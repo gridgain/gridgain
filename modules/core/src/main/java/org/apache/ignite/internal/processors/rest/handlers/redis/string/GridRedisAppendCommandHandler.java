@@ -21,6 +21,7 @@ import java.util.Collection;
 import java.util.List;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.rest.GridRestProtocolHandler;
 import org.apache.ignite.internal.processors.rest.GridRestResponse;
 import org.apache.ignite.internal.processors.rest.handlers.redis.GridRedisRestCommandHandler;
@@ -54,9 +55,10 @@ public class GridRedisAppendCommandHandler extends GridRedisRestCommandHandler {
      *
      * @param log Logger to use.
      * @param hnd Rest handler.
+     * @param ctx Kernal context.
      */
-    public GridRedisAppendCommandHandler(final IgniteLogger log, final GridRestProtocolHandler hnd) {
-        super(log, hnd);
+    public GridRedisAppendCommandHandler(IgniteLogger log, GridRestProtocolHandler hnd, GridKernalContext ctx) {
+        super(log, hnd, ctx);
     }
 
     /** {@inheritDoc} */
