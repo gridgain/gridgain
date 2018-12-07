@@ -26,8 +26,10 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.file.DirectoryStream;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.PathMatcher;
 import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.Collection;
@@ -126,6 +128,10 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
 
     /** */
     public static final String META_STORAGE_NAME = "metastorage";
+
+    /** Matcher for searching of *.tmp files. */
+    public static final PathMatcher TMP_FILE_MATCHER =
+        FileSystems.getDefault().getPathMatcher("glob:**" + TMP_SUFFIX);
 
     /** Marshaller. */
     private final Marshaller marshaller;
