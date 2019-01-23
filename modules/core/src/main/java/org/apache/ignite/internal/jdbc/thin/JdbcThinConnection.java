@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.jdbc.thin;
 
+import java.net.SocketTimeoutException;
 import java.sql.Array;
 import java.sql.BatchUpdateException;
 import java.sql.Blob;
@@ -28,6 +29,8 @@ import java.sql.PreparedStatement;
 import java.sql.SQLClientInfoException;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
+import java.sql.SQLPermission;
+import java.sql.SQLTimeoutException;
 import java.sql.SQLWarning;
 import java.sql.SQLXML;
 import java.sql.Savepoint;
@@ -75,6 +78,15 @@ public class JdbcThinConnection implements Connection {
     /** Logger. */
     private static final Logger LOG = Logger.getLogger(JdbcThinConnection.class.getName());
 
+    /** Request timeout period. */
+    private static final int REQUEST_TIMEOUT_PERIOD = 1_000;
+
+    /** Network timeout permission */
+    private static final String SET_NETWORK_TIMEOUT_PERM = "setNetworkTimeout";
+
+    /** Zero timeout as query timeout means no timeout. */
+    static final int NO_TIMEOUT = 0;
+
     /** Statements modification mutex. */
     final private Object stmtsMux = new Object();
 
@@ -98,9 +110,6 @@ public class JdbcThinConnection implements Connection {
 
     /** Current transaction holdability. */
     private int holdability;
-
-    /** Timeout. */
-    private int timeout;
 
     /** Ignite endpoint. */
     private JdbcThinTcpIo cliIo;
@@ -241,9 +250,6 @@ public class JdbcThinConnection implements Connection {
 
         JdbcThinStatement stmt  = new JdbcThinStatement(this, resSetHoldability, schema);
 
-        if (timeout > 0)
-            stmt.timeout(timeout);
-
         synchronized (stmtsMux) {
             stmts.add(stmt);
         }
@@ -273,9 +279,6 @@ public class JdbcThinConnection implements Connection {
             throw new SQLException("SQL string cannot be null.");
 
         JdbcThinPreparedStatement stmt = new JdbcThinPreparedStatement(this, sql, resSetHoldability, schema);
-
-        if (timeout > 0)
-            stmt.timeout(timeout);
 
         synchronized (stmtsMux) {
             stmts.add(stmt);
@@ -696,20 +699,22 @@ public class JdbcThinConnection implements Connection {
     @Override public void setNetworkTimeout(Executor executor, int ms) throws SQLException {
         ensureNotClosed();
 
-        if (executor == null)
-            throw new SQLException("Executor cannot be null.");
-
         if (ms < 0)
             throw new SQLException("Network timeout cannot be negative.");
 
-        timeout = ms;
+        SecurityManager secMgr = System.getSecurityManager();
+
+        if (secMgr != null)
+            secMgr.checkPermission(new SQLPermission(SET_NETWORK_TIMEOUT_PERM));
+
+        cliIo.timeout(ms);
     }
 
     /** {@inheritDoc} */
     @Override public int getNetworkTimeout() throws SQLException {
         ensureNotClosed();
 
-        return timeout;
+        return cliIo.timeout();
     }
 
     /**
@@ -772,7 +777,10 @@ public class JdbcThinConnection implements Connection {
         catch (Exception e) {
             onDisconnect();
 
-            throw new SQLException("Failed to communicate with Ignite cluster.", SqlStateCode.CONNECTION_FAILURE, e);
+            if (e instanceof SocketTimeoutException)
+                throw new SQLException("Connection timed out.", SqlStateCode.CONNECTION_FAILURE, e);
+            else
+                throw new SQLException("Failed to communicate with Ignite cluster.", SqlStateCode.CONNECTION_FAILURE, e);
         }
     }
 
@@ -811,7 +819,10 @@ public class JdbcThinConnection implements Connection {
         catch (Exception e) {
             onDisconnect();
 
-            throw new SQLException("Failed to communicate with Ignite cluster.", SqlStateCode.CONNECTION_FAILURE, e);
+            if (e instanceof SocketTimeoutException)
+                throw new SQLException("Connection timed out.", SqlStateCode.CONNECTION_FAILURE, e);
+            else
+                throw new SQLException("Failed to communicate with Ignite cluster.", SqlStateCode.CONNECTION_FAILURE, e);
         }
     }
 
@@ -1001,6 +1012,8 @@ public class JdbcThinConnection implements Connection {
                 else {
                     onDisconnect();
 
+                    if (err0 instanceof SocketTimeoutException)
+                        throw new SQLException("Connection timed out.", SqlStateCode.CONNECTION_FAILURE, err0);
                     throw new SQLException("Failed to communicate with Ignite cluster on JDBC streaming.",
                         SqlStateCode.CONNECTION_FAILURE, err0);
                 }
