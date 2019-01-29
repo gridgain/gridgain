@@ -18,12 +18,13 @@ package org.apache.ignite.cache.store.cassandra.persistence;
 
 import com.datastax.driver.core.DataType;
 import com.datastax.driver.core.Row;
+import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.lang.annotation.Annotation;
 import java.util.List;
-
-import org.apache.ignite.cache.store.cassandra.common.PropertyMappingHelper;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
+import org.apache.ignite.cache.store.cassandra.common.PropertyMappingHelper;
 import org.apache.ignite.cache.store.cassandra.serializer.Serializer;
 import org.w3c.dom.Element;
 
@@ -37,21 +38,6 @@ public abstract class PojoField implements Serializable {
 
     /** Column attribute of XML element describing Pojo field. */
     private static final String COLUMN_ATTR = "column";
-
-    /** Field name. */
-    private String name;
-
-    /** Field column name in Cassandra table. */
-    private String col;
-
-    /** Field column DDL.  */
-    private String colDDL;
-
-    /** Indicator for calculated field. */
-    private Boolean calculated;
-
-    /** Field property accessor. */
-    private transient PojoFieldAccessor accessor;
 
     /**
      *  Checks if list contains POJO field with the specified name.
@@ -71,6 +57,23 @@ public abstract class PojoField implements Serializable {
 
         return false;
     }
+
+    /** Field name. */
+    private String name;
+
+    /** Field column name in Cassandra table. */
+    private String col;
+
+    private Class<?> pojoClass;
+
+    /** Field column DDL.  */
+    private transient String colDDL;
+
+    /** Indicator for calculated field. */
+    private transient Boolean calculated;
+
+    /** Field property accessor. */
+    private transient PojoFieldAccessor accessor;
 
     /**
      * Creates instance of {@link PojoField} based on it's description in XML element.
@@ -218,5 +221,11 @@ public abstract class PojoField implements Serializable {
         this.colDDL = "\"" + col + "\" " + cassandraType.toString();
 
         this.accessor = accessor;
+    }
+
+    private void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException {
+        ois.defaultReadObject();
+
+        init(PropertyMappingHelper.getPojoFieldAccessor(pojoClass, name));
     }
 }
