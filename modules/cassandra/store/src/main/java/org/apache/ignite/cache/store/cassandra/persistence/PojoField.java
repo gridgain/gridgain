@@ -93,6 +93,8 @@ public abstract class PojoField implements Serializable {
         this.name = el.getAttribute(NAME_ATTR).trim();
         this.col = el.hasAttribute(COLUMN_ATTR) ? el.getAttribute(COLUMN_ATTR).trim() : name.toLowerCase();
 
+        this.pojoClass = pojoCls;
+
         init(PropertyMappingHelper.getPojoFieldAccessor(pojoCls, name));
     }
 
@@ -108,6 +110,8 @@ public abstract class PojoField implements Serializable {
 
         col = sqlField != null && sqlField.name() != null && !sqlField.name().isEmpty() ?
                 sqlField.name() : name.toLowerCase();
+
+        this.pojoClass = accessor.getDeclaringClass();
 
         init(accessor);
     }
