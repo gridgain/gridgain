@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.commandline;
 
 import org.apache.ignite.internal.client.GridClientConfiguration;
+import org.apache.ignite.internal.util.typedef.F;
 
 /**
  * Container with common parsed and validated arguments.
@@ -257,5 +258,30 @@ public class ConnectionAndSslParameters {
      */
     public char[] sslTrustStorePassword() {
         return sslTrustStorePassword;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return "ConnectionAndSslParameters{" +
+            "host='" + host + '\'' +
+            ", port='" + port + '\'' +
+            ", user='" + user + '\'' +
+            (F.isEmpty(pwd) ? "" : ", pwd=********" ) +
+            ", autoConfirmation=" + autoConfirmation +
+            ", pingTimeout=" + pingTimeout +
+            ", pingInterval=" + pingInterval +
+            ", sslProtocol='" + sslProtocol + '\'' +
+            ", sslCipherSuites='" + sslCipherSuites + '\'' +
+            ", sslKeyAlgorithm='" + sslKeyAlgorithm + '\'' +
+            ", sslKeyStorePath='" + sslKeyStorePath + '\'' +
+            ", sslKeyStoreType='" + sslKeyStoreType + '\'' +
+            (sslKeyStorePassword == null || sslKeyStorePassword.length == 0 ?
+                "" : ", sslKeyStorePassword=********" ) +
+            ", sslTrustStorePath='" + sslTrustStorePath + '\'' +
+            ", sslTrustStoreType='" + sslTrustStoreType + '\'' +
+            (sslTrustStorePassword == null || sslTrustStorePassword.length == 0 ?
+                "" : ", sslTrustStorePassword=********" ) +
+            ", command=" + command.name() +
+            '}';
     }
 }

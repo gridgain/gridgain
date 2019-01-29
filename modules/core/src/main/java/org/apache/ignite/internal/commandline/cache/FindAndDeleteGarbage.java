@@ -96,6 +96,15 @@ public class FindAndDeleteGarbage implements Command<FindAndDeleteGarbage.Argume
         public boolean delete() {
             return delete;
         }
+
+        /** {@inheritDoc} */
+        @Override public String toString() {
+            return "Arguments{" +
+                "groups=" + groups +
+                ", nodeId=" + nodeId +
+                ", delete=" + delete +
+                '}';
+        }
     }
 
     /** Command parsed arguments. */

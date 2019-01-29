@@ -133,6 +133,16 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
         public UUID nodeId() {
             return nodeId;
         }
+
+        /** {@inheritDoc} */
+        @Override public String toString() {
+            return "Arguments{" +
+                "caches=" + caches +
+                ", nodeId=" + nodeId +
+                ", checkFirst=" + checkFirst +
+                ", checkThrough=" + checkThrough +
+                '}';
+        }
     }
 
     /** Command parsed arguments. */

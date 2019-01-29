@@ -23,8 +23,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Logger;
 import java.util.function.Consumer;
+import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import org.apache.ignite.IgniteException;
@@ -174,6 +174,18 @@ public class IdleVerify implements Command<IdleVerify.Arguments> {
          */
         public boolean isSkipZeros() {
             return skipZeros;
+        }
+
+        /** {@inheritDoc} */
+        @Override public String toString() {
+            return "Arguments{" +
+                "caches=" + caches +
+                ", excludeCaches=" + excludeCaches +
+                ", dump=" + dump +
+                ", skipZeros=" + skipZeros +
+                ", idleCheckCrc=" + idleCheckCrc +
+                ", cacheFilterEnum=" + cacheFilterEnum +
+                '}';
         }
     }
 

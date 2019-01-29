@@ -98,6 +98,15 @@ public class CacheDistribution implements Command<CacheDistribution.Arguments> {
         public Set<String> getUserAttributes() {
             return userAttributes;
         }
+
+        /** {@inheritDoc} */
+        @Override public String toString() {
+            return "Arguments{" +
+                "caches=" + caches +
+                ", nodeId=" + nodeId +
+                ", userAttributes=" + userAttributes +
+                '}';
+        }
     }
 
     /** Command parsed arguments */

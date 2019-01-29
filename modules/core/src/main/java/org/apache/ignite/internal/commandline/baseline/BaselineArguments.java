@@ -88,6 +88,17 @@ public class BaselineArguments {
         return consistentIds;
     }
 
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return "BaselineArguments{" +
+            "cmd=" + cmd +
+            ", enableAutoAdjust=" + enableAutoAdjust +
+            ", softBaselineTimeout=" + softBaselineTimeout +
+            ", topVer=" + topVer +
+            ", consistentIds=" + consistentIds +
+            '}';
+    }
+
     /**
      * Builder of {@link BaselineArguments}.
      */

@@ -89,6 +89,15 @@ public class CacheContention implements Command<CacheContention.Arguments> {
         public int maxPrint() {
             return maxPrint;
         }
+
+        /** {@inheritDoc} */
+        @Override public String toString() {
+            return "Arguments{" +
+                "nodeId=" + nodeId +
+                ", minQueueSize=" + minQueueSize +
+                ", maxPrint=" + maxPrint +
+                '}';
+        }
     }
 
     /**

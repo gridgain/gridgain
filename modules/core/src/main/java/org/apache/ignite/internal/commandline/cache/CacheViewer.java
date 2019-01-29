@@ -145,6 +145,17 @@ public class CacheViewer implements Command<CacheViewer.Arguments> {
          * @return Full config flag.
          */
         public boolean fullConfig(){ return fullConfig; }
+
+        /** {@inheritDoc} */
+        @Override public String toString() {
+            return "Arguments{" +
+                "regex='" + regex + '\'' +
+                ", fullConfig=" + fullConfig +
+                ", nodeId=" + nodeId +
+                ", cacheCmd=" + cacheCmd +
+                ", outputFormat=" + outputFormat +
+                '}';
+        }
     }
 
     /** Command parsed arguments */
