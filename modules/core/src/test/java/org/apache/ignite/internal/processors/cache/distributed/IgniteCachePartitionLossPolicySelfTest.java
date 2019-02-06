@@ -29,7 +29,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.cache.CacheException;
-import junit.framework.AssertionFailedError;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -71,23 +70,23 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
  */
 public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTest {
     /** */
-    private boolean client;
+    private static boolean client;
 
     /** */
-    private PartitionLossPolicy partLossPlc;
+    private static PartitionLossPolicy partLossPlc;
 
     /** */
-    private int backups;
+    private static int backups;
 
     /** */
-    private final AtomicBoolean delayPartExchange = new AtomicBoolean(false);
+    private static final AtomicBoolean delayPartExchange = new AtomicBoolean(false);
 
     /** */
     private final TopologyChanger killSingleNode = new TopologyChanger(
         false, singletonList(3), asList(0, 1, 2, 4), 0);
 
     /** */
-    private boolean isPersistenceEnabled;
+    private static boolean isPersistenceEnabled;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
@@ -717,7 +716,7 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
         Collection<Integer> lostParts = cache.lostPartitions();
 
-        int part = cache.lostPartitions().stream().findFirst().orElseThrow(AssertionFailedError::new);
+        int part = cache.lostPartitions().stream().findFirst().orElseThrow(AssertionError::new);
 
         Integer remainingPart = null;
 
