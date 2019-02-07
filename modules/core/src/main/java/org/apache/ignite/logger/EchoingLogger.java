@@ -29,7 +29,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * {@IgniteLogger} wrapper that echoes log messages to arbitrary target.
+ * {@link IgniteLogger} wrapper that echoes log messages to arbitrary target.
  */
 public class EchoingLogger implements IgniteLogger {
     /** */
