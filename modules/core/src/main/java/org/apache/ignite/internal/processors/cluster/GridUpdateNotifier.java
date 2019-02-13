@@ -49,7 +49,9 @@ import org.jetbrains.annotations.Nullable;
  * This class is responsible for notification about new version availability.
  * <p>
  * Note also that this connectivity is not necessary to successfully start the system as it will
- * gracefully ignore any errors occurred during notification and verification process.
+ * gracefully ignore any errors occurred during notification and verification process.</p>
+ * <p>
+ * TODO GG-14736 rework this for GridGain Community versions.</p>
  */
 class GridUpdateNotifier {
     /** Default encoding. */
