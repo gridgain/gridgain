@@ -26,25 +26,25 @@
     </properties>
 
     <parent>
-        <artifactId>ignite-parent</artifactId>
-        <groupId>org.apache.ignite</groupId>
+        <artifactId>community-parent</artifactId>
+        <groupId>org.gridgain</groupId>
         <version>1</version>
         <relativePath>../../parent</relativePath>
     </parent>
 
     <artifactId>ignite-ml</artifactId>
-    <version>2.7.0-SNAPSHOT</version>
+    <version>8.7.0-SNAPSHOT</version>
     <url>http://ignite.apache.org</url>
 
     <dependencies>
         <dependency>
-            <groupId>org.apache.ignite</groupId>
+            <groupId>org.gridgain</groupId>
             <artifactId>ignite-core</artifactId>
             <version>${project.version}</version>
         </dependency>
 
         <dependency>
-            <groupId>org.apache.ignite</groupId>
+            <groupId>org.gridgain</groupId>
             <artifactId>ignite-core</artifactId>
             <version>${project.version}</version>
             <type>test-jar</type>
@@ -52,14 +52,14 @@
         </dependency>
 
         <dependency>
-	    <groupId>org.apache.ignite</groupId>
+	    <groupId>org.gridgain</groupId>
 	    <artifactId>ignite-indexing</artifactId>
 	    <version>${project.version}</version>
         </dependency>
 
 
         <dependency>
-	    <groupId>org.apache.ignite</groupId>
+	    <groupId>org.gridgain</groupId>
 	    <artifactId>ignite-spring</artifactId>
 	    <version>${project.version}</version>
         </dependency>
