@@ -34,6 +34,7 @@
 
 package org.apache.ignite.internal.processors.cluster;
 
+import java.util.Collections;
 import java.util.Properties;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.IgniteProperties;
@@ -45,6 +46,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.Mockito;
+
+import static org.mockito.Matchers.anyString;
 
 /**
  * Update notifier test.
@@ -92,10 +95,10 @@ public class GridUpdateNotifierSelfTest extends GridCommonAbstractTest {
         HttpIgniteUpdatesChecker updatesCheckerMock = Mockito.mock(HttpIgniteUpdatesChecker.class);
 
         // Return current node version and some other info
-        Mockito.when(updatesCheckerMock.getUpdates(""))
+        Mockito.when(updatesCheckerMock.getUpdates(anyString()))
                 .thenReturn("meta=meta" + "\n" + "version=" + nodeVer + "\n" + "downloadUrl=url");
 
-        GridUpdateNotifier ntf = new GridUpdateNotifier(null, nodeVer,null,null, false, updatesCheckerMock);
+        GridUpdateNotifier ntf = new GridUpdateNotifier(null, nodeVer,null, Collections.emptyList(), false, updatesCheckerMock);
 
         ntf.checkForNewVersion(log);
 

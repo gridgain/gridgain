@@ -53,6 +53,7 @@ import org.apache.ignite.events.Event;
 import org.apache.ignite.internal.ClusterMetricsSnapshot;
 import org.apache.ignite.internal.GridDirectMap;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.GridKernalGatewayImpl;
 import org.apache.ignite.internal.IgniteDiagnosticInfo;
 import org.apache.ignite.internal.IgniteDiagnosticMessage;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -370,7 +371,11 @@ public class ClusterProcessor extends GridProcessorAdapter {
     @Override public void onKernalStart(boolean active) throws IgniteCheckedException {
         if (notifyEnabled.get()) {
             try {
-                verChecker = new GridUpdateNotifier(ctx.igniteInstanceName(), VER_STR, false);
+                verChecker = new GridUpdateNotifier(ctx.igniteInstanceName(),
+                    VER_STR,
+                    new GridKernalGatewayImpl(ctx.igniteInstanceName()),
+                    U.allPluginProviders(),
+                    false);
 
                 updateNtfTimer = new Timer("ignite-update-notifier-timer", true);
 
