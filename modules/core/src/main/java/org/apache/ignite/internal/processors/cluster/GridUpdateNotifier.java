@@ -136,7 +136,7 @@ class GridUpdateNotifier {
     GridUpdateNotifier(String igniteInstanceName, String ver, GridKernalGateway gw, Collection<PluginProvider> pluginProviders,
         boolean reportOnlyNew, HttpIgniteUpdatesChecker updatesChecker) throws IgniteCheckedException {
         try {
-            this.ver = ver;
+            this.ver = regularize(ver);
             this.igniteInstanceName = igniteInstanceName == null ? "null" : igniteInstanceName;
             this.gw = gw;
             this.updatesChecker = updatesChecker;
@@ -179,6 +179,16 @@ class GridUpdateNotifier {
         catch (UnsupportedEncodingException e) {
             throw new IgniteCheckedException("Failed to encode.", e);
         }
+    }
+
+    /**
+     * Regularize version. Version 8.7.3-pXXX should be equal to 8.7.3-pYYY
+     *
+     * @param ver Version.
+     * @return Regularized version.
+     */
+    private String regularize(String ver) {
+        return ver.substring('-');
     }
 
     /**
@@ -358,7 +368,7 @@ class GridUpdateNotifier {
 
                         for (String line : lines) {
                             if (line.contains("version"))
-                                latestVer = obtainVersionFrom(line);
+                                latestVer = regularize(obtainVersionFrom(line));
                             else if (line.contains("downloadUrl"))
                                 downloadUrl = obtainDownloadUrlFrom(line);
                         }
