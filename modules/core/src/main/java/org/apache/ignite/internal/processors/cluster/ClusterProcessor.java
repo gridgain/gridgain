@@ -87,6 +87,7 @@ import org.apache.ignite.spi.discovery.DiscoveryMetricsProvider;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.IgniteSystemProperties.GRIDGAIN_UPDATE_URL;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DIAGNOSTIC_ENABLED;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_UPDATE_NOTIFIER;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
@@ -115,6 +116,9 @@ public class ClusterProcessor extends GridProcessorAdapter {
 
     /** */
     private final AtomicBoolean notifyEnabled = new AtomicBoolean();
+
+    /** */
+    private final AtomicReference<String> updateNotifierUrl = new AtomicReference<>();
 
     /** */
     @GridToStringExclude
@@ -150,6 +154,8 @@ public class ClusterProcessor extends GridProcessorAdapter {
         super(ctx);
 
         notifyEnabled.set(IgniteSystemProperties.getBoolean(IGNITE_UPDATE_NOTIFIER, true));
+
+        updateNotifierUrl.set(IgniteSystemProperties.getString(GRIDGAIN_UPDATE_URL, GridUpdateNotifier.DEFAULT_GRIDGAIN_UPDATES_URL));
 
         cluster = new IgniteClusterImpl(ctx);
 
@@ -375,7 +381,8 @@ public class ClusterProcessor extends GridProcessorAdapter {
                     VER_STR,
                     new GridKernalGatewayImpl(ctx.igniteInstanceName()),
                     U.allPluginProviders(),
-                    false);
+                    false,
+                    new HttpIgniteUpdatesChecker(updateNotifierUrl.get(), GridUpdateNotifier.CHARSET));
 
                 updateNtfTimer = new Timer("ignite-update-notifier-timer", true);
 
@@ -549,10 +556,24 @@ public class ClusterProcessor extends GridProcessorAdapter {
     }
 
     /**
+     * Sets updates notifier url.
+     */
+    public void setUpdateNotifierUrl(String url) {
+        updateNotifierUrl.set(url);
+    }
+
+    /**
      * @return Update notifier status.
      */
     public boolean updateNotifierEnabled() {
         return notifyEnabled.get();
+    }
+
+    /**
+     * @return Get update notifier url.
+     */
+    public String updateNotifierUrl() {
+        return updateNotifierUrl.get();
     }
 
     /**
