@@ -692,7 +692,7 @@ public class ClusterProcessor extends GridProcessorAdapter {
             if (!notifyEnabled.get())
                 return;
 
-            verChecker.checkForNewVersion(log, first);
+            verChecker.checkForNewVersion(log);
 
             // Just wait for 10 secs.
             Thread.sleep(PERIODIC_VER_CHECK_CONN_TIMEOUT);

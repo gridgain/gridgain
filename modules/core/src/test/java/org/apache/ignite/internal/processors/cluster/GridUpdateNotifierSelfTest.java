@@ -92,12 +92,12 @@ public class GridUpdateNotifierSelfTest extends GridCommonAbstractTest {
         HttpIgniteUpdatesChecker updatesCheckerMock = Mockito.mock(HttpIgniteUpdatesChecker.class);
 
         // Return current node version and some other info
-        Mockito.when(updatesCheckerMock.getUpdates(true))
+        Mockito.when(updatesCheckerMock.getUpdates(""))
                 .thenReturn("meta=meta" + "\n" + "version=" + nodeVer + "\n" + "downloadUrl=url");
 
-        GridUpdateNotifier ntf = new GridUpdateNotifier(null, nodeVer, false, updatesCheckerMock);
+        GridUpdateNotifier ntf = new GridUpdateNotifier(null, nodeVer,null,null, false, updatesCheckerMock);
 
-        ntf.checkForNewVersion(log, true);
+        ntf.checkForNewVersion(log);
 
         String ver = ntf.latestVersion();
 

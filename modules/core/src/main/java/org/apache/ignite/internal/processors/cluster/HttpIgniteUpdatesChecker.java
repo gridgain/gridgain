@@ -43,7 +43,7 @@ import java.net.URL;
 import java.net.URLConnection;
 
 /**
- * This class is responsible for getting Ignite updates information via HTTP
+ * This class is responsible for getting GridGain updates information via HTTP
  */
 public class HttpIgniteUpdatesChecker {
     /** Url for request updates. */

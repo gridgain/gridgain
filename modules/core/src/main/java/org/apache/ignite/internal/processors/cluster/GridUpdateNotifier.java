@@ -77,8 +77,8 @@ class GridUpdateNotifier {
     /** Sleep milliseconds time for worker thread. */
     private static final int WORKER_THREAD_SLEEP_TIME = 5000;
 
-    /** Default url for request Ignite updates. */
-    private static final String DEFAULT_IGNITE_UPDATES_URL = "https://ignite.run/update_status_ignite-plain-text.php";
+    /** Default url for request GridGain updates. */
+    private static final String DEFAULT_GRIDGAIN_UPDATES_URL = "https://ignite.run/update_status_ignite-plain-text.php";
 
     /** Grid version. */
     private final String ver;
@@ -179,11 +179,11 @@ class GridUpdateNotifier {
     }
 
     /**
-     * Creates new notifier with default Ignite updates URL
+     * Creates new notifier with default GridGain updates URL
      */
     GridUpdateNotifier(String igniteInstanceName, String ver, GridKernalGateway gw, Collection<PluginProvider> pluginProviders,
         boolean reportOnlyNew) throws IgniteCheckedException {
-        this(igniteInstanceName, ver, gw, pluginProviders, reportOnlyNew, new HttpIgniteUpdatesChecker(DEFAULT_IGNITE_UPDATES_URL, CHARSET));
+        this(igniteInstanceName, ver, gw, pluginProviders, reportOnlyNew, new HttpIgniteUpdatesChecker(DEFAULT_GRIDGAIN_UPDATES_URL, CHARSET));
     }
 
     /**
