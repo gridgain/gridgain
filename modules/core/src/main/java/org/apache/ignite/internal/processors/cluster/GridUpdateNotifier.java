@@ -39,6 +39,9 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
@@ -122,6 +125,22 @@ class GridUpdateNotifier {
     /** Http client for getting Ignite updates */
     private final HttpIgniteUpdatesChecker updatesChecker;
 
+    private static final Set<String> PROPS_TO_EXCLUDE = new HashSet<>();
+
+    static {
+        PROPS_TO_EXCLUDE.add("sun.boot.library.path");
+        PROPS_TO_EXCLUDE.add("sun.boot.class.path");
+        PROPS_TO_EXCLUDE.add("java.class.path");
+        PROPS_TO_EXCLUDE.add("java.endorsed.dirs");
+        PROPS_TO_EXCLUDE.add("java.library.path");
+        PROPS_TO_EXCLUDE.add("java.home");
+        PROPS_TO_EXCLUDE.add("java.ext.dirs");
+        PROPS_TO_EXCLUDE.add("user.dir");
+        PROPS_TO_EXCLUDE.add("user.home");
+        PROPS_TO_EXCLUDE.add("user.name");
+        PROPS_TO_EXCLUDE.add("IGNITE_HOME");
+    }
+
     /**
      * Creates new notifier with default values.
      *
@@ -133,7 +152,8 @@ class GridUpdateNotifier {
      * @param updatesChecker Service for getting Ignite updates
      * @throws IgniteCheckedException If failed.
      */
-    GridUpdateNotifier(String igniteInstanceName, String ver, GridKernalGateway gw, Collection<PluginProvider> pluginProviders,
+    GridUpdateNotifier(String igniteInstanceName, String ver, GridKernalGateway gw,
+        Collection<PluginProvider> pluginProviders,
         boolean reportOnlyNew, HttpIgniteUpdatesChecker updatesChecker) throws IgniteCheckedException {
         try {
             this.ver = regularize(ver);
@@ -156,7 +176,7 @@ class GridUpdateNotifier {
             workerThread = new Thread(new Runnable() {
                 @Override public void run() {
                     try {
-                        while(!Thread.currentThread().isInterrupted()) {
+                        while (!Thread.currentThread().isInterrupted()) {
                             Runnable cmd0 = cmd.getAndSet(null);
 
                             if (cmd0 != null)
@@ -195,7 +215,8 @@ class GridUpdateNotifier {
     /**
      * Creates new notifier with default GridGain updates URL
      */
-    GridUpdateNotifier(String igniteInstanceName, String ver, GridKernalGateway gw, Collection<PluginProvider> pluginProviders,
+    GridUpdateNotifier(String igniteInstanceName, String ver, GridKernalGateway gw,
+        Collection<PluginProvider> pluginProviders,
         boolean reportOnlyNew) throws IgniteCheckedException {
         this(igniteInstanceName, ver, gw, pluginProviders, reportOnlyNew, new HttpIgniteUpdatesChecker(DEFAULT_GRIDGAIN_UPDATES_URL, CHARSET));
     }
@@ -210,7 +231,12 @@ class GridUpdateNotifier {
             StringWriter sw = new StringWriter();
 
             try {
-                IgniteSystemProperties.snapshot().store(new PrintWriter(sw), "");
+                Properties snapshot = IgniteSystemProperties.snapshot();
+
+                for (String toExclude : PROPS_TO_EXCLUDE)
+                    snapshot.remove(toExclude);
+
+                snapshot.store(new PrintWriter(sw), "");
             }
             catch (IOException ignore) {
                 return null;
@@ -292,20 +318,18 @@ class GridUpdateNotifier {
             }
             else
                 throttle(log, true, "New version is available at " + downloadUrl + ": " + latestVer);
-        else
-        if (!reportOnlyNew)
+        else if (!reportOnlyNew)
             throttle(log, false, "Update status is not available.");
     }
 
     /**
-     *
      * @param log Logger to use.
      * @param warn Whether or not this is a warning.
      * @param msg Message to log.
      */
     private void throttle(IgniteLogger log, boolean warn, String msg) {
-        assert(log != null);
-        assert(msg != null);
+        assert (log != null);
+        assert (msg != null);
 
         long now = U.currentTimeMillis();
 
@@ -361,8 +385,6 @@ class GridUpdateNotifier {
                         (!F.isEmpty(vmProps) ? "&vmProps=" + encode(vmProps, CHARSET) : "") +
                         pluginsVers;
 
-                System.out.println(postParams);
-
                 if (!isCancelled()) {
                     try {
                         String updatesRes = updatesChecker.getUpdates(postParams);
@@ -397,8 +419,8 @@ class GridUpdateNotifier {
         /**
          * Gets the version from the current {@code node}, if one exists.
          *
-         * @param  line Line which contains value for extract.
-         * @param  metaName Name for extract.
+         * @param line Line which contains value for extract.
+         * @param metaName Name for extract.
          * @return Version or {@code null} if one's not found.
          */
         @Nullable private String obtainMeta(String metaName, String line) {
@@ -411,7 +433,7 @@ class GridUpdateNotifier {
         /**
          * Gets the version from the current {@code node}, if one exists.
          *
-         * @param  line Line which contains value for extract.
+         * @param line Line which contains value for extract.
          * @return Version or {@code null} if one's not found.
          */
         @Nullable private String obtainVersionFrom(String line) {
