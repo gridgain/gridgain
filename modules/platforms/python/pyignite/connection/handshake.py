@@ -16,7 +16,7 @@
 from typing import Optional
 
 from pyignite.constants import *
-from pyignite.datatypes import Byte, Int, Short, String
+from pyignite.datatypes import Byte, Int, Short, String, UUIDObject
 from pyignite.datatypes.internal import Struct
 
 OP_HANDSHAKE = 1
@@ -85,7 +85,11 @@ def read_response(client):
             ('version_patch', Short),
             ('message', String),
         ])
-        end_class, end_buffer = response_end.parse(client)
-        end = end_class.from_buffer_copy(end_buffer)
-        data.update(response_end.to_python(end))
+    else:
+        response_end = Struct([
+            ('node_uuid', UUIDObject),
+        ])
+    end_class, end_buffer = response_end.parse(client)
+    end = end_class.from_buffer_copy(end_buffer)
+    data.update(response_end.to_python(end))
     return data

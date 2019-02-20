@@ -35,6 +35,11 @@ from pyignite.datatypes import (
 from .op_codes import *
 
 
+# response header flags
+RHF_ERROR = 1
+RHF_TOPOLOGY_CHANGED = 2
+
+
 @attr.s
 class Response:
     following = attr.ib(type=list, factory=list)
@@ -55,7 +60,7 @@ class Response:
                     '_fields_': [
                         ('length', ctypes.c_int),
                         ('query_id', ctypes.c_longlong),
-                        ('status_code', ctypes.c_int),
+                        ('flags', ctypes.c_short),
                     ],
                 },
             )
@@ -67,15 +72,29 @@ class Response:
         header = header_class.from_buffer_copy(buffer)
         fields = []
 
-        if header.status_code == OP_SUCCESS:
+        if header.flags & RHF_TOPOLOGY_CHANGED:
+            fields = [
+                ('affinity_version', ctypes.c_longlong),
+                ('affinity_minor', ctypes.c_int),
+            ]
+
+        if header.flags & RHF_ERROR:
+            fields.append(('status_code', ctypes.c_int))
+            buffer += client.recv(
+                sum([ctypes.sizeof(field[1]) for field in fields])
+            )
+            msg_type, buffer_fragment = String.parse(client)
+            buffer += buffer_fragment
+            fields.append(('error_message', msg_type))
+
+        else:
+            buffer += client.recv(
+                sum([ctypes.sizeof(field[1]) for field in fields])
+            )
             for name, ignite_type in self.following:
                 c_type, buffer_fragment = ignite_type.parse(client)
                 buffer += buffer_fragment
                 fields.append((name, c_type))
-        else:
-            c_type, buffer_fragment = String.parse(client)
-            buffer += buffer_fragment
-            fields.append(('error_message', c_type))
 
         response_class = type(
             'Response',
@@ -121,7 +140,24 @@ class SQLResponse(Response):
         header = header_class.from_buffer_copy(buffer)
         fields = []
 
-        if header.status_code == OP_SUCCESS:
+        if header.flags & RHF_TOPOLOGY_CHANGED:
+            fields = [
+                ('affinity_version', ctypes.c_longlong),
+                ('affinity_minor', ctypes.c_int),
+            ]
+
+        if header.flags & RHF_ERROR:
+            fields.append(('status_code', ctypes.c_int))
+            buffer += client.recv(
+                sum([ctypes.sizeof(field[1]) for field in fields])
+            )
+            msg_type, buffer_fragment = String.parse(client)
+            buffer += buffer_fragment
+            fields.append(('error_message', msg_type))
+        else:
+            buffer += client.recv(
+                sum([ctypes.sizeof(field[1]) for field in fields])
+            )
             following = [
                 self.fields_or_field_count(),
                 ('row_count', Int),
@@ -171,10 +207,6 @@ class SQLResponse(Response):
                 ('more', ctypes.c_bool),
             ]
             buffer += body_buffer + data_buffer
-        else:
-            c_type, buffer_fragment = String.parse(client)
-            buffer += buffer_fragment
-            fields.append(('error_message', c_type))
 
         final_class = type(
             'SQLResponse',
@@ -188,7 +220,7 @@ class SQLResponse(Response):
         return final_class, buffer
 
     def to_python(self, ctype_object, *args, **kwargs):
-        if ctype_object.status_code == 0:
+        if not hasattr(ctype_object, 'status_code'):
             result = {
                 'more': Bool.to_python(
                     ctype_object.more, *args, **kwargs
