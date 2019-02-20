@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.metastorage;
 
 import java.io.Serializable;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 import org.apache.ignite.IgniteCheckedException;
@@ -25,6 +26,8 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
+import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -42,14 +45,18 @@ public interface ReadableDistributedMetaStorage {
      * @see IgniteFeatures#DISTRIBUTED_METASTORAGE
      */
     public static boolean isSupported(GridKernalContext ctx) {
+        IgnitePredicate<ClusterNode> srvrNodesFilter = node -> !node.isClient() && !node.isDaemon();
+
         DiscoverySpi discoSpi = ctx.config().getDiscoverySpi();
 
         if (discoSpi instanceof IgniteDiscoverySpi)
-            return ((IgniteDiscoverySpi)discoSpi).allNodesSupport(DISTRIBUTED_METASTORAGE);
+            return ((IgniteDiscoverySpi)discoSpi).allNodesSupport(DISTRIBUTED_METASTORAGE, srvrNodesFilter);
         else {
             Collection<ClusterNode> nodes = discoSpi.getRemoteNodes();
 
-            return IgniteFeatures.allNodesSupports(ctx, nodes, DISTRIBUTED_METASTORAGE);
+            Collection<ClusterNode> srvNodes = F.view(nodes, srvrNodesFilter);
+
+            return IgniteFeatures.allNodesSupports(ctx, srvNodes, DISTRIBUTED_METASTORAGE);
         }
     }
 

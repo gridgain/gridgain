@@ -107,6 +107,7 @@ import org.apache.ignite.internal.worker.WorkersRegistry;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteInClosure;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.security.SecurityCredentials;
@@ -179,6 +180,7 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MARSHALLER;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MARSHALLER_COMPACT_FOOTER;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MARSHALLER_USE_BINARY_STRING_SER_VER_2;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MARSHALLER_USE_DFLT_SUID;
+import static org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi.ALL_NODES;
 import static org.apache.ignite.internal.processors.security.SecurityUtils.nodeSecurityContext;
 import static org.apache.ignite.spi.IgnitePortProtocol.TCP;
 import static org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoverySpiState.AUTH_FAILED;
@@ -354,9 +356,9 @@ class ServerImpl extends TcpDiscoveryImpl {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean allNodesSupport(IgniteFeatures feature) {
+    @Override public boolean allNodesSupport(IgniteFeatures feature, IgnitePredicate<ClusterNode> nodesPred) {
         // It is ok to see visible node without order here because attributes are available when node is created.
-        return IgniteFeatures.allNodesSupports(gridKernalContext(), upcast(ring.allNodes()), feature);
+        return IgniteFeatures.allNodesSupports(gridKernalContext(), F.view(upcast(ring.allNodes()), nodesPred), feature);
     }
 
     /** {@inheritDoc} */
@@ -5512,7 +5514,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                 //we will need to recalculate this value since the topology changed
                 if (!nodeCompactRepresentationSupported) {
                     nodeCompactRepresentationSupported =
-                        allNodesSupport(TCP_DISCOVERY_MESSAGE_NODE_COMPACT_REPRESENTATION);
+                        allNodesSupport(TCP_DISCOVERY_MESSAGE_NODE_COMPACT_REPRESENTATION, ALL_NODES);
                 }
 
                 TcpDiscoveryNode leftNode = ring.removeNode(leavingNodeId);
@@ -5727,7 +5729,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                 //we will need to recalculate this value since the topology changed
                 if (!nodeCompactRepresentationSupported) {
                     nodeCompactRepresentationSupported =
-                        allNodesSupport(TCP_DISCOVERY_MESSAGE_NODE_COMPACT_REPRESENTATION);
+                        allNodesSupport(TCP_DISCOVERY_MESSAGE_NODE_COMPACT_REPRESENTATION, ALL_NODES);
                 }
 
                 failedNode = ring.removeNode(failedNodeId);
@@ -6864,7 +6866,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                     TcpDiscoveryHandshakeResponse res =
                         new TcpDiscoveryHandshakeResponse(locNodeId, locNode.internalOrder());
 
-                    res.setDiscoveryDataPacketCompression(allNodesSupport(IgniteFeatures.DATA_PACKET_COMPRESSION));
+                    res.setDiscoveryDataPacketCompression(allNodesSupport(IgniteFeatures.DATA_PACKET_COMPRESSION, ALL_NODES));
 
                     if (req.client())
                         res.clientAck(true);
