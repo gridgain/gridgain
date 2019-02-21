@@ -50,6 +50,7 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.GridKernalGateway;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.IgniteProperties;
+import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -86,6 +87,9 @@ class GridUpdateNotifier {
     /** Grid version. */
     private final String ver;
 
+    /** Discovery SPI. */
+    private final GridDiscoveryManager discoSpi;
+
     /** Error during obtaining data. */
     private volatile Exception err;
 
@@ -101,17 +105,17 @@ class GridUpdateNotifier {
     /** Whether or not to report only new version. */
     private volatile boolean reportOnlyNew;
 
-    /** */
-    private volatile int topSize;
-
-    /** System properties */
+    /** System properties. */
     private final String vmProps;
 
-    /** Plugins information for request */
+    /** Plugins information for request. */
     private final String pluginsVers;
 
-    /** Kernal gateway */
+    /** Kernal gateway. */
     private final GridKernalGateway gw;
+
+    /** Number of server nodes in topology. */
+    private int srvNodes = 0;
 
     /** */
     private long lastLog = -1;
@@ -122,9 +126,10 @@ class GridUpdateNotifier {
     /** Worker thread to process http request. */
     private final Thread workerThread;
 
-    /** Http client for getting Ignite updates */
+    /** Http client for getting Ignite updates. */
     private final HttpIgniteUpdatesChecker updatesChecker;
 
+    /** Excluded VM props. */
     private static final Set<String> PROPS_TO_EXCLUDE = new HashSet<>();
 
     static {
@@ -147,12 +152,14 @@ class GridUpdateNotifier {
      * @param igniteInstanceName igniteInstanceName
      * @param ver Compound Ignite version.
      * @param gw Kernal gateway.
+     * @param discovery Discovery SPI.
      * @param pluginProviders Kernal gateway.
      * @param reportOnlyNew Whether or not to report only new version.
      * @param updatesChecker Service for getting Ignite updates
      * @throws IgniteCheckedException If failed.
      */
     GridUpdateNotifier(String igniteInstanceName, String ver, GridKernalGateway gw,
+        GridDiscoveryManager discovery,
         Collection<PluginProvider> pluginProviders,
         boolean reportOnlyNew, HttpIgniteUpdatesChecker updatesChecker) throws IgniteCheckedException {
         try {
@@ -172,6 +179,8 @@ class GridUpdateNotifier {
             this.reportOnlyNew = reportOnlyNew;
 
             vmProps = getSystemProperties();
+
+            discoSpi = discovery;
 
             workerThread = new Thread(new Runnable() {
                 @Override public void run() {
@@ -213,15 +222,6 @@ class GridUpdateNotifier {
     }
 
     /**
-     * Creates new notifier with default GridGain updates URL
-     */
-    GridUpdateNotifier(String igniteInstanceName, String ver, GridKernalGateway gw,
-        Collection<PluginProvider> pluginProviders,
-        boolean reportOnlyNew) throws IgniteCheckedException {
-        this(igniteInstanceName, ver, gw, pluginProviders, reportOnlyNew, new HttpIgniteUpdatesChecker(DEFAULT_GRIDGAIN_UPDATES_URL, CHARSET));
-    }
-
-    /**
      * Gets system properties.
      *
      * @return System properties.
@@ -254,13 +254,6 @@ class GridUpdateNotifier {
      */
     void reportOnlyNew(boolean reportOnlyNew) {
         this.reportOnlyNew = reportOnlyNew;
-    }
-
-    /**
-     * @param topSize Size of topology for license verification purpose.
-     */
-    void topologySize(int topSize) {
-        this.topSize = topSize;
     }
 
     /**
@@ -377,10 +370,12 @@ class GridUpdateNotifier {
             try {
                 String stackTrace = gw != null ? gw.userStackTrace() : null;
 
+                srvNodes = discoSpi.serverNodes(discoSpi.topologyVersionEx()).size();
+
                 String postParams =
                     "igniteInstanceName=" + encode(igniteInstanceName, CHARSET) +
                         (!F.isEmpty(updStatusParams) ? "&" + updStatusParams : "") +
-                        (topSize > 0 ? "&topSize=" + topSize : "") +
+                        "&srvNodes=" + srvNodes +
                         (!F.isEmpty(stackTrace) ? "&stackTrace=" + encode(stackTrace, CHARSET) : "") +
                         (!F.isEmpty(vmProps) ? "&vmProps=" + encode(vmProps, CHARSET) : "") +
                         pluginsVers;
