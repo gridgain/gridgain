@@ -760,13 +760,22 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         Collection<? extends BaselineNode> baselineNodes,
         boolean forceChangeBaselineTop
     ) {
+        return changeGlobalState(activate, baselineNodes, forceChangeBaselineTop, false);
+    }
+
+    public IgniteInternalFuture<?> changeGlobalState(
+        final boolean activate,
+        Collection<? extends BaselineNode> baselineNodes,
+        boolean forceChangeBaselineTop,
+        boolean isAutoAdjust
+    ) {
         if (inMemoryMode)
-            return changeGlobalState0(activate, null, false);
+            return changeGlobalState0(activate, null, false, isAutoAdjust);
 
         BaselineTopology newBlt = (compatibilityMode && !forceChangeBaselineTop) ? null :
             calculateNewBaselineTopology(activate, baselineNodes, forceChangeBaselineTop);
 
-        return changeGlobalState0(activate, newBlt, forceChangeBaselineTop);
+        return changeGlobalState0(activate, newBlt, forceChangeBaselineTop, isAutoAdjust);
     }
 
     /**
@@ -834,8 +843,26 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     }
 
     /** */
-    private IgniteInternalFuture<?> changeGlobalState0(final boolean activate,
-        BaselineTopology blt, boolean forceChangeBaselineTop) {
+    private IgniteInternalFuture<?> changeGlobalState0(
+        final boolean activate,
+        BaselineTopology blt,
+        boolean forceChangeBaselineTop
+    ) {
+        return changeGlobalState0(activate, blt, forceChangeBaselineTop, false);
+    }
+
+    /** */
+    private IgniteInternalFuture<?> changeGlobalState0(
+        final boolean activate,
+        BaselineTopology blt,
+        boolean forceChangeBaselineTop,
+        boolean isAutoAdjust
+    ) {
+        boolean isBaselineAutoAdjustEnabled = ctx.cluster().get().baselineConfiguration().isBaselineAutoAdjustEnabled();
+
+        if (forceChangeBaselineTop && isBaselineAutoAdjustEnabled != isAutoAdjust)
+            throw new BaselineAdjustForbiddenException(isBaselineAutoAdjustEnabled);
+
         if (ctx.isDaemon() || ctx.clientNode()) {
             GridFutureAdapter<Void> fut = new GridFutureAdapter<>();
 
@@ -904,7 +931,8 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             activate,
             blt,
             forceChangeBaselineTop,
-            System.currentTimeMillis());
+            System.currentTimeMillis()
+        );
 
         ctx.txDr().onChangeGlobalStateMessagePrepared(msg);
 

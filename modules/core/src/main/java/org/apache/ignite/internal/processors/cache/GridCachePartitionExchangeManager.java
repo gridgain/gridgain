@@ -896,7 +896,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
     /**
      * @return Last finished topology future.
      */
-    @Nullable public GridDhtTopologyFuture lastFinishedFuture() {
+    @Nullable public GridDhtPartitionsExchangeFuture lastFinishedFuture() {
         return lastFinishedFut.get();
     }
 
@@ -922,7 +922,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
      * @param ver Topology version.
      * @return Future or {@code null} is future is already completed.
      */
-    @Nullable public IgniteInternalFuture<AffinityTopologyVersion> affinityReadyFuture(AffinityTopologyVersion ver) {
+    @NotNull public IgniteInternalFuture<AffinityTopologyVersion> affinityReadyFuture(AffinityTopologyVersion ver) {
         GridDhtPartitionsExchangeFuture lastInitializedFut0 = lastInitializedFut;
 
         if (lastInitializedFut0 != null && lastInitializedFut0.initialVersion().compareTo(ver) == 0
