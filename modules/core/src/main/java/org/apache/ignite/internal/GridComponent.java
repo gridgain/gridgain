@@ -79,7 +79,10 @@ public interface GridComponent {
         META_STORAGE,
 
         /** Transactional data replication processor. */
-        TX_DR_PROC
+        TX_DR_PROC;
+
+        /** Cached values array. */
+        public static final DiscoveryDataExchangeType[] VALUES = values();
     }
 
     /**
