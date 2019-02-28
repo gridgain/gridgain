@@ -59,6 +59,7 @@ import org.apache.ignite.internal.util.tostring.GridToStringBuilderSelfTest;
 import org.apache.ignite.internal.util.tostring.IncludeSensitiveAtomicTest;
 import org.apache.ignite.internal.util.tostring.IncludeSensitiveTransactionalTest;
 import org.apache.ignite.lang.GridByteArrayListSelfTest;
+import org.apache.ignite.spi.discovery.ClusterMetricsSnapshotSerializeCompatibilityTest;
 import org.apache.ignite.spi.discovery.ClusterMetricsSnapshotSerializeSelfTest;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.thread.GridThreadPoolExecutorServiceSelfTest;
@@ -135,9 +136,8 @@ public class IgniteUtilSelfTestSuite {
         // Sensitive toString.
         suite.addTest(new JUnit4TestAdapter(IncludeSensitiveAtomicTest.class));
         suite.addTest(new JUnit4TestAdapter(IncludeSensitiveTransactionalTest.class));
-
-        // Metrics.
         suite.addTest(new JUnit4TestAdapter(ClusterMetricsSnapshotSerializeSelfTest.class));
+        suite.addTest(new JUnit4TestAdapter(ClusterMetricsSnapshotSerializeCompatibilityTest.class));
 
         // Unsafe.
         suite.addTest(new JUnit4TestAdapter(GridUnsafeMemorySelfTest.class));
