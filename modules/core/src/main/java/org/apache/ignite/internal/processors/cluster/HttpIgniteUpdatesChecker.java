@@ -55,9 +55,10 @@ public class HttpIgniteUpdatesChecker {
         conn.setDoOutput(true);
         conn.setRequestProperty("Accept-Charset", charset);
         conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded;charset=" + charset);
+        conn.setRequestProperty("user-agent", "");
 
-        conn.setConnectTimeout(3000);
-        conn.setReadTimeout(3000);
+        conn.setConnectTimeout(5000);
+        conn.setReadTimeout(5000);
 
         try (OutputStream os = conn.getOutputStream()) {
             os.write(updateReq.getBytes(charset));
