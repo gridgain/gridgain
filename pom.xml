@@ -49,7 +49,7 @@
     </parent>
 
     <artifactId>apache-ignite</artifactId>
-    <version>8.7.0-SNAPSHOT</version>
+    <version>8.7.3</version>
     <packaging>pom</packaging>
 
     <scm>
