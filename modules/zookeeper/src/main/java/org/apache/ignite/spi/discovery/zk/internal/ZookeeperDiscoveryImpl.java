@@ -570,7 +570,7 @@ public class ZookeeperDiscoveryImpl {
     public boolean allNodesSupport(IgniteFeatures feature) {
         checkState();
 
-        return rtState.top.isAllNodes(n -> IgniteFeatures.nodeSupports(n, feature));
+        return rtState != null && rtState.top.isAllNodes(n -> IgniteFeatures.nodeSupports(n, feature));
     }
 
     /**
@@ -4428,7 +4428,7 @@ public class ZookeeperDiscoveryImpl {
             id = IgniteUuid.fromUuid(node.id());
 
             endTime = System.currentTimeMillis() + node.sessionTimeout() + 1000;
-        };
+        }
 
         /** {@inheritDoc} */
         @Override public IgniteUuid id() {
