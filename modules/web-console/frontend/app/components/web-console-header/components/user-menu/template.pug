@@ -31,7 +31,7 @@
     the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
     Edition software provided with this notice.
 
-div(
+div.user-menu__trigger(
     ng-class='{active: $ctrl.$state.includes("base.settings")}'
     ng-click='$event.stopPropagation()'
     bs-dropdown='$ctrl.items'
@@ -39,5 +39,5 @@ div(
     data-trigger='hover focus'
     data-container='self'
 )
-    span {{$ctrl.user.firstName}} {{$ctrl.user.lastName}}
+    span.user-menu__username {{$ctrl.user.firstName}} {{$ctrl.user.lastName}}
     span.caret
