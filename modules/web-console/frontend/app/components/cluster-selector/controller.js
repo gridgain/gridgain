@@ -36,6 +36,7 @@ import _ from 'lodash';
 
 import { BehaviorSubject } from 'rxjs';
 import {tap, filter, combineLatest} from 'rxjs/operators';
+import {CancellationError} from 'app/errors/CancellationError';
 
 export default class {
     static $inject = ['AgentManager', 'IgniteConfirm', 'IgniteVersion', 'IgniteMessages'];
@@ -80,8 +81,13 @@ export default class {
             this.clusters$.unsubscribe();
     }
 
-    change() {
-        this.agentMgr.switchCluster(this.cluster);
+    change(item) {
+        this.agentMgr.switchCluster(this.cluster)
+            .then(() => this.cluster = item)
+            .catch((err) => {
+                if (!(err instanceof CancellationError))
+                    this.Messages.showError('Failed to switch cluster: ', err);
+            });
     }
 
     isChangeStateAvailable() {
