@@ -34,6 +34,8 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.dht;
 
+import java.util.Arrays;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -169,6 +171,8 @@ public class GridCacheDhtPreloadPutGetSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testPutGetNone0() throws Exception {
+        Assume.assumeFalse("https://issues.apache.org/jira/browse/IGNITE-11417", MvccFeatureChecker.forcedMvcc());
+
         preloadMode = NONE;
         backups = 0;
 
@@ -180,7 +184,7 @@ public class GridCacheDhtPreloadPutGetSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testPutGetNone1() throws Exception {
-        Assume.assumeFalse("https://issues.apache.org/jira/browse/IGNITE-10261", MvccFeatureChecker.forcedMvcc());
+        Assume.assumeFalse("https://issues.apache.org/jira/browse/IGNITE-11417", MvccFeatureChecker.forcedMvcc());
 
         preloadMode = NONE;
         backups = 1;
@@ -193,7 +197,7 @@ public class GridCacheDhtPreloadPutGetSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testPutGetNone2() throws Exception {
-        Assume.assumeFalse("https://issues.apache.org/jira/browse/IGNITE-10261", MvccFeatureChecker.forcedMvcc());
+        Assume.assumeFalse("https://issues.apache.org/jira/browse/IGNITE-11417", MvccFeatureChecker.forcedMvcc());
 
         preloadMode = NONE;
         backups = 2;
@@ -264,9 +268,15 @@ public class GridCacheDhtPreloadPutGetSelfTest extends GridCommonAbstractTest {
                             done.set(true);
 
                             for (int j = 0; j < KEY_CNT; j++) {
+                                // Check SingleGetFuture.
                                 Integer val = internalCache(cache).get(j);
 
                                 assert val != null;
+
+                                // Check GetFuture.
+                                Map<Integer, Integer> vals = internalCache(cache).getAll(Arrays.asList(j, j + 1));
+
+                                assert val.equals(vals.get(j));
 
                                 if (j % FREQUENCY == 0)
                                     info("Read entry: " + j + " -> " + val);
