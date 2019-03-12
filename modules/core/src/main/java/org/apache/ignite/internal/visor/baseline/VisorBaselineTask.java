@@ -98,8 +98,8 @@ public class VisorBaselineTask extends VisorOneNodeTask<VisorBaselineTaskArg, Vi
             Collection<? extends BaselineNode> srvrs = cluster.forServers().nodes();
 
             VisorBaselineAutoAdjustSettings autoAdjustSettings = new VisorBaselineAutoAdjustSettings(
-                cluster.baselineConfiguration().isBaselineAutoAdjustEnabled(),
-                cluster.baselineConfiguration().getBaselineAutoAdjustTimeout()
+                cluster.isBaselineAutoAdjustEnabled(),
+                cluster.baselineAutoAdjustTimeout()
             );
 
             return new VisorBaselineTaskResult(ignite.cluster().active(), cluster.topologyVersion(),
@@ -237,17 +237,10 @@ public class VisorBaselineTask extends VisorOneNodeTask<VisorBaselineTaskArg, Vi
          * @return New baseline.
          */
         private VisorBaselineTaskResult updateAutoAdjustmentSettings(VisorBaselineAutoAdjustSettings settings) {
-            DistributedBaselineConfiguration baselineConfiguration = ignite.cluster().baselineConfiguration();
+            if (settings.isEnabled())
+                ignite.cluster().baselineAutoAdjustTimeout(settings.getSoftTimeout());
 
-            try {
-                if (settings.isEnabled())
-                    baselineConfiguration.updateBaselineAutoAdjustTimeoutAsync(settings.getSoftTimeout()).get();
-
-                baselineConfiguration.updateBaselineAutoAdjustEnabledAsync(settings.isEnabled()).get();
-            }
-            catch (IgniteCheckedException e) {
-                throw U.convertException(e);
-            }
+            ignite.cluster().baselineAutoAdjustEnabled(settings.isEnabled());
 
             return collect();
         }
