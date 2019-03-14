@@ -16,27 +16,23 @@ for mission-critical in-memory computing applications.
     </a>
 </p>
 
-The comprehensive GridGain in-memory computing solution includes an in-memory data grid, in-memory database, streaming analytics,
-and a continuous learning framework. The system provides ANSI-99 SQL and ACID transaction support. The platform can function
-as an in-memory data grid or it can be deployed as a memory-centric database which combines the speed of in-memory computing
-with the durability of disk-based storage. The system can be scaled out by adding
+GridGain can function as an in-memory data grid accelerating a relational database or Hadoop or it can be deployed as
+a in-memory database with transactional persistence.  The system supports SQL and ACID transactions, can be used for
+streaming analytics and machine and deep learning use cases.The system can be scaled out by adding
 new nodes to the cluster to support up to petabytes of data from multiple databases with automatic data rebalancing and
 redundant storage across the nodes.
 
 ## Download GridGain CE
 
-To download the free community edition, please visit : [Downloads](https://www.gridgain.com/resources/download).
+To download the free community edition, please visit : [Downloads](https://www.gridgain.com/resources/download)
 
 ## Getting Started
 
-For more information on how to get started with GridGain CE, please visit: [Getting Started][getting-started].
+For more information on how to get started with GridGain, please visit: [Getting Started][getting-started]
 
-## GridGain On Other Platforms
+## Documentation
 
-<a href="modules/platforms/dotnet">GridGain.NET</a>
-
-<a href="modules/platforms/cpp">GridGain C++</a>
-
+To see full technical documentation on how to use GridGain and it's APIs, please visit: [GridGain Docs](https://docs.gridgain.com/docs).
 
 [apache-ignite-homepage]: https://ignite.apache.org/
 [GridGain-homepage]: https://www.gridgain.com/
