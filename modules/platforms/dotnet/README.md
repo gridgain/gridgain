@@ -30,11 +30,19 @@ redundant storage across the nodes.
 
 ## GridGain and GridGain.NET
 
-* GridGain.NET is built on top of GridGain.
-* .NET starts the JVM in the same process and communicates with it via JNI.
+GridGain.NET is built on top of GridGain. GridGain.NET is available as thick and [thin client](https://apacheignite-net.readme.io/docs/thin-client).
+
+### GridGain.NET thick client
+* GridGain.NET starts the JVM in the same process and communicates with it via JNI.
 * .NET, C++ and Java nodes can join the same cluster, use the same caches, and interoperate using common binary protocol.
 * Java compute jobs can execute on any node (Java, .NET, C++).
 * .NET compute jobs can only execute on .NET nodes.
+
+### GridGain.NET thin client
+* Gridgain client simply establishes a socket connection to an individual GridGain node, and perform all operations through that node.
+* Thin client does not start the JVM process.
+* Thin client does not become part of the cluster.
+* Thin client never holds any data or perform computations.
 
 ## Download GridGain CE
 
