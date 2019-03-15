@@ -28,11 +28,11 @@ To download the free community edition, please visit : [Downloads](https://www.g
 
 ## Getting Started
 
-For more information on how to get started with GridGain, please visit: [Getting Started][getting-started]
+For information on how to get started with GridGain, please visit: [Getting Started][getting-started]
 
 ## Documentation
 
-To see full technical documentation on how to use GridGain and it's APIs, please visit: [GridGain Docs](https://docs.gridgain.com/docs).
+For complete technical documentation on how to use GridGain APIs, please visit: [GridGain Docs][docs]
 
 [apache-ignite-homepage]: https://ignite.apache.org/
 [GridGain-homepage]: https://www.gridgain.com/
