@@ -26,13 +26,13 @@ redundant storage across the nodes.
 
 GridGain C++ is built on top of GridGain. GridGain C++ is available as thick and [thin client](https://apacheignite-cpp.readme.io/docs/thin-client).
 
-### GridGain C++ thick client
+### Thick client
 * GridGain С++ starts the JVM in the same process and communicates with it via JNI.
 * C++, .NET, and Java nodes can join the same cluster, use the same caches, and interoperate using common binary protocol.
 * Java compute jobs can execute on any node (Java, .NET, C++).
 
 
-### GridGain C++ thin client
+### Thin client
 * Gridgain client simply establishes a socket connection to an individual GridGain node, and perform all operations through that node.
 * Thin client does not start the JVM process.
 * Thin client does not become part of the cluster.
