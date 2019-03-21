@@ -73,6 +73,7 @@ import org.apache.ignite.internal.processors.cache.distributed.near.GridNearOpti
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccCoordinator;
 import org.apache.ignite.internal.processors.cache.mvcc.msg.MvccRecoveryFinishedMessage;
+import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
 import org.apache.ignite.internal.processors.cache.transactions.TxDeadlockDetection.TxDeadlockFuture;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.cluster.BaselineTopology;
@@ -2587,7 +2588,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             TransactionState txState = tx.state();
 
             if (txState == PREPARED)
-                cctx.tm().pendingTxsTracker().onTxPrepared(tx.nearXidVersion());
+                cctx.tm().pendingTxsTracker().onTxPrepared(tx.nearXidVersion(), (FileWALPointer)ptr);
             else if (txState == ROLLED_BACK)
                 cctx.tm().pendingTxsTracker().onTxRolledBack(tx.nearXidVersion());
             else
