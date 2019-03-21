@@ -15,6 +15,7 @@
  */
 package org.apache.ignite.internal.processors.cache.transactions;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -29,6 +30,7 @@ import org.apache.ignite.internal.GridKernalState;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
+import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
@@ -55,6 +57,9 @@ public class LocalPendingTransactionsTracker {
 
     /** Currently prepared transactions. Counters are incremented on prepare, decremented on commit/rollback. */
     private final ConcurrentHashMap<GridCacheVersion, Integer> preparedCommittedTxsCounters = new ConcurrentHashMap<>();
+
+    /** Minimum prepare markers for all currently prepared transactions. */
+    private final ConcurrentHashMap<GridCacheVersion, FileWALPointer> minPrepareMarkers = new ConcurrentHashMap<>();
 
     /**
      * Transactions that were transitioned to pending state since last {@link #startTrackingPrepared()} call.
@@ -270,6 +275,15 @@ public class LocalPendingTransactionsTracker {
     }
 
     /**
+     * Returns minimum WAL pointer to prepared marker of all currently prepared transactions.
+     */
+    public FileWALPointer minPreparedMarker() {
+        assert stateLock.writeLock().isHeldByCurrentThread();
+
+        return minPrepareMarkers.isEmpty() ? null : Collections.min(minPrepareMarkers.values());
+    }
+
+    /**
      * Starts tracking transactions that will form a set of transactions {@code P23}
      * that were prepared since phase {@code Cut2} to phase {@code Cut3}.
      */
@@ -383,8 +397,9 @@ public class LocalPendingTransactionsTracker {
 
     /**
      * @param nearXidVer Near xid version.
+     * @param prepareMarkerPtr Prepare marker WAL pointer.
      */
-    public void onTxPrepared(GridCacheVersion nearXidVer) {
+    public void onTxPrepared(GridCacheVersion nearXidVer, FileWALPointer prepareMarkerPtr) {
         if (!enabled)
             return;
 
@@ -392,6 +407,9 @@ public class LocalPendingTransactionsTracker {
 
         try {
             preparedCommittedTxsCounters.compute(nearXidVer, (key, value) -> value == null ? 1 : value + 1);
+
+            minPrepareMarkers.compute(nearXidVer, (key, value) -> value == null ?
+                prepareMarkerPtr : Collections.min(Arrays.asList(value, prepareMarkerPtr)));
 
             if (trackPrepared.get())
                 trackedPreparedTxs.add(nearXidVer);
@@ -424,6 +442,8 @@ public class LocalPendingTransactionsTracker {
             });
 
             if (newCntr == null) {
+                minPrepareMarkers.remove(nearXidVer);
+
                 currentlyCommittingTxs.remove(nearXidVer);
 
                 if (trackCommitted.get())
@@ -455,6 +475,8 @@ public class LocalPendingTransactionsTracker {
             });
 
             if (newCntr == null) {
+                minPrepareMarkers.remove(nearXidVer);
+
                 currentlyCommittingTxs.remove(nearXidVer);
 
                 checkTxFinishFutureDone(nearXidVer);

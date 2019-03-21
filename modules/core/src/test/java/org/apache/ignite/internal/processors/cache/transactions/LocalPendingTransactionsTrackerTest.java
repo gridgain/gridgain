@@ -30,6 +30,7 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
+import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
@@ -780,7 +781,7 @@ public class LocalPendingTransactionsTrackerTest {
      * @param txId Test transaction ID.
      */
     private void txPrepare(int txId) {
-        tracker.onTxPrepared(nearXidVersion(txId));
+        tracker.onTxPrepared(nearXidVersion(txId), new FileWALPointer(0L, 0, 0));
     }
 
     /**
