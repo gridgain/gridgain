@@ -266,6 +266,8 @@ class UUIDObject(StandardObject):
 
     UUID_BYTE_ORDER = (7, 6, 5, 4, 3, 2, 1, 0, 15, 14, 13, 12, 11, 10, 9, 8)
 
+    UUID_BYTE_ORDER = (7, 6, 5, 4, 3, 2, 1, 0, 15, 14, 13, 12, 11, 10, 9, 8)
+
     @classmethod
     def build_c_type(cls):
         if cls._object_c_type is None:
