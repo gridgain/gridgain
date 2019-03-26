@@ -176,7 +176,7 @@ final class GridUriDeploymentJarVerifier {
 
             Manifest manifest = jin.getManifest();
 
-            // Manifest must be included in signed GAR file.
+            // Manifest must be included into a signed package.
             if (manifest == null)
                 return pubKey == null;
 
@@ -235,7 +235,7 @@ final class GridUriDeploymentJarVerifier {
 
             Manifest manifest = jarFile.getManifest();
 
-            // Manifest must be included in signed GAR file.
+            // Manifest must be included into a signed package.
             if (manifest == null)
                 return pubKey == null;
 
