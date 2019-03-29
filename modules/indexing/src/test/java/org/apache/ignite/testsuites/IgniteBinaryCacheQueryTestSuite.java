@@ -216,6 +216,7 @@ import org.apache.ignite.internal.processors.query.SqlSystemViewsSelfTest;
 import org.apache.ignite.internal.processors.query.h2.DmlStatementsProcessorTest;
 import org.apache.ignite.internal.processors.query.h2.GridH2IndexingInMemSelfTest;
 import org.apache.ignite.internal.processors.query.h2.GridH2IndexingOffheapSelfTest;
+import org.apache.ignite.internal.processors.query.h2.GridIndexFullRebuildTest;
 import org.apache.ignite.internal.processors.query.h2.GridIndexRebuildSelfTest;
 import org.apache.ignite.internal.processors.query.h2.H2ResultSetIteratorNullifyOnEndSelfTest;
 import org.apache.ignite.internal.processors.query.h2.H2StatementCacheSelfTest;
@@ -493,6 +494,7 @@ public class IgniteBinaryCacheQueryTestSuite extends TestSuite {
         suite.addTest(new JUnit4TestAdapter(SqlSystemViewsSelfTest.class));
 
         suite.addTest(new JUnit4TestAdapter(GridIndexRebuildSelfTest.class));
+        suite.addTest(new JUnit4TestAdapter(GridIndexFullRebuildTest.class));
 
         suite.addTest(new JUnit4TestAdapter(SqlTransactionCommandsWithMvccDisabledSelfTest.class));
 
