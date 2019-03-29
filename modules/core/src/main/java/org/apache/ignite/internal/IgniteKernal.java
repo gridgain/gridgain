@@ -930,7 +930,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 plugins,
                 MarshallerUtils.classNameFilter(this.getClass().getClassLoader()),
                 workerRegistry,
-                hnd
+                hnd,
+                longJVMPauseDetector
             );
 
             cfg.getMarshaller().setContext(ctx.marshallerContext());
