@@ -17,7 +17,7 @@ from collections import OrderedDict
 import ctypes
 import decimal
 from datetime import date, datetime, timedelta
-from typing import Any, Tuple
+from typing import Any, Tuple, Union
 import uuid
 
 import attr
@@ -206,7 +206,9 @@ class Struct:
 
         return data_class, buffer
 
-    def to_python(self, ctype_object, *args, **kwargs) -> Any:
+    def to_python(
+        self, ctype_object, *args, **kwargs
+    ) -> Union[dict, OrderedDict]:
         result = self.dict_type()
         for name, c_type in self.fields:
             result[name] = c_type.to_python(

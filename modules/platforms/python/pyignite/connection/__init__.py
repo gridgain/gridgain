@@ -19,14 +19,13 @@ This module contains `Connection` class, that wraps TCP socket handling,
 as well as Ignite protocol handshaking.
 """
 
+from collections import OrderedDict
 import socket
+from typing import Union
 
 from pyignite.constants import *
-from pyignite.exceptions import (
-    HandshakeError, ParameterError, ReconnectError, SocketError,
-)
+from pyignite.exceptions import HandshakeError, ParameterError, SocketError
 
-from pyignite.utils import is_iterable
 from .handshake import HandshakeRequest, read_response
 from .ssl import wrap
 
@@ -46,18 +45,18 @@ class Connection:
     """
 
     _socket = None
-    nodes = None
+    client = None
     host = None
     port = None
     timeout = None
     prefetch = None
     username = None
     password = None
+    ssl_params = {}
 
     @staticmethod
-    def _check_kwargs(kwargs):
+    def _check_ssl_params(params):
         expected_args = [
-            'timeout',
             'use_ssl',
             'ssl_version',
             'ssl_ciphers',
@@ -65,22 +64,24 @@ class Connection:
             'ssl_keyfile',
             'ssl_certfile',
             'ssl_ca_certfile',
-            'username',
-            'password',
         ]
-        for kw in kwargs:
-            if kw not in expected_args:
+        for param in params:
+            if param not in expected_args:
                 raise ParameterError((
                     'Unexpected parameter for connection initialization: `{}`'
-                ).format(kw))
+                ).format(param))
 
-    def __init__(self, prefetch: bytes=b'', **kwargs):
+    def __init__(
+        self, client: 'Client', prefetch: bytes = b'', timeout: int = None,
+        username: str = None, password: str = None, **ssl_params
+    ):
         """
         Initialize connection.
 
         For the use of the SSL-related parameters see
         https://docs.python.org/3/library/ssl.html#ssl-certificates.
 
+        :param client: Ignite client object,
         :param prefetch: (optional) initialize the read-ahead data buffer.
          Empty by default,
         :param timeout: (optional) sets timeout (in seconds) for each socket
@@ -113,14 +114,15 @@ class Connection:
          cluster,
         :param password: (optional) password to authenticate to Ignite cluster.
         """
+        self.client = client
         self.prefetch = prefetch
-        self._check_kwargs(kwargs)
-        self.timeout = kwargs.pop('timeout', None)
-        self.username = kwargs.pop('username', None)
-        self.password = kwargs.pop('password', None)
-        if all([self.username, self.password, 'use_ssl' not in kwargs]):
-            kwargs['use_ssl'] = True
-        self.init_kwargs = kwargs
+        self.timeout = timeout
+        self.username = username
+        self.password = password
+        self._check_ssl_params(ssl_params)
+        if all([self.username, self.password, 'use_ssl' not in ssl_params]):
+            ssl_params['use_ssl'] = True
+        self.ssl_params = ssl_params
 
     read_response = read_response
     _wrap = wrap
@@ -131,7 +133,7 @@ class Connection:
         Network socket.
         """
         if self._socket is None:
-            self._reconnect()
+            self.connect(self.host, self.port)
         return self._socket
 
     def __repr__(self) -> str:
@@ -140,10 +142,18 @@ class Connection:
         else:
             return '<not connected>'
 
-    def _connect(self, host: str, port: int):
+    def connect(
+        self, host: str = None, port: int = None
+    ) -> Union[dict, OrderedDict]:
         """
-        Actually connect socket.
+        Connect to the given server node.
+
+        :param host: Ignite server node's host name or IP,
+        :param port: Ignite server node's port number.
         """
+        host = host or IGNITE_DEFAULT_HOST
+        port = port or IGNITE_DEFAULT_PORT
+
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._socket.settimeout(self.timeout)
         self._socket = self._wrap(self.socket)
@@ -174,69 +184,36 @@ class Connection:
                 )
             raise HandshakeError(error_text)
         self.host, self.port = host, port
-
-    def connect(self, *args):
-        """
-        Connect to the server. Connection parameters may be either one node
-        (host and port), or list (or other iterable) of nodes.
-
-        :param host: Ignite server host,
-        :param port: Ignite server port,
-        :param nodes: iterable of (host, port) tuples.
-        """
-        self.nodes = iter([])
-        if len(args) == 0:
-            host, port = IGNITE_DEFAULT_HOST, IGNITE_DEFAULT_PORT
-        elif len(args) == 1 and is_iterable(args[0]):
-            self.nodes = iter(args[0])
-            host, port = next(self.nodes)
-        elif (
-            len(args) == 2
-            and isinstance(args[0], str)
-            and isinstance(args[1], int)
-        ):
-            host, port = args
-        else:
-            raise ConnectionError('Connection parameters are not valid.')
-
-        self._connect(host, port)
-
-    def _reconnect(self):
-        """
-        Restore the connection using the next node in `nodes` iterable.
-        """
-        for host, port in self.nodes:
-            try:
-                self._connect(host, port)
-                return
-            except OSError:
-                pass
-        self.host = self.port = self.nodes = None
-        # exception chaining gives a misleading traceback here
-        raise ReconnectError('Can not reconnect: out of nodes') from None
+        return hs_response
 
     def _transfer_params(self, to: 'Connection'):
         """
         Transfer non-SSL parameters to target connection object.
 
-        :param target: connection object to transfer parameters to.
+        :param to: connection object to transfer parameters to.
         """
         to.username = self.username
         to.password = self.password
-        to.nodes = self.nodes
+        to.client = self.client
 
-    def clone(self, prefetch: bytes=b'') -> 'Connection':
+    def clone(self, prefetch: bytes = b'') -> 'Connection':
         """
         Clones this connection in its current state.
 
         :return: `Connection` object.
         """
-        clone = self.__class__(**self.init_kwargs)
+        clone = self.__class__(self.client, **self.ssl_params)
         self._transfer_params(to=clone)
         if self.port and self.host:
-            clone._connect(self.host, self.port)
+            clone.connect(self.host, self.port)
         clone.prefetch = prefetch
         return clone
+
+    def query_binary_type(self, *args, **kwargs):
+        return self.client.query_binary_type(*args, **kwargs)
+
+    def register_binary_type(self, *args, **kwargs):
+        return self.client.register_binary_type(*args, **kwargs)
 
     def send(self, data: bytes, flags=None):
         """
@@ -253,7 +230,10 @@ class Connection:
 
         while total_bytes_sent < len(data):
             try:
-                bytes_sent = self.socket.send(data[total_bytes_sent:], **kwargs)
+                bytes_sent = self.socket.send(
+                    data[total_bytes_sent:],
+                    **kwargs
+                )
             except OSError:
                 self._socket = self.host = self.port = None
                 raise

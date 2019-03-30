@@ -52,14 +52,14 @@ from .constants import *
 from .datatypes import BinaryObject
 from .datatypes.internal import tc_map
 from .exceptions import BinaryTypeError, CacheError, SQLError
-from .utils import entity_id, schema_id, status_to_exception
+from .utils import entity_id, schema_id, status_to_exception, is_iterable
 from .binary import GenericObjectMeta
 
 
 __all__ = ['Client']
 
 
-class Client(Connection):
+class Client:
     """
     This is a main `pyignite` class, that is build upon the
     :class:`~pyignite.connection.Connection`. In addition to the attributes,
@@ -73,13 +73,10 @@ class Client(Connection):
 
     _registry = defaultdict(dict)
     _compact_footer = None
+    _connection_args = None
+    _nodes = None
 
-    def _transfer_params(self, to: 'Client'):
-        super()._transfer_params(to)
-        to._registry = self._registry
-        to._compact_footer = self._compact_footer
-
-    def __init__(self, compact_footer: bool=None, *args, **kwargs):
+    def __init__(self, compact_footer: bool = None, **kwargs):
         """
         Initialize client.
 
@@ -90,7 +87,72 @@ class Client(Connection):
          https://apacheignite.readme.io/docs/binary-client-protocol-data-format#section-schema
         """
         self._compact_footer = compact_footer
-        super().__init__(*args, **kwargs)
+        self._connection_args = kwargs
+        self._nodes = OrderedDict()
+
+    def _add_node(self, host: str, port: int) -> 'UUID':
+        """
+        Opens a connection to Ignite server and adds it to the nodes'
+        collection (connection pool).
+        """
+        conn = Connection(self, **self._connection_args)
+        hs_response = conn.connect(host, port)
+        node_uuid = hs_response['node_uuid']
+        if node_uuid:
+            self._nodes[node_uuid] = conn
+        return node_uuid
+
+    def connect(self, *args):
+        """
+        Connect to Ignite cluster node(s).
+
+        :param args: (optional) host(s) and port(s) to connect to.
+        """
+        if len(args) == 0:
+            # no parameters − use default Ignite host and port
+            nodes = [(IGNITE_DEFAULT_HOST, IGNITE_DEFAULT_PORT)]
+        elif len(args) == 1 and is_iterable(args[0]):
+            # iterable of host-port pairs is given
+            nodes = args
+        elif (
+            len(args) == 2
+            and isinstance(args[0], str)
+            and isinstance(args[1], int)
+        ):
+            # host and port are given
+            nodes = [args]
+        else:
+            raise ConnectionError('Connection parameters are not valid.')
+
+        # TODO: open first node in foregroung, others − in background
+        for host, port in nodes:
+            self._add_node(host, port)
+
+    def close(self):
+        """
+        Close all connections to the server and clean the connection pool.
+        """
+        for conn in self._nodes.values():
+            conn.close()
+        self._nodes.clear()
+
+    @property
+    def _first_node(self) -> 'Connection':
+        return next(iter(self._nodes.values()))
+
+    @property
+    def prefetch(self) -> bytes:
+        return self._first_node.prefetch
+
+    @prefetch.setter
+    def prefetch(self, buffer: bytes):
+        self._first_node.prefetch = buffer
+
+    def send(self, *args, **kwargs):
+        self._first_node.send(*args, **kwargs)
+
+    def recv(self, *args, **kwargs) -> bytes:
+        return self._first_node.recv(*args, **kwargs)
 
     @status_to_exception(BinaryTypeError)
     def get_binary_type(self, binary_type: Union[str, int]) -> dict:
@@ -178,8 +240,8 @@ class Client(Connection):
 
     @status_to_exception(BinaryTypeError)
     def put_binary_type(
-        self, type_name: str, affinity_key_field: str=None,
-        is_enum=False, schema: dict=None
+        self, type_name: str, affinity_key_field: str = None,
+        is_enum=False, schema: dict = None
     ):
         """
         Registers binary type information in cluster. Do not update binary
@@ -201,7 +263,7 @@ class Client(Connection):
         )
 
     @staticmethod
-    def _create_dataclass(type_name: str, schema: OrderedDict=None) -> Type:
+    def _create_dataclass(type_name: str, schema: OrderedDict = None) -> Type:
         """
         Creates default (generic) class for Ignite Complex object.
 
@@ -230,7 +292,7 @@ class Client(Connection):
                     self._registry[type_id][schema_id(schema)] = data_class
 
     def register_binary_type(
-        self, data_class: Type, affinity_key_field: str=None,
+        self, data_class: Type, affinity_key_field: str = None,
     ):
         """
         Register the given class as a representation of a certain Complex
@@ -250,8 +312,8 @@ class Client(Connection):
         self._registry[data_class.type_id][data_class.schema_id] = data_class
 
     def query_binary_type(
-        self, binary_type: Union[int, str], schema: Union[int, dict]=None,
-        sync: bool=True
+        self, binary_type: Union[int, str], schema: Union[int, dict] = None,
+        sync: bool = True
     ):
         """
         Queries the registry of Complex object classes.
@@ -291,7 +353,7 @@ class Client(Connection):
          :ref:`cache creation example <sql_cache_create>`,
         :return: :class:`~pyignite.cache.Cache` object.
         """
-        return Cache(self, settings)
+        return Cache(self._first_node, settings)
 
     def get_or_create_cache(self, settings: Union[str, dict]) -> 'Cache':
         """
@@ -303,7 +365,7 @@ class Client(Connection):
          :ref:`cache creation example <sql_cache_create>`,
         :return: :class:`~pyignite.cache.Cache` object.
         """
-        return Cache(self, settings, with_get=True)
+        return Cache(self._first_node, settings, with_get=True)
 
     def get_cache(self, settings: Union[str, dict]) -> 'Cache':
         """
@@ -315,7 +377,7 @@ class Client(Connection):
          property is allowed),
         :return: :class:`~pyignite.cache.Cache` object.
         """
-        return Cache(self, settings, get_only=True)
+        return Cache(self._first_node, settings, get_only=True)
 
     @status_to_exception(CacheError)
     def get_cache_names(self) -> list:
@@ -327,13 +389,13 @@ class Client(Connection):
         return cache_get_names(self)
 
     def sql(
-        self, query_str: str, page_size: int=1, query_args: Iterable=None,
-        schema: Union[int, str]='PUBLIC',
-        statement_type: int=0, distributed_joins: bool=False,
-        local: bool=False, replicated_only: bool=False,
-        enforce_join_order: bool=False, collocated: bool=False,
-        lazy: bool=False, include_field_names: bool=False,
-        max_rows: int=-1, timeout: int=0,
+        self, query_str: str, page_size: int = 1, query_args: Iterable = None,
+        schema: Union[int, str] = 'PUBLIC',
+        statement_type: int = 0, distributed_joins: bool = False,
+        local: bool = False, replicated_only: bool = False,
+        enforce_join_order: bool = False, collocated: bool = False,
+        lazy: bool = False, include_field_names: bool = False,
+        max_rows: int = -1, timeout: int = 0,
     ):
         """
         Runs an SQL query and returns its result.
