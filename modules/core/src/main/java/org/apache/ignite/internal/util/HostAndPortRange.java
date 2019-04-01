@@ -73,6 +73,9 @@ public class HostAndPortRange implements Serializable {
         int portFrom;
         int portTo;
 
+        if (F.isEmpty(addrStr))
+            throw createParseError(addrStr, errMsgPrefix, "Address is empty");
+
         final int colIdx = addrStr.indexOf(':');
 
         if (colIdx > 0) {
