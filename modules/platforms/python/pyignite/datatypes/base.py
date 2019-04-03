@@ -21,4 +21,14 @@ class IgniteDataType(ABC):
     This is a base class for all Ignite data types, a.k.a. parser/constructor
     classes, both object and payload varieties.
     """
-    pass
+    @property
+    def type_name(self) -> str:
+        """ Binary object type name. """
+        return self._type_name
+
+    @property
+    def type_id(self) -> int:
+        """ Binary object type ID. """
+        from pyignite.utils import entity_id
+
+        return entity_id(self._type_name)

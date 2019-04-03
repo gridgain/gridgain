@@ -41,7 +41,8 @@ the local (class-wise) registry for Ignite Complex objects.
 """
 
 from collections import defaultdict, OrderedDict
-from typing import Iterable, Type, Union
+import random
+from typing import Iterable, Optional, Type, Union
 
 from .api.binary import get_binary_type, put_binary_type
 from .api.cache_config import cache_get_names
@@ -137,22 +138,22 @@ class Client:
         self._nodes.clear()
 
     @property
-    def _first_node(self) -> 'Connection':
-        return next(iter(self._nodes.values()))
+    def random_node(self) -> Connection:
+        return random.choice(list(self._nodes.values()))
 
-    @property
-    def prefetch(self) -> bytes:
-        return self._first_node.prefetch
+    def best_node(self, key_type_id: Optional[int] = None) -> Connection:
+        """
+        Apache Ignite tries to store the values for the same key type on the
+        certain node of the cluster. This methon tries to determine the node,
+        that holds the data of the given key, and returns the connection
+        to that node. If not possible, comes up with the random connection.
 
-    @prefetch.setter
-    def prefetch(self, buffer: bytes):
-        self._first_node.prefetch = buffer
+        :param key_type_id: (optional) the key type ID,
+        :return: the connection to the Ignite node.
+        """
+        # TODO: long and boring turbulations
 
-    def send(self, *args, **kwargs):
-        self._first_node.send(*args, **kwargs)
-
-    def recv(self, *args, **kwargs) -> bytes:
-        return self._first_node.recv(*args, **kwargs)
+        return self.random_node
 
     @status_to_exception(BinaryTypeError)
     def get_binary_type(self, binary_type: Union[str, int]) -> dict:
@@ -197,7 +198,7 @@ class Client:
                 )
             return converted_schema
 
-        result = get_binary_type(self, binary_type)
+        result = get_binary_type(self.best_node(), binary_type)
         if result.status != 0 or not result.value['type_exists']:
             return result
 
@@ -259,7 +260,7 @@ class Client:
          Binary type with no fields is OK.
         """
         return put_binary_type(
-            self, type_name, affinity_key_field, is_enum, schema
+            self.best_node(), type_name, affinity_key_field, is_enum, schema
         )
 
     @staticmethod
@@ -353,7 +354,7 @@ class Client:
          :ref:`cache creation example <sql_cache_create>`,
         :return: :class:`~pyignite.cache.Cache` object.
         """
-        return Cache(self._first_node, settings)
+        return Cache(self, settings)
 
     def get_or_create_cache(self, settings: Union[str, dict]) -> 'Cache':
         """
@@ -365,7 +366,7 @@ class Client:
          :ref:`cache creation example <sql_cache_create>`,
         :return: :class:`~pyignite.cache.Cache` object.
         """
-        return Cache(self._first_node, settings, with_get=True)
+        return Cache(self, settings, with_get=True)
 
     def get_cache(self, settings: Union[str, dict]) -> 'Cache':
         """
@@ -377,7 +378,7 @@ class Client:
          property is allowed),
         :return: :class:`~pyignite.cache.Cache` object.
         """
-        return Cache(self._first_node, settings, get_only=True)
+        return Cache(self, settings, get_only=True)
 
     @status_to_exception(CacheError)
     def get_cache_names(self) -> list:
@@ -446,7 +447,7 @@ class Client:
 
             while more:
                 inner_result = sql_fields_cursor_get_page(
-                    self, cursor, field_count
+                    self.best_node(), cursor, field_count
                 )
                 if inner_result.status != 0:
                     raise SQLError(result.message)
@@ -456,7 +457,7 @@ class Client:
 
         schema = self.get_or_create_cache(schema)
         result = sql_fields(
-            self, schema.cache_id, query_str,
+            self.best_node(), schema.cache_id, query_str,
             page_size, query_args, schema.name,
             statement_type, distributed_joins, local, replicated_only,
             enforce_join_order, collocated, lazy, include_field_names,

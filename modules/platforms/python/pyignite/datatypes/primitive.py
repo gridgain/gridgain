@@ -56,26 +56,32 @@ class Primitive(IgniteDataType):
 
 class Byte(Primitive):
     c_type = ctypes.c_byte
+    _type_name = 'java.lang.Byte'
 
 
 class Short(Primitive):
     c_type = ctypes.c_short
+    _type_name = 'java.lang.Short'
 
 
 class Int(Primitive):
     c_type = ctypes.c_int
+    _type_name = 'java.lang.Integer'
 
 
 class Long(Primitive):
     c_type = ctypes.c_longlong
+    _type_name = 'java.lang.Long'
 
 
 class Float(Primitive):
     c_type = ctypes.c_float
+    _type_name = 'java.lang.Float'
 
 
 class Double(Primitive):
     c_type = ctypes.c_double
+    _type_name = 'java.lang.Double'
 
 
 class Char(Primitive):
@@ -104,3 +110,4 @@ class Char(Primitive):
 
 class Bool(Primitive):
     c_type = ctypes.c_bool
+    _type_name = 'java.lang.Boolean'

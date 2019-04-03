@@ -84,17 +84,20 @@ def client(
     )
     client.connect(ignite_host, ignite_port)
     yield client
-    for cache_name in cache_get_names(client).value:
-        cache_destroy(client, cache_name)
+    conn = client.best_node()
+    for cache_name in cache_get_names(conn).value:
+        cache_destroy(conn, cache_name)
     client.close()
 
 
 @pytest.fixture
 def cache(client):
     cache_name = 'my_bucket'
-    cache_create(client, cache_name)
+    conn = client.best_node()
+
+    cache_create(conn, cache_name)
     yield cache_name
-    cache_destroy(client, cache_name)
+    cache_destroy(conn, cache_name)
 
 
 def pytest_addoption(parser):

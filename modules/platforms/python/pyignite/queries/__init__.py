@@ -299,8 +299,8 @@ class Query:
         return header.query_id, bytes(header) + buffer
 
     def perform(
-        self, conn: 'Connection', query_params: dict=None,
-        response_config: list=None,
+        self, conn: 'Connection', query_params: dict = None,
+        response_config: list = None,
     ) -> APIResult:
         """
         Perform query and process result.

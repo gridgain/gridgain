@@ -16,6 +16,7 @@
 from typing import Any, Iterable, Optional, Union
 
 from .datatypes import prop_codes
+from .datatypes.internal import AnyDataObject
 from .exceptions import (
     CacheCreationError, CacheError, ParameterError, SQLError,
 )
@@ -89,8 +90,8 @@ class Cache:
             raise ParameterError('Only cache name allowed as a parameter')
 
     def __init__(
-        self, client: 'Client', settings: Union[str, dict]=None,
-        with_get: bool=False, get_only: bool=False,
+        self, client: 'Client', settings: Union[str, dict] = None,
+        with_get: bool = False, get_only: bool = False,
     ):
         """
         Initialize cache object.
@@ -113,7 +114,7 @@ class Cache:
 
         if not get_only:
             func = CACHE_CREATE_FUNCS[type(settings) is dict][with_get]
-            result = func(client, settings)
+            result = func(client.random_node, settings)
             if result.status != 0:
                 raise CacheCreationError(result.message)
 
@@ -130,7 +131,10 @@ class Cache:
         :return: dict of cache properties and their values.
         """
         if self._settings is None:
-            config_result = cache_get_configuration(self._client, self._cache_id)
+            config_result = cache_get_configuration(
+                self._client.best_node(),
+                self._cache_id
+            )
             if config_result.status == 0:
                 self._settings = config_result.value
             else:
@@ -185,7 +189,7 @@ class Cache:
         """
         Destroys cache with a given name.
         """
-        return cache_destroy(self._client, self._cache_id)
+        return cache_destroy(self._client.best_node(), self._cache_id)
 
     @status_to_exception(CacheError)
     def get(self, key, key_hint: object=None) -> Any:
@@ -197,12 +201,23 @@ class Cache:
          should be converted,
         :return: value retrieved.
         """
-        result = cache_get(self._client, self._cache_id, key, key_hint=key_hint)
+        if key_hint is None:
+            key_hint = AnyDataObject.map_python_type(key)
+        type_id = key_hint.type_id
+
+        result = cache_get(
+            self._client.best_node(type_id),
+            self._cache_id,
+            key,
+            key_hint=key_hint
+        )
         result.value = self._process_binary(result.value)
         return result
 
     @status_to_exception(CacheError)
-    def put(self, key, value, key_hint: object=None, value_hint: object=None):
+    def put(
+        self, key, value, key_hint: object = None, value_hint: object = None
+    ):
         """
         Puts a value with a given key to cache (overwriting existing value
         if any).
@@ -214,8 +229,13 @@ class Cache:
         :param value_hint: (optional) Ignite data type, for which the given
          value should be converted.
         """
+        if key_hint is None:
+            key_hint = AnyDataObject.map_python_type(key)
+        type_id = key_hint.type_id
+
         return cache_put(
-            self._client, self._cache_id, key, value,
+            self._client.best_node(type_id),
+            self._cache_id, key, value,
             key_hint=key_hint, value_hint=value_hint
         )
 
@@ -227,7 +247,7 @@ class Cache:
         :param keys: list of keys or tuples of (key, key_hint),
         :return: a dict of key-value pairs.
         """
-        result = cache_get_all(self._client, self._cache_id, keys)
+        result = cache_get_all(self._client.best_node(), self._cache_id, keys)
         if result.value:
             for key, value in result.value.items():
                 result.value[key] = self._process_binary(value)
@@ -243,11 +263,11 @@ class Cache:
          to save. Each key or value can be an item of representable
          Python type or a tuple of (item, hint),
         """
-        return cache_put_all(self._client, self._cache_id, pairs)
+        return cache_put_all(self._client.best_node(), self._cache_id, pairs)
 
     @status_to_exception(CacheError)
     def replace(
-        self, key, value, key_hint: object=None, value_hint: object=None
+        self, key, value, key_hint: object = None, value_hint: object = None
     ):
         """
         Puts a value with a given key to cache only if the key already exist.
@@ -259,28 +279,34 @@ class Cache:
         :param value_hint: (optional) Ignite data type, for which the given
          value should be converted.
         """
+        if key_hint is None:
+            key_hint = AnyDataObject.map_python_type(key)
+        type_id = key_hint.type_id
+
         result = cache_replace(
-            self._client, self._cache_id, key, value,
+            self._client.best_node(type_id),
+            self._cache_id, key, value,
             key_hint=key_hint, value_hint=value_hint
         )
         result.value = self._process_binary(result.value)
         return result
 
     @status_to_exception(CacheError)
-    def clear(self, keys: Optional[list]=None):
+    def clear(self, keys: Optional[list] = None):
         """
         Clears the cache without notifying listeners or cache writers.
 
         :param keys: (optional) list of cache keys or (key, key type
          hint) tuples to clear (default: clear all).
         """
+        conn = self._client.best_node()
         if keys:
-            return cache_clear_keys(self._client, self._cache_id, keys)
+            return cache_clear_keys(conn, self._cache_id, keys)
         else:
-            return cache_clear(self._client, self._cache_id)
+            return cache_clear(conn, self._cache_id)
 
     @status_to_exception(CacheError)
-    def clear_key(self, key, key_hint: object=None):
+    def clear_key(self, key, key_hint: object = None):
         """
         Clears the cache key without notifying listeners or cache writers.
 
@@ -288,8 +314,15 @@ class Cache:
         :param key_hint: (optional) Ignite data type, for which the given key
          should be converted,
         """
+        if key_hint is None:
+            key_hint = AnyDataObject.map_python_type(key)
+        type_id = key_hint.type_id
+
         return cache_clear_key(
-            self._client, self._cache_id, key, key_hint=key_hint
+            self._client.best_node(type_id),
+            self._cache_id,
+            key,
+            key_hint=key_hint
         )
 
     @status_to_exception(CacheError)
@@ -302,8 +335,15 @@ class Cache:
          should be converted,
         :return: boolean `True` when key is present, `False` otherwise.
         """
+        if key_hint is None:
+            key_hint = AnyDataObject.map_python_type(key)
+        type_id = key_hint.type_id
+
         return cache_contains_key(
-            self._client, self._cache_id, key, key_hint=key_hint
+            self._client.best_node(type_id),
+            self._cache_id,
+            key,
+            key_hint=key_hint
         )
 
     @status_to_exception(CacheError)
@@ -330,8 +370,15 @@ class Cache:
          value should be converted.
         :return: old value or None.
         """
+        if key_hint is None:
+            key_hint = AnyDataObject.map_python_type(key)
+        type_id = key_hint.type_id
+
         result = cache_get_and_put(
-            self._client, self._cache_id, key, value, key_hint, value_hint
+            self._client.best_node(type_id),
+            self._cache_id,
+            key, value,
+            key_hint, value_hint
         )
         result.value = self._process_binary(result.value)
         return result
@@ -352,8 +399,15 @@ class Cache:
          value should be converted,
         :return: old value or None.
         """
+        if key_hint is None:
+            key_hint = AnyDataObject.map_python_type(key)
+        type_id = key_hint.type_id
+
         result = cache_get_and_put_if_absent(
-            self._client, self._cache_id, key, value, key_hint, value_hint
+            self._client.best_node(type_id),
+            self._cache_id,
+            key, value,
+            key_hint, value_hint
         )
         result.value = self._process_binary(result.value)
         return result
@@ -371,8 +425,15 @@ class Cache:
         :param value_hint: (optional) Ignite data type, for which the given
          value should be converted.
         """
+        if key_hint is None:
+            key_hint = AnyDataObject.map_python_type(key)
+        type_id = key_hint.type_id
+
         return cache_put_if_absent(
-            self._client, self._cache_id, key, value, key_hint, value_hint
+            self._client.best_node(type_id),
+            self._cache_id,
+            key, value,
+            key_hint, value_hint
         )
 
     @status_to_exception(CacheError)
@@ -385,8 +446,15 @@ class Cache:
          should be converted,
         :return: old value or None.
         """
+        if key_hint is None:
+            key_hint = AnyDataObject.map_python_type(key)
+        type_id = key_hint.type_id
+
         result = cache_get_and_remove(
-            self._client, self._cache_id, key, key_hint
+            self._client.best_node(type_id),
+            self._cache_id,
+            key,
+            key_hint
         )
         result.value = self._process_binary(result.value)
         return result
@@ -408,8 +476,15 @@ class Cache:
          value should be converted.
         :return: old value or None.
         """
+        if key_hint is None:
+            key_hint = AnyDataObject.map_python_type(key)
+        type_id = key_hint.type_id
+
         result = cache_get_and_replace(
-            self._client, self._cache_id, key, value, key_hint, value_hint
+            self._client.best_node(type_id),
+            self._cache_id,
+            key, value,
+            key_hint, value_hint
         )
         result.value = self._process_binary(result.value)
         return result
@@ -423,7 +498,13 @@ class Cache:
         :param key_hint: (optional) Ignite data type, for which the given key
          should be converted,
         """
-        return cache_remove_key(self._client, self._cache_id, key, key_hint)
+        if key_hint is None:
+            key_hint = AnyDataObject.map_python_type(key)
+        type_id = key_hint.type_id
+
+        return cache_remove_key(
+            self._client.best_node(type_id), self._cache_id, key, key_hint
+        )
 
     @status_to_exception(CacheError)
     def remove_keys(self, keys: list):
@@ -433,14 +514,16 @@ class Cache:
 
         :param keys: list of keys or tuples of (key, key_hint) to remove.
         """
-        return cache_remove_keys(self._client, self._cache_id, keys)
+        return cache_remove_keys(
+            self._client.best_node(), self._cache_id, keys
+        )
 
     @status_to_exception(CacheError)
     def remove_all(self):
         """
         Removes all cache entries, notifying listeners and cache writers.
         """
-        return cache_remove_all(self._client, self._cache_id)
+        return cache_remove_all(self._client.best_node(), self._cache_id)
 
     @status_to_exception(CacheError)
     def remove_if_equals(self, key, sample, key_hint=None, sample_hint=None):
@@ -455,8 +538,15 @@ class Cache:
         :param sample_hint: (optional) Ignite data type, for whic
          the given sample should be converted.
         """
+        if key_hint is None:
+            key_hint = AnyDataObject.map_python_type(key)
+        type_id = key_hint.type_id
+
         return cache_remove_if_equals(
-            self._client, self._cache_id, key, sample, key_hint, sample_hint
+            self._client.best_node(type_id),
+            self._cache_id,
+            key, sample,
+            key_hint, sample_hint
         )
 
     @status_to_exception(CacheError)
@@ -479,8 +569,14 @@ class Cache:
          value should be converted,
         :return: boolean `True` when key is present, `False` otherwise.
         """
+        if key_hint is None:
+            key_hint = AnyDataObject.map_python_type(key)
+        type_id = key_hint.type_id
+
         result = cache_replace_if_equals(
-            self._client, self._cache_id, key, sample, value,
+            self._client.best_node(type_id),
+            self._cache_id,
+            key, sample, value,
             key_hint, sample_hint, value_hint
         )
         result.value = self._process_binary(result.value)
@@ -496,9 +592,13 @@ class Cache:
          (PeekModes.BACKUP). Defaults to all cache partitions (PeekModes.ALL),
         :return: integer number of cache entries.
         """
-        return cache_get_size(self._client, self._cache_id, peek_modes)
+        return cache_get_size(
+            self._client.best_node(), self._cache_id, peek_modes
+        )
 
-    def scan(self, page_size: int=1, partitions: int=-1, local: bool=False):
+    def scan(
+        self, page_size: int = 1, partitions: int = -1, local: bool = False
+    ):
         """
         Returns all key-value pairs from the cache, similar to `get_all`, but
         with internal pagination, which is slower, but safer.
@@ -511,7 +611,13 @@ class Cache:
          on local node only. Defaults to False,
         :return: generator with key-value pairs.
         """
-        result = scan(self._client, self._cache_id, page_size, partitions, local)
+        result = scan(
+            self._client.best_node(),
+            self._cache_id,
+            page_size,
+            partitions,
+            local
+        )
         if result.status != 0:
             raise CacheError(result.message)
 
@@ -522,7 +628,7 @@ class Cache:
             yield k, v
 
         while result.value['more']:
-            result = scan_cursor_get_page(self._client, cursor)
+            result = scan_cursor_get_page(self._client.best_node(), cursor)
             if result.status != 0:
                 raise CacheError(result.message)
 
@@ -532,9 +638,9 @@ class Cache:
                 yield k, v
 
     def select_row(
-        self, query_str: str, page_size: int=1,
-        query_args: Optional[list]=None, distributed_joins: bool=False,
-        replicated_only: bool=False, local: bool=False, timeout: int=0
+        self, query_str: str, page_size: int = 1,
+        query_args: Optional[list] = None, distributed_joins: bool = False,
+        replicated_only: bool = False, local: bool = False, timeout: int = 0
     ):
         """
         Executes a simplified SQL SELECT query over data stored in the cache.
@@ -563,7 +669,10 @@ class Cache:
                 yield k, v
 
             while more:
-                inner_result = sql_cursor_get_page(self._client, cursor)
+                inner_result = sql_cursor_get_page(
+                    self._client.best_node(),
+                    cursor
+                )
                 if result.status != 0:
                     raise SQLError(result.message)
                 more = inner_result.value['more']
@@ -578,7 +687,7 @@ class Cache:
         if not type_name:
             raise SQLError('Value type is unknown')
         result = sql(
-            self._client,
+            self._client.best_node(),
             self._cache_id,
             type_name,
             query_str,

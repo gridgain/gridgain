@@ -71,7 +71,7 @@ def int_overflow(value: int) -> int:
     return ((value ^ 0x80000000) & 0xffffffff) - 0x80000000
 
 
-def unwrap_binary(client: 'Client', wrapped: tuple):
+def unwrap_binary(client: 'Client', wrapped: tuple) -> object:
     """
     Unwrap wrapped BinaryObject and convert it to Python data.
 
@@ -82,13 +82,15 @@ def unwrap_binary(client: 'Client', wrapped: tuple):
     from pyignite.datatypes.complex import BinaryObject
 
     blob, offset = wrapped
-    client_clone = client.clone(prefetch=blob)
-    client_clone.pos = offset
-    data_class, data_bytes = BinaryObject.parse(client_clone)
-    return BinaryObject.to_python(
+    conn_clone = client.best_node().clone(prefetch=blob)
+    conn_clone.pos = offset
+    data_class, data_bytes = BinaryObject.parse(conn_clone)
+    result = BinaryObject.to_python(
         data_class.from_buffer_copy(data_bytes),
         client,
     )
+    conn_clone.close()
+    return result
 
 
 def hashcode(string: Union[str, bytes]) -> int:

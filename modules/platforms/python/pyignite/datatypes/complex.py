@@ -448,6 +448,7 @@ class BinaryObject(IgniteDataType):
             A nice hack. Extracts the nearest `Client` instance from the
             call stack.
             """
+            from pyignite import Client
             from pyignite.connection import Connection
 
             frame = None
@@ -457,8 +458,10 @@ class BinaryObject(IgniteDataType):
                     code = frame.f_code
                     for varname in code.co_varnames:
                         suspect = frame.f_locals[varname]
-                        if isinstance(suspect, Connection):
+                        if isinstance(suspect, Client):
                             return suspect
+                        if isinstance(suspect, Connection):
+                            return suspect.client
             finally:
                 del frame
 
@@ -468,7 +471,7 @@ class BinaryObject(IgniteDataType):
             # if no client can be found, the class of the `value` is discarded
             # and the new dataclass is automatically registered later on
             client.register_binary_type(value.__class__)
-            compact_footer = client.client.compact_footer
+            compact_footer = client.compact_footer
         else:
             raise Warning(
                 'Can not register binary type {}'.format(value.type_name)
