@@ -18,7 +18,7 @@ from pyignite.api import cache_create, cache_get_names
 
 def test_get_names(client):
 
-    conn = client.best_node()
+    conn = client.get_best_node()
 
     bucket_names = ['my_bucket', 'my_bucket_2', 'my_bucket_3']
     for name in bucket_names:

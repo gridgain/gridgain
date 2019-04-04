@@ -209,12 +209,6 @@ class Connection:
         clone.prefetch = prefetch
         return clone
 
-    def query_binary_type(self, *args, **kwargs):
-        return self.client.query_binary_type(*args, **kwargs)
-
-    def register_binary_type(self, *args, **kwargs):
-        return self.client.register_binary_type(*args, **kwargs)
-
     def send(self, data: bytes, flags=None):
         """
         Send data down the socket.

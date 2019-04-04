@@ -373,11 +373,12 @@ class BinaryObject(IgniteDataType):
         )
 
     @staticmethod
-    def get_dataclass(client: 'Client', header) -> OrderedDict:
+    def get_dataclass(conn: 'Connection', header) -> OrderedDict:
         # get field names from outer space
-        temp_conn = client.clone()
-        result = temp_conn.query_binary_type(header.type_id, header.schema_id)
-        temp_conn.close()
+        result = conn.client.query_binary_type(
+            header.type_id,
+            header.schema_id
+        )
         if not result:
             raise ParseError('Binary type is not registered')
         return result

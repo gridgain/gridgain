@@ -141,7 +141,7 @@ class Client:
     def random_node(self) -> Connection:
         return random.choice(list(self._nodes.values()))
 
-    def best_node(self, key_type_id: Optional[int] = None) -> Connection:
+    def get_best_node(self, key_type_id: Optional[int] = None) -> Connection:
         """
         Apache Ignite tries to store the values for the same key type on the
         certain node of the cluster. This methon tries to determine the node,
@@ -198,7 +198,7 @@ class Client:
                 )
             return converted_schema
 
-        result = get_binary_type(self.best_node(), binary_type)
+        result = get_binary_type(self.get_best_node(), binary_type)
         if result.status != 0 or not result.value['type_exists']:
             return result
 
@@ -260,7 +260,7 @@ class Client:
          Binary type with no fields is OK.
         """
         return put_binary_type(
-            self.best_node(), type_name, affinity_key_field, is_enum, schema
+            self.get_best_node(), type_name, affinity_key_field, is_enum, schema
         )
 
     @staticmethod
@@ -387,7 +387,7 @@ class Client:
 
         :return: list of cache names.
         """
-        return cache_get_names(self)
+        return cache_get_names(self.get_best_node())
 
     def sql(
         self, query_str: str, page_size: int = 1, query_args: Iterable = None,
@@ -447,7 +447,7 @@ class Client:
 
             while more:
                 inner_result = sql_fields_cursor_get_page(
-                    self.best_node(), cursor, field_count
+                    self.get_best_node(), cursor, field_count
                 )
                 if inner_result.status != 0:
                     raise SQLError(result.message)
@@ -457,7 +457,7 @@ class Client:
 
         schema = self.get_or_create_cache(schema)
         result = sql_fields(
-            self.best_node(), schema.cache_id, query_str,
+            self.get_best_node(), schema.cache_id, query_str,
             page_size, query_args, schema.name,
             statement_type, distributed_joins, local, replicated_only,
             enforce_join_order, collocated, lazy, include_field_names,

@@ -82,7 +82,7 @@ def unwrap_binary(client: 'Client', wrapped: tuple) -> object:
     from pyignite.datatypes.complex import BinaryObject
 
     blob, offset = wrapped
-    conn_clone = client.best_node().clone(prefetch=blob)
+    conn_clone = client.get_best_node().clone(prefetch=blob)
     conn_clone.pos = offset
     data_class, data_bytes = BinaryObject.parse(conn_clone)
     result = BinaryObject.to_python(

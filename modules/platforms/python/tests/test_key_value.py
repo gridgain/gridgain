@@ -23,7 +23,7 @@ from pyignite.datatypes import (
 
 def test_put_get(client, cache):
 
-    conn = client.best_node()
+    conn = client.get_best_node()
 
     result = cache_put(conn, cache, 'my_key', 5)
     assert result.status == 0
@@ -35,7 +35,7 @@ def test_put_get(client, cache):
 
 def test_get_all(client, cache):
 
-    conn = client.best_node()
+    conn = client.get_best_node()
 
     result = cache_get_all(conn, cache, ['key_1', 2, (3, IntObject)])
     assert result.status == 0
@@ -51,7 +51,7 @@ def test_get_all(client, cache):
 
 def test_put_all(client, cache):
 
-    conn = client.best_node()
+    conn = client.get_best_node()
 
     test_dict = {
         1: 2,
@@ -73,7 +73,7 @@ def test_put_all(client, cache):
 
 def test_contains_key(client, cache):
 
-    conn = client.best_node()
+    conn = client.get_best_node()
 
     cache_put(conn, cache, 'test_key', 42)
 
@@ -86,7 +86,7 @@ def test_contains_key(client, cache):
 
 def test_contains_keys(client, cache):
 
-    conn = client.best_node()
+    conn = client.get_best_node()
 
     cache_put(conn, cache, 5, 6)
     cache_put(conn, cache, 'test_key', 42)
@@ -100,7 +100,7 @@ def test_contains_keys(client, cache):
 
 def test_get_and_put(client, cache):
 
-    conn = client.best_node()
+    conn = client.get_best_node()
 
     result = cache_get_and_put(conn, cache, 'test_key', 42)
     assert result.status == 0
@@ -117,7 +117,7 @@ def test_get_and_put(client, cache):
 
 def test_get_and_replace(client, cache):
 
-    conn = client.best_node()
+    conn = client.get_best_node()
 
     result = cache_get_and_replace(conn, cache, 'test_key', 42)
     assert result.status == 0
@@ -136,7 +136,7 @@ def test_get_and_replace(client, cache):
 
 def test_get_and_remove(client, cache):
 
-    conn = client.best_node()
+    conn = client.get_best_node()
 
     result = cache_get_and_remove(conn, cache, 'test_key')
     assert result.status == 0
@@ -151,7 +151,7 @@ def test_get_and_remove(client, cache):
 
 def test_put_if_absent(client, cache):
 
-    conn = client.best_node()
+    conn = client.get_best_node()
 
     result = cache_put_if_absent(conn, cache, 'test_key', 42)
     assert result.status == 0
@@ -164,7 +164,7 @@ def test_put_if_absent(client, cache):
 
 def test_get_and_put_if_absent(client, cache):
 
-    conn = client.best_node()
+    conn = client.get_best_node()
 
     result = cache_get_and_put_if_absent(conn, cache, 'test_key', 42)
     assert result.status == 0
@@ -181,7 +181,7 @@ def test_get_and_put_if_absent(client, cache):
 
 def test_replace(client, cache):
 
-    conn = client.best_node()
+    conn = client.get_best_node()
 
     result = cache_replace(conn, cache, 'test_key', 42)
     assert result.status == 0
@@ -200,7 +200,7 @@ def test_replace(client, cache):
 
 def test_replace_if_equals(client, cache):
 
-    conn = client.best_node()
+    conn = client.get_best_node()
 
     result = cache_replace_if_equals(conn, cache, 'my_test', 42, 1234)
     assert result.status == 0
@@ -219,7 +219,7 @@ def test_replace_if_equals(client, cache):
 
 def test_clear(client, cache):
 
-    conn = client.best_node()
+    conn = client.get_best_node()
 
     result = cache_put(conn, cache, 'my_test', 42)
     assert result.status == 0
@@ -234,7 +234,7 @@ def test_clear(client, cache):
 
 def test_clear_key(client, cache):
 
-    conn = client.best_node()
+    conn = client.get_best_node()
 
     result = cache_put(conn, cache, 'my_test', 42)
     assert result.status == 0
@@ -256,7 +256,7 @@ def test_clear_key(client, cache):
 
 def test_clear_keys(client, cache):
 
-    conn = client.best_node()
+    conn = client.get_best_node()
 
     result = cache_put(conn, cache, 'my_test_key', 42)
     assert result.status == 0
@@ -281,7 +281,7 @@ def test_clear_keys(client, cache):
 
 def test_remove_key(client, cache):
 
-    conn = client.best_node()
+    conn = client.get_best_node()
 
     result = cache_put(conn, cache, 'my_test_key', 42)
     assert result.status == 0
@@ -297,7 +297,7 @@ def test_remove_key(client, cache):
 
 def test_remove_if_equals(client, cache):
 
-    conn = client.best_node()
+    conn = client.get_best_node()
 
     result = cache_put(conn, cache, 'my_test', 42)
     assert result.status == 0
@@ -317,7 +317,7 @@ def test_remove_if_equals(client, cache):
 
 def test_remove_keys(client, cache):
 
-    conn = client.best_node()
+    conn = client.get_best_node()
 
     result = cache_put(conn, cache, 'my_test', 42)
     assert result.status == 0
@@ -339,7 +339,7 @@ def test_remove_keys(client, cache):
 
 def test_remove_all(client, cache):
 
-    conn = client.best_node()
+    conn = client.get_best_node()
 
     result = cache_put(conn, cache, 'my_test', 42)
     assert result.status == 0
@@ -361,7 +361,7 @@ def test_remove_all(client, cache):
 
 def test_cache_get_size(client, cache):
 
-    conn = client.best_node()
+    conn = client.get_best_node()
 
     result = cache_put(conn, cache, 'my_test', 42)
     assert result.status == 0
