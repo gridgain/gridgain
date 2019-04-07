@@ -23,6 +23,31 @@ from pyignite.utils import is_iterable
 from .result import APIResult
 
 
+cache_ids = StructArray([
+    ('cache_id', Int),
+])
+
+cache_configs = StructArray([
+    ('key_type_id', Int),
+    ('affinity_key_field_id', Int),
+])
+
+node_partitions = StructArray([
+    ('partition_id', Int),
+])
+
+node_mappings = StructArray([
+    ('node_uuid', UUIDObject),
+    ('node_partitions', node_partitions)
+])
+
+partiton_mappings = StructArray([
+    ('is_applicable', Bool),
+    ('cache_configs', cache_configs),
+    ('node_partitions', node_mappings),
+])
+
+
 def cache_get_node_partitions(
     connection: 'Connection',
     caches: Union['Cache', Iterable['Cache']],
@@ -39,9 +64,6 @@ def cache_get_node_partitions(
      is generated,
     :return: API result data object.
     """
-    cache_ids = StructArray([
-        ('cache_id', Int),
-    ])
     query_struct = Query(
         OP_CACHE_NODE_PARTITIONS,
         [
@@ -52,30 +74,10 @@ def cache_get_node_partitions(
     if not is_iterable(caches):
         caches = [caches]
     _, send_buffer = query_struct.from_python({
-        'cache_ids': [cache.cache_id for cache in caches],
+        'cache_ids': [{'cache_id': cache.cache_id} for cache in caches],
     })
 
     connection.send(send_buffer)
-
-    cache_configs = StructArray([
-        ('key_type_id', Int),
-        ('affinity_key_field_id', Int),
-    ])
-
-    node_partitions = StructArray([
-        ('partition_id', Int),
-    ])
-
-    node_mappings = StructArray([
-        ('node_uuid', UUIDObject),
-        ('node_partitions', node_partitions)
-    ])
-
-    partiton_mappings = StructArray([
-        ('is_applicable', Bool),
-        ('cache_configs', cache_configs),
-        ('node_partitions', node_mappings),
-    ])
 
     response_struct = Response([
         ('version_major', Long),
