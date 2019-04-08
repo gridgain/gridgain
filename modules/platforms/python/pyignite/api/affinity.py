@@ -18,7 +18,7 @@ from typing import Iterable, Union
 from pyignite.datatypes import Bool, Int, Long, UUIDObject
 from pyignite.datatypes.internal import StructArray
 from pyignite.queries import Query, Response
-from pyignite.queries.op_codes import OP_CACHE_NODE_PARTITIONS
+from pyignite.queries.op_codes import OP_CACHE_PARTITIONS
 from pyignite.utils import is_iterable
 from .result import APIResult
 
@@ -65,7 +65,7 @@ def cache_get_node_partitions(
     :return: API result data object.
     """
     query_struct = Query(
-        OP_CACHE_NODE_PARTITIONS,
+        OP_CACHE_PARTITIONS,
         [
             ('cache_ids', cache_ids),
         ],
