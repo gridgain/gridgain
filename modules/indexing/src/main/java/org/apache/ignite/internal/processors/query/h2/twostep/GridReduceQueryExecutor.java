@@ -622,7 +622,7 @@ public class GridReduceQueryExecutor {
 
             List<Integer> cacheIds = qry.cacheIds();
 
-            boolean mvccEnabled = mvccEnabled(ctx);
+            boolean mvccEnabled = qry.mvccEnabled();
 
             final GridNearTxLocal curTx;
 
