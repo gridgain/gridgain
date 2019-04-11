@@ -434,7 +434,7 @@ public class ClusterProcessor extends GridProcessorAdapter {
 
             allNodesMetrics.put(sndNodeId, nodeMetrics);
 
-            updateNodeMetrics(ctx.discovery().discoCache(), sndNodeId, nodeMetrics);
+            updateNodeMetrics(sndNodeId, ctx.discovery().discoCache(), sndNodeId, nodeMetrics);
         }
         else {
             Map<UUID, byte[]> allNodesMetrics = msg.allNodesMetrics();
@@ -445,7 +445,7 @@ public class ClusterProcessor extends GridProcessorAdapter {
 
             for (Map.Entry<UUID, byte[]> e : allNodesMetrics.entrySet()) {
                 if (!ctx.localNodeId().equals(e.getKey()))
-                    updateNodeMetrics(discoCache, e.getKey(), e.getValue());
+                    updateNodeMetrics(sndNodeId, discoCache, e.getKey(), e.getValue());
             }
         }
     }
@@ -455,7 +455,7 @@ public class ClusterProcessor extends GridProcessorAdapter {
      * @param nodeId Node ID.
      * @param metricsBytes Marshalled metrics.
      */
-    private void updateNodeMetrics(DiscoCache discoCache, UUID nodeId, byte[] metricsBytes) {
+    private void updateNodeMetrics(UUID sndNodeId, DiscoCache discoCache, UUID nodeId, byte[] metricsBytes) {
         ClusterNode node = discoCache.node(nodeId);
 
         if (node == null || !discoCache.alive(nodeId))
@@ -472,8 +472,10 @@ public class ClusterProcessor extends GridProcessorAdapter {
             node0.setCacheMetrics(metrics.cacheMetrics());
 
             ctx.discovery().metricsUpdateEvent(discoCache, node0);
-        }catch (OutOfMemoryError e){
-            U.warn(log, "OOM on unmarshal node metrics (bytes=" + metricsBytes.length + "): " + e);
+        }
+        catch (OutOfMemoryError e) {
+            U.warn(log, "OOM on unmarshal node metrics [sndNodeId=" + sndNodeId +
+                ",bytes=" + metricsBytes.length + "]: " + e);
 
             throw e;
         }
