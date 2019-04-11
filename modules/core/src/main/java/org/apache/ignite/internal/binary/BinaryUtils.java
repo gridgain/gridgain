@@ -1803,6 +1803,10 @@ public class BinaryUtils {
             return ctx.optimizedMarsh().unmarshal(input, U.resolveClassLoader(clsLdr, ctx.configuration()));
         }
         catch (IgniteCheckedException e) {
+            System.err.println(">>> FAILED TO UNMARSHAL " + e.getMessage());
+
+            e.printStackTrace();
+
             throw new BinaryObjectException("Failed to unmarshal object with optimized marshaller", e);
         }
         finally {
