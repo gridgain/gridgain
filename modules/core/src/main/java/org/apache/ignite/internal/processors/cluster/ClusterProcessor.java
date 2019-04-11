@@ -472,6 +472,10 @@ public class ClusterProcessor extends GridProcessorAdapter {
             node0.setCacheMetrics(metrics.cacheMetrics());
 
             ctx.discovery().metricsUpdateEvent(discoCache, node0);
+        }catch (OutOfMemoryError e){
+            U.warn(log, "OOM on unmarshal node metrics (bytes=" + metricsBytes.length + "): " + e);
+
+            throw e;
         }
         catch (IgniteCheckedException e) {
             U.warn(log, "Failed to unmarshal node metrics: " + e);
