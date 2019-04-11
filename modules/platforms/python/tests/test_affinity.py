@@ -14,14 +14,26 @@
 # limitations under the License.
 
 from pyignite.api import *
+from pyignite.datatypes import Int
+from pyignite.datatypes.prop_codes import *
 
 
-def test_get_node_partitions(client, cache):
+def test_get_node_partitions(client):
 
     conn = client.get_best_node()
 
+    cache_1 = client.get_or_create_cache('test_cache_1')
+    cache_2 = client.create_cache({
+        PROP_NAME: 'test_cache_2',
+        PROP_CACHE_KEY_CONFIGURATION: [
+            {
+                'type_name': Int.type_name,
+                'affinity_key_field_name': 'int_affinity',
+            }
+        ],
+    })
     result = cache_get_node_partitions(
         conn,
-        client.get_cache(cache)
+        [cache_1, cache_2]
     )
     assert result.status == 0, result.message

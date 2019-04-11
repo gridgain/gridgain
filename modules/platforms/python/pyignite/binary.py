@@ -31,6 +31,7 @@ from typing import Any
 import attr
 
 from .datatypes import *
+from .datatypes.base import IgniteDataTypeProps, IgniteDataTypeMeta
 from .exceptions import ParseError
 from .utils import entity_id, schema_id
 
@@ -48,21 +49,11 @@ ALLOWED_FIELD_TYPES = [
 ]
 
 
-class GenericObjectPropsMixin:
+class GenericObjectProps(IgniteDataTypeProps):
     """
     This class is mixed both to metaclass and to resulting class to make class
     properties universally available. You should not subclass it directly.
     """
-    @property
-    def type_name(self) -> str:
-        """ Binary object type name. """
-        return self._type_name
-
-    @property
-    def type_id(self) -> int:
-        """ Binary object type ID. """
-        return entity_id(self._type_name)
-
     @property
     def schema(self) -> OrderedDict:
         """ Binary object schema. """
@@ -76,20 +67,23 @@ class GenericObjectPropsMixin:
     def __new__(cls, *args, **kwargs) -> Any:
         # allow all items in Binary Object schema to be populated as optional
         # arguments to `__init__()` with sensible defaults.
-        if cls is not GenericObjectMeta:
-            attributes = {
-                k: attr.ib(
-                    type=getattr(v, 'pythonic', type(None)),
-                    default=getattr(v, 'default', None),
-                ) for k, v in cls.schema.items()
-            }
-            attributes.update({'version': attr.ib(type=int, default=1)})
-            cls = attr.s(cls, these=attributes)
+        attributes = {
+            k: attr.ib(
+                type=getattr(v, 'pythonic', type(None)),
+                default=getattr(v, 'default', None),
+            ) for k, v in cls.schema.items()
+        }
+        attributes.update({'version': attr.ib(type=int, default=1)})
+        cls = attr.s(cls, these=attributes)
         # skip parameters
         return super().__new__(cls)
 
 
-class GenericObjectMeta(type, GenericObjectPropsMixin):
+class GenericObjectPropsMeta(type, GenericObjectProps):
+    pass
+
+
+class GenericObjectMeta(GenericObjectPropsMeta):
     """
     Complex (or Binary) Object metaclass. It is aimed to help user create
     classes, which objects could serve as a pythonic representation of the
@@ -104,7 +98,7 @@ class GenericObjectMeta(type, GenericObjectPropsMixin):
     ) -> Any:
         """ Sort out class creation arguments. """
         return super().__new__(
-            mcs, name, (GenericObjectPropsMixin, )+base_classes, namespace
+            mcs, name, (GenericObjectProps, )+base_classes, namespace
         )
 
     @staticmethod

@@ -77,6 +77,7 @@ class DataObject(IgniteDataType):
 
 
 class ByteObject(DataObject):
+    _type_name = 'java.lang.Byte'
     c_type = ctypes.c_byte
     type_code = TC_BYTE
     pythonic = int
@@ -84,6 +85,7 @@ class ByteObject(DataObject):
 
 
 class ShortObject(DataObject):
+    _type_name = 'java.lang.Short'
     c_type = ctypes.c_short
     type_code = TC_SHORT
     pythonic = int
@@ -91,6 +93,7 @@ class ShortObject(DataObject):
 
 
 class IntObject(DataObject):
+    _type_name = 'java.lang.Integer'
     c_type = ctypes.c_int
     type_code = TC_INT
     pythonic = int
@@ -98,6 +101,7 @@ class IntObject(DataObject):
 
 
 class LongObject(DataObject):
+    _type_name = 'java.lang.Long'
     c_type = ctypes.c_longlong
     type_code = TC_LONG
     pythonic = int
@@ -105,6 +109,7 @@ class LongObject(DataObject):
 
 
 class FloatObject(DataObject):
+    _type_name = 'java.lang.Float'
     c_type = ctypes.c_float
     type_code = TC_FLOAT
     pythonic = float
@@ -112,6 +117,7 @@ class FloatObject(DataObject):
 
 
 class DoubleObject(DataObject):
+    _type_name = 'java.lang.Double'
     c_type = ctypes.c_double
     type_code = TC_DOUBLE
     pythonic = float
@@ -152,6 +158,7 @@ class CharObject(DataObject):
 
 
 class BoolObject(DataObject):
+    _type_name = 'java.lang.Boolean'
     c_type = ctypes.c_bool
     type_code = TC_BOOL
     pythonic = bool

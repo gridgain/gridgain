@@ -16,19 +16,34 @@
 from abc import ABC
 
 
-class IgniteDataType(ABC):
+class IgniteDataTypeProps:
     """
-    This is a base class for all Ignite data types, a.k.a. parser/constructor
-    classes, both object and payload varieties.
+    Add `type_name` and `type_id` properties for all classes and objects
+    of Ignite type hierarchy.
     """
     @property
     def type_name(self) -> str:
         """ Binary object type name. """
-        return self._type_name
+        return getattr(self, '_type_name', None)
 
     @property
     def type_id(self) -> int:
         """ Binary object type ID. """
         from pyignite.utils import entity_id
 
-        return entity_id(self._type_name)
+        return entity_id(getattr(self, '_type_name', None))
+
+
+class IgniteDataTypeMeta(type, IgniteDataTypeProps):
+    """
+    Class variant of Ignate data type properties.
+    """
+    pass
+
+
+class IgniteDataType(metaclass=IgniteDataTypeMeta):
+    """
+    This is a base class for all Ignite data types, a.k.a. parser/constructor
+    classes, both object and payload varieties.
+    """
+    pass

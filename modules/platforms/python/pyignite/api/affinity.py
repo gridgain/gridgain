@@ -27,7 +27,7 @@ cache_ids = StructArray([
     ('cache_id', Int),
 ])
 
-cache_configs = StructArray([
+cache_config = StructArray([
     ('key_type_id', Int),
     ('affinity_key_field_id', Int),
 ])
@@ -36,15 +36,20 @@ node_partitions = StructArray([
     ('partition_id', Int),
 ])
 
-node_mappings = StructArray([
+node_mapping = StructArray([
     ('node_uuid', UUIDObject),
     ('node_partitions', node_partitions)
 ])
 
-partiton_mappings = StructArray([
+cache_mapping = StructArray([
+    ('cache_id', Int),
+    ('cache_config', cache_config),
+])
+
+partition_mapping = StructArray([
     ('is_applicable', Bool),
-    ('cache_configs', cache_configs),
-    ('node_partitions', node_mappings),
+    ('cache_mapping', cache_mapping),
+    ('node_mapping', node_mapping),
 ])
 
 
@@ -82,7 +87,7 @@ def cache_get_node_partitions(
     response_struct = Response([
         ('version_major', Long),
         ('version_minor', Int),
-        ('cache_mapping', partiton_mappings),
+        ('partiton_mapping', partition_mapping),
     ])
     response_class, recv_buffer = response_struct.parse(connection)
     response = response_class.from_buffer_copy(recv_buffer)

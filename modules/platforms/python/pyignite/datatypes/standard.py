@@ -64,6 +64,7 @@ class String(IgniteDataType):
     Pascal-style string: `c_int` counter, followed by count*bytes.
     UTF-8-encoded, so that one character may take 1 to 4 bytes.
     """
+    _type_name = 'java.lang.String'
     type_code = TC_STRING
     pythonic = str
 
