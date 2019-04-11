@@ -1026,11 +1026,11 @@ public class CacheMetricsImpl implements CacheMetrics {
 
                     offHeapEntriesCnt += cacheSize;
 
-                    if (primaries.contains(part.id()))
-                        offHeapPrimaryEntriesCnt += cacheSize;
-
-                    if (backups.contains(part.id()))
-                        offHeapBackupEntriesCnt += cacheSize;
+//                    if (primaries.contains(part.id()))
+//                        offHeapPrimaryEntriesCnt += cacheSize;
+//
+//                    if (backups.contains(part.id()))
+//                        offHeapBackupEntriesCnt += cacheSize;
 
                     size = (int)offHeapEntriesCnt;
 

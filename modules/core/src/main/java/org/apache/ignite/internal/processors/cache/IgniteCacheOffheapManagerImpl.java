@@ -441,7 +441,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 }, true,
                 new IgnitePredicate<GridDhtLocalPartition>() {
                     @Override public boolean apply(GridDhtLocalPartition part) {
-                        return parts.contains(part.id());
+                        return false;
                     }
                 });
         }
