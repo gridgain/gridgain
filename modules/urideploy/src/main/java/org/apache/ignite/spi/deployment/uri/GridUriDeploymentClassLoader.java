@@ -1,23 +1,23 @@
 /*
  *                   GridGain Community Edition Licensing
  *                   Copyright 2019 GridGain Systems, Inc.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
  * Restriction; you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
+ * 
  * Commons Clause Restriction
- *
+ * 
  * The Software is provided to you by the Licensor under the License, as defined below, subject to
  * the following condition.
- *
+ * 
  * Without limiting other conditions in the License, the grant of rights under the License will not
  * include, and the License does not grant to you, the right to Sell the Software.
  * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,7 +26,7 @@
  * service whose value derives, entirely or substantially, from the functionality of the Software.
  * Any license notice or attribution required by the License must also include this Commons Clause
  * License Condition notice.
- *
+ * 
  * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
  * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
  * Edition software provided with this notice.
@@ -43,9 +43,9 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Loads classes and resources from "unpacked" GAR file (GAR directory).
+ * Loads classes and resources from "unpacked" deployment archives.
  * <p>
- * Class loader scans GAR directory first and then if
+ * Class loader scans package directory first and then if
  * class/resource was not found scans all JAR files.
  */
 class GridUriDeploymentClassLoader extends URLClassLoader {
@@ -67,7 +67,7 @@ class GridUriDeploymentClassLoader extends URLClassLoader {
         if (cls == null) {
             try {
                 try {
-                    // Search classes in GAR file.
+                    // Search classes in a deployment unit.
                     // NOTE: findClass(String) is not overridden since it is always called after
                     // findLoadedClass(String) in exclusive synchronization block.
                     cls = findClass(name);
@@ -92,19 +92,19 @@ class GridUriDeploymentClassLoader extends URLClassLoader {
     }
 
     /**
-     * Load class from GAR file.
+     * Load class from a deployment unit.
      *
      * @param name Class name.
      * @return Loaded class.
      * @throws ClassNotFoundException If no class found.
      */
-    public synchronized Class<?> loadClassGarOnly(String name) throws ClassNotFoundException {
+    public synchronized Class<?> loadClassIsolated(String name) throws ClassNotFoundException {
         // First, check if the class has already been loaded.
         Class<?> cls = findLoadedClass(name);
 
         if (cls == null) {
             try {
-                // Search classes in GAR file.
+                // Search classes in deployment unit.
                 // NOTE: findClass(String) is not overridden since it is always called after
                 // findLoadedClass(String) in exclusive synchronization block.
                 cls = findClass(name);
@@ -122,6 +122,19 @@ class GridUriDeploymentClassLoader extends URLClassLoader {
         return cls;
     }
 
+    /**
+     * Load class from GAR file.
+     *
+     * @param name Class name.
+     * @return Loaded class.
+     * @throws ClassNotFoundException If no class found.
+     * @deprecated Use {@link GridUriDeploymentClassLoader#loadClassIsolated(String)} instead.
+     */
+    @Deprecated
+    public synchronized Class<?> loadClassGarOnly(String name) throws ClassNotFoundException {
+        return loadClassIsolated(name);
+    }
+
     /** {@inheritDoc} */
     @Override public URL getResource(String name) {
         URL url = findResource(name);
@@ -137,8 +150,8 @@ class GridUriDeploymentClassLoader extends URLClassLoader {
 
     /** {@inheritDoc} */
     @Override public InputStream getResourceAsStream(String name) {
-        // Find resource in GAR file first.
-        InputStream in = getResourceAsStreamGarOnly(name);
+        // Find resource in a deployment unit first.
+        InputStream in = getResourceAsStreamIsolated(name);
 
         // Find resource in parent class loader.
         if (in == null)
@@ -151,13 +164,13 @@ class GridUriDeploymentClassLoader extends URLClassLoader {
     }
 
     /**
-     * Returns an input stream for reading the specified resource from GAR file only.
+     * Returns an input stream for reading the specified resource from a deployment unit only.
      *
      * @param name Resource name.
      * @return An input stream for reading the resource, or {@code null}
      *      if the resource could not be found.
      */
-    @Nullable public InputStream getResourceAsStreamGarOnly(String name) {
+    @Nullable public InputStream getResourceAsStreamIsolated(String name) {
         URL url = findResource(name);
 
         try {
@@ -166,6 +179,20 @@ class GridUriDeploymentClassLoader extends URLClassLoader {
         catch (IOException ignored) {
             return null;
         }
+    }
+
+    /**
+     * Returns an input stream for reading the specified resource from GAR file only.
+     *
+     * @param name Resource name.
+     * @return An input stream for reading the resource, or {@code null}
+     *      if the resource could not be found.
+     *
+     * @deprecated Use {@link GridUriDeploymentClassLoader#getResourceAsStreamIsolated(String)} instead.
+     */
+    @Deprecated
+    @Nullable public InputStream getResourceAsStreamGarOnly(String name) {
+        return getResourceAsStreamIsolated(name);
     }
 
     /** {@inheritDoc} */

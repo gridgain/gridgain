@@ -1,23 +1,23 @@
 /*
  *                   GridGain Community Edition Licensing
  *                   Copyright 2019 GridGain Systems, Inc.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
  * Restriction; you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
+ * 
  * Commons Clause Restriction
- *
+ * 
  * The Software is provided to you by the Licensor under the License, as defined below, subject to
  * the following condition.
- *
+ * 
  * Without limiting other conditions in the License, the grant of rights under the License will not
  * include, and the License does not grant to you, the right to Sell the Software.
  * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,7 +26,7 @@
  * service whose value derives, entirely or substantially, from the functionality of the Software.
  * Any license notice or attribution required by the License must also include this Commons Clause
  * License Condition notice.
- *
+ * 
  * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
  * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
  * Edition software provided with this notice.
@@ -37,6 +37,7 @@ package org.apache.ignite.examples.datagrid.starschema;
 import java.util.Collection;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.cache.Cache;
@@ -46,7 +47,7 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.query.QueryCursor;
-import org.apache.ignite.cache.query.SqlQuery;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.examples.ExampleNodeStartup;
 
@@ -193,10 +194,9 @@ public class CacheStarSchemaExample {
         // ========================
 
         // Create cross cache query to get all purchases made at store1.
-        QueryCursor<Cache.Entry<Integer, FactPurchase>> storePurchases = factCache.query(new SqlQuery(
-            FactPurchase.class,
-            "from \"" + DIM_STORE_CACHE_NAME + "\".DimStore, \"" + FACT_CACHE_NAME + "\".FactPurchase "
-                + "where DimStore.id=FactPurchase.storeId and DimStore.name=?").setArgs("Store1"));
+        QueryCursor<List<?>> storePurchases = factCache.query(new SqlFieldsQuery(
+            "select fp.* from \"" + DIM_STORE_CACHE_NAME + "\".DimStore, \"" + FACT_CACHE_NAME + "\".FactPurchase as fp "
+                + "where DimStore.id=fp.storeId and DimStore.name=?").setArgs("Store1"));
 
         printQueryResults("All purchases made at store1:", storePurchases.getAll());
     }
@@ -223,11 +223,10 @@ public class CacheStarSchemaExample {
 
         // Create cross cache query to get all purchases made at store2
         // for specified products.
-        QueryCursor<Cache.Entry<Integer, FactPurchase>> prodPurchases = factCache.query(new SqlQuery(
-            FactPurchase.class,
-            "from \"" + DIM_STORE_CACHE_NAME + "\".DimStore, \"" + DIM_PROD_CACHE_NAME + "\".DimProduct, " +
-                "\"" + FACT_CACHE_NAME + "\".FactPurchase "
-                + "where DimStore.id=FactPurchase.storeId and DimProduct.id=FactPurchase.productId "
+        QueryCursor<List<?>> prodPurchases = factCache.query(new SqlFieldsQuery(
+            "select fp.* from \"" + DIM_STORE_CACHE_NAME + "\".DimStore, \"" + DIM_PROD_CACHE_NAME + "\".DimProduct, " +
+                "\"" + FACT_CACHE_NAME + "\".FactPurchase as fp "
+                + "where DimStore.id=fp.storeId and DimProduct.id=fp.productId "
                 + "and DimStore.name=? and DimProduct.id in(?, ?, ?)")
             .setArgs("Store2", p1.getId(), p2.getId(), p3.getId()));
 
@@ -240,11 +239,11 @@ public class CacheStarSchemaExample {
      * @param msg Initial message.
      * @param res Results to print.
      */
-    private static <V> void printQueryResults(String msg, Iterable<Cache.Entry<Integer, V>> res) {
+    private static void printQueryResults(String msg, Iterable<List<?>> res) {
         System.out.println(msg);
 
-        for (Cache.Entry<?, ?> e : res)
-            System.out.println("    " + e.getValue().toString());
+        for (List<?> row : res)
+            System.out.println("    " + row.toString());
     }
 
     /**

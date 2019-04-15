@@ -1,23 +1,23 @@
 /*
  *                   GridGain Community Edition Licensing
  *                   Copyright 2019 GridGain Systems, Inc.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
  * Restriction; you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
+ * 
  * Commons Clause Restriction
- *
+ * 
  * The Software is provided to you by the Licensor under the License, as defined below, subject to
  * the following condition.
- *
+ * 
  * Without limiting other conditions in the License, the grant of rights under the License will not
  * include, and the License does not grant to you, the right to Sell the Software.
  * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,7 +26,7 @@
  * service whose value derives, entirely or substantially, from the functionality of the Software.
  * Any license notice or attribution required by the License must also include this Commons Clause
  * License Condition notice.
- *
+ * 
  * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
  * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
  * Edition software provided with this notice.
@@ -36,6 +36,7 @@ package org.apache.ignite;
 
 import java.io.Serializable;
 import java.lang.management.RuntimeMXBean;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
@@ -43,6 +44,7 @@ import javax.net.ssl.HostnameVerifier;
 import org.apache.ignite.cache.CacheEntryProcessor;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.CheckpointWriteOrder;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.marshaller.optimized.OptimizedMarshaller;
@@ -109,11 +111,6 @@ public final class IgniteSystemProperties {
      * available for download.
      */
     public static final String IGNITE_UPDATE_NOTIFIER = "IGNITE_UPDATE_NOTIFIER";
-
-    /**
-     * Url of updates service.
-     */
-    public static final String GRIDGAIN_UPDATE_URL = "GRIDGAIN_UPDATE_URL";
 
     /**
      * This system property defines interval in milliseconds in which Ignite will check
@@ -963,9 +960,9 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_PART_DISTRIBUTION_WARN_THRESHOLD = "IGNITE_PART_DISTRIBUTION_WARN_THRESHOLD";
 
     /**
-     * When set to {@code true}, WAL will be automatically disabled during rebalancing if there is no partition in
+     * When set to {@code false}, WAL will not be automatically disabled during rebalancing if there is no partition in
      * OWNING state.
-     * Default is {@code false}.
+     * Default is {@code true}.
      */
     public static final String IGNITE_DISABLE_WAL_DURING_REBALANCING = "IGNITE_DISABLE_WAL_DURING_REBALANCING";
 
@@ -993,7 +990,7 @@ public final class IgniteSystemProperties {
      */
     public static final String IGNITE_DUMP_THREADS_ON_FAILURE = "IGNITE_DUMP_THREADS_ON_FAILURE";
 
-   /**
+    /**
      * Throttling timeout in millis which avoid excessive PendingTree access on unwind if there is nothing to clean yet.
      *
      * Default is 500 ms.
@@ -1163,6 +1160,39 @@ public final class IgniteSystemProperties {
      * Maximum number of diagnostic warning messages per category, when waiting for PME.
      */
     public static final String IGNITE_DIAGNOSTIC_WARN_LIMIT = "IGNITE_DIAGNOSTIC_WARN_LIMIT";
+
+    /**
+     * Allow use composite _key, _val columns at the INSERT/UPDATE/MERGE statements.
+     */
+    public static final String IGNITE_SQL_ALLOW_KEY_VAL_UPDATES = "IGNITE_SQL_ALLOW_KEY_VAL_UPDATES";
+
+    /**
+     * Interval between logging of time of next auto-adjust.
+     */
+    public static final String IGNITE_BASELINE_AUTO_ADJUST_LOG_INTERVAL = "IGNITE_BASELINE_AUTO_ADJUST_LOG_INTERVAL";
+
+    /**
+     * Starting from this number of dirty pages in checkpoint, array will be sorted with
+     * {@link Arrays#parallelSort(Comparable[])} in case of {@link CheckpointWriteOrder#SEQUENTIAL}.
+     */
+    public static final String CHECKPOINT_PARALLEL_SORT_THRESHOLD = "CHECKPOINT_PARALLEL_SORT_THRESHOLD";
+
+    /**
+     * Keep static cache configuration even if stored cache data differs from the static config. When this property
+     * is set, static cache configuration will override persisted configuration. DDL operations are not allowed
+     * when this system property is set.
+     */
+    public static final String IGNITE_KEEP_STATIC_CACHE_CONFIGURATION = "IGNITE_KEEP_STATIC_CACHE_CONFIGURATION";
+
+    /** Enable backward compatible to use 'IGNITE' as SQL system schema. */
+    public static final String IGNITE_SQL_SYSTEM_SCHEMA_NAME_IGNITE = "IGNITE_SQL_SYSTEM_SCHEMA_NAME_IGNITE";
+
+    /**
+     * Shows if dump requests from local node to near node are allowed, when long running transaction
+     * is found. If allowed, the compute request to near node will be made to get thread dump of transaction
+     * owner thread.
+     */
+    public static final String IGNITE_TX_OWNER_DUMP_REQUESTS_ALLOWED = "IGNITE_TX_OWNER_DUMP_REQUESTS_ALLOWED";
 
     /**
      * Enforces singleton.

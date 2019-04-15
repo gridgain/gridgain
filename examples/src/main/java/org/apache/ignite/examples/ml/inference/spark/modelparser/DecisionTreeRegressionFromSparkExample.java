@@ -1,24 +1,39 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *                   GridGain Community Edition Licensing
+ *                   Copyright 2019 GridGain Systems, Inc.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
+ * Restriction; you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the specific language governing permissions
+ * and limitations under the License.
+ * 
+ * Commons Clause Restriction
+ * 
+ * The Software is provided to you by the Licensor under the License, as defined below, subject to
+ * the following condition.
+ * 
+ * Without limiting other conditions in the License, the grant of rights under the License will not
+ * include, and the License does not grant to you, the right to Sell the Software.
+ * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
+ * under the License to provide to third parties, for a fee or other consideration (including without
+ * limitation fees for hosting or consulting/ support services related to the Software), a product or
+ * service whose value derives, entirely or substantially, from the functionality of the Software.
+ * Any license notice or attribution required by the License must also include this Commons Clause
+ * License Condition notice.
+ * 
+ * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
+ * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
+ * Edition software provided with this notice.
  */
 
 package org.apache.ignite.examples.ml.inference.spark.modelparser;
 
-import java.io.FileNotFoundException;
-import javax.cache.Cache;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.Ignition;
@@ -31,6 +46,9 @@ import org.apache.ignite.ml.math.primitives.vector.VectorUtils;
 import org.apache.ignite.ml.sparkmodelparser.SparkModelParser;
 import org.apache.ignite.ml.sparkmodelparser.SupportedSparkModels;
 import org.apache.ignite.ml.tree.DecisionTreeNode;
+
+import javax.cache.Cache;
+import java.io.FileNotFoundException;
 
 /**
  * Run Decision tree regression model loaded from snappy.parquet file.
@@ -50,41 +68,46 @@ public class DecisionTreeRegressionFromSparkExample {
         try (Ignite ignite = Ignition.start("examples/config/example-ignite.xml")) {
             System.out.println(">>> Ignite grid started.");
 
-            IgniteCache<Integer, Object[]> dataCache = TitanicUtils.readPassengers(ignite);
+            IgniteCache<Integer, Object[]> dataCache = null;
+            try {
+                dataCache = TitanicUtils.readPassengers(ignite);
 
-            IgniteBiFunction<Integer, Object[], Vector> featureExtractor = (k, v) -> {
-                double[] data = new double[] {(double)v[0], (double)v[1], (double)v[5], (double)v[6]};
-                data[0] = Double.isNaN(data[0]) ? 0 : data[0];
-                data[1] = Double.isNaN(data[1]) ? 0 : data[1];
-                data[2] = Double.isNaN(data[2]) ? 0 : data[2];
-                data[3] = Double.isNaN(data[3]) ? 0 : data[3];
-                return VectorUtils.of(data);
-            };
+                IgniteBiFunction<Integer, Object[], Vector> featureExtractor = (k, v) -> {
+                    double[] data = new double[] {(double)v[0], (double)v[1], (double)v[5], (double)v[6]};
+                    data[0] = Double.isNaN(data[0]) ? 0 : data[0];
+                    data[1] = Double.isNaN(data[1]) ? 0 : data[1];
+                    data[2] = Double.isNaN(data[2]) ? 0 : data[2];
+                    data[3] = Double.isNaN(data[3]) ? 0 : data[3];
+                    return VectorUtils.of(data);
+                };
 
-            IgniteBiFunction<Integer, Object[], Double> lbExtractor = (k, v) -> (double)v[4];
+                IgniteBiFunction<Integer, Object[], Double> lbExtractor = (k, v) -> (double)v[4];
 
-            DecisionTreeNode mdl = (DecisionTreeNode)SparkModelParser.parse(
-                SPARK_MDL_PATH,
-                SupportedSparkModels.DECISION_TREE_REGRESSION
-            );
+                DecisionTreeNode mdl = (DecisionTreeNode)SparkModelParser.parse(
+                    SPARK_MDL_PATH,
+                    SupportedSparkModels.DECISION_TREE_REGRESSION
+                );
 
-            System.out.println(">>> Decision tree regression model: " + mdl);
+                System.out.println(">>> Decision tree regression model: " + mdl);
 
-            System.out.println(">>> ---------------------------------");
-            System.out.println(">>> | Prediction\t| Ground Truth\t|");
-            System.out.println(">>> ---------------------------------");
+                System.out.println(">>> ---------------------------------");
+                System.out.println(">>> | Prediction\t| Ground Truth\t|");
+                System.out.println(">>> ---------------------------------");
 
-            try (QueryCursor<Cache.Entry<Integer, Object[]>> observations = dataCache.query(new ScanQuery<>())) {
-                for (Cache.Entry<Integer, Object[]> observation : observations) {
-                    Vector inputs = featureExtractor.apply(observation.getKey(), observation.getValue());
-                    double groundTruth = lbExtractor.apply(observation.getKey(), observation.getValue());
-                    double prediction = mdl.predict(inputs);
+                try (QueryCursor<Cache.Entry<Integer, Object[]>> observations = dataCache.query(new ScanQuery<>())) {
+                    for (Cache.Entry<Integer, Object[]> observation : observations) {
+                        Vector inputs = featureExtractor.apply(observation.getKey(), observation.getValue());
+                        double groundTruth = lbExtractor.apply(observation.getKey(), observation.getValue());
+                        double prediction = mdl.predict(inputs);
 
-                    System.out.printf(">>> | %.4f\t\t| %.4f\t\t|\n", prediction, groundTruth);
+                        System.out.printf(">>> | %.4f\t\t| %.4f\t\t|\n", prediction, groundTruth);
+                    }
                 }
-            }
 
-            System.out.println(">>> ---------------------------------");
+                System.out.println(">>> ---------------------------------");
+            } finally {
+                dataCache.destroy();
+            }
         }
     }
 }

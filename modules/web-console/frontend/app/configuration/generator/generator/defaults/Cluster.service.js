@@ -1,23 +1,23 @@
 /*
  *                   GridGain Community Edition Licensing
  *                   Copyright 2019 GridGain Systems, Inc.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
  * Restriction; you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
+ * 
  * Commons Clause Restriction
- *
+ * 
  * The Software is provided to you by the Licensor under the License, as defined below, subject to
  * the following condition.
- *
+ * 
  * Without limiting other conditions in the License, the grant of rights under the License will not
  * include, and the License does not grant to you, the right to Sell the Software.
  * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,7 +26,7 @@
  * service whose value derives, entirely or substantially, from the functionality of the Software.
  * Any license notice or attribution required by the License must also include this Commons Clause
  * License Condition notice.
- *
+ * 
  * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
  * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
  * Edition software provided with this notice.
@@ -54,6 +54,9 @@ const DFLT_CLUSTER = {
         ipFinderCleanFrequency: 60000,
         forceServerMode: false,
         clientReconnectDisabled: false,
+        reconnectDelay: 2000,
+        connectionRecoveryTimeout: 10000,
+        soLinger: 5,
         Multicast: {
             multicastGroup: '228.1.2.4',
             multicastPort: 47400,
@@ -104,7 +107,6 @@ const DFLT_CLUSTER = {
     },
     atomics: {
         atomicSequenceReserveSize: 1000,
-        backups: 0,
         cacheMode: {
             clsName: 'org.apache.ignite.cache.CacheMode',
             value: 'PARTITIONED'
@@ -113,7 +115,12 @@ const DFLT_CLUSTER = {
     binary: {
         compactFooter: true,
         typeConfigurations: {
-            enum: false
+            enum: false,
+            enumValues: {
+                keyClsName: 'java.lang.String',
+                valClsName: 'java.lang.Integer',
+                entries: []
+            }
         }
     },
     collision: {
@@ -154,7 +161,11 @@ const DFLT_CLUSTER = {
         tcpNoDelay: true,
         ackSendThreshold: 16,
         unacknowledgedMessagesBufferSize: 0,
-        socketWriteTimeout: 2000
+        socketWriteTimeout: 2000,
+        selectorSpins: 0,
+        connectionsPerNode: 1,
+        usePairedConnections: false,
+        filterReachableAddresses: false
     },
     networkTimeout: 5000,
     networkSendRetryDelay: 1000,
@@ -222,7 +233,10 @@ const DFLT_CLUSTER = {
             value: 'REPEATABLE_READ'
         },
         defaultTxTimeout: 0,
-        pessimisticTxLogLinger: 10000
+        pessimisticTxLogLinger: 10000,
+        useJtaSynchronization: false,
+        txTimeoutOnPartitionMapExchange: 0,
+        deadlockTimeout: 10000
     },
     attributes: {
         keyClsName: 'java.lang.String',
@@ -378,7 +392,9 @@ const DFLT_CLUSTER = {
         lockWaitTime: 10000,
         walThreadLocalBufferSize: 131072,
         metricsSubIntervalCount: 5,
-        metricsRateTimeInterval: 60000
+        metricsRateTimeInterval: 60000,
+        maxWalArchiveSize: 1073741824,
+        walCompactionLevel: 1
     },
     utilityCacheKeepAliveTime: 60000,
     hadoopConfiguration: {
@@ -414,7 +430,12 @@ const DFLT_CLUSTER = {
         lockWaitTime: 10000,
         rateTimeInterval: 60000,
         tlbSize: 131072,
-        subIntervals: 5
+        subIntervals: 5,
+        walMode: {
+            clsName: 'org.apache.ignite.configuration.WALMode',
+            value: 'DEFAULT'
+        },
+        walAutoArchiveAfterInactivity: -1
     },
     sqlConnectorConfiguration: {
         port: 10800,
@@ -438,7 +459,30 @@ const DFLT_CLUSTER = {
         sslEnabled: false,
         useIgniteSslContextFactory: true,
         sslClientAuth: false
-    }
+    },
+    encryptionSpi: {
+        Keystore: {
+            keySize: 256,
+            masterKeyName: 'ignite.master.key'
+        }
+    },
+    failureHandler: {
+        ignoredFailureTypes: {clsName: 'org.apache.ignite.failure.FailureType'}
+    },
+    localEventListeners: {
+        keyClsName: 'org.apache.ignite.lang.IgnitePredicate',
+        keyClsGenericType: 'org.apache.ignite.events.Event',
+        isKeyClsGenericTypeExtended: true,
+        valClsName: 'int[]',
+        valClsNameShow: 'EVENTS',
+        keyField: 'className',
+        valField: 'eventTypes'
+    },
+    authenticationEnabled: false,
+    sqlQueryHistorySize: 1000,
+    allSegmentationResolversPassRequired: true,
+    networkCompressionLevel: 1,
+    autoActivationEnabled: true
 };
 
 export default class IgniteClusterDefaults {

@@ -1,23 +1,23 @@
 /*
  *                   GridGain Community Edition Licensing
  *                   Copyright 2019 GridGain Systems, Inc.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
  * Restriction; you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
+ * 
  * Commons Clause Restriction
- *
+ * 
  * The Software is provided to you by the Licensor under the License, as defined below, subject to
  * the following condition.
- *
+ * 
  * Without limiting other conditions in the License, the grant of rights under the License will not
  * include, and the License does not grant to you, the right to Sell the Software.
  * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,7 +26,7 @@
  * service whose value derives, entirely or substantially, from the functionality of the Software.
  * Any license notice or attribution required by the License must also include this Commons Clause
  * License Condition notice.
- *
+ * 
  * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
  * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
  * Edition software provided with this notice.
@@ -34,10 +34,10 @@
 
 package org.apache.ignite.internal.processors.query;
 
-import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
@@ -45,11 +45,13 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.managers.IgniteMBeansManager;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContextInfo;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
+import org.apache.ignite.internal.processors.odbc.jdbc.JdbcParameterMeta;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitor;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.lang.GridCloseableIterator;
@@ -267,6 +269,27 @@ public interface GridQueryIndexing {
         boolean isSql) throws IgniteCheckedException;
 
     /**
+     * Jdbc parameters metadata of the specified query.
+     *
+     * @param schemaName the default schema name for query.
+     * @param sql Sql query.
+     * @return metadata describing all the parameters, even in case of multi-statement.
+     * @throws SQLException if failed to get meta.
+     */
+    public List<JdbcParameterMeta> parameterMetaData(String schemaName, SqlFieldsQuery sql) throws IgniteSQLException;
+
+    /**
+     * Metadata of the result set that is returned if specified query gets executed.
+     *
+     * @param schemaName the default schema name for query.
+     * @param sql Sql query.
+     * @return metadata or {@code null} if provided query is multi-statement or id it's not a SELECT statement.
+     * @throws SQLException if failed to get meta.
+     */
+    @Nullable public List<GridQueryFieldMetadata> resultMetaData(String schemaName, SqlFieldsQuery sql)
+        throws IgniteSQLException;
+
+    /**
      * Updates index. Note that key is unique for cache, so if cache contains multiple indexes
      * the key should be removed from indexes other than one being updated.
      *
@@ -303,6 +326,13 @@ public interface GridQueryIndexing {
     public IgniteInternalFuture<?> rebuildIndexesFromHash(GridCacheContext cctx);
 
     /**
+     * Mark as rebuild needed for the given cache.
+     *
+     * @param cctx Cache context.
+     */
+    void markAsRebuildNeeded(GridCacheContext cctx);
+
+    /**
      * Returns backup filter.
      *
      * @param topVer Topology version.
@@ -317,15 +347,6 @@ public interface GridQueryIndexing {
      * @param reconnectFut Reconnect future.
      */
     public void onDisconnected(IgniteFuture<?> reconnectFut);
-
-    /**
-     * Prepare native statement to retrieve JDBC metadata from.
-     *
-     * @param schemaName Schema name.
-     * @param sql Query.
-     * @return {@link PreparedStatement} from underlying engine to supply metadata to Prepared - most likely H2.
-     */
-    public PreparedStatement prepareNativeStatement(String schemaName, String sql) throws SQLException;
 
     /**
      * Collect queries that already running more than specified duration.
@@ -356,11 +377,19 @@ public interface GridQueryIndexing {
     public String schema(String cacheName);
 
     /**
-     * Check if passed statement is insert statement eligible for streaming, throw an {@link IgniteSQLException} if not.
+     * Gets database schemas names.
      *
-     * @param nativeStmt Native statement.
+     * @return Schema names.
      */
-    public void checkStatementStreamable(PreparedStatement nativeStmt);
+    public Set<String> schemasNames();
+
+    /**
+     * Whether passed sql statement is single insert statement eligible for streaming.
+     *
+     * @param schemaName name of the schema.
+     * @param sql sql statement.
+     */
+    public boolean isStreamableInsertStatement(String schemaName, SqlFieldsQuery sql) throws SQLException;
 
     /**
      * Return row cache cleaner.
@@ -387,4 +416,12 @@ public interface GridQueryIndexing {
      * @return {@code true} If context has been initialized.
      */
     public boolean initCacheContext(GridCacheContext ctx) throws IgniteCheckedException;
+
+    /**
+     * Register SQL JMX beans.
+     *
+     * @param mbMgr Ignite MXBean manager.
+     * @throws IgniteCheckedException On bean registration error.
+     */
+    void registerMxBeans(IgniteMBeansManager mbMgr) throws IgniteCheckedException;
 }

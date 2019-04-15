@@ -1,18 +1,35 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *                   GridGain Community Edition Licensing
+ *                   Copyright 2019 GridGain Systems, Inc.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
+ * Restriction; you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the specific language governing permissions
+ * and limitations under the License.
+ * 
+ * Commons Clause Restriction
+ * 
+ * The Software is provided to you by the Licensor under the License, as defined below, subject to
+ * the following condition.
+ * 
+ * Without limiting other conditions in the License, the grant of rights under the License will not
+ * include, and the License does not grant to you, the right to Sell the Software.
+ * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
+ * under the License to provide to third parties, for a fee or other consideration (including without
+ * limitation fees for hosting or consulting/ support services related to the Software), a product or
+ * service whose value derives, entirely or substantially, from the functionality of the Software.
+ * Any license notice or attribution required by the License must also include this Commons Clause
+ * License Condition notice.
+ * 
+ * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
+ * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
+ * Edition software provided with this notice.
  */
 
 package org.apache.ignite.internal.processors.metastorage.persistence;
@@ -24,31 +41,48 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 
 /** */
 @SuppressWarnings("PublicField")
-class DistributedMetaStorageHistoryItem implements Serializable {
-    /** */
-    public static final DistributedMetaStorageHistoryItem[] EMPTY_ARRAY = {};
-
+final class DistributedMetaStorageHistoryItem implements Serializable {
     /** */
     private static final long serialVersionUID = 0L;
 
     /** */
-    @GridToStringInclude
-    public final String key;
+    public static final DistributedMetaStorageHistoryItem[] EMPTY_ARRAY = {};
 
     /** */
     @GridToStringInclude
-    public final byte[] valBytes;
+    public final String[] keys;
+
+    /** */
+    @GridToStringInclude
+    public final byte[][] valBytesArray;
+
+    /** */
+    private transient long longHash;
 
     /** */
     public DistributedMetaStorageHistoryItem(String key, byte[] valBytes) {
-        this.key = key;
-        this.valBytes = valBytes;
+        keys = new String[] {key};
+        valBytesArray = new byte[][] {valBytes};
+    }
+
+    /** */
+    public DistributedMetaStorageHistoryItem(String[] keys, byte[][] valBytesArray) {
+        this.keys = keys;
+        this.valBytesArray = valBytesArray;
     }
 
     /** */
     public long estimateSize() {
+        int len = keys.length;
+
+        // 8L = 2 int sizes. Plus all int sizes of strings and byte arrays.
+        long size = 8L + 8L * len;
+
         // String encoding is ignored to make estimation faster. 2 "size" values added as well.
-        return 8 + key.length() * 2 + (valBytes == null ? 0 : valBytes.length);
+        for (int i = 0; i < len; i++)
+            size += keys[i].length() * 2 + (valBytesArray[i] == null ? 0 : valBytesArray[i].length);
+
+        return size;
     }
 
     /** {@inheritDoc} */
@@ -61,12 +95,39 @@ class DistributedMetaStorageHistoryItem implements Serializable {
 
         DistributedMetaStorageHistoryItem item = (DistributedMetaStorageHistoryItem)o;
 
-        return key.equals(item.key) && Arrays.equals(valBytes, item.valBytes);
+        return Arrays.equals(keys, item.keys) && Arrays.deepEquals(valBytesArray, item.valBytesArray);
     }
 
     /** {@inheritDoc} */
     @Override public int hashCode() {
-        return 31 * key.hashCode() + Arrays.hashCode(valBytes);
+        return 31 * Arrays.hashCode(keys) + Arrays.deepHashCode(valBytesArray);
+    }
+
+    /** Long hash. */
+    public long longHash() {
+        long hash = longHash;
+
+        if (hash == 0L) {
+            hash = 1L;
+
+            for (String key : keys)
+                hash = hash * 31L + key.hashCode();
+
+            for (byte[] valBytes : valBytesArray) {
+                if (valBytes == null)
+                    hash *= 31L;
+                else
+                    for (byte b : valBytes)
+                        hash = hash * 31L + b;
+            }
+
+            if (hash == 0L)
+                hash = 1L; // Avoid rehashing.
+
+            longHash = hash;
+        }
+
+        return hash;
     }
 
     /** {@inheritDoc} */

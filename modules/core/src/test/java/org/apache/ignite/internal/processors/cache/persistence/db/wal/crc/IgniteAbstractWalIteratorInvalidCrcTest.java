@@ -1,23 +1,23 @@
 /*
  *                   GridGain Community Edition Licensing
  *                   Copyright 2019 GridGain Systems, Inc.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
  * Restriction; you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
+ * 
  * Commons Clause Restriction
- *
+ * 
  * The Software is provided to you by the Licensor under the License, as defined below, subject to
  * the following condition.
- *
+ * 
  * Without limiting other conditions in the License, the grant of rights under the License will not
  * include, and the License does not grant to you, the right to Sell the Software.
  * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,7 +26,7 @@
  * service whose value derives, entirely or substantially, from the functionality of the Software.
  * Any license notice or attribution required by the License must also include this Commons Clause
  * License Condition notice.
- *
+ * 
  * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
  * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
  * Edition software provided with this notice.
@@ -36,8 +36,6 @@ package org.apache.ignite.internal.processors.cache.persistence.db.wal.crc;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.function.BiFunction;
@@ -54,9 +52,6 @@ import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.pagemem.wal.WALIterator;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
-import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
-import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
-import org.apache.ignite.internal.processors.cache.persistence.file.RandomAccessFileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileDescriptor;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
 import org.apache.ignite.internal.processors.cache.persistence.wal.crc.IgniteDataIntegrityViolationException;
@@ -67,10 +62,6 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
-
-import static java.nio.ByteBuffer.allocate;
-import static java.nio.file.StandardOpenOption.WRITE;
-import static org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordV1Serializer.CRC_SIZE;
 
 /**
  *
@@ -217,9 +208,10 @@ public abstract class IgniteAbstractWalIteratorInvalidCrcTest extends GridCommon
 
         FileDescriptor corruptedDesc = descPicker.apply(archiveDescs, descs);
 
-        FileWALPointer beforeCorruptedPtr = corruptWalSegmentFile(
+        FileWALPointer beforeCorruptedPtr = WalTestUtils.corruptWalSegmentFile(
             corruptedDesc,
-            iterFactory
+            iterFactory,
+            random
         );
 
         if (shouldFail) {
@@ -250,44 +242,5 @@ public abstract class IgniteAbstractWalIteratorInvalidCrcTest extends GridCommon
                 while (iter.hasNext())
                     iter.next();
             }
-    }
-
-    /**
-     * Put zero CRC in one of records for the specified segment.
-     * @param desc WAL segment descriptor.
-     * @param iterFactory Iterator factory for segment iterating.
-     * @return Descriptor that is located strictly before the corrupted one.
-     * @throws IOException If IO exception.
-     * @throws IgniteCheckedException If iterator failed.
-     */
-    protected FileWALPointer corruptWalSegmentFile(
-        FileDescriptor desc,
-        IgniteWalIteratorFactory iterFactory
-    ) throws IOException, IgniteCheckedException {
-        List<FileWALPointer> pointers = new ArrayList<>();
-
-        try (WALIterator it = iterFactory.iterator(desc.file())) {
-            for (IgniteBiTuple<WALPointer, WALRecord> tuple : it) {
-                pointers.add((FileWALPointer) tuple.get1());
-            }
-        }
-
-        // Should have a previous record to return and another value before that to ensure that "lastReadPtr"
-        // in "doTest" will always exist.
-        int idxCorrupted = 2 + random.nextInt(pointers.size() - 2);
-
-        FileWALPointer pointer = pointers.get(idxCorrupted);
-        int crc32Off = pointer.fileOffset() + pointer.length() - CRC_SIZE;
-
-        ByteBuffer zeroCrc32 = allocate(CRC_SIZE); // Has 0 value by default.
-
-        FileIOFactory ioFactory = new RandomAccessFileIOFactory();
-        try (FileIO io = ioFactory.create(desc.file(), WRITE)) {
-            io.write(zeroCrc32, crc32Off);
-
-            io.force(true);
-        }
-
-        return pointers.get(idxCorrupted - 1);
     }
 }

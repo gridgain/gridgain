@@ -1,23 +1,23 @@
 /*
  *                   GridGain Community Edition Licensing
  *                   Copyright 2019 GridGain Systems, Inc.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
  * Restriction; you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
+ * 
  * Commons Clause Restriction
- *
+ * 
  * The Software is provided to you by the Licensor under the License, as defined below, subject to
  * the following condition.
- *
+ * 
  * Without limiting other conditions in the License, the grant of rights under the License will not
  * include, and the License does not grant to you, the right to Sell the Software.
  * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,7 +26,7 @@
  * service whose value derives, entirely or substantially, from the functionality of the Software.
  * Any license notice or attribution required by the License must also include this Commons Clause
  * License Condition notice.
- *
+ * 
  * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
  * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
  * Edition software provided with this notice.
@@ -71,7 +71,6 @@ import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.transactions.Transaction;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -272,7 +271,6 @@ public class CacheMvccBasicContinuousQueryTest extends CacheMvccAbstractTest  {
     /**
      * @throws Exception  If failed.
      */
-    @Ignore("https://issues.apache.org/jira/browse/IGNITE-10768")
     @Test
     public void testUpdateCountersGapClosedSimplePartitioned() throws Exception {
         checkUpdateCountersGapIsProcessedSimple(CacheMode.PARTITIONED);
@@ -292,7 +290,9 @@ public class CacheMvccBasicContinuousQueryTest extends CacheMvccAbstractTest  {
     private void checkUpdateCountersGapIsProcessedSimple(CacheMode cacheMode) throws Exception {
         testSpi = true;
 
-        int srvCnt = 4;
+        final int srvCnt = 4;
+
+        final int backups = srvCnt - 1;
 
         startGridsMultiThreaded(srvCnt);
 
@@ -301,7 +301,7 @@ public class CacheMvccBasicContinuousQueryTest extends CacheMvccAbstractTest  {
         IgniteEx nearNode = startGrid(srvCnt);
 
         IgniteCache<Object, Object> cache = nearNode.createCache(
-            cacheConfiguration(cacheMode, FULL_SYNC, srvCnt - 1, srvCnt)
+            cacheConfiguration(cacheMode, FULL_SYNC, backups, srvCnt)
                 .setIndexedTypes(Integer.class, Integer.class));
 
         IgniteEx primary = grid(0);
@@ -329,17 +329,15 @@ public class CacheMvccBasicContinuousQueryTest extends CacheMvccAbstractTest  {
         // Initial value.
         cache.query(new SqlFieldsQuery("insert into Integer(_key, _val) values(?, 42)").setArgs(keys.get(0))).getAll();
 
-        Transaction txA = nearNode.transactions().txStart(PESSIMISTIC, REPEATABLE_READ);
-
         // prevent first transaction prepare on backups
         TestRecordingCommunicationSpi spi = TestRecordingCommunicationSpi.spi(primary);
 
-        spi.blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
-                private final AtomicInteger limiter = new AtomicInteger();
+        final AtomicInteger dhtPrepMsgLimiter = new AtomicInteger();
 
+        spi.blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
                 @Override public boolean apply(ClusterNode node, Message msg) {
                     if (msg instanceof GridDhtTxPrepareRequest)
-                        return limiter.getAndIncrement() < srvCnt - 1;
+                        return dhtPrepMsgLimiter.getAndIncrement() < backups;
 
                     if (msg instanceof GridContinuousMessage)
                         return true;
@@ -348,16 +346,32 @@ public class CacheMvccBasicContinuousQueryTest extends CacheMvccAbstractTest  {
                 }
             });
 
+        // First tx. Expect it will be prepared only on the primary node and GridDhtTxPrepareRequests to remotes
+        // will be swallowed.
+        Transaction txA = nearNode.transactions().txStart(PESSIMISTIC, REPEATABLE_READ);
+
         cache.query(new SqlFieldsQuery("insert into Integer(_key, _val) values(?, 42)").setArgs(keys.get(1))).getAll();
 
         txA.commitAsync();
 
+        // Wait until first tx changes it's status to PREPARING.
         GridTestUtils.waitForCondition(new GridAbsPredicate() {
             @Override public boolean apply() {
-                return nearNode.context().cache().context().tm().activeTransactions().stream().allMatch(tx -> tx.state() == PREPARING);
+                boolean preparing = nearNode.context()
+                    .cache()
+                    .context()
+                    .tm()
+                    .activeTransactions()
+                    .stream()
+                    .allMatch(tx -> tx.state() == PREPARING);
+
+                boolean allPrepsSwallowed = dhtPrepMsgLimiter.get() == backups;
+
+                return preparing && allPrepsSwallowed;
             }
         }, 3_000);
 
+        // Second tx.
         GridTestUtils.runAsync(() -> {
             try (Transaction txB = nearNode.transactions().txStart(PESSIMISTIC, REPEATABLE_READ)) {
                 cache.query(new SqlFieldsQuery("insert into Integer(_key, _val) values(?, 42)").setArgs(keys.get(2)));
@@ -368,7 +382,7 @@ public class CacheMvccBasicContinuousQueryTest extends CacheMvccAbstractTest  {
 
         long primaryUpdCntr = getUpdateCounter(primary, keys.get(0));
 
-        assertEquals(3, primaryUpdCntr); // There were three updates.
+        assertEquals(3, primaryUpdCntr); // There were three updates: init, first and second.
 
         // drop primary
         stopGrid(primary.name());

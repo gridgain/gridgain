@@ -1,23 +1,23 @@
 /*
  *                   GridGain Community Edition Licensing
  *                   Copyright 2019 GridGain Systems, Inc.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
  * Restriction; you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
+ * 
  * Commons Clause Restriction
- *
+ * 
  * The Software is provided to you by the Licensor under the License, as defined below, subject to
  * the following condition.
- *
+ * 
  * Without limiting other conditions in the License, the grant of rights under the License will not
  * include, and the License does not grant to you, the right to Sell the Software.
  * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,7 +26,7 @@
  * service whose value derives, entirely or substantially, from the functionality of the Software.
  * Any license notice or attribution required by the License must also include this Commons Clause
  * License Condition notice.
- *
+ * 
  * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
  * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
  * Edition software provided with this notice.
@@ -78,8 +78,8 @@ public class SqlClientContext implements AutoCloseable {
     /** Data page scan support for query execution. */
     private final @Nullable Boolean dataPageScanEnabled;
 
-    /** Monitor. */
-    private final Object mux = new Object();
+    /** Monitor for stream operations. */
+    private final Object muxStreamer = new Object();
 
     /** Allow overwrites for duplicate keys on streamed {@code INSERT}s. */
     private boolean streamAllowOverwrite;
@@ -150,7 +150,7 @@ public class SqlClientContext implements AutoCloseable {
      */
     public void enableStreaming(boolean allowOverwrite, long flushFreq, int perNodeBufSize,
         int perNodeParOps, boolean ordered) {
-        synchronized (mux) {
+        synchronized (muxStreamer) {
             if (isStream())
                 return;
 
@@ -161,6 +161,7 @@ public class SqlClientContext implements AutoCloseable {
             this.streamNodeBufSize = perNodeBufSize;
             this.streamNodeParOps = perNodeParOps;
             this.streamOrdered = ordered;
+            this.totalProcessedOrderedReqs = 0;
 
             if (ordered) {
                 orderedBatchThread = new IgniteThread(orderedBatchWorkerFactory.create());
@@ -174,7 +175,7 @@ public class SqlClientContext implements AutoCloseable {
      * Turn off streaming on this client context - with closing all open streamers, if any.
      */
     public void disableStreaming() {
-        synchronized (mux) {
+        synchronized (muxStreamer) {
             if (!isStream())
                 return;
 
@@ -189,8 +190,8 @@ public class SqlClientContext implements AutoCloseable {
             }
 
             streamers = null;
-
             orderedBatchThread = null;
+            totalProcessedOrderedReqs = 0;
         }
     }
 
@@ -247,7 +248,7 @@ public class SqlClientContext implements AutoCloseable {
      * @return Streaming state flag (on or off).
      */
     public boolean isStream() {
-        synchronized (mux) {
+        synchronized (muxStreamer) {
             return streamers != null;
         }
     }
@@ -256,7 +257,7 @@ public class SqlClientContext implements AutoCloseable {
      * @return Stream ordered flag.
      */
     public boolean isStreamOrdered() {
-        synchronized (mux) {
+        synchronized (muxStreamer) {
             return streamOrdered;
         }
     }
@@ -266,7 +267,7 @@ public class SqlClientContext implements AutoCloseable {
      * @return Streamer for given cache.
      */
     public IgniteDataStreamer<?, ?> streamerForCache(String cacheName) {
-        synchronized (mux) {
+        synchronized (muxStreamer) {
             if (streamers == null)
                 return null;
 
@@ -298,10 +299,10 @@ public class SqlClientContext implements AutoCloseable {
      * @param total Expected total processed request.
      */
     public void waitTotalProcessedOrderedRequests(long total) {
-        synchronized (mux) {
+        synchronized (muxStreamer) {
             while (totalProcessedOrderedReqs < total) {
                 try {
-                    mux.wait();
+                    muxStreamer.wait();
                 }
                 catch (InterruptedException e) {
                     throw new IgniteException("Waiting for end of processing the last batch is interrupted", e);
@@ -314,10 +315,10 @@ public class SqlClientContext implements AutoCloseable {
      *
      */
     public void orderedRequestProcessed() {
-        synchronized (mux) {
+        synchronized (muxStreamer) {
             totalProcessedOrderedReqs++;
 
-            mux.notify();
+            muxStreamer.notifyAll();
         }
     }
 

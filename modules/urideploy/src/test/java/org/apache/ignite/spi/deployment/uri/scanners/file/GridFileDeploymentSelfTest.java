@@ -1,23 +1,23 @@
 /*
  *                   GridGain Community Edition Licensing
  *                   Copyright 2019 GridGain Systems, Inc.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
  * Restriction; you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
+ * 
  * Commons Clause Restriction
- *
+ * 
  * The Software is provided to you by the Licensor under the License, as defined below, subject to
  * the following condition.
- *
+ * 
  * Without limiting other conditions in the License, the grant of rights under the License will not
  * include, and the License does not grant to you, the right to Sell the Software.
  * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,7 +26,7 @@
  * service whose value derives, entirely or substantially, from the functionality of the Software.
  * Any license notice or attribution required by the License must also include this Commons Clause
  * License Condition notice.
- *
+ * 
  * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
  * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
  * Edition software provided with this notice.
@@ -68,12 +68,23 @@ public class GridFileDeploymentSelfTest extends GridUriDeploymentAbstractSelfTes
     }
 
     /**
+     * Tests task from file 'deployfile.jar'.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testDeploymentFromJar() throws Exception {
+        checkTask("org.apache.ignite.spi.deployment.uri.tasks.GridUriDeploymentTestTask8");
+        checkTask("GridUriDeploymentTestWithNameTask8");
+    }
+
+    /**
      * Tests task from file 'deployfile.gar'.
      *
      * @throws Exception If failed.
      */
     @Test
-    public void testDeploymentFromFile() throws Exception {
+    public void testDeploymentFromGar() throws Exception {
         checkTask("org.apache.ignite.spi.deployment.uri.tasks.GridUriDeploymentTestTask3");
         checkTask("GridUriDeploymentTestWithNameTask3");
     }
@@ -119,6 +130,26 @@ public class GridFileDeploymentSelfTest extends GridUriDeploymentAbstractSelfTes
     }
 
     /**
+     * Tests task from file 'deployfile.jar'.
+     *
+     * Looks for task {@code GridUriDeploymentTestTask9}.
+     * That task loads resource {@code spring9.xml} and imports external class from the same JAR
+     * External class loads resource {@code test9.properties} from the same JAR it is loaded from.
+     *
+     * To check {@code GridDeploymentUriClassLoader} class loader need to delete all classes
+     * and resources from Junit classpath. Note that class loader searches for classes in a JAR
+     * file and not in the parent class loader for junits.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testDependenceJarDeployment() throws Exception {
+        checkTask("org.apache.ignite.spi.deployment.uri.tasks.GridUriDeploymentTestTask9");
+        getSpi().findResource("org.apache.ignite.spi.deployment.uri.tasks.GridUriDeploymentTestTask9")
+                .getResourceClass().newInstance();
+    }
+
+    /**
      * Tests task from file 'deployfile-depend.gar'.
      *
      * Looks for task {@code GridUriDeploymentTestTask1} with descriptor file from GAR-file.
@@ -132,7 +163,7 @@ public class GridFileDeploymentSelfTest extends GridUriDeploymentAbstractSelfTes
      * @throws Exception If failed.
      */
     @Test
-    public void testDependenceDeployment() throws Exception {
+    public void testDependenceGarDeployment() throws Exception {
         checkTask("org.apache.ignite.spi.deployment.uri.tasks.GridUriDeploymentTestTask1");
         getSpi().findResource("org.apache.ignite.spi.deployment.uri.tasks.GridUriDeploymentTestTask1")
             .getResourceClass().newInstance();
@@ -159,16 +190,17 @@ public class GridFileDeploymentSelfTest extends GridUriDeploymentAbstractSelfTes
     }
 
     /**
-     * Tests task from files 'well-signed-deployfile.gar' and 'bad-signed-deployfile.gar'.
-     * File 'bad-signed-deployfile.gar' contains non-signed modifications.
+     * Tests task from files 'well-signed-deployfile.gar', 'bad-signed-deployfile.gar',
+     * 'well-signed-deployfile.jar' and 'bad-signed-deployfile.jar'.
+     * Files 'bad-signed-deployfile.gar', 'bad-signed-deployfile.jar' contain non-signed modifications.
      *
      * Sign JAR with command:
      * $ jarsigner -keystore $IGNITE_HOME/modules/tests/config/signeddeploy/keystore -storepass "abc123"
-     *      -keypass "abc123" -signedjar signed-deployfile.gar deployfile.gar business
+     *      -keypass "abc123" -signedjar signed-deployfile.jar deployfile.jar business
      *
      * Verify signed JAR-file:
      * $ jarsigner -verify -keystore $IGNITE_HOME/modules/tests/config/signeddeploy/keystore -storepass "abc123"
-     *      -keypass "abc123" signed-deployfile.gar
+     *      -keypass "abc123" signed-deployfile.jar
      *
      * @throws Exception If failed.
      */
@@ -176,10 +208,16 @@ public class GridFileDeploymentSelfTest extends GridUriDeploymentAbstractSelfTes
     public void testSignedDeployment() throws Exception {
         checkTask("org.apache.ignite.spi.deployment.uri.tasks.GridUriDeploymentTestTask5");
         checkTask("GridUriDeploymentTestWithNameTask5");
+        checkTask("org.apache.ignite.spi.deployment.uri.tasks.GridUriDeploymentTestTask10");
+        checkTask("GridUriDeploymentTestWithNameTask10");
 
         assert getSpi().findResource("org.apache.ignite.spi.deployment.uri.tasks.GridUriDeploymentTestTask6") == null :
             "Task from GAR with invalid signature should not be deployed.";
-        assert getSpi().findResource("org.apache.ignite.spi.deployment.uri.tasks.GridUriDeploymentTestWithNameTask6")
+        assert getSpi().findResource("tasks.GridUriDeploymentTestWithNameTask6")
             == null : "Task from GAR with invalid signature should not be deployed.";
+        assert getSpi().findResource("org.apache.ignite.spi.deployment.uri.tasks.GridUriDeploymentTestTask11") == null :
+            "Task from JAR with invalid signature should not be deployed.";
+        assert getSpi().findResource("GridUriDeploymentTestWithNameTask11")
+            == null : "Task from JAR with invalid signature should not be deployed.";
     }
 }

@@ -1,23 +1,23 @@
 /*
  *                   GridGain Community Edition Licensing
  *                   Copyright 2019 GridGain Systems, Inc.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
  * Restriction; you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
+ * 
  * Commons Clause Restriction
- *
+ * 
  * The Software is provided to you by the Licensor under the License, as defined below, subject to
  * the following condition.
- *
+ * 
  * Without limiting other conditions in the License, the grant of rights under the License will not
  * include, and the License does not grant to you, the right to Sell the Software.
  * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,7 +26,7 @@
  * service whose value derives, entirely or substantially, from the functionality of the Software.
  * Any license notice or attribution required by the License must also include this Commons Clause
  * License Condition notice.
- *
+ * 
  * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
  * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
  * Edition software provided with this notice.
@@ -45,6 +45,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -67,33 +68,43 @@ public class IdleVerifyResultV2 extends VisorDataTransferObject {
     private static final long serialVersionUID = 0L;
 
     /** Counter conflicts. */
+    @GridToStringInclude
     private Map<PartitionKeyV2, List<PartitionHashRecordV2>> cntrConflicts;
 
     /** Hash conflicts. */
+    @GridToStringInclude
     private Map<PartitionKeyV2, List<PartitionHashRecordV2>> hashConflicts;
 
     /** Moving partitions. */
+    @GridToStringInclude
     private Map<PartitionKeyV2, List<PartitionHashRecordV2>> movingPartitions;
 
     /** Exceptions. */
+    @GridToStringInclude
     private Map<ClusterNode, Exception> exceptions;
+
+    /** Whether job succeeded or not. */
+    private boolean succeeded = true;
 
     /**
      * @param cntrConflicts Counter conflicts.
      * @param hashConflicts Hash conflicts.
      * @param movingPartitions Moving partitions.
      * @param exceptions Occured exceptions.
+     * @param succeeded Whether succeeded or not.
      */
     public IdleVerifyResultV2(
         Map<PartitionKeyV2, List<PartitionHashRecordV2>> cntrConflicts,
         Map<PartitionKeyV2, List<PartitionHashRecordV2>> hashConflicts,
         Map<PartitionKeyV2, List<PartitionHashRecordV2>> movingPartitions,
-        Map<ClusterNode, Exception> exceptions
+        Map<ClusterNode, Exception> exceptions,
+        boolean succeeded
     ) {
         this.cntrConflicts = cntrConflicts;
         this.hashConflicts = hashConflicts;
         this.movingPartitions = movingPartitions;
         this.exceptions = exceptions;
+        this.succeeded = succeeded;
     }
 
     /**
@@ -194,27 +205,45 @@ public class IdleVerifyResultV2 extends VisorDataTransferObject {
 
     /** */
     private void print(Consumer<String> printer, boolean printExceptionMessages) {
-        if (!F.isEmpty(exceptions)) {
-            int size = exceptions.size();
+        boolean noMatchingCaches = false;
 
-            printer.accept("idle_verify failed on " + size + " node" + (size == 1 ? "" : "s") + ".\n");
-        }
+        for (Exception e : exceptions.values())
+            if (e instanceof NoMatchingCachesException) {
+                noMatchingCaches = true;
+                succeeded = false;
 
-        if (!hasConflicts())
-            printer.accept("idle_verify check has finished, no conflicts have been found.\n");
-        else
-            printConflicts(printer);
-
-        if (!F.isEmpty(movingPartitions())) {
-            printer.accept("Verification was skipped for " + movingPartitions().size() + " MOVING partitions:\n");
-
-            for (Map.Entry<PartitionKeyV2, List<PartitionHashRecordV2>> entry : movingPartitions().entrySet()) {
-                printer.accept("Rebalancing partition: " + entry.getKey() + "\n");
-
-                printer.accept("Partition instances: " + entry.getValue() + "\n");
+                break;
             }
 
-            printer.accept("\n");
+        if (succeeded) {
+            if (!F.isEmpty(exceptions)) {
+                int size = exceptions.size();
+
+                printer.accept("idle_verify failed on " + size + " node" + (size == 1 ? "" : "s") + ".\n");
+            }
+
+            if (!hasConflicts())
+                printer.accept("idle_verify check has finished, no conflicts have been found.\n");
+            else
+                printConflicts(printer);
+
+            if (!F.isEmpty(movingPartitions())) {
+                printer.accept("Verification was skipped for " + movingPartitions().size() + " MOVING partitions:\n");
+
+                for (Map.Entry<PartitionKeyV2, List<PartitionHashRecordV2>> entry : movingPartitions().entrySet()) {
+                    printer.accept("Rebalancing partition: " + entry.getKey() + "\n");
+
+                    printer.accept("Partition instances: " + entry.getValue() + "\n");
+                }
+
+                printer.accept("\n");
+            }
+        }
+        else {
+            printer.accept("idle_verify failed.");
+
+            if (noMatchingCaches)
+                printer.accept("There are no caches matching given filter options.");
         }
 
         if (!F.isEmpty(exceptions())) {

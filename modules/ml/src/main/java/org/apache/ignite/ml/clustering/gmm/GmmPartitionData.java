@@ -1,36 +1,55 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *                   GridGain Community Edition Licensing
+ *                   Copyright 2019 GridGain Systems, Inc.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
+ * Restriction; you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the specific language governing permissions
+ * and limitations under the License.
+ * 
+ * Commons Clause Restriction
+ * 
+ * The Software is provided to you by the Licensor under the License, as defined below, subject to
+ * the following condition.
+ * 
+ * Without limiting other conditions in the License, the grant of rights under the License will not
+ * include, and the License does not grant to you, the right to Sell the Software.
+ * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
+ * under the License to provide to third parties, for a fee or other consideration (including without
+ * limitation fees for hosting or consulting/ support services related to the Software), a product or
+ * service whose value derives, entirely or substantially, from the functionality of the Software.
+ * Any license notice or attribution required by the License must also include this Commons Clause
+ * License Condition notice.
+ * 
+ * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
+ * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
+ * Edition software provided with this notice.
  */
 
 package org.apache.ignite.ml.clustering.gmm;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.ml.dataset.Dataset;
 import org.apache.ignite.ml.dataset.PartitionDataBuilder;
 import org.apache.ignite.ml.dataset.UpstreamEntry;
+import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
 import org.apache.ignite.ml.dataset.primitive.context.EmptyContext;
 import org.apache.ignite.ml.environment.LearningEnvironment;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.math.stat.MultivariateGaussianDistribution;
 import org.apache.ignite.ml.structures.LabeledVector;
-import org.apache.ignite.ml.trainers.FeatureLabelExtractor;
+
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
 
 /**
  * Partition data for GMM algorithm. Unlike partition data for other algorithms this class aggregate probabilities of
@@ -65,10 +84,20 @@ class GmmPartitionData implements AutoCloseable {
     }
 
     /**
-     * @return all vectors from partition.
+     * Updates P(c|xi) values in partitions and compute dataset likelihood.
+     *
+     * @param dataset Dataset.
+     * @param clusterProbs Component probabilities.
+     * @param components Components.
+     * @return Dataset likelihood.
      */
-    public List<LabeledVector<Double>> getAllXs() {
-        return Collections.unmodifiableList(xs);
+    static double updatePcxiAndComputeLikelihood(Dataset<EmptyContext, GmmPartitionData> dataset, Vector clusterProbs,
+        List<MultivariateGaussianDistribution> components) {
+
+        return dataset.compute(
+            data -> updatePcxi(data, clusterProbs, components),
+            (left, right) -> asPrimitive(left) + asPrimitive(right)
+        );
     }
 
     /**
@@ -90,10 +119,10 @@ class GmmPartitionData implements AutoCloseable {
     }
 
     /**
-     * @return size of dataset partition.
+     * @return All vectors from partition.
      */
-    public int size() {
-        return pcxi.length;
+    public List<LabeledVector<Double>> getAllXs() {
+        return Collections.unmodifiableList(xs);
     }
 
     /** {@inheritDoc} */
@@ -104,12 +133,12 @@ class GmmPartitionData implements AutoCloseable {
     /**
      * Builder for GMM partition data.
      */
-    public static class Builder<K, V> implements PartitionDataBuilder<K, V, EmptyContext, GmmPartitionData> {
+    public static class Builder<K, V, C extends Serializable> implements PartitionDataBuilder<K, V, EmptyContext, GmmPartitionData> {
         /** Serial version uid. */
         private static final long serialVersionUID = 1847063348042022561L;
 
-        /** Extractor. */
-        private final FeatureLabelExtractor<K, V, Double> extractor;
+        /** Upsteam vectorizer. */
+        private final Vectorizer<K, V, C, Double> extractor;
 
         /** Count of components of mixture. */
         private final int countOfComponents;
@@ -120,7 +149,7 @@ class GmmPartitionData implements AutoCloseable {
          * @param extractor Extractor.
          * @param countOfComponents Count of components.
          */
-        public Builder(FeatureLabelExtractor<K, V, Double> extractor, int countOfComponents) {
+        public Builder(Vectorizer<K, V, C, Double> extractor, int countOfComponents) {
             this.extractor = extractor;
             this.countOfComponents = countOfComponents;
         }
@@ -169,20 +198,10 @@ class GmmPartitionData implements AutoCloseable {
     }
 
     /**
-     * Updates P(c|xi) values in partitions and compute dataset likelihood.
-     *
-     * @param dataset Dataset.
-     * @param clusterProbs Component probabilities.
-     * @param components Components.
-     * @return dataset likelihood.
+     * @return Size of dataset partition.
      */
-    static double updatePcxiAndComputeLikelihood(Dataset<EmptyContext, GmmPartitionData> dataset, Vector clusterProbs,
-        List<MultivariateGaussianDistribution> components) {
-
-        return dataset.compute(
-            data -> updatePcxi(data, clusterProbs, components),
-            (left, right) -> asPrimitive(left) + asPrimitive(right)
-        );
+    public int size() {
+        return pcxi.length;
     }
 
     /**

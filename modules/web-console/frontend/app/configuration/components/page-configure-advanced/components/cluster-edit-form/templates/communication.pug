@@ -1,23 +1,23 @@
 //-
-    GridGain Community Edition Licensing
+                      GridGain Community Edition Licensing
                       Copyright 2019 GridGain Systems, Inc.
-
+    
     Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
     Restriction; you may not use this file except in compliance with the License. You may obtain a
     copy of the License at
-
+    
     http://www.apache.org/licenses/LICENSE-2.0
-
+    
     Unless required by applicable law or agreed to in writing, software distributed under the
     License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
     KIND, either express or implied. See the License for the specific language governing permissions
     and limitations under the License.
-
+    
     Commons Clause Restriction
-
+    
     The Software is provided to you by the Licensor under the License, as defined below, subject to
     the following condition.
-
+    
     Without limiting other conditions in the License, the grant of rights under the License will not
     include, and the License does not grant to you, the right to Sell the Software.
     For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,10 +26,11 @@
     service whose value derives, entirely or substantially, from the functionality of the Software.
     Any license notice or attribution required by the License must also include this Commons Clause
     License Condition notice.
-
+    
     For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
     the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
     Edition software provided with this notice.
+
 
 include /app/helpers/jade/mixins
 include /app/configuration/mixins
@@ -73,6 +74,16 @@ panel-collapsible(ng-form=form on-open=`ui.loadPanel('${form}')`)
                     min: '1',
                     tip: 'Message send retries count'
                 })
+            .pc-form-grid-col-30(ng-if='$ctrl.available("2.8.0")')
+                +form-field__number({
+                    label: 'Compression level:',
+                    model: `${model}.networkCompressionLevel`,
+                    name: '"networkCompressionLevel"',
+                    placeholder: '1',
+                    min: '0',
+                    max: '9',
+                    tip: 'Compression level of internal network messages'
+                })
             .pc-form-grid-col-30(ng-if='$ctrl.available(["1.0.0", "2.3.0"])')
                 +form-field__number({
                     label: 'Discovery startup delay:',
@@ -81,6 +92,13 @@ panel-collapsible(ng-form=form on-open=`ui.loadPanel('${form}')`)
                     placeholder: '60000',
                     min: '1',
                     tip: 'This value is used to expire messages from waiting list whenever node discovery discrepancies happen'
+                })
+            .pc-form-grid-col-60(ng-if='$ctrl.available("2.5.0")')
+                +form-field__java-class({
+                    label: 'Failure resolver:',
+                    model: `${model}.communicationFailureResolver`,
+                    name: '"communicationFailureResolver"',
+                    tip: 'Communication failure resovler'
                 })
             .pc-form-grid-col-60
                 +form-field__java-class({
@@ -253,6 +271,24 @@ panel-collapsible(ng-form=form on-open=`ui.loadPanel('${form}')`)
                     min: '1',
                     tip: 'Count of selectors te be used in TCP server'
                 })
+            .pc-form-grid-col-30
+                +form-field__number({
+                    label: 'Selectors spins:',
+                    model: `${communication}.selectorSpins`,
+                    name: '"selectorSpins"',
+                    placeholder: '0',
+                    min: '0',
+                    tip: 'Defines how many non-blocking selector.selectNow() should be made before falling into selector.select(long) in NIO server'
+                })
+            .pc-form-grid-col-30
+                +form-field__number({
+                    label: 'Connections per node:',
+                    model: `${communication}.connectionsPerNode`,
+                    name: '"connectionsPerNode"',
+                    placeholder: '1',
+                    min: '1',
+                    tip: 'Number of connections to each remote node'
+                })
             .pc-form-grid-col-60
                 +form-field__java-class({
                     label: 'Address resolver:',
@@ -281,6 +317,20 @@ panel-collapsible(ng-form=form on-open=`ui.loadPanel('${form}')`)
                     model: `${communication}.tcpNoDelay`,
                     name: '"tcpNoDelay"',
                     tip: 'Value for TCP_NODELAY socket option'
+                })
+            .pc-form-grid-col-60
+                +form-field__checkbox({
+                    label: 'Use paired connections',
+                    model: `${communication}.usePairedConnections`,
+                    name: '"usePairedConnections"',
+                    tip: 'Maintain connection for outgoing and incoming messages separately'
+                })
+            .pc-form-grid-col-60(ng-if='$ctrl.available("2.3.0")')
+                +form-field__checkbox({
+                    label: 'Filter reachable addresses',
+                    model: `${communication}.filterReachableAddresses`,
+                    name: '"filterReachableAddresses"',
+                    tip: 'Filter for reachable addresses on creating tcp client'
                 })
         .pca-form-column-6
             +preview-xml-java(model, 'clusterCommunication')

@@ -1,18 +1,35 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *                   GridGain Community Edition Licensing
+ *                   Copyright 2019 GridGain Systems, Inc.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
+ * Restriction; you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the specific language governing permissions
+ * and limitations under the License.
+ * 
+ * Commons Clause Restriction
+ * 
+ * The Software is provided to you by the Licensor under the License, as defined below, subject to
+ * the following condition.
+ * 
+ * Without limiting other conditions in the License, the grant of rights under the License will not
+ * include, and the License does not grant to you, the right to Sell the Software.
+ * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
+ * under the License to provide to third parties, for a fee or other consideration (including without
+ * limitation fees for hosting or consulting/ support services related to the Software), a product or
+ * service whose value derives, entirely or substantially, from the functionality of the Software.
+ * Any license notice or attribution required by the License must also include this Commons Clause
+ * License Condition notice.
+ * 
+ * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
+ * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
+ * Edition software provided with this notice.
  */
 
 package org.apache.ignite.internal.processors.metastorage.persistence;
@@ -27,12 +44,12 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadWriteMetastorage;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageHistoryItem.EMPTY_ARRAY;
+import static org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageKeyValuePair.EMPTY_ARRAY;
 import static org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageUtil.COMMON_KEY_PREFIX;
 import static org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageUtil.cleanupGuardKey;
 import static org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageUtil.globalKey;
 import static org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageUtil.historyItemKey;
-import static org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageUtil.historyVersionKey;
+import static org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageUtil.versionKey;
 import static org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageUtil.localKey;
 import static org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageUtil.localKeyPrefix;
 
@@ -81,18 +98,13 @@ class WritableDistributedMetaStorageBridge implements DistributedMetaStorageBrid
 
     /** {@inheritDoc} */
     @Override public void onUpdateMessage(
-        DistributedMetaStorageHistoryItem histItem,
-        Serializable val,
-        boolean notifyListeners
+        DistributedMetaStorageHistoryItem histItem
     ) throws IgniteCheckedException {
-        metastorage.write(historyItemKey(dms.ver.id + 1), histItem);
+        metastorage.write(historyItemKey(dms.getVer().id + 1), histItem);
 
-        dms.ver = dms.ver.nextVersion(histItem);
+        dms.setVer(dms.getVer().nextVersion(histItem));
 
-        metastorage.write(historyVersionKey(), dms.ver);
-
-        if (notifyListeners)
-            dms.notifyListeners(histItem.key, read(histItem.key, true), val);
+        metastorage.write(versionKey(), dms.getVer());
     }
 
     /** {@inheritDoc} */
@@ -101,12 +113,12 @@ class WritableDistributedMetaStorageBridge implements DistributedMetaStorageBrid
     }
 
     /** {@inheritDoc} */
-    @Override public DistributedMetaStorageHistoryItem[] localFullData() throws IgniteCheckedException {
-        List<DistributedMetaStorageHistoryItem> locFullData = new ArrayList<>();
+    @Override public DistributedMetaStorageKeyValuePair[] localFullData() throws IgniteCheckedException {
+        List<DistributedMetaStorageKeyValuePair> locFullData = new ArrayList<>();
 
         metastorage.iterate(
             localKeyPrefix(),
-            (key, val) -> locFullData.add(new DistributedMetaStorageHistoryItem(globalKey(key), (byte[])val)),
+            (key, val) -> locFullData.add(new DistributedMetaStorageKeyValuePair(globalKey(key), (byte[])val)),
             false
         );
 
@@ -132,32 +144,32 @@ class WritableDistributedMetaStorageBridge implements DistributedMetaStorageBrid
             if (startupExtras.fullNodeData != null) {
                 DistributedMetaStorageClusterNodeData fullNodeData = startupExtras.fullNodeData;
 
-                dms.ver = fullNodeData.ver;
+                dms.setVer(fullNodeData.ver);
 
                 dms.clearHistoryCache();
 
-                for (DistributedMetaStorageHistoryItem item : fullNodeData.fullData)
+                for (DistributedMetaStorageKeyValuePair item : fullNodeData.fullData)
                     metastorage.writeRaw(localKey(item.key), item.valBytes);
 
                 for (int i = 0, len = fullNodeData.hist.length; i < len; i++) {
                     DistributedMetaStorageHistoryItem histItem = fullNodeData.hist[i];
 
-                    long histItemVer = dms.ver.id + i + 1 - len;
+                    long histItemVer = dms.getVer().id + i + 1 - len;
 
                     metastorage.write(historyItemKey(histItemVer), histItem);
 
                     dms.addToHistoryCache(histItemVer, histItem);
                 }
 
-                metastorage.write(historyVersionKey(), dms.ver);
+                metastorage.write(versionKey(), dms.getVer());
             }
 
             metastorage.remove(cleanupGuardKey);
         }
 
-        DistributedMetaStorageVersion storedVer = (DistributedMetaStorageVersion)metastorage.read(historyVersionKey());
+        DistributedMetaStorageVersion storedVer = (DistributedMetaStorageVersion)metastorage.read(versionKey());
 
         if (storedVer == null)
-            metastorage.write(historyVersionKey(), DistributedMetaStorageVersion.INITIAL_VERSION);
+            metastorage.write(versionKey(), DistributedMetaStorageVersion.INITIAL_VERSION);
     }
 }

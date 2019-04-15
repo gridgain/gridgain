@@ -1,46 +1,62 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *                   GridGain Community Edition Licensing
+ *                   Copyright 2019 GridGain Systems, Inc.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
+ * Restriction; you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the specific language governing permissions
+ * and limitations under the License.
+ * 
+ * Commons Clause Restriction
+ * 
+ * The Software is provided to you by the Licensor under the License, as defined below, subject to
+ * the following condition.
+ * 
+ * Without limiting other conditions in the License, the grant of rights under the License will not
+ * include, and the License does not grant to you, the right to Sell the Software.
+ * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
+ * under the License to provide to third parties, for a fee or other consideration (including without
+ * limitation fees for hosting or consulting/ support services related to the Software), a product or
+ * service whose value derives, entirely or substantially, from the functionality of the Software.
+ * Any license notice or attribution required by the License must also include this Commons Clause
+ * License Condition notice.
+ * 
+ * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
+ * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
+ * Edition software provided with this notice.
  */
 
 package org.apache.ignite.ml.composition.combinators.parallel;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
 import org.apache.ignite.ml.IgniteModel;
 import org.apache.ignite.ml.composition.CompositionUtils;
 import org.apache.ignite.ml.dataset.DatasetBuilder;
+import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
 import org.apache.ignite.ml.environment.parallelism.Promise;
-import org.apache.ignite.ml.math.functions.IgniteBiFunction;
 import org.apache.ignite.ml.math.functions.IgniteSupplier;
 import org.apache.ignite.ml.trainers.DatasetTrainer;
-import org.apache.ignite.ml.trainers.FeatureLabelExtractor;
+
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
- * This class represents a parallel composition of trainers.
- * Parallel composition of trainers is a trainer itself which trains a list of trainers with same
- * input and output. Training is done in following manner:
+ * This class represents a parallel composition of trainers. Parallel composition of trainers is a trainer itself which
+ * trains a list of trainers with same input and output. Training is done in following manner:
  * <pre>
  *     1. Independently train all trainers on the same dataset and get a list of models.
  *     2. Combine models produced in step (1) into a {@link ModelsParallelComposition}.
  * </pre>
- * Updating is made in a similar fashion.
- * Like in other trainers combinators we avoid to include type of contained trainers in type parameters
- * because otherwise compositions of compositions would have a relatively complex generic type which will
- * reduce readability.
+ * Updating is made in a similar fashion. Like in other trainers combinators we avoid to include type of contained
+ * trainers in type parameters because otherwise compositions of compositions would have a relatively complex generic
+ * type which will reduce readability.
  *
  * @param <I> Type of trainers inputs.
  * @param <O> Type of trainers outputs.
@@ -72,7 +88,8 @@ public class TrainersParallelComposition<I, O, L> extends DatasetTrainer<IgniteM
      * @param <L> Type of input of labels.
      * @return Parallel composition of trainers contained in a given list.
      */
-    public static <I, O, M extends IgniteModel<I, O>, T extends DatasetTrainer<M, L>, L> TrainersParallelComposition<I, O, L> of(List<T> trainers) {
+    public static <I, O, M extends IgniteModel<I, O>, T extends DatasetTrainer<M, L>, L> TrainersParallelComposition<I, O, L> of(
+        List<T> trainers) {
         List<DatasetTrainer<IgniteModel<I, O>, L>> trs =
             trainers.stream().map(CompositionUtils::unsafeCoerce).collect(Collectors.toList());
 
@@ -80,12 +97,10 @@ public class TrainersParallelComposition<I, O, L> extends DatasetTrainer<IgniteM
     }
 
     /** {@inheritDoc} */
-    @Override public <K, V> IgniteModel<I, List<O>> fit(DatasetBuilder<K, V> datasetBuilder,
-        FeatureLabelExtractor<K, V, L> extractor) {
+    @Override public <K, V, C extends Serializable> IgniteModel<I, List<O>> fit(DatasetBuilder<K, V> datasetBuilder,
+        Vectorizer<K, V, C, L> extractor) {
         List<IgniteSupplier<IgniteModel<I, O>>> tasks = trainers.stream()
-            .map(tr -> (IgniteSupplier<IgniteModel<I, O>>)(() -> tr.fit(datasetBuilder,
-                CompositionUtils.asFeatureExtractor(extractor),
-                CompositionUtils.asLabelExtractor(extractor))))
+            .map(tr -> (IgniteSupplier<IgniteModel<I, O>>)(() -> tr.fit(datasetBuilder, extractor)))
             .collect(Collectors.toList());
 
         List<IgniteModel<I, O>> mdls = environment.parallelismStrategy().submit(tasks).stream()
@@ -96,8 +111,9 @@ public class TrainersParallelComposition<I, O, L> extends DatasetTrainer<IgniteM
     }
 
     /** {@inheritDoc} */
-    @Override public <K, V> IgniteModel<I, List<O>> update(IgniteModel<I, List<O>> mdl, DatasetBuilder<K, V> datasetBuilder,
-        FeatureLabelExtractor<K, V, L> extractor) {
+    @Override public <K, V, C extends Serializable> IgniteModel<I, List<O>> update(IgniteModel<I, List<O>> mdl,
+        DatasetBuilder<K, V> datasetBuilder,
+        Vectorizer<K, V, C, L> extractor) {
         ModelsParallelComposition<I, O> typedMdl = (ModelsParallelComposition<I, O>)mdl;
 
         assert typedMdl.submodels().size() == trainers.size();
@@ -105,9 +121,7 @@ public class TrainersParallelComposition<I, O, L> extends DatasetTrainer<IgniteM
 
         for (int i = 0; i < trainers.size(); i++) {
             int j = i;
-            tasks.add(() -> trainers.get(j).update(typedMdl.submodels().get(j), datasetBuilder,
-                CompositionUtils.asFeatureExtractor(extractor),
-                CompositionUtils.asLabelExtractor(extractor)));
+            tasks.add(() -> trainers.get(j).update(typedMdl.submodels().get(j), datasetBuilder, extractor));
         }
 
         List<IgniteModel<I, O>> mdls = environment.parallelismStrategy().submit(tasks).stream()
@@ -118,10 +132,8 @@ public class TrainersParallelComposition<I, O, L> extends DatasetTrainer<IgniteM
     }
 
     /**
-     * This method is never called, instead of constructing logic of update from
-     * {@link DatasetTrainer#isUpdateable} and
-     * {@link DatasetTrainer#updateModel}
-     * in this class we explicitly override update method.
+     * This method is never called, instead of constructing logic of update from {@link DatasetTrainer#isUpdateable} and
+     * {@link DatasetTrainer#updateModel} in this class we explicitly override update method.
      *
      * @param mdl Model.
      * @return True if current critical for training parameters correspond to parameters from last training.
@@ -132,16 +144,16 @@ public class TrainersParallelComposition<I, O, L> extends DatasetTrainer<IgniteM
     }
 
     /**
-     * This method is never called, instead of constructing logic of update from
-     * {@link DatasetTrainer#isUpdateable(IgniteModel)} and
-     * {@link DatasetTrainer#updateModel(IgniteModel, DatasetBuilder, IgniteBiFunction, IgniteBiFunction)}
+     * This method is never called, instead of constructing logic of update from {@link
+     * DatasetTrainer#isUpdateable(IgniteModel)} and {@link DatasetTrainer#updateModel(IgniteModel, DatasetBuilder, Vectorizer)}
      * in this class we explicitly override update method.
      *
      * @param mdl Model.
      * @return Updated model.
      */
-    @Override protected <K, V> IgniteModel<I, List<O>> updateModel(IgniteModel<I, List<O>> mdl, DatasetBuilder<K, V> datasetBuilder,
-        FeatureLabelExtractor<K, V, L> extractor) {
+    @Override protected <K, V, C extends Serializable> IgniteModel<I, List<O>> updateModel(IgniteModel<I, List<O>> mdl,
+        DatasetBuilder<K, V> datasetBuilder,
+        Vectorizer<K, V, C, L> extractor) {
         // Never called.
         throw new IllegalStateException();
     }

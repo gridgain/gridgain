@@ -1,23 +1,23 @@
 /*
  *                   GridGain Community Edition Licensing
  *                   Copyright 2019 GridGain Systems, Inc.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
  * Restriction; you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
+ * 
  * Commons Clause Restriction
- *
+ * 
  * The Software is provided to you by the Licensor under the License, as defined below, subject to
  * the following condition.
- *
+ * 
  * Without limiting other conditions in the License, the grant of rights under the License will not
  * include, and the License does not grant to you, the right to Sell the Software.
  * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,7 +26,7 @@
  * service whose value derives, entirely or substantially, from the functionality of the Software.
  * Any license notice or attribution required by the License must also include this Commons Clause
  * License Condition notice.
- *
+ * 
  * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
  * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
  * Edition software provided with this notice.
@@ -65,7 +65,7 @@ public class ClusterProperties {
 
     /** */
     public static final double DEFAULT_MEM_PER_NODE = 2048;
-    
+
     /**
      * The minimum memory overhead: overhead is by default 0.1* MEMORY_PER_NODE,
      * with a minimum of DEFAULT_MINIMUM_MEM_OVERHEAD_PER_NODE.
@@ -86,7 +86,7 @@ public class ClusterProperties {
 
     /** Memory limit. */
     private double memPerNode = DEFAULT_MEM_PER_NODE;
-    
+
     /** */
     public static final String IGNITE_MEMORY_OVERHEAD_PER_NODE = "IGNITE_MEMORY_OVERHEAD_PER_NODE";
 
@@ -171,6 +171,15 @@ public class ClusterProperties {
     /** Url to ignite config. */
     private Pattern hostnameConstraint = null;
 
+    /** Ignite Yarn Queue */
+    public static final String IGNITE_YARN_QUEUE = "IGNITE_YARN_QUEUE";
+
+    /** Ignite Yarn default Queue */
+    public static final String DEFAULT_IGNITE_YARN_QUEUE = "default";
+
+    /** Path to users libs. */
+    private String yarnQueue = DEFAULT_IGNITE_YARN_QUEUE;
+
     /** */
     public ClusterProperties() {
         // No-op.
@@ -210,33 +219,33 @@ public class ClusterProperties {
      * @param mem Memory.
      */
     public void memoryPerNode(double mem) {
-         this.memPerNode = mem;
+        this.memPerNode = mem;
     }
 
     /**
      * @return Memory overhead for requested memory.
      */
     public double memoryOverHeadPerNode() {
-		return memOverHeadPerNode;
-	}
+        return memOverHeadPerNode;
+    }
 
     /**
      * Sets memory overhead requested to YARN.
      *
      * @param memOverHeadPerNode Memory over head per node.
      */
-	public void memoryOverHeadPerNode(double memOverHeadPerNode) {
-		this.memOverHeadPerNode = memOverHeadPerNode;
-	}
-	
-	/**
-	 * @return Provide the total memory requested to ResourceManagers (memoryPerNode + memoryOverheadPerNode).
-	 */
-	public double totalMemoryPerNode(){
-		return memoryPerNode() + memoryOverHeadPerNode();
-	}
+    public void memoryOverHeadPerNode(double memOverHeadPerNode) {
+        this.memOverHeadPerNode = memOverHeadPerNode;
+    }
 
-	/**
+    /**
+     * @return Provide the total memory requested to ResourceManagers (memoryPerNode + memoryOverheadPerNode).
+     */
+    public double totalMemoryPerNode(){
+        return memoryPerNode() + memoryOverHeadPerNode();
+    }
+
+    /**
      * @return Instance count limit.
      */
     public double instances() {
@@ -257,6 +266,15 @@ public class ClusterProperties {
      */
     public void hostnameConstraint(Pattern pattern) {
         this.hostnameConstraint = pattern;
+    }
+
+    /**
+     * Sets Yarn Queue
+     *
+     * @param queue queue name.
+     */
+    public void yarnQueue(String queue) {
+        this.yarnQueue = queue;
     }
 
     /**
@@ -330,13 +348,18 @@ public class ClusterProperties {
     }
 
     /**
+     * @return Yarn Queue
+     */
+    public String yarnQueue() { return yarnQueue; }
+
+    /**
      * Instantiate a ClusterProperties from a set of properties.
      *
      * @param props If {@code null} will be used system properties.
      * @return Cluster properties.
      */
     private static ClusterProperties fromProperties(Properties props) {
-    	ClusterProperties prop = new ClusterProperties();
+        ClusterProperties prop = new ClusterProperties();
 
         prop.clusterName = getStringProperty(IGNITE_CLUSTER_NAME, props, DEFAULT_CLUSTER_NAME);
 
@@ -357,6 +380,7 @@ public class ClusterProperties {
         prop.igniteReleasesDir = getStringProperty(IGNITE_RELEASES_DIR, props, DEFAULT_IGNITE_RELEASES_DIR);
         prop.igniteCfg = getStringProperty(IGNITE_CONFIG_XML, props, null);
         prop.userLibs = getStringProperty(IGNITE_USERS_LIBS, props, null);
+        prop.yarnQueue = getStringProperty(IGNITE_YARN_QUEUE, props, DEFAULT_IGNITE_YARN_QUEUE);
 
         String pattern = getStringProperty(IGNITE_HOSTNAME_CONSTRAINT, props, null);
 
@@ -371,7 +395,7 @@ public class ClusterProperties {
 
         return prop;
     }
-    
+
     /**
      * @param config Path to config file.
      * @return Cluster configuration.
@@ -424,6 +448,7 @@ public class ClusterProperties {
         envs.put(IGNITE_RELEASES_DIR, toEnvVal(igniteReleasesDir));
         envs.put(IGNITE_CONFIG_XML, toEnvVal(igniteCfg));
         envs.put(IGNITE_USERS_LIBS, toEnvVal(userLibs));
+        envs.put(IGNITE_YARN_QUEUE, toEnvVal(yarnQueue));
 
         if (hostnameConstraint != null)
             envs.put(IGNITE_HOSTNAME_CONSTRAINT, toEnvVal(hostnameConstraint.pattern()));

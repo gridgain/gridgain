@@ -1,23 +1,23 @@
 /*
  *                   GridGain Community Edition Licensing
  *                   Copyright 2019 GridGain Systems, Inc.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
  * Restriction; you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
+ * 
  * Commons Clause Restriction
- *
+ * 
  * The Software is provided to you by the Licensor under the License, as defined below, subject to
  * the following condition.
- *
+ * 
  * Without limiting other conditions in the License, the grant of rights under the License will not
  * include, and the License does not grant to you, the right to Sell the Software.
  * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,7 +26,7 @@
  * service whose value derives, entirely or substantially, from the functionality of the Software.
  * Any license notice or attribution required by the License must also include this Commons Clause
  * License Condition notice.
- *
+ * 
  * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
  * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
  * Edition software provided with this notice.
@@ -34,6 +34,7 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import org.apache.ignite.Ignite;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -41,8 +42,9 @@ import org.apache.ignite.internal.processors.datastructures.DataStructuresProces
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
-import static org.apache.ignite.cache.CacheMode.PARTITIONED;
-import static org.apache.ignite.cache.CacheMode.REPLICATED;
+import java.util.Collection;
+
+import static org.apache.ignite.cache.CacheMode.*;
 import static org.apache.ignite.cache.CacheRebalanceMode.ASYNC;
 import static org.apache.ignite.cache.CacheRebalanceMode.SYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
@@ -52,7 +54,7 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
  */
 public class GridCacheConfigurationValidationSelfTest extends GridCommonAbstractTest {
     /** */
-    private static final String NON_DFLT_CACHE_NAME = "non-dflt-cache";
+    private boolean client;
 
     /** */
     private static final String WRONG_PRELOAD_MODE_IGNITE_INSTANCE_NAME = "preloadModeCheckFails";
@@ -80,6 +82,12 @@ public class GridCacheConfigurationValidationSelfTest extends GridCommonAbstract
     private static final String RESERVED_FOR_DATASTRUCTURES_CACHE_GROUP_NAME_IGNITE_INSTANCE_NAME =
             "reservedForDsCacheGroupNameCheckFails";
 
+    /** */
+    private static final String CACHE_NAME_WITH_SPECIAL_CHARACTERS_REPLICATED = "--№=+:(replicated)";
+
+    /** */
+    private static final String CACHE_NAME_WITH_SPECIAL_CHARACTERS_PARTITIONED = ":_&:: (partitioned)";
+
     /**
      * Constructs test.
      */
@@ -101,6 +109,7 @@ public class GridCacheConfigurationValidationSelfTest extends GridCommonAbstract
         dfltCacheCfg.setIndexedTypes(
             Integer.class, String.class
         );
+        dfltCacheCfg.setName(CACHE_NAME_WITH_SPECIAL_CHARACTERS_PARTITIONED);
 
         // Non-default cache configuration.
         CacheConfiguration namedCacheCfg = defaultCacheConfiguration();
@@ -109,6 +118,11 @@ public class GridCacheConfigurationValidationSelfTest extends GridCommonAbstract
         namedCacheCfg.setRebalanceMode(ASYNC);
         namedCacheCfg.setWriteSynchronizationMode(FULL_SYNC);
         namedCacheCfg.setAffinity(new RendezvousAffinityFunction());
+
+        // Local cache configuration.
+        CacheConfiguration localCacheCfg = defaultCacheConfiguration();
+
+        localCacheCfg.setCacheMode(LOCAL);
 
         // Modify cache config according to test parameters.
         if (igniteInstanceName.contains(WRONG_PRELOAD_MODE_IGNITE_INSTANCE_NAME))
@@ -124,14 +138,20 @@ public class GridCacheConfigurationValidationSelfTest extends GridCommonAbstract
             cfg.setCacheConfiguration(namedCacheCfg, namedCacheCfg);
         else if (igniteInstanceName.contains(DUP_DFLT_CACHES_IGNITE_INSTANCE_NAME))
             cfg.setCacheConfiguration(dfltCacheCfg, dfltCacheCfg);
-        else
+        else {
             // Normal configuration.
-            cfg.setCacheConfiguration(dfltCacheCfg, namedCacheCfg);
+            if (client)
+                cfg.setClientMode(true);
+            else
+                cfg.setCacheConfiguration(dfltCacheCfg, namedCacheCfg, localCacheCfg);
+        }
 
         if (igniteInstanceName.contains(RESERVED_FOR_DATASTRUCTURES_CACHE_NAME_IGNITE_INSTANCE_NAME))
             namedCacheCfg.setName(DataStructuresProcessor.ATOMICS_CACHE_NAME + "@abc");
-        else
-            namedCacheCfg.setName(NON_DFLT_CACHE_NAME);
+        else {
+            namedCacheCfg.setCacheMode(REPLICATED);
+            namedCacheCfg.setName(CACHE_NAME_WITH_SPECIAL_CHARACTERS_REPLICATED);
+        }
 
         if (igniteInstanceName.contains(RESERVED_FOR_DATASTRUCTURES_CACHE_GROUP_NAME_IGNITE_INSTANCE_NAME))
             namedCacheCfg.setGroupName("default-ds-group");
@@ -181,6 +201,36 @@ public class GridCacheConfigurationValidationSelfTest extends GridCommonAbstract
 
             // This grid will start normally.
             startGrid(1);
+        }
+        finally {
+            stopAllGrids();
+        }
+    }
+
+    /**
+     * @throws Exception If fails.
+     */
+    @Test
+    public void testCacheNames() throws Exception {
+        try {
+            startGridsMultiThreaded(2);
+
+            Collection<String> names = grid(0).cacheNames();
+
+            assertEquals(3, names.size());
+
+            for (String name : names)
+                assertTrue(name.equals(CACHE_NAME_WITH_SPECIAL_CHARACTERS_PARTITIONED)
+                        || name.equals(CACHE_NAME_WITH_SPECIAL_CHARACTERS_REPLICATED)
+                        || DEFAULT_CACHE_NAME.equals(name));
+
+            client = true;
+
+            Ignite client = startGrid(2);
+
+            names = client.cacheNames();
+
+            assertEquals(3, names.size());
         }
         finally {
             stopAllGrids();

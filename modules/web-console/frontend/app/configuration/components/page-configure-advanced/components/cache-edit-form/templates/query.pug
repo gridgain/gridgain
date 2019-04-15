@@ -1,23 +1,23 @@
 //-
-    GridGain Community Edition Licensing
+                      GridGain Community Edition Licensing
                       Copyright 2019 GridGain Systems, Inc.
-
+    
     Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
     Restriction; you may not use this file except in compliance with the License. You may obtain a
     copy of the License at
-
+    
     http://www.apache.org/licenses/LICENSE-2.0
-
+    
     Unless required by applicable law or agreed to in writing, software distributed under the
     License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
     KIND, either express or implied. See the License for the specific language governing permissions
     and limitations under the License.
-
+    
     Commons Clause Restriction
-
+    
     The Software is provided to you by the Licensor under the License, as defined below, subject to
     the following condition.
-
+    
     Without limiting other conditions in the License, the grant of rights under the License will not
     include, and the License does not grant to you, the right to Sell the Software.
     For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,10 +26,11 @@
     service whose value derives, entirely or substantially, from the functionality of the Software.
     Any license notice or attribution required by the License must also include this Commons Clause
     License Condition notice.
-
+    
     For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
     the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
     Edition software provided with this notice.
+
 
 include /app/helpers/jade/mixins
 include /app/configuration/mixins
@@ -135,16 +136,6 @@ panel-collapsible(ng-form=form on-open=`ui.loadPanel('${form}')`)
                     tip: 'Flag indicating whether SQL indexes should support snapshots'
                 })
 
-            .pc-form-grid-col-60
-                +form-field__checkbox({
-                    label: 'Escape table and filed names',
-                    model: `${model}.sqlEscapeAll`,
-                    name: '"sqlEscapeAll"',
-                    tip: 'If enabled than all schema, table and field names will be escaped with double quotes (for example: "tableName"."fieldName").<br/>\
-                         This enforces case sensitivity for field names and also allows having special characters in table and field names.<br/>\
-                         Escaped names will be used for creation internal structures in Ignite SQL engine.'
-                })
-
             //- Since ignite 2.0
             .pc-form-grid-col-30(ng-if-start='$ctrl.available("2.0.0")')
                 +form-field__number({
@@ -163,6 +154,41 @@ panel-collapsible(ng-form=form on-open=`ui.loadPanel('${form}')`)
                     placeholder: '-1',
                     min: '-1',
                     tip: 'Maximum inline size for sql indexes'
+                })
+            .pc-form-grid-col-60(ng-if-start='$ctrl.available("2.4.0")')
+                +form-field__checkbox({
+                    label: 'Onheap cache enabled',
+                    model: `${model}.sqlOnheapCacheEnabled`,
+                    name: '"sqlOnheapCacheEnabled"',
+                    tip: 'When enabled, Ignite will cache SQL rows as they are accessed by query engine'
+                })
+            .pc-form-grid-col-60(ng-if-end)
+                +form-field__number({
+                    label: 'Onheap cache max size:',
+                    model: `${model}.sqlOnheapCacheMaxSize`,
+                    name: '"SqlOnheapCacheMaxSize"',
+                    disabled: `!${model}.sqlOnheapCacheEnabled`,
+                    placeholder: '0',
+                    min: '0',
+                    tip: 'Maximum SQL on-heap cache'
+                })
+            .pc-form-grid-col-60
+                +form-field__number({
+                    label: 'Max query iterators count:',
+                    model: `${model}.maxQueryIteratorsCount`,
+                    name: '"MaxQueryIteratorsCount"',
+                    placeholder: '1024',
+                    min: '1',
+                    tip: 'Maximum number of query iterators that can be stored'
+                })
+            .pc-form-grid-col-60
+                +form-field__checkbox({
+                    label: 'Escape table and filed names',
+                    model: `${model}.sqlEscapeAll`,
+                    name: '"sqlEscapeAll"',
+                    tip: 'If enabled than all schema, table and field names will be escaped with double quotes (for example: "tableName"."fieldName").<br/>\
+                         This enforces case sensitivity for field names and also allows having special characters in table and field names.<br/>\
+                         Escaped names will be used for creation internal structures in Ignite SQL engine.'
                 })
 
         .pca-form-column-6

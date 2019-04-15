@@ -1,23 +1,23 @@
 /*
  *                   GridGain Community Edition Licensing
  *                   Copyright 2019 GridGain Systems, Inc.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
  * Restriction; you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
+ * 
  * Commons Clause Restriction
- *
+ * 
  * The Software is provided to you by the Licensor under the License, as defined below, subject to
  * the following condition.
- *
+ * 
  * Without limiting other conditions in the License, the grant of rights under the License will not
  * include, and the License does not grant to you, the right to Sell the Software.
  * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,7 +26,7 @@
  * service whose value derives, entirely or substantially, from the functionality of the Software.
  * Any license notice or attribution required by the License must also include this Commons Clause
  * License Condition notice.
- *
+ * 
  * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
  * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
  * Edition software provided with this notice.
@@ -1209,7 +1209,16 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                 switchSegmentRecordOffset.set(idx, hnd.getSwitchSegmentRecordOffset());
             }
 
-            FileWriteHandle next = initNextWriteHandle(cur);
+            FileWriteHandle next;
+            try {
+                next = initNextWriteHandle(cur);
+            }
+            catch (IgniteCheckedException e) {
+                //Allow to avoid forever waiting in other threads.
+                cur.signalNextAvailable();
+
+                throw e;
+            }
 
             next.writeHeader();
 
@@ -2704,30 +2713,19 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                     if (end == null) {
                         long nextWalSegmentIdx = curWalSegmIdx + 1;
 
+                        if (!isArchiverEnabled())
+                            if (canIgnoreCrcError(nextWalSegmentIdx, nextWalSegmentIdx, e, ptr))
+                                return null;
+
                         // Check that we should not look this segment up in archive directory.
                         // Basically the same check as in "advanceSegment" method.
-                        if (archiver != null)
+                        if (isArchiverEnabled() && archiver != null)
                             if (!canReadArchiveOrReserveWork(nextWalSegmentIdx))
                                 try {
                                     long workIdx = nextWalSegmentIdx % dsCfg.getWalSegments();
 
-                                    FileDescriptor fd = new FileDescriptor(
-                                        new File(walWorkDir, FileDescriptor.fileName(workIdx)),
-                                        nextWalSegmentIdx
-                                    );
-
-                                    try {
-                                        ReadFileHandle nextHandle = initReadHandle(fd, null);
-
-                                        // "nextHandle == null" is true only if current segment is the last one in the
-                                        // whole history. Only in such case we ignore crc validation error and just stop
-                                        // as if we reached the end of the WAL.
-                                        if (nextHandle == null)
-                                            return null;
-                                    }
-                                    catch (IgniteCheckedException | FileNotFoundException initReadHandleException) {
-                                        e.addSuppressed(initReadHandleException);
-                                    }
+                                    if (canIgnoreCrcError(workIdx, nextWalSegmentIdx, e, ptr))
+                                        return null;
                                 }
                                 finally {
                                     releaseWorkSegment(nextWalSegmentIdx);
@@ -2753,6 +2751,51 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         private void releaseWorkSegment(long absIdx) {
             if (archiver != null)
                 archiver.releaseWorkSegment(absIdx);
+        }
+
+        /**
+         * Check that archiver is enabled
+         */
+        private boolean isArchiverEnabled() {
+            if (walArchiveDir != null && walWorkDir != null)
+                return !walArchiveDir.equals(walWorkDir);
+
+            return !new File(dsCfg.getWalArchivePath()).equals(new File(dsCfg.getWalPath()));
+        }
+
+        /**
+         * @param workIdx Work index.
+         * @param walSegmentIdx Wal segment index.
+         * @param e Exception.
+         * @param ptr Ptr.
+         */
+        private boolean canIgnoreCrcError(
+            long workIdx,
+            long walSegmentIdx,
+            @NotNull Exception e,
+            @Nullable FileWALPointer ptr) {
+            FileDescriptor fd = new FileDescriptor(
+                new File(walWorkDir, FileDescriptor.fileName(workIdx)),
+                walSegmentIdx
+            );
+
+            try {
+                if (!fd.file().exists())
+                    return true;
+
+                ReadFileHandle nextHandle = initReadHandle(fd, ptr);
+
+                // "nextHandle == null" is true only if current segment is the last one in the
+                // whole history. Only in such case we ignore crc validation error and just stop
+                // as if we reached the end of the WAL.
+                if (nextHandle == null)
+                    return true;
+            }
+            catch (IgniteCheckedException | FileNotFoundException initReadHandleException) {
+                e.addSuppressed(initReadHandleException);
+            }
+
+            return false;
         }
 
         /** {@inheritDoc} */

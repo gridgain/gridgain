@@ -1,23 +1,23 @@
 /*
  *                   GridGain Community Edition Licensing
  *                   Copyright 2019 GridGain Systems, Inc.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
  * Restriction; you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
+ * 
  * Commons Clause Restriction
- *
+ * 
  * The Software is provided to you by the Licensor under the License, as defined below, subject to
  * the following condition.
- *
+ * 
  * Without limiting other conditions in the License, the grant of rights under the License will not
  * include, and the License does not grant to you, the right to Sell the Software.
  * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,7 +26,7 @@
  * service whose value derives, entirely or substantially, from the functionality of the Software.
  * Any license notice or attribution required by the License must also include this Commons Clause
  * License Condition notice.
- *
+ * 
  * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
  * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
  * Edition software provided with this notice.
@@ -42,7 +42,6 @@ import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.affinity.AffinityKey;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.cache.query.SqlQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.examples.ExampleNodeStartup;
 import org.apache.ignite.examples.model.Organization;
@@ -61,7 +60,7 @@ import org.apache.ignite.examples.model.Person;
  *         collocated mode. Refer to {@link AffinityKey} javadoc for more details.
  *         <p>
  *         To use distributed joins it is necessary to set query 'distributedJoin' flag using
- *         {@link SqlFieldsQuery#setDistributedJoins(boolean)} or {@link SqlQuery#setDistributedJoins(boolean)}.
+ *         {@link SqlFieldsQuery#setDistributedJoins(boolean)}.
  *     </li>
  *     <li>
  *         Note that if you created query on to replicated cache, all data will
@@ -161,16 +160,15 @@ public class SqlQueriesExample {
         IgniteCache<Long, Person> cache = Ignition.ignite().cache(PERSON_CACHE);
 
         // SQL clause which selects salaries based on range.
-        String sql = "salary > ? and salary <= ?";
+        // Extract fields of the entry.
+        String sql = "select * from Person where salary > ? and salary <= ?";
 
         // Execute queries for salary ranges.
         print("People with salaries between 0 and 1000 (queried with SQL query): ",
-            cache.query(new SqlQuery<AffinityKey<Long>, Person>(Person.class, sql).
-                setArgs(0, 1000)).getAll());
+            cache.query(new SqlFieldsQuery(sql).setArgs(0, 1000)).getAll());
 
         print("People with salaries between 1000 and 2000 (queried with SQL query): ",
-            cache.query(new SqlQuery<AffinityKey<Long>, Person>(Person.class, sql).
-                setArgs(1000, 2000)).getAll());
+            cache.query(new SqlFieldsQuery(sql).setArgs(1000, 2000)).getAll());
     }
 
     /**
@@ -181,18 +179,16 @@ public class SqlQueriesExample {
 
         // SQL clause query which joins on 2 types to select people for a specific organization.
         String joinSql =
-            "from Person, \"" + ORG_CACHE + "\".Organization as org " +
-            "where Person.orgId = org.id " +
+            "select pers.* from Person as pers, \"" + ORG_CACHE + "\".Organization as org " +
+            "where pers.orgId = org.id " +
             "and lower(org.name) = lower(?)";
 
         // Execute queries for find employees for different organizations.
         print("Following people are 'ApacheIgnite' employees: ",
-            cache.query(new SqlQuery<AffinityKey<Long>, Person>(Person.class, joinSql).
-                setArgs("ApacheIgnite")).getAll());
+            cache.query(new SqlFieldsQuery(joinSql).setArgs("ApacheIgnite")).getAll());
 
         print("Following people are 'Other' employees: ",
-            cache.query(new SqlQuery<AffinityKey<Long>, Person>(Person.class, joinSql).
-                setArgs("Other")).getAll());
+            cache.query(new SqlFieldsQuery(joinSql).setArgs("Other")).getAll());
     }
 
     /**
@@ -204,12 +200,11 @@ public class SqlQueriesExample {
 
         // SQL clause query which joins on 2 types to select people for a specific organization.
         String joinSql =
-            "from Person, \"" + ORG_CACHE + "\".Organization as org " +
-            "where Person.orgId = org.id " +
+            "select pers.* from Person as pers, \"" + ORG_CACHE + "\".Organization as org " +
+            "where pers.orgId = org.id " +
             "and lower(org.name) = lower(?)";
 
-        SqlQuery qry = new SqlQuery<Long, Person>(Person.class, joinSql).
-            setArgs("ApacheIgnite");
+        SqlFieldsQuery qry = new SqlFieldsQuery(joinSql).setArgs("ApacheIgnite");
 
         // Enable distributed joins for query.
         qry.setDistributedJoins(true);

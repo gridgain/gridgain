@@ -1,23 +1,23 @@
 /*
  *                   GridGain Community Edition Licensing
  *                   Copyright 2019 GridGain Systems, Inc.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
  * Restriction; you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
+ * 
  * Commons Clause Restriction
- *
+ * 
  * The Software is provided to you by the Licensor under the License, as defined below, subject to
  * the following condition.
- *
+ * 
  * Without limiting other conditions in the License, the grant of rights under the License will not
  * include, and the License does not grant to you, the right to Sell the Software.
  * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,7 +26,7 @@
  * service whose value derives, entirely or substantially, from the functionality of the Software.
  * Any license notice or attribution required by the License must also include this Commons Clause
  * License Condition notice.
- *
+ * 
  * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
  * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
  * Edition software provided with this notice.
@@ -1852,6 +1852,42 @@ namespace Apache.Ignite.Core.Tests.Binary
 
             Assert.AreEqual(new[] {1, 2, 1, 1, 1, 3}, bytes1);
         }
+
+        [Test]
+        public void TestTypeWithDuplicatePropertyName()
+        {
+            var marsh = new Marshaller(null);
+            TestDelegate action = () => marsh.GetDescriptor(typeof(DerivedSamePropertyClass));
+
+            var ex = Assert.Throws<BinaryObjectException>(action);
+            var expectedMessage = "DerivedSamePropertyClass derives from BaseSamePropertyClass and hides field Property " +
+                                  "from the base class. Ignite can not serialize two fields with the same name.";
+            Assert.AreEqual(expectedMessage, ex.Message);
+        }
+
+        [Test]
+        public void TestIncorrectBinaryFieldMapperException()
+        {
+            var cfg = new BinaryConfiguration
+            {
+                TypeConfigurations = new[]
+                {
+                    new BinaryTypeConfiguration
+                    {
+                        TypeName = typeof(BaseSamePropertyClass).FullName,
+                        IdMapper = new IncorrectIdMapper()
+                    }
+                }
+            };
+
+            // ReSharper disable once ObjectCreationAsStatement
+            TestDelegate action = () => new Marshaller(cfg);
+
+            var ex = Assert.Throws<BinaryObjectException>(action);
+            var expectedMessage = "Conflicting field IDs [type=BaseSamePropertyClass, field1=Property, field2=BaseName, fieldId=-1])";
+
+            Assert.AreEqual(expectedMessage, ex.Message);
+        }
     }
 
     /// <summary>
@@ -2196,6 +2232,22 @@ namespace Apache.Ignite.Core.Tests.Binary
     }
 
     /// <summary>
+    /// Test incorrect id mapper.
+    /// </summary>
+    public class IncorrectIdMapper : IBinaryIdMapper
+    {
+        public int GetTypeId(string typeName)
+        {
+            return -1;
+        }
+
+        public int GetFieldId(int typeId, string fieldName)
+        {
+            return -1;
+        }
+    }
+
+    /// <summary>
     /// Test name mapper.
     /// </summary>
     public class NameMapper : IBinaryNameMapper
@@ -2244,5 +2296,22 @@ namespace Apache.Ignite.Core.Tests.Binary
     {
         /** */
         public int NameMapperTestField { get; set; }
+    }
+
+    /// <summary>
+    /// Base class for testing.
+    /// </summary>
+    public class BaseSamePropertyClass
+    {
+        public int Property { get; private set; }
+        public string BaseName { get; private set; }
+    }
+
+    /// <summary>
+    /// Derived class that hides base class' property name.
+    /// </summary>
+    public class DerivedSamePropertyClass : BaseSamePropertyClass
+    {
+        public new int Property { get; private set; }
     }
 }

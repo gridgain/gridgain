@@ -1,23 +1,23 @@
 /*
  *                   GridGain Community Edition Licensing
  *                   Copyright 2019 GridGain Systems, Inc.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
  * Restriction; you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
+ * 
  * Commons Clause Restriction
- *
+ * 
  * The Software is provided to you by the Licensor under the License, as defined below, subject to
  * the following condition.
- *
+ * 
  * Without limiting other conditions in the License, the grant of rights under the License will not
  * include, and the License does not grant to you, the right to Sell the Software.
  * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,7 +26,7 @@
  * service whose value derives, entirely or substantially, from the functionality of the Software.
  * Any license notice or attribution required by the License must also include this Commons Clause
  * License Condition notice.
- *
+ * 
  * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
  * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
  * Edition software provided with this notice.
@@ -95,7 +95,7 @@ namespace Apache.Ignite.Examples.Datagrid
                             Fields = new[]
                             {
                                 new QueryField(NameField, typeof(string)),
-                                new QueryField(CompanyIdField, typeof(int))
+                                new QueryField(CompanyIdField, typeof(int)),
                             },
                             Indexes = new[]
                             {
@@ -134,9 +134,6 @@ namespace Apache.Ignite.Examples.Datagrid
                 // Run SQL query with join example.
                 SqlJoinQueryExample(cache);
 
-                // Run SQL fields query example.
-                SqlFieldsQueryExample(cache);
-
                 // Run full text query example.
                 FullTextQueryExample(cache);
 
@@ -170,18 +167,18 @@ namespace Apache.Ignite.Examples.Datagrid
         }
 
         /// <summary>
-        /// Queries persons that have a specific name using SQL.
+        /// Queries names for all persons.
         /// </summary>
         /// <param name="cache">Cache.</param>
         private static void SqlQueryExample(ICache<int, IBinaryObject> cache)
         {
-            var qry = cache.Query(new SqlQuery(PersonType, "name like 'James%'"));
+            var qry = cache.Query(new SqlFieldsQuery("select name from Person order by name"));
 
             Console.WriteLine();
-            Console.WriteLine(">>> Persons named James:");
+            Console.WriteLine(">>> All person names:");
 
-            foreach (var entry in qry)
-                Console.WriteLine(">>>    " + entry.Value);
+            foreach (var row in qry)
+                Console.WriteLine(">>>     " + row[0]);
         }
 
         /// <summary>
@@ -192,9 +189,9 @@ namespace Apache.Ignite.Examples.Datagrid
         {
             const string orgName = "Apache";
 
-            var qry = cache.Query(new SqlQuery(PersonType,
-                "from Person, Company " +
-                "where Person.CompanyId = Company.Id and Company.Name = ?", orgName)
+            var qry = cache.Query(new SqlFieldsQuery(
+                "select pers.Name from Person as pers, Company as comp where pers.CompanyId = comp.Id and comp.Name = ?",
+                orgName)
             {
                 EnableDistributedJoins = true,
                 Timeout = new TimeSpan(0, 1, 0)
@@ -204,22 +201,7 @@ namespace Apache.Ignite.Examples.Datagrid
             Console.WriteLine(">>> Persons working for " + orgName + ":");
 
             foreach (var entry in qry)
-                Console.WriteLine(">>>     " + entry.Value);
-        }
-
-        /// <summary>
-        /// Queries names for all persons.
-        /// </summary>
-        /// <param name="cache">Cache.</param>
-        private static void SqlFieldsQueryExample(ICache<int, IBinaryObject> cache)
-        {
-            var qry = cache.Query(new SqlFieldsQuery("select name from Person order by name"));
-
-            Console.WriteLine();
-            Console.WriteLine(">>> All person names:");
-
-            foreach (var row in qry)
-                Console.WriteLine(">>>     " + row[0]);
+                Console.WriteLine(">>>     " + entry[0]);
         }
 
         /// <summary>

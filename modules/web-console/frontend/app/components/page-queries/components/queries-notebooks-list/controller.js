@@ -1,23 +1,23 @@
 /*
  *                   GridGain Community Edition Licensing
  *                   Copyright 2019 GridGain Systems, Inc.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
  * Restriction; you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
+ * 
  * Commons Clause Restriction
- *
+ * 
  * The Software is provided to you by the Licensor under the License, as defined below, subject to
  * the following condition.
- *
+ * 
  * Without limiting other conditions in the License, the grant of rights under the License will not
  * include, and the License does not grant to you, the right to Sell the Software.
  * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,13 +26,11 @@
  * service whose value derives, entirely or substantially, from the functionality of the Software.
  * Any license notice or attribution required by the License must also include this Commons Clause
  * License Condition notice.
- *
+ * 
  * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
  * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
  * Edition software provided with this notice.
  */
-
-import headerTemplate from '../../../../../app/primitives/ui-grid-header/index.tpl.pug';
 
 export class NotebooksListCtrl {
     static $inject = ['IgniteNotebook', 'IgniteMessages', 'IgniteLoading', 'IgniteInput', '$scope', '$modal'];
@@ -48,44 +46,17 @@ export class NotebooksListCtrl {
         const sqlQueryTemplate = `<div class="ui-grid-cell-contents">{{row.entity.sqlQueriesParagraphsLength}}</div>`;
         const scanQueryTemplate = `<div class="ui-grid-cell-contents">{{row.entity.scanQueriesPsaragraphsLength}}</div>`;
 
-        const categories = [
+        this.categories = [
             { name: 'Name', visible: true, enableHiding: false },
             { name: 'SQL Queries', visible: true, enableHiding: false },
             { name: 'Scan Queries', visible: true, enableHiding: false }
         ];
 
-        const columnDefs = [
-            { name: 'name', displayName: 'Notebook name', categoryDisplayName: 'Name', field: 'name', cellTemplate: notebookNameTemplate, pinnedLeft: true, filter: { placeholder: 'Filter by Name...' } },
+        this.columnDefs = [
+            { name: 'name', displayName: 'Notebook name', categoryDisplayName: 'Name', field: 'name', cellTemplate: notebookNameTemplate, filter: { placeholder: 'Filter by Name...' } },
             { name: 'sqlQueryNum', displayName: 'SQL Queries', categoryDisplayName: 'SQL Queries', field: 'sqlQueriesParagraphsLength', cellTemplate: sqlQueryTemplate, enableSorting: true, type: 'number', minWidth: 150, width: '10%', enableFiltering: false },
             { name: 'scanQueryNum', displayName: 'Scan Queries', categoryDisplayName: 'Scan Queries', field: 'scanQueriesParagraphsLength', cellTemplate: scanQueryTemplate, enableSorting: true, type: 'number', minWidth: 150, width: '10%', enableFiltering: false }
         ];
-
-        this.gridOptions = {
-            data: [],
-
-            categories,
-            columnDefs,
-            headerTemplate,
-
-            rowHeight: 46,
-            selectWithCheckboxOnly: true,
-            suppressRemoveSort: false,
-            enableFiltering: true,
-            enableSelectAll: true,
-            enableRowSelection: true,
-            enableFullRowSelection: true,
-            enableColumnMenus: false,
-            noUnselect: false,
-            fastWatch: true,
-            onRegisterApi: (api) => {
-                this.gridApi = api;
-
-                api.selection.on.rowSelectionChanged($scope, this._onSelectionChanged.bind(this));
-                api.selection.on.rowSelectionChangedBatch($scope, this._onSelectionChanged.bind(this));
-
-                this.$scope.$watch(() => this.gridApi.grid.getVisibleRows().length, (rows) => this._adjustHeight(rows));
-            }
-        };
 
         this.actionOptions = [
             {
@@ -113,8 +84,10 @@ export class NotebooksListCtrl {
     async _loadAllNotebooks() {
         try {
             this.IgniteLoading.start('notebooksLoading');
-            this.notebooks = await this.IgniteNotebook.read();
-            this.gridOptions.data = this._preprocessNotebooksList(this.notebooks);
+
+            const data = await this.IgniteNotebook.read();
+
+            this.notebooks = this._preprocessNotebooksList(data);
         }
         catch (err) {
             this.IgniteMessages.showError(err);
@@ -139,7 +112,7 @@ export class NotebooksListCtrl {
         return notebook.paragraphs.filter((paragraph) => paragraph.qryType === queryType).length || 0;
     }
 
-    _onSelectionChanged() {
+    onSelectionChanged() {
         this._checkActionsAllow();
     }
 

@@ -1,23 +1,23 @@
 /*
  *                   GridGain Community Edition Licensing
  *                   Copyright 2019 GridGain Systems, Inc.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
  * Restriction; you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
+ * 
  * Commons Clause Restriction
- *
+ * 
  * The Software is provided to you by the Licensor under the License, as defined below, subject to
  * the following condition.
- *
+ * 
  * Without limiting other conditions in the License, the grant of rights under the License will not
  * include, and the License does not grant to you, the right to Sell the Software.
  * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,7 +26,7 @@
  * service whose value derives, entirely or substantially, from the functionality of the Software.
  * Any license notice or attribution required by the License must also include this Commons Clause
  * License Condition notice.
- *
+ * 
  * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
  * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
  * Edition software provided with this notice.
@@ -42,6 +42,7 @@ import javax.cache.CacheException;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.processors.query.h2.dml.UpdatePlanBuilder;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
@@ -66,14 +67,24 @@ public class IgniteCacheInsertSqlQuerySelfTest extends IgniteCacheAbstractInsert
      */
     @Test
     public void testInsertWithExplicitKey() {
-        IgniteCache<String, Person> p = ignite(0).cache("S2P").withKeepBinary();
+        boolean oldAllowColumnsVal = GridTestUtils.getFieldValue(UpdatePlanBuilder.class, UpdatePlanBuilder.class,
+            "ALLOW_KEY_VAL_UPDATES");
 
-        p.query(new SqlFieldsQuery("insert into Person (_key, id, firstName) values ('s', ?, ?), " +
-            "('a', 2, 'Alex')").setArgs(1, "Sergi"));
+        GridTestUtils.setFieldValue(UpdatePlanBuilder.class, "ALLOW_KEY_VAL_UPDATES", true);
 
-        assertEquals(createPerson(1, "Sergi"), p.get("s"));
+        try {
+            IgniteCache<String, Person> p = ignite(0).cache("S2P").withKeepBinary();
 
-        assertEquals(createPerson(2, "Alex"), p.get("a"));
+            p.query(new SqlFieldsQuery("insert into Person (_key, id, firstName) values ('s', ?, ?), " +
+                "('a', 2, 'Alex')").setArgs(1, "Sergi"));
+
+            assertEquals(createPerson(1, "Sergi"), p.get("s"));
+
+            assertEquals(createPerson(2, "Alex"), p.get("a"));
+        }
+        finally {
+            GridTestUtils.setFieldValue(UpdatePlanBuilder.class, "ALLOW_KEY_VAL_UPDATES", oldAllowColumnsVal);
+        }
     }
 
     /**
@@ -222,33 +233,43 @@ public class IgniteCacheInsertSqlQuerySelfTest extends IgniteCacheAbstractInsert
      */
     @Test
     public void testNestedFieldsHandling1() {
-        IgniteCache<Integer, AllTypes> p = ignite(0).cache("I2AT");
+        boolean oldAllowColumnsVal = GridTestUtils.getFieldValue(UpdatePlanBuilder.class, UpdatePlanBuilder.class,
+            "ALLOW_KEY_VAL_UPDATES");
 
-        final int ROOT_KEY = 1;
+        GridTestUtils.setFieldValue(UpdatePlanBuilder.class, "ALLOW_KEY_VAL_UPDATES", true);
 
-        // Create 1st level value
-        AllTypes rootVal = new AllTypes(1L);
+        try {
+            IgniteCache<Integer, AllTypes> p = ignite(0).cache("I2AT");
 
-        // With random inner field
-        rootVal.innerTypeCol = new AllTypes.InnerType(42L);
+            final int ROOT_KEY = 1;
+
+            // Create 1st level value
+            AllTypes rootVal = new AllTypes(1L);
+
+            // With random inner field
+            rootVal.innerTypeCol = new AllTypes.InnerType(42L);
 
 
-        p.query(new SqlFieldsQuery(
-            "INSERT INTO AllTypes(_key,_val) VALUES (?, ?)").setArgs(ROOT_KEY, rootVal)
-        ).getAll();
+            p.query(new SqlFieldsQuery(
+                "INSERT INTO AllTypes(_key,_val) VALUES (?, ?)").setArgs(ROOT_KEY, rootVal)
+            ).getAll();
 
-        // Update inner fields just by their names
-        p.query(new SqlFieldsQuery("UPDATE AllTypes SET innerLongCol = ?, innerStrCol = ?, arrListCol = ?;")
-            .setArgs(50L, "sss", new ArrayList<>(Arrays.asList(3L, 2L, 1L)))).getAll();
+            // Update inner fields just by their names
+            p.query(new SqlFieldsQuery("UPDATE AllTypes SET innerLongCol = ?, innerStrCol = ?, arrListCol = ?;")
+                .setArgs(50L, "sss", new ArrayList<>(Arrays.asList(3L, 2L, 1L)))).getAll();
 
-        AllTypes res = p.get(ROOT_KEY);
+            AllTypes res = p.get(ROOT_KEY);
 
-        AllTypes.InnerType resInner = new AllTypes.InnerType(50L);
+            AllTypes.InnerType resInner = new AllTypes.InnerType(50L);
 
-        resInner.innerStrCol = "sss";
-        resInner.arrListCol = new ArrayList<>(Arrays.asList(3L, 2L, 1L));
+            resInner.innerStrCol = "sss";
+            resInner.arrListCol = new ArrayList<>(Arrays.asList(3L, 2L, 1L));
 
-        assertEquals(resInner, res.innerTypeCol);
+            assertEquals(resInner, res.innerTypeCol);
+        }
+        finally {
+            GridTestUtils.setFieldValue(UpdatePlanBuilder.class, "ALLOW_KEY_VAL_UPDATES", oldAllowColumnsVal);
+        }
     }
 
     /**
@@ -256,17 +277,27 @@ public class IgniteCacheInsertSqlQuerySelfTest extends IgniteCacheAbstractInsert
      */
     @Test
     public void testCacheRestartHandling() {
-        for (int i = 0; i < 4; i++) {
-            IgniteCache<Integer, AllTypes> p =
-                ignite(0).getOrCreateCache(cacheConfig("I2AT", true, false, Integer.class,
-                    AllTypes.class));
+        boolean oldAllowColumnsVal = GridTestUtils.getFieldValue(UpdatePlanBuilder.class, UpdatePlanBuilder.class,
+            "ALLOW_KEY_VAL_UPDATES");
 
-            p.query(new SqlFieldsQuery("INSERT INTO AllTypes(_key, _val) VALUES (1, ?)")
-                .setArgs(new AllTypes(1L))).getAll();
+        GridTestUtils.setFieldValue(UpdatePlanBuilder.class, "ALLOW_KEY_VAL_UPDATES", true);
 
-            p.query(new SqlFieldsQuery("UPDATE AllTypes SET dateCol = null;")).getAll();
+        try {
+            for (int i = 0; i < 4; i++) {
+                IgniteCache<Integer, AllTypes> p =
+                    ignite(0).getOrCreateCache(cacheConfig("I2AT", true, false, Integer.class,
+                        AllTypes.class));
 
-            p.destroy();
+                p.query(new SqlFieldsQuery("INSERT INTO AllTypes(_key, _val) VALUES (1, ?)")
+                    .setArgs(new AllTypes(1L))).getAll();
+
+                p.query(new SqlFieldsQuery("UPDATE AllTypes SET dateCol = null;")).getAll();
+
+                p.destroy();
+            }
+        }
+        finally {
+            GridTestUtils.setFieldValue(UpdatePlanBuilder.class, "ALLOW_KEY_VAL_UPDATES", oldAllowColumnsVal);
         }
     }
 }

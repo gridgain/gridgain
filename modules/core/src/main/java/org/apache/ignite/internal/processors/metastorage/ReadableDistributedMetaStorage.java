@@ -1,36 +1,83 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *                   GridGain Community Edition Licensing
+ *                   Copyright 2019 GridGain Systems, Inc.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
+ * Restriction; you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the specific language governing permissions
+ * and limitations under the License.
+ * 
+ * Commons Clause Restriction
+ * 
+ * The Software is provided to you by the Licensor under the License, as defined below, subject to
+ * the following condition.
+ * 
+ * Without limiting other conditions in the License, the grant of rights under the License will not
+ * include, and the License does not grant to you, the right to Sell the Software.
+ * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
+ * under the License to provide to third parties, for a fee or other consideration (including without
+ * limitation fees for hosting or consulting/ support services related to the Software), a product or
+ * service whose value derives, entirely or substantially, from the functionality of the Software.
+ * Any license notice or attribution required by the License must also include this Commons Clause
+ * License Condition notice.
+ * 
+ * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
+ * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
+ * Edition software provided with this notice.
  */
 
 package org.apache.ignite.internal.processors.metastorage;
 
 import java.io.Serializable;
+import java.util.Collection;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.IgniteFeatures;
+import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
+import org.apache.ignite.spi.discovery.DiscoverySpi;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.internal.IgniteFeatures.DISTRIBUTED_METASTORAGE;
+
 /**
- * API for distributed data storage. It is guaranteed that every read value is the same on every node in the cluster
+ * API for distributed data storage. Gives the ability to store configuration data (or any other data)
+ * consistently and cluster-wide. It is guaranteed that every read value is the same on every node in the cluster
  * all the time.
  */
 public interface ReadableDistributedMetaStorage {
     /**
-     * Get value by the key.
+     * @return {@code True} if all nodes in the cluster support discributed metastorage feature.
+     * @see IgniteFeatures#DISTRIBUTED_METASTORAGE
+     */
+    public static boolean isSupported(GridKernalContext ctx) {
+        DiscoverySpi discoSpi = ctx.config().getDiscoverySpi();
+
+        if (discoSpi instanceof IgniteDiscoverySpi)
+            return ((IgniteDiscoverySpi)discoSpi).allNodesSupport(DISTRIBUTED_METASTORAGE);
+        else {
+            Collection<ClusterNode> nodes = discoSpi.getRemoteNodes();
+
+            return IgniteFeatures.allNodesSupports(nodes, DISTRIBUTED_METASTORAGE);
+        }
+    }
+
+    /**
+     * Get the total number of updates (write/remove) that metastorage ever had.
+     */
+    long getUpdatesCount();
+
+    /**
+     * Get value by the key. Should be consistent for all nodes in cluster when it's in active state.
      *
      * @param key The key.
      * @return Value associated with the key.
@@ -52,7 +99,18 @@ public interface ReadableDistributedMetaStorage {
     ) throws IgniteCheckedException;
 
     /**
-     * Add listener on data updates.
+     * Add listener on data updates. Updates happens it two cases:
+     * <ul>
+     *     <li>
+     *         Some node invoked write or remove. Listeners are invoked after update update operation is
+     *         already completed.
+     *     </li>
+     *     <li>
+     *         Node is just started and not ready for write yet. In this case listeners are invoked for every
+     *         key with new value (retrieved from the clueter) or already existing value if there was no updates
+     *         for given key. This guarantees that all listeners are invoked for all updates in case of failover.
+     *     </li>
+     * </ul>
      *
      * @param keyPred Predicate to check whether this listener should be invoked on given key update or not.
      * @param lsnr Listener object.

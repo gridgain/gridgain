@@ -1,23 +1,23 @@
 /*
  *                   GridGain Community Edition Licensing
  *                   Copyright 2019 GridGain Systems, Inc.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
  * Restriction; you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
+ * 
  * Commons Clause Restriction
- *
+ * 
  * The Software is provided to you by the Licensor under the License, as defined below, subject to
  * the following condition.
- *
+ * 
  * Without limiting other conditions in the License, the grant of rights under the License will not
  * include, and the License does not grant to you, the right to Sell the Software.
  * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,7 +26,7 @@
  * service whose value derives, entirely or substantially, from the functionality of the Software.
  * Any license notice or attribution required by the License must also include this Commons Clause
  * License Condition notice.
- *
+ * 
  * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
  * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
  * Edition software provided with this notice.
@@ -35,7 +35,6 @@
 package org.apache.ignite.internal.processors.odbc.jdbc;
 
 import java.sql.BatchUpdateException;
-import java.sql.ParameterMetaData;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -81,9 +80,11 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.lang.IgniteBiTuple;
+import org.apache.ignite.transactions.TransactionMixedModeException;
 import org.apache.ignite.transactions.TransactionAlreadyCompletedException;
 import org.apache.ignite.transactions.TransactionDuplicateKeyException;
 import org.apache.ignite.transactions.TransactionSerializationException;
+import org.apache.ignite.transactions.TransactionUnsupportedConcurrencyException;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcBulkLoadBatchRequest.CMD_CONTINUE;
@@ -268,8 +269,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
         assert reqId != 0;
 
         synchronized (reqMux) {
-            if (isCancellationSupported() && (cmdType == QRY_EXEC || cmdType == BATCH_EXEC ||
-                cmdType == BATCH_EXEC_ORDERED))
+            if (isCancellationSupported() && (cmdType == QRY_EXEC || cmdType == BATCH_EXEC))
                 reqRegister.put(reqId, new JdbcQueryDescriptor());
         }
     }
@@ -365,16 +365,17 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
      * @return Response.
      */
     private ClientListenerResponse dispatchBatchOrdered(JdbcOrderedBatchExecuteRequest req) {
-        synchronized (orderedBatchesMux) {
-            orderedBatchesQueue.add(req);
-
-            orderedBatchesMux.notify();
-        }
-
         if (!cliCtx.isStreamOrdered())
             executeBatchOrdered(req);
+        else {
+            synchronized (orderedBatchesMux) {
+                orderedBatchesQueue.add(req);
 
-        return null;
+                orderedBatchesMux.notifyAll();
+            }
+        }
+
+       return null;
     }
 
     /**
@@ -398,10 +399,6 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
             U.error(null, "Error processing file batch", e);
 
             sender.send(new JdbcResponse(IgniteQueryErrorCode.UNKNOWN, "Server error: " + e));
-        }
-
-        synchronized (orderedBatchesMux) {
-            orderedBatchesQueue.poll();
         }
 
         cliCtx.orderedRequestProcessed();
@@ -570,30 +567,15 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
                         ((SqlFieldsQueryEx)qry).setSkipReducerOnUpdate(true);
             }
 
+            setupQuery(qry, prepareSchemaName(req.schemaName()));
+
             qry.setArgs(req.arguments());
-
-            qry.setDistributedJoins(cliCtx.isDistributedJoins());
-            qry.setEnforceJoinOrder(cliCtx.isEnforceJoinOrder());
-            qry.setCollocated(cliCtx.isCollocated());
-            qry.setReplicatedOnly(cliCtx.isReplicatedOnly());
-            qry.setLazy(cliCtx.isLazy());
-            qry.setNestedTxMode(nestedTxMode);
             qry.setAutoCommit(req.autoCommit());
-
-            if (cliCtx.dataPageScanEnabled() != null)
-                qry.setDataPageScanEnabled(cliCtx.dataPageScanEnabled());
 
             if (req.pageSize() <= 0)
                 return new JdbcResponse(IgniteQueryErrorCode.UNKNOWN, "Invalid fetch size: " + req.pageSize());
 
             qry.setPageSize(req.pageSize());
-
-            String schemaName = req.schemaName();
-
-            if (F.isEmpty(schemaName))
-                schemaName = QueryUtils.DFLT_SCHEMA;
-
-            qry.setSchema(schemaName);
 
             List<FieldsQueryCursor<List<?>>> results = ctx.query().querySqlFields(null, qry, cliCtx, true,
                 protocolVer.compareTo(VER_2_3_0) < 0, cancel);
@@ -852,7 +834,10 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
     private ClientListenerResponse executeBatch(JdbcBatchExecuteRequest req) {
         GridQueryCancel cancel = null;
 
-        if (isCancellationSupported()) {
+        // Skip request register check for ORDERED batches (JDBC streams)
+        // because ordered batch requests are processed asynchronously at the
+        // separate thread.
+        if (isCancellationSupported() && req.type() == BATCH_EXEC) {
             synchronized (reqMux) {
                 JdbcQueryDescriptor desc = reqRegister.get(req.requestId());
 
@@ -867,10 +852,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
         }
 
         try {
-            String schemaName = req.schemaName();
-
-            if (F.isEmpty(schemaName))
-                schemaName = QueryUtils.DFLT_SCHEMA;
+            String schemaName = prepareSchemaName(req.schemaName());
 
             int qryCnt = req.queries().size();
 
@@ -888,18 +870,9 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
 
                     qry = new SqlFieldsQueryEx(q.sql(), false);
 
-                    qry.setDistributedJoins(cliCtx.isDistributedJoins());
-                    qry.setEnforceJoinOrder(cliCtx.isEnforceJoinOrder());
-                    qry.setCollocated(cliCtx.isCollocated());
-                    qry.setReplicatedOnly(cliCtx.isReplicatedOnly());
-                    qry.setLazy(cliCtx.isLazy());
-                    qry.setNestedTxMode(nestedTxMode);
+                    setupQuery(qry, schemaName);
+
                     qry.setAutoCommit(req.autoCommit());
-
-                    if (cliCtx.dataPageScanEnabled() != null)
-                        qry.setDataPageScanEnabled(cliCtx.dataPageScanEnabled());
-
-                    qry.setSchema(schemaName);
                 }
 
                 assert qry != null;
@@ -927,6 +900,38 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
         finally {
             cleanupQueryCancellationMeta(true, req.requestId());
         }
+    }
+
+    /**
+     * Normalize schema name.
+     *
+     * @param schemaName Schema name.
+     * @return Normalized schema name.
+     */
+    private static String prepareSchemaName(@Nullable String schemaName) {
+        if (F.isEmpty(schemaName))
+            schemaName = QueryUtils.DFLT_SCHEMA;
+
+        return schemaName;
+    }
+
+    /**
+     * Sets up query object with settings from current client context state and handler state.
+     *
+     * @param qry Query to setup.
+     * @param schemaName Schema name.
+     */
+    private void setupQuery(SqlFieldsQueryEx qry, String schemaName) {
+        qry.setDistributedJoins(cliCtx.isDistributedJoins());
+        qry.setEnforceJoinOrder(cliCtx.isEnforceJoinOrder());
+        qry.setCollocated(cliCtx.isCollocated());
+        qry.setReplicatedOnly(cliCtx.isReplicatedOnly());
+        qry.setLazy(cliCtx.isLazy());
+        qry.setNestedTxMode(nestedTxMode);
+        qry.setSchema(schemaName);
+
+        if (cliCtx.dataPageScanEnabled() != null)
+            qry.setDataPageScanEnabled(cliCtx.dataPageScanEnabled());
     }
 
     /**
@@ -1088,16 +1093,14 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
      * @return Response.
      */
     private ClientListenerResponse getParametersMeta(JdbcMetaParamsRequest req) {
+        String schemaName = prepareSchemaName(req.schemaName());
+
+        SqlFieldsQueryEx qry = new SqlFieldsQueryEx(req.sql(), null);
+
+        setupQuery(qry, schemaName);
+
         try {
-            ParameterMetaData paramMeta = ctx.query().prepareNativeStatement(req.schemaName(), req.sql())
-                .getParameterMetaData();
-
-            int size = paramMeta.getParameterCount();
-
-            List<JdbcParameterMeta> meta = new ArrayList<>(size);
-
-            for (int i = 0; i < size; i++)
-                meta.add(new JdbcParameterMeta(paramMeta, i + 1));
+            List<JdbcParameterMeta> meta = ctx.query().getIndexing().parameterMetaData(schemaName, qry);
 
             JdbcMetaParamsResult res = new JdbcMetaParamsResult(meta);
 
@@ -1162,9 +1165,9 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
             return new JdbcResponse(IgniteQueryErrorCode.TRANSACTION_COMPLETED, e.getMessage());
         if (e instanceof TransactionDuplicateKeyException)
             return new JdbcResponse(IgniteQueryErrorCode.DUPLICATE_KEY, e.getMessage());
-        if (e instanceof MvccUtils.NonMvccTransactionException)
+        if (e instanceof TransactionMixedModeException)
             return new JdbcResponse(IgniteQueryErrorCode.TRANSACTION_TYPE_MISMATCH, e.getMessage());
-        if (e instanceof MvccUtils.UnsupportedTxModeException)
+        if (e instanceof TransactionUnsupportedConcurrencyException)
             return new JdbcResponse(IgniteQueryErrorCode.UNSUPPORTED_OPERATION, e.getMessage());
         if (e instanceof IgniteSQLException)
             return new JdbcResponse(((IgniteSQLException)e).statusCode(), e.getMessage());
@@ -1201,6 +1204,8 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
 
                         continue;
                     }
+                    else
+                        orderedBatchesQueue.poll();
                 }
 
                 executeBatchOrdered(req);

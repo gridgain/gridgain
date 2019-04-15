@@ -1,23 +1,23 @@
 //-
-    GridGain Community Edition Licensing
+                      GridGain Community Edition Licensing
                       Copyright 2019 GridGain Systems, Inc.
-
+    
     Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
     Restriction; you may not use this file except in compliance with the License. You may obtain a
     copy of the License at
-
+    
     http://www.apache.org/licenses/LICENSE-2.0
-
+    
     Unless required by applicable law or agreed to in writing, software distributed under the
     License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
     KIND, either express or implied. See the License for the specific language governing permissions
     and limitations under the License.
-
+    
     Commons Clause Restriction
-
+    
     The Software is provided to you by the Licensor under the License, as defined below, subject to
     the following condition.
-
+    
     Without limiting other conditions in the License, the grant of rights under the License will not
     include, and the License does not grant to you, the right to Sell the Software.
     For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,16 +26,18 @@
     service whose value derives, entirely or substantially, from the functionality of the Software.
     Any license notice or attribution required by the License must also include this Commons Clause
     License Condition notice.
-
+    
     For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
     the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
     Edition software provided with this notice.
+
 
 include /app/helpers/jade/mixins
 include /app/configuration/mixins
 
 -var form = 'dataStorageConfiguration'
--var model = '$ctrl.clonedCluster.dataStorageConfiguration'
+-var clusterModel = '$ctrl.clonedCluster'
+-var model = clusterModel + '.dataStorageConfiguration'
 -var dfltRegionModel = model + '.defaultDataRegionConfiguration'
 -var dataRegionConfigurations = model + '.dataRegionConfigurations'
 
@@ -336,14 +338,6 @@ panel-collapsible(ng-show='$ctrl.available("2.3.0")' ng-form=form on-open=`ui.lo
                     placeholder: 'db/wal',
                     tip: 'A path to the directory where WAL is stored'
                 })
-            .pc-form-grid-col-60
-                +form-field__text({
-                    label: 'WAL archive path:',
-                    model: `${model}.walArchivePath`,
-                    name: '"DataStorageWalArchivePath"',
-                    placeholder: 'db/wal/archive',
-                    tip: 'A path to the WAL archive directory'
-                })
             .pc-form-grid-col-20
                 +form-field__number({
                     label: 'WAL segments:',
@@ -370,6 +364,44 @@ panel-collapsible(ng-show='$ctrl.available("2.3.0")' ng-form=form on-open=`ui.lo
                     placeholder: '20',
                     min: '1',
                     tip: 'A total number of checkpoints to keep in the WAL history'
+                })
+            .pc-form-grid-col-60
+                +form-field__text({
+                    label: 'WAL archive path:',
+                    model: `${model}.walArchivePath`,
+                    name: '"DataStorageWalArchivePath"',
+                    placeholder: 'db/wal/archive',
+                    tip: 'A path to the WAL archive directory'
+                })
+            .pc-form-grid-col-60(ng-if='$ctrl.available("2.7.0")')
+                form-field-size(
+                    label='Max allowed size of WAL archives:'
+                    ng-model=`${model}.maxWalArchiveSize`
+                    name='DataStorageMaxWalArchiveSize'
+                    placeholder='1'
+                    min='1'
+                    tip='Max allowed size of WAL archives'
+                    size-scale-label='gb'
+                    size-type='bytes'
+                )
+            .pc-form-grid-col-60(ng-if='$ctrl.available("2.7.0")')
+                +form-field__number({
+                    label: 'WAL compaction level:',
+                    model: `${model}.walCompactionLevel`,
+                    name: '"DataStorageWalCompactionLevel"',
+                    placeholder: '1',
+                    min: '0',
+                    max: '9',
+                    tip: 'ZIP level to WAL compaction (0-9)'
+                })
+            .pc-form-grid-col-60
+                +form-field__number({
+                    label: 'WAL auto archive after inactivity:',
+                    model: `${model}.walAutoArchiveAfterInactivity`,
+                    name: '"DataStorageWalAutoArchiveAfterInactivity"',
+                    placeholder: '-1',
+                    min: '-1',
+                    tip: 'Time in millis to run auto archiving segment after last record logging'
                 })
             .pc-form-grid-col-60(ng-if='$ctrl.available("2.4.0")')
                 +form-field__number({
@@ -443,7 +475,7 @@ panel-collapsible(ng-show='$ctrl.available("2.3.0")' ng-form=form on-open=`ui.lo
                     min: '1000',
                     tip: 'The length of the time interval for rate - based metrics. This interval defines a window over which hits will be tracked'
                 })
-            .pc-form-grid-col-30
+            .pc-form-grid-col-60
                 +form-field__dropdown({
                     label: 'File IO factory:',
                     model: `${model}.fileIOFactory`,
@@ -459,16 +491,6 @@ panel-collapsible(ng-show='$ctrl.available("2.3.0")' ng-form=form on-open=`ui.lo
                             <li>RANDOM - Pages are written in order provided by checkpoint pages collection iterator</li>\
                             <li>SEQUENTIAL - All checkpoint pages are collected into single list and sorted by page index</li>\
                         </ul>'
-                })
-
-            .pc-form-grid-col-30
-                +form-field__number({
-                    label: 'WAL auto archive after inactivity:',
-                    model: `${model}.walAutoArchiveAfterInactivity`,
-                    name: '"DataStorageWalAutoArchiveAfterInactivity"',
-                    placeholder: '-1',
-                    min: '-1',
-                    tip: 'Time in millis to run auto archiving segment after last record logging'
                 })
             .pc-form-grid-col-60
                 +form-field__checkbox({
@@ -498,6 +520,14 @@ panel-collapsible(ng-show='$ctrl.available("2.3.0")' ng-form=form on-open=`ui.lo
                     name: '"DataStorageWalCompactionEnabled"',
                     tip: 'If true, system filters and compresses WAL archive in background'
                 })
+            .pc-form-grid-col-60(ng-if='$ctrl.available("2.5.0")')
+                +form-field__checkbox({
+                    label: 'Authentication enabled',
+                    model: `${clusterModel}.authenticationEnabled`,
+                    name: '"authenticationEnabled"',
+                    disabled: `!$ctrl.Clusters.persistenceEnabled(${model})`,
+                    tip: 'Enable user authentication for cluster with persistence'
+                })
 
         .pca-form-column-6
-            +preview-xml-java(model, 'clusterDataStorageConfiguration')
+            +preview-xml-java(clusterModel, 'clusterDataStorageConfiguration')

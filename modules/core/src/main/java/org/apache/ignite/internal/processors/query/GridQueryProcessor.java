@@ -1,23 +1,23 @@
 /*
  *                   GridGain Community Edition Licensing
  *                   Copyright 2019 GridGain Systems, Inc.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
  * Restriction; you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
+ * 
  * Commons Clause Restriction
- *
+ * 
  * The Software is provided to you by the Licensor under the License, as defined below, subject to
  * the following condition.
- *
+ * 
  * Without limiting other conditions in the License, the grant of rights under the License will not
  * include, and the License does not grant to you, the right to Sell the Software.
  * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,7 +26,7 @@
  * service whose value derives, entirely or substantially, from the functionality of the Software.
  * Any license notice or attribution required by the License must also include this Commons Clause
  * License Condition notice.
- *
+ * 
  * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
  * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
  * Edition software provided with this notice.
@@ -34,8 +34,6 @@
 
 package org.apache.ignite.internal.processors.query;
 
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -56,6 +54,7 @@ import javax.cache.CacheException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.Binarylizable;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -401,6 +400,17 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
                     msg.onError(new SchemaOperationException("Schema changes are not supported for LOCAL cache."));
                 }
+                else if (failOnStaticCacheSchemaChanges(cacheDesc)) {
+                    // Do not allow any schema changes when keep static cache configuration flag is set.
+                    if (log.isDebugEnabled())
+                        log.debug("Received schema propose discovery message, but cache is statically configured " +
+                            "and " + IgniteSystemProperties.IGNITE_KEEP_STATIC_CACHE_CONFIGURATION +
+                            " flag is set (will report error) [opId=" + opId + ", msg=" + msg + ']');
+
+                    msg.onError(new SchemaOperationException("Schema changes are not supported for statically " +
+                        "configured cache when " + IgniteSystemProperties.IGNITE_KEEP_STATIC_CACHE_CONFIGURATION +
+                        " flag is set."));
+                }
                 else {
                     // Preserve deployment ID so that we can distinguish between different caches with the same name.
                     if (msg.deploymentId() == null)
@@ -422,6 +432,17 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         }
 
         return onSchemaProposeDiscovery0(msg);
+    }
+
+    /**
+     * @param cacheDesc Cache descriptor to check.
+     * @return {@code true} if cache is statically configured, IGNITE_KEEP_STATIC_CACHE_CONFIGURATION system property
+     *      is set and cache is persistent, {@code false} otherwise.
+     */
+    private boolean failOnStaticCacheSchemaChanges(DynamicCacheDescriptor cacheDesc) {
+        return cacheDesc.staticallyConfigured() &&
+            ctx.cache().keepStaticCacheConfiguration() &&
+            cacheDesc.groupDescriptor().persistenceEnabled();
     }
 
     /**
@@ -694,6 +715,8 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      */
     public void onCacheStart0(GridCacheContextInfo<?, ?> cacheInfo, QuerySchema schema, boolean isSql)
         throws IgniteCheckedException {
+        if (!cacheSupportSql(cacheInfo.config()))
+            return;
 
         ctx.cache().context().database().checkpointReadLock();
 
@@ -1244,23 +1267,11 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                         op0.tableName());
             }
             else {
-                Map<String, String> aliases = e.getAliases();
-
                 for (String colName : op0.columns()) {
                     if (err != null)
                         break;
 
-                    String fldName = colName;
-
-                    if (!F.isEmpty(aliases)) {
-                        for (Map.Entry<String, String> a : aliases.entrySet()) {
-                            if (colName.equals(a.getValue())) {
-                                fldName = a.getKey();
-
-                                break;
-                            }
-                        }
-                    }
+                    String fldName = QueryUtils.fieldNameByAlias(e, colName);
 
                     if (!e.getFields().containsKey(fldName)) {
                         if (op0.ifExists()) {
@@ -1715,7 +1726,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      * @param destroy Destroy flag.
      */
     public void onCacheStop0(GridCacheContextInfo cacheInfo, boolean destroy) {
-        if (idx == null)
+        if (idx == null || !cacheSupportSql(cacheInfo.config()))
             return;
 
         String cacheName = cacheInfo.name();
@@ -1774,6 +1785,18 @@ public class GridQueryProcessor extends GridProcessorAdapter {
     }
 
     /**
+     * Check is cache configured for SQL.
+     *
+     * @param cfg Cache configuration.
+     * @return {@code true} If cache configuration support SQL, {@code false} otherwise.
+     */
+    private boolean cacheSupportSql(CacheConfiguration cfg) {
+        return !F.isEmpty(cfg.getQueryEntities())
+            || !F.isEmpty(cfg.getSqlSchema())
+            || !F.isEmpty(cfg.getSqlFunctionClasses());
+    }
+
+    /**
      * Check whether provided key and value belongs to expected cache and table.
      *
      * @param cctx Target cache context.
@@ -1814,6 +1837,40 @@ public class GridQueryProcessor extends GridProcessorAdapter {
     }
 
     /**
+     * Mark that for given cache index should/would be rebuilt.
+     *
+     * @param cctx Cache context.
+     */
+    public void markAsRebuildNeeded(GridCacheContext cctx) {
+        if (rebuildIsMeaningless(cctx))
+            return;
+
+        idx.markAsRebuildNeeded(cctx);
+    }
+
+    /**
+     * @param cctx Cache context.
+     * @return True if index rebuild is meaningless (index module is disabled, local node is not an affinity
+     *      node fro this cache or queries are not enabled for the cache).
+     */
+    @SuppressWarnings("RedundantIfStatement")
+    private boolean rebuildIsMeaningless(GridCacheContext cctx) {
+        // Indexing module is disabled, nothing to rebuild.
+        if (idx == null)
+            return true;
+
+        // No data on non-affinity nodes.
+        if (!cctx.affinityNode())
+            return true;
+
+        // No indexes to rebuild when there are no QueryEntities.
+        if (!cctx.isQueryEnabled())
+            return true;
+
+        return false;
+    }
+
+    /**
      * Rebuilds indexes for provided caches from corresponding hash indexes.
      *
      * @param cctx Cache context.
@@ -1821,15 +1878,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      */
     public IgniteInternalFuture<?> rebuildIndexesFromHash(GridCacheContext cctx) {
         // Indexing module is disabled, nothing to rebuild.
-        if (idx == null)
-            return null;
-
-        // No data on non-affinity nodes.
-        if (!cctx.affinityNode())
-            return null;
-
-        // No indexes to rebuild when there are no QueryEntities.
-        if (!cctx.isQueryEnabled())
+        if (rebuildIsMeaningless(cctx))
             return null;
 
         // No need to rebuild if cache has no data.
@@ -2250,8 +2299,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         return executeQuerySafe(cctx, () -> {
             assert idx != null;
 
-            final String schemaName = qry.getSchema() != null ? qry.getSchema()
-                : (cctx != null ? idx.schema(cctx.name()) : QueryUtils.DFLT_SCHEMA);
+            final String schemaName = getSchemaName(cctx, qry);
 
             IgniteOutClosureX<List<FieldsQueryCursor<List<?>>>> clo =
                 new IgniteOutClosureX<List<FieldsQueryCursor<List<?>>>>() {
@@ -2276,6 +2324,24 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
             return executeQuery(qryType, qry.getSql(), cctx, clo, true);
         });
+    }
+
+    /**
+     * @param cctx Cache context.
+     * @param qry Query.
+     * @return Schema name.
+     */
+    private String getSchemaName(GridCacheContext<?, ?> cctx, SqlFieldsQuery qry) {
+        if (qry.getSchema() != null)
+            return qry.getSchema();
+        else if (cctx != null) {
+            String cacheSchemaName = idx.schema(cctx.name());
+
+            if (!F.isEmpty(cacheSchemaName))
+                return cacheSchemaName;
+        }
+
+        return QueryUtils.DFLT_SCHEMA;
     }
 
     /**
@@ -2621,18 +2687,6 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         throws IgniteCheckedException {
         for (String field : cols)
             d.removeProperty(field);
-    }
-
-    /**
-     * @param schemaName Schema name.
-     * @param sql Query.
-     * @return {@link PreparedStatement} from underlying engine to supply metadata to Prepared - most likely H2.
-     * @throws SQLException On error.
-     */
-    public PreparedStatement prepareNativeStatement(String schemaName, String sql) throws SQLException {
-        checkxEnabled();
-
-        return idx.prepareNativeStatement(schemaName, sql);
     }
 
     /**

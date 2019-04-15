@@ -1,23 +1,23 @@
 /*
  *                   GridGain Community Edition Licensing
  *                   Copyright 2019 GridGain Systems, Inc.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
  * Restriction; you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
+ * 
  * Commons Clause Restriction
- *
+ * 
  * The Software is provided to you by the Licensor under the License, as defined below, subject to
  * the following condition.
- *
+ * 
  * Without limiting other conditions in the License, the grant of rights under the License will not
  * include, and the License does not grant to you, the right to Sell the Software.
  * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,7 +26,7 @@
  * service whose value derives, entirely or substantially, from the functionality of the Software.
  * Any license notice or attribution required by the License must also include this Commons Clause
  * License Condition notice.
- *
+ * 
  * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
  * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
  * Edition software provided with this notice.
@@ -38,7 +38,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -49,8 +48,11 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
+
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_AFFINITY_HISTORY_SIZE;
 
 /**
  *
@@ -92,100 +94,118 @@ public class AffinityHistoryCleanupTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_AFFINITY_HISTORY_SIZE, value = "5")
     public void testAffinityHistoryCleanup() throws Exception {
-        String histProp = System.getProperty(IgniteSystemProperties.IGNITE_AFFINITY_HISTORY_SIZE);
+        Ignite ignite = startGrid(0);
 
-        try {
-            System.setProperty(IgniteSystemProperties.IGNITE_AFFINITY_HISTORY_SIZE, "5");
+        checkHistory(ignite, F.asList(topVer(1, 0)), 1); //fullHistSize = 1
 
-            Ignite ignite = startGrid(0);
+        startGrid(1);
 
-            checkHistory(ignite, F.asList(topVer(1, 0)), 1); //fullHistSize = 1
+        checkHistory(ignite, F.asList(
+            topVer(1, 0), // FullHistSize = 1.
+            topVer(2, 0), // FullHistSize = 2.
+            topVer(2, 1)), // FullHistSize = 3.
+            3);
 
-            startGrid(1);
+        startGrid(2);
 
-            checkHistory(ignite, F.asList(
-                topVer(1, 0), // FullHistSize = 1.
-                topVer(2, 0), // FullHistSize = 2.
-                topVer(2, 1)), // FullHistSize = 3.
-                3);
+        checkHistory(ignite, F.asList(
+            topVer(1, 0), // FullHistSize = 1.
+            topVer(2, 0), // FullHistSize = 2.
+            topVer(2, 1), // FullHistSize = 3.
+            topVer(3, 0), // FullHistSize = 4.
+            topVer(3, 1)), // FullHistSize = 5.
+            5);
 
-            startGrid(2);
+        startGrid(3);
 
-            checkHistory(ignite, F.asList(
-                topVer(1, 0), // FullHistSize = 1.
-                topVer(2, 0), // FullHistSize = 2.
-                topVer(2, 1), // FullHistSize = 3.
-                topVer(3, 0), // FullHistSize = 4.
-                topVer(3, 1)), // FullHistSize = 5.
-                5);
+        checkHistory(ignite, F.asList(
+            topVer(2, 1), // FullHistSize = 3.
+            topVer(3, 0), // FullHistSize = 4.
+            topVer(3, 1), // FullHistSize = 5.
+            topVer(4, 0), // FullHistSize = (6 - IGNITE_AFFINITY_HISTORY_SIZE(5)/2) = 4.
+            topVer(4, 1)), // FullHistSize = 5.
+            5);
 
-            startGrid(3);
+        client = true;
 
-            checkHistory(ignite, F.asList(
-                topVer(2, 1), // FullHistSize = 3.
-                topVer(3, 0), // FullHistSize = 4.
-                topVer(3, 1), // FullHistSize = 5.
-                topVer(4, 0), // FullHistSize = (6 - IGNITE_AFFINITY_HISTORY_SIZE(5)/2) = 4.
-                topVer(4, 1)), // FullHistSize = 5.
-                5);
+        startGrid(4);
 
-            client = true;
+        stopGrid(4);
 
-            startGrid(4);
+        checkHistory(ignite, F.asList(
+            topVer(2, 1), // FullHistSize = 3.
+            topVer(3, 0), // FullHistSize = 4.
+            topVer(3, 1), // FullHistSize = 5.
+            topVer(4, 0), // FullHistSize = (6 - IGNITE_AFFINITY_HISTORY_SIZE(5)/2) = 4.
+            topVer(4, 1), // FullHistSize = 5.
+            topVer(5, 0), // Client event ->FullHistSize = 5.
+            topVer(6, 0)), // Client event ->FullHistSize = 5.
+            5);
 
-            stopGrid(4);
+        startGrid(4);
 
-            checkHistory(ignite, F.asList(
-                topVer(3, 1), // FullHistSize = 5.
-                topVer(4, 0), // FullHistSize = (6 - IGNITE_AFFINITY_HISTORY_SIZE(5)/2) = 4.
-                topVer(4, 1), // FullHistSize = 5.
-                topVer(5, 0), // FullHistSize = (6 - IGNITE_AFFINITY_HISTORY_SIZE(5)/2) = 4.
-                topVer(6, 0)), // FullHistSize = 5.
-                5);
+        stopGrid(4);
 
-            startGrid(4);
+        checkHistory(ignite, F.asList(
+            topVer(2, 1), // FullHistSize = 3.
+            topVer(3, 0), // FullHistSize =4.
+            topVer(3, 1), // FullHistSize = 5.
+            topVer(4, 0), // FullHistSize = (6 - IGNITE_AFFINITY_HISTORY_SIZE(5)/2) = 4.
+            topVer(4, 1), // FullHistSize = 5.
+            topVer(5, 0), // Client event -> FullHistSize = 5.
+            topVer(6, 0), // Client event -> FullHistSize = 5.
+            topVer(7, 0), // Client event -> FullHistSize = 5.
+            topVer(8, 0)), // Client event ->FullHistSize = 5.
+            5);
 
-            stopGrid(4);
+        startGrid(4);
 
-            checkHistory(ignite, F.asList(
-                topVer(4, 1), // FullHistSize = 5.
-                topVer(5, 0), // FullHistSize = (6 - IGNITE_AFFINITY_HISTORY_SIZE(5)/2) = 4.
-                topVer(6, 0), // FullHistSize = 5.
-                topVer(7, 0), // FullHistSize = (6 - IGNITE_AFFINITY_HISTORY_SIZE(5)/2) = 4.
-                topVer(8, 0)), // FullHistSize = 5.
-                5);
+        stopGrid(4);
 
-            startGrid(4);
+        checkHistory(ignite, F.asList(
+            topVer(2, 1), // FullHistSize = 3.
+            topVer(3, 0), // FullHistSize = 4.
+            topVer(3, 1), // FullHistSize =5.
+            topVer(4, 0), // FullHistSize = (6 - IGNITE_AFFINITY_HISTORY_SIZE(5)/2) = 4.
+            topVer(4, 1), // FullHistSize = 5.
+            topVer(5, 0), // Client event -> FullHistSize = 5.
+            topVer(6, 0), // Client event -> FullHistSize = 5.
+            topVer(7, 0), // Client event -> FullHistSize = 5.
+            topVer(8, 0), // Client event -> FullHistSize = 5.
+            topVer(9, 0), // Client event -> FullHistSize = 5.
+            topVer(10, 0)), // Client event ->FullHistSize = 5.
+            5);
 
-            stopGrid(4);
+        client = false;
 
-            checkHistory(ignite, F.asList(
-                topVer(6, 0), // FullHistSize = 5.
-                topVer(7, 0), // FullHistSize = (6 - IGNITE_AFFINITY_HISTORY_SIZE(5)/2) = 4.
-                topVer(8, 0), // FullHistSize = 5.
-                topVer(9, 0), // FullHistSize = (6 - IGNITE_AFFINITY_HISTORY_SIZE(5)/2) = 4.
-                topVer(10, 0)), // FullHistSize = 5.
-                5);
+        startGrid(4);
 
-            client = false;
+        checkHistory(ignite, F.asList(
+            topVer(3, 1), // FullHistSize = 5.
+            topVer(4, 0), // FullHistSize = (6 - IGNITE_AFFINITY_HISTORY_SIZE(5)/2) = 4.
+            topVer(4, 1), // FullHistSize = 5.
+            topVer(5, 0), // Client event -> FullHistSize = 5.
+            topVer(6, 0), // Client event -> FullHistSize = 5.
+            topVer(7, 0), // Client event -> FullHistSize = 5.
+            topVer(8, 0), // Client event -> FullHistSize = 5.
+            topVer(9, 0), // Client event -> FullHistSize = 5.
+            topVer(10, 0), // Client event -> FullHistSize = 5.
+            topVer(11, 0), // FullHistSize = (6 - IGNITE_AFFINITY_HISTORY_SIZE(5)/2) = 4.
+            topVer(11, 1)), // FullHistSize = 5.
+            5);
 
-            startGrid(4);
+        stopGrid(4);
 
-            checkHistory(ignite, F.asList(
-                topVer(8, 0), // FullHistSize = 5.
-                topVer(9, 0), // FullHistSize = (6 - IGNITE_AFFINITY_HISTORY_SIZE(5)/2) = 4.
-                topVer(10, 0), // FullHistSize = 5.
-                topVer(11, 0), // FullHistSize = (6 - IGNITE_AFFINITY_HISTORY_SIZE(5)/2) = 4.
-                topVer(11, 1)), // FullHistSize = 5.
-                5);
-        }
-        finally {
-            if (histProp != null)
-                System.setProperty(IgniteSystemProperties.IGNITE_AFFINITY_HISTORY_SIZE, histProp);
-            else
-                System.clearProperty(IgniteSystemProperties.IGNITE_AFFINITY_HISTORY_SIZE);
-        }
+        startGrid(4);
+
+        checkHistory(ignite, F.asList(
+            topVer(11, 1), // FullHistSize = 5.
+            topVer(12, 0), // FullHistSize = (6 - IGNITE_AFFINITY_HISTORY_SIZE(5)/2) = 4.
+            topVer(13, 0), // FullHistSize = 5.
+            topVer(13, 1)), // FullHistSize = (6 - IGNITE_AFFINITY_HISTORY_SIZE(5)/2) = 4.
+            4);
     }
 
     /**

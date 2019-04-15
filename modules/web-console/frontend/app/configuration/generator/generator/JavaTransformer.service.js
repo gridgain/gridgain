@@ -1,23 +1,23 @@
 /*
  *                   GridGain Community Edition Licensing
  *                   Copyright 2019 GridGain Systems, Inc.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
  * Restriction; you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
+ * 
  * Commons Clause Restriction
- *
+ * 
  * The Software is provided to you by the Licensor under the License, as defined below, subject to
  * the following condition.
- *
+ * 
  * Without limiting other conditions in the License, the grant of rights under the License will not
  * include, and the License does not grant to you, the right to Sell the Software.
  * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,13 +26,15 @@
  * service whose value derives, entirely or substantially, from the functionality of the Software.
  * Any license notice or attribution required by the License must also include this Commons Clause
  * License Condition notice.
- *
+ * 
  * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
  * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
  * Edition software provided with this notice.
  */
 
 import {nonEmpty} from 'app/utils/lodashMixins';
+
+import { Bean } from './Beans';
 
 import AbstractTransformer from './AbstractTransformer';
 import StringBuilder from './StringBuilder';
@@ -333,6 +335,7 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
                     sb.emptyLine();
 
                     break;
+
                 default:
                     if (this._isBean(arg.clsName) && arg.value.isComplex()) {
                         this.constructBean(sb, arg.value, vars, limitLines);
@@ -400,6 +403,12 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
     static _toObject(clsName, val) {
         const items = _.isArray(val) ? val : [val];
 
+        if (clsName === 'EVENTS') {
+            const lastIdx = items.length - 1;
+
+            return [..._.map(items, (v, idx) => (idx === 0 ? 'new int[] {' : ' ') + v.label + (lastIdx === idx ? '}' : ''))];
+        }
+
         return _.map(items, (item) => {
             if (_.isNil(item))
                 return 'null';
@@ -417,6 +426,7 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
                 case 'java.lang.String':
                     return `"${item.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
                 case 'PATH':
+                case 'PATH_ARRAY':
                     return `"${item.replace(/\\/g, '\\\\')}"`;
                 case 'java.lang.Class':
                     return `${this.javaTypes.shortClassName(item)}.class`;
@@ -429,7 +439,7 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
                 case 'PROPERTY_INT':
                     return `Integer.parseInt(props.getProperty("${item}"))`;
                 default:
-                    if (this._isBean(clsName)) {
+                    if (this._isBean(clsName) || val instanceof Bean) {
                         if (item.isComplex())
                             return item.id;
 
@@ -533,9 +543,14 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
         const keyClsName = this.javaTypes.shortClassName(map.keyClsName);
         const valClsName = this.javaTypes.shortClassName(map.valClsName);
 
+        const genericTypeShort = map.keyClsGenericType ? this.javaTypes.shortClassName(map.keyClsGenericType) : '';
+        const keyClsGeneric = map.keyClsGenericType ?
+            map.isKeyClsGenericTypeExtended ? `<? extends ${genericTypeShort}>` : `<${genericTypeShort}>`
+            : '';
+
         const mapClsName = map.ordered ? 'LinkedHashMap' : 'HashMap';
 
-        const type = `${mapClsName}<${keyClsName}, ${valClsName}>`;
+        const type = `${mapClsName}<${keyClsName}${keyClsGeneric}, ${valClsName}>`;
 
         sb.append(`${this.varInit(type, map.id, vars)} = new ${mapClsName}<>();`);
 
@@ -559,7 +574,7 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
                     sb.append(`${map.id}.put(${key}, ${this._toObject(map.valClsName, _.head(val))});`);
             }
             else
-                sb.append(`${map.id}.put(${key}, ${this._toObject(map.valClsName, val)});`);
+                sb.append(`${map.id}.put(${key}, ${this._toObject(map.valClsNameShow || map.valClsName, val)});`);
         });
     }
 
@@ -631,6 +646,13 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
                         this._setArray(sb, id, prop, vars, limitLines);
 
                     break;
+                case 'PATH_ARRAY':
+                    if (prop.varArg)
+                        this._setVarArg(sb, id, prop, this._toObject(prop.clsName, prop.items), limitLines);
+                    else
+                        this._setArray(sb, id, prop, this._toObject(prop.clsName, prop.items), limitLines);
+
+                    break;
                 case 'COLLECTION':
                     const nonBean = !this._isBean(prop.typeClsName);
 
@@ -657,7 +679,10 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
 
                         if (nonBean) {
                             _.forEach(this._toObject(colTypeClsName, prop.items), (item) => {
-                                sb.append(`${prop.id}.add("${item}");`);
+                                if (this.javaTypesNonEnum.nonEnum(prop.typeClsName))
+                                    sb.append(`${prop.id}.add("${item}");`);
+                                else
+                                    sb.append(`${prop.id}.add(${item});`);
 
                                 sb.emptyLine();
                             });
@@ -740,6 +765,9 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
         imports.push(prop.ordered ? 'java.util.LinkedHashMap' : 'java.util.HashMap');
         imports.push(prop.keyClsName);
         imports.push(prop.valClsName);
+
+        if (prop.keyClsGenericType)
+            imports.push(prop.keyClsGenericType);
 
         return imports;
     }
@@ -855,6 +883,16 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
                     });
 
                     break;
+
+                case 'MAP':
+                    if (prop.valClsNameShow === 'EVENTS') {
+                        _.forEach(prop.entries, (lnr) => {
+                            _.forEach(lnr.eventTypes, (type) => imports.push(`${type.class}.${type.label}`));
+                        });
+                    }
+
+                    break;
+
                 default:
                     // No-op.
             }

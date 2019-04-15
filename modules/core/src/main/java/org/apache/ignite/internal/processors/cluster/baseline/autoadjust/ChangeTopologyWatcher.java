@@ -1,18 +1,35 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *                   GridGain Community Edition Licensing
+ *                   Copyright 2019 GridGain Systems, Inc.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
+ * Restriction; you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the specific language governing permissions
+ * and limitations under the License.
+ * 
+ * Commons Clause Restriction
+ * 
+ * The Software is provided to you by the Licensor under the License, as defined below, subject to
+ * the following condition.
+ * 
+ * Without limiting other conditions in the License, the grant of rights under the License will not
+ * include, and the License does not grant to you, the right to Sell the Software.
+ * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
+ * under the License to provide to third parties, for a fee or other consideration (including without
+ * limitation fees for hosting or consulting/ support services related to the Software), a product or
+ * service whose value derives, entirely or substantially, from the functionality of the Software.
+ * Any license notice or attribution required by the License must also include this Commons Clause
+ * License Condition notice.
+ * 
+ * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
+ * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
+ * Edition software provided with this notice.
  */
 
 package org.apache.ignite.internal.processors.cluster.baseline.autoadjust;
@@ -31,14 +48,13 @@ import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeMan
 import org.apache.ignite.internal.processors.cluster.GridClusterStateProcessor;
 import org.apache.ignite.lang.IgniteInClosure;
 
+import static org.apache.ignite.internal.processors.cluster.baseline.autoadjust.BaselineAutoAdjustData.NULL_BASELINE_DATA;
 import static org.apache.ignite.internal.util.IgniteUtils.isLocalNodeCoordinator;
 
 /**
  * Watcher of topology changes. It initiate to set new baseline after some timeout.
  */
 public class ChangeTopologyWatcher implements GridLocalEventListener {
-    /** Task represented NULL value is using when normal task can not be created. */
-    private static final BaselineAutoAdjustData NULL_BASELINE_DATA = new BaselineAutoAdjustData(null, -1);
     /** */
     private final IgniteLogger log;
     /** */
@@ -63,7 +79,7 @@ public class ChangeTopologyWatcher implements GridLocalEventListener {
     public ChangeTopologyWatcher(GridKernalContext ctx) {
         this.log = ctx.log(ChangeTopologyWatcher.class);
         this.cluster = ctx.cluster().get();
-        this.baselineConfiguration = cluster.baselineConfiguration();
+        this.baselineConfiguration = ctx.state().baselineConfiguration();
         this.exchangeManager = ctx.cache().context().exchange();
         this.stateProcessor = ctx.state();
         this.baselineAutoAdjustScheduler = new BaselineAutoAdjustScheduler(ctx.timeout(), new BaselineAutoAdjustExecutor(
@@ -71,7 +87,7 @@ public class ChangeTopologyWatcher implements GridLocalEventListener {
             cluster,
             ctx.getSystemExecutorService(),
             this::isBaselineAutoAdjustEnabled
-        ));
+        ), ctx.log(BaselineAutoAdjustScheduler.class));
         this.discoveryMgr = ctx.discovery();
     }
 
@@ -91,7 +107,7 @@ public class ChangeTopologyWatcher implements GridLocalEventListener {
             return;
 
         synchronized (this) {
-            lastBaselineData = lastBaselineData.next(evt, discoEvt.topologyVersion());
+            lastBaselineData = lastBaselineData.next(discoEvt.topologyVersion());
 
             if (isLocalNodeCoordinator(discoveryMgr)) {
                 exchangeManager.affinityReadyFuture(new AffinityTopologyVersion(discoEvt.topologyVersion()))
@@ -107,7 +123,7 @@ public class ChangeTopologyWatcher implements GridLocalEventListener {
 
                         long timeout = baselineConfiguration.getBaselineAutoAdjustTimeout();
 
-                        log.warning("Baseline will be changed in '" + timeout + "' ms");
+                        log.warning("Baseline auto-adjust will be executed in '" + timeout + "' ms");
 
                         baselineAutoAdjustScheduler.schedule(lastBaselineData, timeout);
                     });
@@ -121,5 +137,22 @@ public class ChangeTopologyWatcher implements GridLocalEventListener {
      */
     private boolean isBaselineAutoAdjustEnabled() {
         return stateProcessor.clusterState().active() && baselineConfiguration.isBaselineAutoAdjustEnabled();
+    }
+
+    /**
+     * @return Statistic of baseline auto-adjust.
+     */
+    public BaselineAutoAdjustStatus getStatus() {
+        synchronized (this) {
+            if (lastBaselineData.isAdjusted())
+                return BaselineAutoAdjustStatus.notScheduled();
+
+            long timeToLastTask = baselineAutoAdjustScheduler.lastScheduledTaskTime();
+
+            if (timeToLastTask <= 0)
+                return BaselineAutoAdjustStatus.inProgress();
+
+            return BaselineAutoAdjustStatus.scheduled(timeToLastTask);
+        }
     }
 }

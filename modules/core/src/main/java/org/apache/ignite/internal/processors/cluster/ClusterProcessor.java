@@ -1,23 +1,23 @@
 /*
  *                   GridGain Community Edition Licensing
  *                   Copyright 2019 GridGain Systems, Inc.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
  * Restriction; you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
+ * 
  * Commons Clause Restriction
- *
+ * 
  * The Software is provided to you by the Licensor under the License, as defined below, subject to
  * the following condition.
- *
+ * 
  * Without limiting other conditions in the License, the grant of rights under the License will not
  * include, and the License does not grant to you, the right to Sell the Software.
  * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,7 +26,7 @@
  * service whose value derives, entirely or substantially, from the functionality of the Software.
  * Any license notice or attribution required by the License must also include this Commons Clause
  * License Condition notice.
- *
+ * 
  * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
  * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
  * Edition software provided with this notice.
@@ -52,7 +52,6 @@ import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.internal.ClusterMetricsSnapshot;
 import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.GridKernalGatewayImpl;
 import org.apache.ignite.internal.IgniteDiagnosticInfo;
 import org.apache.ignite.internal.IgniteDiagnosticMessage;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -66,7 +65,6 @@ import org.apache.ignite.internal.managers.discovery.IgniteClusterNode;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
-import org.apache.ignite.internal.processors.cluster.baseline.autoadjust.ChangeTopologyWatcher;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
 import org.apache.ignite.internal.util.GridTimerTask;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
@@ -87,12 +85,10 @@ import org.apache.ignite.spi.discovery.DiscoveryMetricsProvider;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.IgniteSystemProperties.GRIDGAIN_UPDATE_URL;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DIAGNOSTIC_ENABLED;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_UPDATE_NOTIFIER;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
-import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType.CLUSTER_PROC;
 import static org.apache.ignite.internal.GridTopic.TOPIC_INTERNAL_DIAGNOSTIC;
@@ -117,9 +113,6 @@ public class ClusterProcessor extends GridProcessorAdapter {
 
     /** */
     private final AtomicBoolean notifyEnabled = new AtomicBoolean();
-
-    /** */
-    private final AtomicReference<String> updateNotifierUrl = new AtomicReference<>();
 
     /** */
     @GridToStringExclude
@@ -155,8 +148,6 @@ public class ClusterProcessor extends GridProcessorAdapter {
         super(ctx);
 
         notifyEnabled.set(IgniteSystemProperties.getBoolean(IGNITE_UPDATE_NOTIFIER, true));
-
-        updateNotifierUrl.set(IgniteSystemProperties.getString(GRIDGAIN_UPDATE_URL, GridUpdateNotifier.DEFAULT_GRIDGAIN_UPDATES_URL));
 
         cluster = new IgniteClusterImpl(ctx);
 
@@ -195,8 +186,6 @@ public class ClusterProcessor extends GridProcessorAdapter {
                 allNodesMetrics.remove(nodeId);
             }
         }, EVT_NODE_FAILED, EVT_NODE_LEFT);
-
-        ctx.event().addLocalEventListener(new ChangeTopologyWatcher(ctx), EVT_NODE_FAILED, EVT_NODE_LEFT, EVT_NODE_JOINED);
 
         ctx.io().addMessageListener(TOPIC_INTERNAL_DIAGNOSTIC, new GridMessageListener() {
             @Override public void onMessage(UUID nodeId, Object msg, byte plc) {
@@ -379,13 +368,7 @@ public class ClusterProcessor extends GridProcessorAdapter {
     @Override public void onKernalStart(boolean active) throws IgniteCheckedException {
         if (notifyEnabled.get()) {
             try {
-                verChecker = new GridUpdateNotifier(ctx.igniteInstanceName(),
-                    VER_STR,
-                    new GridKernalGatewayImpl(ctx.igniteInstanceName()),
-                    ctx.discovery(),
-                    U.allPluginProviders(),
-                    false,
-                    new HttpIgniteUpdatesChecker(updateNotifierUrl.get(), GridUpdateNotifier.CHARSET));
+                verChecker = new GridUpdateNotifier(ctx.igniteInstanceName(), VER_STR, false);
 
                 updateNtfTimer = new Timer("ignite-update-notifier-timer", true);
 
@@ -559,24 +542,10 @@ public class ClusterProcessor extends GridProcessorAdapter {
     }
 
     /**
-     * Sets updates notifier url.
-     */
-    public void setUpdateNotifierUrl(String url) {
-        updateNotifierUrl.set(url);
-    }
-
-    /**
      * @return Update notifier status.
      */
     public boolean updateNotifierEnabled() {
         return notifyEnabled.get();
-    }
-
-    /**
-     * @return Get update notifier url.
-     */
-    public String updateNotifierUrl() {
-        return updateNotifierUrl.get();
     }
 
     /**
@@ -721,7 +690,7 @@ public class ClusterProcessor extends GridProcessorAdapter {
             if (!notifyEnabled.get())
                 return;
 
-            verChecker.checkForNewVersion(log);
+            verChecker.checkForNewVersion(log, first);
 
             // Just wait for 10 secs.
             Thread.sleep(PERIODIC_VER_CHECK_CONN_TIMEOUT);

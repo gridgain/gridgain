@@ -1,23 +1,23 @@
 /*
  *                   GridGain Community Edition Licensing
  *                   Copyright 2019 GridGain Systems, Inc.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
  * Restriction; you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
+ * 
  * Commons Clause Restriction
- *
+ * 
  * The Software is provided to you by the Licensor under the License, as defined below, subject to
  * the following condition.
- *
+ * 
  * Without limiting other conditions in the License, the grant of rights under the License will not
  * include, and the License does not grant to you, the right to Sell the Software.
  * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,7 +26,7 @@
  * service whose value derives, entirely or substantially, from the functionality of the Software.
  * Any license notice or attribution required by the License must also include this Commons Clause
  * License Condition notice.
- *
+ * 
  * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
  * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
  * Edition software provided with this notice.
@@ -75,53 +75,54 @@ final class GridUriDeploymentFileProcessor {
     }
 
     /**
-     * Method processes given GAR file and extracts all tasks from it which are
-     * either mentioned in GAR descriptor or implements interface {@link org.apache.ignite.compute.ComputeTask}
+     * Method processes given package and extracts all tasks from it which are
+     * either mentioned in a task descriptor or implement interface {@link org.apache.ignite.compute.ComputeTask}
      * if there is no descriptor in file.
      *
-     * @param file GAR file with tasks.
-     * @param uri GAR file deployment URI.
-     * @param deployDir deployment directory with downloaded GAR files.
+     * @param file Package file with tasks.
+     * @param uri URI of the package.
+     * @param deployDir deployment directory with downloaded files.
      * @param log Logger.
      * @throws org.apache.ignite.spi.IgniteSpiException Thrown if file could not be read.
      * @return List of tasks from given file.
      */
     @Nullable static GridUriDeploymentFileProcessorResult processFile(File file, String uri, File deployDir,
         IgniteLogger log) throws IgniteSpiException {
-        File gar = file;
+        File pkg = file;
 
         if (!checkIntegrity(file, log)) {
-            U.error(log, "Tasks in GAR not loaded in configuration (invalid file signature) [uri=" +
+            U.error(log, "Failed to load tasks from a package (invalid file signature) [uri=" +
                 U.hidePassword(uri) + ']');
 
             return null;
         }
 
         if (!file.isDirectory()) {
-            gar = new File(deployDir, "dirzip_" + file.getName());
+            pkg = new File(deployDir, "dirzip_" + file.getName());
 
-            gar.mkdirs();
+            pkg.mkdirs();
 
             try {
-                U.unzip(file, gar, log);
+                U.unzip(file, pkg, log);
             }
             catch (IOException e) {
-                throw new IgniteSpiException("IO error when unzipping GAR file: " + file.getAbsolutePath(), e);
+                throw new IgniteSpiException("IO error when unzipping a package: "
+                        + file.getAbsolutePath(), e);
             }
         }
 
         GridUriDeploymentFileProcessorResult res = null;
 
-        if (gar.isDirectory()) {
+        if (pkg.isDirectory()) {
             try {
-                File xml = new File(gar, XML_DESCRIPTOR_PATH);
+                File xml = new File(pkg, XML_DESCRIPTOR_PATH);
 
                 if (!xml.exists() || xml.isDirectory()) {
                     U.warn(log,
                         "Processing deployment without descriptor file (it will cause full classpath scan) [path="
-                        + XML_DESCRIPTOR_PATH + ", gar=" + gar.getAbsolutePath() + ']');
+                        + XML_DESCRIPTOR_PATH + ", package=" + pkg.getAbsolutePath() + ']');
 
-                    res = processNoDescriptorFile(gar, uri, log);
+                    res = processNoDescriptorFile(pkg, uri, log);
                 }
                 else {
                     InputStream in = null;
@@ -134,7 +135,7 @@ final class GridUriDeploymentFileProcessor {
 
                         assert doc != null;
 
-                        res = processWithDescriptorFile(doc, gar, uri, log);
+                        res = processWithDescriptorFile(doc, pkg, uri, log);
                     }
                     finally {
                         U.close(in, log);
@@ -142,12 +143,13 @@ final class GridUriDeploymentFileProcessor {
                 }
             }
             catch (IOException e) {
-                throw new IgniteSpiException("IO error when parsing GAR directory: " + gar.getAbsolutePath(), e);
+                throw new IgniteSpiException("IO error when parsing a package: "
+                        + pkg.getAbsolutePath(), e);
             }
         }
 
         if (res != null)
-            res.setMd5(md5(gar, log));
+            res.setMd5(md5(pkg, log));
 
         return res;
     }
@@ -338,12 +340,11 @@ final class GridUriDeploymentFileProcessor {
     }
 
     /**
-     * Processes given GAR file and returns back all tasks which are in
-     * descriptor.
+     * Processes given package and returns back all tasks which are in its descriptor.
      *
-     * @param doc GAR file descriptor.
-     * @param file GAR file.
-     * @param uri GAR file deployment URI.
+     * @param doc Package descriptor.
+     * @param file Package file.
+     * @param uri URI of the package file.
      * @param log Logger.
      * @throws org.apache.ignite.spi.IgniteSpiException Thrown if it's impossible to open file.
      * @return List of tasks from descriptor.
@@ -388,11 +389,11 @@ final class GridUriDeploymentFileProcessor {
     }
 
     /**
-     * Processes GAR files which have no descriptor. It scans every class and
+     * Processes packages which have no descriptor. It scans every class and
      * checks if it is a valid task or not. All valid tasks are returned back.
      *
-     * @param file GAR file or directory.
-     * @param uri GAR file deployment URI.
+     * @param file Package file or directory.
+     * @param uri URI of the package file.
      * @param log Logger.
      * @throws org.apache.ignite.spi.IgniteSpiException Thrown if file reading error happened.
      * @return List of tasks from given file.
@@ -453,10 +454,10 @@ final class GridUriDeploymentFileProcessor {
     }
 
     /**
-     * Make integrity check for GAR file.
-     * Method returns {@code false} if GAR file has incorrect signature.
+     * Make integrity check for a package.
+     * Method returns {@code false} if the package has incorrect signature.
      *
-     * @param file GAR file which should be verified.
+     * @param file package which should be verified.
      * @param log Logger.
      * @return {@code true} if given file is a directory of verification
      *      completed successfully otherwise returns {@code false}.

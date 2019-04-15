@@ -1,25 +1,45 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *                   GridGain Community Edition Licensing
+ *                   Copyright 2019 GridGain Systems, Inc.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
+ * Restriction; you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the specific language governing permissions
+ * and limitations under the License.
+ * 
+ * Commons Clause Restriction
+ * 
+ * The Software is provided to you by the Licensor under the License, as defined below, subject to
+ * the following condition.
+ * 
+ * Without limiting other conditions in the License, the grant of rights under the License will not
+ * include, and the License does not grant to you, the right to Sell the Software.
+ * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
+ * under the License to provide to third parties, for a fee or other consideration (including without
+ * limitation fees for hosting or consulting/ support services related to the Software), a product or
+ * service whose value derives, entirely or substantially, from the functionality of the Software.
+ * Any license notice or attribution required by the License must also include this Commons Clause
+ * License Condition notice.
+ * 
+ * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
+ * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
+ * Edition software provided with this notice.
  */
 
 package org.apache.ignite.internal.processors.query.h2.sys.view;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.function.Predicate;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.processors.cache.CacheGroupDescriptor;
 import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.h2.engine.Session;
@@ -46,10 +66,12 @@ public class SqlSystemViewTables extends SqlAbstractLocalSystemView {
      */
     public SqlSystemViewTables(GridKernalContext ctx, SchemaManager schemaMgr) {
         super("TABLES", "Ignite tables", ctx, TABLE_NAME,
+            newColumn("CACHE_GROUP_ID", Value.INT),
+            newColumn("CACHE_GROUP_NAME"),
+            newColumn("CACHE_ID", Value.INT),
+            newColumn("CACHE_NAME"),
             newColumn("SCHEMA_NAME"),
             newColumn(TABLE_NAME),
-            newColumn("CACHE_NAME"),
-            newColumn("CACHE_ID", Value.INT),
             newColumn("AFFINITY_KEY_COLUMN"),
             newColumn("KEY_ALIAS"),
             newColumn("VALUE_ALIAS"),
@@ -74,14 +96,26 @@ public class SqlSystemViewTables extends SqlAbstractLocalSystemView {
         else
             filter = tab -> true;
 
-        return schemaMgr.dataTables().stream()
+        List<Row> rows = new ArrayList<>();
+
+        schemaMgr.dataTables().stream()
             .filter(filter)
-            .map(tbl -> {
+            .forEach(tbl -> {
+                    int cacheGrpId = tbl.cacheInfo().groupId();
+
+                    CacheGroupDescriptor cacheGrpDesc = ctx.cache().cacheGroupDescriptors().get(cacheGrpId);
+
+                    // We should skip table in case in case regarding cache group has been removed.
+                    if (cacheGrpDesc == null)
+                        return;
+
                     Object[] data = new Object[] {
+                        cacheGrpId,
+                        cacheGrpDesc.cacheOrGroupName(),
+                        tbl.cacheId(),
+                        tbl.cacheName(),
                         tbl.getSchema().getName(),
                         tbl.getName(),
-                        tbl.cacheName(),
-                        tbl.cacheId(),
                         computeAffinityColumn(tbl),
                         tbl.rowDescriptor().type().keyFieldAlias(),
                         tbl.rowDescriptor().type().valueFieldAlias(),
@@ -89,9 +123,11 @@ public class SqlSystemViewTables extends SqlAbstractLocalSystemView {
                         tbl.rowDescriptor().type().valueTypeName()
                     };
 
-                    return createRow(ses, data);
+                    rows.add(createRow(ses, data));
                 }
-            ).iterator();
+            );
+
+        return rows.iterator();
     }
 
     /**

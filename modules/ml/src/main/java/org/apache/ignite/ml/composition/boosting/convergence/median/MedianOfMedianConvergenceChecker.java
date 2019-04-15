@@ -1,23 +1,23 @@
 /*
  *                   GridGain Community Edition Licensing
  *                   Copyright 2019 GridGain Systems, Inc.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
  * Restriction; you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
+ * 
  * Commons Clause Restriction
- *
+ * 
  * The Software is provided to you by the Licensor under the License, as defined below, subject to
  * the following condition.
- *
+ * 
  * Without limiting other conditions in the License, the grant of rights under the License will not
  * include, and the License does not grant to you, the right to Sell the Software.
  * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,7 +26,7 @@
  * service whose value derives, entirely or substantially, from the functionality of the Software.
  * Any license notice or attribution required by the License must also include this Commons Clause
  * License Condition notice.
- *
+ * 
  * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
  * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
  * Edition software provided with this notice.
@@ -34,18 +34,19 @@
 
 package org.apache.ignite.ml.composition.boosting.convergence.median;
 
-import java.util.Arrays;
 import org.apache.ignite.ml.composition.ModelsComposition;
 import org.apache.ignite.ml.composition.boosting.convergence.ConvergenceChecker;
 import org.apache.ignite.ml.composition.boosting.loss.Loss;
 import org.apache.ignite.ml.dataset.Dataset;
 import org.apache.ignite.ml.dataset.DatasetBuilder;
+import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
 import org.apache.ignite.ml.dataset.primitive.FeatureMatrixWithLabelsOnHeapData;
 import org.apache.ignite.ml.dataset.primitive.context.EmptyContext;
-import org.apache.ignite.ml.math.functions.IgniteBiFunction;
 import org.apache.ignite.ml.math.functions.IgniteFunction;
-import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.math.primitives.vector.VectorUtils;
+
+import java.io.Serializable;
+import java.util.Arrays;
 
 /**
  * Use median of median on partitions value of errors for estimating error on dataset. This algorithm may be less
@@ -54,7 +55,7 @@ import org.apache.ignite.ml.math.primitives.vector.VectorUtils;
  * @param <K> Type of a key in upstream data.
  * @param <V> Type of a value in upstream data.
  */
-public class MedianOfMedianConvergenceChecker<K, V> extends ConvergenceChecker<K, V> {
+public class MedianOfMedianConvergenceChecker<K, V, C extends Serializable> extends ConvergenceChecker<K, V, C> {
     /** Serial version uid. */
     private static final long serialVersionUID = 4902502002933415287L;
 
@@ -65,19 +66,18 @@ public class MedianOfMedianConvergenceChecker<K, V> extends ConvergenceChecker<K
      * @param lblMapping External label to internal mapping.
      * @param loss Loss function.
      * @param datasetBuilder Dataset builder.
-     * @param fExtr Feature extractor.
-     * @param lbExtr Label extractor.
+     * @param vectorizer Upstream vectorizer.
      * @param precision Precision.
      */
     public MedianOfMedianConvergenceChecker(long sampleSize, IgniteFunction<Double, Double> lblMapping, Loss loss,
-        DatasetBuilder<K, V> datasetBuilder, IgniteBiFunction<K, V, Vector> fExtr,
-        IgniteBiFunction<K, V, Double> lbExtr, double precision) {
+        DatasetBuilder<K, V> datasetBuilder, Vectorizer<K, V, C, Double> vectorizer, double precision) {
 
-        super(sampleSize, lblMapping, loss, datasetBuilder, fExtr, lbExtr, precision);
+        super(sampleSize, lblMapping, loss, datasetBuilder, vectorizer, precision);
     }
 
     /** {@inheritDoc} */
-    @Override public Double computeMeanErrorOnDataset(Dataset<EmptyContext, ? extends FeatureMatrixWithLabelsOnHeapData> dataset,
+    @Override public Double computeMeanErrorOnDataset(
+        Dataset<EmptyContext, ? extends FeatureMatrixWithLabelsOnHeapData> dataset,
         ModelsComposition mdl) {
 
         double[] medians = dataset.compute(
@@ -85,7 +85,7 @@ public class MedianOfMedianConvergenceChecker<K, V> extends ConvergenceChecker<K
             this::reduce
         );
 
-        if(medians == null)
+        if (medians == null)
             return Double.POSITIVE_INFINITY;
         return getMedian(medians);
     }
@@ -95,7 +95,7 @@ public class MedianOfMedianConvergenceChecker<K, V> extends ConvergenceChecker<K
      *
      * @param mdl Model.
      * @param data Data.
-     * @return median value.
+     * @return Median value.
      */
     private double[] computeMedian(ModelsComposition mdl, FeatureMatrixWithLabelsOnHeapData data) {
         double[] errors = new double[data.getLabels().length];
@@ -108,10 +108,10 @@ public class MedianOfMedianConvergenceChecker<K, V> extends ConvergenceChecker<K
      * Compute median value on array of errors.
      *
      * @param errors Error values.
-     * @return median value of errors.
+     * @return Median value of errors.
      */
     private double getMedian(double[] errors) {
-        if(errors.length == 0)
+        if (errors.length == 0)
             return Double.POSITIVE_INFINITY;
 
         Arrays.sort(errors);
@@ -127,12 +127,12 @@ public class MedianOfMedianConvergenceChecker<K, V> extends ConvergenceChecker<K
      *
      * @param left Left partition.
      * @param right Right partition.
-     * @return merged median values.
+     * @return Merged median values.
      */
     private double[] reduce(double[] left, double[] right) {
         if (left == null)
             return right;
-        if(right == null)
+        if (right == null)
             return left;
 
         double[] res = new double[left.length + right.length];

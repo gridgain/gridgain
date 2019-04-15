@@ -1,23 +1,23 @@
 /*
  *                   GridGain Community Edition Licensing
  *                   Copyright 2019 GridGain Systems, Inc.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
  * Restriction; you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
+ * 
  * Commons Clause Restriction
- *
+ * 
  * The Software is provided to you by the Licensor under the License, as defined below, subject to
  * the following condition.
- *
+ * 
  * Without limiting other conditions in the License, the grant of rights under the License will not
  * include, and the License does not grant to you, the right to Sell the Software.
  * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,7 +26,7 @@
  * service whose value derives, entirely or substantially, from the functionality of the Software.
  * Any license notice or attribution required by the License must also include this Commons Clause
  * License Condition notice.
- *
+ * 
  * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
  * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
  * Edition software provided with this notice.
@@ -53,7 +53,7 @@ import org.apache.ignite.ml.preprocessing.encoding.EncoderTrainer;
  *
  * This preprocessor can transform multiple columns which indices are handled during training process.
  *
- * Each one-hot encoded binary vector adds its cells to the end of the current feature vector.
+ * Each one-hot encoded binary vector adds its cells to the end of the current feature vector according the order of handled categorial features.
  *
  * @param <K> Type of a key in {@code upstream} data.
  * @param <V> Type of a value in {@code upstream} data.
@@ -87,38 +87,39 @@ public class OneHotEncoderPreprocessor<K, V> extends EncoderPreprocessor<K, V> {
      */
     @Override public Vector apply(K k, V v) {
         Object[] tmp = basePreprocessor.apply(k, v);
+        int amountOfCategorialFeatures = handledIndices.size();
 
-        double[] res = new double[tmp.length + getAdditionalSize(encodingValues)];
+        double[] res = new double[tmp.length - amountOfCategorialFeatures + getAdditionalSize(encodingValues)];
 
         int categorialFeatureCntr = 0;
+        int resIdx = 0;
 
         for (int i = 0; i < tmp.length; i++) {
             Object tmpObj = tmp[i];
+
             if (handledIndices.contains(i)) {
                 categorialFeatureCntr++;
 
                 if (tmpObj.equals(Double.NaN) && encodingValues[i].containsKey(KEY_FOR_NULL_VALUES)) {
                     final Integer indexedVal = encodingValues[i].get(KEY_FOR_NULL_VALUES);
 
-                    res[i] = indexedVal;
-
-                    res[tmp.length + getIdxOffset(categorialFeatureCntr, indexedVal, encodingValues)] = 1.0;
+                    res[tmp.length - amountOfCategorialFeatures + getIdxOffset(categorialFeatureCntr, indexedVal, encodingValues)] = 1.0;
                 } else {
                     final String key = String.valueOf(tmpObj);
 
                     if (encodingValues[i].containsKey(key)) {
                         final Integer indexedVal = encodingValues[i].get(key);
 
-                        res[i] = indexedVal;
-
-                        res[tmp.length + getIdxOffset(categorialFeatureCntr, indexedVal, encodingValues)] = 1.0;
+                        res[tmp.length - amountOfCategorialFeatures + getIdxOffset(categorialFeatureCntr, indexedVal, encodingValues)] = 1.0;
 
                     } else
                         throw new UnknownCategorialFeatureValue(tmpObj.toString());
                 }
 
-            } else
-                res[i] = (double) tmpObj;
+            } else {
+                res[resIdx] = (double) tmpObj;
+                resIdx++;
+            }
         }
         return VectorUtils.of(res);
     }

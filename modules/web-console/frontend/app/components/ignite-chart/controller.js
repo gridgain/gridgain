@@ -1,23 +1,23 @@
 /*
  *                   GridGain Community Edition Licensing
  *                   Copyright 2019 GridGain Systems, Inc.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
  * Restriction; you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
+ * 
  * Commons Clause Restriction
- *
+ * 
  * The Software is provided to you by the Licensor under the License, as defined below, subject to
  * the following condition.
- *
+ * 
  * Without limiting other conditions in the License, the grant of rights under the License will not
  * include, and the License does not grant to you, the right to Sell the Software.
  * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,13 +26,14 @@
  * service whose value derives, entirely or substantially, from the functionality of the Software.
  * Any license notice or attribution required by the License must also include this Commons Clause
  * License Condition notice.
- *
+ * 
  * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
  * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
  * Edition software provided with this notice.
  */
 
 import _ from 'lodash';
+import moment from 'moment';
 
 /**
  * @typedef {{x: number, y: {[key: string]: number}}} IgniteChartDataPoint
@@ -45,6 +46,18 @@ const RANGE_RATE_PRESET = [
     {label: '15 min', value: 15},
     {label: '30 min', value: 30}
 ];
+
+/**
+ * Determines what label format was chosen by determineLabelFormat function
+ * in Chart.js streaming plugin.
+ * 
+ * @param {string} label
+ */
+const inferLabelFormat = (label) => {
+    if (label.match(/\.\d{3} (am|pm)$/)) return 'MMM D, YYYY h:mm:ss.SSS a';
+    if (label.match(/:\d{1,2} (am|pm)$/)) return 'MMM D, YYYY h:mm:ss a';
+    if (label.match(/ \d{4}$/)) return 'MMM D, YYYY';
+};
 
 export class IgniteChartController {
     /** @type {import('chart.js').ChartConfiguration} */
@@ -214,7 +227,7 @@ export class IgniteChartController {
                     bodyFontSize: 13,
                     callbacks: {
                         title: (tooltipItem) => {
-                            return tooltipItem[0].xLabel.slice(0, -7);
+                            return tooltipItem[0].xLabel = moment(tooltipItem[0].xLabel, inferLabelFormat(tooltipItem[0].xLabel)).format('HH:mm:ss');
                         },
                         label: (tooltipItem, data) => {
                             const label = data.datasets[tooltipItem.datasetIndex].label || '';

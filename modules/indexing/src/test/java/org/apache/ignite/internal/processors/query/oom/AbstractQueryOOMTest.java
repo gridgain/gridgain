@@ -1,18 +1,35 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *                   GridGain Community Edition Licensing
+ *                   Copyright 2019 GridGain Systems, Inc.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
+ * Restriction; you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the specific language governing permissions
+ * and limitations under the License.
+ * 
+ * Commons Clause Restriction
+ * 
+ * The Software is provided to you by the Licensor under the License, as defined below, subject to
+ * the following condition.
+ * 
+ * Without limiting other conditions in the License, the grant of rights under the License will not
+ * include, and the License does not grant to you, the right to Sell the Software.
+ * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
+ * under the License to provide to third parties, for a fee or other consideration (including without
+ * limitation fees for hosting or consulting/ support services related to the Software), a product or
+ * service whose value derives, entirely or substantially, from the functionality of the Software.
+ * Any license notice or attribution required by the License must also include this Commons Clause
+ * License Condition notice.
+ * 
+ * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
+ * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
+ * Edition software provided with this notice.
  */
 
 package org.apache.ignite.internal.processors.query.oom;
@@ -23,10 +40,12 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteDataStreamer;
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
@@ -45,16 +64,16 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.multijvm.IgniteProcessProxy;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
 
 /**
  * Tests for OOME on query.
  */
-@RunWith(JUnit4.class)
 public abstract class AbstractQueryOOMTest extends GridCommonAbstractTest {
     /** */
-    private static final long KEY_CNT = 2_000_000L;
+    private static final long KEY_CNT = 1_000_000L;
+
+    /** */
+    private static final int BATCH_SIZE = 10_000;
 
     /** */
     private static final String CACHE_NAME = "test_cache";
@@ -75,7 +94,7 @@ public abstract class AbstractQueryOOMTest extends GridCommonAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected List<String> additionalRemoteJvmArgs() {
-        return Arrays.asList("-Xmx128m");
+        return Arrays.asList("-Xmx64m", "-Xms64m");
     }
 
     /** {@inheritDoc} */
@@ -126,13 +145,27 @@ public abstract class AbstractQueryOOMTest extends GridCommonAbstractTest {
 
         local.cluster().active(true);
 
-        try (IgniteDataStreamer streamer = local.dataStreamer(CACHE_NAME)) {
-            for (long i = 0; i < KEY_CNT; ++i) {
-                streamer.addData(i, new Value(i));
+        IgniteCache c = local.cache(CACHE_NAME);
 
-                if (i % 100_000 == 0)
-                    log.info("Populate " + i + " values");
+        Map<Long, Value> batch = new HashMap<>(BATCH_SIZE);
+
+        for (long i = 0; i < KEY_CNT; ++i) {
+            batch.put(i, new Value(i));
+
+            if (batch.size() >= BATCH_SIZE) {
+                c.putAll(batch);
+
+                batch.clear();
             }
+
+            if (i % 100_000 == 0)
+                log.info("Populate " + i + " values");
+        }
+
+        if (!batch.isEmpty()) {
+            c.putAll(batch);
+
+            batch.clear();
         }
 
         awaitPartitionMapExchange(true, true, null);
@@ -140,6 +173,8 @@ public abstract class AbstractQueryOOMTest extends GridCommonAbstractTest {
         local.cluster().active(false);
 
         stopAllGrids(false);
+
+        IgniteProcessProxy.killAll();
     }
 
     /** {@inheritDoc} */
@@ -151,11 +186,10 @@ public abstract class AbstractQueryOOMTest extends GridCommonAbstractTest {
         stopAllGrids();
     }
 
-    /**
-     * beforeTest is not user to save the time fot muted tests.
-     * @throws Exception On error.
-     */
-    private void startTestGrid() throws Exception {
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
         log.info("Restart cluster");
 
         Ignite loc = startGrid(0);
@@ -182,8 +216,6 @@ public abstract class AbstractQueryOOMTest extends GridCommonAbstractTest {
      */
     @Test
     public void testHeavyScanLazy() throws Exception {
-        startTestGrid();
-
         checkQuery("SELECT * from test", KEY_CNT, true);
     }
 
@@ -193,8 +225,6 @@ public abstract class AbstractQueryOOMTest extends GridCommonAbstractTest {
     @Ignore("https://issues.apache.org/jira/browse/IGNITE-9480")
     @Test
     public void testHeavyScanNonLazy() throws Exception {
-        startTestGrid();
-
         checkQueryExpectOOM("SELECT * from test", false);
     }
 
@@ -205,8 +235,6 @@ public abstract class AbstractQueryOOMTest extends GridCommonAbstractTest {
     @Ignore("https://issues.apache.org/jira/browse/IGNITE-9933")
     @Test
     public void testHeavySortByPkLazy() throws Exception {
-        startTestGrid();
-
         checkQueryExpectOOM("SELECT * from test ORDER BY id", true);
     }
 
@@ -216,8 +244,6 @@ public abstract class AbstractQueryOOMTest extends GridCommonAbstractTest {
     @Ignore("https://issues.apache.org/jira/browse/IGNITE-9480")
     @Test
     public void testHeavySortByPkNotLazy() throws Exception {
-        startTestGrid();
-
         checkQueryExpectOOM("SELECT * from test ORDER BY id", false);
     }
 
@@ -228,8 +254,6 @@ public abstract class AbstractQueryOOMTest extends GridCommonAbstractTest {
     @Ignore("https://issues.apache.org/jira/browse/IGNITE-9933")
     @Test
     public void testHeavySortByIndexLazy() throws Exception {
-        startTestGrid();
-
         checkQueryExpectOOM("SELECT * from test ORDER BY indexed", true);
     }
 
@@ -239,8 +263,6 @@ public abstract class AbstractQueryOOMTest extends GridCommonAbstractTest {
     @Ignore("https://issues.apache.org/jira/browse/IGNITE-9480")
     @Test
     public void testHeavySortByIndexNotLazy() throws Exception {
-        startTestGrid();
-
         checkQueryExpectOOM("SELECT * from test ORDER BY indexed", false);
     }
 
@@ -250,8 +272,6 @@ public abstract class AbstractQueryOOMTest extends GridCommonAbstractTest {
     @Ignore("https://issues.apache.org/jira/browse/IGNITE-9480")
     @Test
     public void testHeavySortByNotIndexLazy() throws Exception {
-        startTestGrid();
-
         checkQueryExpectOOM("SELECT * from test ORDER BY STR", true);
     }
 
@@ -261,8 +281,6 @@ public abstract class AbstractQueryOOMTest extends GridCommonAbstractTest {
     @Ignore("https://issues.apache.org/jira/browse/IGNITE-9480")
     @Test
     public void testHeavySortByNotIndexNotLazy() throws Exception {
-        startTestGrid();
-
         checkQueryExpectOOM("SELECT * from test ORDER BY str", false);
     }
 
@@ -271,8 +289,6 @@ public abstract class AbstractQueryOOMTest extends GridCommonAbstractTest {
      */
     @Test
     public void testHeavyGroupByPkLazy() throws Exception {
-        startTestGrid();
-
         checkQuery("SELECT id, sum(val) from test GROUP BY id", KEY_CNT, true, true);
     }
 
@@ -282,9 +298,6 @@ public abstract class AbstractQueryOOMTest extends GridCommonAbstractTest {
     @Ignore("https://issues.apache.org/jira/browse/IGNITE-9480")
     @Test
     public void testHeavyGroupByPkNotLazy() throws Exception {
-
-        startTestGrid();
-
         checkQueryExpectOOM("SELECT id, sum(val) from test GROUP BY id", false, true);
     }
 
@@ -333,6 +346,8 @@ public abstract class AbstractQueryOOMTest extends GridCommonAbstractTest {
 
         try {
             checkQuery(sql, 0, lazy, collocated);
+
+            fail("Query is not produce OOM");
         }
         catch (Exception e) {
             if (hangTimeout.get()) {

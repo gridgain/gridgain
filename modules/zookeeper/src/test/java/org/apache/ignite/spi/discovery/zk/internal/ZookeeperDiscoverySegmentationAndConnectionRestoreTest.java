@@ -1,18 +1,35 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *                   GridGain Community Edition Licensing
+ *                   Copyright 2019 GridGain Systems, Inc.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
+ * Restriction; you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the specific language governing permissions
+ * and limitations under the License.
+ * 
+ * Commons Clause Restriction
+ * 
+ * The Software is provided to you by the Licensor under the License, as defined below, subject to
+ * the following condition.
+ * 
+ * Without limiting other conditions in the License, the grant of rights under the License will not
+ * include, and the License does not grant to you, the right to Sell the Software.
+ * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
+ * under the License to provide to third parties, for a fee or other consideration (including without
+ * limitation fees for hosting or consulting/ support services related to the Software), a product or
+ * service whose value derives, entirely or substantially, from the functionality of the Software.
+ * Any license notice or attribution required by the License must also include this Commons Clause
+ * License Condition notice.
+ * 
+ * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
+ * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
+ * Edition software provided with this notice.
  */
 
 package org.apache.ignite.spi.discovery.zk.internal;
@@ -40,6 +57,7 @@ import org.apache.ignite.spi.discovery.tcp.ipfinder.zk.curator.TestingZooKeeperS
 import org.apache.ignite.spi.discovery.zk.ZookeeperDiscoverySpi;
 import org.apache.ignite.spi.discovery.zk.ZookeeperDiscoverySpiTestUtil;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.zookeeper.ZkTestClientCnxnSocketNIO;
 import org.apache.zookeeper.ZooKeeper;
@@ -47,6 +65,7 @@ import org.apache.zookeeper.server.quorum.QuorumPeer;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_WAL_LOG_TX_RECORDS;
 import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED;
@@ -64,83 +83,77 @@ public class ZookeeperDiscoverySegmentationAndConnectionRestoreTest extends Zook
      * @see <a href="https://issues.apache.org/jira/browse/IGNITE-9040">IGNITE-9040</a> ticket for more context of the test.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_WAL_LOG_TX_RECORDS, value = "true")
     public void testStopNodeOnSegmentaion() throws Exception {
-        try {
-            System.setProperty("IGNITE_WAL_LOG_TX_RECORDS", "true");
+        sesTimeout = 2000;
+        testSockNio = true;
+        persistence = true;
+        atomicityMode = CacheAtomicityMode.TRANSACTIONAL;
+        backups = 2;
 
-            sesTimeout = 2000;
-            testSockNio = true;
-            persistence = true;
-            atomicityMode = CacheAtomicityMode.TRANSACTIONAL;
-            backups = 2;
+        final Ignite node0 = startGrid(0);
 
-            final Ignite node0 = startGrid(0);
+        sesTimeout = 10_000;
+        testSockNio = false;
 
-            sesTimeout = 10_000;
-            testSockNio = false;
+        startGrid(1);
 
-            startGrid(1);
+        node0.cluster().active(true);
 
-            node0.cluster().active(true);
+        helper.clientMode(true);
 
-            helper.clientMode(true);
+        final IgniteEx client = startGrid(2);
 
-            final IgniteEx client = startGrid(2);
+        //first transaction
+        client.transactions().txStart(PESSIMISTIC, READ_COMMITTED, 0, 0);
+        client.cache(DEFAULT_CACHE_NAME).put(0, 0);
 
-            //first transaction
-            client.transactions().txStart(PESSIMISTIC, READ_COMMITTED, 0, 0);
-            client.cache(DEFAULT_CACHE_NAME).put(0, 0);
+        //second transaction to create a deadlock with the first one
+        // and guarantee transaction futures will be presented on segmented node
+        // (erroneous write to WAL on segmented node stop happens
+        // on completing transaction with NodeStoppingException)
+        GridTestUtils.runAsync(new Runnable() {
+            @Override public void run() {
+                Transaction tx2 = client.transactions().txStart(OPTIMISTIC, READ_COMMITTED, 0, 0);
+                client.cache(DEFAULT_CACHE_NAME).put(0, 0);
+                tx2.commit();
+            }
+        });
 
-            //second transaction to create a deadlock with the first one
-            // and guarantee transaction futures will be presented on segmented node
-            // (erroneous write to WAL on segmented node stop happens
-            // on completing transaction with NodeStoppingException)
-            GridTestUtils.runAsync(new Runnable() {
-                @Override public void run() {
-                    Transaction tx2 = client.transactions().txStart(OPTIMISTIC, READ_COMMITTED, 0, 0);
-                    client.cache(DEFAULT_CACHE_NAME).put(0, 0);
-                    tx2.commit();
+        //next block simulates Ignite node segmentation by closing socket of ZooKeeper client
+        {
+            final CountDownLatch l = new CountDownLatch(1);
+
+            node0.events().localListen(new IgnitePredicate<Event>() {
+                @Override public boolean apply(Event evt) {
+                    l.countDown();
+
+                    return false;
                 }
-            });
+            }, EventType.EVT_NODE_SEGMENTED);
 
-            //next block simulates Ignite node segmentation by closing socket of ZooKeeper client
-            {
-                final CountDownLatch l = new CountDownLatch(1);
+            ZkTestClientCnxnSocketNIO c0 = ZkTestClientCnxnSocketNIO.forNode(node0);
 
-                node0.events().localListen(new IgnitePredicate<Event>() {
-                    @Override public boolean apply(Event evt) {
-                        l.countDown();
+            c0.closeSocket(true);
 
-                        return false;
-                    }
-                }, EventType.EVT_NODE_SEGMENTED);
+            for (int i = 0; i < 10; i++) {
+                //noinspection BusyWait
+                Thread.sleep(1_000);
 
-                ZkTestClientCnxnSocketNIO c0 = ZkTestClientCnxnSocketNIO.forNode(node0);
-
-                c0.closeSocket(true);
-
-                for (int i = 0; i < 10; i++) {
-                    //noinspection BusyWait
-                    Thread.sleep(1_000);
-
-                    if (l.getCount() == 0)
-                        break;
-                }
-
-                info("Allow connect");
-
-                c0.allowConnect();
-
-                assertTrue(l.await(10, TimeUnit.SECONDS));
+                if (l.getCount() == 0)
+                    break;
             }
 
-            waitForNodeStop(node0.name());
+            info("Allow connect");
 
-            checkStoppedNodeThreads(node0.name());
+            c0.allowConnect();
+
+            assertTrue(l.await(10, TimeUnit.SECONDS));
         }
-        finally {
-            System.clearProperty("IGNITE_WAL_LOG_TX_RECORDS");
-        }
+
+        waitForNodeStop(node0.name());
+
+        checkStoppedNodeThreads(node0.name());
     }
 
     /** */

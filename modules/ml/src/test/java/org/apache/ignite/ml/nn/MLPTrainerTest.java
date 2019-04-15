@@ -1,23 +1,23 @@
 /*
  *                   GridGain Community Edition Licensing
  *                   Copyright 2019 GridGain Systems, Inc.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
  * Restriction; you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
+ * 
  * Commons Clause Restriction
- *
+ * 
  * The Software is provided to you by the Licensor under the License, as defined below, subject to
  * the following condition.
- *
+ * 
  * Without limiting other conditions in the License, the grant of rights under the License will not
  * include, and the License does not grant to you, the right to Sell the Software.
  * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,7 +26,7 @@
  * service whose value derives, entirely or substantially, from the functionality of the Software.
  * Any license notice or attribution required by the License must also include this Commons Clause
  * License Condition notice.
- *
+ * 
  * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
  * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
  * Edition software provided with this notice.
@@ -34,12 +34,8 @@
 
 package org.apache.ignite.ml.nn;
 
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import org.apache.ignite.ml.TestUtils;
+import org.apache.ignite.ml.dataset.feature.extractor.impl.LabeledDummyVectorizer;
 import org.apache.ignite.ml.math.primitives.matrix.Matrix;
 import org.apache.ignite.ml.math.primitives.matrix.impl.DenseMatrix;
 import org.apache.ignite.ml.math.primitives.vector.VectorUtils;
@@ -47,17 +43,19 @@ import org.apache.ignite.ml.math.primitives.vector.impl.DenseVector;
 import org.apache.ignite.ml.nn.architecture.MLPArchitecture;
 import org.apache.ignite.ml.optimization.LossFunctions;
 import org.apache.ignite.ml.optimization.SmoothParametrized;
-import org.apache.ignite.ml.optimization.updatecalculators.NesterovParameterUpdate;
-import org.apache.ignite.ml.optimization.updatecalculators.NesterovUpdateCalculator;
-import org.apache.ignite.ml.optimization.updatecalculators.RPropParameterUpdate;
-import org.apache.ignite.ml.optimization.updatecalculators.RPropUpdateCalculator;
-import org.apache.ignite.ml.optimization.updatecalculators.SimpleGDParameterUpdate;
-import org.apache.ignite.ml.optimization.updatecalculators.SimpleGDUpdateCalculator;
+import org.apache.ignite.ml.optimization.updatecalculators.*;
+import org.apache.ignite.ml.structures.LabeledVector;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Tests for {@link MLPTrainer} that don't require to start the whole Ignite infrastructure.
@@ -101,8 +99,8 @@ public class MLPTrainerTest {
         public void testXORSimpleGD() {
             xorTest(new UpdatesStrategy<>(
                 new SimpleGDUpdateCalculator(0.2),
-                SimpleGDParameterUpdate::sumLocal,
-                SimpleGDParameterUpdate::avg
+                SimpleGDParameterUpdate.SUM_LOCAL,
+                SimpleGDParameterUpdate.AVG
             ));
         }
 
@@ -113,8 +111,8 @@ public class MLPTrainerTest {
         public void testXORRProp() {
             xorTest(new UpdatesStrategy<>(
                 new RPropUpdateCalculator(),
-                RPropParameterUpdate::sumLocal,
-                RPropParameterUpdate::avg
+                RPropParameterUpdate.SUM_LOCAL,
+                RPropParameterUpdate.AVG
             ));
         }
 
@@ -136,11 +134,11 @@ public class MLPTrainerTest {
          * @param <P> Updater parameters type.
          */
         private <P extends Serializable> void xorTest(UpdatesStrategy<? super MultilayerPerceptron, P> updatesStgy) {
-            Map<Integer, double[][]> xorData = new HashMap<>();
-            xorData.put(0, new double[][]{{0.0, 0.0}, {0.0}});
-            xorData.put(1, new double[][]{{0.0, 1.0}, {1.0}});
-            xorData.put(2, new double[][]{{1.0, 0.0}, {1.0}});
-            xorData.put(3, new double[][]{{1.0, 1.0}, {0.0}});
+            Map<Integer, LabeledVector<double[]>> xorData = new HashMap<>();
+            xorData.put(0, VectorUtils.of(0.0, 0.0).labeled(new double[]{0.0}));
+            xorData.put(1, VectorUtils.of(0.0, 1.0).labeled(new double[]{1.0}));
+            xorData.put(2, VectorUtils.of(1.0, 0.0).labeled(new double[]{1.0}));
+            xorData.put(3, VectorUtils.of(1.0, 1.0).labeled(new double[]{0.0}));
 
             MLPArchitecture arch = new MLPArchitecture(2).
                 withAddedLayer(10, true, Activators.RELU).
@@ -156,12 +154,7 @@ public class MLPTrainerTest {
                 123L
             );
 
-            MultilayerPerceptron mlp = trainer.fit(
-                xorData,
-                parts,
-                (k, v) -> VectorUtils.of(v[0]),
-                (k, v) -> v[1]
-            );
+            MultilayerPerceptron mlp = trainer.fit(xorData, parts, new LabeledDummyVectorizer<>());
 
             Matrix predict = mlp.predict(new DenseMatrix(new double[][]{
                 {0.0, 0.0},
@@ -178,15 +171,15 @@ public class MLPTrainerTest {
         public void testUpdate() {
             UpdatesStrategy<SmoothParametrized, SimpleGDParameterUpdate> updatesStgy = new UpdatesStrategy<>(
                 new SimpleGDUpdateCalculator(0.2),
-                SimpleGDParameterUpdate::sumLocal,
-                SimpleGDParameterUpdate::avg
+                SimpleGDParameterUpdate.SUM_LOCAL,
+                SimpleGDParameterUpdate.AVG
             );
 
-            Map<Integer, double[][]> xorData = new HashMap<>();
-            xorData.put(0, new double[][]{{0.0, 0.0}, {0.0}});
-            xorData.put(1, new double[][]{{0.0, 1.0}, {1.0}});
-            xorData.put(2, new double[][]{{1.0, 0.0}, {1.0}});
-            xorData.put(3, new double[][]{{1.0, 1.0}, {0.0}});
+            Map<Integer, LabeledVector<double[]>> xorData = new HashMap<>();
+            xorData.put(0, VectorUtils.of(0.0, 0.0).labeled(new double[]{0.0}));
+            xorData.put(1, VectorUtils.of(0.0, 1.0).labeled(new double[]{1.0}));
+            xorData.put(2, VectorUtils.of(1.0, 0.0).labeled(new double[]{1.0}));
+            xorData.put(3, VectorUtils.of(1.0, 1.0).labeled(new double[]{0.0}));
 
             MLPArchitecture arch = new MLPArchitecture(2).
                 withAddedLayer(10, true, Activators.RELU).
@@ -202,27 +195,20 @@ public class MLPTrainerTest {
                 123L
             );
 
-            MultilayerPerceptron originalMdl = trainer.fit(
-                xorData,
-                parts,
-                (k, v) -> VectorUtils.of(v[0]),
-                (k, v) -> v[1]
-            );
+            MultilayerPerceptron originalMdl = trainer.fit(xorData, parts, new LabeledDummyVectorizer<>());
 
             MultilayerPerceptron updatedOnSameDS = trainer.update(
                 originalMdl,
                 xorData,
                 parts,
-                (k, v) -> VectorUtils.of(v[0]),
-                (k, v) -> v[1]
+                new LabeledDummyVectorizer<>()
             );
 
             MultilayerPerceptron updatedOnEmptyDS = trainer.update(
                 originalMdl,
-                new HashMap<Integer, double[][]>(),
+                new HashMap<Integer, LabeledVector<double[]>>(),
                 parts,
-                (k, v) -> VectorUtils.of(v[0]),
-                (k, v) -> v[1]
+                new LabeledDummyVectorizer<>()
             );
 
             DenseMatrix matrix = new DenseMatrix(new double[][] {

@@ -1,37 +1,58 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *                   GridGain Community Edition Licensing
+ *                   Copyright 2019 GridGain Systems, Inc.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
+ * Restriction; you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the specific language governing permissions
+ * and limitations under the License.
+ * 
+ * Commons Clause Restriction
+ * 
+ * The Software is provided to you by the Licensor under the License, as defined below, subject to
+ * the following condition.
+ * 
+ * Without limiting other conditions in the License, the grant of rights under the License will not
+ * include, and the License does not grant to you, the right to Sell the Software.
+ * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
+ * under the License to provide to third parties, for a fee or other consideration (including without
+ * limitation fees for hosting or consulting/ support services related to the Software), a product or
+ * service whose value derives, entirely or substantially, from the functionality of the Software.
+ * Any license notice or attribution required by the License must also include this Commons Clause
+ * License Condition notice.
+ * 
+ * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
+ * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
+ * Edition software provided with this notice.
  */
 
 package org.apache.ignite.internal.cluster;
 
+import java.util.Objects;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.IgniteSystemProperties;
-import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.processors.cluster.BaselineTopology;
+import org.apache.ignite.internal.processors.configuration.distributed.DistributePropertyListener;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedBooleanProperty;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedLongProperty;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.jetbrains.annotations.NotNull;
 
+import static java.lang.String.format;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_ENABLED;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_RECOVERY_SEMAPHORE_PERMITS;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.internal.processors.configuration.distributed.DistributedBooleanProperty.detachedBooleanProperty;
 import static org.apache.ignite.internal.processors.configuration.distributed.DistributedLongProperty.detachedLongProperty;
+import static org.apache.ignite.internal.util.IgniteUtils.isLocalNodeCoordinator;
 
 /**
  * Distributed baseline configuration.
@@ -43,51 +64,108 @@ public class DistributedBaselineConfiguration {
     private static final int DEFAULT_IN_MEMORY_TIMEOUT = 0;
     /** Message of baseline auto-adjust configuration. */
     private static final String AUTO_ADJUST_CONFIGURED_MESSAGE = "Baseline auto-adjust is '%s' with timeout='%d' ms";
+    /** Message of baseline auto-adjust parameter was changed from default. */
+    private static final String DEFAULT_PROPERTY_UPDATE_MESSAGE =
+        "Baseline parameter '%s' was changed from default value='%s' to '%s'";
+    /** Message of baseline auto-adjust parameter was changed. */
+    private static final String PROPERTY_UPDATE_MESSAGE =
+        "Baseline parameter '%s' was changed from '%s' to '%s'";
+    /** */
+    private volatile long dfltTimeout = DEFAULT_PERSISTENCE_TIMEOUT;
+    /** Default auto-adjust enable/disable. */
+    private volatile boolean dfltEnabled = false;
+    /** */
+    private final GridKernalContext ctx;
+    /** */
+    private final IgniteLogger log;
+
     /** Value of manual baseline control or auto adjusting baseline. */
     private volatile DistributedBooleanProperty baselineAutoAdjustEnabled =
-        detachedBooleanProperty("baselineAutoAdjustEnabled", false);
-
+        detachedBooleanProperty("baselineAutoAdjustEnabled");
     /**
      * Value of time which we would wait before the actual topology change since last discovery event(node join/exit).
      */
     private volatile DistributedLongProperty baselineAutoAdjustTimeout =
-        detachedLongProperty("baselineAutoAdjustTimeout", -1L);
+        detachedLongProperty("baselineAutoAdjustTimeout");
 
     /**
-     * @param cfg Static config.
      * @param isp Subscription processor.
+     * @param ctx Kernal context.
      */
     public DistributedBaselineConfiguration(
-        IgniteConfiguration cfg,
         GridInternalSubscriptionProcessor isp,
+        GridKernalContext ctx,
         IgniteLogger log) {
+        this.ctx = ctx;
+        this.log = log;
         isp.registerDistributedConfigurationListener(
             dispatcher -> {
-                boolean persistenceEnabled = cfg != null && CU.isPersistenceEnabled(cfg);
+                boolean persistenceEnabled = ctx.config() != null && CU.isPersistenceEnabled(ctx.config());
 
-                long timeout = persistenceEnabled ? DEFAULT_PERSISTENCE_TIMEOUT : DEFAULT_IN_MEMORY_TIMEOUT;
+                dfltTimeout = persistenceEnabled ? DEFAULT_PERSISTENCE_TIMEOUT : DEFAULT_IN_MEMORY_TIMEOUT;
+                dfltEnabled = !persistenceEnabled;
 
-                //It set default value locally only.
-                baselineAutoAdjustEnabled.localUpdate(getBoolean(IGNITE_BASELINE_AUTO_ADJUST_ENABLED, true));
-                baselineAutoAdjustTimeout.localUpdate(timeout);
+                baselineAutoAdjustEnabled.addListener(makeUpdateListener(dfltEnabled));
+                baselineAutoAdjustTimeout.addListener(makeUpdateListener(dfltTimeout));
 
                 dispatcher.registerProperty(baselineAutoAdjustEnabled);
                 dispatcher.registerProperty(baselineAutoAdjustTimeout);
-
-                log.info(
-                    String.format(AUTO_ADJUST_CONFIGURED_MESSAGE,
-                        (baselineAutoAdjustEnabled.value() ? "enabled" : "disabled"),
-                        baselineAutoAdjustTimeout.value()
-                    ));
             }
         );
+    }
+
+    /**
+     * @param defaultVal Default value from which property can be changed in first time.
+     * @param <T> Type of property value.
+     * @return Update property listener.
+     */
+    @NotNull private <T> DistributePropertyListener<T> makeUpdateListener(Object defaultVal) {
+        return (name, oldVal, newVal) -> {
+            if (!Objects.equals(oldVal, newVal)) {
+                if (oldVal == null)
+                    log.info(format(DEFAULT_PROPERTY_UPDATE_MESSAGE, name, defaultVal, newVal));
+                else
+                    log.info(format(PROPERTY_UPDATE_MESSAGE, name, oldVal, newVal));
+            }
+        };
+    }
+
+    /**
+     * Called when cluster performing activation.
+     *
+     * @throws IgniteCheckedException If failed.
+     */
+    public void onActivate() throws IgniteCheckedException {
+        if (baselineAutoAdjustEnabled.get() == null && isLocalNodeCoordinator(ctx.discovery())) {
+            boolean dfltEnableVal = getBoolean(IGNITE_BASELINE_AUTO_ADJUST_ENABLED, isCurrentBaselineNew());
+
+            //Set default enable flag to cluster only if it is true.
+            if (dfltEnableVal)
+                baselineAutoAdjustEnabled.propagate(dfltEnableVal);
+        }
+
+        if (isLocalNodeCoordinator(ctx.discovery())) {
+            log.info(format(AUTO_ADJUST_CONFIGURED_MESSAGE,
+                (isBaselineAutoAdjustEnabled() ? "enabled" : "disabled"),
+                getBaselineAutoAdjustTimeout()
+            ));
+        }
+    }
+
+    /**
+     * @return {@code true} if current baseline is new.(It is first activation for cluster.)
+     */
+    private boolean isCurrentBaselineNew() {
+        BaselineTopology baselineTop = ctx.state().clusterState().baselineTopology();
+
+        return baselineTop != null && baselineTop.isNewTopology();
     }
 
     /**
      * @return Value of manual baseline control or auto adjusting baseline.
      */
     public boolean isBaselineAutoAdjustEnabled() {
-        return baselineAutoAdjustEnabled.value();
+        return baselineAutoAdjustEnabled.getOrDefault(dfltEnabled);
     }
 
     /**
@@ -104,7 +182,7 @@ public class DistributedBaselineConfiguration {
      * join/exit).
      */
     public long getBaselineAutoAdjustTimeout() {
-        return baselineAutoAdjustTimeout.value();
+        return baselineAutoAdjustTimeout.getOrDefault(dfltTimeout);
     }
 
     /**

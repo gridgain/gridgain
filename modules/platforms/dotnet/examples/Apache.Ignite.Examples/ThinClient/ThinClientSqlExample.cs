@@ -1,23 +1,23 @@
 /*
  *                   GridGain Community Edition Licensing
  *                   Copyright 2019 GridGain Systems, Inc.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
  * Restriction; you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
+ * 
  * Commons Clause Restriction
- *
+ * 
  * The Software is provided to you by the Licensor under the License, as defined below, subject to
  * the following condition.
- *
+ * 
  * Without limiting other conditions in the License, the grant of rights under the License will not
  * include, and the License does not grant to you, the right to Sell the Software.
  * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,7 +26,7 @@
  * service whose value derives, entirely or substantially, from the functionality of the Software.
  * Any license notice or attribution required by the License must also include this Commons Clause
  * License Condition notice.
- *
+ * 
  * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
  * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
  * Edition software provided with this notice.
@@ -89,12 +89,9 @@ namespace Apache.Ignite.Examples.ThinClient
                 // Populate cache with sample data entries.
                 PopulateCache(cache);
 
-                // Run SQL example.
-                SqlQueryExample(cache);
+                // Run examples.
+                SqlExample(cache);
                 LinqExample(cache);
-
-                // Run SQL fields query example.
-                SqlFieldsQueryExample(cache);
                 LinqFieldsExample(cache);
             }
 
@@ -104,20 +101,18 @@ namespace Apache.Ignite.Examples.ThinClient
         }
 
         /// <summary>
-        /// Queries employees that have provided ZIP code in address.
+        /// Queries names and salaries for all employees.
         /// </summary>
         /// <param name="cache">Cache.</param>
-        private static void SqlQueryExample(ICacheClient<int, Employee> cache)
+        private static void SqlExample(ICacheClient<int, Employee> cache)
         {
-            const int zip = 94109;
-
-            var qry = cache.Query(new SqlQuery(typeof(Employee), "zip = ?", zip));
+            var qry = cache.Query(new SqlFieldsQuery("select name, salary from Employee"));
 
             Console.WriteLine();
-            Console.WriteLine(">>> Employees with zipcode {0} (SQL):", zip);
+            Console.WriteLine(">>> Employee names and their salaries (SQL):");
 
-            foreach (var entry in qry)
-                Console.WriteLine(">>>    " + entry.Value);
+            foreach (var row in qry)
+                Console.WriteLine(">>>     [Name=" + row[0] + ", salary=" + row[1] + ']');
         }
 
         /// <summary>
@@ -140,22 +135,6 @@ namespace Apache.Ignite.Examples.ThinClient
             Console.WriteLine();
             Console.WriteLine(">>> Generated SQL:");
             Console.WriteLine(">>> " + qry.ToCacheQueryable().GetFieldsQuery().Sql);
-        }
-
-
-        /// <summary>
-        /// Queries names and salaries for all employees.
-        /// </summary>
-        /// <param name="cache">Cache.</param>
-        private static void SqlFieldsQueryExample(ICacheClient<int, Employee> cache)
-        {
-            var qry = cache.Query(new SqlFieldsQuery("select name, salary from Employee"));
-
-            Console.WriteLine();
-            Console.WriteLine(">>> Employee names and their salaries (SQL):");
-
-            foreach (var row in qry)
-                Console.WriteLine(">>>     [Name=" + row[0] + ", salary=" + row[1] + ']');
         }
 
         /// <summary>

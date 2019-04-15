@@ -1,18 +1,35 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *                   GridGain Community Edition Licensing
+ *                   Copyright 2019 GridGain Systems, Inc.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
+ * Restriction; you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the specific language governing permissions
+ * and limitations under the License.
+ * 
+ * Commons Clause Restriction
+ * 
+ * The Software is provided to you by the Licensor under the License, as defined below, subject to
+ * the following condition.
+ * 
+ * Without limiting other conditions in the License, the grant of rights under the License will not
+ * include, and the License does not grant to you, the right to Sell the Software.
+ * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
+ * under the License to provide to third parties, for a fee or other consideration (including without
+ * limitation fees for hosting or consulting/ support services related to the Software), a product or
+ * service whose value derives, entirely or substantially, from the functionality of the Software.
+ * Any license notice or attribution required by the License must also include this Commons Clause
+ * License Condition notice.
+ * 
+ * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
+ * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
+ * Edition software provided with this notice.
  */
 
 package org.apache.ignite.ml.trainers;
@@ -22,15 +39,16 @@ import org.apache.ignite.ml.composition.DatasetMapping;
 import org.apache.ignite.ml.composition.combinators.sequential.TrainersSequentialComposition;
 import org.apache.ignite.ml.dataset.DatasetBuilder;
 import org.apache.ignite.ml.dataset.UpstreamTransformerBuilder;
-import org.apache.ignite.ml.math.functions.IgniteBiFunction;
+import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
 import org.apache.ignite.ml.math.functions.IgniteFunction;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.structures.LabeledVector;
 
+import java.io.Serializable;
+
 /**
- * Type used to adapt input and output types of wrapped {@link DatasetTrainer}.
- * Produces model which is composition  of form {@code before `andThen` wMdl `andThen` after} where wMdl is model produced by
- * wrapped trainer.
+ * Type used to adapt input and output types of wrapped {@link DatasetTrainer}. Produces model which is composition  of
+ * form {@code before `andThen` wMdl `andThen` after} where wMdl is model produced by wrapped trainer.
  *
  * @param <I> Input type of model produced by this trainer.
  * @param <O> Output type of model produced by this trainer.
@@ -94,12 +112,12 @@ public class AdaptableDatasetTrainer<I, O, IW, OW, M extends IgniteModel<IW, OW>
     }
 
     /** {@inheritDoc} */
-    @Override public <K, V> AdaptableDatasetModel<I, O, IW, OW, M> fit(DatasetBuilder<K, V> datasetBuilder,
-        FeatureLabelExtractor<K, V, L> extractor) {
+    @Override public <K, V, C extends Serializable> AdaptableDatasetModel<I, O, IW, OW, M> fit(DatasetBuilder<K, V> datasetBuilder,
+        Vectorizer<K, V, C, L> extractor) {
         M fit = wrapped.
             withEnvironmentBuilder(envBuilder)
             .fit(datasetBuilder.withUpstreamTransformer(upstreamTransformerBuilder),
-                extractor.andThen(afterExtractor));
+                extractor.map(afterExtractor));
 
         return new AdaptableDatasetModel<>(before, fit, after);
     }
@@ -110,14 +128,14 @@ public class AdaptableDatasetTrainer<I, O, IW, OW, M extends IgniteModel<IW, OW>
     }
 
     /** {@inheritDoc} */
-    @Override protected <K, V> AdaptableDatasetModel<I, O, IW, OW, M> updateModel(
+    @Override protected <K, V, C extends Serializable> AdaptableDatasetModel<I, O, IW, OW, M> updateModel(
         AdaptableDatasetModel<I, O, IW, OW, M> mdl, DatasetBuilder<K, V> datasetBuilder,
-        FeatureLabelExtractor<K, V, L> extractor) {
+        Vectorizer<K, V, C, L> extractor) {
         M updated = wrapped.withEnvironmentBuilder(envBuilder)
             .updateModel(
                 mdl.innerModel(),
                 datasetBuilder.withUpstreamTransformer(upstreamTransformerBuilder),
-                extractor.andThen(afterExtractor));
+                extractor.map(afterExtractor));
 
         return mdl.withInnerModel(updated);
     }
@@ -165,29 +183,20 @@ public class AdaptableDatasetTrainer<I, O, IW, OW, M extends IgniteModel<IW, OW>
      */
     public AdaptableDatasetTrainer<I, O, IW, OW, M, L> withDatasetMapping(DatasetMapping<L, L> mapping) {
         return of(new DatasetTrainer<M, L>() {
-            @Override public <K, V> M fit(
-                DatasetBuilder<K, V> datasetBuilder, IgniteBiFunction<K, V, Vector> featureExtractor,
-                IgniteBiFunction<K, V, L> lbExtractor) {
-                IgniteBiFunction<K, V, Vector> fe = featureExtractor.andThen(mapping::mapFeatures);
-                IgniteBiFunction<K, V, L> le = lbExtractor.andThen(mapping::mapLabels);
-
-                return wrapped.fit(datasetBuilder,
-                    fe,
-                    le);
+            /** {@inheritDoc} */
+            @Override public <K, V, C extends Serializable> M fit(DatasetBuilder<K, V> datasetBuilder, Vectorizer<K, V, C, L> extractor) {
+                return wrapped.fit(datasetBuilder, extractor.map(lv -> new LabeledVector<>(
+                    mapping.mapFeatures(lv.features()),
+                    mapping.mapLabels(lv.label())
+                )));
             }
 
             /** {@inheritDoc} */
-            @Override public <K, V> M fit(DatasetBuilder<K, V> datasetBuilder,
-                FeatureLabelExtractor<K, V, L> extractor) {
-                return wrapped.fit(datasetBuilder, extractor);
-            }
-
-            /** {@inheritDoc} */
-            @Override public <K, V> M update(M mdl, DatasetBuilder<K, V> datasetBuilder,
-                IgniteBiFunction<K, V, Vector> featureExtractor, IgniteBiFunction<K, V, L> lbExtractor) {
-                return wrapped.update(mdl, datasetBuilder,
-                    featureExtractor.andThen(mapping::mapFeatures),
-                    lbExtractor.andThen((IgniteFunction<L, L>)mapping::mapLabels));
+            @Override public <K, V, C extends Serializable> M update(M mdl, DatasetBuilder<K, V> datasetBuilder, Vectorizer<K, V, C, L> vectorizer) {
+                return wrapped.update(mdl, datasetBuilder, vectorizer.map(lv -> new LabeledVector<>(
+                    mapping.mapFeatures(lv.features()),
+                    mapping.mapLabels(lv.label())
+                )));
             }
 
             /** {@inheritDoc} */
@@ -196,8 +205,8 @@ public class AdaptableDatasetTrainer<I, O, IW, OW, M extends IgniteModel<IW, OW>
             }
 
             /** {@inheritDoc} */
-            @Override protected <K, V> M updateModel(M mdl, DatasetBuilder<K, V> datasetBuilder,
-                FeatureLabelExtractor<K, V, L> extractor) {
+            @Override protected <K, V, C extends Serializable> M updateModel(M mdl, DatasetBuilder<K, V> datasetBuilder,
+                Vectorizer<K, V, C, L> extractor) {
                 return null;
             }
         }).beforeTrainedModel(before).afterTrainedModel(after);
@@ -227,8 +236,8 @@ public class AdaptableDatasetTrainer<I, O, IW, OW, M extends IgniteModel<IW, OW>
      * Specify function which will be applied after feature extractor.
      *
      * @param after Function which will be applied after feature extractor.
-     * @return New trainer with same parameters as this trainer except that specified function will be applied
-     * after feature extractor.
+     * @return New trainer with same parameters as this trainer except that specified function will be applied after
+     * feature extractor.
      */
     public AdaptableDatasetTrainer<I, O, IW, OW, M, L> afterFeatureExtractor(IgniteFunction<Vector, Vector> after) {
         IgniteFunction<LabeledVector<L>, LabeledVector<L>> newExtractor = afterExtractor.andThen((IgniteFunction<LabeledVector<L>, LabeledVector<L>>)
@@ -244,8 +253,8 @@ public class AdaptableDatasetTrainer<I, O, IW, OW, M extends IgniteModel<IW, OW>
      * Specify function which will be applied after label extractor.
      *
      * @param after Function which will be applied after label extractor.
-     * @return New trainer with same parameters as this trainer has except that specified function will be applied
-     * after label extractor.
+     * @return New trainer with same parameters as this trainer has except that specified function will be applied after
+     * label extractor.
      */
     public AdaptableDatasetTrainer<I, O, IW, OW, M, L> afterLabelExtractor(IgniteFunction<L, L> after) {
         IgniteFunction<LabeledVector<L>, LabeledVector<L>> newExtractor = afterExtractor.andThen((IgniteFunction<LabeledVector<L>, LabeledVector<L>>)
@@ -261,7 +270,8 @@ public class AdaptableDatasetTrainer<I, O, IW, OW, M extends IgniteModel<IW, OW>
      * Specify which {@link UpstreamTransformerBuilder} will be used.
      *
      * @param upstreamTransformerBuilder {@link UpstreamTransformerBuilder} to use.
-     * @return New trainer with same parameters as this trainer has except that specified {@link UpstreamTransformerBuilder} will be used.
+     * @return New trainer with same parameters as this trainer has except that specified {@link
+     * UpstreamTransformerBuilder} will be used.
      */
     public AdaptableDatasetTrainer<I, O, IW, OW, M, L> withUpstreamTransformerBuilder(
         UpstreamTransformerBuilder upstreamTransformerBuilder) {

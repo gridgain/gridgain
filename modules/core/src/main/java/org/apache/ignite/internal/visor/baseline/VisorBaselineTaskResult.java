@@ -1,23 +1,23 @@
 /*
  *                   GridGain Community Edition Licensing
  *                   Copyright 2019 GridGain Systems, Inc.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
  * Restriction; you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
+ * 
  * Commons Clause Restriction
- *
+ * 
  * The Software is provided to you by the Licensor under the License, as defined below, subject to
  * the following condition.
- *
+ * 
  * Without limiting other conditions in the License, the grant of rights under the License will not
  * include, and the License does not grant to you, the right to Sell the Software.
  * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,7 +26,7 @@
  * service whose value derives, entirely or substantially, from the functionality of the Software.
  * Any license notice or attribution required by the License must also include this Commons Clause
  * License Condition notice.
- *
+ * 
  * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
  * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
  * Edition software provided with this notice.
@@ -68,6 +68,12 @@ public class VisorBaselineTaskResult extends VisorDataTransferObject {
     /** Baseline autoadjustment settings. */
     private VisorBaselineAutoAdjustSettings autoAdjustSettings;
 
+    /** Time to next baseline adjust. */
+    private long remainingTimeToBaselineAdjust = -1;
+
+    /** Is baseline adjust in progress? */
+    private boolean baselineAdjustInProgress = false;
+
     /**
      * Default constructor.
      */
@@ -101,19 +107,24 @@ public class VisorBaselineTaskResult extends VisorDataTransferObject {
      * @param topVer Current topology version.
      * @param baseline Current baseline nodes.
      * @param servers Current server nodes.
+     * @param remainingTimeToBaselineAdjust Time to next baseline adjust.
+     * @param baselineAdjustInProgress {@code true} If baseline adjust is in progress.
      */
     public VisorBaselineTaskResult(
         boolean active,
         long topVer,
         Collection<? extends BaselineNode> baseline,
         Collection<? extends BaselineNode> servers,
-        VisorBaselineAutoAdjustSettings autoAdjustSettings
-    ) {
+        VisorBaselineAutoAdjustSettings autoAdjustSettings,
+        long remainingTimeToBaselineAdjust,
+        boolean baselineAdjustInProgress) {
         this.active = active;
         this.topVer = topVer;
         this.baseline = toMap(baseline);
         this.servers = toMap(servers);
         this.autoAdjustSettings = autoAdjustSettings;
+        this.remainingTimeToBaselineAdjust = remainingTimeToBaselineAdjust;
+        this.baselineAdjustInProgress = baselineAdjustInProgress;
     }
 
     /**
@@ -156,6 +167,20 @@ public class VisorBaselineTaskResult extends VisorDataTransferObject {
         return autoAdjustSettings;
     }
 
+    /**
+     * @return Time to next baseline adjust.
+     */
+    public long getRemainingTimeToBaselineAdjust() {
+        return remainingTimeToBaselineAdjust;
+    }
+
+    /**
+     * @return {@code true} If baseline adjust is in progress.
+     */
+    public boolean isBaselineAdjustInProgress() {
+        return baselineAdjustInProgress;
+    }
+
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         out.writeBoolean(active);
@@ -163,17 +188,23 @@ public class VisorBaselineTaskResult extends VisorDataTransferObject {
         U.writeMap(out, baseline);
         U.writeMap(out, servers);
         out.writeObject(autoAdjustSettings);
+        out.writeLong(remainingTimeToBaselineAdjust);
+        out.writeBoolean(baselineAdjustInProgress);
     }
 
     /** {@inheritDoc} */
-    @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
+    @Override protected void readExternalData(byte protoVer,
+        ObjectInput in) throws IOException, ClassNotFoundException {
         active = in.readBoolean();
         topVer = in.readLong();
         baseline = U.readTreeMap(in);
         servers = U.readTreeMap(in);
 
-        if (protoVer > V1)
+        if (protoVer > V1) {
             autoAdjustSettings = (VisorBaselineAutoAdjustSettings)in.readObject();
+            remainingTimeToBaselineAdjust = in.readLong();
+            baselineAdjustInProgress = in.readBoolean();
+        }
     }
 
     /** {@inheritDoc} */

@@ -1,23 +1,23 @@
 /*
  *                   GridGain Community Edition Licensing
  *                   Copyright 2019 GridGain Systems, Inc.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
  * Restriction; you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
+ * 
  * Commons Clause Restriction
- *
+ * 
  * The Software is provided to you by the Licensor under the License, as defined below, subject to
  * the following condition.
- *
+ * 
  * Without limiting other conditions in the License, the grant of rights under the License will not
  * include, and the License does not grant to you, the right to Sell the Software.
  * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,7 +26,7 @@
  * service whose value derives, entirely or substantially, from the functionality of the Software.
  * Any license notice or attribution required by the License must also include this Commons Clause
  * License Condition notice.
- *
+ * 
  * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
  * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
  * Edition software provided with this notice.
@@ -49,6 +49,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.jar.JarFile;
+import java.util.jar.Manifest;
 import org.apache.ignite.console.agent.AgentConfiguration;
 import org.apache.ignite.console.agent.db.DbMetadataReader;
 import org.apache.ignite.console.agent.db.DbSchema;
@@ -65,6 +67,12 @@ import static org.apache.ignite.console.agent.AgentUtils.resolvePath;
 public class DatabaseListener {
     /** */
     private static final Logger log = Logger.getLogger(DatabaseListener.class.getName());
+
+    /** */
+    private static final String IMPLEMENTATION_VERSION = "Implementation-Version";
+
+    /** */
+    private static final String BUNDLE_VERSION = "Bundle-Version";
 
     /** */
     private final File driversFolder;
@@ -173,17 +181,26 @@ public class DatabaseListener {
                     URL url = new URL("jar", null,
                         "file:" + (win ? "/" : "") + file.getPath() + "!/META-INF/services/java.sql.Driver");
 
-                    try (BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream(), UTF_8))) {
+                    try (
+                        BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream(), UTF_8));
+                        JarFile jar = new JarFile(file.getPath())
+                    ) {
+                        Manifest m = jar.getManifest();
+                        Object ver = m.getMainAttributes().getValue(IMPLEMENTATION_VERSION);
+
+                        if (ver == null)
+                            ver = m.getMainAttributes().getValue(BUNDLE_VERSION);
+
                         String jdbcDriverCls = reader.readLine();
 
-                        res.add(new JdbcDriver(file.getName(), jdbcDriverCls));
+                        res.add(new JdbcDriver(file.getName(), jdbcDriverCls, ver != null ? ver.toString() : null));
 
                         if (log.isDebugEnabled())
                             log.debug("Found: [driver=" + file + ", class=" + jdbcDriverCls + "]");
                     }
                 }
                 catch (IOException e) {
-                    res.add(new JdbcDriver(file.getName(), null));
+                    res.add(new JdbcDriver(file.getName(), null, null));
 
                     log.info("Found: [driver=" + file + "]");
                     log.info("Failed to detect driver class: " + e.getMessage());
@@ -336,14 +353,17 @@ public class DatabaseListener {
         public final String jdbcDriverJar;
         /** */
         public final String jdbcDriverCls;
+        /** */
+        public final String jdbcDriverImplVersion;
 
         /**
          * @param jdbcDriverJar File name of driver jar file.
          * @param jdbcDriverCls Optional JDBC driver class.
          */
-        public JdbcDriver(String jdbcDriverJar, String jdbcDriverCls) {
+        public JdbcDriver(String jdbcDriverJar, String jdbcDriverCls, String jdbcDriverImplVersion) {
             this.jdbcDriverJar = jdbcDriverJar;
             this.jdbcDriverCls = jdbcDriverCls;
+            this.jdbcDriverImplVersion = jdbcDriverImplVersion;
         }
     }
 }

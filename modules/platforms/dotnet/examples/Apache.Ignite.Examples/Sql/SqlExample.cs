@@ -1,23 +1,23 @@
 /*
  *                   GridGain Community Edition Licensing
  *                   Copyright 2019 GridGain Systems, Inc.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
  * Restriction; you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
+ * 
  * Commons Clause Restriction
- *
+ * 
  * The Software is provided to you by the Licensor under the License, as defined below, subject to
  * the following condition.
- *
+ * 
  * Without limiting other conditions in the License, the grant of rights under the License will not
  * include, and the License does not grant to you, the right to Sell the Software.
  * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,7 +26,7 @@
  * service whose value derives, entirely or substantially, from the functionality of the Software.
  * Any license notice or attribution required by the License must also include this Commons Clause
  * License Condition notice.
- *
+ * 
  * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
  * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
  * Edition software provided with this notice.
@@ -98,9 +98,6 @@ namespace Apache.Ignite.Examples.Sql
                 // Run SQL query with distributed join example.
                 SqlDistributedJoinQueryExample(employeeCache);
 
-                // Run SQL fields query example.
-                SqlFieldsQueryExample(employeeCache);
-
                 Console.WriteLine();
             }
 
@@ -117,13 +114,13 @@ namespace Apache.Ignite.Examples.Sql
         {
             const int zip = 94109;
 
-            var qry = cache.Query(new SqlQuery(typeof(Employee), "zip = ?", zip));
+            var qry = cache.Query(new SqlFieldsQuery("select name, salary from Employee where zip = ?", zip));
 
             Console.WriteLine();
             Console.WriteLine(">>> Employees with zipcode {0} (SQL):", zip);
 
-            foreach (var entry in qry)
-                Console.WriteLine(">>>    " + entry.Value);
+            foreach (var row in qry)
+                Console.WriteLine(">>>     [Name=" + row[0] + ", salary=" + row[1] + ']');
         }
 
         /// <summary>
@@ -134,15 +131,15 @@ namespace Apache.Ignite.Examples.Sql
         {
             const string orgName = "Apache";
 
-            var qry = cache.Query(new SqlQuery("Employee",
-                "from Employee, \"dotnet_cache_query_organization\".Organization " +
+            var qry = cache.Query(new SqlFieldsQuery(
+                "select Employee.name from Employee, \"dotnet_cache_query_organization\".Organization " +
                 "where Employee.organizationId = Organization._key and Organization.name = ?", orgName));
 
             Console.WriteLine();
             Console.WriteLine(">>> Employees working for " + orgName + ":");
 
             foreach (var entry in qry)
-                Console.WriteLine(">>>     " + entry.Value);
+                Console.WriteLine(">>>     " + entry[0]);
         }
 
         /// <summary>
@@ -153,8 +150,8 @@ namespace Apache.Ignite.Examples.Sql
         {
             const string orgName = "Apache";
 
-            var qry = cache.Query(new SqlQuery("Employee",
-                "from Employee, \"dotnet_cache_query_organization\".Organization " +
+            var qry = cache.Query(new SqlFieldsQuery(
+                "select Employee.name from Employee, \"dotnet_cache_query_organization\".Organization " +
                 "where Employee.organizationId = Organization._key and Organization.name = ?", orgName)
             {
                 EnableDistributedJoins = true,
@@ -162,25 +159,10 @@ namespace Apache.Ignite.Examples.Sql
             });
 
             Console.WriteLine();
-            Console.WriteLine(">>> Employees working for " + orgName + ":");
+            Console.WriteLine(">>> Employees working for " + orgName + " (distributed joins enabled):");
 
             foreach (var entry in qry)
-                Console.WriteLine(">>>     " + entry.Value);
-        }
-
-        /// <summary>
-        /// Queries names and salaries for all employees.
-        /// </summary>
-        /// <param name="cache">Cache.</param>
-        private static void SqlFieldsQueryExample(ICache<int, Employee> cache)
-        {
-            var qry = cache.Query(new SqlFieldsQuery("select name, salary from Employee"));
-
-            Console.WriteLine();
-            Console.WriteLine(">>> Employee names and their salaries:");
-
-            foreach (var row in qry)
-                Console.WriteLine(">>>     [Name=" + row[0] + ", salary=" + row[1] + ']');
+                Console.WriteLine(">>>     " + entry[0]);
         }
 
         /// <summary>

@@ -1,23 +1,23 @@
 /*
  *                   GridGain Community Edition Licensing
  *                   Copyright 2019 GridGain Systems, Inc.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
  * Restriction; you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
+ * 
  * Commons Clause Restriction
- *
+ * 
  * The Software is provided to you by the Licensor under the License, as defined below, subject to
  * the following condition.
- *
+ * 
  * Without limiting other conditions in the License, the grant of rights under the License will not
  * include, and the License does not grant to you, the right to Sell the Software.
  * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,7 +26,7 @@
  * service whose value derives, entirely or substantially, from the functionality of the Software.
  * Any license notice or attribution required by the License must also include this Commons Clause
  * License Condition notice.
- *
+ * 
  * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
  * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
  * Edition software provided with this notice.
@@ -58,6 +58,14 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
+import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.internal.jdbc.thin.JdbcThinParameterMetadata;
+import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
+import org.apache.ignite.internal.processors.odbc.jdbc.JdbcParameterMeta;
+import org.apache.ignite.internal.processors.query.GridQueryFieldMetadata;
+import org.apache.ignite.internal.processors.query.IgniteSQLException;
+import org.jetbrains.annotations.Nullable;
+
 /**
  * JDBC prepared statement implementation.
  */
@@ -65,11 +73,17 @@ public class JdbcPreparedStatement extends JdbcStatement implements PreparedStat
     /** SQL query. */
     private final String sql;
 
-    /** H2's parsed statement to retrieve metadata from. */
-    PreparedStatement nativeStatement;
-
     /** Batch arguments. */
     private List<List<Object>> batchArgs;
+
+    /** Parameters metadata (initialized lazily). */
+    private ParameterMetaData paramsMeta;
+
+    /** Result set metadata (initialized lazily). */
+    private ResultSetMetaData resMeta;
+
+    /** Whether metadata of returning result set have been fetched. */
+    private boolean resMetaFetched;
 
     /**
      * Creates new prepared statement.
@@ -286,7 +300,38 @@ public class JdbcPreparedStatement extends JdbcStatement implements PreparedStat
     @Override public ResultSetMetaData getMetaData() throws SQLException {
         ensureNotClosed();
 
-        return getNativeStatement().getMetaData();
+        if (!resMetaFetched) {
+            assert resMeta == null;
+
+            resMeta = getMetadata0();
+
+            resMetaFetched = true;
+        }
+
+        return resMeta;
+    }
+
+    /**
+     * Fetches metadata of the result set is returned when specified query gets executed.
+     *
+     * @return metadata describing result set or {@code null} if query is not a SELECT operation.
+     */
+    @Nullable private ResultSetMetaData getMetadata0() throws SQLException {
+        SqlFieldsQuery qry = new SqlFieldsQuery(sql);
+
+        setupQuery(qry);
+
+        try {
+            List<GridQueryFieldMetadata> meta = conn.ignite().context().query().getIndexing().resultMetaData(conn.schemaName(), qry);
+
+            if (meta == null)
+                return null;
+
+            return new JdbcResultSetMetadata(meta);
+        }
+        catch (IgniteSQLException ex) {
+            throw ex.toJdbcException();
+        }
     }
 
     /** {@inheritDoc} */
@@ -314,11 +359,37 @@ public class JdbcPreparedStatement extends JdbcStatement implements PreparedStat
         setArgument(paramIdx, x);
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     *
+     * Implementation note: If this prepared statement is a multi-statement, returned meta contains meta of parameters
+     * from the all statements.
+     */
     @Override public ParameterMetaData getParameterMetaData() throws SQLException {
         ensureNotClosed();
 
-        return getNativeStatement().getParameterMetaData();
+        if (paramsMeta == null)
+            paramsMeta = parameterMetaData();
+
+        return paramsMeta;
+    }
+
+    /**
+     * Fetches parameters metadata of the specified query.
+     */
+    private ParameterMetaData parameterMetaData() throws SQLException {
+        SqlFieldsQueryEx qry = new SqlFieldsQueryEx(sql, null);
+
+        setupQuery(qry);
+
+        try {
+            List<JdbcParameterMeta> params = conn.ignite().context().query().getIndexing().parameterMetaData(conn.schemaName(), qry);
+
+            return new JdbcThinParameterMetadata(params);
+        }
+        catch (IgniteSQLException ex) {
+            throw ex.toJdbcException();
+        }
     }
 
     /** {@inheritDoc} */
@@ -483,16 +554,5 @@ public class JdbcPreparedStatement extends JdbcStatement implements PreparedStat
 
         while (args.size() < size)
             args.add(null);
-    }
-
-    /**
-     * @return H2's prepared statement to get metadata from.
-     * @throws SQLException if failed.
-     */
-    private PreparedStatement getNativeStatement() throws SQLException {
-        if (nativeStatement != null)
-            return nativeStatement;
-
-        return (nativeStatement = conn.prepareNativeStatement(sql));
     }
 }

@@ -1,23 +1,23 @@
 /*
  *                   GridGain Community Edition Licensing
  *                   Copyright 2019 GridGain Systems, Inc.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
  * Restriction; you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
+ * 
  * Commons Clause Restriction
- *
+ * 
  * The Software is provided to you by the Licensor under the License, as defined below, subject to
  * the following condition.
- *
+ * 
  * Without limiting other conditions in the License, the grant of rights under the License will not
  * include, and the License does not grant to you, the right to Sell the Software.
  * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,13 +26,14 @@
  * service whose value derives, entirely or substantially, from the functionality of the Software.
  * Any license notice or attribution required by the License must also include this Commons Clause
  * License Condition notice.
- *
+ * 
  * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
  * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
  * Edition software provided with this notice.
  */
 
 import get from 'lodash/get';
+import find from 'lodash/find';
 import {from} from 'rxjs';
 import ObjectID from 'bson-objectid/objectid';
 import {uniqueName} from 'app/utils/uniqueName';
@@ -45,7 +46,7 @@ const uniqueNameValidator = (defaultName = '') => (a, items = []) => {
 };
 
 export default class Clusters {
-    static $inject = ['$http'];
+    static $inject = ['$http', 'JDBC_LINKS'];
 
     discoveries: Menu<DiscoveryKinds> = [
         {value: 'Vm', label: 'Static IPs'},
@@ -93,7 +94,7 @@ export default class Clusters {
     /**
      * Cluster-related configuration stuff
      */
-    constructor(private $http: ng.IHttpService) {}
+    constructor(private $http: ng.IHttpService, private JDBC_LINKS) {}
 
     getConfiguration(clusterID: string) {
         return this.$http.get(`/api/v1/configuration/${clusterID}`);
@@ -219,7 +220,8 @@ export default class Clusters {
             igfss: [],
             models: [],
             checkpointSpi: [],
-            loadBalancingSpi: []
+            loadBalancingSpi: [],
+            autoActivationEnabled: true
         };
     }
 
@@ -241,16 +243,12 @@ export default class Clusters {
         };
     }
 
-    requiresProprietaryDrivers(cluster) {
-        return get(cluster, 'discovery.kind') === 'Jdbc' && ['Oracle', 'DB2', 'SQLServer'].includes(get(cluster, 'discovery.Jdbc.dialect'));
+    jdbcDriverURL(dataSrc) {
+        return this.JDBC_LINKS[get(dataSrc, 'dialect')];
     }
 
-    JDBCDriverURL(cluster) {
-        return ({
-            Oracle: 'http://www.oracle.com/technetwork/database/features/jdbc/default-2280470.html',
-            DB2: 'http://www-01.ibm.com/support/docview.wss?uid=swg21363866',
-            SQLServer: 'https://www.microsoft.com/en-us/download/details.aspx?id=11774'
-        })[get(cluster, 'discovery.Jdbc.dialect')];
+    requiresProprietaryDrivers(dataSrc) {
+        return !!this.jdbcDriverURL(dataSrc);
     }
 
     dataRegion = {
@@ -360,6 +358,7 @@ export default class Clusters {
                 const maxSize = memoryPolicy.maxSize;
                 const pageSize = cluster.memoryConfiguration.pageSize || this.memoryConfiguration.pageSize.default;
                 const maxPoolSize = Math.floor(maxSize / pageSize / perThreadLimit);
+
                 return maxPoolSize;
             }
         }
@@ -490,6 +489,11 @@ export default class Clusters {
         }
     };
 
+    persistenceEnabled(dataStorage) {
+        return !!(get(dataStorage, 'defaultDataRegionConfiguration.persistenceEnabled')
+            || find(get(dataStorage, 'dataRegionConfigurations'), (storeCfg) => storeCfg.persistenceEnabled));
+    }
+
     swapSpaceSpi = {
         readStripesNumber: {
             default: 'availableProcessors',
@@ -598,6 +602,17 @@ export default class Clusters {
         if (!cluster.binaryConfiguration.typeConfigurations) cluster.binaryConfiguration.typeConfigurations = [];
         const item = {_id: ObjectID.generate()};
         cluster.binaryConfiguration.typeConfigurations.push(item);
+        return item;
+    }
+
+    addLocalEventListener(cluster) {
+        if (!cluster.localEventListeners)
+            cluster.localEventListeners = [];
+
+        const item = {_id: ObjectID.generate()};
+
+        cluster.localEventListeners.push(item);
+
         return item;
     }
 }

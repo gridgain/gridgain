@@ -1,23 +1,23 @@
 /*
  *                   GridGain Community Edition Licensing
  *                   Copyright 2019 GridGain Systems, Inc.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
  * Restriction; you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
+ * 
  * Commons Clause Restriction
- *
+ * 
  * The Software is provided to you by the Licensor under the License, as defined below, subject to
  * the following condition.
- *
+ * 
  * Without limiting other conditions in the License, the grant of rights under the License will not
  * include, and the License does not grant to you, the right to Sell the Software.
  * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,7 +26,7 @@
  * service whose value derives, entirely or substantially, from the functionality of the Software.
  * Any license notice or attribution required by the License must also include this Commons Clause
  * License Condition notice.
- *
+ * 
  * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
  * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
  * Edition software provided with this notice.
@@ -64,10 +64,6 @@ export default class ClusterEditFormController {
         private IgniteFormUtils: ReturnType<typeof FormUtils>
     ) {}
 
-    $onDestroy() {
-        this.subscription.unsubscribe();
-    }
-
     $onInit() {
         this.available = this.IgniteVersion.available.bind(this.IgniteVersion);
 
@@ -82,16 +78,46 @@ export default class ClusterEditFormController {
                 {value: null, label: 'Default'}
             ];
 
+            this.failureHandlerVariant = [
+                {value: 'RestartProcess', label: 'Restart process'},
+                {value: 'StopNodeOnHalt', label: 'Try stop with timeout'},
+                {value: 'StopNode', label: 'Stop on critical error'},
+                {value: 'Noop', label: 'Disabled'},
+                {value: 'Custom', label: 'Custom'},
+                {value: null, label: 'Default'}
+            ];
+
+            this.ignoredFailureTypes = [
+                {value: 'SEGMENTATION', label: 'SEGMENTATION'},
+                {value: 'SYSTEM_WORKER_TERMINATION', label: 'SYSTEM_WORKER_TERMINATION'},
+                {value: 'SYSTEM_WORKER_BLOCKED', label: 'SYSTEM_WORKER_BLOCKED'},
+                {value: 'CRITICAL_ERROR', label: 'CRITICAL_ERROR'},
+                {value: 'SYSTEM_CRITICAL_OPERATION_TIMEOUT', label: 'SYSTEM_CRITICAL_OPERATION_TIMEOUT'}
+            ];
+
             if (this.available('2.0.0')) {
                 this.eventStorage.push({value: null, label: 'Disabled'});
 
                 this.eventGroups = _.filter(this.IgniteEventGroups, ({value}) => value !== 'EVTS_SWAPSPACE');
+
+                _.forEach(this.eventGroups, (grp) => grp.events = _.filter(grp.events, (evt) => evt.indexOf('SWAP') < 0));
             }
             else {
                 this.eventGroups = this.IgniteEventGroups;
 
                 this.marshallerVariant.splice(0, 0, {value: 'OptimizedMarshaller', label: 'OptimizedMarshaller'});
             }
+
+            this.eventTypes = [];
+
+            _.forEach(this.eventGroups, (grp) => {
+                _.forEach(grp.events, (e) => {
+                    const newVal = {value: e, label: e};
+
+                    if (!_.find(this.eventTypes, newVal))
+                        this.eventTypes.push(newVal);
+                });
+            });
         };
 
         rebuildDropdowns();
@@ -126,6 +152,10 @@ export default class ClusterEditFormController {
             {text: 'Save', icon: 'checkmark', click: () => this.save()},
             {text: 'Save and Download', icon: 'download', click: () => this.save(true)}
         ];
+    }
+
+    $onDestroy() {
+        this.subscription.unsubscribe();
     }
 
     $onChanges(changes) {
@@ -163,12 +193,15 @@ export default class ClusterEditFormController {
     save(download) {
         if (this.$scope.ui.inputForm.$invalid)
             return this.IgniteFormUtils.triggerValidation(this.$scope.ui.inputForm, this.$scope);
+
         this.onSave({$event: {cluster: cloneDeep(this.clonedCluster), download}});
     }
 
     reset = () => this.clonedCluster = cloneDeep(this.cluster);
+
     confirmAndReset() {
-        return this.IgniteConfirm.confirm('Are you sure you want to undo all changes for current cluster?')
-        .then(this.reset);
+        return this.IgniteConfirm
+            .confirm('Are you sure you want to undo all changes for current cluster?')
+            .then(this.reset);
     }
 }

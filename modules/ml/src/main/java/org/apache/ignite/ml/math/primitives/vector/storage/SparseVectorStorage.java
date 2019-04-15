@@ -1,23 +1,23 @@
 /*
  *                   GridGain Community Edition Licensing
  *                   Copyright 2019 GridGain Systems, Inc.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
  * Restriction; you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
+ * 
  * Commons Clause Restriction
- *
+ * 
  * The Software is provided to you by the Licensor under the License, as defined below, subject to
  * the following condition.
- *
+ * 
  * Without limiting other conditions in the License, the grant of rights under the License will not
  * include, and the License does not grant to you, the right to Sell the Software.
  * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,7 +26,7 @@
  * service whose value derives, entirely or substantially, from the functionality of the Software.
  * Any license notice or attribution required by the License must also include this Commons Clause
  * License Condition notice.
- *
+ * 
  * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
  * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
  * Edition software provided with this notice.
@@ -34,12 +34,12 @@
 
 package org.apache.ignite.ml.math.primitives.vector.storage;
 
-import it.unimi.dsi.fastutil.ints.Int2DoubleOpenHashMap;
-import it.unimi.dsi.fastutil.ints.Int2DoubleRBTreeMap;
+import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.ignite.ml.math.StorageConstants;
@@ -51,11 +51,9 @@ import org.apache.ignite.ml.math.primitives.vector.VectorStorage;
 public class SparseVectorStorage implements VectorStorage, StorageConstants {
     /** */
     private int size;
-    /** */
-    private int acsMode;
 
     /** Actual map storage. */
-    private Map<Integer, Double> sto;
+    private Map<Integer, Serializable> sto;
 
     /**
      *
@@ -65,54 +63,21 @@ public class SparseVectorStorage implements VectorStorage, StorageConstants {
     }
 
     /** */
-    public SparseVectorStorage(Map<Integer, Double> map, boolean cp) {
-        assert map.size() > 0;
+    public SparseVectorStorage(Map<Integer, ? extends Serializable> map, boolean cp) {
+        assert !map.isEmpty();
 
         this.size = map.size();
-
-        if (map instanceof Int2DoubleRBTreeMap)
-            acsMode = SEQUENTIAL_ACCESS_MODE;
-        else if (map instanceof Int2DoubleOpenHashMap)
-            acsMode = RANDOM_ACCESS_MODE;
-        else
-            acsMode = UNKNOWN_STORAGE_MODE;
-
-        if (cp)
-            switch (acsMode) {
-                case SEQUENTIAL_ACCESS_MODE:
-                    sto = new Int2DoubleRBTreeMap(map);
-                case RANDOM_ACCESS_MODE:
-                    sto = new Int2DoubleOpenHashMap(map);
-                    break;
-                default:
-                    sto = new HashMap<>(map);
-            }
-        else
-            sto = map;
+        sto = new HashMap<>(map);
     }
 
     /**
      * @param size Vector size.
-     * @param acsMode Access mode.
      */
-    public SparseVectorStorage(int size, int acsMode) {
+    public SparseVectorStorage(int size) {
         assert size > 0;
-        assertAccessMode(acsMode);
 
         this.size = size;
-        this.acsMode = acsMode;
-
-        if (acsMode == SEQUENTIAL_ACCESS_MODE)
-            sto = new Int2DoubleRBTreeMap();
-        else
-            sto = new Int2DoubleOpenHashMap();
-    }
-
-    /**
-     * @return Vector elements access mode.
-     */
-    public int getAccessMode() {
-        return acsMode;
+        this.sto = new HashMap<>();
     }
 
     /** {@inheritDoc} */
@@ -122,22 +87,37 @@ public class SparseVectorStorage implements VectorStorage, StorageConstants {
 
     /** {@inheritDoc} */
     @Override public double get(int i) {
-        return sto.getOrDefault(i, 0.0);
+        Serializable obj = sto.get(i);
+        if (obj == null)
+            return 0.0; //TODO: IGNITE-11664
+
+        return ((Number)obj).doubleValue();
+    }
+
+    /** {@inheritDoc} */
+    @Override public <T extends Serializable> T getRaw(int i) {
+        return (T)sto.get(i);
     }
 
     /** {@inheritDoc} */
     @Override public void set(int i, double v) {
         if (v != 0.0)
             sto.put(i, v);
-        else if (sto.containsKey(i))
+        else if (sto.containsKey(i)) //TODO: IGNITE-11664
             sto.remove(i);
+    }
 
+    /** {@inheritDoc} */
+    @Override public void setRaw(int i, Serializable v) {
+        if (v == null)
+            sto.remove(i);
+        else
+            sto.put(i, v);
     }
 
     /** {@inheritDoc} */
     @Override public void writeExternal(ObjectOutput out) throws IOException {
         out.writeInt(size);
-        out.writeInt(acsMode);
         out.writeObject(sto);
     }
 
@@ -145,23 +125,12 @@ public class SparseVectorStorage implements VectorStorage, StorageConstants {
     @SuppressWarnings({"unchecked"})
     @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
         size = in.readInt();
-        acsMode = in.readInt();
-        sto = (Map<Integer, Double>)in.readObject();
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean isSequentialAccess() {
-        return acsMode == SEQUENTIAL_ACCESS_MODE;
+        sto = (Map<Integer, Serializable>)in.readObject();
     }
 
     /** {@inheritDoc} */
     @Override public boolean isDense() {
         return false;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean isRandomAccess() {
-        return true;
     }
 
     /** {@inheritDoc} */
@@ -175,12 +144,27 @@ public class SparseVectorStorage implements VectorStorage, StorageConstants {
     }
 
     /** {@inheritDoc} */
+    @Override public boolean isNumeric() {
+        return sto.values().stream().allMatch(v -> v instanceof Number) || sto.isEmpty();
+    }
+
+    /** {@inheritDoc} */
     @Override public double[] data() {
+        if (!isNumeric())
+            throw new ClassCastException("Vector has not only numeric values.");
+
         double[] data = new double[size];
 
-        sto.forEach((idx, val) -> data[idx] = val);
+        sto.forEach((idx, val) -> data[idx] = ((Number)val).doubleValue());
 
         return data;
+    }
+
+    /** {@inheritDoc} */
+    @Override public Serializable[] rawData() {
+        Serializable[] res = new Serializable[size];
+        sto.forEach((i, v) -> res[i] = v);
+        return res;
     }
 
     /** {@inheritDoc} */
@@ -193,14 +177,13 @@ public class SparseVectorStorage implements VectorStorage, StorageConstants {
 
         SparseVectorStorage that = (SparseVectorStorage)o;
 
-        return size == that.size && acsMode == that.acsMode && (sto != null ? sto.equals(that.sto) : that.sto == null);
+        return size == that.size && (sto != null ? sto.equals(that.sto) : that.sto == null);
     }
 
     /** {@inheritDoc} */
     @Override public int hashCode() {
         int res = size;
 
-        res = 31 * res + acsMode;
         res = 31 * res + (sto != null ? sto.hashCode() : 0);
 
         return res;
@@ -208,6 +191,6 @@ public class SparseVectorStorage implements VectorStorage, StorageConstants {
 
     /** */
     public IntSet indexes() {
-        return (IntSet)sto.keySet();
+        return new IntArraySet(sto.keySet());
     }
 }

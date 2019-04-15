@@ -1,23 +1,23 @@
 /*
  *                   GridGain Community Edition Licensing
  *                   Copyright 2019 GridGain Systems, Inc.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
  * Restriction; you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
+ * 
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
+ * 
  * Commons Clause Restriction
- *
+ * 
  * The Software is provided to you by the Licensor under the License, as defined below, subject to
  * the following condition.
- *
+ * 
  * Without limiting other conditions in the License, the grant of rights under the License will not
  * include, and the License does not grant to you, the right to Sell the Software.
  * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
@@ -26,7 +26,7 @@
  * service whose value derives, entirely or substantially, from the functionality of the Software.
  * Any license notice or attribution required by the License must also include this Commons Clause
  * License Condition notice.
- *
+ * 
  * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
  * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
  * Edition software provided with this notice.
@@ -37,6 +37,7 @@ package org.apache.ignite.ml.math.primitives.vector;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -143,11 +144,37 @@ public abstract class AbstractVector implements Vector {
     }
 
     /**
+     * Sets serializable value.
+     *
+     * @param i Index.
+     * @param v Value.
+     */
+    protected void storageSetRaw(int i, Serializable v) {
+        ensureReadOnly();
+
+        sto.setRaw(i, v);
+
+        // Reset cached values.
+        lenSq = 0.0;
+        maxElm = minElm = null;
+    }
+
+    /**
      * @param i Index.
      * @return Value.
      */
     protected double storageGet(int i) {
         return sto.get(i);
+    }
+
+    /**
+     * Gets serializable value from storage and casts it to targe type T.
+     *
+     * @param i Index.
+     * @return Value.
+     */
+    protected <T extends Serializable> T storageGetRaw(int i) {
+        return sto.getRaw(i);
     }
 
     /** {@inheritDoc} */
@@ -175,6 +202,18 @@ public abstract class AbstractVector implements Vector {
     /** {@inheritDoc} */
     @Override public double getX(int idx) {
         return storageGet(idx);
+    }
+
+    /** {@inheritDoc} */
+    @Override public <T extends Serializable> T getRaw(int idx) {
+        checkIndex(idx);
+
+        return sto.getRaw(idx);
+    }
+
+    /** {@inheritDoc} */
+    @Override public <T extends Serializable> T getRawX(int idx) {
+        return sto.getRaw(idx);
     }
 
     /** {@inheritDoc} */
@@ -253,6 +292,16 @@ public abstract class AbstractVector implements Vector {
             @Override public void set(double val) {
                 storageSet(idx, val);
             }
+
+            /** {@inheritDoc} */
+            @Override public void setRaw(Serializable val) {
+                storageSetRaw(idx, val);
+            }
+
+            /** {@inheritDoc} */
+            @Override public <T extends Serializable> T getRaw() {
+                return storageGetRaw(idx);
+            }
         };
     }
 
@@ -310,6 +359,22 @@ public abstract class AbstractVector implements Vector {
     /** {@inheritDoc} */
     @Override public Vector setX(int idx, double val) {
         storageSet(idx, val);
+
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Override public Vector setRaw(int idx, Serializable val) {
+        checkIndex(idx);
+
+        storageSetRaw(idx, val);
+
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Override public Vector setRawX(int idx, Serializable val) {
+        storageSetRaw(idx, val);
 
         return this;
     }
@@ -634,18 +699,13 @@ public abstract class AbstractVector implements Vector {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean isSequentialAccess() {
-        return sto.isSequentialAccess();
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean isRandomAccess() {
-        return sto.isRandomAccess();
-    }
-
-    /** {@inheritDoc} */
     @Override public boolean isDistributed() {
         return sto.isDistributed();
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean isNumeric() {
+        return sto.isNumeric();
     }
 
     /** {@inheritDoc} */

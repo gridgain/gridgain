@@ -1,18 +1,35 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *                   GridGain Community Edition Licensing
+ *                   Copyright 2019 GridGain Systems, Inc.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License") modified with Commons Clause
+ * Restriction; you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the specific language governing permissions
+ * and limitations under the License.
+ * 
+ * Commons Clause Restriction
+ * 
+ * The Software is provided to you by the Licensor under the License, as defined below, subject to
+ * the following condition.
+ * 
+ * Without limiting other conditions in the License, the grant of rights under the License will not
+ * include, and the License does not grant to you, the right to Sell the Software.
+ * For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you
+ * under the License to provide to third parties, for a fee or other consideration (including without
+ * limitation fees for hosting or consulting/ support services related to the Software), a product or
+ * service whose value derives, entirely or substantially, from the functionality of the Software.
+ * Any license notice or attribution required by the License must also include this Commons Clause
+ * License Condition notice.
+ * 
+ * For purposes of the clause above, the “Licensor” is Copyright 2019 GridGain Systems, Inc.,
+ * the “License” is the Apache License, Version 2.0, and the Software is the GridGain Community
+ * Edition software provided with this notice.
  */
 
 package org.apache.ignite.internal.processors.metastorage;
@@ -21,8 +38,6 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -32,11 +47,14 @@ import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageImpl;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_ENABLED;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_GLOBAL_METASTORAGE_HISTORY_MAX_BYTES;
 
 /**
@@ -80,8 +98,6 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
     @After
     public void after() throws Exception {
         stopAllGrids();
-
-        System.clearProperty(IGNITE_GLOBAL_METASTORAGE_HISTORY_MAX_BYTES);
     }
 
     /**
@@ -260,9 +276,8 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_GLOBAL_METASTORAGE_HISTORY_MAX_BYTES, value = "0")
     public void testJoinCleanNodeFullData() throws Exception {
-        System.setProperty(IGNITE_GLOBAL_METASTORAGE_HISTORY_MAX_BYTES, "0");
-
         IgniteEx ignite = startGrid(0);
 
         ignite.cluster().active(true);
@@ -284,9 +299,8 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_GLOBAL_METASTORAGE_HISTORY_MAX_BYTES, value = "0")
     public void testDeactivateActivate() throws Exception {
-        System.setProperty(IGNITE_GLOBAL_METASTORAGE_HISTORY_MAX_BYTES, "0");
-
         startGrid(0);
 
         grid(0).cluster().active(true);
@@ -299,25 +313,103 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
 
         startGrid(1);
 
-        CountDownLatch grid1MetaStorageStartLatch = new CountDownLatch(1);
-
-        grid(1).context().internalSubscriptionProcessor().registerDistributedMetastorageListener(
-            new DistributedMetastorageLifecycleListener() {
-                @Override public void onReadyForWrite(DistributedMetaStorage metastorage) {
-                    grid1MetaStorageStartLatch.countDown();
-                }
-            }
-        );
-
         grid(0).cluster().active(true);
 
         assertEquals("value1", metastorage(0).read("key1"));
 
         assertEquals("value2", metastorage(0).read("key2"));
 
-        grid1MetaStorageStartLatch.await(1, TimeUnit.SECONDS);
-
         assertDistributedMetastoragesAreEqual(grid(0), grid(1));
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_ENABLED, value = "false")
+    public void testOptimizedWriteTwice() throws Exception {
+        startGrid(0).cluster().active(true);
+
+        assertEquals(0, metastorage(0).getUpdatesCount());
+
+        metastorage(0).write("key1", "value1");
+
+        assertEquals(1, metastorage(0).getUpdatesCount());
+
+        metastorage(0).write("key2", "value2");
+
+        assertEquals(2, metastorage(0).getUpdatesCount());
+
+        metastorage(0).write("key1", "value1");
+
+        assertEquals(2, metastorage(0).getUpdatesCount());
+    }
+
+    /** */
+    @Test
+    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_ENABLED, value = "false")
+    public void testClient() throws Exception {
+        startGrid(0).cluster().active(true);
+
+        metastorage(0).write("key0", "value0");
+
+        startClient(1);
+
+        AtomicInteger clientLsnrUpdatesCnt = new AtomicInteger();
+
+        assertEquals(1, metastorage(1).getUpdatesCount());
+
+        assertEquals("value0", metastorage(1).read("key0"));
+
+        metastorage(1).listen(key -> true, (key, oldVal, newVal) -> clientLsnrUpdatesCnt.incrementAndGet());
+
+        metastorage(1).write("key1", "value1");
+
+        assertEquals(1, clientLsnrUpdatesCnt.get());
+
+        assertEquals("value1", metastorage(1).read("key1"));
+
+        assertEquals("value1", metastorage(0).read("key1"));
+    }
+
+    /** */
+    @Test
+    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_ENABLED, value = "false")
+    public void testClientReconnect() throws Exception {
+        startGrid(0).cluster().active(true);
+
+        startClient(1);
+
+        metastorage(0).write("key0", "value0");
+
+        startGrid(2);
+
+        stopGrid(0);
+
+        stopGrid(2);
+
+        startGrid(2).cluster().active(true);
+
+        metastorage(2).write("key1", "value1");
+
+        metastorage(2).write("key2", "value2");
+
+        int expUpdatesCnt = isPersistent() ? 3 : 2;
+
+        // Wait enough to cover failover timeout.
+        assertTrue(GridTestUtils.waitForCondition(() -> metastorage(1).getUpdatesCount() == expUpdatesCnt, 15_000));
+
+        if (isPersistent())
+            assertEquals("value0", metastorage(1).read("key0"));
+
+        assertEquals("value1", metastorage(1).read("key1"));
+
+        assertEquals("value2", metastorage(1).read("key2"));
+    }
+
+    /** */
+    protected IgniteEx startClient(int idx) throws Exception {
+        return startGrid(getConfiguration(getTestIgniteInstanceName(idx)).setClientMode(true));
     }
 
     /**
