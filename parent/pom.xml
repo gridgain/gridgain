@@ -44,8 +44,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>org.gridgain</groupId>
-        <artifactId>community.parent</artifactId>
+        <groupId>org.apache</groupId>
+        <artifactId>apache</artifactId>
         <version>16</version>
     </parent>
 
