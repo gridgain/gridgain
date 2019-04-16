@@ -69,6 +69,7 @@
                         </goals>
                         <configuration>
                             <excludeTransitive>false</excludeTransitive>
+                            <excludeArtifactIds>fastutil,h2</excludeArtifactIds>
                         </configuration>
                     </execution>
                 </executions>
