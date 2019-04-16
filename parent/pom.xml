@@ -359,7 +359,7 @@
                             <group>
                                 <title>Common Grid APIs</title>
                                 <packages>
-                                    org.apache.ignite:org.apache.ignite.cluster:org.apache.ignite.lifecycle:org.apache.ignite.configuration:org.apache.ignite.spi:org.apache.ignite.lang:org.apache.ignite.resources:org.apache.ignite.thread:org.apache.ignite.scheduler
+                                    org.gridgain:org.apache.ignite.cluster:org.apache.ignite.lifecycle:org.apache.ignite.configuration:org.apache.ignite.spi:org.apache.ignite.lang:org.apache.ignite.resources:org.apache.ignite.thread:org.apache.ignite.scheduler
                                 </packages>
                             </group>
                             <group>
@@ -1189,7 +1189,7 @@
                                 </goals>
                                 <configuration>
                                     <resourceBundles>
-                                        <resourceBundle>org.apache.ignite:ignite-apache-license-gen:${project.version}
+                                        <resourceBundle>org.gridgain:ignite-apache-license-gen:${project.version}
                                         </resourceBundle>
                                     </resourceBundles>
                                     <excludeTransitive>true</excludeTransitive>
