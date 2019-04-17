@@ -29,6 +29,7 @@ import org.apache.ignite.internal.processors.query.QuerySchema;
 import org.apache.ignite.internal.processors.query.QuerySchemaPatch;
 import org.apache.ignite.internal.processors.query.schema.message.SchemaFinishDiscoveryMessage;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
+import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -44,7 +45,7 @@ public class DynamicCacheDescriptor {
 
     /** Cache configuration. */
     @GridToStringExclude
-    private CacheConfiguration cacheCfg;
+    private volatile CacheConfiguration cacheCfg;
 
     /** Statically configured flag. */
     private final boolean staticCfg;
@@ -94,6 +95,12 @@ public class DynamicCacheDescriptor {
     /** */
     private final CacheGroupDescriptor grpDesc;
 
+    /** Cache config enrichment. */
+    private final @Nullable CacheConfigurationEnrichment cacheCfgEnrichment;
+
+    /** Cache config enriched. */
+    private volatile boolean cacheCfgEnriched;
+
     /**
      * @param ctx Context.
      * @param cacheCfg Cache configuration.
@@ -116,7 +123,9 @@ public class DynamicCacheDescriptor {
         boolean staticCfg,
         boolean sql,
         IgniteUuid deploymentId,
-        QuerySchema schema) {
+        QuerySchema schema,
+        @Nullable CacheConfigurationEnrichment cacheCfgEnrichment
+    ) {
         assert cacheCfg != null;
         assert grpDesc != null || template;
         assert schema != null;
@@ -141,6 +150,8 @@ public class DynamicCacheDescriptor {
         synchronized (schemaMux) {
             this.schema = schema.copy();
         }
+
+        this.cacheCfgEnrichment = cacheCfgEnrichment;
     }
 
     /**
@@ -217,6 +228,13 @@ public class DynamicCacheDescriptor {
      */
     public CacheConfiguration cacheConfiguration() {
         return cacheCfg;
+    }
+
+    /**
+     * @param cacheCfg Cache config.
+     */
+    public void cacheConfiguration(CacheConfiguration cacheCfg) {
+        this.cacheCfg = cacheCfg;
     }
 
     /**
@@ -377,7 +395,7 @@ public class DynamicCacheDescriptor {
      * from page store. Essentially, this method takes from {@link DynamicCacheDescriptor} all that's needed to start
      * cache correctly, leaving out everything else.
      */
-    public StoredCacheData toStoredData() {
+    public StoredCacheData toStoredData(CacheConfigurationSplitter splitter) {
         assert schema != null;
 
         StoredCacheData res = new StoredCacheData(cacheConfiguration());
@@ -385,7 +403,37 @@ public class DynamicCacheDescriptor {
         res.queryEntities(schema().entities());
         res.sql(sql());
 
+        if (isConfigurationEnriched()) {
+            T2<CacheConfiguration, CacheConfigurationEnrichment> splitCfg = splitter.split(this);
+
+            res.config(splitCfg.get1());
+            res.cacheConfigurationEnrichment(splitCfg.get2());
+        }
+        else
+            res.cacheConfigurationEnrichment(cacheCfgEnrichment);
+
         return res;
+    }
+
+    /**
+     * @return Cache configuration enrichment.
+     */
+    public CacheConfigurationEnrichment cacheConfigurationEnrichment() {
+        return cacheCfgEnrichment;
+    }
+
+    /**
+     * @return {@code True} if configuration is already enriched.
+     */
+    public boolean isConfigurationEnriched() {
+        return cacheCfgEnrichment == null || cacheCfgEnriched;
+    }
+
+    /**
+     * @param cacheCfgEnriched Flag indicates that configuration is enriched.
+     */
+    public void configurationEnriched(boolean cacheCfgEnriched) {
+        this.cacheCfgEnriched = cacheCfgEnriched;
     }
 
     /** {@inheritDoc} */

@@ -45,12 +45,25 @@ public class GridCacheAttributes implements Serializable {
     /** Cache configuration. */
     private CacheConfiguration ccfg;
 
+    /** Cache configuration enrichment. */
+    private CacheConfigurationEnrichment enrichment;
+
+
     /**
      * @param cfg Cache configuration.
      *
      */
     public GridCacheAttributes(CacheConfiguration cfg) {
-        ccfg = cfg;
+        this.ccfg = cfg;
+    }
+
+    /**
+     * @param cfg Cache configuration.
+     *
+     */
+    public GridCacheAttributes(CacheConfiguration cfg, CacheConfigurationEnrichment enrichment) {
+        this.ccfg = cfg;
+        this.enrichment = enrichment;
     }
 
     /**
@@ -153,6 +166,9 @@ public class GridCacheAttributes implements Serializable {
      * @return Eviction filter class name.
      */
     public String evictionFilterClassName() {
+        if (enrichment != null)
+            return enrichment.getFieldClassName("evictFilter");
+
         return className(ccfg.getEvictionFilter());
     }
 
@@ -170,6 +186,9 @@ public class GridCacheAttributes implements Serializable {
      * @return Eviction policy factory class name.
      */
     public String evictionPolicyFactoryClassName() {
+        if (enrichment != null)
+            return enrichment.getFieldClassName("evictPlcFactory");
+
         return className(ccfg.getEvictionPolicyFactory());
     }
 
@@ -191,13 +210,24 @@ public class GridCacheAttributes implements Serializable {
      * @return Near eviction policy factory class name.
      */
     public String nearEvictionPolicyFactoryClassName() {
-        return className(ccfg.getEvictionPolicyFactory());
+        NearCacheConfiguration nearCfg = ccfg.getNearConfiguration();
+
+        if (nearCfg == null)
+            return null;
+
+        if (enrichment != null && enrichment.nearCacheConfigurationEnrichment() != null)
+            return enrichment.nearCacheConfigurationEnrichment().getFieldClassName("nearEvictPlcFactory");
+
+        return className(nearCfg.getNearEvictionPolicyFactory());
     }
 
     /**
      * @return Store class name.
      */
     public String storeFactoryClassName() {
+        if (enrichment != null)
+            return enrichment.getFieldClassName("storeFactory");
+
         return className(ccfg.getCacheStoreFactory());
     }
 
