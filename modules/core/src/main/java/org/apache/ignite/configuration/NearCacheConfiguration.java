@@ -42,6 +42,7 @@ public class NearCacheConfiguration<K, V> implements Serializable {
     private EvictionPolicy<K, V> nearEvictPlc;
 
     /** Near cache eviction policy factory. */
+    @SerializeSeparately
     private Factory nearEvictPlcFactory;
 
     /** Default near cache start size. */
