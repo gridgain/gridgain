@@ -174,7 +174,7 @@ public class TestScript extends TestBase {
         errors = null;
 
         println("Running commands in " + scriptFileName);
-        final String outFile = "test.out.txt";
+        final String outFile = "target/test.out.txt";
         conn = getConnection("script");
         stat = conn.createStatement();
         out = new PrintStream(new FileOutputStream(outFile));

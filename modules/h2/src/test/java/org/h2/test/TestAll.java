@@ -389,7 +389,7 @@ java org.h2.test.TestAll timer
     /**
      * If MAX_MEMORY_UNDO=3 should be used.
      */
-    boolean diskUndo;
+    public boolean diskUndo;
 
     /**
      * If TRACE_LEVEL_SYSTEM_OUT should be set to 2 (for debugging only).
@@ -419,12 +419,12 @@ java org.h2.test.TestAll timer
     /**
      * If the database should always be defragmented when closing.
      */
-    boolean defrag;
+    public boolean defrag;
 
     /**
      * The cache type.
      */
-    String cacheType;
+    public String cacheType;
 
     /** If not null the database should be opened with the collation parameter */
     public String collation;
@@ -715,7 +715,7 @@ kill -9 `jps -l | grep "org.h2.test." | cut -d " " -f 1`
     /**
      * Run all tests with the current settings.
      */
-    private void test() throws SQLException {
+    protected void test() throws SQLException {
         System.out.println();
         System.out.println("Test " + toString() +
                 " (" + Utils.getMemoryUsed() + " KB used)");
@@ -974,7 +974,7 @@ kill -9 `jps -l | grep "org.h2.test." | cut -d " " -f 1`
 
     }
 
-    private void addTest(TestBase test) {
+    protected void addTest(TestBase test) {
         // tests.add(test);
         // run directly for now, because concurrently running tests
         // fails on Raspberry Pi quite often (seems to be a JVM problem)
