@@ -45,6 +45,12 @@ public enum IgniteFeatures {
     DIFFERENT_REBALANCE_POOL_SIZE(4),
 
     /**
+     * Support of providing thread dump of thread that started transaction. Used for dumping
+     * long running transactions.
+     */
+    TRANSACTION_OWNER_THREAD_DUMP_PROVIDING(6),
+
+    /**
      * A mode when data nodes throttle update rate regarding to DR sender load
      */
     DR_DATA_NODE_SMART_THROTTLING(19);
