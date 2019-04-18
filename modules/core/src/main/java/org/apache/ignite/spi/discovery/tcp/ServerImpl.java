@@ -4021,7 +4021,6 @@ class ServerImpl extends TcpDiscoveryImpl {
                         spi.marshaller(),
                         U.resolveClassLoader(spi.ignite().configuration()),
                         false,
-                        isDiscoDataPaketCompressed(node),
                         log));
 
                 if (err != null) {
@@ -4331,15 +4330,6 @@ class ServerImpl extends TcpDiscoveryImpl {
                 if (sendMessageToRemotes(msg))
                     sendMessageAcrossRing(msg);
             }
-        }
-
-        /**
-         * @param node Joined node.
-         * @return <code>true</code> if packet is compressed.
-         */
-        private boolean isDiscoDataPaketCompressed(TcpDiscoveryNode node) {
-            return IgniteFeatures.nodeSupports(node, IgniteFeatures.DATA_PACKET_COMPRESSION) &&
-                allNodesSupport(IgniteFeatures.DATA_PACKET_COMPRESSION);
         }
 
         /**
