@@ -40,7 +40,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Store
             get
             {
                 // Shared PlatformDotNetCacheStoreFactory results in a single store instance.
-                return 2;
+                return 1;
             }
         }
     }

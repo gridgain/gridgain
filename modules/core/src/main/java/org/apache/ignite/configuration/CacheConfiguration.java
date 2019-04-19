@@ -212,7 +212,6 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
     private EvictionPolicy evictPlc;
 
     /** Cache eviction policy factory. */
-    @SerializeSeparately
     private Factory evictPlcFactory;
 
     /** */
@@ -225,7 +224,6 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
     private int sqlOnheapCacheMaxSize = DFLT_SQL_ONHEAP_CACHE_MAX_SIZE;
 
     /** Eviction filter. */
-    @SerializeSeparately
     private EvictionFilter<?, ?> evictFilter;
 
     /** Eager ttl flag. */
@@ -244,7 +242,6 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
     private CacheWriteSynchronizationMode writeSync;
 
     /** */
-    @SerializeSeparately
     private Factory storeFactory;
 
     /** */
@@ -360,7 +357,6 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
     private TopologyValidator topValidator;
 
     /** Cache store session listeners. */
-    @SerializeSeparately
     private Factory<? extends CacheStoreSessionListener>[] storeSesLsnrs;
 
     /** Query entities. */

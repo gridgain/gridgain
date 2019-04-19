@@ -240,13 +240,6 @@ public class IgniteSqlNotNullConstraintTest extends AbstractIndexingCommonTest {
         cleanup();
     }
 
-    /**
-     * We need to keep serialized cache store factories to share them between tests.
-     */
-    @Override protected boolean keepSerializedObjects() {
-        return true;
-    }
-
     /** */
     @Test
     public void testQueryEntityGetSetNotNullFields() throws Exception {
