@@ -34,12 +34,12 @@ public class CacheComparatorTest {
         DynamicCacheDescriptor desc1 = new DynamicCacheDescriptor(null,
             new CacheConfiguration().setName("1111"), CacheType.DATA_STRUCTURES,
             null, true, null, true,
-            false, null, new QuerySchema(), null);
+            false, null, new QuerySchema());
 
         DynamicCacheDescriptor desc2 = new DynamicCacheDescriptor(null,
             new CacheConfiguration().setName("2222"), CacheType.INTERNAL,
             null, true, null, true,
-            false, null, new QuerySchema(), null);
+            false, null, new QuerySchema());
 
         assertEquals(-1,
             ClusterCachesInfo.CacheComparators.DIRECT.compare(desc1, desc2));

@@ -197,7 +197,7 @@ public class IgnitePdsCacheConfigurationFileConsistencyCheckTest extends GridCom
 
             FilePageStoreManager pageStore = (FilePageStoreManager) sharedCtx.pageStore();
 
-            StoredCacheData corrData = cacheDescr.toStoredData(ig.context().cache().splitter());
+            StoredCacheData corrData = cacheDescr.toStoredData();
 
             corrData.config().setGroupName(ODD_GROUP_NAME);
 
@@ -221,7 +221,7 @@ public class IgnitePdsCacheConfigurationFileConsistencyCheckTest extends GridCom
 
             FilePageStoreManager pageStore = (FilePageStoreManager) sharedCtx.pageStore();
 
-            StoredCacheData data = cacheDescr.toStoredData(ig.context().cache().splitter());
+            StoredCacheData data = cacheDescr.toStoredData();
 
             data.config().setGroupName(ODD_GROUP_NAME);
 
@@ -247,7 +247,7 @@ public class IgnitePdsCacheConfigurationFileConsistencyCheckTest extends GridCom
 
             FilePageStoreManager pageStore = (FilePageStoreManager) sharedCtx.pageStore();
 
-            StoredCacheData data = cacheDescr.toStoredData(ig.context().cache().splitter());
+            StoredCacheData data = cacheDescr.toStoredData();
 
             data.config().setGroupName(ODD_GROUP_NAME);
 
