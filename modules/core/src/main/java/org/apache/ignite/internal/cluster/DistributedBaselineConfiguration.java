@@ -1,13 +1,12 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * 
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ * 
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -54,21 +53,21 @@ public class DistributedBaselineConfiguration {
     private static final String PROPERTY_UPDATE_MESSAGE =
         "Baseline parameter '%s' was changed from '%s' to '%s'";
     /** */
-    private volatile long dfltTimeout = DEFAULT_PERSISTENCE_TIMEOUT;
+    private volatile long dfltTimeout;
     /** Default auto-adjust enable/disable. */
-    private volatile boolean dfltEnabled = false;
+    private volatile boolean dfltEnabled;
     /** */
     private final GridKernalContext ctx;
     /** */
     private final IgniteLogger log;
 
     /** Value of manual baseline control or auto adjusting baseline. */
-    private volatile DistributedBooleanProperty baselineAutoAdjustEnabled =
+    private final DistributedBooleanProperty baselineAutoAdjustEnabled =
         detachedBooleanProperty("baselineAutoAdjustEnabled");
     /**
      * Value of time which we would wait before the actual topology change since last discovery event(node join/exit).
      */
-    private volatile DistributedLongProperty baselineAutoAdjustTimeout =
+    private final DistributedLongProperty baselineAutoAdjustTimeout =
         detachedLongProperty("baselineAutoAdjustTimeout");
 
     /**
@@ -81,13 +80,14 @@ public class DistributedBaselineConfiguration {
         IgniteLogger log) {
         this.ctx = ctx;
         this.log = log;
+
+        boolean persistenceEnabled = ctx.config() != null && CU.isPersistenceEnabled(ctx.config());
+
+        dfltTimeout = persistenceEnabled ? DEFAULT_PERSISTENCE_TIMEOUT : DEFAULT_IN_MEMORY_TIMEOUT;
+        dfltEnabled = getBoolean(IGNITE_BASELINE_AUTO_ADJUST_ENABLED, !persistenceEnabled);
+
         isp.registerDistributedConfigurationListener(
             dispatcher -> {
-                boolean persistenceEnabled = ctx.config() != null && CU.isPersistenceEnabled(ctx.config());
-
-                dfltTimeout = persistenceEnabled ? DEFAULT_PERSISTENCE_TIMEOUT : DEFAULT_IN_MEMORY_TIMEOUT;
-                dfltEnabled = !persistenceEnabled;
-
                 baselineAutoAdjustEnabled.addListener(makeUpdateListener(dfltEnabled));
                 baselineAutoAdjustTimeout.addListener(makeUpdateListener(dfltTimeout));
 

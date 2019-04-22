@@ -1,13 +1,12 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * 
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ * 
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -65,7 +64,7 @@ public class CrossOverTask extends ComputeTaskAdapter<List<Long>, Boolean> {
      * @param chromosomeKeys Primary keys for respective chromosomes
      * @return A map of nodes to jobs.
      */
-    public Map map(List<ClusterNode> nodes, List<Long> chromosomeKeys) throws IgniteException {
+    @Override public Map map(List<ClusterNode> nodes, List<Long> chromosomeKeys) throws IgniteException {
 
         Map<ComputeJob, ClusterNode> map = new HashMap<>();
 
@@ -86,7 +85,7 @@ public class CrossOverTask extends ComputeTaskAdapter<List<Long>, Boolean> {
      * @param list ComputeJobResult
      * @return Boolean value; if operationa was successful return true, otherwise Exception
      */
-    public Boolean reduce(List<ComputeJobResult> list) throws IgniteException {
+    @Override public Boolean reduce(List<ComputeJobResult> list) throws IgniteException {
         // TODO Auto-generated method stub
         return Boolean.TRUE;
     }
@@ -96,7 +95,7 @@ public class CrossOverTask extends ComputeTaskAdapter<List<Long>, Boolean> {
      * @param rcvd List of ComputeJobResult
      * @return ComputeJobResultPolicy
      */
-    public ComputeJobResultPolicy result(ComputeJobResult res, List<ComputeJobResult> rcvd) {
+    @Override public ComputeJobResultPolicy result(ComputeJobResult res, List<ComputeJobResult> rcvd) {
         IgniteException err = res.getException();
 
         if (err != null)
@@ -108,12 +107,12 @@ public class CrossOverTask extends ComputeTaskAdapter<List<Long>, Boolean> {
     }
 
     /**
-     * Helper method to help assign ComputeJobs to respective ClusterNodes
+     * Helper method to help assign ComputeJobs to respective ClusterNodes.
      *
-     * @param clusterNode
-     * @param keys Primary keys of Chromosomes
-     * @param map Nodes where jobs will be sent
-     * @return A map of ComputeJob/ClusterNode's
+     * @param clusterNode Cluster node.
+     * @param keys Primary keys of Chromosomes.
+     * @param map Nodes where jobs will be sent.
+     * @return A map of ComputeJob/ClusterNode's.
      */
     private Map<ComputeJob, ClusterNode> setupCrossOver(ClusterNode clusterNode, List<Long> keys,
         Map<ComputeJob, ClusterNode> map) {

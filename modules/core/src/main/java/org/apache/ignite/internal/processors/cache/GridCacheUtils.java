@@ -1,13 +1,12 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * 
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ * 
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -99,6 +98,7 @@ import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteReducer;
 import org.apache.ignite.lifecycle.LifecycleAware;
+import org.apache.ignite.marshaller.jdk.JdkMarshaller;
 import org.apache.ignite.plugin.CachePluginConfiguration;
 import org.apache.ignite.plugin.security.SecurityException;
 import org.apache.ignite.spi.encryption.EncryptionSpi;
@@ -1855,6 +1855,36 @@ public class GridCacheUtils {
     private static boolean isIgfsCacheInSystemRegion(CacheConfiguration ccfg) {
         return IgfsUtils.matchIgfsCacheName(ccfg.getName()) &&
             (SYSTEM_DATA_REGION_NAME.equals(ccfg.getDataRegionName()) || ccfg.getDataRegionName() == null);
+    }
+
+    /**
+     * @param nodes Nodes to check.
+     * @param cfg Config to class loader.
+     * @return {@code true} if cluster has only in-memory nodes.
+     */
+    public static boolean isInMemoryCluster(Collection<ClusterNode> nodes, IgniteConfiguration cfg) {
+        return nodes.stream().allMatch(serNode -> !CU.isPersistenceEnabled(extractDataStorage(serNode, cfg)));
+    }
+
+    /**
+     * Extract and unmarshal data storage configuration from given node.
+     *
+     * @param node Source of data storage configuration.
+     * @return Data storage configuration for given node.
+     */
+    private static DataStorageConfiguration extractDataStorage(ClusterNode node, IgniteConfiguration cfg) {
+        Object dsCfgBytes = node.attribute(IgniteNodeAttributes.ATTR_DATA_STORAGE_CONFIG);
+
+        if (dsCfgBytes instanceof byte[]) {
+            try {
+                return new JdkMarshaller().unmarshal((byte[])dsCfgBytes, U.resolveClassLoader(cfg));
+            }
+            catch (IgniteCheckedException e) {
+                throw new IgniteException(e);
+            }
+        }
+
+        return null;
     }
 
     /**

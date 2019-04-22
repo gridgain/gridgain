@@ -1,13 +1,12 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * 
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ * 
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -88,6 +87,9 @@ public class VisorTxInfo extends VisorDataTransferObject {
     /** */
     private AffinityTopologyVersion topVer;
 
+    /** Tx verbose info. */
+    private TxVerboseInfo txVerboseInfo;
+
     /**
      * Default constructor.
      */
@@ -106,10 +108,12 @@ public class VisorTxInfo extends VisorDataTransferObject {
      * @param primaryNodes Primary nodes.
      * @param state State.
      * @param size Size.
+     * @param info Verbose TX info.
      */
     public VisorTxInfo(IgniteUuid xid, long startTime, long duration, TransactionIsolation isolation,
         TransactionConcurrency concurrency, long timeout, String lb, Collection<UUID> primaryNodes,
-        TransactionState state, int size, IgniteUuid nearXid, Collection<UUID> masterNodeIds, AffinityTopologyVersion topVer) {
+        TransactionState state, int size, IgniteUuid nearXid, Collection<UUID> masterNodeIds,
+        AffinityTopologyVersion topVer, TxVerboseInfo info) {
         this.xid = xid;
         this.startTime = startTime;
         this.duration = duration;
@@ -123,11 +127,23 @@ public class VisorTxInfo extends VisorDataTransferObject {
         this.nearXid = nearXid;
         this.masterNodeIds = masterNodeIds;
         this.topVer = topVer;
+        txVerboseInfo = info;
+    }
+
+    /**
+     * Constructor for historical mode.
+     * Used to encapsulate information about tx commit/rollback from completed versions history map.
+     *
+     * @param xid Xid.
+     * @param state State.
+     */
+    public VisorTxInfo(IgniteUuid xid, TransactionState state) {
+        this(xid, 0L, 0L, null, null, 0L, null, null, state, 0, null, null, null, null);
     }
 
     /** {@inheritDoc} */
     @Override public byte getProtocolVersion() {
-        return V3;
+        return V4;
     }
 
     /** */
@@ -191,13 +207,20 @@ public class VisorTxInfo extends VisorDataTransferObject {
     }
 
     /** */
-    @Nullable public IgniteUuid getNearXid() {
+    public @Nullable IgniteUuid getNearXid() {
         return nearXid;
     }
 
     /** */
-    @Nullable public Collection<UUID> getMasterNodeIds() {
+    public @Nullable Collection<UUID> getMasterNodeIds() {
         return masterNodeIds;
+    }
+
+    /**
+     * @return Tx verbose info.
+     */
+    public TxVerboseInfo getTxVerboseInfo() {
+        return txVerboseInfo;
     }
 
     /** {@inheritDoc} */
@@ -216,10 +239,14 @@ public class VisorTxInfo extends VisorDataTransferObject {
         out.writeLong(startTime);
         out.writeLong(topVer == null ? -1 : topVer.topologyVersion());
         out.writeInt(topVer == null ? -1 : topVer.minorTopologyVersion());
+        out.writeObject(txVerboseInfo);
     }
 
     /** {@inheritDoc} */
-    @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
+    @Override protected void readExternalData(
+        byte protoVer,
+        ObjectInput in
+    ) throws IOException, ClassNotFoundException {
         xid = U.readGridUuid(in);
         duration = in.readLong();
         isolation = TransactionIsolation.fromOrdinal(in.readByte());
@@ -241,6 +268,8 @@ public class VisorTxInfo extends VisorDataTransferObject {
             if (topVer != -1)
                 this.topVer = new AffinityTopologyVersion(topVer, minorTopVer);
         }
+        if (protoVer >= V4)
+            txVerboseInfo = (TxVerboseInfo)in.readObject();
     }
 
     /**

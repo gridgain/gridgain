@@ -1,13 +1,12 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * 
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ * 
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -124,32 +123,13 @@ namespace ignite
     namespace binary
     {
         template<>
-        struct BinaryType< RangeFilter<int32_t, std::string> >
+        struct BinaryType< RangeFilter<int32_t, std::string> > :
+            BinaryTypeDefaultAll< RangeFilter<int32_t, std::string> >
         {
-            static int32_t GetTypeId()
-            {
-                return GetBinaryStringHashCode("RangeFilter<int32_t,std::string>");
-            }
-
             static void GetTypeName(std::string& dst)
             {
                 dst = "RangeFilter<int32_t,std::string>";
 
-            }
-
-            static int32_t GetFieldId(const char* name)
-            {
-                return GetBinaryStringHashCode(name);
-            }
-
-            static bool IsNull(const RangeFilter<int32_t, std::string>&)
-            {
-                return false;
-            }
-
-            static void GetNull(RangeFilter<int32_t, std::string>& dst)
-            {
-                dst = RangeFilter<int32_t, std::string>();
             }
 
             static void Write(BinaryWriter& writer, const RangeFilter<int32_t, std::string>& obj)
@@ -215,7 +195,7 @@ int main()
         continuous::ContinuousQuery<int32_t, std::string> qry(MakeReference(listener), MakeReference(filter));
 
         {
-            // Continous query scope. Query is closed when scope is left.
+            // Continuous query scope. Query is closed when scope is left.
             continuous::ContinuousQueryHandle<int32_t, std::string> handle = cache.QueryContinuous(qry);
 
             // Add a few more keys and watch more query notifications.

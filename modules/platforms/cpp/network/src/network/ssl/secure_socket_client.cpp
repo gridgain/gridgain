@@ -1,13 +1,12 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * 
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ * 
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -71,7 +70,7 @@ namespace ignite
 
             SecureSocketClient::~SecureSocketClient()
             {
-                CloseInteral();
+                CloseInternal();
 
                 if (context)
                     SslGateway::GetInstance().SSL_CTX_free_(reinterpret_cast<SSL_CTX*>(context));
@@ -82,6 +81,8 @@ namespace ignite
                 SslGateway &sslGateway = SslGateway::GetInstance();
 
                 assert(sslGateway.Loaded());
+
+                CloseInternal();
 
                 if (!context)
                 {
@@ -95,7 +96,7 @@ namespace ignite
 
                 assert(ssl != 0);
 
-                common::MethodGuard<SecureSocketClient> guard(this, &SecureSocketClient::CloseInteral);
+                common::MethodGuard<SecureSocketClient> guard(this, &SecureSocketClient::CloseInternal);
 
                 SSL* ssl0 = reinterpret_cast<SSL*>(ssl);
 
@@ -131,7 +132,7 @@ namespace ignite
 
             void SecureSocketClient::Close()
             {
-                CloseInteral();
+                CloseInternal();
             }
 
             int SecureSocketClient::Send(const int8_t* data, size_t size, int32_t)
@@ -340,7 +341,7 @@ namespace ignite
                 }
             }
 
-            void SecureSocketClient::CloseInteral()
+            void SecureSocketClient::CloseInternal()
             {
                 SslGateway &sslGateway = SslGateway::GetInstance();
 

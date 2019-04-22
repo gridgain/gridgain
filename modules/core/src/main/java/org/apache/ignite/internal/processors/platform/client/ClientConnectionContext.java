@@ -1,13 +1,12 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * 
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ * 
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,9 +16,11 @@
 
 package org.apache.ignite.internal.processors.platform.client;
 
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
 import org.apache.ignite.internal.processors.odbc.ClientListenerAbstractConnectionContext;
 import org.apache.ignite.internal.processors.odbc.ClientListenerMessageParser;
@@ -44,11 +45,11 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
     /** Version 1.2.0. */
     public static final ClientListenerProtocolVersion VER_1_2_0 = ClientListenerProtocolVersion.create(1, 2, 0);
 
-    /** Version 1.3.0. */
+    /** Version 1.3.0. Added: Affinity Awareness support, IEP-23. */
     public static final ClientListenerProtocolVersion VER_1_3_0 = ClientListenerProtocolVersion.create(1, 3, 0);
 
-    /** Version 1.2.0. */
-    public static final ClientListenerProtocolVersion CURRENT_VER = VER_1_3_0;
+    /** Default version. */
+    public static final ClientListenerProtocolVersion DEFAULT_VER = VER_1_3_0;
 
     /** Supported versions. */
     private static final Collection<ClientListenerProtocolVersion> SUPPORTED_VERS = Arrays.asList(
@@ -69,6 +70,12 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
 
     /** Max cursors. */
     private final int maxCursors;
+
+    /** Current protocol version. */
+    private ClientListenerProtocolVersion currentVer;
+
+    /** Last reported affinity topology version. */
+    private AtomicReference<AffinityTopologyVersion> lastAffinityTopologyVersion = new AtomicReference<>();
 
     /** Cursor counter. */
     private final AtomicLong curCnt = new AtomicLong();
@@ -101,8 +108,15 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
     }
 
     /** {@inheritDoc} */
-    @Override public ClientListenerProtocolVersion currentVersion() {
-        return CURRENT_VER;
+    @Override public ClientListenerProtocolVersion defaultVersion() {
+        return DEFAULT_VER;
+    }
+
+    /**
+     * @return Currently used protocol version.
+     */
+    public ClientListenerProtocolVersion currentVersion() {
+        return currentVer;
     }
 
     /** {@inheritDoc} */
@@ -129,9 +143,11 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
 
         AuthorizationContext authCtx = authenticate(user, pwd);
 
-        handler = new ClientRequestHandler(this, authCtx);
+        currentVer = ver;
 
-        parser = new ClientMessageParser(kernalContext(), ver);
+        handler = new ClientRequestHandler(this, authCtx, ver);
+
+        parser = new ClientMessageParser(this, ver);
     }
 
     /** {@inheritDoc} */
@@ -172,5 +188,27 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
      */
     public void decrementCursors() {
         curCnt.decrementAndGet();
+    }
+
+    /**
+     * Atomically check whether affinity topology version has changed since the last call and sets new version as a last.
+     * @return New version, if it has changed since the last call.
+     */
+    public ClientAffinityTopologyVersion checkAffinityTopologyVersion() {
+        while (true) {
+            AffinityTopologyVersion oldVer = lastAffinityTopologyVersion.get();
+            AffinityTopologyVersion newVer = ctx.cache().context().exchange().readyAffinityVersion();
+
+            boolean changed = oldVer == null || oldVer.compareTo(newVer) < 0;
+
+            if (changed) {
+                boolean success = lastAffinityTopologyVersion.compareAndSet(oldVer, newVer);
+
+                if (!success)
+                    continue;
+            }
+
+            return new ClientAffinityTopologyVersion(newVer, changed);
+        }
     }
 }

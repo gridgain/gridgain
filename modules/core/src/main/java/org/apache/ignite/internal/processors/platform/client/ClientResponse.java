@@ -1,13 +1,12 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * 
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ * 
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,7 +17,10 @@
 package org.apache.ignite.internal.processors.platform.client;
 
 import org.apache.ignite.internal.binary.BinaryRawWriterEx;
+import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 import org.apache.ignite.internal.processors.odbc.ClientListenerResponse;
+
+import static org.apache.ignite.internal.processors.platform.client.ClientConnectionContext.VER_1_3_0;
 
 /**
  * Thin client response.
@@ -64,15 +66,48 @@ public class ClientResponse extends ClientListenerResponse {
     }
 
     /**
-     * Encodes the response data.
+     * Encodes the response data. Used when response result depends on the specific affinity version.
+     * @param ctx Connection context.
+     * @param writer Writer.
+     * @param affinityVer Affinity version.
      */
-    public void encode(BinaryRawWriterEx writer) {
+    public void encode(ClientConnectionContext ctx, BinaryRawWriterEx writer,
+        ClientAffinityTopologyVersion affinityVer) {
         writer.writeLong(reqId);
+
+        ClientListenerProtocolVersion ver = ctx.currentVersion();
+
+        assert ver != null;
+
+        if (ver.compareTo(VER_1_3_0) >= 0) {
+            boolean error = status() != ClientStatus.SUCCESS;
+
+            short flags = ClientFlag.makeFlags(error, affinityVer.isChanged());
+
+            writer.writeShort(flags);
+
+            if (affinityVer.isChanged())
+                affinityVer.write(writer);
+
+            // If no return flag is set, no additional data is written to a payload.
+            if (!error)
+                return;
+        }
+
         writer.writeInt(status());
 
         if (status() != ClientStatus.SUCCESS) {
             writer.writeString(error());
         }
+    }
+
+    /**
+     * Encodes the response data.
+     * @param ctx Connection context.
+     * @param writer Writer.
+     */
+    public void encode(ClientConnectionContext ctx, BinaryRawWriterEx writer) {
+        encode(ctx, writer, ctx.checkAffinityTopologyVersion());
     }
 
     /**

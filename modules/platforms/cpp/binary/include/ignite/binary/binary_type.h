@@ -1,13 +1,12 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * 
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ * 
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -147,6 +146,72 @@ namespace ignite
          */
         template<typename T>
         struct IGNITE_IMPORT_EXPORT BinaryType { };
+
+        /**
+         * Default implementations of BinaryType hashing functions.
+         */
+        template<typename T>
+        struct IGNITE_IMPORT_EXPORT BinaryTypeDefaultHashing
+        {
+            /**
+             * Get binary object type ID.
+             *
+             * @return Type ID.
+             */
+            static int32_t GetTypeId()
+            {
+                std::string typeName;
+                BinaryType<T>::GetTypeName(typeName);
+
+                return GetBinaryStringHashCode(typeName.c_str());
+            }
+
+            /**
+             * Get binary object field ID.
+             *
+             * @param name Field name.
+             * @return Field ID.
+             */
+            static int32_t GetFieldId(const char* name)
+            {
+                return GetBinaryStringHashCode(name);
+            }
+        };
+
+        /**
+         * Default implementations of BinaryType methods for non-null type.
+         */
+        template<typename T>
+        struct IGNITE_IMPORT_EXPORT BinaryTypeNonNullableType
+        {
+            /**
+             * Check whether passed binary object should be interpreted as NULL.
+             *
+             * @return True if binary object should be interpreted as NULL.
+             */
+            static bool IsNull(const T&)
+            {
+                return false;
+            }
+
+            /**
+             * Get NULL value for the given binary type.
+             *
+             * @param dst Null value for the type.
+             */
+            static void GetNull(T& dst)
+            {
+                dst = T();
+            }
+        };
+
+        /**
+         * Default implementations of BinaryType hashing functions and non-null type behaviour.
+         */
+        template<typename T>
+        struct IGNITE_IMPORT_EXPORT BinaryTypeDefaultAll :
+            BinaryTypeDefaultHashing<T>,
+            BinaryTypeNonNullableType<T> { };
 
         /**
          * Templated binary type specification for pointers.

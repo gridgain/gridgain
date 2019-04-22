@@ -1,13 +1,12 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * 
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ * 
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,6 +18,7 @@ package org.apache.ignite.internal.processors.query.h2;
 
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
+import org.apache.ignite.internal.sql.optimizer.affinity.PartitionResult;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -44,6 +44,9 @@ public final class UpdateResult {
     /** Keys that failed to be updated or deleted due to concurrent modification of values. */
     private final Object[] errKeys;
 
+    /** Partition result. */
+    private final PartitionResult partRes;
+
     /**
      * Constructor.
      *
@@ -53,13 +56,27 @@ public final class UpdateResult {
     public UpdateResult(long cnt, Object[] errKeys) {
         this.cnt = cnt;
         this.errKeys = U.firstNotNull(errKeys, X.EMPTY_OBJECT_ARRAY);
+        partRes = null;
+    }
+
+    /**
+     * Constructor.
+     *
+     * @param cnt Updated rows count.
+     * @param errKeys Array of erroneous keys.
+     * @param partRes Partition result.
+     */
+    public UpdateResult(long cnt, Object[] errKeys, PartitionResult partRes) {
+        this.cnt = cnt;
+        this.errKeys = U.firstNotNull(errKeys, X.EMPTY_OBJECT_ARRAY);
+        this.partRes = partRes;
     }
 
     /**
      * @return Update counter.
      */
     public long counter() {
-       return cnt;
+        return cnt;
     }
 
     /**
@@ -81,5 +98,12 @@ public final class UpdateResult {
 
             throw new IgniteSQLException(conEx);
         }
+    }
+
+    /**
+     * @return Partition result.
+     */
+    public PartitionResult partitionResult() {
+        return partRes;
     }
 }

@@ -1,13 +1,12 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * 
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ * 
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -27,7 +26,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 public class PartitionParameterNode extends PartitionSingleNode {
     /** Indexing. */
     @GridToStringExclude
-    private final PartitionResolver partResolver;
+    private final PartitionResolver partRslvr;
 
     /** Index. */
     private final int idx;
@@ -35,26 +34,26 @@ public class PartitionParameterNode extends PartitionSingleNode {
     /** Parameter data type. */
     private final int type;
 
-    /** Mapped parameter type. */
-    private final PartitionParameterType mappedType;
+    /** Client parameter type. */
+    private final PartitionParameterType clientType;
 
     /**
      * Constructor.
      *
      * @param tbl Table descriptor.
-     * @param partResolver Partition resolver.
+     * @param partRslvr Partition resolver.
      * @param idx Parameter index.
      * @param type Parameter data type.
-     * @param mappedType Mapped parameter type to be used by thin clients.
+     * @param clientType Mapped parameter type to be used by thin clients.
      */
-    public PartitionParameterNode(PartitionTable tbl, PartitionResolver partResolver, int idx, int type,
-        PartitionParameterType mappedType) {
+    public PartitionParameterNode(PartitionTable tbl, PartitionResolver partRslvr, int idx, int type,
+        PartitionParameterType clientType) {
         super(tbl);
 
-        this.partResolver = partResolver;
+        this.partRslvr = partRslvr;
         this.idx = idx;
         this.type = type;
-        this.mappedType = mappedType;
+        this.clientType = clientType;
     }
 
     /** {@inheritDoc} */
@@ -65,11 +64,11 @@ public class PartitionParameterNode extends PartitionSingleNode {
         Object arg = args[idx];
 
         if (cliCtx != null)
-            return cliCtx.partition(arg, mappedType, tbl.cacheName());
+            return cliCtx.partition(arg, clientType);
         else {
-            assert partResolver != null;
+            assert partRslvr != null;
 
-            return partResolver.partition(
+            return partRslvr.partition(
                 arg,
                 type,
                 tbl.cacheName()
@@ -85,6 +84,20 @@ public class PartitionParameterNode extends PartitionSingleNode {
     /** {@inheritDoc} */
     @Override public int value() {
         return idx;
+    }
+
+    /**
+     * @return Parameter data type.
+     */
+    public int type() {
+        return type;
+    }
+
+    /**
+     * @return Client parameter type.
+     */
+    public PartitionParameterType clientType() {
+        return clientType;
     }
 
     /** {@inheritDoc} */

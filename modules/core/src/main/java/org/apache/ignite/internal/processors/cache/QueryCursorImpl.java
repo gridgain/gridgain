@@ -1,13 +1,12 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * 
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ * 
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -30,6 +29,7 @@ import org.apache.ignite.cache.query.QueryCancelledException;
 import org.apache.ignite.internal.processors.cache.query.QueryCursorEx;
 import org.apache.ignite.internal.processors.query.GridQueryCancel;
 import org.apache.ignite.internal.processors.query.GridQueryFieldMetadata;
+import org.apache.ignite.internal.sql.optimizer.affinity.PartitionResult;
 
 import static org.apache.ignite.internal.processors.cache.QueryCursorImpl.State.CLOSED;
 import static org.apache.ignite.internal.processors.cache.QueryCursorImpl.State.EXECUTION;
@@ -61,6 +61,9 @@ public class QueryCursorImpl<T> implements QueryCursorEx<T>, FieldsQueryCursor<T
 
     /** */
     private final GridQueryCancel cancel;
+
+    /** Partition result. */
+    private PartitionResult partRes;
 
     /**
      * @param iterExec Query executor.
@@ -145,7 +148,7 @@ public class QueryCursorImpl<T> implements QueryCursorEx<T>, FieldsQueryCursor<T
 
     /** {@inheritDoc} */
     @Override public void close() {
-        while(state != CLOSED) {
+        while (state != CLOSED) {
             if (STATE_UPDATER.compareAndSet(this, RESULT_READY, CLOSED)) {
                 closeIter();
 
@@ -222,5 +225,19 @@ public class QueryCursorImpl<T> implements QueryCursorEx<T>, FieldsQueryCursor<T
         /** Executing. */EXECUTION,
         /** Result ready. */RESULT_READY,
         /** Closed. */CLOSED,
+    }
+
+    /**
+     * @return Partition result.
+     */
+    public PartitionResult partitionResult() {
+        return partRes;
+    }
+
+    /**
+     * @param partRes New partition result.
+     */
+    public void partitionResult(PartitionResult partRes) {
+        this.partRes = partRes;
     }
 }

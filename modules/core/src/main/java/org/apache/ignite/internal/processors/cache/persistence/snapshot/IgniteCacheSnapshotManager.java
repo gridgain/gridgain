@@ -1,13 +1,12 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * 
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ * 
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.snapshot;
 
-import java.nio.ByteBuffer;
 import java.util.UUID;
 
 import org.apache.ignite.IgniteCheckedException;
@@ -48,13 +46,13 @@ public class IgniteCacheSnapshotManager<T extends SnapshotOperation> extends Gri
     /**
      * Try to start local snapshot operation if it's required by discovery event.
      *
-     * @param discoveryEvent Discovery event.
+     * @param discoveryEvt Discovery event.
      * @param topVer topology version on the moment when this method was called
      *
      * @throws IgniteCheckedException if failed
      */
     @Nullable public IgniteInternalFuture tryStartLocalSnapshotOperation(
-            @Nullable DiscoveryEvent discoveryEvent, AffinityTopologyVersion topVer
+            @Nullable DiscoveryEvent discoveryEvt, AffinityTopologyVersion topVer
     ) throws IgniteCheckedException {
         return null;
     }
@@ -120,20 +118,6 @@ public class IgniteCacheSnapshotManager<T extends SnapshotOperation> extends Gri
     }
 
     /**
-     * @param fullId Full page id.
-     * @param tmpWriteBuf buffer
-     * @param writtenPages Overall pages written, negative value means there is no progress tracked
-     * @param totalPages Overall pages count to be written, should be positive
-     */
-    public void onPageWrite(
-        final FullPageId fullId,
-        final ByteBuffer tmpWriteBuf,
-        final int writtenPages,
-        final int totalPages) {
-        // No-op.
-    }
-
-    /**
      * @param cctx Cctx.
      * @param destroy Destroy flag.
      */
@@ -156,17 +140,6 @@ public class IgniteCacheSnapshotManager<T extends SnapshotOperation> extends Gri
         Long page,
         FullPageId fullId,
         PageMemory pageMem
-    ) throws IgniteCheckedException {
-        // No-op.
-    }
-
-    /**
-     *
-     */
-    public void flushDirtyPageHandler(
-        FullPageId fullId,
-        ByteBuffer pageBuf,
-        Integer tag
     ) throws IgniteCheckedException {
         // No-op.
     }

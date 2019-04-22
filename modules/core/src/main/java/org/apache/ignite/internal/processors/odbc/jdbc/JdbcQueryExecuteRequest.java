@@ -1,13 +1,12 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * 
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ * 
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -29,6 +28,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext.VER_2_7_0;
+import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext.VER_2_8_0;
 
 /**
  * JDBC query execute request.
@@ -56,6 +56,9 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
 
     /** Client auto commit flag state. */
     private boolean autoCommit;
+
+    /** Flag, that signals, that query expects partition response in response. */
+    private boolean partResReq;
 
     /**
      */
@@ -157,6 +160,9 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
             writer.writeBoolean(autoCommit);
 
         writer.writeByte((byte)stmtType.ordinal());
+
+        if (ver.compareTo(VER_2_8_0) >= 0)
+            writer.writeBoolean(partResReq);
     }
 
     /** {@inheritDoc} */
@@ -188,6 +194,23 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
         catch (IOException e) {
             throw new BinaryObjectException(e);
         }
+
+        if (ver.compareTo(VER_2_8_0) >= 0)
+            partResReq = reader.readBoolean();
+    }
+
+    /**
+     * @return Partition response request.
+     */
+    public boolean partitionResponseRequest() {
+        return partResReq;
+    }
+
+    /**
+     * @param partResReq New partition response request.
+     */
+    public void partitionResponseRequest(boolean partResReq) {
+        this.partResReq = partResReq;
     }
 
     /** {@inheritDoc} */

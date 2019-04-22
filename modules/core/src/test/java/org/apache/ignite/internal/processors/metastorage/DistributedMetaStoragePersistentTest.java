@@ -1,13 +1,12 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * 
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ * 
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -264,73 +263,6 @@ public class DistributedMetaStoragePersistentTest extends DistributedMetaStorage
         }
 
         assertEquals("globalValue", distributedMetastorage.read("key"));
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testUnstableTopology() throws Exception {
-        int cnt = 8;
-
-        startGridsMultiThreaded(cnt);
-
-        grid(0).cluster().active(true);
-
-        stopGrid(0);
-
-        startGrid(0);
-
-        AtomicInteger gridIdxCntr = new AtomicInteger(0);
-
-        AtomicBoolean stop = new AtomicBoolean();
-
-        IgniteInternalFuture<?> fut = multithreadedAsync(() -> {
-            int gridIdx = gridIdxCntr.incrementAndGet();
-
-            try {
-                while (!stop.get()) {
-                    stopGrid(gridIdx, true);
-
-                    Thread.sleep(100L);
-
-                    startGrid(gridIdx);
-
-                    Thread.sleep(100L);
-                }
-            }
-            catch (Exception e) {
-                log.error(e.getMessage(), e);
-            }
-        }, cnt - 1);
-
-        long start = System.currentTimeMillis();
-
-        long duration = GridTestUtils.SF.applyLB(15_000, 5_000);
-
-        try {
-            for (int i = 0; System.currentTimeMillis() < start + duration; i++) {
-                metastorage(0).write(
-                    "key" + i, Integer.toString(ThreadLocalRandom.current().nextInt(1000))
-                );
-            }
-        }
-        finally {
-            stop.set(true);
-
-            fut.get();
-        }
-
-        awaitPartitionMapExchange();
-
-        for (int i = 0; i < cnt; i++) {
-            DistributedMetaStorage distributedMetastorage = metastorage(i);
-
-            assertNull(U.field(distributedMetastorage, "startupExtras"));
-        }
-
-        for (int i = 1; i < cnt; i++)
-            assertDistributedMetastoragesAreEqual(grid(0), grid(i));
     }
 
     /**

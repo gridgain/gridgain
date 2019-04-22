@@ -1,13 +1,12 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * 
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ * 
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -64,6 +63,9 @@ public class VisorTxTaskArg extends VisorDataTransferObject {
     /** */
     @Nullable private VisorTxSortOrder sortOrder;
 
+    /** Near XID version of transaction to display in verbose mode. */
+    @Nullable private TxVerboseId txInfoArg;
+
     /**
      * Default constructor.
      */
@@ -81,10 +83,13 @@ public class VisorTxTaskArg extends VisorDataTransferObject {
      * @param xid Xid.
      * @param lbRegex Label regex.
      * @param sortOrder Sort order.
+     * @param txInfoArg TX info arg.
      */
-    public VisorTxTaskArg(VisorTxOperation op, @Nullable Integer limit, @Nullable Long minDuration, @Nullable Integer minSize,
+    public VisorTxTaskArg(VisorTxOperation op, @Nullable Integer limit, @Nullable Long minDuration,
+        @Nullable Integer minSize,
         @Nullable TransactionState state, @Nullable VisorTxProjection proj, @Nullable List<String> consistentIds,
-        @Nullable String xid, @Nullable String lbRegex, @Nullable VisorTxSortOrder sortOrder) {
+        @Nullable String xid, @Nullable String lbRegex, @Nullable VisorTxSortOrder sortOrder,
+        @Nullable TxVerboseId txInfoArg) {
         this.op = op;
         this.limit = limit;
         this.minDuration = minDuration;
@@ -95,6 +100,7 @@ public class VisorTxTaskArg extends VisorDataTransferObject {
         this.lbRegex = lbRegex;
         this.xid = xid;
         this.sortOrder = sortOrder;
+        this.txInfoArg = txInfoArg;
     }
 
     /** */
@@ -147,6 +153,32 @@ public class VisorTxTaskArg extends VisorDataTransferObject {
         return sortOrder;
     }
 
+    /**
+     * @return Near XID version of transaction to display in verbose mode.
+     */
+    public @Nullable TxVerboseId txInfoArgument() {
+        return txInfoArg;
+    }
+
+    /**
+     * @return <code>true</code> if {@link VisorTxTask} is being used in verbose --tx --info mode.
+     */
+    public boolean verboseMode() {
+        return txInfoArg != null;
+    }
+
+    /**
+     * @param txInfoArg New near XID version of transaction to display in verbose mode.
+     */
+    public void txInfoArgument(@Nullable TxVerboseId txInfoArg) {
+        this.txInfoArg = txInfoArg;
+    }
+
+    /** {@inheritDoc} */
+    @Override public byte getProtocolVersion() {
+        return V2;
+    }
+
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         U.writeEnum(out, op);
@@ -159,10 +191,14 @@ public class VisorTxTaskArg extends VisorDataTransferObject {
         out.writeUTF(lbRegex == null ? "" : lbRegex);
         out.writeUTF(xid == null ? "" : xid);
         U.writeEnum(out, sortOrder);
+        out.writeObject(txInfoArg);
     }
 
     /** {@inheritDoc} */
-    @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
+    @Override protected void readExternalData(
+        byte protoVer,
+        ObjectInput in
+    ) throws IOException, ClassNotFoundException {
         op = VisorTxOperation.fromOrdinal(in.readByte());
         limit = fixNull(in.readInt());
         minDuration = fixNull(in.readLong());
@@ -173,6 +209,9 @@ public class VisorTxTaskArg extends VisorDataTransferObject {
         lbRegex = fixNull(in.readUTF());
         xid = fixNull(in.readUTF());
         sortOrder = VisorTxSortOrder.fromOrdinal(in.readByte());
+
+        if (protoVer >= V2)
+            txInfoArg = (TxVerboseId)in.readObject();
     }
 
     /**

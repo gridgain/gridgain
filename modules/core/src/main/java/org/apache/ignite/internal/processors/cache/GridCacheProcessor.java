@@ -1,13 +1,12 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * 
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ * 
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -53,6 +52,7 @@ import org.apache.ignite.cache.affinity.AffinityFunctionContext;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.store.CacheStore;
 import org.apache.ignite.cache.store.CacheStoreSessionListener;
+import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataPageEvictionMode;
@@ -204,6 +204,7 @@ import static org.apache.ignite.configuration.DeploymentMode.PRIVATE;
 import static org.apache.ignite.configuration.DeploymentMode.SHARED;
 import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType.CACHE_PROC;
 import static org.apache.ignite.internal.IgniteComponentType.JTA;
+import static org.apache.ignite.internal.IgniteFeatures.TRANSACTION_OWNER_THREAD_DUMP_PROVIDING;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_CONSISTENCY_CHECK_SKIPPED;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_TX_CONFIG;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isNearEnabled;
@@ -756,6 +757,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         }
 
         cctx.cleanup();
+
+        cachesInfo.cleanupRemovedCache(cctx.name());
     }
 
     /**
@@ -776,6 +779,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                 U.error(log, "Failed to unregister MBean for cache group: " + grp.name(), e);
             }
         }
+
+        cachesInfo.cleanupRemovedGroup(grp.groupId());
     }
 
     /**
@@ -5090,6 +5095,22 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     }
 
     /**
+     * Tries to find cache group descriptor either in registered cache groups
+     * or in marked for deletion collection if cache group is considered to be stopped.
+     *
+     * @param grpId Group id.
+     */
+    public CacheGroupDescriptor cacheGroupDescriptor(int grpId) {
+        CacheGroupDescriptor desc = cacheGroupDescriptors().get(grpId);
+
+        // Try to find descriptor if it was marked for deletion.
+        if (desc == null)
+            return cachesInfo.markedForDeletionCacheGroupDesc(grpId);
+
+        return desc;
+    }
+
+    /**
      * @param cacheId Cache ID.
      * @return Cache descriptor.
      */
@@ -5782,7 +5803,12 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @param allowed whether allowed
      */
     public void setTxOwnerDumpRequestsAllowed(boolean allowed) {
-        IgniteCompute compute = ctx.grid().compute(ctx.grid().cluster().forServers());
+        ClusterGroup grp = ctx.grid()
+            .cluster()
+            .forServers()
+            .forPredicate(node -> IgniteFeatures.nodeSupports(node, TRANSACTION_OWNER_THREAD_DUMP_PROVIDING));
+
+        IgniteCompute compute = ctx.grid().compute(grp);
 
         compute.broadcast(new TxOwnerDumpRequestAllowedSettingClosure(allowed));
     }

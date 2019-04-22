@@ -1,13 +1,12 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * 
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ * 
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -744,7 +743,8 @@ public class JdbcThinDatabaseMetadata implements DatabaseMetaData {
         if (!isValidCatalog(catalog) || !tblTypeMatch)
             return new JdbcThinResultSet(Collections.<List<Object>>emptyList(), meta);
 
-        JdbcMetaTablesResult res = conn.sendRequest(new JdbcMetaTablesRequest(schemaPtrn, tblNamePtrn));
+        JdbcMetaTablesResult res = conn.sendRequest(new JdbcMetaTablesRequest(schemaPtrn, tblNamePtrn)).
+            response();
 
         List<List<Object>> rows = new LinkedList<>();
 
@@ -808,7 +808,7 @@ public class JdbcThinDatabaseMetadata implements DatabaseMetaData {
         if (!isValidCatalog(catalog))
             return new JdbcThinResultSet(Collections.<List<Object>>emptyList(), meta);
 
-        JdbcMetaColumnsResult res = conn.sendRequest(new JdbcMetaColumnsRequest(schemaPtrn, tblNamePtrn, colNamePtrn));
+        JdbcMetaColumnsResult res = conn.sendRequest(new JdbcMetaColumnsRequest(schemaPtrn, tblNamePtrn, colNamePtrn)).response();
 
         List<List<Object>> rows = new LinkedList<>();
 
@@ -891,7 +891,8 @@ public class JdbcThinDatabaseMetadata implements DatabaseMetaData {
         if (!isValidCatalog(catalog))
             return new JdbcThinResultSet(Collections.<List<Object>>emptyList(), meta);
 
-        JdbcMetaPrimaryKeysResult res = conn.sendRequest(new JdbcMetaPrimaryKeysRequest(schema, tbl));
+        JdbcMetaPrimaryKeysResult res = conn.sendRequest(new JdbcMetaPrimaryKeysRequest(schema, tbl)).
+            response();
 
         List<List<Object>> rows = new LinkedList<>();
 
@@ -1095,7 +1096,7 @@ public class JdbcThinDatabaseMetadata implements DatabaseMetaData {
         if (!isValidCatalog(catalog))
             return new JdbcThinResultSet(Collections.<List<Object>>emptyList(), meta);
 
-        JdbcMetaIndexesResult res = conn.sendRequest(new JdbcMetaIndexesRequest(schema, tbl));
+        JdbcMetaIndexesResult res = conn.sendRequest(new JdbcMetaIndexesRequest(schema, tbl)).response();
 
         List<List<Object>> rows = new LinkedList<>();
 
@@ -1318,7 +1319,7 @@ public class JdbcThinDatabaseMetadata implements DatabaseMetaData {
         if (!isValidCatalog(catalog))
             return new JdbcThinResultSet(Collections.<List<Object>>emptyList(), meta);
 
-        JdbcMetaSchemasResult res = conn.sendRequest(new JdbcMetaSchemasRequest(schemaPtrn));
+        JdbcMetaSchemasResult res = conn.sendRequest(new JdbcMetaSchemasRequest(schemaPtrn)).response();
 
         List<List<Object>> rows = new LinkedList<>();
 

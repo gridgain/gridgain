@@ -1,13 +1,12 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * 
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ * 
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -472,6 +471,118 @@ namespace ignite
             };
 
             typedef LockGuard<CriticalSection> CsLockGuard;
+
+            /**
+             * Shared lock guard.
+             * Locks guard in shared mode.
+             */
+            template<typename T>
+            class SharedLockGuard
+            {
+            public:
+                /**
+                 * Constructor.
+                 *
+                 * @param lock Lockable object.
+                 */
+                SharedLockGuard(T& lock) :
+                    lock(&lock)
+                {
+                    lock.LockShared();
+                }
+
+                /**
+                 * Destructor.
+                 */
+                ~SharedLockGuard()
+                {
+                    if (lock)
+                        lock->ReleaseShared();
+                }
+
+                /**
+                 * Releases control over lock without unlocking it.
+                 */
+                void Forget()
+                {
+                    lock = 0;
+                }
+
+                /**
+                 * Releases control over lock and unlocks it as if it would
+                 * go out of scope.
+                 */
+                void Reset()
+                {
+                    if (lock)
+                    {
+                        lock->ReleaseShared();
+
+                        Forget();
+                    }
+                }
+
+            private:
+                T* lock;
+            };
+
+            typedef SharedLockGuard<ReadWriteLock> RwSharedLockGuard;
+
+            /**
+             * Exclusive lock guard.
+             * Locks guard in exclusive mode.
+             */
+            template<typename T>
+            class ExclusiveLockGuard
+            {
+            public:
+                /**
+                 * Constructor.
+                 *
+                 * @param lock Lockable object.
+                 */
+                ExclusiveLockGuard(T& lock) :
+                    lock(&lock)
+                {
+                    lock.LockExclusive();
+                }
+
+                /**
+                 * Destructor.
+                 */
+                ~ExclusiveLockGuard()
+                {
+                    if (lock)
+                        lock->ReleaseExclusive();
+                }
+
+                /**
+                 * Releases control over lock without unlocking it.
+                 */
+                void Forget()
+                {
+                    lock = 0;
+                }
+
+                /**
+                 * Releases control over lock and unlocks it as if it would
+                 * go out of scope.
+                 */
+                void Reset()
+                {
+                    if (lock)
+                    {
+                        lock->ReleaseExclusive();
+
+                        Forget();
+                    }
+                }
+
+            private:
+                T* lock;
+            };
+
+            typedef ExclusiveLockGuard<ReadWriteLock> RwExclusiveLockGuard;
         }
     }
 }

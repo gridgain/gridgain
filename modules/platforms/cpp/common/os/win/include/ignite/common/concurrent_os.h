@@ -1,13 +1,12 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * 
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ * 
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -30,16 +29,16 @@ namespace ignite
 {
     namespace common
     {
-        namespace concurrent 
+        namespace concurrent
         {
             /**
-             * Static class to manage memory visibility semantics. 
+             * Static class to manage memory visibility semantics.
              */
             class IGNITE_IMPORT_EXPORT Memory
             {
             public:
                 /**
-                 * Full fence. 
+                 * Full fence.
                  */
                 static void Fence();
             };
@@ -57,7 +56,7 @@ namespace ignite
                 CriticalSection();
 
                 /**
-                 * Destructor. 
+                 * Destructor.
                  */
                 ~CriticalSection();
 
@@ -75,6 +74,46 @@ namespace ignite
                 CRITICAL_SECTION hnd;
 
                 IGNITE_NO_COPY_ASSIGNMENT(CriticalSection)
+            };
+
+            class IGNITE_IMPORT_EXPORT ReadWriteLock
+            {
+            public:
+                /**
+                 * Constructor.
+                 */
+                ReadWriteLock();
+
+                /**
+                 * Destructor.
+                 */
+                ~ReadWriteLock();
+
+                /**
+                 * Lock in exclusive mode.
+                 */
+                void LockExclusive();
+
+                /**
+                 * Release in exclusive mode.
+                 */
+                void ReleaseExclusive();
+
+                /**
+                 * Lock in shared mode.
+                 */
+                void LockShared();
+
+                /**
+                 * Release in shared mode.
+                 */
+                void ReleaseShared();
+
+            private:
+                /** Lock. */
+                SRWLOCK lock;
+
+                IGNITE_NO_COPY_ASSIGNMENT(ReadWriteLock)
             };
 
             /**
@@ -134,7 +173,7 @@ namespace ignite
                  * @return Value which were observed during CAS attempt.
                  */
                 static int32_t CompareAndSet32Val(int32_t* ptr, int32_t expVal, int32_t newVal);
-                
+
                 /**
                  * Increment 32-bit integer and return new value.
                  *
@@ -170,7 +209,7 @@ namespace ignite
                  * @return Value which were observed during CAS attempt.
                  */
                 static int64_t CompareAndSet64Val(int64_t* ptr, int64_t expVal, int64_t newVal);
-                
+
                 /**
                  * Increment 64-bit integer and return new value.
                  *
@@ -219,7 +258,7 @@ namespace ignite
                 {
                     // No-op.
                 }
-                
+
                 ~ThreadLocalTypedEntry()
                 {
                     // No-op.
@@ -236,7 +275,7 @@ namespace ignite
                 }
             private:
                 /** Value. */
-                T val; 
+                T val;
             };
 
             /**
@@ -282,11 +321,11 @@ namespace ignite
 
                     if (winVal)
                     {
-                        std::map<int32_t, ThreadLocalEntry*>* map = 
+                        std::map<int32_t, ThreadLocalEntry*>* map =
                             static_cast<std::map<int32_t, ThreadLocalEntry*>*>(winVal);
 
                         ThreadLocalTypedEntry<T>* entry = static_cast<ThreadLocalTypedEntry<T>*>((*map)[idx]);
-                        
+
                         if (entry)
                             return entry->Get();
                     }
@@ -307,7 +346,7 @@ namespace ignite
 
                     if (winVal)
                     {
-                        std::map<int32_t, ThreadLocalEntry*>* map = 
+                        std::map<int32_t, ThreadLocalEntry*>* map =
                             static_cast<std::map<int32_t, ThreadLocalEntry*>*>(winVal);
 
                         ThreadLocalEntry* appVal = (*map)[idx];
@@ -402,7 +441,7 @@ namespace ignite
 
             private:
                 /** Index. */
-                int32_t idx; 
+                int32_t idx;
             };
 
             /**

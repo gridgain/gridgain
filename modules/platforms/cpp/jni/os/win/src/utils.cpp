@@ -1,13 +1,12 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * 
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ * 
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -34,7 +33,8 @@ namespace ignite
     namespace jni
     {
         const char* JAVA_HOME = "JAVA_HOME";
-        const char* JAVA_DLL = "\\jre\\bin\\server\\jvm.dll";
+        const char* JAVA_DLL1 = "\\jre\\bin\\server\\jvm.dll";
+        const char* JAVA_DLL2 = "\\bin\\server\\jvm.dll";
 
         const char* IGNITE_HOME = "IGNITE_HOME";
 
@@ -283,7 +283,12 @@ namespace ignite
 
             if (!javaEnv.empty())
             {
-                std::string javaDll = javaEnv + JAVA_DLL;
+                std::string javaDll = javaEnv + JAVA_DLL1;
+
+                if (FileExists(javaDll))
+                    return javaDll;
+
+                javaDll = javaEnv + JAVA_DLL2;
 
                 if (FileExists(javaDll))
                     return javaDll;
