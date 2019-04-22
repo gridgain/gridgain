@@ -65,7 +65,7 @@ public class LinuxNativeIoPluginProvider implements PluginProvider {
 
     /** {@inheritDoc} */
     @Override public String copyright() {
-        return "Copyright(C) Apache Software Foundation";
+        return "Copyright(C) GridGain Systems";
     }
 
     /** {@inheritDoc} */

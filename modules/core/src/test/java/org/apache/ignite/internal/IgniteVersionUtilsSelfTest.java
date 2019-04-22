@@ -28,7 +28,7 @@ public class IgniteVersionUtilsSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testIgniteCopyrights() throws Exception {
-        final String COPYRIGHT = String.valueOf(Calendar.getInstance().get(Calendar.YEAR)) + " Copyright(C) Apache Software Foundation";
+        final String COPYRIGHT = String.valueOf(Calendar.getInstance().get(Calendar.YEAR)) + " Copyright(C) GridGain Systems";
 
         assertNotNull(IgniteVersionUtils.COPYRIGHT);
 
