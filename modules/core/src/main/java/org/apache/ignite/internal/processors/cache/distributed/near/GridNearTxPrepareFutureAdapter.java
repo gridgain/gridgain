@@ -185,7 +185,7 @@ public abstract class GridNearTxPrepareFutureAdapter extends
 
             Collection<UUID> backups = entry.getValue();
 
-            if (backups.size() <= 1 && !cctx.tm().pendingTxsTracker().enabled())
+            if (backups.size() <= 1)
                 tx.onePhaseCommit(true);
         }
     }
