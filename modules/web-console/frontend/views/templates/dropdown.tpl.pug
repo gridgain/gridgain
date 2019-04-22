@@ -13,7 +13,6 @@
     See the License for the specific language governing permissions and
     limitations under the License.
 
-
 ul.dropdown-menu(tabindex='-1' role='menu' ng-show='content && content.length')
     li(role='presentation' ui-sref-active='active' ng-class='{divider: item.divider, active: item.active}' ng-repeat='item in content')
         a(role='menuitem' tabindex='-1' ui-sref='{{item.sref}}' ng-if='!item.action && !item.divider && item.sref' ng-bind='item.text')

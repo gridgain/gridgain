@@ -13,7 +13,6 @@
     See the License for the specific language governing permissions and
     limitations under the License.
 
-
 div(ng-switch='($ctrl.connectionState$ | async:this)')
     div(ng-switch-when='AGENT_DISCONNECTED')
         | Agent is disconnected. #[a(ng-click='$ctrl.openAgentMissingDialog()') Check] agent is up and running.
