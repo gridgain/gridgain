@@ -3093,6 +3093,9 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
 
                         break;
                     }
+
+                    if (statsEnabled)
+                        start = System.nanoTime();
                 }
             }
 

@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache;
 import com.google.common.collect.ImmutableMap;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
@@ -38,11 +39,13 @@ import org.apache.ignite.cache.CacheEntryProcessor;
 import org.apache.ignite.cache.CacheMetrics;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CachePeekMode;
+import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.util.lang.GridAbsPredicateX;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.transactions.Transaction;
@@ -423,6 +426,34 @@ public abstract class GridCacheAbstractMetricsSelfTest extends GridCacheAbstract
         cache.get(2);
 
         assert cache.localMetrics().getAverageGetTime() > 0;
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testGetAvgTimeWithFilter() throws Exception {
+        IgniteCache<Integer, Integer> cache = grid(0).cache(DEFAULT_CACHE_NAME);
+
+        for (int i = 0; i < KEY_CNT; i++)
+            cache.put(i, i);
+
+        long start = System.nanoTime();
+
+        Iterator it = cache.query(new ScanQuery<Integer, Integer>().setFilter(new IgniteBiPredicate<Integer, Integer>() {
+            @Override public boolean apply(Integer o, Integer o2) {
+                return o2 % KEY_CNT == 0;
+            }
+        })).iterator();
+
+        while (it.hasNext())
+            it.next();
+
+        long executionTime = (System.nanoTime() - start) / 1000L;
+
+        long metricsExecutionTime = (long)(cache.metrics().getAverageGetTime() * cache.metrics().getCacheGets());
+
+        assertTrue(executionTime > metricsExecutionTime);
     }
 
     /**
