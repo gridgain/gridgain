@@ -29,6 +29,7 @@
 #include "ignite/common/utils.h"
 #include "ignite/binary/binary_consts.h"
 #include "ignite/binary/binary_type.h"
+#include "ignite/binary/binary_enum_entry.h"
 #include "ignite/guid.h"
 #include "ignite/date.h"
 #include "ignite/timestamp.h"
@@ -64,6 +65,7 @@ namespace ignite
                  * @param rawOff Raw data offset.
                  * @param footerBegin Footer beginning absolute position in stream.
                  * @param footerEnd Footer ending absolute position in stream.
+                 * @param schemaType Schema Type.
                  */
                 BinaryReaderImpl(interop::InteropInputStream* stream, BinaryIdResolver* idRslvr,
                     int32_t pos, bool usrType, int32_t typeId, int32_t hashCode, int32_t len, int32_t rawOff,
@@ -558,10 +560,25 @@ namespace ignite
                 int32_t ReadTimeArray(const char* fieldName, Time* res, const int32_t len);
 
                 /**
+                 * Read enum entry.
+                 *
+                 * @return Enum entry.
+                 */
+                ignite::binary::BinaryEnumEntry ReadBinaryEnum();
+
+                /**
+                 * Read enum entry.
+                 *
+                 * @param fieldName Field name.
+                 * @return Enum entry.
+                 */
+                ignite::binary::BinaryEnumEntry ReadBinaryEnum(const char* fieldName);
+
+                /**
                  * Read string.
                  *
                  * @param len Expected length of string.
-                 * @param res Array to store data to (should be able to acocmodate null-terminator).
+                 * @param res Array to store data to (should be able to accomodate null-terminator).
                  * @return Actual amount of elements read. If "len" argument is less than actual
                  *     array size or resulting array is set to null, nothing will be written
                  *     to resulting array and returned value will contain required array length.
