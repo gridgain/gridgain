@@ -16,18 +16,15 @@
 
 /**
  * @file
- * Declares ignite::binary::BinaryWriter class.
+ * Declares ignite::binary::BinaryEnumEntry class.
  */
 
 #ifndef _IGNITE_BINARY_BINARY_ENUM_ENTRY
 #define _IGNITE_BINARY_BINARY_ENUM_ENTRY
 
-#include <string>
 #include <stdint.h>
 
 #include <ignite/common/common.h>
-
-#include "ignite/binary/binary_raw_writer.h"
 
 namespace ignite
 {
@@ -91,8 +88,6 @@ namespace ignite
             /** Ordinal value. */
             int32_t ordinal;
         };
-
-        }
     }
 }
 
