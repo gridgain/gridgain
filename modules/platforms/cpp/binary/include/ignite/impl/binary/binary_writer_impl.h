@@ -30,7 +30,6 @@
 #include "ignite/impl/binary/binary_type_manager.h"
 #include "ignite/impl/binary/binary_utils.h"
 #include "ignite/impl/binary/binary_schema.h"
-#include "ignite/impl/binary/binary_type_manager.h"
 #include "ignite/impl/binary/binary_object_impl.h"
 #include "ignite/binary/binary_consts.h"
 #include "ignite/binary/binary_type.h"
@@ -49,6 +48,9 @@ namespace ignite
     {
         namespace binary
         {
+            // Forward declaration.
+            class BinaryTypeManager;
+
             /**
              * Internal implementation of binary reader.
              */

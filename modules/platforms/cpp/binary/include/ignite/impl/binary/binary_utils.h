@@ -393,7 +393,6 @@ namespace ignite
                  * Utility method to read Guid from stream.
                  *
                  * @param stream Stream.
-                 * @param res Value.
                  */
                 static Guid ReadGuid(interop::InteropInputStream* stream);
 
@@ -409,7 +408,6 @@ namespace ignite
                  * Utility method to read Date from stream.
                  *
                  * @param stream Stream.
-                 * @param res Value.
                  */
                 static Date ReadDate(interop::InteropInputStream* stream);
 
