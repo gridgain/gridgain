@@ -14,10 +14,14 @@
  * limitations under the License.
  */
 
-import template from './template.pug';
-import controller from './controller';
+import {Injectable} from '@angular/core';
 
-export default {
-    template,
-    controller
-};
+export enum FormFieldRequiredMarkerStyles {
+    OPTIONAL = 'optional',
+    REQUIRED = 'required'
+}
+
+export enum FormFieldErrorStyles {
+    INLINE = 'inline',
+    ICON = 'icon'
+}

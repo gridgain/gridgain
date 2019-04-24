@@ -14,20 +14,13 @@
  * limitations under the License.
  */
 
-page-profile {
-    max-width: 800px;
-    display: block;
+import {Directive, AfterViewInit, Inject, ElementRef} from '@angular/core';
 
-    panel-collapsible {
-        width: 100%;
-    }
-
-    footer {
-        display: flex;
-        justify-content: flex-end;
-    }
-
-    .btn-ignite + .btn-ignite {
-        margin-left: 10px;
+@Directive({selector: 'input[autofocus]'})
+export class Autofocus implements AfterViewInit {
+    static parameters = [[new Inject(ElementRef)]]
+    constructor(private el: ElementRef<HTMLInputElement>) {}
+    ngAfterViewInit() {
+        setTimeout(() => this.el.nativeElement.focus(), 0);
     }
 }

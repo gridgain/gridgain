@@ -135,7 +135,6 @@ import igniteChartSelector from './components/ignite-chart-series-selector';
 import statusOutput from './components/status-output';
 import timedRedirection from './components/timed-redirection';
 
-import pageProfile from './components/page-profile';
 import pagePasswordChanged from './components/page-password-changed';
 import pagePasswordReset from './components/page-password-reset';
 import pageSignup from './components/page-signup';
@@ -152,6 +151,10 @@ import igniteServices from './services';
 
 import baseTemplate from 'views/base.pug';
 import * as icons from '../public/images/icons';
+import {igniteWebConsoleAngular} from '../app-angular/downgrade';
+
+import uiRouter from '@uirouter/angularjs';
+import {upgradeModule} from '@uirouter/angular-hybrid';
 
 export default angular
     .module('ignite-console', [
@@ -174,7 +177,8 @@ export default angular
         'ui.grid.resizeColumns',
         'ui.grid.saveState',
         'ui.grid.selection',
-        'ui.router',
+        uiRouter,
+        upgradeModule.name,
         // Base modules.
         'ignite-console.core',
         'ignite-console.ace',
@@ -227,7 +231,6 @@ export default angular
         connectedClustersDialog.name,
         igniteListOfRegisteredUsers.name,
         dialogAdminCreateUser.name,
-        pageProfile.name,
         pageLanding.name,
         pagePasswordChanged.name,
         pagePasswordReset.name,
@@ -250,6 +253,8 @@ export default angular
         noDataCmp.name,
         globalProgressBar.name
     ])
+    // Routing should wait until Angular loads. Angular app part will start it back using serviceBootstrap component.
+    .config(['$urlServiceProvider', ($urlService) => $urlService.deferIntercept()])
     .service('$exceptionHandler', $exceptionHandler)
     // Directives.
     .directive('igniteAutoFocus', igniteAutoFocus)

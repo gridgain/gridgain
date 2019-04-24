@@ -14,23 +14,13 @@
  * limitations under the License.
  */
 
-import angular from 'angular';
-import component from './component';
-import './style.scss';
+import {Injectable} from '@angular/core';
 
-export default angular
-    .module('ignite-console.page-profile', [
-        'ignite-console.user'
-    ])
-    .config(['$stateProvider', ($stateProvider) => {
-        // set up the states
-        $stateProvider.state('base.settings.profile', {
-            url: '/profile',
-            component: 'pageProfile',
-            permission: 'profile',
-            tfMetaTags: {
-                title: 'User profile'
-            }
-        });
-    }])
-    .component('pageProfile', component);
+@Injectable({
+    providedIn: 'root'
+})
+export class VALIDATION_MESSAGES {
+    required = 'Value is required'
+    email = 'Email has invalid format'
+    passwordMatch = 'Passwords do not match'
+}
