@@ -389,6 +389,8 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
             throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
 
         try {
+            log.error("@@@ GridCacheQueryManager.store, cacheId=" + newRow.cacheId() + ", key=" + newRow.key().hashCode() + ", indexing=" + isIndexingSpiEnabled());
+
             if (isIndexingSpiEnabled()) {
                 CacheObjectContext coctx = cctx.cacheObjectContext();
 

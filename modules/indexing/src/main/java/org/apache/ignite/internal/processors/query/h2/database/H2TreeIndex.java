@@ -316,6 +316,9 @@ public class H2TreeIndex extends GridH2IndexBase {
 
             int seg = segmentForRow(row);
 
+            log.error("@@@ H2TreeIndex.putx, cacheId=" + row.cacheId() +
+                ", key=" + row.key().hashCode() + ", index=" + getName() + ", seg=" + seg );
+
             H2Tree tree = treeForRead(seg);
 
             assert cctx.shared().database().checkpointLockIsHeldByThread();
