@@ -68,7 +68,7 @@ public class IgniteVersionUtils {
 
         BUILD_TSTAMP_STR = new SimpleDateFormat("yyyyMMdd").format(new Date(BUILD_TSTAMP * 1000));
 
-        COPYRIGHT = BUILD_TSTAMP_STR.substring(0, 4) + " Copyright(C) GridGain Systems, Inc. and Contributors.";
+        COPYRIGHT = BUILD_TSTAMP_STR.substring(0, 4) + " Copyright(C) GridGain Systems, Inc. and Contributors";
 
         REV_HASH_STR = IgniteProperties.get("ignite.revision");
 
