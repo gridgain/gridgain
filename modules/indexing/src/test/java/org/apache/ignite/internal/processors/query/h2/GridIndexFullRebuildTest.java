@@ -22,16 +22,19 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
+import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.QueryIndexType;
@@ -62,6 +65,7 @@ import static org.apache.ignite.internal.processors.cache.persistence.file.FileP
 public class GridIndexFullRebuildTest extends GridCommonAbstractTest {
     public static final String FIRST_CACHE = "cache1";
     public static final String SECOND_CACHE = "cache2";
+    public static final String THIRD_CACHE = "cache3";
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
@@ -90,11 +94,11 @@ public class GridIndexFullRebuildTest extends GridCommonAbstractTest {
         DataStorageConfiguration dsCfg = new DataStorageConfiguration();
 
         dsCfg.setDefaultDataRegionConfiguration(new DataRegionConfiguration()
-            .setMaxSize(256 * 1024 * 1024)
+            .setMaxSize(1024 * 1024 * 1024)
             .setPersistenceEnabled(true)
         );
 
-        dsCfg.setCheckpointFrequency(3_000);
+        dsCfg.setCheckpointFrequency(300_000);
 
         configuration.setDataStorageConfiguration(dsCfg);
 
@@ -119,9 +123,34 @@ public class GridIndexFullRebuildTest extends GridCommonAbstractTest {
                     .setIndexes(indices)
             ));
 
-        CacheConfiguration ccfgSecond = new CacheConfiguration(ccfgFirst).setName(SECOND_CACHE);
+        LinkedHashMap<String, String> fields2 = new LinkedHashMap<>();
 
-        configuration.setCacheConfiguration(ccfgFirst, ccfgSecond);
+
+        fields2.put("id", "java.lang.Long");
+        fields2.put("updateDate", "java.lang.Date");
+        fields2.put("amount", "java.lang.Long");
+        fields2.put("name", "java.lang.String");
+        fields2.put("type", "java.lang.Integer");
+
+        Set<QueryIndex> indices2 = new HashSet<>();
+
+        indices2.add(new QueryIndex("amount", QueryIndexType.SORTED));
+        indices2.add(new QueryIndex("type", QueryIndexType.SORTED));
+        indices2.add(new QueryIndex("updateDate", QueryIndexType.SORTED));
+
+        CacheConfiguration ccfgSecond = new CacheConfiguration()
+            .setName(SECOND_CACHE)
+            .setGroupName("cache_group_4")
+            .setCacheMode(CacheMode.REPLICATED)
+            .setBackups(2)
+            .setQueryEntities(Collections.singleton(
+                new QueryEntity(Long.class, Account.class)
+                .setFields(fields2)
+                .setIndexes(indices2)
+            ))
+            ;
+
+        configuration.setCacheConfiguration(ccfgFirst, ccfgSecond, new CacheConfiguration(ccfgFirst).setName(THIRD_CACHE));
 
         return configuration;
     }
@@ -134,14 +163,13 @@ public class GridIndexFullRebuildTest extends GridCommonAbstractTest {
      */
     @Test
     public void test() throws Exception {
-
         long start = System.currentTimeMillis();
 
         IgniteEx grid1 = startGrids(4);
 
         grid1.cluster().active(true);
 
-        final int accountCount = 2048;
+        final int accountCount = 4096;
 
         try (IgniteDataStreamer streamer = grid1.dataStreamer(FIRST_CACHE)) {
             for (long i = 0; i < accountCount; i++) {
@@ -159,73 +187,86 @@ public class GridIndexFullRebuildTest extends GridCommonAbstractTest {
             streamer.flush();
         }
 
-        AtomicBoolean stop = new AtomicBoolean();
+        try (IgniteDataStreamer streamer = grid1.dataStreamer(THIRD_CACHE)) {
+            for (long i = 0; i < accountCount; i++) {
+                streamer.addData(i, new Account(i));
+            }
 
-        IgniteCache<Object, Object> cache1 = grid1.cache(FIRST_CACHE);
-        IgniteCache<Object, Object> cache2 = grid1.cache(SECOND_CACHE);
+            streamer.flush();
+        }
 
-        new Thread(new Runnable() {
-            @Override public void run() {
-                long i = 0;
+        for (int i = 0; i < 3; i++) {
+            AtomicBoolean stop = new AtomicBoolean();
 
-                while (!stop.get()) {
-                    try {
-                        cache1.put(i, new Account(i));
+            IgniteCache<Object, Object> cache1 = grid1.cache(FIRST_CACHE);
+            IgniteCache<Object, Object> cache2 = grid1.cache(SECOND_CACHE);
+            IgniteCache<Object, Object> cache3 = grid1.cache(THIRD_CACHE);
 
-                        cache2.put(i, new Account(i));
+            new Thread(new Runnable() {
+                @Override public void run() {
+                    ThreadLocalRandom current = ThreadLocalRandom.current();
+                    while (!stop.get()) {
+                        try {
+                            long i = current.nextInt(0, accountCount * 2);
+                            cache1.put(i, new Account(i));
 
-                        i++;
-                    }
-                    catch (Throwable e) {
-                        e.printStackTrace();
+                            i = current.nextInt(0, accountCount * 2);
+                            cache2.put(i, new Account(i));
+
+                            i = current.nextInt(0, accountCount * 2);
+                            cache3.put(i, new Account(i));
+                        }
+                        catch (Throwable e) {
+                            e.printStackTrace();
+                        }
                     }
                 }
+            }).start();
+
+            long diff = System.currentTimeMillis() - start;
+
+            U.sleep(7500 - (diff % 5000));
+
+            IgniteProcessProxy.kill(getTestIgniteInstanceName(3));
+
+            stop.set(true);
+
+            File workDirectory = U.resolveWorkDirectory(U.defaultWorkDirectory(), DFLT_STORE_DIR, false);
+
+            for (File grp : new File(workDirectory, U.maskForFileName(getTestIgniteInstanceName(3))).listFiles()) {
+                new File(grp, "index.bin").delete();
             }
-        }).start();
 
-        File workDirectory = U.resolveWorkDirectory(U.defaultWorkDirectory(), DFLT_STORE_DIR, false);
+            startGrid(3);
 
-        long diff = System.currentTimeMillis() - start;
+            awaitPartitionMapExchange();
 
-        U.sleep(7500 - (diff % 5000));
+            U.sleep(3_000);
 
-        IgniteProcessProxy.kill(getTestIgniteInstanceName(3));
+            ImmutableSet<UUID> nodes = ImmutableSet.of(((IgniteProcessProxy)grid(3)).getId(),
+                ((IgniteProcessProxy)grid(2)).getId());
 
-        stop.set(true);
+            VisorValidateIndexesTaskArg arg = new VisorValidateIndexesTaskArg(null,
+                null, 10000, 1);
 
-        for (File grp : new File(workDirectory, U.maskForFileName(getTestIgniteInstanceName(3))).listFiles()) {
-            new File(grp, "index.bin").delete();
+            VisorTaskArgument<VisorValidateIndexesTaskArg> argument = new VisorTaskArgument<>(nodes, arg, true);
+
+            ComputeTaskInternalFuture<VisorValidateIndexesTaskResult> execute = grid1.context().task().execute(new VisorValidateIndexesTask(), argument);
+
+            VisorValidateIndexesTaskResult result = execute.get();
+
+            Map<UUID, VisorValidateIndexesJobResult> results = result.results();
+
+            boolean hasIssue = false;
+
+            for (VisorValidateIndexesJobResult jobResult : results.values()) {
+                System.err.println(jobResult);
+
+                hasIssue |= jobResult.hasIssues();
+            }
+
+            assertFalse(hasIssue);
         }
-
-        startGrid(3);
-
-        awaitPartitionMapExchange();
-
-        U.sleep(3_000);
-
-        ImmutableSet<UUID> nodes = ImmutableSet.of(((IgniteProcessProxy)grid(3)).getId(),
-            ((IgniteProcessProxy)grid(2)).getId());
-
-        VisorValidateIndexesTaskArg arg = new VisorValidateIndexesTaskArg(null,
-            null, 10000, 1);
-
-        VisorTaskArgument<VisorValidateIndexesTaskArg> argument = new VisorTaskArgument<>(nodes, arg, true);
-
-        ComputeTaskInternalFuture<VisorValidateIndexesTaskResult> execute = ((IgniteEx)grid1).context().task().execute(new VisorValidateIndexesTask(), argument);
-
-        VisorValidateIndexesTaskResult result = execute.get();
-
-        Map<UUID, VisorValidateIndexesJobResult> results = result.results();
-
-        boolean hasIssue = false;
-
-        for (VisorValidateIndexesJobResult jobResult : results.values()) {
-            System.err.println(jobResult);
-
-            hasIssue |= jobResult.hasIssues();
-        }
-
-        assertFalse(hasIssue);
     }
 
     /** */
@@ -263,6 +304,8 @@ public class GridIndexFullRebuildTest extends GridCommonAbstractTest {
         /** */
         private Date updateDate;
 
+        private int type;
+
         /** */
         public Account(Long id) {
             this.id = id;
@@ -270,6 +313,7 @@ public class GridIndexFullRebuildTest extends GridCommonAbstractTest {
             name = "Account" + id;
             amount = id * 1000;
             updateDate = new Date();
+            type = (int)(id % 10);
         }
 
         /** {@inheritDoc} */
@@ -288,3 +332,70 @@ public class GridIndexFullRebuildTest extends GridCommonAbstractTest {
         }
     }
 }
+
+//<!--TX REPLICATED-->
+//<bean class="org.apache.ignite.configuration.CacheConfiguration">
+//<property name="name"value="cache_group_4_091"/>
+//<property name="groupName"value="cache_group_4"/>
+//<property name="backups"value="2"/>
+//<property name="atomicityMode"value="TRANSACTIONAL"/>
+//<property name="cacheMode"value="REPLICATED"/>
+//<property name="writeSynchronizationMode"value="FULL_SYNC"/>
+//<property name="queryEntities"ref="entities_Long_Account"/>
+//</bean>
+//<bean class="org.apache.ignite.configuration.CacheConfiguration">
+//<property name="name"value="cache_group_4_098"/>
+//<property name="groupName"value="cache_group_5"/>
+//<property name="atomicityMode"value="ATOMIC"/>
+//<property name="backups"value="2"/>
+//<property name="cacheMode"value="REPLICATED"/>
+//<property name="writeSynchronizationMode"value="FULL_SYNC"/>
+//<property name="onheapCacheEnabled"value="true"/>
+//<property name="affinity">
+//<bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">
+//<constructor-arg value="false"/><constructor-arg value="128"/>
+//</bean>
+//</property>
+//<property name="queryEntities"ref="entities_Long_Account"/>
+//</bean>
+//<bean class="org.apache.ignite.configuration.CacheConfiguration">
+//<property name="name"value="cache_group_4_105"/>
+//<property name="groupName"value="cache_group_6"/>
+//<property name="backups"value="2"/>
+//<property name="atomicityMode"value="TRANSACTIONAL"/>
+//<property name="cacheMode"value="REPLICATED"/>
+//<property name="writeSynchronizationMode"value="FULL_SYNC"/>
+//<property name="evictionPolicy">
+//<bean class="org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy">
+//<property name="maxSize"value="1000"/>
+//</bean>
+//</property>
+//<property name="onheapCacheEnabled"value="true"/>
+//<property name="affinity">
+//<bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">
+//<constructor-arg value="false"/>
+//<constructor-arg value="64"/>
+//</bean>
+//</property>
+//<property name="queryEntities"ref="entities_Long_Account"/>
+//</bean>
+//<bean class="org.apache.ignite.configuration.CacheConfiguration">
+//<property name="name"value="cache_group_4_118"/>
+//<property name="atomicityMode"value="TRANSACTIONAL"/>
+//<property name="cacheMode"value="REPLICATED"/>
+//<property name="backups"value="2"/>
+//<property name="writeSynchronizationMode"value="FULL_SYNC"/>
+//<property name="evictionPolicy">
+//<bean class="org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy">
+//<property name="maxSize"value="1000"/>
+//</bean>
+//</property>
+//<property name="onheapCacheEnabled"value="true"/>
+//<property name="affinity">
+//<bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">
+//<constructor-arg value="false"/>
+//<constructor-arg value="32"/>
+//</bean>
+//</property>
+//<property name="queryEntities"ref="entities_Long_Account"/>
+//</bean>
