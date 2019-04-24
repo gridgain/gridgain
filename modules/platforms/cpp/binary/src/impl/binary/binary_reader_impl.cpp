@@ -442,7 +442,7 @@ namespace ignite
                 CheckRawMode(true);
                 CheckSingleMode(true);
 
-                return ReadNullable(stream, BinaryUtils::ReadBinaryEnumEntry, IGNITE_TYPE_ENUM);
+                return ReadBinaryEnumInternal();
             }
 
             BinaryEnumEntry BinaryReaderImpl::ReadBinaryEnum(const char* fieldName)
@@ -458,7 +458,20 @@ namespace ignite
 
                 stream->Position(fieldPos);
 
-                return ReadNullable(stream, BinaryUtils::ReadBinaryEnumEntry, IGNITE_TYPE_ENUM);
+                return ReadBinaryEnumInternal();
+            }
+
+            BinaryEnumEntry BinaryReaderImpl::ReadBinaryEnumInternal()
+            {
+                int8_t hdr = stream->ReadInt8();
+
+                if (hdr == IGNITE_TYPE_ENUM || hdr == IGNITE_TYPE_BINARY_ENUM)
+                    return BinaryUtils::ReadBinaryEnumEntry(stream);
+
+                if (hdr != IGNITE_HDR_NULL)
+                    ThrowOnInvalidHeader(IGNITE_TYPE_ENUM, hdr);
+
+                return BinaryUtils::GetDefaultValue<BinaryEnumEntry>();
             }
 
             int32_t BinaryReaderImpl::ReadString(char* res, const int32_t len)

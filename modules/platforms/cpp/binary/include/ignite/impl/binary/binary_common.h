@@ -160,6 +160,9 @@ namespace ignite
             /** Type: Enum. */
             const int8_t IGNITE_TYPE_ENUM = 28;
 
+            /** Type: Binary Enum. */
+            const int8_t IGNITE_TYPE_BINARY_ENUM = 38;
+
             /** Type: timestamp. */
             const int8_t IGNITE_TYPE_TIMESTAMP = 33;
 

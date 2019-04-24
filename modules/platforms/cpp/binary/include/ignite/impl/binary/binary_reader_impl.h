@@ -1425,6 +1425,13 @@ namespace ignite
                 void ThrowOnInvalidHeader(int8_t expHdr, int8_t hdr) const;
 
                 /**
+                 * Read enum entry.
+                 *
+                 * @return Enum entry.
+                 */
+                ignite::binary::BinaryEnumEntry ReadBinaryEnumInternal();
+
+                /**
                  * Internal string read routine.
                  *
                  * @param res Resulting array.
