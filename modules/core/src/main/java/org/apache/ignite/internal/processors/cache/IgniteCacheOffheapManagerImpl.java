@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -30,13 +30,18 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import javax.cache.Cache;
 import javax.cache.processor.EntryProcessor;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.internal.NodeStoppingException;
+import org.apache.ignite.internal.binary.BinaryObjectExImpl;
+import org.apache.ignite.internal.binary.nextgen.BikeCacheObject;
+import org.apache.ignite.internal.binary.nextgen.BikeConverterRegistry;
+import org.apache.ignite.internal.binary.nextgen.BikeTuple;
 import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.wal.record.delta.DataPageMvccMarkUpdatedRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.DataPageMvccUpdateNewTxStateHintRecord;
@@ -1686,10 +1691,27 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
          */
         @NotNull private DataRow makeDataRow(KeyCacheObject key, CacheObject val, GridCacheVersion ver, long expireTime,
             int cacheId) {
+            val = tryConvert(val);
+
             if (key.partition() == -1)
                 key.partition(partId);
 
             return new DataRow(key, val, ver, partId, expireTime, cacheId);
+        }
+
+        private CacheObject tryConvert(CacheObject val) {
+            if (!(val instanceof BinaryObject))
+                return val;
+
+            BinaryObject bin = (BinaryObject)val;
+            Function<BinaryObject, BikeTuple> tr = BikeConverterRegistry.converter(bin.type().typeId());
+            if (tr == null)
+                return val;
+
+            BikeTuple bike = tr.apply(bin);
+            BikeConverterRegistry.binStat.appendStat(((BinaryObjectExImpl)bin).length());
+            BikeConverterRegistry.bikeStat.appendStat(bike.data().length);
+            return new BikeCacheObject(bike, bin.type().typeId());
         }
 
         /** {@inheritDoc} */

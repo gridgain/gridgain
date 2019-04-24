@@ -504,4 +504,9 @@ public class DataRegionMetricsImpl implements DataRegionMetrics, AllocatedPageTr
         pageReplaceRate.clear();
         pageReplaceAge.clear();
     }
+
+    @Override public long getUsedSpaceEx() {
+        long usedPagesSize = getTotalUsedPages() * pageMem.systemPageSize();
+        return usedPagesSize - dataRegionMetricsProvider.partiallyFilledPagesFreeSpace();
+    }
 }

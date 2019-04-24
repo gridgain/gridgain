@@ -55,6 +55,7 @@ import org.apache.ignite.events.CacheQueryExecutedEvent;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
+import org.apache.ignite.internal.binary.nextgen.BikeCacheObject;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
@@ -2027,7 +2028,10 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
         boolean binaryVal = ctx.cacheObjects().isBinaryObject(val);
 
-        if (binaryVal) {
+        if (val instanceof BikeCacheObject) {
+            id = new QueryTypeIdKey(cacheName, ((BikeCacheObject)val).binaryTypeId());
+        }
+        else if (binaryVal) {
             int typeId = ctx.cacheObjects().typeId(val);
 
             id = new QueryTypeIdKey(cacheName, typeId);
@@ -2043,20 +2047,20 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         if (desc == null)
             return null;
 
-        if (checkType) {
-            if (!binaryVal && !desc.valueClass().isAssignableFrom(valCls))
-                throw new IgniteCheckedException("Failed to update index due to class name conflict" +
-                    "(multiple classes with same simple name are stored in the same cache) " +
-                    "[expCls=" + desc.valueClass().getName() + ", actualCls=" + valCls.getName() + ']');
-
-            if (!ctx.cacheObjects().isBinaryObject(key)) {
-                Class<?> keyCls = key.value(coctx, false).getClass();
-
-                if (!desc.keyClass().isAssignableFrom(keyCls))
-                    throw new IgniteCheckedException("Failed to update index, incorrect key class [expCls=" +
-                        desc.keyClass().getName() + ", actualCls=" + keyCls.getName() + "]");
-            }
-        }
+//        if (checkType) {
+//            if (!binaryVal && !desc.valueClass().isAssignableFrom(valCls))
+//                throw new IgniteCheckedException("Failed to update index due to class name conflict" +
+//                    "(multiple classes with same simple name are stored in the same cache) " +
+//                    "[expCls=" + desc.valueClass().getName() + ", actualCls=" + valCls.getName() + ']');
+//
+//            if (!ctx.cacheObjects().isBinaryObject(key)) {
+//                Class<?> keyCls = key.value(coctx, false).getClass();
+//
+//                if (!desc.keyClass().isAssignableFrom(keyCls))
+//                    throw new IgniteCheckedException("Failed to update index, incorrect key class [expCls=" +
+//                        desc.keyClass().getName() + ", actualCls=" + keyCls.getName() + "]");
+//            }
+//        }
 
         return desc;
     }

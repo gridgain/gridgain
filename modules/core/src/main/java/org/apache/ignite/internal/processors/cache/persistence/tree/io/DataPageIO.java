@@ -44,7 +44,7 @@ import static org.apache.ignite.internal.processors.cache.persistence.tree.io.Da
 public class DataPageIO extends AbstractDataPageIO<CacheDataRow> {
     /** */
     public static final int MVCC_INFO_SIZE = 40;
-    
+
     /** */
     public static final IOVersions<DataPageIO> VERSIONS = new IOVersions<>(
         new DataPageIO(1)

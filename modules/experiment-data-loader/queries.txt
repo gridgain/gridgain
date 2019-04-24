@@ -1,0 +1,231 @@
+select * from abbr5
+select abbr7_extract_cyc_dt from abbr5
+select abbr7_extract_cyc_dt, abbr7_submsn_dt from abbr5
+select abbr7_extract_cyc_dt, abbr7_submsn_dt, abbr7_line_from_dt, abbr7_line_thru_dt, abbr7_from_dt from abbr5
+
+-- all value columns
+select abbr7_extract_cyc_dt, abbr7_abbr6_file_name, abbr7_submsn_dt, abbr7_cwf_rqst_rec_id, abbr7_line_abbr1_cd, abbr1_1_mdfr_cd, abbr1_2_mdfr_cd, abbr1_3_mdfr_cd, abbr1_4_mdfr_cd, abbr1_5_mdfr_cd, abbr7_line_srvc_unit_qty, abbr7_prncpl_dgns_cd, abbr7_dgns_1_cd, abbr7_dgns_2_cd, abbr7_dgns_3_cd, abbr7_dgns_4_cd, abbr7_dgns_5_cd, abbr7_dgns_6_cd, abbr7_dgns_7_cd, abbr7_dgns_8_cd, abbr7_dgns_9_cd, abbr7_dgns_10_cd, abbr7_dgns_11_cd, abbr7_dgns_12_cd, abbr7_dgns_13_cd, abbr7_dgns_14_cd, abbr7_dgns_15_cd, abbr7_dgns_16_cd, abbr7_dgns_17_cd, abbr7_dgns_18_cd, abbr7_dgns_19_cd, abbr7_dgns_20_cd, abbr7_dgns_21_cd, abbr7_dgns_22_cd, abbr7_dgns_23_cd, abbr7_dgns_24_cd, abbr7_dgns_25_cd, abbr7_type_srvc_cd, abbr7_line_from_dt, abbr7_line_thru_dt, abbr7_pos_cd, abbr7_line_pos_zip_cd, abbr7_fac_prvdr_zip5_cd, abbr7_fac_prvdr_zip4_cd, abbr7_bill_fac_type_cd, abbr7_bill_clsfctn_cd, abbr7_bill_freq_cd, abbr7_type_cd, abbr7_xovr_cd, abbr7_bill_type_cd, abbr7_line_rev_cntr_cd, abbr7_line_rev_unit_num, abbr7_from_dt, abbr7_thru_dt, abbr7_ncvrd_chrg_amt, abbr7_line_ncvrd_chrg_amt, abbr7_rlt_cond_cd_grp, abbr7_actv_care_from_dt, abbr7_dschrg_dt, abbr7_ocrnc_span_1_cd, abbr7_ocrnc_span_1_from_dt, abbr7_ocrnc_span_1_to_dt, abbr7_ocrnc_span_2_cd, abbr7_ocrnc_span_2_from_dt, abbr7_ocrnc_span_2_to_dt, abbr7_ocrnc_span_3_cd, abbr7_ocrnc_span_3_from_dt, abbr7_ocrnc_span_3_to_dt, abbr7_ocrnc_span_4_cd, abbr7_ocrnc_span_4from_dt, abbr7_ocrnc_span_4_to_dt, abbr7_ocrnc_span_5_cd, abbr7_ocrnc_span_5_from_dt, abbr7_ocrnc_span_5_to_dt, abbr7_ocrnc_span_6_cd, abbr7_ocrnc_span_6_from_dt, abbr7_ocrnc_span_6_to_dt, abbr7_ocrnc_span_7_cd, abbr7_ocrnc_span_7_from_dt, abbr7_ocrnc_span_7_to_dt, abbr7_ocrnc_span_8_cd, abbr7_ocrnc_span_8_from_dt, abbr7_ocrnc_span_8_to_dt, abbr7_ocrnc_span_9_cd, abbr7_ocrnc_span_9_from_dt, abbr7_ocrnc_span_9_to_dt, abbr7_ocrnc_span_10_cd, abbr7_ocrnc_span_10_from_dt, abbr7_ocrnc_span_10_to_dt, abbr7_rev_apc_hipps_cd, abbr8_ptnt_stus_cd, abbr7_cwf_actn_cd, abbr7_prcdr_cd_grp, abbr7_sbmt_chrg_amt, abbr7_line_tot_chrg_amt, abbr7_prvdr_pmt_amt, abbr7_pmt_amt, abbr7_line_prvdr_pmt_amt, abbr7_alowd_chrg_amt, abbr7_line_alowd_chrg_amt, abbr7_rndrg_prvdr_npi_num, prvdr_mdcr_id, abbr7_prvdr_tax_num, abbr7_atndg_prvdr_npi_num, abbr7_atndg_fed_prvdr_spclty_cd, abbr7_oprtg_prvdr_npi_num, abbr7_othr_prvdr_npi_num, abbr7_othr_prvdr_2_npi_num, abbr7_blg_prvdr_npi_num, abbr7_blg_prvdr_pin_num, abbr7_rndrg_fed_prvdr_spclty_cd, abbr7_fac_prvdr_txnmy_cd, abbr7_rfrg_prvdr_npi_num, abbr7_rfrg_fed_prvdr_spclty_cd, abbr7_hic_num, abbr7_insrd_birth_dt, abbr7_ptnt_death_dt, abbr8_rrb_num, abbr7_crnt_stus_cd, abbr7_pd_stus_cd, abbr7_admtg_dgns_cd, abbr7_ptnt_visit_rsn_1_cd, abbr7_ptnt_visit_rsn_2_cd, abbr7_ptnt_visit_rsn_3_cd, abbr7_abbr8_state_cd, abbr7_admsn_type_cd, abbr7_blg_fed_prvdr_spclty_cd, abbr7_blg_prvdr_oscar_num, abbr7_fac_prvdr_oscar_num, abbr7_fac_prvdr_emer_ind, abbr7_prvdr_fac_cd, abbr7_harmonized_cntrctr_num, abbr7_idr_ld_dt, abbr7_finl_actn_ind, abbr7_line_ndc_qty, abbr7_line_ndc_qty_qlfyr_cd, abbr7_line_abbr8_pd_amt, abbr7_line_othr_tp_pd_amt, abbr7_line_cvrd_pd_amt, abbr7_line_alowd_unit_qty, abbr7_line_ansthsa_unit_cnt, abbr7_line_instnl_adjstd_amt, abbr7_line_instnl_apc_bufr_cd, abbr7_line_instnl_rev_ctr_dt, abbr7_rev_pricng_ind_cd, abbr7_val_cd, abbr7_val_amt, abbr7_dschrg_hr, abbr7_instnl_cvrd_day_cnt, abbr7_instnl_drg_outlier_day_cnt, abbr7_instnl_drg_outlier_amt, abbr7_drop_off_zip4_cd, abbr7_pckp_zip4_cd, abbr7_prcdr_cd, abbr7_prcdr_1_cd, abbr7_prcdr_2_cd, abbr7_prcdr_3_cd, abbr7_prcdr_4_cd, abbr7_prcdr_5_cd, abbr7_prcdr_6_cd, dgns_drg_cd, abbr7_line_ndc_cd, abbr7_drop_off_zip5_cd, abbr7_pckp_zip5_cd, abbr7_line_dgns_cd, abbr7_line_pos_last_name, abbr7_line_pos_1st_name, abbr7_line_pos_mdl_name, abbr7_line_pos_line_1_adr, abbr7_line_pos_line_2_adr, abbr7_line_pos_city_name, abbr7_line_pos_state_cd, abbr7_abbr8_zip_cd, abbr7_blg_prvdr_usps_state_cd, abbr7_dgns_e_cd, abbr7_line_mdcr_ddctbl_amt, abbr8_hic_num, abbr8_eqtbl_bic_hicn_num, abbr7_fac_prvdr_npi_num, abbr7_dgns_prcdr_icd_ind, abbr7_mbi, sub_bid_ind, abbr7_pd_dt, abbr7_abbr8_prcng_state_cd, abbr7_line_rndrg_prvdr_npi_num, abbr7_blg_prvdr_npi_num_orig, abbr7_prvdr_sbmtd_npi_num, abbr7_sbmtr_id, abbr7_abbr8_pd_amt, abbr7_prcr_rtrn_cd, abbr7_admsn_src_cd, abbr7_poa_ind, abbr7_line_stus_ind from abbr5
+-- 26 integral number columns
+select abbr7_extract_cyc_dt, abbr7_submsn_dt, abbr7_line_from_dt, abbr7_line_thru_dt, abbr7_from_dt, abbr7_thru_dt, abbr7_actv_care_from_dt, abbr7_dschrg_dt, abbr7_ocrnc_span_1_from_dt, abbr7_ocrnc_span_1_to_dt, abbr7_ocrnc_span_2_from_dt, abbr7_ocrnc_span_2_to_dt, abbr7_ocrnc_span_3_to_dt, abbr7_ocrnc_span_4from_dt, abbr7_ocrnc_span_4_to_dt, abbr7_ocrnc_span_5_from_dt, abbr7_ocrnc_span_5_to_dt, abbr7_ocrnc_span_6_from_dt, abbr7_ocrnc_span_6_to_dt, abbr7_ocrnc_span_7_from_dt, abbr7_ocrnc_span_7_to_dt, abbr7_ocrnc_span_8_from_dt, abbr7_ocrnc_span_8_to_dt, abbr7_ocrnc_span_9_from_dt, abbr7_ocrnc_span_9_to_dt, abbr7_ocrnc_span_10_from_dt, abbr7_ocrnc_span_10_to_dt from abbr5
+
+-- first Long column
+select abbr7_extract_cyc_dt from abbr5
+-- Long column in the middle
+select abbr7_ocrnc_span_8_from_dt from abbr5
+-- Last Long column
+select abbr7_pd_dt from abbr5
+
+-- first String column
+select abbr7_abbr6_file_name from abbr5
+-- String column in the middle
+select abbr7_ocrnc_span_3_cd from abbr5
+-- Last String column
+select abbr7_line_stus_ind from abbr5
+-- First 5 String columns
+select abbr7_abbr6_file_name, abbr7_cwf_rqst_rec_id, abbr7_line_abbr1_cd abbr1_1_mdfr_cd, abbr1_2_mdfr_cd from abbr5
+-- Last 5 String columns
+select abbr7_sbmtr_id, abbr7_abbr8_pd_amt, abbr7_prcr_rtrn_cd, abbr7_admsn_src_cd, abbr7_poa_ind, abbr7_line_stus_ind from abbr5
+-- Scatered 20 String columns
+select abbr7_abbr6_file_name, abbr7_line_abbr1_cd, abbr7_dgns_9_cd, abbr7_dgns_20_cd, abbr7_dgns_25_cd, abbr7_line_rev_cntr_cd, abbr7_ocrnc_span_1_cd, abbr7_ocrnc_span_3_cd, abbr7_ocrnc_span_5_cd, abbr7_ocrnc_span_6_cd, abbr7_ocrnc_span_9_cd, abbr7_rev_apc_hipps_cd, abbr7_rndrg_prvdr_npi_num, abbr7_othr_prvdr_2_npi_num, abbr7_rfrg_fed_prvdr_spclty_cd, abbr7_ptnt_visit_rsn_1_cd, abbr7_admsn_type_cd, abbr7_line_instnl_apc_bufr_cd, abbr7_pckp_zip4_cd, abbr7_line_pos_last_name from abbr5
+
+-- key columns
+abbr7_cntl_num
+abbr7_line_num
+abbr7_cntrctr_num
+abbr7_src_type
+abbr8_sk
+
+-- value columns
+abbr7_extract_cyc_dt Long
+abbr7_abbr6_file_name String
+abbr7_submsn_dt Long
+abbr7_cwf_rqst_rec_id String
+abbr7_line_abbr1_cd String
+abbr1_1_mdfr_cd String
+abbr1_2_mdfr_cd String
+abbr1_3_mdfr_cd String
+abbr1_4_mdfr_cd String
+abbr1_5_mdfr_cd String
+abbr7_line_srvc_unit_qty BigDecimal
+abbr7_prncpl_dgns_cd String
+abbr7_dgns_1_cd String
+abbr7_dgns_2_cd String
+abbr7_dgns_3_cd String
+abbr7_dgns_4_cd String
+abbr7_dgns_5_cd String
+abbr7_dgns_6_cd String
+abbr7_dgns_7_cd String
+abbr7_dgns_8_cd String
+abbr7_dgns_9_cd String
+abbr7_dgns_10_cd String
+abbr7_dgns_11_cd String
+abbr7_dgns_12_cd String
+abbr7_dgns_13_cd String
+abbr7_dgns_14_cd String
+abbr7_dgns_15_cd String
+abbr7_dgns_16_cd String
+abbr7_dgns_17_cd String
+abbr7_dgns_18_cd String
+abbr7_dgns_19_cd String
+abbr7_dgns_20_cd String
+abbr7_dgns_21_cd String
+abbr7_dgns_22_cd String
+abbr7_dgns_23_cd String
+abbr7_dgns_24_cd String
+abbr7_dgns_25_cd String
+abbr7_type_srvc_cd String
+abbr7_line_from_dt Long
+abbr7_line_thru_dt Long
+abbr7_pos_cd String
+abbr7_line_pos_zip_cd String
+abbr7_fac_prvdr_zip5_cd String
+abbr7_fac_prvdr_zip4_cd String
+abbr7_bill_fac_type_cd String
+abbr7_bill_clsfctn_cd Integer
+abbr7_bill_freq_cd String
+abbr7_type_cd String
+abbr7_xovr_cd String
+abbr7_bill_type_cd String
+abbr7_line_rev_cntr_cd String
+abbr7_line_rev_unit_num BigDecimal
+abbr7_from_dt Long
+abbr7_thru_dt Long
+abbr7_ncvrd_chrg_amt BigDecimal
+abbr7_line_ncvrd_chrg_amt BigDecimal
+abbr7_rlt_cond_cd_grp String
+abbr7_actv_care_from_dt Long
+abbr7_dschrg_dt Long
+abbr7_ocrnc_span_1_cd String
+abbr7_ocrnc_span_1_from_dt Long
+abbr7_ocrnc_span_1_to_dt Long
+abbr7_ocrnc_span_2_cd String
+abbr7_ocrnc_span_2_from_dt Long
+abbr7_ocrnc_span_2_to_dt Long
+abbr7_ocrnc_span_3_cd String
+abbr7_ocrnc_span_3_from_dt Long
+abbr7_ocrnc_span_3_to_dt Long
+abbr7_ocrnc_span_4_cd String
+abbr7_ocrnc_span_4from_dt Long
+abbr7_ocrnc_span_4_to_dt Long
+abbr7_ocrnc_span_5_cd String
+abbr7_ocrnc_span_5_from_dt Long
+abbr7_ocrnc_span_5_to_dt Long
+abbr7_ocrnc_span_6_cd String
+abbr7_ocrnc_span_6_from_dt Long
+abbr7_ocrnc_span_6_to_dt Long
+abbr7_ocrnc_span_7_cd String
+abbr7_ocrnc_span_7_from_dt Long
+abbr7_ocrnc_span_7_to_dt Long
+abbr7_ocrnc_span_8_cd String
+abbr7_ocrnc_span_8_from_dt Long
+abbr7_ocrnc_span_8_to_dt Long
+abbr7_ocrnc_span_9_cd String
+abbr7_ocrnc_span_9_from_dt Long
+abbr7_ocrnc_span_9_to_dt Long
+abbr7_ocrnc_span_10_cd String
+abbr7_ocrnc_span_10_from_dt Long
+abbr7_ocrnc_span_10_to_dt Long
+abbr7_rev_apc_hipps_cd String
+abbr8_ptnt_stus_cd String
+abbr7_cwf_actn_cd String
+abbr7_prcdr_cd_grp String
+abbr7_sbmt_chrg_amt BigDecimal
+abbr7_line_tot_chrg_amt BigDecimal
+abbr7_prvdr_pmt_amt BigDecimal
+abbr7_pmt_amt BigDecimal
+abbr7_line_prvdr_pmt_amt BigDecimal
+abbr7_alowd_chrg_amt BigDecimal
+abbr7_line_alowd_chrg_amt BigDecimal
+abbr7_rndrg_prvdr_npi_num String
+prvdr_mdcr_id String
+abbr7_prvdr_tax_num String
+abbr7_atndg_prvdr_npi_num String
+abbr7_atndg_fed_prvdr_spclty_cd String
+abbr7_oprtg_prvdr_npi_num String
+abbr7_othr_prvdr_npi_num String
+abbr7_othr_prvdr_2_npi_num String
+abbr7_blg_prvdr_npi_num String
+abbr7_blg_prvdr_pin_num String
+abbr7_rndrg_fed_prvdr_spclty_cd String
+abbr7_fac_prvdr_txnmy_cd String
+abbr7_rfrg_prvdr_npi_num String
+abbr7_rfrg_fed_prvdr_spclty_cd String
+abbr7_hic_num String
+abbr7_insrd_birth_dt Long
+abbr7_ptnt_death_dt Long
+abbr8_rrb_num String
+abbr7_crnt_stus_cd String
+abbr7_pd_stus_cd String
+abbr7_admtg_dgns_cd String
+abbr7_ptnt_visit_rsn_1_cd String
+abbr7_ptnt_visit_rsn_2_cd String
+abbr7_ptnt_visit_rsn_3_cd String
+abbr7_abbr8_state_cd String
+abbr7_admsn_type_cd String
+abbr7_blg_fed_prvdr_spclty_cd String
+abbr7_blg_prvdr_oscar_num String
+abbr7_fac_prvdr_oscar_num String
+abbr7_fac_prvdr_emer_ind String
+abbr7_prvdr_fac_cd String
+abbr7_harmonized_cntrctr_num String
+abbr7_idr_ld_dt Long
+abbr7_finl_actn_ind String
+abbr7_line_ndc_qty BigDecimal
+abbr7_line_ndc_qty_qlfyr_cd String
+abbr7_line_abbr8_pd_amt BigDecimal
+abbr7_line_othr_tp_pd_amt BigDecimal
+abbr7_line_cvrd_pd_amt BigDecimal
+abbr7_line_alowd_unit_qty BigDecimal
+abbr7_line_ansthsa_unit_cnt BigDecimal
+abbr7_line_instnl_adjstd_amt BigDecimal
+abbr7_line_instnl_apc_bufr_cd String
+abbr7_line_instnl_rev_ctr_dt Long
+abbr7_rev_pricng_ind_cd String
+abbr7_val_cd String
+abbr7_val_amt String
+abbr7_dschrg_hr BigDecimal
+abbr7_instnl_cvrd_day_cnt BigDecimal
+abbr7_instnl_drg_outlier_day_cnt BigDecimal
+abbr7_instnl_drg_outlier_amt BigDecimal
+abbr7_drop_off_zip4_cd String
+abbr7_pckp_zip4_cd String
+abbr7_prcdr_cd String
+abbr7_prcdr_1_cd String
+abbr7_prcdr_2_cd String
+abbr7_prcdr_3_cd String
+abbr7_prcdr_4_cd String
+abbr7_prcdr_5_cd String
+abbr7_prcdr_6_cd String
+dgns_drg_cd BigDecimal
+abbr7_line_ndc_cd String
+abbr7_drop_off_zip5_cd String
+abbr7_pckp_zip5_cd String
+abbr7_line_dgns_cd String
+abbr7_line_pos_last_name String
+abbr7_line_pos_1st_name String
+abbr7_line_pos_mdl_name String
+abbr7_line_pos_line_1_adr String
+abbr7_line_pos_line_2_adr String
+abbr7_line_pos_city_name String
+abbr7_line_pos_state_cd String
+abbr7_abbr8_zip_cd String
+abbr7_blg_prvdr_usps_state_cd String
+abbr7_dgns_e_cd String
+abbr7_line_mdcr_ddctbl_amt BigDecimal
+abbr8_hic_num String
+abbr8_eqtbl_bic_hicn_num String
+abbr7_fac_prvdr_npi_num String
+abbr7_dgns_prcdr_icd_ind String
+abbr7_mbi String
+sub_bid_ind String
+abbr7_pd_dt Long
+abbr7_abbr8_prcng_state_cd String
+abbr7_line_rndrg_prvdr_npi_num String
+abbr7_blg_prvdr_npi_num_orig String
+abbr7_prvdr_sbmtd_npi_num String
+abbr7_sbmtr_id String
+abbr7_abbr8_pd_amt BigDecimal
+abbr7_prcr_rtrn_cd String
+abbr7_admsn_src_cd String
+abbr7_poa_ind String
+abbr7_line_stus_ind String

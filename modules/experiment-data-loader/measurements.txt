@@ -1,0 +1,35 @@
+Experiment (table abbr5) 500K rows, 193 columns, String (majority), Long, Integer, BigDecimal types
+
+Bike/Binary
+========
+No nulls (row size ~2k/~4k)
+========
+Space: 1 288 160 392/2 334 734 832
+All columns: ~23sec/~28sec
+All Integer and Long columns (26 columns): ~2800millis/~3750millis
+First Long column: ~900millis/~1670milis
+Long column in the middle: ~920millis/~1700millis
+Last Long column: ~860millis/~1680millis
+First String column: ~880millis/~1700millis
+String column in the middle: ~880millis/~1730millis
+Last String column: ~880millis/~1750millis
+First 5 String columns: ~1190millis/~2080millis
+Last 5 String columns: ~1450milils/~2370millis
+Scattered 20 String columns: ~2860millis/~4060millis
+
+Bike/Binary
+========
+70% nulls
+========
+Space: 527 875 176/1 358 817 688
+All columns: ~11700millis/~16200sec
+All Integer and Long columns (26 columns): ~1450millis/~2600millis
+First Long column: ~400millis/~900milis
+Long column in the middle: ~400millis/~900millis
+Last Long column: ~400millis/~900millis
+First String column: ~420millis/~900millis
+String column in the middle: ~420millis/~910millis
+Last String column: ~420illis/~910millis
+First 5 String columns: ~590millis/~1180millis
+Last 5 String columns: ~650milils/~1280millis
+Scattered 20 String columns: ~1500millis/~2600millis

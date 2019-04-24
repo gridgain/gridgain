@@ -90,4 +90,16 @@ public interface GridQueryProperty {
      * @return Scale for a decimal property or -1.
      */
     public int scale();
+
+    default int intValue(Object key, Object val) {
+        return 0;
+    }
+
+    default long longValue(Object key, Object val) {
+        return 0;
+    }
+
+    default int getBikeOrdinal() {
+        return -1;
+    }
 }

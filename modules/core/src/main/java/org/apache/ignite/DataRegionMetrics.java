@@ -218,4 +218,6 @@ public interface DataRegionMetrics {
      * @return Total used offheap size in bytes.
      */
     public long getOffheapUsedSize();
+
+    public long getUsedSpaceEx();
 }

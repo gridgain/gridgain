@@ -1,0 +1,13 @@
+prvdr_npi_num=10.0
+e4t_stus_rsn_cd=3.0
+stus_cd=2.0
+cntrctr_id=5.0
+othr_rsn_txt=15.477611940298512
+pac_id=10.0
+faair_type_cd=1.0
+rec_stus_cd=1.0
+e4t_stus_rsn_desc=31.526310000000034
+e4t_stus_cmt_txt=61.06557377049187
+stus_desc=8.850039999999966
+e4t_id=15.0
+prvdr_dba_name=25.177335938397878

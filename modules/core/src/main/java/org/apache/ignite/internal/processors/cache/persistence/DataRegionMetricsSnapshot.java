@@ -88,6 +88,8 @@ public class DataRegionMetricsSnapshot implements DataRegionMetrics {
     /** */
     private long offHeapUsedSize;
 
+    private final long usedSpaceEx;
+
     /**
      * @param metrics Metrics instance to take a copy.
      */
@@ -114,6 +116,7 @@ public class DataRegionMetricsSnapshot implements DataRegionMetrics {
         replacedPage = metrics.getPagesReplaced();
         offHeapSize = metrics.getOffHeapSize();
         offHeapUsedSize = metrics.getOffheapUsedSize();
+        usedSpaceEx = metrics.getUsedSpaceEx();
     }
 
     /** {@inheritDoc} */
@@ -224,5 +227,9 @@ public class DataRegionMetricsSnapshot implements DataRegionMetrics {
     /** {@inheritDoc} */
     @Override public long getOffheapUsedSize() {
         return offHeapUsedSize;
+    }
+
+    @Override public long getUsedSpaceEx() {
+        return usedSpaceEx;
     }
 }

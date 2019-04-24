@@ -1,0 +1,530 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one or more
+  contributor license agreements.  See the NOTICE file distributed with
+  this work for additional information regarding copyright ownership.
+  The ASF licenses this file to You under the Apache License, Version 2.0
+  (the "License"); you may not use this file except in compliance with
+  the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<!--
+    Ignite configuration with all defaults and enabled p2p deployment and enabled events.
+-->
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd">
+    <bean id="server.cfg" class="org.apache.ignite.configuration.IgniteConfiguration">
+        <property name="igniteInstanceName" value="client"/>
+        <property name="clientMode" value="true"/>
+        <property name="peerClassLoadingEnabled" value="true"/>
+
+        <property name="binaryConfiguration">
+            <bean class="org.apache.ignite.configuration.BinaryConfiguration">
+                <property name="compactFooter" value="false"/>
+                <property name="idMapper">
+                    <bean class="org.apache.ignite.binary.BinaryBasicIdMapper">
+                        <constructor-arg name="isLowerCase" value="true"/>
+                    </bean>
+                </property>
+                <property name="nameMapper">
+                    <bean class="org.apache.ignite.binary.BinaryBasicNameMapper">
+                        <constructor-arg name="isSimpleName" value="true"/>
+                    </bean>
+                </property>
+            </bean>
+        </property>
+
+        <property name="cacheConfiguration">
+            <list>
+                <bean class="org.apache.ignite.configuration.CacheConfiguration">
+                    <property name="name" value="abbr1_CD"/>
+                    <property name="atomicityMode" value="ATOMIC"/>
+                    <property name="cacheMode" value="REPLICATED"/>
+                    <property name="queryEntities">
+                        <list>
+                            <bean class="org.apache.ignite.cache.QueryEntity">
+                                <!--TODO we should understand what is the private key-->
+                                <property name="keyType" value="java.util.UUID"/>
+                                <property name="valueType" value="com.gridgain.experiment.model.abbr1CdRecord"/>
+                                <property name="tableName" value="abbr1_cd"/>
+                                <property name="fields">
+                                    <map>
+                                        <entry key="abbr1_cd" value="java.lang.String"/>
+                                        <entry key="clndr_abbr1_yr_num" value="java.math.BigDecimal"/>
+                                        <entry key="abbr1_actn_cd" value="java.lang.String"/>
+                                        <entry key="abbr1_actn_efctv_dt" value="java.lang.Long"/>
+                                        <entry key="abbr1_ansthsa_unit_qty" value="java.math.BigDecimal"/>
+                                        <entry key="abbr1_asc_ind_cd" value="java.lang.String"/>
+                                        <entry key="abbr1_asc_pmt_grp_cd" value="java.lang.String"/>
+                                        <entry key="abbr1_betos_cd" value="java.lang.String"/>
+                                        <entry key="abbr1_betos_cd_desc" value="java.lang.String"/>
+                                        <entry key="abbr1_betos_ctgry_cd" value="java.lang.String"/>
+                                        <entry key="abbr1_betos_ctgry_clsfctn_cd" value="java.lang.String"/>
+                                        <entry key="abbr1_cd_add_dt" value="java.lang.Long"/>
+                                        <entry key="abbr1_cd_desc" value="java.lang.String"/>
+                                        <entry key="abbr1_cd_shrt_desc" value="java.lang.String"/>
+                                        <entry key="abbr1_ctgry_cd" value="java.lang.String"/>
+                                        <entry key="abbr1_cvrg_cd" value="java.lang.String"/>
+                                        <entry key="abbr1_dme_plcy_grp_cd" value="java.lang.String"/>
+                                        <entry key="abbr1_dme_plcy_grp_cd_desc" value="java.lang.String"/>
+                                        <entry key="abbr1_end_dt" value="java.lang.Long"/>
+                                        <entry key="abbr1_lvl_cd" value="java.lang.String"/>
+                                        <entry key="abbr1_mog_pmt_cd" value="java.lang.String"/>
+                                        <entry key="abbr1_mog_pmt_efctv_dt" value="java.lang.Long"/>
+                                        <entry key="abbr1_mog_pmt_grp_cd" value="java.lang.String"/>
+                                        <entry key="abbr1_nmrc_ind_cd" value="java.lang.String"/>
+                                        <entry key="abbr1_pmt_grp_bgn_dt" value="java.lang.Long"/>
+                                        <entry key="abbr1_prcng_cd" value="java.lang.String"/>
+                                        <entry key="abbr1_prcng_cd_desc" value="java.lang.String"/>
+                                        <entry key="abbr1_prcsg_note_num" value="java.lang.String"/>
+                                        <entry key="abbr1_statute_num" value="java.lang.String"/>
+                                        <entry key="meta_sk" value="java.lang.Integer"/>
+                                        <entry key="meta_src_sk" value="java.lang.Integer"/>
+                                    </map>
+                                </property>
+
+                                <property name="keyFields">
+                                    <!--TODO we should understand what is the private key-->
+                                    <set>
+                                        <value>abbr1_cd</value>
+                                    </set>
+                                </property>
+                            </bean>
+                        </list>
+                    </property>
+                </bean>
+                <bean class="org.apache.ignite.configuration.CacheConfiguration">
+                    <property name="name" value="abbr2_e4t_STUS_NPI"/>
+                    <property name="atomicityMode" value="ATOMIC"/>
+                    <property name="cacheMode" value="REPLICATED"/>
+                    <property name="queryEntities">
+                        <list>
+                            <bean class="org.apache.ignite.cache.QueryEntity">
+                                <!--TODO we should understand what is the private key-->
+                                <property name="keyType" value="java.util.UUID"/>
+                                <property name="valueType" value="com.gridgain.experiment.model.abbr2e4tStusNpiRecord"/>
+                                <property name="tableName" value="abbr2_e4t_stus_npi"/>
+                                <property name="fields">
+                                    <map>
+                                        <entry key="prvdr_npi_num" value="java.lang.String"/>
+                                        <entry key="e4t_stus_sk" value="java.math.BigDecimal"/>
+                                        <entry key="e4t_id" value="java.lang.String"/>
+                                        <entry key="e4t_finl_dt" value="java.lang.Long"/>
+                                        <entry key="pac_id" value="java.lang.String"/>
+                                        <entry key="cntrctr_id" value="java.lang.String"/>
+                                        <entry key="cntct_ts" value="java.lang.Long"/>
+                                        <entry key="e4t_stus_rsn_cd" value="java.lang.String"/>
+                                        <entry key="e4t_stus_rsn_desc" value="java.lang.String"/>
+                                        <entry key="othr_rsn_txt" value="java.lang.String"/>
+                                        <entry key="stus_cd" value="java.lang.String"/>
+                                        <entry key="stus_desc" value="java.lang.String"/>
+                                        <entry key="e4t_stus_cmt_txt" value="java.lang.String"/>
+                                        <entry key="stus_eff_ts" value="java.lang.Long"/>
+                                        <entry key="stus_end_ts" value="java.lang.Long"/>
+                                        <entry key="faair_type_cd" value="java.lang.String"/>
+                                        <entry key="prvdr_dba_name" value="java.lang.String"/>
+                                        <entry key="proc_cntl_dtl_insrt_sk" value="java.lang.Long"/>
+                                        <entry key="proc_cntl_dtl_last_updt_sk" value="java.lang.Long"/>
+                                        <entry key="rec_stus_cd" value="java.lang.String"/>
+                                        <entry key="rec_add_ts" value="java.lang.Long"/>
+                                        <entry key="rec_updt_ts" value="java.lang.Long"/>
+                                        <entry key="prvdr_e4t_stus_cnt" value="java.lang.Long"/>
+                                        <entry key="row_num" value="java.lang.Long"/>
+                                        <entry key="audt_insrt_ts" value="java.lang.Long"/>
+                                        <entry key="audt_updt_ts" value="java.lang.Long"/>
+                                    </map>
+                                </property>
+
+                                <property name="keyFields">
+                                    <!--TODO we should understand what is the private key-->
+                                    <set>
+                                        <value>prvdr_npi_num</value>
+                                    </set>
+                                </property>
+                            </bean>
+                        </list>
+                    </property>
+                </bean>
+                <bean class="org.apache.ignite.configuration.CacheConfiguration">
+                    <property name="name" value="abbr3_RFRNC"/>
+                    <property name="atomicityMode" value="ATOMIC"/>
+                    <property name="cacheMode" value="REPLICATED"/>
+                    <property name="queryEntities">
+                        <list>
+                            <bean class="org.apache.ignite.cache.QueryEntity">
+                                <!--TODO we should understand what is the private key-->
+                                <property name="keyType" value="java.util.UUID"/>
+                                <property name="valueType" value="com.gridgain.experiment.model.abbr3RfrncRecord"/>
+                                <property name="tableName" value="abbr3_rfrnc"/>
+                                <property name="fields">
+                                    <map>
+                                        <entry key="cd" value="java.lang.String"/>
+                                        <entry key="shrt_desc" value="java.lang.String"/>
+                                        <entry key="long_desc" value="java.lang.String"/>
+                                        <entry key="dgns_icd_ind" value="java.lang.Integer"/>
+                                        <entry key="clndr_yr_num" value="java.lang.Integer"/>
+                                        <entry key="rfrnc_data_id" value="java.lang.String"/>
+                                    </map>
+                                </property>
+
+                                <property name="keyFields">
+                                    <!--TODO we should understand what is the private key-->
+                                    <set>
+                                        <value>cd</value>
+                                    </set>
+                                </property>
+                            </bean>
+                        </list>
+                    </property>
+                </bean>
+                <bean class="org.apache.ignite.configuration.CacheConfiguration">
+                    <property name="name" value="abbr4_p10c"/>
+                    <property name="atomicityMode" value="ATOMIC"/>
+                    <property name="cacheMode" value="REPLICATED"/>
+                    <property name="queryEntities">
+                        <list>
+                            <bean class="org.apache.ignite.cache.QueryEntity">
+                                <!--TODO we should understand what is the private key-->
+                                <property name="keyType" value="java.util.UUID"/>
+                                <property name="valueType" value="com.gridgain.experiment.model.abbr4ProvierUpicRecord"/>
+                                <property name="tableName" value="abbr4_p10c"/>
+                                <property name="fields">
+                                    <map>
+                                        <entry key="prvdr_prctc_state_upic_cd" value="java.lang.String"/>
+                                        <entry key="prvdr_prctc_state_desc" value="java.lang.String"/>
+                                        <entry key="prvdr_sk" value="java.lang.Long"/>
+                                        <entry key="prvdr_gnrc_id_num" value="java.lang.String"/>
+                                        <entry key="prvdr_id_qlfyr_cd" value="java.lang.String"/>
+                                        <entry key="prvdr_id_qlfyr_cd_desc" value="java.lang.String"/>
+                                        <entry key="prvdr_birth_dt" value="java.lang.Long"/>
+                                        <entry key="prvdr_1st_name" value="java.lang.String"/>
+                                        <entry key="prvdr_mdl_name" value="java.lang.String"/>
+                                        <entry key="prvdr_last_name" value="java.lang.String"/>
+                                        <entry key="prvdr_name" value="java.lang.String"/>
+                                        <entry key="prvdr_lgl_name" value="java.lang.String"/>
+                                        <entry key="prvdr_drvd_npi_name" value="java.lang.String"/>
+                                        <entry key="prvdr_npi_num" value="java.lang.String"/>
+                                        <entry key="prvdr_emplr_id_num" value="java.lang.String"/>
+                                        <entry key="prvdr_mlg_line_1_adr" value="java.lang.String"/>
+                                        <entry key="prvdr_mlg_line_2_adr" value="java.lang.String"/>
+                                        <entry key="prvdr_mlg_plc_name" value="java.lang.String"/>
+                                        <entry key="prvdr_mlg_zip_cd" value="java.lang.String"/>
+                                        <entry key="prvdr_mlg_state_cd" value="java.lang.String"/>
+                                        <entry key="geo_prvdr_mlg_sk" value="java.lang.Integer"/>
+                                        <entry key="prvdr_mlg_zip4_cd" value="java.lang.String"/>
+                                        <entry key="prvdr_mlg_tel_num" value="java.lang.String"/>
+                                        <entry key="prvdr_prctc_line_1_adr" value="java.lang.String"/>
+                                        <entry key="prvdr_prctc_line_2_adr" value="java.lang.String"/>
+                                        <entry key="prvdr_prctc_plc_name" value="java.lang.String"/>
+                                        <entry key="prvdr_prctc_zip_cd" value="java.lang.String"/>
+                                        <entry key="prvdr_prctc_state_cd" value="java.lang.String"/>
+                                        <entry key="geo_prvdr_prctc_sk" value="java.lang.Integer"/>
+                                        <entry key="prvdr_prctc_zip4_cd" value="java.lang.String"/>
+                                        <entry key="prvdr_prctc_tel_num" value="java.lang.String"/>
+                                        <entry key="prvdr_src_id" value="java.lang.String"/>
+                                        <entry key="prvdr_txnmy_cmpst_cd" value="java.lang.String"/>
+                                        <entry key="prvdr_txnmy_1_cd" value="java.lang.String"/>
+                                        <entry key="prvdr_txnmy_2_cd" value="java.lang.String"/>
+                                        <entry key="prvdr_txnmy_3_cd" value="java.lang.String"/>
+                                        <entry key="prvdr_txnmy_4_cd" value="java.lang.String"/>
+                                        <entry key="prvdr_txnmy_5_cd" value="java.lang.String"/>
+                                        <entry key="prvdr_txnmy_6_cd" value="java.lang.String"/>
+                                        <entry key="prvdr_txnmy_7_cd" value="java.lang.String"/>
+                                        <entry key="prvdr_txnmy_8_cd" value="java.lang.String"/>
+                                        <entry key="prvdr_txnmy_9_cd" value="java.lang.String"/>
+                                        <entry key="prvdr_txnmy_10_cd" value="java.lang.String"/>
+                                        <entry key="prvdr_txnmy_11_cd" value="java.lang.String"/>
+                                        <entry key="prvdr_txnmy_12_cd" value="java.lang.String"/>
+                                        <entry key="prvdr_txnmy_13_cd" value="java.lang.String"/>
+                                        <entry key="prvdr_txnmy_14_cd" value="java.lang.String"/>
+                                        <entry key="prvdr_txnmy_15_cd" value="java.lang.String"/>
+                                        <entry key="meta_sk" value="java.lang.Integer"/>
+                                        <entry key="meta_lst_updt_sk" value="java.lang.Integer"/>
+                                        <entry key="meta_src_sk" value="java.lang.Short"/>
+                                        <entry key="meta_lst_updt_src_sk" value="java.lang.Short"/>
+                                        <entry key="prvdr_type_cd" value="java.lang.String"/>
+                                        <entry key="prvdr_dme_pos_num" value="java.lang.String"/>
+                                        <entry key="prvdr_state_lcns_num" value="java.lang.String"/>
+                                        <entry key="prvdr_ncpdp_id" value="java.lang.String"/>
+                                        <entry key="prvdr_oscar_num" value="java.lang.String"/>
+                                        <entry key="prvdr_pin_num" value="java.lang.String"/>
+                                        <entry key="prvdr_pin_grp_num" value="java.lang.String"/>
+                                        <entry key="prvdr_upin_num" value="java.lang.String"/>
+                                        <entry key="prvdr_upin_grp_num" value="java.lang.String"/>
+                                        <entry key="prvdr_othr_id" value="java.lang.String"/>
+                                    </map>
+                                </property>
+
+                                <property name="keyFields">
+                                    <!--TODO we should understand what is the private key-->
+                                    <set>
+                                        <value>prvdr_prctc_state_upic_cd</value>
+                                    </set>
+                                </property>
+                            </bean>
+                        </list>
+                    </property>
+                </bean>
+                <bean class="org.apache.ignite.configuration.CacheConfiguration">
+                    <property name="name" value="abbr5"/>
+                    <property name="atomicityMode" value="ATOMIC"/>
+                    <property name="cacheMode" value="PARTITIONED"/>
+                    <property name="sqlIndexMaxInlineSize" value="30"/>
+                    <property name="keyConfiguration">
+                        <bean class="org.apache.ignite.cache.CacheKeyConfiguration">
+                            <constructor-arg type = "java.lang.Class" value = "com.gridgain.experiment.model.abbr5Key"/>
+                            <property name="affinityKeyFieldName" value="abbr8_sk"/>
+                        </bean>
+                    </property>
+                    <property name="queryEntities">
+                        <list>
+                            <bean class="org.apache.ignite.cache.QueryEntity">
+                                <!--TODO we should understand what is the private key-->
+                                <property name="keyType" value="com.gridgain.experiment.model.abbr5Key"/>
+                                <property name="valueType" value="com.gridgain.experiment.model.abbr5Record"/>
+                                <property name="tableName" value="abbr5"/>
+                                <property name="fields">
+                                    <map>
+                                        <entry key="abbr7_extract_cyc_dt" value="java.lang.Long"/>
+                                        <entry key="abbr7_abbr6_file_name" value="java.lang.String"/>
+                                        <entry key="abbr7_cntl_num" value="java.lang.String"/>
+                                        <entry key="abbr7_line_num" value="java.lang.Integer"/>
+                                        <entry key="abbr7_submsn_dt" value="java.lang.Long"/>
+                                        <entry key="abbr7_cwf_rqst_rec_id" value="java.lang.String"/>
+                                        <entry key="abbr7_line_abbr1_cd" value="java.lang.String"/>
+                                        <entry key="abbr1_1_mdfr_cd" value="java.lang.String"/>
+                                        <entry key="abbr1_2_mdfr_cd" value="java.lang.String"/>
+                                        <entry key="abbr1_3_mdfr_cd" value="java.lang.String"/>
+                                        <entry key="abbr1_4_mdfr_cd" value="java.lang.String"/>
+                                        <entry key="abbr1_5_mdfr_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_line_srvc_unit_qty" value="java.math.BigDecimal"/>
+                                        <entry key="abbr7_prncpl_dgns_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_dgns_1_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_dgns_2_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_dgns_3_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_dgns_4_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_dgns_5_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_dgns_6_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_dgns_7_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_dgns_8_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_dgns_9_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_dgns_10_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_dgns_11_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_dgns_12_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_dgns_13_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_dgns_14_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_dgns_15_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_dgns_16_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_dgns_17_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_dgns_18_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_dgns_19_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_dgns_20_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_dgns_21_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_dgns_22_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_dgns_23_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_dgns_24_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_dgns_25_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_type_srvc_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_line_from_dt" value="java.lang.Long"/>
+                                        <entry key="abbr7_line_thru_dt" value="java.lang.Long"/>
+                                        <entry key="abbr7_pos_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_line_pos_zip_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_fac_prvdr_zip5_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_fac_prvdr_zip4_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_bill_fac_type_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_bill_clsfctn_cd" value="java.lang.Integer"/>
+                                        <entry key="abbr7_bill_freq_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_type_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_xovr_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_bill_type_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_line_rev_cntr_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_line_rev_unit_num" value="java.math.BigDecimal"/>
+                                        <entry key="abbr7_from_dt" value="java.lang.Long"/>
+                                        <entry key="abbr7_thru_dt" value="java.lang.Long"/>
+                                        <entry key="abbr7_ncvrd_chrg_amt" value="java.math.BigDecimal"/>
+                                        <entry key="abbr7_line_ncvrd_chrg_amt" value="java.math.BigDecimal"/>
+                                        <entry key="abbr7_rlt_cond_cd_grp" value="java.lang.String"/>
+                                        <entry key="abbr7_actv_care_from_dt" value="java.lang.Long"/>
+                                        <entry key="abbr7_dschrg_dt" value="java.lang.Long"/>
+                                        <entry key="abbr7_ocrnc_span_1_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_ocrnc_span_1_from_dt" value="java.lang.Long"/>
+                                        <entry key="abbr7_ocrnc_span_1_to_dt" value="java.lang.Long"/>
+                                        <entry key="abbr7_ocrnc_span_2_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_ocrnc_span_2_from_dt" value="java.lang.Long"/>
+                                        <entry key="abbr7_ocrnc_span_2_to_dt" value="java.lang.Long"/>
+                                        <entry key="abbr7_ocrnc_span_3_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_ocrnc_span_3_from_dt" value="java.lang.Long"/>
+                                        <entry key="abbr7_ocrnc_span_3_to_dt" value="java.lang.Long"/>
+                                        <entry key="abbr7_ocrnc_span_4_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_ocrnc_span_4from_dt" value="java.lang.Long"/>
+                                        <entry key="abbr7_ocrnc_span_4_to_dt" value="java.lang.Long"/>
+                                        <entry key="abbr7_ocrnc_span_5_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_ocrnc_span_5_from_dt" value="java.lang.Long"/>
+                                        <entry key="abbr7_ocrnc_span_5_to_dt" value="java.lang.Long"/>
+                                        <entry key="abbr7_ocrnc_span_6_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_ocrnc_span_6_from_dt" value="java.lang.Long"/>
+                                        <entry key="abbr7_ocrnc_span_6_to_dt" value="java.lang.Long"/>
+                                        <entry key="abbr7_ocrnc_span_7_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_ocrnc_span_7_from_dt" value="java.lang.Long"/>
+                                        <entry key="abbr7_ocrnc_span_7_to_dt" value="java.lang.Long"/>
+                                        <entry key="abbr7_ocrnc_span_8_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_ocrnc_span_8_from_dt" value="java.lang.Long"/>
+                                        <entry key="abbr7_ocrnc_span_8_to_dt" value="java.lang.Long"/>
+                                        <entry key="abbr7_ocrnc_span_9_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_ocrnc_span_9_from_dt" value="java.lang.Long"/>
+                                        <entry key="abbr7_ocrnc_span_9_to_dt" value="java.lang.Long"/>
+                                        <entry key="abbr7_ocrnc_span_10_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_ocrnc_span_10_from_dt" value="java.lang.Long"/>
+                                        <entry key="abbr7_ocrnc_span_10_to_dt" value="java.lang.Long"/>
+                                        <entry key="abbr7_rev_apc_hipps_cd" value="java.lang.String"/>
+                                        <entry key="abbr8_ptnt_stus_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_cwf_actn_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_prcdr_cd_grp" value="java.lang.String"/>
+                                        <entry key="abbr7_sbmt_chrg_amt" value="java.math.BigDecimal"/>
+                                        <entry key="abbr7_line_tot_chrg_amt" value="java.math.BigDecimal"/>
+                                        <entry key="abbr7_prvdr_pmt_amt" value="java.math.BigDecimal"/>
+                                        <entry key="abbr7_pmt_amt" value="java.math.BigDecimal"/>
+                                        <entry key="abbr7_line_prvdr_pmt_amt" value="java.math.BigDecimal"/>
+                                        <entry key="abbr7_alowd_chrg_amt" value="java.math.BigDecimal"/>
+                                        <entry key="abbr7_line_alowd_chrg_amt" value="java.math.BigDecimal"/>
+                                        <entry key="abbr7_rndrg_prvdr_npi_num" value="java.lang.String"/>
+                                        <entry key="prvdr_mdcr_id" value="java.lang.String"/>
+                                        <entry key="abbr7_prvdr_tax_num" value="java.lang.String"/>
+                                        <entry key="abbr7_atndg_prvdr_npi_num" value="java.lang.String"/>
+                                        <entry key="abbr7_atndg_fed_prvdr_spclty_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_oprtg_prvdr_npi_num" value="java.lang.String"/>
+                                        <entry key="abbr7_othr_prvdr_npi_num" value="java.lang.String"/>
+                                        <entry key="abbr7_othr_prvdr_2_npi_num" value="java.lang.String"/>
+                                        <entry key="abbr7_blg_prvdr_npi_num" value="java.lang.String"/>
+                                        <entry key="abbr7_blg_prvdr_pin_num" value="java.lang.String"/>
+                                        <entry key="abbr7_rndrg_fed_prvdr_spclty_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_fac_prvdr_txnmy_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_rfrg_prvdr_npi_num" value="java.lang.String"/>
+                                        <entry key="abbr7_rfrg_fed_prvdr_spclty_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_hic_num" value="java.lang.String"/>
+                                        <entry key="abbr7_insrd_birth_dt" value="java.lang.Long"/>
+                                        <entry key="abbr7_ptnt_death_dt" value="java.lang.Long"/>
+                                        <entry key="abbr8_sk" value="java.lang.String"/>
+                                        <entry key="abbr8_rrb_num" value="java.lang.String"/>
+                                        <entry key="abbr7_crnt_stus_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_pd_stus_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_admtg_dgns_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_ptnt_visit_rsn_1_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_ptnt_visit_rsn_2_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_ptnt_visit_rsn_3_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_abbr8_state_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_admsn_type_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_blg_fed_prvdr_spclty_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_blg_prvdr_oscar_num" value="java.lang.String"/>
+                                        <entry key="abbr7_fac_prvdr_oscar_num" value="java.lang.String"/>
+                                        <entry key="abbr7_fac_prvdr_emer_ind" value="java.lang.String"/>
+                                        <entry key="abbr7_prvdr_fac_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_cntrctr_num" value="java.lang.String"/>
+                                        <entry key="abbr7_harmonized_cntrctr_num" value="java.lang.String"/>
+                                        <entry key="abbr7_idr_ld_dt" value="java.lang.Long"/>
+                                        <entry key="abbr7_finl_actn_ind" value="java.lang.String"/>
+                                        <entry key="abbr7_line_ndc_qty" value="java.math.BigDecimal"/>
+                                        <entry key="abbr7_line_ndc_qty_qlfyr_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_line_abbr8_pd_amt" value="java.math.BigDecimal"/>
+                                        <entry key="abbr7_line_othr_tp_pd_amt" value="java.math.BigDecimal"/>
+                                        <entry key="abbr7_line_cvrd_pd_amt" value="java.math.BigDecimal"/>
+                                        <entry key="abbr7_line_alowd_unit_qty" value="java.math.BigDecimal"/>
+                                        <entry key="abbr7_line_ansthsa_unit_cnt" value="java.math.BigDecimal"/>
+                                        <entry key="abbr7_line_instnl_adjstd_amt" value="java.math.BigDecimal"/>
+                                        <entry key="abbr7_line_instnl_apc_bufr_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_line_instnl_rev_ctr_dt" value="java.lang.Long"/>
+                                        <entry key="abbr7_rev_pricng_ind_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_val_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_val_amt" value="java.lang.String"/>
+                                        <entry key="abbr7_dschrg_hr" value="java.math.BigDecimal"/>
+                                        <entry key="abbr7_instnl_cvrd_day_cnt" value="java.math.BigDecimal"/>
+                                        <entry key="abbr7_instnl_drg_outlier_day_cnt" value="java.math.BigDecimal"/>
+                                        <entry key="abbr7_instnl_drg_outlier_amt" value="java.math.BigDecimal"/>
+                                        <entry key="abbr7_drop_off_zip4_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_pckp_zip4_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_prcdr_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_prcdr_1_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_prcdr_2_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_prcdr_3_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_prcdr_4_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_prcdr_5_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_prcdr_6_cd" value="java.lang.String"/>
+                                        <entry key="dgns_drg_cd" value="java.math.BigDecimal"/>
+                                        <entry key="abbr7_line_ndc_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_drop_off_zip5_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_pckp_zip5_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_line_dgns_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_line_pos_last_name" value="java.lang.String"/>
+                                        <entry key="abbr7_line_pos_1st_name" value="java.lang.String"/>
+                                        <entry key="abbr7_line_pos_mdl_name" value="java.lang.String"/>
+                                        <entry key="abbr7_line_pos_line_1_adr" value="java.lang.String"/>
+                                        <entry key="abbr7_line_pos_line_2_adr" value="java.lang.String"/>
+                                        <entry key="abbr7_line_pos_city_name" value="java.lang.String"/>
+                                        <entry key="abbr7_line_pos_state_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_abbr8_zip_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_blg_prvdr_usps_state_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_dgns_e_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_line_mdcr_ddctbl_amt" value="java.math.BigDecimal"/>
+                                        <entry key="abbr8_hic_num" value="java.lang.String"/>
+                                        <entry key="abbr8_eqtbl_bic_hicn_num" value="java.lang.String"/>
+                                        <entry key="abbr7_fac_prvdr_npi_num" value="java.lang.String"/>
+                                        <entry key="abbr7_dgns_prcdr_icd_ind" value="java.lang.String"/>
+                                        <entry key="abbr7_mbi" value="java.lang.String"/>
+                                        <entry key="sub_bid_ind" value="java.lang.String"/>
+                                        <entry key="abbr7_pd_dt" value="java.lang.Long"/>
+                                        <entry key="abbr7_abbr8_prcng_state_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_line_rndrg_prvdr_npi_num" value="java.lang.String"/>
+                                        <entry key="abbr7_blg_prvdr_npi_num_orig" value="java.lang.String"/>
+                                        <entry key="abbr7_prvdr_sbmtd_npi_num" value="java.lang.String"/>
+                                        <entry key="abbr7_sbmtr_id" value="java.lang.String"/>
+                                        <entry key="abbr7_abbr8_pd_amt" value="java.math.BigDecimal"/>
+                                        <entry key="abbr7_prcr_rtrn_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_admsn_src_cd" value="java.lang.String"/>
+                                        <entry key="abbr7_poa_ind" value="java.lang.String"/>
+                                        <entry key="abbr7_line_stus_ind" value="java.lang.String"/>
+                                        <entry key="abbr7_src_type" value="java.lang.String"/>
+                                    </map>
+                                </property>
+
+                                <property name="keyFields">
+                                    <set>
+                                        <value>abbr7_cntl_num</value>
+                                        <value>abbr7_line_num</value>
+                                        <value>abbr7_cntrctr_num</value>
+                                        <value>abbr7_src_type</value>
+                                        <value>abbr8_sk</value>
+                                    </set>
+                                </property>
+                            </bean>
+                        </list>
+                    </property>
+                </bean>
+            </list>
+        </property>
+
+        <property name="discoverySpi">
+            <bean class="org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi">
+                <property name="ipFinder">
+                    <bean class="org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder">
+                        <property name="addresses">
+                            <list>
+                                <value>127.0.0.1:47500..47509</value>
+                            </list>
+                        </property>
+                    </bean>
+                </property>
+            </bean>
+        </property>
+    </bean>
+</beans>

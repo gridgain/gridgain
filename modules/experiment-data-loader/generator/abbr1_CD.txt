@@ -1,0 +1,16 @@
+abbr1_betos_ctgry_cd=1.0
+abbr1_betos_ctgry_clsfctn_cd=2.0
+abbr1_prcng_cd_desc=58.03566639849832
+abbr1_prcng_cd=1.889217259140417
+abbr1_lvl_cd=1.0
+abbr1_cd=4.999831131000121
+abbr1_cd_shrt_desc=23.84885586422349
+abbr1_asc_ind_cd=1.0
+abbr1_cd_desc=80.30849446930716
+abbr1_dme_plcy_grp_cd_desc=23.53037230568257
+abbr1_cvrg_cd=0.9681246305834706
+abbr1_dme_plcy_grp_cd=3.0
+abbr1_actn_cd=1.0
+abbr1_betos_cd=2.847167102930003
+abbr1_betos_cd_desc=27.015789251488123
+abbr1_nmrc_ind_cd=1.0

@@ -98,6 +98,8 @@ public class H2CacheRow extends H2Row implements CacheDataRow {
         if (v != null)
             return v;
 
+//        v = desc.columnValue(row.key(), row.value(), col, desc.indexing().objectContext());
+
         Object res = desc.columnValue(row.key(), row.value(), col);
 
         v = res == null ? ValueNull.INSTANCE : wrap(res, desc.fieldType(col));

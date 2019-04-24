@@ -259,7 +259,8 @@ public class H2PkHashIndex extends GridH2IndexBase {
                             // Need to filter rows by value type because in a single cache
                             // we can have multiple indexed types.
                             // Also need to skip expired rows.
-                            if (type.matchType(row.value()) && !wasExpired(row))
+//                            if (type.matchType(row.value()) && !wasExpired(row))
+                            if (!wasExpired(row))
                                 return true;
                         }
                     }

@@ -21,6 +21,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.binary.BinaryObject;
+import org.apache.ignite.internal.binary.nextgen.BikeBuilder;
+import org.apache.ignite.internal.binary.nextgen.BikeCacheObject;
+import org.apache.ignite.internal.binary.nextgen.BikeConverterRegistry;
+import org.apache.ignite.internal.binary.nextgen.BikeTuple;
+import org.apache.ignite.internal.processors.cache.CacheObjectValueContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContextInfo;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
@@ -28,11 +34,16 @@ import org.apache.ignite.internal.processors.query.GridQueryProperty;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.H2TableDescriptor;
+import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
+import org.apache.ignite.internal.processors.query.property.QueryBinaryProperty;
 import org.h2.message.DbException;
 import org.h2.result.SearchRow;
 import org.h2.value.DataType;
 import org.h2.value.Value;
+import org.h2.value.ValueInt;
+import org.h2.value.ValueLong;
+import org.h2.value.ValueNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -115,10 +126,14 @@ public class GridH2RowDescriptor {
 
         props = new GridQueryProperty[fields.length];
 
+        int bikeOrd = 0;
         for (int i = 0; i < fields.length; i++) {
             GridQueryProperty p = type.property(fields[i]);
 
             assert p != null : fields[i];
+
+            if (p instanceof QueryBinaryProperty && isNotPartOfKeyHack(p))
+                ((QueryBinaryProperty)p).setBikeOrdinal(bikeOrd++);
 
             props[i] = p;
         }
@@ -130,6 +145,14 @@ public class GridH2RowDescriptor {
 
         valAliasColId = (type.valueFieldName() != null) ?
             QueryUtils.DEFAULT_COLUMNS_COUNT + fieldsList.indexOf(type.valueFieldAlias()) : COL_NOT_EXISTS;
+
+        // t0d0 figure out what is the proper mapping strategy
+        BikeConverterRegistry.registerConverter(type.typeId(), this::binaryToBike);
+    }
+
+    private boolean isNotPartOfKeyHack(GridQueryProperty prop) {
+        // t0d0 figure out how determine if a property corresponds to a key or a value and fix
+        return !prop.key() && !prop.name().equals(type.keyFieldName());
     }
 
     /**
@@ -228,8 +251,33 @@ public class GridH2RowDescriptor {
      * @param key Key.
      * @param val Value.
      * @param col Column index.
+     * @param coCtx
      * @return  Column value.
      */
+    public Value columnValue(Object key, Object val, int col,
+        CacheObjectValueContext coCtx) {
+        try {
+            assert val instanceof BikeCacheObject;
+
+            GridQueryProperty p = props[col];
+
+            if (p.getBikeOrdinal() != -1) {
+                switch (fieldType(col)) {
+                    case Value.INT:
+                        return ValueInt.get(p.intValue(key, val));
+                    case Value.LONG:
+                        return ValueLong.get(p.longValue(key, val));
+                }
+            }
+            Object res = p.value(key, val);
+
+            return res == null ? ValueNull.INSTANCE : H2Utils.wrap(coCtx, res, fieldType(col));
+        }
+        catch (IgniteCheckedException e) {
+            throw DbException.convert(e);
+        }
+    }
+
     public Object columnValue(Object key, Object val, int col) {
         try {
             return props[col].value(key, val);
@@ -250,6 +298,22 @@ public class GridH2RowDescriptor {
     public void setColumnValue(Object key, Object val, Object colVal, int col) {
         try {
             props[col].setValue(key, val, colVal);
+        }
+        catch (IgniteCheckedException e) {
+            throw DbException.convert(e);
+        }
+    }
+
+    private BikeTuple binaryToBike(BinaryObject bin) {
+        int ncols = (int)Arrays.stream(props).filter(this::isNotPartOfKeyHack).count();
+        try {
+            BikeBuilder builder = new BikeBuilder(ncols);
+            for (int i = 0; i < props.length; i++) {
+                GridQueryProperty prop = props[i];
+                if (isNotPartOfKeyHack(prop))
+                    builder.append(prop.value(null, bin));
+            }
+            return new BikeTuple(builder.build());
         }
         catch (IgniteCheckedException e) {
             throw DbException.convert(e);

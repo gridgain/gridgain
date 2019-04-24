@@ -24,6 +24,8 @@ import org.apache.ignite.binary.BinaryType;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.binary.BinaryObjectEx;
 import org.apache.ignite.internal.binary.BinaryObjectExImpl;
+import org.apache.ignite.internal.binary.nextgen.BikeCacheObject;
+import org.apache.ignite.internal.binary.nextgen.BikeTuple;
 import org.apache.ignite.internal.processors.query.GridQueryProperty;
 import org.apache.ignite.internal.util.typedef.F;
 
@@ -31,6 +33,7 @@ import org.apache.ignite.internal.util.typedef.F;
  * Binary property.
  */
 public class QueryBinaryProperty implements GridQueryProperty {
+    private static final boolean bikeFormat = Boolean.getBoolean("bike.row.format");
     /** Kernal context. */
     private final GridKernalContext ctx;
 
@@ -45,6 +48,8 @@ public class QueryBinaryProperty implements GridQueryProperty {
 
     /** Result class. */
     private Class<?> type;
+
+    private final int intType;
 
     /** Defines where value should be extracted from : cache entry's key or value. */
     private final boolean isKeyProp;
@@ -67,9 +72,18 @@ public class QueryBinaryProperty implements GridQueryProperty {
     /** */
     private final int scale;
 
+    private int bikeOrdinal = -1;
+
+    public void setBikeOrdinal(int bikeOrdinal) {
+        this.bikeOrdinal = bikeOrdinal;
+    }
+
+    @Override public int getBikeOrdinal() {
+        return bikeOrdinal;
+    }
+
     /**
      * Constructor.
-     *
      * @param ctx Kernal context.
      * @param propName Property name.
      * @param parent Parent property.
@@ -89,11 +103,20 @@ public class QueryBinaryProperty implements GridQueryProperty {
         this.alias = F.isEmpty(alias) ? propName : alias;
         this.parent = parent;
         this.type = type;
+        this.intType = BikeTuple.intType(type);
         this.notNull = notNull;
         this.isKeyProp = key;
         this.defaultValue = defaultValue;
         this.precision = precision;
         this.scale = scale;
+    }
+
+    @Override public int intValue(Object key, Object val) {
+        return ((BikeCacheObject)val).tuple().attrInt(bikeOrdinal);
+    }
+
+    @Override public long longValue(Object key, Object val) {
+        return ((BikeCacheObject)val).tuple().attrLong(bikeOrdinal);
     }
 
     /** {@inheritDoc} */
@@ -113,18 +136,44 @@ public class QueryBinaryProperty implements GridQueryProperty {
         else
             obj = isKeyProp ? key : val;
 
-        if (obj instanceof BinaryObject) {
-            BinaryObject obj0 = (BinaryObject) obj;
+        if (bikeFormat) {
+            if (obj.getClass() == BikeCacheObject.class) {
+                BikeCacheObject obj0 = (BikeCacheObject)obj;
 
-            return fieldValue(obj0);
-        }
-        else if (obj instanceof BinaryObjectBuilder) {
-            BinaryObjectBuilder obj0 = (BinaryObjectBuilder)obj;
+                return obj0.tuple().attr(bikeOrdinal, type, intType);
+            }
+            else if (obj instanceof BinaryObjectBuilder) {
+                BinaryObjectBuilder obj0 = (BinaryObjectBuilder)obj;
 
-            return obj0.getField(propName);
+                return obj0.getField(propName);
+            }
+            else if (obj instanceof BinaryObject) {
+                BinaryObject obj0 = (BinaryObject)obj;
+
+                return fieldValue(obj0);
+            }
+            else
+                throw new IgniteCheckedException("Unexpected binary object class [type=" + obj.getClass() + ']');
         }
-        else
-            throw new IgniteCheckedException("Unexpected binary object class [type=" + obj.getClass() + ']');
+        else {
+            if (obj instanceof BinaryObjectBuilder) {
+                BinaryObjectBuilder obj0 = (BinaryObjectBuilder)obj;
+
+                return obj0.getField(propName);
+            }
+            else if (obj instanceof BinaryObject) {
+                BinaryObject obj0 = (BinaryObject)obj;
+
+                return fieldValue(obj0);
+            }
+            else if (obj.getClass() == BikeCacheObject.class) {
+                BikeCacheObject obj0 = (BikeCacheObject)obj;
+
+                return obj0.tuple().attr(bikeOrdinal, type, intType);
+            }
+            else
+                throw new IgniteCheckedException("Unexpected binary object class [type=" + obj.getClass() + ']');
+        }
     }
 
     /** {@inheritDoc} */
