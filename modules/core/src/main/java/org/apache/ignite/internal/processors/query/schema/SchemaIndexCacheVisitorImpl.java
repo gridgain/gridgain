@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.query.schema;
 
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
@@ -68,6 +69,8 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
     /** Whether to stop the process. */
     private volatile boolean stop;
 
+    private IgniteLogger log;
+
     /**
      * Constructor.
      *  @param cctx Cache context.
@@ -98,6 +101,7 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
             cctx = ((GridNearCacheAdapter)cctx.cache()).dht().context();
 
         this.cctx = cctx;
+        this.log = cctx.logger(SchemaIndexCacheVisitorImpl.class);
     }
 
     /** {@inheritDoc} */
@@ -188,6 +192,8 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
             GridCursor<? extends CacheDataRow> cursor = part.dataStore().cursor(cctx.cacheId(), null, null,
                 CacheDataRowAdapter.RowData.KEY_ONLY);
 
+            log.error("@@@ SchemaIndexCacheVisitorImpl.processPartition, cacheId=" + cctx.cacheId() + ", partId=" + part.id());
+
             boolean locked = false;
 
             try {
@@ -232,6 +238,8 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
      * @throws IgniteCheckedException If failed.
      */
     private void processKey(KeyCacheObject key, SchemaIndexCacheVisitorClosure clo) throws IgniteCheckedException {
+        log.error("@@@ SchemaIndexCacheVisitorImpl.processKey cacheId=" + cctx.cacheId() + ", key=" + key.hashCode());
+
         while (true) {
             try {
                 checkCancelled();
@@ -248,10 +256,13 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
                 break;
             }
             catch (GridDhtInvalidPartitionException ignore) {
+                log.error("@@@ SchemaIndexCacheVisitorImpl.processKey cacheId=" + cctx.cacheId() + ", key=" + key.hashCode() +", GridDhtInvalidPartitionException was thrown", ignore);
+
                 break;
             }
             catch (GridCacheEntryRemovedException ignored) {
                 // No-op.
+                log.error("@@@ SchemaIndexCacheVisitorImpl.processKey cacheId=" + cctx.cacheId() + ", key=" + key.hashCode() +", GridCacheEntryRemovedException was thrown", ignored);
             }
         }
     }
