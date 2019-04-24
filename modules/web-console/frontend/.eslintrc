@@ -70,7 +70,7 @@ rules:
     max-nested-callbacks: [1, 4]
     max-params: [0, 3]
     max-statements: [0, 10]
-    // https://github.com/eslint/typescript-eslint-parser/issues/569
+    // This rule conflicts with TS decorators
     // new-cap: 2
     new-parens: 2
     no-alert: 2
