@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -93,6 +93,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPreloaderAssignments;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.IgniteDhtPartitionHistorySuppliersMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.IgniteDhtPartitionsToReloadMap;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.PartitionsExchangeAware;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.RebalanceReassignExchangeTask;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.StopCachesOnClientReconnectExchangeTask;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.latch.ExchangeLatchManager;
@@ -259,6 +260,9 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
     /** Distributed latch manager. */
     private ExchangeLatchManager latchMgr;
+
+    /** List of exchange aware components. */
+    private final List<PartitionsExchangeAware> exchangeAwareComps = new ArrayList<>();
 
     /** Discovery listener. */
     private final DiscoveryEventListener discoLsnr = new DiscoveryEventListener() {
@@ -1146,6 +1150,31 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
     }
 
     /**
+     * Registers component that will be notified on every partition map exchange.
+     *
+     * @param comp Component to be registered.
+     */
+    public void registerExchangeAwareComponent(PartitionsExchangeAware comp) {
+        exchangeAwareComps.add(comp);
+    }
+
+    /**
+     * Removes exchange aware component from list of listeners.
+     *
+     * @param comp Component to be registered.
+     */
+    public void unregisterExchangeAwareComponent(PartitionsExchangeAware comp) {
+        exchangeAwareComps.remove(comp);
+    }
+
+    /**
+     * @return List of registered exchange listeners.
+     */
+    public List<PartitionsExchangeAware> exchangeAwareComponents() {
+        return U.sealList(exchangeAwareComps);
+    }
+
+    /**
      * Partition refresh callback for selected cache groups.
      * For coordinator causes {@link GridDhtPartitionsFullMessage FullMessages} send,
      * for non coordinator -  {@link GridDhtPartitionsSingleMessage SingleMessages} send
@@ -1239,9 +1268,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
     ) {
         long time = System.currentTimeMillis();
 
-        GridDhtPartitionsFullMessage m = createPartitionsFullMessage(true, false, null, null, null, null, grps);
-
-        m.topologyVersion(msgTopVer);
+        GridDhtPartitionsFullMessage m = createPartitionsFullMessage(true, false, null,
+            msgTopVer, null, null, null, grps);
 
         if (log.isInfoEnabled()) {
             long latency = System.currentTimeMillis() - time;
@@ -1306,13 +1334,14 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
         boolean compress,
         boolean newCntrMap,
         @Nullable final GridDhtPartitionExchangeId exchId,
+        @Nullable AffinityTopologyVersion msgTopVer,
         @Nullable GridCacheVersion lastVer,
         @Nullable IgniteDhtPartitionHistorySuppliersMap partHistSuppliers,
         @Nullable IgniteDhtPartitionsToReloadMap partsToReload
     ) {
         Collection<CacheGroupContext> grps = cctx.cache().cacheGroups();
 
-        return createPartitionsFullMessage(compress, newCntrMap, exchId, lastVer, partHistSuppliers, partsToReload, grps);
+        return createPartitionsFullMessage(compress, newCntrMap, exchId, msgTopVer, lastVer, partHistSuppliers, partsToReload, grps);
     }
 
     /**
@@ -1332,15 +1361,21 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
         boolean compress,
         boolean newCntrMap,
         @Nullable final GridDhtPartitionExchangeId exchId,
+        @Nullable AffinityTopologyVersion msgTopVer,
         @Nullable GridCacheVersion lastVer,
         @Nullable IgniteDhtPartitionHistorySuppliersMap partHistSuppliers,
         @Nullable IgniteDhtPartitionsToReloadMap partsToReload,
         Collection<CacheGroupContext> grps
     ) {
-        AffinityTopologyVersion ver = exchId != null ? exchId.topologyVersion() : AffinityTopologyVersion.NONE;
+        assert (exchId != null) ^ (msgTopVer != null): "Topology version of full map message must be specified" +
+            " either via exchangeId=[" + exchId + "], or via msgTopVer=[" + msgTopVer + "].";
 
-        final GridDhtPartitionsFullMessage m =
-            new GridDhtPartitionsFullMessage(exchId, lastVer, ver, partHistSuppliers, partsToReload);
+        final GridDhtPartitionsFullMessage m = new GridDhtPartitionsFullMessage(exchId,
+            lastVer,
+            exchId != null ? exchId.topologyVersion() : msgTopVer,
+            partHistSuppliers,
+            partsToReload
+            );
 
         m.compress(compress);
 
@@ -1395,6 +1430,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                 m.addPartitionSizes(top.groupId(), top.globalPartSizes());
             }
         }
+
+        cctx.kernalContext().txDr().onPartitionsFullMessagePrepared(exchId, m);
 
         return m;
     }

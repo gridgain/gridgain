@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -310,7 +310,7 @@ public abstract class AbstractWalRecordsIterator
      * @param desc File descriptor.
      * @param start Optional start pointer. Null means read from the beginning.
      * @param fileIO fileIO associated with file descriptor
-     * @param segmentHeader read segment header from fileIO
+     * @param segmentHdr read segment header from fileIO
      * @return Initialized file read header.
      * @throws IgniteCheckedException If initialized failed due to another unexpected error.
      */
@@ -318,10 +318,10 @@ public abstract class AbstractWalRecordsIterator
         @NotNull final AbstractFileDescriptor desc,
         @Nullable final FileWALPointer start,
         @NotNull final SegmentIO fileIO,
-        @NotNull final SegmentHeader segmentHeader
+        @NotNull final SegmentHeader segmentHdr
     ) throws IgniteCheckedException {
         try {
-            boolean isCompacted = segmentHeader.isCompacted();
+            boolean isCompacted = segmentHdr.isCompacted();
 
             if (isCompacted)
                 serializerFactory.skipPositionCheck(true);
@@ -341,7 +341,7 @@ public abstract class AbstractWalRecordsIterator
                 }
             }
 
-            int serVer = segmentHeader.getSerializerVersion();
+            int serVer = segmentHdr.getSerializerVersion();
 
             return createReadFileHandle(fileIO, serializerFactory.createSerializer(serVer), in);
         }
@@ -365,6 +365,9 @@ public abstract class AbstractWalRecordsIterator
 
             throw new IgniteCheckedException(
                 "Failed to initialize WAL segment after reading segment header: " + desc.file().getAbsolutePath(), e);
+        }
+        finally {
+            serializerFactory.clearSegmentLocalState();
         }
     }
 

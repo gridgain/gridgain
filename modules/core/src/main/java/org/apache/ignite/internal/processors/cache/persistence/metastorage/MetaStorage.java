@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -452,11 +452,11 @@ public class MetaStorage implements DbCheckpointListener, ReadWriteMetastorage {
 
     /** */
     private void checkRootsPageIdFlag(long treeRoot, long reuseListRoot) throws StorageException {
-        if (PageIdUtils.flag(treeRoot) != PageMemory.FLAG_DATA)
+        if (PageIdUtils.flag(treeRoot) != FLAG_DATA)
             throw new StorageException("Wrong tree root page id flag: treeRoot="
                 + U.hexLong(treeRoot) + ", METASTORAGE_CACHE_ID=" + METASTORAGE_CACHE_ID);
 
-        if (PageIdUtils.flag(reuseListRoot) != PageMemory.FLAG_DATA)
+        if (PageIdUtils.flag(reuseListRoot) != FLAG_DATA)
             throw new StorageException("Wrong reuse list root page id flag: reuseListRoot="
                 + U.hexLong(reuseListRoot) + ", METASTORAGE_CACHE_ID=" + METASTORAGE_CACHE_ID);
     }
@@ -515,11 +515,11 @@ public class MetaStorage implements DbCheckpointListener, ReadWriteMetastorage {
                         //MetaStorage never encrypted so realPageSize == pageSize.
                         io.initNewPage(pageAddr, partMetaId, pageMem.pageSize());
 
-                        treeRoot = pageMem.allocatePage(METASTORAGE_CACHE_ID, partId, PageMemory.FLAG_DATA);
-                        reuseListRoot = pageMem.allocatePage(METASTORAGE_CACHE_ID, partId, PageMemory.FLAG_DATA);
+                        treeRoot = pageMem.allocatePage(METASTORAGE_CACHE_ID, partId, FLAG_DATA);
+                        reuseListRoot = pageMem.allocatePage(METASTORAGE_CACHE_ID, partId, FLAG_DATA);
 
-                        assert PageIdUtils.flag(treeRoot) == PageMemory.FLAG_DATA;
-                        assert PageIdUtils.flag(reuseListRoot) == PageMemory.FLAG_DATA;
+                        assert PageIdUtils.flag(treeRoot) == FLAG_DATA;
+                        assert PageIdUtils.flag(reuseListRoot) == FLAG_DATA;
 
                         io.setTreeRoot(pageAddr, treeRoot);
                         io.setReuseListRoot(pageAddr, reuseListRoot);
