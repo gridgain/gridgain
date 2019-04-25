@@ -3,6 +3,8 @@ package org.apache.ignite.internal.processors.cache.mvcc;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
+import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
@@ -92,11 +94,47 @@ public class BikeSqlTest extends GridCommonAbstractTest {
             System.err.println(q("select * from Person where name = ?", "ivan" + i));
     }
 
+    @Test
+    public void cacheApiQueryEntity() throws Exception {
+        IgniteCache<Object, Object> cache = startGrid(0).getOrCreateCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME)
+            .setAtomicityMode(CacheAtomicityMode.ATOMIC)
+            .setSqlSchema("PUBLIC")
+            .setIndexedTypes(Integer.class, PersonData.class));
+
+        cache.put(1, new PersonData("ivan", "p"));
+
+        System.err.println(cache.get(1));
+
+        System.err.println(q("select * from PersonData where _key = 1"));
+    }
+
+    @Test
+    public void cacheApiWithoutSql() throws Exception {
+        IgniteCache<Object, Object> cache = startGrid(0).getOrCreateCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME)
+            .setAtomicityMode(CacheAtomicityMode.ATOMIC));
+
+        cache.put(1, new PersonData("ivan", "p"));
+
+        System.err.println(cache.get(1));
+    }
+
     static class PersonData {
         @QuerySqlField
         String name;
         @QuerySqlField
         String name2;
+
+        PersonData(String name, String name2) {
+            this.name = name;
+            this.name2 = name2;
+        }
+
+        @Override public String toString() {
+            return "PersonData{" +
+                "name='" + name + '\'' +
+                ", name2='" + name2 + '\'' +
+                '}';
+        }
     }
 
     @Test
