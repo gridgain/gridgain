@@ -44,7 +44,7 @@ public class BikeTupleTest {
 
     @Test
     public void singleVarlenNonNull2() throws Exception {
-        byte[] bytes = new BikeBuilder(1)
+        byte[] bytes = new BikeBuilder(1, -1)
                 .append("A")
                 .build();
 
@@ -55,7 +55,7 @@ public class BikeTupleTest {
 
     @Test
     public void varlenThenNull2() throws Exception {
-        byte[] bytes = new BikeBuilder(2)
+        byte[] bytes = new BikeBuilder(2, -1)
                 .append("A")
                 .append(null)
                 .build();
@@ -68,7 +68,7 @@ public class BikeTupleTest {
 
     @Test
     public void nullThenVarlen2() throws Exception {
-        byte[] bytes = new BikeBuilder(2)
+        byte[] bytes = new BikeBuilder(2, -1)
                 .append(null)
                 .append("A")
                 .build();
@@ -81,7 +81,7 @@ public class BikeTupleTest {
 
     @Test
     public void varlenNullVarlen() throws Exception {
-        byte[] bytes = new BikeBuilder(3)
+        byte[] bytes = new BikeBuilder(3, -1)
             .append("A")
             .append(null)
             .append(1)

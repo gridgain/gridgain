@@ -19,11 +19,13 @@ public class BikeBuilder {
     private int cur;
     private int curVarlenOff;
     private int curOff;
+    private final int binaryTypeId;
 
-    public BikeBuilder(int ncols) {
+    public BikeBuilder(int ncols, int binaryTypeId) {
         this.ncols = ncols;
 
         nullsBytes = ((ncols - 1) >>> 3) + 1;
+        this.binaryTypeId = binaryTypeId;
         nullsBitSet = new BitSet(nullsBytes);
 
         varlens = new byte[ncols * 2];
@@ -96,6 +98,11 @@ public class BikeBuilder {
         byte[] nulls0 = nullsBitSet.toByteArray();
         byte[] nulls = new byte[nullsBytes];
         System.arraycopy(nulls0, 0, nulls, 0, nulls0.length);
+
+        byte[] typeIdBytes = new byte[4];
+        BinaryPrimitives.writeInt(typeIdBytes, 0, binaryTypeId);
+        baos.write(typeIdBytes, 0, typeIdBytes.length);
+
         baos.write(nulls.length + 1);
         baos.write(nulls, 0, nulls.length);
 

@@ -93,7 +93,7 @@ public class BinaryClassDescriptor {
     private final Constructor<?> ctor;
 
     /** */
-    private final BinaryFieldAccessor[] fields;
+    public final BinaryFieldAccessor[] fields;
 
     /** Write replacer. */
     private final BinaryWriteReplacer writeReplacer;

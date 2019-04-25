@@ -42,20 +42,18 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.Function;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.internal.UnregisteredBinaryTypeException;
-import org.apache.ignite.internal.UnregisteredClassException;
-import org.apache.ignite.internal.processors.marshaller.MappingExchangeResult;
-import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.binary.BinaryBasicIdMapper;
 import org.apache.ignite.binary.BinaryBasicNameMapper;
 import org.apache.ignite.binary.BinaryIdMapper;
 import org.apache.ignite.binary.BinaryInvalidTypeException;
 import org.apache.ignite.binary.BinaryNameMapper;
+import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.binary.BinaryReflectiveSerializer;
 import org.apache.ignite.binary.BinarySerializer;
@@ -68,6 +66,12 @@ import org.apache.ignite.configuration.BinaryConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.igfs.IgfsPath;
 import org.apache.ignite.internal.DuplicateTypeIdException;
+import org.apache.ignite.internal.UnregisteredBinaryTypeException;
+import org.apache.ignite.internal.UnregisteredClassException;
+import org.apache.ignite.internal.binary.builder.BinaryObjectBuilderImpl;
+import org.apache.ignite.internal.binary.nextgen.BikeBuilder;
+import org.apache.ignite.internal.binary.nextgen.BikeConverterRegistry;
+import org.apache.ignite.internal.binary.nextgen.BikeTuple;
 import org.apache.ignite.internal.marshaller.optimized.OptimizedMarshaller;
 import org.apache.ignite.internal.processors.cache.binary.BinaryMetadataKey;
 import org.apache.ignite.internal.processors.closure.GridClosureProcessor;
@@ -108,10 +112,12 @@ import org.apache.ignite.internal.processors.igfs.meta.IgfsMetaFileReserveSpaceP
 import org.apache.ignite.internal.processors.igfs.meta.IgfsMetaFileUnlockProcessor;
 import org.apache.ignite.internal.processors.igfs.meta.IgfsMetaUpdatePropertiesProcessor;
 import org.apache.ignite.internal.processors.igfs.meta.IgfsMetaUpdateTimesProcessor;
+import org.apache.ignite.internal.processors.marshaller.MappingExchangeResult;
 import org.apache.ignite.internal.processors.platform.PlatformJavaObjectFactoryProxy;
 import org.apache.ignite.internal.processors.platform.websession.PlatformDotNetSessionData;
 import org.apache.ignite.internal.processors.platform.websession.PlatformDotNetSessionLockResult;
 import org.apache.ignite.internal.processors.query.QueryUtils;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.lang.GridMapEntry;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
@@ -805,10 +811,55 @@ public class BinaryContext {
                 desc.isEnum(), cls.isEnum() ? enumMap(cls) : null).wrap(this), false);
 
         descByCls.put(cls, desc);
+        BikeConverterRegistry.registerConverter(typeId, new BinToBikeConverter(desc.fields.length, typeId));
+        String[] names = new String[desc.fields.length];
+        Class<?>[] types = new Class<?>[desc.fields.length];
+        for (int i = 0; i < desc.fields.length; i++) {
+            String n = desc.fields[i].name;
+            names[i] = n;
+            types[i] = BinaryUtils.FLAG_TO_CLASS.get((byte)desc.fieldsMeta().get(n).typeId());
+        }
+        BikeConverterRegistry.registerBackConverter(typeId, new BikeToBinConverter(names, types, clsName));
 
         typeId2Mapper.putIfAbsent(typeId, mapper);
 
         return desc;
+    }
+
+    static class BinToBikeConverter implements Function<BinaryObject, BikeTuple> {
+        final int ncols;
+        final int binaryTypeId;
+
+        BinToBikeConverter(int ncols, int binaryTypeId) {
+            this.ncols = ncols;
+            this.binaryTypeId = binaryTypeId;
+        }
+
+        @Override public BikeTuple apply(BinaryObject object) {
+            BikeBuilder builder = new BikeBuilder(ncols, binaryTypeId);
+            for (int i = 0; i < ncols; i++)
+                builder.append(((BinaryObjectExImpl)object).fieldByOrder(i));
+            return new BikeTuple(builder.build());
+        }
+    }
+
+    class BikeToBinConverter implements Function<BikeTuple, BinaryObjectImpl> {
+        final String[] cols;
+        final Class<?>[] types;
+        final String clsName;
+
+        BikeToBinConverter(String[] cols, Class<?>[] types, String clsName) {
+            this.cols = cols;
+            this.types = types;
+            this.clsName = clsName;
+        }
+
+        @Override public BinaryObjectImpl apply(BikeTuple bike) {
+            BinaryObjectBuilderImpl builder = new BinaryObjectBuilderImpl(BinaryContext.this, clsName);
+            for (int i = 0; i < cols.length; i++)
+                builder.setField(cols[i], bike.attr(i, types[i], -1));
+            return (BinaryObjectImpl)builder.build();
+        }
     }
 
     /**

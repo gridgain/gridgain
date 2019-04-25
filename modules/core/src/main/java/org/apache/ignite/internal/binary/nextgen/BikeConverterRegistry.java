@@ -21,10 +21,15 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import org.apache.ignite.binary.BinaryObject;
+import org.apache.ignite.internal.binary.BinaryObjectImpl;
 
 public class BikeConverterRegistry {
     private static final ConcurrentHashMap<Object, Function<BinaryObject, BikeTuple>> converterMap =
         new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<Object, Function<BikeTuple, BinaryObjectImpl>> backConverterMap =
+        new ConcurrentHashMap<>();
+
+    public static final ThreadLocal<Boolean> queryApi = ThreadLocal.withInitial(() -> false);
 
     public static void registerConverter(Object key, Function<BinaryObject, BikeTuple> converter) {
         converterMap.put(key, converter);
@@ -32,6 +37,14 @@ public class BikeConverterRegistry {
 
     public static Function<BinaryObject, BikeTuple> converter(Object key) {
         return Boolean.getBoolean("bike.row.format") ? converterMap.get(key) : null;
+    }
+
+    public static void registerBackConverter(Object key, Function<BikeTuple, BinaryObjectImpl> converter) {
+        backConverterMap.put(key, converter);
+    }
+
+    public static Function<BikeTuple, BinaryObjectImpl> backConverter(Object key) {
+        return backConverterMap.get(key);
     }
 
     public static class Stat {

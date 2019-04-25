@@ -217,7 +217,7 @@ public class BikeTuple {
     }
 
     private int nullsOffset() {
-        return 0;
+        return 4;
     }
 
     public byte[] data() {
@@ -235,5 +235,9 @@ public class BikeTuple {
             return 4;
 
         return 0;
+    }
+
+    public int typeId() {
+        return BinaryPrimitives.readInt(data, 0);
     }
 }

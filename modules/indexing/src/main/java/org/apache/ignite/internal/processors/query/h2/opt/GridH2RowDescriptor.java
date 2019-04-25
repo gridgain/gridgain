@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,6 +22,8 @@ import java.util.List;
 import java.util.Map;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.binary.BinaryObject;
+import org.apache.ignite.binary.BinaryObjectBuilder;
+import org.apache.ignite.internal.binary.BinaryObjectImpl;
 import org.apache.ignite.internal.binary.nextgen.BikeBuilder;
 import org.apache.ignite.internal.binary.nextgen.BikeCacheObject;
 import org.apache.ignite.internal.binary.nextgen.BikeConverterRegistry;
@@ -148,6 +150,7 @@ public class GridH2RowDescriptor {
 
         // t0d0 figure out what is the proper mapping strategy
         BikeConverterRegistry.registerConverter(type.typeId(), this::binaryToBike);
+        BikeConverterRegistry.registerBackConverter(type.typeId(), this::bikeToBinary);
     }
 
     private boolean isNotPartOfKeyHack(GridQueryProperty prop) {
@@ -307,7 +310,7 @@ public class GridH2RowDescriptor {
     private BikeTuple binaryToBike(BinaryObject bin) {
         int ncols = (int)Arrays.stream(props).filter(this::isNotPartOfKeyHack).count();
         try {
-            BikeBuilder builder = new BikeBuilder(ncols);
+            BikeBuilder builder = new BikeBuilder(ncols, bin.type().typeId());
             for (int i = 0; i < props.length; i++) {
                 GridQueryProperty prop = props[i];
                 if (isNotPartOfKeyHack(prop))
@@ -318,6 +321,16 @@ public class GridH2RowDescriptor {
         catch (IgniteCheckedException e) {
             throw DbException.convert(e);
         }
+    }
+
+    private BinaryObjectImpl bikeToBinary(BikeTuple bike) {
+        BinaryObjectBuilder builder = context().kernalContext().cacheObjects().binary().builder(type.valueTypeName());
+        for (GridQueryProperty prop : props) {
+            int bikeOrdinal = prop.getBikeOrdinal();
+            if (bikeOrdinal != -1)
+                builder.setField(prop.name(), bike.attr(bikeOrdinal, prop.type(), -1));
+        }
+        return (BinaryObjectImpl)builder.build();
     }
 
     /**
