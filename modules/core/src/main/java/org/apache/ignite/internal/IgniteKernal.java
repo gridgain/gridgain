@@ -216,6 +216,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_BINARY_MARSHALLER_
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CONFIG_URL;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DAEMON;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_NO_ASCII;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_OPTIMIZED_MARSHALLER_USE_DEFAULT_SUID;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_REST_START_ON_CLIENT;
@@ -744,6 +745,40 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
             if (e instanceof Error)
                 throw (Error)e;
+        }
+    }
+
+    /** */
+    private void ackClassPathElement(File clsPathElement, StringBuilder clsPathContent) {
+        if (clsPathElement.isDirectory()) {
+            for (String listElement : clsPathElement.list())
+                ackClassPathElement(new File(clsPathElement, listElement), clsPathContent);
+        }
+        else
+            clsPathContent
+                .append(clsPathElement.getAbsolutePath())
+                .append(";");
+    }
+
+    /**
+     * Prints the list of *.jar and *.class files containing in classpath.
+     */
+    private void ackClassPathContent() {
+        assert log != null;
+
+        boolean enabled = IgniteSystemProperties.getBoolean(IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP, true);
+
+        if (enabled) {
+            String clsPath = System.getProperty("java.class.path", ".");
+
+            String[] clsPathElements = clsPath.split(System.getProperty("path.separator"));
+
+            StringBuilder clsPathContent = new StringBuilder("List of files containing in classpath: ");
+
+            for (String classPathElement : clsPathElements)
+                ackClassPathElement(new File(classPathElement), clsPathContent);
+
+            U.log(log, clsPathContent.toString());
         }
     }
 
@@ -1287,6 +1322,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         ctx.performance().logSuggestions(log, igniteInstanceName);
 
         U.quietAndInfo(log, "To start Console Management & Monitoring run ignitevisorcmd.{sh|bat}");
+
+        ackClassPathContent();
 
         ackStart(rtBean);
 
