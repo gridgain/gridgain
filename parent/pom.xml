@@ -1019,6 +1019,8 @@
                                         <exclude>**/web-console/frontend/**/*.svg</exclude>
                                         <!--Packaging -->
                                         <exclude>packaging/**</exclude>
+                                        <!-- Checkstyle -->
+                                        <exclude>checkstyle/**</exclude>
                                     </excludes>
                                 </configuration>
                             </execution>
