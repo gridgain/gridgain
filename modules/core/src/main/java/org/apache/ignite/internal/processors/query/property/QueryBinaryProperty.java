@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -136,7 +136,7 @@ public class QueryBinaryProperty implements GridQueryProperty {
         else
             obj = isKeyProp ? key : val;
 
-        if (bikeFormat) {
+//        if (bikeFormat) {
             if (obj.getClass() == BikeCacheObject.class) {
                 BikeCacheObject obj0 = (BikeCacheObject)obj;
 
@@ -154,26 +154,26 @@ public class QueryBinaryProperty implements GridQueryProperty {
             }
             else
                 throw new IgniteCheckedException("Unexpected binary object class [type=" + obj.getClass() + ']');
-        }
-        else {
-            if (obj instanceof BinaryObjectBuilder) {
-                BinaryObjectBuilder obj0 = (BinaryObjectBuilder)obj;
-
-                return obj0.getField(propName);
-            }
-            else if (obj instanceof BinaryObject) {
-                BinaryObject obj0 = (BinaryObject)obj;
-
-                return fieldValue(obj0);
-            }
-            else if (obj.getClass() == BikeCacheObject.class) {
-                BikeCacheObject obj0 = (BikeCacheObject)obj;
-
-                return obj0.tuple().attr(bikeOrdinal, type, intType);
-            }
-            else
-                throw new IgniteCheckedException("Unexpected binary object class [type=" + obj.getClass() + ']');
-        }
+//        }
+//        else {
+//            if (obj instanceof BinaryObjectBuilder) {
+//                BinaryObjectBuilder obj0 = (BinaryObjectBuilder)obj;
+//
+//                return obj0.getField(propName);
+//            }
+//            else if (obj instanceof BinaryObject) {
+//                BinaryObject obj0 = (BinaryObject)obj;
+//
+//                return fieldValue(obj0);
+//            }
+//            else if (obj.getClass() == BikeCacheObject.class) {
+//                BikeCacheObject obj0 = (BikeCacheObject)obj;
+//
+//                return obj0.tuple().attr(bikeOrdinal, type, intType);
+//            }
+//            else
+//                throw new IgniteCheckedException("Unexpected binary object class [type=" + obj.getClass() + ']');
+//        }
     }
 
     /** {@inheritDoc} */

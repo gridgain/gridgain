@@ -36,7 +36,8 @@ public class BikeConverterRegistry {
     }
 
     public static Function<BinaryObject, BikeTuple> converter(Object key) {
-        return Boolean.getBoolean("bike.row.format") ? converterMap.get(key) : null;
+//        return Boolean.getBoolean("bike.row.format") ? converterMap.get(key) : null;
+        return converterMap.get(key);
     }
 
     public static void registerBackConverter(Object key, Function<BikeTuple, BinaryObjectImpl> converter) {
