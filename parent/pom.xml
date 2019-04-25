@@ -131,6 +131,9 @@
         <zkclient.version>0.5</zkclient.version>
         <zookeeper.version>3.4.13</zookeeper.version>
 
+        <!-- Maven plugins versions -->
+        <maven.javadoc.plugin.version>2.10.4</maven.javadoc.plugin.version>
+
         <!-- OSGI Manifest generation default property values -->
         <osgi.import.package>*</osgi.import.package>
         <osgi.export.package>{local-packages}</osgi.export.package>
@@ -290,7 +293,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-javadoc-plugin</artifactId>
-                    <version>2.10.1</version>
+                    <version>${maven.javadoc.plugin.version}</version>
                     <configuration>
                         <taglets>
                             <taglet>
@@ -318,7 +321,7 @@
                             <group>
                                 <title>Common Grid APIs</title>
                                 <packages>
-                                    org.gridgain:org.apache.ignite.cluster:org.apache.ignite.lifecycle:org.apache.ignite.configuration:org.apache.ignite.spi:org.apache.ignite.lang:org.apache.ignite.resources:org.apache.ignite.thread:org.apache.ignite.scheduler
+                                    org.apache.ignite:org.apache.ignite.cluster:org.apache.ignite.lifecycle:org.apache.ignite.configuration:org.apache.ignite.spi:org.apache.ignite.lang:org.apache.ignite.resources:org.apache.ignite.thread:org.apache.ignite.scheduler
                                 </packages>
                             </group>
                             <group>
