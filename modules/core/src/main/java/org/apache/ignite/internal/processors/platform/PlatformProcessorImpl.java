@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -170,6 +170,18 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
 
     /** */
     private static final int OP_NODE_VERSION = 31;
+
+    /** */
+    private static final int OP_IS_BASELINE_AUTO_ADJ_ENABLED = 32;
+
+    /** */
+    private static final int OP_SET_BASELINE_AUTO_ADJ_ENABLED = 33;
+
+    /** */
+    private static final int OP_GET_BASELINE_AUTO_ADJ_TIMEOUT = 34;
+
+    /** */
+    private static final int OP_SET_BASELINE_AUTO_ADJ_TIMEOUT = 35;
 
     /** Start latch. */
     private final CountDownLatch startLatch = new CountDownLatch(1);
@@ -445,6 +457,12 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
 
                 return 0;
             }
+
+            case OP_SET_BASELINE_AUTO_ADJ_TIMEOUT: {
+                ctx.grid().cluster().baselineAutoAdjustTimeout(val);
+
+                return 0;
+            }
         }
 
         return PlatformAbstractTarget.throwUnsupported(type);
@@ -505,6 +523,18 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
 
             case OP_IS_WAL_ENABLED:
                 return ctx.grid().cluster().isWalEnabled(reader.readString()) ? TRUE : FALSE;
+
+            case OP_IS_BASELINE_AUTO_ADJ_ENABLED:
+                return ctx.grid().cluster().isBaselineAutoAdjustEnabled() ? TRUE : FALSE;
+
+            case OP_SET_BASELINE_AUTO_ADJ_ENABLED:
+                boolean isEnabled = reader.readBoolean();
+                ctx.grid().cluster().baselineAutoAdjustEnabled(isEnabled);
+
+                return 0;
+
+            case OP_GET_BASELINE_AUTO_ADJ_TIMEOUT:
+                return ctx.grid().cluster().baselineAutoAdjustTimeout();
         }
 
         return PlatformAbstractTarget.throwUnsupported(type);

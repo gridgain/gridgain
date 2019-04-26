@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -57,13 +57,7 @@ public class CrossOverTask extends ComputeTaskAdapter<List<Long>, Boolean> {
         this.cfg = cfg;
     }
 
-    /**
-     * Map Jobs to nodes using data affinity.
-     *
-     * @param nodes Cluster Nodes
-     * @param chromosomeKeys Primary keys for respective chromosomes
-     * @return A map of nodes to jobs.
-     */
+    /** {@inheritDoc} */
     @Override public Map map(List<ClusterNode> nodes, List<Long> chromosomeKeys) throws IgniteException {
 
         Map<ComputeJob, ClusterNode> map = new HashMap<>();
@@ -79,22 +73,13 @@ public class CrossOverTask extends ComputeTaskAdapter<List<Long>, Boolean> {
         return map;
     }
 
-    /**
-     * We return TRUE if success, else Exection is thrown.
-     *
-     * @param list ComputeJobResult
-     * @return Boolean value; if operationa was successful return true, otherwise Exception
-     */
+    /** {@inheritDoc} */
     @Override public Boolean reduce(List<ComputeJobResult> list) throws IgniteException {
         // TODO Auto-generated method stub
         return Boolean.TRUE;
     }
 
-    /**
-     * @param res ComputeJobResult
-     * @param rcvd List of ComputeJobResult
-     * @return ComputeJobResultPolicy
-     */
+    /** {@inheritDoc} */
     @Override public ComputeJobResultPolicy result(ComputeJobResult res, List<ComputeJobResult> rcvd) {
         IgniteException err = res.getException();
 

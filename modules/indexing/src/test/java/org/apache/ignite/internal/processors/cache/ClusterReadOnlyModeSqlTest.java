@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -59,7 +59,7 @@ public class ClusterReadOnlyModeSqlTest extends ClusterReadOnlyModeAbstractTest 
                     cur.getAll();
                 }
 
-                boolean failed = false;
+                Throwable failed = null;
 
                 try (FieldsQueryCursor<?> cur = cache.query(new SqlFieldsQuery("DELETE FROM Integer"))) {
                     cur.getAll();
@@ -68,13 +68,15 @@ public class ClusterReadOnlyModeSqlTest extends ClusterReadOnlyModeAbstractTest 
                     if (!readOnly)
                         log.error("Failed to delete data", ex);
 
-                    failed = true;
+                    failed = ex;
                 }
 
-                if (failed != readOnly)
+                if ((failed == null) == readOnly)
                     fail("SQL delete from " + cacheName + " must " + (readOnly ? "fail" : "succeed"));
 
-                failed = false;
+                checkThatRootCauseIsReadOnly(failed);
+
+                failed = null;
 
                 try (FieldsQueryCursor<?> cur = cache.query(new SqlFieldsQuery(
                     "INSERT INTO Integer(_KEY, _VAL) VALUES (?, ?)").setArgs(rnd.nextInt(1000), rnd.nextInt()))) {
@@ -84,11 +86,13 @@ public class ClusterReadOnlyModeSqlTest extends ClusterReadOnlyModeAbstractTest 
                     if (!readOnly)
                         log.error("Failed to insert data", ex);
 
-                    failed = true;
+                    failed = ex;
                 }
 
-                if (failed != readOnly)
+                if ((failed == null) == readOnly)
                     fail("SQL insert into " + cacheName + " must " + (readOnly ? "fail" : "succeed"));
+
+                checkThatRootCauseIsReadOnly(failed);
             }
         }
     }

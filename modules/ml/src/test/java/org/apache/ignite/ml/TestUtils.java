@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -447,7 +447,7 @@ public class TestUtils {
      */
     public static <I, O, M extends IgniteModel<I, O>, L> DatasetTrainer<M, L> constantTrainer(M ml) {
         return new DatasetTrainer<M, L>() {
-            /** {@inheritDoc} */
+            /** */
             public <K, V, C extends Serializable> M fit(DatasetBuilder<K, V> datasetBuilder,
                 Vectorizer<K, V, C, L> extractor) {
                 return ml;
@@ -467,8 +467,8 @@ public class TestUtils {
                 return null;
             }
 
-            /** {@inheritDoc} */
-             public <K, V, C extends Serializable> M updateModel(M mdl, DatasetBuilder<K, V> datasetBuilder,
+            /** */
+            public <K, V, C extends Serializable> M updateModel(M mdl, DatasetBuilder<K, V> datasetBuilder,
                 Vectorizer<K, V, C, L> extractor) {
                 return ml;
             }

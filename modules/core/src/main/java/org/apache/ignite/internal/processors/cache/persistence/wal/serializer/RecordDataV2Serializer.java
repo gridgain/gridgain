@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -28,6 +28,7 @@ import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.pagemem.wal.record.CacheState;
 import org.apache.ignite.internal.pagemem.wal.record.CheckpointRecord;
+import org.apache.ignite.internal.pagemem.wal.record.ConsistentCutRecord;
 import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.ExchangeRecord;
@@ -107,6 +108,9 @@ public class RecordDataV2Serializer extends RecordDataV1Serializer {
 
             case MVCC_TX_RECORD:
                 return txRecordSerializer.size((MvccTxRecord)rec);
+
+            case CONSISTENT_CUT:
+                return 0;
 
             default:
                 return super.plainSize(rec);
@@ -192,6 +196,9 @@ public class RecordDataV2Serializer extends RecordDataV1Serializer {
             case MVCC_TX_RECORD:
                 return txRecordSerializer.readMvccTx(in);
 
+            case CONSISTENT_CUT:
+                return new ConsistentCutRecord();
+
             default:
                 return super.readPlainRecord(type, in, encrypted);
         }
@@ -272,6 +279,9 @@ public class RecordDataV2Serializer extends RecordDataV1Serializer {
             case MVCC_TX_RECORD:
                 txRecordSerializer.write((MvccTxRecord)rec, buf);
 
+                break;
+
+            case CONSISTENT_CUT:
                 break;
 
             default:

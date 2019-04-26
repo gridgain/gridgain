@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,6 +24,7 @@ import java.lang.management.MemoryUsage;
 import java.lang.management.OperatingSystemMXBean;
 import java.lang.management.RuntimeMXBean;
 import java.lang.management.ThreadMXBean;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -2340,6 +2341,25 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
      */
     public long gridStartTime() {
         return getSpi().getGridStartTime();
+    }
+
+    /**
+     * Sets grid start time.
+     *
+     * @param val New time value.
+     */
+    public void setGridStartTime(long val) {
+        DiscoverySpi spi = getSpi();
+
+        try {
+            spi.getClass().getMethod("setGridStartTime", long.class).invoke(spi, val);
+        }
+        catch (NoSuchMethodException e) {
+            U.error(log, "Discovery SPI has no 'setGridStartTime(long)' method [class=" + spi.getClass() + ']', e);
+        }
+        catch (IllegalAccessException | InvocationTargetException e) {
+            throw new IgniteException(e);
+        }
     }
 
     /**

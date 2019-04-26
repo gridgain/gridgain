@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,6 +24,7 @@ import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.cache.distributed.dht.IgniteClusterReadOnlyException;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 
@@ -118,5 +119,14 @@ public class ClusterReadOnlyModeAbstractTest extends GridCommonAbstractTest {
 
             ignite.context().cache().context().readOnlyMode(readOnly);
         }
+    }
+
+    /**
+     * @param e Exception.
+     */
+    public static void checkThatRootCauseIsReadOnly(Throwable e) {
+        for (Throwable t = e; t != null; t = t.getCause())
+            if (t.getCause() == null)
+                assertTrue(t.getMessage(), t instanceof IgniteClusterReadOnlyException);
     }
 }

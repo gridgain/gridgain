@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -84,7 +84,7 @@ public class ClusterReadOnlyModeTest extends ClusterReadOnlyModeAbstractTest {
                             fail("Put must fail for cache " + cacheName);
                         }
                         catch (Exception e) {
-                            // No-op.
+                            checkThatRootCauseIsReadOnly(e);
                         }
 
                         // All removes must fail.
@@ -94,7 +94,7 @@ public class ClusterReadOnlyModeTest extends ClusterReadOnlyModeAbstractTest {
                             fail("Remove must fail for cache " + cacheName);
                         }
                         catch (Exception e) {
-                            // No-op.
+                            checkThatRootCauseIsReadOnly(e);
                         }
                     }
                     else {
@@ -115,7 +115,7 @@ public class ClusterReadOnlyModeTest extends ClusterReadOnlyModeAbstractTest {
 
         for (Ignite ignite : G.allGrids()) {
             for (String cacheName : CACHE_NAMES) {
-                boolean failed = false;
+                Throwable failed = null;
 
                 try (IgniteDataStreamer<Integer, Integer> streamer = ignite.dataStreamer(cacheName)) {
                     for (int i = 0; i < 10; i++) {
@@ -125,11 +125,13 @@ public class ClusterReadOnlyModeTest extends ClusterReadOnlyModeAbstractTest {
                     }
                 }
                 catch (CacheException ignored) {
-                    failed = true;
+                    failed = ignored;
                 }
 
-                if (failed != readOnly)
+                if ((failed == null) == readOnly)
                     fail("Streaming to " + cacheName + " must " + (readOnly ? "fail" : "succeed"));
+
+                checkThatRootCauseIsReadOnly(failed);
             }
         }
     }
