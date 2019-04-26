@@ -190,11 +190,11 @@ And that should be it.
 Licensing
 ---------
 
-This is a free software, brought to you on terms of the `Apache License v2`_.
+This software is brought to you on terms of the `GridGain Community Edition License`_.
 
 .. _Apache Ignite: https://apacheignite.readme.io/docs/what-is-ignite
 .. _binary client protocol: https://apacheignite.readme.io/docs/binary-client-protocol
-.. _Apache License v2: http://www.apache.org/licenses/LICENSE-2.0
+.. _GridGain Community Edition License: https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
 .. _virtualenv: https://virtualenv.pypa.io/
 .. _setuptools: https://setuptools.readthedocs.io/
 .. _ignite/modules/platforms/python/docs/generated/html/index.html: .
