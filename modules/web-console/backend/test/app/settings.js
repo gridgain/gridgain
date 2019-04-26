@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,14 +16,22 @@
 
 'use strict';
 
+const MongoMemoryServer = require('mongodb-memory-server').default;
+
 // Fire me up!
 
 module.exports = {
-    implements: 'mongoose:mock',
-    inject: ['require(mongoose)', 'require(mockgoose)']
+    implements: 'settings:mock',
+    inject: ['settings']
 };
 
-module.exports.factory = (mongoose, mockgoose) => {
-    return mockgoose(mongoose)
-            .then(() => mongoose);
+module.exports.factory = (settings) => {
+    const mongoServer = new MongoMemoryServer();
+
+    return mongoServer.getConnectionString()
+        .then((mongoUrl) => {
+            settings.mongoUrl = mongoUrl;
+
+            return settings;
+        });
 };

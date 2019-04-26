@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,6 +19,7 @@
 // Fire me up!
 
 const _ = require('lodash');
+const mongoose = require('mongoose');
 
 const testAccounts = require('../data/accounts.json');
 const testClusters = require('../data/clusters.json');
@@ -29,10 +30,10 @@ const testSpaces = require('../data/spaces.json');
 
 module.exports = {
     implements: 'dbHelper',
-    inject: ['mongo', 'mongoose']
+    inject: ['mongo']
 };
 
-module.exports.factory = (mongo, mongoose) => {
+module.exports.factory = (mongo) => {
     const prepareUserSpaces = () => Promise.all([mongo.Account.create(testAccounts), mongo.Space.create(testSpaces)]);
     const prepareClusters = () => mongo.Cluster.create(testClusters);
     const prepareDomains = () => mongo.DomainModel.create(testDomains);
@@ -40,7 +41,7 @@ module.exports.factory = (mongo, mongoose) => {
     const prepareIgfss = () => mongo.Igfs.create(testIgfss);
 
     const drop = () => {
-        return Promise.all(_.map(mongoose.connection.collections, (collection) => collection.remove()));
+        return Promise.all(_.map(mongoose.connection.collections, (collection) => collection.deleteMany()));
     };
 
     const init = () => {

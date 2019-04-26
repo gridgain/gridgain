@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -45,7 +45,7 @@ suite('AuthServiceTestsSuite', () => {
     });
 
     test('Reset password token for existing user', (done) => {
-        authService.resetPasswordToken(testAccounts[0].email)
+        authService.resetPasswordToken(null, testAccounts[0].email)
             .then((account) => {
                 assert.notEqual(account.resetPasswordToken.length, 0);
                 assert.notEqual(account.resetPasswordToken, testAccounts[0].resetPasswordToken);
@@ -63,7 +63,7 @@ suite('AuthServiceTestsSuite', () => {
     });
 
     test('Reset password by token for existing user', (done) => {
-        authService.resetPasswordByToken(testAccounts[0].resetPasswordToken, 'NewUniquePassword$1')
+        authService.resetPasswordByToken(null, testAccounts[0].resetPasswordToken, 'NewUniquePassword$1')
             .then((account) => {
                 assert.isUndefined(account.resetPasswordToken);
                 assert.notEqual(account.hash, 0);

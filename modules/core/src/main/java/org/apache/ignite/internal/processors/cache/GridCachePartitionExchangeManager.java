@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -1155,7 +1155,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
      * @param comp Component to be registered.
      */
     public void registerExchangeAwareComponent(PartitionsExchangeAware comp) {
-        exchangeAwareComps.add(new PartitionsExchangeAwareWrapper(comp));
+        exchangeAwareComps.add(comp);
     }
 
     /**
@@ -1164,7 +1164,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
      * @param comp Component to be registered.
      */
     public void unregisterExchangeAwareComponent(PartitionsExchangeAware comp) {
-        exchangeAwareComps.remove(new PartitionsExchangeAwareWrapper(comp));
+        exchangeAwareComps.remove(comp);
     }
 
     /**
@@ -1377,9 +1377,11 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
             partsToReload
             );
 
-        m.compress(compress);
+        m.compressed(compress);
 
         final Map<Object, T2<Integer, GridDhtPartitionFullMap>> dupData = new HashMap<>();
+
+        Map<Integer, Map<Integer, Long>> partsSizes = new HashMap<>();
 
         for (CacheGroupContext grp : grps) {
             if (!grp.isLocal()) {
@@ -1397,7 +1399,10 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                 if (locMap != null)
                     addFullPartitionsMap(m, dupData, compress, grp.groupId(), locMap, affCache.similarAffinityKey());
 
-                m.addPartitionSizes(grp.groupId(), grp.topology().globalPartSizes());
+                Map<Integer, Long> partSizesMap = grp.topology().globalPartSizes();
+
+                if (!partSizesMap.isEmpty())
+                    partsSizes.put(grp.groupId(), partSizesMap);
 
                 if (exchId != null) {
                     CachePartitionFullCountersMap cntrsMap = grp.topology().fullUpdateCounters();
@@ -1427,11 +1432,17 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                 else
                     m.addPartitionUpdateCounters(top.groupId(), CachePartitionFullCountersMap.toCountersMap(cntrsMap));
 
-                m.addPartitionSizes(top.groupId(), top.globalPartSizes());
+                Map<Integer, Long> partSizesMap = top.globalPartSizes();
+
+                if (!partSizesMap.isEmpty())
+                    partsSizes.put(top.groupId(), partSizesMap);
             }
         }
 
         cctx.kernalContext().txDr().onPartitionsFullMessagePrepared(exchId, m);
+
+        if (!partsSizes.isEmpty())
+            m.partitionSizes(cctx, partsSizes);
 
         return m;
     }
@@ -1778,6 +1789,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
                 boolean updated = false;
 
+                Map<Integer, Map<Integer, Long>> partsSizes = msg.partitionSizes(cctx);
+
                 for (Map.Entry<Integer, GridDhtPartitionFullMap> entry : msg.partitions().entrySet()) {
                     Integer grpId = entry.getKey();
 
@@ -1795,7 +1808,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                             entry.getValue(),
                             null,
                             msg.partsToReload(cctx.localNodeId(), grpId),
-                            msg.partitionSizes(grpId),
+                            partsSizes.getOrDefault(grpId, Collections.emptyMap()),
                             msg.topologyVersion());
                     }
                 }
@@ -3647,73 +3660,6 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                 for (String message : messages)
                     U.warn(log, message);
             }
-        }
-    }
-
-    /**
-     * That wrapper class allows avoiding the propagation of the user's exceptions into the Exchange thread.
-     */
-    private class PartitionsExchangeAwareWrapper implements PartitionsExchangeAware {
-        /** */
-        private final PartitionsExchangeAware delegate;
-
-        /**
-         * Creates a new wrapper.
-         * @param delegate Delegate.
-         */
-        public PartitionsExchangeAwareWrapper(PartitionsExchangeAware delegate) {
-            this.delegate = delegate;
-        }
-
-        /** {@inheritDoc} */
-        @Override public void onInitBeforeTopologyLock(GridDhtPartitionsExchangeFuture fut) {
-            try {
-                delegate.onInitBeforeTopologyLock(fut);
-            }
-            catch (Exception e) {
-                U.warn(log, "Failed to execute exchange callback.", e);
-            }
-        }
-
-        /** {@inheritDoc} */
-        @Override public void onInitAfterTopologyLock(GridDhtPartitionsExchangeFuture fut) {
-            try {
-                delegate.onInitAfterTopologyLock(fut);
-            }
-            catch (Exception e) {
-                U.warn(log, "Failed to execute exchange callback.", e);
-            }
-        }
-
-        /** {@inheritDoc} */
-        @Override public void onDoneBeforeTopologyUnlock(GridDhtPartitionsExchangeFuture fut) {
-            try {
-                delegate.onDoneBeforeTopologyUnlock(fut);
-            }
-            catch (Exception e) {
-                U.warn(log, "Failed to execute exchange callback.", e);
-            }
-        }
-
-        /** {@inheritDoc} */
-        @Override public void onDoneAfterTopologyUnlock(GridDhtPartitionsExchangeFuture fut) {
-            try {
-                delegate.onDoneAfterTopologyUnlock(fut);
-            }
-            catch (Exception e) {
-                U.warn(log, "Failed to execute exchange callback.", e);
-            }
-        }
-
-        /** {@inheritDoc} */
-        @Override public int hashCode() {
-            return delegate.hashCode();
-        }
-
-        /** {@inheritDoc} */
-        @SuppressWarnings("EqualsWhichDoesntCheckParameterClass")
-        @Override public boolean equals(Object obj) {
-            return delegate.equals(obj);
         }
     }
 

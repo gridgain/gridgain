@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,7 +22,8 @@ let activitiesService;
 let mongo;
 let db;
 
-const owner = testAccounts[0]._id;
+const testAccount = testAccounts[0];
+const owner = testAccount._id;
 const group = 'test';
 const action1 = '/test/activity1';
 const action2 = '/test/activity2';
@@ -44,7 +45,7 @@ suite('ActivitiesServiceTestsSuite', () => {
     setup(() => db.init());
 
     test('Activities creation and update', (done) => {
-        activitiesService.merge(owner, { group, action: action1 })
+        activitiesService.merge(testAccount, { group, action: action1 })
             .then((activity) => {
                 assert.isNotNull(activity);
                 assert.equal(activity.amount, 1);
@@ -55,7 +56,7 @@ suite('ActivitiesServiceTestsSuite', () => {
                 assert.isNotNull(activityDoc);
                 assert.equal(activityDoc.amount, 1);
             })
-            .then(() => activitiesService.merge(owner, { group, action: action1 }))
+            .then(() => activitiesService.merge(testAccount, { group, action: action1 }))
             .then((activity) => {
                 assert.isNotNull(activity);
                 assert.equal(activity.amount, 2);
@@ -80,8 +81,8 @@ suite('ActivitiesServiceTestsSuite', () => {
         endDate.setMonth(endDate.getMonth() + 1);
 
         Promise.all([
-            activitiesService.merge(owner, {group, action: action1}),
-            activitiesService.merge(owner, {group, action: action2})
+            activitiesService.merge(testAccount, {group, action: action1}),
+            activitiesService.merge(testAccount, {group, action: action2})
         ])
             .then(() => activitiesService.total(owner, {startDate, endDate}))
             .then((activities) =>
@@ -114,8 +115,8 @@ suite('ActivitiesServiceTestsSuite', () => {
         const borderDate = nextMonth(startDate);
         const endDate = nextMonth(borderDate);
 
-        activitiesService.merge(owner, { group, action: action1 })
-            .then(() => activitiesService.merge(owner, { group, action: action1 }, borderDate))
+        activitiesService.merge(testAccount, { group, action: action1 })
+            .then(() => activitiesService.merge(testAccount, { group, action: action1 }, borderDate))
             .then(() => activitiesService.total({ startDate, endDate: borderDate }))
             .then((activities) =>
                 assert.equal(activities[owner].test, 1)

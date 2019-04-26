@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -70,26 +70,13 @@ public class BundleDelegatingClassLoader extends ClassLoader {
         return resource;
     }
 
-    /**
-     * Finds a given resource from within the {@link #bundle}.
-     *
-     * @param name The resource name.
-     * @return URLs of resources.
-     * @throws IOException
-     */
+    /** {@inheritDoc} */
     @SuppressWarnings({"unchecked", "rawtypes"})
-    protected Enumeration findResources(String name) throws IOException {
+    @Override protected Enumeration findResources(String name) throws IOException {
         return bundle.getResources(name);
     }
 
-    /**
-     * Loads a class trying the {@link #bundle} first, falling back to the ClassLoader {@link #clsLdr}.
-     *
-     * @param name Class name.
-     * @param resolve {@code true} to resolve the class.
-     * @return The Class.
-     * @throws ClassNotFoundException
-     */
+    /** {@inheritDoc} */
     @Override protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
         Class<?> cls;
 
