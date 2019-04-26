@@ -106,6 +106,9 @@
     <ClInclude Include="..\..\include\ignite\binary\binary_enum_entry.h">
       <Filter>Code\binary</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\ignite\binary\binary_enum.h">
+      <Filter>Code\binary</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\binary\binary_containers.cpp">
