@@ -524,6 +524,21 @@ namespace ignite
                 void WriteStringElement(int32_t id, const char* val, int32_t len);
 
                 /**
+                 * Write binary enum entry.
+                 *
+                 * @param entry Binary enum entry.
+                 */
+                void WriteBinaryEnum(ignite::binary::BinaryEnumEntry entry);
+
+                /**
+                 * Write binary enum entry.
+                 *
+                 * @param fieldName Field name.
+                 * @param entry Binary enum entry.
+                 */
+                void WriteBinaryEnum(const char* fieldName, ignite::binary::BinaryEnumEntry entry);
+
+                /**
                  * Write NULL value.
                  */
                 void WriteNull();
@@ -543,7 +558,6 @@ namespace ignite
                 /**
                  * Start array write.
                  *
-                 * @param typ Collection type.
                  * @return Session ID.
                  */
                 int32_t WriteArray();

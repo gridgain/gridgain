@@ -282,6 +282,13 @@ namespace ignite
             BinaryStringArrayWriter WriteStringArray();
 
             /**
+             * Write binary enum entry.
+             *
+             * @param entry Binary enum entry.
+             */
+            void WriteBinaryEnum(BinaryEnumEntry entry);
+
+            /**
              * Write NULL value.
              */
             void WriteNull();

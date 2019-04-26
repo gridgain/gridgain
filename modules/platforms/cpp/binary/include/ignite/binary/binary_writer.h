@@ -306,6 +306,14 @@ namespace ignite
             BinaryStringArrayWriter WriteStringArray(const char* fieldName);
 
             /**
+             * Write binary enum entry.
+             *
+             * @param fieldName Field name.
+             * @param entry Binary enum entry.
+             */
+            void WriteBinaryEnum(const char* fieldName, BinaryEnumEntry entry);
+
+            /**
              * Write NULL value.
              *
              * @param fieldName Field name.
