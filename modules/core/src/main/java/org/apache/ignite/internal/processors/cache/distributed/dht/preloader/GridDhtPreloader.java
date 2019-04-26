@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -40,6 +40,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtFuture
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridNearAtomicAbstractUpdateRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
+import org.apache.ignite.internal.processors.txdr.TransactionalDrProcessor;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
@@ -181,6 +182,11 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
 
         if (exchFut.localJoinExchange())
             return true; // Required, can have outdated updSeq partition counter if node reconnects.
+
+        TransactionalDrProcessor txDrProc = ctx.kernalContext().txDr();
+
+        if (txDrProc != null && txDrProc.shouldScheduleRebalance(exchFut))
+            return true;
 
         if (!grp.affinity().cachedVersions().contains(rebTopVer)) {
             assert rebTopVer.compareTo(grp.localStartVersion()) <= 0 :

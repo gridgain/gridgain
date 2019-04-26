@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -1017,7 +1017,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             throw new IgniteCheckedException("Runtime failure on bounds: [lower=" + lower + ", upper=" + upper + "]", e);
         }
         catch (RuntimeException | AssertionError e) {
-            throw new CorruptedTreeException("Runtime failure on bounds: [lower=" + lower + ", upper=" + upper + "]", e);
+            throw createCorruptedTreeException("Runtime failure on bounds: [lower=%s, upper=%s]", e, lower, upper);
         }
         finally {
             checkDestroyed();
@@ -1182,7 +1182,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             throw new IgniteCheckedException("Runtime failure on first row lookup", e);
         }
         catch (RuntimeException | AssertionError e) {
-            throw new CorruptedTreeException("Runtime failure on first row lookup", e);
+            throw createCorruptedTreeException("Runtime failure on first row lookup", e);
         }
         finally {
             checkDestroyed();
@@ -1253,7 +1253,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             throw new IgniteCheckedException("Runtime failure on lookup row: " + row, e);
         }
         catch (RuntimeException | AssertionError e) {
-            throw new CorruptedTreeException("Runtime failure on lookup row: " + row, e);
+            throw createCorruptedTreeException("Runtime failure on lookup row: %s", e, row);
         }
         finally {
             checkDestroyed();
@@ -1813,7 +1813,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             throw new IgniteCheckedException("Runtime failure on search row: " + row, e);
         }
         catch (RuntimeException | AssertionError e) {
-            throw new CorruptedTreeException("Runtime failure on search row: " + row, e);
+            throw createCorruptedTreeException("Runtime failure on search row: %s", e, row);
         }
         finally {
             x.releaseAll();
@@ -1970,7 +1970,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             throw new IgniteCheckedException("Runtime failure on search row: " + row, e);
         }
         catch (RuntimeException | AssertionError e) {
-            throw new CorruptedTreeException("Runtime failure on search row: " + row, e);
+            throw createCorruptedTreeException("Runtime failure on search row: %s", e, row);
         }
         finally {
             r.releaseAll();
@@ -2322,7 +2322,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             throw new IgniteCheckedException("Runtime failure on row: " + row, e);
         }
         catch (RuntimeException | AssertionError e) {
-            throw new CorruptedTreeException("Runtime failure on row: " + row, e);
+            throw createCorruptedTreeException("Runtime failure on row: %s", e, row);
         }
         finally {
             checkDestroyed();
@@ -5834,5 +5834,23 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      */
     protected IoStatisticsHolder statisticsHolder() {
         return IoStatisticsHolderNoOp.INSTANCE;
+    }
+
+    /**
+     * Creates a new instance of {@link CorruptedTreeException}.
+     *
+     * @param msg Detailed error message.
+     * @param cause The cause.
+     * @param rows Optional parameters.
+     * @return New instance of {@link CorruptedTreeException}.
+     */
+    private CorruptedTreeException createCorruptedTreeException(String msg, Throwable cause, Object... rows) {
+        try {
+            return new CorruptedTreeException(String.format(msg, rows), cause);
+        }
+        catch (Throwable ignored) {
+            // Failed to create string representation of optional parameters.
+            return new CorruptedTreeException(msg + " <failed to create rows string representation>", cause);
+        }
     }
 }

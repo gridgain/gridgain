@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -26,6 +26,7 @@ import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedManagerAdapter;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.spi.discovery.DiscoverySpi;
 
 import static org.apache.ignite.events.EventType.EVT_NODE_METRICS_UPDATED;
 
@@ -61,8 +62,12 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
     /** Data center ID. */
     private byte dataCenterId;
 
-    /** */
-    private long gridStartTime;
+    /**
+     * Oldest cluster node start timestamp, lazily initialized.
+     *
+     * @see DiscoverySpi#getGridStartTime().
+     */
+    private volatile long gridStartTime;
 
     /** */
     private GridCacheVersion ISOLATED_STREAMER_VER;
@@ -323,5 +328,12 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
      */
     public boolean isStartVersion(GridCacheVersion ver) {
         return startVer.equals(ver);
+    }
+
+    /**
+     * Invalidates first cluster node start timestamp, it can be reinitialized lazily in the future.
+     */
+    public void invalidateGridStartTime() {
+        gridStartTime = 0;
     }
 }

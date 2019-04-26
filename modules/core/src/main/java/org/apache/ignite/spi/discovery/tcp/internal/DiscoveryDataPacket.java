@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -321,7 +321,7 @@ public class DiscoveryDataPacket implements Serializable {
      * @param b Source of bytes.
      * @return Made int.
      */
-    static private int makeInt(byte[] b) {
+    private static int makeInt(byte[] b) {
         return (((b[3]) << 24) |
             ((b[2] & 0xff) << 16) |
             ((b[1] & 0xff) << 8) |

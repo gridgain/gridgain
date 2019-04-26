@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -32,6 +32,15 @@ public class ZookeeperDiscoverySpiTestUtil {
      * @return Test cluster.
      */
     public static TestingCluster createTestingCluster(int instances) {
+        return createTestingCluster(instances, 0);
+    }
+
+    /**
+     * @param instances Number of instances in.
+     * @param firstInstanceIdx First instance index.
+     * @return Test cluster.
+     */
+    public static TestingCluster createTestingCluster(int instances, int firstInstanceIdx) {
         String tmpDir;
 
         tmpDir = System.getenv("TMPFS_ROOT") != null
@@ -39,7 +48,7 @@ public class ZookeeperDiscoverySpiTestUtil {
 
         List<InstanceSpec> specs = new ArrayList<>();
 
-        for (int i = 0; i < instances; i++) {
+        for (int i = firstInstanceIdx, n = firstInstanceIdx + instances; i < n; i++) {
             File file = new File(tmpDir, "apacheIgniteTestZk-" + i);
 
             if (file.isDirectory())

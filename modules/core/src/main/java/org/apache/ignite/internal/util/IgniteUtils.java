@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -1919,6 +1919,17 @@ public abstract class IgniteUtils {
         assert m != null;
 
         return Collections.unmodifiableMap(new HashMap<>(m));
+    }
+
+    /**
+     * Seal collection.
+     *
+     * @param c Collection to seal.
+     * @param <E> Entry type
+     * @return Sealed collection.
+     */
+    public static <E> Set<E> sealSet(Collection<E> c) {
+        return Collections.unmodifiableSet(new HashSet<>(c));
     }
 
     /**
@@ -9500,6 +9511,32 @@ public abstract class IgniteUtils {
      */
     public static <T> LinkedHashSet<T> newLinkedHashSet(int expSize) {
         return new LinkedHashSet<>(capacity(expSize));
+    }
+
+    /**
+     * Creates new {@link Set} based on {@link ConcurrentHashMap}.
+     *
+     * @param <T> Type of elements.
+     * @return New concurrent set.
+     */
+    public static <T> Set<T> newConcurrentHashSet() {
+        return Collections.newSetFromMap(new ConcurrentHashMap<>());
+    }
+
+    /**
+     * Constructs a new {@link Set} based on {@link ConcurrentHashMap},
+     * containing the elements in the specified collection.
+     *
+     * @param <T> Type of elements.
+     * @param c Source collection.
+     * @return New concurrent set.
+     */
+    public static <T> Set<T> newConcurrentHashSet(Collection<T> c) {
+        Set<T> set = newConcurrentHashSet();
+
+        set.addAll(c);
+
+        return set;
     }
 
     /**
