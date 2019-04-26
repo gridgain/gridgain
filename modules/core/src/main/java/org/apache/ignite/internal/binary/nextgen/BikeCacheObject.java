@@ -28,6 +28,8 @@ import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.jetbrains.annotations.Nullable;
 
 public class BikeCacheObject implements CacheObject {
+    private static final long serialVersionUID = 0L;
+
     private final BikeTuple bike;
     private final int binTypeId;
 
