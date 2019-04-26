@@ -160,20 +160,20 @@ export default class IgniteSpringTransformer extends AbstractTransformer {
                 sb.startBlock('<key>');
                 if (isKeyBean)
                     this.appendBean(sb, key);
-                else
+                else {
+                    sb.startBlock('<value>');
                     sb.append(this._toObject(map.keyClsName, key));
+                    sb.endBlock('</value>');
+                }
                 sb.endBlock('</key>');
 
                 if (isValArray && map.valClsName === 'java.util.Collection')
                     this._toCollection(sb, val, map.keyClsGenericType);
+                else if (isValBean)
+                    this.appendBean(sb, val);
                 else {
                     sb.startBlock('<value>');
-
-                    if (isValBean)
-                        this.appendBean(sb, val);
-                    else
-                        sb.append(this._toObject(map.valClsNameShow || map.valClsName, val));
-
+                    sb.append(this._toObject(map.valClsNameShow || map.valClsName, val));
                     sb.endBlock('</value>');
                 }
 

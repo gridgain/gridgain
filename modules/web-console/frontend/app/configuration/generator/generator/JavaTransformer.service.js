@@ -816,7 +816,7 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
         _.forEach(bean.arguments, (arg) => {
             switch (arg.clsName) {
                 case 'BEAN':
-                    imports.push(...this.collectPropertiesImports(arg.value.properties));
+                    imports.push(...this.collectBeanImports(arg.value));
 
                     break;
                 case 'java.lang.Class':
