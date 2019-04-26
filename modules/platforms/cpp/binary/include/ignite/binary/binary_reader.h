@@ -365,6 +365,14 @@ namespace ignite
             BinaryStringArrayReader ReadStringArray(const char* fieldName);
 
             /**
+             * Read enum entry.
+             *
+             * @param fieldName Field name.
+             * @return Enum entry.
+             */
+            BinaryEnumEntry ReadBinaryEnum(const char* fieldName);
+
+            /**
              * Start array read.
              *
              * Every time you get a BinaryArrayReader from BinaryReader you

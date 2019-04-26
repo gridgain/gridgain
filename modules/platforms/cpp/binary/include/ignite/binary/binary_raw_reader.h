@@ -30,6 +30,7 @@
 #include "ignite/impl/binary/binary_reader_impl.h"
 #include "ignite/binary/binary_consts.h"
 #include "ignite/binary/binary_containers.h"
+#include "ignite/binary/binary_enum_entry.h"
 #include "ignite/guid.h"
 #include "ignite/date.h"
 #include "ignite/timestamp.h"
@@ -349,6 +350,13 @@ namespace ignite
              * @return String array reader.
              */
             BinaryStringArrayReader ReadStringArray();
+
+            /**
+             * Read enum entry.
+             *
+             * @return Enum entry.
+             */
+            BinaryEnumEntry ReadBinaryEnum();
 
             /**
              * Start array read.
