@@ -63,6 +63,8 @@ namespace ignite
 
             /**
              * Get type ID.
+             * Type ID can never equal zero. If the Type ID equals zero, the instance is not valid, and could only be
+             * acquired by manual construction or by reading NULL value.
              *
              * @return Type ID.
              */
@@ -79,6 +81,16 @@ namespace ignite
             int32_t GetOrdinal() const
             {
                 return ordinal;
+            }
+
+            /**
+             * Check whether value was acquired by reading a NULL value.
+             *
+             * @return @c true if acquired by reading a NULL value.
+             */
+            bool IsNull() const
+            {
+                return typeId == 0;
             }
 
         private:
