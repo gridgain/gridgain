@@ -23,7 +23,7 @@ def test_get_node_partitions(client):
     conn = client.get_best_node()
 
     cache_1 = client.get_or_create_cache('test_cache_1')
-    cache_2 = client.create_cache({
+    cache_2 = client.get_or_create_cache({
         PROP_NAME: 'test_cache_2',
         PROP_CACHE_KEY_CONFIGURATION: [
             {
@@ -32,8 +32,11 @@ def test_get_node_partitions(client):
             }
         ],
     })
+    cache_3 = client.get_or_create_cache('test_cache_3')
+    cache_4 = client.get_or_create_cache('test_cache_4')
+    cache_5 = client.get_or_create_cache('test_cache_5')
     result = cache_get_node_partitions(
         conn,
-        [cache_1, cache_2]
+        [cache_1.cache_id, cache_2.cache_id]
     )
     assert result.status == 0, result.message

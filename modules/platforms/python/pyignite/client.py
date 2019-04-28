@@ -72,6 +72,7 @@ class Client:
      * binary types registration endpoint.
     """
 
+    affinity = None
     _registry = defaultdict(dict)
     _compact_footer = None
     _connection_args = None
@@ -90,6 +91,7 @@ class Client:
         self._compact_footer = compact_footer
         self._connection_args = kwargs
         self._nodes = OrderedDict()
+        self.affinity = (0, 0)
 
     def _add_node(self, host: str, port: int) -> 'UUID':
         """

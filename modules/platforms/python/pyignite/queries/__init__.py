@@ -35,11 +35,6 @@ from pyignite.datatypes import (
 from .op_codes import *
 
 
-# response header flags
-RHF_ERROR = 1
-RHF_TOPOLOGY_CHANGED = 2
-
-
 @attr.s
 class Response:
     following = attr.ib(type=list, factory=list)
@@ -66,9 +61,9 @@ class Response:
             )
         return cls._response_header
 
-    def parse(self, client: 'Client'):
+    def parse(self, conn: 'Connection'):
         header_class = self.build_header()
-        buffer = client.recv(ctypes.sizeof(header_class))
+        buffer = conn.recv(ctypes.sizeof(header_class))
         header = header_class.from_buffer_copy(buffer)
         fields = []
 
@@ -80,19 +75,19 @@ class Response:
 
         if header.flags & RHF_ERROR:
             fields.append(('status_code', ctypes.c_int))
-            buffer += client.recv(
+            buffer += conn.recv(
                 sum([ctypes.sizeof(field[1]) for field in fields])
             )
-            msg_type, buffer_fragment = String.parse(client)
+            msg_type, buffer_fragment = String.parse(conn)
             buffer += buffer_fragment
             fields.append(('error_message', msg_type))
 
         else:
-            buffer += client.recv(
+            buffer += conn.recv(
                 sum([ctypes.sizeof(field[1]) for field in fields])
             )
             for name, ignite_type in self.following:
-                c_type, buffer_fragment = ignite_type.parse(client)
+                c_type, buffer_fragment = ignite_type.parse(conn)
                 buffer += buffer_fragment
                 fields.append((name, c_type))
 
@@ -134,9 +129,9 @@ class SQLResponse(Response):
             return 'fields', StringArray
         return 'field_count', Int
 
-    def parse(self, client: 'Client'):
+    def parse(self, conn: 'Connection'):
         header_class = self.build_header()
-        buffer = client.recv(ctypes.sizeof(header_class))
+        buffer = conn.recv(ctypes.sizeof(header_class))
         header = header_class.from_buffer_copy(buffer)
         fields = []
 
@@ -148,14 +143,14 @@ class SQLResponse(Response):
 
         if header.flags & RHF_ERROR:
             fields.append(('status_code', ctypes.c_int))
-            buffer += client.recv(
+            buffer += conn.recv(
                 sum([ctypes.sizeof(field[1]) for field in fields])
             )
-            msg_type, buffer_fragment = String.parse(client)
+            msg_type, buffer_fragment = String.parse(conn)
             buffer += buffer_fragment
             fields.append(('error_message', msg_type))
         else:
-            buffer += client.recv(
+            buffer += conn.recv(
                 sum([ctypes.sizeof(field[1]) for field in fields])
             )
             following = [
@@ -165,7 +160,7 @@ class SQLResponse(Response):
             if self.has_cursor:
                 following.insert(0, ('cursor', Long))
             body_struct = Struct(following)
-            body_class, body_buffer = body_struct.parse(client)
+            body_class, body_buffer = body_struct.parse(conn)
             body = body_class.from_buffer_copy(body_buffer)
 
             if self.include_field_names:
@@ -179,7 +174,7 @@ class SQLResponse(Response):
                 row_fields = []
                 row_buffer = b''
                 for j in range(field_count):
-                    field_class, field_buffer = AnyDataObject.parse(client)
+                    field_class, field_buffer = AnyDataObject.parse(conn)
                     row_fields.append(('column_{}'.format(j), field_class))
                     row_buffer += field_buffer
 
@@ -216,7 +211,7 @@ class SQLResponse(Response):
                 '_fields_': fields,
             }
         )
-        buffer += client.recv(ctypes.sizeof(final_class) - len(buffer))
+        buffer += conn.recv(ctypes.sizeof(final_class) - len(buffer))
         return final_class, buffer
 
     def to_python(self, ctype_object, *args, **kwargs):
@@ -318,6 +313,14 @@ class Query:
         response_struct = Response(response_config)
         response_ctype, recv_buffer = response_struct.parse(conn)
         response = response_ctype.from_buffer_copy(recv_buffer)
+
+        if response.flags & RHF_TOPOLOGY_CHANGED:
+            # update latest affinity version
+            conn.client.affinity = (
+                response.affinity_version, response.affinity_minor
+            )
+
+        # build result
         result = APIResult(response)
         if result.status == 0:
             result.value = response_struct.to_python(response)
