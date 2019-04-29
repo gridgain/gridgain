@@ -20,6 +20,7 @@ import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
+import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordPurpose.*;
@@ -299,6 +300,7 @@ public abstract class WALRecord {
     private WALRecord prev;
 
     /** */
+    @GridToStringInclude
     private WALPointer pos;
 
     /**

@@ -23,6 +23,8 @@ import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactor
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.file.UnzipFileIO;
 import org.apache.ignite.internal.processors.cache.persistence.wal.io.SegmentIO;
+import org.apache.ignite.internal.util.tostring.GridToStringInclude;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -31,7 +33,6 @@ import org.jetbrains.annotations.Nullable;
  * WAL file descriptor.
  */
 public class FileDescriptor implements Comparable<FileDescriptor>, AbstractWalRecordsIterator.AbstractFileDescriptor {
-
     /** file extension of WAL segment. */
     private static final String WAL_SEGMENT_FILE_EXT = ".wal";
 
@@ -39,9 +40,11 @@ public class FileDescriptor implements Comparable<FileDescriptor>, AbstractWalRe
     private static final int WAL_SEGMENT_FILE_NAME_LENGTH = 16;
 
     /** File represented by this class. */
+    @GridToStringInclude
     protected final File file;
 
     /** Absolute WAL segment file index. */
+    @GridToStringInclude
     protected final long idx;
 
     /**
@@ -141,5 +144,10 @@ public class FileDescriptor implements Comparable<FileDescriptor>, AbstractWalRe
         FileIO fileIO = isCompressed() ? new UnzipFileIO(file()) : fileIOFactory.create(file());
 
         return new SegmentIO(idx, fileIO);
+    }
+
+    @Override
+    public String toString() {
+        return S.toString(FileDescriptor.class, this);
     }
 }

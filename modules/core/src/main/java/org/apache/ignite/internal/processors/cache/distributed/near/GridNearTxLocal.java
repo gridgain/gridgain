@@ -3723,6 +3723,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
         else {
             // Committed state will be set in finish future onDone callback.
             if (commit) {
+/*
                 if (!onePhaseCommit()) {
                     if (!state(COMMITTED)) {
                         state(UNKNOWN);
@@ -3730,6 +3731,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                         throw new IgniteCheckedException("Invalid transaction state for commit: " + this);
                     }
                 }
+*/
             }
             else {
                 if (!state(ROLLED_BACK)) {

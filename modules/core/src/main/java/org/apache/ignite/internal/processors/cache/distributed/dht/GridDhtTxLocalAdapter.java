@@ -816,6 +816,7 @@ public abstract class GridDhtTxLocalAdapter extends IgniteTxLocalAdapter {
         }
         else {
             // Committed state will be set in finish future onDone callback.
+/*
             if (commit) {
                 if (!onePhaseCommit()) {
                     if (!state(COMMITTED)) {
@@ -825,7 +826,9 @@ public abstract class GridDhtTxLocalAdapter extends IgniteTxLocalAdapter {
                     }
                 }
             }
-            else {
+            else
+*/
+            if (!commit) {
                 if (!state(ROLLED_BACK)) {
                     state(UNKNOWN);
 

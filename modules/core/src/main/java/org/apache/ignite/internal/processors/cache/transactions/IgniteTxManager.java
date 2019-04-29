@@ -25,9 +25,11 @@ import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteClientDisconnectedException;
@@ -134,6 +136,80 @@ import static org.jsr166.ConcurrentLinkedHashMap.QueuePolicy.PER_SEGMENT_Q;
  * Cache transaction manager.
  */
 public class IgniteTxManager extends GridCacheSharedManagerAdapter {
+    public static final ConcurrentMap<Object, Queue<TxRec>> txLog = new ConcurrentHashMap<>();
+
+    public static final ConcurrentMap<Object, Queue<TxVal>> pitrLog = new ConcurrentHashMap<>();
+
+    public static final ConcurrentMap<GridCacheVersion,  FileWALPointer> committedTxs = new ConcurrentHashMap<>();
+
+
+    public static void logTx(Object node, TxRec rec) {
+        txLog.compute(node, (n, q) -> {
+            if (q == null)
+                q = new ConcurrentLinkedQueue<>();
+
+            q.add(rec);
+
+            return q;
+        });
+    }
+
+    public static void logPitr(Object node, TxVal val) {
+        pitrLog.compute(node, (n, q) -> {
+            if (q == null)
+                q = new ConcurrentLinkedQueue<>();
+
+            q.add(val);
+
+            return q;
+        });
+    }
+
+
+    public static void clearStat() {
+        txLog.clear();
+        pitrLog.clear();
+    }
+
+    public static class TxVal {
+        public GridCacheVersion xid;
+        public int key;
+        public long oldVal;
+        public long newVal;
+        public FileWALPointer ptr;
+
+        public TxVal(GridCacheVersion xid, int key, long oldVal, long newVal, FileWALPointer ptr) {
+            this.xid = xid;
+            this.key = key;
+            this.oldVal = oldVal;
+            this.newVal = newVal;
+            this.ptr = ptr;
+        }
+    }
+
+    public static class TxRec {
+        public GridCacheVersion xid;
+        public int key1;
+        public long oldVal1;
+        public long newVal1;
+        public int key2;
+        public long oldVal2;
+        public long newVal2;
+        public long delta;
+
+        public TxRec(GridCacheVersion xid, int key1, long oldVal1, long newVal1, int key2, long oldVal2, long newVal2, long delta) {
+            this.xid = xid;
+            this.key1 = key1;
+            this.oldVal1 = oldVal1;
+            this.newVal1 = newVal1;
+            this.key2 = key2;
+            this.oldVal2 = oldVal2;
+            this.newVal2 = newVal2;
+            this.delta = delta;
+        }
+
+    }
+
     /** Default maximum number of transactions that have completed. */
     private static final int DFLT_MAX_COMPLETED_TX_CNT = 262144; // 2^18
 
@@ -1323,6 +1399,18 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
                 collectPendingVersions(dhtTxLoc);
             }
+
+            if (!tx.onePhaseCommit()) {
+                if (!tx.state(COMMITTED)) {
+                    tx.state(UNKNOWN);
+
+                    throw new IgniteCheckedException("Invalid transaction state for commit: " + this);
+                }
+            }
+            else {
+                log.info("WTF!");
+            }
+
 
             // 3. Unlock write resources.
             unlockMultiple(tx, tx.writeEntries());
@@ -2587,8 +2675,10 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                 cctx.tm().pendingTxsTracker().onTxPrepared(tx.nearXidVersion(), (FileWALPointer)ptr);
             else if (txState == ROLLED_BACK)
                 cctx.tm().pendingTxsTracker().onTxRolledBack(tx.nearXidVersion());
-            else
+            else if (txState == COMMITTED)
                 cctx.tm().pendingTxsTracker().onTxCommitted(tx.nearXidVersion());
+            else
+                throw new IllegalStateException("WRONG TX STATE LOGGING: " + tx);
 
             return ptr;
         }

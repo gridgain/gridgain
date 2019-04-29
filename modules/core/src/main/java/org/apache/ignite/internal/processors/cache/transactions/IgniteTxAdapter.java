@@ -1120,6 +1120,11 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
      * @return {@code True} if state changed.
      */
     protected final boolean state(TransactionState state, boolean timedOut) {
+/*
+        if (state == COMMITTED)
+            U.dumpStack(log, "STATECHNG: ");
+*/
+
         boolean valid = false;
 
         TransactionState prev;

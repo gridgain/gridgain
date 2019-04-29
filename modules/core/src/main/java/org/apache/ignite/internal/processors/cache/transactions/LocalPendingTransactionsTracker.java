@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.ignite.IgniteLogger;
@@ -56,10 +57,10 @@ public class LocalPendingTransactionsTracker {
     private volatile boolean enabled = IgniteSystemProperties.getBoolean(IGNITE_PENDING_TX_TRACKER_ENABLED, false);
 
     /** Currently prepared transactions. Counters are incremented on prepare, decremented on commit/rollback. */
-    private final ConcurrentHashMap<GridCacheVersion, Integer> preparedCommittedTxsCounters = new ConcurrentHashMap<>();
+    private final ConcurrentMap<GridCacheVersion, Integer> preparedCommittedTxsCounters = new ConcurrentHashMap<>();
 
     /** Minimum prepare markers for all currently prepared transactions. */
-    private final ConcurrentHashMap<GridCacheVersion, FileWALPointer> minPrepareMarkers = new ConcurrentHashMap<>();
+    private final ConcurrentMap<GridCacheVersion, FileWALPointer> minPrepareMarkers = new ConcurrentHashMap<>();
 
     /**
      * Transactions that were transitioned to pending state since last {@link #startTrackingPrepared()} call.
@@ -71,10 +72,10 @@ public class LocalPendingTransactionsTracker {
     private volatile GridConcurrentHashSet<GridCacheVersion> trackedCommittedTxs = new GridConcurrentHashSet<>();
 
     /** Written keys to near xid version. */
-    private volatile ConcurrentHashMap<KeyCacheObject, Set<GridCacheVersion>> writtenKeysToNearXidVer = new ConcurrentHashMap<>();
+    private volatile ConcurrentMap<KeyCacheObject, Set<GridCacheVersion>> writtenKeysToNearXidVer = new ConcurrentHashMap<>();
 
     /** Graph of dependent (by keys) transactions. */
-    private volatile ConcurrentHashMap<GridCacheVersion, Set<GridCacheVersion>> dependentTransactionsGraph = new ConcurrentHashMap<>();
+    private volatile ConcurrentMap<GridCacheVersion, Set<GridCacheVersion>> dependentTransactionsGraph = new ConcurrentHashMap<>();
     // todo GG-13416: maybe handle local sequential consistency with threadId
 
     /** State rw-lock. */
@@ -280,7 +281,13 @@ public class LocalPendingTransactionsTracker {
     public FileWALPointer minPreparedMarker() {
         assert stateLock.writeLock().isHeldByCurrentThread();
 
-        return minPrepareMarkers.isEmpty() ? null : Collections.min(minPrepareMarkers.values());
+        FileWALPointer fileWALPointer = minPrepareMarkers.isEmpty() ? null : Collections.min(minPrepareMarkers.values());
+
+        log.info("DBG: minPreparedMarkers=" + minPrepareMarkers);
+
+        log.info("DBG: minPreparedMarker=" + fileWALPointer);
+
+        return fileWALPointer;
     }
 
     /**
