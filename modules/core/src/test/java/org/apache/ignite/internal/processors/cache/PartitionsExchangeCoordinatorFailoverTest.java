@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -43,7 +44,6 @@ import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.IgniteSpiException;
-import org.apache.ignite.spi.communication.CommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
@@ -62,7 +62,10 @@ public class PartitionsExchangeCoordinatorFailoverTest extends GridCommonAbstrac
     private static final String CRD_NONE = "crd";
 
     /** */
-    private Supplier<CommunicationSpi> spiFactory = TcpCommunicationSpi::new;
+    private volatile Supplier<TcpCommunicationSpi> spiFactory = TcpCommunicationSpi::new;
+
+    /** */
+    private boolean newCaches = true;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -70,7 +73,7 @@ public class PartitionsExchangeCoordinatorFailoverTest extends GridCommonAbstrac
 
         cfg.setConsistentId(igniteInstanceName);
 
-        cfg.setCommunicationSpi(spiFactory.get());
+        cfg.setCommunicationSpi(spiFactory.get().setName("tcp"));
 
         cfg.setCacheConfiguration(
                 new CacheConfiguration(CACHE_NAME)
@@ -79,7 +82,7 @@ public class PartitionsExchangeCoordinatorFailoverTest extends GridCommonAbstrac
         );
 
         // Add cache that exists only on coordinator node.
-        if (igniteInstanceName.equals(CRD_NONE)) {
+        if (newCaches && igniteInstanceName.equals(CRD_NONE)) {
             IgnitePredicate<ClusterNode> nodeFilter = node -> node.consistentId().equals(igniteInstanceName);
 
             cfg.setCacheConfiguration(
@@ -319,47 +322,84 @@ public class PartitionsExchangeCoordinatorFailoverTest extends GridCommonAbstrac
         }
     }
 
+    /**
+     * Test checks that changing coordinator to a node that joining to cluster at the moment works correctly
+     * in case of exchanges merge and completed exchange on other joining nodes.
+     */
     @Test
     @WithSystemProperty(key = IgniteSystemProperties.IGNITE_SKIP_CONFIGURATION_CONSISTENCY_CHECK, value = "true")
     public void testChangeCoordinatorToLocallyJoiningNode() throws Exception {
+        newCaches = false;
+
         spiFactory = TestRecordingCommunicationSpi::new;
 
         IgniteEx crd = startGrid(CRD_NONE);
 
-        final int newCrdNodeIndex = 1;
+        final int newCrdNodeIdx = 1;
 
         // A full message shouldn't be send to new coordinator.
-        blockSendingFullMessage(crd, node -> node.consistentId().equals(getTestIgniteInstanceName(newCrdNodeIndex)));
+        blockSendingFullMessage(crd, node -> node.consistentId().equals(getTestIgniteInstanceName(newCrdNodeIdx)));
 
-        // For non-coordinator nodes delay sending single messages to emulate exchanges merge.
+        CountDownLatch joiningNodeSentSingleMsg = new CountDownLatch(1);
+
+        // For next joining node delay sending single message to emulate exchanges merge.
         spiFactory = () -> new DynamicDelayingCommunicationSpi(msg -> {
-            final int delay = 1_000;
+            final int delay = 5_000;
 
             if (msg instanceof GridDhtPartitionsSingleMessage) {
                 GridDhtPartitionsSingleMessage singleMsg = (GridDhtPartitionsSingleMessage) msg;
 
-                if (singleMsg.exchangeId() != null)
+                if (singleMsg.exchangeId() != null) {
+                    joiningNodeSentSingleMsg.countDown();
+
                     return delay;
+                }
             }
 
             return 0;
         });
 
-        IgniteInternalFuture<?> newCrdJoinFut = GridTestUtils.runAsync(() -> startGrid(newCrdNodeIndex));
+        IgniteInternalFuture<?> newCrdJoinFut = GridTestUtils.runAsync(() -> startGrid(newCrdNodeIdx));
 
-        IgniteInternalFuture<?> joinTwoNodesFut = GridTestUtils.runAsync(() -> startGridsMultiThreaded(2, 2));
+        // Wait till new coordinator node sent single message.
+        joiningNodeSentSingleMsg.await();
 
-        joinTwoNodesFut.get();
+        spiFactory = TcpCommunicationSpi::new;
 
-        U.sleep(1000);
+        // Additionally start 2 new nodes. Their exchange should be merged with exchange on join new coordinator node.
+        startGridsMultiThreaded(2, 2);
 
-        Assert.assertFalse("New coordinator join shouldn't be happened", newCrdJoinFut.isDone());
+        Assert.assertFalse("New coordinator join shouldn't be happened before stopping old coordinator.",
+            newCrdJoinFut.isDone());
 
         // Stop coordinator.
         stopGrid(CRD_NONE);
 
-        // New coordinator join process should succeed.
+        // New coordinator join process should succeed after that.
         newCrdJoinFut.get();
+
+        awaitPartitionMapExchange();
+
+        // Check that affinity are equal on all nodes.
+        AffinityTopologyVersion affVer = ((IgniteEx) ignite(1)).cachex(CACHE_NAME)
+            .context().shared().exchange().readyAffinityVersion();
+
+        List<List<ClusterNode>> expAssignment = null;
+        IgniteEx expAssignmentNode = null;
+
+        for (Ignite node : G.allGrids()) {
+            IgniteEx nodeEx = (IgniteEx) node;
+
+            List<List<ClusterNode>> assignment = nodeEx.cachex(CACHE_NAME).context().affinity().assignments(affVer);
+
+            if (expAssignment == null) {
+                expAssignment = assignment;
+                expAssignmentNode = nodeEx;
+            }
+            else
+                Assert.assertEquals("Affinity assignments are different " +
+                    "[expectedNode=" + expAssignmentNode + ", actualNode=" + nodeEx + "]", expAssignment, assignment);
+        }
     }
 
     /**
@@ -392,7 +432,7 @@ public class PartitionsExchangeCoordinatorFailoverTest extends GridCommonAbstrac
     /**
      * Communication SPI that allows to delay sending message by predicate.
      */
-    class DynamicDelayingCommunicationSpi extends TcpCommunicationSpi {
+    static class DynamicDelayingCommunicationSpi extends TcpCommunicationSpi {
         /** Function that returns delay in milliseconds for given message. */
         private final Function<Message, Integer> delayMsgFunc;
 
