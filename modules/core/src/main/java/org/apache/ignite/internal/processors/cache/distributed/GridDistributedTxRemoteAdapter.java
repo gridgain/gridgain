@@ -814,7 +814,7 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
 
                 cctx.tm().commitTx(this);
 
-                state(COMMITTED);
+//                state(COMMITTED);
             }
         }
     }

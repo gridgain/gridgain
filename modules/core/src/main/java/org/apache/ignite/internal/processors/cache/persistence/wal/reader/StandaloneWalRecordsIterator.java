@@ -55,8 +55,10 @@ import org.apache.ignite.internal.processors.cache.persistence.wal.serializer.Re
 import org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordSerializerFactoryImpl;
 import org.apache.ignite.internal.processors.cache.persistence.wal.serializer.SegmentHeader;
 import org.apache.ignite.internal.processors.cacheobject.IgniteCacheObjectProcessor;
+import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgniteBiTuple;
@@ -84,6 +86,7 @@ class StandaloneWalRecordsIterator extends AbstractWalRecordsIterator {
      * <code>null</code> value means directory scan mode
      */
     @Nullable
+    @GridToStringInclude
     private final List<FileDescriptor> walFileDescriptors;
 
     /** */
@@ -523,5 +526,10 @@ class StandaloneWalRecordsIterator extends AbstractWalRecordsIterator {
         SegmentIO fileIO, RecordSerializer ser, FileInput in
     ) {
         return new ReadFileHandle(fileIO, ser, in, null);
+    }
+
+    @Override
+    public String toString() {
+        return S.toString(StandaloneWalRecordsIterator.class, this);
     }
 }
