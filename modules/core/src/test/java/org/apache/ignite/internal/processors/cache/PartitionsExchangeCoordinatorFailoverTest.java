@@ -18,10 +18,12 @@ package org.apache.ignite.internal.processors.cache;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -44,6 +46,7 @@ import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.communication.CommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Assert;
 import org.junit.Test;
@@ -54,6 +57,9 @@ import org.junit.Test;
 public class PartitionsExchangeCoordinatorFailoverTest extends GridCommonAbstractTest {
     /** */
     private static final String CACHE_NAME = "cache";
+
+    /** Coordinator node name. */
+    private static final String CRD_NONE = "crd";
 
     /** */
     private Supplier<CommunicationSpi> spiFactory = TcpCommunicationSpi::new;
@@ -73,7 +79,7 @@ public class PartitionsExchangeCoordinatorFailoverTest extends GridCommonAbstrac
         );
 
         // Add cache that exists only on coordinator node.
-        if (igniteInstanceName.equals("crd")) {
+        if (igniteInstanceName.equals(CRD_NONE)) {
             IgnitePredicate<ClusterNode> nodeFilter = node -> node.consistentId().equals(igniteInstanceName);
 
             cfg.setCacheConfiguration(
@@ -106,7 +112,7 @@ public class PartitionsExchangeCoordinatorFailoverTest extends GridCommonAbstrac
     public void testNewCoordinatorCompletedExchange() throws Exception {
         spiFactory = TestRecordingCommunicationSpi::new;
 
-        IgniteEx crd = (IgniteEx) startGrid("crd");
+        IgniteEx crd = startGrid(CRD_NONE);
 
         IgniteEx newCrd = startGrid(1);
 
@@ -121,13 +127,13 @@ public class PartitionsExchangeCoordinatorFailoverTest extends GridCommonAbstrac
         // Block FullMessage for newly joined nodes.
         TestRecordingCommunicationSpi spi = TestRecordingCommunicationSpi.spi(crd);
 
-        final CountDownLatch sendFullMsgLatch = new CountDownLatch(1);
+        final CountDownLatch sndFullMsgLatch = new CountDownLatch(1);
 
         // Delay sending full message to newly joined nodes.
         spi.blockMessages((node, msg) -> {
             if (msg instanceof GridDhtPartitionsFullMessage && node.order() > 2) {
                 try {
-                    sendFullMsgLatch.await();
+                    sndFullMsgLatch.await();
                 }
                 catch (Throwable ignored) { }
 
@@ -155,13 +161,13 @@ public class PartitionsExchangeCoordinatorFailoverTest extends GridCommonAbstrac
             getTestTimeout()
         );
 
-        IgniteInternalFuture stopCrdFut = GridTestUtils.runAsync(() -> stopGrid("crd", true, false));
+        IgniteInternalFuture stopCrdFut = GridTestUtils.runAsync(() -> stopGrid(CRD_NONE, true, false));
 
         // Magic sleep to make sure that coordinator stop process has started.
         U.sleep(1000);
 
         // Resume full messages sending to unblock coordinator stopping process.
-        sendFullMsgLatch.countDown();
+        sndFullMsgLatch.countDown();
 
         // Coordinator stop should succeed.
         stopCrdFut.get();
@@ -192,7 +198,7 @@ public class PartitionsExchangeCoordinatorFailoverTest extends GridCommonAbstrac
     public void testDelayedFullMessageReplacedIfCoordinatorChanged() throws Exception {
         spiFactory = TestRecordingCommunicationSpi::new;
 
-        IgniteEx crd = startGrid("crd");
+        IgniteEx crd = startGrid(CRD_NONE);
 
         IgniteEx newCrd = startGrid(1);
 
@@ -202,7 +208,7 @@ public class PartitionsExchangeCoordinatorFailoverTest extends GridCommonAbstrac
 
         awaitPartitionMapExchange();
 
-        blockSendingFullMessage(crd, problemNode);
+        blockSendingFullMessage(crd, node -> node.equals(problemNode.localNode()));
 
         IgniteInternalFuture joinNextNodeFut = GridTestUtils.runAsync(() -> startGrid(3));
 
@@ -210,11 +216,11 @@ public class PartitionsExchangeCoordinatorFailoverTest extends GridCommonAbstrac
 
         U.sleep(5000);
 
-        blockSendingFullMessage(newCrd, problemNode);
+        blockSendingFullMessage(newCrd, node -> node.equals(problemNode.localNode()));
 
-        IgniteInternalFuture stopCoordinatorFut = GridTestUtils.runAsync(() -> stopGrid("crd"));
+        IgniteInternalFuture stopCrdFut = GridTestUtils.runAsync(() -> stopGrid(CRD_NONE));
 
-        stopCoordinatorFut.get();
+        stopCrdFut.get();
 
         U.sleep(5000);
 
@@ -237,9 +243,9 @@ public class PartitionsExchangeCoordinatorFailoverTest extends GridCommonAbstrac
             final int delay = 5_000;
 
             if (msg instanceof GridDhtPartitionDemandMessage) {
-                GridDhtPartitionDemandMessage demandMessage = (GridDhtPartitionDemandMessage) msg;
+                GridDhtPartitionDemandMessage demandMsg = (GridDhtPartitionDemandMessage) msg;
 
-                if (demandMessage.groupId() == GridCacheUtils.cacheId(GridCacheUtils.UTILITY_CACHE_NAME))
+                if (demandMsg.groupId() == GridCacheUtils.cacheId(GridCacheUtils.UTILITY_CACHE_NAME))
                     return 0;
 
                 return delay;
@@ -248,7 +254,7 @@ public class PartitionsExchangeCoordinatorFailoverTest extends GridCommonAbstrac
             return 0;
         });
 
-        final IgniteEx crd = startGrid("crd");
+        final IgniteEx crd = startGrid(CRD_NONE);
 
         startGrid(1);
 
@@ -293,7 +299,7 @@ public class PartitionsExchangeCoordinatorFailoverTest extends GridCommonAbstrac
         U.sleep(2_500);
 
         // And then stop coordinator node.
-        stopGrid("crd", true);
+        stopGrid(CRD_NONE, true);
 
         startNodeFut.get();
 
@@ -313,12 +319,57 @@ public class PartitionsExchangeCoordinatorFailoverTest extends GridCommonAbstrac
         }
     }
 
+    @Test
+    @WithSystemProperty(key = IgniteSystemProperties.IGNITE_SKIP_CONFIGURATION_CONSISTENCY_CHECK, value = "true")
+    public void testChangeCoordinatorToLocallyJoiningNode() throws Exception {
+        spiFactory = TestRecordingCommunicationSpi::new;
+
+        IgniteEx crd = startGrid(CRD_NONE);
+
+        final int newCrdNodeIndex = 1;
+
+        // A full message shouldn't be send to new coordinator.
+        blockSendingFullMessage(crd, node -> node.consistentId().equals(getTestIgniteInstanceName(newCrdNodeIndex)));
+
+        // For non-coordinator nodes delay sending single messages to emulate exchanges merge.
+        spiFactory = () -> new DynamicDelayingCommunicationSpi(msg -> {
+            final int delay = 1_000;
+
+            if (msg instanceof GridDhtPartitionsSingleMessage) {
+                GridDhtPartitionsSingleMessage singleMsg = (GridDhtPartitionsSingleMessage) msg;
+
+                if (singleMsg.exchangeId() != null)
+                    return delay;
+            }
+
+            return 0;
+        });
+
+        IgniteInternalFuture<?> newCrdJoinFut = GridTestUtils.runAsync(() -> startGrid(newCrdNodeIndex));
+
+        IgniteInternalFuture<?> joinTwoNodesFut = GridTestUtils.runAsync(() -> startGridsMultiThreaded(2, 2));
+
+        joinTwoNodesFut.get();
+
+        U.sleep(1000);
+
+        Assert.assertFalse("New coordinator join shouldn't be happened", newCrdJoinFut.isDone());
+
+        // Stop coordinator.
+        stopGrid(CRD_NONE);
+
+        // New coordinator join process should succeed.
+        newCrdJoinFut.get();
+    }
+
     /**
      * Blocks sending full message from coordinator to non-coordinator node.
+     *
      * @param from Coordinator node.
-     * @param to Non-coordinator node.
+     * @param pred Non-coordinator node predicate.
+     *                  If predicate returns {@code true} a full message will not be send to that node.
      */
-    private void blockSendingFullMessage(IgniteEx from, IgniteEx to) {
+    private void blockSendingFullMessage(IgniteEx from, Predicate<ClusterNode> pred) {
         // Block FullMessage for newly joined nodes.
         TestRecordingCommunicationSpi spi = TestRecordingCommunicationSpi.spi(from);
 
@@ -327,8 +378,8 @@ public class PartitionsExchangeCoordinatorFailoverTest extends GridCommonAbstrac
             if (msg instanceof GridDhtPartitionsFullMessage) {
                 GridDhtPartitionsFullMessage fullMsg = (GridDhtPartitionsFullMessage) msg;
 
-                if (fullMsg.exchangeId() != null && node.order() == to.localNode().order()) {
-                    log.warning("Blocked sending " + msg + " to " + to.localNode());
+                if (fullMsg.exchangeId() != null && pred.test(node)) {
+                    log.warning("Blocked sending " + msg + " to " + node);
 
                     return true;
                 }
@@ -343,7 +394,7 @@ public class PartitionsExchangeCoordinatorFailoverTest extends GridCommonAbstrac
      */
     class DynamicDelayingCommunicationSpi extends TcpCommunicationSpi {
         /** Function that returns delay in milliseconds for given message. */
-        private final Function<Message, Integer> delayMessageFunc;
+        private final Function<Message, Integer> delayMsgFunc;
 
         /** */
         DynamicDelayingCommunicationSpi() {
@@ -351,10 +402,10 @@ public class PartitionsExchangeCoordinatorFailoverTest extends GridCommonAbstrac
         }
 
         /**
-         * @param delayMessageFunc Function to calculate delay for message.
+         * @param delayMsgFunc Function to calculate delay for message.
          */
-        DynamicDelayingCommunicationSpi(final Function<Message, Integer> delayMessageFunc) {
-            this.delayMessageFunc = delayMessageFunc;
+        DynamicDelayingCommunicationSpi(final Function<Message, Integer> delayMsgFunc) {
+            this.delayMsgFunc = delayMsgFunc;
         }
 
         /** {@inheritDoc} */
@@ -363,7 +414,7 @@ public class PartitionsExchangeCoordinatorFailoverTest extends GridCommonAbstrac
             try {
                 GridIoMessage ioMsg = (GridIoMessage)msg;
 
-                int delay = delayMessageFunc.apply(ioMsg.message());
+                int delay = delayMsgFunc.apply(ioMsg.message());
 
                 if (delay > 0) {
                     log.warning(String.format("Delay sending %s to %s", msg, node));
