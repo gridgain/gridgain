@@ -26,7 +26,6 @@ import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.internal.binary.BinaryObjectImpl;
 import org.apache.ignite.internal.binary.nextgen.BikeBuilder;
 import org.apache.ignite.internal.binary.nextgen.BikeCacheObject;
-import org.apache.ignite.internal.binary.nextgen.BikeConverterRegistry;
 import org.apache.ignite.internal.binary.nextgen.BikeTuple;
 import org.apache.ignite.internal.processors.cache.CacheObjectValueContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
@@ -149,8 +148,8 @@ public class GridH2RowDescriptor {
             QueryUtils.DEFAULT_COLUMNS_COUNT + fieldsList.indexOf(type.valueFieldAlias()) : COL_NOT_EXISTS;
 
         // t0d0 figure out what is the proper mapping strategy
-        BikeConverterRegistry.registerConverter(type.typeId(), this::binaryToBike);
-        BikeConverterRegistry.registerBackConverter(type.typeId(), this::bikeToBinary);
+//        BikeConverterRegistry.registerConverter(type.typeId(), this::binaryToBike);
+//        BikeConverterRegistry.registerBackConverter(type.typeId(), this::bikeToBinary);
     }
 
     private boolean isNotPartOfKeyHack(GridQueryProperty prop) {
