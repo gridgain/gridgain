@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -1011,19 +1011,19 @@ public class CommandProcessor {
             if (dfltVal != null)
                 dfltValues.put(e.getKey(), dfltVal);
 
-            if (col.getType() == Value.DECIMAL) {
-                if (col.getPrecision() < H2Utils.DECIMAL_DEFAULT_PRECISION)
-                    precision.put(e.getKey(), (int)col.getPrecision());
+            if (col.getType().getValueType() == Value.DECIMAL) {
+                if (col.getType().getPrecision() < H2Utils.DECIMAL_DEFAULT_PRECISION)
+                    precision.put(e.getKey(), (int)col.getType().getPrecision());
 
-                if (col.getScale() < H2Utils.DECIMAL_DEFAULT_SCALE)
-                    scale.put(e.getKey(), col.getScale());
+                if (col.getType().getScale() < H2Utils.DECIMAL_DEFAULT_SCALE)
+                    scale.put(e.getKey(), col.getType().getScale());
             }
 
-            if (col.getType() == Value.STRING ||
-                col.getType() == Value.STRING_FIXED ||
-                col.getType() == Value.STRING_IGNORECASE)
-                if (col.getPrecision() < H2Utils.STRING_DEFAULT_PRECISION)
-                    precision.put(e.getKey(), (int)col.getPrecision());
+            if (col.getType().getValueType() == Value.STRING ||
+                col.getType().getValueType() == Value.STRING_FIXED ||
+                col.getType().getValueType() == Value.STRING_IGNORECASE)
+                if (col.getType().getPrecision() < H2Utils.STRING_DEFAULT_PRECISION)
+                    precision.put(e.getKey(), (int)col.getType().getPrecision());
         }
 
         if (!F.isEmpty(dfltValues))
@@ -1113,7 +1113,7 @@ public class CommandProcessor {
      * @return Type class name.
      */
     private static String getTypeClassName(GridSqlColumn col) {
-        int type = col.column().getType();
+        int type = col.column().getType().getValueType();
 
         switch (type) {
             case Value.UUID :
@@ -1121,7 +1121,7 @@ public class CommandProcessor {
                     return UUID.class.getName();
 
             default:
-                return DataType.getTypeClassName(type);
+                return DataType.getTypeClassName(type, false);
         }
     }
 

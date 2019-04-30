@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,7 +21,7 @@ const logger = require('morgan');
 const cookieParser = require('cookie-parser');
 const bodyParser = require('body-parser');
 const session = require('express-session');
-const connectMongo = require('connect-mongo');
+const MongoDBStore = require('connect-mongodb-session');
 const passport = require('passport');
 const passportSocketIo = require('passport.socketio');
 const mongoSanitize = require('express-mongo-sanitize');
@@ -37,7 +37,7 @@ module.exports = {
 };
 
 module.exports.factory = function(settings, mongo, apis) {
-    const _sessionStore = new (connectMongo(session))({mongooseConnection: mongo.connection});
+    const _sessionStore = new (MongoDBStore(session))({uri: settings.mongoUrl});
 
     return {
         express: (app) => {

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -44,13 +44,19 @@ public class CacheCompressionManager extends GridCacheManagerAdapter {
 
     /** {@inheritDoc} */
     @Override protected void start0() throws IgniteCheckedException {
+        if (cctx.kernalContext().clientNode()) {
+            diskPageCompression = DiskPageCompression.DISABLED;
+
+            return;
+        }
+
         compressProc = cctx.kernalContext().compress();
 
         CacheConfiguration cfg = cctx.config();
 
         diskPageCompression = cctx.kernalContext().config().isClientMode() ? null : cfg.getDiskPageCompression();
 
-        if (diskPageCompression != null) {
+        if (diskPageCompression != DiskPageCompression.DISABLED) {
             if (!cctx.dataRegion().config().isPersistenceEnabled())
                 throw new IgniteCheckedException("Disk page compression makes sense only with enabled persistence.");
 
@@ -81,7 +87,7 @@ public class CacheCompressionManager extends GridCacheManagerAdapter {
      * @throws IgniteCheckedException If failed.
      */
     public ByteBuffer compressPage(ByteBuffer page, PageStore store) throws IgniteCheckedException {
-        if (diskPageCompression == null)
+        if (diskPageCompression == DiskPageCompression.DISABLED)
             return page;
 
         int blockSize = store.getBlockSize();

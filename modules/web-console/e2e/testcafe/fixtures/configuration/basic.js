@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -56,7 +56,7 @@ test('Basic editing', async(t) => {
     const page = new PageConfigurationBasic();
     const clusterName = 'Test basic cluster #1';
     const localMode = 'LOCAL';
-    const atomic = 'ATOMIC';
+    const transactional = 'TRANSACTIONAL';
 
     await t
         .expect(page.buttonPreviewProject.visible).notOk('Preview project button is hidden for new cluster configs')
@@ -69,12 +69,12 @@ test('Basic editing', async(t) => {
     await cache1.startEdit();
     await t.typeText(cache1.fields.name.control, 'Foobar');
     await cache1.fields.cacheMode.selectOption(localMode);
-    await cache1.fields.atomicityMode.selectOption(atomic);
+    await cache1.fields.atomicityMode.selectOption(transactional);
     await cache1.stopEdit();
 
     await t.expect(cache1.getItemViewColumn(0).textContent).contains(`Cache1Foobar`, 'Can edit cache name');
     await t.expect(cache1.getItemViewColumn(1).textContent).eql(localMode, 'Can edit cache mode');
-    await t.expect(cache1.getItemViewColumn(2).textContent).eql(atomic, 'Can edit cache atomicity');
+    await t.expect(cache1.getItemViewColumn(2).textContent).eql(transactional, 'Can edit cache atomicity');
 
     await page.save();
     await t

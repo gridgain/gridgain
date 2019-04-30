@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -348,7 +348,7 @@ public final class DmlAstUtils {
         mapQry.addColumn(valCol, true);
 
         for (GridSqlColumn c : update.cols()) {
-            String newColName = Parser.quoteIdentifier("_upd_" + c.columnName());
+            String newColName = Parser.quoteIdentifier("_upd_" + c.columnName(), true);
             // We have to use aliases to cover cases when the user
             // wants to update _val field directly (if it's a literal)
             GridSqlAlias alias = new GridSqlAlias(newColName, elementOrDefault(update.set().get(c.columnName()), c), true);
@@ -396,7 +396,7 @@ public final class DmlAstUtils {
         if (dfltVal != null)
             return new GridSqlConst(dfltVal);
 
-        int type = h2Col.getType();
+        int type = h2Col.getType().getValueType();
 
         DataType dt = DataType.getDataType(type);
 

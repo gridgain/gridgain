@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -37,6 +37,7 @@ import org.apache.ignite.compute.ComputeJobResultPolicy;
 import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.visor.verify.CacheFilterEnum;
 import org.apache.ignite.internal.visor.verify.VisorIdleVerifyDumpTaskArg;
 import org.apache.ignite.internal.visor.verify.VisorIdleVerifyTaskArg;
 import org.apache.ignite.resources.IgniteInstanceResource;
@@ -202,13 +203,30 @@ public class VerifyBackupPartitionsDumpTask extends ComputeTaskAdapter<VisorIdle
         int skippedRecords,
         PrintWriter writer
     ) {
-        if (!F.isEmpty(conflictRes.exceptions())) {
-            int size = conflictRes.exceptions().size();
+        Map<ClusterNode, Exception> exceptions = conflictRes.exceptions();
+
+        if (!F.isEmpty(exceptions)) {
+            boolean noMatchingCaches = false;
+
+            for (Exception e : exceptions.values()) {
+                if (e instanceof NoMatchingCachesException) {
+                    noMatchingCaches = true;
+
+                    break;
+                }
+            }
+
+            int size = exceptions.size();
 
             writer.write("idle_verify failed on " + size + " node" + (size == 1 ? "" : "s") + ".\n");
+
+            if (noMatchingCaches)
+                writer.write("There are no caches matching given filter options.");
         }
 
-        writer.write("idle_verify check has finished, found " + partitions.size() + " partitions\n");
+        if (!partitions.isEmpty())
+            writer.write("idle_verify check has finished, found " + partitions.size() + " partitions\n");
+
         writer.write("idle_verify task was executed with the following args: " + taskArgsAsCmd() + "\n");
 
         if (skippedRecords > 0)
@@ -244,7 +262,7 @@ public class VerifyBackupPartitionsDumpTask extends ComputeTaskAdapter<VisorIdle
             }
         }
 
-        if (taskArg.getCacheFilterEnum() != null) {
+        if (taskArg.getCacheFilterEnum() != null && taskArg.getCacheFilterEnum() != CacheFilterEnum.DEFAULT) {
             result.append(CACHE_FILTER);
             result.append(" ");
             result.append(taskArg.getCacheFilterEnum());
