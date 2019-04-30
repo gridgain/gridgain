@@ -16,13 +16,10 @@
 
 package org.apache.ignite.util;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.io.RandomAccessFile;
 import java.io.Serializable;
-import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -58,11 +55,7 @@ import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.AtomicConfiguration;
 import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
-import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.GridJobExecuteResponse;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -106,7 +99,6 @@ import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionRollbackException;
 import org.apache.ignite.transactions.TransactionState;
@@ -114,11 +106,7 @@ import org.apache.ignite.transactions.TransactionTimeoutException;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
-import static java.nio.file.Files.delete;
-import static java.nio.file.Files.newDirectoryStream;
 import static java.util.Arrays.asList;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_ENABLED;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXPERIMENTAL_COMMAND;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_INVALID_ARGUMENTS;
@@ -127,7 +115,6 @@ import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_UN
 import static org.apache.ignite.internal.commandline.OutputFormat.MULTI_LINE;
 import static org.apache.ignite.internal.commandline.OutputFormat.SINGLE_LINE;
 import static org.apache.ignite.internal.commandline.cache.CacheCommand.HELP;
-import static org.apache.ignite.internal.processors.cache.verify.VerifyBackupPartitionsDumpTask.IDLE_DUMP_FILE_PREFIX;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
@@ -136,127 +123,11 @@ import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED
 /**
  * Command line handler test.
  */
-public class GridCommandHandlerTest extends GridCommonAbstractTest {
-    /** System out. */
-    protected PrintStream sysOut;
-
-    /** Test out - can be injected via {@link #injectTestSystemOut()} instead of System.out and analyzed in test. */
-    protected ByteArrayOutputStream testOut;
-
-    /** Option is used for auto confirmation. */
-    private static final String CMD_AUTO_CONFIRMATION = "--yes";
-
-    /** Atomic configuration. */
-    private AtomicConfiguration atomicConfiguration;
-
-    /** Additional data region configuration. */
-    private DataRegionConfiguration dataRegionConfiguration;
-
-    /**
-     * @return Folder in work directory.
-     * @throws IgniteCheckedException If failed to resolve folder name.
-     */
-    protected File folder(String folder) throws IgniteCheckedException {
-        return U.resolveWorkDirectory(U.defaultWorkDirectory(), folder, false);
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTestsStopped() throws Exception {
-        super.afterTestsStopped();
-
-        GridTestUtils.cleanIdleVerifyLogFiles();
-
-        System.clearProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED);
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void beforeTestsStarted() throws Exception {
-        System.setProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED, "false");
-
-        super.beforeTestsStarted();
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void beforeTest() throws Exception {
-        System.setProperty(IGNITE_ENABLE_EXPERIMENTAL_COMMAND, "true");
-
-        cleanPersistenceDir();
-
-        stopAllGrids();
-
-        sysOut = System.out;
-
-        testOut = new ByteArrayOutputStream(1024 * 1024);
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTest() throws Exception {
-        stopAllGrids();
-
-        cleanPersistenceDir();
-
-        // Delete idle-verify dump files.
-        try (DirectoryStream<Path> files = newDirectoryStream(
-            Paths.get(U.defaultWorkDirectory()),
-            entry -> entry.toFile().getName().startsWith(IDLE_DUMP_FILE_PREFIX)
-        )
-        ) {
-            for (Path path : files)
-                delete(path);
-        }
-
-        System.clearProperty(IGNITE_ENABLE_EXPERIMENTAL_COMMAND);
-
-        System.setOut(sysOut);
-
-        log.info("----------------------------------------");
-        if (testOut != null)
-            System.out.println(testOut.toString());
-    }
-
-    /**
-     *
-     */
-    protected void injectTestSystemOut() {
-        System.setOut(new PrintStream(testOut));
-    }
-
+public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
     /** {@inheritDoc} */
     @Override public String getTestIgniteInstanceName() {
         return "bltTest";
     }
-
-    /** {@inheritDoc} */
-    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
-
-        if (atomicConfiguration != null)
-            cfg.setAtomicConfiguration(atomicConfiguration);
-
-        cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
-
-        cfg.setConnectorConfiguration(new ConnectorConfiguration());
-
-        DataStorageConfiguration memCfg = new DataStorageConfiguration()
-            .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
-                .setMaxSize(50L * 1024 * 1024));
-
-        if (dataRegionConfiguration != null)
-            memCfg.setDataRegionConfigurations(dataRegionConfiguration);
-
-        cfg.setDataStorageConfiguration(memCfg);
-
-        DataStorageConfiguration dsCfg = cfg.getDataStorageConfiguration();
-        dsCfg.setWalMode(WALMode.LOG_ONLY);
-        dsCfg.getDefaultDataRegionConfiguration().setPersistenceEnabled(true);
-
-        cfg.setConsistentId(igniteInstanceName);
-
-        cfg.setClientMode(igniteInstanceName.startsWith("client"));
-
-        return cfg;
-    }
-
     /**
      * Test activation works via control.sh
      *
@@ -271,53 +142,6 @@ public class GridCommandHandlerTest extends GridCommonAbstractTest {
         assertEquals(EXIT_CODE_OK, execute("--activate"));
 
         assertTrue(ignite.cluster().active());
-    }
-
-    /**
-     * @param args Arguments.
-     * @return Result of execution.
-     */
-    protected int execute(String... args) {
-        return execute(new ArrayList<>(asList(args)));
-    }
-
-    /**
-     * @param args Arguments.
-     * @return Result of execution
-     */
-    protected int execute(List<String> args) {
-        if (!F.isEmpty(args) && !"--help".equalsIgnoreCase(args.get(0))) {
-            // Add force to avoid interactive confirmation.
-            args.add(CMD_AUTO_CONFIRMATION);
-        }
-
-        return new CommandHandler().execute(args);
-    }
-
-    /**
-     * @param hnd Handler.
-     * @param args Arguments.
-     * @return Result of execution
-     */
-    protected int execute(CommandHandler hnd, ArrayList<String> args) {
-        // Add force to avoid interactive confirmation
-        args.add(CMD_AUTO_CONFIRMATION);
-
-        return hnd.execute(args);
-    }
-
-    /**
-     * @param hnd Handler.
-     * @param args Arguments.
-     * @return Result of execution
-     */
-    protected int execute(CommandHandler hnd, String... args) {
-        ArrayList<String> args0 = new ArrayList<>(asList(args));
-
-        // Add force to avoid interactive confirmation
-        args0.add(CMD_AUTO_CONFIRMATION);
-
-        return hnd.execute(args0);
     }
 
     /**
@@ -2722,8 +2546,10 @@ public class GridCommandHandlerTest extends GridCommonAbstractTest {
     /** */
     private static class IncrementClosure implements EntryProcessor<Long, Long, Void> {
         /** {@inheritDoc} */
-        @Override public Void process(MutableEntry<Long, Long> entry,
-            Object... arguments) throws EntryProcessorException {
+        @Override public Void process(
+            MutableEntry<Long, Long> entry,
+            Object... arguments
+        ) throws EntryProcessorException {
             entry.setValue(entry.exists() ? entry.getValue() + 1 : 0);
 
             return null;

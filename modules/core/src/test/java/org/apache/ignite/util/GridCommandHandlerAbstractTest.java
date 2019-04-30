@@ -63,6 +63,60 @@ public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
     protected DataRegionConfiguration dataRegionConfiguration;
 
     /** {@inheritDoc} */
+    @Override protected void afterTestsStopped() throws Exception {
+        super.afterTestsStopped();
+
+        GridTestUtils.cleanIdleVerifyLogFiles();
+
+        System.clearProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTestsStarted() throws Exception {
+        System.setProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED, "false");
+
+        super.beforeTestsStarted();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        System.setProperty(IGNITE_ENABLE_EXPERIMENTAL_COMMAND, "true");
+
+        cleanPersistenceDir();
+
+        stopAllGrids();
+
+        sysOut = System.out;
+
+        testOut = new ByteArrayOutputStream(1024 * 1024);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        stopAllGrids();
+
+        cleanPersistenceDir();
+
+        // Delete idle-verify dump files.
+        try (DirectoryStream<Path> files = newDirectoryStream(
+            Paths.get(U.defaultWorkDirectory()),
+            entry -> entry.toFile().getName().startsWith(IDLE_DUMP_FILE_PREFIX)
+        )
+        ) {
+            for (Path path : files)
+                delete(path);
+        }
+
+        System.clearProperty(IGNITE_ENABLE_EXPERIMENTAL_COMMAND);
+
+        System.setOut(sysOut);
+
+        log.info("----------------------------------------");
+        if (testOut != null)
+            System.out.println(testOut.toString());
+    }
+
+    /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
@@ -91,62 +145,6 @@ public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
         cfg.setClientMode(igniteInstanceName.startsWith("client"));
 
         return cfg;
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void beforeTest() throws Exception {
-        System.setProperty(IGNITE_ENABLE_EXPERIMENTAL_COMMAND, "true");
-
-        cleanPersistenceDir();
-
-        stopAllGrids();
-
-        sysOut = System.out;
-
-        testOut = new ByteArrayOutputStream(1024 * 1024);
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTest() throws Exception {
-        stopAllGrids();
-
-        cleanPersistenceDir();
-
-        // Delete idle-verify dump files.
-        try (DirectoryStream<Path> files =
-                 newDirectoryStream(
-                     Paths.get(U.defaultWorkDirectory()),
-                     entry -> entry.toFile().getName().startsWith(IDLE_DUMP_FILE_PREFIX)
-                 )
-        ) {
-            for (Path path : files)
-                delete(path);
-        }
-
-        System.clearProperty(IGNITE_ENABLE_EXPERIMENTAL_COMMAND);
-
-        System.setOut(sysOut);
-
-        log.info("----------------------------------------");
-
-        if (testOut != null)
-            System.out.println(testOut.toString());
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTestsStopped() throws Exception {
-        super.afterTestsStopped();
-
-        GridTestUtils.cleanIdleVerifyLogFiles();
-
-        System.clearProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED);
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void beforeTestsStarted() throws Exception {
-        System.setProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED, "false");
-
-        super.beforeTestsStarted();
     }
 
     /**
