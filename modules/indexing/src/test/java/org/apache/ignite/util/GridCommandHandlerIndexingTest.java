@@ -59,7 +59,7 @@ import static org.apache.ignite.internal.processors.cache.persistence.file.FileP
  */
 public class GridCommandHandlerIndexingTest extends GridCommandHandlerAbstractTest {
     /** Test cache name. */
-    private static final String CACHE_NAME = "persons-cache-vi";
+    protected static final String CACHE_NAME = "persons-cache-vi";
 
     /**
      * Tests that validation doesn't fail if nothing is broken.

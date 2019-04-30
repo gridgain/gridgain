@@ -160,24 +160,7 @@ public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
      * @return Result of execution
      */
     protected int execute(List<String> args) {
-        if (!F.isEmpty(args) && !"--help".equalsIgnoreCase(args.get(0))) {
-            // Add force to avoid interactive confirmation.
-            args.add(CMD_AUTO_CONFIRMATION);
-        }
-
-        return new CommandHandler().execute(args);
-    }
-
-    /**
-     * @param hnd Handler.
-     * @param args Arguments.
-     * @return Result of execution
-     */
-    protected int execute(CommandHandler hnd, ArrayList<String> args) {
-        // Add force to avoid interactive confirmation
-        args.add(CMD_AUTO_CONFIRMATION);
-
-        return hnd.execute(args);
+        return execute(new CommandHandler(), args);
     }
 
     /**
@@ -186,12 +169,17 @@ public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
      * @return Result of execution
      */
     protected int execute(CommandHandler hnd, String... args) {
-        ArrayList<String> args0 = new ArrayList<>(asList(args));
+        return execute(hnd, new ArrayList<>(asList(args)));
+    }
 
-        // Add force to avoid interactive confirmation
-        args0.add(CMD_AUTO_CONFIRMATION);
+    /** */
+    protected int execute(CommandHandler hnd, List<String> args) {
+        if (!F.isEmpty(args) && !"--help".equalsIgnoreCase(args.get(0))) {
+            // Add force to avoid interactive confirmation.
+            args.add(CMD_AUTO_CONFIRMATION);
+        }
 
-        return hnd.execute(args0);
+        return hnd.execute(args);
     }
 
     /** */
