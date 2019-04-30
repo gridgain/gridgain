@@ -24,6 +24,8 @@ import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.internal.binary.BinaryObjectImpl;
 
 public class BikeConverterRegistry {
+    private static final boolean bikeRowFormat = Boolean.getBoolean("bike.row.format");
+
     private static final ConcurrentHashMap<Object, Function<BinaryObject, BikeTuple>> converterMap =
         new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<Object, Function<BikeTuple, BinaryObjectImpl>> backConverterMap =
@@ -36,8 +38,7 @@ public class BikeConverterRegistry {
     }
 
     public static Function<BinaryObject, BikeTuple> converter(Object key) {
-//        return Boolean.getBoolean("bike.row.format") ? converterMap.get(key) : null;
-        return converterMap.get(key);
+        return bikeRowFormat ? converterMap.get(key) : null;
     }
 
     public static void registerBackConverter(Object key, Function<BikeTuple, BinaryObjectImpl> converter) {
