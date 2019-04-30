@@ -402,7 +402,7 @@ export default function service(ErrorPopover) {
 
                 // Check datasource of current saved cache and datasource of other cache in cluster.
                 if (isDefined(checkCacheExt)) {
-                    if (checkCacheExt._id !== curCache._id) {
+                    if (checkCacheExt.id !== curCache.id) {
                         res = compareDataSources(checkCacheExt, 'cache', curCache, 'cache');
 
                         return !res.checked;
@@ -450,7 +450,7 @@ export default function service(ErrorPopover) {
 
             _.find(caches, (curCache, curIx) => {
                 if (isDefined(checkCacheExt)) {
-                    if (checkCacheExt._id !== curCache._id) {
+                    if (checkCacheExt.id !== curCache.id) {
                         res = compareSQLSchemaNames(checkCacheExt, curCache);
 
                         return !res.checked;

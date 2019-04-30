@@ -19,56 +19,53 @@ package org.apache.ignite.console.agent.rest;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.net.ConnectException;
-import java.security.GeneralSecurityException;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.X509TrustManager;
-import okhttp3.Dispatcher;
-import okhttp3.FormBody;
-import okhttp3.HttpUrl;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.internal.processors.rest.protocols.http.jetty.GridJettyObjectMapper;
+import org.apache.ignite.console.agent.AgentConfiguration;
+import org.apache.ignite.console.json.JsonObject;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.logger.slf4j.Slf4jLogger;
+import org.eclipse.jetty.client.HttpClient;
+import org.eclipse.jetty.client.api.ContentResponse;
+import org.eclipse.jetty.client.api.Request;
+import org.eclipse.jetty.http.HttpMethod;
+import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.slf4j.LoggerFactory;
 
 import static com.fasterxml.jackson.core.JsonToken.END_ARRAY;
 import static com.fasterxml.jackson.core.JsonToken.END_OBJECT;
 import static com.fasterxml.jackson.core.JsonToken.START_ARRAY;
-import static org.apache.ignite.console.agent.AgentUtils.sslConnectionSpec;
-import static org.apache.ignite.console.agent.AgentUtils.sslSocketFactory;
-import static org.apache.ignite.console.agent.AgentUtils.trustManager;
+import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
+import static java.net.HttpURLConnection.HTTP_OK;
+import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
+import static org.apache.ignite.console.agent.AgentUtils.sslContextFactory;
+import static org.apache.ignite.console.json.JsonUtils.fromJson;
 import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_AUTH_FAILED;
 import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_FAILED;
 import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_SUCCESS;
 
 /**
- * API to translate REST requests to Ignite cluster.
+ * API to execute REST requests to Ignite cluster.
  */
 public class RestExecutor implements AutoCloseable {
     /** */
     private static final IgniteLogger log = new Slf4jLogger(LoggerFactory.getLogger(RestExecutor.class));
 
-    /** JSON object mapper. */
-    private static final ObjectMapper MAPPER = new GridJettyObjectMapper();
+    /** */
+    private final AgentConfiguration cfg;
 
     /** */
-    private final OkHttpClient httpClient;
+    private final HttpClient httpClient;
 
     /** Index of alive node URI. */
     private final Map<List<String>, Integer> startIdxs = U.newHashMap(2);
@@ -76,147 +73,116 @@ public class RestExecutor implements AutoCloseable {
     /**
      * Constructor.
      *
-     * @param trustAll {@code true} If we trust to self-signed sertificates.
-     * @param keyStorePath Optional path to key store file.
-     * @param keyStorePwd Optional password for key store.
-     * @param trustStorePath Optional path to trust store file.
-     * @param trustStorePwd Optional password for trust store.
-     * @param cipherSuites Optional cipher suites.
-     * @throws GeneralSecurityException If failed to initialize SSL.
-     * @throws IOException If failed to load content of key stores.
+     * @param cfg Config.
+     * @throws Exception If failed to start HTTP client.
      */
-    public RestExecutor(
-        boolean trustAll,
-        String keyStorePath,
-        String keyStorePwd,
-        String trustStorePath,
-        String trustStorePwd,
-        List<String> cipherSuites
-    ) throws GeneralSecurityException, IOException {
-        Dispatcher dispatcher = new Dispatcher();
+    public RestExecutor(AgentConfiguration cfg) throws Exception {
+        this.cfg = cfg;
+        boolean trustAll = Boolean.getBoolean("trust.all");
 
-        dispatcher.setMaxRequests(Integer.MAX_VALUE);
-        dispatcher.setMaxRequestsPerHost(Integer.MAX_VALUE);
+        if (trustAll && !F.isEmpty(cfg.nodeTrustStore())) {
+            log.warning("Options contains both '--node-trust-store' and '-Dtrust.all=true'. " +
+                "Option '-Dtrust.all=true' will be ignored on connect to cluster.");
 
-        OkHttpClient.Builder builder = new OkHttpClient.Builder()
-            .readTimeout(0, TimeUnit.MILLISECONDS)
-            .dispatcher(dispatcher);
-
-        X509TrustManager trustMgr = trustManager(trustAll, trustStorePath, trustStorePwd);
-
-        if (trustAll)
-            builder.hostnameVerifier((hostname, session) -> true);
-
-        SSLSocketFactory sslSocketFactory = sslSocketFactory(
-            keyStorePath, keyStorePwd,
-            trustMgr,
-            cipherSuites
-        );
-
-        if (sslSocketFactory != null) {
-            if (trustMgr != null)
-                builder.sslSocketFactory(sslSocketFactory, trustMgr);
-            else
-                builder.sslSocketFactory(sslSocketFactory);
-
-            if (!F.isEmpty(cipherSuites))
-                builder.connectionSpecs(sslConnectionSpec(cipherSuites));
+            trustAll = false;
         }
 
-        httpClient = builder.build();
+        boolean ssl = trustAll || !F.isEmpty(cfg.nodeTrustStore()) || !F.isEmpty(cfg.nodeKeyStore());
+
+        if (ssl) {
+            SslContextFactory sslCtxFactory = sslContextFactory(
+                cfg.nodeKeyStore(),
+                cfg.nodeKeyStorePassword(),
+                trustAll,
+                cfg.nodeTrustStore(),
+                cfg.nodeTrustStorePassword(),
+                cfg.cipherSuites()
+
+            );
+
+            httpClient = new HttpClient(sslCtxFactory);
+        }
+        else
+            httpClient = new HttpClient();
+
+        httpClient.start();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void close() {
+        try {
+            httpClient.stop();
+        }
+        catch (Throwable e) {
+            log.error("Failed to close HTTP client", e);
+        }
     }
 
     /**
-     * Stop HTTP client.
+     * @param res Response from cluster.
+     * @return Result of REST request.
+     * @throws Exception If failed to parse REST result.
      */
-    @Override public void close() {
-        if (httpClient != null) {
-            httpClient.dispatcher().executorService().shutdown();
+    private RestResult parseResponse(ContentResponse res) throws Exception {
+        int code = res.getStatus();
 
-            httpClient.dispatcher().cancelAll();
-        }
-    }
-
-    /** */
-    private RestResult parseResponse(Response res) throws IOException {
-        if (res.isSuccessful()) {
-            RestResponseHolder holder = MAPPER.readValue(res.body().byteStream(), RestResponseHolder.class);
+        if (code == HTTP_OK) {
+            RestResponseHolder holder = fromJson(res.getContent(), RestResponseHolder.class);
 
             int status = holder.getSuccessStatus();
 
-            if (status == STATUS_SUCCESS)
-                return RestResult.success(holder.getResponse(), holder.getSessionToken());
-
-            return RestResult.fail(status, holder.getError());
+            return status == STATUS_SUCCESS
+                ? RestResult.success(holder.getResponse(), holder.getSessionToken())
+                : RestResult.fail(status, holder.getError());
         }
 
-        if (res.code() == 401)
+        if (code == HTTP_UNAUTHORIZED) {
             return RestResult.fail(STATUS_AUTH_FAILED, "Failed to authenticate in cluster. " +
                 "Please check agent\'s login and password or node port.");
+        }
 
-        if (res.code() == 404)
+        if (code == HTTP_NOT_FOUND)
             return RestResult.fail(STATUS_FAILED, "Failed connect to cluster.");
 
-        return RestResult.fail(STATUS_FAILED, "Failed to execute REST command: " + res);
+        return RestResult.fail(STATUS_FAILED, "Failed to execute REST command [code=" +
+            code + ", msg=" + res.getReason() + "]");
     }
 
     /** */
-    private RestResult sendRequest(String url, Map<String, Object> params, Map<String, Object> headers) throws IOException {
-        HttpUrl httpUrl = HttpUrl
-            .parse(url)
-            .newBuilder()
-            .addPathSegment("ignite")
-            .build();
+    private RestResult sendRequest(String url, JsonObject params) throws Throwable {
+        Request req = httpClient
+            .newRequest(url)
+            .path("/ignite")
+            .method(HttpMethod.POST);
 
-        final Request.Builder reqBuilder = new Request.Builder();
+        params.forEach((k, v) -> req.param(k, String.valueOf(v)));
 
-        if (headers != null) {
-            for (Map.Entry<String, Object> entry : headers.entrySet())
-                if (entry.getValue() != null)
-                    reqBuilder.addHeader(entry.getKey(), entry.getValue().toString());
-        }
+        ContentResponse res = req.send();
 
-        FormBody.Builder bodyParams = new FormBody.Builder();
-
-        if (params != null) {
-            for (Map.Entry<String, Object> entry : params.entrySet()) {
-                if (entry.getValue() != null)
-                    bodyParams.add(entry.getKey(), entry.getValue().toString());
-            }
-        }
-
-        reqBuilder.url(httpUrl).post(bodyParams.build());
-
-        try (Response resp = httpClient.newCall(reqBuilder.build()).execute()) {
-            return parseResponse(resp);
-        }
+        return parseResponse(res);
     }
 
     /**
      * Send request to cluster.
      *
-     * @param nodeURIs List of cluster nodes URIs.
-     * @param params Map with reques params.
-     * @param headers Map with reques headers.
+     * @param params Map with request params.
      * @return Response from cluster.
-     * @throws IOException If failed to send request to cluster.
+     * @throws ConnectException if failed to connect to cluster.
      */
-    public RestResult sendRequest(
-        List<String> nodeURIs,
-        Map<String, Object> params,
-        Map<String, Object> headers
-    ) throws IOException {
+    public RestResult sendRequest(JsonObject params) throws ConnectException {
+        List<String> nodeURIs = cfg.nodeURIs();
+
         Integer startIdx = startIdxs.getOrDefault(nodeURIs, 0);
 
         int urlsCnt = nodeURIs.size();
 
         for (int i = 0;  i < urlsCnt; i++) {
-            Integer currIdx = (startIdx + i) % urlsCnt;
+            int currIdx = (startIdx + i) % urlsCnt;
 
             String nodeUrl = nodeURIs.get(currIdx);
 
             try {
-                RestResult res = sendRequest(nodeUrl, params, headers);
+                RestResult res = sendRequest(nodeUrl, params);
 
                 // If first attempt failed then throttling should be cleared.
                 if (i > 0)
@@ -228,8 +194,11 @@ public class RestExecutor implements AutoCloseable {
 
                 return res;
             }
-            catch (ConnectException ignored) {
-                LT.warn(log, "Failed connect to cluster [url=" + nodeUrl + "]");
+            catch (Throwable e) {
+                if (log.isDebugEnabled())
+                    log.error("Failed connect to cluster [url=" + nodeUrl + "]", e);
+                else
+                    LT.warn(log, "Failed connect to cluster [url=" + nodeUrl + "]");
             }
         }
 

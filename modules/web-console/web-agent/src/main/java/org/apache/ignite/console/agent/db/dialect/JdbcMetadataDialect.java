@@ -160,13 +160,7 @@ public class JdbcMetadataDialect extends DatabaseMetadataDialect {
                                 if (idxName == null || colName == null)
                                     continue;
 
-                                Set<String> idxCols = uniqueIdxs.get(idxName);
-
-                                if (idxCols == null) {
-                                    idxCols = new LinkedHashSet<>();
-
-                                    uniqueIdxs.put(idxName, idxCols);
-                                }
+                                Set<String> idxCols = uniqueIdxs.computeIfAbsent(idxName, k -> new LinkedHashSet<>());
 
                                 idxCols.add(colName);
                             }

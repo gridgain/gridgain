@@ -21,11 +21,11 @@ import { assert } from 'chai';
 
 const CHECKED_CONFIGURATION = {
     spaces: [{
-        _id: '1space',
+        id: '1space',
         name: 'Test space'
     }],
     clusters: [{
-        _id: '1cluster',
+        id: '1cluster',
         space: '1space',
         name: 'Test cluster',
         caches: ['1cache'],
@@ -33,21 +33,21 @@ const CHECKED_CONFIGURATION = {
         igfss: ['1igfs']
     }],
     caches: [{
-        _id: '1cache',
+        id: '1cache',
         space: '1space',
         name: 'Test cache',
         clusters: ['1cluster'],
         models: ['1model']
     }],
     domains: [{
-        _id: '1model',
+        id: '1model',
         space: '1space',
         name: 'Test model',
         clusters: ['1cluster'],
         caches: ['1cache']
     }],
     igfss: [{
-        _id: '1igfs',
+        id: '1igfs',
         space: '1space',
         name: 'Test IGFS',
         clusters: ['1cluster']

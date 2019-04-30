@@ -17,10 +17,12 @@
 import _ from 'lodash';
 import {nonEmpty, nonNil} from 'app/utils/lodashMixins';
 
-import {BehaviorSubject} from 'rxjs';
-import {first, pluck, tap, distinctUntilChanged, map, filter} from 'rxjs/operators';
+import Sockette from 'sockette';
 
-import io from 'socket.io-client';
+import {BehaviorSubject, Subject} from 'rxjs';
+import {distinctUntilChanged, filter, first, map, pluck, take, tap} from 'rxjs/operators';
+
+import uuidv4 from 'uuid/v4';
 
 import AgentModal from './AgentModal.service';
 // @ts-ignore
@@ -31,6 +33,8 @@ import maskNull from 'app/core/utils/maskNull';
 import {CancellationError} from 'app/errors/CancellationError';
 import {ClusterSecretsManager} from './types/ClusterSecretsManager';
 import ClusterLoginService from './components/cluster-login/service';
+
+const __dbg = false;
 
 const State = {
     INIT: 'INIT',
@@ -111,16 +115,6 @@ class ConnectionState {
             this.state = State.CLUSTER_DISCONNECTED;
     }
 
-    useConnectedCluster() {
-        if (nonEmpty(this.clusters) && !this.cluster.connected) {
-            this.cluster = _.head(this.clusters);
-
-            this.cluster.connected = true;
-
-            this.state = State.CONNECTED;
-        }
-    }
-
     disconnect() {
         if (this.cluster)
             this.cluster.disconnect = true;
@@ -131,7 +125,7 @@ class ConnectionState {
 }
 
 export default class AgentManager {
-    static $inject = ['$rootScope', '$q', '$transitions', 'AgentModal', 'UserNotifications', 'IgniteVersion', 'ClusterLoginService'];
+    static $inject = ['$rootScope', '$q', '$transitions', '$location', 'AgentModal', 'UserNotifications', 'IgniteVersion', 'ClusterLoginService'];
 
     /** @type {ng.IScope} */
     $root;
@@ -158,7 +152,10 @@ export default class AgentManager {
     /** @type {Set<ng.IPromise<unknown>>} */
     promises = new Set();
 
-    socket = null;
+    /** Websocket */
+    ws = null;
+
+    wsSubject = new Subject();
 
     /** @type {Set<() => Promise>} */
     switchClusterListeners = new Set();
@@ -187,15 +184,17 @@ export default class AgentManager {
      * @param {ng.IRootScopeService} $root
      * @param {ng.IQService} $q
      * @param {import('@uirouter/angularjs').TransitionService} $transitions
+     * @param {ng.ILocationService} $location
      * @param {import('./AgentModal.service').default} agentModal
      * @param {import('app/components/user-notifications/service').default} UserNotifications
      * @param {import('app/services/Version.service').default} Version
      * @param {import('./components/cluster-login/service').default} ClusterLoginSrv
      */
-    constructor($root, $q, $transitions, agentModal, UserNotifications, Version, ClusterLoginSrv) {
+    constructor($root, $q, $transitions, $location, agentModal, UserNotifications, Version, ClusterLoginSrv) {
         this.$root = $root;
         this.$q = $q;
         this.$transitions = $transitions;
+        this.$location = $location;
         this.agentModal = agentModal;
         this.UserNotifications = UserNotifications;
         this.Version = Version;
@@ -248,36 +247,86 @@ export default class AgentManager {
     }
 
     connect() {
-        if (nonNil(this.socket))
+        if (nonNil(this.ws))
             return;
 
-        const options = this.isDemoMode() ? {query: 'IgniteDemoMode=true'} : {};
+        // TODO IGNITE-5617 support demo mode.
+        // const options = this.isDemoMode() ? {query: 'IgniteDemoMode=true'} : {};
 
-        this.socket = io.connect(options);
+        const protocol = this.$location.protocol();
+        const host = this.$location.host();
+        const port = this.$location.port();
 
-        const onDisconnect = () => {
-            const conn = this.connectionSbj.getValue();
+        const uri = `${protocol === 'https' ? 'wss' : 'ws'}://${host}:${port}/browsers`;
 
-            conn.disconnect();
+        // Open websocket connection to backend.
+        this.ws = new Sockette(uri, {
+            timeout: 5000, // Retry every 5 seconds
+            onopen: (evt) => {
+                if (__dbg)
+                    console.log('[WS] Connected to server: ', evt);
+            },
+            onmessage: (msg) => {
+                if (__dbg)
+                    console.log('[WS] Received: ', msg);
 
-            this.connectionSbj.next(conn);
-        };
+                const evt = JSON.parse(msg.data);
 
-        this.socket.on('connect_error', onDisconnect);
+                const eventType = evt.eventType;
+                const payload = JSON.parse(evt.payload);
 
-        this.socket.on('disconnect', onDisconnect);
+                if (eventType === 'agent:status') {
+                    const {clusters, count, hasDemo} = payload;
 
-        this.socket.on('agents:stat', ({clusters, count, hasDemo}) => {
-            const conn = this.connectionSbj.getValue();
+                    const conn = this.connectionSbj.getValue();
 
-            conn.update(this.isDemoMode(), count, clusters, hasDemo);
+                    conn.update(this.isDemoMode(), count, clusters, hasDemo);
 
-            this.connectionSbj.next(conn);
+                    this.connectionSbj.next(conn);
+                }
+                else if (eventType === 'admin:announcement')
+                    this.UserNotifications.announcement = payload;
+                else {
+                    this.wsSubject.next({
+                        requestId: evt.requestId,
+                        eventType,
+                        payload
+                    });
+                }
+            },
+            onreconnect: (evt) => {
+                if (__dbg)
+                    console.log('[WS] Reconnecting...', evt);
+            },
+            onclose: (evt) => {
+                if (__dbg)
+                    console.log('[WS] Disconnected from server: ', evt);
+
+                const conn = this.connectionSbj.getValue();
+
+                conn.disconnect();
+
+                this.connectionSbj.next(conn);
+
+                this.wsSubject.next({
+                    requestId: 'any',
+                    eventType: 'disconnected',
+                    payload: 'none'
+                });
+            },
+            onerror: (evt) => {
+                if (__dbg)
+                    console.log('[WS] Error on sending message to server: ', evt);
+            }
         });
+    }
 
-        this.socket.on('cluster:changed', (cluster) => this.updateCluster(cluster));
-
-        this.socket.on('user:notifications', (notification) => this.UserNotifications.notification = notification);
+    _sendWebSocketEvent(requestId, eventType, data) {
+        this.ws.json({
+            requestId,
+            eventType,
+            payload: JSON.stringify(data)
+        });
     }
 
     saveToStorage(cluster = this.connectionSbj.getValue().cluster) {
@@ -290,17 +339,20 @@ export default class AgentManager {
     }
 
     updateCluster(newCluster) {
-        const state = this.connectionSbj.getValue();
+        const conn = this.connectionSbj.getValue();
 
-        const oldCluster = _.find(state.clusters, (cluster) => cluster.id === newCluster.id);
+        const oldCluster = _.find(conn.clusters, (cluster) => cluster.id === newCluster.id);
 
-        if (!_.isNil(oldCluster)) {
+        if (oldCluster) {
             oldCluster.nids = newCluster.nids;
             oldCluster.addresses = newCluster.addresses;
             oldCluster.clusterVersion = this.getClusterVersion(newCluster);
             oldCluster.active = newCluster.active;
 
-            this.connectionSbj.next(state);
+            if (conn.cluster && conn.cluster.id === newCluster.id)
+                conn.cluster.active = newCluster.active;
+
+            this.connectionSbj.next(conn);
         }
     }
 
@@ -352,80 +404,44 @@ export default class AgentManager {
     }
 
     /**
-     * @param {String} backText
-     * @param {String} [backState]
-     * @returns {ng.IPromise}
-     */
-    startAgentWatch(backText, backState) {
-        this.backText = backText;
-        this.backState = backState;
-
-        const conn = this.connectionSbj.getValue();
-
-        conn.useConnectedCluster();
-
-        this.connectionSbj.next(conn);
-
-        this.modalSubscription && this.modalSubscription.unsubscribe();
-
-        this.modalSubscription = this.connectionSbj.subscribe({
-            next: ({state}) => {
-                switch (state) {
-                    case State.CONNECTED:
-                    case State.CLUSTER_DISCONNECTED:
-                        this.agentModal.hide();
-
-                        break;
-
-                    case State.AGENT_DISCONNECTED:
-                        this.agentModal.agentDisconnected(this.backText, this.backState);
-
-                        break;
-
-                    default:
-                        // Connection to backend is not established yet.
-                }
-            }
-        });
-
-        return this.awaitAgent();
-    }
-
-    stopWatch() {
-        this.modalSubscription && this.modalSubscription.unsubscribe();
-
-        this.promises.forEach((promise) => promise.reject('Agent watch stopped.'));
-    }
-
-    /**
+     * Send message.
      *
-     * @param {String} event
-     * @param {Object} [payload]
+     * @param {String} eventType
+     * @param {Object} data
      * @returns {ng.IPromise}
      * @private
      */
-    _sendToAgent(event, payload = {}) {
-        if (!this.socket)
+    _sendToAgent(eventType, data = {}) {
+        if (!this.ws)
             return this.$q.reject('Failed to connect to server');
 
         const latch = this.$q.defer();
 
-        const onDisconnect = () => {
-            this.socket.removeListener('disconnect', onDisconnect);
+        // Generate unique request ID in order to process response.
+        const requestId = uuidv4();
 
-            latch.reject('Connection to server was closed');
-        };
+        if (__dbg)
+            console.log(`Sending request: ${eventType}, ${requestId}`);
 
-        this.socket.on('disconnect', onDisconnect);
+        this.wsSubject
+            .pipe(
+                filter((evt) => evt.requestId === requestId || evt.eventType === 'disconnected'),
+                take(1)
+            )
+            .toPromise()
+            .then((evt) => {
+                if (__dbg)
+                    console.log('Received response: ', evt);
 
-        this.socket.emit(event, payload, (err, res) => {
-            this.socket.removeListener('disconnect', onDisconnect);
+                if (evt.eventType === 'error')
+                    latch.reject(evt.payload);
+                else if (evt.eventType === 'disconnected')
+                    latch.reject({message: 'Connection to web server was lost'});
+                else
+                    latch.resolve(evt.payload);
+            });
 
-            if (err)
-                return latch.reject(err);
-
-            latch.resolve(res);
-        });
+        this._sendWebSocketEvent(requestId, eventType, data);
 
         return latch.promise;
     }
@@ -472,15 +488,12 @@ export default class AgentManager {
                         if (cluster.secured)
                             this.clustersSecrets.get(cluster.id).sessionToken = res.sessionToken;
 
-                        if (res.zipped) {
-                            const taskId = _.get(params, 'taskId', '');
+                        const taskId = _.get(params, 'taskId', '');
 
-                            const useBigIntJson = taskId.startsWith('query');
+                        const useBigIntJson = taskId.startsWith('query');
 
-                            return this.pool.postMessage({payload: res.data, useBigIntJson});
-                        }
-
-                        return res;
+                        return this.pool.postMessage({payload: res.data, useBigIntJson})
+                            .then((data) => data.result ? data.result : data);
 
                     case SuccessStatus.STATUS_FAILED:
                         if (res.error.startsWith('Failed to handle request - unknown session token (maybe expired session)')) {

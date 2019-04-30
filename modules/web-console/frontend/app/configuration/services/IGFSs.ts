@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import ObjectID from 'bson-objectid';
 import omit from 'lodash/fp/omit';
 import get from 'lodash/get';
+import uuidv4 from 'uuid/v4';
 
 export default class IGFSs {
     static $inject = ['$http'];
@@ -36,7 +36,7 @@ export default class IGFSs {
 
     getBlankIGFS() {
         return {
-            _id: ObjectID.generate(),
+            id: uuidv4(),
             ipcEndpointEnabled: true,
             fragmentizerEnabled: true,
             colocateMetadata: true,
@@ -47,7 +47,7 @@ export default class IGFSs {
         };
     }
 
-    affinnityGroupSize = {
+    affinityGroupSize = {
         default: 512,
         min: 1
     };
@@ -83,7 +83,7 @@ export default class IGFSs {
         if (!_.get(igfs, 'secondaryFileSystem.userNameMapper.Chained.mappers'))
             _.set(igfs, 'secondaryFileSystem.userNameMapper.Chained.mappers', []);
 
-        const item = {_id: ObjectID.generate(), kind: 'Basic'};
+        const item = {id: ObjectID.generate(), kind: 'Basic'};
 
         _.get(igfs, 'secondaryFileSystem.userNameMapper.Chained.mappers').push(item);
 

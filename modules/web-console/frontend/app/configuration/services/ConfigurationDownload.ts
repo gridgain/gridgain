@@ -51,10 +51,10 @@ export default class ConfigurationDownload {
     downloadClusterConfiguration(cluster: ClusterLike) {
         this.activitiesData.post({action: '/configuration/download'});
 
-        return this.PageConfigure.getClusterConfiguration({clusterID: cluster._id, isDemo: !!this.$rootScope.IgniteDemoMode})
+        return this.PageConfigure.getClusterConfiguration({clusterID: cluster.id, isDemo: !!this.$rootScope.IgniteDemoMode})
             .then((data) => this.configuration.populate(data))
             .then(({clusters}) => {
-                return clusters.find(({_id}) => _id === cluster._id)
+                return clusters.find(({id}) => id === cluster.id)
                     || this.$q.reject({message: `Cluster ${cluster.name} not found`});
             })
             .then((cluster) => {

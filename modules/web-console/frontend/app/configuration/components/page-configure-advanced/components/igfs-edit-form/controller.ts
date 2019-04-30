@@ -49,7 +49,7 @@ export default class IgfsEditFormController {
 
     $onChanges(changes) {
         if (
-            'igfs' in changes && get(this.$scope.backupItem, '_id') !== get(this.igfs, '_id')
+            'igfs' in changes && get(this.$scope.backupItem, 'id') !== get(this.igfs, 'id')
         ) {
             this.$scope.backupItem = cloneDeep(changes.igfs.currentValue);
             if (this.$scope.ui && this.$scope.ui.inputForm) {

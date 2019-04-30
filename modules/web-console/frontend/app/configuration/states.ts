@@ -26,15 +26,13 @@ import {switchMap, take, map} from 'rxjs/operators';
 
 export type ClusterParams = ({clusterID: string} | {clusterID: 'new'}) & StateParams;
 
-const idRegex = `new|[a-z0-9]+`;
-
 const shortCachesResolve = ['ConfigSelectors', 'ConfigureState', 'ConfigEffects', '$transition$', function(ConfigSelectors, ConfigureState, {etp}, $transition$) {
     if ($transition$.params().clusterID === 'new')
         return Promise.resolve();
     return from($transition$.injector().getAsync('_cluster')).pipe(
         switchMap(() => ConfigureState.state$.pipe(ConfigSelectors.selectCluster($transition$.params().clusterID), take(1))),
         switchMap((cluster) => {
-            return etp('LOAD_SHORT_CACHES', {ids: cluster.caches, clusterID: cluster._id});
+            return etp('LOAD_SHORT_CACHES', {ids: cluster.caches, clusterID: cluster.id});
         })
     )
     .toPromise();
@@ -66,7 +64,7 @@ function registerStates($stateProvider) {
         }
     })
     .state('base.configuration.edit', {
-        url: `/{clusterID:${idRegex}}`,
+        url: `/{clusterID}`,
         permission: 'configuration',
         component: 'pageConfigure',
         resolve: {
@@ -149,9 +147,9 @@ function registerStates($stateProvider) {
                     switchMap(() => ConfigureState.state$.pipe(ConfigSelectors.selectCluster($transition$.params().clusterID), take(1))),
                     map((cluster) => {
                         return Promise.all([
-                            etp('LOAD_SHORT_CACHES', {ids: cluster.caches, clusterID: cluster._id}),
-                            etp('LOAD_SHORT_MODELS', {ids: cluster.models, clusterID: cluster._id}),
-                            etp('LOAD_SHORT_IGFSS', {ids: cluster.igfss, clusterID: cluster._id})
+                            etp('LOAD_SHORT_CACHES', {ids: cluster.caches, clusterID: cluster.id}),
+                            etp('LOAD_SHORT_MODELS', {ids: cluster.models, clusterID: cluster.id}),
+                            etp('LOAD_SHORT_IGFSS', {ids: cluster.igfss, clusterID: cluster.id})
                         ]);
                     })
                 )
@@ -166,7 +164,7 @@ function registerStates($stateProvider) {
         }
     })
     .state('base.configuration.edit.advanced.caches.cache', {
-        url: `/{cacheID:${idRegex}}`,
+        url: `/{cacheID}`,
         permission: 'configuration',
         resolve: {
             _cache: ['ConfigEffects', '$transition$', ({etp}, $transition$) => {
@@ -201,8 +199,8 @@ function registerStates($stateProvider) {
                     switchMap(() => ConfigureState.state$.pipe(ConfigSelectors.selectCluster($transition$.params().clusterID), take(1))),
                     map((cluster) => {
                         return Promise.all([
-                            etp('LOAD_SHORT_CACHES', {ids: cluster.caches, clusterID: cluster._id}),
-                            etp('LOAD_SHORT_MODELS', {ids: cluster.models, clusterID: cluster._id})
+                            etp('LOAD_SHORT_CACHES', {ids: cluster.caches, clusterID: cluster.id}),
+                            etp('LOAD_SHORT_MODELS', {ids: cluster.models, clusterID: cluster.id})
                         ]);
                     })
                 ).toPromise();
@@ -216,7 +214,7 @@ function registerStates($stateProvider) {
         }
     })
     .state('base.configuration.edit.advanced.models.model', {
-        url: `/{modelID:${idRegex}}`,
+        url: `/{modelID}`,
         resolve: {
             _cache: ['ConfigEffects', '$transition$', ({etp}, $transition$) => {
                 const {clusterID, modelID} = $transition$.params();
@@ -248,7 +246,7 @@ function registerStates($stateProvider) {
                     switchMap(() => ConfigureState.state$.pipe(ConfigSelectors.selectCluster($transition$.params().clusterID), take(1))),
                     map((cluster) => {
                         return Promise.all([
-                            etp('LOAD_SHORT_IGFSS', {ids: cluster.igfss, clusterID: cluster._id})
+                            etp('LOAD_SHORT_IGFSS', {ids: cluster.igfss, clusterID: cluster.id})
                         ]);
                     })
                 ).toPromise();
@@ -262,7 +260,7 @@ function registerStates($stateProvider) {
         }
     })
     .state('base.configuration.edit.advanced.igfs.igfs', {
-        url: `/{igfsID:${idRegex}}`,
+        url: `/{igfsID}`,
         permission: 'configuration',
         resolve: {
             _igfs: ['ConfigEffects', '$transition$', ({etp}, $transition$) => {

@@ -86,12 +86,12 @@ export default class ModalPreviewProjectController {
 
     doStuff(cluster: CluserLike, isDemo: boolean) {
         this.IgniteLoading.start('projectStructurePreview');
-        return this.PageConfigure.getClusterConfiguration({clusterID: cluster._id, isDemo})
+        return this.PageConfigure.getClusterConfiguration({clusterID: cluster.id, isDemo})
         .then((data) => {
             return this.IgniteConfigurationResource.populate(data);
         })
         .then(({clusters}) => {
-            return clusters.find(({_id}) => _id === cluster._id);
+            return clusters.find(({id}) => id === cluster.id);
         })
         .then((cluster) => {
             return this.summaryZipper({

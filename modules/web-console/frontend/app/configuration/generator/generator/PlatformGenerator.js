@@ -435,7 +435,7 @@ export default function service(JavaTypes, clusterDflts, cacheDflts) {
 
                 switch (kind) {
                     case 'IGFS':
-                        const foundIgfs = _.find(igfss, (igfs) => igfs._id === cache.nodeFilter.IGFS.igfs);
+                        const foundIgfs = _.find(igfss, (igfs) => igfs.id === cache.nodeFilter.IGFS.igfs);
 
                         if (foundIgfs) {
                             bean = new Bean('org.apache.ignite.internal.processors.igfs.IgfsNodePredicate', 'nodeFilter', foundIgfs)
@@ -471,9 +471,9 @@ export default function service(JavaTypes, clusterDflts, cacheDflts) {
                     .intProperty('rebalanceThrottle');
             }
 
-            if (ccfg.includes('igfsAffinnityGroupSize')) {
+            if (ccfg.includes('igfsAffinityGroupSize')) {
                 const bean = new Bean('org.apache.ignite.igfs.IgfsGroupDataBlocksKeyMapper', 'affinityMapper', cache)
-                    .intConstructorArgument('igfsAffinnityGroupSize');
+                    .intConstructorArgument('igfsAffinityGroupSize');
 
                 ccfg.beanProperty('affinityMapper', bean);
             }

@@ -1,6 +1,7 @@
 *.log
 /out/
 /work/
+/work-web-console/
 */build/
 xcuserdata/
 *.iws

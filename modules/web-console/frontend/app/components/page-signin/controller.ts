@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import _ from 'lodash';
+
 import AuthService from 'app/modules/user/Auth.service';
 
 import {PageSigninStateParams} from './run';
@@ -74,14 +76,15 @@ export default class PageSignIn implements ng.IPostLink {
             return;
         }
 
-        return this.Auth.signin(this.data.email, this.data.password, this.activationToken).catch((res) => {
-            this.IgniteMessages.showError(null, res.data.errorMessage ? res.data.errorMessage : res.data);
+        return this.Auth.signin(this.data.email, this.data.password, this.activationToken)
+            .catch((err) => {
+                this.IgniteMessages.showError(null, err.data);
 
-            this.setServerError(res.data);
+                this.setServerError(_.get(err, 'data.message', err.data));
 
-            this.IgniteFormUtils.triggerValidation(this.form);
+                this.IgniteFormUtils.triggerValidation(this.form);
 
-            this.isLoading = false;
-        });
+                this.isLoading = false;
+            });
     }
 }
