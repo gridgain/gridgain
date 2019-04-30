@@ -69,7 +69,6 @@ import org.apache.ignite.internal.DuplicateTypeIdException;
 import org.apache.ignite.internal.UnregisteredBinaryTypeException;
 import org.apache.ignite.internal.UnregisteredClassException;
 import org.apache.ignite.internal.binary.builder.BinaryObjectBuilderImpl;
-import org.apache.ignite.internal.binary.nextgen.BikeBuilder;
 import org.apache.ignite.internal.binary.nextgen.BikeConverterRegistry;
 import org.apache.ignite.internal.binary.nextgen.BikeTuple;
 import org.apache.ignite.internal.marshaller.optimized.OptimizedMarshaller;
@@ -836,10 +835,28 @@ public class BinaryContext {
         }
 
         @Override public BikeTuple apply(BinaryObject object) {
-            BikeBuilder builder = new BikeBuilder(ncols, binaryTypeId);
-            for (int i = 0; i < ncols; i++)
-                builder.append(((BinaryObjectExImpl)object).fieldByOrder(i));
-            return new BikeTuple(builder.build());
+            BikeTuple ret;
+
+//            BikeBuilder builder = new BikeBuilder(ncols, binaryTypeId);
+//            for (int i = 0; i < ncols; i++)
+//                builder.append(((BinaryObjectExImpl)object).fieldByOrder(i));
+//            ret = new BikeTuple(builder.build());
+
+            ret = new BikeTuple(hackBike(binaryTypeId, ((BinaryObjectImpl)object).fieldByOrder(0)));
+            return ret;
+        }
+
+        private static byte[] hackBike(int binaryTypeId, int value) {
+            byte[] bikeBytes = new byte[4 + 1 + 1 + 2 + 2 + 4];
+
+            BinaryPrimitives.writeInt(bikeBytes, 0, binaryTypeId);
+            bikeBytes[4] = 2;
+            bikeBytes[5] = 1;
+            BinaryPrimitives.writeShort(bikeBytes, 6, (short)4);
+            BinaryPrimitives.writeShort(bikeBytes, 8, (short)0);
+            BinaryPrimitives.writeInt(bikeBytes, 10, value);
+
+            return bikeBytes;
         }
     }
 
