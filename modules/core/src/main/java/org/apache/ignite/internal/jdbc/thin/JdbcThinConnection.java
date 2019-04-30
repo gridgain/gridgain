@@ -1074,7 +1074,7 @@ public class JdbcThinConnection implements Connection {
      * @throws SQLException On any error.
      */
     void sendQueryCancelRequest(JdbcQueryCancelRequest req, JdbcThinTcpIo cliIo) throws SQLException {
-        if (connCnt.get() > 0)
+        if (connCnt.get() == 0)
             throw new SQLException("Failed to communicate with Ignite cluster.", SqlStateCode.CONNECTION_FAILURE);
 
         assert cliIo != null;
