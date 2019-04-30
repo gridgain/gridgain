@@ -38,7 +38,6 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.internal.NodeStoppingException;
-import org.apache.ignite.internal.binary.BinaryObjectExImpl;
 import org.apache.ignite.internal.binary.nextgen.BikeCacheObject;
 import org.apache.ignite.internal.binary.nextgen.BikeConverterRegistry;
 import org.apache.ignite.internal.binary.nextgen.BikeTuple;
@@ -1709,8 +1708,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 return val;
 
             BikeTuple bike = tr.apply(bin);
-            BikeConverterRegistry.binStat.appendStat(((BinaryObjectExImpl)bin).length());
-            BikeConverterRegistry.bikeStat.appendStat(bike.data().length);
+//            BikeConverterRegistry.binStat.appendStat(((BinaryObjectExImpl)bin).length());
+//            BikeConverterRegistry.bikeStat.appendStat(bike.data().length);
             return new BikeCacheObject(bike, bin.type().typeId());
         }
 
