@@ -13,7 +13,7 @@ public final class GeometryUtils {
     /**
      * Converter output target.
      */
-    public abstract static class Target {
+    public static abstract class Target {
 
         public Target() {
         }
