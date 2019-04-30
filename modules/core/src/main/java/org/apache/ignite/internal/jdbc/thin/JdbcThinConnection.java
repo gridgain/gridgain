@@ -110,7 +110,7 @@ public class JdbcThinConnection implements Connection {
     private static final int REQUEST_TIMEOUT_PERIOD = 1_000;
 
     /** Reconnection period. */
-    private static final int RECONNECTION_DELAY = 1_000;
+    public static final int RECONNECTION_DELAY = 200;
 
     /** Reconnection maximum period. */
     private static final int RECONNECTION_MAX_DELAY = 300_000;
@@ -1793,7 +1793,6 @@ public class JdbcThinConnection implements Connection {
 
                                     if (prevIgniteEnpointVer != null &&
                                         !prevIgniteEnpointVer.equals(cliIo.igniteVersion())) {
-
                                         processDelay(sockAddr);
 
                                         LOG.log(Level.WARNING, "Failed to connect to Ignite node [url=" +
@@ -1834,8 +1833,7 @@ public class JdbcThinConnection implements Connection {
                                         processDelay(sockAddr);
 
                                     LOG.log(Level.WARNING, "Failed to connect to Ignite node [url=" +
-                                        connProps.getUrl() + "]. address = [" + addr + ':' + port + "]." +
-                                        "Different versions of nodes are not supported in best effort affinity mode.");
+                                        connProps.getUrl() + "]. address = [" + addr + ':' + port + "].");
                                 }
                             }
                         }
