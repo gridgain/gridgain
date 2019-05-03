@@ -1336,7 +1336,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
             assertContains(log, dumpWithoutZeros, (parts - keysCount) + " partitions was skipped");
             assertContains(log, dumpWithoutZeros, "Partition: PartitionKeyV2 [grpId=1544803905, grpName=default, partId=");
 
-            assertContains(log, dumpWithoutZeros, "updateCntr=0, size=0, partHash=0");
+            assertNotContains(log, dumpWithoutZeros, "updateCntr=0, size=0, partHash=0");
 
             assertContains(log, dumpWithoutZeros, "no conflicts have been found");
 
