@@ -1491,24 +1491,6 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
     }
 
     /**
-     * Checks that string {@param str} contains substring {@param substr}. Logs both strings
-     * and throws {@link java.lang.AssertionError}, if not.
-     *
-     * @param str string
-     * @param substr substring
-     */
-    private void assertContains(String str, String substr) {
-        try {
-            assertTrue(str.contains(substr));
-        } catch (AssertionError e) {
-            log.warning(String.format("String does not contain substring: '%s':", substr));
-            log.warning("String:");
-            log.warning(str);
-            throw e;
-        }
-    }
-
-    /**
      * Checking sorting of partitions.
      *
      * @param expectedPartsCount Expected parts count.
