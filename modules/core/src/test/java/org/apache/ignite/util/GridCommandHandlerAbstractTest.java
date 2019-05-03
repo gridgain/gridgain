@@ -194,23 +194,4 @@ public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
     protected void injectTestSystemOut() {
         System.setOut(new PrintStream(testOut));
     }
-
-    /**
-     * Checks that string {@param str} contains substring {@param substr}. Logs both strings
-     * and throws {@link java.lang.AssertionError}, if not.
-     *
-     * @param str string
-     * @param substr substring
-     */
-    protected void assertContains(String str, String substr) {
-        try {
-            assertTrue(str.contains(substr));
-        } catch (AssertionError e) {
-            log.warning(String.format("String does not contain substring: '%s':", substr));
-            log.warning("String:");
-            log.warning(str);
-
-            throw e;
-        }
-    }
 }

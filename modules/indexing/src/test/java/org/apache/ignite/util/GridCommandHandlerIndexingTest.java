@@ -53,6 +53,7 @@ import org.junit.Test;
 
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.INDEX_FILE_NAME;
+import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 
 /**
  *
@@ -72,7 +73,7 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerAbstractTe
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "validate_indexes", CACHE_NAME));
 
-        assertTrue(testOut.toString().contains("no issues found"));
+        assertContains(log, testOut.toString(), "no issues found");
     }
 
     /**
@@ -94,10 +95,11 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerAbstractTe
                 "--check-first", "10000",
                 "--check-through", "10"));
 
-        assertTrue(testOut.toString().contains("issues found (listed above)"));
+        String out = testOut.toString();
 
-        assertTrue(testOut.toString().contains(
-            "Key is present in SQL index, but is missing in corresponding data page."));
+        assertContains(log, out, "issues found (listed above)");
+
+        assertContains(log, out, "Key is present in SQL index, but is missing in corresponding data page.");
     }
 
     /**
@@ -113,7 +115,7 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerAbstractTe
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "validate_indexes", CACHE_NAME));
 
-        assertTrue(testOut.toString().contains("issues found (listed above)"));
+        assertContains(log, testOut.toString(), "issues found (listed above)");
     }
 
     /**
@@ -139,7 +141,7 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerAbstractTe
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "validate_indexes", CACHE_NAME));
 
-        assertTrue(testOut.toString().contains("issues found (listed above)"));
+        assertContains(log, testOut.toString(), "issues found (listed above)");
     }
 
     /**
