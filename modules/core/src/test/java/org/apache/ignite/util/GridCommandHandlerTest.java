@@ -1973,7 +1973,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
             assertContains(log, dumpWithConflicts, "idle_verify check has finished, found 32 partitions");
             assertContains(log, dumpWithConflicts, "default_third");
-            assertContains(log, dumpWithConflicts, "shared_grp");
+            assertNotContains(log, dumpWithConflicts, "shared_grp");
         }
         else
             fail("Should be found dump with conflicts");
@@ -2282,8 +2282,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
             for (int i = 0; i < cachesCnt; i++)
                 assertContains(log, outStr, "[cache = '" + DEFAULT_CACHE_NAME + i + "']");
 
-            assertContains(log, outStr, "partitions=32");
-            assertContains(log, outStr, "function=o.a.i.cache.affinity.rendezvous.RendezvousAffinityFunction");
+            assertContains(log, outStr, "Affinity Partitions: 32");
+            assertContains(log, outStr, "Affinity Function: o.a.i.cache.affinity.rendezvous.RendezvousAffinityFunction");
         }
         else
             fail("Unknown output format: " + outputFormat);
