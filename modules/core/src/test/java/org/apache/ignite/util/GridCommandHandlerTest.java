@@ -562,6 +562,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         U.awaitQuiet(lockLatch);
 
+        log.error("GG-17465 lockLatch released!");
+
         doSleep(5000);
 
         CommandHandler h = new CommandHandler();
@@ -687,6 +689,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         unlockLatch.countDown();
 
+        log.error("GG-17465 unlockLatch released!");
+
         startFut.get();
 
         fut.get();
@@ -720,6 +724,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         U.awaitQuiet(lockLatch);
 
+        log.error("GG-17465 lockLatch released!");
+
         doSleep(3000); // Should be more than enough for all transactions to appear in contexts.
 
         Set<GridCacheVersion> nearXids = new HashSet<>();
@@ -744,6 +750,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
             assertTrue(out.contains(nearXid.toString()));
 
         unlockLatch.countDown();
+
+        log.error("GG-17465 unlockLatch released!");
 
         fut.get();
     }
@@ -772,6 +780,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         U.awaitQuiet(lockLatch);
 
+        log.error("GG-17465 lockLatch released!");
+
         doSleep(3000); // Should be more than enough for all transactions to appear in contexts.
 
         Set<GridCacheVersion> nearXids = new HashSet<>();
@@ -786,6 +796,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
         }
 
         unlockLatch.countDown();
+
+        log.error("GG-17465 unlockLatch released!");
 
         fut.get();
 
