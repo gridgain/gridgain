@@ -174,12 +174,20 @@ public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
 
     /** */
     protected int execute(CommandHandler hnd, List<String> args) {
-        if (!F.isEmpty(args) && !"--help".equalsIgnoreCase(args.get(0))) {
-            // Add force to avoid interactive confirmation.
-            args.add(CMD_AUTO_CONFIRMATION);
-        }
+        if (!F.isEmpty(args) && !"--help".equalsIgnoreCase(args.get(0)))
+            addExtraArguments(args);
 
         return hnd.execute(args);
+    }
+
+    /**
+     * Adds extra arguments required for tests.
+     *
+     * @param args Incoming arguments;
+     */
+    protected void addExtraArguments(List<String> args) {
+        // Add force to avoid interactive confirmation.
+        args.add(CMD_AUTO_CONFIRMATION);
     }
 
     /** */
