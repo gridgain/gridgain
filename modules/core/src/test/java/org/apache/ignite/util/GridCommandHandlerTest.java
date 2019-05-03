@@ -2476,6 +2476,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
         CountDownLatch unlockLatch,
         boolean topChangeBeforeUnlock
     ) throws Exception {
+
+        U.dumpThreads(log);
+
         IgniteEx client = grid("client");
 
         AtomicInteger idx = new AtomicInteger();
