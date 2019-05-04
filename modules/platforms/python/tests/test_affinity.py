@@ -27,8 +27,8 @@ def test_get_node_partitions(client):
         PROP_NAME: 'test_cache_2',
         PROP_CACHE_KEY_CONFIGURATION: [
             {
-                'type_name': 'java.lang.Byte[]',
-                'affinity_key_field_name': 'int_affinity',
+                'type_name': ByteArray.type_name,
+                'affinity_key_field_name': 'byte_affinity',
             }
         ],
     })

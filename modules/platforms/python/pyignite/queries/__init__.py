@@ -316,7 +316,7 @@ class Query:
 
         if response.flags & RHF_TOPOLOGY_CHANGED:
             # update latest affinity version
-            conn.client.affinity = (
+            conn.client.affinity_version = (
                 response.affinity_version, response.affinity_minor
             )
 

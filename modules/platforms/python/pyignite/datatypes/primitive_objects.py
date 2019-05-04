@@ -19,6 +19,7 @@ from pyignite.constants import *
 from .base import IgniteDataType
 from .type_codes import *
 from .type_ids import *
+from .type_names import *
 
 
 __all__ = [
@@ -79,7 +80,7 @@ class DataObject(IgniteDataType):
 
 
 class ByteObject(DataObject):
-    _type_name = 'java.lang.Byte'
+    _type_name = NAME_BYTE
     _type_id = TYPE_BYTE
     c_type = ctypes.c_byte
     type_code = TC_BYTE
@@ -88,7 +89,7 @@ class ByteObject(DataObject):
 
 
 class ShortObject(DataObject):
-    _type_name = 'java.lang.Short'
+    _type_name = NAME_SHORT
     _type_id = TYPE_SHORT
     c_type = ctypes.c_short
     type_code = TC_SHORT
@@ -97,7 +98,7 @@ class ShortObject(DataObject):
 
 
 class IntObject(DataObject):
-    _type_name = 'java.lang.Integer'
+    _type_name = NAME_INT
     _type_id = TYPE_INT
     c_type = ctypes.c_int
     type_code = TC_INT
@@ -106,7 +107,7 @@ class IntObject(DataObject):
 
 
 class LongObject(DataObject):
-    _type_name = 'java.lang.Long'
+    _type_name = NAME_LONG
     _type_id = TYPE_LONG
     c_type = ctypes.c_longlong
     type_code = TC_LONG
@@ -115,7 +116,7 @@ class LongObject(DataObject):
 
 
 class FloatObject(DataObject):
-    _type_name = 'java.lang.Float'
+    _type_name = NAME_FLOAT
     _type_id = TYPE_FLOAT
     c_type = ctypes.c_float
     type_code = TC_FLOAT
@@ -124,7 +125,7 @@ class FloatObject(DataObject):
 
 
 class DoubleObject(DataObject):
-    _type_name = 'java.lang.Double'
+    _type_name = NAME_DOUBLE
     _type_id = TYPE_DOUBLE
     c_type = ctypes.c_double
     type_code = TC_DOUBLE
@@ -139,7 +140,7 @@ class CharObject(DataObject):
     to/from UTF-8 to keep the coding hassle to minimum. Bear in mind
     though: decoded character may take 1..4 bytes in UTF-8.
     """
-    _type_name = 'java.lang.Character'
+    _type_name = NAME_CHAR
     _type_id = TYPE_CHAR
     c_type = ctypes.c_short
     type_code = TC_CHAR
@@ -168,7 +169,7 @@ class CharObject(DataObject):
 
 
 class BoolObject(DataObject):
-    _type_name = 'java.lang.Boolean'
+    _type_name = NAME_BOOLEAN
     _type_id = TYPE_BOOLEAN
     c_type = ctypes.c_bool
     type_code = TC_BOOL

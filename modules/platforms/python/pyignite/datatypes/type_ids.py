@@ -15,7 +15,6 @@
 
 """ These are excerps from `GridBinaryMarshaller.java`. """
 
-# built-in Java types
 TYPE_BYTE = 1
 TYPE_SHORT = 2
 TYPE_INT = 3
@@ -27,8 +26,6 @@ TYPE_BOOLEAN = 8
 TYPE_STRING = 9
 TYPE_UUID = 10
 TYPE_DATE = 11
-
-# built-in array types
 TYPE_BYTE_ARR = 12
 TYPE_SHORT_ARR = 13
 TYPE_INT_ARR = 14
@@ -40,8 +37,6 @@ TYPE_BOOLEAN_ARR = 19
 TYPE_STRING_ARR = 20
 TYPE_UUID_ARR = 21
 TYPE_DATE_ARR = 22
-
-# others
 TYPE_OBJ_ARR = 23
 TYPE_COL = 24
 TYPE_MAP = 25

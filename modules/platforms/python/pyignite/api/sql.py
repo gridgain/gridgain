@@ -384,7 +384,7 @@ def sql_fields(
 
     if response.flags & RHF_TOPOLOGY_CHANGED:
         # update latest affinity version
-        conn.client.affinity = (
+        conn.client.affinity_version = (
             response.affinity_version, response.affinity_minor
         )
 
@@ -444,7 +444,7 @@ def sql_fields_cursor_get_page(
 
     if response.flags & RHF_TOPOLOGY_CHANGED:
         # update latest affinity version
-        conn.client.affinity = (
+        conn.client.affinity_version = (
             response.affinity_version, response.affinity_minor
         )
 
