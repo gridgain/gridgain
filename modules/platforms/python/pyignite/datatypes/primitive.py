@@ -17,6 +17,7 @@ import ctypes
 
 from pyignite.constants import *
 from .base import IgniteDataType
+from .type_ids import *
 
 
 __all__ = [
@@ -38,7 +39,8 @@ class Primitive(IgniteDataType):
     - Char,
     - Bool.
     """
-
+    _type_name = None
+    _type_id = None
     c_type = None
 
     @classmethod
@@ -55,36 +57,44 @@ class Primitive(IgniteDataType):
 
 
 class Byte(Primitive):
-    c_type = ctypes.c_byte
     _type_name = 'java.lang.Byte'
+    _type_id = TYPE_BYTE
+    c_type = ctypes.c_byte
 
 
 class Short(Primitive):
-    c_type = ctypes.c_short
     _type_name = 'java.lang.Short'
+    _type_id = TYPE_SHORT
+    c_type = ctypes.c_short
 
 
 class Int(Primitive):
-    c_type = ctypes.c_int
     _type_name = 'java.lang.Integer'
+    _type_id = TYPE_INT
+    c_type = ctypes.c_int
 
 
 class Long(Primitive):
-    c_type = ctypes.c_longlong
     _type_name = 'java.lang.Long'
+    _type_id = TYPE_LONG
+    c_type = ctypes.c_longlong
 
 
 class Float(Primitive):
-    c_type = ctypes.c_float
     _type_name = 'java.lang.Float'
+    _type_id = TYPE_FLOAT
+    c_type = ctypes.c_float
 
 
 class Double(Primitive):
-    c_type = ctypes.c_double
     _type_name = 'java.lang.Double'
+    _type_id = TYPE_DOUBLE
+    c_type = ctypes.c_double
 
 
 class Char(Primitive):
+    _type_name = 'java.lang.Character'
+    _type_id = TYPE_CHAR
     c_type = ctypes.c_short
 
     @classmethod
@@ -109,5 +119,6 @@ class Char(Primitive):
 
 
 class Bool(Primitive):
-    c_type = ctypes.c_bool
     _type_name = 'java.lang.Boolean'
+    _type_id = TYPE_BOOLEAN
+    c_type = ctypes.c_bool

@@ -36,6 +36,7 @@ from .api.key_value import (
     cache_remove_if_equals, cache_replace_if_equals, cache_get_size,
 )
 from .api.sql import scan, scan_cursor_get_page, sql, sql_cursor_get_page
+from .api.affinity import cache_get_node_partitions
 
 
 PROP_CODES = set([
@@ -64,6 +65,8 @@ class Cache:
     :py:meth:`~pyignite.client.Client.get_cache` methods instead. See
     :ref:`this example <create_cache>` on how to do it.
     """
+
+    affinity = None
     _cache_id = None
     _name = None
     _client = None
@@ -119,6 +122,9 @@ class Cache:
                 raise CacheCreationError(result.message)
 
         self._cache_id = cache_id(self._name)
+        self.affinity = {
+            'version': (0, 0),
+        }
 
     @property
     def settings(self) -> Optional[dict]:
@@ -132,7 +138,7 @@ class Cache:
         """
         if self._settings is None:
             config_result = cache_get_configuration(
-                self._client.get_best_node(),
+                self.get_best_node(),
                 self._cache_id
             )
             if config_result.status == 0:
@@ -189,10 +195,21 @@ class Cache:
         """
         Destroys cache with a given name.
         """
-        return cache_destroy(self._client.get_best_node(), self._cache_id)
+        return cache_destroy(self.get_best_node(), self._cache_id)
+
+    def get_best_node(self, type_id: int = None) -> 'Connection':
+        """
+        Returns the node from the list of the nodes, opened by client, that
+        most probably contains the needed key-value pair. See IEP-23.
+
+        :param type_id: type ID of the key,
+        :return: Ignite connection.
+        """
+        # TODO: actual code
+        return self._client.random_node
 
     @status_to_exception(CacheError)
-    def get(self, key, key_hint: object=None) -> Any:
+    def get(self, key, key_hint: object = None) -> Any:
         """
         Retrieves a value from cache by key.
 
@@ -206,7 +223,7 @@ class Cache:
         type_id = key_hint.type_id
 
         result = cache_get(
-            self._client.get_best_node(type_id),
+            self.get_best_node(type_id),
             self._cache_id,
             key,
             key_hint=key_hint
@@ -234,7 +251,7 @@ class Cache:
         type_id = key_hint.type_id
 
         return cache_put(
-            self._client.get_best_node(type_id),
+            self.get_best_node(type_id),
             self._cache_id, key, value,
             key_hint=key_hint, value_hint=value_hint
         )
@@ -247,7 +264,7 @@ class Cache:
         :param keys: list of keys or tuples of (key, key_hint),
         :return: a dict of key-value pairs.
         """
-        result = cache_get_all(self._client.get_best_node(), self._cache_id, keys)
+        result = cache_get_all(self.get_best_node(), self._cache_id, keys)
         if result.value:
             for key, value in result.value.items():
                 result.value[key] = self._process_binary(value)
@@ -263,7 +280,9 @@ class Cache:
          to save. Each key or value can be an item of representable
          Python type or a tuple of (item, hint),
         """
-        return cache_put_all(self._client.get_best_node(), self._cache_id, pairs)
+        return cache_put_all(
+            self.get_best_node(), self._cache_id, pairs
+        )
 
     @status_to_exception(CacheError)
     def replace(
@@ -284,7 +303,7 @@ class Cache:
         type_id = key_hint.type_id
 
         result = cache_replace(
-            self._client.get_best_node(type_id),
+            self.get_best_node(type_id),
             self._cache_id, key, value,
             key_hint=key_hint, value_hint=value_hint
         )
@@ -299,7 +318,7 @@ class Cache:
         :param keys: (optional) list of cache keys or (key, key type
          hint) tuples to clear (default: clear all).
         """
-        conn = self._client.get_best_node()
+        conn = self.get_best_node()
         if keys:
             return cache_clear_keys(conn, self._cache_id, keys)
         else:
@@ -319,7 +338,7 @@ class Cache:
         type_id = key_hint.type_id
 
         return cache_clear_key(
-            self._client.get_best_node(type_id),
+            self.get_best_node(type_id),
             self._cache_id,
             key,
             key_hint=key_hint
@@ -340,7 +359,7 @@ class Cache:
         type_id = key_hint.type_id
 
         return cache_contains_key(
-            self._client.get_best_node(type_id),
+            self.get_best_node(type_id),
             self._cache_id,
             key,
             key_hint=key_hint
@@ -375,7 +394,7 @@ class Cache:
         type_id = key_hint.type_id
 
         result = cache_get_and_put(
-            self._client.get_best_node(type_id),
+            self.get_best_node(type_id),
             self._cache_id,
             key, value,
             key_hint, value_hint
@@ -404,7 +423,7 @@ class Cache:
         type_id = key_hint.type_id
 
         result = cache_get_and_put_if_absent(
-            self._client.get_best_node(type_id),
+            self.get_best_node(type_id),
             self._cache_id,
             key, value,
             key_hint, value_hint
@@ -430,7 +449,7 @@ class Cache:
         type_id = key_hint.type_id
 
         return cache_put_if_absent(
-            self._client.get_best_node(type_id),
+            self.get_best_node(type_id),
             self._cache_id,
             key, value,
             key_hint, value_hint
@@ -451,7 +470,7 @@ class Cache:
         type_id = key_hint.type_id
 
         result = cache_get_and_remove(
-            self._client.get_best_node(type_id),
+            self.get_best_node(type_id),
             self._cache_id,
             key,
             key_hint
@@ -481,7 +500,7 @@ class Cache:
         type_id = key_hint.type_id
 
         result = cache_get_and_replace(
-            self._client.get_best_node(type_id),
+            self.get_best_node(type_id),
             self._cache_id,
             key, value,
             key_hint, value_hint
@@ -503,7 +522,7 @@ class Cache:
         type_id = key_hint.type_id
 
         return cache_remove_key(
-            self._client.get_best_node(type_id), self._cache_id, key, key_hint
+            self.get_best_node(type_id), self._cache_id, key, key_hint
         )
 
     @status_to_exception(CacheError)
@@ -515,7 +534,7 @@ class Cache:
         :param keys: list of keys or tuples of (key, key_hint) to remove.
         """
         return cache_remove_keys(
-            self._client.get_best_node(), self._cache_id, keys
+            self.get_best_node(), self._cache_id, keys
         )
 
     @status_to_exception(CacheError)
@@ -523,7 +542,7 @@ class Cache:
         """
         Removes all cache entries, notifying listeners and cache writers.
         """
-        return cache_remove_all(self._client.get_best_node(), self._cache_id)
+        return cache_remove_all(self.get_best_node(), self._cache_id)
 
     @status_to_exception(CacheError)
     def remove_if_equals(self, key, sample, key_hint=None, sample_hint=None):
@@ -543,7 +562,7 @@ class Cache:
         type_id = key_hint.type_id
 
         return cache_remove_if_equals(
-            self._client.get_best_node(type_id),
+            self.get_best_node(type_id),
             self._cache_id,
             key, sample,
             key_hint, sample_hint
@@ -574,7 +593,7 @@ class Cache:
         type_id = key_hint.type_id
 
         result = cache_replace_if_equals(
-            self._client.get_best_node(type_id),
+            self.get_best_node(type_id),
             self._cache_id,
             key, sample, value,
             key_hint, sample_hint, value_hint
@@ -593,7 +612,7 @@ class Cache:
         :return: integer number of cache entries.
         """
         return cache_get_size(
-            self._client.get_best_node(), self._cache_id, peek_modes
+            self.get_best_node(), self._cache_id, peek_modes
         )
 
     def scan(
@@ -612,7 +631,7 @@ class Cache:
         :return: generator with key-value pairs.
         """
         result = scan(
-            self._client.get_best_node(),
+            self.get_best_node(),
             self._cache_id,
             page_size,
             partitions,
@@ -628,7 +647,7 @@ class Cache:
             yield k, v
 
         while result.value['more']:
-            result = scan_cursor_get_page(self._client.get_best_node(), cursor)
+            result = scan_cursor_get_page(self.get_best_node(), cursor)
             if result.status != 0:
                 raise CacheError(result.message)
 
@@ -670,7 +689,7 @@ class Cache:
 
             while more:
                 inner_result = sql_cursor_get_page(
-                    self._client.get_best_node(),
+                    self.get_best_node(),
                     cursor
                 )
                 if result.status != 0:
@@ -687,7 +706,7 @@ class Cache:
         if not type_name:
             raise SQLError('Value type is unknown')
         result = sql(
-            self._client.get_best_node(),
+            self.get_best_node(),
             self._cache_id,
             type_name,
             query_str,

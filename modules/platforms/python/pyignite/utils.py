@@ -20,7 +20,12 @@ from pyignite.datatypes.base import IgniteDataType
 from .constants import *
 
 
-def is_iterable(value):
+def is_pow2(value: int) -> bool:
+    """ Check if value is power of two. """
+    return value > 0 and ((value & (value - 1)) == 0)
+
+
+def is_iterable(value: Any) -> bool:
     """ Check if value is iterable. """
     try:
         iter(value)
@@ -82,7 +87,7 @@ def unwrap_binary(client: 'Client', wrapped: tuple) -> object:
     from pyignite.datatypes.complex import BinaryObject
 
     blob, offset = wrapped
-    conn_clone = client.get_best_node().clone(prefetch=blob)
+    conn_clone = client.random_node.clone(prefetch=blob)
     conn_clone.pos = offset
     data_class, data_bytes = BinaryObject.parse(conn_clone)
     result = BinaryObject.to_python(

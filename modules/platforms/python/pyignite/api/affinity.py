@@ -92,8 +92,10 @@ def cache_get_node_partitions(
     if result.status == 0:
         # tidying up the result
         value = {
-            'version_major': result.value['version_major'],
-            'version_minor': result.value['version_minor'],
+            'version': (
+                result.value['version_major'],
+                result.value['version_minor']
+            ),
             'partition_mapping': [],
         }
         for i, partition_map in enumerate(result.value['partition_mapping']):

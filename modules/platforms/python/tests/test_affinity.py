@@ -14,20 +14,20 @@
 # limitations under the License.
 
 from pyignite.api import *
-from pyignite.datatypes import Int
+from pyignite.datatypes import *
 from pyignite.datatypes.prop_codes import *
 
 
 def test_get_node_partitions(client):
 
-    conn = client.get_best_node()
+    conn = client.random_node
 
     cache_1 = client.get_or_create_cache('test_cache_1')
     cache_2 = client.get_or_create_cache({
         PROP_NAME: 'test_cache_2',
         PROP_CACHE_KEY_CONFIGURATION: [
             {
-                'type_name': Int.type_name,
+                'type_name': 'java.lang.Byte[]',
                 'affinity_key_field_name': 'int_affinity',
             }
         ],
@@ -40,3 +40,7 @@ def test_get_node_partitions(client):
         [cache_1.cache_id, cache_2.cache_id]
     )
     assert result.status == 0, result.message
+
+    best_conn = cache_2.get_best_node(Int.type_id)
+
+    assert best_conn

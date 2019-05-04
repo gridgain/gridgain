@@ -20,7 +20,7 @@ from pyignite.api import (
 
 def test_scan(client, cache):
 
-    conn = client.get_best_node()
+    conn = client.random_node
     page_size = 10
 
     result = cache_put_all(conn, cache, {
@@ -46,7 +46,7 @@ def test_scan(client, cache):
 
 def test_close_resource(client, cache):
 
-    conn = client.get_best_node()
+    conn = client.random_node
     page_size = 10
 
     result = cache_put_all(conn, cache, {

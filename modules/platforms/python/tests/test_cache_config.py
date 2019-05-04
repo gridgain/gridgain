@@ -19,7 +19,7 @@ from pyignite.datatypes.prop_codes import *
 
 def test_get_configuration(client):
 
-    conn = client.get_best_node()
+    conn = client.random_node
 
     result = cache_get_or_create(conn, 'my_unique_cache')
     assert result.status == 0
@@ -32,7 +32,7 @@ def test_get_configuration(client):
 def test_create_with_config(client):
 
     cache_name = 'my_very_unique_name'
-    conn = client.get_best_node()
+    conn = client.random_node
 
     result = cache_create_with_config(conn, {
         PROP_NAME: cache_name,
@@ -57,7 +57,7 @@ def test_create_with_config(client):
 def test_get_or_create_with_config(client):
 
     cache_name = 'my_very_unique_name'
-    conn = client.get_best_node()
+    conn = client.random_node
 
     result = cache_get_or_create_with_config(conn, {
         PROP_NAME: cache_name,

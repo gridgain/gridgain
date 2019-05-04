@@ -28,10 +28,13 @@ from pyignite.utils import is_binary, is_hinted, is_iterable
 from .type_codes import *
 
 
-__all__ = ['AnyDataArray', 'AnyDataObject', 'Struct', 'StructArray', 'tc_map']
+__all__ = [
+    'AnyDataArray', 'AnyDataObject', 'Struct', 'StructArray', 'tc_map',
+    'infer_from_python',
+]
 
 
-def tc_map(key: bytes, _memo_map: dict={}):
+def tc_map(key: bytes, _memo_map: dict = {}):
     """
     Returns a default parser/generator class for the given type code.
 

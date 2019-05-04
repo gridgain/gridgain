@@ -126,7 +126,7 @@ from pyignite.datatypes import *
 )
 def test_put_get_data(client, cache, value, value_hint):
 
-    conn = client.get_best_node()
+    conn = client.random_node
 
     result = cache_put(conn, cache, 'my_key', value, value_hint=value_hint)
     assert result.status == 0

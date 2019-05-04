@@ -47,7 +47,7 @@ page_size = 4
 
 def test_sql(client):
 
-    conn = client.get_best_node()
+    conn = client.random_node
 
     # cleanup
     client.sql(drop_query)
@@ -109,7 +109,7 @@ def test_sql(client):
 
 def test_sql_fields(client):
 
-    conn = client.get_best_node()
+    conn = client.random_node
 
     # cleanup
     client.sql(drop_query)

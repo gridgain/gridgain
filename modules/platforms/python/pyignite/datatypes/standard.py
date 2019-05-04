@@ -22,6 +22,7 @@ import uuid
 from pyignite.constants import *
 from .base import IgniteDataType
 from .type_codes import *
+from .type_ids import *
 from .null_object import Null
 
 
@@ -41,6 +42,8 @@ __all__ = [
 
 
 class StandardObject(IgniteDataType):
+    _type_name = None
+    _type_id = None
     type_code = None
 
     @classmethod
@@ -65,6 +68,7 @@ class String(IgniteDataType):
     UTF-8-encoded, so that one character may take 1 to 4 bytes.
     """
     _type_name = 'java.lang.String'
+    _type_id = TYPE_STRING
     type_code = TC_STRING
     pythonic = str
 
@@ -128,6 +132,8 @@ class String(IgniteDataType):
 
 
 class DecimalObject(IgniteDataType):
+    _type_name = 'java.math.BigDecimal'
+    _type_id = TYPE_DECIMAL
     type_code = TC_DECIMAL
     pythonic = decimal.Decimal
     default = decimal.Decimal('0.00')
@@ -252,8 +258,10 @@ class UUIDObject(StandardObject):
     and :py:meth:`~pyignite.datatypes.standard.UUIDObject.from_python` methods
     is changed for compatibility with `java.util.UUID`.
     """
-    type_code = TC_UUID
+    _type_name = 'java.util.UUID'
+    _type_id = TYPE_UUID
     _object_c_type = None
+    type_code = TC_UUID
 
     UUID_BYTE_ORDER = (7, 6, 5, 4, 3, 2, 1, 0, 15, 14, 13, 12, 11, 10, 9, 8)
 
@@ -309,10 +317,12 @@ class TimestampObject(StandardObject):
     `epoch` and `fraction` stored separately and represented as
     tuple(datetime.datetime, integer).
     """
+    _type_name = 'java.sql.Timestamp'
+    _type_id = TYPE_TIMESTAMP
+    _object_c_type = None
     type_code = TC_TIMESTAMP
     pythonic = tuple
     default = (datetime(1970, 1, 1), 0)
-    _object_c_type = None
 
     @classmethod
     def build_c_type(cls):
@@ -365,10 +375,12 @@ class DateObject(StandardObject):
 
     Represented as a naive datetime.datetime in Python.
     """
+    _type_name = 'java.util.Date'
+    _type_id = TYPE_DATE
+    _object_c_type = None
     type_code = TC_DATE
     pythonic = datetime
     default = datetime(1970, 1, 1)
-    _object_c_type = None
 
     @classmethod
     def build_c_type(cls):
@@ -417,10 +429,12 @@ class TimeObject(StandardObject):
 
     Represented as a datetime.timedelta in Python.
     """
+    _type_name = 'java.sql.Time'
+    _type_id = TYPE_TIME
+    _object_c_type = None
     type_code = TC_TIME
     pythonic = timedelta
     default = timedelta()
-    _object_c_type = None
 
     @classmethod
     def build_c_type(cls):
@@ -469,8 +483,10 @@ class EnumObject(StandardObject):
     (using language-specific type serialization is a good way to kill the
     interoperability though), so it represented by tuple(int, int) in Python.
     """
-    type_code = TC_ENUM
+    _type_name = 'Enum'
+    _type_id = TYPE_ENUM
     _object_c_type = None
+    type_code = TC_ENUM
 
     @classmethod
     def build_c_type(cls):
@@ -519,6 +535,8 @@ class BinaryEnumObject(EnumObject):
     """
     Another way of representing the enum type. Same, but different.
     """
+    _type_name = 'Enum'
+    _type_id = TYPE_BINARY_ENUM
     type_code = TC_BINARY_ENUM
 
 
@@ -526,6 +544,8 @@ class StandardArray(IgniteDataType):
     """
     Base class for array of primitives. Payload-only.
     """
+    _type_name = None
+    _type_id = None
     standard_type = None
     type_code = None
 
@@ -600,34 +620,50 @@ class StringArray(StandardArray):
 
     List(str) in Python.
     """
+    _type_name = 'String[]'
+    _type_id = TYPE_STRING_ARR
     standard_type = String
 
 
 class DecimalArray(StandardArray):
+    _type_name = 'BigDecimal[]'
+    _type_id = TYPE_DECIMAL_ARR
     standard_type = DecimalObject
 
 
 class UUIDArray(StandardArray):
+    _type_name = 'UUID[]'
+    _type_id = TYPE_UUID_ARR
     standard_type = UUIDObject
 
 
 class TimestampArray(StandardArray):
+    _type_name = 'Timestamp[]'
+    _type_id = TYPE_TIMESTAMP_ARR
     standard_type = TimestampObject
 
 
 class DateArray(StandardArray):
+    _type_name = 'Date[]'
+    _type_id = TYPE_DATE_ARR
     standard_type = DateObject
 
 
 class TimeArray(StandardArray):
+    _type_name = 'Time[]'
+    _type_id = TYPE_TIME_ARR
     standard_type = TimeObject
 
 
 class EnumArray(StandardArray):
+    _type_name = 'Enum[]'
+    _type_id = TYPE_ENUM_ARR
     standard_type = EnumObject
 
 
 class StandardArrayObject(StandardArray):
+    _type_name = None
+    _type_id = None
     pythonic = list
     default = []
 
@@ -648,18 +684,24 @@ class StandardArrayObject(StandardArray):
 
 class StringArrayObject(StandardArrayObject):
     """ List of strings. """
+    _type_name = 'String[]'
+    _type_id = TYPE_STRING_ARR
     standard_type = String
     type_code = TC_STRING_ARRAY
 
 
 class DecimalArrayObject(StandardArrayObject):
     """ List of decimal.Decimal objects. """
+    _type_name = 'BigDecimal[]'
+    _type_id = TYPE_DECIMAL_ARR
     standard_type = DecimalObject
     type_code = TC_DECIMAL_ARRAY
 
 
 class UUIDArrayObject(StandardArrayObject):
-    """ Translated into Python as a list(uuid.UUID)"""
+    """ Translated into Python as a list(uuid.UUID). """
+    _type_name = 'UUID[]'
+    _type_id = TYPE_UUID_ARR
     standard_type = UUIDObject
     type_code = TC_UUID_ARRAY
 
@@ -668,18 +710,24 @@ class TimestampArrayObject(StandardArrayObject):
     """
     Translated into Python as a list of (datetime.datetime, integer) tuples.
     """
+    _type_name = 'Timestamp[]'
+    _type_id = TYPE_TIMESTAMP_ARR
     standard_type = TimestampObject
     type_code = TC_TIMESTAMP_ARRAY
 
 
 class DateArrayObject(StandardArrayObject):
     """ List of datetime.datetime type values. """
+    _type_name = 'Date[]'
+    _type_id = TYPE_DATE_ARR
     standard_type = DateObject
     type_code = TC_DATE_ARRAY
 
 
 class TimeArrayObject(StandardArrayObject):
     """ List of datetime.timedelta type values. """
+    _type_name = 'Time[]'
+    _type_id = TYPE_TIME_ARR
     standard_type = TimeObject
     type_code = TC_TIME_ARRAY
 
@@ -689,6 +737,8 @@ class EnumArrayObject(StandardArrayObject):
     Array of (int, int) tuples, plus it holds a `type_id` in its header.
     The only `type_id` value of -1 (user type) works from Python perspective.
     """
+    _type_name = 'Enum[]'
+    _type_id = TYPE_ENUM_ARR
     standard_type = EnumObject
     type_code = TC_ENUM_ARRAY
 

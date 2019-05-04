@@ -18,6 +18,7 @@ import ctypes
 from pyignite.constants import *
 from .base import IgniteDataType
 from .type_codes import *
+from .type_ids import *
 
 
 __all__ = [
@@ -33,10 +34,11 @@ class DataObject(IgniteDataType):
     Primitive data objects are built of primitive data prepended by
     the corresponding type code.
     """
-
+    _type_name = None
+    _type_id = None
+    _object_c_type = None
     c_type = None
     type_code = None
-    _object_c_type = None
 
     @classmethod
     def build_c_type(cls):
@@ -78,6 +80,7 @@ class DataObject(IgniteDataType):
 
 class ByteObject(DataObject):
     _type_name = 'java.lang.Byte'
+    _type_id = TYPE_BYTE
     c_type = ctypes.c_byte
     type_code = TC_BYTE
     pythonic = int
@@ -86,6 +89,7 @@ class ByteObject(DataObject):
 
 class ShortObject(DataObject):
     _type_name = 'java.lang.Short'
+    _type_id = TYPE_SHORT
     c_type = ctypes.c_short
     type_code = TC_SHORT
     pythonic = int
@@ -94,6 +98,7 @@ class ShortObject(DataObject):
 
 class IntObject(DataObject):
     _type_name = 'java.lang.Integer'
+    _type_id = TYPE_INT
     c_type = ctypes.c_int
     type_code = TC_INT
     pythonic = int
@@ -102,6 +107,7 @@ class IntObject(DataObject):
 
 class LongObject(DataObject):
     _type_name = 'java.lang.Long'
+    _type_id = TYPE_LONG
     c_type = ctypes.c_longlong
     type_code = TC_LONG
     pythonic = int
@@ -110,6 +116,7 @@ class LongObject(DataObject):
 
 class FloatObject(DataObject):
     _type_name = 'java.lang.Float'
+    _type_id = TYPE_FLOAT
     c_type = ctypes.c_float
     type_code = TC_FLOAT
     pythonic = float
@@ -118,6 +125,7 @@ class FloatObject(DataObject):
 
 class DoubleObject(DataObject):
     _type_name = 'java.lang.Double'
+    _type_id = TYPE_DOUBLE
     c_type = ctypes.c_double
     type_code = TC_DOUBLE
     pythonic = float
@@ -131,6 +139,8 @@ class CharObject(DataObject):
     to/from UTF-8 to keep the coding hassle to minimum. Bear in mind
     though: decoded character may take 1..4 bytes in UTF-8.
     """
+    _type_name = 'java.lang.Character'
+    _type_id = TYPE_CHAR
     c_type = ctypes.c_short
     type_code = TC_CHAR
     pythonic = str
@@ -159,6 +169,7 @@ class CharObject(DataObject):
 
 class BoolObject(DataObject):
     _type_name = 'java.lang.Boolean'
+    _type_id = TYPE_BOOLEAN
     c_type = ctypes.c_bool
     type_code = TC_BOOL
     pythonic = bool

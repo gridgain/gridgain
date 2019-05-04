@@ -42,7 +42,7 @@ the local (class-wise) registry for Ignite Complex objects.
 
 from collections import defaultdict, OrderedDict
 import random
-from typing import Iterable, Optional, Type, Union
+from typing import Iterable, Type, Union
 
 from .api.binary import get_binary_type, put_binary_type
 from .api.cache_config import cache_get_names
@@ -72,7 +72,7 @@ class Client:
      * binary types registration endpoint.
     """
 
-    affinity = None
+    affinity_version = None
     _registry = defaultdict(dict)
     _compact_footer = None
     _connection_args = None
@@ -91,7 +91,7 @@ class Client:
         self._compact_footer = compact_footer
         self._connection_args = kwargs
         self._nodes = OrderedDict()
-        self.affinity = (0, 0)
+        self.affinity_version = (0, 0)
 
     def _add_node(self, host: str, port: int) -> 'UUID':
         """
@@ -143,20 +143,6 @@ class Client:
     def random_node(self) -> Connection:
         return random.choice(list(self._nodes.values()))
 
-    def get_best_node(self, key_type_id: Optional[int] = None) -> Connection:
-        """
-        Apache Ignite tries to store the values for the same key type on the
-        certain node of the cluster. This methon tries to determine the node,
-        that holds the data of the given key, and returns the connection
-        to that node. If not possible, comes up with the random connection.
-
-        :param key_type_id: (optional) the key type ID,
-        :return: the connection to the Ignite node.
-        """
-        # TODO: long and boring turbulations
-
-        return self.random_node
-
     @status_to_exception(BinaryTypeError)
     def get_binary_type(self, binary_type: Union[str, int]) -> dict:
         """
@@ -200,7 +186,9 @@ class Client:
                 )
             return converted_schema
 
-        result = get_binary_type(self.get_best_node(), binary_type)
+        conn = self.random_node
+
+        result = get_binary_type(conn, binary_type)
         if result.status != 0 or not result.value['type_exists']:
             return result
 
@@ -262,7 +250,7 @@ class Client:
          Binary type with no fields is OK.
         """
         return put_binary_type(
-            self.get_best_node(), type_name, affinity_key_field, is_enum, schema
+            self.random_node, type_name, affinity_key_field, is_enum, schema
         )
 
     @staticmethod
@@ -389,7 +377,7 @@ class Client:
 
         :return: list of cache names.
         """
-        return cache_get_names(self.get_best_node())
+        return cache_get_names(self.random_node)
 
     def sql(
         self, query_str: str, page_size: int = 1, query_args: Iterable = None,
@@ -449,7 +437,7 @@ class Client:
 
             while more:
                 inner_result = sql_fields_cursor_get_page(
-                    self.get_best_node(), cursor, field_count
+                    conn, cursor, field_count
                 )
                 if inner_result.status != 0:
                     raise SQLError(result.message)
@@ -457,9 +445,11 @@ class Client:
                 for line in inner_result.value['data']:
                     yield line
 
+        conn = self.random_node
+
         schema = self.get_or_create_cache(schema)
         result = sql_fields(
-            self.get_best_node(), schema.cache_id, query_str,
+            conn, schema.cache_id, query_str,
             page_size, query_args, schema.name,
             statement_type, distributed_joins, local, replicated_only,
             enforce_join_order, collocated, lazy, include_field_names,

@@ -19,10 +19,11 @@ import inspect
 
 from pyignite.constants import *
 from pyignite.exceptions import ParseError
-from pyignite.utils import entity_id, hashcode, is_hinted
+from pyignite.utils import entity_id, hashcode
 from .base import IgniteDataType
 from .internal import AnyDataObject, infer_from_python
 from .type_codes import *
+from .type_ids import *
 
 
 __all__ = [
@@ -36,6 +37,8 @@ class ObjectArrayObject(IgniteDataType):
     Array of objects of any type. Its Python representation is
     tuple(type_id, iterable of any type).
     """
+    _type_name = 'Object[]'
+    _type_id = TYPE_OBJ_ARR
     type_code = TC_OBJECT_ARRAY
     type_or_id_name = 'type_id'
 
@@ -175,6 +178,8 @@ class CollectionObject(ObjectArrayObject):
 
     Also represented as tuple(type_id, iterable of any type) in Python.
     """
+    _type_name = 'java.util.Collection'
+    _type_id = TYPE_COL
     type_code = TC_COLLECTION
     type_or_id_name = 'type'
     pythonic = list
@@ -203,6 +208,8 @@ class Map(IgniteDataType):
     Ignite does not track the order of key-value pairs in its caches, hence
     the ordinary Python dict type, not the collections.OrderedDict.
     """
+    _type_name = 'java.util.Map'
+    _type_id = TYPE_MAP
     HASH_MAP = 1
     LINKED_HASH_MAP = 2
 
@@ -287,6 +294,8 @@ class MapObject(Map):
     Keys and values in map are independent data objects, but `count`
     counts pairs. Very annoying.
     """
+    _type_name = 'java.util.Map'
+    _type_id = TYPE_MAP
     type_code = TC_MAP
     pythonic = dict
     default = {}
@@ -319,6 +328,7 @@ class MapObject(Map):
 
 
 class BinaryObject(IgniteDataType):
+    _type_id = TYPE_BINARY_OBJ
     type_code = TC_COMPLEX_OBJECT
 
     USER_TYPE = 0x0001

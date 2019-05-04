@@ -19,6 +19,7 @@ from pyignite.constants import *
 from .base import IgniteDataType
 from .primitive import *
 from .type_codes import *
+from .type_ids import *
 
 
 __all__ = [
@@ -33,6 +34,8 @@ class PrimitiveArray(IgniteDataType):
     """
     Base class for array of primitives. Payload-only.
     """
+    _type_name = None
+    _type_id = None
     primitive_type = None
     type_code = None
 
@@ -95,41 +98,57 @@ class PrimitiveArray(IgniteDataType):
 
 
 class ByteArray(PrimitiveArray):
+    _type_name = 'byte[]'
+    _type_id = TYPE_BYTE_ARR
     primitive_type = Byte
     type_code = TC_BYTE_ARRAY
 
 
 class ShortArray(PrimitiveArray):
+    _type_name = 'short[]'
+    _type_id = TYPE_SHORT_ARR
     primitive_type = Short
     type_code = TC_SHORT_ARRAY
 
 
 class IntArray(PrimitiveArray):
+    _type_name = 'int[]'
+    _type_id = TYPE_INT_ARR
     primitive_type = Int
     type_code = TC_INT_ARRAY
 
 
 class LongArray(PrimitiveArray):
+    _type_name = 'long[]'
+    _type_id = TYPE_LONG_ARR
     primitive_type = Long
     type_code = TC_LONG_ARRAY
 
 
 class FloatArray(PrimitiveArray):
+    _type_name = 'float[]'
+    _type_id = TYPE_FLOAT_ARR
     primitive_type = Float
     type_code = TC_FLOAT_ARRAY
 
 
 class DoubleArray(PrimitiveArray):
+    _type_name = 'double[]'
+    _type_id = TYPE_DOUBLE_ARR
     primitive_type = Double
     type_code = TC_DOUBLE_ARRAY
 
 
 class CharArray(PrimitiveArray):
+    _type_name = 'char[]'
+    _type_id = TYPE_CHAR_ARR
     primitive_type = Char
     type_code = TC_CHAR_ARRAY
 
 
 class BoolArray(PrimitiveArray):
+    _type_name = 'boolean[]'
+    _type_id = TYPE_BOOLEAN_ARR
     primitive_type = Bool
     type_code = TC_BOOL_ARRAY
 
@@ -138,6 +157,8 @@ class PrimitiveArrayObject(PrimitiveArray):
     """
     Base class for primitive array object. Type code plus payload.
     """
+    _type_name = None
+    _type_id = None
     pythonic = list
     default = []
 
@@ -157,36 +178,50 @@ class PrimitiveArrayObject(PrimitiveArray):
 
 
 class ByteArrayObject(PrimitiveArrayObject):
+    _type_name = 'byte[]'
+    _type_id = TYPE_BYTE_ARR
     primitive_type = Byte
     type_code = TC_BYTE_ARRAY
 
 
 class ShortArrayObject(PrimitiveArrayObject):
+    _type_name = 'short[]'
+    _type_id = TYPE_SHORT_ARR
     primitive_type = Short
     type_code = TC_SHORT_ARRAY
 
 
 class IntArrayObject(PrimitiveArrayObject):
+    _type_name = 'int[]'
+    _type_id = TYPE_INT_ARR
     primitive_type = Int
     type_code = TC_INT_ARRAY
 
 
 class LongArrayObject(PrimitiveArrayObject):
+    _type_name = 'long[]'
+    _type_id = TYPE_LONG_ARR
     primitive_type = Long
     type_code = TC_LONG_ARRAY
 
 
 class FloatArrayObject(PrimitiveArrayObject):
+    _type_name = 'float[]'
+    _type_id = TYPE_FLOAT_ARR
     primitive_type = Float
     type_code = TC_FLOAT_ARRAY
 
 
 class DoubleArrayObject(PrimitiveArrayObject):
+    _type_name = 'double[]'
+    _type_id = TYPE_DOUBLE_ARR
     primitive_type = Double
     type_code = TC_DOUBLE_ARRAY
 
 
 class CharArrayObject(PrimitiveArrayObject):
+    _type_name = 'char[]'
+    _type_id = TYPE_CHAR_ARR
     primitive_type = Char
     type_code = TC_CHAR_ARRAY
 
@@ -204,5 +239,7 @@ class CharArrayObject(PrimitiveArrayObject):
 
 
 class BoolArrayObject(PrimitiveArrayObject):
+    _type_name = 'boolean[]'
+    _type_id = TYPE_BOOLEAN_ARR
     primitive_type = Bool
     type_code = TC_BOOL_ARRAY
