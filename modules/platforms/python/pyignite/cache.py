@@ -255,17 +255,19 @@ class Cache:
             if parts & mask == 0:
                 part = (base_value ^ (unsigned(base_value) >> 16)) & mask
             else:
-                part = unsigned(base_value // parts)
+                part = abs(base_value // parts)
 
-            # search for a connection
+            assert 0 <= part < parts, 'Partition calculation has failed'
+
+            # search for connection
             try:
                 node_uuid = next(
                     u for u, p
                     in self.affinity['node_mapping'].items()
-                    if p == part
+                    if part in p
                 )
                 conn = conn.client._nodes[node_uuid]
-            except StopIteration:
+            except (StopIteration, KeyError):
                 pass
 
         return conn
