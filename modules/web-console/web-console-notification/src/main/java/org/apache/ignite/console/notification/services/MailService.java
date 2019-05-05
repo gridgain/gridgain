@@ -55,6 +55,10 @@ public class MailService {
     @Value("${spring.mail.from.alias:''}")
     private String fromAlias;
 
+    /** Send e-mail or not. */
+    @Value("${spring.mail.send.email:false}")
+    private boolean sendMail;
+
     /** Expression parser. */
     private static final ExpressionParser parser = new SpelExpressionParser();
 
@@ -93,6 +97,9 @@ public class MailService {
      * @param notification Notification.
      */
     public void send(Notification notification) throws IOException, MessagingException, URISyntaxException {
+        if (!sendMail)
+            return;
+
         NotificationWrapper ctxObj = new NotificationWrapper(notification);
 
         EvaluationContext ctx = createContext(ctxObj);

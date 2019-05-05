@@ -53,7 +53,7 @@ export default function User(
          * @returns {ng.IPromise<User>}
          */
         load() {
-            return user = $http.post('/api/v1/user')
+            return user = $http.get('/api/v1/user')
                 .then(({data}) => {
                     $root.user = data;
 
