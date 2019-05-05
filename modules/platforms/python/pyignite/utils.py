@@ -1,20 +1,21 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
 #
-# Copyright 2019 GridGain Systems, Inc. and Contributors.
-#
-# Licensed under the GridGain Community Edition License (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
+
+import ctypes
 from functools import wraps
-from typing import Any, Type, Union
+from typing import Any, Type, Tuple, Union
 
 from pyignite.datatypes.base import IgniteDataType
 from .constants import *
@@ -177,3 +178,22 @@ def status_to_exception(exc: Type[Exception]):
             return result.value
         return ste_wrapper
     return ste_decorator
+
+
+def get_field_by_id(
+    obj: 'GenericObjectMeta', field_id: int
+) -> Tuple[Any, IgniteDataType]:
+    """
+    Returns a complex object's field value, given the field's entity ID.
+
+    :param obj: complex object,
+    :param field_id: field ID,
+    :return: complex object field's value and type.
+    """
+    for fname, ftype in obj._schema.items():
+        if entity_id(fname) == field_id:
+            return getattr(obj, fname, getattr(ftype, 'default')), ftype
+
+
+def unsigned(value: int, c_type: ctypes._SimpleCData = ctypes.c_uint) -> int:
+    return c_type(value).value

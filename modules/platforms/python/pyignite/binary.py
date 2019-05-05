@@ -31,7 +31,7 @@ from typing import Any
 import attr
 
 from .datatypes import *
-from .datatypes.base import IgniteDataTypeProps, IgniteDataTypeMeta
+from .datatypes.base import IgniteDataTypeProps
 from .exceptions import ParseError
 from .utils import entity_id, schema_id
 
@@ -111,7 +111,7 @@ class GenericObjectMeta(GenericObjectPropsMeta):
 
     def __init__(
         cls, name: str, base_classes: tuple, namespace: dict,
-        type_name: str=None, schema: OrderedDict=None, **kwargs
+        type_name: str = None, schema: OrderedDict = None, **kwargs
     ):
         """
         Initializes binary object class.

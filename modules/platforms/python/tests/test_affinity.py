@@ -41,6 +41,6 @@ def test_get_node_partitions(client):
     )
     assert result.status == 0, result.message
 
-    best_conn = cache_2.get_best_node(Int.type_id)
+    best_conn = cache_2.get_best_node(1)
 
     assert best_conn

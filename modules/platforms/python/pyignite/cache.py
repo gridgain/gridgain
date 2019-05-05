@@ -15,12 +15,16 @@
 #
 from typing import Any, Iterable, Optional, Union
 
+from .binary import GenericObjectMeta
 from .datatypes import prop_codes
 from .datatypes.internal import AnyDataObject
 from .exceptions import (
     CacheCreationError, CacheError, ParameterError, SQLError,
 )
-from .utils import cache_id, is_wrapped, status_to_exception, unwrap_binary
+from .utils import (
+    cache_id, get_field_by_id, hashcode, is_wrapped, status_to_exception,
+    unsigned, unwrap_binary,
+)
 from .api.cache_config import (
     cache_create, cache_create_with_config,
     cache_get_or_create, cache_get_or_create_with_config,
@@ -197,16 +201,74 @@ class Cache:
         """
         return cache_destroy(self.get_best_node(), self._cache_id)
 
-    def get_best_node(self, type_id: int = None) -> 'Connection':
+    def get_best_node(
+        self, key: Any = None, key_hint: 'IgniteDataType' = None,
+    ) -> 'Connection':
         """
         Returns the node from the list of the nodes, opened by client, that
         most probably contains the needed key-value pair. See IEP-23.
 
-        :param type_id: type ID of the key,
-        :return: Ignite connection.
+        :param key: (optional) pythonic key,
+        :param key_hint: (optional) Ignite data type, for which the given key
+         should be converted,
+        :return: Ignite connection object.
         """
-        # TODO: actual code
-        return self._client.random_node
+        conn = self._client.random_node
+
+        if key:
+            if key_hint is None:
+                key_hint = AnyDataObject.map_python_type(key)
+
+            if self.affinity['version'] < self._client.affinity_version:
+                # update partition mapping
+                self.affinity = cache_get_node_partitions(
+                    conn,
+                    self._cache_id
+                ).value
+
+                # flatten it a bit
+                self.affinity.update(self.affinity['partition_mapping'][0])
+                del self.affinity['partition_mapping']
+
+                # calculate the number of partitions
+                parts = sum(
+                    [len(p) for _, p in self.affinity['node_mapping'].items()]
+                )
+                self.affinity['number_of_partitions'] = parts
+            else:
+                # get number of partitions
+                parts = self.affinity['number_of_partitions']
+
+            if self.affinity['is_applicable']:
+                affinity_key_id = self.affinity['cache_config'].get(
+                    key_hint.type_id,
+                    None
+                )
+                if affinity_key_id and isinstance(key, GenericObjectMeta):
+                    key, key_hint = get_field_by_id(key, affinity_key_id)
+
+            # calculate partition for key or affinity key
+            # (algorithm is taken from `RendezvousAffinityFunction.java`)
+            base_value = hashcode(key_hint.from_python(key))
+            mask = parts - 1
+
+            if parts & mask == 0:
+                part = (base_value ^ (unsigned(base_value) >> 16)) & mask
+            else:
+                part = unsigned(base_value // parts)
+
+            # search for a connection
+            try:
+                node_uuid = next(
+                    u for u, p
+                    in self.affinity['node_mapping'].items()
+                    if p == part
+                )
+                conn = conn.client._nodes[node_uuid]
+            except StopIteration:
+                pass
+
+        return conn
 
     @status_to_exception(CacheError)
     def get(self, key, key_hint: object = None) -> Any:
@@ -220,10 +282,9 @@ class Cache:
         """
         if key_hint is None:
             key_hint = AnyDataObject.map_python_type(key)
-        type_id = key_hint.type_id
 
         result = cache_get(
-            self.get_best_node(type_id),
+            self.get_best_node(key, key_hint),
             self._cache_id,
             key,
             key_hint=key_hint
@@ -248,10 +309,9 @@ class Cache:
         """
         if key_hint is None:
             key_hint = AnyDataObject.map_python_type(key)
-        type_id = key_hint.type_id
 
         return cache_put(
-            self.get_best_node(type_id),
+            self.get_best_node(key, key_hint),
             self._cache_id, key, value,
             key_hint=key_hint, value_hint=value_hint
         )
@@ -300,10 +360,9 @@ class Cache:
         """
         if key_hint is None:
             key_hint = AnyDataObject.map_python_type(key)
-        type_id = key_hint.type_id
 
         result = cache_replace(
-            self.get_best_node(type_id),
+            self.get_best_node(key, key_hint),
             self._cache_id, key, value,
             key_hint=key_hint, value_hint=value_hint
         )
@@ -335,10 +394,9 @@ class Cache:
         """
         if key_hint is None:
             key_hint = AnyDataObject.map_python_type(key)
-        type_id = key_hint.type_id
 
         return cache_clear_key(
-            self.get_best_node(type_id),
+            self.get_best_node(key, key_hint),
             self._cache_id,
             key,
             key_hint=key_hint
@@ -356,10 +414,9 @@ class Cache:
         """
         if key_hint is None:
             key_hint = AnyDataObject.map_python_type(key)
-        type_id = key_hint.type_id
 
         return cache_contains_key(
-            self.get_best_node(type_id),
+            self.get_best_node(key, key_hint),
             self._cache_id,
             key,
             key_hint=key_hint
@@ -391,10 +448,9 @@ class Cache:
         """
         if key_hint is None:
             key_hint = AnyDataObject.map_python_type(key)
-        type_id = key_hint.type_id
 
         result = cache_get_and_put(
-            self.get_best_node(type_id),
+            self.get_best_node(key, key_hint),
             self._cache_id,
             key, value,
             key_hint, value_hint
@@ -420,10 +476,9 @@ class Cache:
         """
         if key_hint is None:
             key_hint = AnyDataObject.map_python_type(key)
-        type_id = key_hint.type_id
 
         result = cache_get_and_put_if_absent(
-            self.get_best_node(type_id),
+            self.get_best_node(key, key_hint),
             self._cache_id,
             key, value,
             key_hint, value_hint
@@ -446,10 +501,9 @@ class Cache:
         """
         if key_hint is None:
             key_hint = AnyDataObject.map_python_type(key)
-        type_id = key_hint.type_id
 
         return cache_put_if_absent(
-            self.get_best_node(type_id),
+            self.get_best_node(key, key_hint),
             self._cache_id,
             key, value,
             key_hint, value_hint
@@ -467,10 +521,9 @@ class Cache:
         """
         if key_hint is None:
             key_hint = AnyDataObject.map_python_type(key)
-        type_id = key_hint.type_id
 
         result = cache_get_and_remove(
-            self.get_best_node(type_id),
+            self.get_best_node(key, key_hint),
             self._cache_id,
             key,
             key_hint
@@ -497,10 +550,9 @@ class Cache:
         """
         if key_hint is None:
             key_hint = AnyDataObject.map_python_type(key)
-        type_id = key_hint.type_id
 
         result = cache_get_and_replace(
-            self.get_best_node(type_id),
+            self.get_best_node(key, key_hint),
             self._cache_id,
             key, value,
             key_hint, value_hint
@@ -519,10 +571,9 @@ class Cache:
         """
         if key_hint is None:
             key_hint = AnyDataObject.map_python_type(key)
-        type_id = key_hint.type_id
 
         return cache_remove_key(
-            self.get_best_node(type_id), self._cache_id, key, key_hint
+            self.get_best_node(key, key_hint), self._cache_id, key, key_hint
         )
 
     @status_to_exception(CacheError)
@@ -559,10 +610,9 @@ class Cache:
         """
         if key_hint is None:
             key_hint = AnyDataObject.map_python_type(key)
-        type_id = key_hint.type_id
 
         return cache_remove_if_equals(
-            self.get_best_node(type_id),
+            self.get_best_node(key, key_hint),
             self._cache_id,
             key, sample,
             key_hint, sample_hint
@@ -590,10 +640,9 @@ class Cache:
         """
         if key_hint is None:
             key_hint = AnyDataObject.map_python_type(key)
-        type_id = key_hint.type_id
 
         result = cache_replace_if_equals(
-            self.get_best_node(type_id),
+            self.get_best_node(key, key_hint),
             self._cache_id,
             key, sample, value,
             key_hint, sample_hint, value_hint
