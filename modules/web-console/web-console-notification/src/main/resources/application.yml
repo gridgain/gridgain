@@ -15,8 +15,3 @@
 #
 
 spring.messages.basename: i18/messages,i18/notifications
-
-spring.mail:
-  host: your.smtp.com
-  username:
-  password:

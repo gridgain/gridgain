@@ -21,19 +21,35 @@ import org.apache.ignite.console.notification.model.INotificationDescriptor;
 import org.apache.ignite.console.notification.model.NotificationDescriptor;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Configuration;
 
 /**
  * Mail configuration.
  */
-@Component
-@ConfigurationProperties(prefix = "spring.mail.templates")
-public class MessageProperties {
+@ConfigurationProperties(prefix = "spring.mail")
+public class MailPropertiesEx {
+    /** Return address. */
+    private String from;
+
     /** Default template path. */
     private String dfltTemplatePath;
 
     /** Templates path. */
-    private Map<NotificationDescriptor, String> templates;
+    private Map<String, String> templates;
+
+    /**
+     * @return Username alias.
+     */
+    public String getFrom() {
+        return from;
+    }
+
+    /**
+     * @param from Username alias.
+     */
+    public void setFrom(String from) {
+        this.from = from;
+    }
 
     /**
      * @return Default template path.
@@ -53,25 +69,25 @@ public class MessageProperties {
      * @param desc Notification type.
      */
     public String getTemplatePath(INotificationDescriptor desc) {
-        return templates == null ? dfltTemplatePath : templates.getOrDefault(desc, dfltTemplatePath);
+        return templates == null ? dfltTemplatePath : templates.getOrDefault(desc.toString(), dfltTemplatePath);
     }
 
     /**
      * @return Templates path.
      */
-    public Map<NotificationDescriptor, String> getTemplates() {
+    public Map<String, String> getTemplates() {
         return templates;
     }
 
     /**
      * @param templates New templates path.
      */
-    public void setTemplates(Map<NotificationDescriptor, String> templates) {
+    public void setTemplates(Map<String, String> templates) {
         this.templates = templates;
     }
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(MessageProperties.class, this);
+        return S.toString(MailPropertiesEx.class, this);
     }
 }

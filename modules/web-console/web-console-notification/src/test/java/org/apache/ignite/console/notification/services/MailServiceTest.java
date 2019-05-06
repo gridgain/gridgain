@@ -22,8 +22,9 @@ import java.util.Locale;
 import java.util.Properties;
 import javax.mail.MessagingException;
 import javax.mail.Session;
+import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
-import org.apache.ignite.console.notification.config.MessageProperties;
+import org.apache.ignite.console.notification.config.MailPropertiesEx;
 import org.apache.ignite.console.notification.model.INotificationDescriptor;
 import org.apache.ignite.console.notification.model.IRecipient;
 import org.apache.ignite.console.notification.model.Notification;
@@ -32,13 +33,12 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.MessageSource;
 import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.test.context.junit4.SpringRunner;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.anyString;
@@ -50,7 +50,7 @@ import static org.mockito.Mockito.when;
 /**
  * Mail service test.
  */
-@RunWith(MockitoJUnitRunner.class)
+@RunWith(SpringRunner.class)
 @SpringBootTest
 public class MailServiceTest {
     /** Message source. */
@@ -62,27 +62,26 @@ public class MailServiceTest {
     private JavaMailSender mailSnd;
 
     /** Message properties. */
-    @Mock
-    MessageProperties cfg;
+    @Autowired
+    MailPropertiesEx props;
 
     /** Argument capture  */
     @Captor
     private ArgumentCaptor<MimeMessage> captor;
 
     /** Mail service. */
-    @InjectMocks
     private MailService srvc;
 
     /** */
     @Before
     public void setup() {
-        ReflectionTestUtils.setField(srvc, "from", "");
-
         when(msgSrc.getMessage(anyString(), isNull(Object[].class), anyString(), eq(Locale.US)))
             .thenAnswer(invocation -> invocation.getArguments()[2]);
 
         when(mailSnd.createMimeMessage())
             .thenReturn(new MimeMessage(Session.getDefaultInstance(new Properties())));
+
+        srvc = new MailService(msgSrc, mailSnd, props);
     }
 
     /** Test send e-mail. */
@@ -112,6 +111,8 @@ public class MailServiceTest {
         
         assertEquals("subject", msg.getSubject());
         assertEquals("text", msg.getContent());
+        assertEquals(1, msg.getFrom().length);
+        assertEquals("alias", ((InternetAddress)msg.getFrom()[0]).getPersonal());
     }
 
     /** Test send e-mail with message template. */

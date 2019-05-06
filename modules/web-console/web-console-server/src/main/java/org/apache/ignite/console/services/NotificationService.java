@@ -19,6 +19,7 @@ package org.apache.ignite.console.services;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.notification.model.Notification;
 import org.apache.ignite.console.notification.model.NotificationDescriptor;
+import org.apache.ignite.console.notification.services.IMailService;
 import org.apache.ignite.console.notification.services.MailService;
 import org.apache.ignite.console.web.socket.WebSocketManager;
 import org.slf4j.Logger;
@@ -33,15 +34,15 @@ import static org.apache.ignite.console.common.Utils.currentRequestOrigin;
 @Service
 public class NotificationService {
     /** */
-    private static final Logger log = LoggerFactory.getLogger(WebSocketManager.class);
+    private static final Logger log = LoggerFactory.getLogger(NotificationService.class);
 
     /** Mail service. */
-    private MailService mailSrvc;
+    private IMailService mailSrvc;
 
     /**
      * @param srvc Mail service.
      */
-    public NotificationService(MailService srvc) {
+    public NotificationService(IMailService srvc) {
         mailSrvc = srvc;
     }
 

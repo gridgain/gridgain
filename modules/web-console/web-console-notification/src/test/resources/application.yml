@@ -15,11 +15,7 @@
 #
 
 spring.mail:
-  host: your.smtp.com
-  username: ds
-  password: ds
-  from.alias: ds
-
-messages:
-  templates:
-    BASE: templates/mail/base.html
+  host: test.com
+  username: username@test.com
+  password: password
+  from: alias <username@test.com>

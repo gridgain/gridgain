@@ -25,12 +25,12 @@ import java.nio.file.Paths;
 import java.util.Locale;
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
-import org.apache.ignite.console.notification.config.MessageProperties;
+import org.apache.ignite.console.notification.config.MailPropertiesEx;
 import org.apache.ignite.console.notification.model.INotificationDescriptor;
 import org.apache.ignite.console.notification.model.Notification;
 import org.apache.ignite.console.notification.model.IRecipient;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.expression.EvaluationContext;
@@ -40,25 +40,11 @@ import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
-import org.springframework.stereotype.Service;
 
 /**
  * Mail sending service.
  */
-@Service
-public class MailService {
-    /** From email. */
-    @Value("${spring.mail.username:''}")
-    private String from;
-
-    /** From alias. */
-    @Value("${spring.mail.from.alias:''}")
-    private String fromAlias;
-
-    /** Send e-mail or not. */
-    @Value("${spring.mail.send.email:false}")
-    private boolean sendMail;
-
+public class MailService implements IMailService {
     /** Expression parser. */
     private static final ExpressionParser parser = new SpelExpressionParser();
 
@@ -72,34 +58,21 @@ public class MailService {
     private JavaMailSender mailSnd;
 
     /** Mail config. */
-    private MessageProperties cfg;
-
-    /**
-     * Default constructor.
-     */
-    public MailService() {
-    }
+    private MailPropertiesEx props;
 
     /**
      * @param msgSrc Message source.
      * @param mailSnd Mail sender.
-     * @param cfg Mail properties.
+     * @param props Mail properties.
      */
-    public MailService(MessageSource msgSrc, JavaMailSender mailSnd, MessageProperties cfg) {
+    public MailService(MessageSource msgSrc, JavaMailSender mailSnd, MailPropertiesEx props) {
         this.msgSrc = msgSrc;
         this.mailSnd = mailSnd;
-        this.cfg = cfg;
+        this.props = props;
     }
 
-    /**
-     * Send email.
-     *
-     * @param notification Notification.
-     */
-    public void send(Notification notification) throws IOException, MessagingException, URISyntaxException {
-        if (!sendMail)
-            return;
-
+    /** {@inheritDoc} */
+    @Override public void send(Notification notification) throws IOException, MessagingException, URISyntaxException {
         NotificationWrapper ctxObj = new NotificationWrapper(notification);
 
         EvaluationContext ctx = createContext(ctxObj);
@@ -116,7 +89,10 @@ public class MailService {
         MimeMessageHelper msgHelper = new MimeMessageHelper(msg);
 
         msgHelper.setTo(notification.getRecipient().getEmail());
-        msgHelper.setFrom(from, fromAlias);
+
+        if (!F.isEmpty(props.getFrom()))
+            msgHelper.setFrom(props.getFrom());
+
         msgHelper.setSubject(ctxObj.getSubject());
         msgHelper.setText(template == null ? ctxObj.getMessage() : processExpressions(template, ctx), true);
 
@@ -128,7 +104,7 @@ public class MailService {
      * @return Message template or empty string.
      */
     private String loadMessageTemplate(INotificationDescriptor desc) throws IOException, URISyntaxException {
-        String path = cfg.getTemplatePath(desc);
+        String path = props.getTemplatePath(desc);
 
         if (path == null)
             return null;
