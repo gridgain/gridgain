@@ -125,7 +125,6 @@ import org.apache.ignite.internal.processors.cache.ExchangeActions;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
-import org.apache.ignite.internal.processors.cache.GridCacheUtils;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
@@ -165,6 +164,7 @@ import org.apache.ignite.internal.util.future.CountDownFuture;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridInClosure3X;
+import org.apache.ignite.internal.util.lang.GridTuple3;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.F;
@@ -284,9 +284,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
     /** This number of threads will be created and used for parallel sorting. */
     private static final int PARALLEL_SORT_THREADS = Math.min(Runtime.getRuntime().availableProcessors(), 8);
-
-    /** System cache group id. */
-    private final int SYSTEM_CACHE_GROUP_ID = CU.cacheGroupId(GridCacheUtils.UTILITY_CACHE_NAME, null);
 
     /** Checkpoint thread. Needs to be volatile because it is created in exchange worker. */
     private volatile Checkpointer checkpointer;
@@ -4190,12 +4187,14 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                 fillCacheGroupState(cpRec);
 
-                cpPagesTuple = beginAllCheckpoints();
+                GridTuple3<Collection<GridMultiCollectionWrapper<FullPageId>>, Integer, Boolean> cpPagesTriple =
+                    beginAllCheckpoints();
 
-                IgniteBiTuple<Boolean, Boolean> hasPagesTuple = hasPageForWrite(cpPagesTuple.get1());
+                cpPagesTuple = new IgniteBiTuple<>(cpPagesTriple.get1(), cpPagesTriple.get2());
 
-                hasPages = hasPagesTuple.get1();
-                hasUserPages = hasPagesTuple.get2();
+                hasUserPages = cpPagesTriple.get3();
+
+                hasPages = hasUserPages || hasPageForWrite(cpPagesTuple.get1());
 
                 hasPartitionsToDestroy = !curr.destroyQueue.pendingReqs.isEmpty();
 
@@ -4489,58 +4488,51 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
          * Check that at least one collection is not empty.
          *
          * @param cpPagesCollWrapper Collection of {@link GridMultiCollectionWrapper} checkpoint pages.
-         * @return Pair of booleans. First boolean is {@code True} if checkpoint have pages for write, Second boolean is
-         * {@code True} if checkpoint have user pages for write.
          */
-        private IgniteBiTuple<Boolean, Boolean> hasPageForWrite(
-            Collection<GridMultiCollectionWrapper<FullPageId>> cpPagesCollWrapper
-        ) {
+        private boolean hasPageForWrite(Collection<GridMultiCollectionWrapper<FullPageId>> cpPagesCollWrapper) {
             boolean hasPages = false;
-            boolean hasUserPages = false;
 
-            for (GridMultiCollectionWrapper<FullPageId> c : cpPagesCollWrapper) {
+            for (Collection c : cpPagesCollWrapper)
                 if (!c.isEmpty()) {
                     hasPages = true;
 
-                    for (FullPageId pageId : c) {
-                        if (pageId.groupId() != SYSTEM_CACHE_GROUP_ID) {
-                            hasUserPages = true;
-
-                            break;
-                        }
-                    }
-
-                    if (hasUserPages)
-                        break;
+                    break;
                 }
-            }
 
-            return new IgniteBiTuple<>(hasPages, hasUserPages);
+            return hasPages;
         }
 
         /**
-         * @return tuple with collections of FullPageIds obtained from each PageMemory and overall number of dirty
-         * pages.
+         * @return triple with collections of FullPageIds obtained from each PageMemory, overall number of dirty
+         * pages, and flag defines at least one user page became a dirty since last checkpoint.
          */
-        private IgniteBiTuple<Collection<GridMultiCollectionWrapper<FullPageId>>, Integer> beginAllCheckpoints() {
+        private GridTuple3<Collection<GridMultiCollectionWrapper<FullPageId>>, Integer, Boolean> beginAllCheckpoints() {
             Collection<GridMultiCollectionWrapper<FullPageId>> res = new ArrayList(dataRegions().size());
 
             int pagesNum = 0;
+
+            boolean hasUserDirtyPages = false;
 
             for (DataRegion memPlc : dataRegions()) {
                 if (!memPlc.config().isPersistenceEnabled())
                     continue;
 
-                GridMultiCollectionWrapper<FullPageId> nextCpPagesCol = ((PageMemoryEx)memPlc.pageMemory()).beginCheckpoint();
+                IgniteBiTuple<GridMultiCollectionWrapper<FullPageId>, Boolean> nextCpPages =
+                    ((PageMemoryEx)memPlc.pageMemory()).beginCheckpointEx();
+
+                GridMultiCollectionWrapper<FullPageId> nextCpPagesCol = nextCpPages.get1();
 
                 pagesNum += nextCpPagesCol.size();
 
                 res.add(nextCpPagesCol);
+
+                if (nextCpPages.get2())
+                    hasUserDirtyPages = true;
             }
 
             currCheckpointPagesCnt = pagesNum;
 
-            return new IgniteBiTuple<>(res, pagesNum);
+            return new GridTuple3<>(res, pagesNum, hasUserDirtyPages);
         }
 
         /**
