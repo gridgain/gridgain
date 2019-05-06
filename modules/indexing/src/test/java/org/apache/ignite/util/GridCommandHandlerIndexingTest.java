@@ -24,8 +24,10 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.cache.Cache;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -118,6 +120,51 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerAbstractTe
         assertContains(log, testOut.toString(), "issues found (listed above)");
     }
 
+    /** */
+    @Test
+    public void testValidateIndexesFailedOnNotIdleCluster() throws Exception {
+        checkpointFreq = 100L;
+
+        Ignite ignite = prepareGridForTest();
+
+        AtomicBoolean stopFlag = new AtomicBoolean();
+
+        IgniteCache<Integer, Person> cache = ignite.cache(CACHE_NAME);
+
+        Thread loadThread = new Thread(() -> {
+            ThreadLocalRandom rnd = ThreadLocalRandom.current();
+
+            while (!stopFlag.get()) {
+                int id = rnd.nextInt();
+
+                cache.put(id, new Person(id, "name" + id));
+
+                if (Thread.interrupted())
+                    break;
+            }
+        });
+
+        try {
+            loadThread.start();
+
+            doSleep(checkpointFreq);
+
+            injectTestSystemOut();
+
+            assertEquals(EXIT_CODE_OK, execute("--cache", "validate_indexes", CACHE_NAME));
+        }
+        finally {
+            stopFlag.set(true);
+
+            loadThread.join();
+        }
+
+        String out = testOut.toString();
+
+        assertContains(log, out, "Index validation failed");
+        assertContains(log, out, "Checkpoint with dirty pages started! Cluster not idle!");
+    }
+
     /**
      * Tests that corrupted pages in the index partition are detected.
      */
@@ -154,10 +201,8 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerAbstractTe
 
         Ignite client = startGrid("client");
 
-        String cacheName = "persons-cache-vi";
-
         client.getOrCreateCache(new CacheConfiguration<Integer, Person>()
-                .setName(cacheName)
+                .setName(CACHE_NAME)
                 .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC)
                 .setAtomicityMode(CacheAtomicityMode.ATOMIC)
                 .setBackups(1)

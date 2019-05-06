@@ -62,6 +62,9 @@ public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
     /** Additional data region configuration. */
     protected DataRegionConfiguration dataRegionConfiguration;
 
+    /** Checkpoint frequency. */
+    protected long checkpointFreq;
+
     /** {@inheritDoc} */
     @Override protected void afterTestsStopped() throws Exception {
         super.afterTestsStopped();
@@ -89,6 +92,8 @@ public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
         sysOut = System.out;
 
         testOut = new ByteArrayOutputStream(20 * 1024 * 1024);
+
+        checkpointFreq = DataStorageConfiguration.DFLT_CHECKPOINT_FREQ;
     }
 
     /** {@inheritDoc} */
@@ -128,8 +133,8 @@ public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
         cfg.setConnectorConfiguration(new ConnectorConfiguration());
 
         DataStorageConfiguration memCfg = new DataStorageConfiguration()
-            .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
-                .setMaxSize(50L * 1024 * 1024));
+            .setCheckpointFrequency(checkpointFreq)
+            .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setMaxSize(50L * 1024 * 1024));
 
         if (dataRegionConfiguration != null)
             memCfg.setDataRegionConfigurations(dataRegionConfiguration);

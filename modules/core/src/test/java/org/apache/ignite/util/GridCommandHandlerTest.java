@@ -36,6 +36,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.regex.Matcher;
@@ -1442,6 +1443,61 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
             null,
             "--cache", "idle_verify", "--dump", ".*", "--cache-filter", "PERSISTENT"
         );
+    }
+
+    /** */
+    @Test
+    public void testIdleVerifyCheckCrcFailsOnNotIdleCluster() throws Exception {
+        checkpointFreq = 100L;
+
+        IgniteEx node = startGrids(2);
+
+        node.cluster().active(true);
+
+        IgniteCache cache = node.createCache(new CacheConfiguration<>()
+            .setAffinity(new RendezvousAffinityFunction(false, 32))
+            .setBackups(1)
+            .setName("tmp_cache")
+        );
+
+        AtomicBoolean stopFlag = new AtomicBoolean();
+
+        Thread loadThread = new Thread(() -> {
+            ThreadLocalRandom rnd = ThreadLocalRandom.current();
+
+            while (!stopFlag.get()) {
+                cache.put(rnd.nextInt(), rnd.nextInt());
+
+                if (Thread.interrupted())
+                    break;
+            }
+        });
+
+        try {
+            loadThread.start();
+
+            doSleep(checkpointFreq);
+
+            injectTestSystemOut();
+
+            assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify", "--check-crc"));
+        }
+        finally {
+            stopFlag.set(true);
+
+            loadThread.join();
+        }
+
+        String out = testOut.toString();
+
+        assertContains(log, out, "idle_verify failed");
+        assertContains(log, out, "See log for additional information.");
+
+        String logFileName = (out.split("See log for additional information. ")[1]).split(".txt")[0];
+
+        String logFile = new String(Files.readAllBytes(new File(logFileName + ".txt").toPath()));
+
+        assertContains(log, logFile, "Checkpoint with dirty pages started! Cluster not idle!");
     }
 
     /**
