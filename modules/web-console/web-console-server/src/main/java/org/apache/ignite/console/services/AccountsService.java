@@ -23,26 +23,23 @@ import org.apache.ignite.console.repositories.AccountsRepository;
 import org.apache.ignite.console.tx.TransactionManager;
 import org.apache.ignite.console.web.model.ChangeUserRequest;
 import org.apache.ignite.console.web.model.SignUpRequest;
-import org.apache.ignite.console.web.security.AccountStatusChecker;
 import org.apache.ignite.console.web.security.MissingConfirmRegistrationException;
 import org.apache.ignite.console.web.socket.WebSocketManager;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.transactions.Transaction;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.security.core.SpringSecurityMessageSource;
 import org.springframework.security.core.userdetails.UserDetailsChecker;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import static org.apache.ignite.console.notification.model.NotificationDescriptor.ACTIVATION_LINK;
-import static org.apache.ignite.console.notification.model.NotificationDescriptor.PASSWORD_CHANGED;
-import static org.apache.ignite.console.notification.model.NotificationDescriptor.PASSWORD_RESET;
-import static org.apache.ignite.console.notification.model.NotificationDescriptor.WELCOME_LETTER;
+import static org.apache.ignite.console.notification.NotificationDescriptor.ACTIVATION_LINK;
+import static org.apache.ignite.console.notification.NotificationDescriptor.PASSWORD_CHANGED;
+import static org.apache.ignite.console.notification.NotificationDescriptor.PASSWORD_RESET;
+import static org.apache.ignite.console.notification.NotificationDescriptor.WELCOME_LETTER;
 
 /**
  * Service to handle accounts.

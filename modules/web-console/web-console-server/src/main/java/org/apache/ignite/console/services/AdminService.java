@@ -31,8 +31,8 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
-import static org.apache.ignite.console.notification.model.NotificationDescriptor.ACCOUNT_DELETED;
-import static org.apache.ignite.console.notification.model.NotificationDescriptor.ADMIN_WELCOME_LETTER;
+import static org.apache.ignite.console.notification.NotificationDescriptor.ACCOUNT_DELETED;
+import static org.apache.ignite.console.notification.NotificationDescriptor.ADMIN_WELCOME_LETTER;
 
 /**
  * Service to handle administrator actions.

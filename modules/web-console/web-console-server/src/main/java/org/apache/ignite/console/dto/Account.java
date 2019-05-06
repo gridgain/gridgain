@@ -19,7 +19,7 @@ package org.apache.ignite.console.dto;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.UUID;
-import org.apache.ignite.console.notification.model.IRecipient;
+import org.apache.ignite.console.notification.IRecipient;
 import org.springframework.security.core.CredentialsContainer;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;

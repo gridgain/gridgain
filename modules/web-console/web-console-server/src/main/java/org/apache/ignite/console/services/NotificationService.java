@@ -17,11 +17,8 @@
 package org.apache.ignite.console.services;
 
 import org.apache.ignite.console.dto.Account;
-import org.apache.ignite.console.notification.model.Notification;
-import org.apache.ignite.console.notification.model.NotificationDescriptor;
-import org.apache.ignite.console.notification.services.IMailService;
-import org.apache.ignite.console.notification.services.MailService;
-import org.apache.ignite.console.web.socket.WebSocketManager;
+import org.apache.ignite.console.notification.Notification;
+import org.apache.ignite.console.notification.NotificationDescriptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
