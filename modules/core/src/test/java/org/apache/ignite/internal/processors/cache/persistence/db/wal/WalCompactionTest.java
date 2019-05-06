@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,6 +18,7 @@ package org.apache.ignite.internal.processors.cache.persistence.db.wal;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Comparator;
 import org.apache.ignite.Ignite;
@@ -38,9 +38,11 @@ import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.pagemem.wal.record.CheckpointRecord;
 import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
 import org.apache.ignite.internal.pagemem.wal.record.RolloverType;
+import org.apache.ignite.internal.processors.cache.persistence.DummyPageIO;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileDescriptor;
+import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -173,9 +175,11 @@ public class WalCompactionTest extends GridCommonAbstractTest {
             cache.put(i, val);
         }
 
+        byte[] dummyPage = dummyPage(pageSize);
+
         // Spam WAL to move all data records to compressible WAL zone.
         for (int i = 0; i < WAL_SEGMENT_SIZE / pageSize * 2; i++) {
-            ig.context().cache().context().wal().log(new PageSnapshot(new FullPageId(-1, -1), new byte[pageSize],
+            ig.context().cache().context().wal().log(new PageSnapshot(new FullPageId(-1, -1), dummyPage,
                 pageSize));
         }
 
@@ -480,9 +484,11 @@ public class WalCompactionTest extends GridCommonAbstractTest {
             cache.put(i, val);
         }
 
+        byte[] dummyPage = dummyPage(pageSize);
+
         // Spam WAL to move all data records to compressible WAL zone.
         for (int i = 0; i < WAL_SEGMENT_SIZE / pageSize * 2; i++) {
-            ig.context().cache().context().wal().log(new PageSnapshot(new FullPageId(-1, -1), new byte[pageSize],
+            ig.context().cache().context().wal().log(new PageSnapshot(new FullPageId(-1, -1), dummyPage,
                 pageSize));
         }
 
@@ -564,5 +570,20 @@ public class WalCompactionTest extends GridCommonAbstractTest {
         }
 
         assertFalse(fail);
+    }
+
+    /**
+     * @param pageSize Page size.
+     */
+    private static byte[] dummyPage(int pageSize) {
+        ByteBuffer pageBuf = ByteBuffer.allocateDirect(pageSize);
+
+        DummyPageIO.VERSIONS.latest().initNewPage(GridUnsafe.bufferAddress(pageBuf), -1, pageSize);
+
+        byte[] pageData = new byte[pageSize];
+
+        pageBuf.get(pageData);
+
+        return pageData;
     }
 }

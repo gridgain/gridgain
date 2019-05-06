@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -92,15 +91,15 @@ public class TcpDiscoveryKubernetesIpFinder extends TcpDiscoveryIpFinderAdapter 
     /** Trust manager. */
     private TrustManager[] trustAll = new TrustManager[] {
         new X509TrustManager() {
-            public void checkServerTrusted(X509Certificate[] certs, String authType) {}
-            public void checkClientTrusted(X509Certificate[] certs, String authType) {}
-            public X509Certificate[] getAcceptedIssuers() { return null; }
+            @Override public void checkServerTrusted(X509Certificate[] certs, String authType) {}
+            @Override public void checkClientTrusted(X509Certificate[] certs, String authType) {}
+            @Override public X509Certificate[] getAcceptedIssuers() { return null; }
         }
     };
 
     /** Host verifier. */
     private HostnameVerifier trustAllHosts = new HostnameVerifier() {
-        public boolean verify(String hostname, SSLSession session) {
+        @Override public boolean verify(String hostname, SSLSession session) {
             return true;
         }
     };

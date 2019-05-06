@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -35,6 +34,7 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.processors.cache.CacheOperationContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.QueryCursorImpl;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.processors.odbc.SqlStateCode;
@@ -50,7 +50,6 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.transactions.TransactionDuplicateKeyException;
-import org.h2.util.DateTimeUtils;
 import org.h2.util.LocalDateTimeUtils;
 import org.h2.value.Value;
 import org.h2.value.ValueDate;
@@ -97,8 +96,7 @@ public class DmlUtils {
                 return LocalDateTimeUtils.valueToLocalDateTime(ValueTimestamp.get((Timestamp)val));
 
             if (val instanceof Date && LocalDateTimeUtils.LOCAL_DATE == expCls) {
-                return LocalDateTimeUtils.valueToLocalDate(ValueDate.fromDateValue(
-                    DateTimeUtils.dateValueFromDate(((Date)val).getTime())));
+                return LocalDateTimeUtils.valueToLocalDate(ValueDate.fromMillis(((Date)val).getTime()));
             }
 
             if (val instanceof Time && LocalDateTimeUtils.LOCAL_TIME == expCls)
@@ -279,7 +277,8 @@ public class DmlUtils {
             throw new IgniteSQLException(resEx);
         }
 
-        return new UpdateResult(sender.updateCount(), sender.failedKeys().toArray());
+        return new UpdateResult(sender.updateCount(), sender.failedKeys().toArray(),
+            cursor instanceof QueryCursorImpl ? ((QueryCursorImpl) cursor).partitionResult() : null);
     }
 
     /**
@@ -378,7 +377,8 @@ public class DmlUtils {
             throw new IgniteSQLException(resEx);
         }
 
-        return new UpdateResult(sender.updateCount(), sender.failedKeys().toArray());
+        return new UpdateResult(sender.updateCount(), sender.failedKeys().toArray(),
+            cursor instanceof QueryCursorImpl ? ((QueryCursorImpl) cursor).partitionResult() : null);
     }
 
     /**

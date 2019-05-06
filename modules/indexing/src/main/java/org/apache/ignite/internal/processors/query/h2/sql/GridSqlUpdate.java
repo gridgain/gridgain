@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,7 +18,7 @@ package org.apache.ignite.internal.processors.query.h2.sql;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import org.h2.util.StatementBuilder;
+import org.h2.command.Parser;
 import org.h2.util.StringUtils;
 
 /** */
@@ -83,15 +82,19 @@ public class GridSqlUpdate extends GridSqlStatement {
 
     /** {@inheritDoc} */
     @Override public String getSQL() {
-        StatementBuilder buff = new StatementBuilder(explain() ? "EXPLAIN " : "");
+        StringBuilder buff = new StringBuilder(explain() ? "EXPLAIN " : "");
         buff.append("UPDATE ")
             .append(target.getSQL())
             .append("\nSET\n");
 
-        for (GridSqlColumn c : cols) {
+        for (int i = 0; i < cols.size(); i++) {
+            GridSqlColumn c = cols.get(i);
+
             GridSqlElement e = set.get(c.columnName());
-            buff.appendExceptFirst(",\n    ");
-            buff.append(c.columnName()).append(" = ").append(e != null ? e.getSQL() : "DEFAULT");
+            if (i > 0)
+                buff.append(",\n    ");
+
+            buff.append(Parser.quoteIdentifier(c.columnName(), true)).append(" = ").append(e != null ? e.getSQL() : "DEFAULT");
         }
 
         if (where != null)

@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -39,10 +38,10 @@ module.exports.factory = (mongo, spacesService, cachesService, errors) => {
      *
      * @param {RemoveResult} result - The results of remove operation.
      */
-    const convertRemoveStatus = ({result}) => ({rowsAffected: result.n});
+    const convertRemoveStatus = (result) => ({rowsAffected: result.n});
 
     const _updateCacheStore = (cacheStoreChanges) =>
-        Promise.all(_.map(cacheStoreChanges, (change) => mongo.Cache.update({_id: {$eq: change.cacheId}}, change.change, {}).exec()));
+        Promise.all(_.map(cacheStoreChanges, (change) => mongo.Cache.updateOne({_id: {$eq: change.cacheId}}, change.change, {}).exec()));
 
     /**
      * Update existing domain.
@@ -54,9 +53,9 @@ module.exports.factory = (mongo, spacesService, cachesService, errors) => {
     const update = (domain, savedDomains) => {
         const domainId = domain._id;
 
-        return mongo.DomainModel.update({_id: domainId}, domain, {upsert: true}).exec()
-            .then(() => mongo.Cache.update({_id: {$in: domain.caches}}, {$addToSet: {domains: domainId}}, {multi: true}).exec())
-            .then(() => mongo.Cache.update({_id: {$nin: domain.caches}}, {$pull: {domains: domainId}}, {multi: true}).exec())
+        return mongo.DomainModel.updateOne({_id: domainId}, domain, {upsert: true}).exec()
+            .then(() => mongo.Cache.updateMany({_id: {$in: domain.caches}}, {$addToSet: {domains: domainId}}).exec())
+            .then(() => mongo.Cache.updateMany({_id: {$nin: domain.caches}}, {$pull: {domains: domainId}}).exec())
             .then(() => {
                 savedDomains.push(domain);
 
@@ -82,7 +81,7 @@ module.exports.factory = (mongo, spacesService, cachesService, errors) => {
             .then((createdDomain) => {
                 savedDomains.push(createdDomain);
 
-                return mongo.Cache.update({_id: {$in: domain.caches}}, {$addToSet: {domains: createdDomain._id}}, {multi: true}).exec()
+                return mongo.Cache.updateMany({_id: {$in: domain.caches}}, {$addToSet: {domains: createdDomain._id}}).exec()
                     .then(() => _updateCacheStore(domain.cacheStoreChanges));
             })
             .catch((err) => {
@@ -144,8 +143,8 @@ module.exports.factory = (mongo, spacesService, cachesService, errors) => {
      * @returns {Promise.<RemoveResult>} - that resolves results of remove operation.
      */
     const removeAllBySpaces = (spaceIds) => {
-        return mongo.Cache.update({space: {$in: spaceIds}}, {domains: []}, {multi: true}).exec()
-            .then(() => mongo.DomainModel.remove({space: {$in: spaceIds}}).exec());
+        return mongo.Cache.updateMany({space: {$in: spaceIds}}, {domains: []}).exec()
+            .then(() => mongo.DomainModel.deleteMany({space: {$in: spaceIds}}).exec());
     };
 
     class DomainsService {
@@ -197,9 +196,9 @@ module.exports.factory = (mongo, spacesService, cachesService, errors) => {
 
             const query = _.pick(model, ['space', '_id']);
 
-            return mongo.DomainModel.update(query, {$set: model}, {upsert: true}).exec()
-                .then(() => mongo.Cache.update({_id: {$in: model.caches}}, {$addToSet: {domains: model._id}}, {multi: true}).exec())
-                .then(() => mongo.Cache.update({_id: {$nin: model.caches}}, {$pull: {domains: model._id}}, {multi: true}).exec())
+            return mongo.DomainModel.updateOne(query, {$set: model}, {upsert: true}).exec()
+                .then(() => mongo.Cache.updateMany({_id: {$in: model.caches}}, {$addToSet: {domains: model._id}}).exec())
+                .then(() => mongo.Cache.updateMany({_id: {$nin: model.caches}}, {$pull: {domains: model._id}}).exec())
                 .then(() => _updateCacheStore(model.cacheStoreChanges))
                 .catch((err) => {
                     if (err.code === mongo.errCodes.DUPLICATE_KEY_ERROR)
@@ -224,9 +223,9 @@ module.exports.factory = (mongo, spacesService, cachesService, errors) => {
             if (_.isEmpty(ids))
                 return Promise.resolve({rowsAffected: 0});
 
-            return mongo.Cache.update({domains: {$in: ids}}, {$pull: {domains: ids}}, {multi: true}).exec()
-                .then(() => mongo.Cluster.update({models: {$in: ids}}, {$pull: {models: ids}}, {multi: true}).exec())
-                .then(() => mongo.DomainModel.remove({_id: {$in: ids}}).exec())
+            return mongo.Cache.updateMany({domains: {$in: ids}}, {$pull: {domains: ids}}).exec()
+                .then(() => mongo.Cluster.updateMany({models: {$in: ids}}, {$pull: {models: ids}}).exec())
+                .then(() => mongo.DomainModel.deleteMany({_id: {$in: ids}}).exec())
                 .then(convertRemoveStatus);
         }
 

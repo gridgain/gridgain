@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -2072,18 +2071,15 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
         DiscoveryDataBag dataBag;
 
         if (dataPacket.joiningNodeId().equals(locNode.id()))
-            dataBag = dataPacket.unmarshalGridData(marshaller(),
-                clsLdr,
-                locNode.clientRouterNodeId() != null,
-                allNodesSupport(IgniteFeatures.DATA_PACKET_COMPRESSION),
-                log);
-        else
-            dataBag = dataPacket.unmarshalJoiningNodeData(marshaller(),
-                clsLdr,
-                locNode.clientRouterNodeId() != null,
-                allNodesSupport(IgniteFeatures.DATA_PACKET_COMPRESSION),
-                log);
+            dataBag = dataPacket.unmarshalGridData(marshaller(), clsLdr, locNode.clientRouterNodeId() != null, log);
+        else {
+            dataBag = dataPacket.unmarshalJoiningNodeData(marshaller(), clsLdr, locNode.clientRouterNodeId() != null, log);
 
+            //Marshal unzipped joining node data if it was zipped but not whole cluster supports that.
+            //It can be happened due to several nodes, including node without compression support, are trying to join cluster concurrently.
+            if (!allNodesSupport(IgniteFeatures.DATA_PACKET_COMPRESSION) && dataPacket.isJoiningDataZipped())
+                dataPacket.unzipData(log);
+        }
 
         exchange.onExchange(dataBag);
     }

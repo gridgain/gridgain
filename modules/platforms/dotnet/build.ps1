@@ -1,21 +1,18 @@
 <#
+Copyright 2019 GridGain Systems, Inc. and Contributors.
 
-  Licensed to the Apache Software Foundation (ASF) under one or more
-  contributor license agreements.  See the NOTICE file distributed with
-  this work for additional information regarding copyright ownership.
-  The ASF licenses this file to You under the Apache License, Version 2.0
-  (the "License"); you may not use this file except in compliance with
-  the License.  You may obtain a copy of the License at
+Licensed under the GridGain Community Edition License (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-       http://www.apache.org/licenses/LICENSE-2.0
+    https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
 
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
-
- #>
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+#>
 
  <#
 
@@ -35,6 +32,9 @@ Skip Java build.
 
 .PARAMETER skipDotNet
 Skip .NET build.
+
+.PARAMETER skipDotNetCore
+Skip .NET Core build.
 
 .PARAMETER skipNuGet
 Skip NuGet packaging.
@@ -79,6 +79,7 @@ NuGet version override (normally inferred from assembly version).
 param (
     [switch]$skipJava,
 	[switch]$skipDotNet,
+    [switch]$skipDotNetCore,
     [switch]$skipNuGet,
     [switch]$skipCodeAnalysis,  
     [switch]$clean,
@@ -87,7 +88,7 @@ param (
     [ValidateSet("Release", "Debug")]
     [string]$configuration="Release",
     [string]$mavenOpts="-U -P-lgpl,-scala,-examples,-test,-benchmarks -Dmaven.javadoc.skip=true",
-	[string]$jarDirs="modules\indexing\target,modules\core\target,modules\spring\target",
+	[string]$jarDirs="modules\indexing\target,modules\core\target,modules\h2\target,modules\spring\target",
     [string]$asmDirs="",
     [string]$nugetPath="",
 	[string]$version=""
@@ -145,7 +146,7 @@ $libsDir = "$PSScriptRoot\bin\libs"
 mkdir -Force $libsDir; del -Force $libsDir\*.*
 
 ls $jarDirs.Split(',') *.jar -recurse `
-   -include "ignite-core*","ignite-indexing*","ignite-shmem*","ignite-spring*","lucene*","h2*","cache-api*","commons-*","spring*" `
+   -include "ignite-core*","ignite-indexing*","ignite-shmem*","ignite-spring*","lucene*","ignite-h2*","cache-api*","commons-*","spring*" `
    -exclude "*-sources*","*-javadoc*","*-tests*","*optional*" `
    | % { copy -Force $_ $libsDir }
    
@@ -193,13 +194,34 @@ if (!$skipDotNet) {
 	$codeAnalysis = if ($skipCodeAnalysis) {"/p:RunCodeAnalysis=false"} else {""}
 	$msBuildCommand = "`"$msBuildExe`" Apache.Ignite.sln /target:$targets /p:Configuration=$configuration /p:Platform=`"$platform`" $codeAnalysis /p:UseSharedCompilation=false"
 	echo "Starting MsBuild: '$msBuildCommand'"
-	cmd /c $msBuildCommand
+	cmd /c $msBuildCommand   
 
 	# Check result
 	if ($LastExitCode -ne 0) {
 		echo ".NET build failed."
 		exit -1
 	}
+}
+
+if(!$skipDotNetCore) {
+    
+    # Build core
+    $targetSolution =  ".\Apache.Ignite\Apache.Ignite.DotNetCore.csproj"
+    if ($clean) {
+        $cleanCommand = "dotnet clean $targetSolution -c $configuration"
+        echo "Starting dotnet clean: '$cleanCommand'"
+        cmd /c $cleanCommand
+    }
+
+    $publishCommand = "dotnet publish $targetSolution -c $configuration"
+	echo "Starting dotnet publish: '$publishCommand'"
+	cmd /c $publishCommand    
+
+    # Check result
+    if ($LastExitCode -ne 0) {
+        echo ".NET Core build failed."
+        exit -1
+    }
 }
 
 if ($asmDirs) {
@@ -221,7 +243,7 @@ if ($asmDirs) {
 }
 
 # Copy binaries
-mkdir -Force bin; del -Force bin\*.*
+mkdir -Force bin; del -Force -Recurse bin\*.*
 
 ls *.csproj -Recurse | where Name -NotLike "*Examples*" `
                      | where Name -NotLike "*Tests*" `

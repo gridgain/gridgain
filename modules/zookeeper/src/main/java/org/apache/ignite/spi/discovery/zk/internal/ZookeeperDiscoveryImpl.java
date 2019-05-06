@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -192,9 +191,6 @@ public class ZookeeperDiscoveryImpl {
 
     /** */
     private final ZookeeperDiscoveryStatistics stats;
-
-    /** Last listener future. */
-    private IgniteFuture<?> lastCustomEvtLsnrFut;
 
     /**
      * @param spi Discovery SPI.
@@ -2816,8 +2812,6 @@ public class ZookeeperDiscoveryImpl {
     private boolean processBulkJoin(ZkDiscoveryEventsData evtsData, ZkDiscoveryNodeJoinEventData evtData)
         throws Exception
     {
-        waitForLastListenerFuture();
-
         boolean evtProcessed = false;
 
         for (int i = 0; i < evtData.joinedNodes.size(); i++) {
@@ -3496,8 +3490,6 @@ public class ZookeeperDiscoveryImpl {
 
         if (msg != null && msg.isMutable())
             fut.get();
-        else
-            lastCustomEvtLsnrFut = fut;
     }
 
     /**
@@ -4052,20 +4044,6 @@ public class ZookeeperDiscoveryImpl {
         }
 
         return out.toByteArray();
-    }
-
-    /**
-     * Wait for all the listeners from previous discovery message to be completed.
-     */
-    private void waitForLastListenerFuture() {
-        if (lastCustomEvtLsnrFut != null) {
-            try {
-                lastCustomEvtLsnrFut.get();
-            }
-            finally {
-                lastCustomEvtLsnrFut = null;
-            }
-        }
     }
 
     /**

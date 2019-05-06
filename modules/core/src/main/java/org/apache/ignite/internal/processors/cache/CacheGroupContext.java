@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -69,6 +68,8 @@ import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
 import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
 import static org.apache.ignite.cache.CacheRebalanceMode.NONE;
+import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_PART_MISSED;
+import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_PART_SUPPLIED;
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_PART_UNLOADED;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.AFFINITY_POOL;
 import static org.apache.ignite.internal.stat.IoStatisticsHolderIndex.HASH_PK_IDX_NAME;
@@ -495,6 +496,54 @@ public class CacheGroupContext {
                     cctx.localNode(),
                     "Cache unloading event.",
                     EVT_CACHE_REBALANCE_PART_UNLOADED,
+                    part,
+                    null,
+                    0,
+                    0));
+    }
+
+    /**
+     * Adds partition supply event.
+     *
+     * @param part Partition.
+     */
+    public void addRebalanceSupplyEvent(int part) {
+        if (!eventRecordable(EVT_CACHE_REBALANCE_PART_SUPPLIED))
+            LT.warn(log, "Added event without checking if event is recordable: " +
+                U.gridEventName(EVT_CACHE_REBALANCE_PART_SUPPLIED));
+
+        List<GridCacheContext> caches = this.caches;
+
+        for (GridCacheContext cctx : caches)
+            if (!cctx.config().isEventsDisabled())
+                cctx.gridEvents().record(new CacheRebalancingEvent(cctx.name(),
+                    cctx.localNode(),
+                    "Cache partition supplied event.",
+                    EVT_CACHE_REBALANCE_PART_SUPPLIED,
+                    part,
+                    null,
+                    0,
+                    0));
+    }
+
+    /**
+     * Adds partition supply event.
+     *
+     * @param part Partition.
+     */
+    public void addRebalanceMissEvent(int part) {
+        if (!eventRecordable(EVT_CACHE_REBALANCE_PART_MISSED))
+            LT.warn(log, "Added event without checking if event is recordable: " +
+                U.gridEventName(EVT_CACHE_REBALANCE_PART_MISSED));
+
+        List<GridCacheContext> caches = this.caches;
+
+        for (GridCacheContext cctx : caches)
+            if (!cctx.config().isEventsDisabled())
+                cctx.gridEvents().record(new CacheRebalancingEvent(cctx.name(),
+                    cctx.localNode(),
+                    "Cache partition missed event.",
+                    EVT_CACHE_REBALANCE_PART_MISSED,
                     part,
                     null,
                     0,
@@ -1023,8 +1072,8 @@ public class CacheGroupContext {
                 ccfg.getAffinity(),
                 ccfg.getNodeFilter(),
                 ccfg.getBackups(),
-                ccfg.getCacheMode() == LOCAL,
-                persistenceEnabled());
+                ccfg.getCacheMode() == LOCAL
+            );
 
         if (ccfg.getCacheMode() != LOCAL)
             top = new GridDhtPartitionTopologyImpl(ctx, this);

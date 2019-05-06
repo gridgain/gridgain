@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,6 +19,7 @@ package org.apache.ignite.internal.sql.optimizer.affinity;
 import java.util.Collection;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.F;
@@ -36,15 +36,50 @@ public class PartitionResult {
     /** Affinity function. */
     private final PartitionTableAffinityDescriptor aff;
 
+    /** Affinity topology version. Used within Jdbc thin affinity awareness. */
+    private final AffinityTopologyVersion topVer;
+
+    /** Cache name. Used within Jdbc thin affinity awareness. */
+    private final String cacheName;
+
+    /** Partitions count. Used within Jdbc thin affinity awareness. */
+    private final int partsCnt;
+
     /**
      * Constructor.
      *
      * @param tree Tree.
      * @param aff Affinity function.
      */
-    public PartitionResult(PartitionNode tree, PartitionTableAffinityDescriptor aff) {
+    public PartitionResult(PartitionNode tree, PartitionTableAffinityDescriptor aff, AffinityTopologyVersion topVer) {
         this.tree = tree;
         this.aff = aff;
+        this.topVer = topVer;
+        cacheName = tree != null ? tree.cacheName() : null;
+        partsCnt = aff != null ? aff.parts() : 0;
+    }
+
+    /**
+     * Constructor.
+     *
+     * @param tree Tree.
+     * @param aff Affinity function.
+     */
+
+    /**
+     * Constructor.
+     *
+     * @param tree Tree.
+     * @param topVer Affinity topology version.
+     * @param cacheName Cache name.
+     * @param partsCnt Partitions count.
+     */
+    public PartitionResult(PartitionNode tree, AffinityTopologyVersion topVer, String cacheName, int partsCnt) {
+        this.tree = tree;
+        aff = null;
+        this.topVer = topVer;
+        this.cacheName = cacheName;
+        this.partsCnt = partsCnt;
     }
 
     /**
@@ -98,6 +133,37 @@ public class PartitionResult {
         }
 
         return null;
+    }
+
+    /**
+     * @return Affinity topology version. This method is intended to be used within the Jdbc thin client.
+     */
+    public AffinityTopologyVersion topologyVersion() {
+        return topVer;
+    }
+
+    /**
+     * @return Cache name. This method is intended to be used within the Jdbc thin client.
+     */
+    public String cacheName() {
+        return cacheName;
+    }
+
+    /**
+     * @return Partitions count. This method is intended to be used within the Jdbc thin client.
+     */
+    public int partitionsCount() {
+        return partsCnt;
+    }
+
+    /**
+     * @return True if applicable to jdbc thin client side affinity awareness:
+     *   1. Rendezvous affinity function without map filters was used;
+     *   2. Partition result tree neither PartitoinAllNode nor PartitionNoneNode;
+     */
+    public boolean isClientAffinityAwarenessApplicable() {
+        return aff != null && aff.isClientAffinityAwarenessApplicable() &&
+            !(tree instanceof PartitionNoneNode) && !(tree instanceof PartitionAllNode);
     }
 
     /** {@inheritDoc} */

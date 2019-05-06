@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,7 +16,7 @@
 
 import ObjectID from 'bson-objectid';
 import omit from 'lodash/fp/omit';
-import {DomainModel, IndexField, ShortDomainModel, Index, Field, KeyField, ValueField} from '../types';
+import {DomainModel, IndexField, ShortDomainModel, Index, Field, KeyField, ValueField, InlineSizeType} from '../types';
 
 export default class Models {
     static $inject = ['$http'];
@@ -60,10 +59,12 @@ export default class Models {
     ];
 
     inlineSizeType = {
-        _val(queryIndex) {
+        _val(queryIndex: Index): InlineSizeType {
             return (queryIndex.inlineSizeType === null || queryIndex.inlineSizeType === void 0) ? -1 : queryIndex.inlineSizeType;
         },
-        onChange: (queryIndex) => {
+        onChange: (queryIndex?: Index): void => {
+            // Undefined queryIndex did not happen until native selects were introduced
+            if (!queryIndex) return;
             const inlineSizeType = this.inlineSizeType._val(queryIndex);
             switch (inlineSizeType) {
                 case 1:

@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -1093,8 +1092,8 @@ public class IgniteCrossCachesJoinsQueryTest extends AbstractH2CompareQueryTest 
         SqlFieldsQuery q = new SqlFieldsQuery("select max(p.salary) " +
             "from \"" + PERSON_CACHE_NAME + "\".Person p join \"" + ORG_CACHE_NAME + "\".Organization o " +
             "on p.orgId = o.id " +
-            "group by o.name " +
-            "having o.id = ?");
+            "where o.id = ?" +
+            "group by o.name ");
 
         q.setDistributedJoins(distributedJoins());
 
@@ -1132,8 +1131,8 @@ public class IgniteCrossCachesJoinsQueryTest extends AbstractH2CompareQueryTest 
         SqlFieldsQuery q = new SqlFieldsQuery("select count(a.id) " +
             "from \"" + PERSON_CACHE_NAME + "\".Person p join \"" + ACC_CACHE_NAME + "\".Account a " +
             "on p.strId = a.personStrId " +
-            "group by p.name " +
-            "having p.id = ?");
+            "where p.id = ?" +
+            "group by p.name");
 
         q.setDistributedJoins(distributedJoins());
 
@@ -1175,9 +1174,8 @@ public class IgniteCrossCachesJoinsQueryTest extends AbstractH2CompareQueryTest 
             "\"" + PERSON_CACHE_NAME + "\".Person p, " +
             "\"" + ORG_CACHE_NAME + "\".Organization o, " +
             "\"" + ACC_CACHE_NAME + "\".Account a " +
-            "where p.id = a.personId and p.orgStrId = o.strId " +
-            "group by p.id " +
-            "having o.id = ?";
+            "where p.id = a.personId and p.orgStrId = o.strId and o.id = ? " +
+            "group by p.id";
 
         for (Organization org : data.orgs)
             compareQueryRes0(cache, sql, distributedJoins(), new Object[] {org.id}, Ordering.RANDOM);

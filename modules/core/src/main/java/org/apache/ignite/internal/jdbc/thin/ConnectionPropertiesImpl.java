@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -189,6 +188,12 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
         "Whether data page scan for queries is allowed. If not specified, server defines the default behaviour.",
         null, false);
 
+    /** affinity awareness flag. */
+    private BooleanProperty affinityAwareness = new BooleanProperty(
+        "affinityAwareness",
+        "Whether jdbc thin affinity awareness is enabled.",
+        false, false);
+
     /** Properties array. */
     private final ConnectionProperty [] propsArray = {
         distributedJoins, enforceJoinOrder, collocated, replicatedOnly, autoCloseServerCursor,
@@ -198,7 +203,8 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
         sslTrustCertificateKeyStoreUrl, sslTrustCertificateKeyStorePassword, sslTrustCertificateKeyStoreType,
         sslTrustAll, sslFactory,
         user, passwd,
-        dataPageScanEnabled
+        dataPageScanEnabled,
+        affinityAwareness
     };
 
     /** {@inheritDoc} */
@@ -502,6 +508,16 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
     /** {@inheritDoc} */
     @Override public void setDataPageScanEnabled(@Nullable Boolean dataPageScanEnabled) {
         this.dataPageScanEnabled.setValue(dataPageScanEnabled);
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean isAffinityAwareness() {
+        return affinityAwareness.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setAffinityAwareness(boolean affinityAwareness) {
+        this.affinityAwareness.setValue(affinityAwareness);
     }
 
     /**

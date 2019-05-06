@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,8 +19,7 @@
 const _ = require('lodash');
 const http = require('http');
 const https = require('https');
-const MigrateMongoose = require('migrate-mongoose');
-const mongoose = require('mongoose');
+const MigrateMongoose = require('migrate-mongoose-typescript');
 
 /**
  * Event listener for HTTP server "error" event.
@@ -81,15 +79,15 @@ const init = ([settings, apiSrv, agentsHnd, browsersHnd]) => {
 /**
  * Run mongo model migration.
  *
- * @param dbConnectionUri Mongo connection url.
+ * @param connection Mongo connection.
  * @param group Migrations group.
  * @param migrationsPath Migrations path.
  * @param collectionName Name of collection where migrations write info about applied scripts.
  */
-const migrate = (dbConnectionUri, group, migrationsPath, collectionName) => {
+const migrate = (connection, group, migrationsPath, collectionName) => {
     const migrator = new MigrateMongoose({
         migrationsPath,
-        dbConnectionUri,
+        connection,
         collectionName,
         autosync: true
     });
@@ -111,21 +109,4 @@ const migrate = (dbConnectionUri, group, migrationsPath, collectionName) => {
         });
 };
 
-/**
- * Check version of used MongoDB.
- */
-const checkMongo = () => {
-    const versionValid = (mijor, minor) => mijor === 3 && minor >= 2 && minor <= 4;
-
-    const admin = new mongoose.mongo.Admin(mongoose.connection.db, null, global.Promise);
-
-    return admin.buildInfo()
-        .then((info) => {
-            const versions = info.version.split('.');
-
-            if (!versionValid(parseInt(versions[0]), parseInt(versions[1])))
-                throw Error(`Unsupported version of MongoDB ${info.version}. Supported versions: 3.2.x-3.4.x`);
-        });
-};
-
-module.exports = { checkMongo, migrate, init };
+module.exports = { migrate, init };

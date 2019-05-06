@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -340,7 +339,7 @@ public class Tracer {
      * @param generator Datastream generator.
      * @param limit Count of points that should be taken from dataset.
      * @param xIdx Index of dimension for abscissa representation.
-     * @throws IOException
+     * @throws IOException IOException.
      */
     public static void showRegressionDatasetInHtml(String name, DataStreamGenerator generator, int limit,
         int xIdx) throws IOException {
@@ -356,7 +355,7 @@ public class Tracer {
      * @param generator Datastream generator.
      * @param limit Count of points that should be taken from dataset.
      * @param xIdx Index of dimension for abscissa representation.
-     * @throws IOException
+     * @throws IOException IOException.
      */
     public static void showRegressionDatasetInHtml(DataStreamGenerator generator, int limit,
         int xIdx) throws IOException {
@@ -372,7 +371,7 @@ public class Tracer {
      * @param xIdx Index of dimension for abscissa representation.
      * @param yIdx Index of dimension for ordinate representation.
      * @param isLabeled if isLabeled == true then colors will be used for separate different classes on plane.
-     * @throws IOException
+     * @throws IOException IOException.
      */
     public static void showClassificationDatasetHtml(DataStreamGenerator generator, int limit,
         int xIdx, int yIdx, boolean isLabeled) throws IOException {
@@ -389,7 +388,7 @@ public class Tracer {
      * @param xIdx Index of dimension for abscissa representation.
      * @param yIdx Index of dimension for ordinate representation.
      * @param isLabeled if isLabeled == true then colors will be used for separate different classes on plane.
-     * @throws IOException
+     * @throws IOException IOException.
      */
     public static void showClassificationDatasetHtml(String name, DataStreamGenerator generator, int limit,
         int xIdx, int yIdx, boolean isLabeled) throws IOException {
@@ -415,7 +414,7 @@ public class Tracer {
      * @param xIndex Index of abscissa in vector.
      * @param yGetter Getter of ordinate value from vector.
      * @param colorGetter Getter of collor for showing.
-     * @throws IOException
+     * @throws IOException IOException.
      */
     private static void showVectorsHtml(String name, List<LabeledVector<Double>> values,
         int xIndex, Function<LabeledVector<Double>, Double> yGetter,

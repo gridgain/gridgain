@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -72,7 +71,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static org.apache.ignite.internal.processors.platform.PlatformAbstractTarget.FALSE;
 import static org.apache.ignite.internal.processors.platform.PlatformAbstractTarget.TRUE;
-import static org.apache.ignite.internal.processors.platform.client.ClientConnectionContext.CURRENT_VER;
+import static org.apache.ignite.internal.processors.platform.client.ClientConnectionContext.DEFAULT_VER;
 
 /**
  * GridGain platform processor.
@@ -171,6 +170,18 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
 
     /** */
     private static final int OP_NODE_VERSION = 31;
+
+    /** */
+    private static final int OP_IS_BASELINE_AUTO_ADJ_ENABLED = 32;
+
+    /** */
+    private static final int OP_SET_BASELINE_AUTO_ADJ_ENABLED = 33;
+
+    /** */
+    private static final int OP_GET_BASELINE_AUTO_ADJ_TIMEOUT = 34;
+
+    /** */
+    private static final int OP_SET_BASELINE_AUTO_ADJ_TIMEOUT = 35;
 
     /** Start latch. */
     private final CountDownLatch startLatch = new CountDownLatch(1);
@@ -446,6 +457,12 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
 
                 return 0;
             }
+
+            case OP_SET_BASELINE_AUTO_ADJ_TIMEOUT: {
+                ctx.grid().cluster().baselineAutoAdjustTimeout(val);
+
+                return 0;
+            }
         }
 
         return PlatformAbstractTarget.throwUnsupported(type);
@@ -483,7 +500,7 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
             }
 
             case OP_ADD_CACHE_CONFIGURATION:
-                CacheConfiguration cfg = PlatformConfigurationUtils.readCacheConfiguration(reader, CURRENT_VER);
+                CacheConfiguration cfg = PlatformConfigurationUtils.readCacheConfiguration(reader, DEFAULT_VER);
 
                 ctx.grid().addCacheConfiguration(cfg);
 
@@ -506,6 +523,18 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
 
             case OP_IS_WAL_ENABLED:
                 return ctx.grid().cluster().isWalEnabled(reader.readString()) ? TRUE : FALSE;
+
+            case OP_IS_BASELINE_AUTO_ADJ_ENABLED:
+                return ctx.grid().cluster().isBaselineAutoAdjustEnabled() ? TRUE : FALSE;
+
+            case OP_SET_BASELINE_AUTO_ADJ_ENABLED:
+                boolean isEnabled = reader.readBoolean();
+                ctx.grid().cluster().baselineAutoAdjustEnabled(isEnabled);
+
+                return 0;
+
+            case OP_GET_BASELINE_AUTO_ADJ_TIMEOUT:
+                return ctx.grid().cluster().baselineAutoAdjustTimeout();
         }
 
         return PlatformAbstractTarget.throwUnsupported(type);
@@ -552,7 +581,7 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
             }
 
             case OP_CREATE_CACHE_FROM_CONFIG: {
-                CacheConfiguration cfg = PlatformConfigurationUtils.readCacheConfiguration(reader, CURRENT_VER);
+                CacheConfiguration cfg = PlatformConfigurationUtils.readCacheConfiguration(reader, DEFAULT_VER);
 
                 IgniteCacheProxy cache = reader.readBoolean()
                         ? (IgniteCacheProxy)ctx.grid().createCache(cfg, PlatformConfigurationUtils.readNearConfiguration(reader))
@@ -562,7 +591,7 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
             }
 
             case OP_GET_OR_CREATE_CACHE_FROM_CONFIG: {
-                CacheConfiguration cfg = PlatformConfigurationUtils.readCacheConfiguration(reader, CURRENT_VER);
+                CacheConfiguration cfg = PlatformConfigurationUtils.readCacheConfiguration(reader, DEFAULT_VER);
 
                 IgniteCacheProxy cache = reader.readBoolean()
                         ? (IgniteCacheProxy)ctx.grid().getOrCreateCache(cfg,
@@ -677,7 +706,7 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
     @Override public void processOutStream(int type, BinaryRawWriterEx writer) throws IgniteCheckedException {
         switch (type) {
             case OP_GET_IGNITE_CONFIGURATION: {
-                PlatformConfigurationUtils.writeIgniteConfiguration(writer, ignite().configuration(), CURRENT_VER);
+                PlatformConfigurationUtils.writeIgniteConfiguration(writer, ignite().configuration(), DEFAULT_VER);
 
                 return;
             }

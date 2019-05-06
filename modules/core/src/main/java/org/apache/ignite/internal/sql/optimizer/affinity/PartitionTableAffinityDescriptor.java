@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,15 +19,10 @@ package org.apache.ignite.internal.sql.optimizer.affinity;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
-import java.io.Serializable;
-
 /**
  * Affinity function descriptor. Used to compare affinity functions of two tables.
  */
-public class PartitionTableAffinityDescriptor implements Serializable {
-    /** */
-    private static final long serialVersionUID = 0L;
-
+public class PartitionTableAffinityDescriptor {
     /** Affinity function type. */
     private final PartitionAffinityFunctionType affFunc;
 
@@ -81,13 +75,28 @@ public class PartitionTableAffinityDescriptor implements Serializable {
             if (!hasNodeFilter) {
                 return
                     other.affFunc == PartitionAffinityFunctionType.RENDEZVOUS &&
-                    !other.hasNodeFilter &&
-                    other.parts == parts &&
-                    F.eq(other.dataRegion, dataRegion);
+                        !other.hasNodeFilter &&
+                        other.parts == parts &&
+                        F.eq(other.dataRegion, dataRegion);
             }
         }
 
         return false;
+    }
+
+    /**
+     *
+     * @return True if applicable to jdbc thin client side affinity awareness.
+     */
+    public boolean isClientAffinityAwarenessApplicable() {
+        return affFunc == PartitionAffinityFunctionType.RENDEZVOUS && !hasNodeFilter;
+    }
+
+    /**
+     * @return Number of partitions.
+     */
+    public int parts() {
+        return parts;
     }
 
     /** {@inheritDoc} */

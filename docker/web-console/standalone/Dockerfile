@@ -1,12 +1,11 @@
 #
-# Licensed to the Apache Software Foundation (ASF) under one or more
-# contributor license agreements.  See the NOTICE file distributed with
-# this work for additional information regarding copyright ownership.
-# The ASF licenses this file to You under the Apache License, Version 2.0
-# (the "License"); you may not use this file except in compliance with
-# the License.  You may obtain a copy of the License at
+# Copyright 2019 GridGain Systems, Inc. and Contributors.
 #
-#      http://www.apache.org/licenses/LICENSE-2.0
+# Licensed under the GridGain Community Edition License (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,11 +14,10 @@
 # limitations under the License.
 #
 
-
 #~~~~~~~~~~~~~~~~~~#
 #  Frontend build  #
 #~~~~~~~~~~~~~~~~~~#
-FROM node:8-slim as frontend-build
+FROM node:10-stretch as frontend-build
 
 ENV NPM_CONFIG_LOGLEVEL error
 
@@ -35,7 +33,7 @@ RUN cd frontend && \
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #  Web Console Standalone assemble  #
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-FROM node:8-slim
+FROM node:10-stretch
 
 ENV NPM_CONFIG_LOGLEVEL error
 
@@ -43,8 +41,8 @@ ENV NPM_CONFIG_LOGLEVEL error
 RUN npm install -g pm2
 
 # Update software sources and install missing applications
-RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 0C49F3730359A14518585931BC711F9BA15703C6 && \
-    echo "deb http://repo.mongodb.org/apt/debian jessie/mongodb-org/3.4 main" > /etc/apt/sources.list.d/mongodb-org-3.4.list && \
+RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 9DA31620334BD75D9DCB49F368818C72E52529D4 \
+    && echo "deb http://repo.mongodb.org/apt/debian stretch/mongodb-org/4.0 main" | tee /etc/apt/sources.list.d/mongodb-org-4.0.list
     apt update && \
     apt install -y --no-install-recommends \
         nginx-light \

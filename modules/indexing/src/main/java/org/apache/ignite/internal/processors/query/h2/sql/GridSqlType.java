@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -21,6 +20,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.h2.expression.Expression;
 import org.h2.table.Column;
+import org.h2.value.TypeInfo;
 import org.h2.value.Value;
 import org.h2.value.ValueBoolean;
 import org.h2.value.ValueDouble;
@@ -93,10 +93,13 @@ public final class GridSqlType {
      * @return Type.
      */
     public static GridSqlType fromColumn(Column c) {
-        if (c.getName() != null)
-            c = new Column(null, c.getType(), c.getPrecision(), c.getScale(), c.getDisplaySize());
+        TypeInfo type = c.getType();
 
-        return new GridSqlType(c.getType(), c.getScale(), c.getPrecision(), c.getDisplaySize(), c.getCreateSQL());
+        if (c.getName() != null)
+            c = new Column(null, type);
+
+        return new GridSqlType(type.getValueType(), type.getScale(),
+            type.getPrecision(), type.getDisplaySize(), c.getCreateSQL());
     }
 
     /**
@@ -104,10 +107,10 @@ public final class GridSqlType {
      * @return Type.
      */
     public static GridSqlType fromExpression(Expression e) {
-        if (e.getType() == Value.UNKNOWN)
+        if (e.getType().getValueType() == Value.UNKNOWN)
             return UNKNOWN;
 
-        return fromColumn(new Column(null, e.getType(), e.getPrecision(), e.getScale(), e.getDisplaySize()));
+        return fromColumn(new Column(null, e.getType()));
     }
 
     /**

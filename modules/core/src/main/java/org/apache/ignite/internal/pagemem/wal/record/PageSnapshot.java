@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -29,16 +28,16 @@ import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 /**
  *
  */
-public class PageSnapshot extends WALRecord implements WalRecordCacheGroupAware{
+public class PageSnapshot extends WALRecord implements WalRecordCacheGroupAware {
     /** */
     @GridToStringExclude
-    private byte[] pageData;
+    private ByteBuffer pageData;
 
     /** */
     private FullPageId fullPageId;
 
     /**
-     * PageSIze without encryption overhead.
+     * PageSize without encryption overhead.
      */
     private int realPageSize;
 
@@ -49,13 +48,16 @@ public class PageSnapshot extends WALRecord implements WalRecordCacheGroupAware{
      */
     public PageSnapshot(FullPageId fullId, byte[] arr, int realPageSize) {
         this.fullPageId = fullId;
-        this.pageData = arr;
+        this.pageData = ByteBuffer.wrap(arr).order(ByteOrder.nativeOrder());
         this.realPageSize = realPageSize;
     }
 
     /**
+     * This constructor doesn't actually create a page snapshot (copy), it creates a wrapper over page memory region.
+     * A created record should not be used after WAL manager writes it to log, since page content can be modified.
+     *
      * @param fullPageId Full page ID.
-     * @param ptr Pointer to copy from.
+     * @param ptr Pointer to wrap.
      * @param pageSize Page size.
      * @param realPageSize Page size without encryption overhead.
      */
@@ -63,9 +65,7 @@ public class PageSnapshot extends WALRecord implements WalRecordCacheGroupAware{
         this.fullPageId = fullPageId;
         this.realPageSize = realPageSize;
 
-        pageData = new byte[pageSize];
-
-        GridUnsafe.copyMemory(null, ptr, pageData, GridUnsafe.BYTE_ARR_OFF, pageSize);
+        pageData = GridUnsafe.wrapPointer(ptr, pageSize);
     }
 
     /** {@inheritDoc} */
@@ -77,6 +77,31 @@ public class PageSnapshot extends WALRecord implements WalRecordCacheGroupAware{
      * @return Snapshot of page data.
      */
     public byte[] pageData() {
+        if (!pageData.isDirect())
+            return pageData.array();
+
+        // In case of direct buffer copy buffer content to new array.
+        byte[] arr = new byte[pageData.limit()];
+
+        GridUnsafe.copyMemory(null, GridUnsafe.bufferAddress(pageData), arr, GridUnsafe.BYTE_ARR_OFF,
+            pageData.limit());
+
+        return arr;
+    }
+
+    /**
+     * @return Size of page data.
+     */
+    public int pageDataSize() {
+        return pageData.limit();
+    }
+
+    /**
+     * @return Page data byte buffer.
+     */
+    public ByteBuffer pageDataBuffer() {
+        pageData.rewind();
+
         return pageData;
     }
 
@@ -88,10 +113,26 @@ public class PageSnapshot extends WALRecord implements WalRecordCacheGroupAware{
     }
 
     /** {@inheritDoc} */
+    @Override public int groupId() {
+        return fullPageId.groupId();
+    }
+
+    /**
+     * @return PageSize without encryption overhead.
+     */
+    public int realPageSize() {
+        return realPageSize;
+    }
+
+    /** {@inheritDoc} */
     @Override public String toString() {
-        ByteBuffer buf = ByteBuffer.allocateDirect(pageData.length);
-        buf.order(ByteOrder.nativeOrder());
-        buf.put(pageData);
+        ByteBuffer buf = pageData;
+
+        if (!pageData.isDirect()) {
+            buf = ByteBuffer.allocateDirect(pageDataSize());
+            buf.order(ByteOrder.nativeOrder());
+            buf.put(pageData);
+        }
 
         long addr = GridUnsafe.bufferAddress(buf);
 
@@ -102,16 +143,12 @@ public class PageSnapshot extends WALRecord implements WalRecordCacheGroupAware{
                 + super.toString() + "]]";
         }
         catch (IgniteCheckedException ignored) {
-            return "Error during call'toString' of PageSnapshot [fullPageId=" + fullPageId() +
-                ", pageData = " + Arrays.toString(pageData) + ", super=" + super.toString() + "]";
+            return "Error during call 'toString' of PageSnapshot [fullPageId=" + fullPageId() +
+                ", pageData = " + Arrays.toString(pageData()) + ", super=" + super.toString() + "]";
         }
         finally {
-            GridUnsafe.cleanDirectBuffer(buf);
+            if (!pageData.isDirect())
+                GridUnsafe.cleanDirectBuffer(buf);
         }
-    }
-
-    /** {@inheritDoc} */
-    @Override public int groupId() {
-        return fullPageId.groupId();
     }
 }

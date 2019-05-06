@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -52,15 +51,15 @@ function deduplicateAccounts(model) {
                 .then((spaces) => _.map(spaces, '_id'))
                 .then((spaceIds) =>
                     Promise.all([
-                        model('Cluster').remove({space: {$in: spaceIds}}).exec(),
-                        model('Cache').remove({space: {$in: spaceIds}}).exec(),
-                        model('DomainModel').remove({space: {$in: spaceIds}}).exec(),
-                        model('Igfs').remove({space: {$in: spaceIds}}).exec(),
-                        model('Notebook').remove({space: {$in: spaceIds}}).exec(),
-                        model('Activities').remove({owner: accountIds}).exec(),
-                        model('Notifications').remove({owner: accountIds}).exec(),
-                        spaceModel.remove({owner: accountIds}).exec(),
-                        accountsModel.remove({_id: accountIds}).exec()
+                        model('Cluster').deleteMany({space: {$in: spaceIds}}).exec(),
+                        model('Cache').deleteMany({space: {$in: spaceIds}}).exec(),
+                        model('DomainModel').deleteMany({space: {$in: spaceIds}}).exec(),
+                        model('Igfs').deleteMany({space: {$in: spaceIds}}).exec(),
+                        model('Notebook').deleteMany({space: {$in: spaceIds}}).exec(),
+                        model('Activities').deleteMany({owner: accountIds}).exec(),
+                        model('Notifications').deleteMany({owner: accountIds}).exec(),
+                        spaceModel.deleteMany({owner: accountIds}).exec(),
+                        accountsModel.deleteMany({_id: accountIds}).exec()
                     ])
                 )
                 .then(() => {

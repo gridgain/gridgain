@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -439,8 +438,10 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
 
         int minorVer = 1;
 
-        if (initiallyActive && persistenceEnabled()) {
+        if (initiallyActive) {
             ignite(0).cluster().active(true);
+
+            awaitPartitionMapExchange();
 
             minorVer++;
         }
@@ -1389,6 +1390,11 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
      * @param exp {@code True} if expect that cache is started on node.
      */
     void checkCache(Ignite node, String cacheName, boolean exp) throws IgniteCheckedException {
+        GridTestUtils.waitForCondition(
+            () -> ((IgniteEx)node).context().cache().context().exchange().lastTopologyFuture() != null,
+            1000
+        );
+
         ((IgniteEx)node).context().cache().context().exchange().lastTopologyFuture().get();
 
         ((IgniteEx)node).context().state().publicApiActiveState(true);
@@ -1406,7 +1412,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
      */
     final void checkNoCaches(int nodes) {
         for (int i = 0; i < nodes; i++) {
-            grid(i).context().state().publicApiActiveState(true);
+            assertFalse(grid(i).context().state().publicApiActiveState(true));
 
             GridCacheProcessor cache = ((IgniteEx)ignite(i)).context().cache();
 

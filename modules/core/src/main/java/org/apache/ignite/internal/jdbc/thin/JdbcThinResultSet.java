@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -131,6 +130,9 @@ public class JdbcThinResultSet implements ResultSet {
     /** Jdbc metadata. Cache the JDBC object on the first access */
     private JdbcThinResultSetMetadata jdbcMeta;
 
+    /** Sticky ignite endpoint. */
+    private JdbcThinTcpIo stickyIO;
+
     /**
      * Constructs static result set.
      *
@@ -170,7 +172,8 @@ public class JdbcThinResultSet implements ResultSet {
      * @param closeStmt Close statement on the result set close.
      */
     JdbcThinResultSet(JdbcThinStatement stmt, long cursorId, int fetchSize, boolean finished,
-        List<List<Object>> rows, boolean isQuery, boolean autoClose, long updCnt, boolean closeStmt) {
+        List<List<Object>> rows, boolean isQuery, boolean autoClose, long updCnt, boolean closeStmt,
+        JdbcThinTcpIo stickyIO) {
         assert stmt != null;
         assert fetchSize > 0;
 
@@ -190,6 +193,8 @@ public class JdbcThinResultSet implements ResultSet {
         }
         else
             this.updCnt = updCnt;
+
+        this.stickyIO = stickyIO;
     }
 
     /** {@inheritDoc} */
@@ -197,7 +202,8 @@ public class JdbcThinResultSet implements ResultSet {
         ensureAlive();
 
         if ((rowsIter == null || !rowsIter.hasNext()) && !finished) {
-            JdbcQueryFetchResult res = stmt.conn.sendRequest(new JdbcQueryFetchRequest(cursorId, fetchSize), stmt);
+            JdbcQueryFetchResult res = stmt.conn.sendRequest(new JdbcQueryFetchRequest(cursorId, fetchSize), stmt,
+                stickyIO).response();
 
             rows = res.items();
             finished = res.last();
@@ -241,7 +247,7 @@ public class JdbcThinResultSet implements ResultSet {
 
         try {
             if (!(stmt != null && stmt.isCancelled()) && (!finished || (isQuery && !autoClose)))
-                stmt.conn.sendRequest(new JdbcQueryCloseRequest(cursorId), stmt);
+                stmt.conn.sendRequest(new JdbcQueryCloseRequest(cursorId), stmt, stickyIO);
         }
         finally {
             closed = true;
@@ -1903,7 +1909,8 @@ public class JdbcThinResultSet implements ResultSet {
             throw new SQLException("Server cursor is already closed.", SqlStateCode.INVALID_CURSOR_STATE);
 
         if (!metaInit) {
-            JdbcQueryMetadataResult res = stmt.conn.sendRequest(new JdbcQueryMetadataRequest(cursorId), stmt);
+            JdbcQueryMetadataResult res = stmt.conn.sendRequest(new JdbcQueryMetadataRequest(cursorId), stmt, stickyIO).
+                response();
 
             meta = res.meta();
 

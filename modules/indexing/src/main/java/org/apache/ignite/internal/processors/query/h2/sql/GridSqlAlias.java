@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -69,7 +68,7 @@ public class GridSqlAlias extends GridSqlElement {
         return (X)el;
     }
 
-    /** {@inheritDoc} */
+    /** {@inheritDoc}  */
     @Override public String getSQL() {
         SB b = new SB();
 
@@ -77,13 +76,13 @@ public class GridSqlAlias extends GridSqlElement {
 
         boolean tbl = child instanceof GridSqlTable;
 
-        b.a(tbl ? ((GridSqlTable)child).getBeforeAliasSql() : child.getSQL());
+        b.a(tbl ? ((GridSqlTable)child).getBeforeAliasSql(true) : child.getSQL());
 
         b.a(useAs ? " AS " : " ");
-        b.a(Parser.quoteIdentifier(alias));
+        Parser.quoteIdentifier(b.impl(), alias, true);
 
         if (tbl)
-            b.a(((GridSqlTable)child).getAfterAliasSQL());
+            b.a(((GridSqlTable)child).getAfterAliasSQL(true));
 
         return b.toString();
     }

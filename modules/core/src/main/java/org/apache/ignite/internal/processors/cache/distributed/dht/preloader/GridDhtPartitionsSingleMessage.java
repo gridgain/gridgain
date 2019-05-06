@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -95,10 +94,6 @@ public class GridDhtPartitionsSingleMessage extends GridDhtPartitionsAbstractMes
     private boolean client;
 
     /** */
-    @GridDirectTransient
-    private transient boolean compress;
-
-    /** */
     @GridDirectCollection(Integer.class)
     private Collection<Integer> grpsAffRequest;
 
@@ -127,11 +122,13 @@ public class GridDhtPartitionsSingleMessage extends GridDhtPartitionsAbstractMes
     public GridDhtPartitionsSingleMessage(GridDhtPartitionExchangeId exchId,
         boolean client,
         @Nullable GridCacheVersion lastVer,
-        boolean compress) {
+        boolean compress
+    ) {
         super(exchId, lastVer);
 
+        compressed(compress);
+
         this.client = client;
-        this.compress = compress;
     }
 
     /**
@@ -186,7 +183,7 @@ public class GridDhtPartitionsSingleMessage extends GridDhtPartitionsAbstractMes
         parts.put(cacheId, locMap);
 
         if (dupDataCache != null) {
-            assert compress;
+            assert compressed();
             assert F.isEmpty(locMap.map());
             assert parts.containsKey(dupDataCache);
 
@@ -365,9 +362,7 @@ public class GridDhtPartitionsSingleMessage extends GridDhtPartitionsAbstractMes
             if (err != null && errBytes == null)
                 errBytes0 = U.marshal(ctx, err);
 
-            if (compress) {
-                assert !compressed();
-
+            if (compressed()) {
                 try {
                     byte[] partsBytesZip = U.zip(partsBytes0);
                     byte[] partCntrsBytesZip = U.zip(partCntrsBytes0);
@@ -380,8 +375,6 @@ public class GridDhtPartitionsSingleMessage extends GridDhtPartitionsAbstractMes
                     partHistCntrsBytes0 = partHistCntrsBytesZip;
                     partsSizesBytes0 = partsSizesBytesZip;
                     errBytes0 = exBytesZip;
-
-                    compressed(true);
                 }
                 catch (IgniteCheckedException e) {
                     U.error(ctx.logger(getClass()), "Failed to compress partitions data: " + e, e);

@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -27,14 +26,14 @@ namespace ignite_test
 {
     namespace core
     {
-        namespace binary 
+        namespace binary
         {
             class BinaryDummy
             {
                 // No-op.
             };
 
-            class BinaryInner 
+            class BinaryInner
             {
             public:
                 BinaryInner();
@@ -76,13 +75,13 @@ namespace ignite_test
                 BinaryFields(int32_t val1, int32_t val2, int32_t rawVal1, int32_t rawVal2) :
                     val1(val1), val2(val2), rawVal1(rawVal1), rawVal2(rawVal2)
                 {
-                    // No-op.   
+                    // No-op.
                 }
 
                 friend bool operator==(const BinaryFields& one, const BinaryFields& two)
                 {
-                    return one.val1 == two.val1 && one.val2 == two.val2 && 
-                        one.rawVal1 == two.rawVal1 &&one.rawVal2 == two.rawVal2;
+                    return one.val1 == two.val1 && one.val2 == two.val2 &&
+                        one.rawVal1 == two.rawVal1 && one.rawVal2 == two.rawVal2;
                 }
             };
 
@@ -141,31 +140,11 @@ namespace ignite
         namespace gt = ignite_test::core::binary;
 
         template<>
-        struct BinaryType<gt::BinaryDummy>
+        struct BinaryType<gt::BinaryDummy> : BinaryTypeDefaultAll<gt::BinaryDummy>
         {
-            static int32_t GetTypeId()
-            {
-                return GetBinaryStringHashCode("BinaryDummy");
-            }
-
             static void GetTypeName(std::string& dst)
             {
                 dst = "BinaryDummy";
-            }
-
-            static int32_t GetFieldId(const char* name)
-            {
-                return GetBinaryStringHashCode(name);
-            }
-
-            static bool IsNull(const gt::BinaryInner& obj)
-            {
-                return false;
-            }
-
-            static void GetNull(gt::BinaryDummy& dst)
-            {
-                dst = gt::BinaryDummy();
             }
 
             static void Write(BinaryWriter& writer, const gt::BinaryDummy& obj)
@@ -173,28 +152,18 @@ namespace ignite
                 // No-op.
             }
 
-            static void Read(BinaryReader& reader, gt::BinaryDummy& dst)
+            static void Read(BinaryReader&, gt::BinaryDummy& dst)
             {
                 dst = gt::BinaryDummy();
             }
         };
 
-        template<> 
-        struct BinaryType<gt::BinaryInner>
+        template<>
+        struct BinaryType<gt::BinaryInner> : BinaryTypeDefaultHashing<gt::BinaryInner>
         {
-            static int32_t GetTypeId()
-            { 
-                return GetBinaryStringHashCode("BinaryInner"); 
-            }
-
             static void GetTypeName(std::string& dst)
             {
                 dst = "BinaryInner";
-            }
-
-            static int32_t GetFieldId(const char* name)
-            { 
-                return GetBinaryStringHashCode(name); 
             }
 
             static bool IsNull(const gt::BinaryInner& obj)
@@ -221,21 +190,11 @@ namespace ignite
         };
 
         template<>
-        struct BinaryType<gt::BinaryOuter>
+        struct BinaryType<gt::BinaryOuter> : BinaryTypeDefaultHashing<gt::BinaryOuter>
         {
-            static int32_t GetTypeId()
-            {
-                return GetBinaryStringHashCode("BinaryOuter");
-            }
-
             static void GetTypeName(std::string& dst)
             {
                 dst = "BinaryOuter";
-            }
-
-            static int32_t GetFieldId(const char* name)
-            {
-                return GetBinaryStringHashCode(name);
             }
 
             static bool IsNull(const gt::BinaryOuter& obj)
@@ -251,7 +210,7 @@ namespace ignite
             static void Write(BinaryWriter& writer, const gt::BinaryOuter& obj)
             {
                 writer.WriteObject("inner", obj.GetInner());
-                writer.WriteInt32("val", obj.GetValue());                
+                writer.WriteInt32("val", obj.GetValue());
             }
 
             static void Read(BinaryReader& reader, gt::BinaryOuter& dst)
@@ -264,21 +223,11 @@ namespace ignite
         };
 
         template<>
-        struct BinaryType<gt::BinaryFields>
+        struct BinaryType<gt::BinaryFields> : BinaryTypeDefaultHashing<gt::BinaryFields>
         {
-            static int32_t GetTypeId()
-            {
-                return GetBinaryStringHashCode("BinaryFields");
-            }
-
             static void GetTypeName(std::string& dst)
             {
                 dst = "BinaryFields";
-            }
-
-            static int32_t GetFieldId(const char* name)
-            {
-                return GetBinaryStringHashCode(name);
             }
 
             static bool IsNull(const gt::BinaryFields& obj)
@@ -317,21 +266,11 @@ namespace ignite
         };
 
         template<>
-        struct BinaryType<gt::PureRaw>
+        struct BinaryType<gt::PureRaw> : BinaryTypeDefaultHashing<gt::PureRaw>
         {
-            static int32_t GetTypeId()
-            {
-                return GetBinaryStringHashCode("PureRaw");
-            }
-
             static void GetTypeName(std::string& dst)
             {
                 dst = "PureRaw";
-            }
-
-            static int32_t GetFieldId(const char* name)
-            {
-                return GetBinaryStringHashCode(name);
             }
 
             static bool IsNull(const gt::PureRaw& obj)

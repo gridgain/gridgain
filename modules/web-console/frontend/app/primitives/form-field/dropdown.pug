@@ -1,12 +1,11 @@
 //-
-    Licensed to the Apache Software Foundation (ASF) under one or more
-    contributor license agreements.  See the NOTICE file distributed with
-    this work for additional information regarding copyright ownership.
-    The ASF licenses this file to You under the Apache License, Version 2.0
-    (the "License"); you may not use this file except in compliance with
-    the License.  You may obtain a copy of the License at
+    Copyright 2019 GridGain Systems, Inc. and Contributors.
 
-         http://www.apache.org/licenses/LICENSE-2.0
+    Licensed under the GridGain Community Edition License (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
 
     Unless required by applicable law or agreed to in writing, software
     distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,32 +13,56 @@
     See the License for the specific language governing permissions and
     limitations under the License.
 
-mixin form-field__dropdown({ label, model, name, disabled, required, multiple, placeholder, placeholderEmpty, options, optionLabel = 'label', tip, tipOpts, change })
+mixin form-field__dropdown({ label, model, name, disabled, required, multiple, placeholder, placeholderEmpty, options, optionLabel = 'label', tip, tipOpts, inline = false, change })
     -var errLbl = label ? label.substring(0, label.length - 1) : 'Field';
 
     mixin __form-field__input()
-        button.select-toggle(
-            type='button'
-            id=`{{ ${name} }}Input`
-            name=`{{ ${name} }}`
+        if !inline && !multiple
 
-            data-placeholder=placeholderEmpty ? `{{ ${options}.length > 0 ? '${placeholder}' : '${placeholderEmpty}' }}` : placeholder
-            
-            ng-model=model
-            ng-disabled=disabled && `${disabled}`
-            ng-required=required && `${required}`
-            ng-ref='$input'
-            ng-ref-read='ngModel'
+            select(
+                id=`{{ ${name} }}Input`
+                name=`{{ ${name} }}`
 
-            ng-change=change && `${change}`
+                ng-model=model
+                ng-disabled=disabled && `${disabled}`
+                ng-required=required && `${required}`
+                ng-ref='$input'
+                ng-ref-read='ngModel'
+                ng-change=change && `${change}`
 
-            bs-select
-            bs-options=`item.value as item.${optionLabel} for item in ${options}`
+                multiple=multiple ? '' : false
+            )&attributes(attributes.attributes)
+                if !multiple && placeholder
+                    option(value='' hidden) #{placeholderEmpty ? `{{ ${options}.length > 0 ? '${placeholder}' : '${placeholderEmpty}' }}` : placeholder}
+                option(
+                    ng-repeat=`item in ${options} track by item.value`
+                    ng-value='item.value'
+                    ng-bind=`item.${optionLabel}`
+                )
 
-            data-multiple=multiple ? '1' : false
+        else
 
-            tabindex='0'
-        )&attributes(attributes.attributes)
+            button.select-toggle(
+                type='button'
+                id=`{{ ${name} }}Input`
+                name=`{{ ${name} }}`
+
+                data-placeholder=placeholderEmpty ? `{{ ${options}.length > 0 ? '${placeholder}' : '${placeholderEmpty}' }}` : placeholder
+
+                ng-model=model
+                ng-disabled=disabled && `${disabled}`
+                ng-required=required && `${required}`
+                ng-ref='$input'
+                ng-ref-read='ngModel'
+                ng-change=change && `${change}`
+
+                bs-select
+                bs-options=`item.value as item.${optionLabel} for item in ${options}`
+
+                data-multiple=multiple ? '1' : false
+
+                tabindex='0'
+            )&attributes(attributes.attributes)
 
     .form-field.form-field__dropdown.ignite-form-field(id=`{{ ${name} }}Field`)
         +form-field__label({ label, name, required, disabled })

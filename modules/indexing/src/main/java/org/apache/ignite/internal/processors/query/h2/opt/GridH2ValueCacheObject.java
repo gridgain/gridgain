@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -29,6 +28,7 @@ import org.h2.util.Bits;
 import org.h2.util.JdbcUtils;
 import org.h2.util.Utils;
 import org.h2.value.CompareMode;
+import org.h2.value.TypeInfo;
 import org.h2.value.Value;
 import org.h2.value.ValueJavaObject;
 
@@ -80,18 +80,18 @@ public class GridH2ValueCacheObject extends Value {
     }
 
     /** {@inheritDoc} */
-    @Override public int getType() {
+    @Override public StringBuilder getSQL(StringBuilder sb) {
+        throw new UnsupportedOperationException();
+    }
+
+    /** {@inheritDoc} */
+    @Override public TypeInfo getType() {
+        return TypeInfo.TYPE_JAVA_OBJECT;
+    }
+
+    /** {@inheritDoc} */
+    @Override public int getValueType() {
         return Value.JAVA_OBJECT;
-    }
-
-    /** {@inheritDoc} */
-    @Override public long getPrecision() {
-        return 0;
-    }
-
-    /** {@inheritDoc} */
-    @Override public int getDisplaySize() {
-        return 64;
     }
 
     /** {@inheritDoc} */
@@ -140,7 +140,7 @@ public class GridH2ValueCacheObject extends Value {
 
     /** {@inheritDoc} */
     @SuppressWarnings("unchecked")
-    @Override protected int compareSecure(Value v, CompareMode mode) {
+    @Override public int compareTypeSafe(Value v, CompareMode mode) {
         Object o1 = getObject();
         Object o2 = v.getObject();
 
@@ -188,7 +188,7 @@ public class GridH2ValueCacheObject extends Value {
 
         Value otherVal = (Value)other;
 
-        return otherVal.getType() == Value.JAVA_OBJECT
+        return otherVal.getType().getValueType() == Value.JAVA_OBJECT
             && getObject().equals(otherVal.getObject());
     }
 

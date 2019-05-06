@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -47,13 +46,13 @@ import org.apache.ignite.internal.managers.discovery.GridDiscoveryManagerAliveCa
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManagerAttributesSelfTest;
 import org.apache.ignite.internal.managers.discovery.IgniteTopologyPrintFormatSelfTest;
 import org.apache.ignite.internal.managers.events.GridEventStorageManagerSelfTest;
+import org.apache.ignite.internal.processors.cluster.BaselineAutoAdjustInMemoryTest;
 import org.apache.ignite.internal.processors.cluster.BaselineAutoAdjustTest;
 import org.apache.ignite.internal.processors.cluster.GridAddressResolverSelfTest;
 import org.apache.ignite.internal.processors.cluster.GridUpdateNotifierSelfTest;
 import org.apache.ignite.internal.processors.port.GridPortProcessorSelfTest;
 import org.apache.ignite.internal.util.GridStartupWithUndefinedIgniteHomeSelfTest;
 import org.apache.ignite.spi.communication.GridCacheMessageSelfTest;
-
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -90,6 +89,7 @@ import org.junit.runners.Suite;
     IgniteConcurrentEntryProcessorAccessStopTest.class,
     GridUpdateNotifierSelfTest.class,
     GridAddressResolverSelfTest.class,
+    BaselineAutoAdjustInMemoryTest.class,
     BaselineAutoAdjustTest.class,
     IgniteUpdateNotifierPerClusterSettingSelfTest.class,
     GridLocalEventListenerSelfTest.class,

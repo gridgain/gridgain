@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,9 +18,12 @@ package org.apache.ignite.jdbc.thin;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import javax.naming.Binding;
 import javax.naming.Context;
@@ -151,14 +153,15 @@ public class JdbcThinDataSourceSelfTest extends JdbcThinAbstractSelfTest {
         ids.setUrl("jdbc:ignite:thin://127.0.0.1");
 
         try (Connection conn = ids.getConnection()) {
-            JdbcThinTcpIo io = GridTestUtils.getFieldValue(conn, JdbcThinConnection.class, "cliIo");
 
-            assertFalse(io.connectionProperties().isAutoCloseServerCursor());
-            assertFalse(io.connectionProperties().isCollocated());
-            assertFalse(io.connectionProperties().isEnforceJoinOrder());
-            assertFalse(io.connectionProperties().isLazy());
-            assertFalse(io.connectionProperties().isDistributedJoins());
-            assertFalse(io.connectionProperties().isReplicatedOnly());
+            for (JdbcThinTcpIo io: ios(conn)) {
+                assertFalse(io.connectionProperties().isAutoCloseServerCursor());
+                assertFalse(io.connectionProperties().isCollocated());
+                assertFalse(io.connectionProperties().isEnforceJoinOrder());
+                assertFalse(io.connectionProperties().isLazy());
+                assertFalse(io.connectionProperties().isDistributedJoins());
+                assertFalse(io.connectionProperties().isReplicatedOnly());
+            }
         }
 
         ids.setAutoCloseServerCursor(true);
@@ -169,14 +172,15 @@ public class JdbcThinDataSourceSelfTest extends JdbcThinAbstractSelfTest {
         ids.setReplicatedOnly(true);
 
         try (Connection conn = ids.getConnection()) {
-            JdbcThinTcpIo io = GridTestUtils.getFieldValue(conn, JdbcThinConnection.class, "cliIo");
 
-            assertTrue(io.connectionProperties().isAutoCloseServerCursor());
-            assertTrue(io.connectionProperties().isCollocated());
-            assertTrue(io.connectionProperties().isEnforceJoinOrder());
-            assertTrue(io.connectionProperties().isLazy());
-            assertTrue(io.connectionProperties().isDistributedJoins());
-            assertTrue(io.connectionProperties().isReplicatedOnly());
+            for (JdbcThinTcpIo io: ios(conn)) {
+                assertTrue(io.connectionProperties().isAutoCloseServerCursor());
+                assertTrue(io.connectionProperties().isCollocated());
+                assertTrue(io.connectionProperties().isEnforceJoinOrder());
+                assertTrue(io.connectionProperties().isLazy());
+                assertTrue(io.connectionProperties().isDistributedJoins());
+                assertTrue(io.connectionProperties().isReplicatedOnly());
+            }
         }
     }
 
@@ -190,17 +194,17 @@ public class JdbcThinDataSourceSelfTest extends JdbcThinAbstractSelfTest {
         ids.setUrl("jdbc:ignite:thin://127.0.0.1");
 
         try (Connection conn = ids.getConnection()) {
-            JdbcThinTcpIo io = GridTestUtils.getFieldValue(conn, JdbcThinConnection.class, "cliIo");
 
-            assertTrue(io.connectionProperties().isTcpNoDelay());
+            for (JdbcThinTcpIo io: ios(conn))
+                assertTrue(io.connectionProperties().isTcpNoDelay());
         }
 
         ids.setTcpNoDelay(false);
 
         try (Connection conn = ids.getConnection()) {
-            JdbcThinTcpIo io = GridTestUtils.getFieldValue(conn, JdbcThinConnection.class, "cliIo");
 
-            assertFalse(io.connectionProperties().isTcpNoDelay());
+            for (JdbcThinTcpIo io: ios(conn))
+                assertFalse(io.connectionProperties().isTcpNoDelay());
         }
     }
 
@@ -216,10 +220,11 @@ public class JdbcThinDataSourceSelfTest extends JdbcThinAbstractSelfTest {
         ids.setSocketSendBuffer(111);
 
         try (Connection conn = ids.getConnection()) {
-            JdbcThinTcpIo io = GridTestUtils.getFieldValue(conn, JdbcThinConnection.class, "cliIo");
 
-            assertEquals(111, io.connectionProperties().getSocketReceiveBuffer());
-            assertEquals(111, io.connectionProperties().getSocketSendBuffer());
+            for (JdbcThinTcpIo io: ios(conn)) {
+                assertEquals(111, io.connectionProperties().getSocketReceiveBuffer());
+                assertEquals(111, io.connectionProperties().getSocketSendBuffer());
+            }
         }
 
         GridTestUtils.assertThrows(log, new Callable<Object>() {
@@ -265,6 +270,25 @@ public class JdbcThinDataSourceSelfTest extends JdbcThinAbstractSelfTest {
         @Override public Context getInitialContext(Hashtable<?, ?> environment) throws NamingException {
             return new JndiMockContext();
         }
+    }
+
+    /**
+     * Get client endpoints for connection.
+     *
+     * @param conn Connection.
+     * @return Collection of endpoints.
+     * @throws Exception If failed.
+     */
+    private static Collection<JdbcThinTcpIo> ios(Connection conn) throws Exception {
+        JdbcThinConnection conn0 = conn.unwrap(JdbcThinConnection.class);
+
+        Collection<JdbcThinTcpIo> ios = affinityAwareness ? ((Map<UUID, JdbcThinTcpIo>)
+            GridTestUtils.getFieldValue(conn0, JdbcThinConnection.class, "ios")).values() :
+            Collections.singleton(GridTestUtils.getFieldValue(conn0, JdbcThinConnection.class, "singleIo"));
+
+        assert !ios.isEmpty();
+
+        return ios;
     }
 
     /**

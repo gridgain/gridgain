@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -29,7 +28,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -45,8 +43,6 @@ import org.apache.ignite.cluster.ClusterGroupEmptyException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterStartNodeResult;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.events.ClusterActivationEvent;
-import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteComponentType;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -72,7 +68,6 @@ import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IPS;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MACS;
 import static org.apache.ignite.internal.util.nodestart.IgniteNodeStartUtils.parseFile;
@@ -324,13 +319,7 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
 
     /** */
     private Collection<BaselineNode> baselineNodes() {
-        Collection<ClusterNode> srvNodes = ctx.cluster().get().forServers().nodes();
-
-        List<BaselineNode> baselineNodes = new ArrayList<>(srvNodes.size());
-
-        baselineNodes.addAll(srvNodes);
-
-        return baselineNodes;
+        return new ArrayList<>(ctx.cluster().get().forServers().nodes());
     }
 
     /** {@inheritDoc} */
@@ -352,10 +341,7 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
         guard();
 
         try {
-            if (isInMemoryMode())
-                return;
-
-            ctx.state().validateBeforeBaselineChange(baselineTop);
+            validateBeforeBaselineChange(baselineTop);
 
             ctx.state().changeGlobalState(true, baselineTop, true).get();
         }
@@ -376,11 +362,6 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
      */
     public void triggerBaselineAutoAdjust(long topVer) {
         setBaselineTopology(topVer, true);
-    }
-
-    /** */
-    private boolean isInMemoryMode() {
-        return !CU.isPersistenceEnabled(cfg);
     }
 
     /**
@@ -473,13 +454,16 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
         setBaselineTopology(topVer, false);
     }
 
+    /**
+     * Set baseline topology.
+     *
+     * @param topVer Topology version.
+     * @param isBaselineAutoAdjust Whether this is an automatic update or not.
+     */
     private void setBaselineTopology(long topVer, boolean isBaselineAutoAdjust) {
         guard();
 
         try {
-            if (isInMemoryMode())
-                return;
-
             Collection<ClusterNode> top = topology(topVer);
 
             if (top == null)

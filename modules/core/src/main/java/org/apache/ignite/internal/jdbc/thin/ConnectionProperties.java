@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -395,14 +394,26 @@ public interface ConnectionProperties {
     public String getPassword();
 
     /**
-     * @return {@code True} if data page scan support is enabled for this connection, {@code false} if it's disabled
+     * @return {@code true} if data page scan support is enabled for this connection, {@code false} if it's disabled
      *     and {@code null} for server default.
      */
     @Nullable public Boolean isDataPageScanEnabled();
 
     /**
-     * @param dataPageScanEnabled {@code True} if data page scan support is enabled for this connection,
+     * @param dataPageScanEnabled {@code true} if data page scan support is enabled for this connection,
      *     if {@code false} then it's disabled, if {@code null} then server should use its default settings.
      */
     public void setDataPageScanEnabled(@Nullable Boolean dataPageScanEnabled);
+
+    /**
+     * @return {@code true} if jdbc thin affinity awareness is enabled for this connection,
+     * {@code false} if it's disabled.
+     */
+    public boolean isAffinityAwareness();
+
+    /**
+     * @param affinityAwareness {@code true} if jdbc thin affinity awareness is enabled
+     * for this connection, if {@code false} then it's disabled.
+     */
+    public void setAffinityAwareness(boolean affinityAwareness);
 }

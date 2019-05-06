@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -5840,18 +5839,18 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
     /**
      * Creates a new instance of {@link CorruptedTreeException}.
      *
-     * @param message Detailed error message.
+     * @param msg Detailed error message.
      * @param cause The cause.
      * @param rows Optional parameters.
      * @return New instance of {@link CorruptedTreeException}.
      */
-    private CorruptedTreeException createCorruptedTreeException(String message, Throwable cause, Object... rows) {
+    private CorruptedTreeException createCorruptedTreeException(String msg, Throwable cause, Object... rows) {
         try {
-            return new CorruptedTreeException(String.format(message, rows), cause);
+            return new CorruptedTreeException(String.format(msg, rows), cause);
         }
-        catch (Throwable t) {
+        catch (Throwable ignored) {
             // Failed to create string representation of optional parameters.
-            return new CorruptedTreeException("", cause);
+            return new CorruptedTreeException(msg + " <failed to create rows string representation>", cause);
         }
     }
 }

@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,7 +17,9 @@
 package org.apache.ignite.internal.processors.query.h2.sys;
 
 import java.util.Iterator;
+import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Cursor;
+import org.h2.command.dml.AllColumnsForPlan;
 import org.h2.engine.Session;
 import org.h2.index.BaseIndex;
 import org.h2.index.Cursor;
@@ -30,8 +31,6 @@ import org.h2.result.SortOrder;
 import org.h2.table.Column;
 import org.h2.table.IndexColumn;
 import org.h2.table.TableFilter;
-
-import java.util.HashSet;
 
 /**
  * Meta view H2 index.
@@ -45,14 +44,9 @@ public class SqlSystemIndex extends BaseIndex {
      * @param col Column.
      */
     SqlSystemIndex(SqlSystemTable tbl, Column... col) {
-        IndexColumn[] idxCols;
-
-        if (col != null && col.length > 0)
-            idxCols = IndexColumn.wrap(col);
-        else
-            idxCols = new IndexColumn[0];
-
-        initBaseIndex(tbl, 0, null, idxCols, IndexType.createNonUnique(false));
+        super(tbl, 0, null,
+            col != null && col.length > 0 ? IndexColumn.wrap(col) : H2Utils.EMPTY_COLUMNS,
+            IndexType.createNonUnique(false));
     }
 
     /** {@inheritDoc} */
@@ -81,7 +75,7 @@ public class SqlSystemIndex extends BaseIndex {
 
     /** {@inheritDoc} */
     @Override public double getCost(Session ses, int[] masks, TableFilter[] filters, int filter, SortOrder sortOrder,
-        HashSet<Column> allColsSet) {
+        AllColumnsForPlan allColsSet) {
         long rowCnt = getRowCountApproximation();
 
         double baseCost = getCostRangeIndex(masks, rowCnt, filters, filter, sortOrder, false, allColsSet);

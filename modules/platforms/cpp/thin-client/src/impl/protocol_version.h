@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -21,7 +20,6 @@
 #include <stdint.h>
 
 #include <string>
-#include <set>
 
 namespace ignite
 {
@@ -88,7 +86,7 @@ namespace ignite
                  * Compare to another value.
                  *
                  * @param other Instance to compare to.
-                 * @return Zero if equeals, negative number if less and positive if more.
+                 * @return Zero if equals, negative number if less and positive if more.
                  */
                 int32_t Compare(const ProtocolVersion& other) const;
 
@@ -133,7 +131,7 @@ namespace ignite
                  *
                  * @param val1 First value.
                  * @param val2 Second value.
-                 * @return True if gretter.
+                 * @return True if greater.
                  */
                 friend bool operator>(const ProtocolVersion& val1, const ProtocolVersion& val2);
 
@@ -142,7 +140,7 @@ namespace ignite
                  *
                  * @param val1 First value.
                  * @param val2 Second value.
-                 * @return True if gretter or equal.
+                 * @return True if greater or equal.
                  */
                 friend bool operator>=(const ProtocolVersion& val1, const ProtocolVersion& val2);
 

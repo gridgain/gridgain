@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -36,9 +35,6 @@ public enum IgniteFeatures {
     /** Cache metrics v2 support. */
     CACHE_METRICS_V2(1),
 
-    /** Distributed metastorage. */
-    DISTRIBUTED_METASTORAGE(2),
-
     /** Data paket compression. */
     DATA_PACKET_COMPRESSION(3),
 
@@ -46,7 +42,19 @@ public enum IgniteFeatures {
     DIFFERENT_REBALANCE_POOL_SIZE(4),
 
     /** Support of splitted cache configurations to avoid broken deserialization on non-affinity nodes. */
-    SPLITTED_CACHE_CONFIGURATIONS(5);
+    SPLITTED_CACHE_CONFIGURATIONS(5),
+
+    /**
+     * Support of providing thread dump of thread that started transaction. Used for dumping
+     * long running transactions.
+     */
+    TRANSACTION_OWNER_THREAD_DUMP_PROVIDING(6),
+
+    /** Displaying versbose transaction information: --info option of --tx control script command. */
+    TX_INFO_COMMAND(7),
+
+    /** Distributed metastorage. */
+    DISTRIBUTED_METASTORAGE(11);
 
     /**
      * Unique feature identifier.
@@ -71,6 +79,7 @@ public enum IgniteFeatures {
      * Checks that feature supported by node.
      *
      * @param clusterNode Cluster node to check.
+     * @param feature Feature to check.
      * @return {@code True} if feature is declared to be supported by remote node.
      */
     public static boolean nodeSupports(ClusterNode clusterNode, IgniteFeatures feature) {
@@ -79,18 +88,29 @@ public enum IgniteFeatures {
         if (features == null)
             return false;
 
+        return nodeSupports(features, feature);
+    }
+
+    /**
+     * Checks that feature supported by node.
+     *
+     * @param featuresAttrBytes Byte array value of supported features node attribute.
+     * @param feature Feature to check.
+     * @return {@code True} if feature is declared to be supported by remote node.
+     */
+    public static boolean nodeSupports(byte[] featuresAttrBytes, IgniteFeatures feature) {
         int featureId = feature.getFeatureId();
 
         // Same as "BitSet.valueOf(features).get(featureId)"
 
         int byteIdx = featureId >>> 3;
 
-        if (byteIdx >= features.length)
+        if (byteIdx >= featuresAttrBytes.length)
             return false;
 
         int bitIdx = featureId & 0x7;
 
-        return (features[byteIdx] & (1 << bitIdx)) != 0;
+        return (featuresAttrBytes[byteIdx] & (1 << bitIdx)) != 0;
     }
 
     /**

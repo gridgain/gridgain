@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -128,10 +127,10 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
     protected final GridCacheSharedContext cctx;
 
     /** Size of page used for PageMemory regions. */
-    private final int pageSize;
+    protected final int pageSize;
 
     /** Size of page without encryption overhead. */
-    private final int realPageSize;
+    protected final int realPageSize;
 
     /** Cache object processor to reading {@link DataEntry DataEntries}. */
     protected final IgniteCacheObjectProcessor co;
@@ -185,7 +184,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
     }
 
     /** {@inheritDoc} */
-    @Override public WALRecord readRecord(RecordType type, ByteBufferBackedDataInput in)
+    @Override public WALRecord readRecord(RecordType type, ByteBufferBackedDataInput in, int size)
         throws IOException, IgniteCheckedException {
         if (type == ENCRYPTED_RECORD) {
             if (encSpi == null) {
@@ -202,10 +201,10 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
             if (clData.get1() == null)
                 return new EncryptedRecord(clData.get2(), clData.get3());
 
-            return readPlainRecord(clData.get3(), clData.get1(), true);
+            return readPlainRecord(clData.get3(), clData.get1(), true, clData.get1().buffer().capacity());
         }
 
-        return readPlainRecord(type, in, false);
+        return readPlainRecord(type, in, false, size);
     }
 
     /** {@inheritDoc} */
@@ -347,7 +346,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
 
                 PageSnapshot pageRec = (PageSnapshot)record;
 
-                return pageRec.pageData().length + 12;
+                return pageRec.pageDataSize() + 12;
 
             case CHECKPOINT_RECORD:
                 CheckpointRecord cpRec = (CheckpointRecord)record;
@@ -533,12 +532,13 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
      * @param type Record type.
      * @param in Input
      * @param encrypted Record was encrypted.
+     * @param recordSize Record size.
      * @return Deserialized record.
      * @throws IOException If failed.
      * @throws IgniteCheckedException If failed.
      */
     WALRecord readPlainRecord(RecordType type, ByteBufferBackedDataInput in,
-        boolean encrypted) throws IOException, IgniteCheckedException {
+        boolean encrypted, int recordSize) throws IOException, IgniteCheckedException {
         WALRecord res;
 
         switch (type) {
@@ -1161,7 +1161,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
 
                 buf.putInt(snap.fullPageId().groupId());
                 buf.putLong(snap.fullPageId().pageId());
-                buf.put(snap.pageData());
+                buf.put(snap.pageDataBuffer());
 
                 break;
 

@@ -1,12 +1,11 @@
 //-
-    Licensed to the Apache Software Foundation (ASF) under one or more
-    contributor license agreements.  See the NOTICE file distributed with
-    this work for additional information regarding copyright ownership.
-    The ASF licenses this file to You under the Apache License, Version 2.0
-    (the "License"); you may not use this file except in compliance with
-    the License.  You may obtain a copy of the License at
+    Copyright 2019 GridGain Systems, Inc. and Contributors.
 
-         http://www.apache.org/licenses/LICENSE-2.0
+    Licensed under the GridGain Community Edition License (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
 
     Unless required by applicable law or agreed to in writing, software
     distributed under the License is distributed on an "AS IS" BASIS,
@@ -264,7 +263,7 @@ panel-collapsible(ng-form=form opened=`!!${model}.queryMetadata`)
                                         model: `queryIndex.inlineSizeType`,
                                         name: '"InlineSizeKind"',
                                         placeholder: '{{::$ctrl.Models.inlineSizeType.default}}',
-                                        options: '{{::$ctrl.Models.inlineSizeTypes}}',
+                                        options: '::$ctrl.Models.inlineSizeTypes',
                                         tip: `Inline size
                                             <ul>
                                                 <li>Auto - Determine inline size automatically</li>
@@ -314,7 +313,7 @@ panel-collapsible(ng-form=form opened=`!!${model}.queryMetadata`)
                                                             placeholder: `{{ ${queryFields}.length > 0 ? 'Choose index field' : 'No fields configured' }}`,
                                                             options: queryFields
                                                         })(
-                                                            bs-options=`queryField.name as queryField.name for queryField in ${queryFields}`
+                                                            ng-options=`queryField.name as queryField.name for queryField in ${queryFields}`
                                                             ng-disabled=`${queryFields}.length === 0`
                                                             ng-model-options='{allowInvalid: true}'
                                                             ignite-unique='queryIndex.fields'

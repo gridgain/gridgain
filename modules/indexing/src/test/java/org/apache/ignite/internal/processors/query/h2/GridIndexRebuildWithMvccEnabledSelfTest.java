@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -46,7 +45,7 @@ public class GridIndexRebuildWithMvccEnabledSelfTest extends GridIndexRebuildSel
 
     /** {@inheritDoc} */
     @Test
-    public void testIndexRebuild() throws Exception {
+    @Override public void testIndexRebuild() throws Exception {
         IgniteEx srv = startServer();
 
         execute(srv, "CREATE TABLE T(k int primary key, v int) WITH \"cache_name=T,wrap_value=false," +
@@ -90,7 +89,7 @@ public class GridIndexRebuildWithMvccEnabledSelfTest extends GridIndexRebuildSel
     }
 
     /** {@inheritDoc} */
-    protected void checkDataState(IgniteEx srv, boolean afterRebuild) throws IgniteCheckedException {
+    @Override protected void checkDataState(IgniteEx srv, boolean afterRebuild) throws IgniteCheckedException {
         IgniteInternalCache icache = srv.cachex(CACHE_NAME);
 
         assertNotNull(icache);

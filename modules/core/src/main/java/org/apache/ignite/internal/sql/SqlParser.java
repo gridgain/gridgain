@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -28,6 +27,7 @@ import org.apache.ignite.internal.sql.command.SqlCreateIndexCommand;
 import org.apache.ignite.internal.sql.command.SqlCreateUserCommand;
 import org.apache.ignite.internal.sql.command.SqlDropIndexCommand;
 import org.apache.ignite.internal.sql.command.SqlDropUserCommand;
+import org.apache.ignite.internal.sql.command.SqlKillQueryCommand;
 import org.apache.ignite.internal.sql.command.SqlRollbackTransactionCommand;
 import org.apache.ignite.internal.sql.command.SqlSetStreamingCommand;
 import org.jetbrains.annotations.Nullable;
@@ -42,7 +42,9 @@ import static org.apache.ignite.internal.sql.SqlKeyword.GRANT;
 import static org.apache.ignite.internal.sql.SqlKeyword.HASH;
 import static org.apache.ignite.internal.sql.SqlKeyword.HELP;
 import static org.apache.ignite.internal.sql.SqlKeyword.INDEX;
+import static org.apache.ignite.internal.sql.SqlKeyword.KILL;
 import static org.apache.ignite.internal.sql.SqlKeyword.PRIMARY;
+import static org.apache.ignite.internal.sql.SqlKeyword.QUERY;
 import static org.apache.ignite.internal.sql.SqlKeyword.REVOKE;
 import static org.apache.ignite.internal.sql.SqlKeyword.ROLLBACK;
 import static org.apache.ignite.internal.sql.SqlKeyword.SET;
@@ -183,6 +185,11 @@ public class SqlParser {
 
                             break;
 
+                        case KILL:
+                            cmd = processKill();
+
+                            break;
+
                         case HELP:
                             cmd = processHelp();
 
@@ -217,7 +224,7 @@ public class SqlParser {
                         return cmd;
                     }
                     else
-                        throw errorUnexpectedToken(lex, BEGIN, COMMIT, CREATE, DROP, ROLLBACK, COPY, SET, ALTER, START);
+                        throw errorUnexpectedToken(lex, BEGIN, COMMIT, CREATE, DROP, ROLLBACK, COPY, SET, ALTER, START, KILL);
 
                 case QUOTED:
                 case MINUS:
@@ -269,6 +276,22 @@ public class SqlParser {
         }
 
         throw errorUnexpectedToken(lex, STREAMING);
+    }
+
+    /**
+     * Process KILL keyword.
+     *
+     * @return Command.
+     */
+    private SqlCommand processKill() {
+        if (lex.shift() && lex.tokenType() == SqlLexerTokenType.DEFAULT) {
+            switch (lex.token()) {
+                case QUERY:
+                    return new SqlKillQueryCommand().parse(lex);
+            }
+        }
+
+        throw errorUnexpectedToken(lex, QUERY);
     }
 
     /**

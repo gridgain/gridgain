@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -27,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
@@ -1672,11 +1672,7 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
      */
     @Test
     public void testInitCacheReceivedOnJoin() throws Exception {
-        cacheC = new IgniteClosure<String, CacheConfiguration[]>() {
-            @Override public CacheConfiguration[] apply(String s) {
-                return null;
-            }
-        };
+        cacheC = s -> null;
 
         startServer(0, 1);
 
@@ -1684,11 +1680,7 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
 
         checkAffinity(2, topVer(2, 1), true);
 
-        cacheC = new IgniteClosure<String, CacheConfiguration[]>() {
-            @Override public CacheConfiguration[] apply(String s) {
-                return new CacheConfiguration[]{cacheConfiguration()};
-            }
-        };
+        cacheC = s -> new CacheConfiguration[]{cacheConfiguration()};
 
         startServer(2, 3);
 
@@ -1696,14 +1688,12 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
 
         checkAffinity(3, topVer(3, 1), true);
 
-        cacheC = new IgniteClosure<String, CacheConfiguration[]>() {
-            @Override public CacheConfiguration[] apply(String s) {
-                CacheConfiguration ccfg = cacheConfiguration();
+        cacheC = s -> {
+            CacheConfiguration ccfg = cacheConfiguration();
 
-                ccfg.setName(CACHE_NAME2);
+            ccfg.setName(CACHE_NAME2);
 
-                return new CacheConfiguration[]{ccfg};
-            }
+            return new CacheConfiguration[]{ccfg};
         };
 
         startClient(3, 4);
@@ -2605,7 +2595,8 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
     private Map<String, List<List<ClusterNode>>> checkAffinity(int expNodes,
         AffinityTopologyVersion topVer,
         boolean expIdeal,
-        boolean checkPublicApi) throws Exception {
+        boolean checkPublicApi
+    ) throws Exception {
         List<Ignite> nodes = G.allGrids();
 
         Map<String, List<List<ClusterNode>>> aff = new HashMap<>();
@@ -2697,11 +2688,14 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
 
         if (!aff1.equals(aff2)) {
             for (int i = 0; i < aff1.size(); i++) {
+                Collection<UUID> n1 = new ArrayList<>(F.nodeIds(aff1.get(i)));
+                Collection<UUID> n2 = new ArrayList<>(F.nodeIds(aff2.get(i)));
+
                 assertEquals("Wrong affinity [node=" + node.name() +
                     ", topVer=" + topVer +
                     ", cache=" + cacheName +
                     ", part=" + i + ']',
-                    F.nodeIds(aff1.get(i)), F.nodeIds(aff2.get(i)));
+                    n1, n2);
             }
 
             fail();

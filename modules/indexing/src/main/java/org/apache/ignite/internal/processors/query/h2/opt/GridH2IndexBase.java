@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,33 +16,38 @@
 
 package org.apache.ignite.internal.processors.query.h2.opt;
 
+import java.util.List;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.query.QueryUtils;
+import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.opt.join.CollocationModelMultiplier;
 import org.apache.ignite.internal.processors.query.h2.opt.join.CollocationModel;
 import org.h2.engine.Session;
 import org.h2.index.BaseIndex;
+import org.h2.index.IndexType;
 import org.h2.message.DbException;
 import org.h2.result.Row;
 import org.h2.result.SearchRow;
+import org.h2.table.IndexColumn;
 import org.h2.table.TableFilter;
 import org.h2.value.Value;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Index base.
  */
 public abstract class GridH2IndexBase extends BaseIndex {
-    /** Underlying table. */
-    private final GridH2Table tbl;
-
     /**
      * Constructor.
      *
      * @param tbl Table.
+     * @param name Index name.
+     * @param cols Indexed columns.
+     * @param type Index type.
      */
-    protected GridH2IndexBase(GridH2Table tbl) {
-        this.tbl = tbl;
+    protected GridH2IndexBase(GridH2Table tbl, String name, IndexColumn[] cols, IndexType type) {
+        super(tbl, 0, name, cols, type);
     }
 
     /** {@inheritDoc} */
@@ -219,13 +223,26 @@ public abstract class GridH2IndexBase extends BaseIndex {
      * @return Row descriptor.
      */
     protected GridH2RowDescriptor rowDescriptor() {
-        return tbl.rowDescriptor();
+        return ((GridH2Table)table).rowDescriptor();
     }
 
     /**
      * @return Query context registry.
      */
     protected QueryContextRegistry queryContextRegistry() {
-        return tbl.rowDescriptor().indexing().queryContextRegistry();
+        return ((GridH2Table)table).rowDescriptor().indexing().queryContextRegistry();
+    }
+
+    /**
+     * @param tbl Table.
+     * @param colsList Columns list.
+     * @return Index column array.
+     */
+    @NotNull public static IndexColumn[] columnsArray(GridH2Table tbl, List<IndexColumn> colsList) {
+        IndexColumn[] cols = colsList.toArray(H2Utils.EMPTY_COLUMNS);
+
+        IndexColumn.mapColumns(cols, tbl);
+
+        return cols;
     }
 }

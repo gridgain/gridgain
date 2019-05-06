@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -93,7 +92,11 @@ namespace Apache.Ignite.Core.Impl
             EnableWal = 28,
             IsWalEnabled = 29,
             SetTxTimeoutOnPartitionMapExchange = 30,
-            GetNodeVersion = 31
+            GetNodeVersion = 31,
+            IsBaselineAutoAdjustmentEnabled = 32,
+            SetBaselineAutoAdjustmentEnabled = 33,
+            GetBaselineAutoAdjustTimeout = 34,
+            SetBaselineAutoAdjustTimeout = 35
         }
 
         /** */
@@ -846,10 +849,35 @@ namespace Apache.Ignite.Core.Impl
             return DoOutOp((int) Op.IsWalEnabled, w => w.WriteString(cacheName)) == True;
         }
 
+        /** <inheritdoc /> */
         public void SetTxTimeoutOnPartitionMapExchange(TimeSpan timeout)
         {
             DoOutOp((int) Op.SetTxTimeoutOnPartitionMapExchange, 
                 (BinaryWriter w) => w.WriteLong((long) timeout.TotalMilliseconds));
+        }
+
+        /** <inheritdoc /> */
+        public bool IsBaselineAutoAdjustEnabled()
+        {
+            return DoOutOp((int) Op.IsBaselineAutoAdjustmentEnabled, s => s.ReadBool()) == True;
+        }
+
+        /** <inheritdoc /> */
+        public void SetBaselineAutoAdjustEnabledFlag(bool isBaselineAutoAdjustEnabled)
+        {
+            DoOutOp((int) Op.SetBaselineAutoAdjustmentEnabled, w => w.WriteBoolean(isBaselineAutoAdjustEnabled));
+        }
+
+        /** <inheritdoc /> */
+        public long GetBaselineAutoAdjustTimeout()
+        {
+            return DoOutOp((int) Op.GetBaselineAutoAdjustTimeout, s => s.ReadLong());
+        }
+
+        /** <inheritdoc /> */
+        public void SetBaselineAutoAdjustTimeout(long baselineAutoAdjustTimeout)
+        {
+            DoOutInOp((int) Op.SetBaselineAutoAdjustTimeout, baselineAutoAdjustTimeout);
         }
 
         /** <inheritdoc /> */

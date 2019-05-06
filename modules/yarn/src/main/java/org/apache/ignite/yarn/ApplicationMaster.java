@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -107,7 +106,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler {
     }
 
     /** {@inheritDoc} */
-    public synchronized void onContainersAllocated(List<Container> conts) {
+    @Override public synchronized void onContainersAllocated(List<Container> conts) {
         for (Container c : conts) {
             if (checkContainer(c)) {
                 try {
@@ -226,7 +225,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler {
     }
 
     /** {@inheritDoc} */
-    public synchronized void onContainersCompleted(List<ContainerStatus> statuses) {
+    @Override public synchronized void onContainersCompleted(List<ContainerStatus> statuses) {
         for (ContainerStatus status : statuses) {
             containers.remove(status.getContainerId());
 
@@ -236,7 +235,7 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler {
     }
 
     /** {@inheritDoc} */
-    public synchronized void onNodesUpdated(List<NodeReport> updated) {
+    @Override public synchronized void onNodesUpdated(List<NodeReport> updated) {
         for (NodeReport node : updated) {
             // If node unusable.
             if (node.getNodeState().isUnusable()) {
@@ -256,17 +255,17 @@ public class ApplicationMaster implements AMRMClientAsync.CallbackHandler {
     }
 
     /** {@inheritDoc} */
-    public void onShutdownRequest() {
+    @Override public void onShutdownRequest() {
         // No-op.
     }
 
     /** {@inheritDoc} */
-    public void onError(Throwable t) {
+    @Override public void onError(Throwable t) {
         nmClient.stop();
     }
 
     /** {@inheritDoc} */
-    public float getProgress() {
+    @Override public float getProgress() {
         return 50;
     }
 

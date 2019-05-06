@@ -1,12 +1,11 @@
 ﻿/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -170,6 +169,11 @@ namespace Apache.Ignite.Core.Configuration
         public const long DefaultMaxWalArchiveSize = 1024 * 1024 * 1024;
 
         /// <summary>
+        /// Default value for <see cref="WalPageCompression"/>.
+        /// </summary>
+        public const DiskPageCompression DefaultWalPageCompression = DiskPageCompression.Disabled;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="DataStorageConfiguration"/> class.
         /// </summary>
         public DataStorageConfiguration()
@@ -197,6 +201,7 @@ namespace Apache.Ignite.Core.Configuration
             PageSize = DefaultPageSize;
             WalAutoArchiveAfterInactivity = DefaultWalAutoArchiveAfterInactivity;
             MaxWalArchiveSize = DefaultMaxWalArchiveSize;
+            WalPageCompression = DefaultWalPageCompression;
         }
 
         /// <summary>
@@ -237,6 +242,8 @@ namespace Apache.Ignite.Core.Configuration
             ConcurrencyLevel = reader.ReadInt();
             WalAutoArchiveAfterInactivity = reader.ReadLongAsTimespan();
             CheckpointReadLockTimeout = reader.ReadTimeSpanNullable();
+            WalPageCompression = (DiskPageCompression)reader.ReadInt();
+            WalPageCompressionLevel = reader.ReadIntNullable();
 
             var count = reader.ReadInt();
 
@@ -291,6 +298,8 @@ namespace Apache.Ignite.Core.Configuration
             writer.WriteInt(ConcurrencyLevel);
             writer.WriteTimeSpanAsLong(WalAutoArchiveAfterInactivity);
             writer.WriteTimeSpanAsLongNullable(CheckpointReadLockTimeout);
+            writer.WriteInt((int)WalPageCompression);
+            writer.WriteIntNullable(WalPageCompressionLevel);
 
             if (DataRegionConfigurations != null)
             {
@@ -497,6 +506,16 @@ namespace Apache.Ignite.Core.Configuration
         /// Gets or sets the timeout for checkpoint read lock acquisition.
         /// </summary>
         public TimeSpan? CheckpointReadLockTimeout { get; set; }
+
+        /// <summary>
+        /// Gets or sets the compression algorithm for WAL page snapshot records.
+        /// </summary>
+        public DiskPageCompression WalPageCompression { get; set; }
+
+        /// <summary>
+        /// Gets or sets the compression level for WAL page snapshot records.
+        /// </summary>
+        public int? WalPageCompressionLevel { get; set; }
 
         /// <summary>
         /// Gets or sets the data region configurations.

@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -27,6 +26,8 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.query.GridCacheSqlQuery;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlAlias;
@@ -78,18 +79,24 @@ public class PartitionExtractor {
     /** Maximum number of partitions to be used in case of between expression. */
     private final int maxPartsCntBetween;
 
+    /** Grid kernal context. */
+    private final GridKernalContext ctx;
+
     /**
      * Constructor.
      *
      * @param partResolver Partition resolver.
+     * @param ctx Grid kernal context.
      */
-    public PartitionExtractor(H2PartitionResolver partResolver) {
+    public PartitionExtractor(H2PartitionResolver partResolver, GridKernalContext ctx) {
         this.partResolver = partResolver;
 
         maxPartsCntBetween = Integer.getInteger(
             IgniteSystemProperties.IGNITE_SQL_MAX_EXTRACTED_PARTS_FROM_BETWEEN,
             DFLT_MAX_EXTRACTED_PARTS_FROM_BETWEEN
         );
+
+        this.ctx = ctx;
     }
 
     /**
@@ -120,7 +127,8 @@ public class PartitionExtractor {
             return null;
 
         // Done.
-        return new PartitionResult(tree, tblModel.joinGroupAffinity(tree.joinGroup()));
+        return new PartitionResult(tree, tblModel.joinGroupAffinity(tree.joinGroup()),
+            ctx.cache().context().exchange().readyAffinityVersion());
     }
 
     /**
@@ -155,6 +163,8 @@ public class PartitionExtractor {
         // Merge.
         PartitionNode tree = null;
 
+        AffinityTopologyVersion affinityTopVer = null;
+
         for (GridCacheSqlQuery qry : qrys) {
             PartitionResult qryRes = (PartitionResult)qry.derivedPartitions();
 
@@ -162,6 +172,12 @@ public class PartitionExtractor {
                 tree = qryRes.tree();
             else
                 tree = new PartitionCompositeNode(tree, qryRes.tree(), PartitionCompositeNodeOperator.OR);
+
+
+            if (affinityTopVer == null)
+                affinityTopVer = qryRes.topologyVersion();
+            else
+                assert affinityTopVer.equals(qryRes.topologyVersion());
         }
 
         // Optimize.
@@ -175,7 +191,12 @@ public class PartitionExtractor {
         // If there is no affinity, then we assume "NONE" result.
         assert aff != null || tree == PartitionNoneNode.INSTANCE;
 
-        return new PartitionResult(tree, aff);
+        // Affinity topology version expected to be the same for all partition results derived from map queries.
+        // TODO: 09.04.19 IGNITE-11507: SQL: Ensure that affinity topology version doesn't change
+        // TODO: during PartitionResult construction/application.
+        assert affinityTopVer != null;
+        
+        return new PartitionResult(tree, aff, affinityTopVer);
     }
 
     /**
@@ -617,20 +638,20 @@ public class PartitionExtractor {
         if (rightConst != null) {
             int part = partResolver.partition(
                 rightConst.value().getObject(),
-                leftCol0.getType(),
+                leftCol0.getType().getValueType(),
                 tbl.cacheName()
             );
 
             return new PartitionConstantNode(tbl0, part);
         }
         else if (rightParam != null) {
-            int colType = leftCol0.getType();
+            int colType = leftCol0.getType().getValueType();
 
             return new PartitionParameterNode(
                 tbl0,
                 partResolver,
                 rightParam.index(),
-                leftCol0.getType(),
+                leftCol0.getType().getValueType(),
                 mappedType(colType)
             );
         }
@@ -766,8 +787,10 @@ public class PartitionExtractor {
             return null;
 
         // Check columns type
-        if (!(leftCol.column().getType() == Value.BYTE || leftCol.column().getType() == Value.SHORT ||
-            leftCol.column().getType() == Value.INT || leftCol.column().getType() == Value.LONG))
+        int leftColValueType = leftCol.column().getType().getValueType();
+
+        if (!(leftColValueType == Value.BYTE || leftColValueType == Value.SHORT ||
+            leftColValueType == Value.INT || leftColValueType == Value.LONG))
             return null;
 
         // Try parse left AST right value (value to the right of '>' or '>=').
@@ -814,7 +837,7 @@ public class PartitionExtractor {
             return null;
 
         for (long i = leftLongVal; i <= rightLongVal; i++) {
-            int part = partResolver.partition(i , leftCol.column().getType(), tbl0.cacheName());
+            int part = partResolver.partition(i , leftColValueType, tbl0.cacheName());
 
             parts.add(new PartitionConstantNode(tbl0, part));
 

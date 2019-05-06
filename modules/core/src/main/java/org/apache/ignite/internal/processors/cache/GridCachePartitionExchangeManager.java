@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -52,6 +51,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.affinity.AffinityFunction;
 import org.apache.ignite.cluster.BaselineNode;
+import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -147,6 +147,8 @@ import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
 import static org.apache.ignite.failure.FailureType.SYSTEM_WORKER_TERMINATION;
 import static org.apache.ignite.internal.GridTopic.TOPIC_CACHE;
+import static org.apache.ignite.internal.IgniteFeatures.TRANSACTION_OWNER_THREAD_DUMP_PROVIDING;
+import static org.apache.ignite.internal.IgniteFeatures.allNodesSupports;
 import static org.apache.ignite.internal.events.DiscoveryCustomEvent.EVT_DISCOVERY_CUSTOM_EVT;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYSTEM_POOL;
 import static org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion.NONE;
@@ -519,7 +521,9 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
             ExchangeActions exchActs = null;
 
-            if (evt.type() == EVT_NODE_JOINED && evt.eventNode().isLocal()) {
+            boolean locJoin = evt.type() == EVT_NODE_JOINED && evt.eventNode().isLocal();
+
+            if (locJoin) {
                 LocalJoinCachesContext locJoinCtx = cctx.cache().localJoinCachesContext();
 
                 if (locJoinCtx != null) {
@@ -528,6 +532,9 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                     exchActs.localJoinContext(locJoinCtx);
                 }
             }
+
+            if (!n.isClient() && !n.isDaemon())
+                exchActs = cctx.kernalContext().state().autoAdjustExchangeActions(exchActs);
 
             exchFut = exchangeFuture(exchId, evt, cache, exchActs, null);
         }
@@ -1148,7 +1155,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
      * @param comp Component to be registered.
      */
     public void registerExchangeAwareComponent(PartitionsExchangeAware comp) {
-        exchangeAwareComps.add(new PartitionsExchangeAwareWrapper(comp));
+        exchangeAwareComps.add(comp);
     }
 
     /**
@@ -1157,7 +1164,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
      * @param comp Component to be registered.
      */
     public void unregisterExchangeAwareComponent(PartitionsExchangeAware comp) {
-        exchangeAwareComps.remove(new PartitionsExchangeAwareWrapper(comp));
+        exchangeAwareComps.remove(comp);
     }
 
     /**
@@ -1370,9 +1377,11 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
             partsToReload
             );
 
-        m.compress(compress);
+        m.compressed(compress);
 
         final Map<Object, T2<Integer, GridDhtPartitionFullMap>> dupData = new HashMap<>();
+
+        Map<Integer, Map<Integer, Long>> partsSizes = new HashMap<>();
 
         for (CacheGroupContext grp : grps) {
             if (!grp.isLocal()) {
@@ -1390,7 +1399,10 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                 if (locMap != null)
                     addFullPartitionsMap(m, dupData, compress, grp.groupId(), locMap, affCache.similarAffinityKey());
 
-                m.addPartitionSizes(grp.groupId(), grp.topology().globalPartSizes());
+                Map<Integer, Long> partSizesMap = grp.topology().globalPartSizes();
+
+                if (!partSizesMap.isEmpty())
+                    partsSizes.put(grp.groupId(), partSizesMap);
 
                 if (exchId != null) {
                     CachePartitionFullCountersMap cntrsMap = grp.topology().fullUpdateCounters();
@@ -1420,9 +1432,17 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                 else
                     m.addPartitionUpdateCounters(top.groupId(), CachePartitionFullCountersMap.toCountersMap(cntrsMap));
 
-                m.addPartitionSizes(top.groupId(), top.globalPartSizes());
+                Map<Integer, Long> partSizesMap = top.globalPartSizes();
+
+                if (!partSizesMap.isEmpty())
+                    partsSizes.put(top.groupId(), partSizesMap);
             }
         }
+
+        cctx.kernalContext().txDr().onPartitionsFullMessagePrepared(exchId, m);
+
+        if (!partsSizes.isEmpty())
+            m.partitionSizes(cctx, partsSizes);
 
         cctx.kernalContext().txDr().onPartitionsFullMessagePrepared(exchId, m);
 
@@ -1771,6 +1791,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
                 boolean updated = false;
 
+                Map<Integer, Map<Integer, Long>> partsSizes = msg.partitionSizes(cctx);
+
                 for (Map.Entry<Integer, GridDhtPartitionFullMap> entry : msg.partitions().entrySet()) {
                     Integer grpId = entry.getKey();
 
@@ -1788,7 +1810,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                             entry.getValue(),
                             null,
                             msg.partsToReload(cctx.localNodeId(), grpId),
-                            msg.partitionSizes(grpId),
+                            partsSizes.getOrDefault(grpId, Collections.emptyMap()),
                             msg.topologyVersion());
                     }
                 }
@@ -2136,40 +2158,51 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
                 Ignite ignite = cctx.kernalContext().grid();
 
-                IgniteCompute compute = ignite.compute(ignite.cluster().forNodeId(nearNodeId));
+                ClusterGroup nearNode = ignite.cluster().forNodeId(nearNodeId);
 
-                try {
-                    compute
-                        .callAsync(new FetchActiveTxOwnerTraceClosure(txOwnerThreadId))
-                        .listen(new IgniteInClosure<IgniteFuture<String>>() {
-                            @Override public void apply(IgniteFuture<String> strIgniteFut) {
-                                String traceDump = null;
+                if (allNodesSupports(nearNode.nodes(), TRANSACTION_OWNER_THREAD_DUMP_PROVIDING)) {
+                    IgniteCompute compute = ignite.compute(ignite.cluster().forNodeId(nearNodeId));
 
-                                try {
-                                    traceDump = strIgniteFut.get();
-                                }
-                                catch (Exception e) {
-                                    U.warn(
-                                        diagnosticLog,
-                                        "Could not get thread dump from transaction owner near node: " + e.getMessage()
-                                    );
-                                }
+                    try {
+                        compute
+                            .callAsync(new FetchActiveTxOwnerTraceClosure(txOwnerThreadId))
+                            .listen(new IgniteInClosure<IgniteFuture<String>>() {
+                                @Override public void apply(IgniteFuture<String> strIgniteFut) {
+                                    String traceDump = null;
 
-                                if (traceDump != null) {
-                                    U.warn(
-                                        diagnosticLog,
-                                        String.format(
-                                            "Dumping the near node thread that started transaction [xidVer=%s]\n%s",
-                                            tx.xidVersion().toString(),
-                                            traceDump
-                                        )
-                                    );
+                                    try {
+                                        traceDump = strIgniteFut.get();
+                                    }
+                                    catch (Exception e) {
+                                        U.error(
+                                            diagnosticLog,
+                                            "Could not get thread dump from transaction owner near node: ",
+                                            e
+                                        );
+                                    }
+
+                                    if (traceDump != null) {
+                                        U.warn(
+                                            diagnosticLog,
+                                            String.format(
+                                                "Dumping the near node thread that started transaction [xidVer=%s]\n%s",
+                                                tx.xidVersion().toString(),
+                                                traceDump
+                                            )
+                                        );
+                                    }
                                 }
-                            }
-                        });
+                            });
+                    }
+                    catch (Exception e) {
+                        U.error(diagnosticLog, "Could not send dump request to transaction owner near node: ", e);
+                    }
                 }
-                catch (Exception e) {
-                    U.warn(diagnosticLog, "Could not send dump request to transaction owner near node: " + e.getMessage());
+                else {
+                    U.warn(
+                        diagnosticLog,
+                        "Could not send dump request to transaction owner near node: node does not support this feature."
+                    );
                 }
             }
         }

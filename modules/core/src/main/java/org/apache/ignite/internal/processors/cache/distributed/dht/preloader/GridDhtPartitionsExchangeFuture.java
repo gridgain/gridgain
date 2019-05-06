@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -118,7 +117,6 @@ import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.jetbrains.annotations.Nullable;
@@ -2495,6 +2493,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         newCrdFut = null;
         exchangeLocE = null;
         exchangeGlobalExceptions.clear();
+        if (finishState != null)
+            finishState.cleanUp();
     }
 
     /**
@@ -3559,13 +3559,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
                 IgniteInternalFuture<Map<Integer, Map<Integer, List<UUID>>>> fut = cctx.affinity().initAffinityOnNodeLeft(this);
 
-                if (!fut.isDone()) {
-                    fut.listen(new IgniteInClosure<IgniteInternalFuture<Map<Integer, Map<Integer, List<UUID>>>>>() {
-                        @Override public void apply(IgniteInternalFuture<Map<Integer, Map<Integer, List<UUID>>>> fut) {
-                            onAffinityInitialized(fut);
-                        }
-                    });
-                }
+                if (!fut.isDone())
+                    fut.listen(this::onAffinityInitialized);
                 else
                     onAffinityInitialized(fut);
             }
@@ -3655,15 +3650,17 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     cctx.kernalContext().state().onExchangeFinishedOnCoordinator(this, hasMoving);
                 }
 
-                boolean active = !stateChangeErr && req.activate();
+                if (!cctx.kernalContext().state().clusterState().localBaselineAutoAdjustment()) {
+                    boolean active = !stateChangeErr && req.activate();
 
-                ChangeGlobalStateFinishMessage stateFinishMsg = new ChangeGlobalStateFinishMessage(
-                    req.requestId(),
-                    active,
-                    !stateChangeErr
-                );
+                    ChangeGlobalStateFinishMessage stateFinishMsg = new ChangeGlobalStateFinishMessage(
+                        req.requestId(),
+                        active,
+                        !stateChangeErr
+                    );
 
-                cctx.discovery().sendCustomEvent(stateFinishMsg);
+                    cctx.discovery().sendCustomEvent(stateFinishMsg);
+                }
 
                 timeBag.finishGlobalStage("State finish message sending");
 
@@ -4255,6 +4252,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         int parallelismLvl = U.availableThreadCount(cctx.kernalContext(), GridIoPolicy.SYSTEM_POOL, 2);
 
         try {
+            Map<Integer, Map<Integer, Long>> partsSizes = msg.partitionSizes(cctx);
+
             doInParallel(
                 parallelismLvl,
                 cctx.kernalContext().getSystemExecutorService(),
@@ -4269,7 +4268,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                             msg.partitions().get(grpId),
                             cntrMap,
                             msg.partsToReload(cctx.localNodeId(), grpId),
-                            msg.partitionSizes(grpId),
+                            partsSizes.getOrDefault(grpId, Collections.emptyMap()),
                             null);
                     }
                     else {
@@ -5083,6 +5082,14 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             this.crdId = crdId;
             this.resTopVer = resTopVer;
             this.msg = msg;
+        }
+
+        /**
+         * Cleans up resources to avoid excessive memory usage.
+         */
+        public void cleanUp() {
+            if (msg != null)
+                msg.cleanUp();
         }
     }
 

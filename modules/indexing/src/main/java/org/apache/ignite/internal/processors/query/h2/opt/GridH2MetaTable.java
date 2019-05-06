@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,13 +18,13 @@ package org.apache.ignite.internal.processors.query.h2.opt;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 import org.h2.command.ddl.CreateTableData;
+import org.h2.command.dml.AllColumnsForPlan;
 import org.h2.engine.Session;
 import org.h2.index.BaseIndex;
 import org.h2.index.Cursor;
@@ -39,6 +38,7 @@ import org.h2.result.SearchRow;
 import org.h2.result.SortOrder;
 import org.h2.table.Column;
 import org.h2.table.IndexColumn;
+import org.h2.table.Table;
 import org.h2.table.TableBase;
 import org.h2.table.TableFilter;
 import org.h2.table.TableType;
@@ -60,7 +60,7 @@ public class GridH2MetaTable extends TableBase {
 
     /** */
     private final Set<Session> fakeExclusiveSet = Collections.newSetFromMap(
-        new ConcurrentHashMap<Session,Boolean>());
+        new ConcurrentHashMap<>());
 
     /**
      * @param data Data.
@@ -72,10 +72,10 @@ public class GridH2MetaTable extends TableBase {
         assert cols.size() == 4 : cols;
 
         Column id = cols.get(ID);
-        assert "ID".equals(id.getName()) && id.getType() == Value.INT : cols;
+        assert "ID".equals(id.getName()) && id.getType().getValueType() == Value.INT : cols;
         assert id.getColumnId() == ID;
 
-        index = new MetaIndex();
+        index = new MetaIndex(this, 0, data.tableName, null, IndexType.createNonUnique(true));
     }
 
     /** {@inheritDoc} */
@@ -223,6 +223,12 @@ public class GridH2MetaTable extends TableBase {
         /** */
         private final ConcurrentMap<ValueInt, Row> rows = new ConcurrentHashMap<>();
 
+        /** */
+        public MetaIndex(Table newTable, int id, String name, IndexColumn[] newIndexColumns,
+            IndexType newIndexType) {
+            super(newTable, id, name, newIndexColumns, newIndexType);
+        }
+
         /** {@inheritDoc} */
         @Override public void checkRename() {
             throw DbException.getUnsupportedException("rename");
@@ -265,7 +271,7 @@ public class GridH2MetaTable extends TableBase {
 
         /** {@inheritDoc} */
         @Override public double getCost(Session session, int[] masks, TableFilter[] filters,
-            int filter, SortOrder sortOrder, HashSet<Column> cols) {
+            int filter, SortOrder sortOrder, AllColumnsForPlan cols) {
             if ((masks[ID] & IndexCondition.EQUALITY) == IndexCondition.EQUALITY)
                 return 1;
 

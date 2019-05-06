@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -274,9 +273,6 @@ class ServerImpl extends TcpDiscoveryImpl {
     /** Map with proceeding ping requests. */
     private final ConcurrentMap<InetSocketAddress, GridPingFutureAdapter<IgniteBiTuple<UUID, Boolean>>> pingMap =
         new ConcurrentHashMap<>();
-
-    /** Last listener future. */
-    private IgniteFuture<?> lastCustomEvtLsnrFut;
 
     /**
      * Maximum size of history of IDs of server nodes ever tried to join current topology (ever sent join request).
@@ -568,7 +564,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                     Map<Long, Collection<ClusterNode>> hist = updateTopologyHistory(topVer,
                         Collections.unmodifiableList(top));
 
-                    lsnr.onDiscovery(EVT_NODE_FAILED, topVer, n, top, hist, null);
+                    lsnr.onDiscovery(EVT_NODE_FAILED, topVer, n, top, hist, null).get();
                 }
             }
         }
@@ -2251,20 +2247,6 @@ class ServerImpl extends TcpDiscoveryImpl {
     /** */
     private static WorkersRegistry getWorkerRegistry(TcpDiscoverySpi spi) {
         return spi.ignite() instanceof IgniteEx ? ((IgniteEx)spi.ignite()).context().workersRegistry() : null;
-    }
-
-    /**
-     * Wait for all the listeners from previous discovery message to be completed.
-     */
-    private void waitForLastCustomEventListenerFuture() {
-        if (lastCustomEvtLsnrFut != null) {
-            try {
-                lastCustomEvtLsnrFut.get();
-            }
-            finally {
-                lastCustomEvtLsnrFut = null;
-            }
-        }
     }
 
     /**
@@ -4065,7 +4047,6 @@ class ServerImpl extends TcpDiscoveryImpl {
                         spi.marshaller(),
                         U.resolveClassLoader(spi.ignite().configuration()),
                         false,
-                        isDiscoDataPaketCompressed(node),
                         log));
 
                 if (err != null) {
@@ -4381,15 +4362,6 @@ class ServerImpl extends TcpDiscoveryImpl {
         }
 
         /**
-         * @param node Joined node.
-         * @return <code>true</code> if packet is compressed.
-         */
-        private boolean isDiscoDataPaketCompressed(TcpDiscoveryNode node) {
-            return IgniteFeatures.nodeSupports(node, IgniteFeatures.DATA_PACKET_COMPRESSION) &&
-                allNodesSupport(IgniteFeatures.DATA_PACKET_COMPRESSION);
-        }
-
-        /**
          * @param node Node.
          * @param name Attribute name.
          * @param dflt Default value.
@@ -4501,15 +4473,6 @@ class ServerImpl extends TcpDiscoveryImpl {
         @Deprecated
         private void processNodeAddedMessage(TcpDiscoveryNodeAddedMessage msg) {
             assert msg != null;
-
-            blockingSectionBegin();
-
-            try {
-                waitForLastCustomEventListenerFuture();
-            }
-            finally {
-                blockingSectionEnd();
-            }
 
             TcpDiscoveryNode node = msg.node();
 
@@ -6009,8 +5972,6 @@ class ServerImpl extends TcpDiscoveryImpl {
                         blockingSectionEnd();
                     }
                 }
-                else
-                    lastCustomEvtLsnrFut = fut;
 
                 if (msgObj.isMutable()) {
                     try {
@@ -7517,6 +7478,11 @@ class ServerImpl extends TcpDiscoveryImpl {
         /** {@inheritDoc} */
         private MessageWorkerDiscoveryThread(GridWorker worker, IgniteLogger log) {
             super(worker, log);
+        }
+
+        /** {@inheritDoc} */
+        @Override public GridWorker worker() {
+            return worker;
         }
     }
 

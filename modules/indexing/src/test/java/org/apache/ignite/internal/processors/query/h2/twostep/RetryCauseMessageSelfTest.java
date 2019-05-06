@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,12 +16,12 @@
 
 package org.apache.ignite.internal.processors.query.h2.twostep;
 
-import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.cache.CacheException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.query.SqlQuery;
@@ -38,7 +37,6 @@ import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2QueryRequest;
-import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
@@ -89,19 +87,14 @@ public class RetryCauseMessageSelfTest extends AbstractIndexingCommonTest {
         GridMapQueryExecutor mapQryExec = GridTestUtils.getFieldValue(h2Idx, IgniteH2Indexing.class, "mapQryExec");
 
         GridTestUtils.setFieldValue(h2Idx, IgniteH2Indexing.class, "mapQryExec",
-            new MockGridMapQueryExecutor(null) {
-                @Override public void onMessage(UUID nodeId, Object msg) {
-                    if (GridH2QueryRequest.class.isAssignableFrom(msg.getClass())) {
-                        GridH2QueryRequest qryReq = (GridH2QueryRequest)msg;
+            new MockGridMapQueryExecutor() {
+                @Override
+                public void onQueryRequest(ClusterNode node, GridH2QueryRequest qryReq) throws IgniteCheckedException {
+                    qryReq.caches().add(Integer.MAX_VALUE);
 
-                        qryReq.caches().add(Integer.MAX_VALUE);
+                    startedExecutor.onQueryRequest(node, qryReq);
 
-                        startedExecutor.onMessage(nodeId, msg);
-
-                        qryReq.caches().remove(qryReq.caches().size() - 1);
-                    }
-                    else
-                        startedExecutor.onMessage(nodeId, msg);
+                    qryReq.caches().remove(qryReq.caches().size() - 1);
                 }
             }.insertRealExecutor(mapQryExec));
 
@@ -133,21 +126,20 @@ public class RetryCauseMessageSelfTest extends AbstractIndexingCommonTest {
         final ConcurrentMap<PartitionReservationKey, GridReservable> reservations = reservations(h2Idx);
 
         GridTestUtils.setFieldValue(h2Idx, IgniteH2Indexing.class, "mapQryExec",
-            new MockGridMapQueryExecutor(null) {
-                @Override public void onMessage(UUID nodeId, Object msg) {
-                    if (GridH2QueryRequest.class.isAssignableFrom(msg.getClass())) {
-                        final PartitionReservationKey grpKey = new PartitionReservationKey(ORG, null);
+            new MockGridMapQueryExecutor() {
+                @Override
+                public void onQueryRequest(ClusterNode node, GridH2QueryRequest qryReq) throws IgniteCheckedException {
+                    final PartitionReservationKey grpKey = new PartitionReservationKey(ORG, null);
 
-                        reservations.put(grpKey, new GridReservable() {
+                    reservations.put(grpKey, new GridReservable() {
 
-                            @Override public boolean reserve() {
-                                return false;
-                            }
+                        @Override public boolean reserve() {
+                            return false;
+                        }
 
-                            @Override public void release() {}
-                        });
-                    }
-                    startedExecutor.onMessage(nodeId, msg);
+                        @Override public void release() {}
+                    });
+                    startedExecutor.onQueryRequest(node, qryReq);
                 }
             }.insertRealExecutor(mapQryExec));
 
@@ -180,25 +172,19 @@ public class RetryCauseMessageSelfTest extends AbstractIndexingCommonTest {
         final GridKernalContext ctx = GridTestUtils.getFieldValue(mapQryExec, GridMapQueryExecutor.class, "ctx");
 
         GridTestUtils.setFieldValue(h2Idx, IgniteH2Indexing.class, "mapQryExec",
-            new MockGridMapQueryExecutor(null) {
-                @Override public void onMessage(UUID nodeId, Object msg) {
-                    if (GridH2QueryRequest.class.isAssignableFrom(msg.getClass())) {
-                        GridH2QueryRequest qryReq = (GridH2QueryRequest)msg;
+            new MockGridMapQueryExecutor() {
+                @Override public void onQueryRequest(ClusterNode node, GridH2QueryRequest qryReq) throws IgniteCheckedException {
+                    GridCacheContext<?, ?> cctx = ctx.cache().context().cacheContext(qryReq.caches().get(0));
 
-                        GridCacheContext<?, ?> cctx = ctx.cache().context().cacheContext(qryReq.caches().get(0));
+                    GridDhtLocalPartition part = cctx.topology().localPartition(0, NONE, false);
 
-                        GridDhtLocalPartition part = cctx.topology().localPartition(0, NONE, false);
+                    AtomicLong aState = GridTestUtils.getFieldValue(part, GridDhtLocalPartition.class, "state");
 
-                        AtomicLong aState = GridTestUtils.getFieldValue(part, GridDhtLocalPartition.class, "state");
+                    long stateVal = aState.getAndSet(2);
 
-                        long stateVal = aState.getAndSet(2);
+                    startedExecutor.onQueryRequest(node, qryReq);
 
-                        startedExecutor.onMessage(nodeId, msg);
-
-                        aState.getAndSet(stateVal);
-                    }
-                    else
-                        startedExecutor.onMessage(nodeId, msg);
+                    aState.getAndSet(stateVal);
                 }
             }.insertRealExecutor(mapQryExec));
 
@@ -230,26 +216,20 @@ public class RetryCauseMessageSelfTest extends AbstractIndexingCommonTest {
         final GridKernalContext ctx = GridTestUtils.getFieldValue(mapQryExec, GridMapQueryExecutor.class, "ctx");
 
         GridTestUtils.setFieldValue(h2Idx, IgniteH2Indexing.class, "mapQryExec",
-            new MockGridMapQueryExecutor(null) {
-                @Override public void onMessage(UUID nodeId, Object msg) {
-                    if (GridH2QueryRequest.class.isAssignableFrom(msg.getClass())) {
-                        GridH2QueryRequest qryReq = (GridH2QueryRequest)msg;
+            new MockGridMapQueryExecutor() {
+                @Override
+                public void onQueryRequest(ClusterNode node, GridH2QueryRequest qryReq) throws IgniteCheckedException {
+                    GridCacheContext<?, ?> cctx = ctx.cache().context().cacheContext(qryReq.caches().get(0));
 
-                        GridCacheContext<?, ?> cctx = ctx.cache().context().cacheContext(qryReq.caches().get(0));
+                    GridDhtLocalPartition part = cctx.topology().localPartition(0, NONE, false);
 
-                        GridDhtLocalPartition part = cctx.topology().localPartition(0, NONE, false);
+                    AtomicLong aState = GridTestUtils.getFieldValue(part, GridDhtLocalPartition.class, "state");
 
-                        AtomicLong aState = GridTestUtils.getFieldValue(part, GridDhtLocalPartition.class, "state");
+                    long stateVal = aState.getAndSet(2);
 
-                        long stateVal = aState.getAndSet(2);
+                    startedExecutor.onQueryRequest(node, qryReq);
 
-                        startedExecutor.onMessage(nodeId, msg);
-
-                        aState.getAndSet(stateVal);
-                    }
-                    else
-                        startedExecutor.onMessage(nodeId, msg);
-
+                    aState.getAndSet(stateVal);
                 }
             }.insertRealExecutor(mapQryExec));
 
@@ -281,24 +261,20 @@ public class RetryCauseMessageSelfTest extends AbstractIndexingCommonTest {
         final ConcurrentMap<PartitionReservationKey, GridReservable> reservations = reservations(h2Idx);
 
         GridTestUtils.setFieldValue(h2Idx, IgniteH2Indexing.class, "mapQryExec",
-            new MockGridMapQueryExecutor(null) {
-                @Override public void onMessage(UUID nodeId, Object msg) {
-                    if (GridH2QueryRequest.class.isAssignableFrom(msg.getClass())) {
-                        final PartitionReservationKey grpKey = new PartitionReservationKey(ORG, null);
+            new MockGridMapQueryExecutor() {
+                @Override
+                public void onQueryRequest(ClusterNode node, GridH2QueryRequest qryReq) throws IgniteCheckedException {
+                    final PartitionReservationKey grpKey = new PartitionReservationKey(ORG, null);
 
-                        reservations.put(grpKey, new GridReservable() {
+                    reservations.put(grpKey, new GridReservable() {
+                        @Override public boolean reserve() {
+                            throw H2Utils.retryException("test retry exception");
+                        }
 
-                            @Override public boolean reserve() {
-                                throw H2Utils.retryException("test retry exception");
-                            }
+                        @Override public void release() {}
+                    });
 
-                            @Override public void release() {
-                            }
-                        });
-                    }
-
-                    startedExecutor.onMessage(nodeId, msg);
-
+                    startedExecutor.onQueryRequest(node, qryReq);
                 }
             }.insertRealExecutor(mapQryExec));
 
@@ -391,16 +367,9 @@ public class RetryCauseMessageSelfTest extends AbstractIndexingCommonTest {
             return this;
         }
 
-        /**
-         * @param busyLock Busy lock.
-         */
-        MockGridMapQueryExecutor(GridSpinBusyLock busyLock) {
-            super(busyLock);
-        }
-
         /** {@inheritDoc} */
-        @Override public void onMessage(UUID nodeId, Object msg) {
-            startedExecutor.onMessage(nodeId, msg);
+        @Override public void onQueryRequest(ClusterNode node, GridH2QueryRequest req) throws IgniteCheckedException {
+            startedExecutor.onQueryRequest(node, req);
         }
     }
 }

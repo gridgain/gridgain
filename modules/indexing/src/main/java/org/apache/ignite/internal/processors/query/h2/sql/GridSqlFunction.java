@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,7 +21,6 @@ import java.util.HashMap;
 import java.util.Map;
 import org.apache.ignite.internal.util.typedef.F;
 import org.h2.command.Parser;
-import org.h2.util.StatementBuilder;
 import org.h2.value.ValueString;
 
 import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlFunctionType.CASE;
@@ -87,12 +85,15 @@ public class GridSqlFunction extends GridSqlElement {
         this(schema, TYPE_MAP.get(name), name);
     }
 
-    /** {@inheritDoc} */
+    /** {@inheritDoc}  */
     @Override public String getSQL() {
-        StatementBuilder buff = new StatementBuilder();
+        StringBuilder buff = new StringBuilder();
 
-        if (schema != null)
-            buff.append(Parser.quoteIdentifier(schema)).append('.');
+        if (schema != null) {
+            Parser.quoteIdentifier(buff, schema, true);
+
+            buff.append('.');
+        }
 
         // We don't need to quote identifier as long as H2 never does so with function names when generating plan SQL.
         // On the other hand, quoting identifiers that also serve as keywords (like CURRENT_DATE() and CURRENT_DATE)
@@ -138,13 +139,14 @@ public class GridSqlFunction extends GridSqlElement {
 
             case TABLE:
                 for (int i = 0; i < size(); i++) {
-                    buff.appendExceptFirst(", ");
+                    if (i > 0)
+                        buff.append(", ");
 
                     GridSqlElement e = child(i);
 
                     // id int = ?, name varchar = ('aaa', 'bbb')
-                    buff.append(Parser.quoteIdentifier(((GridSqlAlias)e).alias()))
-                        .append(' ')
+                    Parser.quoteIdentifier(buff, ((GridSqlAlias)e).alias(), true);
+                    buff.append(' ')
                         .append(e.resultType().sql())
                         .append('=')
                         .append(e.child().getSQL());
@@ -154,7 +156,9 @@ public class GridSqlFunction extends GridSqlElement {
 
             default:
                 for (int i = 0; i < size(); i++) {
-                    buff.appendExceptFirst(", ");
+                    if (i > 0)
+                        buff.append(", ");
+
                     buff.append(child(i).getSQL());
                 }
         }

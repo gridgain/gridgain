@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -76,6 +75,9 @@ public class JdbcResult implements JdbcRawBinarylizable {
     /** A result of the processing ordered batch request. */
     static final byte BATCH_EXEC_ORDERED = 18;
 
+    /** A result of the processing cache partitions distributions request. */
+    static final byte CACHE_PARTITIONS = 19;
+
     /** Success status. */
     private byte type;
 
@@ -97,7 +99,6 @@ public class JdbcResult implements JdbcRawBinarylizable {
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
         ClientListenerProtocolVersion ver) throws BinaryObjectException {
-        // No-op.
     }
 
     /**
@@ -106,12 +107,13 @@ public class JdbcResult implements JdbcRawBinarylizable {
      * @return Request object.
      * @throws BinaryObjectException On error.
      */
-    public static JdbcResult readResult(BinaryReaderExImpl reader, ClientListenerProtocolVersion ver) throws BinaryObjectException {
+    public static JdbcResult readResult(BinaryReaderExImpl reader,
+        ClientListenerProtocolVersion ver) throws BinaryObjectException {
         int resId = reader.readByte();
 
         JdbcResult res;
 
-        switch(resId) {
+        switch (resId) {
             case QRY_EXEC:
                 res = new JdbcQueryExecuteResult();
 
@@ -189,6 +191,11 @@ public class JdbcResult implements JdbcRawBinarylizable {
 
             case BATCH_EXEC_ORDERED:
                 res = new JdbcOrderedBatchExecuteResult();
+
+                break;
+
+            case CACHE_PARTITIONS:
+                res = new JdbcCachePartitionsResult();
 
                 break;
 

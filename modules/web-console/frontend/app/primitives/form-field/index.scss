@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -80,16 +79,6 @@
                         border-color: $ignite-brand-primary;
                         box-shadow: inset 0 1px 3px 0 rgba($ignite-brand-primary, .5);
                     }
-
-                    &:focus {
-                        border-color: $ignite-brand-success;
-                        box-shadow: inset 0 1px 3px 0 rgba($ignite-brand-success, .5);
-                    }
-
-                    &:disabled {
-                        opacity: .5;
-                    }
-
 
                     &:focus {
                         border-color: $ignite-brand-success;
@@ -220,6 +209,7 @@
         }
 
         & > input,
+        & > select:not([multiple]),
         & > button:not(.btn-ignite) {
             outline: none;
             overflow: visible;
@@ -274,6 +264,10 @@
             &:after {
                 right: 36px;
             }
+        }
+        & > select.ng-invalid.ng-touched:not([multiple]) {
+            background-position: calc(100% - 36px) 50%;
+            padding-right: calc(28px + 26px);
         }
     }
 
@@ -376,12 +370,16 @@
                 right: 10px;
             }
         }
+        & > select.ng-invalid.ng-touched:not([multiple]) {
+            background-position: calc(100% - 10px) 50%;
+            padding-right: calc(28px + 26px);
+        }
     }
 
     .form-field__errors {
         position: relative;
         
-        padding: 5px 10px 0px;
+        padding: 5px 10px 0;
 
         color: $ignite-brand-primary;
         font-size: 12px;
@@ -595,14 +593,14 @@
                 border: none;
                 box-shadow: none;
 
-                background: linear-gradient(to right, rgb(0, 103, 185), transparent) 0px 25px / 0px, 
+                background: linear-gradient(to right, rgb(0, 103, 185), transparent) 0 25px / 0px,
                             linear-gradient(to right, rgb(0, 103, 185) 70%, transparent 0%) 0% 0% / 8px 1px repeat-x,
                             0% 0% / 0px, 0% 0% / 4px;
                 background-size: 0, 8px 1px, 0, 0;
                 background-position: 1px 25px;
 
-                padding-left: 0px;
-                padding-right: 0px;
+                padding-left: 0;
+                padding-right: 0;
                 margin-left: 10px;
                 margin-right: 10px;
 
@@ -648,6 +646,24 @@
     .form-field__control {
         > button:not(.btn-ignite) {
             padding-top: 10px;
+        }
+        select:not([multiple]) {
+            -webkit-appearance: unset;
+            appearance: unset;
+            background-image: url(data:image/svg+xml;base64,PHN2ZyB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA4IDQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0ibTAgMGg4bC00IDR6IiBmaWxsPSIjMzkzOTM5Ii8+PC9zdmc+);
+            background-size: 8px 4px;
+            background-repeat: no-repeat;
+            background-position: calc(100% - 10px) 50%;
+            padding-right: 28px;
+        }
+        // "Placeholder" color
+        select.ng-empty {
+            color: rgba(66, 66, 66, 0.5);
+
+            // Resets option color back to normal
+            option {
+                color: #393939;
+            }
         }
     }
 }
