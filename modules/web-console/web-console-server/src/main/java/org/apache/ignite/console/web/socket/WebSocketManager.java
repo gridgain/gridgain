@@ -595,7 +595,6 @@ public class WebSocketManager extends TextWebSocketHandler {
             throw new IllegalStateException("Task ID not specified [evt=" + evt + "]");
 
         String nids = params.getString("nids");
-        JsonArray args = params.getJsonArray("args");
 
         VisorTaskDescriptor desc = visorTasks.get(taskId);
 
@@ -612,7 +611,10 @@ public class WebSocketManager extends TextWebSocketHandler {
 
         Arrays.stream(desc.getArgumentsClasses()).forEach(arg ->  exeParams.put("p" + idx.getAndIncrement(), arg));
 
-        args.forEach(arg -> exeParams.put("p" + idx.getAndIncrement(), arg));
+        JsonArray args = params.getJsonArray("args");
+
+        if (!F.isEmpty(args))
+            args.forEach(arg -> exeParams.put("p" + idx.getAndIncrement(), arg));
 
         payload.put("params", exeParams);
 
