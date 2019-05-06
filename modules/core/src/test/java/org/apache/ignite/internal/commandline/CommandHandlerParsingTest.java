@@ -36,7 +36,12 @@ import static org.apache.ignite.internal.commandline.CommandHandler.DFLT_HOST;
 import static org.apache.ignite.internal.commandline.CommandHandler.DFLT_PORT;
 import static org.apache.ignite.internal.commandline.CommandHandler.WAL_DELETE;
 import static org.apache.ignite.internal.commandline.CommandHandler.WAL_PRINT;
+import static org.apache.ignite.internal.commandline.cache.CacheCommand.IDLE_VERIFY;
 import static org.apache.ignite.internal.commandline.cache.CacheCommand.VALIDATE_INDEXES;
+import static org.apache.ignite.internal.commandline.cache.argument.IdleVerifyCommandArg.CHECK_CRC;
+import static org.apache.ignite.internal.commandline.cache.argument.IdleVerifyCommandArg.DUMP;
+import static org.apache.ignite.internal.commandline.cache.argument.IdleVerifyCommandArg.EXCLUDE_CACHES;
+import static org.apache.ignite.internal.commandline.cache.argument.IdleVerifyCommandArg.SKIP_ZEROS;
 import static org.apache.ignite.internal.commandline.cache.argument.ValidateIndexesCommandArg.CHECK_FIRST;
 import static org.apache.ignite.internal.commandline.cache.argument.ValidateIndexesCommandArg.CHECK_THROUGH;
 import static org.junit.Assert.assertArrayEquals;
@@ -59,6 +64,51 @@ public class CommandHandlerParsingTest {
     @After
     public void tearDown() throws Exception {
         System.clearProperty(IGNITE_ENABLE_EXPERIMENTAL_COMMAND);
+    }
+
+    /**
+     * Test parsing and validation for the idle_verify arguments.
+     */
+    @Test
+    public void testValidateIdleVerifyArguments() {
+        CommandHandler hnd = new CommandHandler();
+
+        try {
+            CacheArguments args = hnd.parseAndValidate(
+                Arrays.asList(
+                    CACHE.text(),
+                    IDLE_VERIFY.text(),
+                    DUMP.toString(),
+                    SKIP_ZEROS.toString(),
+                    CHECK_CRC.toString(),
+                    EXCLUDE_CACHES.toString(),
+                    "cache1, cache2"
+                )
+            ).cacheArgs();
+        }
+        catch (IllegalArgumentException e) {
+            fail("Unexpected exception: " + e);
+        }
+
+        try {
+            CacheArguments args = hnd.parseAndValidate(
+                Arrays.asList(
+                    CACHE.text(),
+                    IDLE_VERIFY.text(),
+                    DUMP.toString(),
+                    "--skipZeros",
+                    CHECK_CRC.toString(),
+                    EXCLUDE_CACHES.toString(),
+                    "cache1, cache2"
+                )
+            ).cacheArgs();
+
+            fail("Expected exception hasn't been thrown");
+        }
+        catch (IllegalArgumentException e) {
+            e.printStackTrace();
+        }
+
     }
 
     /**

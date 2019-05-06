@@ -2141,6 +2141,10 @@ public class CommandHandler {
         while (hasNextArg()) {
             String str = nextArg("").toLowerCase();
 
+            if (str.startsWith("-"))
+                if (str.charAt(1) != '-')
+                    throw new IllegalArgumentException(str + " must begin with double minus \"--\"");
+
             Command cmd = Command.of(str);
 
             if (cmd != null) {
@@ -2403,8 +2407,11 @@ public class CommandHandler {
 
                     IdleVerifyCommandArg arg = CommandArgUtils.of(nextArg, IdleVerifyCommandArg.class);
 
-                    if (arg == null)
+                    if (arg == null) {
+                        if (nextArg.startsWith("--"))
+                                throw new IllegalArgumentException("Wrong argument passed: " + nextArg);
                         parseCacheNames(nextArg, cacheArgs);
+                    }
                     else {
                         switch (arg) {
                             case DUMP:
