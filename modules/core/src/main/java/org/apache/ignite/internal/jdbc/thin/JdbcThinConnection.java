@@ -37,9 +37,12 @@ import java.sql.Savepoint;
 import java.sql.Statement;
 import java.sql.Struct;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Semaphore;
 import java.util.logging.Level;
@@ -124,7 +127,7 @@ public class JdbcThinConnection implements Connection {
     private boolean connected;
 
     /** Tracked statements to close on disconnect. */
-    private final ArrayList<JdbcThinStatement> stmts = new ArrayList<>();
+    private final Set<JdbcThinStatement> stmts = Collections.newSetFromMap(new IdentityHashMap<>());
 
     /**
      * Creates new connection.
@@ -386,6 +389,12 @@ public class JdbcThinConnection implements Connection {
 
             streamState = null;
         }
+
+        synchronized (stmtsMux) {
+            stmts.clear();
+        }
+
+        SQLException err = null;
 
         closed = true;
 
@@ -893,6 +902,15 @@ public class JdbcThinConnection implements Connection {
             res = schemaName.toUpperCase();
 
         return res;
+    }
+
+    /**
+     * @param stmt Statement to close.
+     */
+    void closeStatement(JdbcThinStatement stmt) {
+        synchronized (stmtsMux) {
+            stmts.remove(stmt);
+        }
     }
 
     /**
