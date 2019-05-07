@@ -147,6 +147,8 @@ public class CleanupRestoredCachesSlowTest extends GridCommonAbstractTest implem
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
         cleanPersistenceDir();
     }
 
@@ -155,6 +157,8 @@ public class CleanupRestoredCachesSlowTest extends GridCommonAbstractTest implem
         stopAllGrids();
 
         cleanPersistenceDir();
+
+        super.afterTest();
     }
 
     /**
