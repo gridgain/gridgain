@@ -137,6 +137,8 @@ export default class NotebookData {
 
                 if (idx < 0)
                     this.notebooks.push(notebook);
+                else
+                    this.notebooks[idx] = notebook;
 
                 return notebook;
             })
