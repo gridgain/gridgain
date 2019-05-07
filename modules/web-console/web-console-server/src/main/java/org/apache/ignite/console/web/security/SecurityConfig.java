@@ -26,7 +26,6 @@ import org.apache.ignite.console.services.AccountsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
@@ -46,12 +45,11 @@ import org.springframework.session.MapSession;
 import org.springframework.session.SessionRepository;
 import org.springframework.session.config.annotation.web.http.EnableSpringHttpSession;
 
-import static org.apache.ignite.console.websocket.WebSocketConsts.AGENTS_PATH;
+import static org.apache.ignite.console.websocket.WebSocketConsts.BROWSERS_PATH;
 
 /**
  * Security settings provider.
  */
-@Configuration
 @EnableWebSecurity
 @EnableSpringHttpSession
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
@@ -73,10 +71,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     /** Resend activation token. */
     private static final String ACTIVATION_RESEND = "/api/v1/activation/resend/";
 
-
     /** Public routes. */
     private static final String[] PUBLIC_ROUTES = new String[] {
-        AGENTS_PATH,
         SIGN_IN_ROUTE, SIGN_UP_ROUTE,
         FORGOT_PASSWORD_ROUTE, RESET_PASSWORD_ROUTE, ACTIVATION_RESEND
     };
@@ -91,7 +87,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     /** */
     private final AccountsService accountsSrvc;
-    
+
     /** */
     private final PasswordEncoder encoder;
 
@@ -100,6 +96,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     /**
      * @param encoder Service for encoding user passwords.
+     * @param userDetailsChecker Service to check the status of the loaded <tt>UserDetails</tt> object.
      * @param accountsSrvc User details service.
      */
     @Autowired
@@ -118,8 +115,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             .authorizeRequests()
             .antMatchers(PUBLIC_ROUTES).anonymous()
             .antMatchers("/api/v1/admin/**").hasRole("ADMIN")
-            .antMatchers("/api/v1/**").hasRole("USER")
-            .anyRequest().authenticated()
+            .antMatchers("/api/v1/**", BROWSERS_PATH).hasRole("USER")
             .and()
             .addFilterBefore(authenticationFilter(), UsernamePasswordAuthenticationFilter.class)
             .logout()
