@@ -137,8 +137,10 @@ public class Table<T extends AbstractDto> extends CacheHolder<UUID, T> {
      * @param values Map of DTOs.
      */
     public void saveAll(Map<UUID, T> values) throws IgniteException {
-        for (T item : values.values())
-            putToUniqueIndexes(item);
+        if (!F.isEmpty(uniqueIndexes)) {
+            for (T item : values.values())
+                putToUniqueIndexes(item);
+        }
 
         cache.putAll(values);
     }
