@@ -37,15 +37,10 @@ public class ClassPathContentLoggingTest extends GridCommonAbstractTest {
     }
 
     /** {@inheritDoc} */
-    @Override protected void beforeTest() {
+    @Override protected void beforeTestsStarted() throws Exception {
+        super.beforeTestsStarted();
+
         System.setProperty(IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP, "true");
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTest() {
-        System.setProperty(IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP, "false");
-
-        stopAllGrids(true);
     }
 
     /**

@@ -19,6 +19,8 @@ package org.apache.ignite.testframework.junits;
 import org.junit.Rule;
 import org.junit.rules.TestName;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP;
+
 /**
  * Supports compatibility with old tests that expect specific threading behavior of JUnit 3 TestCase class,
  * inherited assertions and specific old interface for GridTestUtils.
@@ -73,7 +75,7 @@ public class JUnit3TestLegacySupport extends JUnitAssertAware {
      * @throws Exception If failed. {@link #afterTestsStopped()} will be called in this case.
      */
     protected void beforeTestsStarted() throws Exception {
-        // No-op.
+        System.setProperty(IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP, "false");
     }
 
     /**
