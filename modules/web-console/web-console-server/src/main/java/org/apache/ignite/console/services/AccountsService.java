@@ -256,7 +256,7 @@ public class AccountsService implements UserDetailsService {
             String newTok = changes.getToken();
 
             if (!oldTok.equals(newTok)) {
-                wsm.revokeToken(oldTok);
+                wsm.revokeToken(oldTok, newTok);
 
                 acc.setToken(newTok);
             }
