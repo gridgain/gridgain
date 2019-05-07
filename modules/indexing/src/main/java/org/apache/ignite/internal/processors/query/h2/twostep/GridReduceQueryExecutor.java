@@ -64,7 +64,7 @@ import org.apache.ignite.internal.processors.query.h2.ReduceH2QueryInfo;
 import org.apache.ignite.internal.processors.query.h2.ThreadLocalObjectPool;
 import org.apache.ignite.internal.processors.query.h2.UpdateResult;
 import org.apache.ignite.internal.processors.query.h2.dml.DmlDistributedUpdateRun;
-import org.apache.ignite.internal.processors.query.h2.GridH2QueryMemoryTracker;
+import org.apache.ignite.internal.processors.query.h2.QueryMemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContextRegistry;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlSortColumn;
@@ -643,15 +643,15 @@ public class GridReduceQueryExecutor {
                     else {
                         cancel.checkCancelled();
 
-                        H2Utils.setupConnection(r.connection(), false, enforceJoinOrder);
+                        long workMem = req.workMemory();
 
                         QueryContext qctx = new QueryContext(
                             0,
                             null,
                             null,
                             null,
-                            null
-                        );
+                            null,
+                            workMem > 0 && workMem != Long.MAX_VALUE ? new QueryMemoryTracker(workMem) : null);
 
                         QueryContextRegistry qryCtxRegistry = h2.queryContextRegistry();
 

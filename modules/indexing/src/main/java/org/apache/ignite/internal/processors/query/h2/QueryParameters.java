@@ -60,6 +60,9 @@ public class QueryParameters {
      */
     private final int updateBatchSize;
 
+    /** Work memory. */
+    private final long workMem;
+
     /**
      * Create parameters from query.
      *
@@ -70,6 +73,7 @@ public class QueryParameters {
         NestedTxMode nestedTxMode = NestedTxMode.DEFAULT;
         boolean autoCommit = true;
         List<Object[]> batchedArgs = null;
+        long workMem = Long.MAX_VALUE;
 
         if (qry instanceof SqlFieldsQueryEx) {
             SqlFieldsQueryEx qry0 = (SqlFieldsQueryEx)qry;
@@ -80,6 +84,8 @@ public class QueryParameters {
             autoCommit = qry0.isAutoCommit();
 
             batchedArgs = qry0.batchedArguments();
+
+            workMem = qry0.workMemory();
         }
 
         return new QueryParameters(
@@ -88,6 +94,7 @@ public class QueryParameters {
             qry.getTimeout(),
             qry.isLazy(),
             qry.getPageSize(),
+            workMem,
             qry.isDataPageScanEnabled(),
             nestedTxMode,
             autoCommit,
@@ -104,6 +111,7 @@ public class QueryParameters {
      * @param timeout Timeout.
      * @param lazy Lazy flag.
      * @param pageSize Page size.
+     * @param workMem Query work memory size.
      * @param dataPageScanEnabled Data page scan enabled flag.
      * @param nestedTxMode Nested TX mode.
      * @param autoCommit Auto-commit flag.
@@ -117,6 +125,7 @@ public class QueryParameters {
         int timeout,
         boolean lazy,
         int pageSize,
+        long workMem,
         Boolean dataPageScanEnabled,
         NestedTxMode nestedTxMode,
         boolean autoCommit,
@@ -128,6 +137,7 @@ public class QueryParameters {
         this.timeout = timeout;
         this.lazy = lazy;
         this.pageSize = pageSize;
+        this.workMem = workMem;
         this.dataPageScanEnabled = dataPageScanEnabled;
         this.nestedTxMode = nestedTxMode;
         this.autoCommit = autoCommit;
@@ -212,6 +222,13 @@ public class QueryParameters {
     }
 
     /**
+     * @return Work memory size for query.
+     */
+    public long workMemory() {
+        return workMem;
+    }
+
+    /**
      * Convert current batched arguments to a form with single arguments.
      *
      * @param args Arguments.
@@ -224,6 +241,7 @@ public class QueryParameters {
             this.timeout,
             this.lazy,
             this.pageSize,
+            this.workMem,
             this.dataPageScanEnabled,
             this.nestedTxMode,
             this.autoCommit,

@@ -159,6 +159,9 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
     /** TX details holder for {@code SELECT FOR UPDATE}, or {@code null} if not applicable. */
     private GridH2SelectForUpdateTxDetails txReq;
 
+    /** Memory available for query local results. */
+    private long workMem;
+
     /**
      * Required by {@link Externalizable}
      */
@@ -185,6 +188,7 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
         schemaName = req.schemaName;
         mvccSnapshot = req.mvccSnapshot;
         txReq = req.txReq;
+        workMem = req.workMem;
     }
 
     /**
@@ -448,6 +452,25 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
     }
 
     /**
+     * Memory available for query local result.
+     *
+     * @return Maximum memory size.
+     */
+    public long workMemory() {
+        return workMem;
+    }
+
+    /**
+     * @param workMem Memory available for query local result.
+     * @return {@code} this.
+     */
+    public GridH2QueryRequest workMemory(long workMem) {
+        this.workMem = workMem;
+
+        return this;
+    }
+
+    /**
      * Checks if data page scan enabled.
      *
      * @return {@code true} If data page scan enabled, {@code false} if not, and {@code null} if not set.
@@ -607,6 +630,12 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
 
                 writer.incrementState();
 
+            case 14:
+                if (!writer.writeLong("workMem", workMem))
+                    return false;
+
+                writer.incrementState();
+
         }
 
         return true;
@@ -732,6 +761,14 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
 
                 reader.incrementState();
 
+            case 14:
+                workMem = reader.readLong("workMem");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
         }
 
         return reader.afterMessageRead(GridH2QueryRequest.class);
@@ -744,7 +781,7 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 14;
+        return 15;
     }
 
     /** {@inheritDoc} */
