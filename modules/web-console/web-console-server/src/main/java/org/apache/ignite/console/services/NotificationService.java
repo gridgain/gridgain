@@ -34,13 +34,13 @@ public class NotificationService {
     private static final Logger log = LoggerFactory.getLogger(NotificationService.class);
 
     /** Mail service. */
-    private IMailService mailSrvc;
+    private IMailService mailSrv;
 
     /**
-     * @param srvc Mail service.
+     * @param srv Mail service.
      */
-    public NotificationService(IMailService srvc) {
-        mailSrvc = srvc;
+    public NotificationService(IMailService srv) {
+        mailSrv = srv;
     }
 
     /**
@@ -51,7 +51,7 @@ public class NotificationService {
         try {
             Notification notification = new Notification(currentRequestOrigin(), acc, desc);
 
-            mailSrvc.send(notification);
+            mailSrv.send(notification);
         }
         catch (Throwable e) {
             log.error("Failed to send email", e);

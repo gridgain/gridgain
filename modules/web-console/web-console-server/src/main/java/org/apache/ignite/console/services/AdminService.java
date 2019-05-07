@@ -43,16 +43,16 @@ public class AdminService {
     private final TransactionManager txMgr;
 
     /** */
-    private final AccountsService accountsSrvc;
+    private final AccountsService accountsSrv;
 
     /** */
-    private final ConfigurationsService cfgsSrvc;
+    private final ConfigurationsService cfgsSrv;
 
     /** */
-    private final NotebooksService notebooksSrvc;
+    private final NotebooksService notebooksSrv;
 
     /** */
-    private final NotificationService notificationSrvc;
+    private final NotificationService notificationSrv;
 
     /** */
     private final AnnouncementRepository annRepo;
@@ -62,27 +62,27 @@ public class AdminService {
 
     /**
      * @param txMgr Transactions manager.
-     * @param accountsSrvc Service to work with accounts.
-     * @param cfgsSrvc Service to work with configurations.
-     * @param notebooksSrvc Service to work with notebooks.
-     * @param notificationSrvc Service to send notifications.
+     * @param accountsSrv Service to work with accounts.
+     * @param cfgsSrv Service to work with configurations.
+     * @param notebooksSrv Service to work with notebooks.
+     * @param notificationSrv Service to send notifications.
      * @param annRepo Repository to work with announcement.
      * @param wsm Web sockets manager.
      */
     public AdminService(
         TransactionManager txMgr,
-        AccountsService accountsSrvc,
-        ConfigurationsService cfgsSrvc,
-        NotebooksService notebooksSrvc,
-        NotificationService notificationSrvc,
+        AccountsService accountsSrv,
+        ConfigurationsService cfgsSrv,
+        NotebooksService notebooksSrv,
+        NotificationService notificationSrv,
         AnnouncementRepository annRepo,
         WebSocketManager wsm
     ) {
         this.txMgr = txMgr;
-        this.accountsSrvc = accountsSrvc;
-        this.cfgsSrvc = cfgsSrvc;
-        this.notebooksSrvc = notebooksSrvc;
-        this.notificationSrvc = notificationSrvc;
+        this.accountsSrv = accountsSrv;
+        this.cfgsSrv = cfgsSrv;
+        this.notebooksSrv = notebooksSrv;
+        this.notificationSrv = notificationSrv;
         this.annRepo = annRepo;
         this.wsm = wsm;
     }
@@ -91,7 +91,7 @@ public class AdminService {
      * @return List of all users.
      */
     public JsonArray list() {
-        List<Account> accounts = accountsSrvc.list();
+        List<Account> accounts = accountsSrv.list();
 
         JsonArray res = new JsonArray();
 
@@ -125,13 +125,13 @@ public class AdminService {
      */
     public void delete(UUID accId) {
         try (Transaction tx = txMgr.txStart()) {
-            cfgsSrvc.deleteByAccountId(accId);
-            notebooksSrvc.deleteByAccountId(accId);
-            Account acc = accountsSrvc.delete(accId);
+            cfgsSrv.deleteByAccountId(accId);
+            notebooksSrv.deleteByAccountId(accId);
+            Account acc = accountsSrv.delete(accId);
 
             tx.commit();
 
-            notificationSrvc.sendEmail(ACCOUNT_DELETED, acc);
+            notificationSrv.sendEmail(ACCOUNT_DELETED, acc);
         }
     }
 
@@ -140,7 +140,7 @@ public class AdminService {
      * @param admin Admin flag.
      */
     public void toggle(UUID accId, boolean admin) {
-        accountsSrvc.toggle(accId, admin);
+        accountsSrv.toggle(accId, admin);
     }
 
     /**
@@ -154,9 +154,9 @@ public class AdminService {
      * @param params SignUp params.
      */
     public void registerUser(SignUpRequest params) {
-        Account acc = accountsSrvc.create(params);
+        Account acc = accountsSrv.create(params);
 
-        notificationSrvc.sendEmail(ADMIN_WELCOME_LETTER, acc);
+        notificationSrv.sendEmail(ADMIN_WELCOME_LETTER, acc);
     }
 
     /** */

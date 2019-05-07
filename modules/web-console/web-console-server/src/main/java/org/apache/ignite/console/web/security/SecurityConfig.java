@@ -82,7 +82,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     };
 
     /** */
-    private final AccountsService accountsSrvc;
+    private final AccountsService accountsSrv;
     
     /** */
     private final PasswordEncoder encoder;
@@ -99,20 +99,20 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     /**
      * @param activationCfg Account activation configuration.
      * @param encoder Service interface for encoding passwords.
-     * @param accountsSrvc User details service.
+     * @param accountsSrv User details service.
      */
     @Autowired
     public SecurityConfig(
         ActivationConfiguration activationCfg,
         PasswordEncoder encoder,
-        AccountsService accountsSrvc
+        AccountsService accountsSrv
     ) {
         userDetailsChecker = activationCfg.getChecker();
         activationEnabled = activationCfg.isEnabled();
         activationTimeout = activationCfg.getTimeout();
 
         this.encoder = encoder;
-        this.accountsSrvc = accountsSrvc;
+        this.accountsSrv = accountsSrv;
     }
 
     /** {@inheritDoc} */
@@ -162,7 +162,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             new CustomAuthenticationProvider(activationTimeout) : new DaoAuthenticationProvider();
 
         authProvider.setPreAuthenticationChecks(userDetailsChecker);
-        authProvider.setUserDetailsService(accountsSrvc);
+        authProvider.setUserDetailsService(accountsSrv);
         authProvider.setPasswordEncoder(encoder);
 
         auth.authenticationProvider(authProvider);

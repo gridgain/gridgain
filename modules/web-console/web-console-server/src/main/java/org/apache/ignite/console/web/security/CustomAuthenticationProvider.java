@@ -118,11 +118,11 @@ public class CustomAuthenticationProvider extends DaoAuthenticationProvider {
 
             checkActivationToken(acc, activationTok);
 
-            AccountsService accountsSrvc = (AccountsService)getUserDetailsService();
+            AccountsService accountsSrv = (AccountsService)getUserDetailsService();
 
             if (!acc.isEnabled() &&
                 MILLIS.between(acc.getActivationSentAt(), LocalDateTime.now()) >= activationTimeout) {
-                accountsSrvc.resetActivationToken(username);
+                accountsSrv.resetActivationToken(username);
 
                 throw new MissingConfirmRegistrationException(messages.getMessage(
                     "AbstractUserDetailsAuthenticationProvider.expiredActivationToken",
@@ -130,7 +130,7 @@ public class CustomAuthenticationProvider extends DaoAuthenticationProvider {
                     acc.getEmail());
             }
 
-            accountsSrvc.activateAccount(acc.getId());
+            accountsSrv.activateAccount(acc.getId());
         }
 
         return super.authenticate(authentication);

@@ -225,7 +225,7 @@ public class AccountsService implements UserDetailsService {
             Account acc = accountsRepo.getByEmail(email);
 
             if (MILLIS.between(acc.getActivationSentAt(), LocalDateTime.now()) >= activationSndTimeout)
-                throw new IllegalAccessError("Too Many Activation Attempts!");
+                throw new IllegalAccessError("Too many activation attempts");
 
             acc.resetActivationToken();
 
