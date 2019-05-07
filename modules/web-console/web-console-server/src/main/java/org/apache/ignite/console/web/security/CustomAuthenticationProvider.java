@@ -35,7 +35,7 @@ import static java.time.temporal.ChronoUnit.MILLIS;
  * Custom activation provider.
  */
 public class CustomAuthenticationProvider extends DaoAuthenticationProvider {
-    /** */
+    /** Timeout between emails with new activation token. */
     private long activationTimeout;
 
     /**
@@ -82,12 +82,6 @@ public class CustomAuthenticationProvider extends DaoAuthenticationProvider {
             messages.getMessage("CustomAuthenticationProvider.onlySupports",
                 "Only AccountsService is supported"));
 
-
-        UUID activationTok = null;
-
-        if (authentication.getDetails() instanceof UUID)
-            activationTok = (UUID)authentication.getDetails();
-
         // Determine username
         String username = (authentication.getPrincipal() == null) ? "NONE_PROVIDED" : authentication.getName();
 
@@ -117,13 +111,18 @@ public class CustomAuthenticationProvider extends DaoAuthenticationProvider {
         if (user instanceof Account) {
             Account acc = (Account)user;
 
+            UUID activationTok = null;
+
+            if (authentication.getDetails() instanceof UUID)
+                activationTok = (UUID)authentication.getDetails();
+
             checkActivationToken(acc, activationTok);
 
-            AccountsService accountsSrvc = (AccountsService)getUserDetailsService();
+            AccountsService accountsSrv = (AccountsService)getUserDetailsService();
 
             if (!acc.isEnabled() &&
                 MILLIS.between(acc.getActivationSentAt(), LocalDateTime.now()) >= activationTimeout) {
-                accountsSrvc.resetActivationToken(username);
+                accountsSrv.resetActivationToken(username);
 
                 throw new MissingConfirmRegistrationException(messages.getMessage(
                     "AbstractUserDetailsAuthenticationProvider.expiredActivationToken",
@@ -131,7 +130,7 @@ public class CustomAuthenticationProvider extends DaoAuthenticationProvider {
                     acc.getEmail());
             }
 
-            accountsSrvc.activateAccount(acc.getId());
+            accountsSrv.activateAccount(acc.getId());
         }
 
         return super.authenticate(authentication);

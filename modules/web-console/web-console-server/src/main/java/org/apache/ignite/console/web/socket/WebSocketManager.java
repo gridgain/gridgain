@@ -433,19 +433,25 @@ public class WebSocketManager extends TextWebSocketHandler {
     }
 
     /**
-     * @param token Token to revoke.
+     * @param oldTok Token to revoke.
+     * @param newTok New token.
      */
-    public void revokeToken(String token) {
-        log.info("Revoke token: " + token);
+    public void revokeToken(String oldTok, String newTok) {
+        log.info("Revoke token [old: " + oldTok + ", new: " + newTok + "]");
 
         agents.forEach((ws, tokens) -> {
             try {
-                if (tokens.remove(token))
-                    sendMessage(ws, new WebSocketEvent(AGENT_REVOKE_TOKEN, token));
+                if (tokens.remove(oldTok))
+                    sendMessage(ws, new WebSocketEvent(AGENT_REVOKE_TOKEN, oldTok));
             }
             catch (Throwable e) {
-                log.error("Failed to revoke token: " + token);
+                log.error("Failed to revoke token: " + oldTok);
             }
+        });
+
+        browsers.forEach((ws, tok) -> {
+            if (tok.equals(oldTok))
+                browsers.put(ws, newTok);
         });
     }
 

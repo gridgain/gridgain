@@ -22,11 +22,10 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.configuration.CacheConfiguration;
+    import org.apache.ignite.console.config.ActivationConfiguration;
 import org.apache.ignite.console.services.AccountsService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
@@ -46,12 +45,11 @@ import org.springframework.session.MapSession;
 import org.springframework.session.SessionRepository;
 import org.springframework.session.config.annotation.web.http.EnableSpringHttpSession;
 
-import static org.apache.ignite.console.websocket.WebSocketConsts.AGENTS_PATH;
+import static org.apache.ignite.console.websocket.WebSocketConsts.BROWSERS_PATH;
 
 /**
  * Security settings provider.
  */
-@Configuration
 @EnableWebSecurity
 @EnableSpringHttpSession
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
@@ -73,40 +71,43 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     /** Resend activation token. */
     private static final String ACTIVATION_RESEND = "/api/v1/activation/resend/";
 
-
     /** Public routes. */
     private static final String[] PUBLIC_ROUTES = new String[] {
-        AGENTS_PATH,
         SIGN_IN_ROUTE, SIGN_UP_ROUTE,
         FORGOT_PASSWORD_ROUTE, RESET_PASSWORD_ROUTE, ACTIVATION_RESEND
     };
 
     /** */
-    @Value("${app.activation.enabled:false}")
-    private boolean activationEnabled;
-
-    /** */
-    @Value("${app.activation.timeout:1800000}")
-    private long activationTimeout;
-
-    /** */
-    private final AccountsService accountsSrvc;
-    
+    private final AccountsService accountsSrv;
     /** */
     private final PasswordEncoder encoder;
 
     /** */
     private UserDetailsChecker userDetailsChecker;
 
+    /** Is account email should be confirmed. */
+    private boolean activationEnabled;
+
+    /** Timeout between emails with new activation token. */
+    private long activationTimeout;
+
     /**
+     * @param activationCfg Account activation configuration.
      * @param encoder Service for encoding user passwords.
-     * @param accountsSrvc User details service.
+     * @param accountsSrv User details service.
      */
     @Autowired
-    public SecurityConfig(PasswordEncoder encoder, UserDetailsChecker userDetailsChecker, AccountsService accountsSrvc) {
+    public SecurityConfig(
+        ActivationConfiguration activationCfg,
+        PasswordEncoder encoder,
+        AccountsService accountsSrv
+    ) {
+        userDetailsChecker = activationCfg.getChecker();
+        activationEnabled = activationCfg.isEnabled();
+        activationTimeout = activationCfg.getTimeout();
+
         this.encoder = encoder;
-        this.userDetailsChecker = userDetailsChecker;
-        this.accountsSrvc = accountsSrvc;
+        this.accountsSrv = accountsSrv;
     }
 
     /** {@inheritDoc} */
@@ -118,8 +119,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             .authorizeRequests()
             .antMatchers(PUBLIC_ROUTES).anonymous()
             .antMatchers("/api/v1/admin/**").hasRole("ADMIN")
-            .antMatchers("/api/v1/**").hasRole("USER")
-            .anyRequest().authenticated()
+            .antMatchers("/api/v1/**", BROWSERS_PATH).hasRole("USER")
             .and()
             .addFilterBefore(authenticationFilter(), UsernamePasswordAuthenticationFilter.class)
             .logout()
@@ -152,12 +152,11 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     /** {@inheritDoc} */
     @Override protected void configure(AuthenticationManagerBuilder auth) {
-        DaoAuthenticationProvider authProvider = activationEnabled
-            ? new CustomAuthenticationProvider(activationTimeout)
-            : new DaoAuthenticationProvider();
+        DaoAuthenticationProvider authProvider = activationEnabled ?
+            new CustomAuthenticationProvider(activationTimeout) : new DaoAuthenticationProvider();
 
         authProvider.setPreAuthenticationChecks(userDetailsChecker);
-        authProvider.setUserDetailsService(accountsSrvc);
+        authProvider.setUserDetailsService(accountsSrv);
         authProvider.setPasswordEncoder(encoder);
 
         auth.authenticationProvider(authProvider);

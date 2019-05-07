@@ -50,7 +50,7 @@ export class NotebooksListCtrl {
             },
             {
                 action: 'Rename',
-                click: this.renameNotebok.bind(this),
+                click: this.renameNotebook.bind(this),
                 available: true
             },
             {
@@ -130,7 +130,7 @@ export class NotebooksListCtrl {
         }
     }
 
-    async renameNotebok() {
+    async renameNotebook() {
         try {
             const currentNotebook = this.gridApi.selection.legacyGetSelectedRows()[0];
             const newNotebookName = await this.IgniteInput.input('Rename notebook', 'Notebook name', currentNotebook.name);

@@ -42,13 +42,13 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 @RequestMapping(path = "/api/v1/configuration")
 public class ConfigurationsController {
     /** */
-    private final ConfigurationsService cfgsSrvc;
+    private final ConfigurationsService cfgsSrv;
 
     /**
-     * @param cfgsSrvc Configurations service.
+     * @param cfgsSrv Configurations service.
      */
-    public ConfigurationsController(ConfigurationsService cfgsSrvc) {
-        this.cfgsSrvc = cfgsSrvc;
+    public ConfigurationsController(ConfigurationsService cfgsSrv) {
+        this.cfgsSrv = cfgsSrv;
     }
 
     /**
@@ -61,7 +61,7 @@ public class ConfigurationsController {
         @AuthenticationPrincipal Account acc,
         @PathVariable("clusterId") UUID clusterId
     ) {
-        return ResponseEntity.ok(cfgsSrvc.loadConfiguration(acc.getId(), clusterId));
+        return ResponseEntity.ok(cfgsSrv.loadConfiguration(acc.getId(), clusterId));
     }
 
     /**
@@ -71,7 +71,7 @@ public class ConfigurationsController {
     @ApiOperation(value = "Clusters short list.")
     @GetMapping(path = "/clusters")
     public ResponseEntity<JsonArray> loadClustersShortList(@AuthenticationPrincipal Account acc) {
-        return ResponseEntity.ok(cfgsSrvc.loadClusters(acc.getId()));
+        return ResponseEntity.ok(cfgsSrv.loadClusters(acc.getId()));
     }
 
     /**
@@ -85,7 +85,7 @@ public class ConfigurationsController {
         @AuthenticationPrincipal Account acc,
         @PathVariable("clusterId") UUID clusterId
     ) {
-        return ResponseEntity.ok(cfgsSrvc.loadCluster(acc.getId(), clusterId));
+        return ResponseEntity.ok(cfgsSrv.loadCluster(acc.getId(), clusterId));
     }
 
     /**
@@ -101,7 +101,7 @@ public class ConfigurationsController {
         @AuthenticationPrincipal Account acc,
         @PathVariable("clusterId") UUID clusterId
     ) {
-        return ResponseEntity.ok(cfgsSrvc.loadShortCaches(acc.getId(), clusterId));
+        return ResponseEntity.ok(cfgsSrv.loadShortCaches(acc.getId(), clusterId));
     }
 
     /**
@@ -117,7 +117,7 @@ public class ConfigurationsController {
         @AuthenticationPrincipal Account acc,
         @PathVariable("clusterId") UUID clusterId
     ) {
-        return ResponseEntity.ok(cfgsSrvc.loadShortModels(acc.getId(), clusterId));
+        return ResponseEntity.ok(cfgsSrv.loadShortModels(acc.getId(), clusterId));
     }
 
     /**
@@ -133,7 +133,7 @@ public class ConfigurationsController {
         @AuthenticationPrincipal Account acc,
         @PathVariable("clusterId") UUID clusterId
     ) {
-        return ResponseEntity.ok(cfgsSrvc.loadShortIgfss(acc.getId(), clusterId));
+        return ResponseEntity.ok(cfgsSrv.loadShortIgfss(acc.getId(), clusterId));
     }
 
     /**
@@ -146,7 +146,7 @@ public class ConfigurationsController {
         @AuthenticationPrincipal Account acc,
         @PathVariable("cacheId") UUID cacheId
     ) {
-        return ResponseEntity.ok(cfgsSrvc.loadCache(acc.getId(), cacheId));
+        return ResponseEntity.ok(cfgsSrv.loadCache(acc.getId(), cacheId));
     }
 
     /**
@@ -159,7 +159,7 @@ public class ConfigurationsController {
         @AuthenticationPrincipal Account acc,
         @PathVariable("modelId") UUID mdlId
     ) {
-        return ResponseEntity.ok(cfgsSrvc.loadModel(acc.getId(), mdlId));
+        return ResponseEntity.ok(cfgsSrv.loadModel(acc.getId(), mdlId));
     }
 
     /**
@@ -171,7 +171,7 @@ public class ConfigurationsController {
         @AuthenticationPrincipal Account acc,
         @PathVariable("igfsId") UUID igfsId
     ) {
-        return ResponseEntity.ok(cfgsSrvc.loadIgfs(acc.getId(), igfsId));
+        return ResponseEntity.ok(cfgsSrv.loadIgfs(acc.getId(), igfsId));
     }
 
     /**
@@ -186,7 +186,7 @@ public class ConfigurationsController {
         @AuthenticationPrincipal Account acc,
         @RequestBody JsonObject changedItems
     ) {
-        cfgsSrvc.saveAdvancedCluster(acc.getId(), changedItems);
+        cfgsSrv.saveAdvancedCluster(acc.getId(), changedItems);
 
         return ResponseEntity.ok().build();
     }
@@ -203,7 +203,7 @@ public class ConfigurationsController {
         @AuthenticationPrincipal Account acc,
         @RequestBody JsonObject changedItems
     ) {
-        cfgsSrvc.saveBasicCluster(acc.getId(), changedItems);
+        cfgsSrv.saveBasicCluster(acc.getId(), changedItems);
 
         return ResponseEntity.ok().build();
     }
@@ -220,7 +220,7 @@ public class ConfigurationsController {
         @AuthenticationPrincipal Account acc,
         @RequestBody JsonObject clusterIDs
     ) {
-        cfgsSrvc.deleteClusters(acc.getId(), idsFromJson(clusterIDs, "clusterIDs"));
+        cfgsSrv.deleteClusters(acc.getId(), idsFromJson(clusterIDs, "clusterIDs"));
 
         return ResponseEntity.ok().build();
     }
