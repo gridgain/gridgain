@@ -1457,7 +1457,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
         IgniteCache cache = node.createCache(new CacheConfiguration<>()
             .setAffinity(new RendezvousAffinityFunction(false, 32))
             .setBackups(1)
-            .setName("tmp_cache")
+            .setName(DEFAULT_CACHE_NAME)
         );
 
         AtomicBoolean stopFlag = new AtomicBoolean();

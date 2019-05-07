@@ -1124,7 +1124,6 @@ public class PageMemoryImpl implements PageMemoryEx {
 
     /** {@inheritDoc} */
     @Override public IgniteBiTuple<GridMultiCollectionWrapper<FullPageId>, Boolean> beginCheckpointEx(
-
     ) throws IgniteException {
         if (segments == null)
             return new IgniteBiTuple<>(new GridMultiCollectionWrapper<>(Collections.emptyList()), false);
