@@ -252,12 +252,12 @@ public class H2BaseLocalResult implements LocalResult {
             if (previous == null || sort != null && sort.compare(previous, values) > 0) {
                 distinctRows.put(array, values);
 
-                onUpdate(previous, values);
+                onUpdate(array, previous, values);
             }
             rowCount = distinctRows.size();
         }
         else {
-            onUpdate(null, values);
+            onUpdate(null,null, values);
             rows.add(values);
             rowCount++;
         }
@@ -437,8 +437,9 @@ public class H2BaseLocalResult implements LocalResult {
     }
 
     /**
+     * @param distinctRowKey
      * @param row Row.
      */
-    protected void onUpdate(Value[] oldRow, Value[] row) {
+    protected void onUpdate(ValueRow distinctRowKey, Value[] oldRow, Value[] row) {
     }
 }

@@ -16,10 +16,12 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
+import org.h2.engine.Constants;
 import org.h2.engine.Session;
 import org.h2.expression.Expression;
 import org.h2.result.H2BaseLocalResult;
 import org.h2.value.Value;
+import org.h2.value.ValueRow;
 
 /**
  * H2 local result with memory tracker.
@@ -47,24 +49,29 @@ public class H2ManagedLocalResult extends H2BaseLocalResult {
     }
 
     /** {@inheritDoc} */
-    @Override protected void onUpdate(Value[] oldRow, Value[] row) {
+    @Override protected void onUpdate(ValueRow distinctRowKey, Value[] oldRow, Value[] row) {
         if (oldRow != null) {
-            for (Value v : oldRow) {
-                int size = v.getMemory();
+            long rowSize = Constants.MEMORY_ARRAY + oldRow.length * Constants.MEMORY_POINTER;
 
-                allocMem -= size;
+            for (int i = 0; i < oldRow.length; i++)
+                rowSize += oldRow[i].getMemory();
 
-                mem.free(size);
-            }
+            allocMem -= rowSize;
+
+            mem.free(rowSize);
         }
 
-        for (Value v : row) {
-            int size = v.getMemory();
+        long rowSize = Constants.MEMORY_OBJECT + row.length * Constants.MEMORY_POINTER;
 
-            allocMem += size;
+        if (distinctRowKey != null)
+            rowSize += 72 + distinctRowKey.getList().length * Constants.MEMORY_POINTER;
 
-            mem.allocate(size);
-        }
+        for (int i = 0; i < row.length; i++)
+            rowSize += row[i].getMemory();
+
+        allocMem += rowSize;
+
+        mem.allocate(rowSize);
     }
 
     /** {@inheritDoc} */
