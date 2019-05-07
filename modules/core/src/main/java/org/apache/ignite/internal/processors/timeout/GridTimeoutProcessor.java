@@ -36,6 +36,7 @@ import org.apache.ignite.lang.IgniteBiInClosure;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.thread.IgniteThread;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
 import static org.apache.ignite.failure.FailureType.SYSTEM_WORKER_TERMINATION;
@@ -151,28 +152,14 @@ public class GridTimeoutProcessor extends GridProcessorAdapter {
     public void waitAsync(final IgniteInternalFuture<?> fut,
         long timeout,
         IgniteBiInClosure<IgniteCheckedException, Boolean> clo) {
-        if (ctx.cache().context().exchange().currentThreadIsExchanger())
-            ctx.closure().runLocalSafe(() -> waitAsync0(fut, timeout, clo), GridIoPolicy.SYSTEM_POOL);
-        else
-            waitAsync0(fut, timeout, clo);
-    }
-
-    /**
-     * @param fut Future.
-     * @param timeout Timeout.
-     * @param clo Clo.
-     */
-    private void waitAsync0(final IgniteInternalFuture<?> fut,
-        long timeout,
-        IgniteBiInClosure<IgniteCheckedException, Boolean> clo) {
         if (timeout == -1) {
-            clo.apply(null, true);
+            executeClosure(clo, null, true);
 
             return;
         }
 
         if (fut == null || fut.isDone())
-            clo.apply(null, false);
+            executeClosure(clo, null, false);
         else {
             WaitFutureTimeoutObject timeoutObj = null;
 
@@ -192,10 +179,10 @@ public class GridTimeoutProcessor extends GridProcessorAdapter {
                     try {
                         fut.get();
 
-                        clo.apply(null, false);
+                        executeClosure(clo, null, false);
                     }
                     catch (IgniteCheckedException e) {
-                        clo.apply(e, false);
+                        executeClosure(clo, e, false);
                     }
                     finally {
                         if (finalTimeoutObj != null)
@@ -204,6 +191,27 @@ public class GridTimeoutProcessor extends GridProcessorAdapter {
                 }
             });
         }
+    }
+
+    /**
+     * Executes closure either in caller thread or in system pool thread if caller thread is exchange worker.
+     *
+     * @param clo Closure to execute.
+     * @param e Exception to pass to the closure.
+     * @param flag Flag to pass to the closure.
+     */
+    private void executeClosure(
+        IgniteBiInClosure<IgniteCheckedException, Boolean> clo,
+        @Nullable IgniteCheckedException e,
+        boolean flag
+    ) {
+        if (ctx.cache() != null &&
+            ctx.cache().context() != null &&
+            ctx.cache().context().exchange() != null &&
+            ctx.cache().context().exchange().currentThreadIsExchanger())
+            ctx.closure().runLocalSafe(() -> clo.apply(e, flag));
+        else
+            clo.apply(e, flag);
     }
 
     /**
