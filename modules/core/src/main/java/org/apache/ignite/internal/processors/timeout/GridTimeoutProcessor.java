@@ -24,6 +24,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.util.GridConcurrentSkipListSet;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
@@ -148,6 +149,20 @@ public class GridTimeoutProcessor extends GridProcessorAdapter {
      * second is {@code true} if wait timed out or passed timeout argument means expired timeout.
      */
     public void waitAsync(final IgniteInternalFuture<?> fut,
+        long timeout,
+        IgniteBiInClosure<IgniteCheckedException, Boolean> clo) {
+        if (ctx.cache().context().exchange().currentThreadIsExchanger())
+            ctx.closure().runLocalSafe(() -> waitAsync0(fut, timeout, clo), GridIoPolicy.SYSTEM_POOL);
+        else
+            waitAsync0(fut, timeout, clo);
+    }
+
+    /**
+     * @param fut Future.
+     * @param timeout Timeout.
+     * @param clo Clo.
+     */
+    private void waitAsync0(final IgniteInternalFuture<?> fut,
         long timeout,
         IgniteBiInClosure<IgniteCheckedException, Boolean> clo) {
         if (timeout == -1) {

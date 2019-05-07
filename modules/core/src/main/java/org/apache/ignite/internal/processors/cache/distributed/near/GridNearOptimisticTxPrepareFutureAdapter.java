@@ -181,30 +181,14 @@ public abstract class GridNearOptimisticTxPrepareFutureAdapter extends GridNearT
         }
         else {
             cctx.time().waitAsync(topFut, tx.remainingTime(), (e, timedOut) -> {
-                // TODO GG-17429 this should actually go to the cctx.time().waitAsync(...) logic.
-                if (cctx.exchange().currentThreadIsExchanger()) {
-                    cctx.kernalContext().closure().runLocalSafe(() -> {
-                        if (errorOrTimeoutOnTopologyVersion(e, timedOut))
-                            return;
+                if (errorOrTimeoutOnTopologyVersion(e, timedOut))
+                    return;
 
-                        try {
-                            prepareOnTopology(remap, c);
-                        }
-                        finally {
-                            cctx.txContextReset();
-                        }
-                    }, GridIoPolicy.SYSTEM_POOL);
+                try {
+                    prepareOnTopology(remap, c);
                 }
-                else {
-                    if (errorOrTimeoutOnTopologyVersion(e, timedOut))
-                        return;
-
-                    try {
-                        prepareOnTopology(remap, c);
-                    }
-                    finally {
-                        cctx.txContextReset();
-                    }
+                finally {
+                    cctx.txContextReset();
                 }
             });
         }
