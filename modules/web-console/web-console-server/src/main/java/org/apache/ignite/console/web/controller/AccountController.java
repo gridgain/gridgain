@@ -48,15 +48,15 @@ public class AccountController {
     private final AuthenticationManager authMgr;
 
     /** Accounts service. */
-    private final AccountsService accountsSrvc;
+    private final AccountsService accountsSrv;
 
     /**
      * @param authMgr Authentication manager.
-     * @param accountsSrvc Accounts service.
+     * @param accountsSrv Accounts service.
      */
-    public AccountController(AuthenticationManager authMgr, AccountsService accountsSrvc) {
+    public AccountController(AuthenticationManager authMgr, AccountsService accountsSrv) {
         this.authMgr = authMgr;
-        this.accountsSrvc = accountsSrvc;
+        this.accountsSrv = accountsSrv;
     }
 
     /**
@@ -65,7 +65,7 @@ public class AccountController {
     @ApiOperation(value = "Get current user.")
     @GetMapping(path = "/api/v1/user")
     public ResponseEntity<UserResponse> user(@AuthenticationPrincipal UserDetails user) {
-        Account acc = accountsSrvc.loadUserByUsername(user.getUsername());
+        Account acc = accountsSrv.loadUserByUsername(user.getUsername());
 
         return ResponseEntity.ok(new UserResponse(
             acc.getEmail(),
@@ -85,7 +85,7 @@ public class AccountController {
     @ApiOperation(value = "Register user.")
     @PostMapping(path = "/api/v1/signup")
     public ResponseEntity<Void> signup(@Valid @RequestBody SignUpRequest params) {
-        accountsSrvc.register(params);
+        accountsSrv.register(params);
 
         Authentication authentication = authMgr.authenticate(
             new UsernamePasswordAuthenticationToken(params.getEmail(), params.getPassword()));
@@ -105,7 +105,7 @@ public class AccountController {
         @AuthenticationPrincipal Account acc,
         @Valid @RequestBody ChangeUserRequest changes
     ) {
-        accountsSrvc.save(acc.getId(), changes);
+        accountsSrv.save(acc.getId(), changes);
 
         return ResponseEntity.ok().build();
     }
@@ -116,7 +116,7 @@ public class AccountController {
     @ApiOperation(value = "Send password reset token.")
     @PostMapping(path = "/api/v1/password/forgot", consumes = APPLICATION_JSON_VALUE)
     public ResponseEntity forgotPassword(@Valid @RequestBody EmailRequest req) {
-        accountsSrvc.forgotPassword(req.getEmail());
+        accountsSrv.forgotPassword(req.getEmail());
 
         return ResponseEntity.ok().build();
     }
@@ -127,7 +127,7 @@ public class AccountController {
     @ApiOperation(value = "Reset user password.")
     @PostMapping(path = "/api/v1/password/reset")
     public ResponseEntity resetPassword(@Valid @RequestBody ResetPasswordRequest req) {
-        accountsSrvc.resetPasswordByToken(req.getEmail(), req.getToken(), req.getPassword());
+        accountsSrv.resetPasswordByToken(req.getEmail(), req.getToken(), req.getPassword());
 
         return ResponseEntity.ok().build();
     }
@@ -138,7 +138,7 @@ public class AccountController {
     @ApiOperation(value = "Resend activation token.")
     @PostMapping(path = "/api/v1/activation/resend", consumes = APPLICATION_JSON_VALUE)
     public ResponseEntity activationResend(@Valid @RequestBody EmailRequest req) {
-        accountsSrvc.resetActivationToken(req.getEmail());
+        accountsSrv.resetActivationToken(req.getEmail());
 
         return ResponseEntity.ok().build();
     }

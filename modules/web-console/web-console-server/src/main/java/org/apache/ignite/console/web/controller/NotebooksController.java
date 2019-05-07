@@ -42,14 +42,14 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 @RequestMapping(path = "/api/v1/notebooks")
 public class NotebooksController {
     /** */
-    private final NotebooksService notebooksSrvc;
+    private final NotebooksService notebooksSrv;
 
     /**
-     * @param notebooksSrvc Notebooks service.
+     * @param notebooksSrv Notebooks service.
      */
     @Autowired
-    public NotebooksController(NotebooksService notebooksSrvc) {
-        this.notebooksSrvc = notebooksSrvc;
+    public NotebooksController(NotebooksService notebooksSrv) {
+        this.notebooksSrv = notebooksSrv;
     }
 
     /**
@@ -59,7 +59,7 @@ public class NotebooksController {
     @ApiOperation(value = "Get user's notebooks.")
     @GetMapping
     public ResponseEntity<Collection<Notebook>> list(@AuthenticationPrincipal Account acc) {
-        return ResponseEntity.ok(notebooksSrvc.list(acc.getId()));
+        return ResponseEntity.ok(notebooksSrv.list(acc.getId()));
     }
 
     /**
@@ -68,7 +68,7 @@ public class NotebooksController {
     @ApiOperation(value = "Save user's notebook.")
     @PutMapping(consumes = APPLICATION_JSON_VALUE)
     public ResponseEntity<Void> save(@AuthenticationPrincipal Account acc, @RequestBody Notebook notebook) {
-        notebooksSrvc.save(acc.getId(), notebook);
+        notebooksSrv.save(acc.getId(), notebook);
 
         return ResponseEntity.ok().build();
     }
@@ -83,7 +83,7 @@ public class NotebooksController {
         @AuthenticationPrincipal Account acc,
         @PathVariable("notebookId") UUID notebookId
     ) {
-        notebooksSrvc.delete(acc.getId(), notebookId);
+        notebooksSrv.delete(acc.getId(), notebookId);
 
         return ResponseEntity.ok().build();
     }

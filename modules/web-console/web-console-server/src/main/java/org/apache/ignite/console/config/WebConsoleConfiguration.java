@@ -32,7 +32,7 @@ public class WebConsoleConfiguration {
     private int port = DFLT_PORT;
 
     /** Accounts configuration. */
-    private AccountConfiguration accountCfg;
+    private ActivationConfiguration accountCfg;
 
     /** SSL configuration. */
     private SslConfiguration sslCfg;
@@ -93,7 +93,7 @@ public class WebConsoleConfiguration {
     /**
      * @return Account configuration.
      */
-    public AccountConfiguration getAccountConfiguration() {
+    public ActivationConfiguration getAccountConfiguration() {
         return accountCfg;
     }
 
@@ -101,7 +101,7 @@ public class WebConsoleConfiguration {
      * @param activationCfg Account configuration.
      * @return {@code this} for chaining.
      */
-    public WebConsoleConfiguration setAccountConfiguration(AccountConfiguration activationCfg) {
+    public WebConsoleConfiguration setAccountConfiguration(ActivationConfiguration activationCfg) {
         this.accountCfg = activationCfg;
 
         return this;

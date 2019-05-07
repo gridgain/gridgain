@@ -46,13 +46,13 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 @RequestMapping("/api/v1/admin")
 public class AdminController {
     /** */
-    private final AdminService adminSrvc;
+    private final AdminService adminSrv;
 
     /**
-     * @param adminSrvc Admin service.
+     * @param adminSrv Admin service.
      */
-    public AdminController(AdminService adminSrvc) {
-        this.adminSrvc = adminSrvc;
+    public AdminController(AdminService adminSrv) {
+        this.adminSrv = adminSrv;
     }
 
     /**
@@ -62,7 +62,7 @@ public class AdminController {
     @ApiOperation(value = "Get a list of users.")
     @PostMapping(path = "/list", consumes = APPLICATION_JSON_VALUE)
     public ResponseEntity<JsonArray> loadAccounts(@ApiIgnore @RequestBody JsonObject params) {
-        return ResponseEntity.ok(adminSrvc.list());
+        return ResponseEntity.ok(adminSrv.list());
     }
 
     /**
@@ -81,7 +81,7 @@ public class AdminController {
         if (acc.getId().equals(accId) && !admin)
             throw new IllegalStateException("Self revoke of administrator rights is prohibited");
 
-        adminSrvc.toggle(accId, admin);
+        adminSrv.toggle(accId, admin);
 
         return ResponseEntity.ok().build();
     }
@@ -92,7 +92,7 @@ public class AdminController {
     @ApiOperation(value = "Register user.")
     @PutMapping(path = "/users")
     public ResponseEntity<Void> registerUser(@Valid @RequestBody SignUpRequest params) {
-        adminSrvc.registerUser(params);
+        adminSrv.registerUser(params);
 
         return ResponseEntity.ok().build();
     }
@@ -103,7 +103,7 @@ public class AdminController {
     @ApiOperation(value = "Delete user.")
     @DeleteMapping(path = "/users/{accountId}")
     public ResponseEntity<Void> delete(@PathVariable("accountId") UUID accId) {
-        adminSrvc.delete(accId);
+        adminSrv.delete(accId);
 
         return ResponseEntity.ok().build();
     }
@@ -114,7 +114,7 @@ public class AdminController {
     @ApiIgnore
     @PostMapping(path = "/become", consumes = APPLICATION_JSON_VALUE)
     public ResponseEntity<Void> become(@RequestBody JsonObject params) {
-        adminSrvc.become(params.getUuid("id"));
+        adminSrv.become(params.getUuid("id"));
 
         return ResponseEntity.ok().build();
     }
@@ -125,7 +125,7 @@ public class AdminController {
     @ApiOperation(value = "Update announcement for all connected users.")
     @PutMapping(path = "/announcement", consumes = APPLICATION_JSON_VALUE)
     public ResponseEntity<Void> updateAnnouncement(@RequestBody Announcement ann) {
-        adminSrvc.updateAnnouncement(ann);
+        adminSrv.updateAnnouncement(ann);
 
         return ResponseEntity.ok().build();
     }}
