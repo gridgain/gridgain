@@ -24,7 +24,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * Mail configuration.
  */
-@ConfigurationProperties(prefix = "spring.mail")
+@ConfigurationProperties("spring.mail")
 public class MailPropertiesEx {
     /** Return address. */
     private String from;

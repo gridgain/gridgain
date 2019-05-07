@@ -22,9 +22,9 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.configuration.CacheConfiguration;
+    import org.apache.ignite.console.config.ActivationConfiguration;
 import org.apache.ignite.console.services.AccountsService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -82,14 +82,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     };
 
     /** */
-    @Value("${app.activation.enabled:false}")
-    private boolean activationEnabled;
-
-    /** */
-    @Value("${app.activation.timeout:1800000}")
-    private long activationTimeout;
-
-    /** */
     private final AccountsService accountsSrvc;
     
     /** */
@@ -98,14 +90,28 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     /** */
     private UserDetailsChecker userDetailsChecker;
 
+    /** Is account email should be confirmed. */
+    private boolean activationEnabled;
+
+    /** Timeout between emails with new activation token. */
+    private long activationTimeout;
+
     /**
-     * @param encoder Service for encoding user passwords.
+     * @param activationCfg Account activation configuration.
+     * @param encoder Service interface for encoding passwords.
      * @param accountsSrvc User details service.
      */
     @Autowired
-    public SecurityConfig(PasswordEncoder encoder, UserDetailsChecker userDetailsChecker, AccountsService accountsSrvc) {
+    public SecurityConfig(
+        ActivationConfiguration activationCfg,
+        PasswordEncoder encoder,
+        AccountsService accountsSrvc
+    ) {
+        userDetailsChecker = activationCfg.getChecker();
+        activationEnabled = activationCfg.isEnabled();
+        activationTimeout = activationCfg.getTimeout();
+
         this.encoder = encoder;
-        this.userDetailsChecker = userDetailsChecker;
         this.accountsSrvc = accountsSrvc;
     }
 
@@ -152,9 +158,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     /** {@inheritDoc} */
     @Override protected void configure(AuthenticationManagerBuilder auth) {
-        DaoAuthenticationProvider authProvider = activationEnabled
-            ? new CustomAuthenticationProvider(activationTimeout)
-            : new DaoAuthenticationProvider();
+        DaoAuthenticationProvider authProvider = activationEnabled ?
+            new CustomAuthenticationProvider(activationTimeout) : new DaoAuthenticationProvider();
 
         authProvider.setPreAuthenticationChecks(userDetailsChecker);
         authProvider.setUserDetailsService(accountsSrvc);

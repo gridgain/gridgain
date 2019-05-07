@@ -35,7 +35,7 @@ import static java.time.temporal.ChronoUnit.MILLIS;
  * Custom activation provider.
  */
 public class CustomAuthenticationProvider extends DaoAuthenticationProvider {
-    /** */
+    /** Timeout between emails with new activation token. */
     private long activationTimeout;
 
     /**
@@ -82,12 +82,6 @@ public class CustomAuthenticationProvider extends DaoAuthenticationProvider {
             messages.getMessage("CustomAuthenticationProvider.onlySupports",
                 "Only AccountsService is supported"));
 
-
-        UUID activationTok = null;
-
-        if (authentication.getDetails() instanceof UUID)
-            activationTok = (UUID)authentication.getDetails();
-
         // Determine username
         String username = (authentication.getPrincipal() == null) ? "NONE_PROVIDED" : authentication.getName();
 
@@ -116,6 +110,11 @@ public class CustomAuthenticationProvider extends DaoAuthenticationProvider {
 
         if (user instanceof Account) {
             Account acc = (Account)user;
+
+            UUID activationTok = null;
+
+            if (authentication.getDetails() instanceof UUID)
+                activationTok = (UUID)authentication.getDetails();
 
             checkActivationToken(acc, activationTok);
 
