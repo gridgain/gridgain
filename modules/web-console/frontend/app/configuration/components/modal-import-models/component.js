@@ -1039,7 +1039,7 @@ export class ModalImportModels {
                         .then((drivers) => {
                             $scope.ui.packageName = $scope.ui.packageNameUserInput;
 
-                            if (drivers && drivers.length > 0) {
+                            if (!_.isEmpty(drivers)) {
                                 $scope.drivers = _.map(_.sortBy(drivers, 'jdbcDriverJar'), (drv) => ({
                                     jdbcDriverJar: drv.jdbcDriverJar,
                                     jdbcDriverClass: drv.jdbcDriverCls,
@@ -1092,7 +1092,7 @@ export class ModalImportModels {
             this.domainData$
         ).subscribe();
 
-        $scope.$watch('ui.selectedJdbcDriverJar', function(idx) {
+        $scope.$watch('ui.selectedJdbcDriverJar', (idx) => {
             const val = _.get($scope.drivers, idx);
 
             if (val && !$scope.importDomain.demo) {
