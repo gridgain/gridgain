@@ -64,6 +64,7 @@ import org.apache.ignite.internal.processors.query.h2.ReduceH2QueryInfo;
 import org.apache.ignite.internal.processors.query.h2.ThreadLocalObjectPool;
 import org.apache.ignite.internal.processors.query.h2.UpdateResult;
 import org.apache.ignite.internal.processors.query.h2.dml.DmlDistributedUpdateRun;
+import org.apache.ignite.internal.processors.query.h2.GridH2QueryMemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContextRegistry;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlSortColumn;
@@ -328,6 +329,7 @@ public class GridReduceQueryExecutor {
      * @param mvccTracker Query tracker.
      * @param dataPageScanEnabled If data page scan is enabled.
      * @param pageSize Page size.
+     * @param mem Query work memory.
      * @return Rows iterator.
      */
     @SuppressWarnings({"BusyWait", "IfMayBeConditional"})
@@ -343,7 +345,8 @@ public class GridReduceQueryExecutor {
         boolean lazy,
         MvccQueryTracker mvccTracker,
         Boolean dataPageScanEnabled,
-        int pageSize
+        int pageSize,
+        long mem
     ) {
         // If explicit partitions are set, but there are no real tables, ignore.
         if (!qry.hasCacheIds() && parts != null)
@@ -589,7 +592,8 @@ public class GridReduceQueryExecutor {
                     .parameters(params)
                     .flags(flags)
                     .timeout(timeoutMillis)
-                    .schemaName(schemaName);
+                    .schemaName(schemaName)
+                    .workMemory(mem);
 
                 if (mvccTracker != null)
                     req.mvccSnapshot(mvccTracker.snapshot());
@@ -652,6 +656,8 @@ public class GridReduceQueryExecutor {
                         QueryContextRegistry qryCtxRegistry = h2.queryContextRegistry();
 
                         qryCtxRegistry.setThreadLocal(qctx);
+
+                        H2Utils.setupConnection(r.connection(), qctx, false, enforceJoinOrder);
 
                         try {
                             if (qry.explain())
@@ -722,7 +728,7 @@ public class GridReduceQueryExecutor {
                         cause = disconnectedErr;
                 }
 
-                throw new CacheException("Failed to run reduce query locally.", cause);
+                throw new CacheException("Failed to run reduce query locally. " + cause.getMessage(), cause);
             }
             finally {
                 if (detachedConn != null)
