@@ -48,6 +48,7 @@ TestBed.initTestEnvironment(BrowserDynamicTestingModule, platformBrowserDynamicT
 suite.only('Angular form-field component', () => {
     @Component({selector: 'popper-content', template: ''}) class PopperContentStub {}
     @Directive({selector: '[popper]'}) class PopperStub {}
+    @Component({selector: 'form-field-errors', template: ''}) class ErrorsStub {}
 
     let fixture: ComponentFixture<HostComponent>;
     @Component({
@@ -57,9 +58,12 @@ suite.only('Angular form-field component', () => {
                 <label for="one">One:</label>
                 <input type="text" id="one" formControlName='one'>
             </form-field>
-            <form-field [requiredMarkerStyle]='requiredMarkerStyle' [errorStyle]='errorStyle'>
+            <form-field [requiredMarkerStyle]='requiredMarkerStyle' [errorStyle]='inlineError'>
                 <label for="two">Two:</label>
                 <input type="text" id="two" formControlName='two'>
+            </form-field>
+            <form-field [errorStyle]='iconError'>
+                <input type="text" formControlName='three'>
             </form-field>
         </div>
         `,
@@ -77,17 +81,20 @@ suite.only('Angular form-field component', () => {
     class HostComponent {
         form = new FormGroup({
             one: new FormControl(null, []),
-            two: new FormControl(null, [Validators.required])
+            two: new FormControl(null, [Validators.required]),
+            three: new FormControl(null, [Validators.required])
         })
         requiredMarkerStyle = FormFieldRequiredMarkerStyles.REQUIRED
-        errorStyle = FormFieldErrorStyles.ICON
+        inlineError = FormFieldErrorStyles.INLINE
+        iconError = FormFieldErrorStyles.ICON
     }
 
     setup(fakeAsync(async() => {
         TestBed.configureTestingModule({
             declarations: [
                 FormField,
-                HostComponent
+                HostComponent,
+                ErrorsStub
             ],
             schemas: [NO_ERRORS_SCHEMA],
             imports: [ReactiveFormsModule]
@@ -108,4 +115,17 @@ suite.only('Angular form-field component', () => {
             'Has "optional" class when required marker mode is "optional" and required validator is not present'
         );
     }));
+    test('Validation styles', () => {
+        fixture.componentInstance.form.get('two').markAsTouched();
+        fixture.componentInstance.form.get('three').markAsTouched();
+        fixture.detectChanges();
+        assert.ok(
+            fixture.nativeElement.querySelector('form-field:nth-of-type(2)>form-field-errors'),
+            'Displays errors inline when "inline" errorStyle is used.'
+        );
+        assert.ok(
+            fixture.nativeElement.querySelector('form-field:nth-of-type(3) .input-overlay form-field-errors'),
+            'Displays errors in overlay when "icon" errorStyle is used.'
+        );
+    });
 });
