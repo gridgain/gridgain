@@ -423,7 +423,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
                 H2RowCache cache = rowCache.forGroup(cacheInfo.groupId());
 
-                return new H2TreeIndex(
+                return H2TreeIndex.createIndex(
                     cacheInfo.cacheContext(),
                     cache,
                     tbl,
@@ -434,11 +434,11 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                     wrappedCols,
                     inlineSize,
                     segments,
-                    qryCtxRegistry
+                    log
                 );
             }
             else
-                return new H2TreeClientIndex(tbl, name, pk, unwrappedCols, inlineSize);
+                return H2TreeClientIndex.createIndex(tbl, name, pk, unwrappedCols, inlineSize, log);
         }
         catch (IgniteCheckedException e) {
             throw new IgniteException(e);
@@ -1268,6 +1268,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      * @param cancel Cancel.
      * @param timeout Timeout.
      * @return Fields query.
+     * @throws IgniteCheckedException On error.
      */
     private QueryCursorImpl<List<?>> executeSelectForDml(
         String schema,
@@ -1314,6 +1315,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      * @param inTx Flag whether query is executed within transaction.
      * @param timeout Timeout.
      * @return Query result.
+     * @throws IgniteCheckedException On error.
      */
     private Iterable<List<?>> executeSelect0(
         QueryDescriptor qryDesc,
@@ -2349,7 +2351,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                     List<List<List<?>>> cur = plan.createRows(argss);
 
                     //TODO: IGNITE-11176 - Need to support cancellation
-                    ress = DmlUtils.processSelectResultBatched(plan, cur, qryParams.pageSize());
+                    ress = DmlUtils.processSelectResultBatched(plan, cur, qryParams.updateBatchSize());
                 }
                 finally {
                     DmlUtils.restoreKeepBinaryContext(cctx, opCtx);
@@ -2623,7 +2625,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             }, cancel);
         }
 
-        int pageSize = loc ? 0 : qryParams.pageSize();
+        int pageSize = qryParams.updateBatchSize();
 
         //TODO: IGNITE-11176 - Need to support cancellation
         return DmlUtils.processSelectResult(plan, cur, pageSize);

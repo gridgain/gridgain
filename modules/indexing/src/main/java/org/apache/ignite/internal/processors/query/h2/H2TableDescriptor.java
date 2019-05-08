@@ -50,10 +50,10 @@ public class H2TableDescriptor {
     /** PK index name. */
     public static final String PK_IDX_NAME = "_key_PK";
 
-    /** PK hashindex name */
+    /** PK hash index name. */
     public static final String PK_HASH_IDX_NAME = "_key_PK_hash";
 
-    /** Affinity key index name */
+    /** Affinity key index name. */
     public static final String AFFINITY_KEY_IDX_NAME = "AFFINITY_KEY";
 
     /** Indexing. */
@@ -417,7 +417,7 @@ public class H2TableDescriptor {
             );
         }
         else if (idxDesc.type() == QueryIndexType.GEOSPATIAL)
-            return H2Utils.createSpatialIndex(tbl, idxDesc.name(), cols.toArray(new IndexColumn[0]));
+            return H2Utils.createSpatialIndex(tbl, idxDesc.name(), cols.toArray(H2Utils.EMPTY_COLUMNS));
 
         throw new IllegalStateException("Index type: " + idxDesc.type());
     }
