@@ -15,7 +15,7 @@
  */
 
 import {Component, AfterViewInit, Inject, Input, ContentChild, HostBinding, Injectable} from '@angular/core';
-import {FormFieldErrorStyles, FormFieldRequiredMarkerStyles} from './errorStyles.provider';
+import {FormFieldErrorStyles, FormFieldRequiredMarkerStyles} from './index';
 import {FormFieldHint} from './hint.component';
 import {FormControlName, FormControl} from '@angular/forms';
 import './formField.component.scss';
