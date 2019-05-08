@@ -209,7 +209,7 @@ public class GridTimeoutProcessor extends GridProcessorAdapter {
             ctx.cache().context() != null &&
             ctx.cache().context().exchange() != null &&
             ctx.cache().context().exchange().currentThreadIsExchanger())
-            ctx.closure().runLocalSafe(() -> clo.apply(e, flag));
+            ctx.closure().runLocalSafe(() -> clo.apply(e, flag), GridIoPolicy.SYSTEM_POOL);
         else
             clo.apply(e, flag);
     }
