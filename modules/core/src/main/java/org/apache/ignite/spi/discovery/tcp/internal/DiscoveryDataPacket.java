@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
@@ -112,13 +113,18 @@ public class DiscoveryDataPacket implements Serializable {
     /**
      * @return {@code true} if joining node data was transferred via network in zipped format.
      */
-    public boolean isJoiningDataZipped(){
-        if (joiningNodeData == null)
+    public boolean hasZippedJoiningData() {
+        Set<Map.Entry<Integer, byte[]>> datas;
+
+        if (joiningNodeData == null || (datas = joiningNodeData.entrySet()) == null)
             return false;
 
-        Collection<byte[]> values = joiningNodeData.values();
+        for (Map.Entry<Integer, byte[]> entry : datas) {
+            if (isZipped(entry.getValue()))
+                return true;
+        }
 
-        return values != null && !values.isEmpty() && isZipped(values.iterator().next());
+        return false;
     }
 
     /**
