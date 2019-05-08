@@ -511,7 +511,7 @@ public class ConfigurationsRepository {
      */
     public void deleteClusters(UUID accId, TreeSet<UUID> clusterIds) {
         try (Transaction tx = txMgr.txStart()) {
-            configIdx.validateAll(accId, clusterIds);
+            clustersIdx.validateAll(accId, clusterIds);
 
             clusterIds.forEach(clusterId -> deleteAllClusterObjects(accId, clusterId));
 
