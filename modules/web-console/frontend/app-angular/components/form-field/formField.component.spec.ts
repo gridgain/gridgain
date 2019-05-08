@@ -35,7 +35,8 @@ import {ReactiveFormsModule, FormControl, Validators, FormGroup} from '@angular/
 
 import {assert} from 'chai';
 import {TestBed, async, ComponentFixture, tick, fakeAsync} from '@angular/core/testing';
-import {Component, Directive, NO_ERRORS_SCHEMA} from '@angular/core';
+import {Component, Directive, NO_ERRORS_SCHEMA, Input, TemplateRef} from '@angular/core';
+import { By } from '@angular/platform-browser';
 import {
     FormField, FormFieldError, FormFieldHint, FormFieldTooltip,
     FormFieldRequiredMarkerStyles, FormFieldErrorStyles, FORM_FIELD_OPTIONS
@@ -48,7 +49,14 @@ TestBed.initTestEnvironment(BrowserDynamicTestingModule, platformBrowserDynamicT
 suite.only('Angular form-field component', () => {
     @Component({selector: 'popper-content', template: ''}) class PopperContentStub {}
     @Directive({selector: '[popper]'}) class PopperStub {}
-    @Component({selector: 'form-field-errors', template: ''}) class ErrorsStub {}
+    @Component({selector: 'form-field-errors', template: ''}) class ErrorsStub {
+        @Input()
+        errorStyle: any
+        @Input()
+        errorType: any
+        @Input()
+        extraErrorMessages: any
+    }
 
     let fixture: ComponentFixture<HostComponent>;
     @Component({
@@ -87,6 +95,7 @@ suite.only('Angular form-field component', () => {
         requiredMarkerStyle = FormFieldRequiredMarkerStyles.REQUIRED
         inlineError = FormFieldErrorStyles.INLINE
         iconError = FormFieldErrorStyles.ICON
+        extraMessages = {required: 'Foo'}
     }
 
     setup(fakeAsync(async() => {
@@ -154,5 +163,32 @@ suite.only('Angular form-field component', () => {
         fixture.componentInstance.form.get('two').markAsDirty();
         fixture.detectChanges();
         assert.isTrue(hasErrors(2), 'Dirty, touched and invalid shows errors');
+    });
+    test('form-field-errors intgration', () => {
+        const field = (fixture.debugElement.query(By.css('form-field:nth-of-type(2)')).componentInstance as FormField);
+        const extraMessages = {
+            required: {} as TemplateRef<any>,
+            custom: {} as TemplateRef<any>
+        };
+        field.addExtraErrorMessage('required', extraMessages.required);
+        field.addExtraErrorMessage('custom', extraMessages.custom);
+        fixture.componentInstance.form.get('two').markAsTouched();
+        fixture.detectChanges();
+        const errors = fixture.debugElement.query(By.css('form-field:nth-of-type(2) form-field-errors')).componentInstance as ErrorsStub;
+        assert.deepEqual(
+            errors.extraErrorMessages,
+            extraMessages,
+            'Public addExtraErrorMessage method passes extra error messages to form-field-errors'
+        );
+        assert.equal(
+            errors.errorStyle,
+            FormFieldErrorStyles.INLINE,
+            'Error style value is passed to form-field-errors'
+        );
+        assert.equal(
+            errors.errorType,
+            'required',
+            'Current error type is passed to form-field-errors'
+        );
     });
 });
