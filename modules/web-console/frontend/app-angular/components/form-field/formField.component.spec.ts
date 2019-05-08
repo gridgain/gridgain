@@ -38,33 +38,50 @@ import {TestBed, async, ComponentFixture, tick, fakeAsync} from '@angular/core/t
 import {Component, Directive, NO_ERRORS_SCHEMA} from '@angular/core';
 import {
     FormField, FormFieldError, FormFieldHint, FormFieldTooltip,
-    FormFieldRequiredMarkerStyles
+    FormFieldRequiredMarkerStyles, FormFieldErrorStyles, FORM_FIELD_OPTIONS
 } from './index';
 import {FormFieldErrors} from './errors.component';
 import {IgniteIcon} from '../igniteIcon.component';
 
 TestBed.initTestEnvironment(BrowserDynamicTestingModule, platformBrowserDynamicTesting());
 
-suite.only('form-field', () => {
+suite.only('Angular form-field component', () => {
+    @Component({selector: 'popper-content', template: ''}) class PopperContentStub {}
+    @Directive({selector: '[popper]'}) class PopperStub {}
+
     let fixture: ComponentFixture<HostComponent>;
     @Component({
         template: `
         <div [formGroup]='form'>
-            <form-field [requiredMarkerStyle]='markerStyle'>
+            <form-field>
                 <label for="one">One:</label>
                 <input type="text" id="one" formControlName='one'>
             </form-field>
+            <form-field [requiredMarkerStyle]='requiredMarkerStyle' [errorStyle]='errorStyle'>
+                <label for="two">Two:</label>
+                <input type="text" id="two" formControlName='two'>
+            </form-field>
         </div>
-        `
+        `,
+        providers: [
+            {
+                provide: FORM_FIELD_OPTIONS,
+                useValue: {
+                    requiredMarkerStyle: FormFieldRequiredMarkerStyles.OPTIONAL,
+                    errorStyle: FormFieldErrorStyles.INLINE
+                }
+            }
+        ]
+
     })
     class HostComponent {
         form = new FormGroup({
-            one: new FormControl(null, [Validators.required])
+            one: new FormControl(null, []),
+            two: new FormControl(null, [Validators.required])
         })
-        markerStyle = FormFieldRequiredMarkerStyles.REQUIRED
+        requiredMarkerStyle = FormFieldRequiredMarkerStyles.REQUIRED
+        errorStyle = FormFieldErrorStyles.ICON
     }
-    @Component({selector: 'popper-content', template: ''}) class PopperContentStub {}
-    @Directive({selector: '[popper]'}) class PopperStub {}
 
     setup(fakeAsync(async() => {
         TestBed.configureTestingModule({
@@ -75,14 +92,20 @@ suite.only('form-field', () => {
             schemas: [NO_ERRORS_SCHEMA],
             imports: [ReactiveFormsModule]
         }).compileComponents().then(() => {
-
             fixture = TestBed.createComponent(HostComponent);
             fixture.detectChanges();
             tick();
             fixture.detectChanges();
         });
     }));
-    test('Required host class', () => {
-        assert.ok(fixture.nativeElement.querySelector('form-field').matches('.form-field__required'));
-    });
+    test('Required marker styles', fakeAsync(() => {
+        assert.ok(
+            fixture.nativeElement.querySelector('form-field:nth-of-type(1)').matches('.form-field__optional'),
+            'Has "optional" class when required marker mode is "optional" and required validator is not present'
+        );
+        assert.ok(
+            fixture.nativeElement.querySelector('form-field:nth-of-type(2)').matches('.form-field__required'),
+            'Has "optional" class when required marker mode is "optional" and required validator is not present'
+        );
+    }));
 });
