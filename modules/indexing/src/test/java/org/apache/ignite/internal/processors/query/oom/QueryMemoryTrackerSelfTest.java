@@ -54,14 +54,15 @@ public class QueryMemoryTrackerSelfTest extends GridCommonAbstractTest {
      */
     private void populateData() {
         execSql("create table T (id int primary key, ref_key int, name varchar)");
-        execSql("create table K (id int primary key, indexed int, grp int, name varchar)");
+        execSql("create table K (id int primary key, indexed int, grp int, grp_indexed int, name varchar)");
         execSql("create index K_IDX on K(indexed)");
+        execSql("create index K_GRP_IDX on K(grp_indexed)");
 
         for (int i = 0; i < ROW_CNT; ++i)
             execSql("insert into T VALUES (?, ?, ?)", i, i, UUID.randomUUID().toString());
 
         for (int i = 0; i < 10 * ROW_CNT; ++i)
-            execSql("insert into K VALUES (?, ?, ?, ?)", i, i, i % 100, UUID.randomUUID().toString());
+            execSql("insert into K VALUES (?, ?, ?, ?, ?)", i, i, i % 100, i % 100, UUID.randomUUID().toString());
     }
 
     /**
@@ -147,12 +148,20 @@ public class QueryMemoryTrackerSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testGroupBy() {
-        execQuery("select K.grp, sum(K.id) from K GROUP BY K.grp", false); // Tiny local result.
-        execQuery("select K.id, sum(K.grp) from K GROUP BY K.id", false); // Sorted grouping.
+        execQuery("select K.grp, avg(K.id), min(K.id), sum(K.id) from K GROUP BY K.grp", false); // Tiny local result.
+        execQuery("select K.indexed, sum(K.id) from K GROUP BY K.indexed", false); // Sorted grouping.
+        execQuery("select K.grp_indexed, sum(K.id) as s from K GROUP BY K.grp_indexed ORDER BY s", false); // Tiny local result with sort.
 
         // Group by non-indexed field.
         GridTestUtils.assertThrows(log, () -> {
             execQuery("select K.name from K GROUP BY K.name", true);
+
+            return null;
+        }, CacheException.class, "IgniteOutOfMemoryException: SQL query out of memory");
+
+        // Group by indexed field, then sort.
+        GridTestUtils.assertThrows(log, () -> {
+            List<List<?>> res = execQuery("select K.indexed, sum(K.grp) as s from K GROUP BY K.indexed ORDER BY s DESC", true);
 
             return null;
         }, CacheException.class, "IgniteOutOfMemoryException: SQL query out of memory");
