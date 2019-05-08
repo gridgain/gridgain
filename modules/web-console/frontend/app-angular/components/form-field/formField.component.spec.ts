@@ -128,4 +128,31 @@ suite.only('Angular form-field component', () => {
             'Displays errors in overlay when "icon" errorStyle is used.'
         );
     });
+    test('Validation message display conditions', () => {
+        const hasErrors = (index: number) => !!fixture.nativeElement.querySelector(`form-field:nth-of-type(${index}) form-field-errors`);
+
+        assert.isFalse(hasErrors(1), 'Pristine, untouched and valid shows no errors');
+        fixture.componentInstance.form.get('one').markAsTouched();
+        fixture.detectChanges();
+        assert.isFalse(hasErrors(1), 'Pristine, touched and valid shows no errors');
+        fixture.componentInstance.form.get('one').markAsUntouched();
+        fixture.componentInstance.form.get('one').markAsDirty();
+        fixture.detectChanges();
+        assert.isFalse(hasErrors(1), 'Untouched, dirty and valid shows no errors');
+
+        fixture.componentInstance.form.get('two').markAsTouched();
+        fixture.detectChanges();
+        assert.isTrue(hasErrors(2), 'Pristine, touched and invalid shows errors');
+        fixture.componentInstance.form.get('two').markAsUntouched();
+        fixture.componentInstance.form.get('two').markAsDirty();
+        fixture.detectChanges();
+        assert.isTrue(hasErrors(2), 'Dirty, untouched and invalid shows errors');
+        fixture.componentInstance.form.get('two').markAsTouched();
+        fixture.componentInstance.form.get('two').markAsPristine();
+        fixture.detectChanges();
+        assert.isTrue(hasErrors(2), 'Pristine, touched and invalid shows errors');
+        fixture.componentInstance.form.get('two').markAsDirty();
+        fixture.detectChanges();
+        assert.isTrue(hasErrors(2), 'Dirty, touched and invalid shows errors');
+    });
 });
