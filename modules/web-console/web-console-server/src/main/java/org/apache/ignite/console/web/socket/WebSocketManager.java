@@ -144,7 +144,7 @@ public class WebSocketManager extends TextWebSocketHandler {
      * @param evt Event.
      * @throws IOException If failed to send message.
      */
-    private void sendMessage(WebSocketSession ws, WebSocketEvent evt) throws IOException {
+    protected void sendMessage(WebSocketSession ws, WebSocketEvent evt) throws IOException {
         ws.sendMessage(new TextMessage(toJson(evt)));
     }
 
@@ -261,7 +261,7 @@ public class WebSocketManager extends TextWebSocketHandler {
     /**
      * @param ws Session.
      */
-    private void registerBrowser(WebSocketSession ws) {
+    protected void registerBrowser(WebSocketSession ws) {
         log.info("Browser connected: " + ws);
 
         browsers.put(ws, token(ws));

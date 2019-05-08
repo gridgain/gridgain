@@ -53,10 +53,10 @@ public class AccountsService implements UserDetailsService {
     private final MessageSourceAccessor messages = SpringSecurityMessageSource.getAccessor();
 
     /** */
-    private final TransactionManager txMgr;
+    protected final TransactionManager txMgr;
 
     /** */
-    private final AccountsRepository accountsRepo;
+    protected final AccountsRepository accountsRepo;
 
     /** */
     private final WebSocketManager wsm;
@@ -114,21 +114,39 @@ public class AccountsService implements UserDetailsService {
     }
 
     /**
-     * Create account for user.
+     * Encode password.
      *
-     * @param params Sign up params.
-     * @return Registered account.
+     * @param pwd Password to encode.
+     * @return Encoded value.
      */
-    Account create(SignUpRequest params) {
-        Account acc = new Account(
+    protected String encodePassword(String pwd) {
+        return encoder.encode(pwd);
+    }
+
+    /**
+     * @param params Sign up params.
+     * @return New account.
+     */
+    protected Account createAccount(SignUpRequest params) {
+        return new Account(
             params.getEmail(),
-            encoder.encode(params.getPassword()),
+            encodePassword(params.getPassword()),
             params.getFirstName(),
             params.getLastName(),
             params.getPhone(),
             params.getCompany(),
             params.getCountry()
         );
+    }
+
+    /**
+     * Create account for user.
+     *
+     * @param params Sign up params.
+     * @return Registered account.
+     */
+    Account create(SignUpRequest params) {
+        Account acc = createAccount(params);
 
         if (activationEnabled)
             acc.resetActivationToken();

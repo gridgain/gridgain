@@ -20,6 +20,7 @@ import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.UUID;
 import org.apache.ignite.console.notification.IRecipient;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.springframework.security.core.CredentialsContainer;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -340,5 +341,10 @@ public class Account extends AbstractDto implements UserDetails, CredentialsCont
     /** {@inheritDoc} */
     @Override public void eraseCredentials() {
         this.hashedPwd = null;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(Account.class, this);
     }
 }
