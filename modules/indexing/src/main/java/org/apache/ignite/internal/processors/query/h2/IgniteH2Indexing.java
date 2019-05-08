@@ -1958,6 +1958,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     public void onMessage(UUID nodeId, Object msg) {
         assert msg != null;
 
+        if (log.isDebugEnabled())
+            log.debug("Receiving: [msg=" + msg + ", originalNodeId=" + nodeId + ']');
+
         ClusterNode node = ctx.discovery().node(nodeId);
 
         if (node == null)
