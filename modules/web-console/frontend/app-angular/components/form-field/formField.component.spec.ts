@@ -47,42 +47,42 @@ TestBed.initTestEnvironment(BrowserDynamicTestingModule, platformBrowserDynamicT
 
 suite.only('form-field', () => {
     let fixture: ComponentFixture<HostComponent>;
-	@Component({
-	    template: `
-	    <div [formGroup]='form'>
-			<form-field [requiredMarkerStyle]='markerStyle'>
-				<label for="one">One:</label>
-				<input type="text" id="one" formControlName='one'>
-			</form-field>
-	    </div>
-		`
-	})
+    @Component({
+        template: `
+        <div [formGroup]='form'>
+            <form-field [requiredMarkerStyle]='markerStyle'>
+                <label for="one">One:</label>
+                <input type="text" id="one" formControlName='one'>
+            </form-field>
+        </div>
+        `
+    })
     class HostComponent {
-    	form = new FormGroup({
-    		one: new FormControl(null, [Validators.required])
-    	})
-    	markerStyle = FormFieldRequiredMarkerStyles.REQUIRED
-	}
+        form = new FormGroup({
+            one: new FormControl(null, [Validators.required])
+        })
+        markerStyle = FormFieldRequiredMarkerStyles.REQUIRED
+    }
     @Component({selector: 'popper-content', template: ''}) class PopperContentStub {}
     @Directive({selector: '[popper]'}) class PopperStub {}
 
     setup(fakeAsync(async() => {
-	    TestBed.configureTestingModule({
-	        declarations: [
-		        FormField,
-		        HostComponent
-	        ],
-	        schemas: [NO_ERRORS_SCHEMA],
-	        imports: [ReactiveFormsModule]
-	    }).compileComponents().then(() => {
+        TestBed.configureTestingModule({
+            declarations: [
+                FormField,
+                HostComponent
+            ],
+            schemas: [NO_ERRORS_SCHEMA],
+            imports: [ReactiveFormsModule]
+        }).compileComponents().then(() => {
 
-		    fixture = TestBed.createComponent(HostComponent);
-		    fixture.detectChanges();
-		    tick();
-		    fixture.detectChanges();
-	    });
+            fixture = TestBed.createComponent(HostComponent);
+            fixture.detectChanges();
+            tick();
+            fixture.detectChanges();
+        });
     }));
     test('Required host class', () => {
-    	assert.ok(fixture.nativeElement.querySelector('form-field').matches('.form-field__required'));
+        assert.ok(fixture.nativeElement.querySelector('form-field').matches('.form-field__required'));
     });
 });
