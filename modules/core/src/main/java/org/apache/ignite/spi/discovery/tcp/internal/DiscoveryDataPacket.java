@@ -113,12 +113,12 @@ public class DiscoveryDataPacket implements Serializable {
      * @return {@code true} if joining node data was transferred via network in zipped format.
      */
     public boolean isJoiningDataZipped(){
-        for (Map.Entry<Integer, byte[]> entry : joiningNodeData.entrySet()) {
-            if (isZipped(entry.getValue()))
-                return true;
-        }
+        if (joiningNodeData == null)
+            return false;
 
-        return false;
+        Collection<byte[]> values = joiningNodeData.values();
+
+        return values != null && !values.isEmpty() && isZipped(values.iterator().next());
     }
 
     /**
@@ -363,10 +363,11 @@ public class DiscoveryDataPacket implements Serializable {
     /**
      * @param log Logger.
      */
-    public void unzipData(IgniteLogger log) {
+    public void unzipZippedData(IgniteLogger log) {
         for (Map.Entry<Integer, byte[]> entry : joiningNodeData.entrySet()) {
             try {
-                entry.setValue(U.unzip(entry.getValue()));
+                if (isZipped(entry.getValue()))
+                    entry.setValue(U.unzip(entry.getValue()));
             }
             catch (IgniteCheckedException e) {
                 U.error(log, "Failed to unzip discovery data " +
