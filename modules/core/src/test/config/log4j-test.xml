@@ -77,11 +77,9 @@
     <!--
         Uncomment to enable Ignite query execution debugging.
     -->
-    <!--
-    <category name="org.apache.ignite.internal.processors.query">
+    <category name="org.apache.ignite.spi.discovery.tcp">
         <level value="DEBUG"/>
     </category>
-    -->
 
     <!--
         Uncomment to enable Exchange, Rebalance and Partitions workflow debugging.
