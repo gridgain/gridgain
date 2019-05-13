@@ -69,7 +69,11 @@ suite.only('Angular form-field component', () => {
             <form-field>
                 <form-field-hint>Hello world!</form-field-hint>
                 <label for="one">One:</label>
+                <span>Foo</span>
                 <input type="text" id="one" formControlName='one'>
+                <i>Bar</i>
+                <span formFieldOverlay>😂</span>
+                <span formFieldOverlay>👌</span>
             </form-field>
             <form-field [requiredMarkerStyle]='requiredMarkerStyle' [errorStyle]='inlineError'>
                 <label for="two">Two:</label>
@@ -213,6 +217,35 @@ suite.only('Angular form-field component', () => {
             tooltip.content,
             hint.popper,
             'Passes hint.popper to form-field-tooltip'
+        );
+    });
+    test('Label transclusion', () => {
+        assert.ok(
+            fixture.debugElement.query(By.css('form-field:nth-of-type(1) .angular-form-field__label label')),
+            'It trancludes label element into label wrapper'
+        );
+    });
+    test('Overlay', () => {
+        assert.equal(
+            fixture.debugElement.query(By.css('form-field:nth-of-type(1) .input-overlay')).children.length,
+            2,
+            'It transcludes overlay nodes into overlay container'
+        );
+        assert.equal(
+            fixture.debugElement
+                .query(By.css('form-field:nth-of-type(1) .angular-form-field__input'))
+                .nativeElement.dataset.overlayItemsCount,
+            '2',
+            'It exposes overlay items count as data-attribute'
+        );
+    });
+    test('Input transclusion', () => {
+        assert.equal(
+            fixture.debugElement
+                .query(By.css('form-field:nth-of-type(1) .angular-form-field__input'))
+                .nativeElement.children.length,
+            4,
+            'It transcludes the rest of elements into input wrapper'
         );
     });
 });
