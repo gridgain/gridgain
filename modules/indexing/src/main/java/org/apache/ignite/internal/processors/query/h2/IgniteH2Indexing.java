@@ -1958,9 +1958,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     public void onMessage(UUID nodeId, Object msg) {
         assert msg != null;
 
-        if (log.isDebugEnabled())
-            log.debug("Receiving: [msg=" + msg + ", originalNodeId=" + nodeId + ']');
-
         ClusterNode node = ctx.discovery().node(nodeId);
 
         if (node == null)
@@ -1976,10 +1973,18 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             try {
                 boolean processed = true;
 
-                if (msg instanceof GridQueryNextPageRequest)
+                boolean tracebleMsg = false;
+
+                if (msg instanceof GridQueryNextPageRequest) {
                     mapQueryExecutor().onNextPageRequest(node, (GridQueryNextPageRequest)msg);
-                else if (msg instanceof GridQueryNextPageResponse)
+
+                    tracebleMsg = true;
+                }
+                else if (msg instanceof GridQueryNextPageResponse) {
                     reduceQueryExecutor().onNextPage(node, (GridQueryNextPageResponse)msg);
+
+                    tracebleMsg = true;
+                }
                 else if (msg instanceof GridH2QueryRequest)
                     mapQueryExecutor().onQueryRequest(node, (GridH2QueryRequest)msg);
                 else if (msg instanceof GridH2DmlRequest)
@@ -1993,11 +1998,11 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 else
                     processed = false;
 
-                if (processed && log.isDebugEnabled())
-                    log.debug("Processed message " + msg.getClass().getName() + ": " + nodeId + "->" + ctx.localNodeId() + " " + msg);
+                if (processed && log.isDebugEnabled() && (!tracebleMsg || log.isTraceEnabled()))
+                    log.debug("Processed message: [srcNodeId=" + nodeId + ", msg=" + msg + ']');
             }
             catch (Throwable th) {
-                U.error(log, "Failed to process message: " + msg, th);
+                U.error(log, "Failed to process message: [srcNodeId=" + nodeId + ", msg=" + msg + ']', th);
             }
         }
         finally {
