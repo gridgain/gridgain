@@ -27,12 +27,14 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.preauth.PreAuthenticatedCredentialsNotFoundException;
 
+import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
+
 /**
  * Custom filter for retrieve credentials from body and authenticate user. Default implementation use path parameters.
  */
-public class RequestBodyReaderAuthenticationFilter extends UsernamePasswordAuthenticationFilter {
+public class BodyReaderAuthenticationFilter extends UsernamePasswordAuthenticationFilter {
     /** */
-    private final ObjectMapper objMapper = new ObjectMapper();
+    private ObjectMapper objMapper = new ObjectMapper().configure(FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     /** {@inheritDoc} */
     @Override public Authentication attemptAuthentication(HttpServletRequest req,

@@ -54,11 +54,11 @@ import static org.apache.ignite.console.websocket.WebSocketConsts.BROWSERS_PATH;
  * Security settings provider.
  */
 @Configuration
-@EnableWebSecurity
+@EnableWebSecurity(debug = true)
 @EnableSpringHttpSession
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
     /** Sign in route. */
-    private static final String SIGN_IN_ROUTE = "/api/v1/signin";
+    public static final String SIGN_IN_ROUTE = "/api/v1/signin";
 
     /** Sign up route. */
     private static final String SIGN_UP_ROUTE = "/api/v1/signup";
@@ -126,13 +126,11 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             .antMatchers("/api/v1/**", BROWSERS_PATH).hasAuthority(ROLE_USER)
             .anyRequest().authenticated()
             .and()
-            .addFilterBefore(authenticationFilter(), UsernamePasswordAuthenticationFilter.class)
+            .addFilterAt(authenticationFilter(), UsernamePasswordAuthenticationFilter.class)
             .logout()
             .logoutUrl(LOGOUT_ROUTE)
             .deleteCookies("JSESSIONID")
-            .logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler(HttpStatus.OK))
-            .and()
-            .exceptionHandling();
+            .logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler(HttpStatus.OK));
     }
 
     /** {@inheritDoc} */
@@ -194,8 +192,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     /**
      * Custom filter for retrieve credentials.
      */
-    private RequestBodyReaderAuthenticationFilter authenticationFilter() throws Exception {
-        RequestBodyReaderAuthenticationFilter authenticationFilter = new RequestBodyReaderAuthenticationFilter();
+    private BodyReaderAuthenticationFilter authenticationFilter() throws Exception {
+        BodyReaderAuthenticationFilter authenticationFilter = new BodyReaderAuthenticationFilter();
 
         authenticationFilter.setAuthenticationManager(authenticationManagerBean());
         authenticationFilter.setRequiresAuthenticationRequestMatcher(new AntPathRequestMatcher(SIGN_IN_ROUTE, "POST"));
