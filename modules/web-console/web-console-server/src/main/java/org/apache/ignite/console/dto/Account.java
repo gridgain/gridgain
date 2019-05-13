@@ -31,10 +31,10 @@ import static org.springframework.security.core.authority.AuthorityUtils.createA
  */
 public class Account extends AbstractDto implements UserDetails, CredentialsContainer, IRecipient {
     /** */
-    private static final String ROLE_USER = "ROLE_USER";
+    public static final String ROLE_USER = "ROLE_USER";
 
     /** */
-    private static final String ROLE_ADMIN = "ROLE_ADMIN";
+    public static final String ROLE_ADMIN = "ROLE_ADMIN";
 
     /** Email. */
     private String email;
@@ -73,7 +73,7 @@ public class Account extends AbstractDto implements UserDetails, CredentialsCont
     private boolean admin;
 
     /** Indicates whether the user is enabled or disabled. */
-    private boolean enabled;
+    private boolean enabled = true;
 
     /** Latest activation token. */
     private UUID activationTok;
@@ -289,6 +289,7 @@ public class Account extends AbstractDto implements UserDetails, CredentialsCont
      * Reset activation token.
      */
     public void resetActivationToken() {
+        enabled = false;
         activationTok = UUID.randomUUID();
         activationSentAt = LocalDateTime.now();
     }

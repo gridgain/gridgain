@@ -20,8 +20,8 @@
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:schemaLocation="http://www.springframework.org/schema/beans
                            http://www.springframework.org/schema/beans/spring-beans.xsd">
-    <bean class="org.apache.ignite.configuration.IgniteConfiguration" primary="true">
-        <property name="clientMode" value="${CLIENT_MODE:true}"/>
+    <bean class="org.apache.ignite.configuration.IgniteConfiguration">
+        <property name="clientMode" value="#{new Boolean('${client.mode:true}')}"/>
 
         <property name="authenticationEnabled" value="false"/>
         <property name="metricsLogFrequency" value="0"/>
@@ -80,6 +80,10 @@
                     </bean>
                 </constructor-arg>
             </bean>
+        </property>
+
+        <property name="failureHandler">
+            <bean class="org.apache.ignite.failure.NoOpFailureHandler"/>
         </property>
     </bean>
 </beans>

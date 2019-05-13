@@ -17,6 +17,7 @@
 package org.apache.ignite.console.web.security;
 
 import java.io.IOException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.ignite.console.web.model.SignInRequest;
@@ -26,17 +27,18 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.preauth.PreAuthenticatedCredentialsNotFoundException;
 
-import static org.apache.ignite.console.json.JsonUtils.fromJson;
-
 /**
  * Custom filter for retrieve credentials from body and authenticate user. Default implementation use path parameters.
  */
 public class RequestBodyReaderAuthenticationFilter extends UsernamePasswordAuthenticationFilter {
+    /** */
+    private final ObjectMapper objMapper = new ObjectMapper();
+
     /** {@inheritDoc} */
     @Override public Authentication attemptAuthentication(HttpServletRequest req,
         HttpServletResponse res) throws AuthenticationException {
         try {
-            SignInRequest params = fromJson(req.getReader(), SignInRequest.class);
+            SignInRequest params = objMapper.readValue(req.getReader(), SignInRequest.class);
 
             UsernamePasswordAuthenticationToken tok =
                 new UsernamePasswordAuthenticationToken(params.getEmail(), params.getPassword());
