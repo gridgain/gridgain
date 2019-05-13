@@ -200,9 +200,7 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerAbstractTe
     public void testValidateSingleCacheShouldNotTriggerCacheGroupValidation() throws Exception {
         Ignite ignite = prepareGridForTest();
 
-        Ignite client = startGrid("another-one-client");
-
-        client.getOrCreateCache(new CacheConfiguration<Integer, Person>()
+        ignite.getOrCreateCache(new CacheConfiguration<Integer, Person>()
                 .setName(DEFAULT_CACHE_NAME)
                 .setGroupName(GROUP_NAME)
                 .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC)
@@ -213,18 +211,18 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerAbstractTe
 
         ThreadLocalRandom rand = ThreadLocalRandom.current();
 
-        try (IgniteDataStreamer<Integer, Person> streamer = client.dataStreamer(DEFAULT_CACHE_NAME)) {
+        try (IgniteDataStreamer<Integer, Person> streamer = ignite.dataStreamer(DEFAULT_CACHE_NAME)) {
             for (int i = 0; i < 10_000; i++)
                 streamer.addData(i, new Person(rand.nextInt(), String.valueOf(rand.nextLong())));
         }
 
         forceCheckpoint();
 
-        breakCacheDataTree(ignite, DEFAULT_CACHE_NAME, 1);
+        breakCacheDataTree(ignite, CACHE_NAME, 1);
 
         injectTestSystemOut();
 
-        assertEquals(EXIT_CODE_OK, execute("--cache", "validate_indexes", CACHE_NAME, "--check-through", "10"));
+        assertEquals(EXIT_CODE_OK, execute("--cache", "validate_indexes", DEFAULT_CACHE_NAME, "--check-through", "10"));
         assertContains(log, testOut.toString(), "no issues found");
     }
 
