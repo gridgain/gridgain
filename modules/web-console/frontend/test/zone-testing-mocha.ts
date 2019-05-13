@@ -26,5 +26,3 @@ import 'zone.js/dist/fake-async-test';
 import 'zone.js/dist/zone-patch-promise-test';
 
 import 'core-js/es7/reflect';
-
-
