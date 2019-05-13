@@ -28,7 +28,7 @@ import {
 import {FormFieldErrors} from './errors.component';
 import {IgniteIcon} from '../igniteIcon.component';
 
-suite.only('Angular form-field component', () => {
+suite('Angular form-field component', () => {
     @Component({selector: 'popper-content', template: ''}) class PopperContentStub {}
     @Directive({selector: '[popper]'}) class PopperStub {}
     @Component({selector: 'form-field-errors', template: ''}) class ErrorsStub {
