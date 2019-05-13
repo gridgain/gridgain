@@ -1553,6 +1553,11 @@ public class GridCommandHandlerTest extends GridCommonAbstractTest {
                 .setBackups(1)
                 .setName("wrong_cache"));
 
+        ignite.createCache(new CacheConfiguration<>()
+                .setAffinity(new RendezvousAffinityFunction(false, 32))
+                .setBackups(1)
+                .setName("--cache_name_with_leading_minus"));
+
         injectTestSystemOut();
 
         testCacheIdleVerifyMultipleCacheFilterOptionsCommon(
@@ -1563,7 +1568,7 @@ public class GridCommandHandlerTest extends GridCommonAbstractTest {
         );
         testCacheIdleVerifyMultipleCacheFilterOptionsCommon(
             true,
-            "idle_verify check has finished, found 196 partitions",
+            "idle_verify check has finished, found 228 partitions",
             null,
             "--cache", "idle_verify", "--dump", ".*", "--exclude-caches", "wrong.*"
         );
@@ -1614,6 +1619,12 @@ public class GridCommandHandlerTest extends GridCommonAbstractTest {
             "idle_verify check has finished, no conflicts have been found.",
             null,
             "--cache", "idle_verify", "--dump", ".*", "--cache-filter", "PERSISTENT"
+        );
+        testCacheIdleVerifyMultipleCacheFilterOptionsCommon(
+            true,
+            "There are no caches matching given filter options.",
+            null,
+            "--cache", "idle_verify", "--dump", "-no-cache"
         );
     }
 
