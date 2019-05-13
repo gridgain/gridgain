@@ -57,12 +57,17 @@ suite.only('Angular form-field component', () => {
         @Input()
         extraErrorMessages: any
     }
+    @Component({selector: 'form-field-tooltip', template: ''}) class TooltipStub {
+        @Input()
+        content: any
+    }
 
     let fixture: ComponentFixture<HostComponent>;
     @Component({
         template: `
         <div [formGroup]='form'>
             <form-field>
+                <form-field-hint>Hello world!</form-field-hint>
                 <label for="one">One:</label>
                 <input type="text" id="one" formControlName='one'>
             </form-field>
@@ -101,9 +106,9 @@ suite.only('Angular form-field component', () => {
     setup(fakeAsync(async() => {
         TestBed.configureTestingModule({
             declarations: [
-                FormField,
+                FormField, FormFieldHint,
                 HostComponent,
-                ErrorsStub
+                ErrorsStub, TooltipStub
             ],
             schemas: [NO_ERRORS_SCHEMA],
             imports: [ReactiveFormsModule]
@@ -189,6 +194,25 @@ suite.only('Angular form-field component', () => {
             errors.errorType,
             'required',
             'Current error type is passed to form-field-errors'
+        );
+    });
+    test('Form field hint', () => {
+        const hint = fixture.debugElement.query(By.directive(FormFieldHint)).componentInstance as FormFieldHint;
+        hint.popper = {};
+        fixture.detectChanges();
+        const tooltip = fixture.debugElement.query(By.directive(TooltipStub)).componentInstance as TooltipStub;
+        assert.notOk(
+            fixture.nativeElement.querySelector('form-field:nth-of-type(2) form-field-tooltip'),
+            'Does not show tooltip if no hint was provided'
+        );
+        assert.ok(
+            fixture.nativeElement.querySelector('form-field:nth-of-type(1) form-field-tooltip'),
+            'Shows tooltip if hint was provided'
+        );
+        assert.equal(
+            tooltip.content,
+            hint.popper,
+            'Passes hint.popper to form-field-tooltip'
         );
     });
 });
