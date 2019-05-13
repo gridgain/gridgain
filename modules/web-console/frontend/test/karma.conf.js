@@ -30,6 +30,7 @@ module.exports = (/** @type {import('karma').Config} */ config) => {
         files: [
             'node_modules/angular/angular.js',
             'node_modules/angular-mocks/angular-mocks.js',
+            'test/zone-testing-mocha.ts',
             '+(app|app-angular)/**/*.spec.+(js|ts)',
             'test/**/*.test.js'
         ],
