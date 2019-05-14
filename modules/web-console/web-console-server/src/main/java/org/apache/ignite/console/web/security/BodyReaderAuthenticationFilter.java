@@ -34,7 +34,7 @@ import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKN
  */
 public class BodyReaderAuthenticationFilter extends UsernamePasswordAuthenticationFilter {
     /** */
-    private ObjectMapper objMapper = new ObjectMapper().configure(FAIL_ON_UNKNOWN_PROPERTIES, false);
+    protected ObjectMapper objMapper = new ObjectMapper().configure(FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     /** {@inheritDoc} */
     @Override public Authentication attemptAuthentication(HttpServletRequest req,

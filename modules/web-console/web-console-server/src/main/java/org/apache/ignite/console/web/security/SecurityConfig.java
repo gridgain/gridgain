@@ -54,14 +54,14 @@ import static org.apache.ignite.console.websocket.WebSocketConsts.BROWSERS_PATH;
  * Security settings provider.
  */
 @Configuration
-@EnableWebSecurity(debug = true)
+@EnableWebSecurity
 @EnableSpringHttpSession
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
     /** Sign in route. */
     public static final String SIGN_IN_ROUTE = "/api/v1/signin";
 
     /** Sign up route. */
-    private static final String SIGN_UP_ROUTE = "/api/v1/signup";
+    public static final String SIGN_UP_ROUTE = "/api/v1/signup";
 
     /** Logout route. */
     private static final String LOGOUT_ROUTE = "/api/v1/logout";
