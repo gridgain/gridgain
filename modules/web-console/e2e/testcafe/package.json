@@ -33,6 +33,7 @@
     "objectid": "3.2.1",
     "path": "0.12.7",
     "sinon": "2.3.8",
+    "socket.io": "^2.2.0",
     "testcafe": "1.1.4",
     "testcafe-angular-selectors": "0.3.0",
     "testcafe-reporter-teamcity": "1.0.9",
@@ -40,9 +41,11 @@
     "util": "0.10.3"
   },
   "devDependencies": {
+    "@types/socket.io": "^2.1.2",
     "@typescript-eslint/eslint-plugin": "^1.7.0",
     "@typescript-eslint/parser": "^1.7.0",
     "eslint": "^5.16.0",
+    "thebugger": "^1.0.0",
     "typescript": "^3.4.5"
   }
 }
