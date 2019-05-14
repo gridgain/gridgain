@@ -190,7 +190,7 @@ if (stop) {
  * @returns {string}
  */
 const resolveUrl = (targetUrl) => {
-    return url.resolve(process.env.APP_URL || 'http://localhost:9001', targetUrl);
+    return url.resolve(process.env.APP_URL || 'http://localhost:9000', targetUrl);
 };
 
 module.exports = { startEnv, insertTestUser, dropTestDB, resolveUrl };
