@@ -52,6 +52,7 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.affinity.AffinityFunction;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterGroup;
+import org.apache.ignite.cluster.ClusterGroupEmptyException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -2170,6 +2171,13 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
                                     try {
                                         traceDump = strIgniteFut.get();
+                                    }
+                                    catch (ClusterGroupEmptyException e) {
+                                        U.error(
+                                            diagnosticLog,
+                                            "Could not get thread dump from transaction owner because near node " +
+                                                "is now out of topology."
+                                        );
                                     }
                                     catch (Exception e) {
                                         U.error(
