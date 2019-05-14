@@ -9061,7 +9061,7 @@ public abstract class IgniteUtils {
      */
     public static Collection<InetSocketAddress> toSocketAddresses(Collection<String> addrs,
         Collection<String> hostNames, int port) {
-        Set<InetSocketAddress> res = new HashSet<>(addrs.size());
+        Set<InetSocketAddress> res = new LinkedHashSet<>(addrs.size());
 
         Iterator<String> hostNamesIt = hostNames.iterator();
 
