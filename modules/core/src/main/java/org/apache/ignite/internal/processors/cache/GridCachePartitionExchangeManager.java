@@ -2176,7 +2176,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                                         U.error(
                                             diagnosticLog,
                                             "Could not get thread dump from transaction owner because near node " +
-                                                "is now out of topology."
+                                                "is now out of topology. Node ID: " +
+                                                nearNodeId.toString()
                                         );
                                     }
                                     catch (Exception e) {
