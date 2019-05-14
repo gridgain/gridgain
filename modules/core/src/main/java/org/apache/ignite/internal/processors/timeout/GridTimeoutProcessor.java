@@ -26,6 +26,9 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
+import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
+import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
+import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.util.GridConcurrentSkipListSet;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.X;
@@ -205,13 +208,32 @@ public class GridTimeoutProcessor extends GridProcessorAdapter {
         @Nullable IgniteCheckedException e,
         boolean flag
     ) {
-        if (ctx.cache() != null &&
-            ctx.cache().context() != null &&
-            ctx.cache().context().exchange() != null &&
-            ctx.cache().context().exchange().currentThreadIsExchanger())
+        if (curThreadIsExchanger())
             ctx.closure().runLocalSafe(() -> clo.apply(e, flag), GridIoPolicy.SYSTEM_POOL);
         else
             clo.apply(e, flag);
+    }
+
+    /**
+     * Checks whether current thread is exchange worker.
+     *
+     * @return {@code True} if current thread is exchange worker thread and {@code False} otherwise.
+     */
+    private boolean curThreadIsExchanger() {
+        GridCacheProcessor cacheProc = ctx.cache();
+
+        if (cacheProc != null) {
+            GridCacheSharedContext<Object, Object> cacheSharedCtx = cacheProc.context();
+
+            if (cacheSharedCtx != null) {
+                GridCachePartitionExchangeManager<Object, Object> exchange = cacheSharedCtx.exchange();
+                if (exchange != null)
+                    return exchange.currentThreadIsExchanger();
+            }
+
+        }
+
+        return false;
     }
 
     /**
