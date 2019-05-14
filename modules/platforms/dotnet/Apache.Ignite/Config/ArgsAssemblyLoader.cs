@@ -24,14 +24,14 @@ namespace Apache.Ignite.Config
     /// <summary>
     /// Loads required assemblies at runtime.
     /// </summary>
-    public static class ArgsAssemblyLoader
+    internal static class ArgsAssemblyLoader
     {
         /// <summary>
         /// Load assemblies if assembly key is present in arguments.
         /// This is useful for plugin configuration before parsing the app.config file.
         /// </summary>
         /// <param name="args">Application arguments in split form.</param>
-        public static void LoadAssembliesIfRequired(IEnumerable<Tuple<string, string>> args)
+        public static void LoadAssemblies(IEnumerable<Tuple<string, string>> args)
         {
             IEnumerable<string> assemblies = args
                 .Where(x => x.Item1.StartsWith(Configurator.CmdAssembly, StringComparison.InvariantCultureIgnoreCase))

@@ -93,7 +93,7 @@ namespace Apache.Ignite
                         .Concat(ArgsConfigurator.GetArgs(args)).ToArray();
 
                     // load additional assemblies if required
-                    ArgsAssemblyLoader.LoadAssembliesIfRequired(allArgs);
+                    ArgsAssemblyLoader.LoadAssemblies(allArgs);
 
                     if (install)
                         IgniteService.DoInstall(allArgs);

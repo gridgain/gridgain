@@ -57,7 +57,7 @@ namespace Apache.Ignite
                     .Concat(ArgsConfigurator.GetArgs(args)).ToArray();
 
                 // load additional assemblies if required
-                ArgsAssemblyLoader.LoadAssembliesIfRequired(allArgs);
+                ArgsAssemblyLoader.LoadAssemblies(allArgs);
 
                 var ignite = Ignition.Start(Configurator.GetConfiguration(allArgs));
 
