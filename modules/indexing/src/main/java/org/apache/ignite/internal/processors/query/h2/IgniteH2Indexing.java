@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import javax.cache.CacheException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
@@ -1374,7 +1375,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                     return new GridQueryCacheObjectsIterator(res.iterator(), objectContext(), keepBinary);
                 }
                 catch (IgniteCheckedException e) {
-                    throw new IgniteException(e);
+                    throw new CacheException(e);
                 }
             };
         }
