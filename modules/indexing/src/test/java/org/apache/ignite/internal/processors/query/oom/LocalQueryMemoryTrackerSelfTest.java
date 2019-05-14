@@ -17,12 +17,11 @@
 package org.apache.ignite.internal.processors.query.oom;
 
 /**
- * Tests for OOME on query.
+ * Query memory manager for local queries.
  */
-@Deprecated
-public class QueryOOMWithQueryParallelismTest extends AbstractQueryOOMTest {
+public class LocalQueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTest {
     /** {@inheritDoc} */
-    @Override protected int queryParallelism() {
-        return 4;
+    @Override protected boolean isLocal() {
+        return true;
     }
 }

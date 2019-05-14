@@ -75,6 +75,11 @@ public class H2ManagedLocalResult extends H2BaseLocalResult {
     }
 
     /** {@inheritDoc} */
+    public long memoryAllocated() {
+        return allocMem;
+    }
+
+    /** {@inheritDoc} */
     @Override public void close() {
         super.close();
 

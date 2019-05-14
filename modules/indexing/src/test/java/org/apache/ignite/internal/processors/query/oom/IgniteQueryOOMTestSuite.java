@@ -28,6 +28,7 @@ import org.junit.runners.Suite;
     QueryOOMWithoutQueryParallelismTest.class,
     QueryOOMWithQueryParallelismTest.class,
 })
+@Deprecated
 public class IgniteQueryOOMTestSuite {
 }
 
