@@ -69,6 +69,11 @@ namespace ignite
             return serversCluster.Get()->GetCompute();
         }
 
+        IgniteImpl::SP_ComputeImpl IgniteImpl::GetCompute(cluster::SP_ClusterGroupImpl grp)
+        {
+            return grp.Get()->GetCompute();
+        }
+
         transactions::TransactionsImpl* IgniteImpl::InternalGetTransactions()
         {
             IgniteError err;

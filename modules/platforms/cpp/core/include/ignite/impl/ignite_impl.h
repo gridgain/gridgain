@@ -186,6 +186,13 @@ namespace ignite
             SP_ComputeImpl GetCompute();
 
             /**
+             * Get compute from cluster group.
+             *
+             * @return ComputeImpl instance.
+             */
+            SP_ComputeImpl GetCompute(cluster::SP_ClusterGroupImpl grp);
+
+            /**
              * Check if the Ignite grid is active.
              *
              * @return True if grid is active and false otherwise.
