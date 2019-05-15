@@ -30,3 +30,9 @@ export type AgentsStatResponse = {
 	hasDemo: boolean,
 	clusters: ClusterStats[]
 }
+
+export type CacheNamesCollectorTaskResponse = {
+	caches: {[cacheName: string]: string},
+	groups: string[],
+	protocolVersion: 1
+}

@@ -33,6 +33,9 @@ import {ClusterSecretsManager} from './types/ClusterSecretsManager';
 import ClusterLoginService from './components/cluster-login/service';
 
 import * as AgentTypes from 'app/types/Agent';
+import {TransitionService} from '@uirouter/angularjs';
+import VersionService from 'app/services/Version.service';
+import UserNotifications from 'app/components/user-notifications/service';
 
 const State = {
     INIT: 'INIT',
@@ -129,35 +132,19 @@ class ConnectionState {
 export default class AgentManager {
     static $inject = ['$rootScope', '$q', '$transitions', 'AgentModal', 'UserNotifications', 'IgniteVersion', 'ClusterLoginService'];
 
-    /** @type {ng.IScope} */
-    $root;
-
-    /** @type {ng.IQService} */
-    $q;
-
-    /** @type {AgentModal} */
-    agentModal;
-
-    /** @type {ClusterLoginService} */
-    ClusterLoginSrv;
-
-    /** @type {String} */
-    clusterVersion;
+    clusterVersion: string;
 
     connectionSbj = new BehaviorSubject(new ConnectionState(AgentManager.restoreActiveCluster()));
 
-    /** @type {ClusterSecretsManager} */
     clustersSecrets = new ClusterSecretsManager();
 
     pool = new SimpleWorkerPool('decompressor', Worker, 4);
 
-    /** @type {Set<ng.IPromise<unknown>>} */
-    promises = new Set();
+    promises = new Set<ng.IPromise<unknown>>();
 
     socket = null;
 
-    /** @type {Set<() => Promise>} */
-    switchClusterListeners = new Set();
+    switchClusterListeners = new Set<() => Promise>();
 
     addClusterSwitchListener(func) {
         this.switchClusterListeners.add(func);
@@ -178,24 +165,15 @@ export default class AgentManager {
         }
     }
 
-    /**
-     * @param {ng.IRootScopeService} $root
-     * @param {ng.IQService} $q
-     * @param {import('@uirouter/angularjs').TransitionService} $transitions
-     * @param {import('./AgentModal.service').default} agentModal
-     * @param {import('app/components/user-notifications/service').default} UserNotifications
-     * @param {import('app/services/Version.service').default} Version
-     * @param {import('./components/cluster-login/service').default} ClusterLoginSrv
-     */
-    constructor($root, $q, $transitions, agentModal, UserNotifications, Version, ClusterLoginSrv) {
-        this.$root = $root;
-        this.$q = $q;
-        this.$transitions = $transitions;
-        this.agentModal = agentModal;
-        this.UserNotifications = UserNotifications;
-        this.Version = Version;
-        this.ClusterLoginSrv = ClusterLoginSrv;
-
+    constructor(
+        private $root: ng.IRootScopeService,
+        private $q: ng.IQService,
+        private $transitions: TransitionService,
+        private agentModal: AgentModal,
+        private UserNotifications: UserNotifications,
+        private Version: VersionService,
+        private ClusterLoginSrv: ClusterLoginService
+    ) {
         this.clusterVersion = this.Version.webConsole;
 
         let prevCluster;
@@ -552,9 +530,9 @@ export default class AgentManager {
         return this._executeOnCluster('node:rest', {cmd: 'top', attr, mtr, caches});
     }
 
-    collectCacheNames(nid) {
+    collectCacheNames(nid: string) {
         if (this.available(COLLECT_BY_CACHE_GROUPS_SINCE))
-            return this.visorTask('cacheNamesCollectorTask', nid);
+            return this.visorTask<AgentTypes.CacheNamesCollectorTaskResponse>('cacheNamesCollectorTask', nid);
 
         return Promise.resolve({cacheGroupsNotAvailable: true});
     }
@@ -572,12 +550,9 @@ export default class AgentManager {
             });
     }
 
-    /**
-     * @param {string} cacheName Cache name.
-     */
-    cacheNodes(cacheName) {
+    cacheNodes(cacheName: string) {
         if (this.available(IGNITE_2_0))
-            return this.visorTask('cacheNodesTaskX2', null, cacheName);
+            return this.visorTask<AgentTypes.CacheNodesTaskX2Response>('cacheNodesTaskX2', null, cacheName);
 
         return this.visorTask('cacheNodesTask', null, cacheName);
     }
@@ -684,7 +659,7 @@ export default class AgentManager {
      * @param {Array.<String>|String} nids
      * @param {Array.<Object>} args
      */
-    visorTask(taskId, nids, ...args) {
+    visorTask<T>(taskId, nids, ...args): Promise<T> {
         args = _.map(args, (arg) => maskNull(arg));
 
         nids = _.isArray(nids) ? nids.join(';') : maskNull(nids);
@@ -714,7 +689,7 @@ export default class AgentManager {
             else if (this.available(...LAZY_QUERY_SINCE))
                 args = [...args, lazy];
 
-            return this.visorTask('querySqlX2', nid, ...args).then(({error, result}) => {
+            return this.visorTask<AgentTypes.QuerySqlX2Response>('querySqlX2', nid, ...args).then(({error, result}) => {
                 if (_.isEmpty(error))
                     return result;
 
@@ -743,13 +718,11 @@ export default class AgentManager {
     }
 
     /**
-     * @param {String} nid Node id.
-     * @param {String} queryId Query ID.
-     * @param {Number} pageSize
-     * @returns {Promise.<VisorQueryResult>} Query execution result.
+     * @param nid Node id.
+     * @returns Query execution result.
      */
-    queryFetchFistsPage(nid, queryId, pageSize) {
-        return this.visorTask('queryFetchFirstPage', nid, queryId, pageSize).then(({error, result}) => {
+    queryFetchFistsPage(nid: string, queryId: string, pageSize: number) {
+        return this.visorTask<AgentTypes.QueryFetchFirstPageResult>('queryFetchFirstPage', nid, queryId, pageSize).then(({error, result}) => {
             if (_.isEmpty(error))
                 return result;
 
