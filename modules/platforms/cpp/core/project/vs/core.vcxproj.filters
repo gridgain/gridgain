@@ -61,6 +61,9 @@
     <ClCompile Include="..\..\src\impl\compute\cancelable_impl.cpp">
       <Filter>Code\impl\compute</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\impl\cluster\ignite_cluster_impl.cpp">
+      <Filter>Code\impl\cluster</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\ignite\impl\cache\cache_impl.h">
@@ -242,6 +245,9 @@
     </ClInclude>
     <ClInclude Include="..\..\include\ignite\impl\compute\multiple_job_compute_task_holder.h">
       <Filter>Code\impl\compute</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\ignite\impl\cluster\ignite_cluster_impl.h">
+      <Filter>Code\impl\cluster</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

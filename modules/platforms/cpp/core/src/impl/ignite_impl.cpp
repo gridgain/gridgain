@@ -57,6 +57,11 @@ namespace ignite
             return env.Get()->GetBinding();
         }
 
+        IgniteImpl::SP_IgniteClusterImpl IgniteImpl::GetCluster()
+        {
+            return IgniteImpl::SP_IgniteClusterImpl(new cluster::IgniteClusterImpl(this->GetProjection()));
+        }
+
         IgniteImpl::SP_ComputeImpl IgniteImpl::GetCompute()
         {
             cluster::SP_ClusterGroupImpl serversCluster = prjImpl.Get().Get()->ForServers();

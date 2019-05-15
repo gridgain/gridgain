@@ -29,6 +29,12 @@ namespace ignite
             {
                 enum Type
                 {
+                    FOR_ATTRIBUTE = 2,
+
+                    FOR_DATA = 5,
+
+                    NODES = 12,
+
                     FOR_SERVERS = 23,
 
                     SET_ACTIVE = 28,
@@ -46,6 +52,29 @@ namespace ignite
             ClusterGroupImpl::~ClusterGroupImpl()
             {
                 // No-op.
+            }
+
+            SP_ClusterGroupImpl ClusterGroupImpl::ForAttribute(std::string name, std::string val)
+            {
+                common::concurrent::SharedPointer<interop::InteropMemory> mem = GetEnvironment().AllocateMemory();
+                interop::InteropOutputStream out(mem.Get());
+                binary::BinaryWriterImpl writer(&out, GetEnvironment().GetTypeManager());
+
+                writer.WriteString(name);
+                writer.WriteString(val);
+
+                out.Synchronize();
+
+                IgniteError err;
+                jobject target = InStreamOutObject(Command::FOR_ATTRIBUTE, *mem.Get(), err);
+                IgniteError::ThrowIfNeeded(err);
+
+                return SP_ClusterGroupImpl(new ClusterGroupImpl(GetEnvironmentPointer(), target));
+            }
+
+            SP_ClusterGroupImpl ClusterGroupImpl::ForDataNodes(std::string cacheName)
+            {
+                return ForCacheNodes(cacheName, Command::FOR_DATA);
             }
 
             SP_ClusterGroupImpl ClusterGroupImpl::ForServers()
@@ -82,6 +111,23 @@ namespace ignite
                 OutInOpLong(Command::SET_ACTIVE, active ? 1 : 0, err);
 
                 IgniteError::ThrowIfNeeded(err);
+            }
+
+            SP_ClusterGroupImpl ClusterGroupImpl::ForCacheNodes(std::string name, int32_t op)
+            {
+                common::concurrent::SharedPointer<interop::InteropMemory> mem = GetEnvironment().AllocateMemory();
+                interop::InteropOutputStream out(mem.Get());
+                binary::BinaryWriterImpl writer(&out, GetEnvironment().GetTypeManager());
+
+                writer.WriteString(name);
+
+                out.Synchronize();
+
+                IgniteError err;
+                jobject target = InStreamOutObject(op, *mem.Get(), err);
+                IgniteError::ThrowIfNeeded(err);
+
+                return SP_ClusterGroupImpl(new ClusterGroupImpl(GetEnvironmentPointer(), target));
             }
 
             SP_ClusterGroupImpl ClusterGroupImpl::FromTarget(jobject javaRef)
