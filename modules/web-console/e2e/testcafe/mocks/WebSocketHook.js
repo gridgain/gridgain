@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import thebugger from 'thebugger';
+// import thebugger from 'thebugger';
 import Server from 'socket.io';
 import {RequestHook} from 'testcafe';
 import PortPool from 'port-pool';
@@ -26,9 +26,8 @@ const getPort = () => new Promise((resolve, reject) => {
         resolve(port);
     });
 });
-const noop = () => {};
 
-export class AgentManagerMock extends RequestHook {
+export class WebSocketHook extends RequestHook {
     constructor() {
         super(([/socket\.io/]));
         this._port = getPort();
@@ -40,8 +39,22 @@ export class AgentManagerMock extends RequestHook {
     	e.requestOptions.port = await this._port;
     }
     async onResponse() {}
-
     destroy() {
     	this._io.close();
+    }
+    /**
+     * @param {string} event
+     * @param {()=>void} listener
+     */
+    on(event, listener) {
+    	this._io.on(event, listener);
+    	return this;
+    }
+    /**
+     * @param {string} event
+     * @param {any} data
+     */
+    emit(event, data) {
+    	this._io.emit(event, data);
     }
 }

@@ -7,12 +7,11 @@ import {connectedClustersBadge} from '../components/connectedClustersBadge';
 
 const me = createRegularUser('iborisov+1@gridgain.com', '1');
 
-import {AgentManagerMock} from '../mocks/AgentManagerMock';
+import {WebSocketHook} from '../mocks/WebSocketHook';
 
-const agentMock = new AgentManagerMock();
-agentMock._io.on('connection', ((client) => {
-    console.log('client id', client.id);
-    client.emit('agents:stat', {
+const ws = new WebSocketHook();
+ws.on('connection', ((client) => {
+    ws.emit('agents:stat', {
         count: 2,
         hasDemo: true,
         clusters: [
@@ -48,8 +47,8 @@ agentMock._io.on('connection', ((client) => {
     });
 }));
 
-fixture('WS mock').requestHooks(agentMock).after(async(t) => {
-    agentMock.destroy();
+fixture('WS mock').requestHooks(ws).after(async(t) => {
+    ws.destroy();
 });
 
 test('Connected clusters', async(t) => {
