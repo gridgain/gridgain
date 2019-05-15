@@ -16,8 +16,8 @@
 
 package org.apache.ignite.console.web.controller;
 
-import org.apache.ignite.console.web.model.ErrorWithEmailResponse;
 import org.apache.ignite.console.web.model.ErrorResponse;
+import org.apache.ignite.console.web.model.ErrorWithEmailResponse;
 import org.apache.ignite.console.web.security.MissingConfirmRegistrationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.AuthenticationException;
