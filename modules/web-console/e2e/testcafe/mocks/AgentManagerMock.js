@@ -17,21 +17,21 @@
 import thebugger from 'thebugger';
 import Server from 'socket.io';
 import {RequestHook} from 'testcafe';
+import PortPool from 'port-pool';
 
-const START_PORT = 3003;
-
-const portPool = {
-    async getNext() {
-        return START_PORT.toString();
-    }
-};
-
+const portPool = new PortPool(3000, 3100);
+const getPort = () => new Promise((resolve, reject) => {
+    portPool.getNext((port) => {
+        if (port === null) reject(new Error('No free ports available'));
+        resolve(port);
+    });
+});
 const noop = () => {};
 
 export class AgentManagerMock extends RequestHook {
     constructor() {
         super(([/socket\.io/]));
-        this._port = portPool.getNext();
+        this._port = getPort();
         this._io = Server();
         this._port.then((port) => this._io.listen(port));
     }
