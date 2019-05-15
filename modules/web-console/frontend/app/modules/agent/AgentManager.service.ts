@@ -32,6 +32,8 @@ import {CancellationError} from 'app/errors/CancellationError';
 import {ClusterSecretsManager} from './types/ClusterSecretsManager';
 import ClusterLoginService from './components/cluster-login/service';
 
+import * as AgentTypes from 'app/types/Agent';
+
 const State = {
     INIT: 'INIT',
     AGENT_DISCONNECTED: 'AGENT_DISCONNECTED',
@@ -260,7 +262,7 @@ export default class AgentManager {
 
         this.socket.on('disconnect', onDisconnect);
 
-        this.socket.on('agents:stat', ({clusters, count, hasDemo}) => {
+        this.socket.on('agents:stat', ({clusters, count, hasDemo}: AgentTypes.AgentsStatResponse) => {
             const conn = this.connectionSbj.getValue();
 
             conn.update(this.isDemoMode(), count, clusters, hasDemo);
