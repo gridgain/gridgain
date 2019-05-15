@@ -92,6 +92,22 @@ BOOST_AUTO_TEST_CASE(IgniteImplProjection)
     BOOST_REQUIRE(impl->GetProjection().IsValid());
 }
 
+BOOST_AUTO_TEST_CASE(IgniteImplGetNodes)
+{
+    impl::IgniteImpl* impl = impl::IgniteImpl::GetFromProxy(node);
+
+    BOOST_REQUIRE(impl != 0);
+
+    SharedPointer<impl::cluster::ClusterGroupImpl> clusterGroup = impl->GetProjection();
+
+    BOOST_REQUIRE(clusterGroup.IsValid());
+
+    std::vector<SharedPointer<impl::cluster::ClusterNodeImpl> > nodes = clusterGroup.Get()->GetNodes();
+
+    BOOST_REQUIRE(nodes.size() == 1);
+    BOOST_REQUIRE(nodes.front().IsValid());
+}
+
 BOOST_AUTO_TEST_CASE(IgniteImplGetCluster)
 {
     impl::IgniteImpl* impl = impl::IgniteImpl::GetFromProxy(node);

@@ -93,6 +93,11 @@ namespace ignite
                 return computeImpl;
             }
 
+            std::vector<SP_ClusterNodeImpl> ClusterGroupImpl::GetNodes()
+            {
+                return RefreshNodes();
+            }
+
             bool ClusterGroupImpl::IsActive()
             {
                 IgniteError err;
@@ -140,6 +145,45 @@ namespace ignite
                 jobject computeProc = GetEnvironment().GetProcessorCompute(GetTarget());
 
                 return SP_ComputeImpl(new compute::ComputeImpl(GetEnvironmentPointer(), computeProc));
+            }
+
+            std::vector<SP_ClusterNodeImpl> ClusterGroupImpl::RefreshNodes()
+            {
+                long oldTopVer = 0;
+
+                common::concurrent::SharedPointer<interop::InteropMemory> memIn = GetEnvironment().AllocateMemory();
+                common::concurrent::SharedPointer<interop::InteropMemory> memOut = GetEnvironment().AllocateMemory();
+                interop::InteropOutputStream out(memIn.Get());
+                binary::BinaryWriterImpl writer(&out, GetEnvironment().GetTypeManager());
+
+                writer.WriteInt64(oldTopVer);
+
+                out.Synchronize();
+
+                IgniteError err;
+                InStreamOutStream(Command::NODES, *memIn.Get(), *memOut.Get(), err);
+                IgniteError::ThrowIfNeeded(err);
+
+                interop::InteropInputStream inStream(memOut.Get());
+                binary::BinaryReaderImpl reader(&inStream);
+
+                bool wasUpdated = reader.ReadBool();
+                if (wasUpdated)
+                {
+                    long newTopVer = reader.ReadInt64();
+                    int cnt = reader.ReadInt32();
+
+                    std::vector<SP_ClusterNodeImpl> newNodes;
+                    for (int i = 0; i < cnt; i++)
+                        newNodes.push_back(GetEnvironment().GetNode(reader.ReadGuid()));
+
+                    topVer = newTopVer;
+                    nodes = newNodes;
+
+                    return newNodes;
+                }
+
+                return nodes;
             }
         }
     }

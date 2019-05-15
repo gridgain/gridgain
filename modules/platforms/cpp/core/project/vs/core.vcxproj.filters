@@ -64,6 +64,9 @@
     <ClCompile Include="..\..\src\impl\cluster\ignite_cluster_impl.cpp">
       <Filter>Code\impl\cluster</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\impl\cluster\cluster_node_impl.cpp">
+      <Filter>Code\impl\cluster</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\ignite\impl\cache\cache_impl.h">
@@ -247,6 +250,9 @@
       <Filter>Code\impl\compute</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\ignite\impl\cluster\ignite_cluster_impl.h">
+      <Filter>Code\impl\cluster</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\ignite\impl\cluster\cluster_node_impl.h">
       <Filter>Code\impl\cluster</Filter>
     </ClInclude>
   </ItemGroup>

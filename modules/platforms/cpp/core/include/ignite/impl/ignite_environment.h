@@ -21,6 +21,7 @@
 #include <ignite/jni/java.h>
 #include <ignite/jni/utils.h>
 #include <ignite/ignite_configuration.h>
+#include <ignite/guid.h>
 
 #include <ignite/impl/interop/interop_memory.h>
 #include <ignite/impl/binary/binary_type_manager.h>
@@ -33,12 +34,16 @@ namespace ignite
         /* Forward declarations. */
         class IgniteBindingImpl;
         class ModuleManager;
+        namespace cluster {
+            class ClusterNodeImpl;
+        }
 
         /**
          * Defines environment in which Ignite operates.
          */
         class IGNITE_IMPORT_EXPORT IgniteEnvironment
         {
+            typedef common::concurrent::SharedPointer<cluster::ClusterNodeImpl> SP_ClusterNodeImpl;
         public:
             /**
              * Default memory block allocation size.
@@ -190,6 +195,13 @@ namespace ignite
             binary::BinaryTypeUpdater* GetTypeUpdater();
 
             /**
+             * Get cluster node by id.
+             *
+             * @return Cluster node or NULL if does not exist.
+             */
+            SP_ClusterNodeImpl GetNode(Guid Id);
+
+            /**
              * Notify processor that Ignite instance has started.
              */
             void ProcessorReleaseStart();
@@ -277,6 +289,16 @@ namespace ignite
              */
             int32_t ComputeTaskJobResult(common::concurrent::SharedPointer<interop::InteropMemory>& mem);
 
+            /**
+             * InLongOutLong callback.
+             * Allow access to private nodes member.
+             *
+             * @param target Target environment.
+             * @param type Operation type.
+             * @param val Value.
+             */
+            friend long long IGNITE_CALL InLongOutLong(void* target, int type, long long val);
+
         private:
             /** Node configuration. */
             IgniteConfiguration* cfg;
@@ -307,6 +329,9 @@ namespace ignite
 
             /** Module manager. */
             common::concurrent::SharedPointer<ModuleManager> moduleMgr;
+
+            /** Cluster nodes. */
+            std::map<Guid, SP_ClusterNodeImpl> nodes;
 
             IGNITE_NO_COPY_ASSIGNMENT(IgniteEnvironment);
         };

@@ -20,6 +20,7 @@
 #include <ignite/impl/module_manager.h>
 #include <ignite/impl/ignite_binding_impl.h>
 #include <ignite/impl/compute/compute_task_holder.h>
+#include <ignite/impl/cluster/cluster_node_impl.h>
 
 #include <ignite/binary/binary.h>
 #include <ignite/cache/query/continuous/continuous_query.h>
@@ -57,6 +58,7 @@ namespace ignite
                 CONTINUOUS_QUERY_FILTER_APPLY = 20,
                 CONTINUOUS_QUERY_FILTER_RELEASE = 21,
                 REALLOC = 36,
+                NODE_INFO = 48,
                 ON_START = 49,
                 ON_STOP = 50,
                 COMPUTE_TASK_LOCAL_JOB_RESULT = 60,
@@ -101,6 +103,18 @@ namespace ignite
 
             switch (type)
             {
+                case OperationCallback::NODE_INFO:
+                {
+                    typedef common::concurrent::SharedPointer<impl::cluster::ClusterNodeImpl> SP_ClusterNodeImpl;
+
+                    SharedPointer<InteropMemory> mem = env->Get()->GetMemory(val);
+                    interop::InteropInputStream inStream(mem.Get());
+                    binary::BinaryReaderImpl reader(&inStream);
+                    SP_ClusterNodeImpl node = (new impl::cluster::ClusterNodeImpl(reader));
+                    env->Get()->nodes.insert(std::pair<Guid, SP_ClusterNodeImpl> (node.Get()->Id(), node));
+                    break;
+                }
+
                 case OperationCallback::ON_STOP:
                 {
                     delete env;
@@ -389,6 +403,14 @@ namespace ignite
         BinaryTypeUpdater* IgniteEnvironment::GetTypeUpdater()
         {
             return metaUpdater;
+        }
+
+        IgniteEnvironment::SP_ClusterNodeImpl IgniteEnvironment::GetNode(Guid Id)
+        {
+            if (nodes.find(Id) != nodes.end())
+                return nodes[Id];
+
+            return 0;
         }
 
         SharedPointer<IgniteBindingImpl> IgniteEnvironment::GetBinding() const

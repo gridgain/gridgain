@@ -22,6 +22,7 @@
 
 #include <ignite/impl/interop/interop_target.h>
 #include <ignite/impl/compute/compute_impl.h>
+#include <ignite/impl/cluster/cluster_node_impl.h>
 
 namespace ignite
 {
@@ -85,6 +86,13 @@ namespace ignite
                 SP_ComputeImpl GetCompute();
 
                 /**
+                 * Get container of cluster nodes over this cluster group.
+                 *
+                 * @return Vector of cluster nodes.
+                 */
+                std::vector<SP_ClusterNodeImpl> GetNodes();
+
+                /**
                  * Check if the Ignite grid is active.
                  *
                  * @return True if grid is active and false otherwise.
@@ -127,8 +135,21 @@ namespace ignite
                  */
                 SP_ComputeImpl InternalGetCompute();
 
+                /**
+                 * Get container of refreshed cluster nodes over this cluster group..
+                 *
+                 * @return Instance of compute.
+                 */
+                std::vector<SP_ClusterNodeImpl> ClusterGroupImpl::RefreshNodes();
+
                 /** Compute for the cluster group. */
                 SP_ComputeImpl computeImpl;
+
+                /** Cluster nodes. */
+                std::vector<SP_ClusterNodeImpl> nodes;
+
+                /** Cluster nodes top version. */
+                long topVer; //??? Possibly should be atomic (from dotnet)
             };
         }
     }
