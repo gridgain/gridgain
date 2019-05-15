@@ -57,4 +57,11 @@ export class WebSocketHook extends RequestHook {
     emit(event, data) {
     	this._io.emit(event, data);
     }
+    /**
+     * @param {Array<(hook: WebSocketHook) => any>} hooks
+     */
+    use(...hooks) {
+        hooks.forEach((hook) => hook(this));
+        return this;
+    }
 }
