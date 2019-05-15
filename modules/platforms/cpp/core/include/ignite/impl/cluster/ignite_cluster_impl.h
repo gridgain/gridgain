@@ -63,6 +63,8 @@ namespace ignite
                 void SetActive(bool active);
 
             private:
+                IGNITE_NO_COPY_ASSIGNMENT(IgniteClusterImpl);
+
                 /** Implementation. */
                 SP_ClusterGroupImpl impl;
             };
