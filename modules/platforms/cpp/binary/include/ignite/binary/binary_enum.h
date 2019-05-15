@@ -26,9 +26,8 @@
 #include <stdint.h>
 
 #include <ignite/common/common.h>
+
 #include <ignite/binary/binary_type.h>
-#include <ignite/binary/binary_writer.h>
-#include <ignite/binary/binary_reader.h>
 
 namespace ignite
 {
@@ -94,39 +93,12 @@ namespace ignite
         };
 
         /**
-         * Default implementations of BinaryEnum methods for non-null type.
-         */
-        template<typename T>
-        struct IGNITE_IMPORT_EXPORT BinaryEnumNonNullableType
-        {
-            /**
-             * Check whether passed enum object should be interpreted as NULL.
-             *
-             * @return True if enum object should be interpreted as NULL.
-             */
-            static bool IsNull(T)
-            {
-                return false;
-            }
-
-            /**
-             * Get NULL value for the given enum type.
-             *
-             * @return Null value for the type.
-             */
-            static T GetNull()
-            {
-                return T();
-            }
-        };
-
-        /**
          * Default implementations of BinaryType hashing functions and non-null type behaviour.
          */
         template<typename T>
         struct IGNITE_IMPORT_EXPORT BinaryEnumDefaultAll :
             BinaryEnumDefault<T>,
-            BinaryEnumNonNullableType<T> { };
+            BinaryTypeNonNullableType<T> { };
 
         /**
          * BinaryEnum template specialization for pointers.
@@ -183,7 +155,7 @@ namespace ignite
              * @param obj Enum value to test.
              * @return True if enum value should be interpreted as NULL.
              */
-            static bool IsNull(T* obj)
+            static bool IsNull(T* const& obj)
             {
                 return !obj || BinaryEnumDereferenced::IsNull(*obj);
             }
@@ -191,11 +163,11 @@ namespace ignite
             /**
              * Get NULL value for the enum type.
              *
-             * @return NULL value for the enum.
+             * @param dst NULL value for the enum.
              */
-            static T* GetNull()
+            static void GetNull(T*& dst)
             {
-                return 0;
+                dst = 0;
             }
         };
     }
