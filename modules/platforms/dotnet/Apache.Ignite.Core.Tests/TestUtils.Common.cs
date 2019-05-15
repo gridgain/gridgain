@@ -108,6 +108,8 @@ namespace Apache.Ignite.Core.Tests
                     ops.Add(opt);
             }
 
+            ops.Add("-DIGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP=false");
+
             return ops;
         }
 
