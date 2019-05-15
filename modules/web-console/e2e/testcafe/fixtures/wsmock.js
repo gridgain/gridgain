@@ -55,5 +55,5 @@ test('Connected clusters', async(t) => {
     await t
     .useRole(me)
     .navigateTo(resolveUrl('/settings/profile'))
-    .expect(connectedClustersBadge.innerText).eql('My Connected Clusters:\n2');
+    .expect(connectedClustersBadge.textContent).eql('My Connected Clusters: 2');
 });
