@@ -60,11 +60,14 @@ public class AccountController {
     }
 
     /**
-     * @param acc Account.
-     * @return Response with info about user that can be send to fromtend.
+     * @param user User.
      */
-    protected UserResponse createUserResponse(Account acc) {
-        return new UserResponse(
+    @ApiOperation(value = "Get current user.")
+    @GetMapping(path = "/api/v1/user")
+    public ResponseEntity<UserResponse> user(@AuthenticationPrincipal UserDetails user) {
+        Account acc = accountsSrv.loadUserByUsername(user.getUsername());
+
+        return ResponseEntity.ok(new UserResponse(
             acc.getEmail(),
             acc.getFirstName(),
             acc.getLastName(),
@@ -73,18 +76,7 @@ public class AccountController {
             acc.getCountry(),
             acc.getToken(),
             acc.getAdmin()
-        );
-    }
-
-    /**
-     * @param user User.
-     */
-    @ApiOperation(value = "Get current user.")
-    @GetMapping(path = "/api/v1/user")
-    public ResponseEntity<UserResponse> user(@AuthenticationPrincipal UserDetails user) {
-        Account acc = accountsSrv.loadUserByUsername(user.getUsername());
-
-        return ResponseEntity.ok(createUserResponse(acc));
+        ));
     }
 
     /**
