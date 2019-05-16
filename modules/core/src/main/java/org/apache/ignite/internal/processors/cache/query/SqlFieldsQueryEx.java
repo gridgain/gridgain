@@ -45,8 +45,8 @@ public final class SqlFieldsQueryEx extends SqlFieldsQuery {
     /** Batched arguments list. */
     private List<Object[]> batchedArgs;
 
-    /** Work memory available for query local results. */
-    private long workMem = Long.MAX_VALUE;
+    /** Max memory available for query results. */
+    private long maxMem = Long.MAX_VALUE;
 
     /**
      * @param sql SQL query.
@@ -69,7 +69,7 @@ public final class SqlFieldsQueryEx extends SqlFieldsQuery {
         this.autoCommit = qry.autoCommit;
         this.nestedTxMode = qry.nestedTxMode;
         this.batchedArgs = qry.batchedArgs;
-        this.workMem = qry.workMem;
+        this.maxMem = qry.maxMem;
     }
 
     /**
@@ -244,20 +244,22 @@ public final class SqlFieldsQueryEx extends SqlFieldsQuery {
     }
 
     /**
-     * Memory available for query local results.
+     * Return memory limit for query results.
      *
-     * @return Maximum memory size.
+     * @return Memory size in bytes.
      */
-    public long workMemory() {
-        return workMem;
+    public long maxMemory() {
+        return maxMem;
     }
 
     /**
-     * @param workMem Memory available for query local results.
+     * Sets memory limit for query results.
+     *
+     * @param maxMem Memory size in bytes.
      * @return {@code this} for chaining.
      */
-    public SqlFieldsQuery workMemory(long workMem) {
-        this.workMem = workMem;
+    public SqlFieldsQuery maxMemory(long maxMem) {
+        this.maxMem = maxMem;
 
         return this;
     }

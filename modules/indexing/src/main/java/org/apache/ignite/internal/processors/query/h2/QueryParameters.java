@@ -60,8 +60,8 @@ public class QueryParameters {
      */
     private final int updateBatchSize;
 
-    /** Work memory. */
-    private final long workMem;
+    /** Memory limit for query results. */
+    private final long maxMem;
 
     /**
      * Create parameters from query.
@@ -85,7 +85,7 @@ public class QueryParameters {
 
             batchedArgs = qry0.batchedArguments();
 
-            workMem = qry0.workMemory();
+            workMem = qry0.maxMemory();
         }
 
         return new QueryParameters(
@@ -111,7 +111,7 @@ public class QueryParameters {
      * @param timeout Timeout.
      * @param lazy Lazy flag.
      * @param pageSize Page size.
-     * @param workMem Query work memory size.
+     * @param maxMem Query memory limit.
      * @param dataPageScanEnabled Data page scan enabled flag.
      * @param nestedTxMode Nested TX mode.
      * @param autoCommit Auto-commit flag.
@@ -125,7 +125,7 @@ public class QueryParameters {
         int timeout,
         boolean lazy,
         int pageSize,
-        long workMem,
+        long maxMem,
         Boolean dataPageScanEnabled,
         NestedTxMode nestedTxMode,
         boolean autoCommit,
@@ -137,7 +137,7 @@ public class QueryParameters {
         this.timeout = timeout;
         this.lazy = lazy;
         this.pageSize = pageSize;
-        this.workMem = workMem;
+        this.maxMem = maxMem;
         this.dataPageScanEnabled = dataPageScanEnabled;
         this.nestedTxMode = nestedTxMode;
         this.autoCommit = autoCommit;
@@ -222,10 +222,12 @@ public class QueryParameters {
     }
 
     /**
-     * @return Work memory size for query.
+     * Returns max memory available for query.
+     * .
+     * @return Memory limit in bytes.
      */
-    public long workMemory() {
-        return workMem;
+    public long maxMemory() {
+        return maxMem;
     }
 
     /**
@@ -241,7 +243,7 @@ public class QueryParameters {
             this.timeout,
             this.lazy,
             this.pageSize,
-            this.workMem,
+            this.maxMem,
             this.dataPageScanEnabled,
             this.nestedTxMode,
             this.autoCommit,

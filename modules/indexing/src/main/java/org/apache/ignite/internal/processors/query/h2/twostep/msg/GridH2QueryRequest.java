@@ -159,8 +159,8 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
     /** TX details holder for {@code SELECT FOR UPDATE}, or {@code null} if not applicable. */
     private GridH2SelectForUpdateTxDetails txReq;
 
-    /** Memory available for query local results. */
-    private long workMem;
+    /** Memory available for query results. */
+    private long maxMem;
 
     /**
      * Required by {@link Externalizable}
@@ -188,7 +188,7 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
         schemaName = req.schemaName;
         mvccSnapshot = req.mvccSnapshot;
         txReq = req.txReq;
-        workMem = req.workMem;
+        maxMem = req.maxMem;
     }
 
     /**
@@ -452,20 +452,22 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
     }
 
     /**
-     * Memory available for query local result.
+     * Return memory limit for query results.
      *
-     * @return Maximum memory size.
+     * @return Memory size in bytes.
      */
-    public long workMemory() {
-        return workMem;
+    public long maxMemory() {
+        return maxMem;
     }
 
     /**
-     * @param workMem Memory available for query local result.
-     * @return {@code} this.
+     * Sets memory limit for query results.
+     *
+     * @param maxMem Memory size in bytes.
+     * @return {@code this} for chaining.
      */
-    public GridH2QueryRequest workMemory(long workMem) {
-        this.workMem = workMem;
+    public GridH2QueryRequest maxMemory(long maxMem) {
+        this.maxMem = maxMem;
 
         return this;
     }
@@ -631,7 +633,7 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
                 writer.incrementState();
 
             case 14:
-                if (!writer.writeLong("workMem", workMem))
+                if (!writer.writeLong("maxMem", maxMem))
                     return false;
 
                 writer.incrementState();
@@ -762,7 +764,7 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
                 reader.incrementState();
 
             case 14:
-                workMem = reader.readLong("workMem");
+                maxMem = reader.readLong("maxMem");
 
                 if (!reader.isLastRead())
                     return false;

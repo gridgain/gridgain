@@ -511,7 +511,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             if (mvccEnabled)
                 mvccSnapshot = mvccTracker.snapshot();
 
-            long workMem = qryParams.workMemory();
+            long workMem = qryParams.maxMemory();
 
             final QueryContext qctx = new QueryContext(
                 0,
@@ -1663,7 +1663,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                             mvccTracker,
                             qryParams.dataPageScanEnabled(),
                             qryParams.pageSize(),
-                            qryParams.workMemory()
+                            qryParams.maxMemory()
                         );
                     }
                     catch (Throwable e) {

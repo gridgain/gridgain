@@ -329,7 +329,7 @@ public class GridReduceQueryExecutor {
      * @param mvccTracker Query tracker.
      * @param dataPageScanEnabled If data page scan is enabled.
      * @param pageSize Page size.
-     * @param mem Query work memory.
+     * @param maxMem Query memory limit.
      * @return Rows iterator.
      */
     @SuppressWarnings({"BusyWait", "IfMayBeConditional"})
@@ -346,7 +346,7 @@ public class GridReduceQueryExecutor {
         MvccQueryTracker mvccTracker,
         Boolean dataPageScanEnabled,
         int pageSize,
-        long mem
+        long maxMem
     ) {
         // If explicit partitions are set, but there are no real tables, ignore.
         if (!qry.hasCacheIds() && parts != null)
@@ -593,7 +593,7 @@ public class GridReduceQueryExecutor {
                     .flags(flags)
                     .timeout(timeoutMillis)
                     .schemaName(schemaName)
-                    .workMemory(mem);
+                    .maxMemory(maxMem);
 
                 if (mvccTracker != null)
                     req.mvccSnapshot(mvccTracker.snapshot());
@@ -643,7 +643,7 @@ public class GridReduceQueryExecutor {
                     else {
                         cancel.checkCancelled();
 
-                        long workMem = req.workMemory();
+                        long workMem = req.maxMemory();
 
                         QueryContext qctx = new QueryContext(
                             0,

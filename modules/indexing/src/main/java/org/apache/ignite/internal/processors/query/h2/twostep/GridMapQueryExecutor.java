@@ -232,7 +232,7 @@ public class GridMapQueryExecutor {
                             lazy,
                             req.mvccSnapshot(),
                             dataPageScanEnabled,
-                            req.workMemory());
+                            req.maxMemory());
 
                         return null;
                     }
@@ -258,7 +258,7 @@ public class GridMapQueryExecutor {
             lazy,
             req.mvccSnapshot(),
             dataPageScanEnabled,
-            req.workMemory());
+            req.maxMemory());
     }
 
     /**

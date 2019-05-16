@@ -48,8 +48,8 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     /** Query local results. */
     protected static final List<H2ManagedLocalResult> localResults = new ArrayList<>();
 
-    /** Work mem. */
-    protected long workMem;
+    /** Query memory limit. */
+    protected long maxMem;
 
     /** Node client mode flag. */
     private boolean client;
@@ -61,8 +61,12 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         System.setProperty(IgniteSystemProperties.IGNITE_H2_LOCAL_RESULT_FACTORY, TestH2LocalResultFactory.class.getName());
 
         startGrid(0);
-        client = true;
-        startGrid(1);
+
+        if (!isLocal()) {
+            client = true;
+
+            startGrid(1);
+        }
 
         populateData();
     }
@@ -78,7 +82,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
-        workMem = 1024 * 1024;
+        maxMem = 1024 * 1024;
 
         localResults.clear();
     }
@@ -197,7 +201,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
             "select * from T as T2, T as T3 where T2.id >= 2 AND T2.id < 4", true);
 
         assertEquals(2, localResults.size());
-        assertTrue(workMem < localResults.get(1).memoryAllocated());
+        assertTrue(maxMem < localResults.get(1).memoryAllocated());
         assertTrue(2000 > localResults.get(0).getRowCount());
         assertTrue(2000 > localResults.get(1).getRowCount());
     }
@@ -206,7 +210,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     @Ignore("https://ggsystems.atlassian.net/browse/GG-18628")
     @Test
     public void testUnionOfSmallDataSetsWithLargeResult() {
-        workMem = 2L * 1024 * 1024;
+        maxMem = 2L * 1024 * 1024;
 
         //TODO: GG-18628: Memory manager should ignore duplicates.
         execQuery("select * from T as T0, T as T1 where T0.id < 1 " +
@@ -214,7 +218,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
             "select * from T as T2, T as T3 where T2.id > 2 AND T2.id < 4", false);
 
         assertEquals(3, localResults.size());
-        assertTrue(workMem > localResults.get(1).memoryAllocated() + localResults.get(2).memoryAllocated());
+        assertTrue(maxMem > localResults.get(1).memoryAllocated() + localResults.get(2).memoryAllocated());
         assertEquals(1000, localResults.get(1).getRowCount());
         assertEquals(1000, localResults.get(2).getRowCount());
         assertEquals(2000, localResults.get(0).getRowCount());
@@ -233,7 +237,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         checkQueryExpectOOM("select * from T as T0, T as T1", false);
 
         assertEquals(1, localResults.size());
-        assertTrue(workMem < localResults.get(0).memoryAllocated());
+        assertTrue(maxMem < localResults.get(0).memoryAllocated());
 
         localResults.clear();
 
@@ -241,7 +245,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         checkQueryExpectOOM("select * from T as T0, T as T1 ORDER BY T1.id", true);
 
         assertEquals(1, localResults.size());
-        assertTrue(workMem < localResults.get(0).memoryAllocated());
+        assertTrue(maxMem < localResults.get(0).memoryAllocated());
     }
 
     /** Check GROUP BY operation on large data set with small result set. */
@@ -286,7 +290,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
             "GROUP BY K.indexed ORDER BY a DESC", true);
 
         assertEquals(1, localResults.size());
-        assertTrue(workMem < localResults.get(0).memoryAllocated());
+        assertTrue(maxMem < localResults.get(0).memoryAllocated());
     }
 
     /** Check query with DISTINCT and GROUP BY indexed col (small result). */
@@ -316,7 +320,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         boolean localQry = isLocal();
 
         return grid(client ? 1 : 0).context().query().querySqlFields(
-            new SqlFieldsQueryEx(sql, null).setLocal(localQry).workMemory(workMem)
+            new SqlFieldsQueryEx(sql, null).setLocal(localQry).maxMemory(maxMem)
                 .setLazy(lazy).setPageSize(100), false).getAll();
     }
 
