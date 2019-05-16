@@ -164,6 +164,21 @@ BOOST_AUTO_TEST_CASE(IgniteImplForServers)
     BOOST_REQUIRE(clusterGroup.Get()->ForServers().IsValid());
 }
 
+BOOST_AUTO_TEST_CASE(IgniteImplForCpp)
+{
+    impl::IgniteImpl* impl = impl::IgniteImpl::GetFromProxy(node);
+
+    BOOST_REQUIRE(impl != 0);
+
+    SharedPointer<impl::cluster::ClusterGroupImpl> clusterGroup = impl->GetProjection();
+
+    BOOST_REQUIRE(clusterGroup.IsValid());
+
+    IgniteError err;
+
+    BOOST_REQUIRE(clusterGroup.Get()->ForCpp().IsValid());
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_FIXTURE_TEST_SUITE(ClusterTestSuiteIsolated, ClusterTestSuiteFixtureIsolated)

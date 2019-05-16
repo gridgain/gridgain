@@ -79,6 +79,13 @@ namespace ignite
                 SP_ClusterGroupImpl ForServers();
 
                 /**
+                 * Get server nodes cluster group implementation.
+                 *
+                 * @return Cpp nodes cluster group implementation.
+                 */
+                SP_ClusterGroupImpl ForCpp();
+
+                /**
                  * Get compute instance over this cluster group.
                  *
                  * @return Compute instance.

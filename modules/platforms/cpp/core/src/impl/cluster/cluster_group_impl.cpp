@@ -25,6 +25,13 @@ namespace ignite
     {
         namespace cluster
         {
+
+            /** Attribute: platform. */
+            const std::string attrPlatform = "org.apache.ignite.platform";
+
+            /** Platform. */
+            const std::string platform = "cpp";
+
             struct Command
             {
                 enum Type
@@ -86,6 +93,11 @@ namespace ignite
                 IgniteError::ThrowIfNeeded(err);
 
                 return FromTarget(res);
+            }
+
+            SP_ClusterGroupImpl ClusterGroupImpl::ForCpp()
+            {
+                return ForAttribute(attrPlatform, platform);
             }
 
             ClusterGroupImpl::SP_ComputeImpl ClusterGroupImpl::GetCompute()
