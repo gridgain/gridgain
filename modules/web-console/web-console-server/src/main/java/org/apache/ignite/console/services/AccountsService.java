@@ -30,8 +30,6 @@ import org.apache.ignite.console.web.security.MissingConfirmRegistrationExceptio
 import org.apache.ignite.console.web.socket.WebSocketManager;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.transactions.Transaction;
-import org.springframework.context.support.MessageSourceAccessor;
-import org.springframework.security.core.SpringSecurityMessageSource;
 import org.springframework.security.core.userdetails.UserDetailsChecker;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -50,25 +48,22 @@ import static org.apache.ignite.console.notification.NotificationDescriptor.WELC
 @Service
 public class AccountsService implements UserDetailsService {
     /** */
-    private final MessageSourceAccessor messages = SpringSecurityMessageSource.getAccessor();
+    protected TransactionManager txMgr;
 
     /** */
-    protected final TransactionManager txMgr;
+    protected AccountsRepository accountsRepo;
 
     /** */
-    protected final AccountsRepository accountsRepo;
+    protected WebSocketManager wsm;
 
     /** */
-    private final WebSocketManager wsm;
+    protected NotificationService notificationSrv;
 
     /** */
-    private final NotificationService notificationSrv;
-
-    /** */
-    private final PasswordEncoder encoder;
+    protected PasswordEncoder encoder;
 
     /** User details getChecker. */
-    private UserDetailsChecker userDetailsChecker;
+    protected UserDetailsChecker userDetailsChecker;
 
     /** Flag if sign up disabled and new accounts can be created only by administrator. */
     private boolean disableSignup;
@@ -114,39 +109,21 @@ public class AccountsService implements UserDetailsService {
     }
 
     /**
-     * Encode password.
+     * Create account for user.
      *
-     * @param pwd Password to encode.
-     * @return Encoded value.
-     */
-    protected String encodePassword(String pwd) {
-        return encoder.encode(pwd);
-    }
-
-    /**
      * @param params Sign up params.
      * @return New account.
      */
-    protected Account createAccount(SignUpRequest params) {
-        return new Account(
+    protected Account create(SignUpRequest params) {
+        Account acc = new Account(
             params.getEmail(),
-            encodePassword(params.getPassword()),
+            encoder.encode(params.getPassword()),
             params.getFirstName(),
             params.getLastName(),
             params.getPhone(),
             params.getCompany(),
             params.getCountry()
         );
-    }
-
-    /**
-     * Create account for user.
-     *
-     * @param params Sign up params.
-     * @return Registered account.
-     */
-    Account create(SignUpRequest params) {
-        Account acc = createAccount(params);
 
         if (activationEnabled)
             acc.resetActivationToken();
@@ -168,8 +145,7 @@ public class AccountsService implements UserDetailsService {
         if (activationEnabled) {
             notificationSrv.sendEmail(ACTIVATION_LINK, acc);
 
-            throw new MissingConfirmRegistrationException(messages.getMessage(
-                "AccountsService.confirmEmail", "Confirm your email"), acc.getEmail());
+            throw new MissingConfirmRegistrationException("Confirm your email", acc.getEmail());
         }
 
         notificationSrv.sendEmail(WELCOME_LETTER, acc);
@@ -261,23 +237,9 @@ public class AccountsService implements UserDetailsService {
      * @param accId User ID.
      * @param changes Changes to apply to user.
      */
-    public void save(UUID accId, ChangeUserRequest changes) {
+    public Account save(UUID accId, ChangeUserRequest changes) {
         try (Transaction tx = txMgr.txStart()) {
             Account acc = accountsRepo.getById(accId);
-
-            String pwd = changes.getPassword();
-
-            if (!F.isEmpty(pwd))
-                acc.setPassword(encoder.encode(pwd));
-
-            String oldTok = acc.getToken();
-            String newTok = changes.getToken();
-
-            if (!oldTok.equals(newTok)) {
-                wsm.revokeToken(oldTok, newTok);
-
-                acc.setToken(newTok);
-            }
 
             String oldEmail = acc.getEmail();
             String newEmail = changes.getEmail();
@@ -285,21 +247,28 @@ public class AccountsService implements UserDetailsService {
             if (!oldEmail.equals(newEmail)) {
                 Account accByEmail = accountsRepo.getByEmail(oldEmail);
 
-                if (acc.getId().equals(accByEmail.getId()))
-                    acc.setEmail(changes.getEmail());
-                else
+                if (!acc.getId().equals(accByEmail.getId()))
                     throw new IllegalStateException("User with this email already registered");
             }
 
-            acc.setFirstName(changes.getFirstName());
-            acc.setLastName(changes.getLastName());
-            acc.setPhone(changes.getPhone());
-            acc.setCountry(changes.getCountry());
-            acc.setCompany(changes.getCompany());
+            String oldTok = acc.getToken();
+            String newTok = changes.getToken();
+
+            if (!oldTok.equals(newTok))
+                wsm.revokeToken(oldTok, newTok);
+
+            acc.update(changes);
+
+            String pwd = changes.getPassword();
+
+            if (!F.isEmpty(pwd))
+                acc.setPassword(encoder.encode(pwd));
 
             accountsRepo.save(acc);
 
             tx.commit();
+
+            return acc;
         }
     }
 

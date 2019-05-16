@@ -18,6 +18,7 @@ package org.apache.ignite.console.web.model;
 
 import io.swagger.annotations.ApiModelProperty;
 import javax.validation.constraints.NotNull;
+import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.hibernate.validator.constraints.NotEmpty;
 
@@ -45,29 +46,13 @@ public class UserResponse extends User {
     /**
      * Full constructor.
      *
-     * @param email Email.
-     * @param firstName First name.
-     * @param lastName Last name.
-     * @param phone Phone.
-     * @param company Company.
-     * @param country Country.
-     * @param tok Agent token.
-     * @param admin Admin flag.
+     * @param acc Account DTO.
      */
-    public UserResponse(
-        String email,
-        String firstName,
-        String lastName,
-        String phone,
-        String company,
-        String country,
-        String tok,
-        boolean admin
-    ) {
-        super(email, firstName, lastName, phone, company, country);
+    public UserResponse(Account acc) {
+        super(acc);
 
-        this.tok = tok;
-        this.admin = admin;
+        this.tok = acc.getToken();
+        this.admin = acc.getAdmin();
     }
 
     /**
