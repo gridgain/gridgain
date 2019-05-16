@@ -16,6 +16,7 @@
 
 #include "ignite/impl/cluster/cluster_group_impl.h"
 
+using namespace ignite::common;
 using namespace ignite::jni::java;
 using namespace ignite::impl::cluster;
 
@@ -105,7 +106,7 @@ namespace ignite
                 return computeImpl;
             }
 
-            std::vector<SP_ClusterNodeImpl> ClusterGroupImpl::GetNodes()
+            ClusterGroupImpl::ClusterNodesArray ClusterGroupImpl::GetNodes()
             {
                 return RefreshNodes();
             }
@@ -159,7 +160,7 @@ namespace ignite
                 return SP_ComputeImpl(new compute::ComputeImpl(GetEnvironmentPointer(), computeProc));
             }
 
-            std::vector<SP_ClusterNodeImpl> ClusterGroupImpl::RefreshNodes()
+            ClusterGroupImpl::ClusterNodesArray ClusterGroupImpl::RefreshNodes()
             {
                 long oldTopVer = 0;
 
@@ -182,12 +183,12 @@ namespace ignite
                 bool wasUpdated = reader.ReadBool();
                 if (wasUpdated)
                 {
-                    long newTopVer = reader.ReadInt64();
+                    int64_t newTopVer = reader.ReadInt64();
                     int cnt = reader.ReadInt32();
 
-                    std::vector<SP_ClusterNodeImpl> newNodes;
+                    ClusterGroupImpl::ClusterNodesArray newNodes;
                     for (int i = 0; i < cnt; i++)
-                        newNodes.push_back(GetEnvironment().GetNode(reader.ReadGuid()));
+                        newNodes.PushBack(GetEnvironment().GetNode(reader.ReadGuid()));
 
                     topVer = newTopVer;
                     nodes = newNodes;

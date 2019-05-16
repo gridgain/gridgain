@@ -18,6 +18,7 @@
 #define _IGNITE_IMPL_CLUSTER_CLUSTER_GROUP_IMPL
 
 #include <ignite/common/concurrent.h>
+#include <ignite/common/dynamic_size_array.h>
 #include <ignite/jni/java.h>
 
 #include <ignite/impl/interop/interop_target.h>
@@ -43,6 +44,7 @@ namespace ignite
             {
                 typedef common::concurrent::SharedPointer<IgniteEnvironment> SP_IgniteEnvironment;
                 typedef common::concurrent::SharedPointer<compute::ComputeImpl> SP_ComputeImpl;
+                typedef ignite::common::DynamicSizeArray<SP_ClusterNodeImpl> ClusterNodesArray;
             public:
                 /**
                  * Constructor used to create new instance.
@@ -97,7 +99,7 @@ namespace ignite
                  *
                  * @return Vector of cluster nodes.
                  */
-                std::vector<SP_ClusterNodeImpl> GetNodes();
+                ClusterNodesArray GetNodes();
 
                 /**
                  * Check if the Ignite grid is active.
@@ -147,16 +149,16 @@ namespace ignite
                  *
                  * @return Instance of compute.
                  */
-                std::vector<SP_ClusterNodeImpl> ClusterGroupImpl::RefreshNodes();
+                ClusterNodesArray ClusterGroupImpl::RefreshNodes();
 
                 /** Compute for the cluster group. */
                 SP_ComputeImpl computeImpl;
 
                 /** Cluster nodes. */
-                std::vector<SP_ClusterNodeImpl> nodes;
+                ClusterNodesArray nodes;
 
                 /** Cluster nodes top version. */
-                long topVer; //??? Possibly should be atomic (from dotnet)
+                int64_t topVer; //??? Possibly should be atomic (from dotnet)
             };
         }
     }

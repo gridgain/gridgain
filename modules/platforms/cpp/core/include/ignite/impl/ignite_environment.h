@@ -34,9 +34,11 @@ namespace ignite
         /* Forward declarations. */
         class IgniteBindingImpl;
         class ModuleManager;
+        class ClusterNodesHolder;
         namespace cluster {
             class ClusterNodeImpl;
         }
+        
 
         /**
          * Defines environment in which Ignite operates.
@@ -331,7 +333,7 @@ namespace ignite
             common::concurrent::SharedPointer<ModuleManager> moduleMgr;
 
             /** Cluster nodes. */
-            std::map<Guid, SP_ClusterNodeImpl> nodes;
+            common::concurrent::SharedPointer<ClusterNodesHolder> nodes;
 
             IGNITE_NO_COPY_ASSIGNMENT(IgniteEnvironment);
         };

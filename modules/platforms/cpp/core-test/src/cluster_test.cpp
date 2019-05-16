@@ -20,6 +20,7 @@
 #include <ignite/test_utils.h>
 
 using namespace ignite;
+using namespace ignite::common;
 using namespace ignite::common::concurrent;
 
 using namespace boost::unit_test;
@@ -102,10 +103,10 @@ BOOST_AUTO_TEST_CASE(IgniteImplGetNodes)
 
     BOOST_REQUIRE(clusterGroup.IsValid());
 
-    std::vector<SharedPointer<impl::cluster::ClusterNodeImpl> > nodes = clusterGroup.Get()->GetNodes();
+    DynamicSizeArray<SharedPointer<impl::cluster::ClusterNodeImpl> > nodes = clusterGroup.Get()->GetNodes();
 
-    BOOST_REQUIRE(nodes.size() == 1);
-    BOOST_REQUIRE(nodes.front().IsValid());
+    BOOST_REQUIRE(nodes.GetSize() == 1);
+    BOOST_REQUIRE(nodes.Front().IsValid());
 }
 
 BOOST_AUTO_TEST_CASE(IgniteImplGetCluster)
