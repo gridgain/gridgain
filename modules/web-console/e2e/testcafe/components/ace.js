@@ -14,9 +14,18 @@
  * limitations under the License.
  */
 
-import {Selector} from 'testcafe';
+import {Selector, t} from 'testcafe';
 
 /**
  * @param {ReturnType<Selector>} selector
  */
 export const ace = (selector) => selector.find('textarea.ace_text-input');
+/**
+ * @param {ReturnType<typeof ace>} ace
+ * @param {string} text
+ */
+export const enterAceText = async(ace, text, options = {replace: false}) => {
+    await t.click(ace);
+    if (options.replace) await t.typeText(ace, 'A', {modifiers: {ctrl: true}});
+    await t.typeText(ace, text, {replace: options.replace});
+};

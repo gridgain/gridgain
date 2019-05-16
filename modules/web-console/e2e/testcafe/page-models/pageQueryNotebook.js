@@ -17,7 +17,7 @@
 import {Selector} from 'testcafe';
 import {PanelCollapsible} from '../components/PanelCollapsible';
 import {Table} from '../components/Table';
-import {ace} from '../components/ace';
+import {ace, enterAceText} from '../components/ace';
 
 export class Paragraph extends PanelCollapsible {
     constructor(title) {
@@ -25,5 +25,18 @@ export class Paragraph extends PanelCollapsible {
         this.executeButton = this.body.find('button').withExactText('Execute');
         this.resultsTable = new Table(this.body.find('.table'));
         this.queryField = ace(this.body);
+        this.showQueryButton = this.body.find('a').withExactText('Show query');
+    }
+    async enterQuery(text, options = {replace: false}) {
+        return await enterAceText(this.queryField, text, options);
     }
 }
+
+const showQueryDialogSelector = Selector('.modal-header').withText('SQL query').parent('.modal');
+
+export const showQueryDialog = {
+    dialog: showQueryDialogSelector,
+    body: showQueryDialogSelector.find('.modal-body'),
+    footer: showQueryDialogSelector.find('.modal-footer'),
+    okButton: showQueryDialogSelector.find('button').withExactText('Ok')
+};

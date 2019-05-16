@@ -19,33 +19,56 @@ import {
     cacheNamesCollectorTask, agentStat, simeplFakeSQLQuery,
     FAKE_CLUSTERS, SIMPLE_QUERY_RESPONSE, FAKE_CACHES
 } from '../../mocks/agentTasks';
+import {resolveUrl, dropTestDB, insertTestUser} from '../../environment/envtools';
 import {createRegularUser} from '../../roles';
-import {resolveUrl} from '../../environment/envtools';
-import {Paragraph} from '../../page-models/pageQueryNotebook';
+import {Paragraph, showQueryDialog} from '../../page-models/pageQueryNotebook';
 import {errorNotification} from '../../components/notifications';
+import {PageQueriesNotebooksList} from '../../page-models/PageQueries';
+import {queriesNavButton} from '../../components/topNavigation';
 
-const me = createRegularUser('iborisov+1@gridgain.com', '1');
-const ws = new WebSocketHook();
+const user = createRegularUser();
 
-ws
-.use(agentStat(FAKE_CLUSTERS))
-.use(cacheNamesCollectorTask(FAKE_CACHES))
-.use(simeplFakeSQLQuery(FAKE_CLUSTERS.clusters[0].nids[0], SIMPLE_QUERY_RESPONSE));
+const ws = new WebSocketHook()
+    .use(agentStat(FAKE_CLUSTERS))
+    .use(cacheNamesCollectorTask(FAKE_CACHES))
+    .use(simeplFakeSQLQuery(FAKE_CLUSTERS.clusters[0].nids[0], SIMPLE_QUERY_RESPONSE));
 
-fixture('Notebook').requestHooks(ws)/* .after(async() => ws.destroy())*/;
+fixture('Notebook')
+    .requestHooks(ws)
+    .before(async() => {
+        await dropTestDB();
+        await insertTestUser();
+    })
+    .after(async() => {
+        ws.destroy();
+        await dropTestDB;
+    });
+
 
 test('Sending a request', async(t) => {
+    const notebooks = new PageQueriesNotebooksList();
     const query = `SELECT * FROM Person;`;
     const paragraph = new Paragraph('Query');
 
     await t
-		.useRole(me)
-		.navigateTo(resolveUrl('/notebook/5cc7ef443787c733b81ce1a5'))
-		.click(paragraph.queryField.with({timeout: 5000}))
-		.typeText(paragraph.queryField, 'A', {modifiers: {ctrl: true}})
-		.typeText(paragraph.queryField, query, {replace: true})
-		.click(paragraph.executeButton)
+		.useRole(user)
+        .navigateTo(resolveUrl('/queries/notebooks'));
+    await notebooks.createNotebook('Foo');
+    await t.click(notebooks.getNotebookByName('Foo'));
+    await paragraph.enterQuery(query, {replace: true});
+    await t
+        .click(paragraph.executeButton)
+        .pressKey('pagedown')
+        .expect(paragraph.resultsTable._selector.visible).ok()
+        .expect(paragraph.resultsTable.findCell(0, 'ID').innerText).eql(SIMPLE_QUERY_RESPONSE.result.rows[0][0].toString())
+        .expect(paragraph.resultsTable.findCell(0, 'NAME').innerText).eql(SIMPLE_QUERY_RESPONSE.result.rows[0][1])
+        .expect(paragraph.resultsTable.findCell(1, 'ID').innerText).eql(SIMPLE_QUERY_RESPONSE.result.rows[1][0].toString())
+        .expect(paragraph.resultsTable.findCell(1, 'NAME').innerText).eql(SIMPLE_QUERY_RESPONSE.result.rows[1][1])
+        .expect(paragraph.resultsTable.findCell(2, 'ID').innerText).eql(SIMPLE_QUERY_RESPONSE.result.rows[2][0].toString())
+        .expect(paragraph.resultsTable.findCell(2, 'NAME').innerText).eql(SIMPLE_QUERY_RESPONSE.result.rows[2][1])
+        .click(paragraph.showQueryButton)
+        .expect(showQueryDialog.body.innerText).contains(query)
+        .expect(showQueryDialog.footer.innerText).contains('Duration: 0')
+        .click(showQueryDialog.okButton)
         .debug();
-    // .expect(errorNotification.withText('Failed to execute request on cluster').exists).ok();
-    // .debug();
 });
