@@ -69,6 +69,5 @@ test('Sending a request', async(t) => {
         .click(paragraph.showQueryButton)
         .expect(showQueryDialog.body.innerText).contains(query)
         .expect(showQueryDialog.footer.innerText).contains('Duration: 0')
-        .click(showQueryDialog.okButton)
-        .debug();
+        .click(showQueryDialog.okButton);
 });
