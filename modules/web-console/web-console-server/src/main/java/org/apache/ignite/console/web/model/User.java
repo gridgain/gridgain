@@ -18,6 +18,7 @@ package org.apache.ignite.console.web.model;
 
 import io.swagger.annotations.ApiModelProperty;
 import javax.validation.constraints.NotNull;
+import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.hibernate.validator.constraints.NotEmpty;
 
@@ -69,27 +70,15 @@ public class User {
     /**
      * Full constructor.
      *
-     * @param email Email.
-     * @param firstName First name.
-     * @param lastName Last name.
-     * @param phone Phone.
-     * @param company Company.
-     * @param country Country.
+     * @param acc AccountDTO.
      */
-    public User(
-        String email,
-        String firstName,
-        String lastName,
-        String phone,
-        String company,
-        String country
-    ) {
-        this.email = email;
-        this.firstName = firstName;
-        this.lastName = lastName;
-        this.phone = phone;
-        this.company = company;
-        this.country = country;
+    public User(Account acc) {
+        this.email = acc.getEmail();
+        this.firstName = acc.getFirstName();
+        this.lastName = acc.getLastName();
+        this.phone = acc.getPhone();
+        this.company = acc.getCompany();
+        this.country = acc.getCountry();
     }
 
     /**
