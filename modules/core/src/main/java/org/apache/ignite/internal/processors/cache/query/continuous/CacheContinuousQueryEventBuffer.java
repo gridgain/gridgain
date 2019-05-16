@@ -452,6 +452,8 @@ public class CacheContinuousQueryEventBuffer {
                             else
                                 filtered++;
 
+                            entries[i] = null;
+
                             pos = i;
                         }
                         else
