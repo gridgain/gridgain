@@ -53,8 +53,10 @@ public class H2ManagedLocalResult extends H2BaseLocalResult {
         if (oldRow != null) {
             long rowSize = Constants.MEMORY_ARRAY + oldRow.length * Constants.MEMORY_POINTER;
 
-            for (int i = 0; i < oldRow.length; i++)
-                rowSize += oldRow[i].getMemory();
+            for (int i = 0; i < oldRow.length; i++) {
+                if (oldRow[i].untrack())
+                    rowSize += oldRow[i].getMemory();
+            }
 
             allocMem -= rowSize;
 
@@ -63,11 +65,13 @@ public class H2ManagedLocalResult extends H2BaseLocalResult {
 
         long rowSize = Constants.MEMORY_ARRAY + row.length * Constants.MEMORY_POINTER;
 
-        if (distinctRowKey != null)
+        if (distinctRowKey != null && distinctRowKey.track())
             rowSize += distinctRowKey.getMemory();
 
-        for (int i = 0; i < row.length; i++)
-            rowSize += row[i].getMemory();
+        for (int i = 0; i < row.length; i++) {
+            if (row[i].track())
+                rowSize += row[i].getMemory();
+        }
 
         allocMem += rowSize;
 

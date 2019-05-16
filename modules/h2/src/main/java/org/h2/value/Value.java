@@ -261,6 +261,11 @@ public abstract class Value extends VersionedValue {
     public static final BigDecimal MIN_LONG_DECIMAL = BigDecimal.valueOf(Long.MIN_VALUE);
 
     /**
+     * Memory tracker marker.
+     */
+    private int tracked;
+
+    /**
      * Check the range of the parameters.
      *
      * @param zeroBasedOffset the offset (0 meaning no offset)
@@ -1676,4 +1681,25 @@ public abstract class Value extends VersionedValue {
         return null;
     }
 
+    /**
+     * Try mark value as tracked.
+     *
+     * @return {@code True} if value was marked as tracked, {@code False} otherwise.
+     */
+    public boolean track() {
+        tracked++;
+
+        return tracked == 1;
+    }
+
+    /**
+     * Try mark value as non-tracked.
+     *
+     * @return {@code True} if value was marked as non-tracked, {@code False} otherwise.
+     */
+    public boolean untrack() {
+        tracked--;
+
+        return tracked == 0;
+    }
 }
