@@ -49,6 +49,7 @@ const LAZY_QUERY_SINCE = [['2.1.4-p1', '2.2.0'], '2.2.1'];
 const COLLOCATED_QUERY_SINCE = [['2.3.5', '2.4.0'], ['2.4.6', '2.5.0'], ['2.5.1-p13', '2.6.0'], '2.7.0'];
 const COLLECT_BY_CACHE_GROUPS_SINCE = '2.7.0';
 const QUERY_PING_SINCE = [['2.5.6', '2.6.0'], '2.7.4'];
+const NON_ZIPPED_TASKS = new Set(['schemaImport:drivers', 'schemaImport:schemas', 'schemaImport:metadata']);
 
 /**
  * Query execution result.
@@ -437,7 +438,7 @@ export default class AgentManager {
      */
     _executeOnActiveCluster(cluster, credentials, event, params) {
         return this._sendToAgent(event, {clusterId: cluster.id, params, credentials})
-            .then((res) => {
+            .then(async(res) => {
                 const {status = SuccessStatus.STATUS_SUCCESS} = res;
 
                 switch (status) {
@@ -450,10 +451,13 @@ export default class AgentManager {
 
                             const useBigIntJson = taskId.startsWith('query');
 
-                            return this.pool.postMessage({payload: res.data, useBigIntJson});
+                            const response = await this.pool.postMessage({payload: res.data, useBigIntJson});
+                            return response;
                         }
 
-                        return res;
+                        if (NON_ZIPPED_TASKS.has(params.taskId))
+                            return res;
+                        return res.data;
 
                     case SuccessStatus.STATUS_FAILED:
                         if (res.error.startsWith('Failed to handle request - unknown session token (maybe expired session)')) {
