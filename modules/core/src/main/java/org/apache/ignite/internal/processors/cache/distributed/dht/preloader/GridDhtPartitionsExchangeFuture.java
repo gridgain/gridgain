@@ -1937,7 +1937,26 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         if (log.isTraceEnabled())
             log.trace("Sending local partitions [nodeId=" + node.id() + ", exchId=" + exchId + ", msg=" + msg + ']');
 
-        cctx.io().send(node, msg, SYSTEM_POOL);
+        while (true) {
+            try {
+                cctx.io().send(node, msg, SYSTEM_POOL);
+            }
+            catch (ClusterTopologyCheckedException ignored) {
+                if (log.isDebugEnabled()) {
+                    log.debug(
+                        "Failed to send local partitions on exchange [nodeId=" + node.id() + ", exchId=" + exchId + ']'
+                    );
+                }
+
+                if (cctx.discovery().alive(node.id())) {
+                    U.sleep(cctx.gridConfig().getNetworkSendRetryDelay());
+
+                    continue;
+                }
+            }
+
+            return;
+        }
     }
 
     /**
@@ -4073,12 +4092,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         try {
             sendLocalPartitions(node);
         }
-        catch (ClusterTopologyCheckedException ignore) {
-            if (log.isDebugEnabled())
-                log.debug("Node left during partition exchange [nodeId=" + node.id() + ", exchId=" + exchId + ']');
-        }
         catch (IgniteCheckedException e) {
-            U.error(log, "Failed to send message to coordinator: " + e, e);
+            U.error(log, "Failed to send message to coordinator: " + e);
         }
     }
 
