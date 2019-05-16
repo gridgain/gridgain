@@ -653,11 +653,11 @@ public class GridReduceQueryExecutor {
                             null,
                             workMem > 0 && workMem != Long.MAX_VALUE ? new QueryMemoryTracker(workMem) : null);
 
+                        H2Utils.setupConnection(r.connection(), qctx, false, enforceJoinOrder);
+
                         QueryContextRegistry qryCtxRegistry = h2.queryContextRegistry();
 
                         qryCtxRegistry.setThreadLocal(qctx);
-
-                        H2Utils.setupConnection(r.connection(), qctx, false, enforceJoinOrder);
 
                         try {
                             if (qry.explain())
