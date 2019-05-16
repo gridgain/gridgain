@@ -36,3 +36,39 @@ export type CacheNamesCollectorTaskResponse = {
 	groups: string[],
 	protocolVersion: 1
 }
+
+export type CacheNodesTaskX2Response = string[]
+
+export type VisorQueryResult =
+{
+	error: null,
+	result: {
+		columns: null | {
+			fieldName: string,
+			fieldTypeName: string,
+			protocolVersion: 1,
+			schemaName: string,
+			typeName: string
+		}[],
+		duration: number,
+		hasMore: boolean,
+		protocolVersion: 1,
+		queryId: string,
+		responseNodeId: string,
+		rows: null | any[]
+	}
+} | {
+	error: {
+		cause: {
+			className: string,
+			message: string
+		},
+		className: string,
+		message: string
+	},
+	result: null
+}
+
+export type QuerySqlX2Response = VisorQueryResult
+
+export type QueryFetchFirstPageResult = VisorQueryResult

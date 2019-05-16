@@ -15,6 +15,10 @@
  */
 
 import {WebSocketHook} from '../../mocks/WebSocketHook';
+import {
+    cacheNamesCollectorTask, agentStat, simeplFakeSQLQuery,
+    FAKE_CLUSTERS, SIMPLE_QUERY_RESPONSE, FAKE_CACHES
+} from '../../mocks/agentTasks';
 import {createRegularUser} from '../../roles';
 import {resolveUrl} from '../../environment/envtools';
 import {Paragraph} from '../../page-models/pageQueryNotebook';
@@ -23,7 +27,12 @@ import {errorNotification} from '../../components/notifications';
 const me = createRegularUser('iborisov+1@gridgain.com', '1');
 const ws = new WebSocketHook();
 
-fixture('Notebook').requestHooks(ws).after(async() => ws.destroy());
+ws
+.use(agentStat(FAKE_CLUSTERS))
+.use(cacheNamesCollectorTask(FAKE_CACHES))
+.use(simeplFakeSQLQuery(FAKE_CLUSTERS.clusters[0].nids[0], SIMPLE_QUERY_RESPONSE));
+
+fixture('Notebook').requestHooks(ws)/* .after(async() => ws.destroy())*/;
 
 test('Sending a request', async(t) => {
     const query = `SELECT * FROM Person;`;
@@ -32,9 +41,11 @@ test('Sending a request', async(t) => {
     await t
 		.useRole(me)
 		.navigateTo(resolveUrl('/notebook/5cc7ef443787c733b81ce1a5'))
-		.click(paragraph.queryField.with({timeout: 0}))
+		.click(paragraph.queryField.with({timeout: 5000}))
 		.typeText(paragraph.queryField, 'A', {modifiers: {ctrl: true}})
 		.typeText(paragraph.queryField, query, {replace: true})
 		.click(paragraph.executeButton)
-		.expect(errorNotification.withText('Failed to execute request on cluster').exists).ok();
+        .debug();
+    // .expect(errorNotification.withText('Failed to execute request on cluster').exists).ok();
+    // .debug();
 });
