@@ -21,7 +21,7 @@
        xsi:schemaLocation="http://www.springframework.org/schema/beans
                            http://www.springframework.org/schema/beans/spring-beans.xsd">
     <bean class="org.apache.ignite.configuration.IgniteConfiguration" primary="true">
-        <property name="clientMode" value="${CLIENT_MODE:true}"/>
+        <property name="clientMode" value="${CLIENT_MODE:false}"/>
 
         <property name="authenticationEnabled" value="false"/>
         <property name="metricsLogFrequency" value="0"/>
