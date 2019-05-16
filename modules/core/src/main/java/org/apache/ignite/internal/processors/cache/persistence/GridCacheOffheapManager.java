@@ -592,9 +592,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                     log.debug("Save next snapshot before checkpoint start for grId = " + grpId
                         + ", nextSnapshotTag = " + nextSnapshotTag);
 
-                if (!wal.disabled(grpId))
-                    wal.log(new MetaPageUpdateNextSnapshotId(grpId, metaPageId, nextSnapshotTag + 1));
-
                 addPartition(
                     null,
                     ctx.partitionStatMap(),
@@ -606,7 +603,10 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                     -1);
             }
             finally {
-                pageMem.writeUnlock(grpId, metaPageId, metaPage, null, true);
+                // Aways write page snapshot for stored nextSnapshotTag in meta page.
+                Boolean walPlc = Boolean.TRUE;
+
+                pageMem.writeUnlock(grpId, metaPageId, metaPage, walPlc, true);
             }
         }
         finally {
