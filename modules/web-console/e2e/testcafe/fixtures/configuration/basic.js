@@ -18,6 +18,7 @@ import {dropTestDB, insertTestUser, resolveUrl} from '../../environment/envtools
 import {createRegularUser} from '../../roles';
 import {PageConfigurationBasic} from '../../page-models/PageConfigurationBasic';
 import {successNotification} from '../../components/notifications';
+import {scrollIntoView} from '../../helpers';
 
 const regularUser = createRegularUser();
 
@@ -66,6 +67,7 @@ test('Basic editing', async(t) => {
     await page.cachesList.addItem();
 
     const cache1 = page.cachesList.getItem(1);
+    await scrollIntoView.with({dependencies: {el: cache1._selector}});
     await cache1.startEdit();
     await t.typeText(cache1.fields.name.control, 'Foobar');
     await cache1.fields.cacheMode.selectOption(localMode);
