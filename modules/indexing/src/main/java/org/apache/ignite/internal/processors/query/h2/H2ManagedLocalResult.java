@@ -61,10 +61,10 @@ public class H2ManagedLocalResult extends H2BaseLocalResult {
             mem.free(rowSize);
         }
 
-        long rowSize = Constants.MEMORY_OBJECT + row.length * Constants.MEMORY_POINTER;
+        long rowSize = Constants.MEMORY_ARRAY + row.length * Constants.MEMORY_POINTER;
 
         if (distinctRowKey != null)
-            rowSize += 72 + distinctRowKey.getList().length * Constants.MEMORY_POINTER;
+            rowSize += distinctRowKey.getMemory();
 
         for (int i = 0; i < row.length; i++)
             rowSize += row[i].getMemory();

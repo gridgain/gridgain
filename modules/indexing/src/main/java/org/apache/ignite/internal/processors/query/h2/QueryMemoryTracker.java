@@ -16,44 +16,57 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import org.apache.ignite.internal.mem.IgniteOutOfMemoryException;
 
 /**
  * Query memory tracker.
  */
 public class QueryMemoryTracker {
+    /** Default query memory limit. */
+    public static final long DFLT_QRY_MEMORY_LIMIT = 100L * 1024 * 1024;
+
+    /** Atomic field updater. */
+    private static final AtomicLongFieldUpdater<QueryMemoryTracker> ALLOC_UPD = AtomicLongFieldUpdater.newUpdater(QueryMemoryTracker.class, "allocated");
+
     /** Mem query pool size. */
-    private long workMem;
+    private final long maxMem;
 
     /** Memory used. */
     private long allocated;
 
     /**
      * Constructor.
-     * @param workMem Query work memory.
+     *
+     * @param maxMem Query memory limit in bytes.
      */
-    public QueryMemoryTracker(long workMem) {
-       this.workMem = workMem;
+    public QueryMemoryTracker(long maxMem) {
+        assert maxMem >= 0 && maxMem != Long.MAX_VALUE;
+
+        if (maxMem > 0)
+            this.maxMem = maxMem;
+        else
+            this.maxMem = DFLT_QRY_MEMORY_LIMIT;
     }
 
     /**
      * Check allocated size is less than query memory pool threshold.
-     * @param size Allocated size.
+     *
+     * @param size Allocated size in bytes.
      */
     public void allocate(long size) {
-        allocated += size;
-
-        if (allocated >= workMem)
+        if (ALLOC_UPD.addAndGet(this, size) >= maxMem)
             throw new IgniteOutOfMemoryException("SQL query out of memory");
     }
 
     /**
      * Free allocated memory.
-     * @param size Free size.
+     *
+     * @param size Free size in bytes.
      */
     public void free(long size) {
-        assert allocated >= size: "Invalid free memory size [allocated=" + allocated + ", free=" + size + ']';
+        long allocated = ALLOC_UPD.getAndAdd(this, -size);
 
-        allocated -= size;
+        assert allocated >= size : "Invalid free memory size [allocated=" + allocated + ", free=" + size + ']';
     }
 }

@@ -280,7 +280,7 @@ public class GridMapQueryExecutor {
      * @param lazy Streaming flag.
      * @param mvccSnapshot MVCC snapshot.
      * @param dataPageScanEnabled If data page scan is enabled.
-     * @param workMem Query work memory.
+     * @param maxMem Query memory limit.
      */
     private void onQueryRequest0(
         final ClusterNode node,
@@ -301,7 +301,7 @@ public class GridMapQueryExecutor {
         boolean lazy,
         @Nullable final MvccSnapshot mvccSnapshot,
         Boolean dataPageScanEnabled,
-        long workMem) {
+        long maxMem) {
         // Prepare to run queries.
         GridCacheContext<?, ?> mainCctx = mainCacheContext(cacheIds);
 
@@ -349,7 +349,7 @@ public class GridMapQueryExecutor {
                 distributedJoinCtx,
                 mvccSnapshot,
                 reserved,
-                workMem > 0 && workMem != Long.MAX_VALUE ? new QueryMemoryTracker(workMem) : null);
+                maxMem != Long.MAX_VALUE ? new QueryMemoryTracker(maxMem) : null);
 
             qryResults = new MapQueryResults(h2, reqId, qrys.size(), mainCctx, lazy, qctx);
 

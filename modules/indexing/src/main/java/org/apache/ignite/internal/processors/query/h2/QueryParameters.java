@@ -73,7 +73,7 @@ public class QueryParameters {
         NestedTxMode nestedTxMode = NestedTxMode.DEFAULT;
         boolean autoCommit = true;
         List<Object[]> batchedArgs = null;
-        long workMem = Long.MAX_VALUE;
+        long maxMem = Long.MAX_VALUE;
 
         if (qry instanceof SqlFieldsQueryEx) {
             SqlFieldsQueryEx qry0 = (SqlFieldsQueryEx)qry;
@@ -85,7 +85,7 @@ public class QueryParameters {
 
             batchedArgs = qry0.batchedArguments();
 
-            workMem = qry0.maxMemory();
+            maxMem = qry0.maxMemory();
         }
 
         return new QueryParameters(
@@ -94,7 +94,7 @@ public class QueryParameters {
             qry.getTimeout(),
             qry.isLazy(),
             qry.getPageSize(),
-            workMem,
+            maxMem,
             qry.isDataPageScanEnabled(),
             nestedTxMode,
             autoCommit,

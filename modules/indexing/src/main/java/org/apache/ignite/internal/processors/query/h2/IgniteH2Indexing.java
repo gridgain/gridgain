@@ -519,7 +519,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             if (mvccEnabled)
                 mvccSnapshot = mvccTracker.snapshot();
 
-            long workMem = qryParams.maxMemory();
+            long maxMem = qryParams.maxMemory();
 
             final QueryContext qctx = new QueryContext(
                 0,
@@ -527,7 +527,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 null,
                 mvccSnapshot,
                 null,
-                workMem > 0 && workMem != Long.MAX_VALUE ? new QueryMemoryTracker(workMem) : null);
+                maxMem != Long.MAX_VALUE ? new QueryMemoryTracker(maxMem) : null);
 
             return new GridQueryFieldsResultAdapter(select.meta(), null) {
                 @Override public GridCloseableIterator<List<?>> iterator() throws IgniteCheckedException {
