@@ -41,7 +41,8 @@ public class QueryMemoryTracker {
     /**
      * Constructor.
      *
-     * @param maxMem Query memory limit in bytes. If zero value, then {@link QueryMemoryTracker#DFLT_QRY_MEMORY_LIMIT} will be used.
+     * @param maxMem Query memory limit in bytes. If zero value, then {@link QueryMemoryTracker#DFLT_QRY_MEMORY_LIMIT}
+     * will be used.
      */
     public QueryMemoryTracker(long maxMem) {
         assert maxMem >= 0 && maxMem != Long.MAX_VALUE;
@@ -59,8 +60,8 @@ public class QueryMemoryTracker {
      * @throws IgniteOutOfMemoryException if memory limit has been exceeded.
      */
     public void allocate(long size) {
-        if (ALLOC_UPD.addAndGet(this, size) >= maxMem)
-            throw new IgniteOutOfMemoryException("SQL query out of memory");
+        if (ALLOC_UPD.addAndGet(this, size) > maxMem)
+            throw new IgniteOutOfMemoryException("SQL query out of memory: [allocated=" + allocated + ", limit=" + maxMem + "]");
     }
 
     /**
