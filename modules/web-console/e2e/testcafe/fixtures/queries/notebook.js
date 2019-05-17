@@ -22,26 +22,24 @@ import {
 import {resolveUrl, dropTestDB, insertTestUser} from '../../environment/envtools';
 import {createRegularUser} from '../../roles';
 import {Paragraph, showQueryDialog} from '../../page-models/pageQueryNotebook';
-import {errorNotification} from '../../components/notifications';
 import {PageQueriesNotebooksList} from '../../page-models/PageQueries';
-import {queriesNavButton} from '../../components/topNavigation';
 
 const user = createRegularUser();
 
-const ws = new WebSocketHook()
-    .use(agentStat(FAKE_CLUSTERS))
-    .use(cacheNamesCollectorTask(FAKE_CACHES))
-    .use(simeplFakeSQLQuery(FAKE_CLUSTERS.clusters[0].nids[0], SIMPLE_QUERY_RESPONSE));
-
 fixture('Notebook')
-    .requestHooks(ws)
-    .before(async() => {
+    .beforeEach(async(t) => {
+        await t.addRequestHooks(
+            t.ctx.ws = new WebSocketHook()
+            .use(agentStat(FAKE_CLUSTERS))
+            .use(cacheNamesCollectorTask(FAKE_CACHES))
+            .use(simeplFakeSQLQuery(FAKE_CLUSTERS.clusters[0].nids[0], SIMPLE_QUERY_RESPONSE))
+        );
         await dropTestDB();
         await insertTestUser();
     })
-    .after(async() => {
-        ws.destroy();
-        await dropTestDB;
+    .afterEach(async(t) => {
+        t.ctx.ws.destroy();
+        await dropTestDB();
     });
 
 
