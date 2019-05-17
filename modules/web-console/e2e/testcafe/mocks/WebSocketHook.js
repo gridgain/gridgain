@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-// import thebugger from 'thebugger';
 import Server from 'socket.io';
 import {RequestHook} from 'testcafe';
 import PortPool from 'port-pool';

@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import thebugger from 'thebugger';
-
 export const taskResult = (data) => ({
     data,
     error: null,
