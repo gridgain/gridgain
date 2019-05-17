@@ -272,6 +272,9 @@ export default class AgentManager {
 
             conn.update(this.isDemoMode(), count, clusters, hasDemo);
 
+            if (conn.cluster)
+                this.saveToStorage(conn.cluster);
+
             this.connectionSbj.next(conn);
         });
 
