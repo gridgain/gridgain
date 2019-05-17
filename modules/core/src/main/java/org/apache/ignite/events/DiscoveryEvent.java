@@ -17,6 +17,7 @@
 package org.apache.ignite.events;
 
 import java.util.Collection;
+import io.opencensus.trace.Span;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -73,6 +74,8 @@ public class DiscoveryEvent extends EventAdapter {
 
     /** Collection of nodes corresponding to topology version. */
     private Collection<ClusterNode> topSnapshot;
+
+    private transient Span span;
 
     /** {@inheritDoc} */
     @Override public String shortDisplay() {
@@ -160,5 +163,13 @@ public class DiscoveryEvent extends EventAdapter {
             "msg", message(),
             "type", name(),
             "tstamp", timestamp());
+    }
+
+    public Span getSpan() {
+        return span;
+    }
+
+    public void setSpan(Span span) {
+        this.span = span;
     }
 }

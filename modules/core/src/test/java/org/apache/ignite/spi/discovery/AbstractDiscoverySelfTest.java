@@ -167,7 +167,8 @@ public abstract class AbstractDiscoverySelfTest<T extends IgniteSpi> extends Gri
             long topVer,
             ClusterNode node,
             Collection<ClusterNode> topSnapshot,
-            Map<Long, Collection<ClusterNode>> topHist, @Nullable DiscoverySpiCustomMessage data
+            Map<Long, Collection<ClusterNode>> topHist, @Nullable DiscoverySpiCustomMessage data,
+            Map<String, Object> metadata
         ) {
             if (type == EVT_NODE_METRICS_UPDATED)
                 isMetricsUpdate = true;
@@ -250,7 +251,7 @@ public abstract class AbstractDiscoverySelfTest<T extends IgniteSpi> extends Gri
 
                 @Override public IgniteFuture<?> onDiscovery(int type, long topVer, ClusterNode node,
                     Collection<ClusterNode> topSnapshot, Map<Long, Collection<ClusterNode>> topHist,
-                    @Nullable DiscoverySpiCustomMessage data) {
+                    @Nullable DiscoverySpiCustomMessage data, Map<String, Object> metadata) {
                     // If METRICS_UPDATED came from local node
                     if (type == EVT_NODE_METRICS_UPDATED
                         && node.id().equals(spi.getLocalNode().id()))
@@ -428,7 +429,8 @@ public abstract class AbstractDiscoverySelfTest<T extends IgniteSpi> extends Gri
                         ClusterNode node,
                         Collection<ClusterNode> topSnapshot,
                         Map<Long, Collection<ClusterNode>> topHist,
-                        @Nullable DiscoverySpiCustomMessage data
+                        @Nullable DiscoverySpiCustomMessage data,
+                        Map<String, Object> metadata
                     ) {
                         info("Discovery event [type=" + type + ", node=" + node + ']');
 

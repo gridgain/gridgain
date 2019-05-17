@@ -17,6 +17,7 @@
 package org.apache.ignite.spi.discovery;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
@@ -51,11 +52,22 @@ public interface DiscoverySpiListener {
      *
      * @return A future that will be completed when notification process has finished.
      */
+    public default IgniteFuture<?> onDiscovery(
+        int type,
+        long topVer,
+        ClusterNode node,
+        Collection<ClusterNode> topSnapshot,
+        @Nullable Map<Long, Collection<ClusterNode>> topHist,
+        @Nullable DiscoverySpiCustomMessage data) {
+        return onDiscovery(type, topVer, node, topSnapshot, topHist, data, Collections.emptyMap());
+    }
+
     public IgniteFuture<?> onDiscovery(
         int type,
         long topVer,
         ClusterNode node,
         Collection<ClusterNode> topSnapshot,
         @Nullable Map<Long, Collection<ClusterNode>> topHist,
-        @Nullable DiscoverySpiCustomMessage data);
+        @Nullable DiscoverySpiCustomMessage data,
+        Map<String, Object> metadata);
 }

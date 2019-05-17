@@ -41,6 +41,9 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import io.opencensus.trace.AttributeValue;
+import io.opencensus.trace.Span;
+import io.opencensus.trace.Status;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -357,6 +360,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     /** Discovery lag / Clocks discrepancy, calculated on coordinator when all single messages are received. */
     private T2<Long, UUID> discoveryLag;
 
+    private Span span;
+
     /**
      * @param cctx Cache context.
      * @param busyLock Busy lock.
@@ -398,6 +403,14 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
         if (log.isDebugEnabled())
             log.debug("Creating exchange future [localNode=" + cctx.localNodeId() + ", fut=" + this + ']');
+    }
+
+    public void span(Span span) {
+        this.span = span;
+    }
+
+    public Span span() {
+        return span;
     }
 
     /**
@@ -778,6 +791,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     ", customEvt=" + (firstDiscoEvt.type() == EVT_DISCOVERY_CUSTOM_EVT ? ((DiscoveryCustomEvent)firstDiscoEvt).customMessage() : null) +
                     ", allowMerge=" + exchCtx.mergeExchanges() + ']');
             }
+
+            span.addAnnotation("Exchange parameters initialization");
 
             timeBag.finishGlobalStage("Exchange parameters initialization");
 
@@ -2156,6 +2171,14 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
         assert res != null || err != null;
 
+        span.setStatus(Status.OK);
+        if (res != null)
+            span.putAttribute("result.topology.version", AttributeValue.stringAttributeValue(res.toString()));
+        if (err != null) {
+            span.putAttribute("error", AttributeValue.stringAttributeValue(err.getMessage()));
+            span.setStatus(Status.INTERNAL.withDescription(err.toString()));
+        }
+
         try {
             waitUntilNewCachesAreRegistered();
 
@@ -2295,6 +2318,10 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
         if (super.onDone(res, err)) {
             afterLsnrCompleteFut.onDone();
+
+            span.addAnnotation("Completed partition exchange");
+
+            span.end();
 
             if (log.isInfoEnabled()) {
                 log.info("Completed partition exchange [localNode=" + cctx.localNodeId() +
@@ -3347,6 +3374,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         try {
             initFut.get();
 
+            span.addAnnotation("Waiting for all single messages");
+
             timeBag.finishGlobalStage("Waiting for all single messages");
 
             assert crd.isLocal();
@@ -3467,6 +3496,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             TransactionalDrProcessor txDrProc = cctx.kernalContext().txDr();
 
             boolean skipResetOwners = txDrProc != null && txDrProc.shouldIgnoreAssignPartitionStates(this);
+
+            span.addAnnotation("Affinity recalculation (crd)");
 
             timeBag.finishGlobalStage("Affinity recalculation (crd)");
 

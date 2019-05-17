@@ -18,6 +18,7 @@ package org.apache.ignite.spi.discovery.tcp.messages;
 
 import java.util.Map;
 import java.util.UUID;
+import io.opencensus.trace.Span;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.spi.discovery.tcp.internal.DiscoveryDataPacket;
@@ -44,6 +45,10 @@ public class TcpDiscoveryNodeAddFinishedMessage extends TcpDiscoveryAbstractMess
     /** */
     @GridToStringExclude
     private Map<String, Object> clientNodeAttrs;
+
+    private byte[] traceContext;
+
+    private transient Span span;
 
     /**
      * Constructor.
@@ -107,8 +112,26 @@ public class TcpDiscoveryNodeAddFinishedMessage extends TcpDiscoveryAbstractMess
         this.clientNodeAttrs = clientNodeAttrs;
     }
 
+
+
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(TcpDiscoveryNodeAddFinishedMessage.class, this, "super", super.toString());
+    }
+
+    public byte[] getTraceContext() {
+        return traceContext;
+    }
+
+    public void setTraceContext(byte[] traceContext) {
+        this.traceContext = traceContext;
+    }
+
+    public Span getSpan() {
+        return span;
+    }
+
+    public void setSpan(Span span) {
+        this.span = span;
     }
 }

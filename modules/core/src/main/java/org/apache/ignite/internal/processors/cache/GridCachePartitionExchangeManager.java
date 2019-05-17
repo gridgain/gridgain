@@ -44,6 +44,11 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import io.opencensus.exporter.trace.zipkin.ZipkinTraceExporter;
+import io.opencensus.trace.AttributeValue;
+import io.opencensus.trace.Span;
+import io.opencensus.trace.Tracing;
+import io.opencensus.trace.samplers.Samplers;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteCompute;
@@ -357,6 +362,15 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
     @Override protected void start0() throws IgniteCheckedException {
         super.start0();
 
+        // 1. Configure exporter to export traces to Zipkin.
+        try {
+            ZipkinTraceExporter.createAndRegister(
+                "http://localhost:9411/api/v2/spans", "tracing-to-zipkin-service");
+        }
+        catch (Exception ignored) {}
+
+
+
         exchWorker = new ExchangeWorker();
 
         latchMgr = new ExchangeLatchManager(cctx.kernalContext());
@@ -621,6 +635,19 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
             // Event callback - without this callback future will never complete.
             exchFut.onEvent(exchId, evt, cache);
 
+            Span span = Tracing.getTracer().spanBuilderWithExplicitParent("exchange.future", evt.getSpan())
+                .setRecordEvents(true)
+                .setSampler(Samplers.alwaysSample())
+                .startSpan();
+
+            if (exchId != null)
+                span.putAttribute("exchange.id", AttributeValue.stringAttributeValue(exchId.toString()));
+
+            span.putAttribute("node", AttributeValue.stringAttributeValue(cctx.localNodeId().toString()));
+            span.addAnnotation("Created");
+
+            exchFut.span(span);
+
             // Start exchange process.
             addFuture(exchFut);
         }
@@ -876,6 +903,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
         busyLock.writeLock().lock();
 
         exchFuts.clear();
+
+        Tracing.getExportComponent().shutdown();
     }
 
     /**

@@ -16,6 +16,12 @@
 
 package org.apache.ignite.spi.discovery;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.Socket;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Map;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -29,12 +35,6 @@ import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryAbstractMessage;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryNodeAddFinishedMessage;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.net.Socket;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
 import org.junit.Test;
 
 /**
@@ -117,7 +117,8 @@ public class LongClientConnectToClusterTest extends GridCommonAbstractTest {
                 ClusterNode node,
                 Collection<ClusterNode> topSnapshot,
                 @Nullable Map<Long, Collection<ClusterNode>> topHist,
-                @Nullable DiscoverySpiCustomMessage spiCustomMsg
+                @Nullable DiscoverySpiCustomMessage spiCustomMsg,
+                Map<String, Object> metadata
             ) {
                 if (EventType.EVT_NODE_METRICS_UPDATED == type) {
                     log.info("Metrics update message catched from node " + node);
@@ -129,7 +130,7 @@ public class LongClientConnectToClusterTest extends GridCommonAbstractTest {
                 }
 
                 if (delegate != null)
-                    return delegate.onDiscovery(type, topVer, node, topSnapshot, topHist, spiCustomMsg);
+                    return delegate.onDiscovery(type, topVer, node, topSnapshot, topHist, spiCustomMsg, metadata);
 
                 return new IgniteFinishedFutureImpl<>();
             }

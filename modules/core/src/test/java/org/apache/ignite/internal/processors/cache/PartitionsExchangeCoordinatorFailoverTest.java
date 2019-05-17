@@ -458,6 +458,21 @@ public class PartitionsExchangeCoordinatorFailoverTest extends GridCommonAbstrac
         awaitPartitionMapExchange();
     }
 
+    @Test
+    public void testSimple() throws Exception {
+        newCaches = false;
+
+        startGrid(0);
+
+        startGrid(1);
+
+        startGrid(2);
+
+        startGrid(3);
+
+        U.sleep(10000);
+    }
+
     /**
      * Blocks sending full message from coordinator to non-coordinator node.
      *
