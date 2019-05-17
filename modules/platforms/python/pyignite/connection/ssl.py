@@ -18,7 +18,7 @@ import ssl
 from pyignite.constants import *
 
 
-def wrap(conn, _socket):
+def wrap(conn: 'Connection', _socket):
     """ Wrap socket in SSL wrapper. """
     if conn.ssl_params.get('use_ssl', None):
         _socket = ssl.wrap_socket(

@@ -73,6 +73,7 @@ class Client:
     """
 
     affinity_version = None
+    protocol_version = None
     _registry = defaultdict(dict)
     _compact_footer = None
     _connection_args = None

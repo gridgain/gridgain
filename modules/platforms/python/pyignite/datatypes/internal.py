@@ -188,7 +188,9 @@ class Struct:
     dict_type = attr.ib(default=OrderedDict)
     defaults = attr.ib(type=dict, default={})
 
-    def parse(self, client: 'Client') -> Tuple[type, bytes]:
+    def parse(
+        self, client: 'Client'
+    ) -> Tuple[ctypes.BigEndianStructure, bytes]:
         buffer = b''
         fields = []
 

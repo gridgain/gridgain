@@ -21,16 +21,41 @@ as well as Ignite protocol handshaking.
 
 from collections import OrderedDict
 import socket
-from typing import Union
+from typing import Callable, Union
 
 from pyignite.constants import *
 from pyignite.exceptions import HandshakeError, ParameterError, SocketError
+from pyignite.datatypes import Byte, Int, Short, String, UUIDObject
+from pyignite.datatypes.internal import Struct
 
-from .handshake import HandshakeRequest, read_response
+from .handshake import HandshakeRequest
 from .ssl import wrap
 
 
 __all__ = ['Connection']
+
+
+def select_version(func):
+    """
+    This decorator tries to find a method more suitable for a current protocol
+    version, before calling the decorated method.
+
+    :param func: decorated `Connection()` method,
+    :return: wrapper.
+    """
+    def wrapper(conn: 'Connection', *args, **kwargs) -> Callable:
+        suggested_name = '{}_{}{}{}'.format(
+            func.__name__,
+            *conn.client.protocol_version
+        )
+        suggested = getattr(conn, suggested_name, None)
+        if suggested is None:
+            return func(conn, *args, **kwargs)
+
+        # this method is bound, do not pass `conn` here
+        return suggested(*args, **kwargs)
+
+    return wrapper
 
 
 class Connection:
@@ -124,8 +149,63 @@ class Connection:
             ssl_params['use_ssl'] = True
         self.ssl_params = ssl_params
 
-    read_response = read_response
     _wrap = wrap
+
+    @select_version
+    def read_response(self) -> Union[dict, OrderedDict]:
+        """
+        Processes server's response to the handshake request.
+
+        :return: handshake data.
+        """
+        response_start = Struct([
+            ('length', Int),
+            ('op_code', Byte),
+        ])
+        start_class, start_buffer = response_start.parse(self)
+        start = start_class.from_buffer_copy(start_buffer)
+        data = response_start.to_python(start)
+        if data['op_code'] == 0:
+            response_end = Struct([
+                ('version_major', Short),
+                ('version_minor', Short),
+                ('version_patch', Short),
+                ('message', String),
+            ])
+        else:
+            response_end = Struct([
+                ('node_uuid', UUIDObject),
+            ])
+        end_class, end_buffer = response_end.parse(self)
+        end = end_class.from_buffer_copy(end_buffer)
+        data.update(response_end.to_python(end))
+        return data
+
+    def read_response_120(self):
+        """
+        Processes server's response to the handshake request (thin protocol
+        version 1.2.0).
+
+        :return: handshake data.
+        """
+        response_start = Struct([
+            ('length', Int),
+            ('op_code', Byte),
+        ])
+        start_class, start_buffer = response_start.parse(self)
+        start = start_class.from_buffer_copy(start_buffer)
+        data = response_start.to_python(start)
+        if data['op_code'] == 0:
+            response_end = Struct([
+                ('version_major', Short),
+                ('version_minor', Short),
+                ('version_patch', Short),
+                ('message', String),
+            ])
+            end_class, end_buffer = response_end.parse(self)
+            end = end_class.from_buffer_copy(end_buffer)
+            data.update(response_end.to_python(end))
+        return data
 
     @property
     def socket(self) -> socket.socket:
@@ -146,7 +226,30 @@ class Connection:
         self, host: str = None, port: int = None
     ) -> Union[dict, OrderedDict]:
         """
-        Connect to the given server node.
+        Connect to the given server node with protocol version fallback.
+
+        :param host: Ignite server node's host name or IP,
+        :param port: Ignite server node's port number.
+        """
+
+        # choose highest version first
+        if self.client.protocol_version is None:
+            self.client.protocol_version = max(PROTOCOLS)
+
+        try:
+            return self._connect_version(host, port)
+        except HandshakeError as e:
+            if e.expected_version in PROTOCOLS:
+                self.client.protocol_version = e.expected_version
+                return self._connect_version(host, port)
+            raise e
+
+    def _connect_version(
+        self, host: str = None, port: int = None,
+    ) -> Union[dict, OrderedDict]:
+        """
+        Connect to the given server node using protocol version
+        defined on client.
 
         :param host: Ignite server node's host name or IP,
         :param port: Ignite server node's port number.
@@ -159,7 +262,13 @@ class Connection:
         self._socket = self._wrap(self.socket)
         self._socket.connect((host, port))
 
-        hs_request = HandshakeRequest(self.username, self.password)
+        protocol_version = self.client.protocol_version
+
+        hs_request = HandshakeRequest(
+            protocol_version,
+            self.username,
+            self.password
+        )
         self.send(hs_request)
         hs_response = self.read_response()
         if hs_response['op_code'] == 0:
@@ -177,12 +286,12 @@ class Connection:
                     '{version_major}.{version_minor}.{version_patch}. Client '
                     'provides {client_major}.{client_minor}.{client_patch}.'
                 ).format(
-                    client_major=PROTOCOL_VERSION_MAJOR,
-                    client_minor=PROTOCOL_VERSION_MINOR,
-                    client_patch=PROTOCOL_VERSION_PATCH,
+                    client_major=protocol_version[0],
+                    client_minor=protocol_version[1],
+                    client_patch=protocol_version[2],
                     **hs_response
                 )
-            raise HandshakeError(error_text)
+            raise HandshakeError(tuple(hs_response.values()), error_text)
         self.host, self.port = host, port
         return hs_response
 

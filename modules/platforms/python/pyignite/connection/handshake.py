@@ -13,11 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections import OrderedDict
-from typing import Optional, Union
+from typing import Optional, Tuple
 
-from pyignite.constants import *
-from pyignite.datatypes import Byte, Int, Short, String, UUIDObject
+from pyignite.datatypes import Byte, Int, Short, String
 from pyignite.datatypes.internal import Struct
 
 OP_HANDSHAKE = 1
@@ -28,9 +26,11 @@ class HandshakeRequest:
     handshake_struct = None
     username = None
     password = None
+    protocol_version = None
 
     def __init__(
-        self, username: Optional[str]=None, password: Optional[str]=None
+        self, protocol_version: Tuple[int, int, int],
+        username: Optional[str] = None, password: Optional[str] = None
     ):
         fields = [
             ('length', Int),
@@ -40,6 +40,7 @@ class HandshakeRequest:
             ('version_patch', Short),
             ('client_code', Byte),
         ]
+        self.protocol_version = protocol_version
         if username and password:
             self.username = username
             self.password = password
@@ -53,9 +54,9 @@ class HandshakeRequest:
         handshake_data = {
             'length': 8,
             'op_code': OP_HANDSHAKE,
-            'version_major': PROTOCOL_VERSION_MAJOR,
-            'version_minor': PROTOCOL_VERSION_MINOR,
-            'version_patch': PROTOCOL_VERSION_PATCH,
+            'version_major': self.protocol_version[0],
+            'version_minor': self.protocol_version[1],
+            'version_patch': self.protocol_version[2],
             'client_code': 2,  # fixed value defined by protocol
         }
         if self.username and self.password:
@@ -69,28 +70,3 @@ class HandshakeRequest:
                 len(self.password),
             ])
         return self.handshake_struct.from_python(handshake_data)
-
-
-def read_response(client) -> Union[dict, OrderedDict]:
-    response_start = Struct([
-        ('length', Int),
-        ('op_code', Byte),
-    ])
-    start_class, start_buffer = response_start.parse(client)
-    start = start_class.from_buffer_copy(start_buffer)
-    data = response_start.to_python(start)
-    if data['op_code'] == 0:
-        response_end = Struct([
-            ('version_major', Short),
-            ('version_minor', Short),
-            ('version_patch', Short),
-            ('message', String),
-        ])
-    else:
-        response_end = Struct([
-            ('node_uuid', UUIDObject),
-        ])
-    end_class, end_buffer = response_end.parse(client)
-    end = end_class.from_buffer_copy(end_buffer)
-    data.update(response_end.to_python(end))
-    return data
