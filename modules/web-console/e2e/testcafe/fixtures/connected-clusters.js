@@ -23,7 +23,7 @@ import {FAKE_CLUSTERS, agentStat} from '../mocks/agentTasks';
 
 const user = createRegularUser();
 
-fixture('WS mock')
+fixture('Connected clusters')
 .beforeEach(async(t) => {
     await dropTestDB();
     await insertTestUser();
@@ -34,7 +34,7 @@ fixture('WS mock')
     await dropTestDB();
 });
 
-test('Connected clusters', async(t) => {
+test('Connected clusters badge', async(t) => {
     await t
     .useRole(user)
     .navigateTo(resolveUrl('/settings/profile'))
