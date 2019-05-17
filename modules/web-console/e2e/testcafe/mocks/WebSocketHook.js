@@ -34,7 +34,7 @@ export class WebSocketHook extends RequestHook {
         this._port.then((port) => this._io.listen(port));
     }
     async onRequest(e) {
-    	e.requestOptions.host = e.requestOptions.host.replace(e.requestOptions.port, await this._port);
+    	e.requestOptions.host = `http://localhost:${await this._port}`;
     	e.requestOptions.port = await this._port;
     }
     async onResponse() {}
