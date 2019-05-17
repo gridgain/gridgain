@@ -28,7 +28,7 @@ export class Paragraph extends PanelCollapsible {
         this.showQueryButton = this.body.find('a').withExactText('Show query');
     }
     async enterQuery(text, options = {replace: false}) {
-        return await enterAceText(this.queryField, text, options);
+        return await enterAceText(this.queryField.with({timeout: 0}), text, options);
     }
 }
 
