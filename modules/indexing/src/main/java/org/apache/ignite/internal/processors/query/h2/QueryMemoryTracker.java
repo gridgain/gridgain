@@ -21,24 +21,27 @@ import org.apache.ignite.internal.mem.IgniteOutOfMemoryException;
 
 /**
  * Query memory tracker.
+ *
+ * Track query memory usage and throws an exception if query tries to allocate memory over limit.
  */
 public class QueryMemoryTracker {
+    //TODO: GG-18629: Move defaults to memory quotas configuration.
     /** Default query memory limit. */
     public static final long DFLT_QRY_MEMORY_LIMIT = 100L * 1024 * 1024;
 
     /** Atomic field updater. */
     private static final AtomicLongFieldUpdater<QueryMemoryTracker> ALLOC_UPD = AtomicLongFieldUpdater.newUpdater(QueryMemoryTracker.class, "allocated");
 
-    /** Mem query pool size. */
+    /** Memory limit. */
     private final long maxMem;
 
-    /** Memory used. */
-    private long allocated;
+    /** Memory allocated. */
+    private volatile long allocated;
 
     /**
      * Constructor.
      *
-     * @param maxMem Query memory limit in bytes.
+     * @param maxMem Query memory limit in bytes. If zero value, then {@link QueryMemoryTracker#DFLT_QRY_MEMORY_LIMIT} will be used.
      */
     public QueryMemoryTracker(long maxMem) {
         assert maxMem >= 0 && maxMem != Long.MAX_VALUE;
@@ -53,6 +56,7 @@ public class QueryMemoryTracker {
      * Check allocated size is less than query memory pool threshold.
      *
      * @param size Allocated size in bytes.
+     * @throws IgniteOutOfMemoryException if memory limit has been exceeded.
      */
     public void allocate(long size) {
         if (ALLOC_UPD.addAndGet(this, size) >= maxMem)

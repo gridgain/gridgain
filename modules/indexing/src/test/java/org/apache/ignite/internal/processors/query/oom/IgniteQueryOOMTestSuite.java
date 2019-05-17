@@ -28,7 +28,7 @@ import org.junit.runners.Suite;
     QueryOOMWithoutQueryParallelismTest.class,
     QueryOOMWithQueryParallelismTest.class,
 })
-@Deprecated
+@Deprecated //TODO: GG-18628: Drop these tests.
 public class IgniteQueryOOMTestSuite {
 }
 

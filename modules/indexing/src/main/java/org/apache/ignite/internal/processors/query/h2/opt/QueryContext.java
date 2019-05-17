@@ -113,7 +113,7 @@ public class QueryContext {
     /**
      * @return Query memory tracker.
      */
-    public QueryMemoryTracker queryMemoryManager() {
+    @Nullable public QueryMemoryTracker queryMemoryManager() {
         return memTracker;
     }
 

@@ -194,34 +194,46 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
     /** Check UNION operation with large sub-selects. */
     @Test
-    public void testUnionLargeDataSets() {
-        // None of sub-selects fits to memory.
-        checkQueryExpectOOM("select * from T as T0, T as T1 where T0.id < 2 " +
-            "UNION " +
-            "select * from T as T2, T as T3 where T2.id >= 2 AND T2.id < 4", true);
-
-        assertEquals(2, localResults.size());
-        assertTrue(maxMem < localResults.get(1).memoryAllocated());
-        assertTrue(2000 > localResults.get(0).getRowCount());
-        assertTrue(2000 > localResults.get(1).getRowCount());
-    }
-
-    /** Check large UNION operation with small enough sub-selects, but large result set. */
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-18628")
-    @Test
-    public void testUnionOfSmallDataSetsWithLargeResult() {
+    public void testUnionSimple() {
         maxMem = 2L * 1024 * 1024;
-
-        //TODO: GG-18628: Memory manager should ignore duplicates.
-        execQuery("select * from T as T0, T as T1 where T0.id < 1 " +
+        // None of sub-selects fits to memory.
+        execQuery("select * from T as T0, T as T1 where T0.id < 2 " +
             "UNION " +
-            "select * from T as T2, T as T3 where T2.id > 2 AND T2.id < 4", false);
+            "select * from T as T2, T as T3 where T2.id > 2 AND T2.id < 3", true);
 
         assertEquals(3, localResults.size());
         assertTrue(maxMem > localResults.get(1).memoryAllocated() + localResults.get(2).memoryAllocated());
         assertEquals(1000, localResults.get(1).getRowCount());
         assertEquals(1000, localResults.get(2).getRowCount());
         assertEquals(2000, localResults.get(0).getRowCount());
+    }
+
+    /** Check UNION operation with large sub-selects. */
+    @Test
+    public void testUnionLargeDataSets() {
+        // None of sub-selects fits to memory.
+        checkQueryExpectOOM("select * from T as T0, T as T1 where T0.id < 4 " +
+            "UNION " +
+            "select * from T as T2, T as T3 where T2.id >= 2 AND T2.id < 6", true);
+
+        assertEquals(2, localResults.size());
+        assertTrue(maxMem < localResults.get(1).memoryAllocated());
+        assertTrue(4000 > localResults.get(0).getRowCount());
+        assertTrue(4000 > localResults.get(1).getRowCount());
+    }
+
+    /** Check large UNION operation with small enough sub-selects, but large result set. */
+    @Test
+    public void testUnionOfSmallDataSetsWithLargeResult() {
+        checkQueryExpectOOM("select * from T as T0, T as T1 where T0.id < 2 " +
+            "UNION " +
+            "select * from T as T2, T as T3 where T2.id > 2 AND T2.id < 4", false);
+
+        assertEquals(3, localResults.size());
+        assertTrue(maxMem > localResults.get(1).memoryAllocated() + localResults.get(2).memoryAllocated());
+        assertEquals(2000, localResults.get(1).getRowCount());
+        assertEquals(1000, localResults.get(2).getRowCount());
+        assertTrue(3000 > localResults.get(0).getRowCount());
     }
 
     /** Check simple Joins. */

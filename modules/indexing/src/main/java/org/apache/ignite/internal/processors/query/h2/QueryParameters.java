@@ -73,7 +73,7 @@ public class QueryParameters {
         NestedTxMode nestedTxMode = NestedTxMode.DEFAULT;
         boolean autoCommit = true;
         List<Object[]> batchedArgs = null;
-        long maxMem = Long.MAX_VALUE;
+        long maxMem = 0;
 
         if (qry instanceof SqlFieldsQueryEx) {
             SqlFieldsQueryEx qry0 = (SqlFieldsQueryEx)qry;

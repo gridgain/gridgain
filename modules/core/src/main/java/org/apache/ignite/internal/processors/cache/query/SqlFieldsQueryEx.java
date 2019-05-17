@@ -45,7 +45,7 @@ public final class SqlFieldsQueryEx extends SqlFieldsQuery {
     /** Batched arguments list. */
     private List<Object[]> batchedArgs;
 
-    /** Max memory available for query results. */
+    /** Max memory available for query. */
     private long maxMem = Long.MAX_VALUE;
 
     /**
@@ -244,7 +244,7 @@ public final class SqlFieldsQueryEx extends SqlFieldsQuery {
     }
 
     /**
-     * Return memory limit for query results.
+     * Return memory limit for query.
      *
      * @return Memory size in bytes.
      */
@@ -253,7 +253,7 @@ public final class SqlFieldsQueryEx extends SqlFieldsQuery {
     }
 
     /**
-     * Sets memory limit for query results.
+     * Sets memory limit for query.
      *
      * @param maxMem Memory size in bytes.
      * @return {@code this} for chaining.

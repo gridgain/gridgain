@@ -373,6 +373,7 @@ public class H2BaseLocalResult implements LocalResult {
 
     /** {@inheritDoc} */
     @Override public void close() {
+        closed = true;
     }
 
     /** {@inheritDoc} */

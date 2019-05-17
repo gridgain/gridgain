@@ -159,7 +159,7 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
     /** TX details holder for {@code SELECT FOR UPDATE}, or {@code null} if not applicable. */
     private GridH2SelectForUpdateTxDetails txReq;
 
-    /** Memory available for query results. */
+    /** Memory available for query. */
     private long maxMem;
 
     /**
@@ -452,7 +452,7 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
     }
 
     /**
-     * Return memory limit for query results.
+     * Return memory limit for query.
      *
      * @return Memory size in bytes.
      */
@@ -461,7 +461,7 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
     }
 
     /**
-     * Sets memory limit for query results.
+     * Sets memory limit for query.
      *
      * @param maxMem Memory size in bytes.
      * @return {@code this} for chaining.
