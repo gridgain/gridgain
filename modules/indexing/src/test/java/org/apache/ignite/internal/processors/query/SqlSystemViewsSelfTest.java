@@ -1595,6 +1595,11 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
         @Override public boolean apply(ClusterNode n) {
             return n.consistentId().equals(consistentId);
         }
+
+        /** {@inheritDoc} */
+        @Override public String toString() {
+            return "TestNodeFilter";
+        }
     }
 
     /**
