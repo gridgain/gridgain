@@ -49,7 +49,6 @@ const LAZY_QUERY_SINCE = [['2.1.4-p1', '2.2.0'], '2.2.1'];
 const COLLOCATED_QUERY_SINCE = [['2.3.5', '2.4.0'], ['2.4.6', '2.5.0'], ['2.5.1-p13', '2.6.0'], '2.7.0'];
 const COLLECT_BY_CACHE_GROUPS_SINCE = '2.7.0';
 const QUERY_PING_SINCE = [['2.5.6', '2.6.0'], '2.7.4'];
-const NON_ZIPPED_TASKS = new Set(['schemaImport:drivers', 'schemaImport:schemas', 'schemaImport:metadata']);
 
 /**
  * Query execution result.
@@ -455,8 +454,6 @@ export default class AgentManager {
                             return response;
                         }
 
-                        if (NON_ZIPPED_TASKS.has(params.taskId))
-                            return res;
                         return res.data;
 
                     case SuccessStatus.STATUS_FAILED:
