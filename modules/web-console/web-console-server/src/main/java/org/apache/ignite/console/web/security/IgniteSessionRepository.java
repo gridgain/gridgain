@@ -27,8 +27,7 @@ import org.springframework.session.SessionRepository;
  */
 public class IgniteSessionRepository implements SessionRepository<ExpiringSession> {
     /**
-     * If non-null, this value is used to override
-     * {@link ExpiringSession#setMaxInactiveIntervalInSeconds(int)}.
+     * If non-null, this value is used to override {@link ExpiringSession#setMaxInactiveIntervalInSeconds(int)}.
      */
     private Integer dfltMaxInactiveInterval;
 
@@ -43,25 +42,25 @@ public class IgniteSessionRepository implements SessionRepository<ExpiringSessio
     }
 
     /**
-     * If non-null, this value is used to override
-     * {@link ExpiringSession#setMaxInactiveIntervalInSeconds(int)}.
-     * @param dfltMaxInactiveInterval the number of seconds that the {@link Session}
-     * should be kept alive between client requests.
+     * If non-null, this value is used to override {@link ExpiringSession#setMaxInactiveIntervalInSeconds(int)}.
+     *
+     * @param dfltMaxInactiveInterval the number of seconds that the {@link Session} should be kept alive between client
+     * requests.
      */
     public IgniteSessionRepository setDefaultMaxInactiveInterval(int dfltMaxInactiveInterval) {
         this.dfltMaxInactiveInterval = dfltMaxInactiveInterval;
-        
+
         return this;
     }
 
     /** {@inheritDoc} */
     @Override public ExpiringSession createSession() {
-        ExpiringSession res = new MapSession();
-        
-        if (this.dfltMaxInactiveInterval != null)
-            res.setMaxInactiveIntervalInSeconds(this.dfltMaxInactiveInterval);
+        ExpiringSession ses = new MapSession();
 
-        return res;
+        if (this.dfltMaxInactiveInterval != null)
+            ses.setMaxInactiveIntervalInSeconds(this.dfltMaxInactiveInterval);
+
+        return ses;
     }
 
     /** {@inheritDoc} */
@@ -71,18 +70,18 @@ public class IgniteSessionRepository implements SessionRepository<ExpiringSessio
 
     /** {@inheritDoc} */
     @Override public ExpiringSession getSession(String id) {
-        ExpiringSession saved = this.cache.get(id);
+        ExpiringSession ses = this.cache.get(id);
 
-        if (saved == null)
+        if (ses == null)
             return null;
 
-        if (saved.isExpired()) {
-            delete(saved.getId());
+        if (ses.isExpired()) {
+            delete(ses.getId());
 
             return null;
         }
 
-        return saved;
+        return ses;
     }
 
     /** {@inheritDoc} */

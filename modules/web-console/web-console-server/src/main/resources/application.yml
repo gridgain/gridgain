@@ -23,19 +23,3 @@ websocket:
 agent:
   folder.name: agent_dists
   file.regexp: ignite-web-console-agent.*\.zip
-
-spring.messages.basename: i18/messages,i18/notifications
-
-spring.mail:
-  host:
-  port:
-  username:
-  password:
-  from.alias:
-  properties.mail:
-    smtp:
-      auth:
-      starttls.enable:
-
-  templates:
-    defaultTemplatePath: templates/mail/base.html

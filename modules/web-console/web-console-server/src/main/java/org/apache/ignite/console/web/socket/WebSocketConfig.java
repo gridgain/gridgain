@@ -37,11 +37,11 @@ public class WebSocketConfig implements WebSocketConfigurer {
 	private final WebSocketHandler wsm;
 
 	/** */
-	@Value("${websocket.ssl.enabled}")
+	@Value("${websocket.ssl.enabled:false}")
 	private boolean sslEnabled;
 
 	/** */
-	@Value("${websocket.allowed.origin}")
+	@Value("${websocket.allowed.origin:https://localhost}")
 	private String allowedOrigin;
 
 	/**

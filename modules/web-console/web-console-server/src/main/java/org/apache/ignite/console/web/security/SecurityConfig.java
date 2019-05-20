@@ -22,10 +22,11 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.configuration.CacheConfiguration;
-    import org.apache.ignite.console.config.ActivationConfiguration;
+import org.apache.ignite.console.config.ActivationConfiguration;
 import org.apache.ignite.console.services.AccountsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
@@ -45,19 +46,22 @@ import org.springframework.session.MapSession;
 import org.springframework.session.SessionRepository;
 import org.springframework.session.config.annotation.web.http.EnableSpringHttpSession;
 
+import static org.apache.ignite.console.dto.Account.ROLE_ADMIN;
+import static org.apache.ignite.console.dto.Account.ROLE_USER;
 import static org.apache.ignite.console.websocket.WebSocketConsts.BROWSERS_PATH;
 
 /**
  * Security settings provider.
  */
+@Configuration
 @EnableWebSecurity
 @EnableSpringHttpSession
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
     /** Sign in route. */
-    private static final String SIGN_IN_ROUTE = "/api/v1/signin";
+    public static final String SIGN_IN_ROUTE = "/api/v1/signin";
 
     /** Sign up route. */
-    private static final String SIGN_UP_ROUTE = "/api/v1/signup";
+    public static final String SIGN_UP_ROUTE = "/api/v1/signup";
 
     /** Logout route. */
     private static final String LOGOUT_ROUTE = "/api/v1/logout";
@@ -118,22 +122,15 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             .and()
             .authorizeRequests()
             .antMatchers(PUBLIC_ROUTES).anonymous()
-            .antMatchers("/api/v1/admin/**").hasRole("ADMIN")
-            .antMatchers("/api/v1/**", BROWSERS_PATH).hasRole("USER")
+            .antMatchers("/api/v1/admin/**").hasAuthority(ROLE_ADMIN)
+            .antMatchers("/api/v1/**", BROWSERS_PATH).hasAuthority(ROLE_USER)
+            .anyRequest().authenticated()
             .and()
-            .addFilterBefore(authenticationFilter(), UsernamePasswordAuthenticationFilter.class)
+            .addFilterAt(authenticationFilter(), UsernamePasswordAuthenticationFilter.class)
             .logout()
             .logoutUrl(LOGOUT_ROUTE)
             .deleteCookies("JSESSIONID")
             .logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler(HttpStatus.OK));
-    }
-
-    /**
-     * @param auth Auth.
-     */
-    @Autowired
-    public void configureGlobal(AuthenticationManagerBuilder auth) {
-        configure(auth);
     }
 
     /** {@inheritDoc} */
@@ -150,8 +147,11 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         );
     }
 
-    /** {@inheritDoc} */
-    @Override protected void configure(AuthenticationManagerBuilder auth) {
+    /**
+     * Configure global implementation of {@link #authenticationManager()}
+     */
+    @Autowired
+    public void configureGlobal(AuthenticationManagerBuilder auth) {
         DaoAuthenticationProvider authProvider = activationEnabled ?
             new CustomAuthenticationProvider(activationTimeout) : new DaoAuthenticationProvider();
 
@@ -192,9 +192,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     /**
      * Custom filter for retrieve credentials.
      */
-    @Bean
-    public RequestBodyReaderAuthenticationFilter authenticationFilter() throws Exception {
-        RequestBodyReaderAuthenticationFilter authenticationFilter = new RequestBodyReaderAuthenticationFilter();
+    private BodyReaderAuthenticationFilter authenticationFilter() throws Exception {
+        BodyReaderAuthenticationFilter authenticationFilter = new BodyReaderAuthenticationFilter();
 
         authenticationFilter.setAuthenticationManager(authenticationManagerBean());
         authenticationFilter.setRequiresAuthenticationRequestMatcher(new AntPathRequestMatcher(SIGN_IN_ROUTE, "POST"));
