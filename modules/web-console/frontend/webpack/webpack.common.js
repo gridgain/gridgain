@@ -93,7 +93,7 @@ const config = {
             {
                 test: /\.(js|ts)$/,
                 exclude: /node_modules/,
-                use: 'babel-loader'
+                use: [/* 'angular2-template-loader?keepUrl=true', */'babel-loader']
             },
             {
                 test: /\.(ttf|eot|svg|woff(2)?)(\?v=[\d.]+)?(\?[a-z0-9#-]+)?$/,

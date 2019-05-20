@@ -57,6 +57,27 @@ module.exports = merge(commonCfg, {
                         }
                     }
                 ]
+            },
+            {
+                test: /\.url\.scss$/,
+                use: [
+                    'raw-loader',
+                    // 'exports-loader?module.exports.toString()',
+                    // MiniCssExtractPlugin.loader,
+                    {
+                        loader: 'css-loader',
+                        options: {
+                            sourceMap: true
+                        }
+                    },
+                    {
+                        loader: 'sass-loader',
+                        options: {
+                            sourceMap: true,
+                            includePaths: [ path.join(__dirname, '../') ]
+                        }
+                    }
+                ]
             }
         ]
     },

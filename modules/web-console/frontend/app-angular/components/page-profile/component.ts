@@ -27,7 +27,7 @@ import {default as LegacyUtilsFactory} from 'app/services/LegacyUtils.service';
 import {
     FORM_FIELD_OPTIONS, FormFieldRequiredMarkerStyles, FormFieldErrorStyles
 } from '../form-field';
-import './style.scss';
+// import './style.scss';
 
 const passwordMatch = (newPassword: string) => (confirmPassword: FormControl) => newPassword === confirmPassword.value
     ? null
@@ -38,6 +38,7 @@ const disableFormGroup = (fg: FormGroup) => {fg.disable(); return fg;};
 @Component({
     selector: 'page-profile',
     templateUrl,
+    styles: [require('./style.url.scss')],
     viewProviders: [
         {
             provide: FORM_FIELD_OPTIONS,
