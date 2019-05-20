@@ -45,7 +45,6 @@ export const simeplFakeSQLQuery = (nid, response) => (ws) => {
                                 columns: null,
                                 duration: 0,
                                 hasMore: false,
-                                protocolVersion: 1,
                                 queryId: 'query-1',
                                 responseNodeId: nid,
                                 rows: null
@@ -111,18 +110,15 @@ export const SIMPLE_QUERY_RESPONSE = {
             schemaName: 'PUBLIC',
             typeName: 'PERSON',
             fieldName: 'ID',
-            fieldTypeName: 'java.lang.Integer',
-            protocolVersion: 1
+            fieldTypeName: 'java.lang.Integer'
         }, {
             schemaName: 'PUBLIC',
             typeName: 'PERSON',
             fieldName: 'NAME',
-            fieldTypeName: 'java.lang.String',
-            protocolVersion: 1
+            fieldTypeName: 'java.lang.String'
         }],
         queryId: 'VISOR_SQL_QUERY-42b1b723-874e-48eb-a760-b6357fc71c7f',
-        responseNodeId: '0daf9042-21e6-4dd3-8f8e-a3187246abe4',
-        protocolVersion: 1
+        responseNodeId: '0daf9042-21e6-4dd3-8f8e-a3187246abe4'
     }
 };
 
@@ -131,8 +127,7 @@ export const FAKE_CACHES = {
         Cache1: 'a',
         Cache2: 'b'
     },
-    groups: [],
-    protocolVersion: 1
+    groups: []
 };
 
 export const agentStat = (clusters) => (ws) => {
