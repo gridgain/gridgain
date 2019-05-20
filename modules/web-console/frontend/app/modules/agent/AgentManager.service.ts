@@ -556,9 +556,9 @@ export default class AgentManager {
 
     cacheNodes(cacheName: string) {
         if (this.available(IGNITE_2_0))
-            return this.visorTask<AgentTypes.CacheNodesTaskX2Response>('cacheNodesTaskX2', null, cacheName);
+            return this.visorTask<AgentTypes.CacheNodesTaskResponse>('cacheNodesTaskX2', null, cacheName);
 
-        return this.visorTask('cacheNodesTask', null, cacheName);
+        return this.visorTask<AgentTypes.CacheNodesTaskResponse>('cacheNodesTask', null, cacheName);
     }
 
     /**

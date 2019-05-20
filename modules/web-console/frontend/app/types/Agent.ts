@@ -37,7 +37,7 @@ export type CacheNamesCollectorTaskResponse = {
 	protocolVersion: 1
 }
 
-export type CacheNodesTaskX2Response = string[]
+export type CacheNodesTaskResponse = string[]
 
 export type VisorQueryResult =
 {
