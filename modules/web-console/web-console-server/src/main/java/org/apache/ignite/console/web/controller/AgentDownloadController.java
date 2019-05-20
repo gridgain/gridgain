@@ -54,11 +54,11 @@ public class AgentDownloadController {
     private static final int BUFFER_SZ = 30 * 1024 * 1024;
 
     /** */
-    @Value("${agent.folder.name}")
+    @Value("${agent.folder.name:agent_dists}")
     private String agentFolderName;
 
     /** */
-    @Value("${agent.file.regexp}")
+    @Value("${agent.file.regexp:ignite-web-console-agent.*\\.zip}")
     private String agentFileRegExp;
 
     /**

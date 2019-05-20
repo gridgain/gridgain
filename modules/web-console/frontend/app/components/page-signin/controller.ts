@@ -76,7 +76,7 @@ export default class PageSignIn implements ng.IPostLink {
             return;
         }
 
-        return this.Auth.signin(this.data.email, this.data.password, this.activationToken)
+        return this.Auth.signin(this.data)
             .catch((err) => {
                 this.IgniteMessages.showError(null, err.data);
 
