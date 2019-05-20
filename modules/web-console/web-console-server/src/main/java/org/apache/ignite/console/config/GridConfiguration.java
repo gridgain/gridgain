@@ -35,6 +35,10 @@ public class GridConfiguration {
      */
     @Bean(destroyMethod = "close")
     public IgniteEx igniteInstance(@Autowired IgniteConfiguration cfg) {
-        return (IgniteEx)Ignition.start(cfg);
+        IgniteEx ignite = (IgniteEx)Ignition.start(cfg);
+
+        ignite.cluster().active(true);
+
+        return ignite;
     }
 }
