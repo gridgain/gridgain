@@ -16,6 +16,7 @@
 
 package org.apache.ignite.ml.selection.paramgrid;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -32,9 +33,12 @@ public class ParamGrid {
     /** Parameter counter. */
     private int paramCntr;
 
+    /** Parameter search strategy. */
+    private HyperParameterSearchingStrategy parameterSearchStrategy = HyperParameterSearchingStrategy.BRUT_FORCE;
+
     /** */
     public Map<Integer, Double[]> getParamValuesByParamIdx() {
-        return paramValuesByParamIdx;
+        return Collections.unmodifiableMap(paramValuesByParamIdx);
     }
 
     /**
@@ -48,6 +52,23 @@ public class ParamGrid {
         paramNamesByParamIdx.put(paramCntr, paramName);
         paramCntr++;
         return this;
+    }
+
+    /**
+     * Set up the hyperparameter searching strategy.
+     *
+     * @param parameterSearchStrategy Parameter search strategy.
+     */
+    public ParamGrid setParameterSearchStrategy(HyperParameterSearchingStrategy parameterSearchStrategy) {
+        this.parameterSearchStrategy = parameterSearchStrategy;
+        return this;
+    }
+
+    /**
+     *
+     */
+    public HyperParameterSearchingStrategy getParameterSearchStrategy() {
+        return parameterSearchStrategy;
     }
 
     /** */

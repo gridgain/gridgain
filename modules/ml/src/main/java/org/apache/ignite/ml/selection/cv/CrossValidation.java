@@ -44,6 +44,7 @@ import org.apache.ignite.ml.selection.scoring.metric.Metric;
 import org.apache.ignite.ml.selection.split.mapper.SHA256UniformMapper;
 import org.apache.ignite.ml.selection.split.mapper.UniformMapper;
 import org.apache.ignite.ml.trainers.DatasetTrainer;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Cross validation score calculator. Cross validation is an approach that allows to avoid overfitting that is made the
@@ -117,41 +118,25 @@ public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
                                        Preprocessor<K, V> preprocessor, int amountOfFolds,
                                        ParamGrid paramGrid) {
 
+        switch (paramGrid.getParameterSearchStrategy()) {
+            case BRUT_FORCE:
+                return scoreBrutForceHyperparameterOptimiztion(trainer, scoreCalculator, ignite, upstreamCache, filter, preprocessor, amountOfFolds, paramGrid);
+            case RANDOM_SEARCH:
+                return scoreRandomSearchHyperparameterOptimiztion(trainer, scoreCalculator, ignite, upstreamCache, filter, preprocessor, amountOfFolds, paramGrid);
+            default:
+                throw new UnsupportedOperationException("This strategy "
+                    + paramGrid.getParameterSearchStrategy().name() + " is unsupported");
+        }
+    }
+
+    // TODO: https://en.wikipedia.org/wiki/Random_search
+    private CrossValidationResult scoreRandomSearchHyperparameterOptimiztion(DatasetTrainer<M, L> trainer, Metric<L> scoreCalculator, Ignite ignite, IgniteCache<K, V> upstreamCache, IgniteBiPredicate<K, V> filter, Preprocessor<K, V> preprocessor, int amountOfFolds, ParamGrid paramGrid) {
         List<Double[]> paramSets = new ParameterSetGenerator(paramGrid.getParamValuesByParamIdx()).generate();
 
         CrossValidationResult cvRes = new CrossValidationResult();
 
         paramSets.forEach(paramSet -> {
-            Map<String, Double> paramMap = new HashMap<>();
-
-            for (int paramIdx = 0; paramIdx < paramSet.length; paramIdx++) {
-                String paramName = paramGrid.getParamNameByIndex(paramIdx);
-                Double paramVal = paramSet[paramIdx];
-
-                paramMap.put(paramName, paramVal);
-
-                try {
-                    final String mtdName = "with" +
-                        paramName.substring(0, 1).toUpperCase() +
-                        paramName.substring(1);
-
-                    Method trainerSetter = null;
-
-                    // We should iterate along all methods due to we have no info about signature and passed types.
-                    for (Method method : trainer.getClass().getDeclaredMethods()) {
-                        if (method.getName().equals(mtdName))
-                            trainerSetter = method;
-                    }
-
-                    if (trainerSetter != null)
-                        trainerSetter.invoke(trainer, paramVal);
-                    else
-                        throw new NoSuchMethodException(mtdName);
-
-                } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
-                    e.printStackTrace();
-                }
-            }
+            Map<String, Double> paramMap = injectAndGetParametersToPipeline(trainer, paramGrid, paramSet);
 
             double[] locScores = score(trainer, scoreCalculator, ignite, upstreamCache, filter, preprocessor,
                 new SHA256UniformMapper<>(), amountOfFolds);
@@ -168,6 +153,72 @@ public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
         });
 
         return cvRes;
+
+
+    }
+
+    private CrossValidationResult scoreBrutForceHyperparameterOptimiztion(DatasetTrainer<M, L> trainer, Metric<L> scoreCalculator, Ignite ignite,
+                                                                          IgniteCache<K, V> upstreamCache, IgniteBiPredicate<K, V> filter,
+                                                                          Preprocessor<K, V> preprocessor, int amountOfFolds,
+                                                                          ParamGrid paramGrid) {
+
+        List<Double[]> paramSets = new ParameterSetGenerator(paramGrid.getParamValuesByParamIdx()).generate();
+
+        CrossValidationResult cvRes = new CrossValidationResult();
+
+        paramSets.forEach(paramSet -> {
+            Map<String, Double> paramMap = injectAndGetParametersToPipeline(trainer, paramGrid, paramSet);
+
+            double[] locScores = score(trainer, scoreCalculator, ignite, upstreamCache, filter, preprocessor,
+                new SHA256UniformMapper<>(), amountOfFolds);
+
+            cvRes.addScores(locScores, paramMap);
+
+            final double locAvgScore = Arrays.stream(locScores).average().orElse(Double.MIN_VALUE);
+
+            if (locAvgScore > cvRes.getBestAvgScore()) {
+                cvRes.setBestScore(locScores);
+                cvRes.setBestHyperParams(paramMap);
+                System.out.println(paramMap.toString());
+            }
+        });
+
+        return cvRes;
+    }
+
+    // TODO: it should work with preprocessor parameters too
+    @NotNull private Map<String, Double> injectAndGetParametersToPipeline(DatasetTrainer<M, L> trainer, ParamGrid paramGrid, Double[] paramSet) {
+        Map<String, Double> paramMap = new HashMap<>();
+
+        for (int paramIdx = 0; paramIdx < paramSet.length; paramIdx++) {
+            String paramName = paramGrid.getParamNameByIndex(paramIdx);
+            Double paramVal = paramSet[paramIdx];
+
+            paramMap.put(paramName, paramVal);
+
+            try {
+                final String mtdName = "with" +
+                    paramName.substring(0, 1).toUpperCase() +
+                    paramName.substring(1);
+
+                Method trainerSetter = null;
+
+                // We should iterate along all methods due to we have no info about signature and passed types.
+                for (Method method : trainer.getClass().getDeclaredMethods()) {
+                    if (method.getName().equals(mtdName))
+                        trainerSetter = method;
+                }
+
+                if (trainerSetter != null)
+                    trainerSetter.invoke(trainer, paramVal);
+                else
+                    throw new NoSuchMethodException(mtdName);
+
+            } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+                e.printStackTrace();
+            }
+        }
+        return paramMap;
     }
 
     /**
@@ -350,37 +401,7 @@ public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
         DatasetTrainer trainer = pipeline.getTrainer();
 
         paramSets.forEach(paramSet -> {
-            Map<String, Double> paramMap = new HashMap<>();
-
-
-            for (int paramIdx = 0; paramIdx < paramSet.length; paramIdx++) {
-                String paramName = paramGrid.getParamNameByIndex(paramIdx);
-                Double paramVal = paramSet[paramIdx];
-
-                paramMap.put(paramName, paramVal);
-
-                try {
-                    final String mtdName = "with" +
-                        paramName.substring(0, 1).toUpperCase() +
-                        paramName.substring(1);
-
-                    Method trainerSetter = null;
-
-                    // We should iterate along all methods due to we have no info about signature and passed types.
-                    for (Method method : trainer.getClass().getDeclaredMethods()) {
-                        if (method.getName().equals(mtdName))
-                            trainerSetter = method;
-                    }
-
-                    if (trainerSetter != null)
-                        trainerSetter.invoke(trainer, paramVal);
-                    else
-                        throw new NoSuchMethodException(mtdName);
-
-                } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
-                    e.printStackTrace();
-                }
-            }
+            Map<String, Double> paramMap = injectAndGetParametersToPipeline(trainer, paramGrid, paramSet);
 
             double[] locScores = scorePipeline(
                 pipeline,
