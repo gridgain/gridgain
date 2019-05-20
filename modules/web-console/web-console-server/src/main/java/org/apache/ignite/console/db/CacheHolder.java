@@ -19,6 +19,8 @@ package org.apache.ignite.console.db;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.internal.IgniteKernal;
+import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
@@ -57,7 +59,12 @@ public class CacheHolder<K, V> {
     /**
      * @return Underlying cache.
      */
-    public IgniteCache cache() {
+    public IgniteCache<K, V> cache() {
         return cache;
+    }
+
+    /** */
+    public IgniteInternalCache<K, V> internalCache() {
+        return ((IgniteKernal)this.ignite).getCache(cacheName);
     }
 }

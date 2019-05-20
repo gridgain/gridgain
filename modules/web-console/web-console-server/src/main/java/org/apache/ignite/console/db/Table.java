@@ -19,19 +19,24 @@ package org.apache.ignite.console.db;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.UUID;
 import java.util.function.Function;
+import javax.cache.Cache;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.Query;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.console.dto.AbstractDto;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.lang.IgniteBiPredicate;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.stream.Collectors.toSet;
@@ -100,10 +105,36 @@ public class Table<T extends AbstractDto> extends CacheHolder<UUID, T> {
     }
 
     /**
+     * @return Collection of DTOs.
+     */
+    public List<T> loadAll() throws IgniteCheckedException {
+        Iterator<Cache.Entry<UUID, T>> it = internalCache().scanIterator(false, DTOPredicate.INSTANCE);
+        
+        ArrayList<T> res = new ArrayList<>();
+
+        it.forEachRemaining(entry -> res.add(entry.getValue()));
+
+        return res;
+    }
+
+    /**
+     * @param keys Indexed keys.
+     * @return Collection of DTOs.
+     */
+    public Collection<T> loadAllByIndex(Set<?> keys) {
+        Map<?, UUID> ids = indexCache().getAll(keys);
+
+        if (ids.isEmpty())
+            return Collections.emptyList();
+
+        return loadAll(new HashSet<>(ids.values()));
+    }
+
+    /**
      * @param ids IDs.
      * @return Collection of DTOs.
      */
-    public Collection<T> loadAll(TreeSet<UUID> ids) {
+    public Collection<T> loadAll(Set<UUID> ids) {
         Map<UUID, T> res = cache.getAll(ids);
 
         return F.isEmpty(res) ? Collections.emptyList() : res.values();
@@ -210,6 +241,27 @@ public class Table<T extends AbstractDto> extends CacheHolder<UUID, T> {
          */
         public String message(T val) {
             return msgGenerator.apply(val);
+        }
+    }
+
+    /**
+     *
+     */
+    static class DTOPredicate implements IgniteBiPredicate<Object, Object> {
+        /** */
+        private static final long serialVersionUID = 0L;
+
+        /** */
+        private static final DTOPredicate INSTANCE = new DTOPredicate();
+
+        /** {@inheritDoc} */
+        @Override public boolean apply(Object key, Object val) {
+            return val instanceof AbstractDto;
+        }
+
+        /** {@inheritDoc} */
+        @Override public String toString() {
+            return S.toString(DTOPredicate.class, this);
         }
     }
 }

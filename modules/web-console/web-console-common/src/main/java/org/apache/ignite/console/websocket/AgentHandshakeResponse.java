@@ -41,8 +41,8 @@ public class AgentHandshakeResponse {
     /**
      * @param err Error message.
      */
-    public AgentHandshakeResponse(String err) {
-        this.err = err;
+    public AgentHandshakeResponse(Exception err) {
+        this.err = err.getMessage();
     }
 
     /**

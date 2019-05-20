@@ -70,6 +70,16 @@
                 <property name="txTimeoutOnPartitionMapExchange" value="#{60L * 1000L}"/>
             </bean>
         </property>
+
+        <property name="dataStorageConfiguration">
+            <bean class="org.apache.ignite.configuration.DataStorageConfiguration">
+                <property name="defaultDataRegionConfiguration">
+                    <bean class="org.apache.ignite.configuration.DataRegionConfiguration">
+                        <property name="persistenceEnabled" value="true"/>
+                    </bean>
+                </property>
+            </bean>
+        </property>
         
         <!-- Logging configuration. -->
         <property name="gridLogger">
