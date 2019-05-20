@@ -40,16 +40,16 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
  */
 public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstractTest {
     /** Row count. */
-    private static final int SMALL_TABLE_SIZE = 1000;
+    static final int SMALL_TABLE_SIZE = 1000;
 
     /** Row count. */
-    private static final int BIG_TABLE_SIZE = 10000;
+    static final int BIG_TABLE_SIZE = 10000;
 
     /** Query local results. */
-    protected static final List<H2ManagedLocalResult> localResults = new ArrayList<>();
+    static final List<H2ManagedLocalResult> localResults = new ArrayList<>();
 
     /** Query memory limit. */
-    protected long maxMem;
+    long maxMem;
 
     /** Node client mode flag. */
     private boolean client;
@@ -195,15 +195,15 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     /** Check UNION operation with large sub-selects. */
     @Test
     public void testUnionSimple() {
-        maxMem = 2L * 1024 * 1024;
-        // None of sub-selects fits to memory.
+        maxMem = 6L * 1024 * 1024;
+
         execQuery("select * from T as T0, T as T1 where T0.id < 2 " +
             "UNION " +
-            "select * from T as T2, T as T3 where T2.id > 2 AND T2.id < 3", true);
+            "select * from T as T2, T as T3 where T2.id >= 1 AND T2.id < 2", true);
 
         assertEquals(3, localResults.size());
         assertTrue(maxMem > localResults.get(1).memoryAllocated() + localResults.get(2).memoryAllocated());
-        assertEquals(1000, localResults.get(1).getRowCount());
+        assertEquals(2000, localResults.get(1).getRowCount());
         assertEquals(1000, localResults.get(2).getRowCount());
         assertEquals(2000, localResults.get(0).getRowCount());
     }
@@ -225,6 +225,8 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     /** Check large UNION operation with small enough sub-selects, but large result set. */
     @Test
     public void testUnionOfSmallDataSetsWithLargeResult() {
+        maxMem = 5 * 1024 * 1024;
+
         checkQueryExpectOOM("select * from T as T0, T as T1 where T0.id < 2 " +
             "UNION " +
             "select * from T as T2, T as T3 where T2.id > 2 AND T2.id < 4", false);

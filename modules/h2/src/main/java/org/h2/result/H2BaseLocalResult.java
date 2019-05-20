@@ -19,6 +19,7 @@ import org.h2.value.Value;
 import org.h2.value.ValueRow;
 
 /** */
+//TODO: GG-18632 Add external result and merge with {@link org.h2.result.LocalResultImpl}.
 public class H2BaseLocalResult implements LocalResult {
     private Session session;
     private int visibleColumnCount;
@@ -438,9 +439,12 @@ public class H2BaseLocalResult implements LocalResult {
     }
 
     /**
-     * @param distinctRowKey
-     * @param row Row.
+     * Local result update callback.
+     *
+     * @param rowKey Distinct row key.
+     * @param oldRow Old row values.
+     * @param row New row values.
      */
-    protected void onUpdate(ValueRow distinctRowKey, Value[] oldRow, Value[] row) {
+    protected void onUpdate(ValueRow rowKey, Value[] oldRow, Value[] row) {
     }
 }

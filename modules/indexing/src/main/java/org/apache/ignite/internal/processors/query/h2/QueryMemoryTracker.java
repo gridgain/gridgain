@@ -73,4 +73,11 @@ public class QueryMemoryTracker {
 
         assert allocated >= size : "Invalid free memory size [allocated=" + allocated + ", free=" + size + ']';
     }
+
+    /**
+     * @return Memory allocated by tracker.
+     */
+    public long getAllocated() {
+        return allocated;
+    }
 }

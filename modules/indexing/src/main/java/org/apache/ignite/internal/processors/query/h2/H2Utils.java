@@ -441,6 +441,13 @@ public class H2Utils {
         s.setForceJoinOrder(enforceJoinOrder);
         s.setJoinBatchEnabled(distributedJoins);
         s.setLazyQueryExecution(lazy);
+
+        Object oldCtx = s.getQueryContext();
+
+        assert oldCtx == null
+            || ((QueryContext)oldCtx).queryMemoryManager() == null
+            || ((QueryContext)oldCtx).queryMemoryManager().getAllocated() == 0;
+
         s.setQueryContext(qctx);
     }
 
