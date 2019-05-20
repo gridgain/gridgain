@@ -5,7 +5,6 @@
  */
 package org.h2.engine;
 
-import com.sun.istack.internal.Nullable;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.BitSet;
@@ -38,7 +37,6 @@ import org.h2.mvstore.db.MVTable;
 import org.h2.mvstore.db.MVTableEngine;
 import org.h2.mvstore.tx.Transaction;
 import org.h2.mvstore.tx.TransactionStore;
-import org.h2.value.VersionedValue;
 import org.h2.result.ResultInterface;
 import org.h2.result.Row;
 import org.h2.result.SortOrder;
@@ -61,6 +59,7 @@ import org.h2.value.ValueLong;
 import org.h2.value.ValueNull;
 import org.h2.value.ValueString;
 import org.h2.value.ValueTimestampTimeZone;
+import org.h2.value.VersionedValue;
 
 /**
  * A session represents an embedded database connection. When using the server
@@ -213,21 +212,21 @@ public class Session extends SessionWithState implements TransactionStore.Rollba
     /**
      * @return Query context.
      */
-    @Nullable public H2QueryContext getQueryContext() {
+    public H2QueryContext getQueryContext() {
         return qryContext;
     }
 
     /**
      * @param qryContext Query context.
      */
-    public void setQueryContext(@Nullable H2QueryContext qryContext) {
+    public void setQueryContext(H2QueryContext qryContext) {
         this.qryContext = qryContext;
     }
 
     /**
      * @return Query memory tracker if it is available or 'null' otherwise.
      */
-    @Nullable public H2MemoryTracker queryMemoryTracker() {
+    public H2MemoryTracker queryMemoryTracker() {
         return qryContext != null ? qryContext.queryMemoryManager() : null;
     }
 

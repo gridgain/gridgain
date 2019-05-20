@@ -16,8 +16,6 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
-import com.sun.istack.internal.Nullable;
-
 /**
  * H2 query context.
  */
@@ -25,5 +23,5 @@ public interface H2QueryContext {
     /**
      * @return Query memory tracker.
      */
-    @Nullable H2MemoryTracker queryMemoryManager();
+    H2MemoryTracker queryMemoryManager();
 }
