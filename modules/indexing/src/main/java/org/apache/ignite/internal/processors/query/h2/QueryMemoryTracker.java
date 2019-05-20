@@ -42,7 +42,9 @@ public class QueryMemoryTracker {
     /**
      * Constructor.
      *
-     * @param maxMem Query memory limit in bytes. If zero value, then {@link QueryMemoryTracker#DFLT_QRY_MEMORY_LIMIT} will be used.
+     * @param maxMem Query memory limit in bytes.
+     * Note: If zero value, then {@link QueryMemoryTracker#DFLT_QRY_MEMORY_LIMIT} will be used.
+     * Note: Long.MAX_VALUE is reserved for disable memory tracking.
      */
     public QueryMemoryTracker(long maxMem) {
         assert maxMem >= 0 && maxMem != Long.MAX_VALUE;
