@@ -44,7 +44,7 @@ namespace ignite
             {
                 typedef common::concurrent::SharedPointer<IgniteEnvironment> SP_IgniteEnvironment;
                 typedef common::concurrent::SharedPointer<compute::ComputeImpl> SP_ComputeImpl;
-                typedef ignite::common::DynamicSizeArray<SP_ClusterNodeImpl> ClusterNodesArray;
+                typedef ignite::common::DynamicSizeArray<SP_ClusterNodeImpl> ClusterNodes;
             public:
                 /**
                  * Constructor used to create new instance.
@@ -99,7 +99,7 @@ namespace ignite
                  *
                  * @return Vector of cluster nodes.
                  */
-                ClusterNodesArray GetNodes();
+                ClusterNodes GetNodes();
 
                 /**
                  * Check if the Ignite grid is active.
@@ -149,16 +149,16 @@ namespace ignite
                  *
                  * @return Instance of compute.
                  */
-                ClusterNodesArray ClusterGroupImpl::RefreshNodes();
+                ClusterNodes ClusterGroupImpl::RefreshNodes();
 
                 /** Compute for the cluster group. */
                 SP_ComputeImpl computeImpl;
 
                 /** Cluster nodes. */
-                ClusterNodesArray nodes;
+                ClusterNodes nodes;
 
                 /** Cluster nodes top version. */
-                int64_t topVer; //??? Possibly should be atomic (from dotnet)
+                int64_t topVer;
             };
         }
     }

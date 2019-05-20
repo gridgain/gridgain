@@ -52,7 +52,7 @@ namespace ignite
             };
 
             ClusterGroupImpl::ClusterGroupImpl(SP_IgniteEnvironment env, jobject javaRef) :
-                InteropTarget(env, javaRef)
+                InteropTarget(env, javaRef), topVer(0)
             {
                 computeImpl = InternalGetCompute();
             }
@@ -106,7 +106,7 @@ namespace ignite
                 return computeImpl;
             }
 
-            ClusterGroupImpl::ClusterNodesArray ClusterGroupImpl::GetNodes()
+            ClusterGroupImpl::ClusterNodes ClusterGroupImpl::GetNodes()
             {
                 return RefreshNodes();
             }
@@ -160,7 +160,7 @@ namespace ignite
                 return SP_ComputeImpl(new compute::ComputeImpl(GetEnvironmentPointer(), computeProc));
             }
 
-            ClusterGroupImpl::ClusterNodesArray ClusterGroupImpl::RefreshNodes()
+            ClusterGroupImpl::ClusterNodes ClusterGroupImpl::RefreshNodes()
             {
                 long oldTopVer = 0;
 
@@ -186,7 +186,7 @@ namespace ignite
                     int64_t newTopVer = reader.ReadInt64();
                     int cnt = reader.ReadInt32();
 
-                    ClusterGroupImpl::ClusterNodesArray newNodes;
+                    ClusterGroupImpl::ClusterNodes newNodes;
                     for (int i = 0; i < cnt; i++)
                         newNodes.PushBack(GetEnvironment().GetNode(reader.ReadGuid()));
 
