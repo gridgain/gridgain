@@ -33,8 +33,7 @@ export type AgentsStatResponse = {
 
 export type CacheNamesCollectorTaskResponse = {
 	caches: {[cacheName: string]: string},
-	groups: string[],
-	protocolVersion: 1
+	groups: string[]
 }
 
 export type CacheNodesTaskResponse = string[]
@@ -46,13 +45,11 @@ export type VisorQueryResult =
 		columns: null | {
 			fieldName: string,
 			fieldTypeName: string,
-			protocolVersion: 1,
 			schemaName: string,
 			typeName: string
 		}[],
 		duration: number,
 		hasMore: boolean,
-		protocolVersion: 1,
 		queryId: string,
 		responseNodeId: string,
 		rows: null | any[]
