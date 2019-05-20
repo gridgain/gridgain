@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.List;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccQueryTracker;
+import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
 
 /**
  * Special field set iterator based on database result set.
@@ -29,6 +30,9 @@ import org.apache.ignite.internal.processors.cache.mvcc.MvccQueryTracker;
 public class H2FieldsIterator extends H2ResultSetIterator<List<?>> {
     /** */
     private static final long serialVersionUID = 0L;
+
+    /** */
+    private final QueryContext qctx;
 
     /** */
     private transient MvccQueryTracker mvccTracker;
@@ -39,17 +43,19 @@ public class H2FieldsIterator extends H2ResultSetIterator<List<?>> {
     /**
      * @param data Data.
      * @param mvccTracker Mvcc tracker.
+     * @param qctx Query context.
      * @param detachedConn Detached connection.
      * @throws IgniteCheckedException If failed.
      */
     public H2FieldsIterator(ResultSet data, MvccQueryTracker mvccTracker,
-        ThreadLocalObjectPool<H2ConnectionWrapper>.Reusable detachedConn)
+        QueryContext qctx, ThreadLocalObjectPool<H2ConnectionWrapper>.Reusable detachedConn)
         throws IgniteCheckedException {
         super(data);
 
         assert detachedConn != null;
 
         this.mvccTracker = mvccTracker;
+        this.qctx = qctx;
         this.detachedConn = detachedConn;
     }
 
@@ -69,6 +75,8 @@ public class H2FieldsIterator extends H2ResultSetIterator<List<?>> {
         }
         finally {
             detachedConn.recycle();
+
+            qctx.clearContext(false);
 
             if (mvccTracker != null)
                 mvccTracker.onDone();

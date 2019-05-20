@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.query.h2;
 
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import org.apache.ignite.internal.mem.IgniteOutOfMemoryException;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  * Query memory tracker.
@@ -79,5 +80,10 @@ public class QueryMemoryTracker {
      */
     public long getAllocated() {
         return allocated;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(QueryMemoryTracker.class, this);
     }
 }

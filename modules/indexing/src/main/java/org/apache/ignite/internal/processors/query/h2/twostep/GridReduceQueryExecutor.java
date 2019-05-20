@@ -658,8 +658,14 @@ public class GridReduceQueryExecutor {
                         qryCtxRegistry.setThreadLocal(qctx);
 
                         try {
-                            if (qry.explain())
-                                return explainPlan(r.connection(), qry, params);
+                            if (qry.explain()) {
+                                try {
+                                    return explainPlan(r.connection(), qry, params);
+                                }
+                                finally {
+                                    qctx.clearContext(false);
+                                }
+                            }
 
                             GridCacheSqlQuery rdc = qry.reduceQuery();
 
@@ -679,7 +685,7 @@ public class GridReduceQueryExecutor {
                                 qryInfo
                                 );
 
-                            resIter = new H2FieldsIterator(res, mvccTracker, detachedConn);
+                            resIter = new H2FieldsIterator(res, mvccTracker, qctx, detachedConn);
 
                             // don't recycle at final block
                             detachedConn = null;
