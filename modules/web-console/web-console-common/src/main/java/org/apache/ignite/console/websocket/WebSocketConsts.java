@@ -17,7 +17,7 @@
 package org.apache.ignite.console.websocket;
 
 /**
- * Contains event bus addresses.
+ * Contains web socket endpoint names.
  */
 public interface WebSocketConsts {
     /** */

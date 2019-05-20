@@ -293,7 +293,7 @@ module.exports = {
 
                     this.executeOnNode(agent, token, demo, credentials, exeParams)
                         .then((data) => {
-                            if (data.finished && !data.zipped)
+                            if (data.finished)
                                 return cb(null, data.result);
 
                             return cb(null, data);

@@ -67,16 +67,7 @@ public class AccountController {
     public ResponseEntity<UserResponse> user(@AuthenticationPrincipal UserDetails user) {
         Account acc = accountsSrv.loadUserByUsername(user.getUsername());
 
-        return ResponseEntity.ok(new UserResponse(
-            acc.getEmail(),
-            acc.getFirstName(),
-            acc.getLastName(),
-            acc.getPhone(),
-            acc.getCompany(),
-            acc.getCountry(),
-            acc.getToken(),
-            acc.getAdmin()
-        ));
+        return ResponseEntity.ok(new UserResponse(acc));
     }
 
     /**
