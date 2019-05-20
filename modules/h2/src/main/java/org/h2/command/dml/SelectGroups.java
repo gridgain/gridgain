@@ -481,7 +481,7 @@ public abstract class SelectGroups {
 
         long size;
 
-        /* TODO: GG-18542: Estimate Aggregate objects size. */
+        /* TODO: GG-18628: Estimate Aggregate objects size. */
         if (row != null && old != null)
             size = (row.length - old.length) * Constants.MEMORY_OBJECT;
         else if (old == null) {
