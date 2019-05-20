@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.query.h2.opt;
 
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
+import org.apache.ignite.internal.processors.query.h2.H2QueryContext;
 import org.apache.ignite.internal.processors.query.h2.QueryMemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.opt.join.DistributedJoinContext;
 import org.apache.ignite.internal.processors.query.h2.twostep.PartitionReservation;
@@ -27,7 +28,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Thread local SQL query context which is intended to be accessible from everywhere.
  */
-public class QueryContext {
+public class QueryContext implements H2QueryContext {
     /** Segment ID. */
     private final int segment;
 

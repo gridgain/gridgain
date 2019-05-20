@@ -7,6 +7,7 @@ package org.h2.expression.aggregate;
 
 import java.util.TreeMap;
 import org.h2.engine.Database;
+import org.h2.engine.Session;
 import org.h2.value.Value;
 import org.h2.value.ValueNull;
 
@@ -37,12 +38,12 @@ class AggregateDataDistinctWithCounts extends AggregateData {
     }
 
     @Override
-    void add(Database database, Value v) {
+    void add(Session ses, Value v) {
         if (ignoreNulls && v == ValueNull.INSTANCE) {
             return;
         }
         if (values == null) {
-            values = new TreeMap<>(database.getCompareMode());
+            values = new TreeMap<>(ses.getDatabase().getCompareMode());
         }
         LongDataCounter a = values.get(v);
         if (a == null) {

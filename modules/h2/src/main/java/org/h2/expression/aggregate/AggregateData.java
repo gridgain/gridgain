@@ -7,6 +7,7 @@ package org.h2.expression.aggregate;
 
 import org.h2.engine.Constants;
 import org.h2.engine.Database;
+import org.h2.engine.Session;
 import org.h2.message.DbException;
 import org.h2.value.Value;
 
@@ -76,10 +77,10 @@ abstract class AggregateData {
     /**
      * Add a value to this aggregate.
      *
-     * @param database the database
+     * @param ses the session
      * @param v the value
      */
-    abstract void add(Database database, Value v);
+    abstract void add(Session ses, Value v);
 
     /**
      * Get the aggregate result.

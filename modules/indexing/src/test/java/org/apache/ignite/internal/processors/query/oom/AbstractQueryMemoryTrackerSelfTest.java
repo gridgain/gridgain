@@ -43,13 +43,13 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     private static final int SMALL_TABLE_SIZE = 1000;
 
     /** Row count. */
-    private static final int BIG_TABLE_SIZE = 10000;
+    static final int BIG_TABLE_SIZE = 10000;
 
     /** Query local results. */
-    protected static final List<H2ManagedLocalResult> localResults = new ArrayList<>();
+    static final List<H2ManagedLocalResult> localResults = new ArrayList<>();
 
     /** Query memory limit. */
-    protected long maxMem;
+    long maxMem;
 
     /** Node client mode flag. */
     private boolean client;
@@ -164,6 +164,8 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     @Test
     public void testLazyQueryWithSortByIndexedCol() {
         execQuery("select * from K ORDER BY K.indexed", true);
+
+        // No local result needed.
         assertEquals(0, localResults.size());
     }
 
@@ -195,15 +197,19 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     /** Check UNION operation with large sub-selects. */
     @Test
     public void testUnionSimple() {
-        maxMem = 2L * 1024 * 1024;
+        maxMem = 4L * 1024 * 1024;
         // None of sub-selects fits to memory.
         execQuery("select * from T as T0, T as T1 where T0.id < 2 " +
             "UNION " +
-            "select * from T as T2, T as T3 where T2.id > 2 AND T2.id < 3", true);
+            "select * from T as T2, T as T3 where T2.id >= 1 AND T2.id < 2", true);
 
         assertEquals(3, localResults.size());
+        System.out.println(localResults.get(0).memoryAllocated() +
+            localResults.get(1).memoryAllocated() +
+            localResults.get(2).memoryAllocated());
+
         assertTrue(maxMem > localResults.get(1).memoryAllocated() + localResults.get(2).memoryAllocated());
-        assertEquals(1000, localResults.get(1).getRowCount());
+        assertEquals(2000, localResults.get(1).getRowCount());
         assertEquals(1000, localResults.get(2).getRowCount());
         assertEquals(2000, localResults.get(0).getRowCount());
     }
@@ -225,15 +231,17 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     /** Check large UNION operation with small enough sub-selects, but large result set. */
     @Test
     public void testUnionOfSmallDataSetsWithLargeResult() {
-        checkQueryExpectOOM("select * from T as T0, T as T1 where T0.id < 2 " +
+        maxMem = 2 * 1024 * 1024;
+
+        checkQueryExpectOOM("select * from T as T0, T as T1 where T0.id < 1 " +
             "UNION " +
-            "select * from T as T2, T as T3 where T2.id > 2 AND T2.id < 4", false);
+            "select * from T as T2, T as T3 where T2.id >= 2 AND T2.id < 3", false);
 
         assertEquals(3, localResults.size());
         assertTrue(maxMem > localResults.get(1).memoryAllocated() + localResults.get(2).memoryAllocated());
-        assertEquals(2000, localResults.get(1).getRowCount());
+        assertEquals(1000, localResults.get(1).getRowCount());
         assertEquals(1000, localResults.get(2).getRowCount());
-        assertTrue(3000 > localResults.get(0).getRowCount());
+        assertTrue(2000 > localResults.get(0).getRowCount());
     }
 
     /** Check simple Joins. */
@@ -242,17 +250,22 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         execQuery("select * from T as T0, T as T1 where T0.id < 2", false);
         execQuery("select * from T as T0, T as T1 where T0.id >= 2 AND T0.id < 4", false);
         execQuery("select * from T as T0, T as T1", true);
+    }
 
-        localResults.clear();
-
+    /** Check simple Joins. */
+    @Test
+    public void testSimpleJoinsHugeResult() {
         // Query with single huge local result.
         checkQueryExpectOOM("select * from T as T0, T as T1", false);
 
         assertEquals(1, localResults.size());
         assertTrue(maxMem < localResults.get(0).memoryAllocated());
 
-        localResults.clear();
+    }
 
+    /** Check simple Joins. */
+    @Test
+    public void testLazyQueryWithJoinAndSort() {
         // Query with huge local result.
         checkQueryExpectOOM("select * from T as T0, T as T1 ORDER BY T1.id", true);
 
@@ -264,51 +277,92 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     @Test
     public void testQueryWithGroupsSmallResult() {
         execQuery("select K.grp, avg(K.id), min(K.id), sum(K.id) from K GROUP BY K.grp", false); // Tiny local result.
-        assertEquals(1, localResults.size());
-        localResults.clear();
 
-        execQuery("select K.indexed, sum(K.id) from K GROUP BY K.indexed", false); // Sorted grouping.
         assertEquals(1, localResults.size());
-        localResults.clear();
-
-        execQuery("select K.grp_indexed, sum(K.id) as s from K GROUP BY K.grp_indexed ORDER BY s", false); // Tiny local result with sort.
-        assertEquals(1, localResults.size());
-        localResults.clear();
+        assertEquals(100, localResults.get(0).getRowCount());
     }
 
-    /** Check lazy query with GROUP BY non-indexed col failure due to large result. */
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-18542")
+    /** Check GROUP BY operation on indexed col. */
+    @Test
+    public void testQueryWithGroupByIndexedCol() {
+        // Sorted grouping. Too many groups causes OOM.
+        checkQueryExpectOOM("select K.indexed, sum(K.id) from K GROUP BY K.indexed", true);
+
+        // Local result is quite small.
+        assertEquals(1, localResults.size());
+        assertTrue(maxMem > localResults.get(0).memoryAllocated());
+        assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
+        //TODO: GG-18840: Add global limit check.
+    }
+
+    /** Check GROUP BY operation on indexed col. */
+    @Test
+    public void testQueryWithGroupThenSort() {
+        // Tiny local result with sorting.
+        execQuery("select K.grp_indexed, sum(K.id) as s from K GROUP BY K.grp_indexed ORDER BY s", false);
+
+        assertEquals(1, localResults.size());
+        assertEquals(100, localResults.get(0).getRowCount());
+    }
+
+    /** Check lazy query with GROUP BY non-indexed col failure due to too many groups. */
     @Test
     public void testQueryWithGroupBy() {
-        // TODO: GG-18542: Fix tests.
-        checkQueryExpectOOM("select K.name from K GROUP BY K.name", true);
+        // Too many groups causes OOM.
+        checkQueryExpectOOM("select K.name, count(K.id), sum(K.grp) from K GROUP BY K.name", true);
+
+        // Local result is quite small.
+        assertEquals(1, localResults.size());
+        assertTrue(maxMem > localResults.get(0).memoryAllocated());
+        assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
+        //TODO: GG-18840: Add global limit check.
     }
 
-    /** Check query with GROUP BY and DISTINCT aggregates. */
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-18542")
+    /** Check query with GROUP BY non-indexed col and with DISTINCT aggregates. */
     @Test
-    public void testQueryWithDistinctAggregates() {
-        // TODO: GG-18542: Fix test.
+    public void testQueryWithGroupByNonIndexedColAndDistinctAggregates() {
         checkQueryExpectOOM("select K.grp, count(DISTINCT k.name) from K GROUP BY K.grp", true);
+
+        // Local result is quite small.
+        assertEquals(1, localResults.size());
+        assertTrue(maxMem > localResults.get(0).memoryAllocated());
+        assertTrue(100 > localResults.get(0).getRowCount());
+    }
+
+    /** Check query with GROUP BY indexed col and with and DISTINCT aggregates. */
+    @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-18628")
+    public void testQueryWithGroupByIndexedColAndDistinctAggregates() {
+        //TODO: GG-18628: Fix exception handling.
         checkQueryExpectOOM("select K.grp_indexed, count(DISTINCT k.name) from K GROUP BY K.grp_indexed", true);
+
+        assertEquals(1, localResults.size());
+        assertTrue(maxMem < localResults.get(0).memoryAllocated());
+        assertTrue(100 > localResults.get(0).getRowCount());
     }
 
     /** Check lazy query with GROUP BY indexed col (small result), then sort. */
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-18542")
     @Test
     public void testQueryWithGroupByAndSort() {
-        // TODO: GG-18542: Fix test.
-        checkQueryExpectOOM("select K.indexed, sum(K.grp) as a, count(K.grp)from K " +
+        maxMem = 512 * 1024;
+
+        checkQueryExpectOOM("select K.indexed, sum(K.grp) as a, avg(K.grp), count(K.id) from K " +
             "GROUP BY K.indexed ORDER BY a DESC", true);
 
         assertEquals(1, localResults.size());
         assertTrue(maxMem < localResults.get(0).memoryAllocated());
+        assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
     }
 
     /** Check query with DISTINCT and GROUP BY indexed col (small result). */
     @Test
     public void testQueryWithDistinctAndGroupBy() {
         checkQueryExpectOOM("select DISTINCT K.id from K GROUP BY K.id", true);
+
+        // Local result is quite small.
+        assertEquals(1, localResults.size());
+        assertTrue(maxMem < localResults.get(0).memoryAllocated());
+        assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
     }
 
     /** Check simple query with DISTINCT constraint. */
@@ -319,9 +373,6 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
         // Distinct on non-indexed column with small cardinality.
         execQuery("select DISTINCT K.grp from K", false);
-
-        // Distinct on indexed column with unique values.
-        checkQueryExpectOOM("select DISTINCT K.id from K", true);
     }
 
     /**

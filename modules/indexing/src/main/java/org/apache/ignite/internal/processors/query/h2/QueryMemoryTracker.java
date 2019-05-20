@@ -24,7 +24,7 @@ import org.apache.ignite.internal.mem.IgniteOutOfMemoryException;
  *
  * Track query memory usage and throws an exception if query tries to allocate memory over limit.
  */
-public class QueryMemoryTracker {
+public class QueryMemoryTracker extends H2MemoryTracker {
     //TODO: GG-18629: Move defaults to memory quotas configuration.
     /** Default query memory limit. */
     public static final long DFLT_QRY_MEMORY_LIMIT = 100L * 1024 * 1024;

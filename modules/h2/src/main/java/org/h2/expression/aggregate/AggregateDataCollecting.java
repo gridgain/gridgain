@@ -11,8 +11,11 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.TreeSet;
 
+import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.h2.api.ErrorCode;
+import org.h2.engine.Constants;
 import org.h2.engine.Database;
+import org.h2.engine.Session;
 import org.h2.message.DbException;
 import org.h2.value.Value;
 import org.h2.value.ValueNull;
@@ -45,15 +48,23 @@ class AggregateDataCollecting extends AggregateData implements Iterable<Value> {
     }
 
     @Override
-    void add(Database database, Value v) {
+    void add(Session ses, Value v) {
         if (v == ValueNull.INSTANCE) {
             return;
         }
         Collection<Value> c = values;
+        H2MemoryTracker memTracker;
         if (c == null) {
-            values = c = distinct ? new TreeSet<>(database.getCompareMode()) : new ArrayList<Value>();
+            values = c = distinct ? new TreeSet<>(ses.getDatabase().getCompareMode()) : new ArrayList<Value>();
         }
-        c.add(v);
+        if (c.add(v) && (memTracker = ses.queryMemoryTracker()) != null) {
+            long size = distinct ? 40 /* TreeMap.Entry */ : Constants.MEMORY_POINTER;
+
+            if (v.track())
+                size += v.getMemory();
+
+            memTracker.allocate(size);
+        }
     }
 
     @Override

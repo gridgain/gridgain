@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.query.oom;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -83,23 +82,59 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
         // OOM on reducer.
         checkQueryExpectOOM("select * from K ORDER BY K.indexed", true);
 
-        // Reduce only
+        // Reduce only.
         assertEquals(1, localResults.size());
+        assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
+    }
+
+    /** {@inheritDoc} */
+    @Test
+    @Override public void testQueryWithGroupByAndSort() {
+        maxMem = 512 * 1024;
+
+        // OOM on reducer.
+        checkQueryExpectOOM("select K.indexed, sum(K.grp) as a, avg(K.grp), count(K.id) from K " +
+            "GROUP BY K.indexed ORDER BY a DESC", true);
+
+        assertEquals(1, localResults.size());
+        assertTrue(maxMem > localResults.get(0).memoryAllocated());
+        assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
+    }
+
+    /** {@inheritDoc} */
+    @Test
+    public void testQueryWithDistinctAndGroupBy() {
+        // OOM on reducer.
+        checkQueryExpectOOM("select DISTINCT K.id from K GROUP BY K.id", true);
+
+        // Local result is quite small.
+        assertEquals(1, localResults.size());
+        assertTrue(maxMem > localResults.get(0).memoryAllocated());
         assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
     }
 
     /** Check GROUP BY operation on large data set with small result set. */
     @Test
-    @Override public void testQueryWithGroupsSmallResult() {
+    public void testQueryWithGroupsSmallResult() {
         execQuery("select K.grp, avg(K.id), min(K.id), sum(K.id) from K GROUP BY K.grp", false); // Tiny local result.
-        assertEquals(2, localResults.size());
-        localResults.clear();
 
-        execQuery("select K.indexed, sum(K.id) from K GROUP BY K.indexed", false); // Sorted grouping.
         assertEquals(2, localResults.size());
-        localResults.clear();
+        // Map
+        assertEquals(100, localResults.get(0).getRowCount());
+        // Reduce
+        assertEquals(100, localResults.get(1).getRowCount());
+    }
 
-        execQuery("select K.grp_indexed, sum(K.id) as s from K GROUP BY K.grp_indexed ORDER BY s", false); // Tiny local result with sort.
+    /** Check GROUP BY operation on indexed col. */
+    @Test
+    public void testQueryWithGroupThenSort() {
+        // Tiny local result with sorting.
+        execQuery("select K.grp_indexed, sum(K.id) as s from K GROUP BY K.grp_indexed ORDER BY s", false);
+
         assertEquals(2, localResults.size());
+        // Map
+        assertEquals(100, localResults.get(0).getRowCount());
+        // Reduce
+        assertEquals(100, localResults.get(1).getRowCount());
     }
 }

@@ -28,7 +28,7 @@ import org.h2.value.ValueRow;
  */
 public class H2ManagedLocalResult extends H2BaseLocalResult {
     /** Query memory tracker. */
-    private QueryMemoryTracker mem;
+    private H2MemoryTracker mem;
 
     /** Allocated memory. */
     private long allocMem;
@@ -41,7 +41,7 @@ public class H2ManagedLocalResult extends H2BaseLocalResult {
      * @param expressions the expression array
      * @param visibleColCnt the number of visible columns
      */
-    public H2ManagedLocalResult(Session ses, QueryMemoryTracker memTracker, Expression[] expressions,
+    public H2ManagedLocalResult(Session ses, H2MemoryTracker memTracker, Expression[] expressions,
         int visibleColCnt) {
         super(ses, expressions, visibleColCnt);
 
@@ -72,6 +72,8 @@ public class H2ManagedLocalResult extends H2BaseLocalResult {
             if (row[i].track())
                 rowSize += row[i].getMemory();
         }
+
+        assert rowSize > 0;
 
         allocMem += rowSize;
 
