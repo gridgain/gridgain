@@ -74,9 +74,12 @@ public class H2FieldsIterator extends H2ResultSetIterator<List<?>> {
             super.onClose();
         }
         finally {
-            detachedConn.recycle();
+            QueryMemoryTracker memTracker = qctx.queryMemoryManager();
 
-            qctx.clearContext(false);
+            if (memTracker != null)
+                memTracker.free(memTracker.getAllocated());
+
+            detachedConn.recycle();
 
             if (mvccTracker != null)
                 mvccTracker.onDone();

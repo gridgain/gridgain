@@ -63,7 +63,7 @@ public class QueryMemoryTracker {
      * @param size Allocated size in bytes.
      * @throws IgniteOutOfMemoryException if memory limit has been exceeded.
      */
-    public synchronized void allocate(long size) {
+    public void allocate(long size) {
         assert size >= 0;
 
         if (ALLOC_UPD.addAndGet(this, size) >= maxMem)
@@ -75,7 +75,7 @@ public class QueryMemoryTracker {
      *
      * @param size Free size in bytes.
      */
-    public synchronized void free(long size) {
+    public void free(long size) {
         assert size >= 0;
 
         long allocated = ALLOC_UPD.addAndGet(this, -size);
