@@ -445,8 +445,8 @@ public class H2Utils {
         Object oldCtx = s.getQueryContext();
 
         assert  oldCtx == null || oldCtx == qctx
-            || ((QueryContext)oldCtx).queryMemoryManager() != null
-            || ((QueryContext)oldCtx).queryMemoryManager().getAllocated() != 0: s;
+            || ((QueryContext)oldCtx).queryMemoryManager() == null
+            || ((QueryContext)oldCtx).queryMemoryManager().getAllocated() == 0L: oldCtx;
 
         s.setQueryContext(qctx);
     }
