@@ -101,9 +101,6 @@ public class QueryContext {
 
         if (!nodeStop && reservations != null)
             reservations.release();
-
-        if (memTracker != null)
-            memTracker.free(memTracker.getAllocated());
     }
 
     /**

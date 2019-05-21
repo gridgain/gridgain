@@ -50,6 +50,8 @@ public class H2ManagedLocalResult extends H2BaseLocalResult {
 
     /** {@inheritDoc} */
     @Override protected void onUpdate(ValueRow distinctRowKey, Value[] oldRow, Value[] row) {
+        assert !isClosed();
+
         if (oldRow != null) {
             long rowSize = Constants.MEMORY_ARRAY + oldRow.length * Constants.MEMORY_POINTER;
 
@@ -81,8 +83,11 @@ public class H2ManagedLocalResult extends H2BaseLocalResult {
 
     /** {@inheritDoc} */
     @Override public void close() {
+        boolean closed = isClosed();
+
         super.close();
 
-        mem.free(allocMem);
+        if (!closed)
+            mem.free(allocMem);
     }
 }

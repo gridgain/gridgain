@@ -39,6 +39,9 @@ public class QueryMemoryTracker {
     /** Memory allocated. */
     private volatile long allocated;
 
+    /** Closed flag. */
+    private volatile boolean closed;
+
     /**
      * Constructor.
      *
@@ -49,10 +52,7 @@ public class QueryMemoryTracker {
     public QueryMemoryTracker(long maxMem) {
         assert maxMem >= 0 && maxMem != Long.MAX_VALUE;
 
-        if (maxMem > 0)
-            this.maxMem = maxMem;
-        else
-            this.maxMem = DFLT_QRY_MEMORY_LIMIT;
+        this.maxMem = maxMem > 0 ? maxMem : DFLT_QRY_MEMORY_LIMIT;
     }
 
     /**
@@ -61,7 +61,9 @@ public class QueryMemoryTracker {
      * @param size Allocated size in bytes.
      * @throws IgniteOutOfMemoryException if memory limit has been exceeded.
      */
-    public void allocate(long size) {
+    public synchronized void allocate(long size) {
+        assert size >= 0;
+
         if (ALLOC_UPD.addAndGet(this, size) >= maxMem)
             throw new IgniteOutOfMemoryException("SQL query out of memory");
     }
@@ -71,10 +73,12 @@ public class QueryMemoryTracker {
      *
      * @param size Free size in bytes.
      */
-    public void free(long size) {
-        long allocated = ALLOC_UPD.getAndAdd(this, -size);
+    public synchronized void free(long size) {
+        assert size >= 0;
 
-        assert allocated >= size : "Invalid free memory size [allocated=" + allocated + ", free=" + size + ']';
+        long allocated = ALLOC_UPD.addAndGet(this, -size);
+
+        assert allocated >= 0 : "Invalid allocated memory size:" + allocated;
     }
 
     /**

@@ -369,7 +369,7 @@ public class H2BaseLocalResult implements LocalResult {
 
     /** {@inheritDoc} */
     @Override public boolean needToClose() {
-        return false;
+        return !closed;
     }
 
     /** {@inheritDoc} */

@@ -658,14 +658,8 @@ public class GridReduceQueryExecutor {
                         qryCtxRegistry.setThreadLocal(qctx);
 
                         try {
-                            if (qry.explain()) {
-                                try {
-                                    return explainPlan(r.connection(), qry, params);
-                                }
-                                finally {
-                                    qctx.clearContext(false);
-                                }
-                            }
+                            if (qry.explain())
+                                return explainPlan(r.connection(), qry, params);
 
                             GridCacheSqlQuery rdc = qry.reduceQuery();
 
@@ -1050,6 +1044,9 @@ public class GridReduceQueryExecutor {
         }
         catch (SQLException e) {
             throw new IgniteCheckedException(e);
+        }
+        finally {
+            U.closeQuiet(rs);
         }
     }
 
