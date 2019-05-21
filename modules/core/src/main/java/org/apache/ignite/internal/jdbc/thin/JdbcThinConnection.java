@@ -807,6 +807,23 @@ public class JdbcThinConnection implements Connection {
      * @param req Request.
      * @throws SQLException On any error.
      */
+    void sendQueryCancelRequest(JdbcQueryCancelRequest req) throws SQLException {
+        ensureConnected();
+
+        try {
+            cliIo.sendCancelRequest(req);
+        }
+        catch (Exception e) {
+            throw new SQLException("Failed to communicate with Ignite cluster.", SqlStateCode.CONNECTION_FAILURE, e);
+        }
+    }
+
+    /**
+     * Send request for execution via {@link #cliIo}. Response is waited at the separate thread
+     *     (see {@link StreamState#asyncRespReaderThread}).
+     * @param req Request.
+     * @throws SQLException On any error.
+     */
     private void sendRequestNotWaitResponse(JdbcOrderedBatchExecuteRequest req) throws SQLException {
         ensureConnected();
 
