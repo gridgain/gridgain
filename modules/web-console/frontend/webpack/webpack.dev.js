@@ -28,6 +28,23 @@ const webpackDevServerPort = process.env.PORT || 9000;
 
 console.log(`Backend url: ${backendUrl}`);
 
+const commonSassLoaders = [
+    {
+        loader: 'css-loader',
+        options: {
+            sourceMap: true
+        }
+    },
+    {
+        loader: 'sass-loader',
+        options: {
+            sourceMap: true,
+            includePaths: [ path.join(__dirname, '../') ]
+        }
+    }
+];
+const sassUrls = /\.url\.scss$/;
+
 module.exports = merge(commonCfg, {
     mode: 'development',
     devtool: 'source-map',
@@ -37,46 +54,30 @@ module.exports = merge(commonCfg, {
         rules: [
             {
                 test: /\.css$/,
+                exclude: /\.url/,
                 use: ['style-loader', 'css-loader']
             },
             {
-                test: /\.scss$/,
+                test: sassUrls,
                 use: [
-                    MiniCssExtractPlugin.loader, // style-loader does not work with styles in IgniteModules
                     {
-                        loader: 'css-loader',
+                        loader: 'file-loader',
                         options: {
-                            sourceMap: true
+                            // This solves leading "/" in JIT Angular styles compiler
+                            // https://github.com/angular/angular/issues/4974
+                            publicPath: (url) => url
                         }
                     },
-                    {
-                        loader: 'sass-loader',
-                        options: {
-                            sourceMap: true,
-                            includePaths: [ path.join(__dirname, '../') ]
-                        }
-                    }
+                    'extract-loader',
+                    ...commonSassLoaders
                 ]
             },
             {
-                test: /\.url\.scss$/,
+                test: /\.scss$/,
+                exclude: sassUrls,
                 use: [
-                    'raw-loader',
-                    // 'exports-loader?module.exports.toString()',
-                    // MiniCssExtractPlugin.loader,
-                    {
-                        loader: 'css-loader',
-                        options: {
-                            sourceMap: true
-                        }
-                    },
-                    {
-                        loader: 'sass-loader',
-                        options: {
-                            sourceMap: true,
-                            includePaths: [ path.join(__dirname, '../') ]
-                        }
-                    }
+                    MiniCssExtractPlugin.loader, // style-loader does not work with styles in IgniteModules
+                    ...commonSassLoaders
                 ]
             }
         ]
