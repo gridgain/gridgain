@@ -44,9 +44,6 @@ public class QueryMemoryTracker {
     /** Memory allocated. */
     private volatile long allocated;
 
-    /** Closed flag. */
-    private volatile boolean closed;
-
     /**
      * Constructor.
      *
