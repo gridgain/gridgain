@@ -48,6 +48,7 @@ import org.springframework.session.config.annotation.web.http.EnableSpringHttpSe
 
 import static org.apache.ignite.console.dto.Account.ROLE_ADMIN;
 import static org.apache.ignite.console.dto.Account.ROLE_USER;
+import static org.apache.ignite.console.websocket.WebSocketConsts.AGENTS_PATH;
 import static org.apache.ignite.console.websocket.WebSocketConsts.BROWSERS_PATH;
 
 /**
@@ -77,6 +78,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     /** Public routes. */
     private static final String[] PUBLIC_ROUTES = new String[] {
+        AGENTS_PATH,
         SIGN_IN_ROUTE, SIGN_UP_ROUTE,
         FORGOT_PASSWORD_ROUTE, RESET_PASSWORD_ROUTE, ACTIVATION_RESEND
     };

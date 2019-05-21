@@ -262,7 +262,7 @@ public class ClusterHandler {
                 clusterDisconnect();
             }
             catch (Throwable e) {
-                log.error("WatchTask failed", e);
+                LT.error(log, e, "WatchTask failed");
 
                 clusterDisconnect();
             }
