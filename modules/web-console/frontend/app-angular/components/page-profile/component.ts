@@ -19,7 +19,6 @@ import {merge} from 'rxjs';
 import {tap, filter} from 'rxjs/operators';
 import {Component, Inject, OnInit, OnDestroy} from '@angular/core';
 import {FormGroup, FormControl, Validators, FormBuilder} from '@angular/forms';
-import templateUrl from 'file-loader!./template.html';
 import {default as CountriesFactory, Country} from 'app/services/Countries.service';
 import {default as UserFactory, User} from 'app/modules/user/User.service';
 import {Confirm} from 'app/services/Confirm.service';
@@ -37,8 +36,8 @@ const disableFormGroup = (fg: FormGroup) => {fg.disable(); return fg;};
 
 @Component({
     selector: 'page-profile',
-    templateUrl,
-    styles: [require('./style.url.scss')],
+    templateUrl: './template.html',
+    styleUrls: ['./style.url.scss'],
     viewProviders: [
         {
             provide: FORM_FIELD_OPTIONS,
