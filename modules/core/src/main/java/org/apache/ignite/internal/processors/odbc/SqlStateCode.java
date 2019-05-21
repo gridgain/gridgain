@@ -71,4 +71,7 @@ public final class SqlStateCode {
 
     /** Internal error. */
     public final static String INTERNAL_ERROR = "50000";  // Generic value for custom "50" class.
+
+    /** Query canceled. */
+    public static final String QUERY_CANCELLED = "57014";
 }

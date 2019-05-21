@@ -48,6 +48,7 @@ import org.apache.ignite.internal.processors.odbc.SqlStateCode;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcOrderedBatchExecuteRequest;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcOrderedBatchExecuteResult;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcQuery;
+import org.apache.ignite.internal.processors.odbc.jdbc.JdbcQueryCancelRequest;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcQueryExecuteRequest;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcRequest;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcResponse;
@@ -81,7 +82,7 @@ public class JdbcThinConnection implements Connection {
     private String schema;
 
     /** Closed flag. */
-    private boolean closed;
+    private volatile boolean closed;
 
     /** Current transaction isolation. */
     private int txIsolation;
@@ -173,9 +174,10 @@ public class JdbcThinConnection implements Connection {
     /**
      * @param sql Statement.
      * @param cmd Parsed form of {@code sql}.
+     * @param stmt Jdbc thin statement.
      * @throws SQLException if failed.
      */
-    void executeNative(String sql, SqlCommand cmd) throws SQLException {
+    void executeNative(String sql, SqlCommand cmd, JdbcThinStatement stmt) throws SQLException {
         if (cmd instanceof SqlSetStreamingCommand) {
             SqlSetStreamingCommand cmd0 = (SqlSetStreamingCommand)cmd;
 
@@ -195,10 +197,12 @@ public class JdbcThinConnection implements Connection {
                         + cliIo.igniteVersion() + ']', SqlStateCode.INTERNAL_ERROR);
                 }
 
-                sendRequest(new JdbcQueryExecuteRequest(JdbcStatementType.ANY_STATEMENT_TYPE,
-                    schema, 1, 1, autoCommit, sql, null));
-
                 streamState = new StreamState((SqlSetStreamingCommand)cmd);
+
+                sendRequest(new JdbcQueryExecuteRequest(JdbcStatementType.ANY_STATEMENT_TYPE,
+                    schema, 1, 1, autoCommit, sql, null), stmt);
+
+                streamState.start();
             }
         }
         else
@@ -740,10 +744,22 @@ public class JdbcThinConnection implements Connection {
      */
     @SuppressWarnings("unchecked")
     <R extends JdbcResult> R sendRequest(JdbcRequest req) throws SQLException {
+        return sendRequest(req, null);
+    }
+
+    /**
+     * Send request for execution via {@link #cliIo}.
+     * @param req Request.
+     * @param stmt Jdbc thin statement.
+     * @return Server response.
+     * @throws SQLException On any error.
+     */
+    @SuppressWarnings("unchecked")
+    <R extends JdbcResult> R sendRequest(JdbcRequest req, JdbcThinStatement stmt) throws SQLException {
         ensureConnected();
 
         try {
-            JdbcResponse res = cliIo.sendRequest(req);
+            JdbcResponse res = cliIo.sendRequest(req, stmt);
 
             if (res.status() != ClientListenerResponse.STATUS_SUCCESS)
                 throw new SQLException(res.error(), IgniteQueryErrorCode.codeToSqlState(res.status()), res.status());
@@ -756,6 +772,23 @@ public class JdbcThinConnection implements Connection {
         catch (Exception e) {
             onDisconnect();
 
+            throw new SQLException("Failed to communicate with Ignite cluster.", SqlStateCode.CONNECTION_FAILURE, e);
+        }
+    }
+
+    /**
+     * Send request for execution via {@link #cliIo}. Response is waited at the separate thread
+     *     (see {@link StreamState#asyncRespReaderThread}).
+     * @param req Request.
+     * @throws SQLException On any error.
+     */
+    void sendQueryCancelRequest(JdbcQueryCancelRequest req) throws SQLException {
+        ensureConnected();
+
+        try {
+            cliIo.sendCancelRequest(req);
+        }
+        catch (Exception e) {
             throw new SQLException("Failed to communicate with Ignite cluster.", SqlStateCode.CONNECTION_FAILURE, e);
         }
     }
@@ -878,7 +911,12 @@ public class JdbcThinConnection implements Connection {
             streamBatchSize = cmd.batchSize();
 
             asyncRespReaderThread = new Thread(this::readResponses);
+        }
 
+        /**
+         * Start reader.
+         */
+        void start() {
             asyncRespReaderThread.start();
         }
 
@@ -1031,5 +1069,12 @@ public class JdbcThinConnection implements Connection {
                 err = e;
             }
         }
+    }
+
+    /**
+     * @return True if query cancellation supported, false otherwise.
+     */
+    boolean isQueryCancellationSupported() {
+        return cliIo.isQueryCancellationSupported();
     }
 }

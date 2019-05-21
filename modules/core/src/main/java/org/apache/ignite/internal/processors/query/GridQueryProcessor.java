@@ -2154,6 +2154,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      * @param keepBinary Keep binary flag.
      * @param failOnMultipleStmts If {@code true} the method must throws exception when query contains
      *      more then one SQL statement.
+     * @param cancel Hook for query cancellation.
      * @return Cursor.
      */
     public List<FieldsQueryCursor<List<?>>> querySqlFields(
@@ -2218,14 +2219,16 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                     @Override public List<FieldsQueryCursor<List<?>>> applyx() {
                         GridQueryCancel cancel0 = cancel != null ? cancel : new GridQueryCancel();
 
-                        List<FieldsQueryCursor<List<?>>> res = idx.querySqlFields(
-                            schemaName,
-                            qry,
-                            cliCtx,
-                            keepBinary,
-                            failOnMultipleStmts,
-                            null,
-                            cancel != null ? cancel : new GridQueryCancel());
+                        List<FieldsQueryCursor<List<?>>> res =
+                            idx.querySqlFields(
+                                schemaName,
+                                qry,
+                                cliCtx,
+                                keepBinary,
+                                failOnMultipleStmts,
+                                null,
+                                cancel0
+                            );
 
                         if (cctx != null)
                             sendQueryExecutedEvent(qry.getSql(), qry.getArgs(), cctx);
