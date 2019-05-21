@@ -16,6 +16,11 @@
 
 package org.apache.ignite.internal;
 
+import java.io.UncheckedIOException;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import javax.cache.CacheException;
 import javax.management.JMException;
 import java.io.Externalizable;
@@ -749,15 +754,74 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     }
 
     /** */
-    private void ackClassPathElement(File clsPathElement, StringBuilder clsPathContent) {
-        if (clsPathElement.isDirectory()) {
-            for (String listElement : clsPathElement.list())
-                ackClassPathElement(new File(clsPathElement, listElement), clsPathContent);
+    private void ackClassPathElementRecursive(File clsPathEntry, StringBuilder clsPathContent) {
+        if (clsPathEntry.isDirectory()) {
+            String[] list = clsPathEntry.list();
+
+            if (list != null) {
+                for (String listElement : list)
+                    ackClassPathElementRecursive(new File(clsPathEntry, listElement), clsPathContent);
+            }
         }
-        else
-            clsPathContent
-                .append(clsPathElement.getAbsolutePath())
-                .append(";");
+        else {
+            String path = clsPathEntry.getAbsolutePath();
+
+            if (path.endsWith(".class"))
+                clsPathContent.append(path).append(";");
+        }
+    }
+
+    /** */
+    private void ackClassPathEntry(String clsPathEntry, StringBuilder clsPathContent) {
+        File clsPathElementFile = new File(clsPathEntry);
+
+        if (clsPathElementFile.isDirectory()) {
+            String[] list = clsPathElementFile.list();
+
+            if (list != null) {
+                for (String listElement : list) {
+                    File listElementFile = new File(listElement);
+
+                    if (listElementFile.isDirectory())
+                        ackClassPathElementRecursive(listElementFile, clsPathContent);
+                    else
+                        clsPathContent.append(listElementFile.getAbsolutePath()).append(";");
+                }
+            }
+        }
+        else {
+            String extension = clsPathEntry.length() >= 4
+                ? clsPathEntry.substring(clsPathEntry.length() - 4).toLowerCase()
+                : null;
+
+            if (".jar".equals(extension) || ".zip".equals(extension))
+                clsPathContent.append(clsPathEntry).append(";");
+        }
+    }
+
+    /** */
+    private void ackClassPathWildCard(String clsPathEntry, StringBuilder clsPathContent) {
+        int lastSeparatorIdx = clsPathEntry.lastIndexOf(File.separator);
+
+        String fileMask =
+            (clsPathEntry.length() == lastSeparatorIdx) ? "*.jar" : clsPathEntry.substring(lastSeparatorIdx + 1);
+
+        Path path = Paths.get(clsPathEntry.substring(0, lastSeparatorIdx));
+
+        try {
+            DirectoryStream<Path> files =
+                Files.newDirectoryStream(path, fileMask);
+
+            for (Path f : files) {
+                String s = f.toString();
+
+                if (s.toLowerCase().endsWith(".jar"))
+                    clsPathContent.append(f.toString()).append(";");
+            }
+        }
+        catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     /**
@@ -765,7 +829,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
      */
     private void ackClassPathContent() {
         assert log != null;
-
+        
         boolean enabled = IgniteSystemProperties.getBoolean(IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP, true);
 
         if (enabled) {
@@ -775,8 +839,17 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
             StringBuilder clsPathContent = new StringBuilder("List of files containing in classpath: ");
 
-            for (String classPathElement : clsPathElements)
-                ackClassPathElement(new File(classPathElement), clsPathContent);
+            for (String clsPathEntry : clsPathElements) {
+                try {
+                    if (clsPathEntry.contains("*"))
+                        ackClassPathWildCard(clsPathEntry, clsPathContent);
+                    else
+                        ackClassPathEntry(clsPathEntry, clsPathContent);
+                }
+                catch (Exception e) {
+                    U.warn(log, String.format("Could not log class path entry '%s': %s", clsPathEntry, e.getMessage()));
+                }
+            }
 
             U.log(log, clsPathContent.toString());
         }

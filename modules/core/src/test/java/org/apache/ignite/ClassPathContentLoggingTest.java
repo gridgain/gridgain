@@ -15,6 +15,10 @@
  */
 package org.apache.ignite;
 
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
@@ -30,6 +34,12 @@ public class ClassPathContentLoggingTest extends GridCommonAbstractTest {
     /** */
     private final ListeningTestLogger listeningLog = new ListeningTestLogger(false, log);
 
+    /** */
+    private String javaClassPath;
+
+    /** */
+    private static String javaHome = System.getenv("JAVA_HOME");
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
@@ -41,6 +51,25 @@ public class ClassPathContentLoggingTest extends GridCommonAbstractTest {
         super.beforeTestsStarted();
 
         System.setProperty(IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP, "true");
+
+        javaClassPath = System.getProperty("java.class.path", ".");
+
+        assertNotNull(javaHome);
+
+        StringBuilder jarPath = new StringBuilder(javaHome)
+            .append(javaHome.endsWith(File.separator) ? "" : File.separator)
+            .append("lib")
+            .append(File.separator)
+            .append("*");
+
+        System.setProperty("java.class.path", javaClassPath + ";" + jarPath.toString());
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTestsStopped() throws Exception {
+        System.setProperty("java.class.path", javaClassPath);
+
+        super.afterTestsStopped();
     }
 
     /**
@@ -54,10 +83,34 @@ public class ClassPathContentLoggingTest extends GridCommonAbstractTest {
             .matches("List of files containing in classpath")
             .build();
 
+        LogListener errLsnr = LogListener
+            .matches("Could not log class path entry")
+            .build();
+
+        LogListener.Builder jarLsnrBuilder = LogListener.builder();
+
+        String jarPath = new StringBuilder(javaHome)
+            .append(javaHome.endsWith(File.separator) ? "" : File.separator)
+            .append("lib")
+            .append(File.separator)
+            .toString();
+
+        Iterable<Path> jars = Files.newDirectoryStream(Paths.get(jarPath), "*.jar");
+
+        for (Path jar : jars)
+            jarLsnrBuilder.andMatches(jar.getFileName().toString());
+
+        LogListener jarLsnr = jarLsnrBuilder.build();
+
         listeningLog.registerListener(lsnr);
+        listeningLog.registerListener(errLsnr);
+        listeningLog.registerListener(jarLsnr);
 
         startGrid(0);
 
         assertTrue(lsnr.check());
+        assertTrue(jarLsnr.check());
+
+        assertFalse(errLsnr.check());
     }
 }
