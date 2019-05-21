@@ -1184,6 +1184,14 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_H2_LOCAL_RESULT_FACTORY = "IGNITE_H2_LOCAL_RESULT_FACTORY";
 
     /**
+     * Defines default memory limit for sql query.
+     *
+     * Default: MaxHeapSize/AvailableCPUs.
+     */
+    // TODO: GG-18629: Move to memory quotas configuration.
+    public static final String IGNITE_SQL_QUERY_MEMORY_LIMIT = "IGNITE_SQL_QUERY_MEMORY_LIMIT";
+
+    /**
      * Enforces singleton.
      */
     private IgniteSystemProperties() {
