@@ -23,45 +23,33 @@ import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
- * JDBC query fetch request.
+ * JDBC query cancel request.
  */
-public class JdbcQueryFetchRequest extends JdbcRequest {
-    /** Cursor ID. */
-    private long cursorId;
+public class JdbcQueryCancelRequest extends JdbcRequest {
 
-    /** Fetch size. */
-    private int pageSize;
+    /** Id of a request to be cancelled. */
+    private long reqIdToCancel;
 
     /**
-     * Constructor.
      */
-    JdbcQueryFetchRequest() {
-        super(QRY_FETCH);
+    public JdbcQueryCancelRequest() {
+        super(QRY_CANCEL);
     }
 
     /**
-     * @param cursorId Cursor ID.
-     * @param pageSize Fetch size.
+     * @param reqIdToCancel Id of a request to be cancelled.
      */
-    public JdbcQueryFetchRequest(long cursorId, int pageSize) {
-        super(QRY_FETCH);
+    public JdbcQueryCancelRequest(long reqIdToCancel) {
+        super(QRY_CANCEL);
 
-        this.cursorId = cursorId;
-        this.pageSize = pageSize;
+        this.reqIdToCancel = reqIdToCancel;
     }
 
     /**
-     * @return Cursor ID.
+     * @return Id of a request to be cancelled.
      */
-    public long cursorId() {
-        return cursorId;
-    }
-
-    /**
-     * @return Fetch page size.
-     */
-    public int pageSize() {
-        return pageSize;
+    public long requestIdToBeCancelled() {
+        return reqIdToCancel;
     }
 
     /** {@inheritDoc} */
@@ -69,8 +57,7 @@ public class JdbcQueryFetchRequest extends JdbcRequest {
         ClientListenerProtocolVersion ver) throws BinaryObjectException {
         super.writeBinary(writer, ver);
 
-        writer.writeLong(cursorId);
-        writer.writeInt(pageSize);
+        writer.writeLong(reqIdToCancel);
     }
 
     /** {@inheritDoc} */
@@ -78,12 +65,11 @@ public class JdbcQueryFetchRequest extends JdbcRequest {
         ClientListenerProtocolVersion ver) throws BinaryObjectException {
         super.readBinary(reader, ver);
 
-        cursorId = reader.readLong();
-        pageSize = reader.readInt();
+        reqIdToCancel = reader.readLong();
     }
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(JdbcQueryFetchRequest.class, this);
+        return S.toString(JdbcQueryCancelRequest.class, this);
     }
 }
