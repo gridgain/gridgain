@@ -3595,7 +3595,7 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
                     }
                 }
 
-                if (commWorker != null)
+                if (commWorker != null && commWorker.runner() == Thread.currentThread())
                     commWorker.updateHeartbeat();
             }
 
