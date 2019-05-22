@@ -50,7 +50,7 @@ public class ActivitiesController {
     /**
      * @param acc Account.
      */
-    @ApiOperation(value = "Save user's notebook.")
+    @ApiOperation(value = "Save user's activity.")
     @PostMapping(path = "/page", consumes = APPLICATION_JSON_VALUE)
     public ResponseEntity<Void> save(@AuthenticationPrincipal Account acc, @RequestBody ActivityRequest req) {
         activitiesSrv.save(acc.getId(), req);

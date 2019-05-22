@@ -16,6 +16,9 @@
 
 package org.apache.ignite.console.repositories;
 
+import java.time.LocalDate;
+import java.util.Collection;
+import java.util.TreeSet;
 import java.util.UUID;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.console.db.OneToManyIndex;
@@ -25,6 +28,8 @@ import org.apache.ignite.console.tx.TransactionManager;
 import org.apache.ignite.console.web.model.ActivityRequest;
 import org.apache.ignite.transactions.Transaction;
 import org.springframework.stereotype.Repository;
+
+import static java.time.ZoneOffset.UTC;
 
 /**
  * Repository to work with activities.
@@ -53,18 +58,41 @@ public class ActivitiesRepository {
     }
 
     /**
-     * Save notebook.
+     * Save activity.
      *
      * @param accId Account ID.
      * @param req Activity update request.
      */
     public void save(UUID accId, ActivityRequest req) {
         try (Transaction tx = txMgr.txStart()) {
-//            activitiesIdx.validateSave(accId, notebook.getId(), activitiesTbl);
-//
-//            activitiesTbl.save(notebook);
-//
-//            activitiesIdx.add(accId, notebook.getId());
+            TreeSet<UUID> ids = activitiesIdx.load(accId);
+
+            Collection<Activity> activities = activitiesTbl.loadAll(ids);
+
+            // Activity period is the current year and month.
+            long date = LocalDate.now().atStartOfDay(UTC).withDayOfMonth(1).toInstant().toEpochMilli();
+
+            Activity activity = activities
+                .stream()
+                .filter(item ->
+                    item.getDate() == date &&
+                    item.getGroup().equals(req.getGroup()) &&
+                    item.getAction().equals(req.getAction())
+                )
+                .findFirst()
+                .orElse(new Activity(
+                    UUID.randomUUID(),
+                    accId,
+                    date,
+                    req.getGroup(),
+                    req.getAction(),
+                    0));
+
+            activity.increment();
+
+            activitiesTbl.save(activity);
+
+            activitiesIdx.add(accId, activity.getId());
 
             tx.commit();
         }
