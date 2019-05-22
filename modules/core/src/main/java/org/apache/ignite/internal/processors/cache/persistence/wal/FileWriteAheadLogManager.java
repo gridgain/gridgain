@@ -141,6 +141,7 @@ import static org.apache.ignite.events.EventType.EVT_WAL_SEGMENT_COMPACTED;
 import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
 import static org.apache.ignite.failure.FailureType.SYSTEM_WORKER_TERMINATION;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.TMP_SUFFIX;
+import static org.apache.ignite.internal.processors.cache.persistence.wal.FileDescriptor.fileName;
 import static org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordSerializerFactory.LATEST_SERIALIZER_VERSION;
 import static org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordV1Serializer.HEADER_RECORD_SIZE;
 import static org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordV1Serializer.readPosition;
@@ -2776,9 +2777,10 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
             boolean readArchive = canReadArchiveOrReserveWork(curWalSegmIdx); //lock during creation handle.
 
+            FileDescriptor fd = null;
             ReadFileHandle nextHandle;
             try {
-                FileDescriptor fd = segmentRouter.findSegment(curWalSegmIdx);
+                fd = segmentRouter.findSegment(curWalSegmIdx);
 
                 if (log.isDebugEnabled())
                     log.debug("Reading next file [absIdx=" + curWalSegmIdx + ", file=" + fd.file.getAbsolutePath() + ']');
@@ -2788,8 +2790,29 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             catch (FileNotFoundException e) {
                 if (readArchive)
                     throw new IgniteCheckedException("Missing WAL segment in the archive", e);
-                else
+                else {
+                    if (curRec == null && curWalSegment == null) {
+                        File workDirFile = new File(walWorkDir, fileName(curWalSegmIdx % dsCfg.getWalSegments()));
+                        File archiveDirFile = new File(walArchiveDir, fileName(curWalSegmIdx));
+
+                        U.warn(
+                            log,
+                            "Next segment file is not found [" +
+                                "curWalSegmIdx=" + curWalSegmIdx
+                                + ", start=" + start
+                                + ", filePath=" + (fd == null ? "<empty>" : fd.file.getAbsolutePath())
+                                + ", walWorkDir=" + walWorkDir
+                                + ", walArchiveDir=" + walArchiveDir
+                                + ", workDirFile=" + workDirFile.getName()
+                                + ", exists=" + workDirFile.exists()
+                                + ", archiveDirFile=" + archiveDirFile.getName()
+                                + ", exists=" + archiveDirFile.exists()
+                                + "]",
+                            e
+                        );
+                    }
                     nextHandle = null;
+                }
             }
 
             if (!readArchive)
