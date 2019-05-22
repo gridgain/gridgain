@@ -26,7 +26,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  *
  * Track query memory usage and throws an exception if query tries to allocate memory over limit.
  */
-public class QueryMemoryTracker {
+public class QueryMemoryTracker implements AutoCloseable {
     //TODO: GG-18629: Move defaults to memory quotas configuration.
     /**
      * Default query memory limit.
@@ -44,6 +44,9 @@ public class QueryMemoryTracker {
 
     /** Memory allocated. */
     private volatile long allocated;
+
+    /** Close flag to prevent tracker reuse. */
+    private volatile boolean closed;
 
     /**
      * Constructor.
@@ -65,7 +68,7 @@ public class QueryMemoryTracker {
      * @throws IgniteOutOfMemoryException if memory limit has been exceeded.
      */
     public void allocate(long size) {
-        assert size >= 0;
+        assert !closed && size >= 0;
 
         if (ALLOC_UPD.addAndGet(this, size) >= maxMem)
             throw new IgniteOutOfMemoryException("SQL query out of memory");
@@ -81,7 +84,7 @@ public class QueryMemoryTracker {
 
         long allocated = ALLOC_UPD.addAndGet(this, -size);
 
-        assert allocated >= 0 : "Invalid allocated memory size:" + allocated;
+        assert !closed && allocated >=0 || allocated == 0 : "Invalid allocated memory size:" + allocated;
     }
 
     /**
@@ -89,6 +92,23 @@ public class QueryMemoryTracker {
      */
     public long getAllocated() {
         return allocated;
+    }
+
+    /**
+     * @return {@code True} if closed, {@code False} otherwise.
+     */
+    public boolean closed() {
+        return closed;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void close() {
+        // It is not expected to be called concurrently.
+        if (!closed) {
+            closed = true;
+
+            free(allocated);
+        }
     }
 
     /** {@inheritDoc} */

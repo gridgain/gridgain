@@ -181,6 +181,9 @@ class MapQueryResults {
 
         if (lazy)
             releaseQueryContext();
+
+        if (qctx.queryMemoryManager() != null)
+            qctx.queryMemoryManager().close();
     }
 
     /**

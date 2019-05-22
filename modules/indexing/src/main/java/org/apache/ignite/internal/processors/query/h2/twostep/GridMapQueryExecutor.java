@@ -844,6 +844,8 @@ public class GridMapQueryExecutor {
             qr.closeResult(qry);
 
             if (qr.isAllClosed()) {
+                qr.close();
+
                 nodeRess.remove(qr.queryRequestId(), segmentId, qr);
 
                 // Clear context, release reservations

@@ -566,6 +566,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                         return new H2FieldsIterator(rs, mvccTracker, qctx, conn);
                     }
                     catch (IgniteCheckedException | RuntimeException | Error e) {
+                        if (qctx.queryMemoryManager() != null)
+                            qctx.queryMemoryManager().close();
+                        
                         conn.recycle();
 
                         try {

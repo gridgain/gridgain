@@ -443,11 +443,12 @@ public class H2Utils {
         s.setLazyQueryExecution(lazy);
 
         //TODO: GG-18628: Fix memory release on query finish.
-     /*   Object oldCtx = s.getQueryContext();
+        Object oldCtx = s.getQueryContext();
 
         assert  oldCtx == null || oldCtx == qctx
             || ((QueryContext)oldCtx).queryMemoryManager() == null
-            || ((QueryContext)oldCtx).queryMemoryManager().getAllocated() == 0L: oldCtx;*/
+            || ((QueryContext)oldCtx).queryMemoryManager().closed() &&
+            ((QueryContext)oldCtx).queryMemoryManager().getAllocated() == 0L: oldCtx;
 
         s.setQueryContext(qctx);
     }

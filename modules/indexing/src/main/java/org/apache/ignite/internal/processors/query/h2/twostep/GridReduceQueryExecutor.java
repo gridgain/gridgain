@@ -687,6 +687,9 @@ public class GridReduceQueryExecutor {
                             mvccTracker = null; // To prevent callback inside finally block;
                         }
                         finally {
+                            if (detachedConn != null)
+                                U.closeQuiet(qctx.queryMemoryManager());
+
                             qryCtxRegistry.clearThreadLocal();
                         }
                     }
