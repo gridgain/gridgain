@@ -66,6 +66,8 @@ libignite_la_SOURCES = \
 	src/impl/transactions/transaction_impl.cpp \
 	src/impl/transactions/transactions_impl.cpp \
 	src/impl/cluster/cluster_group_impl.cpp \
+	src/impl/cluster/cluster_node_impl.cpp \
+	src/impl/cluster/ignite_cluster_impl.cpp \
 	src/impl/compute/cancelable_impl.cpp \
 	src/impl/compute/compute_impl.cpp \
 	src/impl/ignite_impl.cpp \

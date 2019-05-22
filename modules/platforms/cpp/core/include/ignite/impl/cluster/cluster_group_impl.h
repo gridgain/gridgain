@@ -149,7 +149,7 @@ namespace ignite
                  *
                  * @return Instance of compute.
                  */
-                ClusterNodes ClusterGroupImpl::RefreshNodes();
+                ClusterNodes RefreshNodes();
 
                 /** Compute for the cluster group. */
                 SP_ComputeImpl computeImpl;
