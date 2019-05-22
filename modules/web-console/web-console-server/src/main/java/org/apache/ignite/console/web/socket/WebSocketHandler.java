@@ -90,19 +90,19 @@ public class WebSocketHandler extends TextWebSocketHandler {
     private static final PingMessage PING = new PingMessage(UTF_8.encode("PING"));
 
     /** */
-    private final AccountsRepository accRepo;
+    protected final AccountsRepository accRepo;
 
     /** */
-    private final Map<WebSocketSession, Set<UUID>> agents;
+    protected final Map<WebSocketSession, AgentDescriptor> agents;
 
     /** */
-    private final Map<WebSocketSession, TopologySnapshot> clusters;
-
-    /** */
-    private final Map<WebSocketSession, UUID> browsers;
+    protected final Map<WebSocketSession, UUID> browsers;
 
     /** */
     private final Map<String, WebSocketSession> requests;
+
+    /** */
+    private final Map<String, TopologySnapshot> clusters;
 
     /** */
     private final Map<String, String> supportedAgents;
@@ -120,8 +120,8 @@ public class WebSocketHandler extends TextWebSocketHandler {
         this.accRepo = accRepo;
 
         agents = new ConcurrentLinkedHashMap<>();
-        clusters = new ConcurrentHashMap<>();
         browsers = new ConcurrentHashMap<>();
+        clusters = new ConcurrentHashMap<>();
         requests = new ConcurrentHashMap<>();
         supportedAgents = new ConcurrentHashMap<>();
         visorTasks = new ConcurrentHashMap<>();
@@ -134,10 +134,13 @@ public class WebSocketHandler extends TextWebSocketHandler {
         log.info("Session closed: " + ws);
 
         if (AGENTS_PATH.equals(ws.getUri().getPath())) {
-            agents.remove(ws);
+            AgentDescriptor desc = agents.remove(ws);
+
+            updateClusterInBrowsers(desc.accIds);
+
             clusters.remove(ws);
 
-            updateAgentStatus();
+
         }
         else
             browsers.remove(ws);
@@ -182,7 +185,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
             WebSocketSession wsAgent = agents
                 .entrySet()
                 .stream()
-                .filter(e -> e.getValue().contains(accId))
+                .filter(e -> e.getValue().isServeAccount(accId))
                 .findFirst()
                 .map(Map.Entry::getKey)
                 .orElseThrow(() -> new IllegalStateException("Agent not found for token: " + accId));
@@ -192,6 +195,8 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
             if (NODE_VISOR.equals(evt.getEventType()))
                 prepareNodeVisorParams(evt);
+
+            requests.put(evt.getRequestId(), wsBrowser);
 
             sendMessage(wsAgent, evt);
         }
@@ -224,36 +229,52 @@ public class WebSocketHandler extends TextWebSocketHandler {
         }
     }
 
-    /**
-     * @param ws Session.
-     * @param evt Event to process.
-     */
-    private void registerCluster(WebSocketSession ws, WebSocketEvent evt) {
-        try {
-            TopologySnapshot top = fromJson(evt.getPayload(), TopologySnapshot.class);
+    protected void updateTopology(WebSocketSession wsAgent, TopologySnapshot oldTop, TopologySnapshot newTop) {
+        AgentDescriptor desc = agents.get(wsAgent);
 
-            clusters.put(ws, top);
+        if (!newTop.getId().equals(desc.clusterId)) {
+            desc.clusterId = newTop.getId();
 
-            updateAgentStatus();
-        }
-        catch (Throwable e) {
-            log.error("Failed to send information about clusters to browsers", e);
+            updateClusterInBrowsers(desc.accIds);
         }
     }
 
     /**
-     * @param ws Session.
+     * @param wsAgent Session.
+     * @param newTop Topology snapshot.
      */
-    protected void registerBrowser(WebSocketSession ws) {
-        log.info("Browser connected: " + ws);
+    protected void processTopologyUpdate(WebSocketSession wsAgent, TopologySnapshot newTop) {
+        String clusterId = newTop.getId();
 
-        Account acc = extractAccount(ws);
+        if (F.isEmpty(clusterId)) {
+            clusterId = this.clusters.entrySet().stream()
+                .filter(e -> e.getValue().differentCluster(newTop))
+                .map(Map.Entry::getKey)
+                .findFirst()
+                .orElse(null);
+        }
 
-        browsers.put(ws, acc.getId());
+        if (F.isEmpty(clusterId))
+            newTop.setId(clusterId = UUID.randomUUID().toString());
 
-        updateAgentStatus();
+        TopologySnapshot oldTop = this.clusters.put(clusterId, newTop);
 
-        sendAnnouncement(ws);
+        updateTopology(wsAgent, oldTop, newTop);
+    }
+
+    /**
+     * @param wsBrowser Browser session.
+     */
+    protected void onBrowserConnect(WebSocketSession wsBrowser) {
+        log.info("Browser connected: " + wsBrowser);
+
+        Account acc = extractAccount(wsBrowser);
+
+        browsers.put(wsBrowser, acc.getId());
+
+        sendAgentStats(wsBrowser, acc.getId());
+
+        sendAnnouncement(wsBrowser);
     }
 
     /**
@@ -336,7 +357,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
                     log.info("Agent connected: " + req);
 
-                    agents.put(ws, mapToSet(accounts, Account::getId));
+                    agents.put(ws, new AgentDescriptor(mapToSet(accounts, Account::getId)));
                 }
                 catch (Exception e) {
                     log.warn("Failed to establish connection in handshake: " + evt, e);
@@ -349,7 +370,9 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 break;
 
             case CLUSTER_TOPOLOGY:
-                registerCluster(ws, evt);
+                TopologySnapshot top = fromJson(evt.getPayload(), TopologySnapshot.class);
+
+                processTopologyUpdate(ws, top);
 
                 break;
 
@@ -377,8 +400,6 @@ public class WebSocketHandler extends TextWebSocketHandler {
             case SCHEMA_IMPORT_METADATA:
             case NODE_REST:
             case NODE_VISOR:
-                requests.put(evt.getRequestId(), ws);
-
                 sendToAgent(ws, evt);
 
                 break;
@@ -404,11 +425,11 @@ public class WebSocketHandler extends TextWebSocketHandler {
     }
 
     /**
-     * @param browserWs Browser to send current announcement.
+     * @param wsBrowser Browser to send current announcement.
      */
-    private void sendAnnouncement(WebSocketSession browserWs) {
+    private void sendAnnouncement(WebSocketSession wsBrowser) {
         if (lastAnn != null)
-            sendAnnouncement(Collections.singleton(browserWs), lastAnn);
+            sendAnnouncement(Collections.singleton(wsBrowser), lastAnn);
     }
 
     /**
@@ -429,36 +450,41 @@ public class WebSocketHandler extends TextWebSocketHandler {
     }
 
     /**
-     * Send to all connected browsers info about agent status.
+     * Send to browser info about agent status.
      */
-    private void updateAgentStatus() {
-        // TODO GG-18386 Use id instead of token in agents value.
-        //  On revoke account token close all connections for this account.
-        browsers.forEach((wsBrowser, accId) -> {
-            List<TopologySnapshot> tops = new ArrayList<>();
+    private void sendAgentStats(WebSocketSession wsBrowser, UUID accId) {
+        List<TopologySnapshot> tops = new ArrayList<>();
 
-            agents.forEach((wsAgent, tokens) -> {
-                if (tokens.contains(accId)) {
-                    TopologySnapshot top = clusters.get(wsAgent);
+        agents.forEach((wsAgent, desc) -> {
+            if (desc.isServeAccount(accId)) {
+                TopologySnapshot top = clusters.get(desc.clusterId);
 
-                    if (top != null && tops.stream().allMatch(t -> t.differentCluster(top)))
-                        tops.add(top);
-                }
-            });
-
-            Map<String, Object> res = new LinkedHashMap<>();
-
-            res.put("count", tops.size());
-            res.put("hasDemo", false);
-            res.put("clusters", tops);
-
-            try {
-                sendMessage(wsBrowser, new WebSocketEvent(AGENT_STATUS, toJson(res)));
-            }
-            catch (Throwable e) {
-                log.error("Failed to update agent status [session=" + wsBrowser + ", token=" + accId + "]", e);
+                if (top != null && tops.stream().allMatch(t -> t.differentCluster(top)))
+                    tops.add(top);
             }
         });
+
+        Map<String, Object> res = new LinkedHashMap<>();
+
+        res.put("count", tops.size());
+        res.put("hasDemo", false);
+        res.put("clusters", tops);
+
+        try {
+            sendMessage(wsBrowser, new WebSocketEvent(AGENT_STATUS, toJson(res)));
+        }
+        catch (Throwable e) {
+            log.error("Failed to update agent status [session=" + wsBrowser + ", token=" + accId + "]", e);
+        }
+    }
+
+    /**
+     * Send to all connected browsers info about agent status.
+     */
+    private void updateClusterInBrowsers(Set<UUID> accIds) {
+        browsers.entrySet().stream()
+            .filter(e -> accIds.contains(e.getValue()))
+            .forEach((e) -> sendAgentStats(e.getKey(), e.getValue()));
     }
 
     /**
@@ -468,12 +494,12 @@ public class WebSocketHandler extends TextWebSocketHandler {
     public void revokeToken(Account acc, String oldTok) {
         log.info("Revoke token [old: " + oldTok + ", new: " + acc.getToken() + "]");
 
-        agents.forEach((ws, accIds) -> {
+        agents.forEach((ws, desc) -> {
             try {
-                if (accIds.remove(acc.getId()))
+                if (desc.revokeAccountByToken(acc.getId()))
                     sendMessage(ws, new WebSocketEvent(AGENT_REVOKE_TOKEN, oldTok));
 
-                if (accIds.isEmpty())
+                if (desc.isActive())
                     ws.close();
             }
             catch (Throwable e) {
@@ -513,7 +539,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
         ws.setTextMessageSizeLimit(10 * 1024 * 1024); // TODO IGNITE-5617 how to configure in more correct way
 
         if (BROWSERS_PATH.equals(ws.getUri().getPath()))
-            registerBrowser(ws);
+            onBrowserConnect(ws);
     }
 
     /** {@inheritDoc} */
@@ -652,5 +678,40 @@ public class WebSocketHandler extends TextWebSocketHandler {
         payload.put("params", exeParams);
 
         evt.setPayload(toJson(payload));
+    }
+
+    protected static class AgentDescriptor {
+        private Set<UUID> accIds;
+        private String clusterId;
+
+        AgentDescriptor(Set<UUID> accIds) {
+            this.accIds = accIds;
+        }
+
+        boolean isServeAccount(UUID accId) {
+            return accIds.contains(accId);
+        }
+
+        boolean revokeAccountByToken(UUID accId) {
+            return accIds.remove(accId);
+        }
+
+        boolean isActive() {
+            return accIds.isEmpty();
+        }
+
+        /**
+         * @return Acc ids.
+         */
+        public Set<UUID> getAccIds() {
+            return accIds;
+        }
+
+        /**
+         * @return Cluster id.
+         */
+        public String getClusterId() {
+            return clusterId;
+        }
     }
 }
