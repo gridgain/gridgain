@@ -93,7 +93,7 @@ const config = {
             {
                 test: /\.(js|ts)$/,
                 exclude: /node_modules/,
-                use: ['babel-loader']
+                use: 'babel-loader'
             },
             {
                 test: /\.html$/,
