@@ -16,8 +16,8 @@
  */
 package org.apache.ignite.internal;
 
-import java.io.IOException;
 import java.net.Socket;
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
@@ -29,12 +29,14 @@ import org.apache.ignite.testframework.GridStringLogger;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.logger.GridTestLog4jLogger;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
  *
  */
-public class IgniteTcpCommNotBlockedOnClientFailureTest extends GridCommonAbstractTest {
+public class IgniteClientFailuresTest extends GridCommonAbstractTest {
     /** */
     private boolean clientMode;
 
@@ -58,9 +60,21 @@ public class IgniteTcpCommNotBlockedOnClientFailureTest extends GridCommonAbstra
         return cfg;
     }
 
+    /** */
+    @Before
+    public void setupClientFailuresTest() {
+        stopAllGrids();
+    }
+
+    /** */
+    @After
+    public void tearDownClientFailuresTest() {
+        stopAllGrids();
+    }
+
     /**
      * Test verifies that FailureProcessor doesn't treat tcp-comm-worker thread as blocked when
-     * the thread handles situation of failed client node.
+     * the thread handles situation of failed client node and thus doesn't print full thread dump into logs.
      *
      * @throws Exception If failed.
      */
@@ -89,6 +103,51 @@ public class IgniteTcpCommNotBlockedOnClientFailureTest extends GridCommonAbstra
         assertTrue(waitRes);
 
         assertFalse(inMemoryLog.toString().contains("name=tcp-comm-worker"));
+    }
+
+    /**
+     * Test verifies that when client node failed but not yet cleaned up from topology (because {@link IgniteConfiguration#clientFailureDetectionTimeout} has not been reached yet)
+     * it doesn't affect new client connected from the same address.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testFailedClientLeavesTopologyAfterTimeout() throws Exception {
+        IgniteEx srv0 = startGrid(0);
+
+        clientMode = true;
+
+        IgniteEx client00 = startGrid("client00");
+
+        Thread.sleep(5_000);
+
+        client00.getOrCreateCache(new CacheConfiguration<>("cache0"));
+
+        breakClient(client00);
+
+        final IgniteClusterEx cl = srv0.cluster();
+
+        assertEquals(2, cl.topology(cl.topologyVersion()).size());
+
+        IgniteEx client01 = startGrid("client01");
+
+        assertEquals(3, cl.topology(cl.topologyVersion()).size());
+
+        boolean waitRes = GridTestUtils.waitForCondition(() -> (cl.topology(cl.topologyVersion()).size() == 2),
+            20_000);
+
+        checkCacheOperations(client01.cache("cache0"));
+
+        assertTrue(waitRes);
+    }
+
+    /** */
+    private void checkCacheOperations(IgniteCache cache) {
+        for (int i = 0; i < 100; i++)
+            cache.put(i, i);
+
+        for (int i = 0; i < 100; i++)
+            assertEquals(i, cache.get(i));
     }
 
     /** */
