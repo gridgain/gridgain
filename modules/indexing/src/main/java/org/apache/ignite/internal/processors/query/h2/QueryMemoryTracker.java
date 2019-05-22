@@ -30,7 +30,8 @@ public class QueryMemoryTracker {
     //TODO: GG-18629: Move defaults to memory quotas configuration.
     /**
      * Default query memory limit.
-     * Note: it is per query stage limit. Every Map\Reduce query will have it's own tracker.
+     * Note: It is per query stage limit. Every Map\Reduce query will have it's own tracker.
+     * With QueryParallelism every query-thread will be treated as separate Map query.
      */
     public static final long DFLT_QRY_MEMORY_LIMIT = Long.getLong(IgniteSystemProperties.IGNITE_SQL_QUERY_MEMORY_LIMIT,
         Runtime.getRuntime().maxMemory() / Runtime.getRuntime().availableProcessors());

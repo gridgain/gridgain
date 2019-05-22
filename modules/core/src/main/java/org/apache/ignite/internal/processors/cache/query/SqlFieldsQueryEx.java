@@ -246,6 +246,10 @@ public final class SqlFieldsQueryEx extends SqlFieldsQuery {
     /**
      * Return memory limit for query.
      *
+     * Note: Every query (Map\Reduce) will have own limit and track memory independently.
+     * Query can have few Map queries (e.g. an additional Map query per sub-select).
+     * With QueryParallelism query can allocate MaxMemory*QueryParallelismLevel.
+     *
      * @return Memory size in bytes.
      */
     public long maxMemory() {
@@ -254,6 +258,10 @@ public final class SqlFieldsQueryEx extends SqlFieldsQuery {
 
     /**
      * Sets memory limit for query.
+     *
+     * Note: Every query (Map\Reduce) will have own limit and track memory independently.
+     * Query can have few Map queries (e.g. an additional Map query per sub-select).
+     * With QueryParallelism query can allocate MaxMemory*QueryParallelismLevel.
      *
      * @param maxMem Memory size in bytes.
      * @return {@code this} for chaining.
