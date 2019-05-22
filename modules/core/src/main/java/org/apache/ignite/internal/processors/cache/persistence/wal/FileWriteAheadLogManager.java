@@ -35,6 +35,7 @@ import java.sql.Time;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -47,6 +48,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -2791,6 +2793,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                 if (readArchive)
                     throw new IgniteCheckedException("Missing WAL segment in the archive", e);
                 else {
+                    // Log only when no segments were read. This will help us avoiding logging on the end of the WAL.
                     if (curRec == null && curWalSegment == null) {
                         File workDirFile = new File(walWorkDir, fileName(curWalSegmIdx % dsCfg.getWalSegments()));
                         File archiveDirFile = new File(walArchiveDir, fileName(curWalSegmIdx));
@@ -2800,9 +2803,12 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                             "Next segment file is not found [" +
                                 "curWalSegmIdx=" + curWalSegmIdx
                                 + ", start=" + start
+                                + ", end=" + end
                                 + ", filePath=" + (fd == null ? "<empty>" : fd.file.getAbsolutePath())
                                 + ", walWorkDir=" + walWorkDir
+                                + ", walWorkDirContent=" + listFileNames(walWorkDir)
                                 + ", walArchiveDir=" + walArchiveDir
+                                + ", walArchiveDirContent=" + listFileNames(walArchiveDir)
                                 + ", workDirFile=" + workDirFile.getName()
                                 + ", exists=" + workDirFile.exists()
                                 + ", archiveDirFile=" + archiveDirFile.getName()
@@ -2811,6 +2817,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                             e
                         );
                     }
+
                     nextHandle = null;
                 }
             }
@@ -2821,6 +2828,16 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             curRec = null;
 
             return nextHandle;
+        }
+
+        /** */
+        private static List<String> listFileNames(File dir) {
+            File[] files = dir.listFiles();
+
+            if (files == null)
+                return Collections.emptyList();
+
+            return Arrays.stream(files).map(File::getName).sorted().collect(Collectors.toList());
         }
 
         /** {@inheritDoc} */
