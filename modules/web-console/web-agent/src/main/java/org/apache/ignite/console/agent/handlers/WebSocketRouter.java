@@ -167,22 +167,22 @@ public class WebSocketRouter implements AutoCloseable {
         else
             client = new WebSocketClient();
 
-        reconnect();
+        try {
+            reconnect();
+        }
+        catch (Throwable e) {
+            log.error("Failed to connect to the server", e);
+        }
     }
 
     /**
      * Reconnect to backend.
      */
-    private void reconnect() {
-        try {
-            client.start();
-            client.connect(this, new URI(cfg.serverUri() + AGENTS_PATH)).get();
+    private void reconnect() throws Exception {
+        client.start();
+        client.connect(this, new URI(cfg.serverUri()).resolve(AGENTS_PATH)).get();
 
-            reconnectCnt = 0;
-        }
-        catch (Throwable e) {
-            log.error("Unable to connect to WebSocket: ", e);
-        }
+        reconnectCnt = 0;
     }
 
     /**
@@ -384,19 +384,19 @@ public class WebSocketRouter implements AutoCloseable {
     public void onError(Throwable e) {
         // Reconnect only in case of ConnectException.
         if (e instanceof ConnectException) {
-            LT.error(log, e, "Failed connect to server");
+            LT.error(log, e, "Failed to connect to the server");
 
             if (reconnectCnt < 10)
                 reconnectCnt++;
 
             try {
                 Thread.sleep(reconnectCnt * 1000);
+
+                reconnect();
             }
             catch (Throwable ignore) {
                 // No-op.
             }
-
-            reconnect();
         }
     }
 }

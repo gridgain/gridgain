@@ -229,6 +229,11 @@ public class WebSocketHandler extends TextWebSocketHandler {
         }
     }
 
+    /**
+     * @param wsAgent Session.
+     * @param oldTop Old topology.
+     * @param newTop New topology.
+     */
     protected void updateTopology(WebSocketSession wsAgent, TopologySnapshot oldTop, TopologySnapshot newTop) {
         AgentDescriptor desc = agents.get(wsAgent);
 
@@ -244,20 +249,31 @@ public class WebSocketHandler extends TextWebSocketHandler {
      * @param newTop Topology snapshot.
      */
     protected void processTopologyUpdate(WebSocketSession wsAgent, TopologySnapshot newTop) {
-        String clusterId = newTop.getId();
+        TopologySnapshot oldTop = null;
 
-        if (F.isEmpty(clusterId)) {
-            clusterId = this.clusters.entrySet().stream()
-                .filter(e -> e.getValue().differentCluster(newTop))
-                .map(Map.Entry::getKey)
-                .findFirst()
-                .orElse(null);
+        AgentDescriptor desc = agents.get(wsAgent);
+
+        if (desc.clusterId != null)
+            oldTop = clusters.remove(desc.clusterId);
+
+        if (F.isEmpty(newTop.getId())) {
+            String clusterId = null;
+
+            if (oldTop != null && !oldTop.differentCluster(newTop))
+                clusterId = oldTop.getId();
+
+            if (F.isEmpty(clusterId)) {
+                clusterId = clusters.entrySet().stream()
+                    .filter(e -> !e.getValue().differentCluster(newTop))
+                    .map(Map.Entry::getKey)
+                    .findFirst()
+                    .orElse(null);
+            }
+
+            newTop.setId(F.isEmpty(clusterId) ? UUID.randomUUID().toString() : clusterId);
         }
 
-        if (F.isEmpty(clusterId))
-            newTop.setId(clusterId = UUID.randomUUID().toString());
-
-        TopologySnapshot oldTop = this.clusters.put(clusterId, newTop);
+        clusters.put(newTop.getId(), newTop);
 
         updateTopology(wsAgent, oldTop, newTop);
     }

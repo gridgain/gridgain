@@ -165,15 +165,15 @@ public class Table<T extends AbstractDto> extends CacheHolder<UUID, T> {
     }
 
     /**
-     * @param values Map of DTOs.
+     * @param map Map of DTOs.
      */
-    public void saveAll(Map<UUID, T> values) throws IgniteException {
+    public void saveAll(Map<UUID, T> map) throws IgniteException {
         if (!F.isEmpty(uniqueIndexes)) {
-            for (T item : values.values())
+            for (T item : map.values())
                 putToUniqueIndexes(item);
         }
 
-        cache.putAll(values);
+        cache.putAll(map);
     }
 
     /**
