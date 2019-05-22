@@ -17,8 +17,8 @@
 package org.apache.ignite.events;
 
 import java.util.Collection;
-import io.opencensus.trace.Span;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;

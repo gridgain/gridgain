@@ -60,12 +60,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLSocket;
-import io.opencensus.trace.AttributeValue;
-import io.opencensus.trace.Span;
-import io.opencensus.trace.SpanContext;
-import io.opencensus.trace.Tracing;
-import io.opencensus.trace.propagation.SpanContextParseException;
-import io.opencensus.trace.samplers.Samplers;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -86,6 +80,7 @@ import org.apache.ignite.internal.managers.discovery.DiscoveryServerOnlyCustomMe
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.security.SecurityContext;
 import org.apache.ignite.internal.processors.security.SecurityUtils;
+import org.apache.ignite.internal.processors.tracing.messages.TraceableMessage;
 import org.apache.ignite.internal.util.GridBoundedLinkedHashSet;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.util.IgniteUtils;
@@ -1120,7 +1115,16 @@ class ServerImpl extends TcpDiscoveryImpl {
      * @throws IgniteSpiException If any error occurs.
      */
     private boolean sendJoinRequestMessage(DiscoveryDataPacket discoveryData) throws IgniteSpiException {
-        TcpDiscoveryAbstractMessage joinReq = new TcpDiscoveryJoinRequestMessage(locNode, discoveryData);
+        TcpDiscoveryJoinRequestMessage joinReq = new TcpDiscoveryJoinRequestMessage(locNode, discoveryData);
+
+        joinReq.trace().span(
+            tracing.create(joinReq.traceName())
+                .addTag("event.node", locNode.toString())
+                .addLog("Created")
+                .end()
+        );
+
+        tracing.beforeSend(joinReq);
 
         // Time when join process started.
         long joinStart = 0;
@@ -2987,6 +2991,12 @@ class ServerImpl extends TcpDiscoveryImpl {
                 }
             }
 
+            if (msg instanceof TraceableMessage) {
+                TraceableMessage tMsg = (TraceableMessage) msg;
+
+                tracing.afterReceive(tMsg);
+            }
+
             spi.stats.onMessageProcessingStarted(msg);
 
             processMessageFailedNodes(msg);
@@ -3050,6 +3060,14 @@ class ServerImpl extends TcpDiscoveryImpl {
             }
 
             spi.stats.onMessageProcessingFinished(msg);
+
+            if (msg instanceof TraceableMessage) {
+                TraceableMessage tMsg = (TraceableMessage) msg;
+
+                tMsg.trace().span()
+                    .addLog("Processed")
+                    .end();
+            }
         }
 
         /** {@inheritDoc} */
@@ -3131,6 +3149,10 @@ class ServerImpl extends TcpDiscoveryImpl {
 
             for (IgniteInClosure<TcpDiscoveryAbstractMessage> msgLsnr : spi.sndMsgLsnrs)
                 msgLsnr.apply(msg);
+
+            // TODO: Maybe put this interceptor to spi.sndMsgLsnrs ?
+            if (msg instanceof TraceableMessage)
+                tracing.beforeSend((TraceableMessage) msg);
 
             sendMessageToClients(msg);
 
@@ -4358,12 +4380,25 @@ class ServerImpl extends TcpDiscoveryImpl {
 
                 DiscoveryDataPacket data = msg.gridDiscoveryData();
 
+                log.warning("Before create node added: " + msg.trace().span() + " " + msg.trace().serializedSpan());
+
                 TcpDiscoveryNodeAddedMessage nodeAddedMsg = new TcpDiscoveryNodeAddedMessage(locNodeId,
                     node, data, spi.gridStartTime);
+
+                nodeAddedMsg.trace().span(
+                    tracing.create(nodeAddedMsg.traceName(), msg.trace().span())
+                        .addTag("node", locNodeId.toString())
+                        .addTag("event.node", node.id().toString())
+                        .addLog("Created")
+                );
 
                 nodeAddedMsg.client(msg.client());
 
                 processNodeAddedMessage(nodeAddedMsg);
+
+                nodeAddedMsg.trace().span()
+                    .addLog("Processed")
+                    .end();
             }
             else {
                 if (sendMessageToRemotes(msg))
@@ -4518,29 +4553,18 @@ class ServerImpl extends TcpDiscoveryImpl {
                         addFinishMsg.clientNodeAttributes(node.attributes());
                     }
 
-                    Span span = Tracing.getTracer().spanBuilder("node.join")
-                        .setSampler(Samplers.alwaysSample())
-                        .startSpan();
-
-                    span.addAnnotation("Discovered");
-                    span.putAttribute("crd.node", AttributeValue.stringAttributeValue(locNodeId.toString()));
-
-                    addFinishMsg.setTraceContext(Tracing.getPropagationComponent().getBinaryFormat().toByteArray(span.getContext()));
-
-                    span.end();
-
-                    span = Tracing.getTracer().spanBuilderWithExplicitParent("node.join." + locNode.order(), span)
-                        .setSampler(Samplers.alwaysSample())
-                        .startSpan();
-
-                    addFinishMsg.setSpan(span);
-
-                    span.addAnnotation("Created");
-
-                    span.putAttribute("node.id", AttributeValue.stringAttributeValue(locNodeId.toString()));
-                    span.putAttribute("event.node", AttributeValue.stringAttributeValue(node.id().toString()));
+                    addFinishMsg.trace().span(
+                        tracing.create(addFinishMsg.traceName(), msg.trace().span())
+                            .addTag("node", locNodeId.toString())
+                            .addTag("event.node", node.id().toString())
+                            .addLog("Created")
+                    );
 
                     processNodeAddFinishedMessage(addFinishMsg);
+
+                    addFinishMsg.trace().span()
+                        .addLog("Processed")
+                        .end();
 
                     addMessage(new TcpDiscoveryDiscardMessage(locNodeId, msg.id(), false));
 
@@ -4931,28 +4955,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                 if (state == CONNECTED) {
                     Map<String, Object> meta = U.newHashMap(3);
 
-                    if (msg.getSpan() != null)
-                        meta.put("trace", msg.getSpan());
-                    else if (msg.getTraceContext() != null) {
-                        try {
-                            SpanContext ctx = Tracing.getPropagationComponent().getBinaryFormat()
-                                .fromByteArray(msg.getTraceContext());
-
-                            Span span = Tracing.getTracer()
-                                .spanBuilderWithRemoteParent("node.join." + locNode.order(), ctx)
-                                .setSampler(Samplers.alwaysSample())
-                                .startSpan();
-
-                            span.addAnnotation("Received");
-
-                            span.putAttribute("node.id", AttributeValue.stringAttributeValue(locNodeId.toString()));
-                            span.putAttribute("event.node", AttributeValue.stringAttributeValue(node.id().toString()));
-
-                            meta.put("trace", span);
-                        } catch (SpanContextParseException e) {
-                            e.printStackTrace();
-                        }
-                    }
+                    meta.put("trace", msg.trace());
 
                     notifyDiscovery(EVT_NODE_JOINED, topVer, node, meta);
 
@@ -5001,27 +5004,7 @@ class ServerImpl extends TcpDiscoveryImpl {
 
                 Map<String, Object> meta = U.newHashMap(3);
 
-                if (msg.getSpan() != null)
-                    meta.put("trace", msg.getSpan());
-                else if (msg.getTraceContext() != null) {
-                    try {
-                        SpanContext ctx = Tracing.getPropagationComponent().getBinaryFormat()
-                            .fromByteArray(msg.getTraceContext());
-
-                        Span span = Tracing.getTracer()
-                            .spanBuilderWithRemoteParent("node.join." + locNode.order(), ctx)
-                            .setSampler(Samplers.alwaysSample())
-                            .startSpan();
-
-                        span.addAnnotation("Received");
-                        span.putAttribute("node.id", AttributeValue.stringAttributeValue(locNodeId.toString()));
-                        span.putAttribute("event.node", AttributeValue.stringAttributeValue(node.id().toString()));
-
-                        meta.put("trace", span);
-                    } catch (SpanContextParseException e) {
-                        e.printStackTrace();
-                    }
-                }
+                meta.put("trace", msg.trace());
 
                 // Discovery manager must create local joined event before spiStart completes.
                 notifyDiscovery(EVT_NODE_JOINED, topVer, locNode, meta);

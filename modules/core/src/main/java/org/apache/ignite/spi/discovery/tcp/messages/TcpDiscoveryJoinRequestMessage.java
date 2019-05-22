@@ -16,16 +16,19 @@
 
 package org.apache.ignite.spi.discovery.tcp.messages;
 
+import org.apache.ignite.internal.processors.tracing.messages.Trace;
+import org.apache.ignite.internal.processors.tracing.messages.TraceableMessage;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.spi.discovery.tcp.internal.DiscoveryDataPacket;
 import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Initial message sent by a node that wants to enter topology.
  * Sent to random node during SPI start. Then forwarded directly to coordinator.
  */
-public class TcpDiscoveryJoinRequestMessage extends TcpDiscoveryAbstractMessage {
+public class TcpDiscoveryJoinRequestMessage extends TcpDiscoveryAbstractMessage implements TraceableMessage {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -34,6 +37,9 @@ public class TcpDiscoveryJoinRequestMessage extends TcpDiscoveryAbstractMessage 
 
     /** Discovery data container. */
     private final DiscoveryDataPacket dataPacket;
+
+    /** Trace. */
+    private Trace trace = new Trace();
 
     /**
      * Constructor.
@@ -94,5 +100,13 @@ public class TcpDiscoveryJoinRequestMessage extends TcpDiscoveryAbstractMessage 
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(TcpDiscoveryJoinRequestMessage.class, this, "super", super.toString());
+    }
+
+    @Override public @NotNull Trace trace() {
+        return trace;
+    }
+
+    @Override public String traceName() {
+        return "node.join.request." + node.id();
     }
 }

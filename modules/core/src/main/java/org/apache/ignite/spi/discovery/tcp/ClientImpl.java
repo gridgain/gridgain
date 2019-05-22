@@ -69,6 +69,7 @@ import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.managers.discovery.CustomMessageWrapper;
 import org.apache.ignite.internal.managers.discovery.DiscoveryServerOnlyCustomMessage;
+import org.apache.ignite.internal.processors.tracing.messages.TraceableMessage;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.F;
@@ -741,7 +742,16 @@ class ClientImpl extends TcpDiscoveryImpl {
                     if (discoveryData == null)
                         discoveryData = spi.collectExchangeData(new DiscoveryDataPacket(getLocalNodeId()));
 
-                    msg = new TcpDiscoveryJoinRequestMessage(node, discoveryData);
+                    TcpDiscoveryJoinRequestMessage joinMsg = new TcpDiscoveryJoinRequestMessage(node, discoveryData);
+
+                    joinMsg.trace().span(
+                        tracing.create(joinMsg.traceName())
+                            .addTag("event.node", node.toString())
+                            .addLog("Created")
+                            .end()
+                    );
+
+                    msg = joinMsg;
 
                     // During marshalling, SPI didn't know whether all nodes support compression as we didn't join yet.
                     // The only way to know is passing flag directly with handshake response.
@@ -752,6 +762,9 @@ class ClientImpl extends TcpDiscoveryImpl {
                     msg = new TcpDiscoveryClientReconnectMessage(getLocalNodeId(), rmtNodeId, lastMsgId);
 
                 msg.client(true);
+
+                if (msg instanceof TraceableMessage)
+                    tracing.beforeSend((TraceableMessage) msg);
 
                 spi.writeToSocket(sock, msg, timeoutHelper.nextTimeoutChunk(spi.getSocketTimeout()));
 

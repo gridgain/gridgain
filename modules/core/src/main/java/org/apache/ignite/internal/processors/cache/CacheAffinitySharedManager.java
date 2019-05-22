@@ -32,10 +32,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 import javax.cache.CacheException;
-import io.opencensus.trace.AttributeValue;
-import io.opencensus.trace.Span;
-import io.opencensus.trace.Tracing;
-import io.opencensus.trace.samplers.Samplers;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSystemProperties;
@@ -67,6 +63,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cluster.DiscoveryDataClusterState;
+import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.GridPartitionStateMap;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
@@ -2392,11 +2389,8 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                 if (cache.affinity().lastVersion().equals(evts.topologyVersion()))
                     return;
 
-                Span span = Tracing.getTracer().spanBuilderWithExplicitParent("AffinityCalculation", fut.span())
-                    .setSampler(Samplers.alwaysSample())
-                    .startSpan();
-
-                span.putAttribute("CacheGroup", AttributeValue.stringAttributeValue(desc.cacheOrGroupName()));
+                Span affCalcSpan = cctx.kernalContext().tracing().create("affinity.calculation", fut.span())
+                    .addTag("cache.group", desc.cacheOrGroupName());
 
                 boolean latePrimary = cache.rebalanceEnabled;
 
@@ -2424,7 +2418,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
                 cctx.exchange().exchangerUpdateHeartbeat();
 
-                span.end();
+                affCalcSpan.end();
 
                 fut.timeBag().finishLocalStage("Affinity initialization (node join) " +
                     "[grp=" + desc.cacheOrGroupName() + ", crd=" + crd + "]");

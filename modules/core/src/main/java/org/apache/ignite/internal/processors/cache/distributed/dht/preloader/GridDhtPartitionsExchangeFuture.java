@@ -41,9 +41,6 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import io.opencensus.trace.AttributeValue;
-import io.opencensus.trace.Span;
-import io.opencensus.trace.Status;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -107,6 +104,7 @@ import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateMessage;
 import org.apache.ignite.internal.processors.cluster.DiscoveryDataClusterState;
 import org.apache.ignite.internal.processors.cluster.IgniteChangeGlobalStateSupport;
 import org.apache.ignite.internal.processors.service.GridServiceProcessor;
+import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.processors.txdr.TransactionalDrProcessor;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.TimeBag;
@@ -792,7 +790,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     ", allowMerge=" + exchCtx.mergeExchanges() + ']');
             }
 
-            span.addAnnotation("Exchange parameters initialization");
+            span.addLog("Exchange parameters initialization");
 
             timeBag.finishGlobalStage("Exchange parameters initialization");
 
@@ -2171,12 +2169,10 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
         assert res != null || err != null;
 
-        span.setStatus(Status.OK);
         if (res != null)
-            span.putAttribute("result.topology.version", AttributeValue.stringAttributeValue(res.toString()));
+            span.addTag("result.topology.version", res.toString());
         if (err != null) {
-            span.putAttribute("error", AttributeValue.stringAttributeValue(err.getMessage()));
-            span.setStatus(Status.INTERNAL.withDescription(err.toString()));
+            span.addTag("error", err.getMessage());
         }
 
         try {
@@ -2319,7 +2315,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         if (super.onDone(res, err)) {
             afterLsnrCompleteFut.onDone();
 
-            span.addAnnotation("Completed partition exchange");
+            span.addLog("Completed partition exchange");
 
             span.end();
 
@@ -3374,7 +3370,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         try {
             initFut.get();
 
-            span.addAnnotation("Waiting for all single messages");
+            span.addLog("Waiting for all single messages");
 
             timeBag.finishGlobalStage("Waiting for all single messages");
 
@@ -3497,7 +3493,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
             boolean skipResetOwners = txDrProc != null && txDrProc.shouldIgnoreAssignPartitionStates(this);
 
-            span.addAnnotation("Affinity recalculation (crd)");
+            span.addLog("Affinity recalculation (crd)");
 
             timeBag.finishGlobalStage("Affinity recalculation (crd)");
 

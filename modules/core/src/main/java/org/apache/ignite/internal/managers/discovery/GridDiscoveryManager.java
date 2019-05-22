@@ -44,7 +44,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import io.opencensus.trace.Span;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteClientDisconnectedException;
 import org.apache.ignite.IgniteException;
@@ -94,6 +93,7 @@ import org.apache.ignite.internal.processors.cluster.DiscoveryDataClusterState;
 import org.apache.ignite.internal.processors.cluster.IGridClusterStateProcessor;
 import org.apache.ignite.internal.processors.security.SecurityContext;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
+import org.apache.ignite.internal.processors.tracing.messages.Trace;
 import org.apache.ignite.internal.util.GridAtomicLong;
 import org.apache.ignite.internal.util.GridBoundedConcurrentLinkedHashMap;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
@@ -601,13 +601,6 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
             ) {
                 GridFutureAdapter<?> notificationFut = new GridFutureAdapter<>();
 
-                if (metadata.containsKey("trace"))
-                    notificationFut.listen(f -> {
-                        Span span = (Span) metadata.get("trace");
-
-                        span.end();
-                    });
-
                 discoNtfWrk.submit(notificationFut, () -> {
                     synchronized (discoEvtMux) {
                         onDiscovery0(type, topVer, node, topSnapshot, snapshots, spiCustomMsg, metadata);
@@ -824,7 +817,11 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                     discoEvt.type(EVT_NODE_JOINED);
 
                     discoEvt.topologySnapshot(topVer, new ArrayList<>(F.view(topSnapshot, FILTER_NOT_DAEMON)));
-                    discoEvt.setSpan((Span) metadata.get("trace"));
+
+                    Trace trace = (Trace) metadata.get("trace");
+
+                    if (trace != null)
+                        discoEvt.setSpan(trace.span());
 
                     discoWrk.discoCache = discoCache;
 
@@ -2891,7 +2888,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
          * @param topSnapshot Topology snapshot.
          */
         @SuppressWarnings("RedundantTypeArguments")
-        private void recordEvent(int type, long topVer, ClusterNode node, DiscoCache discoCache, Collection<ClusterNode> topSnapshot, @Nullable Span span) {
+        private void recordEvent(int type, long topVer, ClusterNode node, DiscoCache discoCache, Collection<ClusterNode> topSnapshot, @Nullable Trace trace) {
             assert node != null;
 
             if (ctx.event().isRecordable(type)) {
@@ -2901,7 +2898,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                 evt.eventNode(node);
                 evt.type(type);
                 evt.topologySnapshot(topVer, U.<ClusterNode, ClusterNode>arrayList(topSnapshot, FILTER_NOT_DAEMON));
-                evt.setSpan(span);
+                evt.setSpan(trace != null ? trace.span() : null);
 
                 if (type == EVT_NODE_METRICS_UPDATED)
                     evt.message("Metrics were updated: " + node);
@@ -3153,7 +3150,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                     assert false : "Invalid discovery event: " + type;
             }
 
-            recordEvent(type, topVer.topologyVersion(), node, evt.get4(), evt.get5(), (Span) evt.get7().get("trace"));
+            recordEvent(type, topVer.topologyVersion(), node, evt.get4(), evt.get5(), (Trace) evt.get7().get("trace"));
 
             if (segmented)
                 onSegmentation();
