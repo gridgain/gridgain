@@ -16,14 +16,12 @@
  */
 package org.apache.ignite.internal;
 
-import java.net.Socket;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.managers.GridManagerAdapter;
-import org.apache.ignite.internal.util.nio.GridNioServer;
-import org.apache.ignite.internal.util.worker.GridWorker;
+import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridStringLogger;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -151,22 +149,13 @@ public class IgniteClientFailuresTest extends GridCommonAbstractTest {
     }
 
     /** */
-    private void breakClient(IgniteEx client) throws Exception {
-        Object clientDiscoSpi = ((Object[])GridTestUtils.getFieldValue(client.context().discovery(), GridManagerAdapter.class, "spis"))[0];
+    private void breakClient(IgniteEx client) {
+        Object discoSpi = ((Object[])GridTestUtils.getFieldValue(client.context().discovery(), GridManagerAdapter.class, "spis"))[0];
 
         Object commSpi = ((Object[])GridTestUtils.getFieldValue(client.context().io(), GridManagerAdapter.class, "spis"))[0];
 
-        GridNioServer nioServer = GridTestUtils.getFieldValue(commSpi, "nioSrvr");
+        ((TcpCommunicationSpi)commSpi).simulateNodeFailure();
 
-        Object clientImpl = GridTestUtils.getFieldValue(clientDiscoSpi, TcpDiscoverySpi.class, "impl");
-
-        GridWorker msgWorker = GridTestUtils.getFieldValue(clientImpl, "msgWorker");
-
-        msgWorker.runner().interrupt();
-
-        nioServer.stop();
-
-        Socket currSock = GridTestUtils.getFieldValue(msgWorker, "currSock", "sock");
-        currSock.close();
+        ((TcpDiscoverySpi)discoSpi).simulateNodeFailure();
     }
 }
