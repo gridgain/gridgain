@@ -77,7 +77,7 @@ public class WebSocketSession {
         Session ses = sesRef.get();
 
         if (ses == null)
-            throw new IOException("No active session");
+            throw new IOException("Failed to send event to WebSocket: active session not found");
 
         ses.getRemote().sendStringByFuture(toJson(evt)).get();
     }

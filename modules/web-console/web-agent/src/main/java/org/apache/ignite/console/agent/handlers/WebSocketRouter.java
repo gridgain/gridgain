@@ -176,11 +176,11 @@ public class WebSocketRouter implements AutoCloseable {
     private void reconnect() {
         try {
             client.start();
-            client.connect(this, new URI(cfg.serverUri() + AGENTS_PATH));
+            client.connect(this, new URI(cfg.serverUri() + AGENTS_PATH)).get();
 
             reconnectCnt = 0;
         }
-        catch (Exception e) {
+        catch (Throwable e) {
             log.error("Unable to connect to WebSocket: ", e);
         }
     }
