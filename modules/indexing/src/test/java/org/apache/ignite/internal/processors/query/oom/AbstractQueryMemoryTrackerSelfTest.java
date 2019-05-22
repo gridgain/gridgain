@@ -334,7 +334,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         boolean localQry = isLocal();
 
         return grid(client ? 1 : 0).context().query().querySqlFields(
-            new SqlFieldsQueryEx(sql, null).setLocal(localQry).maxMemory(maxMem)
+            new SqlFieldsQueryEx(sql, null).setLocal(localQry).setMaxMemory(maxMem)
                 .setLazy(lazy).setPageSize(100), false).getAll();
     }
 

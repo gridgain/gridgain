@@ -252,7 +252,7 @@ public final class SqlFieldsQueryEx extends SqlFieldsQuery {
      *
      * @return Memory size in bytes.
      */
-    public long maxMemory() {
+    public long getMaxMemory() {
         return maxMem;
     }
 
@@ -266,7 +266,7 @@ public final class SqlFieldsQueryEx extends SqlFieldsQuery {
      * @param maxMem Memory size in bytes.
      * @return {@code this} for chaining.
      */
-    public SqlFieldsQuery maxMemory(long maxMem) {
+    public SqlFieldsQuery setMaxMemory(long maxMem) {
         this.maxMem = maxMem;
 
         return this;

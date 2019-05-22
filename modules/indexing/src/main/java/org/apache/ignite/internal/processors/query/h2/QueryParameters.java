@@ -85,7 +85,7 @@ public class QueryParameters {
 
             batchedArgs = qry0.batchedArguments();
 
-            maxMem = qry0.maxMemory();
+            maxMem = qry0.getMaxMemory();
         }
 
         return new QueryParameters(

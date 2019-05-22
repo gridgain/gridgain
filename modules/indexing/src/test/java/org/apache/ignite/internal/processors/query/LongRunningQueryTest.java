@@ -25,7 +25,6 @@ import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.QueryCancelledException;
-import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
@@ -151,7 +150,7 @@ public class LongRunningQueryTest extends AbstractIndexingCommonTest {
      */
     private FieldsQueryCursor<List<?>> sql(String sql, Object ... args) {
         return grid().context().query().querySqlFields(new SqlFieldsQueryEx(sql, true)
-            .maxMemory(Long.MAX_VALUE)
+            .setMaxMemory(Long.MAX_VALUE)
             .setTimeout(10, TimeUnit.SECONDS)
             .setLocal(local)
             .setSchema("TEST")
