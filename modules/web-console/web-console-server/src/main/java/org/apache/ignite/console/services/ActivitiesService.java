@@ -18,7 +18,6 @@ package org.apache.ignite.console.services;
 
 import java.util.UUID;
 import org.apache.ignite.console.repositories.ActivitiesRepository;
-import org.apache.ignite.console.web.model.ActivityRequest;
 import org.springframework.stereotype.Service;
 
 /**
@@ -38,9 +37,19 @@ public class ActivitiesService {
 
     /**
      * @param accId Account ID.
-     * @param req Activity update request.
+     * @param grp Activity group.
+     * @param act Activity action.
      */
-    public void save(UUID accId, ActivityRequest req) {
-        activitiesRepo.save(accId, req);
+    public void save(UUID accId, String grp, String act) {
+        activitiesRepo.save(accId, grp, act);
+    }
+
+    /**
+     * @param accId Account ID.
+     * @param startDate Start date.
+     * @param endDate End date.
+     */
+    public void details(UUID accId, long startDate, long endDate) {
+        activitiesRepo.details(accId, startDate, endDate);
     }
 }

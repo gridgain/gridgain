@@ -25,7 +25,6 @@ import org.apache.ignite.console.db.OneToManyIndex;
 import org.apache.ignite.console.db.Table;
 import org.apache.ignite.console.dto.Activity;
 import org.apache.ignite.console.tx.TransactionManager;
-import org.apache.ignite.console.web.model.ActivityRequest;
 import org.apache.ignite.transactions.Transaction;
 import org.springframework.stereotype.Repository;
 
@@ -61,9 +60,10 @@ public class ActivitiesRepository {
      * Save activity.
      *
      * @param accId Account ID.
-     * @param req Activity update request.
+     * @param grp Activity group.
+     * @param act Activity action.
      */
-    public void save(UUID accId, ActivityRequest req) {
+    public void save(UUID accId, String grp, String act) {
         try (Transaction tx = txMgr.txStart()) {
             TreeSet<UUID> ids = activitiesIdx.load(accId);
 
@@ -76,16 +76,16 @@ public class ActivitiesRepository {
                 .stream()
                 .filter(item ->
                     item.getDate() == date &&
-                    item.getGroup().equals(req.getGroup()) &&
-                    item.getAction().equals(req.getAction())
+                    item.getGroup().equals(grp) &&
+                    item.getAction().equals(act)
                 )
                 .findFirst()
                 .orElse(new Activity(
                     UUID.randomUUID(),
                     accId,
                     date,
-                    req.getGroup(),
-                    req.getAction(),
+                    grp,
+                    act,
                     0));
 
             activity.increment();
@@ -96,5 +96,15 @@ public class ActivitiesRepository {
 
             tx.commit();
         }
+    }
+
+    /**
+     * @param accId Account ID.
+     * @param startDate Start date.
+     * @param endDate End date.
+     */
+    public void details(UUID accId, long startDate, long endDate) {
+        // todo
+
     }
 }
