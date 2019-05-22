@@ -23,6 +23,7 @@ import java.util.List;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccQueryTracker;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  * Special field set iterator based on database result set.
@@ -74,10 +75,7 @@ public class H2FieldsIterator extends H2ResultSetIterator<List<?>> {
             super.onClose();
         }
         finally {
-            QueryMemoryTracker memTracker = qctx.queryMemoryManager();
-
-            if (memTracker != null)
-                memTracker.close();
+            U.closeQuiet(qctx.queryMemoryManager());
 
             detachedConn.recycle();
 
