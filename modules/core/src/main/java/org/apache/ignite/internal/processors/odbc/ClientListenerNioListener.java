@@ -103,7 +103,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
         if (log.isDebugEnabled())
             log.debug("Client connected: " + ses.remoteAddress());
 
-        long handshakeTimeout = cliConnCfg.getHandshakeTimout();
+        long handshakeTimeout = cliConnCfg.getHandshakeTimeout();
 
         if (handshakeTimeout > 0)
             scheduleHandshakeTimeout(ses, handshakeTimeout);

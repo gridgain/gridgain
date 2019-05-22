@@ -128,7 +128,7 @@ public class ClientConnectorConfiguration {
         tcpNoDelay = cfg.isTcpNoDelay();
         threadPoolSize = cfg.getThreadPoolSize();
         idleTimeout = cfg.getIdleTimeout();
-        handshakeTimeout = cfg.getHandshakeTimout();
+        handshakeTimeout = cfg.getHandshakeTimeout();
         jdbcEnabled = cfg.jdbcEnabled;
         odbcEnabled = cfg.odbcEnabled;
         thinCliEnabled = cfg.thinCliEnabled;
@@ -349,7 +349,7 @@ public class ClientConnectorConfiguration {
      *
      * @return Handshake timeout in milliseconds.
      */
-    public long getHandshakeTimout() {
+    public long getHandshakeTimeout() {
         return handshakeTimeout;
     }
 
@@ -360,10 +360,10 @@ public class ClientConnectorConfiguration {
      * Zero or negative means no timeout.
      *
      * @param handshakeTimeout Idle timeout in milliseconds.
-     * @see #getHandshakeTimout()
+     * @see #getHandshakeTimeout()
      * @return {@code this} for chaining.
      */
-    public ClientConnectorConfiguration setHandshakeTimout(long handshakeTimeout) {
+    public ClientConnectorConfiguration setHandshakeTimeout(long handshakeTimeout) {
         this.handshakeTimeout = handshakeTimeout;
 
         return this;
