@@ -29,6 +29,7 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
+import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
@@ -149,7 +150,8 @@ public class LongRunningQueryTest extends AbstractIndexingCommonTest {
      * @return Results cursor.
      */
     private FieldsQueryCursor<List<?>> sql(String sql, Object ... args) {
-        return grid().context().query().querySqlFields(new SqlFieldsQuery(sql)
+        return grid().context().query().querySqlFields(new SqlFieldsQueryEx(sql, true)
+            .maxMemory(Long.MAX_VALUE)
             .setTimeout(10, TimeUnit.SECONDS)
             .setLocal(local)
             .setSchema("TEST")
