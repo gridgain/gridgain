@@ -27,10 +27,7 @@ public class MessageOrderLogListenerTest {
     /** */
     @Test
     public void testMessageOrderLogListener() {
-        MessageOrderLogListener lsnr = new MessageOrderLogListener(new MessageOrderLogListener.MessageGroup(true)
-            .add("a")
-            .add("b")
-        );
+        MessageOrderLogListener lsnr = new MessageOrderLogListener("a", "b");
 
         lsnr.accept("a");
         lsnr.accept("b");

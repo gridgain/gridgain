@@ -113,9 +113,8 @@ public class CleanupRestoredCachesSlowTest extends GridCommonAbstractTest implem
 
     /** */
     private final LogListener logLsnr = new MessageOrderLogListener(
-        new MessageOrderLogListener.MessageGroup(true)
-            .add("Cache stores cleanup started asynchronously")
-            .add("Cleanup cache stores .*? cleanFiles=true\\]")
+        "Cache stores cleanup started asynchronously",
+        "Cleanup cache stores .*? cleanFiles=true\\]"
     );
 
     /** {@inheritDoc} */

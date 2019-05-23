@@ -131,9 +131,7 @@ public class RebuildIndexLogMessageTest extends GridCommonAbstractTest implement
         super.afterTest();
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testRebuildIndexLogMessage() throws Exception {
         IgniteEx ignite = startGrids(1);
@@ -187,19 +185,13 @@ public class RebuildIndexLogMessageTest extends GridCommonAbstractTest implement
         assertTrue(logLsnr.check());
     }
 
-    /**
-     *
-     */
+    /** */
     private static class Person implements Serializable {
-        /**
-         *
-         */
+        /** */
         @QuerySqlField(index = true)
         private int id;
 
-        /**
-         *
-         */
+        /** */
         @QuerySqlField(index = true)
         private int age;
 

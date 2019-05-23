@@ -156,6 +156,7 @@ import org.apache.ignite.internal.processors.port.GridPortRecord;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.stat.IoStatisticsHolderNoOp;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
+import org.apache.ignite.internal.util.GridCountDownCallback;
 import org.apache.ignite.internal.util.GridMultiCollectionWrapper;
 import org.apache.ignite.internal.util.GridReadOnlyArrayView;
 import org.apache.ignite.internal.util.IgniteUtils;
@@ -1462,8 +1463,11 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         GridQueryProcessor qryProc = cctx.kernalContext().query();
 
         if (qryProc.moduleEnabled()) {
-            CountDownCallback rebuildIndexesCompleteCntr =
-                new CountDownCallback(cctx.cacheContexts().size(), () -> log().info("Indexes rebuilding completed for all caches."), 1);
+            GridCountDownCallback rebuildIndexesCompleteCntr = new GridCountDownCallback(
+                cctx.cacheContexts().size(),
+                () -> log().info("Indexes rebuilding completed for all caches."),
+                1  //need at least 1 index rebuilded to print message about rebuilding completion
+            );
 
             for (final GridCacheContext cacheCtx : (Collection<GridCacheContext>)cctx.cacheContexts()) {
                 if (cacheCtx.startTopologyVersion().equals(fut.initialVersion())) {
@@ -5894,52 +5898,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         /** */
         private CheckpointReadLockTimeoutException(String msg) {
             super(msg);
-        }
-    }
-
-    /**
-     * Allows to execute callback when a set of operations will be completed.
-     */
-    private static class CountDownCallback {
-        /** */
-        private final AtomicInteger cntr;
-
-        /** */
-        private final int minimumOperationsPerformed;
-
-        /** */
-        private final AtomicInteger operationsPerformed = new AtomicInteger(0);
-
-        /** */
-        private final Runnable cb;
-
-        /**
-         * Default constructor.
-         *
-         * @param initCnt count of invocations of {@link #countDown}.
-         * @param cb callback which will be executed after <code>initialCount</code>
-         * invocations of {@link #countDown}.
-         * @param minimumOperationsPerformed minimal count of really performed operations to execute callback.
-         */
-        public CountDownCallback(int initCnt, Runnable cb, int minimumOperationsPerformed) {
-            cntr = new AtomicInteger(initCnt);
-
-            this.minimumOperationsPerformed = minimumOperationsPerformed;
-
-            this.cb = cb;
-        }
-
-        /**
-         * Decrements the internal counter. If counter becomes 0, callback will be executed.
-         *
-         * @param performedOperation
-         */
-        public void countDown(boolean performedOperation) {
-            if (performedOperation)
-                operationsPerformed.incrementAndGet();
-
-            if (cntr.decrementAndGet() == 0 && operationsPerformed.get() >= minimumOperationsPerformed)
-                cb.run();
         }
     }
 }

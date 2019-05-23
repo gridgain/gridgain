@@ -19,13 +19,35 @@ import java.util.Iterator;
 import org.apache.ignite.internal.util.GridConcurrentLinkedHashSet;
 
 /**
- * Checks the order of the messages in the log.
+ * This log listener allows to check the order or presence of messages in log. Messages are matched via regexps.
+ * Also allows to unify various messages into groups to check messages only within group.
+ * Groups can be ordered or non-ordered. In non-ordered groups, message order will not be checked, only
+ * will be checked the presence of given messages.
+ * <p>
+ * Message groups can also be unified into higher-level groups, that can also be ordered or non-ordered and in general
+ * work like message groups.
  */
 public class MessageOrderLogListener extends LogListener {
     /** */
     private final MessageGroup matchesGrp;
 
-    /** */
+    /**
+     * Constructor accepting array of messages.
+     *
+     * @param messages array of messages that will be unified into ordered group.
+     */
+    public MessageOrderLogListener(String... messages) {
+        this(new MessageGroup(true) {{
+            for (String m : messages)
+                add(m);
+        }});
+    }
+
+    /**
+     * Constructor accepting message group
+     *
+     * @param matchesGrp group
+     */
     public MessageOrderLogListener(MessageGroup matchesGrp) {
         this.matchesGrp = matchesGrp;
     }
@@ -46,8 +68,7 @@ public class MessageOrderLogListener extends LogListener {
     }
 
     /**
-     * Allows to unify messages into groups. Messages in non-ordered groups can be analyzed independently
-     * from each other.
+     * Allows to unify messages into groups and groups into higher-level groups.
      */
     public static class MessageGroup extends LogListener {
         /** */
@@ -89,12 +110,22 @@ public class MessageOrderLogListener extends LogListener {
             groups = s == null ? new GridConcurrentLinkedHashSet<>() : null;
         }
 
-        /** */
+        /**
+         * Adds a message regexp to group.
+         *
+         * @param s message regexp
+         * @return this for chaining
+         */
         public MessageGroup add(String s) {
             return add(new MessageGroup(false, s));
         }
 
-        /** */
+        /**
+         * Adds another message group to this group.
+         *
+         * @param grp group
+         * @return this for chaining
+         */
         public MessageGroup add(MessageGroup grp) {
             groups.add(grp);
 
@@ -143,7 +174,12 @@ public class MessageOrderLogListener extends LogListener {
             internalAccept(s);
         }
 
-        /** */
+        /**
+         * Tries to accept given string. If fails, tries to accept it using internal message groups.
+         *
+         * @param s message
+         * @return whether accepted
+         */
         private boolean internalAccept(String s) {
             if (checked)
                 return false;
