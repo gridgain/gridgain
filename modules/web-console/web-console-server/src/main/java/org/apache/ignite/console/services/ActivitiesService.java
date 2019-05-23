@@ -16,7 +16,9 @@
 
 package org.apache.ignite.console.services;
 
+import java.util.Collection;
 import java.util.UUID;
+import org.apache.ignite.console.dto.Activity;
 import org.apache.ignite.console.repositories.ActivitiesRepository;
 import org.springframework.stereotype.Service;
 
@@ -48,8 +50,9 @@ public class ActivitiesService {
      * @param accId Account ID.
      * @param startDate Start date.
      * @param endDate End date.
+     * @return Collection of user activities.
      */
-    public void details(UUID accId, long startDate, long endDate) {
-        activitiesRepo.details(accId, startDate, endDate);
+    public Collection<Activity> details(UUID accId, long startDate, long endDate) {
+        return activitiesRepo.details(accId, startDate, endDate);
     }
 }

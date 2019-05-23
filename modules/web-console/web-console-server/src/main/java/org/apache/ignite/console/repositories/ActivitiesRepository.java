@@ -17,6 +17,7 @@
 package org.apache.ignite.console.repositories;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.TreeSet;
 import java.util.UUID;
@@ -103,8 +104,7 @@ public class ActivitiesRepository {
      * @param startDate Start date.
      * @param endDate End date.
      */
-    public void details(UUID accId, long startDate, long endDate) {
-        // todo
-
+    public Collection<Activity> details(UUID accId, long startDate, long endDate) {
+        return new ArrayList<>();
     }
 }
