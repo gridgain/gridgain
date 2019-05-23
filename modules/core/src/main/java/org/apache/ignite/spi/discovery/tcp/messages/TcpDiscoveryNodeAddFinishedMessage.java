@@ -126,6 +126,6 @@ public class TcpDiscoveryNodeAddFinishedMessage extends TcpDiscoveryAbstractMess
 
     /** {@inheritDoc} */
     @Override public String traceName() {
-        return "node.join.finish." + nodeId;
+        return "node.join.finish";
     }
 }

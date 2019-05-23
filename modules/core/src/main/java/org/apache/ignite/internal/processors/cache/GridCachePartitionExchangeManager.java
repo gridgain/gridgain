@@ -627,7 +627,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
             if (exchId != null)
                 span.addTag("exchange.id", exchId.toString());
 
-            span.addTag("node", cctx.localNodeId().toString());
+            span.addTag("node.id", cctx.localNodeId().toString());
             span.addLog("Created");
 
             exchFut.span(span);

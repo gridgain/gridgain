@@ -470,8 +470,9 @@ class ServerImpl extends TcpDiscoveryImpl {
             TcpDiscoveryNodeLeftMessage leftMsg = new TcpDiscoveryNodeLeftMessage(locNode.id());
 
             Span rootSpan = tracing.create(leftMsg.traceName())
-                .addTag("node", locNode.id().toString())
-                .addTag("event.node", locNode.id().toString())
+                .addTag("node.id", locNode.id().toString())
+                .addTag("event.node.id", locNode.id().toString())
+                .addTag("event.node.consistent.id", locNode.consistentId().toString())
                 .addLog("Created");
 
             leftMsg.trace().serializedSpan(tracing.serialize(rootSpan));
@@ -889,7 +890,7 @@ class ServerImpl extends TcpDiscoveryImpl {
 
             Span rootSpan = tracing.create(msg.traceName())
                 .addLog("Created")
-                .addTag("node", getLocalNodeId().toString());
+                .addTag("node.id", getLocalNodeId().toString());
 
             // This root span will be parent both from local and remote nodes.
             msg.trace().serializedSpan(tracing.serialize(rootSpan));
@@ -980,7 +981,8 @@ class ServerImpl extends TcpDiscoveryImpl {
 
         joinMsg.trace().span(
             tracing.create(joinMsg.traceName())
-                .addTag("event.node", locNode.toString())
+                .addTag("event.node.id", locNode.id().toString())
+                .addTag("event.node.consistent.id", locNode.consistentId() != null ? locNode.consistentId().toString() : "")
                 .addLog("Created")
                 .end()
         );
@@ -4435,7 +4437,8 @@ class ServerImpl extends TcpDiscoveryImpl {
                 nodeAddedMsg = tracing.messages().branch(nodeAddedMsg, msg);
 
                 nodeAddedMsg.trace().span()
-                    .addTag("event.node", node.id().toString());
+                    .addTag("event.node.id", node.id().toString())
+                    .addTag("event.node.consistent.id", node.consistentId().toString());
 
                 nodeAddedMsg.client(msg.client());
 
@@ -4599,7 +4602,8 @@ class ServerImpl extends TcpDiscoveryImpl {
                     addFinishMsg = tracing.messages().branch(addFinishMsg, msg);
 
                     addFinishMsg.trace().span()
-                        .addTag("event.node", node.id().toString());
+                        .addTag("event.node.id", node.id().toString())
+                        .addTag("event.node.consistent.id", node.consistentId().toString());
 
                     processNodeAddFinishedMessage(addFinishMsg);
 

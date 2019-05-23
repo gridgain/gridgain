@@ -752,7 +752,8 @@ class ClientImpl extends TcpDiscoveryImpl {
 
                     joinMsg.trace().span(
                         tracing.create(joinMsg.traceName())
-                            .addTag("event.node", node.toString())
+                            .addTag("event.node.id", node.id().toString())
+                            .addTag("event.node.consistent.id", node.consistentId().toString())
                             .addLog("Created")
                             .end()
                     );
