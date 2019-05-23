@@ -83,8 +83,8 @@ public class RebuildIndexWithHistoricalRebalanceTest extends GridCommonAbstractT
         /**
          * @param a A.
          */
-        public UserKey(int a) {
-            this.account = a;
+        public UserKey(int account) {
+            this.account = account;
         }
 
         /** {@inheritDoc} */
@@ -225,7 +225,6 @@ public class RebuildIndexWithHistoricalRebalanceTest extends GridCommonAbstractT
 
         awaitPartitionMapExchange();
 
-        // Validate indexes on start.
         ValidateIndexesClosure clo = new ValidateIndexesClosure(Collections.singleton(CACHE_NAME), 0, 0);
         node2.context().resource().injectGeneric(clo);
         VisorValidateIndexesJobResult res = clo.call();
