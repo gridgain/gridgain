@@ -965,8 +965,19 @@ class ServerImpl extends TcpDiscoveryImpl {
 
         DiscoveryDataPacket discoveryData = spi.collectExchangeData(new DiscoveryDataPacket(getLocalNodeId()));
 
+        TcpDiscoveryJoinRequestMessage joinMsg = new TcpDiscoveryJoinRequestMessage(locNode, discoveryData);
+
+        joinMsg.trace().span(
+            tracing.create(joinMsg.traceName())
+                .addTag("event.node", locNode.toString())
+                .addLog("Created")
+                .end()
+        );
+
+        tracing.messages().beforeSend(joinMsg);
+
         while (true) {
-            if (!sendJoinRequestMessage(discoveryData)) {
+            if (!sendJoinRequestMessage(joinMsg)) {
                 if (log.isDebugEnabled())
                     log.debug("Join request message has not been sent (local node is the first in the topology).");
 
@@ -1004,7 +1015,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                             mux.notifyAll();
                         }
 
-                        notifyDiscovery(EVT_NODE_JOINED, 1, locNode);
+                        notifyDiscovery(EVT_NODE_JOINED, 1, locNode, joinMsg.trace());
 
                         return null;
                     }
@@ -1125,22 +1136,11 @@ class ServerImpl extends TcpDiscoveryImpl {
      * Address is provided by {@link org.apache.ignite.spi.discovery.tcp.ipfinder.TcpDiscoveryIpFinder} and message is
      * sent to first node connection succeeded to.
      *
-     * @param discoveryData Discovery data.
+     * @param joinMsg Join request message.
      * @return {@code true} if send succeeded.
      * @throws IgniteSpiException If any error occurs.
      */
-    private boolean sendJoinRequestMessage(DiscoveryDataPacket discoveryData) throws IgniteSpiException {
-        TcpDiscoveryJoinRequestMessage joinReq = new TcpDiscoveryJoinRequestMessage(locNode, discoveryData);
-
-        joinReq.trace().span(
-            tracing.create(joinReq.traceName())
-                .addTag("event.node", locNode.toString())
-                .addLog("Created")
-                .end()
-        );
-
-        tracing.messages().beforeSend(joinReq);
-
+    private boolean sendJoinRequestMessage(TcpDiscoveryJoinRequestMessage joinMsg) throws IgniteSpiException {
         // Time when join process started.
         long joinStart = 0;
 
@@ -1164,7 +1164,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                     try {
                         SecurityUtils.serializeVersion(1);
 
-                        res = sendMessageDirectly(joinReq, addr, timeoutHelper);
+                        res = sendMessageDirectly(joinMsg, addr, timeoutHelper);
                     }
                     finally {
                         SecurityUtils.restoreDefaultSerializeVersion();
@@ -1189,7 +1189,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                         case RES_OK:
                             if (log.isDebugEnabled())
                                 log.debug("Join request message has been sent to address [addr=" + addr +
-                                    ", req=" + joinReq + ']');
+                                    ", req=" + joinMsg + ']');
 
                             // Join request sending succeeded, wait for response from topology.
                             return true;
@@ -1235,7 +1235,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                     throw new IgniteSpiException("Impossible to continue join, " +
                         "check if local discovery and communication ports " +
                         "are not blocked with firewall [addr=" + addr +
-                        ", req=" + joinReq + ", discoLocalPort=" + spi.getLocalPort() +
+                        ", req=" + joinMsg + ", discoLocalPort=" + spi.getLocalPort() +
                         ", discoLocalPortRange=" + spi.getLocalPortRange() + ']');
             }
 
