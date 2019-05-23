@@ -61,7 +61,7 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.INDEX_FILE_NAME;
 
 /**
- *
+ * Rebuild index after index.bin remove, when partition is moving.
  */
 public class RebuildIndexWithHistoricalRebalanceTest extends GridCommonAbstractTest {
     /** Rebalance cache name. */
@@ -195,6 +195,9 @@ public class RebuildIndexWithHistoricalRebalanceTest extends GridCommonAbstractT
         cleanPersistenceDir();
     }
 
+    /**
+     *
+     */
     @Test
     @WithSystemProperty(key = IGNITE_PDS_WAL_REBALANCE_THRESHOLD, value = "0") // Use only historical rebalance
     public void shouldRebuldIndexForMovingPartitionWithHistoricalRebalance() throws Exception {
