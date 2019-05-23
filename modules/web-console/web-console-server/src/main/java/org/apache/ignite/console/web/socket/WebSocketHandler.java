@@ -185,10 +185,10 @@ public class WebSocketHandler extends TextWebSocketHandler {
             WebSocketSession wsAgent = agents
                 .entrySet()
                 .stream()
-                .filter(e -> e.getValue().isServeAccount(accId))
+                .filter(e -> e.getValue().isActiveAccount(accId))
                 .findFirst()
                 .map(Map.Entry::getKey)
-                .orElseThrow(() -> new IllegalStateException("Agent not found for token: " + accId));
+                .orElseThrow(() -> new IllegalStateException("Failed to find agent for account."));
 
             if (log.isDebugEnabled())
                 log.debug("Found agent session [token=" + accId + ", session=" + wsAgent + ", event=" + evt + "]");
@@ -472,7 +472,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
         List<TopologySnapshot> tops = new ArrayList<>();
 
         agents.forEach((wsAgent, desc) -> {
-            if (desc.isServeAccount(accId)) {
+            if (desc.isActiveAccount(accId)) {
                 TopologySnapshot top = clusters.get(desc.clusterId);
 
                 if (top != null && tops.stream().allMatch(t -> t.differentCluster(top)))
@@ -512,10 +512,10 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
         agents.forEach((ws, desc) -> {
             try {
-                if (desc.revokeAccountByToken(acc.getId()))
+                if (desc.revokeAccount(acc.getId()))
                     sendMessage(ws, new WebSocketEvent(AGENT_REVOKE_TOKEN, oldTok));
 
-                if (desc.isActive())
+                if (desc.canBeClose())
                     ws.close();
             }
             catch (Throwable e) {
@@ -699,7 +699,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
     /**
      * Agent descriptor.
      */
-    protected static class AgentDescriptor {
+    private static class AgentDescriptor {
         /** */
         private Set<UUID> accIds;
 
@@ -715,24 +715,24 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
         /**
          * @param accId Account ID.
-         * @return
+         * @return {@code True} if contained the specified account.
          */
-        boolean isServeAccount(UUID accId) {
+        boolean isActiveAccount(UUID accId) {
             return accIds.contains(accId);
         }
 
         /**
-         * @param accId ACcount ID.
-         * @return
+         * @param accId Account ID.
+         * @return {@code True} if contained the specified account.
          */
-        boolean revokeAccountByToken(UUID accId) {
+        boolean revokeAccount(UUID accId) {
             return accIds.remove(accId);
         }
 
         /**
-         * @return
+         * @return {@code True} if connection to agent can be closed.
          */
-        boolean isActive() {
+        boolean canBeClose() {
             return accIds.isEmpty();
         }
 
