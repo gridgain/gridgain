@@ -227,17 +227,17 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     /** Check large UNION operation with small enough sub-selects, but large result set. */
     @Test
     public void testUnionOfSmallDataSetsWithLargeResult() {
-        maxMem = 2 * 1024 * 1024;
+        maxMem = 3 * 1024 * 1024;
 
-        checkQueryExpectOOM("select * from T as T0, T as T1 where T0.id < 1 " +
+        checkQueryExpectOOM("select * from T as T0, T as T1 where T0.id < 2 " +
             "UNION " +
-            "select * from T as T2, T as T3 where T2.id >= 2 AND T2.id < 3", false);
+            "select * from T as T2, T as T3 where T2.id > 2 AND T2.id < 4", false);
 
         assertEquals(3, localResults.size());
         assertTrue(maxMem > localResults.get(1).memoryAllocated() + localResults.get(2).memoryAllocated());
-        assertEquals(1000, localResults.get(1).getRowCount());
+        assertEquals(2000, localResults.get(1).getRowCount());
         assertEquals(1000, localResults.get(2).getRowCount());
-        assertTrue(2000 > localResults.get(0).getRowCount());
+        assertTrue(3000 > localResults.get(0).getRowCount());
     }
 
     /** Check simple Joins. */
@@ -333,14 +333,14 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         checkQueryExpectOOM("select K.grp_indexed, count(DISTINCT k.name) from K GROUP BY K.grp_indexed", true);
 
         assertEquals(1, localResults.size());
-        assertTrue(maxMem < localResults.get(0).memoryAllocated());
+        assertTrue(maxMem > localResults.get(0).memoryAllocated());
         assertTrue(100 > localResults.get(0).getRowCount());
     }
 
     /** Check lazy query with GROUP BY indexed col (small result), then sort. */
     @Test
     public void testQueryWithGroupByAndSort() {
-        maxMem = 512 * 1024;
+        maxMem = 256 * 1024;
 
         checkQueryExpectOOM("select K.indexed, sum(K.grp) as a, avg(K.grp), count(K.id) from K " +
             "GROUP BY K.indexed ORDER BY a DESC", true);

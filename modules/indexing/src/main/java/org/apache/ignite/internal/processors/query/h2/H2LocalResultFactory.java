@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
-import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
 import org.h2.engine.Session;
 import org.h2.expression.Expression;
 import org.h2.result.H2BaseLocalResult;

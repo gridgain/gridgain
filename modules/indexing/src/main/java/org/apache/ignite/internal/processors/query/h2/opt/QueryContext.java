@@ -19,7 +19,6 @@ package org.apache.ignite.internal.processors.query.h2.opt;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.query.h2.H2QueryContext;
 import org.apache.ignite.internal.processors.query.h2.QueryMemoryTracker;
-import org.apache.ignite.internal.processors.query.h2.QueryMemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.opt.join.DistributedJoinContext;
 import org.apache.ignite.internal.processors.query.h2.twostep.PartitionReservation;
 import org.apache.ignite.internal.util.typedef.internal.S;

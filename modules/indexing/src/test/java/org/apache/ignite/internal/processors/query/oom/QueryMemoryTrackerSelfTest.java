@@ -67,7 +67,7 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
 
     /** {@inheritDoc} */
     @Test
-    public void testLazyQueryWithHighLimit() {
+    @Override public void testLazyQueryWithHighLimit() {
         // OOM on reducer.
         checkQueryExpectOOM("select * from K LIMIT 8000", true);
 
@@ -103,7 +103,7 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
 
     /** {@inheritDoc} */
     @Test
-    public void testQueryWithDistinctAndGroupBy() {
+    @Override public void testQueryWithDistinctAndGroupBy() {
         // OOM on reducer.
         checkQueryExpectOOM("select DISTINCT K.id from K GROUP BY K.id", true);
 
@@ -115,7 +115,7 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
 
     /** Check GROUP BY operation on large data set with small result set. */
     @Test
-    public void testQueryWithGroupsSmallResult() {
+    @Override public void testQueryWithGroupsSmallResult() {
         execQuery("select K.grp, avg(K.id), min(K.id), sum(K.id) from K GROUP BY K.grp", false); // Tiny local result.
 
         assertEquals(2, localResults.size());
@@ -127,7 +127,7 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
 
     /** Check GROUP BY operation on indexed col. */
     @Test
-    public void testQueryWithGroupThenSort() {
+    @Override public void testQueryWithGroupThenSort() {
         // Tiny local result with sorting.
         execQuery("select K.grp_indexed, sum(K.id) as s from K GROUP BY K.grp_indexed ORDER BY s", false);
 
