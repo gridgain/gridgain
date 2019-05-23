@@ -38,6 +38,11 @@ public class BikeBuilder {
     static {
         serializers = new HashMap<>();
         serializers.put(String.class, x -> ((String)x).getBytes(StandardCharsets.UTF_8));
+        serializers.put(Short.class, x -> {
+            byte[] b = new byte[2];
+            BinaryPrimitives.writeShort(b, 0, (Short)x);
+            return b;
+        });
         serializers.put(Integer.class, x -> {
             byte[] b = new byte[4];
             BinaryPrimitives.writeInt(b, 0, (Integer)x);
@@ -58,6 +63,12 @@ public class BikeBuilder {
 
             return b;
         });
+        serializers.put(java.sql.Date.class, x -> {
+            byte[] b = new byte[8];
+            BinaryPrimitives.writeLong(b, 0, ((java.sql.Date)x).getTime());
+            return b;
+        });
+        serializers.put(byte[].class, x -> (byte[])x);
     }
 
     public BikeBuilder append(Object v) {

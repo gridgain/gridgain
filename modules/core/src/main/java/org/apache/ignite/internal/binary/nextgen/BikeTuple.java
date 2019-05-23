@@ -198,6 +198,9 @@ public class BikeTuple {
 //        if (intType == 4)
             return new String(data, off, len, StandardCharsets.UTF_8);
 
+        if (type == Short.class)
+            return BinaryPrimitives.readShort(data, off);
+
         if (type == Integer.class)
 //        if (intType == 1)
             return BinaryPrimitives.readInt(data, off);
@@ -211,6 +214,15 @@ public class BikeTuple {
             return new BigDecimal(
                 new BigInteger(BinaryPrimitives.readByteArray(data, off + 4, len - 4)),
                 BinaryPrimitives.readInt(data, off));
+        }
+
+        if (type == java.sql.Date.class)
+            return new java.sql.Date(BinaryPrimitives.readLong(data, off));
+
+        if (type == byte[].class) {
+            byte[] b = new byte[len];
+            System.arraycopy(data, off, b, 0, len);
+            return b;
         }
 
         throw new RuntimeException();
