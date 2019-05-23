@@ -5,21 +5,28 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.tracing.impl.OpenCensusTracingSpi;
 import org.apache.ignite.internal.processors.tracing.impl.OpenCensusZipkinReporter;
-import org.apache.ignite.internal.processors.tracing.messages.TraceableMessage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class TracingProcessor extends GridProcessorAdapter implements Tracing {
     // TODO: Make configurable in Ignite configuration (Tracing section?).
-    private final TracingSpi spi = new OpenCensusTracingSpi();
+    private final TracingSpi spi;
 
-    private final Reporter reporter = new OpenCensusZipkinReporter("http://localhost:9411/api/v2/spans", "ignite");
+    private final Reporter reporter;
+
+    private final TracingMessagesProcessor msgProc;
 
     /**
      * @param ctx Kernal context.
      */
     public TracingProcessor(GridKernalContext ctx) {
         super(ctx);
+
+        spi = new OpenCensusTracingSpi();
+
+        reporter = new OpenCensusZipkinReporter("http://localhost:9411/api/v2/spans", "ignite");
+
+        msgProc = new TracingMessagesProcessor(ctx, spi);
     }
 
     @Override public void start() throws IgniteCheckedException {
@@ -51,17 +58,8 @@ public class TracingProcessor extends GridProcessorAdapter implements Tracing {
         return spi.serialize((SpanEx) span);
     }
 
-    @Override public void afterReceive(TraceableMessage msg) {
-        if (msg.trace().serializedSpan() != null && msg.trace().span() == null)
-            msg.trace().span(
-                create(msg.traceName(), msg.trace().serializedSpan())
-                    .addTag("node", ctx.localNodeId().toString())
-                    .addLog("Received")
-            );
-    }
-
-    @Override public void beforeSend(TraceableMessage msg) {
-        if (msg.trace().span() != null && msg.trace().serializedSpan() == null)
-            msg.trace().serializedSpan(serialize(msg.trace().span()));
+    /** {@inheritDoc} */
+    @Override public TracingMessagesProcessor messages() {
+        return msgProc;
     }
 }

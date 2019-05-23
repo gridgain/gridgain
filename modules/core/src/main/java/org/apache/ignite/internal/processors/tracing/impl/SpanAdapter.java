@@ -1,5 +1,8 @@
 package org.apache.ignite.internal.processors.tracing.impl;
 
+import java.util.Map;
+import java.util.stream.Collectors;
+import io.opencensus.trace.Annotation;
 import io.opencensus.trace.AttributeValue;
 import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.processors.tracing.SpanEx;
@@ -23,6 +26,19 @@ public class SpanAdapter implements SpanEx<io.opencensus.trace.Span> {
 
     @Override public Span addLog(String logDesc) {
         span.addAnnotation(logDesc);
+
+        return this;
+    }
+
+    @Override public Span addLog(String logDesc, Map<String, String> attributes) {
+        span.addAnnotation(Annotation.fromDescriptionAndAttributes(
+            logDesc,
+            attributes.entrySet().stream()
+                .collect(Collectors.toMap(
+                    e -> e.getKey(),
+                    e -> AttributeValue.stringAttributeValue(e.getValue())
+                ))
+        ));
 
         return this;
     }

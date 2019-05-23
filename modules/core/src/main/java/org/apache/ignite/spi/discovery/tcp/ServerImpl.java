@@ -80,6 +80,7 @@ import org.apache.ignite.internal.managers.discovery.DiscoveryServerOnlyCustomMe
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.security.SecurityContext;
 import org.apache.ignite.internal.processors.security.SecurityUtils;
+import org.apache.ignite.internal.processors.tracing.messages.Trace;
 import org.apache.ignite.internal.processors.tracing.messages.TraceableMessage;
 import org.apache.ignite.internal.util.GridBoundedLinkedHashSet;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
@@ -111,6 +112,7 @@ import org.apache.ignite.spi.IgniteSpiContext;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.IgniteSpiOperationTimeoutHelper;
 import org.apache.ignite.spi.IgniteSpiThread;
+import org.apache.ignite.spi.discovery.DiscoveryNotification;
 import org.apache.ignite.spi.discovery.DiscoverySpiCustomMessage;
 import org.apache.ignite.spi.discovery.DiscoverySpiListener;
 import org.apache.ignite.spi.discovery.IgniteDiscoveryThread;
@@ -565,7 +567,9 @@ class ServerImpl extends TcpDiscoveryImpl {
                     Map<Long, Collection<ClusterNode>> hist = updateTopologyHistory(topVer,
                         Collections.unmodifiableList(top));
 
-                    lsnr.onDiscovery(EVT_NODE_FAILED, topVer, n, top, hist, null).get();
+                    lsnr.onDiscovery(
+                        new DiscoveryNotification(EVT_NODE_FAILED, topVer, n, top, hist, null, null)
+                    ).get();
                 }
             }
         }
@@ -1124,7 +1128,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                 .end()
         );
 
-        tracing.beforeSend(joinReq);
+        tracing.messages().beforeSend(joinReq);
 
         // Time when join process started.
         long joinStart = 0;
@@ -1523,7 +1527,7 @@ class ServerImpl extends TcpDiscoveryImpl {
     }
 
     private void notifyDiscovery(int type, long topVer, TcpDiscoveryNode node) {
-        notifyDiscovery(type, topVer, node, Collections.emptyMap());
+        notifyDiscovery(type, topVer, node, null);
     }
 
     /**
@@ -1533,7 +1537,7 @@ class ServerImpl extends TcpDiscoveryImpl {
      * @param topVer Topology version.
      * @param node Remote node this event is connected with.
      */
-    private void notifyDiscovery(int type, long topVer, TcpDiscoveryNode node, Map<String, Object> metadata) {
+    private void notifyDiscovery(int type, long topVer, TcpDiscoveryNode node, Trace trace) {
         assert type > 0;
         assert node != null;
 
@@ -1552,7 +1556,9 @@ class ServerImpl extends TcpDiscoveryImpl {
 
             Map<Long, Collection<ClusterNode>> hist = updateTopologyHistory(topVer, top);
 
-            lsnr.onDiscovery(type, topVer, node, top, hist, null, metadata);
+            lsnr.onDiscovery(
+                new DiscoveryNotification(type, topVer, node, top, hist, null, trace)
+            );
         }
         else {
             if (log.isDebugEnabled())
@@ -2994,7 +3000,7 @@ class ServerImpl extends TcpDiscoveryImpl {
             if (msg instanceof TraceableMessage) {
                 TraceableMessage tMsg = (TraceableMessage) msg;
 
-                tracing.afterReceive(tMsg);
+                tracing.messages().afterReceive(tMsg);
             }
 
             spi.stats.onMessageProcessingStarted(msg);
@@ -3064,9 +3070,7 @@ class ServerImpl extends TcpDiscoveryImpl {
             if (msg instanceof TraceableMessage) {
                 TraceableMessage tMsg = (TraceableMessage) msg;
 
-                tMsg.trace().span()
-                    .addLog("Processed")
-                    .end();
+                tracing.messages().finishProcessing(tMsg);
             }
         }
 
@@ -3152,7 +3156,7 @@ class ServerImpl extends TcpDiscoveryImpl {
 
             // TODO: Maybe put this interceptor to spi.sndMsgLsnrs ?
             if (msg instanceof TraceableMessage)
-                tracing.beforeSend((TraceableMessage) msg);
+                tracing.messages().beforeSend((TraceableMessage) msg);
 
             sendMessageToClients(msg);
 
@@ -4380,25 +4384,19 @@ class ServerImpl extends TcpDiscoveryImpl {
 
                 DiscoveryDataPacket data = msg.gridDiscoveryData();
 
-                log.warning("Before create node added: " + msg.trace().span() + " " + msg.trace().serializedSpan());
-
                 TcpDiscoveryNodeAddedMessage nodeAddedMsg = new TcpDiscoveryNodeAddedMessage(locNodeId,
                     node, data, spi.gridStartTime);
 
-                nodeAddedMsg.trace().span(
-                    tracing.create(nodeAddedMsg.traceName(), msg.trace().span())
-                        .addTag("node", locNodeId.toString())
-                        .addTag("event.node", node.id().toString())
-                        .addLog("Created")
-                );
+                nodeAddedMsg = tracing.messages().branch(nodeAddedMsg, msg);
+
+                nodeAddedMsg.trace().span()
+                    .addTag("event.node", node.id().toString());
 
                 nodeAddedMsg.client(msg.client());
 
                 processNodeAddedMessage(nodeAddedMsg);
 
-                nodeAddedMsg.trace().span()
-                    .addLog("Processed")
-                    .end();
+                tracing.messages().finishProcessing(nodeAddedMsg);
             }
             else {
                 if (sendMessageToRemotes(msg))
@@ -4553,18 +4551,14 @@ class ServerImpl extends TcpDiscoveryImpl {
                         addFinishMsg.clientNodeAttributes(node.attributes());
                     }
 
-                    addFinishMsg.trace().span(
-                        tracing.create(addFinishMsg.traceName(), msg.trace().span())
-                            .addTag("node", locNodeId.toString())
-                            .addTag("event.node", node.id().toString())
-                            .addLog("Created")
-                    );
+                    addFinishMsg = tracing.messages().branch(addFinishMsg, msg);
+
+                    addFinishMsg.trace().span()
+                        .addTag("event.node", node.id().toString());
 
                     processNodeAddFinishedMessage(addFinishMsg);
 
-                    addFinishMsg.trace().span()
-                        .addLog("Processed")
-                        .end();
+                    tracing.messages().finishProcessing(addFinishMsg);
 
                     addMessage(new TcpDiscoveryDiscardMessage(locNodeId, msg.id(), false));
 
@@ -4953,11 +4947,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                 }
 
                 if (state == CONNECTED) {
-                    Map<String, Object> meta = U.newHashMap(3);
-
-                    meta.put("trace", msg.trace());
-
-                    notifyDiscovery(EVT_NODE_JOINED, topVer, node, meta);
+                    notifyDiscovery(EVT_NODE_JOINED, topVer, node, msg.trace());
 
                     if (!node.isClient() && !node.isDaemon())
                         nodesIdsHist.add(node.id());
@@ -5002,12 +4992,8 @@ class ServerImpl extends TcpDiscoveryImpl {
 
                 nullifyDiscoData();
 
-                Map<String, Object> meta = U.newHashMap(3);
-
-                meta.put("trace", msg.trace());
-
                 // Discovery manager must create local joined event before spiStart completes.
-                notifyDiscovery(EVT_NODE_JOINED, topVer, locNode, meta);
+                notifyDiscovery(EVT_NODE_JOINED, topVer, locNode, msg.trace());
             }
 
             if (sendMessageToRemotes(msg))
@@ -5393,7 +5379,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                     joiningNodes.remove(failedNode.id());
                 }
 
-                notifyDiscovery(EVT_NODE_FAILED, topVer, failedNode);
+                notifyDiscovery(EVT_NODE_FAILED, topVer, failedNode, msg.trace());
 
                 spi.stats.onNodeFailed();
             }
@@ -6019,12 +6005,16 @@ class ServerImpl extends TcpDiscoveryImpl {
                     throw new IgniteException("Failed to unmarshal discovery custom message: " + msg, t);
                 }
 
-                IgniteFuture<?> fut = lsnr.onDiscovery(DiscoveryCustomEvent.EVT_DISCOVERY_CUSTOM_EVT,
-                    msg.topologyVersion(),
-                    node,
-                    snapshot,
-                    hist,
-                    msgObj);
+                IgniteFuture<?> fut = lsnr.onDiscovery(
+                    new DiscoveryNotification(
+                        DiscoveryCustomEvent.EVT_DISCOVERY_CUSTOM_EVT,
+                        msg.topologyVersion(),
+                        node,
+                        snapshot,
+                        hist,
+                        msgObj,
+                        null)
+                    );
 
                 if (waitForNotification || msgObj.isMutable()) {
                     blockingSectionBegin();

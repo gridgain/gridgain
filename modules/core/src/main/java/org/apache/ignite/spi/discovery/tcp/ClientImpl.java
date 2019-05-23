@@ -69,6 +69,7 @@ import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.managers.discovery.CustomMessageWrapper;
 import org.apache.ignite.internal.managers.discovery.DiscoveryServerOnlyCustomMessage;
+import org.apache.ignite.internal.processors.tracing.messages.Trace;
 import org.apache.ignite.internal.processors.tracing.messages.TraceableMessage;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
@@ -87,6 +88,7 @@ import org.apache.ignite.spi.IgniteSpiContext;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.IgniteSpiOperationTimeoutHelper;
 import org.apache.ignite.spi.IgniteSpiThread;
+import org.apache.ignite.spi.discovery.DiscoveryNotification;
 import org.apache.ignite.spi.discovery.DiscoverySpiCustomMessage;
 import org.apache.ignite.spi.discovery.DiscoverySpiListener;
 import org.apache.ignite.spi.discovery.tcp.internal.DiscoveryDataPacket;
@@ -482,7 +484,11 @@ class ClientImpl extends TcpDiscoveryImpl {
 
                 Collection<ClusterNode> top = updateTopologyHistory(topVer + 1, null);
 
-                lsnr.onDiscovery(EVT_NODE_FAILED, topVer, n, top, new TreeMap<>(topHist), null).get();
+                lsnr.onDiscovery(
+                    new DiscoveryNotification(
+                        EVT_NODE_FAILED, topVer, n, top, new TreeMap<>(topHist), null, null
+                    )
+                    ).get();
             }
         }
 
@@ -764,7 +770,7 @@ class ClientImpl extends TcpDiscoveryImpl {
                 msg.client(true);
 
                 if (msg instanceof TraceableMessage)
-                    tracing.beforeSend((TraceableMessage) msg);
+                    tracing.messages().beforeSend((TraceableMessage) msg);
 
                 spi.writeToSocket(sock, msg, timeoutHelper.nextTimeoutChunk(spi.getSocketTimeout()));
 
@@ -1721,7 +1727,7 @@ class ClientImpl extends TcpDiscoveryImpl {
 
                                 state = SEGMENTED;
 
-                                notifyDiscovery(EVT_NODE_SEGMENTED, topVer, locNode, allVisibleNodes());
+                                notifyDiscovery(EVT_NODE_SEGMENTED, topVer, locNode, allVisibleNodes(), null);
                             }
                         }
                     }
@@ -1847,7 +1853,7 @@ class ClientImpl extends TcpDiscoveryImpl {
 
                                 state = SEGMENTED;
 
-                                notifyDiscovery(EVT_NODE_SEGMENTED, topVer, locNode, allVisibleNodes());
+                                notifyDiscovery(EVT_NODE_SEGMENTED, topVer, locNode, allVisibleNodes(), null);
                             }
                         }
                         else {
@@ -1923,7 +1929,7 @@ class ClientImpl extends TcpDiscoveryImpl {
 
                                     state = SEGMENTED;
 
-                                    notifyDiscovery(EVT_NODE_SEGMENTED, topVer, locNode, allVisibleNodes());
+                                    notifyDiscovery(EVT_NODE_SEGMENTED, topVer, locNode, allVisibleNodes(), null);
                                 }
                                 else
                                     joinError(err);
@@ -2002,7 +2008,7 @@ class ClientImpl extends TcpDiscoveryImpl {
 
             delayDiscoData.clear();
 
-            notifyDiscovery(EVT_CLIENT_NODE_DISCONNECTED, topVer, locNode, allVisibleNodes());
+            notifyDiscovery(EVT_CLIENT_NODE_DISCONNECTED, topVer, locNode, allVisibleNodes(), null);
 
             IgniteClientDisconnectedCheckedException err =
                 new IgniteClientDisconnectedCheckedException(null, "Failed to ping node, " +
@@ -2053,7 +2059,7 @@ class ClientImpl extends TcpDiscoveryImpl {
                 else {
                     state = SEGMENTED;
 
-                    notifyDiscovery(EVT_NODE_SEGMENTED, topVer, locNode, allVisibleNodes());
+                    notifyDiscovery(EVT_NODE_SEGMENTED, topVer, locNode, allVisibleNodes(), null);
                 }
 
                 return;
@@ -2085,6 +2091,9 @@ class ClientImpl extends TcpDiscoveryImpl {
 
             spi.stats.onMessageProcessingStarted(msg);
 
+            if (msg instanceof TraceableMessage)
+                tracing.messages().beforeSend((TraceableMessage) msg);
+
             if (msg instanceof TcpDiscoveryNodeAddedMessage)
                 processNodeAddedMessage((TcpDiscoveryNodeAddedMessage)msg);
             else if (msg instanceof TcpDiscoveryNodeAddFinishedMessage)
@@ -2105,6 +2114,9 @@ class ClientImpl extends TcpDiscoveryImpl {
                 processPingRequest();
 
             spi.stats.onMessageProcessingFinished(msg);
+
+            if (msg instanceof TraceableMessage)
+                tracing.messages().finishProcessing((TraceableMessage) msg);
 
             if (spi.ensured(msg)
                     && state == CONNECTED
@@ -2242,14 +2254,14 @@ class ClientImpl extends TcpDiscoveryImpl {
 
                     Collection<ClusterNode> nodes = updateTopologyHistory(topVer, msg);
 
-                    notifyDiscovery(EVT_NODE_JOINED, topVer, locNode, nodes);
+                    notifyDiscovery(EVT_NODE_JOINED, topVer, locNode, nodes, msg.trace());
 
                     boolean disconnected = disconnected();
 
                     state = CONNECTED;
 
                     if (disconnected) {
-                        notifyDiscovery(EVT_CLIENT_NODE_RECONNECTED, topVer, locNode, nodes);
+                        notifyDiscovery(EVT_CLIENT_NODE_RECONNECTED, topVer, locNode, nodes, null);
 
                         U.quietAndWarn(log, "Client node was reconnected after it was already considered " +
                             "failed by the server topology (this could happen after all servers restarted or due " +
@@ -2314,7 +2326,7 @@ class ClientImpl extends TcpDiscoveryImpl {
                     }
 
                     if (evt) {
-                        notifyDiscovery(EVT_NODE_JOINED, topVer, node, top);
+                        notifyDiscovery(EVT_NODE_JOINED, topVer, node, top, msg.trace());
 
                         spi.stats.onNodeJoined();
                     }
@@ -2359,7 +2371,7 @@ class ClientImpl extends TcpDiscoveryImpl {
                         return;
                     }
 
-                    notifyDiscovery(EVT_NODE_LEFT, msg.topologyVersion(), node, top);
+                    notifyDiscovery(EVT_NODE_LEFT, msg.topologyVersion(), node, top, msg.trace());
 
                     spi.stats.onNodeLeft();
                 }
@@ -2423,7 +2435,7 @@ class ClientImpl extends TcpDiscoveryImpl {
                             ", msg=" + msg.warning() + ']');
                     }
 
-                    notifyDiscovery(EVT_NODE_FAILED, msg.topologyVersion(), node, top);
+                    notifyDiscovery(EVT_NODE_FAILED, msg.topologyVersion(), node, top, msg.trace());
 
                     spi.stats.onNodeFailed();
                 }
@@ -2531,7 +2543,7 @@ class ClientImpl extends TcpDiscoveryImpl {
                             DiscoverySpiCustomMessage msgObj = msg.message(spi.marshaller(),
                                 U.resolveClassLoader(spi.ignite().configuration()));
 
-                            notifyDiscovery(EVT_DISCOVERY_CUSTOM_EVT, topVer, node, allVisibleNodes(), msgObj);
+                            notifyDiscovery(EVT_DISCOVERY_CUSTOM_EVT, topVer, node, allVisibleNodes(), msgObj, null);
                         }
                         catch (Throwable e) {
                             U.error(log, "Failed to unmarshal discovery custom message.", e);
@@ -2591,7 +2603,7 @@ class ClientImpl extends TcpDiscoveryImpl {
 
                 node.lastUpdateTime(tstamp);
 
-                notifyDiscovery(EVT_NODE_METRICS_UPDATED, topVer, node, allVisibleNodes());
+                notifyDiscovery(EVT_NODE_METRICS_UPDATED, topVer, node, allVisibleNodes(), null);
             }
             else if (log.isDebugEnabled())
                 log.debug("Received metrics from unknown node: " + nodeId);
@@ -2603,8 +2615,8 @@ class ClientImpl extends TcpDiscoveryImpl {
          * @param node Node.
          * @param top Topology snapshot.
          */
-        private void notifyDiscovery(int type, long topVer, ClusterNode node, Collection<ClusterNode> top) {
-            notifyDiscovery(type, topVer, node, top, null);
+        private void notifyDiscovery(int type, long topVer, ClusterNode node, Collection<ClusterNode> top, Trace trace) {
+            notifyDiscovery(type, topVer, node, top, null, trace);
         }
 
         /**
@@ -2619,7 +2631,8 @@ class ClientImpl extends TcpDiscoveryImpl {
             long topVer,
             ClusterNode node,
             Collection<ClusterNode> top,
-            @Nullable DiscoverySpiCustomMessage data
+            @Nullable DiscoverySpiCustomMessage data,
+            Trace trace
         ) {
             DiscoverySpiListener lsnr = spi.lsnr;
 
@@ -2630,7 +2643,9 @@ class ClientImpl extends TcpDiscoveryImpl {
                     debugLog.debug("Discovery notification [node=" + node + ", type=" + U.gridEventName(type) +
                         ", topVer=" + topVer + ']');
 
-                lsnr.onDiscovery(type, topVer, node, top, new TreeMap<>(topHist), data).get();
+                lsnr.onDiscovery(
+                    new DiscoveryNotification(type, topVer, node, top, new TreeMap<>(topHist), data, trace)
+                ).get();
             }
             else if (debugLog.isDebugEnabled())
                 debugLog.debug("Skipped discovery notification [node=" + node + ", type=" + U.gridEventName(type) +
