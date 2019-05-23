@@ -705,6 +705,8 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
                     if (incMinorTopVer)
                         ctx.cache().onDiscoveryEvent(type, customMsg, node, nextTopVer, ctx.state().clusterState());
+
+                    log.warning("Here " + notification.getTrace());
                 }
                 else {
                     nextTopVer = new AffinityTopologyVersion(topVer, minorTopVer);
@@ -3134,6 +3136,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                         customEvt.topologySnapshot(topVer.topologyVersion(), evt.topSnapshot);
                         customEvt.affinityTopologyVersion(topVer);
                         customEvt.customMessage(evt.data);
+                        customEvt.setSpan(evt.trace != null ? evt.trace.span() : null);
 
                         if (evt.discoCache == null) {
                             assert discoCache != null : evt.data;

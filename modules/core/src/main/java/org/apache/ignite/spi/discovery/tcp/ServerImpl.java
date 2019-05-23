@@ -80,6 +80,8 @@ import org.apache.ignite.internal.managers.discovery.DiscoveryServerOnlyCustomMe
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.security.SecurityContext;
 import org.apache.ignite.internal.processors.security.SecurityUtils;
+import org.apache.ignite.internal.processors.tracing.Span;
+import org.apache.ignite.internal.processors.tracing.Status;
 import org.apache.ignite.internal.processors.tracing.messages.Trace;
 import org.apache.ignite.internal.processors.tracing.messages.TraceableMessage;
 import org.apache.ignite.internal.util.GridBoundedLinkedHashSet;
@@ -865,7 +867,7 @@ class ServerImpl extends TcpDiscoveryImpl {
     /** {@inheritDoc} */
     @Override public void sendCustomEvent(DiscoverySpiCustomMessage evt) {
         try {
-            TcpDiscoveryAbstractMessage msg;
+            TcpDiscoveryCustomEventMessage msg;
 
             if (((CustomMessageWrapper)evt).delegate() instanceof DiscoveryServerOnlyCustomMessage)
                 msg = new TcpDiscoveryServerOnlyCustomEventMessage(getLocalNodeId(), evt,
@@ -874,7 +876,16 @@ class ServerImpl extends TcpDiscoveryImpl {
                 msg = new TcpDiscoveryCustomEventMessage(getLocalNodeId(), evt,
                     U.marshal(spi.marshaller(), evt));
 
+            Span rootSpan = tracing.create(msg.traceName())
+                .addLog("Created")
+                .addTag("node", getLocalNodeId().toString());
+
+            // This root span will be parent both from local and remote nodes.
+            msg.trace().serializedSpan(tracing.serialize(rootSpan));
+
             msgWorker.addMessage(msg);
+
+            rootSpan.addLog("Sent").end();
         }
         catch (IgniteCheckedException e) {
             throw new IgniteSpiException("Failed to marshal custom event: " + evt, e);
@@ -2954,6 +2965,12 @@ class ServerImpl extends TcpDiscoveryImpl {
             if (msg == WAKEUP)
                 return;
 
+            if (msg instanceof TraceableMessage) {
+                TraceableMessage tMsg = (TraceableMessage) msg;
+
+                tracing.messages().afterReceive(tMsg);
+            }
+
             spi.startMessageProcess(msg);
 
             sendMetricsUpdateMessage();
@@ -2963,6 +2980,12 @@ class ServerImpl extends TcpDiscoveryImpl {
                     if (log.isDebugEnabled())
                         log.debug("Discovery detected ring connectivity issues and will stop local node, " +
                             "ignoring message [msg=" + msg + ", locNode=" + locNode + ']');
+
+                    if (msg instanceof TraceableMessage)
+                        ((TraceableMessage) msg).trace().span()
+                            .addLog("Ring failed")
+                            .setStatus(Status.ABORTED)
+                            .end();
 
                     return;
                 }
@@ -2993,14 +3016,14 @@ class ServerImpl extends TcpDiscoveryImpl {
                             ", locNode=" + locNode + ']');
                     }
 
+                    if (msg instanceof TraceableMessage)
+                        ((TraceableMessage) msg).trace().span()
+                            .addLog("Local node orderd not initialized")
+                            .setStatus(Status.ABORTED)
+                            .end();
+
                     return;
                 }
-            }
-
-            if (msg instanceof TraceableMessage) {
-                TraceableMessage tMsg = (TraceableMessage) msg;
-
-                tracing.messages().afterReceive(tMsg);
             }
 
             spi.stats.onMessageProcessingStarted(msg);
@@ -5817,6 +5840,10 @@ class ServerImpl extends TcpDiscoveryImpl {
 
                 if (!msg.verified()) {
                     msg.verify(getLocalNodeId());
+
+                    msg.trace().span()
+                        .addLog("Verified");
+
                     msg.topologyVersion(ring.topologyVersion());
 
                     if (pendingMsgs.procCustomMsgs.add(msg.id())) {
@@ -5834,6 +5861,10 @@ class ServerImpl extends TcpDiscoveryImpl {
                     msg.message(null, msg.messageBytes());
                 }
                 else {
+                    msg.trace().span()
+                        .addLog("Discarded")
+                        .setStatus(Status.CANCELLED);
+
                     addMessage(new TcpDiscoveryDiscardMessage(getLocalNodeId(), msg.id(), true));
 
                     spi.stats.onRingMessageReceived(msg);
@@ -6005,6 +6036,8 @@ class ServerImpl extends TcpDiscoveryImpl {
                     throw new IgniteException("Failed to unmarshal discovery custom message: " + msg, t);
                 }
 
+                log.warning("Notify with " + msg + " " + msg.trace());
+
                 IgniteFuture<?> fut = lsnr.onDiscovery(
                     new DiscoveryNotification(
                         DiscoveryCustomEvent.EVT_DISCOVERY_CUSTOM_EVT,
@@ -6013,7 +6046,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                         snapshot,
                         hist,
                         msgObj,
-                        null)
+                        msg.trace())
                     );
 
                 if (waitForNotification || msgObj.isMutable()) {
