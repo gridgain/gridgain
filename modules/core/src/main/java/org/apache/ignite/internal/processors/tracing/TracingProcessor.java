@@ -40,7 +40,7 @@ public class TracingProcessor extends GridProcessorAdapter implements Tracing {
     @Override public void stop(boolean cancel) throws IgniteCheckedException {
         super.stop(cancel);
 
-        reporter.stop();
+        //reporter.stop();
     }
 
     /** {@inheritDoc} */

@@ -2171,9 +2171,9 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
         if (res != null)
             span.addTag("result.topology.version", res.toString());
-        if (err != null) {
-            span.addTag("error", err.getMessage());
-        }
+
+        if (err != null)
+            span.addTag("error", err.toString());
 
         try {
             waitUntilNewCachesAreRegistered();

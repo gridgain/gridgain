@@ -28,6 +28,8 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -96,6 +98,10 @@ public class PartitionsExchangeCoordinatorFailoverTest extends GridCommonAbstrac
                             .setAffinity(new RendezvousAffinityFunction(false, 32))
             );
         }
+
+        cfg.setDataStorageConfiguration(new DataStorageConfiguration()
+            .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
+            .setMaxSize(128 * 1024 * 1024)));
 
         cfg.setClientMode(client);
 
@@ -468,9 +474,19 @@ public class PartitionsExchangeCoordinatorFailoverTest extends GridCommonAbstrac
 
         startGrid(2);
 
-        startGrid(3);
+        U.sleep(2000);
 
-        U.sleep(10000);
+        stopGrid(2);
+
+        U.sleep(2000);
+
+        stopGrid(1);
+
+        U.sleep(2000);
+
+        stopGrid(0);
+
+        U.sleep(2000);
     }
 
     /**

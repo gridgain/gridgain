@@ -467,7 +467,18 @@ class ServerImpl extends TcpDiscoveryImpl {
 
         if (msgWorker != null && msgWorker.runner() != null && msgWorker.runner().isAlive() && !disconnect) {
             // Send node left message only if it is final stop.
-            msgWorker.addMessage(new TcpDiscoveryNodeLeftMessage(locNode.id()));
+            TcpDiscoveryNodeLeftMessage leftMsg = new TcpDiscoveryNodeLeftMessage(locNode.id());
+
+            Span rootSpan = tracing.create(leftMsg.traceName())
+                .addTag("node", locNode.id().toString())
+                .addTag("event.node", locNode.id().toString())
+                .addLog("Created");
+
+            leftMsg.trace().serializedSpan(tracing.serialize(rootSpan));
+
+            msgWorker.addMessage(leftMsg);
+
+            rootSpan.addLog("Sent").end();
 
             synchronized (mux) {
                 long timeout = spi.netTimeout;
@@ -1548,7 +1559,7 @@ class ServerImpl extends TcpDiscoveryImpl {
      * @param topVer Topology version.
      * @param node Remote node this event is connected with.
      */
-    private void notifyDiscovery(int type, long topVer, TcpDiscoveryNode node, Trace trace) {
+    private boolean notifyDiscovery(int type, long topVer, TcpDiscoveryNode node, Trace trace) {
         assert type > 0;
         assert node != null;
 
@@ -1570,12 +1581,16 @@ class ServerImpl extends TcpDiscoveryImpl {
             lsnr.onDiscovery(
                 new DiscoveryNotification(type, topVer, node, top, hist, null, trace)
             );
+
+            return true;
         }
         else {
             if (log.isDebugEnabled())
                 log.debug("Skipped discovery notification [node=" + node + ", spiState=" + spiState +
                     ", type=" + U.gridEventName(type) + ", topVer=" + topVer + ']');
         }
+
+        return false;
     }
 
     /**
@@ -2805,6 +2820,8 @@ class ServerImpl extends TcpDiscoveryImpl {
         /** */
         private DiscoveryDataPacket gridDiscoveryData;
 
+        private final ThreadLocal<Boolean> notifiedDiscovery = ThreadLocal.withInitial(() -> false);
+
         /**
          * @param log Logger.
          */
@@ -2965,6 +2982,8 @@ class ServerImpl extends TcpDiscoveryImpl {
             if (msg == WAKEUP)
                 return;
 
+            notifiedDiscovery.set(false);
+
             if (msg instanceof TraceableMessage) {
                 TraceableMessage tMsg = (TraceableMessage) msg;
 
@@ -3090,7 +3109,10 @@ class ServerImpl extends TcpDiscoveryImpl {
 
             spi.stats.onMessageProcessingFinished(msg);
 
-            if (msg instanceof TraceableMessage) {
+            if (msg instanceof TraceableMessage &&
+                (msg instanceof TcpDiscoveryNodeAddedMessage
+                    || msg instanceof TcpDiscoveryJoinRequestMessage
+                    || notifiedDiscovery.get())) {
                 TraceableMessage tMsg = (TraceableMessage) msg;
 
                 tracing.messages().finishProcessing(tMsg);
@@ -5016,7 +5038,9 @@ class ServerImpl extends TcpDiscoveryImpl {
                 nullifyDiscoData();
 
                 // Discovery manager must create local joined event before spiStart completes.
-                notifyDiscovery(EVT_NODE_JOINED, topVer, locNode, msg.trace());
+                boolean notified = notifyDiscovery(EVT_NODE_JOINED, topVer, locNode, msg.trace());
+
+                notifiedDiscovery.set(notified);
             }
 
             if (sendMessageToRemotes(msg))
@@ -5208,7 +5232,9 @@ class ServerImpl extends TcpDiscoveryImpl {
 
                 spi.stats.onNodeLeft();
 
-                notifyDiscovery(EVT_NODE_LEFT, topVer, leftNode);
+                boolean notified = notifyDiscovery(EVT_NODE_LEFT, topVer, leftNode, msg.trace());
+
+                notifiedDiscovery.set(notified);
 
                 synchronized (mux) {
                     failedNodes.remove(leftNode);
@@ -5841,8 +5867,9 @@ class ServerImpl extends TcpDiscoveryImpl {
                 if (!msg.verified()) {
                     msg.verify(getLocalNodeId());
 
-                    msg.trace().span()
-                        .addLog("Verified");
+                    if (msg.trace().span() != null)
+                        msg.trace().span()
+                            .addLog("Verified");
 
                     msg.topologyVersion(ring.topologyVersion());
 
@@ -6048,6 +6075,8 @@ class ServerImpl extends TcpDiscoveryImpl {
                         msgObj,
                         msg.trace())
                     );
+
+                notifiedDiscovery.set(true);
 
                 if (waitForNotification || msgObj.isMutable()) {
                     blockingSectionBegin();
