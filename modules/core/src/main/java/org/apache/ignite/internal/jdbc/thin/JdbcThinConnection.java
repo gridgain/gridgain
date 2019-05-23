@@ -49,12 +49,14 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -167,14 +169,11 @@ public class JdbcThinConnection implements Connection {
     /** Connection properties. */
     private final ConnectionProperties connProps;
 
-    /** Connections count. */
-    private volatile AtomicInteger connCnt = new AtomicInteger();
+    /** The amount of potentially alive {@code JdbcThinTcpIo} instances - connections to server nodes. */
+    private final AtomicInteger connCnt = new AtomicInteger();
 
     /** Tracked statements to close on disconnect. */
     private final Set<JdbcThinStatement> stmts = Collections.newSetFromMap(new IdentityHashMap<>());
-
-    /** Query timeout timer */
-    private final Timer timer;
 
     /** Affinity cache. */
     private AffinityCache affinityCache;
@@ -203,8 +202,14 @@ public class JdbcThinConnection implements Connection {
     /** Network timeout. */
     private int netTimeout;
 
-    /** Connections handler timer */
-    private final Timer connHndTimer;
+    /** Background periodical maintenance: query timeouts and reconnection handler. */
+    private final ScheduledExecutorService maintenanceExecutor = Executors.newScheduledThreadPool(2);
+
+    /** Cancelable future for query timeout task. */
+    private ScheduledFuture<?> qryTimeoutScheduledFut;
+
+    /** Cancelable future for connections handler task. */
+    private ScheduledFuture<?> connectionsHndScheduledFut;
 
     /**
      * Creates new connection.
@@ -221,16 +226,13 @@ public class JdbcThinConnection implements Connection {
 
         schema = JdbcUtils.normalizeSchema(connProps.getSchema());
 
-        timer = new Timer("query-timeout-timer");
-
-        connHndTimer = new Timer("connection-handler-timer");
-
         affinityAwareness = connProps.isAffinityAwareness();
 
         ensureConnected();
 
         if (affinityAwareness)
-            connHndTimer.schedule(new ConnectionHandlerTimerTask(), 0, RECONNECTION_DELAY);
+            connectionsHndScheduledFut = maintenanceExecutor.scheduleWithFixedDelay(new ConnectionHandlerTask(),
+                0, RECONNECTION_DELAY, TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -466,9 +468,7 @@ public class JdbcThinConnection implements Connection {
 
         closed = true;
 
-        connHndTimer.cancel();
-
-        timer.cancel();
+        maintenanceExecutor.shutdown();
 
         if (streamState != null) {
             streamState.close();
@@ -876,7 +876,7 @@ public class JdbcThinConnection implements Connection {
     JdbcResultWithIo sendRequest(JdbcRequest req, JdbcThinStatement stmt, @Nullable JdbcThinTcpIo stickyIo)
         throws SQLException {
 
-        RequestTimeoutTimerTask reqTimeoutTimerTask = null;
+        RequestTimeoutTask reqTimeoutTask = null;
 
         synchronized (mux) {
             if (ownThread != null) {
@@ -901,14 +901,15 @@ public class JdbcThinConnection implements Connection {
                     try {
                         cliIo = (stickyIo == null || !stickyIo.connected()) ? cliIo(calculateNodeIds(req)) : stickyIo;
 
-                        if (stmt != null && stmt.requestTimeout() != NO_TIMEOUT) {
-                            reqTimeoutTimerTask = new RequestTimeoutTimerTask(
-                                req instanceof JdbcBulkLoadBatchRequest ? stmt.currentRequestId() : req.requestId(),
-                                cliIo,
-                                stmt.requestTimeout());
+                if (stmt != null && stmt.requestTimeout() != NO_TIMEOUT) {
+                    reqTimeoutTask = new RequestTimeoutTask(
+                        req instanceof JdbcBulkLoadBatchRequest ? stmt.currentRequestId() : req.requestId(),
+                        cliIo,
+                        stmt.requestTimeout());
 
-                            timer.schedule(reqTimeoutTimerTask, 0, REQUEST_TIMEOUT_PERIOD);
-                        }
+                    qryTimeoutScheduledFut = maintenanceExecutor.scheduleAtFixedRate(reqTimeoutTask, 0,
+                        REQUEST_TIMEOUT_PERIOD, TimeUnit.MILLISECONDS);
+                }
 
                         JdbcQueryExecuteRequest qryReq = null;
 
@@ -919,15 +920,16 @@ public class JdbcThinConnection implements Connection {
 
                         txIo = res.activeTransaction() ? cliIo : null;
 
-                        if (res.status() == IgniteQueryErrorCode.QUERY_CANCELED && stmt != null &&
-                            stmt.requestTimeout() != NO_TIMEOUT && reqTimeoutTimerTask != null &&
-                            reqTimeoutTimerTask.expired.get()) {
+                if (res.status() == IgniteQueryErrorCode.QUERY_CANCELED && stmt != null &&
+                    stmt.requestTimeout() != NO_TIMEOUT && reqTimeoutTask != null &&
+                    reqTimeoutTask.expired.get()) {
 
-                            throw new SQLTimeoutException(QueryCancelledException.ERR_MSG, SqlStateCode.QUERY_CANCELLED,
-                                IgniteQueryErrorCode.QUERY_CANCELED);
-                        }
-                        else if (res.status() != ClientListenerResponse.STATUS_SUCCESS)
-                            throw new SQLException(res.error(), IgniteQueryErrorCode.codeToSqlState(res.status()), res.status());
+                    throw new SQLTimeoutException(QueryCancelledException.ERR_MSG, SqlStateCode.QUERY_CANCELLED,
+                        IgniteQueryErrorCode.QUERY_CANCELED);
+                }
+                else if (res.status() != ClientListenerResponse.STATUS_SUCCESS)
+                    throw new SQLException(res.error(), IgniteQueryErrorCode.codeToSqlState(res.status()),
+                        res.status());
 
                         updateAffinityCache(qryReq, res);
 
@@ -961,8 +963,8 @@ public class JdbcThinConnection implements Connection {
                 throw new SQLException("Failed to communicate with Ignite cluster.", CONNECTION_FAILURE, lastE);
             }
             finally {
-                if (stmt != null && stmt.requestTimeout() != NO_TIMEOUT && reqTimeoutTimerTask != null)
-                    reqTimeoutTimerTask.cancel();
+                if (stmt != null && stmt.requestTimeout() != NO_TIMEOUT && reqTimeoutTask != null)
+                    qryTimeoutScheduledFut.cancel(false);
             }
         }
         finally {
@@ -1042,7 +1044,8 @@ public class JdbcThinConnection implements Connection {
 
         JdbcResponse res;
 
-        res = cliIo(null).sendRequest(new JdbcCachePartitionsRequest(Collections.singleton(cacheId)),null);
+        res = cliIo(null).sendRequest(new JdbcCachePartitionsRequest(Collections.singleton(cacheId)),
+            null);
 
         assert res.status() == ClientListenerResponse.STATUS_SUCCESS;
 
@@ -1175,8 +1178,7 @@ public class JdbcThinConnection implements Connection {
      * Called on IO disconnect: close the client IO and opened statements.
      */
     private void onDisconnect(JdbcThinTcpIo cliIo) {
-        if (connCnt.get() == 0)
-            return;
+        assert connCnt.get() > 0;
 
         if (affinityAwareness) {
             cliIo.close();
@@ -1451,7 +1453,7 @@ public class JdbcThinConnection implements Connection {
         JdbcThinTcpIo io = null;
 
         if (nodeIds.size() == 1)
-            io = ios.get(nodeIds.iterator().next());
+            io = ios.get(nodeIds.get(0));
         else {
             int initNodeId = RND.nextInt(nodeIds.size());
 
@@ -1473,10 +1475,34 @@ public class JdbcThinConnection implements Connection {
     }
 
     /**
+     * Returns random tcpIo, based on random UUID, generated in a custom way with the help of {@code Random}
+     * instead of {@code SecureRandom}. It's valid, cause cryptographically strong pseudo
+     * random number generator is not required in this particular case. {@code Random} is much faster
+     * than {@code SecureRandom}.
+     *
      * @return random tcpIo
      */
     private JdbcThinTcpIo randomIo() {
-        UUID randomUUID = UUID.randomUUID();
+        byte[] randomBytes = new byte[16];
+
+        RND.nextBytes(randomBytes);
+
+        randomBytes[6]  &= 0x0f;  /* clear version        */
+        randomBytes[6]  |= 0x40;  /* set to version 4     */
+        randomBytes[8]  &= 0x3f;  /* clear variant        */
+        randomBytes[8]  |= 0x80;  /* set to IETF variant  */
+
+        long msb = 0;
+
+        long lsb = 0;
+
+        for (int i=0; i<8; i++)
+            msb = (msb << 8) | (randomBytes[i] & 0xff);
+
+        for (int i=8; i<16; i++)
+            lsb = (lsb << 8) | (randomBytes[i] & 0xff);
+
+        UUID randomUUID =  new UUID(msb, lsb);
 
         Map.Entry<UUID, JdbcThinTcpIo> entry = ios.ceilingEntry(randomUUID);
 
@@ -1740,9 +1766,9 @@ public class JdbcThinConnection implements Connection {
     }
 
     /**
-     * Request Timeout Timer Task
+     * Request Timeout Task
      */
-    private class RequestTimeoutTimerTask extends TimerTask {
+    private class RequestTimeoutTask implements Runnable {
         /** Request id. */
         private final long reqId;
 
@@ -1759,7 +1785,7 @@ public class JdbcThinConnection implements Connection {
          * @param reqId Request Id to cancel in case of timeout
          * @param initReqTimeout Initial request timeout
          */
-        RequestTimeoutTimerTask(long reqId, JdbcThinTcpIo stickyIO, int initReqTimeout) {
+        RequestTimeoutTask(long reqId, JdbcThinTcpIo stickyIO, int initReqTimeout) {
             this.reqId = reqId;
 
             this.stickyIO = stickyIO;
@@ -1777,7 +1803,9 @@ public class JdbcThinConnection implements Connection {
 
                     sendQueryCancelRequest(new JdbcQueryCancelRequest(reqId), stickyIO);
 
-                    cancel();
+                    qryTimeoutScheduledFut.cancel(false);
+
+                    return;
                 }
 
                 remainingQryTimeout -= REQUEST_TIMEOUT_PERIOD;
@@ -1786,15 +1814,15 @@ public class JdbcThinConnection implements Connection {
                 LOG.log(Level.WARNING,
                     "Request timeout processing failure: unable to cancel request [reqId=" + reqId + ']', e);
 
-                cancel();
+                qryTimeoutScheduledFut.cancel(false);
             }
         }
     }
 
     /**
-     * Connection Handler Timer Task
+     * Connection Handler Task
      */
-    private class ConnectionHandlerTimerTask extends TimerTask {
+    private class ConnectionHandlerTask  implements Runnable {
         /** Map with reconnection delays. */
         private Map<InetSocketAddress, Integer> reconnectionDelays = new HashMap<>();
 
@@ -1838,7 +1866,7 @@ public class JdbcThinConnection implements Connection {
                                         continue;
 
                                     if (closed) {
-                                        connHndTimer.cancel();
+                                        maintenanceExecutor.shutdown();
 
                                         return;
                                     }
@@ -1886,7 +1914,7 @@ public class JdbcThinConnection implements Connection {
                                     prevIgniteEndpointVer = cliIo.igniteVersion();
 
                                     if (closed) {
-                                        connHndTimer.cancel();
+                                        maintenanceExecutor.shutdown();
 
                                         cliIo.close();
 
@@ -1915,7 +1943,7 @@ public class JdbcThinConnection implements Connection {
                 LOG.log(Level.WARNING, "Connection handler processing failure. Reconnection processes was stopped."
                     , e);
 
-                cancel();
+                connectionsHndScheduledFut.cancel(false);
             }
         }
 
