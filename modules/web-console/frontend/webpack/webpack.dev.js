@@ -79,6 +79,14 @@ module.exports = merge(commonCfg, {
                     MiniCssExtractPlugin.loader, // style-loader does not work with styles in IgniteModules
                     ...commonSassLoaders
                 ]
+            },
+            {
+                test: /\.html$/,
+                use: 'file-loader'
+            },
+            {
+                test: /\.(ts)$/,
+                use: ['angular2-template-loader?keepUrl=true']
             }
         ]
     },

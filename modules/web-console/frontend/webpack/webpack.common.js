@@ -53,7 +53,7 @@ const config = {
             images: path.join(basedir, 'public/images'),
             views: path.join(basedir, 'views')
         },
-        extensions: ['.wasm', '.mjs', '.js', '.ts', '.json']
+        extensions: ['.wasm', '.mjs', '.js', '.ts', '.json', '.html']
     },
 
     module: {
@@ -94,15 +94,6 @@ const config = {
                 test: /\.(js|ts)$/,
                 exclude: /node_modules/,
                 use: 'babel-loader'
-            },
-            {
-                test: /\.html$/,
-                use: 'file-loader'
-            },
-            {
-                test: /\.(ts)$/,
-                exclude: /node_modules/,
-                use: ['angular2-template-loader?keepUrl=true']
             },
             {
                 test: /\.(ttf|eot|svg|woff(2)?)(\?v=[\d.]+)?(\?[a-z0-9#-]+)?$/,
