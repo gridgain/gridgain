@@ -49,12 +49,14 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -157,14 +159,11 @@ public class JdbcThinConnection implements Connection {
     /** Connection properties. */
     private final ConnectionProperties connProps;
 
-    /** Connections count. */
-    private volatile AtomicInteger connCnt = new AtomicInteger();
+    /** The amount of potentially alive {@code JdbcThinTcpIo} instances - connections to server nodes. */
+    private final AtomicInteger connCnt = new AtomicInteger();
 
     /** Tracked statements to close on disconnect. */
     private final Set<JdbcThinStatement> stmts = Collections.newSetFromMap(new IdentityHashMap<>());
-
-    /** Query timeout timer */
-    private final Timer timer;
 
     /** Affinity cache. */
     private AffinityCache affinityCache;
@@ -193,8 +192,14 @@ public class JdbcThinConnection implements Connection {
     /** Network timeout. */
     private int netTimeout;
 
-    /** Connections handler timer */
-    private final Timer connHndTimer;
+    /** Background periodical maintenance: query timeouts and reconnection handler. */
+    private final ScheduledExecutorService maintenanceExecutor = Executors.newScheduledThreadPool(2);
+
+    /** Cancelable future for query timeout task. */
+    private ScheduledFuture<?> qryTimeoutScheduledFut;
+
+    /** Cancelable future for connections handler task. */
+    private ScheduledFuture<?> connectionsHndScheduledFut;
 
     /**
      * Creates new connection.
@@ -211,16 +216,13 @@ public class JdbcThinConnection implements Connection {
 
         schema = JdbcUtils.normalizeSchema(connProps.getSchema());
 
-        timer = new Timer("query-timeout-timer");
-
-        connHndTimer = new Timer("connection-handler-timer");
-
         affinityAwareness = connProps.isAffinityAwareness();
 
         ensureConnected();
 
         if (affinityAwareness)
-            connHndTimer.schedule(new ConnectionHandlerTimerTask(), 0, RECONNECTION_DELAY);
+            connectionsHndScheduledFut = maintenanceExecutor.scheduleWithFixedDelay(new ConnectionHandlerTask(),
+                0, RECONNECTION_DELAY, TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -456,9 +458,7 @@ public class JdbcThinConnection implements Connection {
 
         closed = true;
 
-        connHndTimer.cancel();
-
-        timer.cancel();
+        maintenanceExecutor.shutdown();
 
         if (streamState != null) {
             streamState.close();
@@ -867,7 +867,7 @@ public class JdbcThinConnection implements Connection {
         throws SQLException {
         ensureConnected();
 
-        RequestTimeoutTimerTask reqTimeoutTimerTask = null;
+        RequestTimeoutTask reqTimeoutTask = null;
 
         synchronized (mux) {
             if (ownThread != null) {
@@ -884,12 +884,13 @@ public class JdbcThinConnection implements Connection {
                 cliIo = (stickyIo == null || !stickyIo.connected()) ? cliIo(calculateNodeIds(req)) : stickyIo;
 
                 if (stmt != null && stmt.requestTimeout() != NO_TIMEOUT) {
-                    reqTimeoutTimerTask = new RequestTimeoutTimerTask(
+                    reqTimeoutTask = new RequestTimeoutTask(
                         req instanceof JdbcBulkLoadBatchRequest ? stmt.currentRequestId() : req.requestId(),
                         cliIo,
                         stmt.requestTimeout());
 
-                    timer.schedule(reqTimeoutTimerTask, 0, REQUEST_TIMEOUT_PERIOD);
+                    qryTimeoutScheduledFut = maintenanceExecutor.scheduleAtFixedRate(reqTimeoutTask, 0,
+                        REQUEST_TIMEOUT_PERIOD, TimeUnit.MILLISECONDS);
                 }
 
                 JdbcQueryExecuteRequest qryReq = null;
@@ -902,14 +903,15 @@ public class JdbcThinConnection implements Connection {
                 txIo = res.activeTransaction() ? cliIo : null;
 
                 if (res.status() == IgniteQueryErrorCode.QUERY_CANCELED && stmt != null &&
-                    stmt.requestTimeout() != NO_TIMEOUT && reqTimeoutTimerTask != null &&
-                    reqTimeoutTimerTask.expired.get()) {
+                    stmt.requestTimeout() != NO_TIMEOUT && reqTimeoutTask != null &&
+                    reqTimeoutTask.expired.get()) {
 
                     throw new SQLTimeoutException(QueryCancelledException.ERR_MSG, SqlStateCode.QUERY_CANCELLED,
                         IgniteQueryErrorCode.QUERY_CANCELED);
                 }
                 else if (res.status() != ClientListenerResponse.STATUS_SUCCESS)
-                    throw new SQLException(res.error(), IgniteQueryErrorCode.codeToSqlState(res.status()), res.status());
+                    throw new SQLException(res.error(), IgniteQueryErrorCode.codeToSqlState(res.status()),
+                        res.status());
 
                 updateAffinityCache(qryReq, res);
 
@@ -928,8 +930,8 @@ public class JdbcThinConnection implements Connection {
                         SqlStateCode.CONNECTION_FAILURE, e);
             }
             finally {
-                if (stmt != null && stmt.requestTimeout() != NO_TIMEOUT && reqTimeoutTimerTask != null)
-                    reqTimeoutTimerTask.cancel();
+                if (stmt != null && stmt.requestTimeout() != NO_TIMEOUT && reqTimeoutTask != null)
+                    qryTimeoutScheduledFut.cancel(false);
             }
         }
         finally {
@@ -944,7 +946,7 @@ public class JdbcThinConnection implements Connection {
      *
      * @param req Jdbc request for which we'll try to calculate node id.
      * @return node UUID or null if failed to calculate.
-     * @throws IOException If Exception occured during the network partiton destribution retrieval.
+     * @throws IOException If Exception occurred during the network partition distribution retrieval.
      * @throws SQLException If Failed to calculate derived partitions.
      */
     @Nullable private List<UUID> calculateNodeIds(JdbcRequest req) throws IOException, SQLException {
@@ -994,12 +996,12 @@ public class JdbcThinConnection implements Connection {
     }
 
     /**
-     * Retrieve cache destribution for specified cache Id.
+     * Retrieve cache distribution for specified cache Id.
      *
      * @param cacheId Cache Id.
-     * @param partCnt Partitons count.
+     * @param partCnt Partitions count.
      * @return Partitions cache distribution.
-     * @throws IOException If Exception occured during the network partiton destribution retrieval.
+     * @throws IOException If Exception occurred during the network partition distribution retrieval.
      */
     private UUID[] retrieveCacheDistribution(int cacheId, int partCnt) throws IOException {
         UUID[] cacheDistr = affinityCache.cacheDistribution(cacheId);
@@ -1009,7 +1011,8 @@ public class JdbcThinConnection implements Connection {
 
         JdbcResponse res;
 
-        res = cliIo(null).sendRequest(new JdbcCachePartitionsRequest(Collections.singleton(cacheId)),null);
+        res = cliIo(null).sendRequest(new JdbcCachePartitionsRequest(Collections.singleton(cacheId)),
+            null);
 
         assert res.status() == ClientListenerResponse.STATUS_SUCCESS;
 
@@ -1019,7 +1022,7 @@ public class JdbcThinConnection implements Connection {
             affinityCache = new AffinityCache(resAffinityVer);
         else if (affinityCache.version().compareTo(resAffinityVer) > 0) {
             // Jdbc thin affinity cache is binded to the newer affinity topology version, so we should ignore retrieved
-            // partition destribution. Given situation might occur in case of concurrent race and is not
+            // partition distribution. Given situation might occur in case of concurrent race and is not
             // possible in single-threaded jdbc thin client, so it's a reserve for the future.
             return null;
         }
@@ -1027,7 +1030,7 @@ public class JdbcThinConnection implements Connection {
         List<JdbcThinAffinityAwarenessMappingGroup> mappings =
             ((JdbcCachePartitionsResult)res.response()).getMappings();
 
-        // Despite the fact that, at this moment, we request partition destribution only for one cache,
+        // Despite the fact that, at this moment, we request partition distribution only for one cache,
         // we might retrieve multiple caches but exactly with same distribution.
         assert mappings.size() == 1;
 
@@ -1142,8 +1145,7 @@ public class JdbcThinConnection implements Connection {
      * Called on IO disconnect: close the client IO and opened statements.
      */
     private void onDisconnect(JdbcThinTcpIo cliIo) {
-        if (connCnt.get() == 0)
-            return;
+        assert connCnt.get() > 0;
 
         if (affinityAwareness) {
             cliIo.close();
@@ -1418,7 +1420,7 @@ public class JdbcThinConnection implements Connection {
         JdbcThinTcpIo io = null;
 
         if (nodeIds.size() == 1)
-            io = ios.get(nodeIds.iterator().next());
+            io = ios.get(nodeIds.get(0));
         else {
             int initNodeId = RND.nextInt(nodeIds.size());
 
@@ -1440,10 +1442,34 @@ public class JdbcThinConnection implements Connection {
     }
 
     /**
+     * Returns random tcpIo, based on random UUID, generated in a custom way with the help of {@code Random}
+     * instead of {@code SecureRandom}. It's valid, cause cryptographically strong pseudo
+     * random number generator is not required in this particular case. {@code Random} is much faster
+     * than {@code SecureRandom}.
+     *
      * @return random tcpIo
      */
     private JdbcThinTcpIo randomIo() {
-        UUID randomUUID = UUID.randomUUID();
+        byte[] randomBytes = new byte[16];
+
+        RND.nextBytes(randomBytes);
+
+        randomBytes[6]  &= 0x0f;  /* clear version        */
+        randomBytes[6]  |= 0x40;  /* set to version 4     */
+        randomBytes[8]  &= 0x3f;  /* clear variant        */
+        randomBytes[8]  |= 0x80;  /* set to IETF variant  */
+
+        long msb = 0;
+
+        long lsb = 0;
+
+        for (int i=0; i<8; i++)
+            msb = (msb << 8) | (randomBytes[i] & 0xff);
+
+        for (int i=8; i<16; i++)
+            lsb = (lsb << 8) | (randomBytes[i] & 0xff);
+
+        UUID randomUUID =  new UUID(msb, lsb);
 
         Map.Entry<UUID, JdbcThinTcpIo> entry = ios.ceilingEntry(randomUUID);
 
@@ -1567,7 +1593,7 @@ public class JdbcThinConnection implements Connection {
     private void connectInBestEffortAffinityMode() throws SQLException {
         List<Exception> exceptions = null;
 
-        IgniteProductVersion prevIgniteEnpointVer = null;
+        IgniteProductVersion prevIgniteEndpointVer = null;
 
         for (int i = 0; i < connProps.getAddresses().length; i++) {
             HostAndPortRange srv = connProps.getAddresses()[i];
@@ -1590,7 +1616,7 @@ public class JdbcThinConnection implements Connection {
                                     SqlStateCode.INTERNAL_ERROR);
                             }
 
-                            if (prevIgniteEnpointVer != null && !prevIgniteEnpointVer.equals(cliIo.igniteVersion())) {
+                            if (prevIgniteEndpointVer != null && !prevIgniteEndpointVer.equals(cliIo.igniteVersion())) {
                                 // TODO: 13.02.19 IGNITE-11321 JDBC Thin: implement nodes multi version support.
                                 cliIo.close();
 
@@ -1611,7 +1637,7 @@ public class JdbcThinConnection implements Connection {
                             else
                                 connCnt.incrementAndGet();
 
-                            prevIgniteEnpointVer = cliIo.igniteVersion();
+                            prevIgniteEndpointVer = cliIo.igniteVersion();
 
                             return;
                         }
@@ -1673,9 +1699,9 @@ public class JdbcThinConnection implements Connection {
     }
 
     /**
-     * Request Timeout Timer Task
+     * Request Timeout Task
      */
-    private class RequestTimeoutTimerTask extends TimerTask {
+    private class RequestTimeoutTask implements Runnable {
         /** Request id. */
         private final long reqId;
 
@@ -1692,7 +1718,7 @@ public class JdbcThinConnection implements Connection {
          * @param reqId Request Id to cancel in case of timeout
          * @param initReqTimeout Initial request timeout
          */
-        RequestTimeoutTimerTask(long reqId, JdbcThinTcpIo stickyIO, int initReqTimeout) {
+        RequestTimeoutTask(long reqId, JdbcThinTcpIo stickyIO, int initReqTimeout) {
             this.reqId = reqId;
 
             this.stickyIO = stickyIO;
@@ -1710,7 +1736,9 @@ public class JdbcThinConnection implements Connection {
 
                     sendQueryCancelRequest(new JdbcQueryCancelRequest(reqId), stickyIO);
 
-                    cancel();
+                    qryTimeoutScheduledFut.cancel(false);
+
+                    return;
                 }
 
                 remainingQryTimeout -= REQUEST_TIMEOUT_PERIOD;
@@ -1719,15 +1747,15 @@ public class JdbcThinConnection implements Connection {
                 LOG.log(Level.WARNING,
                     "Request timeout processing failure: unable to cancel request [reqId=" + reqId + ']', e);
 
-                cancel();
+                qryTimeoutScheduledFut.cancel(false);
             }
         }
     }
 
     /**
-     * Connection Handler Timer Task
+     * Connection Handler Task
      */
-    private class ConnectionHandlerTimerTask extends TimerTask {
+    private class ConnectionHandlerTask  implements Runnable {
         /** Map with reconnection delays. */
         private Map<InetSocketAddress, Integer> reconnectionDelays = new HashMap<>();
 
@@ -1743,7 +1771,7 @@ public class JdbcThinConnection implements Connection {
                 Set<InetSocketAddress> aliveSockAddrs =
                     ios.values().stream().map(JdbcThinTcpIo::socketAddress).collect(Collectors.toSet());
 
-                IgniteProductVersion prevIgniteEnpointVer = null;
+                IgniteProductVersion prevIgniteEndpointVer = null;
 
                 for (int i = 0; i < connProps.getAddresses().length; i++) {
                     HostAndPortRange srv = connProps.getAddresses()[i];
@@ -1771,7 +1799,7 @@ public class JdbcThinConnection implements Connection {
                                         continue;
 
                                     if (closed) {
-                                        connHndTimer.cancel();
+                                        maintenanceExecutor.shutdown();
 
                                         return;
                                     }
@@ -1784,15 +1812,15 @@ public class JdbcThinConnection implements Connection {
 
                                         LOG.log(Level.WARNING, "Failed to connect to Ignite node [url=" +
                                             connProps.getUrl() + "]. address = [" + addr + ':' + port + "]." +
-                                            "Node doesn't support best affort affinity mode.");
+                                            "Node doesn't support best effort affinity mode.");
 
                                         cliIo.close();
 
                                         continue;
                                     }
 
-                                    if (prevIgniteEnpointVer != null &&
-                                        !prevIgniteEnpointVer.equals(cliIo.igniteVersion())) {
+                                    if (prevIgniteEndpointVer != null &&
+                                        !prevIgniteEndpointVer.equals(cliIo.igniteVersion())) {
                                         processDelay(sockAddr);
 
                                         LOG.log(Level.WARNING, "Failed to connect to Ignite node [url=" +
@@ -1816,10 +1844,10 @@ public class JdbcThinConnection implements Connection {
                                     else
                                         connCnt.incrementAndGet();
 
-                                    prevIgniteEnpointVer = cliIo.igniteVersion();
+                                    prevIgniteEndpointVer = cliIo.igniteVersion();
 
                                     if (closed) {
-                                        connHndTimer.cancel();
+                                        maintenanceExecutor.shutdown();
 
                                         cliIo.close();
 
@@ -1848,12 +1876,12 @@ public class JdbcThinConnection implements Connection {
                 LOG.log(Level.WARNING, "Connection handler processing failure. Reconnection processes was stopped."
                     , e);
 
-                cancel();
+                connectionsHndScheduledFut.cancel(false);
             }
         }
 
         /**
-         * Increase reconnection delay if needed and store it to corresponsing maps.
+         * Increase reconnection delay if needed and store it to corresponding maps.
          *
          * @param sockAddr Socket address.
          */
