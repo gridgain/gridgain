@@ -94,7 +94,7 @@ public class GridCountDownCallback {
     /**
      * Decrements the internal counter. If counter becomes 0, callback will be executed.
      *
-     * @param doIncreaseExecutionCounter
+     * @param doIncreaseExecutionCounter whether to increase execution counter
      */
     public void countDown(boolean doIncreaseExecutionCounter) {
         if (doIncreaseExecutionCounter)
