@@ -862,14 +862,14 @@ public class JdbcThinAffinityAwarenessReconnectionAndFailoverSelfTest extends Jd
      * Invalidate connection to stopped node. Jdbc thin, won't detect that node has gone, until it tries to touch it. So
      * sending simple query to randomly chosen connection(socket), sooner or later, will touch dead one, and thus
      * invalidate it. Please, pay attention, that it's better to send non-failoverable query, for example query with
-     * ';'.
+     * ';' somewhere in the middle.
      *
      * @param conn Connections.
      */
     private void invalidateConnectionToStoppedNode(Connection conn) {
         while (true) {
             try (Statement stmt = conn.createStatement()) {
-                stmt.execute("select 1;");
+                stmt.execute("select ';';");
             }
             catch (SQLException e) {
                 return;

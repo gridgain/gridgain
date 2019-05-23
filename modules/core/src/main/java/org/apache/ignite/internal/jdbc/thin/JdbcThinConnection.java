@@ -1758,8 +1758,17 @@ public class JdbcThinConnection implements Connection {
         if (req.type() == JdbcRequest.QRY_EXEC) {
             JdbcQueryExecuteRequest qryExecReq = (JdbcQueryExecuteRequest)req;
 
-            return qryExecReq.sqlQuery().trim().toUpperCase().startsWith("SELECT") &&
-                !qryExecReq.sqlQuery().contains(";") ? DEFT_RETRIES_CAT : NO_RETRIES;
+            String trimmedQry = qryExecReq.sqlQuery().trim();
+
+            char[] qryCArr = trimmedQry.toCharArray();
+
+            // Last symbol is ignored.
+            for (int i = 0; i < qryCArr.length - 1; i++) {
+                if (qryCArr[i] == ';')
+                    return NO_RETRIES;
+            }
+
+            return trimmedQry.toUpperCase().startsWith("SELECT") ? DEFT_RETRIES_CAT : NO_RETRIES;
         }
 
         return NO_RETRIES;
