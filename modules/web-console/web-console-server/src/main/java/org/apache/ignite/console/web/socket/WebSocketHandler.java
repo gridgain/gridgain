@@ -111,7 +111,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
     private final Map<String, VisorTaskDescriptor> visorTasks;
 
     /** */
-    volatile private Announcement lastAnn;
+    private volatile Announcement lastAnn;
 
     /**
      * @param accRepo Repository to work with accounts.
@@ -696,22 +696,42 @@ public class WebSocketHandler extends TextWebSocketHandler {
         evt.setPayload(toJson(payload));
     }
 
+    /**
+     * Agent descriptor.
+     */
     protected static class AgentDescriptor {
+        /** */
         private Set<UUID> accIds;
+
+        /** */
         private String clusterId;
 
+        /**
+         * @param accIds Account IDs.
+         */
         AgentDescriptor(Set<UUID> accIds) {
             this.accIds = accIds;
         }
 
+        /**
+         * @param accId Account ID.
+         * @return
+         */
         boolean isServeAccount(UUID accId) {
             return accIds.contains(accId);
         }
 
+        /**
+         * @param accId ACcount ID.
+         * @return
+         */
         boolean revokeAccountByToken(UUID accId) {
             return accIds.remove(accId);
         }
 
+        /**
+         * @return
+         */
         boolean isActive() {
             return accIds.isEmpty();
         }

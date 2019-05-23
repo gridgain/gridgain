@@ -245,9 +245,9 @@ public class Table<T extends AbstractDto> extends CacheHolder<UUID, T> {
     }
 
     /**
-     *
+     * Filter that keeps DTO objects and drops non DTO objects.
      */
-    static class DTOPredicate implements IgniteBiPredicate<Object, Object> {
+    private static class DTOPredicate implements IgniteBiPredicate<Object, Object> {
         /** */
         private static final long serialVersionUID = 0L;
 
