@@ -19,6 +19,7 @@ const merge = require('webpack-merge');
 const path = require('path');
 
 const commonCfg = require('./webpack.common');
+const {devProdScss} = require('./styles');
 
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 
@@ -27,23 +28,6 @@ const webpackDevServerHost = process.env.HOST || '0.0.0.0';
 const webpackDevServerPort = process.env.PORT || 9000;
 
 console.log(`Backend url: ${backendUrl}`);
-
-const commonSassLoaders = [
-    {
-        loader: 'css-loader',
-        options: {
-            sourceMap: true
-        }
-    },
-    {
-        loader: 'sass-loader',
-        options: {
-            sourceMap: true,
-            includePaths: [ path.join(__dirname, '../') ]
-        }
-    }
-];
-const sassUrls = /\.url\.scss$/;
 
 module.exports = merge(commonCfg, {
     mode: 'development',
@@ -57,29 +41,7 @@ module.exports = merge(commonCfg, {
                 exclude: /\.url/,
                 use: ['style-loader', 'css-loader']
             },
-            {
-                test: sassUrls,
-                use: [
-                    {
-                        loader: 'file-loader',
-                        options: {
-                            // This solves leading "/" in JIT Angular styles compiler
-                            // https://github.com/angular/angular/issues/4974
-                            publicPath: (url) => url
-                        }
-                    },
-                    'extract-loader',
-                    ...commonSassLoaders
-                ]
-            },
-            {
-                test: /\.scss$/,
-                exclude: sassUrls,
-                use: [
-                    MiniCssExtractPlugin.loader, // style-loader does not work with styles in IgniteModules
-                    ...commonSassLoaders
-                ]
-            },
+            ...devProdScss(true),
             {
                 test: /\.html$/,
                 use: 'file-loader'

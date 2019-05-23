@@ -21,6 +21,7 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const UglifyJSPlugin = require('uglifyjs-webpack-plugin');
 
 const commonCfg = require('./webpack.common');
+const {devProdScss} = require('./styles');
 
 const basedir = path.join(__dirname, '../');
 
@@ -33,14 +34,14 @@ module.exports = merge(commonCfg, {
                 test: /\.css$/,
                 use: [MiniCssExtractPlugin.loader, 'css-loader']
             },
+            ...devProdScss(false),
             {
-                test: /\.scss$/,
-                use: [MiniCssExtractPlugin.loader, 'css-loader', {
-                    loader: 'sass-loader',
-                    options: {
-                        includePaths: [basedir]
-                    }
-                }]
+                test: /\.html$/,
+                use: 'file-loader'
+            },
+            {
+                test: /\.(ts)$/,
+                use: ['angular2-template-loader?keepUrl=true']
             }
         ]
     },
