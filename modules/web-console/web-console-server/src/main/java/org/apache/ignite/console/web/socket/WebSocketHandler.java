@@ -699,7 +699,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
     /**
      * Agent descriptor.
      */
-    private static class AgentDescriptor {
+    protected static class AgentDescriptor {
         /** */
         private Set<UUID> accIds;
 
