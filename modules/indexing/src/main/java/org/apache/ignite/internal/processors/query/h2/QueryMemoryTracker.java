@@ -21,6 +21,7 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.mem.IgniteOutOfMemoryException;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  * Query memory tracker.
@@ -32,11 +33,11 @@ public class QueryMemoryTracker implements AutoCloseable {
     /**
      * Default query memory limit.
      *
-     * Note: It is per query stage limit. Every Map\Reduce query will have it's own tracker.
+     * Note: Actually, it is  per query (Map\Reduce) stage limit.
      * With QueryParallelism every query-thread will be treated as separate Map query.
      */
     public static final long DFLT_QRY_MEMORY_LIMIT = Long.getLong(IgniteSystemProperties.IGNITE_SQL_QUERY_MEMORY_LIMIT,
-        Runtime.getRuntime().maxMemory() / IgniteConfiguration.DFLT_QUERY_THREAD_POOL_SIZE);
+        (long) (Runtime.getRuntime().maxMemory() * 0.6d / IgniteConfiguration.DFLT_QUERY_THREAD_POOL_SIZE));
 
     /** Atomic field updater. */
     private static final AtomicLongFieldUpdater<QueryMemoryTracker> ALLOC_UPD = AtomicLongFieldUpdater.newUpdater(QueryMemoryTracker.class, "allocated");
