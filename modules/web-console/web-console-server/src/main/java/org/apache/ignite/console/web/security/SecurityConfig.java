@@ -131,7 +131,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             .addFilterAt(authenticationFilter(), UsernamePasswordAuthenticationFilter.class)
             .logout()
             .logoutUrl(LOGOUT_ROUTE)
-            .deleteCookies("JSESSIONID")
+            .deleteCookies("SESSION")
             .logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler(HttpStatus.OK));
     }
 
