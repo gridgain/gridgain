@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 import javax.swing.ImageIcon;
+import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteState;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.IgnitionListener;
@@ -297,8 +298,15 @@ public final class CommandLineStartup {
         // Name of the grid loaded from the command line (unique in JVM).
         final String igniteInstanceName;
 
+        String out = "<empty>";
+
         try {
-            igniteInstanceName = G.start(cfg).name();
+            Ignite node = G.start(cfg);
+
+            if (node == null)
+                out = "Node not started, cfg:" + cfg;
+
+            igniteInstanceName = node.name();
         }
         catch (Throwable e) {
             e.printStackTrace();
@@ -308,13 +316,7 @@ public final class CommandLineStartup {
             if (X.hasCause(e, ClassNotFoundException.class))
                 note = "\nNote! You may use 'USER_LIBS' environment variable to specify your classpath.";
 
-            StringWriter sw = new StringWriter();
-
-            PrintWriter pw = new PrintWriter(sw);
-
-            e.printStackTrace(pw);
-
-            exit("Failed to start grid: " + e.getMessage() + note + "\nst:" + sw.toString(), false, -1);
+            exit("Failed to start grid: " + e.getMessage() + note + " " + out, false, -1);
 
             if (e instanceof Error)
                 throw e;
