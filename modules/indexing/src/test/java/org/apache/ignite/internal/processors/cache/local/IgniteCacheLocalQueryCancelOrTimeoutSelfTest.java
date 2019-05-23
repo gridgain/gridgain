@@ -125,7 +125,7 @@ public class IgniteCacheLocalQueryCancelOrTimeoutSelfTest extends GridCommonAbst
 
         loadCache(cache);
 
-        SqlFieldsQuery qry = new SqlFieldsQueryEx(QUERY, true).setMaxMemory(Long.MAX_VALUE);
+        SqlFieldsQuery qry = new SqlFieldsQueryEx(QUERY, true).setMaxMemory(-1);
 
         final QueryCursor<List<?>> cursor;
         if (timeout) {

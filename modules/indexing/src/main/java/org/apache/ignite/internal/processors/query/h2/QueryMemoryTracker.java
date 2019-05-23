@@ -30,6 +30,7 @@ public class QueryMemoryTracker implements AutoCloseable {
     //TODO: GG-18629: Move defaults to memory quotas configuration.
     /**
      * Default query memory limit.
+     *
      * Note: It is per query stage limit. Every Map\Reduce query will have it's own tracker.
      * With QueryParallelism every query-thread will be treated as separate Map query.
      */
@@ -53,10 +54,10 @@ public class QueryMemoryTracker implements AutoCloseable {
      *
      * @param maxMem Query memory limit in bytes.
      * Note: If zero value, then {@link QueryMemoryTracker#DFLT_QRY_MEMORY_LIMIT} will be used.
-     * Note: Long.MAX_VALUE is reserved for disable memory tracking.
+     * Note: Negative values are reserved for disable memory tracking.
      */
     public QueryMemoryTracker(long maxMem) {
-        assert maxMem >= 0 && maxMem != Long.MAX_VALUE;
+        assert maxMem >= 0;
 
         this.maxMem = maxMem > 0 ? maxMem : DFLT_QRY_MEMORY_LIMIT;
     }

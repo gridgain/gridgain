@@ -349,7 +349,7 @@ public class GridMapQueryExecutor {
                 distributedJoinCtx,
                 mvccSnapshot,
                 reserved,
-                maxMem != Long.MAX_VALUE ? new QueryMemoryTracker(maxMem) : null);
+                maxMem < 0 ? null : new QueryMemoryTracker(maxMem));
 
             qryResults = new MapQueryResults(h2, reqId, qrys.size(), mainCctx, lazy, qctx);
 

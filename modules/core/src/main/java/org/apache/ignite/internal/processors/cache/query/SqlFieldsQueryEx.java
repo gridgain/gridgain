@@ -246,6 +246,8 @@ public final class SqlFieldsQueryEx extends SqlFieldsQuery {
     /**
      * Return memory limit for query.
      *
+     * Note: Negative value means unlimited. Zero value means a default value is used.
+     *
      * Note: Every query (Map\Reduce) will have own limit and track memory independently.
      * Query can have few Map queries (e.g. an additional Map query per sub-select).
      * With QueryParallelism query can allocate MaxMemory*QueryParallelismLevel.
@@ -258,6 +260,8 @@ public final class SqlFieldsQueryEx extends SqlFieldsQuery {
 
     /**
      * Sets memory limit for query.
+     *
+     * Note: Negative value means unlimited. Zero value means a default value is used.
      *
      * Note: Every query (Map\Reduce) will have own limit and track memory independently.
      * Query can have few Map queries (e.g. an additional Map query per sub-select).
