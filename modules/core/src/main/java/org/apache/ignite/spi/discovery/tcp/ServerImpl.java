@@ -4996,7 +4996,9 @@ class ServerImpl extends TcpDiscoveryImpl {
                 }
 
                 if (state == CONNECTED) {
-                    notifyDiscovery(EVT_NODE_JOINED, topVer, node, msg.trace());
+                    boolean notified = notifyDiscovery(EVT_NODE_JOINED, topVer, node, msg.trace());
+
+                    notifiedDiscovery.set(notified);
 
                     if (!node.isClient() && !node.isDaemon())
                         nodesIdsHist.add(node.id());

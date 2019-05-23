@@ -53,6 +53,6 @@ public class TcpDiscoveryNodeLeftMessage extends TcpDiscoveryAbstractMessage imp
     }
 
     @Override public String traceName() {
-        return "node.left." + id();
+        return "node.left";
     }
 }
