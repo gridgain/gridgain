@@ -177,6 +177,7 @@ public class WebSocketRouter implements AutoCloseable {
 
     /**
      * Reconnect to backend.
+     * @throws Exception If failed.
      */
     private void reconnect() throws Exception {
         client.start();
