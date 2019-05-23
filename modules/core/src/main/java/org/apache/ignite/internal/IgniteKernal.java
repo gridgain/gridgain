@@ -754,7 +754,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     }
 
     /** */
-    private void ackClassPathElementRecursive(File clsPathEntry, StringBuilder clsPathContent) {
+    private void ackClassPathElementRecursive(File clsPathEntry, SB clsPathContent) {
         if (clsPathEntry.isDirectory()) {
             String[] list = clsPathEntry.list();
 
@@ -767,12 +767,12 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             String path = clsPathEntry.getAbsolutePath();
 
             if (path.endsWith(".class"))
-                clsPathContent.append(path).append(";");
+                clsPathContent.a(path).a(";");
         }
     }
 
     /** */
-    private void ackClassPathEntry(String clsPathEntry, StringBuilder clsPathContent) {
+    private void ackClassPathEntry(String clsPathEntry, SB clsPathContent) {
         File clsPathElementFile = new File(clsPathEntry);
 
         if (clsPathElementFile.isDirectory()) {
@@ -785,7 +785,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                     if (listElementFile.isDirectory())
                         ackClassPathElementRecursive(listElementFile, clsPathContent);
                     else
-                        clsPathContent.append(listElementFile.getAbsolutePath()).append(";");
+                        clsPathContent.a(listElementFile.getAbsolutePath()).a(";");
                 }
             }
         }
@@ -795,12 +795,12 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 : null;
 
             if (".jar".equals(extension) || ".zip".equals(extension))
-                clsPathContent.append(clsPathEntry).append(";");
+                clsPathContent.a(clsPathEntry).a(";");
         }
     }
 
     /** */
-    private void ackClassPathWildCard(String clsPathEntry, StringBuilder clsPathContent) {
+    private void ackClassPathWildCard(String clsPathEntry, SB clsPathContent) {
         int lastSeparatorIdx = clsPathEntry.lastIndexOf(File.separator);
 
         String fileMask =
@@ -816,7 +816,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 String s = f.toString();
 
                 if (s.toLowerCase().endsWith(".jar"))
-                    clsPathContent.append(f.toString()).append(";");
+                    clsPathContent.a(f.toString()).a(";");
             }
         }
         catch (IOException e) {
@@ -829,7 +829,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
      */
     private void ackClassPathContent() {
         assert log != null;
-        
+
         boolean enabled = IgniteSystemProperties.getBoolean(IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP, true);
 
         if (enabled) {
@@ -837,7 +837,9 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
             String[] clsPathElements = clsPath.split(System.getProperty("path.separator"));
 
-            StringBuilder clsPathContent = new StringBuilder("List of files containing in classpath: ");
+            U.log(log, "Classpath value: " + clsPath);
+
+            SB clsPathContent = new SB("List of files containing in classpath: ");
 
             for (String clsPathEntry : clsPathElements) {
                 try {

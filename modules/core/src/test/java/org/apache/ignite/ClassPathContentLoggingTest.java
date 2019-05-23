@@ -83,6 +83,10 @@ public class ClassPathContentLoggingTest extends GridCommonAbstractTest {
             .matches("List of files containing in classpath")
             .build();
 
+        LogListener clsPathValuelsnr = LogListener
+            .matches("Classpath value")
+            .build();
+
         LogListener errLsnr = LogListener
             .matches("Could not log class path entry")
             .build();
@@ -103,12 +107,14 @@ public class ClassPathContentLoggingTest extends GridCommonAbstractTest {
         LogListener jarLsnr = jarLsnrBuilder.build();
 
         listeningLog.registerListener(lsnr);
+        listeningLog.registerListener(clsPathValuelsnr);
         listeningLog.registerListener(errLsnr);
         listeningLog.registerListener(jarLsnr);
 
         startGrid(0);
 
         assertTrue(lsnr.check());
+        assertTrue(clsPathValuelsnr.check());
         assertTrue(jarLsnr.check());
 
         assertFalse(errLsnr.check());
