@@ -135,11 +135,6 @@ public class Activity extends AbstractDto {
         this.amount = amount;
     }
 
-    /** {@inheritDoc} */
-    @Override public String toString() {
-        return S.toString(Activity.class, this);
-    }
-
     /**
      * Increment number of activity usages in current period.
      *
@@ -147,5 +142,10 @@ public class Activity extends AbstractDto {
      */
     public void increment(int inc) {
         amount += inc;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(Activity.class, this);
     }
 }
