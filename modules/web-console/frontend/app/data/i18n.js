@@ -49,6 +49,7 @@ export default {
     'base.settings.profile': 'User profile',
     'base.sql.notebook': 'Query notebook',
     'base.sql.tabs.notebooks-list': 'Query notebooks',
+    'base.monitoring.rolling-updates': 'Rolling Update',
 
     // app/components/page-signin/template.pug
     'app.components.page-signin.m1': 'Sign In',

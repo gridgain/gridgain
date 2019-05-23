@@ -17,8 +17,9 @@
 package org.apache.ignite.console.repositories;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.TreeSet;
 import java.util.UUID;
 import org.apache.ignite.Ignite;
@@ -87,9 +88,10 @@ public class ActivitiesRepository {
                     date,
                     grp,
                     act,
-                    0));
+                    0)
+                );
 
-            activity.increment();
+            activity.increment(1);
 
             activitiesTbl.save(activity);
 
@@ -104,7 +106,28 @@ public class ActivitiesRepository {
      * @param startDate Start date.
      * @param endDate End date.
      */
-    public Collection<Activity> details(UUID accId, long startDate, long endDate) {
-        return new ArrayList<>();
+    public Collection<Activity> activitiesForPeriod(UUID accId, long startDate, long endDate) {
+        try (Transaction ignored = txMgr.txStart()) {
+            TreeSet<UUID> ids = activitiesIdx.load(accId);
+
+            Collection<Activity> activities = activitiesTbl.loadAll(ids);
+
+            Map<String, Activity> totals = new HashMap<>();
+
+            activities.forEach(activity -> {
+                long date = activity.getDate();
+
+                if (startDate <= date && date <= endDate) {
+                    Activity total = totals.get(activity.getAction());
+
+                    if (total != null)
+                        total.increment(activity.getAmount());
+                    else
+                        totals.put(activity.getAction(), activity);
+                }
+            });
+
+            return totals.values();
+        }
     }
 }

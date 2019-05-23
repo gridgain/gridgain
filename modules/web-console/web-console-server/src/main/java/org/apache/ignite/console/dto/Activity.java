@@ -142,8 +142,10 @@ public class Activity extends AbstractDto {
 
     /**
      * Increment number of activity usages in current period.
+     *
+     * @param inc Value to add to amount.
      */
-    public void increment() {
-        amount++;
+    public void increment(int inc) {
+        amount += inc;
     }
 }

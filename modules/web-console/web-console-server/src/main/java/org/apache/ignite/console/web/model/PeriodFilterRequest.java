@@ -16,7 +16,6 @@
 
 package org.apache.ignite.console.web.model;
 
-import java.util.UUID;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
@@ -24,27 +23,10 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  */
 public class PeriodFilterRequest {
     /** */
-    private UUID accId;
-
-    /** */
     private long startDate;
 
     /** */
     private long endDate;
-
-    /**
-     * @return Account ID.
-     */
-    public UUID getAccountId() {
-        return accId;
-    }
-
-    /**
-     * @param accId Account ID.
-     */
-    public void setAccountId(UUID accId) {
-        this.accId = accId;
-    }
 
     /**
      * @return Start date.

@@ -20,7 +20,6 @@ import io.swagger.annotations.ApiOperation;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.services.ActivitiesService;
 import org.apache.ignite.console.web.model.ActivityRequest;
-import org.apache.ignite.console.web.model.PeriodFilterRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -55,18 +54,6 @@ public class ActivitiesController {
     @PostMapping(path = "/page", consumes = APPLICATION_JSON_VALUE)
     public ResponseEntity<Void> save(@AuthenticationPrincipal Account acc, @RequestBody ActivityRequest req) {
         activitiesSrv.save(acc.getId(), req.getGroup(), req.getAction());
-
-        return ResponseEntity.ok().build();
-    }
-
-    /**
-     * @param req Request with period filter.
-     * @return Collection of user activities.
-     */
-    @ApiOperation(value = "Users activities for specified period")
-    @PostMapping(path = "/details", consumes = APPLICATION_JSON_VALUE)
-    public ResponseEntity<Void> details(@RequestBody PeriodFilterRequest req) {
-        activitiesSrv.details(req.getAccountId(), req.getStartDate(), req.getEndDate());
 
         return ResponseEntity.ok().build();
     }
