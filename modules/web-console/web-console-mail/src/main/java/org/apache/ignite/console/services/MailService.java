@@ -154,11 +154,8 @@ public class MailService implements IMailService {
      * Context for email templates.
      */
     private static class NotificationWrapper extends StandardEvaluationContext {
-        /** Origin. */
-        private String origin;
-
-        /** Recipient. */
-        private IRecipient rcpt;
+        /** Notification. */
+        private Notification notification;
 
         /** Subject. */
         private String subject;
@@ -170,22 +167,28 @@ public class MailService implements IMailService {
          * @param notification Notification.
          */
         private NotificationWrapper(Notification notification) {
-            this.origin = notification.getOrigin();
-            this.rcpt = notification.getRecipient();
+            this.notification = notification;
         }
 
         /**
          * @return Origin.
          */
         public String getOrigin() {
-            return origin;
+            return notification.getOrigin();
         }
 
         /**
          * @return Recipient.
          */
         public IRecipient getRecipient() {
-            return rcpt;
+            return notification.getRecipient();
+        }
+
+        /**
+         * @return value of notification
+         */
+        public Notification getNotification() {
+            return notification;
         }
 
         /**
