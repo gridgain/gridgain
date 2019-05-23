@@ -69,7 +69,6 @@ import org.apache.ignite.internal.DuplicateTypeIdException;
 import org.apache.ignite.internal.UnregisteredBinaryTypeException;
 import org.apache.ignite.internal.UnregisteredClassException;
 import org.apache.ignite.internal.binary.builder.BinaryObjectBuilderImpl;
-import org.apache.ignite.internal.binary.nextgen.BikeConverterRegistry;
 import org.apache.ignite.internal.binary.nextgen.BikeTuple;
 import org.apache.ignite.internal.marshaller.optimized.OptimizedMarshaller;
 import org.apache.ignite.internal.processors.cache.binary.BinaryMetadataKey;
@@ -810,7 +809,7 @@ public class BinaryContext {
                 desc.isEnum(), cls.isEnum() ? enumMap(cls) : null).wrap(this), false);
 
         descByCls.put(cls, desc);
-        BikeConverterRegistry.registerConverter(typeId, new BinToBikeConverter(desc.fields.length, typeId));
+//        BikeConverterRegistry.registerConverter(typeId, new BinToBikeConverter(desc.fields.length, typeId));
         String[] names = new String[desc.fields.length];
         Class<?>[] types = new Class<?>[desc.fields.length];
         for (int i = 0; i < desc.fields.length; i++) {
@@ -818,7 +817,7 @@ public class BinaryContext {
             names[i] = n;
             types[i] = BinaryUtils.FLAG_TO_CLASS.get((byte)desc.fieldsMeta().get(n).typeId());
         }
-        BikeConverterRegistry.registerBackConverter(typeId, new BikeToBinConverter(names, types, clsName));
+//        BikeConverterRegistry.registerBackConverter(typeId, new BikeToBinConverter(names, types, clsName));
 
         typeId2Mapper.putIfAbsent(typeId, mapper);
 
