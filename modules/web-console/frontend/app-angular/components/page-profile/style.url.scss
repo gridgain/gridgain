@@ -17,31 +17,31 @@
 :host {
     display: block;
     max-width: 800px;
+}
 
-    .form-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        grid-gap: var(--form-gap);
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-gap: var(--form-gap);
 
-        .span-1 {
-            grid-column: span 1;
-        }
-        .span-2 {
-            grid-column: span 2;
-        }
+    .span-1 {
+        grid-column: span 1;
     }
-
-    .security-token-generate-button-container {
-        align-items: flex-end;
-        display: flex;
-        padding-bottom: 9px;
+    .span-2 {
+        grid-column: span 2;
     }
+}
 
-    footer {
-        display: grid;
-        grid-auto-flow: column;
-        grid-auto-columns: max-content;
-        justify-content: flex-end;
-        grid-gap: var(--form-gap);
-    }
+.security-token-generate-button-container {
+    align-items: flex-end;
+    display: flex;
+    padding-bottom: 9px;
+}
+
+footer {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: max-content;
+    justify-content: flex-end;
+    grid-gap: var(--form-gap);
 }

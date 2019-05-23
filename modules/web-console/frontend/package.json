@@ -124,7 +124,6 @@
     "eslint": "5.12.1",
     "eslint-formatter-friendly": "6.0.0",
     "eslint-loader": "2.1.0",
-    "exports-loader": "^0.7.0",
     "expose-loader": "0.7.5",
     "extract-loader": "^3.1.0",
     "file-loader": "1.1.11",

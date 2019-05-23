@@ -53,7 +53,7 @@ const config = {
             images: path.join(basedir, 'public/images'),
             views: path.join(basedir, 'views')
         },
-        extensions: ['.wasm', '.mjs', '.js', '.ts', '.json', '.html']
+        extensions: ['.wasm', '.mjs', '.js', '.ts', '.json']
     },
 
     module: {

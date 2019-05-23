@@ -26,7 +26,6 @@ import {default as LegacyUtilsFactory} from 'app/services/LegacyUtils.service';
 import {
     FORM_FIELD_OPTIONS, FormFieldRequiredMarkerStyles, FormFieldErrorStyles
 } from '../form-field';
-// import './style.scss';
 
 const passwordMatch = (newPassword: string) => (confirmPassword: FormControl) => newPassword === confirmPassword.value
     ? null
