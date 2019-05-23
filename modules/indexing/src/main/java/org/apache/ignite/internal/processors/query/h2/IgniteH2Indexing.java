@@ -527,7 +527,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 null,
                 mvccSnapshot,
                 null,
-                maxMem != Long.MAX_VALUE ? new QueryMemoryTracker(maxMem) : null);
+                maxMem < 0 ? null : new QueryMemoryTracker(maxMem));
 
             return new GridQueryFieldsResultAdapter(select.meta(), null) {
                 @Override public GridCloseableIterator<List<?>> iterator() throws IgniteCheckedException {
@@ -563,9 +563,11 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                             new H2QueryInfo(H2QueryInfo.QueryType.LOCAL, stmt, qry)
                         );
 
-                        return new H2FieldsIterator(rs, mvccTracker, conn);
+                        return new H2FieldsIterator(rs, mvccTracker, qctx, conn);
                     }
                     catch (IgniteCheckedException | RuntimeException | Error e) {
+                        U.closeQuiet(qctx.queryMemoryManager());
+
                         conn.recycle();
 
                         try {
@@ -885,7 +887,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             ResultSet rs = executeSqlQuery(conn, stmt, timeoutMillis, cancel);
 
             if (qryInfo != null && qryInfo.time() > longRunningQryMgr.getTimeout())
-                qryInfo.printLogMessage(log, connMgr, "Long running query is finished");            return rs;
+                qryInfo.printLogMessage(log, connMgr, "Long running query is finished");
+
+            return rs;
         }
         catch (Throwable e) {
             if (qryInfo != null && qryInfo.time() > longRunningQryMgr.getTimeout()) {

@@ -46,7 +46,7 @@ public final class SqlFieldsQueryEx extends SqlFieldsQuery {
     private List<Object[]> batchedArgs;
 
     /** Max memory available for query. */
-    private long maxMem = Long.MAX_VALUE;
+    private long maxMem;
 
     /**
      * @param sql SQL query.
@@ -246,19 +246,31 @@ public final class SqlFieldsQueryEx extends SqlFieldsQuery {
     /**
      * Return memory limit for query.
      *
+     * Note: Negative value means unlimited. Zero value means a default value is used.
+     *
+     * Note: Every query (Map\Reduce) will have own limit and track memory independently.
+     * Query can have few Map queries (e.g. an additional Map query per sub-select).
+     * With QueryParallelism query can allocate MaxMemory*QueryParallelismLevel.
+     *
      * @return Memory size in bytes.
      */
-    public long maxMemory() {
+    public long getMaxMemory() {
         return maxMem;
     }
 
     /**
      * Sets memory limit for query.
      *
+     * Note: Negative value means unlimited. Zero value means a default value is used.
+     *
+     * Note: Every query (Map\Reduce) will have own limit and track memory independently.
+     * Query can have few Map queries (e.g. an additional Map query per sub-select).
+     * With QueryParallelism query can allocate MaxMemory*QueryParallelismLevel.
+     *
      * @param maxMem Memory size in bytes.
      * @return {@code this} for chaining.
      */
-    public SqlFieldsQuery maxMemory(long maxMem) {
+    public SqlFieldsQuery setMaxMemory(long maxMem) {
         this.maxMem = maxMem;
 
         return this;

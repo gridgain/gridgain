@@ -369,7 +369,7 @@ public class H2BaseLocalResult implements LocalResult {
 
     /** {@inheritDoc} */
     @Override public boolean needToClose() {
-        return false;
+        return !closed;
     }
 
     /** {@inheritDoc} */
@@ -439,12 +439,12 @@ public class H2BaseLocalResult implements LocalResult {
     }
 
     /**
-     * Local result row update callback.
+     * Local result update callback.
      *
-     * @param distinctRowKey Row key.
-     * @param oldRow Old row.
-     * @param row New row.
+     * @param rowKey Distinct row key.
+     * @param oldRow Old row values.
+     * @param row New row values.
      */
-    protected void onUpdate(ValueRow distinctRowKey, Value[] oldRow, Value[] row) {
+    protected void onUpdate(ValueRow rowKey, Value[] oldRow, Value[] row) {
     }
 }

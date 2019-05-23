@@ -16,11 +16,10 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
+import java.util.List;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.processors.query.NestedTxMode;
-
-import java.util.List;
 
 /**
  * Query parameters which vary between requests having the same execution plan. Essentially, these are the arguments
@@ -85,7 +84,7 @@ public class QueryParameters {
 
             batchedArgs = qry0.batchedArguments();
 
-            maxMem = qry0.maxMemory();
+            maxMem = qry0.getMaxMemory();
         }
 
         return new QueryParameters(

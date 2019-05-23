@@ -17,17 +17,26 @@
 package org.apache.ignite.internal.processors.query.h2;
 
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
+import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.mem.IgniteOutOfMemoryException;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  * Query memory tracker.
  *
  * Track query memory usage and throws an exception if query tries to allocate memory over limit.
  */
-public class QueryMemoryTracker extends H2MemoryTracker {
+public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable {
     //TODO: GG-18629: Move defaults to memory quotas configuration.
-    /** Default query memory limit. */
-    public static final long DFLT_QRY_MEMORY_LIMIT = 100L * 1024 * 1024;
+    /**
+     * Default query memory limit.
+     *
+     * Note: Actually, it is  per query (Map\Reduce) stage limit.
+     * With QueryParallelism every query-thread will be treated as separate Map query.
+     */
+    public static final long DFLT_QRY_MEMORY_LIMIT = Long.getLong(IgniteSystemProperties.IGNITE_SQL_QUERY_MEMORY_LIMIT,
+        (long) (Runtime.getRuntime().maxMemory() * 0.6d / IgniteConfiguration.DFLT_QUERY_THREAD_POOL_SIZE));
 
     /** Atomic field updater. */
     private static final AtomicLongFieldUpdater<QueryMemoryTracker> ALLOC_UPD = AtomicLongFieldUpdater.newUpdater(QueryMemoryTracker.class, "allocated");
@@ -38,19 +47,20 @@ public class QueryMemoryTracker extends H2MemoryTracker {
     /** Memory allocated. */
     private volatile long allocated;
 
+    /** Close flag to prevent tracker reuse. */
+    private volatile boolean closed;
+
     /**
      * Constructor.
      *
-     * @param maxMem Query memory limit in bytes. If zero value, then {@link QueryMemoryTracker#DFLT_QRY_MEMORY_LIMIT}
-     * will be used.
+     * @param maxMem Query memory limit in bytes.
+     * Note: If zero value, then {@link QueryMemoryTracker#DFLT_QRY_MEMORY_LIMIT} will be used.
+     * Note: Negative values are reserved for disable memory tracking.
      */
     public QueryMemoryTracker(long maxMem) {
-        assert maxMem >= 0 && maxMem != Long.MAX_VALUE;
+        assert maxMem >= 0;
 
-        if (maxMem > 0)
-            this.maxMem = maxMem;
-        else
-            this.maxMem = DFLT_QRY_MEMORY_LIMIT;
+        this.maxMem = maxMem > 0 ? maxMem : DFLT_QRY_MEMORY_LIMIT;
     }
 
     /**
@@ -60,8 +70,10 @@ public class QueryMemoryTracker extends H2MemoryTracker {
      * @throws IgniteOutOfMemoryException if memory limit has been exceeded.
      */
     public void allocate(long size) {
-        if (ALLOC_UPD.addAndGet(this, size) > maxMem)
-            throw new IgniteOutOfMemoryException("SQL query out of memory: [allocated=" + allocated + ", limit=" + maxMem + "]");
+        assert !closed && size >= 0;
+
+        if (ALLOC_UPD.addAndGet(this, size) >= maxMem)
+            throw new IgniteOutOfMemoryException("SQL query out of memory");
     }
 
     /**
@@ -70,8 +82,39 @@ public class QueryMemoryTracker extends H2MemoryTracker {
      * @param size Free size in bytes.
      */
     public void free(long size) {
-        long allocated = ALLOC_UPD.getAndAdd(this, -size);
+        assert size >= 0;
 
-        assert allocated >= size : "Invalid free memory size [allocated=" + allocated + ", free=" + size + ']';
+        long allocated = ALLOC_UPD.addAndGet(this, -size);
+
+        assert !closed && allocated >=0 || allocated == 0 : "Invalid allocated memory size:" + allocated;
+    }
+
+    /**
+     * @return Memory allocated by tracker.
+     */
+    public long getAllocated() {
+        return allocated;
+    }
+
+    /**
+     * @return {@code True} if closed, {@code False} otherwise.
+     */
+    public boolean closed() {
+        return closed;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void close() {
+        // It is not expected to be called concurrently.
+        if (!closed) {
+            closed = true;
+
+            free(allocated);
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(QueryMemoryTracker.class, this);
     }
 }

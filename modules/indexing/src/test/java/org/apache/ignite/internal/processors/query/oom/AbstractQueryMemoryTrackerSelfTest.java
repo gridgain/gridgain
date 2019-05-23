@@ -40,7 +40,7 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
  */
 public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstractTest {
     /** Row count. */
-    private static final int SMALL_TABLE_SIZE = 1000;
+    static final int SMALL_TABLE_SIZE = 1000;
 
     /** Row count. */
     static final int BIG_TABLE_SIZE = 10000;
@@ -198,16 +198,12 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     @Test
     public void testUnionSimple() {
         maxMem = 4L * 1024 * 1024;
-        // None of sub-selects fits to memory.
+
         execQuery("select * from T as T0, T as T1 where T0.id < 2 " +
             "UNION " +
             "select * from T as T2, T as T3 where T2.id >= 1 AND T2.id < 2", true);
 
         assertEquals(3, localResults.size());
-        System.out.println(localResults.get(0).memoryAllocated() +
-            localResults.get(1).memoryAllocated() +
-            localResults.get(2).memoryAllocated());
-
         assertTrue(maxMem > localResults.get(1).memoryAllocated() + localResults.get(2).memoryAllocated());
         assertEquals(2000, localResults.get(1).getRowCount());
         assertEquals(1000, localResults.get(2).getRowCount());
@@ -373,6 +369,9 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
         // Distinct on non-indexed column with small cardinality.
         execQuery("select DISTINCT K.grp from K", false);
+
+        // Distinct on indexed column with unique values.
+        checkQueryExpectOOM("select DISTINCT K.id from K", true);
     }
 
     /**
@@ -383,7 +382,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         boolean localQry = isLocal();
 
         return grid(client ? 1 : 0).context().query().querySqlFields(
-            new SqlFieldsQueryEx(sql, null).setLocal(localQry).maxMemory(maxMem)
+            new SqlFieldsQueryEx(sql, null).setLocal(localQry).setMaxMemory(maxMem)
                 .setLazy(lazy).setPageSize(100), false).getAll();
     }
 

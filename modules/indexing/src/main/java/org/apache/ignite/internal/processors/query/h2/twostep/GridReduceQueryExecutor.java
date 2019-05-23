@@ -649,7 +649,7 @@ public class GridReduceQueryExecutor {
                             null,
                             null,
                             null,
-                            maxMem != Long.MAX_VALUE ? new QueryMemoryTracker(maxMem) : null);
+                            maxMem < 0 ? null : new QueryMemoryTracker(maxMem));
 
                         H2Utils.setupConnection(r.connection(), qctx, false, enforceJoinOrder);
 
@@ -679,7 +679,7 @@ public class GridReduceQueryExecutor {
                                 qryInfo
                                 );
 
-                            resIter = new H2FieldsIterator(res, mvccTracker, detachedConn);
+                            resIter = new H2FieldsIterator(res, mvccTracker, qctx, detachedConn);
 
                             // don't recycle at final block
                             detachedConn = null;
@@ -687,6 +687,9 @@ public class GridReduceQueryExecutor {
                             mvccTracker = null; // To prevent callback inside finally block;
                         }
                         finally {
+                            if (detachedConn != null)
+                                U.closeQuiet(qctx.queryMemoryManager());
+
                             qryCtxRegistry.clearThreadLocal();
                         }
                     }
@@ -1044,6 +1047,9 @@ public class GridReduceQueryExecutor {
         }
         catch (SQLException e) {
             throw new IgniteCheckedException(e);
+        }
+        finally {
+            U.closeQuiet(rs);
         }
     }
 
