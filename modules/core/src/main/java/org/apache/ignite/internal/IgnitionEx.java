@@ -909,6 +909,10 @@ public class IgnitionEx {
                 U.removeJavaNoOpLogger(savedHnds);
         }
 
+        cfgMap.get1().forEach(c->{
+            System.out.println("!!!!>>>> " + c.getIgniteInstanceName());
+        });
+
         return startConfigurations(cfgMap, springCfgUrl, igniteInstanceName, springCtx, ldr);
     }
 
