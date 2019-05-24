@@ -36,7 +36,7 @@ import org.mockito.Captor;
 import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.MessageSource;
+import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.context.junit4.SpringRunner;
 
@@ -55,7 +55,7 @@ import static org.mockito.Mockito.when;
 public class MailServiceTest {
     /** Message source. */
     @Mock
-    private MessageSource msgSrc;
+    private MessageSourceAccessor accessor;
 
     /** JavaMail sender. */
     @Mock
@@ -75,13 +75,13 @@ public class MailServiceTest {
     /** */
     @Before
     public void setup() {
-        when(msgSrc.getMessage(anyString(), isNull(Object[].class), anyString(), eq(Locale.US)))
+        when(accessor.getMessage(anyString(), isNull(Object[].class), anyString()))
             .thenAnswer(invocation -> invocation.getArguments()[2]);
 
         when(mailSnd.createMimeMessage())
             .thenReturn(new MimeMessage(Session.getDefaultInstance(new Properties())));
 
-        srvc = new MailService(msgSrc, mailSnd, props);
+        srvc = new MailService(accessor, mailSnd, props);
     }
 
     /** Test send e-mail. */

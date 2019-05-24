@@ -16,5 +16,3 @@
 
 spring.mail:
   defaultTemplatePath: templates/mail/base.html
-
-spring.messages.basename: i18/messages,i18/notifications
