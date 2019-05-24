@@ -131,7 +131,7 @@ public class JdbcThinConnection implements Connection {
     private static final AtomicLong IDX_GEN = new AtomicLong();
 
     /** Default retires count. */
-    public static final int DEFT_RETRIES_CAT = 4;
+    public static final int DFLT_RETRIES_CNT = 4;
 
     /** No retries. */
     public static final int NO_RETRIES = 0;
@@ -1753,7 +1753,7 @@ public class JdbcThinConnection implements Connection {
             req.type() == JdbcRequest.META_PRIMARY_KEYS ||
             req.type() == JdbcRequest.META_SCHEMAS ||
             req.type() == JdbcRequest.CACHE_PARTITIONS)
-            return DEFT_RETRIES_CAT;
+            return DFLT_RETRIES_CNT;
 
         if (req.type() == JdbcRequest.QRY_EXEC) {
             JdbcQueryExecuteRequest qryExecReq = (JdbcQueryExecuteRequest)req;
@@ -1768,7 +1768,7 @@ public class JdbcThinConnection implements Connection {
                     return NO_RETRIES;
             }
 
-            return trimmedQry.toUpperCase().startsWith("SELECT") ? DEFT_RETRIES_CAT : NO_RETRIES;
+            return trimmedQry.toUpperCase().startsWith("SELECT") ? DFLT_RETRIES_CNT : NO_RETRIES;
         }
 
         return NO_RETRIES;
