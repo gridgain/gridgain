@@ -90,6 +90,10 @@ public class GridCommandLineLoaderTest extends GridCommonAbstractTest {
                 System.setProperty(IGNITE_RESTART_CODE, Integer.toString(
                     1 + IgniteSystemProperties.getInteger(IGNITE_RESTART_CODE, 0)));
 
+                System.err.println(IgniteSystemProperties.getInteger(IGNITE_RESTART_CODE, 0));
+
+                Thread.dumpStack();
+
                 System.out.println("Ignite instance seen, will shut it down.");
 
                 new Thread(new Runnable() {
