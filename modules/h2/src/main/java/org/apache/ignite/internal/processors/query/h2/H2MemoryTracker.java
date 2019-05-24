@@ -19,7 +19,7 @@ package org.apache.ignite.internal.processors.query.h2;
 /**
  * Abstract memory tracker.
  */
-public abstract class H2MemoryTracker {
+public abstract class H2MemoryTracker implements AutoCloseable {
     /**
      * @param size Allocated size in bytes.
      */
