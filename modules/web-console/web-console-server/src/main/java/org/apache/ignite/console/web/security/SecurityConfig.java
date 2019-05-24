@@ -126,7 +126,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             .antMatchers(PUBLIC_ROUTES).anonymous()
             .antMatchers("/api/v1/admin/**").hasAuthority(ROLE_ADMIN)
             .antMatchers("/api/v1/**", BROWSERS_PATH).hasAuthority(ROLE_USER)
-            .anyRequest().authenticated()
             .and()
             .addFilterAt(authenticationFilter(), UsernamePasswordAuthenticationFilter.class)
             .logout()
