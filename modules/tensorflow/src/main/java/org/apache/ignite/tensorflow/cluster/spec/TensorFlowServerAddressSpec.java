@@ -18,6 +18,8 @@ package org.apache.ignite.tensorflow.cluster.spec;
 
 import java.io.Serializable;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.UUID;
 import org.apache.ignite.Ignite;
 
@@ -56,7 +58,6 @@ public class TensorFlowServerAddressSpec implements Serializable {
      */
     public String format(Ignite ignite) {
         Collection<String> names = ignite.cluster().forNodeId(nodeId).hostNames();
-
         return names.iterator().next() + ":" + port;
     }
 

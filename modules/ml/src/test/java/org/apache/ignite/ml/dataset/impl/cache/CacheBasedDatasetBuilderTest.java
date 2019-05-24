@@ -27,6 +27,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.ml.TestUtils;
 import org.apache.ignite.ml.dataset.UpstreamEntry;
+import org.apache.ignite.ml.environment.deploy.DeployContext;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -66,7 +67,8 @@ public class CacheBasedDatasetBuilderTest extends GridCommonAbstractTest {
         CacheBasedDataset<Integer, String, Long, AutoCloseable> dataset = builder.build(
             TestUtils.testEnvBuilder(),
             (env, upstream, upstreamSize) -> upstreamSize,
-            (env, upstream, upstreamSize, ctx) -> null
+            (env, upstream, upstreamSize, ctx) -> null,
+            TestUtils.testEnvBuilder().buildForTrainer()
         );
 
         Affinity<Integer> upstreamAffinity = ignite.affinity(upstreamCache.getName());
@@ -119,7 +121,8 @@ public class CacheBasedDatasetBuilderTest extends GridCommonAbstractTest {
                 assertEquals(Integer.valueOf(2), entry.getValue());
                 assertFalse(upstream.hasNext());
                 return null;
-            }
+            },
+            TestUtils.testEnvBuilder().buildForTrainer()
         );
 
         dataset.compute(data -> {});

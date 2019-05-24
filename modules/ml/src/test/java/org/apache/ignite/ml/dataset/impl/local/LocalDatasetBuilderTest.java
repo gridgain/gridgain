@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.ml.TestUtils;
 import org.apache.ignite.ml.dataset.PartitionContextBuilder;
 import org.apache.ignite.ml.dataset.PartitionDataBuilder;
+import org.apache.ignite.ml.environment.deploy.DeployContext;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -107,7 +108,8 @@ public class LocalDatasetBuilderTest {
         return builder.build(
             TestUtils.testEnvBuilder(),
             partCtxBuilder.andThen(x -> null),
-            partDataBuilder.andThen((x, y) -> x)
+            partDataBuilder.andThen((x, y) -> x),
+            TestUtils.testEnvBuilder().buildForTrainer()
         );
     }
 

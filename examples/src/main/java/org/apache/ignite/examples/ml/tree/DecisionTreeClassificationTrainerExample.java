@@ -62,7 +62,7 @@ public class DecisionTreeClassificationTrainerExample {
 
             IgniteCache<Integer, LabeledVector<Double>> trainingSet = null;
             try {
-                trainingSet = ignite.createCache(trainingSetCfg);
+                trainingSet = ignite.getOrCreateCache(trainingSetCfg);
 
                 Random rnd = new Random(0);
 
@@ -78,7 +78,8 @@ public class DecisionTreeClassificationTrainerExample {
                 DecisionTreeNode mdl = trainer.fit(
                     ignite,
                     trainingSet,
-                    vectorizer
+//                    vectorizer
+                    (k,v) -> v.features().labeled(v.label())
                 );
 
                 System.out.println(">>> Decision tree classification model: " + mdl);

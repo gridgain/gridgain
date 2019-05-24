@@ -25,6 +25,7 @@ import org.apache.ignite.ml.composition.boosting.loss.Loss;
 import org.apache.ignite.ml.dataset.DatasetBuilder;
 import org.apache.ignite.ml.dataset.primitive.builder.context.EmptyContextBuilder;
 import org.apache.ignite.ml.environment.LearningEnvironmentBuilder;
+import org.apache.ignite.ml.environment.deploy.DeployContext;
 import org.apache.ignite.ml.math.functions.IgniteFunction;
 import org.apache.ignite.ml.preprocessing.Preprocessor;
 import org.apache.ignite.ml.structures.LabeledVector;
@@ -68,20 +69,23 @@ public abstract class GDBBinaryClassifierTrainer extends GDBTrainer {
     @Override protected <V, K> boolean learnLabels(DatasetBuilder<K, V> builder,
         Preprocessor<K, V> preprocessor) {
 
+        learningEnvironment().deployContext().init(preprocessor);
+
         Set<Double> uniqLabels = builder.build(
             envBuilder,
             new EmptyContextBuilder<>(),
-            new LabeledDatasetPartitionDataBuilderOnHeap<>(preprocessor))
-            .compute((IgniteFunction<LabeledVectorSet<Double, LabeledVector>, Set<Double>>)x ->
-                    Arrays.stream(x.labels()).boxed().collect(Collectors.toSet()), (a, b) -> {
-                    if (a == null)
-                        return b;
-                    if (b == null)
-                        return a;
-                    a.addAll(b);
+            new LabeledDatasetPartitionDataBuilderOnHeap<>(preprocessor),
+            learningEnvironment()
+        ).compute((IgniteFunction<LabeledVectorSet<Double, LabeledVector>, Set<Double>>)x ->
+                Arrays.stream(x.labels()).boxed().collect(Collectors.toSet()), (a, b) -> {
+                if (a == null)
+                    return b;
+                if (b == null)
                     return a;
-                }
-            );
+                a.addAll(b);
+                return a;
+            }
+        );
 
         if (uniqLabels != null && uniqLabels.size() == 2) {
             ArrayList<Double> lblsArr = new ArrayList<>(uniqLabels);

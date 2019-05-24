@@ -27,7 +27,7 @@ import org.apache.ignite.ml.preprocessing.Preprocessor;
  * @param <K> Type of a key in {@code upstream} data.
  * @param <V> Type of a value in {@code upstream} data.
  */
-public class BinarizationTrainer<K, V> implements PreprocessingTrainer<K, V> {
+public class BinarizationTrainer<K, V> extends PreprocessingTrainer<K, V> {
     /** Threshold. */
     private double threshold;
 

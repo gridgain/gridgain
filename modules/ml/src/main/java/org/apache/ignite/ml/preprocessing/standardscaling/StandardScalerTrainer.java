@@ -31,7 +31,7 @@ import org.apache.ignite.ml.preprocessing.Preprocessor;
  * @param <K> Type of a key in {@code upstream} data.
  * @param <V> Type of a value in {@code upstream} data.
  */
-public class StandardScalerTrainer<K, V> implements PreprocessingTrainer<K, V> {
+public class StandardScalerTrainer<K, V> extends PreprocessingTrainer<K, V> {
     /** {@inheritDoc} */
     @Override public StandardScalerPreprocessor<K, V> fit(LearningEnvironmentBuilder envBuilder,
         DatasetBuilder<K, V> datasetBuilder,
@@ -55,6 +55,7 @@ public class StandardScalerTrainer<K, V> implements PreprocessingTrainer<K, V> {
     private StandardScalerData computeSum(LearningEnvironmentBuilder envBuilder,
         DatasetBuilder<K, V> datasetBuilder,
         Preprocessor<K, V>  basePreprocessor) {
+
         try (Dataset<EmptyContext, StandardScalerData> dataset = datasetBuilder.build(
             envBuilder,
             (env, upstream, upstreamSize) -> new EmptyContext(),
@@ -84,7 +85,7 @@ public class StandardScalerTrainer<K, V> implements PreprocessingTrainer<K, V> {
                     }
                 }
                 return new StandardScalerData(sum, squaredSum, cnt);
-            }
+            }, learningEnvironment(basePreprocessor)
         )) {
 
             return dataset.compute(data -> data,

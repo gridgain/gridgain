@@ -34,6 +34,7 @@ import org.apache.ignite.ml.dataset.primitive.builder.context.EmptyContextBuilde
 import org.apache.ignite.ml.dataset.primitive.context.EmptyContext;
 import org.apache.ignite.ml.environment.LearningEnvironment;
 import org.apache.ignite.ml.environment.LearningEnvironmentBuilder;
+import org.apache.ignite.ml.environment.deploy.DeployContext;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.math.primitives.vector.VectorUtils;
 import org.apache.ignite.ml.preprocessing.Preprocessor;
@@ -177,7 +178,8 @@ public class DataStreamGeneratorTest {
         DatasetBuilder<Vector, Double> b1) {
         return b1.build(LearningEnvironmentBuilder.defaultBuilder(),
             new EmptyContextBuilder<>(),
-            new LabeledDatasetPartitionDataBuilderOnHeap<>((Preprocessor<Vector, Double>)LabeledVector::new)
+            new LabeledDatasetPartitionDataBuilderOnHeap<>((Preprocessor<Vector, Double>)LabeledVector::new),
+            LearningEnvironmentBuilder.defaultBuilder().buildForTrainer()
         );
     }
 

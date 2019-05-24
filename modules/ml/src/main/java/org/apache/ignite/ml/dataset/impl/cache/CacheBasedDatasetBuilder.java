@@ -29,6 +29,7 @@ import org.apache.ignite.ml.dataset.PartitionDataBuilder;
 import org.apache.ignite.ml.dataset.UpstreamTransformerBuilder;
 import org.apache.ignite.ml.dataset.impl.cache.util.ComputeUtils;
 import org.apache.ignite.ml.dataset.impl.cache.util.DatasetAffinityFunctionWrapper;
+import org.apache.ignite.ml.environment.LearningEnvironment;
 import org.apache.ignite.ml.environment.LearningEnvironmentBuilder;
 
 /**
@@ -124,7 +125,9 @@ public class CacheBasedDatasetBuilder<K, V> implements DatasetBuilder<K, V> {
     @Override public <C extends Serializable, D extends AutoCloseable> CacheBasedDataset<K, V, C, D> build(
         LearningEnvironmentBuilder envBuilder,
         PartitionContextBuilder<K, V, C> partCtxBuilder,
-        PartitionDataBuilder<K, V, C, D> partDataBuilder) {
+        PartitionDataBuilder<K, V, C, D> partDataBuilder,
+        LearningEnvironment localLearningEnv) {
+
         UUID datasetId = UUID.randomUUID();
 
         // Retrieves affinity function of the upstream Ignite Cache.
@@ -149,10 +152,11 @@ public class CacheBasedDatasetBuilder<K, V> implements DatasetBuilder<K, V> {
             envBuilder,
             RETRIES,
             RETRY_INTERVAL,
-            upstreamKeepBinary
+            upstreamKeepBinary,
+            localLearningEnv.deployContext()
         );
 
-        return new CacheBasedDataset<>(ignite, upstreamCache, filter, transformerBuilder, datasetCache, envBuilder, partDataBuilder, datasetId, upstreamKeepBinary);
+        return new CacheBasedDataset<>(ignite, upstreamCache, filter, transformerBuilder, datasetCache, envBuilder, partDataBuilder, datasetId, upstreamKeepBinary, localLearningEnv);
     }
 
     /** {@inheritDoc} */

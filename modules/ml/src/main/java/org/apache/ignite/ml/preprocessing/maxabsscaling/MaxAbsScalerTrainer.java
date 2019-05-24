@@ -20,6 +20,7 @@ import org.apache.ignite.ml.dataset.Dataset;
 import org.apache.ignite.ml.dataset.DatasetBuilder;
 import org.apache.ignite.ml.dataset.UpstreamEntry;
 import org.apache.ignite.ml.dataset.primitive.context.EmptyContext;
+import org.apache.ignite.ml.environment.LearningEnvironment;
 import org.apache.ignite.ml.environment.LearningEnvironmentBuilder;
 import org.apache.ignite.ml.preprocessing.PreprocessingTrainer;
 import org.apache.ignite.ml.preprocessing.Preprocessor;
@@ -31,12 +32,13 @@ import org.apache.ignite.ml.structures.LabeledVector;
  * @param <K> Type of a key in {@code upstream} data.
  * @param <V> Type of a value in {@code upstream} data.
  */
-public class MaxAbsScalerTrainer<K, V> implements PreprocessingTrainer<K, V> {
+public class MaxAbsScalerTrainer<K, V> extends PreprocessingTrainer<K, V> {
     /** {@inheritDoc} */
     @Override public MaxAbsScalerPreprocessor<K, V> fit(
         LearningEnvironmentBuilder envBuilder,
         DatasetBuilder<K, V> datasetBuilder,
         Preprocessor<K, V> basePreprocessor) {
+
         try (Dataset<EmptyContext, MaxAbsScalerPartitionData> dataset = datasetBuilder.build(
             envBuilder,
             (env, upstream, upstreamSize) -> new EmptyContext(),
@@ -62,7 +64,7 @@ public class MaxAbsScalerTrainer<K, V> implements PreprocessingTrainer<K, V> {
                     }
                 }
                 return new MaxAbsScalerPartitionData(maxAbs);
-            }
+            }, learningEnvironment(basePreprocessor)
         )) {
             double[] maxAbs = dataset.compute(MaxAbsScalerPartitionData::getMaxAbs,
                 (a, b) -> {

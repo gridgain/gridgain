@@ -25,6 +25,7 @@ import org.apache.ignite.ml.dataset.primitive.FeatureMatrixWithLabelsOnHeapData;
 import org.apache.ignite.ml.dataset.primitive.FeatureMatrixWithLabelsOnHeapDataBuilder;
 import org.apache.ignite.ml.dataset.primitive.builder.context.EmptyContextBuilder;
 import org.apache.ignite.ml.dataset.primitive.context.EmptyContext;
+import org.apache.ignite.ml.environment.LearningEnvironment;
 import org.apache.ignite.ml.environment.LearningEnvironmentBuilder;
 import org.apache.ignite.ml.math.functions.IgniteFunction;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
@@ -90,10 +91,15 @@ public abstract class ConvergenceChecker<K, V> implements Serializable {
         LearningEnvironmentBuilder envBuilder,
         DatasetBuilder<K, V> datasetBuilder,
         ModelsComposition currMdl) {
+
+        LearningEnvironment environment = envBuilder.buildForTrainer();
+        environment.deployContext().init(preprocessor);
+
         try (Dataset<EmptyContext, FeatureMatrixWithLabelsOnHeapData> dataset = datasetBuilder.build(
             envBuilder,
             new EmptyContextBuilder<>(),
-            new FeatureMatrixWithLabelsOnHeapDataBuilder<>(preprocessor)
+            new FeatureMatrixWithLabelsOnHeapDataBuilder<>(preprocessor),
+            environment
         )) {
             return isConverged(dataset, currMdl);
         }

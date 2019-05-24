@@ -18,6 +18,7 @@ package org.apache.ignite.ml.environment;
 
 import java.util.Random;
 import org.apache.ignite.ml.dataset.Dataset;
+import org.apache.ignite.ml.environment.deploy.DeployContext;
 import org.apache.ignite.ml.environment.logging.MLLogger;
 import org.apache.ignite.ml.environment.parallelism.ParallelismStrategy;
 
@@ -59,4 +60,11 @@ public interface LearningEnvironment {
      * @return Partition.
      */
     public int partition();
+
+    /**
+     * Returns deploy context instance.
+     *
+     * @return Deploy context.
+     */
+    public DeployContext deployContext();
 }

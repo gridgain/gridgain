@@ -32,12 +32,13 @@ import org.apache.ignite.ml.structures.LabeledVector;
  * @param <K> Type of a key in {@code upstream} data.
  * @param <V> Type of a value in {@code upstream} data.
  */
-public class MinMaxScalerTrainer<K, V> implements PreprocessingTrainer<K, V> {
+public class MinMaxScalerTrainer<K, V> extends PreprocessingTrainer<K, V> {
     /** {@inheritDoc} */
     @Override public MinMaxScalerPreprocessor<K, V> fit(
         LearningEnvironmentBuilder envBuilder,
         DatasetBuilder<K, V> datasetBuilder,
         Preprocessor<K, V> basePreprocessor) {
+
         PartitionContextBuilder<K, V, EmptyContext> ctxBuilder = (env, upstream, upstreamSize) -> new EmptyContext();
         try (Dataset<EmptyContext, MinMaxScalerPartitionData> dataset = datasetBuilder.build(
             envBuilder,
@@ -77,7 +78,7 @@ public class MinMaxScalerTrainer<K, V> implements PreprocessingTrainer<K, V> {
                 }
 
                 return new MinMaxScalerPartitionData(min, max);
-            }
+            }, learningEnvironment(basePreprocessor)
         )) {
             double[][] minMax = dataset.compute(
                 data -> data.getMin() != null ? new double[][]{ data.getMin(), data.getMax() } : null,

@@ -40,7 +40,7 @@ import org.apache.ignite.ml.structures.LabeledVector;
  * @param <K> Type of a key in {@code upstream} data.
  * @param <V> Type of a value in {@code upstream} data.
  */
-public class ImputerTrainer<K, V> implements PreprocessingTrainer<K, V> {
+public class ImputerTrainer<K, V> extends PreprocessingTrainer<K, V> {
     /** The imputing strategy. */
     private ImputingStrategy imputingStgy = ImputingStrategy.MEAN;
 
@@ -84,7 +84,7 @@ public class ImputerTrainer<K, V> implements PreprocessingTrainer<K, V> {
                     default: throw new UnsupportedOperationException("The chosen strategy is not supported");
                 }
                 return partData;
-            }
+            }, learningEnvironment(basePreprocessor)
         )) {
 
             Vector imputingValues;

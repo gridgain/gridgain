@@ -16,6 +16,7 @@
 
 package org.apache.ignite.examples.ml.clustering;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.Ignition;
@@ -23,7 +24,6 @@ import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.ml.clustering.gmm.GmmModel;
 import org.apache.ignite.ml.clustering.gmm.GmmTrainer;
-import org.apache.ignite.ml.dataset.feature.extractor.impl.LabeledDummyVectorizer;
 import org.apache.ignite.ml.environment.LearningEnvironmentBuilder;
 import org.apache.ignite.ml.math.Tracer;
 import org.apache.ignite.ml.math.primitives.vector.VectorUtils;
@@ -33,8 +33,6 @@ import org.apache.ignite.ml.util.generators.DataStreamGenerator;
 import org.apache.ignite.ml.util.generators.primitives.scalar.GaussRandomProducer;
 import org.apache.ignite.ml.util.generators.primitives.scalar.RandomProducer;
 import org.apache.ignite.ml.util.generators.primitives.vector.VectorGeneratorsFamily;
-
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Example of using GMM clusterization algorithm. Gaussian Mixture Algorithm (GMM, see {@link GmmModel}, {@link
@@ -89,7 +87,7 @@ public class GmmClusterizationExample {
                     .withMaxCountIterations(10)
                     .withMaxCountOfClusters(4)
                     .withEnvironmentBuilder(LearningEnvironmentBuilder.defaultBuilder().withRNGSeed(seed))
-                    .fit(ignite, dataCache, new LabeledDummyVectorizer<>());
+                    .fit(ignite, dataCache, (k,v) -> v);
 
                 System.out.println(">>> GMM means and covariances");
                 for (int i = 0; i < mdl.countOfComponents(); i++) {

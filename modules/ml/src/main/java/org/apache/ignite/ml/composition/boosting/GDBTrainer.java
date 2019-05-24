@@ -86,7 +86,7 @@ public abstract class GDBTrainer extends DatasetTrainer<ModelsComposition, Doubl
     }
 
     /** {@inheritDoc} */
-    @Override public <K, V> ModelsComposition fit(DatasetBuilder<K, V> datasetBuilder,
+    @Override public <K, V> ModelsComposition fit0(DatasetBuilder<K, V> datasetBuilder,
                                                   Preprocessor<K, V> preprocessor) {
         return updateModel(null, datasetBuilder, preprocessor);
     }
@@ -186,10 +186,13 @@ public abstract class GDBTrainer extends DatasetTrainer<ModelsComposition, Doubl
         DatasetBuilder<K, V> builder,
         Preprocessor<K, V> preprocessor) {
 
+        learningEnvironment().deployContext().init(preprocessor);
+
         try (Dataset<EmptyContext, DecisionTreeData> dataset = builder.build(
             envBuilder,
             new EmptyContextBuilder<>(),
-            new DecisionTreeDataBuilder<>(preprocessor, false)
+            new DecisionTreeDataBuilder<>(preprocessor, false),
+            learningEnvironment()
         )) {
             IgniteBiTuple<Double, Long> meanTuple = dataset.compute(
                 data -> {

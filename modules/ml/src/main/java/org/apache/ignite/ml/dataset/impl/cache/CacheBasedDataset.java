@@ -81,6 +81,11 @@ public class CacheBasedDataset<K, V, C extends Serializable, D extends AutoClose
     private final boolean upstreamKeepBinary;
 
     /**
+     * Learning environment of current cache working session.
+     */
+    private final LearningEnvironment localLearningEnv;
+
+    /**
      * Constructs a new instance of dataset based on Ignite Cache, which is used as {@code upstream} and as reliable storage for
      * partition {@code context} as well.
      *
@@ -91,6 +96,7 @@ public class CacheBasedDataset<K, V, C extends Serializable, D extends AutoClose
      * @param datasetCache Ignite Cache with partition {@code context}.
      * @param partDataBuilder Partition {@code data} builder.
      * @param datasetId Dataset ID.
+     * @param localLearningEnv Local learning environment.
      */
     public CacheBasedDataset(
         Ignite ignite,
@@ -101,7 +107,9 @@ public class CacheBasedDataset<K, V, C extends Serializable, D extends AutoClose
         LearningEnvironmentBuilder envBuilder,
         PartitionDataBuilder<K, V, C, D> partDataBuilder,
         UUID datasetId,
-        boolean upstreamKeepBinary) {
+        boolean upstreamKeepBinary,
+        LearningEnvironment localLearningEnv) {
+
         this.ignite = ignite;
         this.upstreamCache = upstreamCache;
         this.filter = filter;
@@ -111,6 +119,7 @@ public class CacheBasedDataset<K, V, C extends Serializable, D extends AutoClose
         this.envBuilder = envBuilder;
         this.datasetId = datasetId;
         this.upstreamKeepBinary = upstreamKeepBinary;
+        this.localLearningEnv = localLearningEnv;
     }
 
     /** {@inheritDoc} */
@@ -192,7 +201,7 @@ public class CacheBasedDataset<K, V, C extends Serializable, D extends AutoClose
      */
     private <R> R computeForAllPartitions(IgniteFunction<Integer, R> fun, IgniteBinaryOperator<R> reduce, R identity) {
         Collection<String> cacheNames = Arrays.asList(datasetCache.getName(), upstreamCache.getName());
-        Collection<R> results = ComputeUtils.affinityCallWithRetries(ignite, cacheNames, fun, RETRIES, RETRY_INTERVAL);
+        Collection<R> results = ComputeUtils.affinityCallWithRetries(ignite, cacheNames, fun, RETRIES, RETRY_INTERVAL, localLearningEnv.deployContext());
 
         R res = identity;
         for (R partRes : results)

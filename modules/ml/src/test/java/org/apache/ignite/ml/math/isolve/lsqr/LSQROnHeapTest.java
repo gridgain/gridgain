@@ -25,6 +25,7 @@ import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
 import org.apache.ignite.ml.dataset.feature.extractor.impl.DummyVectorizer;
 import org.apache.ignite.ml.dataset.impl.local.LocalDatasetBuilder;
 import org.apache.ignite.ml.dataset.primitive.builder.data.SimpleLabeledDatasetDataBuilder;
+import org.apache.ignite.ml.environment.deploy.DeployContext;
 import org.apache.ignite.ml.math.functions.IgniteFunction;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.math.primitives.vector.VectorUtils;
@@ -61,7 +62,8 @@ public class LSQROnHeapTest extends TrainerTest {
         LSQROnHeap<Integer, Vector> lsqr = new LSQROnHeap<>(
             datasetBuilder,
             TestUtils.testEnvBuilder(),
-            new SimpleLabeledDatasetDataBuilder<>(prerocessor)
+            new SimpleLabeledDatasetDataBuilder<>(prerocessor),
+            TestUtils.testEnvBuilder().buildForTrainer()
         );
 
         LSQRResult res = lsqr.solve(0, 1e-12, 1e-12, 1e8, -1, false, null);
@@ -99,7 +101,8 @@ public class LSQROnHeapTest extends TrainerTest {
         LSQROnHeap<Integer, Vector> lsqr = new LSQROnHeap<>(
             datasetBuilder,
             TestUtils.testEnvBuilder(),
-            new SimpleLabeledDatasetDataBuilder<>(prerocessor)
+            new SimpleLabeledDatasetDataBuilder<>(prerocessor),
+            TestUtils.testEnvBuilder().buildForTrainer()
         );
 
         LSQRResult res = lsqr.solve(0, 1e-12, 1e-12, 1e8, -1, false,
@@ -137,7 +140,7 @@ public class LSQROnHeapTest extends TrainerTest {
         try (LSQROnHeap<Integer, Vector> lsqr = new LSQROnHeap<>(
             datasetBuilder,
             TestUtils.testEnvBuilder(),
-            new SimpleLabeledDatasetDataBuilder<>(prerocessor)))
+            new SimpleLabeledDatasetDataBuilder<>(prerocessor), TestUtils.testEnvBuilder().buildForTrainer()))
         {
             LSQRResult res = lsqr.solve(0, 1e-12, 1e-12, 1e8, -1, false, null);
 

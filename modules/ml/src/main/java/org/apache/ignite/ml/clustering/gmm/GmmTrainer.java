@@ -30,6 +30,7 @@ import org.apache.ignite.ml.dataset.DatasetBuilder;
 import org.apache.ignite.ml.dataset.primitive.builder.context.EmptyContextBuilder;
 import org.apache.ignite.ml.dataset.primitive.context.EmptyContext;
 import org.apache.ignite.ml.environment.LearningEnvironment;
+import org.apache.ignite.ml.environment.deploy.DeployContext;
 import org.apache.ignite.ml.environment.logging.MLLogger;
 import org.apache.ignite.ml.math.exceptions.SingularMatrixException;
 import org.apache.ignite.ml.math.functions.IgniteBiFunction;
@@ -102,7 +103,7 @@ public class GmmTrainer extends SingleLabelDatasetTrainer<GmmModel> {
     }
 
     /** {@inheritDoc} */
-    @Override public <K, V> GmmModel fit(DatasetBuilder<K, V> datasetBuilder,
+    @Override public <K, V> GmmModel fit0(DatasetBuilder<K, V> datasetBuilder,
         Preprocessor<K, V> extractor) {
         return updateModel(null, datasetBuilder, extractor);
     }
@@ -481,7 +482,8 @@ public class GmmTrainer extends SingleLabelDatasetTrainer<GmmModel> {
 
         try (Dataset<EmptyContext, GmmPartitionData> dataset = datasetBuilder.build(envBuilder,
             new EmptyContextBuilder<>(),
-            new GmmPartitionData.Builder<>(extractor, maxCountOfClusters)
+            new GmmPartitionData.Builder<>(extractor, maxCountOfClusters),
+            learningEnvironment()
         )) {
             if (mdl != null) {
                 if (initialMeans != null)

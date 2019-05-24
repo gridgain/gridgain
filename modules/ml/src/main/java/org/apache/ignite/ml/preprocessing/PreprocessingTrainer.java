@@ -22,6 +22,7 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.ml.dataset.DatasetBuilder;
 import org.apache.ignite.ml.dataset.impl.cache.CacheBasedDatasetBuilder;
 import org.apache.ignite.ml.dataset.impl.local.LocalDatasetBuilder;
+import org.apache.ignite.ml.environment.LearningEnvironment;
 import org.apache.ignite.ml.environment.LearningEnvironmentBuilder;
 
 /**
@@ -30,7 +31,10 @@ import org.apache.ignite.ml.environment.LearningEnvironmentBuilder;
  * @param <K> Type of a key in {@code upstream} data.
  * @param <V> Type of a value in {@code upstream} data.
  */
-public interface PreprocessingTrainer<K, V> {
+public abstract class PreprocessingTrainer<K, V> {
+    /** Local environment. */
+    private LearningEnvironment localEnvironment;
+
     /**
      * Fits preprocessor.
      *
@@ -39,7 +43,7 @@ public interface PreprocessingTrainer<K, V> {
      * @param basePreprocessor Base preprocessor.
      * @return Preprocessor.
      */
-    public Preprocessor<K, V> fit(
+    public abstract Preprocessor<K, V> fit(
         LearningEnvironmentBuilder envBuilder,
         DatasetBuilder<K, V> datasetBuilder,
         Preprocessor<K, V> basePreprocessor);
@@ -51,7 +55,7 @@ public interface PreprocessingTrainer<K, V> {
      * @param basePreprocessor Base preprocessor.
      * @return Preprocessor.
      */
-    public default Preprocessor<K, V> fit(
+    public Preprocessor<K, V> fit(
         DatasetBuilder<K, V> datasetBuilder,
         Preprocessor<K, V> basePreprocessor) {
         return fit(LearningEnvironmentBuilder.defaultBuilder(), datasetBuilder, basePreprocessor);
@@ -65,7 +69,7 @@ public interface PreprocessingTrainer<K, V> {
      * @param basePreprocessor Base preprocessor.
      * @return Preprocessor.
      */
-    public default Preprocessor<K, V> fit(
+    public Preprocessor<K, V> fit(
         Ignite ignite, IgniteCache<K, V> cache,
         Preprocessor<K, V> basePreprocessor) {
         return fit(
@@ -83,7 +87,7 @@ public interface PreprocessingTrainer<K, V> {
      * @param basePreprocessor Base preprocessor.
      * @return Preprocessor.
      */
-    public default Preprocessor<K, V> fit(
+    public Preprocessor<K, V> fit(
         LearningEnvironmentBuilder envBuilder,
         Ignite ignite, IgniteCache<K, V> cache,
         Preprocessor<K, V> basePreprocessor) {
@@ -102,7 +106,7 @@ public interface PreprocessingTrainer<K, V> {
      * @param basePreprocessor Base preprocessor.
      * @return Preprocessor.
      */
-    public default Preprocessor<K, V> fit(
+    public Preprocessor<K, V> fit(
         LearningEnvironmentBuilder envBuilder,
         Map<K, V> data,
         int parts,
@@ -122,7 +126,7 @@ public interface PreprocessingTrainer<K, V> {
      * @param basePreprocessor Base preprocessor.
      * @return Preprocessor.
      */
-    public default Preprocessor<K, V> fit(
+    public Preprocessor<K, V> fit(
         Map<K, V> data,
         int parts,
         Preprocessor<K, V> basePreprocessor) {
@@ -130,5 +134,31 @@ public interface PreprocessingTrainer<K, V> {
             new LocalDatasetBuilder<>(data, parts),
             basePreprocessor
         );
+    }
+
+    /**
+     * Sets learning environment for preprocessor trainer.
+     * @param environment Learning environment.
+     */
+    public void setLearningEnvironment(LearningEnvironment environment) {
+        this.localEnvironment = environment;
+    }
+
+    /**
+     * Returns local learning environment if it set or create temp environment
+     * with deploy context defined by other preprocessor.
+     *
+     * @param basePreprocessor Preprocessor.
+     * @param <K> Type of key.
+     * @param <V> Type of value.
+     * @return Learning environment.
+     */
+    protected <K,V> LearningEnvironment learningEnvironment(Preprocessor<K,V> basePreprocessor) {
+        if(localEnvironment != null)
+            return localEnvironment;
+
+        LearningEnvironment env = LearningEnvironmentBuilder.defaultBuilder().buildForTrainer();
+        env.deployContext().init(basePreprocessor);
+        return env;
     }
 }
