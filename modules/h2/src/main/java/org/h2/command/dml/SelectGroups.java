@@ -245,7 +245,9 @@ public abstract class SelectGroups {
     int currentGroupRowId;
 
     /**
-     * Memory allocated in bytes. Note: Poison value '-1' means memory tracking is disabled.
+     * Memory allocated in bytes.
+     *
+     * Note: Poison value '-1' means memory tracking is disabled.
      */
     long allocMem;
 

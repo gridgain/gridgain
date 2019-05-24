@@ -31,7 +31,6 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.h2.engine.Session;
 import org.h2.expression.Expression;
 import org.h2.result.LocalResult;
-import org.junit.Ignore;
 import org.junit.Test;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
@@ -281,14 +280,18 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     /** Check GROUP BY operation on indexed col. */
     @Test
     public void testQueryWithGroupByIndexedCol() {
-        // Sorted grouping. Too many groups causes OOM.
-        checkQueryExpectOOM("select K.indexed, sum(K.id) from K GROUP BY K.indexed", true);
+        execQuery("select K.indexed, sum(K.grp) from K GROUP BY K.indexed", true);
 
-        // Local result is quite small.
-        assertEquals(1, localResults.size());
-        assertTrue(maxMem > localResults.get(0).memoryAllocated());
-        assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
-        //TODO: GG-18840: Add global limit check.
+        assertEquals(0, localResults.size());
+    }
+
+    /** Check GROUP BY operation on indexed col. */
+    @Test
+    public void testQueryWithGroupByPrimaryKey() {
+        //TODO: GG-19071: make next test pass without hint.
+        execQuery("select K.indexed, sum(K.id) from K USE INDEX (K_IDX) GROUP BY K.indexed", true);
+
+        assertEquals(0, localResults.size());
     }
 
     /** Check GROUP BY operation on indexed col. */
@@ -325,24 +328,20 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         assertTrue(100 > localResults.get(0).getRowCount());
     }
 
-    /** Check query with GROUP BY indexed col and with and DISTINCT aggregates. */
+    /** Check lazy query with GROUP BY indexed col and with and DISTINCT aggregates. */
     @Test
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-18628")
-    public void testQueryWithGroupByIndexedColAndDistinctAggregates() {
-        //TODO: GG-18628: Fix exception handling.
-        checkQueryExpectOOM("select K.grp_indexed, count(DISTINCT k.name) from K GROUP BY K.grp_indexed", true);
+    public void testLazyQueryWithGroupByIndexedColAndDistinctAggregates() {
+        execQuery("select K.grp_indexed, count(DISTINCT k.name) from K GROUP BY K.grp_indexed", true);
 
-        assertEquals(1, localResults.size());
-        assertTrue(maxMem > localResults.get(0).memoryAllocated());
-        assertTrue(100 > localResults.get(0).getRowCount());
+        assertEquals(0, localResults.size());
     }
 
     /** Check lazy query with GROUP BY indexed col (small result), then sort. */
     @Test
-    public void testQueryWithGroupByAndSort() {
-        maxMem = 256 * 1024;
+    public void testLazyQueryWithGroupByThenSort() {
+        maxMem = 512 * 1024;
 
-        checkQueryExpectOOM("select K.indexed, sum(K.grp) as a, avg(K.grp), count(K.id) from K " +
+        checkQueryExpectOOM("select K.indexed, sum(K.grp) as a from K " +
             "GROUP BY K.indexed ORDER BY a DESC", true);
 
         assertEquals(1, localResults.size());
@@ -353,7 +352,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     /** Check query with DISTINCT and GROUP BY indexed col (small result). */
     @Test
     public void testQueryWithDistinctAndGroupBy() {
-        checkQueryExpectOOM("select DISTINCT K.id from K GROUP BY K.id", true);
+        checkQueryExpectOOM("select DISTINCT K.name from K GROUP BY K.id", true);
 
         // Local result is quite small.
         assertEquals(1, localResults.size());
@@ -382,16 +381,17 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         boolean localQry = isLocal();
 
         return grid(client ? 1 : 0).context().query().querySqlFields(
-            new SqlFieldsQueryEx(sql, null).setLocal(localQry).setMaxMemory(maxMem)
-                .setLazy(lazy).setPageSize(100), false).getAll();
+            new SqlFieldsQueryEx(sql, null)
+                .setLocal(localQry)
+                .setMaxMemory(maxMem)
+                .setLazy(lazy)
+                .setPageSize(100), false).getAll();
     }
 
     /**
      * @return Local query flag.
      */
-    protected boolean isLocal() {
-        return false;
-    }
+    protected abstract boolean isLocal();
 
     /**
      * @param sql SQL query

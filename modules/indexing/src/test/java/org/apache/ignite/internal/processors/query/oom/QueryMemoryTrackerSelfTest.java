@@ -87,25 +87,23 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
         assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
     }
 
-    /** {@inheritDoc} */
+    /** Check lazy query with GROUP BY indexed col (small result), then sort. */
     @Test
-    @Override public void testQueryWithGroupByAndSort() {
+    @Override public void testLazyQueryWithGroupByThenSort() {
         maxMem = 512 * 1024;
 
-        // OOM on reducer.
-        checkQueryExpectOOM("select K.indexed, sum(K.grp) as a, avg(K.grp), count(K.id) from K " +
+        checkQueryExpectOOM("select K.indexed, sum(K.grp) as a from K " +
             "GROUP BY K.indexed ORDER BY a DESC", true);
 
         assertEquals(1, localResults.size());
-        assertTrue(maxMem > localResults.get(0).memoryAllocated());
-        assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
+        assertEquals(0, localResults.get(0).memoryAllocated());
+        assertEquals(0, localResults.get(0).getRowCount());
     }
 
-    /** {@inheritDoc} */
+    /** Check query with DISTINCT and GROUP BY indexed col (small result). */
     @Test
     @Override public void testQueryWithDistinctAndGroupBy() {
-        // OOM on reducer.
-        checkQueryExpectOOM("select DISTINCT K.id from K GROUP BY K.id", true);
+        checkQueryExpectOOM("select DISTINCT K.name from K GROUP BY K.id", true);
 
         // Local result is quite small.
         assertEquals(1, localResults.size());
@@ -119,10 +117,10 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
         execQuery("select K.grp, avg(K.id), min(K.id), sum(K.id) from K GROUP BY K.grp", false); // Tiny local result.
 
         assertEquals(2, localResults.size());
-        // Map
+        //Map
         assertEquals(100, localResults.get(0).getRowCount());
         // Reduce
-        assertEquals(100, localResults.get(1).getRowCount());
+        assertEquals(100, localResults.get(0).getRowCount());
     }
 
     /** Check GROUP BY operation on indexed col. */
@@ -136,5 +134,38 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
         assertEquals(100, localResults.get(0).getRowCount());
         // Reduce
         assertEquals(100, localResults.get(1).getRowCount());
+    }
+
+    /** Check GROUP BY operation on indexed col. */
+    @Test
+    @Override public void testQueryWithGroupByIndexedCol() {
+        // OOM on reducer.
+        checkQueryExpectOOM("select K.indexed, sum(K.grp) from K GROUP BY K.indexed", true);
+
+        assertEquals(1, localResults.size());
+        assertTrue(maxMem > localResults.get(0).memoryAllocated());
+        assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
+    }
+
+    /** Check GROUP BY operation on indexed col. */
+    @Test
+    @Override public void testQueryWithGroupByPrimaryKey() {
+        // OOM on reducer.
+        checkQueryExpectOOM("select K.indexed, sum(K.grp) from K GROUP BY K.indexed", true);
+
+        assertEquals(1, localResults.size());
+        assertTrue(maxMem > localResults.get(0).memoryAllocated());
+        assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
+    }
+
+    /** Check lazy query with GROUP BY indexed col and with and DISTINCT aggregates. */
+    @Test
+    @Override public void testLazyQueryWithGroupByIndexedColAndDistinctAggregates() {
+        // OOM on reducer.
+        checkQueryExpectOOM("select K.grp_indexed, count(DISTINCT k.name) from K GROUP BY K.grp_indexed", true);
+
+        assertEquals(1, localResults.size());
+        assertTrue(maxMem > localResults.get(0).memoryAllocated());
+        assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
     }
 }
