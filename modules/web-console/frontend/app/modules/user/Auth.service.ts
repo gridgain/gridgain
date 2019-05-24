@@ -85,7 +85,7 @@ export default class AuthService {
             });
     }
     logout() {
-        return this.$http.get('/api/v1/logout')
+        return this.$http.post('/api/v1/logout')
             .then(() => {
                 this.User.clean();
 
