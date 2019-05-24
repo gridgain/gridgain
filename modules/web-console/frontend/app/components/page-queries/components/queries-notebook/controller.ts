@@ -1605,10 +1605,16 @@ export class NotebookCtrl {
             }
         };
 
-        const addLimit = (query, limitSize) =>
-            `SELECT * FROM (
-            ${query} 
-            ) LIMIT ${limitSize}`;
+        const addLimit = (query, limitSize) => {
+            let qry = query.trim();
+
+            if (qry.endsWith(';'))
+                qry = qry.substring(0, qry.length - 1);
+
+            return `SELECT * FROM (
+                ${qry} 
+                ) LIMIT ${limitSize}`;
+        };
 
         $scope.nonCollocatedJoinsAvailable = () => {
             return Version.since(this.agentMgr.clusterVersion, NON_COLLOCATED_JOINS_SINCE);
