@@ -1064,8 +1064,12 @@ public class JdbcThinConnection implements Connection {
 
         AffinityTopologyVersion resAffinityVer = res.affinityVersion();
 
-        if (affinityCache.version().compareTo(resAffinityVer) < 0)
-            affinityCache = new AffinityCache(resAffinityVer);
+        if (affinityCache.version().compareTo(resAffinityVer) < 0) {
+            affinityCache = new AffinityCache(
+                resAffinityVer,
+                connProps.getAffinityAwarenessPartitionDistributionsCacheSize(),
+                connProps.getAffinityAwarenessSqlCacheSize());
+        }
         else if (affinityCache.version().compareTo(resAffinityVer) > 0) {
             // Jdbc thin affinity cache is binded to the newer affinity topology version, so we should ignore retrieved
             // partition distribution. Given situation might occur in case of concurrent race and is not
@@ -1718,8 +1722,12 @@ public class JdbcThinConnection implements Connection {
         if (affinityAwareness) {
             AffinityTopologyVersion resAffVer = res.affinityVersion();
 
-            if (resAffVer != null && (affinityCache == null || affinityCache.version().compareTo(resAffVer) < 0))
-                affinityCache = new AffinityCache(resAffVer);
+            if (resAffVer != null && (affinityCache == null || affinityCache.version().compareTo(resAffVer) < 0)) {
+                affinityCache = new AffinityCache(
+                    resAffVer,
+                    connProps.getAffinityAwarenessPartitionDistributionsCacheSize(),
+                    connProps.getAffinityAwarenessSqlCacheSize());
+            }
 
             // Partition result was requested.
             if (res.response() instanceof JdbcQueryExecuteResult && qryReq.partitionResponseRequest()) {
