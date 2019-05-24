@@ -126,11 +126,8 @@ public class TopologySnapshot {
             }
         }
 
-        // TODO WC-1006 How to fix?
-        if (F.isEmpty(id)) {
-            id = "NO_CLUSTER_ID";
+        if (F.isEmpty(name))
             name = "NO_CLUSTER_NAME";
-        }
     }
 
     /**
@@ -143,7 +140,7 @@ public class TopologySnapshot {
     /**
      * @param id Cluster id.
      */
-    public void setClusterId(String id) {
+    public void setId(String id) {
         this.id = id;
     }
 

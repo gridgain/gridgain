@@ -24,11 +24,11 @@ import org.springframework.boot.autoconfigure.condition.AnyNestedCondition;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.mail.MailSender;
 import org.springframework.mail.javamail.JavaMailSender;
 
@@ -39,7 +39,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 @EnableConfigurationProperties(MailPropertiesEx.class)
 public class MailServiceAutoConfiguration {
     /** Message source. */
-    private MessageSource msgSrc;
+    private MessageSourceAccessor accessor;
 
     /** JavaMail sender. */
     private JavaMailSender mailSnd;
@@ -73,12 +73,12 @@ public class MailServiceAutoConfiguration {
     }
 
     /**
-     * @param msgSrc Message source.
+     * @param accessor Message source accessor.
      * @param mailSnd Mail send.
      * @param props Properties.
      */
-    public MailServiceAutoConfiguration(MessageSource msgSrc, JavaMailSender mailSnd, MailPropertiesEx props) {
-        this.msgSrc = msgSrc;
+    public MailServiceAutoConfiguration(MessageSourceAccessor accessor, JavaMailSender mailSnd, MailPropertiesEx props) {
+        this.accessor = accessor;
         this.mailSnd = mailSnd;
         this.props = props;
     }
@@ -87,6 +87,6 @@ public class MailServiceAutoConfiguration {
     @Bean
     @Primary
     public IMailService mailService() {
-        return new MailService(msgSrc, mailSnd, props);
+        return new MailService(accessor, mailSnd, props);
     }
 }

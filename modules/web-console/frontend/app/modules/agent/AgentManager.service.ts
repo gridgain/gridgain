@@ -245,28 +245,10 @@ export default class AgentManager {
                     console.log('[WS] Received: ', msg);
 
                 const evt = JSON.parse(msg.data);
-
                 const eventType = evt.eventType;
                 const payload = JSON.parse(evt.payload);
 
-                if (eventType === 'agent:status') {
-                    const {clusters, count, hasDemo} = payload;
-
-                    const conn = this.connectionSbj.getValue();
-
-                    conn.update(this.isDemoMode(), count, clusters, hasDemo);
-
-                    this.connectionSbj.next(conn);
-                }
-                else if (eventType === 'admin:announcement')
-                    this.UserNotifications.announcement = payload;
-                else {
-                    this.wsSubject.next({
-                        requestId: evt.requestId,
-                        eventType,
-                        payload
-                    });
-                }
+                this.processWebSocketEvent(evt, eventType, payload);
             },
             onreconnect: (evt) => {
                 if (__dbg)
@@ -293,6 +275,27 @@ export default class AgentManager {
                     console.log('[WS] Error on sending message to server: ', evt);
             }
         });
+    }
+
+    processWebSocketEvent(evt, eventType, payload) {
+        if (eventType === 'agent:status') {
+            const {clusters, count, hasDemo} = payload;
+
+            const conn = this.connectionSbj.getValue();
+
+            conn.update(this.isDemoMode(), count, clusters, hasDemo);
+
+            this.connectionSbj.next(conn);
+        }
+        else if (eventType === 'admin:announcement')
+            this.UserNotifications.announcement = payload;
+        else {
+            this.wsSubject.next({
+                requestId: evt.requestId,
+                eventType,
+                payload
+            });
+        }
     }
 
     _sendWebSocketEvent(requestId, eventType, data) {
