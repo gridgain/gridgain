@@ -132,6 +132,9 @@ class Cache:
             'version': (0, 0),
         }
 
+    def get_protocol_version(self):
+        return self.client.protocol_version
+
     @property
     def settings(self) -> Optional[dict]:
         """

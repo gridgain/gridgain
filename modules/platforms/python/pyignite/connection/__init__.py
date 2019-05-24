@@ -21,41 +21,19 @@ as well as Ignite protocol handshaking.
 
 from collections import OrderedDict
 import socket
-from typing import Callable, Union
+from typing import Union
 
 from pyignite.constants import *
 from pyignite.exceptions import HandshakeError, ParameterError, SocketError
 from pyignite.datatypes import Byte, Int, Short, String, UUIDObject
 from pyignite.datatypes.internal import Struct
+from pyignite.utils import select_version
 
 from .handshake import HandshakeRequest
 from .ssl import wrap
 
 
 __all__ = ['Connection']
-
-
-def select_version(func):
-    """
-    This decorator tries to find a method more suitable for a current protocol
-    version, before calling the decorated method.
-
-    :param func: decorated `Connection()` method,
-    :return: wrapper.
-    """
-    def wrapper(conn: 'Connection', *args, **kwargs) -> Callable:
-        suggested_name = '{}_{}{}{}'.format(
-            func.__name__,
-            *conn.client.protocol_version
-        )
-        suggested = getattr(conn, suggested_name, None)
-        if suggested is None:
-            return func(conn, *args, **kwargs)
-
-        # this method is bound, do not pass `conn` here
-        return suggested(*args, **kwargs)
-
-    return wrapper
 
 
 class Connection:
@@ -150,6 +128,9 @@ class Connection:
         self.ssl_params = ssl_params
 
     _wrap = wrap
+
+    def get_protocol_version(self):
+        return self.client.protocol_version
 
     @select_version
     def read_response(self) -> Union[dict, OrderedDict]:

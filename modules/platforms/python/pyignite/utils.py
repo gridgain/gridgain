@@ -15,7 +15,7 @@
 #
 import ctypes
 from functools import wraps
-from typing import Any, Type, Tuple, Union
+from typing import Any, Callable, Type, Tuple, Union
 
 from pyignite.datatypes.base import IgniteDataType
 from .constants import *
@@ -178,6 +178,30 @@ def status_to_exception(exc: Type[Exception]):
             return result.value
         return ste_wrapper
     return ste_decorator
+
+
+def select_version(func):
+    """
+    This decorator tries to find a method more suitable for a current protocol
+    version, before calling the decorated method. The object which method is
+    being decorated must have `get_protocol_version()` method.
+
+    :param func: decorated method,
+    :return: wrapper.
+    """
+    def wrapper(obj: object, *args, **kwargs) -> Callable:
+        suggested_name = '{}_{}{}{}'.format(
+            func.__name__,
+            *obj.get_protocol_version()
+        )
+        suggested = getattr(obj, suggested_name, None)
+        if suggested is None:
+            return func(obj, *args, **kwargs)
+
+        # this method is bound, do not pass `conn` here
+        return suggested(*args, **kwargs)
+
+    return wrapper
 
 
 def get_field_by_id(

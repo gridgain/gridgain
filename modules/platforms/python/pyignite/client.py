@@ -53,7 +53,9 @@ from .constants import *
 from .datatypes import BinaryObject
 from .datatypes.internal import tc_map
 from .exceptions import BinaryTypeError, CacheError, SQLError
-from .utils import entity_id, schema_id, status_to_exception, is_iterable
+from .utils import (
+    entity_id, schema_id, select_version, status_to_exception, is_iterable
+)
 from .binary import GenericObjectMeta
 
 
@@ -78,6 +80,7 @@ class Client:
     _compact_footer = None
     _connection_args = None
     _nodes = None
+    _current_node = 0
 
     def __init__(self, compact_footer: bool = None, **kwargs):
         """
@@ -93,6 +96,9 @@ class Client:
         self._connection_args = kwargs
         self._nodes = OrderedDict()
         self.affinity_version = (0, 0)
+
+    def get_protocol_version(self):
+        return self.protocol_version
 
     def _add_node(self, host: str, port: int) -> 'UUID':
         """
