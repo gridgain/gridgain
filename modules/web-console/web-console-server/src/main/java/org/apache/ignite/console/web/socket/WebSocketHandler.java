@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -28,6 +29,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.dto.Announcement;
@@ -76,9 +79,9 @@ import static org.apache.ignite.console.websocket.WebSocketConsts.SCHEMA_IMPORT_
  * Web sockets manager.
  */
 @Service
-public class WebSocketManager extends TextWebSocketHandler {
+public class WebSocketHandler extends TextWebSocketHandler {
     /** */
-    private static final Logger log = LoggerFactory.getLogger(WebSocketManager.class);
+    private static final Logger log = LoggerFactory.getLogger(WebSocketHandler.class);
 
     /** */
     private static final String VISOR_IGNITE = "org.apache.ignite.internal.visor.";
@@ -87,19 +90,19 @@ public class WebSocketManager extends TextWebSocketHandler {
     private static final PingMessage PING = new PingMessage(UTF_8.encode("PING"));
 
     /** */
-    private final AccountsRepository accRepo;
+    protected final AccountsRepository accRepo;
 
     /** */
-    private final Map<WebSocketSession, Set<String>> agents;
+    protected final Map<WebSocketSession, AgentDescriptor> agents;
 
     /** */
-    private final Map<WebSocketSession, TopologySnapshot> clusters;
-
-    /** */
-    private final Map<WebSocketSession, String> browsers;
+    protected final Map<WebSocketSession, UUID> browsers;
 
     /** */
     private final Map<String, WebSocketSession> requests;
+
+    /** */
+    private final Map<String, TopologySnapshot> clusters;
 
     /** */
     private final Map<String, String> supportedAgents;
@@ -108,17 +111,17 @@ public class WebSocketManager extends TextWebSocketHandler {
     private final Map<String, VisorTaskDescriptor> visorTasks;
 
     /** */
-    volatile private Announcement lastAnn;
+    private volatile Announcement lastAnn;
 
     /**
      * @param accRepo Repository to work with accounts.
      */
-    public WebSocketManager(AccountsRepository accRepo) {
+    public WebSocketHandler(AccountsRepository accRepo) {
         this.accRepo = accRepo;
 
         agents = new ConcurrentLinkedHashMap<>();
-        clusters = new ConcurrentHashMap<>();
         browsers = new ConcurrentHashMap<>();
+        clusters = new ConcurrentHashMap<>();
         requests = new ConcurrentHashMap<>();
         supportedAgents = new ConcurrentHashMap<>();
         visorTasks = new ConcurrentHashMap<>();
@@ -131,10 +134,13 @@ public class WebSocketManager extends TextWebSocketHandler {
         log.info("Session closed: " + ws);
 
         if (AGENTS_PATH.equals(ws.getUri().getPath())) {
-            agents.remove(ws);
+            AgentDescriptor desc = agents.remove(ws);
+
+            updateClusterInBrowsers(desc.accIds);
+
             clusters.remove(ws);
 
-            updateAgentStatus();
+
         }
         else
             browsers.remove(ws);
@@ -144,7 +150,7 @@ public class WebSocketManager extends TextWebSocketHandler {
      * @param evt Event.
      * @throws IOException If failed to send message.
      */
-    private void sendMessage(WebSocketSession ws, WebSocketEvent evt) throws IOException {
+    protected void sendMessage(WebSocketSession ws, WebSocketEvent evt) throws IOException {
         ws.sendMessage(new TextMessage(toJson(evt)));
     }
 
@@ -174,21 +180,23 @@ public class WebSocketManager extends TextWebSocketHandler {
      */
     private void sendToAgent(WebSocketSession wsBrowser, WebSocketEvent evt) {
         try {
-            String tok = token(wsBrowser);
+            UUID accId = browsers.get(wsBrowser);
 
             WebSocketSession wsAgent = agents
                 .entrySet()
                 .stream()
-                .filter(e -> e.getValue().contains(tok))
+                .filter(e -> e.getValue().isActiveAccount(accId))
                 .findFirst()
                 .map(Map.Entry::getKey)
-                .orElseThrow(() -> new IllegalStateException("Agent not found for token: " + tok));
+                .orElseThrow(() -> new IllegalStateException("Failed to find agent for account."));
 
             if (log.isDebugEnabled())
-                log.debug("Found agent session [token=" + tok + ", session=" + wsAgent + ", event=" + evt + "]");
+                log.debug("Found agent session [token=" + accId + ", session=" + wsAgent + ", event=" + evt + "]");
 
             if (NODE_VISOR.equals(evt.getEventType()))
                 prepareNodeVisorParams(evt);
+
+            requests.put(evt.getRequestId(), wsBrowser);
 
             sendMessage(wsAgent, evt);
         }
@@ -211,73 +219,87 @@ public class WebSocketManager extends TextWebSocketHandler {
         }
         catch (Throwable e) {
             log.error("Failed to send PING request [session=" + ws + "]");
+
+            try {
+                ws.close(CloseStatus.SESSION_NOT_RELIABLE);
+            }
+            catch (IOException ignored) {
+                // No-op.
+            }
         }
     }
 
     /**
-     * @param evt Event to process.
-     * @throws IOException If failed to process.
+     * @param wsAgent Session.
+     * @param oldTop Old topology.
+     * @param newTop New topology.
      */
-    private AgentHandshakeResponse agentHandshake(WebSocketEvent evt) throws IOException {
-        AgentHandshakeRequest req = fromJson(evt.getPayload(), AgentHandshakeRequest.class);
+    protected void updateTopology(WebSocketSession wsAgent, TopologySnapshot oldTop, TopologySnapshot newTop) {
+        AgentDescriptor desc = agents.get(wsAgent);
 
-        if (F.isEmpty(req.getTokens()))
-            return new AgentHandshakeResponse("Tokens not set. Please reload agent or check settings.");
+        if (!newTop.getId().equals(desc.clusterId)) {
+            desc.clusterId = newTop.getId();
 
-        if (!F.isEmpty(req.getVersion()) && !F.isEmpty(req.getBuildTime()) & !F.isEmpty(supportedAgents)) {
-            // TODO WC-1053 Implement version check in beta2 stage.
-            return new AgentHandshakeResponse("You are using an older version of the agent. Please reload agent.");
+            updateClusterInBrowsers(desc.accIds);
         }
-
-        Set<String> tokens = req.getTokens();
-
-        Set<String> validTokens = accRepo.validateTokens(tokens);
-
-        if (F.isEmpty(validTokens)) {
-            return new AgentHandshakeResponse("Failed to authenticate with token(s): " + tokens + "." +
-                " Please reload agent or check settings.");
-        }
-
-        return new AgentHandshakeResponse(validTokens);
     }
 
     /**
-     * @param ws Session.
-     * @param evt Event to process.
+     * @param wsAgent Session.
+     * @param newTop Topology snapshot.
      */
-    private void registerCluster(WebSocketSession ws, WebSocketEvent evt) {
-        try {
-            TopologySnapshot top = fromJson(evt.getPayload(), TopologySnapshot.class);
+    protected void processTopologyUpdate(WebSocketSession wsAgent, TopologySnapshot newTop) {
+        TopologySnapshot oldTop = null;
 
-            clusters.put(ws, top);
+        AgentDescriptor desc = agents.get(wsAgent);
 
-            updateAgentStatus();
+        if (desc.clusterId != null)
+            oldTop = clusters.remove(desc.clusterId);
+
+        if (F.isEmpty(newTop.getId())) {
+            String clusterId = null;
+
+            if (oldTop != null && !oldTop.differentCluster(newTop))
+                clusterId = oldTop.getId();
+
+            if (F.isEmpty(clusterId)) {
+                clusterId = clusters.entrySet().stream()
+                    .filter(e -> !e.getValue().differentCluster(newTop))
+                    .map(Map.Entry::getKey)
+                    .findFirst()
+                    .orElse(null);
+            }
+
+            newTop.setId(F.isEmpty(clusterId) ? UUID.randomUUID().toString() : clusterId);
         }
-        catch (Throwable e) {
-            log.error("Failed to send information about clusters to browsers", e);
-        }
+
+        clusters.put(newTop.getId(), newTop);
+
+        updateTopology(wsAgent, oldTop, newTop);
     }
 
     /**
-     * @param ws Session.
+     * @param wsBrowser Browser session.
      */
-    private void registerBrowser(WebSocketSession ws) {
-        log.info("Browser connected: " + ws);
+    protected void onBrowserConnect(WebSocketSession wsBrowser) {
+        log.info("Browser connected: " + wsBrowser);
 
-        browsers.put(ws, token(ws));
+        Account acc = extractAccount(wsBrowser);
 
-        updateAgentStatus();
+        browsers.put(wsBrowser, acc.getId());
 
-        sendAnnouncement(ws);
+        sendAgentStats(wsBrowser, acc.getId());
+
+        sendAnnouncement(wsBrowser);
     }
 
     /**
-     * Extract user token from session.
+     * Extract account from session.
      *
      * @param ws Websocket.
-     * @return Token.
+     * @return Account.
      */
-    private String token(WebSocketSession ws) {
+    protected Account extractAccount(WebSocketSession ws) {
         Principal p = ws.getPrincipal();
 
         if (p instanceof UsernamePasswordAuthenticationToken) {
@@ -285,16 +307,47 @@ public class WebSocketManager extends TextWebSocketHandler {
 
             Object tp = t.getPrincipal();
 
-            if (tp instanceof Account) {
-                Account acc = (Account)tp;
-
-                return acc.getToken();
-            }
+            if (tp instanceof Account)
+                return (Account)tp;
         }
 
-        log.error("Token not found [session=" + ws + "]");
+        throw new IllegalStateException("Account can't be found [session=" + ws + "]");
+    }
 
-        return UUID.randomUUID().toString();
+    /**
+     * @param req Agent handshake.
+     */
+    private void validateAgentHandshake(AgentHandshakeRequest req) {
+        if (F.isEmpty(req.getTokens()))
+            throw new IllegalArgumentException("Tokens not set. Please reload agent or check settings.");
+
+        if (!F.isEmpty(req.getVersion()) && !F.isEmpty(req.getBuildTime()) & !F.isEmpty(supportedAgents)) {
+            // TODO WC-1053 Implement version check in beta2 stage.
+            throw new IllegalArgumentException("You are using an older version of the agent. Please reload agent.");
+        }
+    }
+
+    /**
+     * @param tokens Tokens.
+     */
+    private Collection<Account> loadAccounts(Set<String> tokens) {
+        Collection<Account> accounts = accRepo.getAllByTokens(tokens);
+
+        if (accounts.isEmpty()) {
+            throw new IllegalArgumentException("Failed to authenticate with token(s): " + tokens + ". " +
+                "Please reload agent or check settings.");
+        }
+
+        return accounts;
+    }
+
+
+    /**
+     * @param c Collection of Objects.
+     * @param mapper Mapper.
+     */
+    private <T, R> Set<R> mapToSet(Collection<T> c, Function<? super T, ? extends R> mapper) {
+        return c.stream().map(mapper).collect(Collectors.toSet());
     }
 
     /**
@@ -302,27 +355,40 @@ public class WebSocketManager extends TextWebSocketHandler {
      * @param msg Incoming message.
      * @throws IOException If failed to handle event.
      */
-    private void handleAgentEvents(WebSocketSession ws, TextMessage msg) throws IOException {
+    private void handleTextMessageAgent(WebSocketSession ws, TextMessage msg) throws IOException {
         WebSocketEvent evt = fromJson(msg.getPayload(), WebSocketEvent.class);
 
         switch (evt.getEventType()) {
             case AGENT_HANDSHAKE:
-                AgentHandshakeResponse res = agentHandshake(evt);
+                try {
+                    AgentHandshakeRequest req = fromJson(evt.getPayload(), AgentHandshakeRequest.class);
 
-                if (F.isEmpty(res.getError())) {
-                    log.info("Agent connected [evt=" + evt + "]");
+                    validateAgentHandshake(req);
 
-                    agents.put(ws, res.getTokens());
+                    Collection<Account> accounts = loadAccounts(req.getTokens());
+
+                    evt.setPayload(toJson(new AgentHandshakeResponse(mapToSet(accounts, Account::getToken))));
+
+                    sendMessage(ws, evt);
+
+                    log.info("Agent connected: " + req);
+
+                    agents.put(ws, new AgentDescriptor(mapToSet(accounts, Account::getId)));
                 }
-                else
-                    log.warn("Agent not connected [err=" + res.getError() + ", evt=" + evt + "]");
+                catch (Exception e) {
+                    log.warn("Failed to establish connection in handshake: " + evt, e);
 
-                sendMessage(ws, evt.setPayload(toJson(res)));
+                    sendMessage(ws, evt.setPayload(toJson(new AgentHandshakeResponse(e))));
+
+                    ws.close();
+                }
 
                 break;
 
             case CLUSTER_TOPOLOGY:
-                registerCluster(ws, evt);
+                TopologySnapshot top = fromJson(evt.getPayload(), TopologySnapshot.class);
+
+                processTopologyUpdate(ws, top);
 
                 break;
 
@@ -350,8 +416,6 @@ public class WebSocketManager extends TextWebSocketHandler {
             case SCHEMA_IMPORT_METADATA:
             case NODE_REST:
             case NODE_VISOR:
-                requests.put(evt.getRequestId(), ws);
-
                 sendToAgent(ws, evt);
 
                 break;
@@ -377,11 +441,11 @@ public class WebSocketManager extends TextWebSocketHandler {
     }
 
     /**
-     * @param browserWs Browser to send current announcement.
+     * @param wsBrowser Browser to send current announcement.
      */
-    private void sendAnnouncement(WebSocketSession browserWs) {
+    private void sendAnnouncement(WebSocketSession wsBrowser) {
         if (lastAnn != null)
-            sendAnnouncement(Collections.singleton(browserWs), lastAnn);
+            sendAnnouncement(Collections.singleton(wsBrowser), lastAnn);
     }
 
     /**
@@ -402,56 +466,61 @@ public class WebSocketManager extends TextWebSocketHandler {
     }
 
     /**
-     * Send to all connected browsers info about agent status.
+     * Send to browser info about agent status.
      */
-    private void updateAgentStatus() {
-        browsers.forEach((wsBrowser, token) -> {
-            List<TopologySnapshot> tops = new ArrayList<>();
+    private void sendAgentStats(WebSocketSession wsBrowser, UUID accId) {
+        List<TopologySnapshot> tops = new ArrayList<>();
 
-            agents.forEach((wsAgent, tokens) -> {
-                if (tokens.contains(token)) {
-                    TopologySnapshot top = clusters.get(wsAgent);
+        agents.forEach((wsAgent, desc) -> {
+            if (desc.isActiveAccount(accId)) {
+                TopologySnapshot top = clusters.get(desc.clusterId);
 
-                    if (top != null && tops.stream().allMatch(t -> t.differentCluster(top)))
-                        tops.add(top);
-                }
-            });
-
-            Map<String, Object> res = new LinkedHashMap<>();
-
-            res.put("count", tops.size());
-            res.put("hasDemo", false);
-            res.put("clusters", tops);
-
-            try {
-                sendMessage(wsBrowser, new WebSocketEvent(AGENT_STATUS, toJson(res)));
-            }
-            catch (Throwable e) {
-                log.error("Failed to update agent status [session=" + wsBrowser + ", token=" + token + "]", e);
+                if (top != null && tops.stream().allMatch(t -> t.differentCluster(top)))
+                    tops.add(top);
             }
         });
+
+        Map<String, Object> res = new LinkedHashMap<>();
+
+        res.put("count", tops.size());
+        res.put("hasDemo", false);
+        res.put("clusters", tops);
+
+        try {
+            sendMessage(wsBrowser, new WebSocketEvent(AGENT_STATUS, toJson(res)));
+        }
+        catch (Throwable e) {
+            log.error("Failed to update agent status [session=" + wsBrowser + ", token=" + accId + "]", e);
+        }
     }
 
     /**
-     * @param oldTok Token to revoke.
-     * @param newTok New token.
+     * Send to all connected browsers info about agent status.
      */
-    public void revokeToken(String oldTok, String newTok) {
-        log.info("Revoke token [old: " + oldTok + ", new: " + newTok + "]");
+    private void updateClusterInBrowsers(Set<UUID> accIds) {
+        browsers.entrySet().stream()
+            .filter(e -> accIds.contains(e.getValue()))
+            .forEach((e) -> sendAgentStats(e.getKey(), e.getValue()));
+    }
 
-        agents.forEach((ws, tokens) -> {
+    /**
+     * @param acc Account.
+     * @param oldTok Token to revoke.
+     */
+    public void revokeToken(Account acc, String oldTok) {
+        log.info("Revoke token [old: " + oldTok + ", new: " + acc.getToken() + "]");
+
+        agents.forEach((ws, desc) -> {
             try {
-                if (tokens.remove(oldTok))
+                if (desc.revokeAccount(acc.getId()))
                     sendMessage(ws, new WebSocketEvent(AGENT_REVOKE_TOKEN, oldTok));
+
+                if (desc.canBeClose())
+                    ws.close();
             }
             catch (Throwable e) {
                 log.error("Failed to revoke token: " + oldTok);
             }
-        });
-
-        browsers.forEach((ws, tok) -> {
-            if (tok.equals(oldTok))
-                browsers.put(ws, newTok);
         });
     }
 
@@ -461,7 +530,7 @@ public class WebSocketManager extends TextWebSocketHandler {
             if (BROWSERS_PATH.equals(ws.getUri().getPath()))
                 handleBrowserEvents(ws, msg);
             else
-                handleAgentEvents(ws, msg);
+                handleTextMessageAgent(ws, msg);
         }
         catch (Throwable e) {
             log.error("Failed to process websocket message [session=" + ws + ", msg=" + msg + "]", e);
@@ -486,7 +555,7 @@ public class WebSocketManager extends TextWebSocketHandler {
         ws.setTextMessageSizeLimit(10 * 1024 * 1024); // TODO IGNITE-5617 how to configure in more correct way
 
         if (BROWSERS_PATH.equals(ws.getUri().getPath()))
-            registerBrowser(ws);
+            onBrowserConnect(ws);
     }
 
     /** {@inheritDoc} */
@@ -625,5 +694,60 @@ public class WebSocketManager extends TextWebSocketHandler {
         payload.put("params", exeParams);
 
         evt.setPayload(toJson(payload));
+    }
+
+    /**
+     * Agent descriptor.
+     */
+    protected static class AgentDescriptor {
+        /** */
+        private Set<UUID> accIds;
+
+        /** */
+        private String clusterId;
+
+        /**
+         * @param accIds Account IDs.
+         */
+        AgentDescriptor(Set<UUID> accIds) {
+            this.accIds = accIds;
+        }
+
+        /**
+         * @param accId Account ID.
+         * @return {@code True} if contained the specified account.
+         */
+        boolean isActiveAccount(UUID accId) {
+            return accIds.contains(accId);
+        }
+
+        /**
+         * @param accId Account ID.
+         * @return {@code True} if contained the specified account.
+         */
+        boolean revokeAccount(UUID accId) {
+            return accIds.remove(accId);
+        }
+
+        /**
+         * @return {@code True} if connection to agent can be closed.
+         */
+        boolean canBeClose() {
+            return accIds.isEmpty();
+        }
+
+        /**
+         * @return Acc ids.
+         */
+        public Set<UUID> getAccIds() {
+            return accIds;
+        }
+
+        /**
+         * @return Cluster id.
+         */
+        public String getClusterId() {
+            return clusterId;
+        }
     }
 }

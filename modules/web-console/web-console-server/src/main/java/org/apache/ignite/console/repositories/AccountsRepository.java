@@ -16,19 +16,18 @@
 
 package org.apache.ignite.console.repositories;
 
-import java.util.HashSet;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
-import javax.cache.Cache;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.console.db.Table;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.tx.TransactionManager;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.transactions.Transaction;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -56,7 +55,8 @@ public class AccountsRepository {
         this.txMgr = txMgr;
 
         accountsTbl = new Table<Account>(ignite, "accounts")
-            .addUniqueIndex(Account::getUsername, (acc) -> "Account with email '" + acc.getUsername() + "' already registered");
+            .addUniqueIndex(Account::getUsername, (acc) -> "Account with email '" + acc.getUsername() + "' already registered")
+            .addUniqueIndex(Account::getToken, (acc) -> "Account with token '" + acc.getToken() + "' already registered");
     }
 
     /**
@@ -160,14 +160,12 @@ public class AccountsRepository {
      * @return List of accounts.
      */
     public List<Account> list() {
-        return accountsTbl
-            .query(new ScanQuery<UUID, Object>())
-            .getAll()
-            .stream()
-            .map(Cache.Entry::getValue)
-            .filter(item -> item instanceof Account)
-            .map(item -> (Account)item)
-            .collect(Collectors.toList());
+        try {
+            return accountsTbl.loadAll();
+        }
+        catch (IgniteCheckedException e) {
+            throw U.convertException(e);
+        }
     }
 
 
@@ -175,20 +173,9 @@ public class AccountsRepository {
      * @param tokens Tokens to check.
      * @return Valid tokens.
      */
-    public Set<String> validateTokens(Set<String> tokens) {
-        Set<String> accToks = accountsTbl
-            .query(new ScanQuery<UUID, Object>())
-            .getAll()
-            .stream()
-            .map(Cache.Entry::getValue)
-            .filter(item -> item instanceof Account)
-            .map(item -> ((Account)item).getToken())
-            .collect(Collectors.toSet());
-
-        Set<String> validTokens = new HashSet<>(tokens);
-
-        validTokens.retainAll(accToks);
-
-        return validTokens;
+    public Collection<Account> getAllByTokens(Set<String> tokens) {
+        try (Transaction ignored = txMgr.txStart()) {
+            return accountsTbl.loadAllByIndex(tokens);
+        }
     }
 }

@@ -27,7 +27,7 @@ import org.apache.ignite.console.tx.TransactionManager;
 import org.apache.ignite.console.web.model.ChangeUserRequest;
 import org.apache.ignite.console.web.model.SignUpRequest;
 import org.apache.ignite.console.web.security.MissingConfirmRegistrationException;
-import org.apache.ignite.console.web.socket.WebSocketManager;
+import org.apache.ignite.console.web.socket.WebSocketHandler;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.transactions.Transaction;
 import org.springframework.security.core.userdetails.UserDetailsChecker;
@@ -54,7 +54,7 @@ public class AccountsService implements UserDetailsService {
     protected AccountsRepository accountsRepo;
 
     /** */
-    protected WebSocketManager wsm;
+    protected WebSocketHandler wsm;
 
     /** */
     protected NotificationService notificationSrv;
@@ -86,7 +86,7 @@ public class AccountsService implements UserDetailsService {
         AccountConfiguration accCfg,
         ActivationConfiguration activationCfg,
         PasswordEncoder encoder,
-        WebSocketManager wsm,
+        WebSocketHandler wsm,
         AccountsRepository accountsRepo,
         TransactionManager txMgr,
         NotificationService notificationSrv
@@ -112,7 +112,7 @@ public class AccountsService implements UserDetailsService {
      * Create account for user.
      *
      * @param params Sign up params.
-     * @return Registered account.
+     * @return New account.
      */
     protected Account create(SignUpRequest params) {
         Account acc = new Account(
@@ -252,10 +252,6 @@ public class AccountsService implements UserDetailsService {
             }
 
             String oldTok = acc.getToken();
-            String newTok = changes.getToken();
-
-            if (!oldTok.equals(newTok))
-                wsm.revokeToken(oldTok, newTok);
 
             acc.update(changes);
 
@@ -267,6 +263,9 @@ public class AccountsService implements UserDetailsService {
             accountsRepo.save(acc);
 
             tx.commit();
+
+            if (!oldTok.equals(acc.getToken()))
+                wsm.revokeToken(acc, oldTok);
 
             return acc;
         }

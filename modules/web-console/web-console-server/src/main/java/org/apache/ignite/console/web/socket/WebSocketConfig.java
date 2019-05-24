@@ -34,7 +34,7 @@ import static org.apache.ignite.console.websocket.WebSocketConsts.BROWSERS_PATH;
 @EnableWebSocket
 public class WebSocketConfig implements WebSocketConfigurer {
 	/** */
-	private final WebSocketManager wsm;
+	private final WebSocketHandler wsm;
 
 	/** */
 	@Value("${websocket.ssl.enabled:false}")
@@ -48,7 +48,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
 	 * @param wsm Websocket manager.
 	 */
 	@Autowired
-	public WebSocketConfig(WebSocketManager wsm) {
+	public WebSocketConfig(WebSocketHandler wsm) {
 		this.wsm = wsm;
 	}
 

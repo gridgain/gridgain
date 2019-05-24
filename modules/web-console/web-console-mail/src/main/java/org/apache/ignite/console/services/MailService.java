@@ -22,16 +22,15 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Locale;
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
 import org.apache.ignite.console.config.MailPropertiesEx;
-import org.apache.ignite.console.notification.Notification;
 import org.apache.ignite.console.notification.INotificationDescriptor;
 import org.apache.ignite.console.notification.IRecipient;
+import org.apache.ignite.console.notification.Notification;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.springframework.context.MessageSource;
+import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.ExpressionParser;
@@ -52,7 +51,7 @@ public class MailService implements IMailService {
     private static final TemplateParserContext templateParserCtx = new TemplateParserContext("${", "}");
 
     /** Message source. */
-    private MessageSource msgSrc;
+    private MessageSourceAccessor accessor;
 
     /** JavaMail sender */
     private JavaMailSender mailSnd;
@@ -61,12 +60,12 @@ public class MailService implements IMailService {
     private MailPropertiesEx props;
 
     /**
-     * @param msgSrc Message source.
+     * @param accessor Message source accessor.
      * @param mailSnd Mail sender.
      * @param props Mail properties.
      */
-    public MailService(MessageSource msgSrc, JavaMailSender mailSnd, MailPropertiesEx props) {
-        this.msgSrc = msgSrc;
+    public MailService(MessageSourceAccessor accessor, JavaMailSender mailSnd, MailPropertiesEx props) {
+        this.accessor = accessor;
         this.mailSnd = mailSnd;
         this.props = props;
     }
@@ -147,18 +146,15 @@ public class MailService implements IMailService {
      * @return Message.
      */
     private String getMessage(String code) {
-        return msgSrc.getMessage(code, null, code, Locale.US);
+        return accessor.getMessage(code, null, code);
     }
 
     /**
      * Context for email templates.
      */
     private static class NotificationWrapper extends StandardEvaluationContext {
-        /** Origin. */
-        private String origin;
-
-        /** Recipient. */
-        private IRecipient rcpt;
+        /** Notification. */
+        private Notification notification;
 
         /** Subject. */
         private String subject;
@@ -170,22 +166,28 @@ public class MailService implements IMailService {
          * @param notification Notification.
          */
         private NotificationWrapper(Notification notification) {
-            this.origin = notification.getOrigin();
-            this.rcpt = notification.getRecipient();
+            this.notification = notification;
         }
 
         /**
          * @return Origin.
          */
         public String getOrigin() {
-            return origin;
+            return notification.getOrigin();
         }
 
         /**
          * @return Recipient.
          */
         public IRecipient getRecipient() {
-            return rcpt;
+            return notification.getRecipient();
+        }
+
+        /**
+         * @return value of notification
+         */
+        public Notification getNotification() {
+            return notification;
         }
 
         /**

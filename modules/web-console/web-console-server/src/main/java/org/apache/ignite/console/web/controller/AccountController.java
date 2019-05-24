@@ -79,7 +79,10 @@ public class AccountController {
         accountsSrv.register(params);
 
         Authentication authentication = authMgr.authenticate(
-            new UsernamePasswordAuthenticationToken(params.getEmail(), params.getPassword()));
+            new UsernamePasswordAuthenticationToken(
+                params.getEmail(),
+                params.getPassword())
+        );
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
