@@ -117,7 +117,7 @@ class Client:
             nodes = [(IGNITE_DEFAULT_HOST, IGNITE_DEFAULT_PORT)]
         elif len(args) == 1 and is_iterable(args[0]):
             # iterable of host-port pairs is given
-            nodes = args
+            nodes = args[0]
         elif (
             len(args) == 2
             and isinstance(args[0], str)

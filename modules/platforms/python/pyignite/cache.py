@@ -13,8 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from typing import Any, Iterable, Optional, Union
+import time
+from typing import Any, Dict, Iterable, Optional, Union
 
+from .constants import *
 from .binary import GenericObjectMeta
 from .datatypes import prop_codes
 from .datatypes.internal import AnyDataObject
@@ -201,6 +203,24 @@ class Cache:
         """
         return cache_destroy(self.get_best_node(), self._cache_id)
 
+    @status_to_exception(CacheError)
+    def _get_affinity(self, conn: 'Connection') -> Dict:
+        """
+        Queries server for affinity mappings. Retries in case
+        of an intermittent error (most probably “Getting affinity for topology
+        version earlier than affinity is calculated”).
+
+        :param conn: connection to Igneite server,
+        :return: OP_CACHE_PARTITIONS operation result value.
+        """
+        for _ in range(AFFINITY_RETRIES or 1):
+            result = cache_get_node_partitions(conn, self._cache_id)
+            if result.status == 0:
+                break
+            time.sleep(AFFINITY_DELAY)
+
+        return result
+
     def get_best_node(
         self, key: Any = None, key_hint: 'IgniteDataType' = None,
     ) -> 'Connection':
@@ -221,10 +241,7 @@ class Cache:
 
             if self.affinity['version'] < self._client.affinity_version:
                 # update partition mapping
-                self.affinity = cache_get_node_partitions(
-                    conn,
-                    self._cache_id
-                ).value
+                self.affinity = self._get_affinity(conn)
 
                 # flatten it a bit
                 self.affinity.update(self.affinity['partition_mapping'][0])
@@ -681,8 +698,10 @@ class Cache:
          on local node only. Defaults to False,
         :return: generator with key-value pairs.
         """
+        node = self.get_best_node()
+
         result = scan(
-            self.get_best_node(),
+            node,
             self._cache_id,
             page_size,
             partitions,
@@ -698,7 +717,7 @@ class Cache:
             yield k, v
 
         while result.value['more']:
-            result = scan_cursor_get_page(self.get_best_node(), cursor)
+            result = scan_cursor_get_page(node, cursor)
             if result.status != 0:
                 raise CacheError(result.message)
 
@@ -730,6 +749,8 @@ class Cache:
          disables timeout (default),
         :return: generator with key-value pairs.
         """
+        node = self.get_best_node()
+
         def generate_result(value):
             cursor = value['cursor']
             more = value['more']
@@ -739,10 +760,7 @@ class Cache:
                 yield k, v
 
             while more:
-                inner_result = sql_cursor_get_page(
-                    self.get_best_node(),
-                    cursor
-                )
+                inner_result = sql_cursor_get_page(node, cursor)
                 if result.status != 0:
                     raise SQLError(result.message)
                 more = inner_result.value['more']
@@ -757,7 +775,7 @@ class Cache:
         if not type_name:
             raise SQLError('Value type is unknown')
         result = sql(
-            self.get_best_node(),
+            node,
             self._cache_id,
             type_name,
             query_str,
