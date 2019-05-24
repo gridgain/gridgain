@@ -2544,7 +2544,7 @@ class ClientImpl extends TcpDiscoveryImpl {
                             DiscoverySpiCustomMessage msgObj = msg.message(spi.marshaller(),
                                 U.resolveClassLoader(spi.ignite().configuration()));
 
-                            notifyDiscovery(EVT_DISCOVERY_CUSTOM_EVT, topVer, node, allVisibleNodes(), msgObj, null);
+                            notifyDiscovery(EVT_DISCOVERY_CUSTOM_EVT, topVer, node, allVisibleNodes(), msgObj, msg.trace());
                         }
                         catch (Throwable e) {
                             U.error(log, "Failed to unmarshal discovery custom message.", e);

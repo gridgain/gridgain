@@ -2860,7 +2860,11 @@ class ServerImpl extends TcpDiscoveryImpl {
          * @param msg Message to add.
          */
         void addMessage(TcpDiscoveryAbstractMessage msg) {
-            addMessage(msg, false);
+            addMessage(msg, false, false);
+        }
+
+        void addMessage(TcpDiscoveryAbstractMessage msg, boolean ignoreHighPriority) {
+            addMessage(msg, ignoreHighPriority, false);
         }
 
         /**
@@ -2869,7 +2873,7 @@ class ServerImpl extends TcpDiscoveryImpl {
          * @param msg Message to add.
          * @param ignoreHighPriority If {@code true}, high priority messages will be added to the top of the queue.
          */
-        void addMessage(TcpDiscoveryAbstractMessage msg, boolean ignoreHighPriority) {
+        void addMessage(TcpDiscoveryAbstractMessage msg, boolean ignoreHighPriority, boolean fromSocket) {
             DebugLogger log = messageLogger(msg);
 
             if ((msg instanceof TcpDiscoveryStatusCheckMessage ||
@@ -2881,6 +2885,24 @@ class ServerImpl extends TcpDiscoveryImpl {
                     log.debug("Ignoring duplicate message: " + msg);
 
                 return;
+            }
+
+            if (msg instanceof TraceableMessage) {
+                TraceableMessage tMsg = (TraceableMessage) msg;
+
+                // If we read this message from socket
+                if (fromSocket)
+                    tracing.messages().afterReceive(tMsg);
+                else { // If we're going to send this message.
+                    if (tMsg.trace().serializedSpan() == null) {
+                        Span rootSpan = tracing.create(tMsg.traceName())
+                            .addTag("node.id", getLocalNodeId().toString())
+                            .end();
+
+                        // This root span will be parent both from local and remote nodes.
+                        tMsg.trace().serializedSpan(tracing.serialize(rootSpan));
+                    }
+                }
             }
 
             if (msg.highPriority() && !ignoreHighPriority)
@@ -6920,7 +6942,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                         else {
                             ringMessageReceived();
 
-                            msgWorker.addMessage(msg);
+                            msgWorker.addMessage(msg, false, true);
                         }
 
                         // Send receipt back.
