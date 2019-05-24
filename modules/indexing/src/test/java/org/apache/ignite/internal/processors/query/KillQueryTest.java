@@ -616,6 +616,45 @@ public class KillQueryTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Verifies that local query can be caneled (non-async method).
+     */
+    @Test
+    public void testCancelLocalQuery() throws Exception {
+        checkCancelLocalQueryNative(false);
+    }
+
+    /**
+     * Verifies that local query can be caneled (async method).
+     */
+    @Test
+    public void testAsyncCancelLocalQuery() throws Exception {
+        checkCancelLocalQueryNative(true);
+    }
+
+    /**
+     * Check that local query can be canceled either using async or non-async method. Local query is performed using
+     * cache.query() API with "local" property "true".
+     *
+     * @param async whether cancelation method is async.
+     */
+    private void checkCancelLocalQueryNative(boolean async) throws Exception {
+        IgniteInternalFuture cancelRes = cancel(1, async);
+
+        GridTestUtils.assertThrows(log, () -> {
+            ignite.cache(DEFAULT_CACHE_NAME).query(
+                new SqlFieldsQuery("select * from Integer where _key in " +
+                    "(select _key from Integer where awaitLatchCancelled() = 0) and shouldNotBeCalledInCaseOfCancellation()")
+                    .setLocal(true)
+            ).getAll();
+
+            return null;
+        }, IgniteException.class, "The query was cancelled while executing.");
+
+        // Ensures that there were no exceptions within async cancellation process.
+        cancelRes.get(CHECK_RESULT_TIMEOUT);
+    }
+
+    /**
      * Trying to cancel long running multiple statements query. No exceptions expected.
      *
      * @throws Exception If failed.
