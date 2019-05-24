@@ -80,7 +80,7 @@ class Cache:
 
     @staticmethod
     def _validate_settings(
-        settings: Union[str, dict]=None, get_only: bool=False,
+        settings: Union[str, dict] = None, get_only: bool = False,
     ):
         if any([
             not settings,
@@ -241,7 +241,11 @@ class Cache:
 
             if self.affinity['version'] < self._client.affinity_version:
                 # update partition mapping
-                self.affinity = self._get_affinity(conn)
+                try:
+                    self.affinity = self._get_affinity(conn)
+                except CacheError:
+                    # server did not create mapping in time
+                    return conn
 
                 # flatten it a bit
                 self.affinity.update(self.affinity['partition_mapping'][0])

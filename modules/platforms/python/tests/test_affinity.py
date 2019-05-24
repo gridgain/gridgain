@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import time
+
 from pyignite.api import *
 from pyignite.datatypes import *
 from pyignite.datatypes.prop_codes import *
@@ -35,6 +37,9 @@ def test_get_node_partitions(client):
     cache_3 = client.get_or_create_cache('test_cache_3')
     cache_4 = client.get_or_create_cache('test_cache_4')
     cache_5 = client.get_or_create_cache('test_cache_5')
+
+    time.sleep(1)
+
     result = cache_get_node_partitions(
         conn,
         [cache_1.cache_id, cache_2.cache_id]
