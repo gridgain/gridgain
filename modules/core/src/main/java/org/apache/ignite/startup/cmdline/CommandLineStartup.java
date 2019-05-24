@@ -300,6 +300,10 @@ public final class CommandLineStartup {
 
         String out = "<empty>";
 
+        System.out.println(">>>!!! Start " + U.currentTimeMillis());
+
+        Thread.dumpStack();
+
         try {
             Ignite node = G.start(cfg);
 
