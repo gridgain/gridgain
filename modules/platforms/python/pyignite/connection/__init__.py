@@ -272,9 +272,22 @@ class Connection:
                     client_patch=protocol_version[2],
                     **hs_response
                 )
-            raise HandshakeError(tuple(hs_response.values()), error_text)
+            raise HandshakeError((
+                hs_response['version_major'],
+                hs_response['version_minor'],
+                hs_response['version_patch'],
+            ), error_text)
         self.host, self.port = host, port
         return hs_response
+
+    def reconnect(self):
+        """
+        Tries to reconnect
+        """
+        if self.host and self.port:
+            self._socket.shutdown(socket.SHUT_RDWR)
+            self._socket.close()
+            self.connect(self.host, self.port)
 
     def _transfer_params(self, to: 'Connection'):
         """
