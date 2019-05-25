@@ -26,7 +26,7 @@ from pyignite.datatypes import (
     StructArray,
 )
 from pyignite.datatypes.sql import StatementType
-from pyignite.queries import Query, Response, SQLResponse
+from pyignite.queries import Query
 from pyignite.queries.op_codes import *
 from pyignite.utils import cache_id
 from .result import APIResult
@@ -354,46 +354,30 @@ def sql_fields(
         query_id=query_id,
     )
 
-    _, send_buffer = query_struct.from_python({
-        'hash_code': cache_id(cache),
-        'flag': 1 if binary else 0,
-        'schema': schema,
-        'page_size': page_size,
-        'max_rows': max_rows,
-        'query_str': query_str,
-        'query_args': query_args,
-        'statement_type': statement_type,
-        'distributed_joins': distributed_joins,
-        'local': local,
-        'replicated_only': replicated_only,
-        'enforce_join_order': enforce_join_order,
-        'collocated': collocated,
-        'lazy': lazy,
-        'timeout': timeout,
-        'include_field_names': include_field_names,
-    })
-
-    conn.send(send_buffer)
-
-    response_struct = SQLResponse(
+    return query_struct.perform(
+        conn,
+        query_params={
+            'hash_code': cache_id(cache),
+            'flag': 1 if binary else 0,
+            'schema': schema,
+            'page_size': page_size,
+            'max_rows': max_rows,
+            'query_str': query_str,
+            'query_args': query_args,
+            'statement_type': statement_type,
+            'distributed_joins': distributed_joins,
+            'local': local,
+            'replicated_only': replicated_only,
+            'enforce_join_order': enforce_join_order,
+            'collocated': collocated,
+            'lazy': lazy,
+            'timeout': timeout,
+            'include_field_names': include_field_names,
+        },
+        sql=True,
         include_field_names=include_field_names,
         has_cursor=True,
     )
-    response_class, recv_buffer = response_struct.parse(conn)
-    response = response_class.from_buffer_copy(recv_buffer)
-
-    if response.flags & RHF_TOPOLOGY_CHANGED:
-        # update latest affinity version
-        conn.client.affinity_version = (
-            response.affinity_version, response.affinity_minor
-        )
-
-    result = APIResult(response)
-    if result.status != 0:
-        return result
-
-    result.value = response_struct.to_python(response)
-    return result
 
 
 def sql_fields_cursor_get_page(
@@ -426,33 +410,23 @@ def sql_fields_cursor_get_page(
         ],
         query_id=query_id,
     )
-
-    _, send_buffer = query_struct.from_python({
-        'cursor': cursor,
-    })
-
-    conn.send(send_buffer)
-
-    response_struct = Response([
-        ('data', StructArray([
-            ('field_{}'.format(i), AnyDataObject) for i in range(field_count)
-        ])),
-        ('more', Bool),
-    ])
-    response_class, recv_buffer = response_struct.parse(conn)
-    response = response_class.from_buffer_copy(recv_buffer)
-
-    if response.flags & RHF_TOPOLOGY_CHANGED:
-        # update latest affinity version
-        conn.client.affinity_version = (
-            response.affinity_version, response.affinity_minor
-        )
-
-    result = APIResult(response)
+    result = query_struct.perform(
+        conn,
+        query_params={
+            'cursor': cursor,
+        },
+        response_config=[
+            ('data', StructArray([
+                ('field_{}'.format(i), AnyDataObject)
+                for i in range(field_count)
+            ])),
+            ('more', Bool),
+        ]
+    )
     if result.status != 0:
         return result
 
-    value = response_struct.to_python(response)
+    value = result.value
     result.value = {
         'data': [],
         'more': value['more']
