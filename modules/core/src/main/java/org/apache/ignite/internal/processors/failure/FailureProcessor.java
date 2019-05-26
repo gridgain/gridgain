@@ -123,6 +123,8 @@ public class FailureProcessor extends GridProcessorAdapter {
         if (this.failureCtx != null) // Node already terminating, no reason to process more errors.
             return false;
 
+        Thread.dumpStack();
+
         U.error(ignite.log(), "Critical system error detected. Will be handled accordingly to configured handler " +
             "[hnd=" + hnd + ", failureCtx=" + failureCtx + ']', failureCtx.error());
 
