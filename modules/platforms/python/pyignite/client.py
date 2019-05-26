@@ -79,7 +79,6 @@ class Client:
     _registry = defaultdict(dict)
     _compact_footer = None
     _connection_args = None
-    _nodes = None
     _current_node = 0
 
     def __init__(self, compact_footer: bool = None, **kwargs):
@@ -94,23 +93,44 @@ class Client:
         """
         self._compact_footer = compact_footer
         self._connection_args = kwargs
-        self._nodes = OrderedDict()
+        self._nodes = None
         self.affinity_version = (0, 0)
 
     def get_protocol_version(self):
         return self.protocol_version
 
-    def _add_node(self, host: str, port: int) -> 'UUID':
+    @select_version
+    def _add_node(
+        self, host: str = None, port: int = None, conn: Connection = None,
+    ) -> 'UUID':
         """
         Opens a connection to Ignite server and adds it to the nodes'
         collection (connection pool).
         """
-        conn = Connection(self, **self._connection_args)
+        if self._nodes is None:
+            self._nodes = OrderedDict()
+
+        if conn is None:
+            conn = Connection(self, **self._connection_args)
+
         hs_response = conn.connect(host, port)
         node_uuid = hs_response['node_uuid']
         if node_uuid:
             self._nodes[node_uuid] = conn
         return node_uuid
+
+    def _add_node_120(
+        self, host: str = None, port: int = None, conn: Connection = None
+    ):
+        if self._nodes is None:
+            self._nodes = []
+
+        if conn is None:
+            conn = Connection(self, **self._connection_args)
+
+        conn.host = host
+        conn.port = port
+        self._nodes.append(conn)
 
     def connect(self, *args):
         """
@@ -134,7 +154,15 @@ class Client:
         else:
             raise ConnectionError('Connection parameters are not valid.')
 
+        nodes = iter(nodes)
         # TODO: open first node in foregroung, others − in background
+
+        first_node = Connection(self, **self._connection_args)
+        first_node.connect(*next(nodes))
+
+        # now we know protocol version
+        self._add_node(conn=first_node)
+
         for host, port in nodes:
             self._add_node(host, port)
 
@@ -142,13 +170,19 @@ class Client:
         """
         Close all connections to the server and clean the connection pool.
         """
-        for conn in self._nodes.values():
+        all_nodes = self._nodes if isinstance(self._nodes, list) else self._nodes.values()
+
+        for conn in all_nodes:
             conn.close()
         self._nodes.clear()
 
     @property
+    @select_version
     def random_node(self) -> Connection:
         return random.choice(list(self._nodes.values()))
+
+    def random_node_120(self):
+        return self._nodes[self._current_node]
 
     @status_to_exception(BinaryTypeError)
     def get_binary_type(self, binary_type: Union[str, int]) -> dict:

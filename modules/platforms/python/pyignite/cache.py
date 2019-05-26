@@ -24,8 +24,8 @@ from .exceptions import (
     CacheCreationError, CacheError, ParameterError, SQLError,
 )
 from .utils import (
-    cache_id, get_field_by_id, hashcode, is_wrapped, status_to_exception,
-    unsigned, unwrap_binary,
+    cache_id, get_field_by_id, hashcode, is_wrapped, select_version,
+    status_to_exception, unsigned, unwrap_binary,
 )
 from .api.cache_config import (
     cache_create, cache_create_with_config,
@@ -224,6 +224,7 @@ class Cache:
 
         return result
 
+    @select_version
     def get_best_node(
         self, key: Any = None, key_hint: 'IgniteDataType' = None,
     ) -> 'Connection':
@@ -295,6 +296,9 @@ class Cache:
                 pass
 
         return conn
+
+    def get_best_node_120(self, *args, **kwargs):
+        return self.client.random_node
 
     @status_to_exception(CacheError)
     def get(self, key, key_hint: object = None) -> Any:

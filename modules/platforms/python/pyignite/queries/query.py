@@ -59,7 +59,7 @@ class Query:
             )
         return cls._query_c_type
 
-    def from_python(self, values: dict=None):
+    def from_python(self, values: dict = None):
         if values is None:
             values = {}
         buffer = b''
@@ -103,7 +103,8 @@ class Query:
         response_ctype, recv_buffer = response_struct.parse(conn)
         response = response_ctype.from_buffer_copy(recv_buffer)
 
-        if response.flags & RHF_TOPOLOGY_CHANGED:
+        # this test depends on protocol version
+        if getattr(response, 'flags', False) & RHF_TOPOLOGY_CHANGED:
             # update latest affinity version
             conn.client.affinity_version = (
                 response.affinity_version, response.affinity_minor

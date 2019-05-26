@@ -387,6 +387,6 @@ class Connection:
         Mark socket closed. This is recommended but not required, since
         sockets are automatically closed when they are garbage-collected.
         """
-        self._socket.shutdown(socket.SHUT_RDWR)
-        self._socket.close()
-        self._socket = self.host = self.port = None
+        if self._socket:
+            self._socket.shutdown(socket.SHUT_RDWR)
+            self._socket.close()
