@@ -19,6 +19,7 @@ package org.apache.ignite.startup.cmdline;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.Ignition;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -80,9 +81,6 @@ public class GridCommandLineLoaderTest extends GridCommonAbstractTest {
      * Kills node after it is started.
      */
     public static class KillerLifecycleBean implements LifecycleBean {
-        /** */
-        @IgniteInstanceResource
-        private Ignite ignite;
 
         /** */
         @Override public void onLifecycleEvent(LifecycleEventType evt) throws IgniteException {
@@ -94,7 +92,9 @@ public class GridCommandLineLoaderTest extends GridCommonAbstractTest {
 
                 Thread.dumpStack();
 
-                System.out.println("Ignite instance seen, will shut it down.");
+                String name = Ignition.localIgnite().name();
+
+                System.out.println("Ignite instance seen, will shut it down. " + name);
 
                 new Thread(new Runnable() {
                     @Override public void run() {
@@ -105,9 +105,9 @@ public class GridCommandLineLoaderTest extends GridCommonAbstractTest {
                             e.printStackTrace();
                         }
 
-                        System.out.println("Shutdown imminent.");
+                        System.out.println("Shutdown imminent. " + name);
 
-                        ignite.close();
+                        Ignition.stop(name, true);
                     }
                 }).start();
             }
