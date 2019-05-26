@@ -37,6 +37,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.QueryCancelledException;
@@ -49,7 +50,11 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.managers.discovery.CustomMessageWrapper;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.DynamicCacheChangeBatch;
+import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
+import org.apache.ignite.internal.processors.query.h2.twostep.PartitionReservation;
+import org.apache.ignite.internal.processors.query.h2.twostep.PartitionReservationManager;
 import org.apache.ignite.internal.processors.query.schema.message.SchemaProposeDiscoveryMessage;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.spi.discovery.DiscoverySpiCustomMessage;
@@ -59,6 +64,7 @@ import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.GridAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.jetbrains.annotations.Nullable;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -172,6 +178,8 @@ public class KillQueryTest extends GridCommonAbstractTest {
 
         cntr = 0;
 
+        GridQueryProcessor.idxCls = IndexingWithMockedReservation.class;
+
         startGrids(NODES_COUNT);
 
         for (int i = 0; i < MAX_ROWS; ++i) {
@@ -201,6 +209,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
 
         tblCnt.incrementAndGet();
 
+        // FIXME: why not getKillRequestNode() ?
         conn = GridTestUtils.connect(grid(0), null);
 
         conn.setSchema('"' + GridAbstractTest.DEFAULT_CACHE_NAME + '"');
@@ -210,6 +219,9 @@ public class KillQueryTest extends GridCommonAbstractTest {
         ignite = grid(0);
 
         igniteForKillRequest = getKillRequestNode();
+
+        // Reset to default behaviour.
+        IndexingWithMockedReservation.failReservations = false;
     }
 
     /**
@@ -420,7 +432,8 @@ public class KillQueryTest extends GridCommonAbstractTest {
      * @param async Execute cancellation in ASYNC mode.
      * @throws Exception In case of failure.
      */
-    private void checkCancellationUnsupported(List<String> prepareSteps, String sqlCmd, boolean async) throws Exception {
+    private void checkCancellationUnsupported(List<String> prepareSteps, String sqlCmd,
+        boolean async) throws Exception {
         for (String sql : prepareSteps) {
             try {
                 stmt.execute(sql);
@@ -763,6 +776,43 @@ public class KillQueryTest extends GridCommonAbstractTest {
     }
 
     /**
+     * If query hangs due to partitions for it can't be reserved, we're still able to cancel it. Used non-async
+     * cancellation method.
+     */
+    @Test
+    public void testCancelQueryIfPartitionsCantBeReserved() throws Exception {
+        checkCancelQueryIfPartitionsCantBeReserved(false);
+    }
+
+    /**
+     * If query hangs due to partitions for it can't be reserved, we're still able to cancel it. Used async cancellation
+     * method.
+     */
+    @Test
+    public void testAsyncCancelQueryIfPartitionsCantBeReserved() throws Exception {
+        checkCancelQueryIfPartitionsCantBeReserved(true);
+    }
+
+    /**
+     * Check if query hangs due to partitions for it can't be reserved, we still able to cancel it.
+     */
+    public void checkCancelQueryIfPartitionsCantBeReserved(boolean async) throws Exception {
+        IndexingWithMockedReservation.failReservations = true;
+
+        IgniteInternalFuture cancelFut = cancel(1, async);
+
+        GridTestUtils.assertThrows(log, () -> {
+            ignite.cache(DEFAULT_CACHE_NAME).query(
+                new SqlFieldsQuery("select * from Integer where _val <> 42")
+            ).getAll();
+
+            return null;
+        }, IgniteException.class, "The query was cancelled while executing.");
+
+        cancelFut.get(CHECK_RESULT_TIMEOUT);
+    }
+
+    /**
      * Cancels current query which wait on barrier.
      *
      * @param qry Query which need to try cancel.
@@ -1042,6 +1092,51 @@ public class KillQueryTest extends GridCommonAbstractTest {
             result = 31 * result + (lastName != null ? lastName.hashCode() : 0);
             result = 31 * result + age;
             return result;
+        }
+    }
+
+    /**
+     * Mocked indexing to test the case, when partitions can't be reserved due to any reasons (never ending PMEs, for
+     * example very unstable cluster topology).
+     */
+    static class IndexingWithMockedReservation extends IgniteH2Indexing {
+        /**
+         * If this flag is set to {@code true}, this indexing will always return mocked {@link
+         * PartitionReservationManager} which never is able to reserve partitions. Acts like normal indexing by
+         * default.
+         */
+        static volatile boolean failReservations = false;
+
+        /**
+         * Manager that fails to reserve partitions.
+         */
+        private PartitionReservationManager failToReserveMgr;
+
+        /**
+         * Initializes manager lazily. This is required because, at the time constructor gets called, we don't have
+         * kernal context yet. At the time this method gets called, {@link super#ctx} is already initialized.
+         */
+        private PartitionReservationManager getManagerLazy() {
+            if (failToReserveMgr == null)
+                failToReserveMgr = new PartitionReservationManager(super.ctx) {
+                    @Override public PartitionReservation reservePartitions(
+                        @Nullable List<Integer> cacheIds,
+                        AffinityTopologyVersion reqTopVer,
+                        int[] explicitParts, UUID nodeId,
+                        long reqId) throws IgniteCheckedException {
+                        return new PartitionReservation(null,
+                            "[TESTS]: Failed to reserve partitions for the testing purpose!");
+                    }
+                };
+            return failToReserveMgr;
+        }
+
+        /** {@inheritDoc} */
+        @Override public PartitionReservationManager partitionReservationManager() {
+            if (failReservations)
+                return getManagerLazy();
+            else
+                return super.partitionReservationManager();
         }
     }
 }
