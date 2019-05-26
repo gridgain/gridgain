@@ -17,6 +17,7 @@
 package org.apache.ignite.startup.cmdline;
 
 import java.util.concurrent.CountDownLatch;
+import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.Ignition;
@@ -25,6 +26,7 @@ import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lifecycle.LifecycleBean;
 import org.apache.ignite.lifecycle.LifecycleEventType;
+import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonTest;
@@ -85,6 +87,10 @@ public class GridCommandLineLoaderTest extends GridCommonAbstractTest {
          */
         private static final CountDownLatch INIT_TWO_NODES_LATCH = new CountDownLatch(2);
 
+        /** */
+        @IgniteInstanceResource
+        private Ignite ignite;
+
         /**
          *
          */
@@ -93,7 +99,7 @@ public class GridCommandLineLoaderTest extends GridCommonAbstractTest {
                 System.setProperty(IGNITE_RESTART_CODE, Integer.toString(
                     1 + IgniteSystemProperties.getInteger(IGNITE_RESTART_CODE, 0)));
 
-                String name = Ignition.localIgnite().name();
+                String name = ignite.name();
 
                 System.out.println("Ignite instance seen, will shut it down. Name=" + name);
 
