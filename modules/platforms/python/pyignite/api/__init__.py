@@ -57,6 +57,7 @@ from .key_value import (
     cache_remove_keys,
     cache_remove_all,
     cache_get_size,
+    cache_local_peek,
 )
 from .sql import (
     scan,

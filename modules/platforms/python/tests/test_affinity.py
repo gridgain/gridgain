@@ -17,6 +17,8 @@ import time
 
 from pyignite.api import *
 from pyignite.datatypes import *
+from pyignite.datatypes.key_value import PeekModes
+from pyignite.datatypes.cache_config import CacheMode
 from pyignite.datatypes.prop_codes import *
 
 
@@ -46,6 +48,22 @@ def test_get_node_partitions(client):
     )
     assert result.status == 0, result.message
 
-    best_conn = cache_2.get_best_node(1)
 
-    assert best_conn
+def test_affinity(client):
+
+    cache_1 = client.get_or_create_cache('test_cache_1')
+    k = '1234'
+    v = 2
+
+    cache_1.put(k, v)
+
+    best_node = cache_1.get_best_node(k)
+
+    for node in client._nodes.values():
+        result = cache_local_peek(
+            node, cache_1.cache_id, k,
+        )
+        if node is best_node:
+            assert result.value == v
+        else:
+            assert result.value is None
