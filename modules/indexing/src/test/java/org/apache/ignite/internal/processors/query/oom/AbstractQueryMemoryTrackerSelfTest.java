@@ -27,6 +27,7 @@ import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.processors.query.h2.H2LocalResultFactory;
 import org.apache.ignite.internal.processors.query.h2.H2ManagedLocalResult;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.h2.engine.Session;
 import org.h2.expression.Expression;
@@ -37,6 +38,7 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 /**
  * Query memory manager tests.
  */
+@WithSystemProperty(key = "IGNITE_SQL_FAIL_ON_QUERY_MEMORY_LIMIT_EXCEED", value = "true")
 public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstractTest {
     /** Row count. */
     static final int SMALL_TABLE_SIZE = 1000;
@@ -421,7 +423,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         @Override public LocalResult create(Session ses, Expression[] expressions, int visibleColCnt) {
             LocalResult res = super.create(ses, expressions, visibleColCnt);
 
-            if (res instanceof H2ManagedLocalResult)
+            if (res instanceof H2ManagedLocalResult && ((H2ManagedLocalResult)res).memoryTracker() != null)
                 localResults.add((H2ManagedLocalResult)res);
 
             return res;

@@ -71,6 +71,7 @@ import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.h2.engine.Constants;
 import org.h2.engine.Session;
 import org.h2.jdbc.JdbcConnection;
 import org.h2.result.Row;
@@ -93,6 +94,7 @@ import org.h2.value.ValueInt;
 import org.h2.value.ValueJavaObject;
 import org.h2.value.ValueLong;
 import org.h2.value.ValueNull;
+import org.h2.value.ValueRow;
 import org.h2.value.ValueShort;
 import org.h2.value.ValueString;
 import org.h2.value.ValueTime;
@@ -1024,5 +1026,34 @@ public class H2Utils {
      */
     public static QueryContext context(Connection c) {
         return (QueryContext)((Session)((JdbcConnection)c).getSession()).getQueryContext();
+    }
+
+    /**
+     * @param row Data row.
+     * @return Row size in bytes.
+     */
+    public static long rowSizeInBytes(Value[] row) {
+        if (row == null)
+            return 0;
+
+        long rowSize = Constants.MEMORY_ARRAY + row.length * Constants.MEMORY_POINTER;
+
+        for (int i = 0; i < row.length; i++)
+            rowSize += row[i].getMemory();
+
+        return rowSize;
+    }
+
+
+    public static long calculateMemoryDelta(ValueRow distinctRowKey, Value[] oldRow, Value[] newRow) {
+        long oldRowSize = rowSizeInBytes(oldRow);
+        long newRowSize = rowSizeInBytes(newRow);
+
+        long memory = newRowSize - oldRowSize;
+
+        if (oldRow == null && distinctRowKey != null)
+            memory += distinctRowKey.getMemory();
+
+        return memory;
     }
 }

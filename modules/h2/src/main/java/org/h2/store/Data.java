@@ -15,7 +15,6 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Timestamp;
 import java.util.Arrays;
-
 import org.h2.api.ErrorCode;
 import org.h2.api.IntervalQualifier;
 import org.h2.engine.Constants;
@@ -1278,6 +1277,10 @@ public class Data {
             this.pos = size;
             data = buff;
         }
+    }
+
+    public void trim() {
+        data = Arrays.copyOf(data, pos);
     }
 
     /**

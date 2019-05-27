@@ -528,9 +528,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 null,
                 mvccSnapshot,
                 null,
+                true,
                 maxMem < 0 ? null : new QueryMemoryTracker(maxMem),
-                true
-            );
+                ctx);
 
             return new GridQueryFieldsResultAdapter(select.meta(), null) {
                 @Override public GridCloseableIterator<List<?>> iterator() throws IgniteCheckedException {

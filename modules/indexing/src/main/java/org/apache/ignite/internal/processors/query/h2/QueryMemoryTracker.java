@@ -47,11 +47,26 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
     private static final AtomicReferenceFieldUpdater<QueryMemoryTracker, Boolean> CLOSED_UPD =
         AtomicReferenceFieldUpdater.newUpdater(QueryMemoryTracker.class, Boolean.class, "closed");
 
+    /**
+     * Defines an action that occurs when the memory limit is exceeded. Possible variants:
+     * <ul>
+     *     <li>{@code true} - exception will be thrown.</li>
+     *     <li>{@code false} - intermediate query results will be spilled to the disk.</li>
+     * </ul>
+     *
+     * Default: false.
+     */
+    public static final boolean DFLT_FAIL_ON_QRY_MEMORY_LIMIT_EXCEED =
+        Boolean.getBoolean(IgniteSystemProperties.IGNITE_SQL_FAIL_ON_QUERY_MEMORY_LIMIT_EXCEED);
+
     /** Memory limit. */
     private final long maxMem;
 
     /** Memory allocated. */
     private volatile long allocated;
+
+    /** Whether to throw exception when memory limit is exceeded. */
+    private final boolean failOnMemLimitExceed;
 
     /** Close flag to prevent tracker reuse. */
     private volatile Boolean closed = Boolean.FALSE;
@@ -66,22 +81,24 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
         assert maxMem >= 0;
 
         this.maxMem = maxMem > 0 ? maxMem : DFLT_QRY_MEMORY_LIMIT;
+        this.failOnMemLimitExceed = DFLT_FAIL_ON_QRY_MEMORY_LIMIT_EXCEED;
     }
 
-    /**
-     * Check allocated size is less than query memory pool threshold.
-     *
-     * @param size Allocated size in bytes.
-     * @throws IgniteOutOfMemoryException if memory limit has been exceeded.
-     */
-    @Override public void allocate(long size) {
+    /** {@inheritDoc} */
+    @Override public boolean allocate(long size) {
         assert !closed && size >= 0;
 
         if (size == 0)
-            return;
+            return ALLOC_UPD.get(this) < maxMem;
 
-        if (ALLOC_UPD.addAndGet(this, size) >= maxMem)
+        long allocated = ALLOC_UPD.addAndGet(this, size);
+
+        if (allocated < maxMem)
+            return true;
+        else if (failOnMemLimitExceed)
             throw new IgniteOutOfMemoryException("SQL query out of memory");
+        else
+            return false;
     }
 
     /** {@inheritDoc} */
