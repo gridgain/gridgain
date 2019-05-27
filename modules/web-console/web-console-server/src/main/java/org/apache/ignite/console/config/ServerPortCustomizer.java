@@ -16,6 +16,7 @@
 
 package org.apache.ignite.console.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.embedded.ConfigurableEmbeddedServletContainer;
 import org.springframework.boot.context.embedded.EmbeddedServletContainerCustomizer;
 import org.springframework.stereotype.Component;
@@ -25,8 +26,12 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class ServerPortCustomizer implements EmbeddedServletContainerCustomizer {
+    /** */
+    @Value("${server.port:3000}")
+    private int serverPort;
+
     /** {@inheritDoc} */
     @Override public void customize(ConfigurableEmbeddedServletContainer container) {
-        container.setPort(3000);
+        container.setPort(serverPort);
     }
 }
