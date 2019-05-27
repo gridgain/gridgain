@@ -131,7 +131,7 @@ public class JdbcThinConnection implements Connection {
     private static final AtomicLong IDX_GEN = new AtomicLong();
 
     /** Default retires count. */
-    public static final int DEFT_RETRIES_CAT = 4;
+    public static final int DFLT_RETRIES_CNT = 4;
 
     /** No retries. */
     public static final int NO_RETRIES = 0;
@@ -914,15 +914,15 @@ public class JdbcThinConnection implements Connection {
                     try {
                         cliIo = (stickyIo == null || !stickyIo.connected()) ? cliIo(calculateNodeIds(req)) : stickyIo;
 
-                if (stmt != null && stmt.requestTimeout() != NO_TIMEOUT) {
-                    reqTimeoutTask = new RequestTimeoutTask(
-                        req instanceof JdbcBulkLoadBatchRequest ? stmt.currentRequestId() : req.requestId(),
-                        cliIo,
-                        stmt.requestTimeout());
+                        if (stmt != null && stmt.requestTimeout() != NO_TIMEOUT) {
+                            reqTimeoutTask = new RequestTimeoutTask(
+                                req instanceof JdbcBulkLoadBatchRequest ? stmt.currentRequestId() : req.requestId(),
+                                cliIo,
+                                stmt.requestTimeout());
 
-                    qryTimeoutScheduledFut = maintenanceExecutor.scheduleAtFixedRate(reqTimeoutTask, 0,
-                        REQUEST_TIMEOUT_PERIOD, TimeUnit.MILLISECONDS);
-                }
+                            qryTimeoutScheduledFut = maintenanceExecutor.scheduleAtFixedRate(reqTimeoutTask, 0,
+                                REQUEST_TIMEOUT_PERIOD, TimeUnit.MILLISECONDS);
+                        }
 
                         JdbcQueryExecuteRequest qryReq = null;
 
@@ -933,16 +933,16 @@ public class JdbcThinConnection implements Connection {
 
                         txIo = res.activeTransaction() ? cliIo : null;
 
-                if (res.status() == IgniteQueryErrorCode.QUERY_CANCELED && stmt != null &&
-                    stmt.requestTimeout() != NO_TIMEOUT && reqTimeoutTask != null &&
-                    reqTimeoutTask.expired.get()) {
+                        if (res.status() == IgniteQueryErrorCode.QUERY_CANCELED && stmt != null &&
+                            stmt.requestTimeout() != NO_TIMEOUT && reqTimeoutTask != null &&
+                            reqTimeoutTask.expired.get()) {
 
-                    throw new SQLTimeoutException(QueryCancelledException.ERR_MSG, SqlStateCode.QUERY_CANCELLED,
-                        IgniteQueryErrorCode.QUERY_CANCELED);
-                }
-                else if (res.status() != ClientListenerResponse.STATUS_SUCCESS)
-                    throw new SQLException(res.error(), IgniteQueryErrorCode.codeToSqlState(res.status()),
-                        res.status());
+                            throw new SQLTimeoutException(QueryCancelledException.ERR_MSG, SqlStateCode.QUERY_CANCELLED,
+                                IgniteQueryErrorCode.QUERY_CANCELED);
+                        }
+                        else if (res.status() != ClientListenerResponse.STATUS_SUCCESS)
+                            throw new SQLException(res.error(), IgniteQueryErrorCode.codeToSqlState(res.status()),
+                                res.status());
 
                         updateAffinityCache(qryReq, res);
 
@@ -1762,7 +1762,7 @@ public class JdbcThinConnection implements Connection {
      * @return retries count.
      */
     private int calculateRetryAttemptsCount(JdbcThinTcpIo stickyIo, JdbcRequest req) {
-        if (! affinityAwareness)
+        if (!affinityAwareness)
             return NO_RETRIES;
 
         if (stickyIo != null)
@@ -1775,22 +1775,20 @@ public class JdbcThinConnection implements Connection {
             req.type() == JdbcRequest.META_PRIMARY_KEYS ||
             req.type() == JdbcRequest.META_SCHEMAS ||
             req.type() == JdbcRequest.CACHE_PARTITIONS)
-            return DEFT_RETRIES_CAT;
+            return DFLT_RETRIES_CNT;
 
         if (req.type() == JdbcRequest.QRY_EXEC) {
             JdbcQueryExecuteRequest qryExecReq = (JdbcQueryExecuteRequest)req;
 
             String trimmedQry = qryExecReq.sqlQuery().trim();
 
-            char[] qryCArr = trimmedQry.toCharArray();
-
             // Last symbol is ignored.
-            for (int i = 0; i < qryCArr.length - 1; i++) {
-                if (qryCArr[i] == ';')
+            for (int i = 0; i < trimmedQry.length() - 1; i++) {
+                if (trimmedQry.charAt(i) == ';')
                     return NO_RETRIES;
             }
 
-            return trimmedQry.toUpperCase().startsWith("SELECT") ? DEFT_RETRIES_CAT : NO_RETRIES;
+            return trimmedQry.toUpperCase().startsWith("SELECT") ? DFLT_RETRIES_CNT : NO_RETRIES;
         }
 
         return NO_RETRIES;
