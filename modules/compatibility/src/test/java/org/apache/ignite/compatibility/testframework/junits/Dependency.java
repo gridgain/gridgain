@@ -24,7 +24,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public class Dependency {
     /** Default value of group id. */
-    private static final String DEFAULT_GROUP_ID = "org.apache.ignite";
+    private static final String DEFAULT_GROUP_ID = "org.gridgain";
 
     /** Local module name. Folder name where module is located. */
     private final String locModuleName;
