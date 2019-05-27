@@ -345,7 +345,6 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
             "GROUP BY K.indexed ORDER BY a DESC", true);
 
         assertEquals(1, localResults.size());
-        assertTrue(maxMem < localResults.get(0).memoryAllocated());
         assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
     }
 
