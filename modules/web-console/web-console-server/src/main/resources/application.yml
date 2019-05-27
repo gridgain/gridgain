@@ -15,10 +15,9 @@
 #
 
 # Uncomment in case of HTTPS
-# server.port: 443
-
-#server.ssl:
-#  enabled: true
-#  key-store: certificates/server.jks
-#  key-store-password: change_me
-#  keyStoreType: JKS
+#server:
+#  port: 443
+#  ssl:
+#    key-store-type: JKS
+#    key-store: certificates/server.jks
+#    key-store-password: 123456

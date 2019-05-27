@@ -98,10 +98,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     /** Timeout between emails with new activation token. */
     private long activationTimeout;
 
-    /** */
-    @Value("${server.ssl.enabled:false}")
-    private boolean ssl;
-
     /**
      * @param activationCfg Account activation configuration.
      * @param encoder Service for encoding user passwords.
@@ -137,9 +133,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             .logoutUrl(LOGOUT_ROUTE)
             .deleteCookies("SESSION")
             .logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler(HttpStatus.OK));
-
-        if (ssl)
-            http.portMapper().http(80).mapsTo(443);
     }
 
     /** {@inheritDoc} */
