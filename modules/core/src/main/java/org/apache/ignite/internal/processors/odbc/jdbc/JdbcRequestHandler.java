@@ -181,6 +181,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
         GridSpinBusyLock busyLock,
         ClientListenerResponseSender sender,
         int maxCursors,
+        long maxMem,
         boolean distributedJoins,
         boolean enforceJoinOrder,
         boolean collocated,
@@ -216,7 +217,8 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
             lazy,
             skipReducerOnUpdate,
             dataPageScanEnabled,
-            updateBatchSize
+            updateBatchSize,
+            maxMem
         );
 
         this.busyLock = busyLock;
@@ -713,6 +715,8 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
 
             if (X.cause(e, QueryCancelledException.class) != null)
                 return exceptionToResult(new QueryCancelledException());
+            else if (X.cause(e, IgniteSQLException.class) != null)
+                return exceptionToResult(X.cause(e, IgniteSQLException.class));
             else
                 return exceptionToResult(e);
         }
@@ -969,6 +973,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
         qry.setLazy(cliCtx.isLazy());
         qry.setNestedTxMode(nestedTxMode);
         qry.setSchema(schemaName);
+        qry.setMaxMemory(cliCtx.maxMemory());
 
         if (cliCtx.dataPageScanEnabled() != null)
             qry.setDataPageScanEnabled(cliCtx.dataPageScanEnabled());

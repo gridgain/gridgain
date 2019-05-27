@@ -168,11 +168,15 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
 
         Boolean dataPageScanEnabled = null;
         Integer updateBatchSize = null;
+        long maxMemory = 0L;
 
         if (ver.compareTo(VER_2_8_0) >= 0) {
             dataPageScanEnabled = nullableBooleanFromByte(reader.readByte());
 
             updateBatchSize = JdbcUtils.readNullableInteger(reader);
+
+            if (reader.readBoolean())
+                maxMemory = reader.readLong();
         }
 
         if (ver.compareTo(VER_2_5_0) >= 0) {
@@ -207,7 +211,7 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
             }
         };
 
-        handler = new JdbcRequestHandler(busyLock, sender, maxCursors, distributedJoins, enforceJoinOrder,
+        handler = new JdbcRequestHandler(busyLock, sender, maxCursors, maxMemory, distributedJoins, enforceJoinOrder,
             collocated, replicatedOnly, autoCloseCursors, lazyExec, skipReducerOnUpdate, nestedTxMode,
             dataPageScanEnabled, updateBatchSize, actx, ver, this);
 

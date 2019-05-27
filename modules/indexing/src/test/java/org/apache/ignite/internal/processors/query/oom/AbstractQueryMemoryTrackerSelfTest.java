@@ -110,7 +110,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
     /** Check simple query on small data set. */
     @Test
-    public void testSimpleQuerySmallResult() {
+    public void testSimpleQuerySmallResult() throws Exception {
         execQuery("select * from T", false);
 
         assertEquals(1, localResults.size());
@@ -119,7 +119,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
     /** Check simple lazy query on large data set. */
     @Test
-    public void testLazyQueryLargeResult() {
+    public void testLazyQueryLargeResult() throws Exception {
         execQuery("select * from K", true);
 
         assertEquals(0, localResults.size()); // No local result required.
@@ -127,7 +127,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
     /** Check simple query failure on large data set. */
     @Test
-    public void testSimpleQueryLargeResult() {
+    public void testSimpleQueryLargeResult() throws Exception {
         checkQueryExpectOOM("select * from K", false);
 
         assertEquals(1, localResults.size());
@@ -136,7 +136,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
     /** Check simple query on large data set with small limit. */
     @Test
-    public void testQueryWithLimit() {
+    public void testQueryWithLimit() throws Exception {
         execQuery("select * from K LIMIT 500", false);
 
         assertEquals(1, localResults.size());
@@ -145,7 +145,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
     /** Check lazy query on large data set with large limit. */
     @Test
-    public void testLazyQueryWithHighLimit() {
+    public void testLazyQueryWithHighLimit() throws Exception {
         execQuery("select * from K LIMIT 8000", true);
 
         assertEquals(0, localResults.size()); // No local result required.
@@ -153,7 +153,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
     /** Check simple query on large data set with small limit. */
     @Test
-    public void testQueryWithHighLimit() {
+    public void testQueryWithHighLimit() throws Exception {
         checkQueryExpectOOM("select * from K LIMIT 8000", false);
 
         assertEquals(1, localResults.size());
@@ -162,14 +162,14 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
     /** Check lazy query with ORDER BY indexed col. */
     @Test
-    public void testLazyQueryWithSortByIndexedCol() {
+    public void testLazyQueryWithSortByIndexedCol() throws Exception {
         execQuery("select * from K ORDER BY K.indexed", true);
         assertEquals(0, localResults.size());
     }
 
     /** Check query failure with ORDER BY indexed col. */
     @Test
-    public void testQueryWithSortByIndexedCol() {
+    public void testQueryWithSortByIndexedCol() throws Exception {
         checkQueryExpectOOM("select * from K ORDER BY K.indexed", false);
         assertEquals(1, localResults.size());
         assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
@@ -177,7 +177,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
     /** Check lazy query failure with ORDER BY non-indexed col. */
     @Test
-    public void testLazyQueryWithSort() {
+    public void testLazyQueryWithSort() throws Exception {
         checkQueryExpectOOM("select * from K ORDER BY K.grp", true);
         assertEquals(1, localResults.size());
         assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
@@ -185,7 +185,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
     /** Check query failure with ORDER BY non-indexed col. */
     @Test
-    public void testQueryWithSort() {
+    public void testQueryWithSort() throws Exception {
         // Order by non-indexed field.
         checkQueryExpectOOM("select * from K ORDER BY K.grp", false);
         assertEquals(1, localResults.size());
@@ -194,7 +194,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
     /** Check UNION operation with large sub-selects. */
     @Test
-    public void testUnionSimple() {
+    public void testUnionSimple() throws Exception {
         maxMem = 6L * 1024 * 1024;
 
         execQuery("select * from T as T0, T as T1 where T0.id < 2 " +
@@ -210,7 +210,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
     /** Check UNION operation with large sub-selects. */
     @Test
-    public void testUnionLargeDataSets() {
+    public void testUnionLargeDataSets() throws Exception {
         // None of sub-selects fits to memory.
         checkQueryExpectOOM("select * from T as T0, T as T1 where T0.id < 4 " +
             "UNION " +
@@ -224,7 +224,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
     /** Check large UNION operation with small enough sub-selects, but large result set. */
     @Test
-    public void testUnionOfSmallDataSetsWithLargeResult() {
+    public void testUnionOfSmallDataSetsWithLargeResult() throws Exception {
         maxMem = 5 * 1024 * 1024;
 
         checkQueryExpectOOM("select * from T as T0, T as T1 where T0.id < 2 " +
@@ -240,7 +240,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
     /** Check simple Joins. */
     @Test
-    public void testSimpleJoins() {
+    public void testSimpleJoins() throws Exception {
         execQuery("select * from T as T0, T as T1 where T0.id < 2", false);
         execQuery("select * from T as T0, T as T1 where T0.id >= 2 AND T0.id < 4", false);
         execQuery("select * from T as T0, T as T1", true);
@@ -264,16 +264,37 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
     /** Check GROUP BY operation on large data set with small result set. */
     @Test
-    public void testQueryWithGroupsSmallResult() {
+    public void testQueryWithGroupsSmallResult() throws Exception {
         execQuery("select K.grp, avg(K.id), min(K.id), sum(K.id) from K GROUP BY K.grp", false); // Tiny local result.
         assertEquals(1, localResults.size());
-        localResults.clear();
+        assertEquals(100, localResults.get(0).getRowCount());
+    }
+
+    /** Check GROUP BY operation on indexed col. */
+    @Test
+    public void testQueryWithGroupByIndexedCol() throws Exception {
+        execQuery("select K.indexed, sum(K.grp) from K GROUP BY K.indexed", true);
+
+        assertEquals(0, localResults.size());
+    }
+
+    /** Check GROUP BY operation on indexed col. */
+    @Test
+    public void testQueryWithGroupByPrimaryKey() throws Exception {
+        //TODO: GG-19071: make next test pass without hint.
+        execQuery("select K.indexed, sum(K.id) from K USE INDEX (K_IDX) GROUP BY K.indexed", true);
 
         execQuery("select K.indexed, sum(K.id) from K GROUP BY K.indexed", false); // Sorted grouping.
         assertEquals(1, localResults.size());
         localResults.clear();
+    }
 
-        execQuery("select K.grp_indexed, sum(K.id) as s from K GROUP BY K.grp_indexed ORDER BY s", false); // Tiny local result with sort.
+    /** Check GROUP BY operation on indexed col. */
+    @Test
+    public void testQueryWithGroupThenSort() throws Exception {
+        // Tiny local result with sorting.
+        execQuery("select K.grp_indexed, sum(K.id) as s from K GROUP BY K.grp_indexed ORDER BY s", false);
+
         assertEquals(1, localResults.size());
         localResults.clear();
     }
@@ -281,7 +302,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     /** Check lazy query with GROUP BY non-indexed col failure due to large result. */
     @Ignore("https://ggsystems.atlassian.net/browse/GG-18542")
     @Test
-    public void testQueryWithGroupBy() {
+    public void testQueryWithGroupBy() throws Exception {
         // TODO: GG-18542: Fix tests.
         checkQueryExpectOOM("select K.name from K GROUP BY K.name", true);
     }
@@ -289,16 +310,28 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     /** Check query with GROUP BY and DISTINCT aggregates. */
     @Ignore("https://ggsystems.atlassian.net/browse/GG-18542")
     @Test
-    public void testQueryWithDistinctAggregates() {
+    public void testQueryWithDistinctAggregates() throws Exception {
         // TODO: GG-18542: Fix test.
         checkQueryExpectOOM("select K.grp, count(DISTINCT k.name) from K GROUP BY K.grp", true);
-        checkQueryExpectOOM("select K.grp_indexed, count(DISTINCT k.name) from K GROUP BY K.grp_indexed", true);
+
+        // Local result is quite small.
+        assertEquals(1, localResults.size());
+        assertTrue(maxMem > localResults.get(0).memoryAllocated());
+        assertTrue(100 > localResults.get(0).getRowCount());
+    }
+
+    /** Check lazy query with GROUP BY indexed col and with and DISTINCT aggregates. */
+    @Test
+    public void testLazyQueryWithGroupByIndexedColAndDistinctAggregates() throws Exception {
+        execQuery("select K.grp_indexed, count(DISTINCT k.name) from K GROUP BY K.grp_indexed", true);
+
+        assertEquals(0, localResults.size());
     }
 
     /** Check lazy query with GROUP BY indexed col (small result), then sort. */
     @Ignore("https://ggsystems.atlassian.net/browse/GG-18542")
     @Test
-    public void testQueryWithGroupByAndSort() {
+    public void testQueryWithGroupByAndSort() throws Exception {
         // TODO: GG-18542: Fix test.
         checkQueryExpectOOM("select K.indexed, sum(K.grp) as a, count(K.grp)from K " +
             "GROUP BY K.indexed ORDER BY a DESC", true);
@@ -309,13 +342,13 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
     /** Check query with DISTINCT and GROUP BY indexed col (small result). */
     @Test
-    public void testQueryWithDistinctAndGroupBy() {
+    public void testQueryWithDistinctAndGroupBy() throws Exception {
         checkQueryExpectOOM("select DISTINCT K.id from K GROUP BY K.id", true);
     }
 
     /** Check simple query with DISTINCT constraint. */
     @Test
-    public void testQueryWithDistinct() {
+    public void testQueryWithDistinct() throws Exception {
         // Distinct on indexed column with small cardinality.
         execQuery("select DISTINCT K.grp_indexed from K", false);
 
@@ -330,7 +363,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
      * @param sql SQL query
      * @return Results set.
      */
-    protected List<List<?>> execQuery(String sql, boolean lazy) {
+    protected List<List<?>> execQuery(String sql, boolean lazy) throws Exception {
         boolean localQry = isLocal();
 
         return grid(client ? 1 : 0).context().query().querySqlFields(
@@ -358,7 +391,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
      * @param sql SQL query.
      * @param lazy Lazy flag.
      */
-    protected void checkQueryExpectOOM(String sql, boolean lazy) {
+    protected void checkQueryExpectOOM(String sql, boolean lazy) throws Exception {
         GridTestUtils.assertThrows(log, () -> {
             execQuery(sql, lazy);
 

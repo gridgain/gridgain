@@ -251,6 +251,8 @@ public class JdbcThinTcpIo {
             writer.writeByte(nullableBooleanToByte(connProps.isDataPageScanEnabled()));
 
             JdbcUtils.writeNullableInteger(writer, connProps.getUpdateBatchSize());
+
+            JdbcUtils.writeNullableLong(writer, connProps.getQueryMaxMemory());
         }
 
         if (!F.isEmpty(connProps.getUsername())) {

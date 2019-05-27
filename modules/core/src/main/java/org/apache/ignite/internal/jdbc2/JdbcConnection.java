@@ -81,6 +81,7 @@ import static org.apache.ignite.IgniteJdbcDriver.PROP_DISTRIBUTED_JOINS;
 import static org.apache.ignite.IgniteJdbcDriver.PROP_ENFORCE_JOIN_ORDER;
 import static org.apache.ignite.IgniteJdbcDriver.PROP_LAZY;
 import static org.apache.ignite.IgniteJdbcDriver.PROP_LOCAL;
+import static org.apache.ignite.IgniteJdbcDriver.PROP_MAX_MEMORY;
 import static org.apache.ignite.IgniteJdbcDriver.PROP_MULTIPLE_STMTS;
 import static org.apache.ignite.IgniteJdbcDriver.PROP_NODE_ID;
 import static org.apache.ignite.IgniteJdbcDriver.PROP_SKIP_REDUCER_ON_UPDATE;
@@ -173,6 +174,9 @@ public class JdbcConnection implements Connection {
     /** Skip reducer on update flag. */
     private final boolean skipReducerOnUpdate;
 
+    /** Query memory limit. */
+    private final long maxMemory;
+
     /** Statements. */
     final Set<JdbcStatement> statements = new HashSet<>();
 
@@ -196,6 +200,7 @@ public class JdbcConnection implements Connection {
         enforceJoinOrder = Boolean.parseBoolean(props.getProperty(PROP_ENFORCE_JOIN_ORDER));
         lazy = Boolean.parseBoolean(props.getProperty(PROP_LAZY));
         txAllowed = Boolean.parseBoolean(props.getProperty(PROP_TX_ALLOWED));
+        maxMemory = Long.parseLong(props.getProperty(PROP_MAX_MEMORY));
 
         stream = Boolean.parseBoolean(props.getProperty(PROP_STREAMING));
 
@@ -889,6 +894,13 @@ public class JdbcConnection implements Connection {
      */
     boolean isLazy() {
         return lazy;
+    }
+
+    /**
+     * @return Query memory limit.
+     */
+    long getMaxMemory() {
+        return maxMemory;
     }
 
     /**

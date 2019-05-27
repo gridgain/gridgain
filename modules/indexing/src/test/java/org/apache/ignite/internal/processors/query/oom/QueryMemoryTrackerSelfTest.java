@@ -29,13 +29,13 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
 
     /** {@inheritDoc} */
     @Test
-    @Override public void testUnionOfSmallDataSetsWithLargeResult() {
+    @Override public void testUnionOfSmallDataSetsWithLargeResult() throws Exception {
         maxMem = 2 * 1024 * 1024;
 
         // OOM on reducer.
         checkQueryExpectOOM("select * from T as T0, T as T1 where T0.id < 1 " +
             "UNION " +
-            "select * from T as T2, T as T3 where T2.id >= 2 AND T2.id < 3", false);
+            "select * from T as T2, T as T3 where T2.id >= 2 AND T2.id < 3", true);
 
         assertEquals(5, localResults.size());
 
@@ -53,7 +53,7 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
 
     /** {@inheritDoc} */
     @Test
-    @Override public void testQueryWithLimit() {
+    @Override public void testQueryWithLimit() throws Exception {
         execQuery("select * from K LIMIT 500", false);
 
         assertEquals(2, localResults.size());
@@ -67,7 +67,7 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
 
     /** {@inheritDoc} */
     @Test
-    public void testLazyQueryWithHighLimit() {
+    @Override public void testLazyQueryWithHighLimit() throws Exception {
         // OOM on reducer.
         checkQueryExpectOOM("select * from K LIMIT 8000", true);
 
@@ -78,7 +78,7 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
 
     /** {@inheritDoc} */
     @Test
-    @Override public void testLazyQueryWithSortByIndexedCol() {
+    @Override public void testLazyQueryWithSortByIndexedCol() throws Exception {
         // OOM on reducer.
         checkQueryExpectOOM("select * from K ORDER BY K.indexed", true);
 
@@ -87,9 +87,9 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
         assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
     }
 
-    /** Check GROUP BY operation on large data set with small result set. */
+    /** {@inheritDoc} */
     @Test
-    @Override public void testQueryWithGroupsSmallResult() {
+    @Override public void testQueryWithGroupsSmallResult() throws Exception {
         execQuery("select K.grp, avg(K.id), min(K.id), sum(K.id) from K GROUP BY K.grp", false); // Tiny local result.
 
         assertEquals(2, localResults.size());
@@ -97,9 +97,11 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
         assertEquals(100, localResults.get(0).getRowCount());
         // Reduce
         assertEquals(100, localResults.get(1).getRowCount());
+    }
 
-        localResults.clear();
-
+    /** {@inheritDoc} */
+    @Test
+    @Override public void testQueryWithGroupThenSort() throws Exception {
         // Tiny local result with sorting.
         execQuery("select K.grp_indexed, sum(K.id) as s from K GROUP BY K.grp_indexed ORDER BY s", false);
 

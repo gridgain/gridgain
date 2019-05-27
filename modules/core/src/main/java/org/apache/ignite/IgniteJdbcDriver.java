@@ -333,6 +333,9 @@ public class IgniteJdbcDriver implements Driver {
     /** Parameter: replicated only flag (SQL hint). */
     public static final String PARAM_LAZY = "lazy";
 
+    /** Parameter: query max memory. */
+    public static final String PARAM_MAX_MEMORY = "maxMemory";
+
     /** Hostname property name. */
     public static final String PROP_HOST = PROP_PREFIX + "host";
 
@@ -383,6 +386,9 @@ public class IgniteJdbcDriver implements Driver {
 
     /** Lazy property name. */
     public static final String PROP_LAZY = PROP_PREFIX + PARAM_LAZY;
+
+    /** Max memory property name. */
+    public static final String PROP_MAX_MEMORY = PROP_PREFIX + PARAM_MAX_MEMORY;
 
     /** Cache name property name. */
     public static final String PROP_CFG = PROP_PREFIX + "cfg";
@@ -457,7 +463,8 @@ public class IgniteJdbcDriver implements Driver {
             new JdbcDriverPropertyInfo("Lazy query execution", info.getProperty(PROP_LAZY), ""),
             new JdbcDriverPropertyInfo("Transactions Allowed", info.getProperty(PROP_TX_ALLOWED), ""),
             new JdbcDriverPropertyInfo("Queries with multiple statements allowed", info.getProperty(PROP_MULTIPLE_STMTS), ""),
-            new JdbcDriverPropertyInfo("Skip reducer on update", info.getProperty(PROP_SKIP_REDUCER_ON_UPDATE), "")
+            new JdbcDriverPropertyInfo("Skip reducer on update", info.getProperty(PROP_SKIP_REDUCER_ON_UPDATE), ""),
+            new JdbcDriverPropertyInfo("Query memory limit", info.getProperty(PROP_MAX_MEMORY), "")
         );
 
         if (info.getProperty(PROP_CFG) != null)

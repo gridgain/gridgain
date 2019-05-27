@@ -74,7 +74,7 @@ public class QueryMemoryTracker implements AutoCloseable {
         assert !closed && size >= 0;
 
         if (ALLOC_UPD.addAndGet(this, size) >= maxMem)
-            throw new IgniteSQLException("SQL query run out of memory.", IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY);
+            throw new IgniteSQLException("SQL query run out of memory", IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY);
     }
 
     /**
