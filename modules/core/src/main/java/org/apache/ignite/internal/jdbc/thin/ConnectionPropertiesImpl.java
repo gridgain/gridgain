@@ -203,7 +203,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
     /** Affinity awareness SQL cache size. */
     private IntegerProperty affinityAwarenessSQLCacheSize = new IntegerProperty("affinityAwarenessSQLCacheSize",
         "The size of sql cache that is used within affinity awareness optimization.",
-        100_000, false, 1, Integer.MAX_VALUE);
+        1_000, false, 1, Integer.MAX_VALUE);
 
     /** Affinity awareness partition distributions cache size. */
     private IntegerProperty affinityAwarenessPartDistributionsCacheSize = new IntegerProperty(

@@ -286,7 +286,7 @@ public class JdbcThinConnectionSelfTest extends JdbcThinAbstractSelfTest {
 
         try (Connection conn = DriverManager.getConnection(urlWithAffinityAwarenessProp)) {
             for (JdbcThinTcpIo io : ios(conn))
-                assertEquals(100_000, io.connectionProperties().getAffinityAwarenessSqlCacheSize());
+                assertEquals(1_000, io.connectionProperties().getAffinityAwarenessSqlCacheSize());
         }
 
         try (Connection conn = DriverManager.getConnection(urlWithAffinityAwarenessProp +
@@ -310,7 +310,7 @@ public class JdbcThinConnectionSelfTest extends JdbcThinAbstractSelfTest {
 
         try (Connection conn = DriverManager.getConnection(urlWithAffinityAwarenessPropSemicolon)) {
             for (JdbcThinTcpIo io : ios(conn))
-                assertEquals(100_000, io.connectionProperties().getAffinityAwarenessSqlCacheSize());
+                assertEquals(1_000, io.connectionProperties().getAffinityAwarenessSqlCacheSize());
         }
 
         try (Connection conn = DriverManager.getConnection(urlWithAffinityAwarenessPropSemicolon +
