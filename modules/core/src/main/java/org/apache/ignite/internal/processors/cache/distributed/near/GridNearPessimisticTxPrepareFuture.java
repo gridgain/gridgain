@@ -223,7 +223,8 @@ public class GridNearPessimisticTxPrepareFuture extends GridNearTxPrepareFutureA
             false,
             true,
             tx.activeCachesDeploymentEnabled(),
-            tx.txState().recovery());
+            tx.txState().recovery(),
+            null);
 
         req.queryUpdate(m.queryUpdate());
 

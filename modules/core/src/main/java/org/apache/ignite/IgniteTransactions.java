@@ -123,4 +123,11 @@ public interface IgniteTransactions {
      * @throws NullPointerException if label is null.
      */
     public IgniteTransactions withLabel(String lb);
+
+    /**
+     * Returns an instance of {@code IgniteTransactions} tran will trace every transaction.
+     *
+     * @return Trace-enabled transactions intance.
+     */
+    public IgniteTransactions withTracing();
 }

@@ -77,6 +77,8 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.query.EnlistOperation;
 import org.apache.ignite.internal.processors.query.UpdateSourceIterator;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
+import org.apache.ignite.internal.processors.tracing.Span;
+import org.apache.ignite.internal.processors.tracing.Status;
 import org.apache.ignite.internal.transactions.IgniteTxOptimisticCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxRollbackCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxTimeoutCheckedException;
@@ -191,6 +193,9 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
     /** Tx label. */
     @Nullable private String lb;
 
+    /** Transaction span. Non-null when tracing is enabled for this transaction. */
+    private Span rootTransactionSpan;
+
     /** Whether this is Mvcc transaction or not.<p>
      * {@code null} means there haven't been any calls made on this transaction, and first operation will give this
      * field actual value.
@@ -225,6 +230,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
      * @param subjId Subject ID.
      * @param taskNameHash Task name hash code.
      * @param lb Label.
+     * @param tracingEnabled {@code true} if the transaction should be traced.
      */
     public GridNearTxLocal(
         GridCacheSharedContext ctx,
@@ -240,7 +246,8 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
         int txSize,
         @Nullable UUID subjId,
         int taskNameHash,
-        @Nullable String lb
+        @Nullable String lb,
+        boolean tracingEnabled
     ) {
         super(
             ctx,
@@ -259,7 +266,11 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
             txSize,
             subjId,
             taskNameHash);
+
         this.lb = lb;
+
+        if (tracingEnabled)
+            rootTransactionSpan = cctx.kernalContext().tracing().create("tx").addTag("xid", xidVersion().toString());
 
         mappings = implicitSingle ? new IgniteTxMappingsSingleImpl() : new IgniteTxMappingsImpl();
 
@@ -268,6 +279,13 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
         initResult();
 
         trackTimeout = timeout() > 0 && !implicit() && cctx.time().addTimeoutObject(this);
+    }
+
+    /**
+     * @return Root transaction span.
+     */
+    public Span rootTransactionSpan() {
+        return rootTransactionSpan;
     }
 
     /** {@inheritDoc} */
@@ -4088,7 +4106,8 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
             0,
             Collections.<IgniteTxKey, GridCacheVersion>emptyMap(),
             req.last(),
-            needReturnValue() && implicit());
+            needReturnValue() && implicit(),
+            req.remoteSpan());
 
         try {
             userPrepare((serializable() && optimistic()) ? F.concat(false, req.writes(), req.reads()) : req.writes());
@@ -4441,6 +4460,9 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
             }
         }
         finally {
+            if (rootTransactionSpan != null)
+                rootTransactionSpan.setStatus(state() == COMMITTED ? Status.OK : Status.ABORTED).end();
+
             if (clearThreadMap)
                 cctx.tm().clearThreadMap(this);
 
