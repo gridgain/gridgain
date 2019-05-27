@@ -212,7 +212,6 @@ public class KillQueryTest extends GridCommonAbstractTest {
 
         tblCnt.incrementAndGet();
 
-        // FIXME: why not getKillRequestNode() ?
         conn = GridTestUtils.connect(grid(0), null);
 
         conn.setSchema('"' + GridAbstractTest.DEFAULT_CACHE_NAME + '"');
@@ -905,9 +904,8 @@ public class KillQueryTest extends GridCommonAbstractTest {
 
                 TestSQLFunctions.reqLatch.countDown();
 
-                for (IgniteInternalFuture fut : res) {
+                for (IgniteInternalFuture fut : res)
                     fut.get(TIMEOUT);
-                }
             }
             catch (Exception e) {
                 log.error("Unexpected exception.", e);
