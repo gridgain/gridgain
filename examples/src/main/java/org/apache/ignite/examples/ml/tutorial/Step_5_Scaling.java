@@ -31,7 +31,6 @@ import org.apache.ignite.ml.preprocessing.minmaxscaling.MinMaxScalerTrainer;
 import org.apache.ignite.ml.preprocessing.normalization.NormalizationTrainer;
 import org.apache.ignite.ml.selection.scoring.evaluator.Evaluator;
 import org.apache.ignite.ml.selection.scoring.metric.classification.Accuracy;
-import org.apache.ignite.ml.structures.LabeledVector;
 import org.apache.ignite.ml.tree.DecisionTreeClassificationTrainer;
 import org.apache.ignite.ml.tree.DecisionTreeNode;
 
@@ -62,19 +61,13 @@ public class Step_5_Scaling {
                 final Vectorizer<Integer, Vector, Integer, Double> vectorizer
                     = new DummyVectorizer<Integer>(0, 3, 4, 5, 6, 8, 10).labeled(1);
 
-                final Vectorizer<Integer, Vector, Integer, Double> vecr = new Vectorizer.VectorizerAdapter<Integer, Vector, Integer, Double>() {
-                    @Override public LabeledVector<Double> apply(Integer key, Vector value) {
-                        return vectorizer.apply(key, value);
-                    }
-                };
-
                 Preprocessor<Integer, Vector> strEncoderPreprocessor = new EncoderTrainer<Integer, Vector>()
                     .withEncoderType(EncoderType.STRING_ENCODER)
                     .withEncodedFeature(1)
                     .withEncodedFeature(6) // <--- Changed index here.
                     .fit(ignite,
                         dataCache,
-                        vecr
+                        vectorizer
                     );
 
                 Preprocessor<Integer, Vector> imputingPreprocessor = new ImputerTrainer<Integer, Vector>()

@@ -71,7 +71,7 @@ public class GaussianNaiveBayesTrainerExample {
                 double accuracy = Evaluator.evaluate(
                     dataCache,
                     mdl,
-                    (k,v) -> vectorizer.apply(k,v)
+                    vectorizer
                 ).accuracy();
 
                 System.out.println("\n>>> Accuracy " + accuracy);

@@ -73,7 +73,7 @@ public class KNNRegressionExample {
                 double rmse = Evaluator.evaluate(
                     dataCache,
                     knnMdl,
-                    (k,v) -> vectorizer.apply(k,v),
+                    vectorizer,
                     new RegressionMetrics()
                 );
 

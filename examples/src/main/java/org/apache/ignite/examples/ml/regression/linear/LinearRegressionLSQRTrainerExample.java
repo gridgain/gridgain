@@ -77,7 +77,7 @@ public class LinearRegressionLSQRTrainerExample {
                 double rmse = Evaluator.evaluate(
                     dataCache,
                     mdl,
-                    (k,v) -> vectorizer.apply(k,v),
+                    vectorizer,
                     new RegressionMetrics()
                 );
 

@@ -75,7 +75,7 @@ public class ANNClassificationExample {
                 NNClassificationModel knnMdl = trainer.fit(
                     ignite,
                     dataCache,
-                    (k,v) -> vectorizer.apply(k,v)
+                    vectorizer
                 ).withK(5)
                     .withDistanceMeasure(new EuclideanDistance())
                     .withStrategy(NNStrategy.WEIGHTED);

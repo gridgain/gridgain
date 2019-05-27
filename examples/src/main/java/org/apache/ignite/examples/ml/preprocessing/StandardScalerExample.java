@@ -54,7 +54,7 @@ public class StandardScalerExample {
 
                 // Defines second preprocessor that scales features.
                 Preprocessor<Integer, Vector> preprocessor = new StandardScalerTrainer<Integer, Vector>()
-                    .fit(ignite, data, (k,v) -> vectorizer.apply(k,v));
+                    .fit(ignite, data, vectorizer);
 
                 // Creates a cache based simple dataset containing features and providing standard dataset API.
                 try (SimpleDataset<?> dataset = DatasetFactory.createSimpleDataset(ignite, data, preprocessor)) {

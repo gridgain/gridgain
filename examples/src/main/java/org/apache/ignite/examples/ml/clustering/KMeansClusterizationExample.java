@@ -66,7 +66,7 @@ public class KMeansClusterizationExample {
                 KMeansModel mdl = trainer.fit(
                     ignite,
                     dataCache,
-                    (k,v) -> vectorizer.apply(k,v)
+                    vectorizer
                 );
 
                 System.out.println(">>> KMeans centroids");

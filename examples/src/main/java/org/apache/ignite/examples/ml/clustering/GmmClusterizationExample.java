@@ -89,7 +89,7 @@ public class GmmClusterizationExample {
                     .withMaxCountIterations(10)
                     .withMaxCountOfClusters(4)
                     .withEnvironmentBuilder(LearningEnvironmentBuilder.defaultBuilder().withRNGSeed(seed))
-                    .fit(ignite, dataCache, (k, v) -> vectorizer.apply(k, v));
+                    .fit(ignite, dataCache, vectorizer);
 
                 System.out.println(">>> GMM means and covariances");
                 for (int i = 0; i < mdl.countOfComponents(); i++) {
