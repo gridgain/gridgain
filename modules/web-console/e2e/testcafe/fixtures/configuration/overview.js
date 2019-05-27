@@ -65,7 +65,6 @@ test('Create cluster basic/advanced clusters amount redirect', async(t) => {
     await overviewPage.removeAllItems();
 });
 
-
 test('Cluster edit basic/advanced redirect based on caches amount', async(t) => {
     const clusterName = 'Seven caches cluster';
     const clusterEditLink = overviewPage.clustersTable.findCell(0, 'Name').find('a');
@@ -148,4 +147,12 @@ test('Cluster cell values', async(t) => {
         .expect(overviewPage.clustersTable.findCell(0, 'Caches').textContent).contains(cachesAmount)
         .expect(overviewPage.clustersTable.findCell(0, 'Models').textContent).contains(modelsAmount)
         .expect(overviewPage.clustersTable.findCell(0, 'IGFS').textContent).contains(igfsAmount);
+});
+
+test('Switch editor measure', async(t) => {
+    await t.click(overviewPage.createClusterConfigButton)
+        .typeText(basicConfigPage.memoryInput.control, '256', {replace: true})
+        .click(basicConfigPage.memorySizeToggleButton)
+        .click(basicConfigPage.memorySizeToggleLast)
+        .expect(basicConfigPage.memoryInput.control.value).eql('256');
 });

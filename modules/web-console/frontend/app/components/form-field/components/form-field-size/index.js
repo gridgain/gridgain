@@ -31,6 +31,7 @@ export default {
         min: '@?',
         max: '@?',
         tip: '@',
+        id: '@',
         required: '<?',
         sizeType: '@?',
         sizeScaleLabel: '@?',

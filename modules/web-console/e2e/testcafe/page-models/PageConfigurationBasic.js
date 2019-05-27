@@ -46,6 +46,9 @@ export class PageConfigurationBasic {
         this.contextSaveAndDownloadButton = Selector('a[role=menuitem]').withText(PageConfigurationBasic.SAVE_CHANGES_AND_DOWNLOAD_LABEL);
         this.buttonPreviewProject = Selector('button-preview-project');
         this.clusterNameInput = new FormField({id: 'clusterNameInput'});
+        this.memoryInput = new FormField({id: 'memoryInput'});
+        this.memorySizeToggleButton = Selector('.select-toggle');
+        this.memorySizeToggleLast = Selector('.bssm-item-button:last-child');
         this.clusterDiscoveryInput = new FormField({id: 'discoveryInput'});
         this.cachesList = new ListEditable(Selector('.pcb-caches-list'), {
             name: {id: 'nameInput'},
