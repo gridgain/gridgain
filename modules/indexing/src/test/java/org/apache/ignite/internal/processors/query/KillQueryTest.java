@@ -46,8 +46,10 @@ import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.GridTopic;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.managers.communication.GridMessageListener;
 import org.apache.ignite.internal.managers.discovery.CustomMessageWrapper;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
@@ -55,6 +57,7 @@ import org.apache.ignite.internal.processors.cache.DynamicCacheChangeBatch;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.twostep.PartitionReservation;
 import org.apache.ignite.internal.processors.query.h2.twostep.PartitionReservationManager;
+import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2QueryRequest;
 import org.apache.ignite.internal.processors.query.schema.message.SchemaProposeDiscoveryMessage;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.spi.discovery.DiscoverySpiCustomMessage;
@@ -797,19 +800,33 @@ public class KillQueryTest extends GridCommonAbstractTest {
      * Check if query hangs due to partitions for it can't be reserved, we still able to cancel it.
      */
     public void checkCancelQueryIfPartitionsCantBeReserved(boolean async) throws Exception {
+        GridMessageListener qryStarted = (node, msg, plc) -> {
+            if (msg instanceof GridH2QueryRequest)
+                TestSQLFunctions.cancelLatch.countDown();
+        };
+
+        for (int i = 0; i < NODES_COUNT; i++)
+            grid(i).context().io().addMessageListener(GridTopic.TOPIC_QUERY, qryStarted);
+
         IndexingWithMockedReservation.failReservations = true;
 
-        IgniteInternalFuture cancelFut = cancel(1, async);
+        try {
+            IgniteInternalFuture cancelFut = cancel(1, async);
 
-        GridTestUtils.assertThrows(log, () -> {
-            ignite.cache(DEFAULT_CACHE_NAME).query(
-                new SqlFieldsQuery("select * from Integer where _val <> 42")
-            ).getAll();
+            GridTestUtils.assertThrows(log, () -> {
+                ignite.cache(DEFAULT_CACHE_NAME).query(
+                    new SqlFieldsQuery("select * from Integer where _val <> 42")
+                ).getAll();
 
-            return null;
-        }, IgniteException.class, "The query was cancelled while executing.");
+                return null;
+            }, CacheException.class, "The query was cancelled while executing.");
 
-        cancelFut.get(CHECK_RESULT_TIMEOUT);
+            cancelFut.get(CHECK_RESULT_TIMEOUT);
+        }
+        finally {
+            for (int i = 0; i < NODES_COUNT; i++)
+                grid(i).context().io().removeMessageListener(GridTopic.TOPIC_CACHE, qryStarted);
+        }
     }
 
     /**
