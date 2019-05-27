@@ -108,7 +108,7 @@ public class MLPTrainer<P extends Serializable> extends MultiLabelDatasetTrainer
     }
 
     /** {@inheritDoc} */
-    @Override public <K, V> MultilayerPerceptron fitInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder,
+    @Override public <K, V> MultilayerPerceptron fitWithInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder,
                                                      Preprocessor<K, V> extractor) {
         return updateModel(null, datasetBuilder, extractor);
     }

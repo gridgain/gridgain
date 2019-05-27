@@ -77,7 +77,7 @@ public class TrainersParallelComposition<I, O, L> extends DatasetTrainer<IgniteM
     }
 
     /** {@inheritDoc} */
-    @Override public <K, V> IgniteModel<I, List<O>> fitInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder,
+    @Override public <K, V> IgniteModel<I, List<O>> fitWithInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder,
         Preprocessor<K, V> preprocessor) {
         List<IgniteSupplier<IgniteModel<I, O>>> tasks = trainers.stream()
             .map(tr -> (IgniteSupplier<IgniteModel<I, O>>)(() -> tr.fit(datasetBuilder, preprocessor)))

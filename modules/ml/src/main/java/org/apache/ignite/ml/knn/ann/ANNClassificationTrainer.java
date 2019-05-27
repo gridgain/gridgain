@@ -67,7 +67,7 @@ public class ANNClassificationTrainer extends SingleLabelDatasetTrainer<ANNClass
      * @param extractor Mapping from upstream entry to {@link LabeledVector}.
      * @return Model.
      */
-    @Override public <K, V> ANNClassificationModel fitInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder,
+    @Override public <K, V> ANNClassificationModel fitWithInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder,
                                                        Preprocessor<K, V> extractor) {
 
         return updateModel(null, datasetBuilder, extractor);

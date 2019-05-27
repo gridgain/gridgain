@@ -102,7 +102,7 @@ public class GmmTrainer extends SingleLabelDatasetTrainer<GmmModel> {
     }
 
     /** {@inheritDoc} */
-    @Override public <K, V> GmmModel fitInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder,
+    @Override public <K, V> GmmModel fitWithInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder,
         Preprocessor<K, V> extractor) {
         return updateModel(null, datasetBuilder, extractor);
     }

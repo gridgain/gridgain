@@ -84,12 +84,11 @@ public class GmmClusterizationExample {
                 dataStream.fillCacheWithCustomKey(50000, dataCache, v -> keyGen.getAndIncrement());
                 GmmTrainer trainer = new GmmTrainer(1);
 
-                LabeledDummyVectorizer<Integer, Double> vectorizer = new LabeledDummyVectorizer<>();
                 GmmModel mdl = trainer
                     .withMaxCountIterations(10)
                     .withMaxCountOfClusters(4)
                     .withEnvironmentBuilder(LearningEnvironmentBuilder.defaultBuilder().withRNGSeed(seed))
-                    .fit(ignite, dataCache, vectorizer);
+                    .fit(ignite, dataCache, new LabeledDummyVectorizer<>());
 
                 System.out.println(">>> GMM means and covariances");
                 for (int i = 0; i < mdl.countOfComponents(); i++) {

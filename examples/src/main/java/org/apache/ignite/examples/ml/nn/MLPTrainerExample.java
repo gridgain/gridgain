@@ -106,8 +106,7 @@ public class MLPTrainerExample {
                 );
 
                 // Train neural network and get multilayer perceptron model.
-                LabeledDummyVectorizer<Integer, double[]> preprocessor = new LabeledDummyVectorizer<>();
-                MultilayerPerceptron mlp = trainer.fit(ignite, trainingSet, preprocessor);
+                MultilayerPerceptron mlp = trainer.fit(ignite, trainingSet, new LabeledDummyVectorizer<>());
 
                 int totalCnt = 4;
                 int failCnt = 0;

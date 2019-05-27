@@ -58,7 +58,7 @@ public abstract class DatasetTrainer<M extends IgniteModel, L> {
     public static <I, L> DatasetTrainer<IgniteModel<I, I>, L> identityTrainer() {
         return new DatasetTrainer<IgniteModel<I, I>, L>() {
             /** {@inheritDoc} */
-            @Override public <K, V> IgniteModel<I, I> fitInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder,
+            @Override public <K, V> IgniteModel<I, I> fitWithInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder,
                                                           Preprocessor<K, V> preprocessor) {
                 return x -> x;
             }
@@ -88,7 +88,7 @@ public abstract class DatasetTrainer<M extends IgniteModel, L> {
     public <K, V> M fit(DatasetBuilder<K, V> datasetBuilder, Preprocessor<K, V> preprocessor) {
         learningEnvironment().initDeployingContext(preprocessor);
 
-        return fitInitializedDeployingContext(datasetBuilder, preprocessor);
+        return fitWithInitializedDeployingContext(datasetBuilder, preprocessor);
     }
 
     /**
@@ -103,7 +103,7 @@ public abstract class DatasetTrainer<M extends IgniteModel, L> {
      */
     public <K, V> M fit(DatasetBuilder<K, V> datasetBuilder, Preprocessor<K, V> preprocessor, LearningEnvironment learningEnvironment) {
         environment = learningEnvironment;
-        return fitInitializedDeployingContext(datasetBuilder, preprocessor);
+        return fitWithInitializedDeployingContext(datasetBuilder, preprocessor);
     }
 
     /**
@@ -115,7 +115,7 @@ public abstract class DatasetTrainer<M extends IgniteModel, L> {
      * @param <V> Type of a value in {@code upstream} data.
      * @return Model.
      */
-    protected abstract <K, V> M fitInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder,
+    protected abstract <K, V> M fitWithInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder,
         Preprocessor<K, V> preprocessor);
 
     /**
@@ -382,7 +382,7 @@ public abstract class DatasetTrainer<M extends IgniteModel, L> {
                 return old.updateModel(mdl, datasetBuilder, getNewExtractor(preprocessor));
             }
 
-            @Override public <K, V> M fitInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder, Preprocessor<K, V> preprocessor) {
+            @Override public <K, V> M fitWithInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder, Preprocessor<K, V> preprocessor) {
                 return old.fit(datasetBuilder, getNewExtractor(preprocessor));
             }
 

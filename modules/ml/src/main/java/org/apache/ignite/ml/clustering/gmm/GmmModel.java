@@ -31,7 +31,7 @@ import org.apache.ignite.ml.math.stat.MultivariateGaussianDistribution;
  * compute likelihood vector where each component of it is a probability of cluster of mixture (see {@link
  * #likelihood(Vector)}).
  */
-public final class GmmModel extends DistributionMixture<MultivariateGaussianDistribution> implements IgniteModel<Vector, Double>,
+public class GmmModel extends DistributionMixture<MultivariateGaussianDistribution> implements IgniteModel<Vector, Double>,
     DeployableObject {
     /** Serial version uid. */
     private static final long serialVersionUID = -4484174539118240037L;

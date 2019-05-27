@@ -55,7 +55,7 @@ public class OneVsRestTrainer<M extends IgniteModel<Vector, Double>>
     }
 
     /** {@inheritDoc} */
-    @Override public <K, V> MultiClassModel<M> fitInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder,
+    @Override public <K, V> MultiClassModel<M> fitWithInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder,
                                                    Preprocessor<K, V> extractor) {
 
         return updateModel(null, datasetBuilder, extractor);

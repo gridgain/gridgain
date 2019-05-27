@@ -40,7 +40,7 @@ public interface PreprocessingTrainer<K, V> {
      * @param basePreprocessor Base preprocessor.
      * @return Preprocessor.
      */
-    public abstract Preprocessor<K, V> fit(
+    public Preprocessor<K, V> fit(
         LearningEnvironmentBuilder envBuilder,
         DatasetBuilder<K, V> datasetBuilder,
         Preprocessor<K, V> basePreprocessor);

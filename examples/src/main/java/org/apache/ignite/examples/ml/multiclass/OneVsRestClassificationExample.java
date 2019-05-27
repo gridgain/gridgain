@@ -76,11 +76,10 @@ public class OneVsRestClassificationExample {
                     .withSeed(1234L)
                 );
 
-                Vectorizer<Integer, Vector, Integer, Double> vectorizer = new DummyVectorizer<Integer>().labeled(0);
                 MultiClassModel<SVMLinearClassificationModel> mdl = trainer.fit(
                     ignite,
                     dataCache,
-                    vectorizer
+                    new DummyVectorizer<Integer>().labeled(0)
                 );
 
                 System.out.println(">>> One-vs-Rest SVM Multi-class model");
@@ -91,7 +90,7 @@ public class OneVsRestClassificationExample {
                 Preprocessor<Integer, Vector> preprocessor = minMaxScalerTrainer.fit(
                     ignite,
                     dataCache,
-                    vectorizer
+                    new DummyVectorizer<Integer>().labeled(0)
                 );
 
                 MultiClassModel<SVMLinearClassificationModel> mdlWithScaling = trainer.fit(

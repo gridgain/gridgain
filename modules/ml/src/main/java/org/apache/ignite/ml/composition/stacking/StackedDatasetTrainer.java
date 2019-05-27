@@ -229,7 +229,7 @@ public class StackedDatasetTrainer<IS, IA, O, AM extends IgniteModel<IA, O>, L>
     }
 
     /** {@inheritDoc} */
-    @Override public <K, V> StackedModel<IS, IA, O, AM> fitInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder,
+    @Override public <K, V> StackedModel<IS, IA, O, AM> fitWithInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder,
         Preprocessor<K, V> preprocessor) {
 
         return new StackedModel<>(getTrainer().fit(datasetBuilder, preprocessor));

@@ -71,11 +71,10 @@ public class ANNClassificationExample {
 
                 long startTrainingTime = System.currentTimeMillis();
 
-                Vectorizer<Integer, double[], Integer, Double> vectorizer = new DoubleArrayVectorizer<Integer>().labeled(Vectorizer.LabelCoordinate.FIRST);
                 NNClassificationModel knnMdl = trainer.fit(
                     ignite,
                     dataCache,
-                    vectorizer
+                    new DoubleArrayVectorizer<Integer>().labeled(Vectorizer.LabelCoordinate.FIRST)
                 ).withK(5)
                     .withDistanceMeasure(new EuclideanDistance())
                     .withStrategy(NNStrategy.WEIGHTED);
