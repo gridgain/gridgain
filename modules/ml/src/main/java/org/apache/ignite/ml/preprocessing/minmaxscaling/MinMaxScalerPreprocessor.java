@@ -16,6 +16,8 @@
 
 package org.apache.ignite.ml.preprocessing.minmaxscaling;
 
+import java.util.Optional;
+import org.apache.ignite.ml.environment.deploy.DeployableObject;
 import org.apache.ignite.ml.preprocessing.Preprocessor;
 import org.apache.ignite.ml.structures.LabeledVector;
 
@@ -31,7 +33,7 @@ import org.apache.ignite.ml.structures.LabeledVector;
  * @param <K> Type of a key in {@code upstream} data.
  * @param <V> Type of a value in {@code upstream} data.
  */
-public class MinMaxScalerPreprocessor<K, V> implements Preprocessor<K, V> {
+public final class MinMaxScalerPreprocessor<K, V> implements Preprocessor<K, V>, DeployableObject {
     /** */
     private static final long serialVersionUID = 6997800576392623469L;
 
@@ -92,5 +94,10 @@ public class MinMaxScalerPreprocessor<K, V> implements Preprocessor<K, V> {
     /** */
     public double[] getMax() {
         return max;
+    }
+
+    /** {@inheritDoc} */
+    @Override public Optional<Object> getDependency() {
+        return Optional.of(basePreprocessor);
     }
 }

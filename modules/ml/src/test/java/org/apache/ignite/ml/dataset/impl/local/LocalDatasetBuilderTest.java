@@ -23,7 +23,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.ml.TestUtils;
 import org.apache.ignite.ml.dataset.PartitionContextBuilder;
 import org.apache.ignite.ml.dataset.PartitionDataBuilder;
-import org.apache.ignite.ml.environment.deploy.DeployContext;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;

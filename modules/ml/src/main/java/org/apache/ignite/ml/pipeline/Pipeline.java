@@ -136,12 +136,7 @@ public class Pipeline<K, V, C extends Serializable, L> {
         // Reload for new fit
         finalPreprocessor = vectorizer;
 
-        LearningEnvironment env = LearningEnvironmentBuilder.defaultBuilder().buildForTrainer();
-        env.deployContext().init(vectorizer);
-
         preprocessingTrainers.forEach(e -> {
-            e.setLearningEnvironment(env);
-
             finalPreprocessor = e.fit(
                 envBuilder,
                 datasetBuilder,
@@ -149,6 +144,8 @@ public class Pipeline<K, V, C extends Serializable, L> {
             );
         });
 
+        LearningEnvironment env = LearningEnvironmentBuilder.defaultBuilder().buildForTrainer();
+        env.initDeployingContext(finalPreprocessor);
         IgniteModel<Vector, Double> internalMdl = finalStage
             .fit(
                 datasetBuilder,

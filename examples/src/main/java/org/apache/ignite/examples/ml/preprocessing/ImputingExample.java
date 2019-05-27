@@ -59,7 +59,7 @@ public class ImputingExample {
 
                 // Defines second preprocessor that imputing features.
                 Preprocessor<Integer, Vector> preprocessor = new ImputerTrainer<Integer, Vector>()
-                    .fit(ignite, data, vectorizer);
+                    .fit(ignite, data, (k,v) -> vectorizer.apply(k,v));
 
                 // Creates a cache based simple dataset containing features and providing standard dataset API.
                 try (SimpleDataset<?> dataset = DatasetFactory.createSimpleDataset(ignite, data, preprocessor)) {

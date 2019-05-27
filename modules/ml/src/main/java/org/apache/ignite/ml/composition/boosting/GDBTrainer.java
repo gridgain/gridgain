@@ -86,7 +86,7 @@ public abstract class GDBTrainer extends DatasetTrainer<ModelsComposition, Doubl
     }
 
     /** {@inheritDoc} */
-    @Override public <K, V> ModelsComposition fit0(DatasetBuilder<K, V> datasetBuilder,
+    @Override public <K, V> ModelsComposition fitInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder,
                                                   Preprocessor<K, V> preprocessor) {
         return updateModel(null, datasetBuilder, preprocessor);
     }
@@ -186,7 +186,7 @@ public abstract class GDBTrainer extends DatasetTrainer<ModelsComposition, Doubl
         DatasetBuilder<K, V> builder,
         Preprocessor<K, V> preprocessor) {
 
-        learningEnvironment().deployContext().init(preprocessor);
+        learningEnvironment().initDeployingContext(preprocessor);
 
         try (Dataset<EmptyContext, DecisionTreeData> dataset = builder.build(
             envBuilder,
@@ -243,7 +243,7 @@ public abstract class GDBTrainer extends DatasetTrainer<ModelsComposition, Doubl
     /**
      * GDB model.
      */
-    public static class GDBModel extends ModelsComposition {
+    public static final class GDBModel extends ModelsComposition {
         /** Serial version uid. */
         private static final long serialVersionUID = 3476661240155508004L;
 

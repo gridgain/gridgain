@@ -93,7 +93,7 @@ public abstract class ConvergenceChecker<K, V> implements Serializable {
         ModelsComposition currMdl) {
 
         LearningEnvironment environment = envBuilder.buildForTrainer();
-        environment.deployContext().init(preprocessor);
+        environment.initDeployingContext(preprocessor);
 
         try (Dataset<EmptyContext, FeatureMatrixWithLabelsOnHeapData> dataset = datasetBuilder.build(
             envBuilder,

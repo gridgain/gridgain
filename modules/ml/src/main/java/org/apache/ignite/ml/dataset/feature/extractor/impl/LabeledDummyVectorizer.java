@@ -16,7 +16,9 @@
 
 package org.apache.ignite.ml.dataset.feature.extractor.impl;
 
+import java.util.Optional;
 import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
+import org.apache.ignite.ml.environment.deploy.DeployableObject;
 import org.apache.ignite.ml.structures.LabeledVector;
 
 import java.util.List;
@@ -28,7 +30,7 @@ import java.util.stream.IntStream;
  *
  * @param <K> Type of key.
  */
-public class LabeledDummyVectorizer<K, L> extends Vectorizer<K, LabeledVector<L>, Integer, L> {
+public class LabeledDummyVectorizer<K, L> extends Vectorizer<K, LabeledVector<L>, Integer, L> implements DeployableObject {
     /** Serial version uid. */
     private static final long serialVersionUID = -6225354615212148224L;
 
@@ -60,5 +62,10 @@ public class LabeledDummyVectorizer<K, L> extends Vectorizer<K, LabeledVector<L>
     /** {@inheritDoc} */
     @Override protected List<Integer> allCoords(K key, LabeledVector<L> value) {
         return IntStream.range(0, value.features().size()).boxed().collect(Collectors.toList());
+    }
+
+    /** {@inheritDoc} */
+    @Override public Optional<Object> getDependency() {
+        return Optional.empty();
     }
 }

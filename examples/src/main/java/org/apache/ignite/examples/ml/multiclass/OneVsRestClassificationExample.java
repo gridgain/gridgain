@@ -25,6 +25,7 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.ScanQuery;
+import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
 import org.apache.ignite.ml.dataset.feature.extractor.impl.DummyVectorizer;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.multiclass.MultiClassModel;
@@ -75,10 +76,11 @@ public class OneVsRestClassificationExample {
                     .withSeed(1234L)
                 );
 
+                Vectorizer<Integer, Vector, Integer, Double> vectorizer = new DummyVectorizer<Integer>().labeled(0);
                 MultiClassModel<SVMLinearClassificationModel> mdl = trainer.fit(
                     ignite,
                     dataCache,
-                    new DummyVectorizer<Integer>().labeled(0)
+                    (k,v) -> vectorizer.apply(k,v)
                 );
 
                 System.out.println(">>> One-vs-Rest SVM Multi-class model");
@@ -89,7 +91,7 @@ public class OneVsRestClassificationExample {
                 Preprocessor<Integer, Vector> preprocessor = minMaxScalerTrainer.fit(
                     ignite,
                     dataCache,
-                    new DummyVectorizer<Integer>().labeled(0)
+                    (k,v) -> vectorizer.apply(k,v)
                 );
 
                 MultiClassModel<SVMLinearClassificationModel> mdlWithScaling = trainer.fit(

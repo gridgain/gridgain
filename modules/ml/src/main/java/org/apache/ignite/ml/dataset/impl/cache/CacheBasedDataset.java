@@ -81,7 +81,7 @@ public class CacheBasedDataset<K, V, C extends Serializable, D extends AutoClose
     private final boolean upstreamKeepBinary;
 
     /**
-     * Learning environment of current cache working session.
+     * Client-side learning environment.
      */
     private final LearningEnvironment localLearningEnv;
 
@@ -201,7 +201,7 @@ public class CacheBasedDataset<K, V, C extends Serializable, D extends AutoClose
      */
     private <R> R computeForAllPartitions(IgniteFunction<Integer, R> fun, IgniteBinaryOperator<R> reduce, R identity) {
         Collection<String> cacheNames = Arrays.asList(datasetCache.getName(), upstreamCache.getName());
-        Collection<R> results = ComputeUtils.affinityCallWithRetries(ignite, cacheNames, fun, RETRIES, RETRY_INTERVAL, localLearningEnv.deployContext());
+        Collection<R> results = ComputeUtils.affinityCallWithRetries(ignite, cacheNames, fun, RETRIES, RETRY_INTERVAL, localLearningEnv.deployingContext());
 
         R res = identity;
         for (R partRes : results)

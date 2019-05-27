@@ -52,8 +52,8 @@ public class DataStreamGeneratorFillCacheTest extends GridCommonAbstractTest {
         IgniteConfiguration configuration = new IgniteConfiguration()
             .setDiscoverySpi(new TcpDiscoverySpi()
                 .setIpFinder(new TcpDiscoveryVmIpFinder()
-                    .setAddresses(Arrays.asList("127.0.0.1:47500..47509"))))
-            .setPeerClassLoadingEnabled(true);
+                    .setAddresses(Arrays.asList("127.0.0.1:47500..47509"))));
+
         String cacheName = "TEST_CACHE";
         CacheConfiguration<UUID, LabeledVector<Double>> cacheConfiguration =
             new CacheConfiguration<UUID, LabeledVector<Double>>(cacheName)
@@ -71,7 +71,7 @@ public class DataStreamGeneratorFillCacheTest extends GridCommonAbstractTest {
             IgniteFunction<SimpleDatasetData, StatPair> map = data ->
                 new StatPair(DoubleStream.of(data.getFeatures()).sum(), data.getRows());
             LearningEnvironment env = LearningEnvironmentBuilder.defaultBuilder().buildForTrainer();
-            env.deployContext().initByClientObject(map);
+            env.deployingContext().initByClientObject(map);
 
             try (CacheBasedDataset<UUID, LabeledVector<Double>, EmptyContext, SimpleDatasetData> dataset =
                      datasetBuilder.build(

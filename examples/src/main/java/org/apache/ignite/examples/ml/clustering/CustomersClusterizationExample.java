@@ -78,7 +78,7 @@ public class CustomersClusterizationExample {
                     KMeansModel mdl = trainer.fit(
                         ignite, dataCache,
                         split.getTrainFilter(),
-                        vectorizer
+                        (k,v) -> vectorizer.apply(k,v)
                     );
 
                     double entropy = computeMeanEntropy(dataCache, split.getTestFilter(), vectorizer, mdl);

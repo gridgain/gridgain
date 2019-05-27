@@ -48,7 +48,7 @@ import org.apache.ignite.ml.dataset.UpstreamTransformer;
 import org.apache.ignite.ml.dataset.UpstreamTransformerBuilder;
 import org.apache.ignite.ml.environment.LearningEnvironment;
 import org.apache.ignite.ml.environment.LearningEnvironmentBuilder;
-import org.apache.ignite.ml.environment.deploy.DeployContext;
+import org.apache.ignite.ml.environment.deploy.DeployingContext;
 import org.apache.ignite.ml.math.functions.IgniteFunction;
 import org.apache.ignite.ml.util.Utils;
 
@@ -73,12 +73,12 @@ public class ComputeUtils {
      * @param fun Function to be applied on all partitions.
      * @param retries Number of retries for the case when one of partitions not found on the node.
      * @param interval Interval of retries for the case when one of partitions not found on the node.
-     * @param deployContext Deploy context of user-defined classes for peer class loading.
+     * @param deployingContext Deploy context of user-defined classes for peer class loading.
      * @param <R> Type of a result.
      * @return Collection of results.
      */
     public static <R> Collection<R> affinityCallWithRetries(Ignite ignite, Collection<String> cacheNames,
-        IgniteFunction<Integer, R> fun, int retries, int interval, DeployContext deployContext) {
+        IgniteFunction<Integer, R> fun, int retries, int interval, DeployingContext deployingContext) {
         assert !cacheNames.isEmpty();
         assert interval >= 0;
 
@@ -103,7 +103,7 @@ public class ComputeUtils {
                         currPart,
                         ignite.compute(clusterGrp).affinityCallAsync(
                             cacheNames, currPart,
-                            new DeployableCallable<>(deployContext, part, fun)
+                            new DeployableCallable<>(deployingContext, part, fun)
                         )
                     );
                 }
@@ -140,17 +140,17 @@ public class ComputeUtils {
         private final int part;
 
         /** Deploy context. */
-        private transient DeployContext deployContext;
+        private transient DeployingContext deployingContext;
 
         /**
          * Creates an instance of DeployableCallable.
-         * @param deployContext Deploy context.
+         * @param deployingContext Deploy context.
          * @param part Partition.
          * @param fun Callable function.
          */
-        public DeployableCallable(DeployContext deployContext, int part, IgniteFunction<Integer, C> fun) {
+        public DeployableCallable(DeployingContext deployingContext, int part, IgniteFunction<Integer, C> fun) {
             this.fun = fun;
-            this.deployContext = deployContext;
+            this.deployingContext = deployingContext;
             this.part = part;
         }
 
@@ -161,12 +161,12 @@ public class ComputeUtils {
 
         /** {@inheritDoc} */
         @Override public Class<?> deployClass() {
-            return deployContext.userClass();
+            return deployingContext.userClass();
         }
 
         /** {@inheritDoc} */
         @Override public ClassLoader classLoader() {
-            return deployContext.clientClassLoader();
+            return deployingContext.clientClassLoader();
         }
     }
 
@@ -180,13 +180,13 @@ public class ComputeUtils {
      * @param cacheNames Collection of cache names.
      * @param fun Function to be applied on all partitions.
      * @param retries Number of retries for the case when one of partitions not found on the node.
-     * @param deployContext Deploy context.
+     * @param deployingContext Deploy context.
      * @param <R> Type of a result.
      * @return Collection of results.
      */
     public static <R> Collection<R> affinityCallWithRetries(Ignite ignite, Collection<String> cacheNames,
-        IgniteFunction<Integer, R> fun, int retries, DeployContext deployContext) {
-        return affinityCallWithRetries(ignite, cacheNames, fun, retries, 0, deployContext);
+        IgniteFunction<Integer, R> fun, int retries, DeployingContext deployingContext) {
+        return affinityCallWithRetries(ignite, cacheNames, fun, retries, 0, deployingContext);
     }
 
     /**
@@ -315,7 +315,7 @@ public class ComputeUtils {
      * @param ctxBuilder Partition {@code context} builder.
      * @param envBuilder Environment builder.
      * @param isKeepBinary Support of binary objects.
-     * @param deployContext Deploy context.
+     * @param deployingContext Deploy context.
      * @param <K> Type of a key in {@code upstream} data.
      * @param <V> Type of a value in {@code upstream} data.
      * @param <C> Type of a partition {@code context}.
@@ -331,7 +331,7 @@ public class ComputeUtils {
         int retries,
         int interval,
         boolean isKeepBinary,
-        DeployContext deployContext) {
+        DeployingContext deployingContext) {
 
         affinityCallWithRetries(ignite, Arrays.asList(datasetCacheName, upstreamCacheName), part -> {
             Ignite locIgnite = Ignition.localIgnite();
@@ -373,7 +373,7 @@ public class ComputeUtils {
             datasetCache.put(part, ctx);
 
             return part;
-        }, retries, interval, deployContext);
+        }, retries, interval, deployingContext);
     }
 
     /**

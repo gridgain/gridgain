@@ -18,8 +18,6 @@ package org.apache.ignite.tensorflow.cluster.spec;
 
 import java.io.Serializable;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.UUID;
 import org.apache.ignite.Ignite;
 

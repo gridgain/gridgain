@@ -105,7 +105,7 @@ public abstract class DecisionTree<T extends ImpurityMeasure<T>> extends SingleL
     }
 
     /** {@inheritDoc} */
-    @Override public <K, V> DecisionTreeNode fit0(DatasetBuilder<K, V> datasetBuilder,
+    @Override public <K, V> DecisionTreeNode fitInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder,
                                                  Preprocessor<K, V> preprocessor) {
         try (Dataset<EmptyContext, DecisionTreeData> dataset = datasetBuilder.build(
             envBuilder,

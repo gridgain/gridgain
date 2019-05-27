@@ -17,6 +17,8 @@
 package org.apache.ignite.ml.preprocessing.maxabsscaling;
 
 
+import java.util.Optional;
+import org.apache.ignite.ml.environment.deploy.DeployableObject;
 import org.apache.ignite.ml.preprocessing.Preprocessor;
 import org.apache.ignite.ml.structures.LabeledVector;
 
@@ -31,7 +33,7 @@ import org.apache.ignite.ml.structures.LabeledVector;
  * @param <K> Type of a key in {@code upstream} data.
  * @param <V> Type of a value in {@code upstream} data.
  */
-public class MaxAbsScalerPreprocessor<K, V> implements Preprocessor<K, V> {
+public final class MaxAbsScalerPreprocessor<K, V> implements Preprocessor<K, V>, DeployableObject {
     /** */
     private static final long serialVersionUID = 1L;
 
@@ -73,5 +75,10 @@ public class MaxAbsScalerPreprocessor<K, V> implements Preprocessor<K, V> {
     /** */
     public double[] getMaxAbs() {
         return maxAbs;
+    }
+
+    /** {@inheritDoc} */
+    @Override public Optional<Object> getDependency() {
+        return Optional.of(basePreprocessor);
     }
 }

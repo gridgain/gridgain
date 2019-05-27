@@ -60,7 +60,7 @@ public class GDBOnTreesLearningStrategy extends GDBLearningStrategy {
                                                                      DatasetBuilder<K, V> datasetBuilder, Preprocessor<K, V> vectorizer) {
 
         LearningEnvironment environment = envBuilder.buildForTrainer();
-        environment.deployContext().init(vectorizer);
+        environment.initDeployingContext(vectorizer);
 
         DatasetTrainer<? extends IgniteModel<Vector, Double>, Double> trainer = baseMdlTrainerBuilder.get();
         assert trainer instanceof DecisionTree;

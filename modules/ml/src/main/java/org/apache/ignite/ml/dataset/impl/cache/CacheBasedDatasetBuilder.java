@@ -153,7 +153,7 @@ public class CacheBasedDatasetBuilder<K, V> implements DatasetBuilder<K, V> {
             RETRIES,
             RETRY_INTERVAL,
             upstreamKeepBinary,
-            localLearningEnv.deployContext()
+            localLearningEnv.deployingContext()
         );
 
         return new CacheBasedDataset<>(ignite, upstreamCache, filter, transformerBuilder, datasetCache, envBuilder, partDataBuilder, datasetId, upstreamKeepBinary, localLearningEnv);

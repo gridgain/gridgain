@@ -16,13 +16,11 @@
 
 package org.apache.ignite.ml.environment.deploy;
 
-import org.apache.ignite.ml.preprocessing.Preprocessor;
-
 /**
  * Class represents user's class loading environment for specific remote job.
  * This contexst is used to determine class loader for missing classes on worker node.
  */
-public interface DeployContext {
+public interface DeployingContext {
     /**
      * @return Class represents client-defined class.
      */
@@ -34,22 +32,11 @@ public interface DeployContext {
     public ClassLoader clientClassLoader();
 
     /**
-     * Inits context by preprocessor.
-     *
-     * @param preprocessor User-defined preprocessor.
-     * @param <K> Type of key in upstream cache.
-     * @param <V> Type of value in upstream cache.
-     */
-    public default <K, V> void init(Preprocessor<K, V> preprocessor) {
-        initByClientObject(preprocessor);
-    }
-
-    /**
-     * Inits context bu other context.
+     * Inits context by other context.
      *
      * @param other Other context.
      */
-    public void init(DeployContext other);
+    public void init(DeployingContext other);
 
     /**
      * Inits context by any client-defined object.
@@ -61,7 +48,7 @@ public interface DeployContext {
     /**
      * @return Unitialized deploy context.
      */
-    public static DeployContext unitialized() {
-        return new DeployContextImpl();
+    public static DeployingContext unitialized() {
+        return new DeployingContextImpl();
     }
 }

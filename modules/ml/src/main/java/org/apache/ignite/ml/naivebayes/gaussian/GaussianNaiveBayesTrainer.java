@@ -42,7 +42,7 @@ public class GaussianNaiveBayesTrainer extends SingleLabelDatasetTrainer<Gaussia
     private boolean equiprobableClasses;
 
     /** {@inheritDoc} */
-    @Override public <K, V> GaussianNaiveBayesModel fit0(DatasetBuilder<K, V> datasetBuilder,
+    @Override public <K, V> GaussianNaiveBayesModel fitInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder,
                                                         Preprocessor<K, V> extractor) {
         return updateModel(null, datasetBuilder, extractor);
     }

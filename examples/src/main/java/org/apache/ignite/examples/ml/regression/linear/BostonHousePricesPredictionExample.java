@@ -69,7 +69,7 @@ public class BostonHousePricesPredictionExample {
                 LinearRegressionModel mdl = trainer.fit(
                     ignite, dataCache,
                     split.getTrainFilter(),
-                    vectorizer
+                    (k,v) -> vectorizer.apply(k,v)
                 );
 
                 System.out.println(">>> Perform scoring.");

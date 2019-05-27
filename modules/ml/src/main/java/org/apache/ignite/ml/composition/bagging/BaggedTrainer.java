@@ -147,7 +147,7 @@ public class BaggedTrainer<L> extends
 
 
     /** {@inheritDoc} */
-    @Override public <K, V> BaggedModel fit0(DatasetBuilder<K, V> datasetBuilder,
+    @Override public <K, V> BaggedModel fitInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder,
         Preprocessor<K, V> preprocessor) {
         IgniteModel<Vector, Double> fit = getTrainer().fit(datasetBuilder, preprocessor);
         return new BaggedModel(fit);
@@ -157,7 +157,7 @@ public class BaggedTrainer<L> extends
     @Override public <K, V> BaggedModel update(BaggedModel mdl, DatasetBuilder<K, V> datasetBuilder,
         Preprocessor<K, V> preprocessor) {
 
-        learningEnvironment().deployContext().init(preprocessor);
+        learningEnvironment().initDeployingContext(preprocessor);
 
         IgniteModel<Vector, Double> updated = getTrainer().update(mdl.model(), datasetBuilder, preprocessor);
         return new BaggedModel(updated);

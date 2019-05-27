@@ -17,7 +17,9 @@
 package org.apache.ignite.ml.preprocessing.encoding;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import org.apache.ignite.ml.environment.deploy.DeployableObject;
 import org.apache.ignite.ml.preprocessing.Preprocessor;
 
 /**
@@ -45,10 +47,10 @@ public abstract class EncoderPreprocessor<K, V> implements Preprocessor<K, V> {
      * Constructs a new instance of String Encoder preprocessor.
      *
      * @param basePreprocessor Base preprocessor.
-     * @param handledIndices   Handled indices.
+     * @param handledIndices Handled indices.
      */
     public EncoderPreprocessor(Map<String, Integer>[] encodingValues,
-                               Preprocessor<K, V> basePreprocessor, Set<Integer> handledIndices) {
+        Preprocessor<K, V> basePreprocessor, Set<Integer> handledIndices) {
         this.handledIndices = handledIndices;
         this.encodingValues = encodingValues;
         this.basePreprocessor = basePreprocessor;

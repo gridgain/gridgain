@@ -93,9 +93,7 @@ public class AlgorithmSpecificDatasetExample {
 
                     // Makes a copy of features to supplement it by columns with values equal to 1.0.
                     double[] a = new double[features.length + rows];
-
-                    for (int i = 0; i < rows; i++)
-                        a[i] = 1.0;
+                    Arrays.fill(a, 1.0);
 
                     System.arraycopy(features, 0, a, rows, features.length);
 

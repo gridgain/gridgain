@@ -73,7 +73,7 @@ public class LinearRegressionSGDTrainerExample {
                 Vectorizer<Integer, Vector, Integer, Double> vectorizer = new DummyVectorizer<Integer>()
                     .labeled(Vectorizer.LabelCoordinate.FIRST);
 
-                LinearRegressionModel mdl = trainer.fit(ignite, dataCache, vectorizer);
+                LinearRegressionModel mdl = trainer.fit(ignite, dataCache, (k,v) -> vectorizer.apply(k,v));
 
                 System.out.println(">>> Linear regression model: " + mdl);
 

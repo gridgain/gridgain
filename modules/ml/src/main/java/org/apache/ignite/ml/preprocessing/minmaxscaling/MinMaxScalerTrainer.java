@@ -32,7 +32,7 @@ import org.apache.ignite.ml.structures.LabeledVector;
  * @param <K> Type of a key in {@code upstream} data.
  * @param <V> Type of a value in {@code upstream} data.
  */
-public class MinMaxScalerTrainer<K, V> extends PreprocessingTrainer<K, V> {
+public class MinMaxScalerTrainer<K, V> implements PreprocessingTrainer<K, V> {
     /** {@inheritDoc} */
     @Override public MinMaxScalerPreprocessor<K, V> fit(
         LearningEnvironmentBuilder envBuilder,

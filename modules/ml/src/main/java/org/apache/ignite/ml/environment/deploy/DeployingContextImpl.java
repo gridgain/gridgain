@@ -16,15 +16,16 @@
 
 package org.apache.ignite.ml.environment.deploy;
 
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Default implementation of {@link DeployContext} class.
+ * Default implementation of {@link DeployingContext} class.
  */
-public class DeployContextImpl implements DeployContext {
+public class DeployingContextImpl implements DeployingContext {
     /** Logger. */
-    private static final Logger LOGGER = LoggerFactory.getLogger(DeployContextImpl.class);
+    private static final Logger logger = LoggerFactory.getLogger(DeployingContextImpl.class);
 
     /** Preprocessor class. */
     private transient Class<?> preprocessorClass;
@@ -45,19 +46,29 @@ public class DeployContextImpl implements DeployContext {
     /** {@inheritDoc} */
     @Override public void initByClientObject(Object jobObj) {
         if(jobObj == null) {
-            LOGGER.warn("Attempt to initialize deploy context by null");
+            logger.warn("Attempt to initialize deploy context by null");
             return;
         }
 
         if(preprocessorClass != null)
-            LOGGER.warn("Reinitialize deploy context by " + jobObj.getClass().getName());
+            logger.warn("Reinitialize deploying context [class=" + jobObj.getClass().getName() + "]");
 
-        preprocessorClass = jobObj.getClass();
+        Object objectToDeploy = jobObj;
+        while(objectToDeploy instanceof DeployableObject) {
+            Optional<Object> dep = ((DeployableObject)objectToDeploy).getDependency();
+            if(dep.isPresent())
+                objectToDeploy = dep.get();
+            else
+                break;
+        }
+
+        assert objectToDeploy != null;
+        preprocessorClass = objectToDeploy.getClass();
         clientClassLoader = preprocessorClass.getClassLoader();
     }
 
     /** {@inheritDoc} */
-    @Override public void init(DeployContext other) {
+    @Override public void init(DeployingContext other) {
         this.clientClassLoader = other.clientClassLoader();
         this.preprocessorClass = other.userClass();
     }

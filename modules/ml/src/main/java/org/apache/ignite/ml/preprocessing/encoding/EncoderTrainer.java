@@ -42,7 +42,7 @@ import org.jetbrains.annotations.NotNull;
  * @param <K> Type of a key in {@code upstream} data.
  * @param <V> Type of a value in {@code upstream} data.
  */
-public class EncoderTrainer<K, V> extends PreprocessingTrainer<K, V> {
+public class EncoderTrainer<K, V> implements PreprocessingTrainer<K, V> {
     /** Indices of features which should be encoded. */
     private Set<Integer> handledIndices = new HashSet<>();
 

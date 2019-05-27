@@ -115,7 +115,7 @@ public class DatasetFactory {
         PartitionDataBuilder<K, V, C, D> partDataBuilder) {
 
         LearningEnvironment environment = LearningEnvironmentBuilder.defaultBuilder().buildForTrainer();
-        environment.deployContext().initByClientObject(partDataBuilder);
+        environment.deployingContext().initByClientObject(partDataBuilder);
 
         return datasetBuilder.build(
             LearningEnvironmentBuilder.defaultBuilder(),
@@ -204,7 +204,7 @@ public class DatasetFactory {
         Preprocessor<K, V> featureExtractor) {
 
         LearningEnvironment environment = LearningEnvironmentBuilder.defaultBuilder().buildForTrainer();
-        environment.deployContext().init(featureExtractor);
+        environment.initDeployingContext(featureExtractor);
 
         return create(
             datasetBuilder,
@@ -266,7 +266,7 @@ public class DatasetFactory {
         Preprocessor<K, V> vectorizer) {
 
         LearningEnvironment environment = LearningEnvironmentBuilder.defaultBuilder().buildForTrainer();
-        environment.deployContext().init(vectorizer);
+        environment.initDeployingContext(vectorizer);
 
         return create(
             datasetBuilder,

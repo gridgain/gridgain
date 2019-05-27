@@ -68,7 +68,7 @@ public class IrisClassificationExample {
                 NNClassificationModel mdl = trainer.fit(
                     ignite, dataCache,
                     split.getTrainFilter(),
-                    vectorizer
+                    (k,v) -> vectorizer.apply(k,v)
                 )
                     .withK(3)
                     .withDistanceMeasure(new EuclideanDistance())

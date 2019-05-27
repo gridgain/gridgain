@@ -182,7 +182,7 @@ public class BaggingTest extends TrainerTest {
         }
 
         /** {@inheritDoc} */
-        @Override public <K, V> IgniteModel<Vector, Double> fit0(
+        @Override public <K, V> IgniteModel<Vector, Double> fitInitializedDeployingContext(
             DatasetBuilder<K, V> datasetBuilder,
             Preprocessor<K, V> extractor) {
             Dataset<Long, CountData> dataset = datasetBuilder.build(

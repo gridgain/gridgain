@@ -28,7 +28,6 @@ import org.apache.ignite.ml.dataset.PartitionDataBuilder;
 import org.apache.ignite.ml.dataset.feature.FeatureMeta;
 import org.apache.ignite.ml.dataset.primitive.builder.context.EmptyContextBuilder;
 import org.apache.ignite.ml.dataset.primitive.context.EmptyContext;
-import org.apache.ignite.ml.environment.deploy.DeployContext;
 import org.apache.ignite.ml.environment.logging.ConsoleLogger;
 import org.apache.ignite.ml.environment.logging.MLLogger;
 import org.apache.ignite.ml.environment.parallelism.DefaultParallelismStrategy;
@@ -87,7 +86,7 @@ public class LearningEnvironmentTest {
 
         DatasetTrainer<IgniteModel<Object, Vector>, Void> trainer = new DatasetTrainer<IgniteModel<Object, Vector>, Void>() {
             /** {@inheritDoc} */
-             @Override public <K, V> IgniteModel<Object, Vector> fit0(DatasetBuilder<K, V> datasetBuilder, Preprocessor<K, V> preprocessor) {
+             @Override public <K, V> IgniteModel<Object, Vector> fitInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder, Preprocessor<K, V> preprocessor) {
                 Dataset<EmptyContext, TestUtils.DataWrapper<Integer>> ds = datasetBuilder.build(envBuilder,
                     new EmptyContextBuilder<>(),
                     (PartitionDataBuilder<K, V, EmptyContext, TestUtils.DataWrapper<Integer>>)(env, upstreamData, upstreamDataSize, ctx) ->

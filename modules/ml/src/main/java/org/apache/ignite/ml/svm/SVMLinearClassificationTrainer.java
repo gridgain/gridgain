@@ -60,7 +60,7 @@ public class SVMLinearClassificationTrainer extends SingleLabelDatasetTrainer<SV
      * @param preprocessor Extractor of {@link UpstreamEntry} into {@link LabeledVector}.
      * @return Model.
      */
-    @Override public <K, V> SVMLinearClassificationModel fit0(DatasetBuilder<K, V> datasetBuilder,
+    @Override public <K, V> SVMLinearClassificationModel fitInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder,
                                                              Preprocessor<K, V> preprocessor) {
 
         return updateModel(null, datasetBuilder, preprocessor);

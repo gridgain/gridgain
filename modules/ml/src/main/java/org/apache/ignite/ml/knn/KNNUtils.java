@@ -45,7 +45,7 @@ public class KNNUtils {
         LearningEnvironmentBuilder envBuilder,
         DatasetBuilder<K, V> datasetBuilder, Preprocessor<K, V> vectorizer) {
         LearningEnvironment environment = envBuilder.buildForTrainer();
-        environment.deployContext().init(vectorizer);
+        environment.initDeployingContext(vectorizer);
 
         PartitionDataBuilder<K, V, EmptyContext, LabeledVectorSet<Double, LabeledVector>> partDataBuilder
             = new LabeledDatasetPartitionDataBuilderOnHeap<>(vectorizer);

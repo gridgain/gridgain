@@ -72,7 +72,7 @@ public class LinearRegressionLSQRTrainerWithMinMaxScalerExample {
                 Preprocessor<Integer, Vector> preprocessor = minMaxScalerTrainer.fit(
                     ignite,
                     dataCache,
-                    vectorizer
+                    (k,v) -> vectorizer.apply(k,v)
                 );
 
                 System.out.println(">>> Create new linear regression trainer object.");

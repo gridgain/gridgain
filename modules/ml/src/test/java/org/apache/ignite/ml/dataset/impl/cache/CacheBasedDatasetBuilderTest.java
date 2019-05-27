@@ -27,7 +27,6 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.ml.TestUtils;
 import org.apache.ignite.ml.dataset.UpstreamEntry;
-import org.apache.ignite.ml.environment.deploy.DeployContext;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 

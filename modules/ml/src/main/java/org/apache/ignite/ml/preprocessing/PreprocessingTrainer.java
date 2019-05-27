@@ -31,10 +31,7 @@ import org.apache.ignite.ml.environment.LearningEnvironmentBuilder;
  * @param <K> Type of a key in {@code upstream} data.
  * @param <V> Type of a value in {@code upstream} data.
  */
-public abstract class PreprocessingTrainer<K, V> {
-    /** Local environment. */
-    private LearningEnvironment localEnvironment;
-
+public interface PreprocessingTrainer<K, V> {
     /**
      * Fits preprocessor.
      *
@@ -55,7 +52,7 @@ public abstract class PreprocessingTrainer<K, V> {
      * @param basePreprocessor Base preprocessor.
      * @return Preprocessor.
      */
-    public Preprocessor<K, V> fit(
+    public default Preprocessor<K, V> fit(
         DatasetBuilder<K, V> datasetBuilder,
         Preprocessor<K, V> basePreprocessor) {
         return fit(LearningEnvironmentBuilder.defaultBuilder(), datasetBuilder, basePreprocessor);
@@ -69,7 +66,7 @@ public abstract class PreprocessingTrainer<K, V> {
      * @param basePreprocessor Base preprocessor.
      * @return Preprocessor.
      */
-    public Preprocessor<K, V> fit(
+    public default Preprocessor<K, V> fit(
         Ignite ignite, IgniteCache<K, V> cache,
         Preprocessor<K, V> basePreprocessor) {
         return fit(
@@ -87,7 +84,7 @@ public abstract class PreprocessingTrainer<K, V> {
      * @param basePreprocessor Base preprocessor.
      * @return Preprocessor.
      */
-    public Preprocessor<K, V> fit(
+    public default Preprocessor<K, V> fit(
         LearningEnvironmentBuilder envBuilder,
         Ignite ignite, IgniteCache<K, V> cache,
         Preprocessor<K, V> basePreprocessor) {
@@ -106,7 +103,7 @@ public abstract class PreprocessingTrainer<K, V> {
      * @param basePreprocessor Base preprocessor.
      * @return Preprocessor.
      */
-    public Preprocessor<K, V> fit(
+    public default Preprocessor<K, V> fit(
         LearningEnvironmentBuilder envBuilder,
         Map<K, V> data,
         int parts,
@@ -126,7 +123,7 @@ public abstract class PreprocessingTrainer<K, V> {
      * @param basePreprocessor Base preprocessor.
      * @return Preprocessor.
      */
-    public Preprocessor<K, V> fit(
+    public default Preprocessor<K, V> fit(
         Map<K, V> data,
         int parts,
         Preprocessor<K, V> basePreprocessor) {
@@ -137,28 +134,16 @@ public abstract class PreprocessingTrainer<K, V> {
     }
 
     /**
-     * Sets learning environment for preprocessor trainer.
-     * @param environment Learning environment.
-     */
-    public void setLearningEnvironment(LearningEnvironment environment) {
-        this.localEnvironment = environment;
-    }
-
-    /**
-     * Returns local learning environment if it set or create temp environment
-     * with deploy context defined by other preprocessor.
+     * Returns local learning environment with initialized deploying context by base preptocessor.
      *
      * @param basePreprocessor Preprocessor.
      * @param <K> Type of key.
      * @param <V> Type of value.
      * @return Learning environment.
      */
-    protected <K,V> LearningEnvironment learningEnvironment(Preprocessor<K,V> basePreprocessor) {
-        if(localEnvironment != null)
-            return localEnvironment;
-
+    public default <K,V> LearningEnvironment learningEnvironment(Preprocessor<K,V> basePreprocessor) {
         LearningEnvironment env = LearningEnvironmentBuilder.defaultBuilder().buildForTrainer();
-        env.deployContext().init(basePreprocessor);
+        env.initDeployingContext(basePreprocessor);
         return env;
     }
 }

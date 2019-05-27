@@ -21,11 +21,13 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import org.apache.ignite.ml.Exportable;
 import org.apache.ignite.ml.Exporter;
 import org.apache.ignite.ml.IgniteModel;
+import org.apache.ignite.ml.environment.deploy.DeployableObject;
 import org.apache.ignite.ml.knn.classification.KNNModelFormat;
 import org.apache.ignite.ml.knn.classification.NNStrategy;
 import org.apache.ignite.ml.math.distances.DistanceMeasure;
@@ -40,7 +42,8 @@ import org.jetbrains.annotations.NotNull;
  * Common methods and fields for all kNN and aNN models
  * to predict label based on neighbours' labels.
  */
-public abstract class NNClassificationModel implements IgniteModel<Vector, Double>, Exportable<KNNModelFormat> {
+public abstract class NNClassificationModel implements IgniteModel<Vector, Double>, Exportable<KNNModelFormat>,
+    DeployableObject {
     /** Amount of nearest neighbors. */
     protected int k = 5;
 
@@ -229,4 +232,9 @@ public abstract class NNClassificationModel implements IgniteModel<Vector, Doubl
 
     /** {@inheritDoc} */
     @Override public abstract <P> void saveModel(Exporter<KNNModelFormat, P> exporter, P path);
+
+    /** {@inheritDoc} */
+    @Override public Optional<Object> getDependency() {
+        return Optional.of(distanceMeasure);
+    }
 }

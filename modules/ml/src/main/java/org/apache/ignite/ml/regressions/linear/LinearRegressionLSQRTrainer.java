@@ -37,7 +37,7 @@ import org.apache.ignite.ml.trainers.SingleLabelDatasetTrainer;
  */
 public class LinearRegressionLSQRTrainer extends SingleLabelDatasetTrainer<LinearRegressionModel> {
     /** {@inheritDoc} */
-    @Override public <K, V> LinearRegressionModel fit0(DatasetBuilder<K, V> datasetBuilder,
+    @Override public <K, V> LinearRegressionModel fitInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder,
                                                       Preprocessor<K, V> extractor) {
 
         return updateModel(null, datasetBuilder, extractor);

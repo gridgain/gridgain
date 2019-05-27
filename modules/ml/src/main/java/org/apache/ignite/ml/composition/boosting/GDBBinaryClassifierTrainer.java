@@ -25,7 +25,6 @@ import org.apache.ignite.ml.composition.boosting.loss.Loss;
 import org.apache.ignite.ml.dataset.DatasetBuilder;
 import org.apache.ignite.ml.dataset.primitive.builder.context.EmptyContextBuilder;
 import org.apache.ignite.ml.environment.LearningEnvironmentBuilder;
-import org.apache.ignite.ml.environment.deploy.DeployContext;
 import org.apache.ignite.ml.math.functions.IgniteFunction;
 import org.apache.ignite.ml.preprocessing.Preprocessor;
 import org.apache.ignite.ml.structures.LabeledVector;
@@ -69,7 +68,7 @@ public abstract class GDBBinaryClassifierTrainer extends GDBTrainer {
     @Override protected <V, K> boolean learnLabels(DatasetBuilder<K, V> builder,
         Preprocessor<K, V> preprocessor) {
 
-        learningEnvironment().deployContext().init(preprocessor);
+        learningEnvironment().initDeployingContext(preprocessor);
 
         Set<Double> uniqLabels = builder.build(
             envBuilder,
