@@ -363,7 +363,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
             execQuery(sql, lazy);
 
             return null;
-        }, CacheException.class, "IgniteOutOfMemoryException: SQL query out of memory");
+        }, CacheException.class, "IgniteSQLException: SQL query run out of memory.");
     }
 
     /**

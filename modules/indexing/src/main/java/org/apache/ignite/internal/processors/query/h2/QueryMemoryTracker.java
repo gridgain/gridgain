@@ -19,7 +19,8 @@ package org.apache.ignite.internal.processors.query.h2;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.mem.IgniteOutOfMemoryException;
+import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
+import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
@@ -67,13 +68,13 @@ public class QueryMemoryTracker implements AutoCloseable {
      * Check allocated size is less than query memory pool threshold.
      *
      * @param size Allocated size in bytes.
-     * @throws IgniteOutOfMemoryException if memory limit has been exceeded.
+     * @throws IgniteSQLException if memory limit has been exceeded.
      */
     public void allocate(long size) {
         assert !closed && size >= 0;
 
         if (ALLOC_UPD.addAndGet(this, size) >= maxMem)
-            throw new IgniteOutOfMemoryException("SQL query out of memory");
+            throw new IgniteSQLException("SQL query run out of memory.", IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY);
     }
 
     /**
