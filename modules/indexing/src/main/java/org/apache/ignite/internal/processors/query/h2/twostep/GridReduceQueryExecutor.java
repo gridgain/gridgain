@@ -56,6 +56,7 @@ import org.apache.ignite.internal.processors.cache.query.GridCacheSqlQuery;
 import org.apache.ignite.internal.processors.cache.query.GridCacheTwoStepQuery;
 import org.apache.ignite.internal.processors.query.GridQueryCacheObjectsIterator;
 import org.apache.ignite.internal.processors.query.GridQueryCancel;
+import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.h2.H2ConnectionWrapper;
 import org.apache.ignite.internal.processors.query.h2.H2FieldsIterator;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
@@ -210,7 +211,7 @@ public class GridReduceQueryExecutor {
     public void onFail(ClusterNode node, GridQueryFailResponse msg) {
         ReduceQueryRun r = runs.get(msg.queryRequestId());
 
-        fail(r, node.id(), msg.error(), msg.failCode());
+        fail(r, node.id(), msg.error(), msg.failCode(), msg.sqlErrCode());
     }
 
     /**
@@ -218,7 +219,7 @@ public class GridReduceQueryExecutor {
      * @param nodeId Failed node ID.
      * @param msg Error message.
      */
-    private void fail(ReduceQueryRun r, UUID nodeId, String msg, byte failCode) {
+    private void fail(ReduceQueryRun r, UUID nodeId, String msg, byte failCode, int sqlErrCode) {
         if (r != null) {
             CacheException e;
 
@@ -232,7 +233,8 @@ public class GridReduceQueryExecutor {
             }
             else {
                 e = new CacheException("Failed to execute map query on remote node [nodeId=" + nodeId +
-                    ", errMsg=" + msg + ']');
+                    ", errMsg=" + msg + ']', sqlErrCode > 0 ?
+                    new IgniteSQLException(msg, sqlErrCode) : null);
             }
 
             r.setStateOnException(nodeId, e);
@@ -289,7 +291,10 @@ public class GridReduceQueryExecutor {
         catch (Exception e) {
             U.error(log, "Error in message.", e);
 
-            fail(r, node.id(), "Error in message.", GridQueryFailResponse.GENERAL_ERROR);
+            IgniteSQLException sqlCause = X.cause(e, IgniteSQLException.class);
+
+            fail(r, node.id(), "Error in message.", GridQueryFailResponse.GENERAL_ERROR,
+                sqlCause == null ? 0 : sqlCause.statusCode());
 
             return;
         }

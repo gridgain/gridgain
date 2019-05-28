@@ -267,34 +267,13 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     public void testQueryWithGroupsSmallResult() throws Exception {
         execQuery("select K.grp, avg(K.id), min(K.id), sum(K.id) from K GROUP BY K.grp", false); // Tiny local result.
         assertEquals(1, localResults.size());
-        assertEquals(100, localResults.get(0).getRowCount());
-    }
-
-    /** Check GROUP BY operation on indexed col. */
-    @Test
-    public void testQueryWithGroupByIndexedCol() throws Exception {
-        execQuery("select K.indexed, sum(K.grp) from K GROUP BY K.indexed", true);
-
-        assertEquals(0, localResults.size());
-    }
-
-    /** Check GROUP BY operation on indexed col. */
-    @Test
-    public void testQueryWithGroupByPrimaryKey() throws Exception {
-        //TODO: GG-19071: make next test pass without hint.
-        execQuery("select K.indexed, sum(K.id) from K USE INDEX (K_IDX) GROUP BY K.indexed", true);
+        localResults.clear();
 
         execQuery("select K.indexed, sum(K.id) from K GROUP BY K.indexed", false); // Sorted grouping.
         assertEquals(1, localResults.size());
         localResults.clear();
-    }
 
-    /** Check GROUP BY operation on indexed col. */
-    @Test
-    public void testQueryWithGroupThenSort() throws Exception {
-        // Tiny local result with sorting.
-        execQuery("select K.grp_indexed, sum(K.id) as s from K GROUP BY K.grp_indexed ORDER BY s", false);
-
+        execQuery("select K.grp_indexed, sum(K.id) as s from K GROUP BY K.grp_indexed ORDER BY s", false); // Tiny local result with sort.
         assertEquals(1, localResults.size());
         localResults.clear();
     }
@@ -313,19 +292,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     public void testQueryWithDistinctAggregates() throws Exception {
         // TODO: GG-18542: Fix test.
         checkQueryExpectOOM("select K.grp, count(DISTINCT k.name) from K GROUP BY K.grp", true);
-
-        // Local result is quite small.
-        assertEquals(1, localResults.size());
-        assertTrue(maxMem > localResults.get(0).memoryAllocated());
-        assertTrue(100 > localResults.get(0).getRowCount());
-    }
-
-    /** Check lazy query with GROUP BY indexed col and with and DISTINCT aggregates. */
-    @Test
-    public void testLazyQueryWithGroupByIndexedColAndDistinctAggregates() throws Exception {
-        execQuery("select K.grp_indexed, count(DISTINCT k.name) from K GROUP BY K.grp_indexed", true);
-
-        assertEquals(0, localResults.size());
+        checkQueryExpectOOM("select K.grp_indexed, count(DISTINCT k.name) from K GROUP BY K.grp_indexed", true);
     }
 
     /** Check lazy query with GROUP BY indexed col (small result), then sort. */

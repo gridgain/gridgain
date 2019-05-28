@@ -19,6 +19,8 @@ package org.apache.ignite.internal.processors.query.h2.twostep.messages;
 import java.nio.ByteBuffer;
 import org.apache.ignite.cache.query.QueryCancelledException;
 import org.apache.ignite.cache.query.QueryRetryException;
+import org.apache.ignite.internal.processors.query.IgniteSQLException;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
@@ -49,6 +51,9 @@ public class GridQueryFailResponse implements Message {
     /** */
     private byte failCode;
 
+    /** */
+    private int sqlErrCode;
+
     /**
      * Default constructor.
      */
@@ -70,6 +75,11 @@ public class GridQueryFailResponse implements Message {
             this.failCode = RETRY_QUERY;
         else
             this.failCode = GENERAL_ERROR;
+
+        IgniteSQLException sqlEx = X.cause(err, IgniteSQLException.class);
+
+        if (sqlEx != null)
+            this.sqlErrCode = sqlEx.statusCode();
     }
 
     /**
@@ -91,6 +101,13 @@ public class GridQueryFailResponse implements Message {
      */
     public byte failCode() {
         return failCode;
+    }
+
+    /**
+     * @return Sql error code.
+     */
+    public int sqlErrCode() {
+        return sqlErrCode;
     }
 
     /** {@inheritDoc} */
@@ -133,6 +150,11 @@ public class GridQueryFailResponse implements Message {
 
                 writer.incrementState();
 
+            case 3:
+                if (!writer.writeLong("sqlErrCode", sqlErrCode))
+                    return false;
+
+                writer.incrementState();
         }
 
         return true;
@@ -170,6 +192,13 @@ public class GridQueryFailResponse implements Message {
 
                 reader.incrementState();
 
+            case 3:
+                sqlErrCode = reader.readInt("sqlErrCode");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
         }
 
         return reader.afterMessageRead(GridQueryFailResponse.class);
@@ -182,6 +211,6 @@ public class GridQueryFailResponse implements Message {
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 3;
+        return 4;
     }
 }

@@ -35,7 +35,7 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
         // OOM on reducer.
         checkQueryExpectOOM("select * from T as T0, T as T1 where T0.id < 1 " +
             "UNION " +
-            "select * from T as T2, T as T3 where T2.id >= 2 AND T2.id < 3", true);
+            "select * from T as T2, T as T3 where T2.id >= 2 AND T2.id < 3", false);
 
         assertEquals(5, localResults.size());
 
@@ -97,11 +97,9 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
         assertEquals(100, localResults.get(0).getRowCount());
         // Reduce
         assertEquals(100, localResults.get(1).getRowCount());
-    }
 
-    /** {@inheritDoc} */
-    @Test
-    @Override public void testQueryWithGroupThenSort() throws Exception {
+        localResults.clear();
+
         // Tiny local result with sorting.
         execQuery("select K.grp_indexed, sum(K.id) as s from K GROUP BY K.grp_indexed ORDER BY s", false);
 

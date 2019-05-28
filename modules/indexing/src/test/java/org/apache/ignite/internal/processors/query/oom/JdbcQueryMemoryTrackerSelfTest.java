@@ -47,14 +47,17 @@ public class JdbcQueryMemoryTrackerSelfTest extends QueryMemoryTrackerSelfTest {
             assert stmt.isClosed();
         }
 
-        conn.close();
+        if (conn != null) {
+            conn.close();
 
-        assert stmt.isClosed();
-        assert conn.isClosed();
+            assert conn.isClosed();
+        }
     }
 
     /** {@inheritDoc} */
     @Override protected List<List<?>> execQuery(String sql, boolean lazy) throws Exception {
+        initConnection(lazy);
+
         try (ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next())
                 ;
@@ -65,15 +68,6 @@ public class JdbcQueryMemoryTrackerSelfTest extends QueryMemoryTrackerSelfTest {
 
     /** {@inheritDoc} */
     protected void checkQueryExpectOOM(String sql, boolean lazy) throws Exception {
-        conn = DriverManager.getConnection(url + "?maxMemory=" + (maxMem));
-
-        conn.setSchema("\"PUBLIC\"");
-
-        stmt = conn.createStatement();
-
-        assert stmt != null;
-        assert !stmt.isClosed();
-
         SQLException ex = (SQLException)GridTestUtils.assertThrows(log, () -> {
             execQuery(sql, lazy);
 
@@ -82,5 +76,22 @@ public class JdbcQueryMemoryTrackerSelfTest extends QueryMemoryTrackerSelfTest {
 
         assertEquals(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY, ex.getErrorCode());
         assertEquals(IgniteQueryErrorCode.codeToSqlState(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY), ex.getSQLState());
+    }
+
+    /**
+     * Initialize SQL connection.
+     * @param lazy Lazy flag.
+     *
+     * @throws SQLException If failed.
+     */
+    private void initConnection(boolean lazy) throws SQLException {
+        conn = DriverManager.getConnection(url + "?maxMemory=" + (maxMem)+"&lazy="+lazy);
+
+        conn.setSchema("\"PUBLIC\"");
+
+        stmt = conn.createStatement();
+
+        assert stmt != null;
+        assert !stmt.isClosed();
     }
 }
