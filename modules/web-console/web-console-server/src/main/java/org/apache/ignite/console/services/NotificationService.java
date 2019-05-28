@@ -54,7 +54,7 @@ public class NotificationService {
             mailSrv.send(notification);
         }
         catch (Throwable e) {
-            log.error("Failed to send email", e);
+            log.error("Failed to send notification email to user [type={}, accId={}]", desc, acc.getId(), e);
         }
     }
 }
