@@ -18,15 +18,21 @@ package org.apache.ignite.console.config;
 
 import org.springframework.boot.context.embedded.ConfigurableEmbeddedServletContainer;
 import org.springframework.boot.context.embedded.EmbeddedServletContainerCustomizer;
+import org.springframework.core.Ordered;
 import org.springframework.stereotype.Component;
 
 /**
  * Programmatic configuration of default server port.
  */
 @Component
-public class ServerPortCustomizer implements EmbeddedServletContainerCustomizer {
+public class ServerPortCustomizer implements EmbeddedServletContainerCustomizer, Ordered {
     /** {@inheritDoc} */
     @Override public void customize(ConfigurableEmbeddedServletContainer container) {
         container.setPort(3000);
+    }
+
+    /** {@inheritDoc} */
+    @Override public int getOrder() {
+        return HIGHEST_PRECEDENCE;
     }
 }
