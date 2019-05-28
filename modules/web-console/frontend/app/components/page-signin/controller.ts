@@ -23,6 +23,7 @@ import {PageSigninStateParams} from './run';
 interface ISiginData {
     email: string,
     password: string
+    activationToken?: PageSigninStateParams['activationToken']
 }
 
 interface ISigninFormController extends ng.IFormController {
@@ -35,7 +36,8 @@ export default class PageSignIn implements ng.IPostLink {
 
     data: ISiginData = {
         email: null,
-        password: null
+        password: null,
+        activationToken: this.activationToken
     };
 
     form: ISigninFormController;
