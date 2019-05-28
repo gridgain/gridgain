@@ -25,7 +25,7 @@ import org.apache.ignite.console.json.JsonObject;
 import org.apache.ignite.console.repositories.AnnouncementRepository;
 import org.apache.ignite.console.tx.TransactionManager;
 import org.apache.ignite.console.web.model.SignUpRequest;
-import org.apache.ignite.console.web.socket.WebSocketHandler;
+import org.apache.ignite.console.web.socket.WebSocketsManager;
 import org.apache.ignite.transactions.Transaction;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
@@ -58,7 +58,7 @@ public class AdminService {
     private final AnnouncementRepository annRepo;
 
     /** */
-    private final WebSocketHandler wsm;
+    private final WebSocketsManager wsm;
 
     /**
      * @param txMgr Transactions manager.
@@ -76,7 +76,7 @@ public class AdminService {
         NotebooksService notebooksSrv,
         NotificationService notificationSrv,
         AnnouncementRepository annRepo,
-        WebSocketHandler wsm
+        WebSocketsManager wsm
     ) {
         this.txMgr = txMgr;
         this.accountsSrv = accountsSrv;

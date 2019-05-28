@@ -27,7 +27,7 @@ import org.apache.ignite.console.tx.TransactionManager;
 import org.apache.ignite.console.web.model.ChangeUserRequest;
 import org.apache.ignite.console.web.model.SignUpRequest;
 import org.apache.ignite.console.web.security.MissingConfirmRegistrationException;
-import org.apache.ignite.console.web.socket.WebSocketHandler;
+import org.apache.ignite.console.web.socket.WebSocketsManager;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.transactions.Transaction;
 import org.springframework.security.core.userdetails.UserDetailsChecker;
@@ -54,7 +54,7 @@ public class AccountsService implements UserDetailsService {
     protected AccountsRepository accountsRepo;
 
     /** */
-    protected WebSocketHandler wsm;
+    protected WebSocketsManager wsm;
 
     /** */
     protected NotificationService notificationSrv;
@@ -86,7 +86,7 @@ public class AccountsService implements UserDetailsService {
         AccountConfiguration accCfg,
         ActivationConfiguration activationCfg,
         PasswordEncoder encoder,
-        WebSocketHandler wsm,
+        WebSocketsManager wsm,
         AccountsRepository accountsRepo,
         TransactionManager txMgr,
         NotificationService notificationSrv

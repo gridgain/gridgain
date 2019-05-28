@@ -52,21 +52,17 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.PingMessage;
-import org.springframework.web.socket.PongMessage;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
-import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.ignite.console.json.JsonUtils.errorToJson;
 import static org.apache.ignite.console.json.JsonUtils.fromJson;
 import static org.apache.ignite.console.json.JsonUtils.toJson;
 import static org.apache.ignite.console.websocket.WebSocketConsts.ADMIN_ANNOUNCEMENT;
-import static org.apache.ignite.console.websocket.WebSocketConsts.AGENTS_PATH;
 import static org.apache.ignite.console.websocket.WebSocketConsts.AGENT_HANDSHAKE;
 import static org.apache.ignite.console.websocket.WebSocketConsts.AGENT_REVOKE_TOKEN;
 import static org.apache.ignite.console.websocket.WebSocketConsts.AGENT_STATUS;
-import static org.apache.ignite.console.websocket.WebSocketConsts.BROWSERS_PATH;
 import static org.apache.ignite.console.websocket.WebSocketConsts.CLUSTER_TOPOLOGY;
 import static org.apache.ignite.console.websocket.WebSocketConsts.ERROR;
 import static org.apache.ignite.console.websocket.WebSocketConsts.NODE_REST;
@@ -79,9 +75,9 @@ import static org.apache.ignite.console.websocket.WebSocketConsts.SCHEMA_IMPORT_
  * Web sockets manager.
  */
 @Service
-public class WebSocketHandler extends TextWebSocketHandler {
+public class WebSocketsManager {
     /** */
-    private static final Logger log = LoggerFactory.getLogger(WebSocketHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(WebSocketsManager.class);
 
     /** */
     private static final String VISOR_IGNITE = "org.apache.ignite.internal.visor.";
@@ -116,7 +112,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
     /**
      * @param accRepo Repository to work with accounts.
      */
-    public WebSocketHandler(AccountsRepository accRepo) {
+    public WebSocketsManager(AccountsRepository accRepo) {
         this.accRepo = accRepo;
 
         agents = new ConcurrentLinkedHashMap<>();
@@ -130,23 +126,23 @@ public class WebSocketHandler extends TextWebSocketHandler {
     /**
      * @param ws Session to close.
      */
-    public void closeSession(WebSocketSession ws) {
-        log.info("Session closed: " + ws);
+    public void closeAgentSession(WebSocketSession ws) {
+        AgentDescriptor desc = agents.remove(ws);
 
-        if (AGENTS_PATH.equals(ws.getUri().getPath())) {
-            AgentDescriptor desc = agents.remove(ws);
+        updateClusterInBrowsers(desc.accIds);
 
-            updateClusterInBrowsers(desc.accIds);
-
-            clusters.remove(ws);
-
-
-        }
-        else
-            browsers.remove(ws);
+        clusters.remove(desc.clusterId);
     }
 
     /**
+     * @param ws Session to close.
+     */
+    public void closeBrowserSession(WebSocketSession ws) {
+        browsers.remove(ws);
+    }
+
+    /**
+     * @param ws Session to send message.
      * @param evt Event.
      * @throws IOException If failed to send message.
      */
@@ -178,7 +174,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
      * @param wsBrowser Browser session.
      * @param evt Event to send.
      */
-    private void sendToAgent(WebSocketSession wsBrowser, WebSocketEvent evt) {
+    public void sendToAgent(WebSocketSession wsBrowser, WebSocketEvent evt) {
         try {
             UUID accId = browsers.get(wsBrowser);
 
@@ -281,9 +277,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
     /**
      * @param wsBrowser Browser session.
      */
-    protected void onBrowserConnect(WebSocketSession wsBrowser) {
-        log.info("Browser connected: " + wsBrowser);
-
+    public void onBrowserConnect(WebSocketSession wsBrowser) {
         Account acc = extractAccount(wsBrowser);
 
         browsers.put(wsBrowser, acc.getId());
@@ -355,7 +349,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
      * @param msg Incoming message.
      * @throws IOException If failed to handle event.
      */
-    private void handleTextMessageAgent(WebSocketSession ws, TextMessage msg) throws IOException {
+    public void handleAgentMessage(WebSocketSession ws, TextMessage msg) throws IOException {
         WebSocketEvent evt = fromJson(msg.getPayload(), WebSocketEvent.class);
 
         switch (evt.getEventType()) {
@@ -407,7 +401,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
      * @param msg Incoming message.
      * @throws IOException If failed to handle event.
      */
-    private void handleBrowserEvents(WebSocketSession ws, TextMessage msg) throws IOException {
+    public void handleBrowserEvents(WebSocketSession ws, TextMessage msg) throws IOException {
         WebSocketEvent evt = fromJson(msg.getPayload(), WebSocketEvent.class);
 
         switch (evt.getEventType()) {
@@ -421,7 +415,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 break;
 
             default:
-                log.warn("Unknown event: " + evt);
+                throw new IllegalStateException("Unknown event: " + evt);
         }
     }
 
@@ -522,47 +516,6 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 log.error("Failed to revoke token: " + oldTok);
             }
         });
-    }
-
-    /** {@inheritDoc} */
-    @Override public void handleTextMessage(WebSocketSession ws, TextMessage msg) {
-        try {
-            if (BROWSERS_PATH.equals(ws.getUri().getPath()))
-                handleBrowserEvents(ws, msg);
-            else
-                handleTextMessageAgent(ws, msg);
-        }
-        catch (Throwable e) {
-            log.error("Failed to process websocket message [session=" + ws + ", msg=" + msg + "]", e);
-        }
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void handlePongMessage(WebSocketSession ws, PongMessage msg) {
-        try {
-            if (log.isTraceEnabled())
-                log.trace("Received pong message [socket=" + ws + ", msg=" + msg + "]");
-        }
-        catch (Throwable e) {
-            log.error("Failed to process pong message [socket=" + ws + ", msg=" + msg + "]", e);
-        }
-    }
-
-    /** {@inheritDoc} */
-    @Override public void afterConnectionEstablished(WebSocketSession ws) {
-        log.info("Session opened [socket=" + ws + "]");
-
-        ws.setTextMessageSizeLimit(10 * 1024 * 1024); // TODO IGNITE-5617 how to configure in more correct way
-
-        if (BROWSERS_PATH.equals(ws.getUri().getPath()))
-            onBrowserConnect(ws);
-    }
-
-    /** {@inheritDoc} */
-    @Override public void afterConnectionClosed(WebSocketSession ws, CloseStatus status) {
-        log.info("Session closed [socket=" + ws + ", status=" + status + "]");
-
-        closeSession(ws);
     }
 
     /**
