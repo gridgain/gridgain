@@ -16,9 +16,9 @@
 
 package org.apache.ignite.console.services;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -71,7 +71,7 @@ public class MailService implements IMailService {
     }
 
     /** {@inheritDoc} */
-    @Override public void send(Notification notification) throws IOException, MessagingException, URISyntaxException {
+    @Override public void send(Notification notification) throws IOException, MessagingException {
         NotificationWrapper ctxObj = new NotificationWrapper(notification);
 
         EvaluationContext ctx = createContext(ctxObj);
@@ -102,7 +102,7 @@ public class MailService implements IMailService {
      * @param desc Notification type.
      * @return Message template or empty string.
      */
-    private String loadMessageTemplate(INotificationDescriptor desc) throws IOException, URISyntaxException {
+    private String loadMessageTemplate(INotificationDescriptor desc) throws IOException {
         String path = props.getTemplatePath(desc);
 
         if (path == null)
@@ -120,7 +120,12 @@ public class MailService implements IMailService {
                 url = new ClassPathResource(path).getURL();
         }
 
-        return new String(Files.readAllBytes(Paths.get(url.toURI())));
+        try {
+            return new String(Files.readAllBytes(Paths.get(url.toURI())));
+        }
+        catch (Exception e) {
+            throw new FileNotFoundException("Failed to load template file for email: " + path);
+        }
     }
 
     /**
