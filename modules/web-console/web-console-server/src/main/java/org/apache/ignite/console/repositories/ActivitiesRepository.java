@@ -16,15 +16,17 @@
 
 package org.apache.ignite.console.repositories;
 
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZonedDateTime;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.console.db.CacheHolder;
-import org.apache.ignite.console.db.OneToManyIndex;
 import org.apache.ignite.console.db.Table;
 import org.apache.ignite.console.dto.Activity;
 import org.apache.ignite.console.dto.ActivityKey;
@@ -43,10 +45,10 @@ public class ActivitiesRepository {
     private final TransactionManager txMgr;
 
     /** */
-    private final CacheHolder<ActivityKey, Activity> activitiesTbl;
+    private final Table<Activity> activitiesTbl;
 
     /** */
-    private final OneToManyIndex activitiesIdx;
+    private final CacheHolder<ActivityKey, Set<UUID>> activitiesIdx;
 
     /**
      * @param ignite Ignite.
@@ -55,9 +57,9 @@ public class ActivitiesRepository {
     public ActivitiesRepository(Ignite ignite, TransactionManager txMgr) {
         this.txMgr = txMgr;
 
-        activitiesTbl = new CacheHolder<>(ignite, "wc_activities");
+        activitiesTbl = new Table<>(ignite, "wc_activities");
 
-        activitiesIdx = new OneToManyIndex(ignite, "wc_account_activities_idx");
+        activitiesIdx = new CacheHolder<>(ignite, "wc_account_activities_idx");
     }
 
     /**
@@ -74,33 +76,26 @@ public class ActivitiesRepository {
 
             ActivityKey activityKey = new ActivityKey(accId, date);
 
-            activitiesTbl.get(activityKey)
+            Set<UUID> ids = activitiesIdx.cache().get(activityKey);
+
+            if (ids == null)
+                ids = new TreeSet<>();
 
             Collection<Activity> activities = activitiesTbl.loadAll(ids);
 
-
             Activity activity = activities
                 .stream()
-                .filter(item ->
-                    item.getDate() == date &&
-                    item.getGroup().equals(grp) &&
-                    item.getAction().equals(act)
-                )
+                .filter(item -> item.getGroup().equals(grp) && item.getAction().equals(act))
                 .findFirst()
-                .orElse(new Activity(
-                    UUID.randomUUID(),
-                    accId,
-                    date,
-                    grp,
-                    act,
-                    0)
-                );
+                .orElse(new Activity(UUID.randomUUID(), grp, act, 0));
 
             activity.increment(1);
 
             activitiesTbl.save(activity);
 
-            activitiesIdx.add(accId, activity.getId());
+            ids.add(activity.getId());
+
+            activitiesIdx.cache().put(activityKey, ids);
 
             tx.commit();
         }
@@ -113,24 +108,31 @@ public class ActivitiesRepository {
      */
     public Collection<Activity> activitiesForPeriod(UUID accId, long startDate, long endDate) {
         try (Transaction ignored = txMgr.txStart()) {
-            TreeSet<UUID> ids = activitiesIdx.load(accId);
-
-            Collection<Activity> activities = activitiesTbl.loadAll(ids);
+            ZonedDateTime dtStart = Instant.ofEpochMilli(startDate).atZone(UTC);
+            ZonedDateTime dtEnd = Instant.ofEpochMilli(endDate).atZone(UTC);
 
             Map<String, Activity> totals = new HashMap<>();
 
-            activities.forEach(activity -> {
-                long date = activity.getDate();
+            while (dtStart.isBefore(dtEnd)) {
+                ActivityKey key = new ActivityKey(accId, dtStart.toInstant().toEpochMilli());
 
-                if (startDate <= date && date <= endDate) {
-                    Activity total = totals.get(activity.getAction());
+                Set<UUID> ids = activitiesIdx.cache().get(key);
 
-                    if (total != null)
-                        total.increment(activity.getAmount());
-                    else
-                        totals.put(activity.getAction(), activity);
+                if (ids != null) {
+                    Collection<Activity> activities = activitiesTbl.loadAll(ids);
+
+                    activities.forEach(activity -> {
+                        Activity total = totals.get(activity.getAction());
+
+                        if (total != null)
+                            total.increment(activity.getAmount());
+                        else
+                            totals.put(activity.getAction(), activity);
+                    });
                 }
-            });
+
+                dtStart = dtStart.plusMonths(1);
+            }
 
             return totals.values();
         }

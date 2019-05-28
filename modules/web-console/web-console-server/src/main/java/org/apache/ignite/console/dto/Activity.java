@@ -24,12 +24,6 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  */
 public class Activity extends AbstractDto {
     /** */
-    private UUID owner;
-
-    /** */
-    private long date;
-
-    /** */
     private String grp;
 
     /** */
@@ -49,48 +43,16 @@ public class Activity extends AbstractDto {
      * Full constructor.
      *
      * @param id Activity ID.
-     * @param owner Owner ID.
-     * @param date Activity period (year and month).
      * @param grp Group.
      * @param act Activity.
      * @param amount Number of times activity was executed in current period..
      */
-    public Activity(UUID id, UUID owner, long date, String grp, String act, int amount) {
+    public Activity(UUID id, String grp, String act, int amount) {
         super(id);
 
-        this.owner = owner;
-        this.date = date;
         this.grp = grp;
         this.act = act;
         this.amount = amount;
-    }
-
-    /**
-     * @return Owner.
-     */
-    public UUID getOwner() {
-        return owner;
-    }
-
-    /**
-     * @param owner Owner.
-     */
-    public void setOwner(UUID owner) {
-        this.owner = owner;
-    }
-
-    /**
-     * @return Activity period.
-     */
-    public long getDate() {
-        return date;
-    }
-
-    /**
-     * @param date Activity period.
-     */
-    public void setDate(long date) {
-        this.date = date;
     }
 
     /**
