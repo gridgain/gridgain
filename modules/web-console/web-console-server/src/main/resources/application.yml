@@ -14,10 +14,10 @@
 # limitations under the License.
 #
 
-# Uncomment in case of HTTPS
+# Uncomment for HTTPS
 #server:
 #  port: 443
 #  ssl:
 #    key-store-type: JKS
 #    key-store: certificates/server.jks
-#    key-store-password: 123456
+#    key-store-password: change_me

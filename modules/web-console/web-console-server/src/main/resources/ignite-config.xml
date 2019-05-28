@@ -52,8 +52,6 @@
             </bean>
         </property>
 
-        <property name="connectorConfiguration"><null/></property>
-
         <!-- Allows encryption with SSL and TLS. For more details refer to https://apacheignite.readme.io/docs/ssltls -->
         <!--
             <property name="sslContextFactory">
