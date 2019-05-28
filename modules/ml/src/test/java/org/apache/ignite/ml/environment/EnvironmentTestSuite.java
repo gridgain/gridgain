@@ -16,7 +16,8 @@
 
 package org.apache.ignite.ml.environment;
 
-import org.apache.ignite.ml.environment.deploy.DeployingContextImpl;
+import org.apache.ignite.ml.environment.deploy.DeployingContextImplTest;
+import org.apache.ignite.ml.environment.deploy.MLDeployingTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -28,7 +29,8 @@ import org.junit.runners.Suite;
     LearningEnvironmentBuilderTest.class,
     LearningEnvironmentTest.class,
     PromiseTest.class,
-    DeployingContextImpl.class
+    DeployingContextImplTest.class,
+    MLDeployingTest.class
 })
 public class EnvironmentTestSuite {
 }
