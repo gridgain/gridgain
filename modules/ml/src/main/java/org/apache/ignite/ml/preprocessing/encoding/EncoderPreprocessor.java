@@ -17,9 +17,7 @@
 package org.apache.ignite.ml.preprocessing.encoding;
 
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
-import org.apache.ignite.ml.environment.deploy.DeployableObject;
 import org.apache.ignite.ml.preprocessing.Preprocessor;
 
 /**

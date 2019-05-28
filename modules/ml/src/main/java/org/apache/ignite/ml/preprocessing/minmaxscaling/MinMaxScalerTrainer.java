@@ -38,7 +38,6 @@ public class MinMaxScalerTrainer<K, V> implements PreprocessingTrainer<K, V> {
         LearningEnvironmentBuilder envBuilder,
         DatasetBuilder<K, V> datasetBuilder,
         Preprocessor<K, V> basePreprocessor) {
-
         PartitionContextBuilder<K, V, EmptyContext> ctxBuilder = (env, upstream, upstreamSize) -> new EmptyContext();
         try (Dataset<EmptyContext, MinMaxScalerPartitionData> dataset = datasetBuilder.build(
             envBuilder,

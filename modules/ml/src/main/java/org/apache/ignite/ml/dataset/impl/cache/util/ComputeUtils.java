@@ -128,49 +128,6 @@ public class ComputeUtils {
     }
 
     /**
-     * Callable that contains deploy context and can pass missing classes
-     * during learning session by p2p deployment.
-     * @param <C> Type of callable result.
-     */
-    private static class DeployableCallable<C> implements GridPeerDeployAware, IgniteCallable<C> {
-        /** Fun. */
-        private final IgniteFunction<Integer, C> fun;
-
-        /** Partition. */
-        private final int part;
-
-        /** Deploy context. */
-        private transient DeployingContext deployingContext;
-
-        /**
-         * Creates an instance of DeployableCallable.
-         * @param deployingContext Deploy context.
-         * @param part Partition.
-         * @param fun Callable function.
-         */
-        public DeployableCallable(DeployingContext deployingContext, int part, IgniteFunction<Integer, C> fun) {
-            this.fun = fun;
-            this.deployingContext = deployingContext;
-            this.part = part;
-        }
-
-        /** {@inheritDoc} */
-        @Override public C call() throws Exception {
-            return fun.apply(part);
-        }
-
-        /** {@inheritDoc} */
-        @Override public Class<?> deployClass() {
-            return deployingContext.userClass();
-        }
-
-        /** {@inheritDoc} */
-        @Override public ClassLoader classLoader() {
-            return deployingContext.clientClassLoader();
-        }
-    }
-
-    /**
      * Calls the specified {@code fun} function on all partitions so that is't guaranteed that partitions with the same
      * index of all specified caches will be placed on the same node and will not be moved before computation is
      * finished. If partitions are placed on different nodes then call will be retried, but not more than {@code
@@ -440,5 +397,48 @@ public class ComputeUtils {
         }
 
         return res;
+    }
+
+    /**
+     * Callable that contains deploy context and can pass missing classes
+     * during learning session by p2p deployment.
+     * @param <C> Type of callable result.
+     */
+    private static class DeployableCallable<C> implements GridPeerDeployAware, IgniteCallable<C> {
+        /** Fun. */
+        private final IgniteFunction<Integer, C> fun;
+
+        /** Partition. */
+        private final int part;
+
+        /** Deploy context. */
+        private transient DeployingContext deployingContext;
+
+        /**
+         * Creates an instance of DeployableCallable.
+         * @param deployingContext Deploy context.
+         * @param part Partition.
+         * @param fun Callable function.
+         */
+        public DeployableCallable(DeployingContext deployingContext, int part, IgniteFunction<Integer, C> fun) {
+            this.fun = fun;
+            this.deployingContext = deployingContext;
+            this.part = part;
+        }
+
+        /** {@inheritDoc} */
+        @Override public C call() throws Exception {
+            return fun.apply(part);
+        }
+
+        /** {@inheritDoc} */
+        @Override public Class<?> deployClass() {
+            return deployingContext.userClass();
+        }
+
+        /** {@inheritDoc} */
+        @Override public ClassLoader classLoader() {
+            return deployingContext.clientClassLoader();
+        }
     }
 }

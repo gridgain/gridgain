@@ -33,7 +33,6 @@ import org.apache.ignite.ml.util.ModelTrace;
  */
 public final class KMeansModel implements ClusterizationModel<Vector, Integer>, Exportable<KMeansModelFormat>,
     DeployableObject {
-
     /** Centers of clusters. */
     private final Vector[] centers;
 

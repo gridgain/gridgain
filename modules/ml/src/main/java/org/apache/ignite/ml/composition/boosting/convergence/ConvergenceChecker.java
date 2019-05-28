@@ -70,7 +70,6 @@ public abstract class ConvergenceChecker<K, V> implements Serializable {
                               IgniteFunction<Double, Double> externalLbToInternalMapping, Loss loss,
                               DatasetBuilder<K, V> datasetBuilder,
                               Preprocessor<K, V> preprocessor, double precision) {
-
         assert precision < 1 && precision >= 0;
 
         this.sampleSize = sampleSize;
@@ -91,7 +90,6 @@ public abstract class ConvergenceChecker<K, V> implements Serializable {
         LearningEnvironmentBuilder envBuilder,
         DatasetBuilder<K, V> datasetBuilder,
         ModelsComposition currMdl) {
-
         LearningEnvironment environment = envBuilder.buildForTrainer();
         environment.initDeployingContext(preprocessor);
 

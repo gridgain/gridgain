@@ -67,7 +67,6 @@ public abstract class GDBBinaryClassifierTrainer extends GDBTrainer {
     /** {@inheritDoc} */
     @Override protected <V, K> boolean learnLabels(DatasetBuilder<K, V> builder,
         Preprocessor<K, V> preprocessor) {
-
         learningEnvironment().initDeployingContext(preprocessor);
 
         Set<Double> uniqLabels = builder.build(

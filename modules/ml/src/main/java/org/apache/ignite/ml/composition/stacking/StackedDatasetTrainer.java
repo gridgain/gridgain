@@ -238,7 +238,6 @@ public class StackedDatasetTrainer<IS, IA, O, AM extends IgniteModel<IA, O>, L>
     /** {@inheritDoc} */
     @Override public <K, V> StackedModel<IS, IA, O, AM> update(StackedModel<IS, IA, O, AM> mdl,
         DatasetBuilder<K, V> datasetBuilder, Preprocessor<K, V> preprocessor) {
-
         learningEnvironment().initDeployingContext(preprocessor);
         return new StackedModel<>(getTrainer().update(mdl, datasetBuilder, preprocessor));
     }

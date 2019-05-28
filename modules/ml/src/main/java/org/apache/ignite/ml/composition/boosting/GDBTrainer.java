@@ -185,7 +185,6 @@ public abstract class GDBTrainer extends DatasetTrainer<ModelsComposition, Doubl
         LearningEnvironmentBuilder envBuilder,
         DatasetBuilder<K, V> builder,
         Preprocessor<K, V> preprocessor) {
-
         learningEnvironment().initDeployingContext(preprocessor);
 
         try (Dataset<EmptyContext, DecisionTreeData> dataset = builder.build(

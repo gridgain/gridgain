@@ -35,7 +35,6 @@ import org.apache.ignite.ml.math.primitives.vector.impl.SparseVector;
  */
 public final class BinaryObjectVectorizer<K> extends ExtractionUtils.StringCoordVectorizer<K, BinaryObject>
     implements DeployableObject {
-
     /** Serial version uid. */
     private static final long serialVersionUID = 2152161240934492838L;
 

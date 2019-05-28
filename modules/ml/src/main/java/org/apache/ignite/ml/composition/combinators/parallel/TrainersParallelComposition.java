@@ -94,7 +94,6 @@ public class TrainersParallelComposition<I, O, L> extends DatasetTrainer<IgniteM
     @Override public <K, V> IgniteModel<I, List<O>> update(IgniteModel<I, List<O>> mdl,
         DatasetBuilder<K, V> datasetBuilder,
         Preprocessor<K, V> preprocessor) {
-
         learningEnvironment().initDeployingContext(preprocessor);
 
         ModelsParallelComposition<I, O> typedMdl = (ModelsParallelComposition<I, O>)mdl;

@@ -32,7 +32,6 @@ import org.apache.ignite.ml.util.ModelTrace;
  */
 public class ModelsComposition implements IgniteModel<Vector, Double>, Exportable<ModelsCompositionFormat>,
     DeployableObject {
-
     /**
      * Predictions aggregator.
      */

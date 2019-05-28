@@ -156,7 +156,6 @@ public class BaggedTrainer<L> extends
     /** {@inheritDoc} */
     @Override public <K, V> BaggedModel update(BaggedModel mdl, DatasetBuilder<K, V> datasetBuilder,
         Preprocessor<K, V> preprocessor) {
-
         learningEnvironment().initDeployingContext(preprocessor);
 
         IgniteModel<Vector, Double> updated = getTrainer().update(mdl.model(), datasetBuilder, preprocessor);

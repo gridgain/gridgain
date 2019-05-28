@@ -69,6 +69,7 @@ public final class PipelineMdl<K, V> implements IgniteModel<Vector, Double>, Dep
             '}';
     }
 
+    /** {@inheritDoc} */
     @Override public Optional<Object> getDependency() {
         return Optional.of(preprocessor);
     }
