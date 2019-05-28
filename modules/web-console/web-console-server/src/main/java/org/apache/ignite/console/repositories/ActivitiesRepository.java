@@ -23,9 +23,11 @@ import java.util.Map;
 import java.util.TreeSet;
 import java.util.UUID;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.console.db.CacheHolder;
 import org.apache.ignite.console.db.OneToManyIndex;
 import org.apache.ignite.console.db.Table;
 import org.apache.ignite.console.dto.Activity;
+import org.apache.ignite.console.dto.ActivityKey;
 import org.apache.ignite.console.tx.TransactionManager;
 import org.apache.ignite.transactions.Transaction;
 import org.springframework.stereotype.Repository;
@@ -41,7 +43,7 @@ public class ActivitiesRepository {
     private final TransactionManager txMgr;
 
     /** */
-    private final Table<Activity> activitiesTbl;
+    private final CacheHolder<ActivityKey, Activity> activitiesTbl;
 
     /** */
     private final OneToManyIndex activitiesIdx;
@@ -53,7 +55,7 @@ public class ActivitiesRepository {
     public ActivitiesRepository(Ignite ignite, TransactionManager txMgr) {
         this.txMgr = txMgr;
 
-        activitiesTbl = new Table<>(ignite, "wc_activities");
+        activitiesTbl = new CacheHolder<>(ignite, "wc_activities");
 
         activitiesIdx = new OneToManyIndex(ignite, "wc_account_activities_idx");
     }
@@ -67,12 +69,15 @@ public class ActivitiesRepository {
      */
     public void save(UUID accId, String grp, String act) {
         try (Transaction tx = txMgr.txStart()) {
-            TreeSet<UUID> ids = activitiesIdx.load(accId);
+            // Activity period is the current year and month.
+            long date = LocalDate.now().atStartOfDay(UTC).withDayOfMonth(1).toInstant().toEpochMilli();
+
+            ActivityKey activityKey = new ActivityKey(accId, date);
+
+            activitiesTbl.get(activityKey)
 
             Collection<Activity> activities = activitiesTbl.loadAll(ids);
 
-            // Activity period is the current year and month.
-            long date = LocalDate.now().atStartOfDay(UTC).withDayOfMonth(1).toInstant().toEpochMilli();
 
             Activity activity = activities
                 .stream()
