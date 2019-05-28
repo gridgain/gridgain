@@ -224,7 +224,7 @@ public class AgentUtils {
         try {
             URI uri = URI.create(str);
 
-            URI proxyUri = new URI(!"ws".equalsIgnoreCase(uri.getScheme()) ? "http" : "https",
+            URI proxyUri = new URI("ws".equalsIgnoreCase(uri.getScheme()) ? "http" : "https",
                 uri.getUserInfo(),
                 uri.getHost(),
                 uri.getPort(),
@@ -233,7 +233,7 @@ public class AgentUtils {
                 uri.getFragment()
             );
 
-            boolean secure = false; // "https".equalsIgnoreCase(uri.getScheme());
+            boolean secure = "https".equalsIgnoreCase(proxyUri.getScheme());
 
             List<ProxyConfiguration.Proxy> proxies = ProxySelector.getDefault().select(proxyUri).stream()
                 .filter(p -> !p.equals(NO_PROXY))
