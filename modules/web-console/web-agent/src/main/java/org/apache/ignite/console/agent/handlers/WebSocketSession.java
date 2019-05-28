@@ -16,7 +16,7 @@
 
 package org.apache.ignite.console.agent.handlers;
 
-import java.io.IOException;
+import java.net.ConnectException;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.console.websocket.WebSocketEvent;
@@ -77,7 +77,7 @@ public class WebSocketSession {
         Session ses = sesRef.get();
 
         if (ses == null)
-            throw new IOException("Failed to send event to WebSocket: active session not found");
+            throw new ConnectException("Failed to send event to WebSocket: active session not found");
 
         ses.getRemote().sendStringByFuture(toJson(evt)).get();
     }

@@ -18,8 +18,6 @@ package org.apache.ignite.console.agent;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.Authenticator;
-import java.net.PasswordAuthentication;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -120,9 +118,22 @@ public class AgentLauncher {
         URI uri;
 
         try {
-            uri = new URI(cfg.serverUri());
+            uri = URI.create(cfg.serverUri());
+
+            if (uri.getScheme().startsWith("http")) {
+                uri = new URI("ws",
+                    uri.getUserInfo(),
+                    uri.getHost(),
+                    uri.getPort(),
+                    uri.getPath(),
+                    uri.getQuery(),
+                    uri.getFragment()
+                );
+                
+                cfg.serverUri(uri.toString());
+            }
         }
-        catch (URISyntaxException e) {
+        catch (Exception e) {
             log.error("Failed to parse Ignite Web Console uri", e);
 
             return null;
@@ -135,25 +146,6 @@ public class AgentLauncher {
             String tokens = String.valueOf(readPassword("Enter security tokens separated by comma: "));
 
             cfg.tokens(new ArrayList<>(Arrays.asList(tokens.trim().split(","))));
-        }
-
-        // Create proxy authenticator using passed properties.
-        switch (uri.getScheme()) {
-            case "http":
-            case "https":
-                final String username = System.getProperty(uri.getScheme() + ".proxyUsername");
-                final char[] pwd = System.getProperty(uri.getScheme() + ".proxyPassword", "").toCharArray();
-
-                Authenticator.setDefault(new Authenticator() {
-                    @Override protected PasswordAuthentication getPasswordAuthentication() {
-                        return new PasswordAuthentication(username, pwd);
-                    }
-                });
-
-                break;
-
-            default:
-                // No-op.
         }
 
         List<String> nodeURIs = cfg.nodeURIs();
@@ -182,24 +174,28 @@ public class AgentLauncher {
         return cfg;
     }
 
+
+
     /**
      * @param args Args.
      */
     public static void main(String[] args) {
         AgentConfiguration cfg = parseArgs(args);
 
-        if (cfg != null) {
-            try (WebSocketRouter websocket = new WebSocketRouter(cfg)) {
-                websocket.start();
+        // Failed to parse configuration or help printed.
+        if (cfg == null)
+            return;
 
-                websocket.awaitClose();
-            }
-            catch (Throwable e) {
-                log.error("Web Console Agent failed to start", e);
-            }
+        try (WebSocketRouter websocket = new WebSocketRouter(cfg)) {
+            websocket.start();
 
-            // Force exit because of known issue with Jetty: HTTP client does not shutdown its threads.
-            System.exit(0);
+            websocket.awaitClose();
         }
+        catch (Throwable e) {
+            log.error("Web Console Agent failed to start", e);
+        }
+
+        // Force exit because of known issue with Jetty: HTTP client does not shutdown its threads.
+        System.exit(0);
     }
 }

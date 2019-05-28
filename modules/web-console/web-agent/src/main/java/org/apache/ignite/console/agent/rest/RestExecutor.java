@@ -71,13 +71,20 @@ public class RestExecutor implements AutoCloseable {
     private final Map<List<String>, Integer> startIdxs = U.newHashMap(2);
 
     /**
-     * Constructor.
-     *
      * @param cfg Config.
-     * @throws Exception If failed to start HTTP client.
      */
-    public RestExecutor(AgentConfiguration cfg) throws Exception {
+    public RestExecutor(AgentConfiguration cfg) {
         this.cfg = cfg;
+
+        SslContextFactory sslCtxFactory = createSslFactory(cfg);
+
+        httpClient = new HttpClient(sslCtxFactory);
+    }
+
+    /**
+     * @param cfg Config.
+     */
+    private static SslContextFactory createSslFactory(AgentConfiguration cfg) {
         boolean trustAll = Boolean.getBoolean("trust.all");
 
         if (trustAll && !F.isEmpty(cfg.nodeTrustStore())) {
@@ -89,23 +96,17 @@ public class RestExecutor implements AutoCloseable {
 
         boolean ssl = trustAll || !F.isEmpty(cfg.nodeTrustStore()) || !F.isEmpty(cfg.nodeKeyStore());
 
-        if (ssl) {
-            SslContextFactory sslCtxFactory = sslContextFactory(
-                cfg.nodeKeyStore(),
-                cfg.nodeKeyStorePassword(),
-                trustAll,
-                cfg.nodeTrustStore(),
-                cfg.nodeTrustStorePassword(),
-                cfg.cipherSuites()
+        if (!ssl)
+            return null;
 
-            );
-
-            httpClient = new HttpClient(sslCtxFactory);
-        }
-        else
-            httpClient = new HttpClient();
-
-        httpClient.start();
+        return sslContextFactory(
+            cfg.nodeKeyStore(),
+            cfg.nodeKeyStorePassword(),
+            trustAll,
+            cfg.nodeTrustStore(),
+            cfg.nodeTrustStorePassword(),
+            cfg.cipherSuites()
+        );
     }
 
     /** {@inheritDoc} */
@@ -167,9 +168,12 @@ public class RestExecutor implements AutoCloseable {
      *
      * @param params Map with request params.
      * @return Response from cluster.
-     * @throws ConnectException if failed to connect to cluster.
+     * @throws Exception if failed to send request to cluster to cluster.
      */
-    public RestResult sendRequest(JsonObject params) throws ConnectException {
+    public RestResult sendRequest(JsonObject params) throws Exception {
+        if (!httpClient.isStarted())
+            httpClient.start();
+
         List<String> nodeURIs = cfg.nodeURIs();
 
         Integer startIdx = startIdxs.getOrDefault(nodeURIs, 0);
