@@ -16,8 +16,9 @@
 
 package org.apache.ignite.ml.preprocessing.encoding.stringencoder;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import org.apache.ignite.ml.environment.deploy.DeployableObject;
 import org.apache.ignite.ml.math.exceptions.preprocessing.UnknownCategorialFeatureValue;
@@ -88,7 +89,7 @@ public final class StringEncoderPreprocessor<K, V> extends EncoderPreprocessor<K
     }
 
     /** {@inheritDoc} */
-    @Override public Optional<Object> getDependency() {
-        return Optional.of(basePreprocessor);
+    @Override public List<Object> getDependencies() {
+        return Collections.singletonList(basePreprocessor);
     }
 }

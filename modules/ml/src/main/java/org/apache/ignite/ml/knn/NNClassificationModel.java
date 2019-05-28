@@ -21,7 +21,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import org.apache.ignite.ml.Exportable;
@@ -234,7 +233,7 @@ public abstract class NNClassificationModel implements IgniteModel<Vector, Doubl
     @Override public abstract <P> void saveModel(Exporter<KNNModelFormat, P> exporter, P path);
 
     /** {@inheritDoc} */
-    @Override public Optional<Object> getDependency() {
-        return Optional.of(distanceMeasure);
+    @Override public List<Object> getDependencies() {
+        return Collections.singletonList(distanceMeasure);
     }
 }

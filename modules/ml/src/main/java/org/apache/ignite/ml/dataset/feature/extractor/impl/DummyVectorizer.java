@@ -17,7 +17,8 @@
 package org.apache.ignite.ml.dataset.feature.extractor.impl;
 
 import java.io.Serializable;
-import java.util.Optional;
+import java.util.Collections;
+import java.util.List;
 import org.apache.ignite.ml.dataset.feature.extractor.ExtractionUtils;
 import org.apache.ignite.ml.environment.deploy.DeployableObject;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
@@ -51,7 +52,7 @@ public final class DummyVectorizer<K> extends ExtractionUtils.ArrayLikeVectorize
     }
 
     /** {@inheritDoc} */
-    @Override public Optional<Object> getDependency() {
-        return Optional.empty();
+    @Override public List<Object> getDependencies() {
+        return Collections.emptyList();
     }
 }

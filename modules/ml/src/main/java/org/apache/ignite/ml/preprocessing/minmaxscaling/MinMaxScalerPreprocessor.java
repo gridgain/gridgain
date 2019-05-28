@@ -16,7 +16,8 @@
 
 package org.apache.ignite.ml.preprocessing.minmaxscaling;
 
-import java.util.Optional;
+import java.util.Collections;
+import java.util.List;
 import org.apache.ignite.ml.environment.deploy.DeployableObject;
 import org.apache.ignite.ml.preprocessing.Preprocessor;
 import org.apache.ignite.ml.structures.LabeledVector;
@@ -97,7 +98,7 @@ public final class MinMaxScalerPreprocessor<K, V> implements Preprocessor<K, V>,
     }
 
     /** {@inheritDoc} */
-    @Override public Optional<Object> getDependency() {
-        return Optional.of(basePreprocessor);
+    @Override public List<Object> getDependencies() {
+        return Collections.singletonList(basePreprocessor);
     }
 }

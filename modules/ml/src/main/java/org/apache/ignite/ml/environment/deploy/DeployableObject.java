@@ -16,7 +16,7 @@
 
 package org.apache.ignite.ml.environment.deploy;
 
-import java.util.Optional;
+import java.util.List;
 
 /**
  * Represents an final objects from Ignite ML library like models or preprocessors having
@@ -26,7 +26,7 @@ import java.util.Optional;
  */
 public interface DeployableObject {
     /**
-     * Returns dependency of this object that can be object with class defined by client side and unknown for server.
+     * Returns dependencies of this object that can be object with class defined by client side and unknown for server.
      */
-    public Optional<Object> getDependency();
+    public List<Object> getDependencies();
 }

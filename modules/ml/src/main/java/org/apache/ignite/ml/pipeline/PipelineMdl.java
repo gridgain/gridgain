@@ -16,7 +16,8 @@
 
 package org.apache.ignite.ml.pipeline;
 
-import java.util.Optional;
+import java.util.Collections;
+import java.util.List;
 import org.apache.ignite.ml.IgniteModel;
 import org.apache.ignite.ml.environment.deploy.DeployableObject;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
@@ -70,7 +71,7 @@ public final class PipelineMdl<K, V> implements IgniteModel<Vector, Double>, Dep
     }
 
     /** {@inheritDoc} */
-    @Override public Optional<Object> getDependency() {
-        return Optional.of(preprocessor);
+    @Override public List<Object> getDependencies() {
+        return Collections.singletonList(preprocessor);
     }
 }

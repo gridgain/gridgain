@@ -16,7 +16,8 @@
 
 package org.apache.ignite.ml.preprocessing.developer;
 
-import java.util.Optional;
+import java.util.Collections;
+import java.util.List;
 import org.apache.ignite.ml.environment.deploy.DeployableObject;
 import org.apache.ignite.ml.math.functions.IgniteFunction;
 import org.apache.ignite.ml.preprocessing.Preprocessor;
@@ -54,7 +55,7 @@ public final class MappedPreprocessor<K, V, L0, L1> implements Preprocessor<K, V
     }
 
     /** {@inheritDoc} */
-    @Override public Optional<Object> getDependency() {
-        return Optional.of(original);
+    @Override public List<Object> getDependencies() {
+        return Collections.singletonList(original);
     }
 }

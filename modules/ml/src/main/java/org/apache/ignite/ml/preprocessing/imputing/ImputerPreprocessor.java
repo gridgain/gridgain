@@ -16,7 +16,8 @@
 
 package org.apache.ignite.ml.preprocessing.imputing;
 
-import java.util.Optional;
+import java.util.Collections;
+import java.util.List;
 import org.apache.ignite.ml.environment.deploy.DeployableObject;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.preprocessing.Preprocessor;
@@ -69,7 +70,7 @@ public final class ImputerPreprocessor<K, V> implements Preprocessor<K, V>, Depl
     }
 
     /** {@inheritDoc} */
-    @Override public Optional<Object> getDependency() {
-        return Optional.of(basePreprocessor);
+    @Override public List<Object> getDependencies() {
+        return Collections.singletonList(basePreprocessor);
     }
 }

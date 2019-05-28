@@ -16,7 +16,8 @@
 
 package org.apache.ignite.ml.dataset.feature.extractor.impl;
 
-import java.util.Optional;
+import java.util.Collections;
+import java.util.List;
 import org.apache.ignite.ml.dataset.feature.extractor.ExtractionUtils;
 import org.apache.ignite.ml.environment.deploy.DeployableObject;
 
@@ -27,7 +28,6 @@ import org.apache.ignite.ml.environment.deploy.DeployableObject;
  */
 public final class DoubleArrayVectorizer<K> extends ExtractionUtils.ArrayLikeVectorizer<K, double[]>
     implements DeployableObject {
-
     /** Serial version uid. */
     private static final long serialVersionUID = -1177109334215177722L;
 
@@ -51,7 +51,7 @@ public final class DoubleArrayVectorizer<K> extends ExtractionUtils.ArrayLikeVec
     }
 
     /** {@inheritDoc} */
-    @Override public Optional<Object> getDependency() {
-        return Optional.empty();
+    @Override public List<Object> getDependencies() {
+        return Collections.emptyList();
     }
 }

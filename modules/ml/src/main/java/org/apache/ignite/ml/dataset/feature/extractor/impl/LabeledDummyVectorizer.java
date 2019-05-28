@@ -16,14 +16,13 @@
 
 package org.apache.ignite.ml.dataset.feature.extractor.impl;
 
-import java.util.Optional;
-import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
-import org.apache.ignite.ml.environment.deploy.DeployableObject;
-import org.apache.ignite.ml.structures.LabeledVector;
-
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
+import org.apache.ignite.ml.environment.deploy.DeployableObject;
+import org.apache.ignite.ml.structures.LabeledVector;
 
 /**
  * Vectorizer on LabeledVector.
@@ -65,7 +64,7 @@ public class LabeledDummyVectorizer<K, L> extends Vectorizer<K, LabeledVector<L>
     }
 
     /** {@inheritDoc} */
-    @Override public Optional<Object> getDependency() {
-        return Optional.empty();
+    @Override public List<Object> getDependencies() {
+        return Collections.emptyList();
     }
 }

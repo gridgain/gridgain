@@ -16,9 +16,9 @@
 
 package org.apache.ignite.ml.dataset.feature.extractor.impl;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.internal.binary.BinaryUtils;
@@ -142,7 +142,7 @@ public final class BinaryObjectVectorizer<K> extends ExtractionUtils.StringCoord
     }
 
     /** {@inheritDoc} */
-    @Override public Optional<Object> getDependency() {
-        return Optional.empty();
+    @Override public List<Object> getDependencies() {
+        return Collections.emptyList();
     }
 }

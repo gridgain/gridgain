@@ -16,8 +16,8 @@
 
 package org.apache.ignite.ml.clustering.gmm;
 
+import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import org.apache.ignite.ml.IgniteModel;
 import org.apache.ignite.ml.environment.deploy.DeployableObject;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
@@ -52,7 +52,7 @@ public class GmmModel extends DistributionMixture<MultivariateGaussianDistributi
     }
 
     /** {@inheritDoc} */
-    @Override public Optional<Object> getDependency() {
-        return Optional.empty();
+    @Override public List<Object> getDependencies() {
+        return Collections.emptyList();
     }
 }

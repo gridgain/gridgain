@@ -18,7 +18,6 @@ package org.apache.ignite.ml.composition;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import org.apache.ignite.ml.Exportable;
 import org.apache.ignite.ml.Exporter;
 import org.apache.ignite.ml.IgniteModel;
@@ -101,7 +100,7 @@ public class ModelsComposition implements IgniteModel<Vector, Double>, Exportabl
     }
 
     /** {@inheritDoc} */
-    @Override public Optional<Object> getDependency() {
-        return Optional.of(predictionsAggregator);
+    @Override public List<Object> getDependencies() {
+        return Collections.singletonList(predictionsAggregator);
     }
 }

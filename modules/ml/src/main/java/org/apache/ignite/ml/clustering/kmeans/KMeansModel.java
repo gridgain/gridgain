@@ -17,8 +17,8 @@
 package org.apache.ignite.ml.clustering.kmeans;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import org.apache.ignite.ml.Exportable;
 import org.apache.ignite.ml.Exporter;
@@ -129,7 +129,7 @@ public final class KMeansModel implements ClusterizationModel<Vector, Integer>, 
     }
 
     /** {@inheritDoc} */
-    @Override public Optional<Object> getDependency() {
-        return Optional.of(distanceMeasure);
+    @Override public List<Object> getDependencies() {
+        return Collections.singletonList(distanceMeasure);
     }
 }

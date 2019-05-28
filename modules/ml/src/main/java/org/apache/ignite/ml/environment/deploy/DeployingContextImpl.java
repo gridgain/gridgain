@@ -16,7 +16,7 @@
 
 package org.apache.ignite.ml.environment.deploy;
 
-import java.util.Optional;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,11 +55,12 @@ public class DeployingContextImpl implements DeployingContext {
 
         Object objectToDeploy = jobObj;
         while(objectToDeploy instanceof DeployableObject) {
-            Optional<Object> dep = ((DeployableObject)objectToDeploy).getDependency();
-            if(dep.isPresent())
-                objectToDeploy = dep.get();
-            else
+            // TODO: GG-19105
+            List<Object> deps = ((DeployableObject)objectToDeploy).getDependencies();
+            if(deps.isEmpty())
                 break;
+            else
+                objectToDeploy = deps.get(0);
         }
 
         assert objectToDeploy != null;
