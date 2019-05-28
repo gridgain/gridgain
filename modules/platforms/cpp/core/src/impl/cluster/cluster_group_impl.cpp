@@ -51,8 +51,30 @@ namespace ignite
                 };
             };
 
+            class ClusterNodesHolder
+            {
+            public:
+                ClusterNodesHolder() {}
+                void SetNodes(const std::vector<SP_ClusterNodeImpl>& nodes);
+                std::vector<SP_ClusterNodeImpl> GetNodes();
+
+            private:
+                std::vector<SP_ClusterNodeImpl> nodes;
+                IGNITE_NO_COPY_ASSIGNMENT(ClusterNodesHolder);
+            };
+
+            void  ClusterNodesHolder::SetNodes(const std::vector<SP_ClusterNodeImpl>& nodes)
+            {
+                this->nodes = nodes;
+            }
+
+            std::vector<SP_ClusterNodeImpl> ClusterNodesHolder::GetNodes()
+            {
+                return nodes;
+            }
+
             ClusterGroupImpl::ClusterGroupImpl(SP_IgniteEnvironment env, jobject javaRef) :
-                InteropTarget(env, javaRef), topVer(0)
+                InteropTarget(env, javaRef), nodes(new ClusterNodesHolder()), topVer(0)
             {
                 computeImpl = InternalGetCompute();
             }
@@ -106,7 +128,7 @@ namespace ignite
                 return computeImpl;
             }
 
-            ClusterGroupImpl::ClusterNodes ClusterGroupImpl::GetNodes()
+            std::vector<SP_ClusterNodeImpl> ClusterGroupImpl::GetNodes()
             {
                 return RefreshNodes();
             }
@@ -160,7 +182,7 @@ namespace ignite
                 return SP_ComputeImpl(new compute::ComputeImpl(GetEnvironmentPointer(), computeProc));
             }
 
-            ClusterGroupImpl::ClusterNodes ClusterGroupImpl::RefreshNodes()
+            std::vector<SP_ClusterNodeImpl> ClusterGroupImpl::RefreshNodes()
             {
                 long oldTopVer = 0;
 
@@ -186,17 +208,21 @@ namespace ignite
                     int64_t newTopVer = reader.ReadInt64();
                     int cnt = reader.ReadInt32();
 
-                    ClusterGroupImpl::ClusterNodes newNodes;
+                    std::vector<SP_ClusterNodeImpl> newNodes;
                     for (int i = 0; i < cnt; i++)
-                        newNodes.PushBack(GetEnvironment().GetNode(reader.ReadGuid()));
+                    {
+                        SP_ClusterNodeImpl node = GetEnvironment().GetNode(reader.ReadGuid());
+                        if (node.IsValid())
+                            newNodes.push_back(node);
+                    }
 
                     topVer = newTopVer;
-                    nodes = newNodes;
+                    nodes.Get()->SetNodes(newNodes);
 
                     return newNodes;
                 }
 
-                return nodes;
+                return nodes.Get()->GetNodes();
             }
         }
     }

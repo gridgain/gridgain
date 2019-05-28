@@ -33,6 +33,7 @@ namespace ignite
         {
             /* Forward declaration. */
             class ClusterGroupImpl;
+            class ClusterNodesHolder;
 
             /* Shared pointer. */
             typedef common::concurrent::SharedPointer<ClusterGroupImpl> SP_ClusterGroupImpl;
@@ -44,7 +45,7 @@ namespace ignite
             {
                 typedef common::concurrent::SharedPointer<IgniteEnvironment> SP_IgniteEnvironment;
                 typedef common::concurrent::SharedPointer<compute::ComputeImpl> SP_ComputeImpl;
-                typedef ignite::common::DynamicSizeArray<SP_ClusterNodeImpl> ClusterNodes;
+                typedef common::concurrent::SharedPointer<ClusterNodesHolder> SP_ClusterNodesHolder;
             public:
                 /**
                  * Constructor used to create new instance.
@@ -99,7 +100,7 @@ namespace ignite
                  *
                  * @return Vector of cluster nodes.
                  */
-                ClusterNodes GetNodes();
+                std::vector<SP_ClusterNodeImpl> GetNodes();
 
                 /**
                  * Check if the Ignite grid is active.
@@ -149,13 +150,13 @@ namespace ignite
                  *
                  * @return Instance of compute.
                  */
-                ClusterNodes RefreshNodes();
+                std::vector<SP_ClusterNodeImpl> RefreshNodes();
 
                 /** Compute for the cluster group. */
                 SP_ComputeImpl computeImpl;
 
                 /** Cluster nodes. */
-                ClusterNodes nodes;
+                SP_ClusterNodesHolder nodes;
 
                 /** Cluster nodes top version. */
                 int64_t topVer;

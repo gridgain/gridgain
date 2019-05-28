@@ -67,6 +67,15 @@
     <ClCompile Include="..\..\src\impl\cluster\cluster_node_impl.cpp">
       <Filter>Code\impl\cluster</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\cluster\cluster_node.cpp">
+      <Filter>Code\cluster</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\cluster\cluster_group.cpp">
+      <Filter>Code\cluster</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\cluster\ignite_cluster.cpp">
+      <Filter>Code\cluster</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\ignite\impl\cache\cache_impl.h">
@@ -255,6 +264,15 @@
     <ClInclude Include="..\..\include\ignite\impl\cluster\cluster_node_impl.h">
       <Filter>Code\impl\cluster</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\ignite\cluster\cluster_node.h">
+      <Filter>Code\cluster</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\ignite\cluster\cluster_group.h">
+      <Filter>Code\cluster</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\ignite\cluster\ignite_cluster.h">
+      <Filter>Code\cluster</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Code">
@@ -307,6 +325,9 @@
     </Filter>
     <Filter Include="Code\impl\compute">
       <UniqueIdentifier>{ef20cfe1-cd30-429d-a241-575696df8399}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Code\cluster">
+      <UniqueIdentifier>{45d247ce-364b-4eec-87dc-1ecbee6c6b03}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

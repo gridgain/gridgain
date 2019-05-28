@@ -28,6 +28,7 @@
 #include <ignite/cache/cache.h>
 #include <ignite/transactions/transactions.h>
 #include <ignite/compute/compute.h>
+#include <ignite/cluster/ignite_cluster.h>
 
 namespace ignite
 {
@@ -205,6 +206,15 @@ namespace ignite
         transactions::Transactions GetTransactions();
 
         /**
+         * Get cluster.
+         *
+         * This method should only be called on the valid instance.
+         *
+         * @return Cluster class instance.
+         */
+        cluster::IgniteCluster GetCluster();
+
+        /**
          * Get compute.
          *
          * This method should only be called on the valid instance.
@@ -212,6 +222,15 @@ namespace ignite
          * @return Compute class instance.
          */
         compute::Compute GetCompute();
+
+        /**
+         * Get compute.
+         *
+         * This method should only be called on the valid instance.
+         *
+         * @return Compute class ove the specified cluster group.
+         */
+        compute::Compute GetCompute(cluster::ClusterGroup grp);
 
         /**
          * Get ignite binding.

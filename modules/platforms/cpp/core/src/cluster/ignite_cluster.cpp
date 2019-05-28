@@ -14,43 +14,34 @@
  * limitations under the License.
  */
 
-#include "ignite/impl/cluster/ignite_cluster_impl.h"
+#include "ignite/cluster/ignite_cluster.h"
 
-using namespace ignite::jni::java;
+using namespace ignite::common::concurrent;
 using namespace ignite::impl::cluster;
 
 namespace ignite
 {
-    namespace impl
+    namespace cluster
     {
-        namespace cluster
+        IgniteCluster::IgniteCluster(SharedPointer<ignite::impl::cluster::IgniteClusterImpl> impl) :
+            impl(impl)
         {
-            IgniteClusterImpl::IgniteClusterImpl(SP_ClusterGroupImpl impl) :
-                impl(impl)
-            {
-                // No-op.
-            }
+            // No-op.
+        }
 
-            IgniteClusterImpl::~IgniteClusterImpl()
-            {
-                // No-op.
-            }
+        bool IgniteCluster::IsActive()
+        {
+            return impl.Get()->IsActive();
+        }
 
-            bool IgniteClusterImpl::IsActive()
-            {
-                return impl.Get()->IsActive();
-            }
+        void IgniteCluster::SetActive(bool active)
+        {
+            impl.Get()->SetActive(active);
+        }
 
-            void IgniteClusterImpl::SetActive(bool active)
-            {
-                impl.Get()->SetActive(active);
-            }
-
-            SP_ClusterGroupImpl IgniteClusterImpl::ForLocal()
-            {
-                return impl;
-            }
+        cluster::ClusterGroup IgniteCluster::ForLocal()
+        {
+            return cluster::ClusterGroup(impl.Get()->ForLocal());
         }
     }
 }
-

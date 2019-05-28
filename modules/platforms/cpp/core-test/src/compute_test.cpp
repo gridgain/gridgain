@@ -65,6 +65,61 @@ struct ComputeTestSuiteFixture
     }
 };
 
+/*
+ * Test setup fixture for cluster group.
+ */
+struct ComputeTestSuiteFixtureClusterGroup
+{
+    enum NodeType {
+        SERVER_NODE_ATTRIBUTE_VALUE0,
+        SERVER_NODE_ATTRIBUTE_VALUE1,
+        CLIENT_NODE,
+    };
+
+    Ignite node;
+
+    Ignite MakeNode(const char* name, NodeType type = SERVER_NODE_ATTRIBUTE_VALUE0)
+    {
+        std::string config;
+
+        switch (type) {
+        case SERVER_NODE_ATTRIBUTE_VALUE0:
+            config = "compute-server0.xml";
+            break;
+
+        case SERVER_NODE_ATTRIBUTE_VALUE1:
+            config = "compute-server1.xml";
+            break;
+
+        case CLIENT_NODE:
+            config = "compute-client.xml";
+            break;
+        }
+
+#ifdef IGNITE_TESTS_32
+        std::replace(config.begin(), config.end(), ".xml", "-32.xml");
+#endif
+        return StartNode(config.c_str(), name);
+    }
+
+    /*
+     * Constructor.
+     */
+    ComputeTestSuiteFixtureClusterGroup() :
+        node(MakeNode("ClientNode"))
+    {
+        // No-op.
+    }
+
+    /*
+     * Destructor.
+     */
+    ~ComputeTestSuiteFixtureClusterGroup()
+    {
+        Ignition::StopAll(true);
+    }
+};
+
 struct Func1 : ComputeFunc<std::string>
 {
     Func1() :
@@ -530,6 +585,57 @@ BOOST_AUTO_TEST_CASE(IgniteBroadcastRemoteError)
     BOOST_CHECK(!res.IsReady());
 
     BOOST_CHECK_EXCEPTION(res.GetValue(), IgniteError, IsTestError);
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_FIXTURE_TEST_SUITE(ComputeTestSuiteClusterGroup, ComputeTestSuiteFixtureClusterGroup)
+
+BOOST_AUTO_TEST_CASE(IgniteGetClusterGroupForServers)
+{
+    Ignite server1 = MakeNode("ServerNode1", SERVER_NODE_ATTRIBUTE_VALUE1);
+    Ignite server2 = MakeNode("ServerNode2", SERVER_NODE_ATTRIBUTE_VALUE1);
+    Ignite client = MakeNode("ClinetNode", CLIENT_NODE);
+
+    cluster::ClusterGroup localGroup = client.GetCluster().ForLocal();
+    cluster::ClusterGroup group = localGroup.ForServers();
+
+    Compute compute = client.GetCompute(group);
+
+    BOOST_TEST_CHECKPOINT("Broadcasting");
+    std::vector<std::string> res = compute.Broadcast<std::string>(Func2(8, 5));
+
+    BOOST_CHECK_EQUAL(res.size(), 3);
+    BOOST_CHECK_EQUAL(res[0], "8.5");
+    BOOST_CHECK_EQUAL(res[1], "8.5");
+    BOOST_CHECK_EQUAL(res[2], "8.5");
+}
+
+BOOST_AUTO_TEST_CASE(IgniteGetClusterGroupForAttribute)
+{
+    Ignite server1 = MakeNode("ServerNode1", SERVER_NODE_ATTRIBUTE_VALUE1);
+    Ignite server2 = MakeNode("ServerNode2", SERVER_NODE_ATTRIBUTE_VALUE1);
+    Ignite client = MakeNode("ClinetNode", CLIENT_NODE);
+
+    cluster::ClusterGroup localGroup = client.GetCluster().ForLocal();
+    cluster::ClusterGroup group1 = localGroup.ForAttribute("DemoAttribute", "Value0");
+    cluster::ClusterGroup group2 = localGroup.ForAttribute("DemoAttribute", "Value1");
+
+    Compute compute1 = client.GetCompute(group1);
+    Compute compute2 = client.GetCompute(group2);
+
+    BOOST_TEST_CHECKPOINT("Broadcasting1");
+    std::vector<std::string> res1 = compute1.Broadcast<std::string>(Func2(8, 5));
+
+    BOOST_CHECK_EQUAL(res1.size(), 1);
+    BOOST_CHECK_EQUAL(res1[0], "8.5");
+
+    BOOST_TEST_CHECKPOINT("Broadcasting2");
+    std::vector<std::string> res2 = compute2.Broadcast<std::string>(Func2(8, 5));
+
+    BOOST_CHECK_EQUAL(res2.size(), 2);
+    BOOST_CHECK_EQUAL(res2[0], "8.5");
+    BOOST_CHECK_EQUAL(res2[1], "8.5");
 }
 
 BOOST_AUTO_TEST_SUITE_END()

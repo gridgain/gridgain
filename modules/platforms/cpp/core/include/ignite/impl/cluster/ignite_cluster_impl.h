@@ -62,6 +62,13 @@ namespace ignite
                  */
                 void SetActive(bool active);
 
+                /**
+                 * Gets a cluster group impl consisting from the local node.
+                 *
+                 * @return Cluster group impl consisting from local node.
+                 */
+                SP_ClusterGroupImpl ForLocal();
+
             private:
                 IGNITE_NO_COPY_ASSIGNMENT(IgniteClusterImpl);
 
