@@ -828,6 +828,32 @@ public class KillQueryTest extends GridCommonAbstractTest {
         }
     }
 
+    @Test
+    public void testAsyncCancelQueryWithPartitions() throws Exception {
+        checkCancelQueryWithPartitions(false);
+    }
+
+    @Test
+    public void testCancelQueryWithPartitions() throws Exception {
+        checkCancelQueryWithPartitions(false);
+    }
+
+    public void checkCancelQueryWithPartitions(boolean async) throws Exception {
+        IgniteInternalFuture cancelRes = cancel(1, async);
+
+        GridTestUtils.assertThrows(log, () -> {
+            ignite.cache(DEFAULT_CACHE_NAME).query(
+                new SqlFieldsQuery("select * from Integer where _key <> awaitLatchCancelled()")
+                .setPartitions(1, 2, 3)
+            ).getAll();
+
+            return null;
+        }, CacheException.class, "The query was cancelled while executing.");
+
+        // Ensures that there were no exceptions within async cancellation process.
+        cancelRes.get(CHECK_RESULT_TIMEOUT);
+    }
+
     /**
      * Cancels current query which wait on barrier.
      *
