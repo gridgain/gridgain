@@ -135,6 +135,7 @@ public abstract class SelectGroups {
                 currentGroupRowId++;
                 return curEntry.getKey();
             }
+            curEntry = null;
             return null;
         }
 
@@ -145,6 +146,8 @@ public abstract class SelectGroups {
             currentGroupRowId--;
 
             onUpdate(curEntry.getKey(), curEntry.getValue(), null);
+            
+            curEntry = null;
         }
 
         @Override
@@ -482,6 +485,8 @@ public abstract class SelectGroups {
             return;
 
         long size;
+
+        assert old != null || row != null;
 
         /* TODO: GG-18628: Estimate Aggregate objects size. */
         if (row != null && old != null)

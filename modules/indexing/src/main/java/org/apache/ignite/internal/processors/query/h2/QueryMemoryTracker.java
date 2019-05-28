@@ -74,19 +74,15 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
      * @param size Allocated size in bytes.
      * @throws IgniteOutOfMemoryException if memory limit has been exceeded.
      */
-    public void allocate(long size) {
+    @Override public void allocate(long size) {
         assert !closed && size >= 0;
 
         if (ALLOC_UPD.addAndGet(this, size) >= maxMem)
             throw new IgniteOutOfMemoryException("SQL query out of memory");
     }
 
-    /**
-     * Free allocated memory.
-     *
-     * @param size Free size in bytes.
-     */
-    public void free(long size) {
+    /** {@inheritDoc} */
+    @Override public void free(long size) {
         assert size >= 0;
 
         long allocated = ALLOC_UPD.addAndGet(this, -size);
