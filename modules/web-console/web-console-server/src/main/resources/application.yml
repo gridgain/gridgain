@@ -13,3 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
+# Uncomment for HTTPS:
+#server:
+#  port: 443
+#  ssl:
+#    key-store-type: JKS
+#    key-store: certificates/server.jks
+#    key-store-password: change_me
