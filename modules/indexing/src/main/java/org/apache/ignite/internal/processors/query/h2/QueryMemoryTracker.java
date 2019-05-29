@@ -18,8 +18,6 @@ package org.apache.ignite.internal.processors.query.h2;
 
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-import org.apache.ignite.IgniteSystemProperties;
-import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -30,15 +28,6 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  * Track query memory usage and throws an exception if query tries to allocate memory over limit.
  */
 public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable {
-    //TODO: GG-18629: Move defaults to memory quotas configuration.
-    /**
-     * Default query memory limit.
-     *
-     * Note: Actually, it is  per query (Map\Reduce) stage limit. With QueryParallelism every query-thread will be
-     * treated as separate Map query.
-     */
-    public static final long DFLT_QRY_MEMORY_LIMIT = Long.getLong(IgniteSystemProperties.IGNITE_SQL_QUERY_MEMORY_LIMIT,
-        (long)(Runtime.getRuntime().maxMemory() * 0.6d / IgniteConfiguration.DFLT_QUERY_THREAD_POOL_SIZE));
 
     /** Allocated field updater. */
     private static final AtomicLongFieldUpdater<QueryMemoryTracker> ALLOC_UPD =
@@ -51,6 +40,9 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
     /** Memory limit. */
     private final long maxMem;
 
+    /** Parent tracker. */
+    private final H2MemoryTracker parent;
+
     /** Memory allocated. */
     private volatile long allocated;
 
@@ -60,13 +52,14 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
     /**
      * Constructor.
      *
-     * @param maxMem Query memory limit in bytes. Note: If zero value, then {@link QueryMemoryTracker#DFLT_QRY_MEMORY_LIMIT}
-     * will be used. Note: Negative values are reserved for disable memory tracking.
+     * @param parent Parent memory tracker.
+     * @param maxMem Query memory limit in bytes.
      */
-    public QueryMemoryTracker(long maxMem) {
-        assert maxMem >= 0;
+    QueryMemoryTracker(H2MemoryTracker parent, long maxMem) {
+        assert maxMem > 0;
 
-        this.maxMem = maxMem > 0 ? maxMem : DFLT_QRY_MEMORY_LIMIT;
+        this.parent = parent;
+        this.maxMem = maxMem;
     }
 
     /**
@@ -81,16 +74,21 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
         if (size == 0)
             return;
 
+        //TODO: GG-18628: tries to allocate memory from parent first. Let's make this allocation coarse-grained.
+        parent.allocate(size);
+
         if (ALLOC_UPD.addAndGet(this, size) >= maxMem)
             throw new IgniteSQLException("SQL query run out of memory.", IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY);
     }
 
     /** {@inheritDoc} */
-    @Override public void free(long size) {
+    @Override public void release(long size) {
         assert size >= 0;
 
         if (size == 0)
             return;
+
+        parent.release(size);
 
         long allocated = ALLOC_UPD.addAndGet(this, -size);
 
@@ -115,7 +113,7 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
     @Override public void close() {
         // It is not expected to be called concurrently with allocate\free.
         if (CLOSED_UPD.compareAndSet(this, Boolean.FALSE, Boolean.TRUE))
-            free(allocated);
+            release(allocated);
     }
 
     /** {@inheritDoc} */

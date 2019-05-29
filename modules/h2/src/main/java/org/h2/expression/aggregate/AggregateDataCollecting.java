@@ -130,7 +130,7 @@ class AggregateDataCollecting extends AggregateData implements Iterable<Value> {
         if (values != null && (memTracker = ses.queryMemoryTracker()) != null) {
             values = null;
 
-            memTracker.free(allocated);
+            memTracker.release(allocated);
         }
     }
 }

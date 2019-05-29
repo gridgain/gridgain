@@ -1188,8 +1188,15 @@ public final class IgniteSystemProperties {
      *
      * Default: MaxHeapSize/AvailableCPUs.
      */
-    // TODO: GG-18629: Move to memory quotas configuration.
-    public static final String IGNITE_SQL_QUERY_MEMORY_LIMIT = "IGNITE_SQL_QUERY_MEMORY_LIMIT";
+    public static final String IGNITE_DEFAULT_SQL_QUERY_MEMORY_LIMIT = "IGNITE_DEFAULT_SQL_QUERY_MEMORY_LIMIT";
+
+    /**
+     * Defines memory pool size available for sql queries on node.
+     *
+     * Default: 60% MaxHeapSize.
+     */
+
+    public static final String IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE = "IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE";
 
     /**
      * Enforces singleton.

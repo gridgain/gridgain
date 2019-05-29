@@ -654,7 +654,7 @@ public class GridReduceQueryExecutor {
                             null,
                             null,
                             null,
-                            maxMem < 0 ? null : new QueryMemoryTracker(maxMem));
+                            maxMem < 0 ? null : h2.memoryManager().createQueryMemoryTracker(maxMem));
 
                         H2Utils.setupConnection(r.connection(), qctx, false, enforceJoinOrder);
 

@@ -262,6 +262,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     /** Parser. */
     private QueryParser parser;
 
+    /** Memory manager */
+    private QueryMemoryManager memoryManager;
+
     /** */
     private final IgniteInClosure<? super IgniteInternalFuture<?>> logger = new IgniteInClosure<IgniteInternalFuture<?>>() {
         @Override public void apply(IgniteInternalFuture<?> fut) {
@@ -527,7 +530,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 null,
                 mvccSnapshot,
                 null,
-                maxMem < 0 ? null : new QueryMemoryTracker(maxMem));
+                maxMem < 0 ? null : memoryManager.createQueryMemoryTracker(maxMem));
 
             return new GridQueryFieldsResultAdapter(select.meta(), null) {
                 @Override public GridCloseableIterator<List<?>> iterator() throws IgniteCheckedException {
@@ -1913,6 +1916,13 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         return runningQryMgr;
     }
 
+    /**
+     * @return Reduce query executor.
+     */
+    public QueryMemoryManager memoryManager() {
+        return memoryManager;
+    }
+
     /** {@inheritDoc} */
     @SuppressWarnings({"deprecation"})
     @Override public void start(GridKernalContext ctx, GridSpinBusyLock busyLock) throws IgniteCheckedException {
@@ -1942,6 +1952,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         nodeId = ctx.localNodeId();
         marshaller = ctx.config().getMarshaller();
+
+        memoryManager = new QueryMemoryManager(0); //TODO: GG-18629: Get global_memory_quota value from configuration.
 
         mapQryExec = new GridMapQueryExecutor();
         rdcQryExec = new GridReduceQueryExecutor();
@@ -2164,6 +2176,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         schemaMgr.stop();
         longRunningQryMgr.stop();
         connMgr.stop();
+
+        memoryManager.close();
 
         cmdProc.stop();
 

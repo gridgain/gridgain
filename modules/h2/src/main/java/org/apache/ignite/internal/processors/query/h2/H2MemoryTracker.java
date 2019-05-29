@@ -30,5 +30,5 @@ public abstract class H2MemoryTracker implements AutoCloseable {
      *
      * @param size Free size in bytes.
      */
-    public abstract void free(long size);
+    public abstract void release(long size);
 }

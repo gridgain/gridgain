@@ -74,7 +74,7 @@ public class H2ManagedLocalResult extends H2BaseLocalResult {
         allocMem += memory;
 
         if (memory < 0)
-            mem.free(memory);
+            mem.release(memory);
         else
             mem.allocate(memory);
     }
@@ -92,7 +92,7 @@ public class H2ManagedLocalResult extends H2BaseLocalResult {
             distinctRows = null;
             rows = null;
 
-            mem.free(allocMem);
+            mem.release(allocMem);
         }
     }
 }

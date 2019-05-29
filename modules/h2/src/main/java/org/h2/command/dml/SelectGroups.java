@@ -417,7 +417,7 @@ public abstract class SelectGroups {
         currentGroupRowId = 0;
 
         if (trackable()) {
-            session.queryMemoryTracker().free(allocMem);
+            session.queryMemoryTracker().release(allocMem);
 
             allocMem = 0;
         }
@@ -530,7 +530,7 @@ public abstract class SelectGroups {
         if (size > 0)
             session.queryMemoryTracker().allocate(size);
         else
-            session.queryMemoryTracker().free(size);
+            session.queryMemoryTracker().release(size);
     }
 
     /**

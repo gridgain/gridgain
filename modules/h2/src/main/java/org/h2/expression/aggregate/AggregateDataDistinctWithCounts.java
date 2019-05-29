@@ -90,7 +90,7 @@ class AggregateDataDistinctWithCounts extends AggregateData  {
         if (values != null && (memTracker = ses.queryMemoryTracker()) != null) {
             values = null;
 
-            memTracker.free(allocated);
+            memTracker.release(allocated);
         }
     }
 }
