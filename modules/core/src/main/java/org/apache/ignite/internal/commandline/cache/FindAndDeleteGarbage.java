@@ -181,4 +181,9 @@ public class FindAndDeleteGarbage implements Command<FindAndDeleteGarbage.Argume
 
         args = new Arguments(groups, nodeId, delete);
     }
+
+    /** {@inheritDoc} */
+    @Override public String name() {
+        return FIND_AND_DELETE_GARBAGE.text().toUpperCase();
+    }
 }

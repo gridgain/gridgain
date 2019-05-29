@@ -136,4 +136,9 @@ public class CacheContention implements Command<CacheContention.Arguments> {
 
         args = new Arguments(nodeId, minQueueSize, maxPrint);
     }
+
+    /** {@inheritDoc} */
+    @Override public String name() {
+        return CONTENTION.text().toUpperCase();
+    }
 }

@@ -65,4 +65,9 @@ public class DeactivateCommand implements Command<Void> {
     @Override public Void arg() {
         return null;
     }
+
+    /** {@inheritDoc} */
+    @Override public String name() {
+        return DEACTIVATE.toCommandName();
+    }
 }

@@ -255,4 +255,9 @@ public class BaselineCommand implements Command<BaselineArguments> {
 
         this.baselineArgs = baselineArgs.build();
     }
+
+    /** {@inheritDoc} */
+    @Override public String name() {
+        return BASELINE.toCommandName();
+    }
 }

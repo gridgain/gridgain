@@ -373,4 +373,9 @@ public class IdleVerify implements Command<IdleVerify.Arguments> {
             }
         }
     }
+
+    /** {@inheritDoc} */
+    @Override public String name() {
+        return IDLE_VERIFY.text().toUpperCase();
+    }
 }

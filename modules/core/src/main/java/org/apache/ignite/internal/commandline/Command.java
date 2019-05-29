@@ -95,4 +95,9 @@ public interface Command<T> {
      * @param logger Would be used as output.
      */
     public void printUsage(CommandLogger logger);
+
+    /**
+     * @return command name.
+     */
+    String name();
 }

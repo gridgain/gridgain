@@ -160,4 +160,9 @@ public class CacheDistribution implements Command<CacheDistribution.Arguments> {
 
         args = new Arguments(caches, nodeId, userAttributes);
     }
+
+    /** {@inheritDoc} */
+    @Override public String name() {
+        return DISTRIBUTION.text().toUpperCase();
+    }
 }

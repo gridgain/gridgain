@@ -70,4 +70,9 @@ public class ResetLostPartitions implements Command<Set<String>> {
     @Override public void parseArguments(CommandArgIterator argIter) {
         caches = argIter.nextStringSet("Cache names");
     }
+
+    /** {@inheritDoc} */
+    @Override public String name() {
+        return RESET_LOST_PARTITIONS.text().toUpperCase();
+    }
 }

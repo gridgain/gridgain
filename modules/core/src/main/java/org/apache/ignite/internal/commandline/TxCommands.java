@@ -579,4 +579,9 @@ public class TxCommands implements Command<VisorTxTaskArg> {
             }
         }
     }
+
+    /** {@inheritDoc} */
+    @Override public String name() {
+        return TX.toCommandName();
+    }
 }

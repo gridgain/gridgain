@@ -426,4 +426,9 @@ public class CacheViewer implements Command<CacheViewer.Arguments> {
             logger.log(sb.toString());
         }
     }
+
+    /** {@inheritDoc} */
+    @Override public String name() {
+        return LIST.text().toUpperCase();
+    }
 }

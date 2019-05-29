@@ -270,4 +270,9 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
 
         args = new Arguments(caches, nodeId, checkFirst, checkThrough);
     }
+
+    /** {@inheritDoc} */
+    @Override public String name() {
+        return VALIDATE_INDEXES.text().toUpperCase();
+    }
 }

@@ -256,4 +256,9 @@ public class WalCommands implements Command<T2<String, String>> {
             logger.nl();
         }
     }
+
+    /** {@inheritDoc} */
+    @Override public String name() {
+        return WAL.toCommandName();
+    }
 }

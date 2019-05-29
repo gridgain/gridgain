@@ -94,6 +94,26 @@ public class CommandLogger {
     }
 
     /**
+     * Generates readable error message from exception
+     * @param e Exctption
+     * @return error message
+     */
+    public static String errorMessage(Throwable e) {
+        String msg = e.getMessage();
+
+        if (F.isEmpty(msg))
+            msg = e.getClass().getName();
+
+        if (msg.startsWith("Failed to handle request")) {
+            int p = msg.indexOf("err=");
+
+            msg = msg.substring(p + 4, msg.length() - 1);
+        }
+
+        return msg;
+    }
+
+    /**
      * Output specified string to console.
      *
      * @param s String to output.
@@ -192,18 +212,7 @@ public class CommandLogger {
         if (!F.isEmpty(s))
             log(s);
 
-        String msg = e.getMessage();
-
-        if (F.isEmpty(msg))
-            msg = e.getClass().getName();
-
-        if (msg.startsWith("Failed to handle request")) {
-            int p = msg.indexOf("err=");
-
-            msg = msg.substring(p + 4, msg.length() - 1);
-        }
-
-        log("Error: " + msg);
+        log("Error: " + errorMessage(e));
     }
 
 
