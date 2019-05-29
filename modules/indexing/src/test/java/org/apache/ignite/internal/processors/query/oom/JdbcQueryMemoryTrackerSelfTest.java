@@ -67,7 +67,7 @@ public class JdbcQueryMemoryTrackerSelfTest extends QueryMemoryTrackerSelfTest {
     }
 
     /** {@inheritDoc} */
-    protected void checkQueryExpectOOM(String sql, boolean lazy) throws Exception {
+    @Override protected void checkQueryExpectOOM(String sql, boolean lazy) {
         SQLException ex = (SQLException)GridTestUtils.assertThrows(log, () -> {
             execQuery(sql, lazy);
 

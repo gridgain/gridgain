@@ -29,7 +29,7 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
 
     /** {@inheritDoc} */
     @Test
-    @Override public void testUnionOfSmallDataSetsWithLargeResult() throws Exception {
+    @Override public void testUnionOfSmallDataSetsWithLargeResult() {
         maxMem = 2 * 1024 * 1024;
 
         // OOM on reducer.
@@ -67,7 +67,7 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
 
     /** {@inheritDoc} */
     @Test
-    @Override public void testLazyQueryWithHighLimit() throws Exception {
+    public void testLazyQueryWithHighLimit() {
         // OOM on reducer.
         checkQueryExpectOOM("select * from K LIMIT 8000", true);
 
@@ -78,7 +78,7 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
 
     /** {@inheritDoc} */
     @Test
-    @Override public void testLazyQueryWithSortByIndexedCol() throws Exception {
+    @Override public void testLazyQueryWithSortByIndexedCol() {
         // OOM on reducer.
         checkQueryExpectOOM("select * from K ORDER BY K.indexed", true);
 
@@ -89,7 +89,7 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
 
     /** {@inheritDoc} */
     @Test
-    @Override public void testLazyQueryWithGroupByThenSort() {throws Exception {
+    @Override public void testLazyQueryWithGroupByThenSort() {
         maxMem = 512 * 1024;
 
         // Query failed on map side due too many groups.
@@ -104,7 +104,7 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
 
     /** {@inheritDoc} */
     @Test
-    @Override public void testQueryWithDistinctAndGroupBy() throws Exception {
+    @Override public void testQueryWithDistinctAndGroupBy() {
         checkQueryExpectOOM("select DISTINCT K.name from K GROUP BY K.id", true);
 
         // Local result is quite small.
@@ -139,7 +139,7 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
 
     /** Check GROUP BY operation on indexed col. */
     @Test
-    @Override public void testQueryWithGroupByIndexedCol() throws Exception {
+    @Override public void testQueryWithGroupByIndexedCol() {
         // OOM on reducer.
         checkQueryExpectOOM("select K.indexed, sum(K.grp) from K GROUP BY K.indexed", true);
 

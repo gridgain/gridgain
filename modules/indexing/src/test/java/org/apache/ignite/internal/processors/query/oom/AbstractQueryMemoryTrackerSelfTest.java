@@ -23,9 +23,12 @@ import javax.cache.CacheException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
+import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.h2.H2LocalResultFactory;
 import org.apache.ignite.internal.processors.query.h2.H2ManagedLocalResult;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.h2.engine.Session;
@@ -39,7 +42,7 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
  */
 public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstractTest {
     /** Row count. */
-    static final int SMALL_TABLE_SIZE = 1000;
+    private static final int SMALL_TABLE_SIZE = 1000;
 
     /** Row count. */
     static final int BIG_TABLE_SIZE = 10000;
@@ -126,7 +129,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
     /** Check simple query failure on large data set. */
     @Test
-    public void testSimpleQueryLargeResult() throws Exception {
+    public void testSimpleQueryLargeResult() {
         checkQueryExpectOOM("select * from K", false);
 
         assertEquals(1, localResults.size());
@@ -152,7 +155,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
     /** Check simple query on large data set with small limit. */
     @Test
-    public void testQueryWithHighLimit() throws Exception {
+    public void testQueryWithHighLimit() {
         checkQueryExpectOOM("select * from K LIMIT 8000", false);
 
         assertEquals(1, localResults.size());
@@ -170,7 +173,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
     /** Check query failure with ORDER BY indexed col. */
     @Test
-    public void testQueryWithSortByIndexedCol() throws Exception {
+    public void testQueryWithSortByIndexedCol() {
         checkQueryExpectOOM("select * from K ORDER BY K.indexed", false);
         assertEquals(1, localResults.size());
         assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
@@ -178,7 +181,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
     /** Check lazy query failure with ORDER BY non-indexed col. */
     @Test
-    public void testLazyQueryWithSort() throws Exception {
+    public void testLazyQueryWithSort() {
         checkQueryExpectOOM("select * from K ORDER BY K.grp", true);
         assertEquals(1, localResults.size());
         assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
@@ -186,7 +189,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
     /** Check query failure with ORDER BY non-indexed col. */
     @Test
-    public void testQueryWithSort() throws Exception {
+    public void testQueryWithSort() {
         // Order by non-indexed field.
         checkQueryExpectOOM("select * from K ORDER BY K.grp", false);
         assertEquals(1, localResults.size());
@@ -211,7 +214,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
     /** Check UNION operation with large sub-selects. */
     @Test
-    public void testUnionLargeDataSets() throws Exception {
+    public void testUnionLargeDataSets() {
         // None of sub-selects fits to memory.
         checkQueryExpectOOM("select * from T as T0, T as T1 where T0.id < 4 " +
             "UNION " +
@@ -279,7 +282,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
     /** Check GROUP BY operation on indexed col. */
     @Test
-    public void testQueryWithGroupByIndexedCol() {
+    public void testQueryWithGroupByIndexedCol() throws Exception {
         execQuery("select K.indexed, sum(K.grp) from K GROUP BY K.indexed", true);
 
         assertEquals(0, localResults.size());
@@ -287,7 +290,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
     /** Check GROUP BY operation on indexed col. */
     @Test
-    public void testQueryWithGroupByPrimaryKey() {
+    public void testQueryWithGroupByPrimaryKey() throws Exception {
         //TODO: GG-19071: make next test pass without hint.
         execQuery("select K.indexed, sum(K.id) from K USE INDEX (K_IDX) GROUP BY K.indexed", true);
 
@@ -296,7 +299,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
     /** Check GROUP BY operation on indexed col. */
     @Test
-    public void testQueryWithGroupThenSort() {
+    public void testQueryWithGroupThenSort() throws Exception {
         // Tiny local result with sorting.
         execQuery("select K.grp_indexed, sum(K.id) as s from K GROUP BY K.grp_indexed ORDER BY s", false);
 
@@ -306,7 +309,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
     /** Check lazy query with GROUP BY non-indexed col failure due to too many groups. */
     @Test
-    public void testQueryWithGroupBy() throws Exception {
+    public void testQueryWithGroupBy() {
         // Too many groups causes OOM.
         checkQueryExpectOOM("select K.name, count(K.id), sum(K.grp) from K GROUP BY K.name", true);
 
@@ -330,7 +333,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
     /** Check lazy query with GROUP BY indexed col and with and DISTINCT aggregates. */
     @Test
-    public void testLazyQueryWithGroupByIndexedColAndDistinctAggregates() {
+    public void testLazyQueryWithGroupByIndexedColAndDistinctAggregates() throws Exception {
         execQuery("select K.grp_indexed, count(DISTINCT k.name) from K  USE INDEX (K_GRP_IDX) GROUP BY K.grp_indexed", true);
 
         assertEquals(0, localResults.size());
@@ -338,7 +341,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
     /** Check lazy query with GROUP BY indexed col (small result), then sort. */
     @Test
-    public void testLazyQueryWithGroupByThenSort() {
+    public void testLazyQueryWithGroupByThenSort() throws Exception {
         maxMem = 512 * 1024;
 
         checkQueryExpectOOM("select K.indexed, sum(K.grp) as a from K " +
@@ -396,7 +399,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
      * @param sql SQL query
      * @param args Query parameters.
      */
-    protected void execSql(String sql, Object... args) {
+    private void execSql(String sql, Object... args) {
         grid(0).context().query().querySqlFields(
             new SqlFieldsQuery(sql).setArgs(args), false).getAll();
     }
@@ -405,12 +408,18 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
      * @param sql SQL query.
      * @param lazy Lazy flag.
      */
-    protected void checkQueryExpectOOM(String sql, boolean lazy) throws Exception {
-        GridTestUtils.assertThrows(log, () -> {
+    protected void checkQueryExpectOOM(String sql, boolean lazy) {
+        CacheException ex = (CacheException)GridTestUtils.assertThrows(log, () -> {
             execQuery(sql, lazy);
 
             return null;
-        }, CacheException.class, "IgniteSQLException: SQL query run out of memory.");
+        }, CacheException.class, "SQL query run out of memory");
+
+        IgniteSQLException sqlEx = X.cause(ex, IgniteSQLException.class);
+
+        assertNotNull("SQL exception missed.", sql);
+        assertEquals(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY, sqlEx.statusCode());
+        assertEquals(IgniteQueryErrorCode.codeToSqlState(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY), sqlEx.sqlState());
     }
 
     /**
