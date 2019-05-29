@@ -16,14 +16,46 @@
 
 package org.apache.ignite.internal.processors.cache.query.continuous;
 
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
+import org.junit.Rule;
+import org.junit.rules.TestRule;
+import org.junit.runner.Description;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.model.Statement;
 
 /**
  *
  */
+@RunWith(Parameterized.class)
 public class CacheContinuousQueryAsyncFailoverAtomicSelfTest
     extends CacheContinuousQueryFailoverAbstractSelfTest {
+
+    @Parameterized.Parameters
+    public static List<Object[]> pars() {
+        return IntStream.range(0, 100)
+            .mapToObj(i -> new Object[0])
+            .collect(Collectors.toList());
+    }
+
+    @Rule
+    public TestRule filterByName = new TestRule() {
+        @Override public Statement apply(Statement base, Description description) {
+            if (description.getMethodName().contains("testFailoverStartStopBackup"))
+                return base;
+
+            return new Statement() {
+                @Override public void evaluate() throws Throwable {
+                    // do nothing
+                }
+            };
+        }
+    };
+
     /** {@inheritDoc} */
     @Override protected CacheMode cacheMode() {
         return CacheMode.PARTITIONED;
