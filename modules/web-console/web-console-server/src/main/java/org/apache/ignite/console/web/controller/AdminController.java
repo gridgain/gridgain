@@ -24,6 +24,7 @@ import org.apache.ignite.console.dto.Announcement;
 import org.apache.ignite.console.json.JsonArray;
 import org.apache.ignite.console.json.JsonObject;
 import org.apache.ignite.console.services.AdminService;
+import org.apache.ignite.console.web.model.PeriodFilterRequest;
 import org.apache.ignite.console.web.model.SignUpRequest;
 import org.apache.ignite.console.web.model.ToggleRequest;
 import org.springframework.http.ResponseEntity;
@@ -56,13 +57,13 @@ public class AdminController {
     }
 
     /**
-     * @param params Parameters.
+     * @param period Period filter.
      * @return List of accounts.
      */
     @ApiOperation(value = "Get a list of users.")
     @PostMapping(path = "/list", consumes = APPLICATION_JSON_VALUE)
-    public ResponseEntity<JsonArray> loadAccounts(@ApiIgnore @RequestBody JsonObject params) {
-        return ResponseEntity.ok(adminSrv.list());
+    public ResponseEntity<JsonArray> loadAccounts(@ApiIgnore @RequestBody PeriodFilterRequest period) {
+        return ResponseEntity.ok(adminSrv.list(period.getStartDate(), period.getEndDate()));
     }
 
     /**
