@@ -18,6 +18,7 @@ package org.apache.ignite.internal;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.TimeZone;
 import org.apache.ignite.lang.IgniteProductVersion;
 
 /**
@@ -66,7 +67,11 @@ public class IgniteVersionUtils {
         BUILD_TSTAMP = !BUILD_TSTAMP_FROM_PROPERTY.isEmpty() && Long.parseLong(BUILD_TSTAMP_FROM_PROPERTY) != 0
             ? Long.parseLong(BUILD_TSTAMP_FROM_PROPERTY) : System.currentTimeMillis() / 1000;
 
-        BUILD_TSTAMP_STR = new SimpleDateFormat("yyyyMMdd").format(new Date(BUILD_TSTAMP * 1000));
+        SimpleDateFormat buildDateFormatter = new SimpleDateFormat("yyyyMMdd");
+
+        buildDateFormatter.setTimeZone(TimeZone.getTimeZone("UTC"));
+
+        BUILD_TSTAMP_STR = buildDateFormatter.format(new Date(BUILD_TSTAMP * 1000));
 
         COPYRIGHT = BUILD_TSTAMP_STR.substring(0, 4) + " Copyright(C) Apache Software Foundation";
 
