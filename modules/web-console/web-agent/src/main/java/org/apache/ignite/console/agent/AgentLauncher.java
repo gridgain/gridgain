@@ -121,7 +121,7 @@ public class AgentLauncher {
             uri = URI.create(cfg.serverUri());
 
             if (uri.getScheme().startsWith("http")) {
-                uri = new URI("ws",
+                uri = new URI("http".equalsIgnoreCase(uri.getScheme()) ? "ws" : "wss",
                     uri.getUserInfo(),
                     uri.getHost(),
                     uri.getPort(),

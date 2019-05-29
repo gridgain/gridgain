@@ -106,7 +106,8 @@ public class WebSocketRouter implements AutoCloseable {
         this.cfg = cfg;
 
         httpClient = new HttpClient(createSslFactory(cfg));
-        
+
+//        TODO GG-18379 Investigate how to establish native websocket connection with proxy.
         configureProxy(httpClient, cfg.serverUri());
 
         clusterHnd = new ClusterHandler(cfg, wss);
