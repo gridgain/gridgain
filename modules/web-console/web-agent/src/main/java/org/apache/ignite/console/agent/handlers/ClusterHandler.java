@@ -98,9 +98,8 @@ public class ClusterHandler {
     /**
      * @param cfg Web agent configuration.
      * @param wss Websocket session.
-     * @throws Exception If failed to create cluster handler.
      */
-    public ClusterHandler(AgentConfiguration cfg, WebSocketSession wss) throws Exception {
+    public ClusterHandler(AgentConfiguration cfg, WebSocketSession wss) {
         this.cfg = cfg;
         this.wss = wss;
 
@@ -131,9 +130,9 @@ public class ClusterHandler {
      *
      * @param params Command params.
      * @return Command result.
-     * @throws IOException If failed to execute.
+     * @throws Exception If failed to execute.
      */
-    private RestResult restCommand(JsonObject params) throws IOException {
+    private RestResult restCommand(JsonObject params) throws Exception {
         if (!F.isEmpty(sesTok))
             params.put("sessionToken", sesTok);
         else if (!F.isEmpty(cfg.nodeLogin()) && !F.isEmpty(cfg.nodePassword())) {
@@ -167,9 +166,9 @@ public class ClusterHandler {
      * @param ver Cluster version.
      * @param nid Node ID.
      * @return Cluster active state.
-     * @throws IOException If failed to collect cluster active state.
+     * @throws Exception If failed to collect cluster active state.
      */
-    private boolean active(IgniteProductVersion ver, UUID nid) throws IOException {
+    private boolean active(IgniteProductVersion ver, UUID nid) throws Exception {
         // 1.x clusters are always active.
         if (ver.compareTo(IGNITE_2_0) < 0)
             return true;
@@ -210,9 +209,9 @@ public class ClusterHandler {
      * Collect topology.
      *
      * @return REST result.
-     * @throws IOException If failed to collect cluster topology.
+     * @throws Exception If failed to collect cluster topology.
      */
-    private RestResult topology() throws IOException {
+    private RestResult topology() throws Exception {
         JsonObject params = new JsonObject()
             .add("cmd", "top")
             .add("attr", true)
@@ -226,6 +225,9 @@ public class ClusterHandler {
      * Start watch cluster.
      */
     public void start() {
+        if (refreshTask != null && !refreshTask.isCancelled())
+            return;
+
         refreshTask = pool.scheduleWithFixedDelay(() -> {
             try {
                 RestResult res = topology();
@@ -259,7 +261,7 @@ public class ClusterHandler {
                 }
             }
             catch (ConnectException ignored) {
-                clusterDisconnect();
+                // No-op.
             }
             catch (Throwable e) {
                 LT.error(log, e, "WatchTask failed");

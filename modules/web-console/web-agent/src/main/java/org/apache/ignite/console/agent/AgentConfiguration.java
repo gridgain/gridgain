@@ -40,7 +40,7 @@ public class AgentConfiguration {
     public static final String DFLT_CFG_PATH = "default.properties";
 
     /** Default server URI. */
-    private static final String DFLT_SERVER_URI = "ws://localhost:3000";
+    private static final String DFLT_SERVER_URI = "http://localhost:3000";
 
     /** Default Ignite node HTTP URI. */
     private static final String DFLT_NODE_URI = "http://localhost:8080";
@@ -52,7 +52,7 @@ public class AgentConfiguration {
 
     /** */
     @Parameter(names = {"-s", "--server-uri"},
-        description = "URI for connect to Ignite Console via web-socket protocol" +
+        description = "URI of Ignite Console server" +
             "           " +
             "      Default value: " + DFLT_SERVER_URI)
     private String srvUri;
