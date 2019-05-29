@@ -109,8 +109,12 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     /** Row cache. */
     private final H2RowCache rowCache;
 
+    /** */
+    public static final String IGNITE_THROTTLE_INLINE_SIZE_CALCULATION = "IGNITE_THROTTLE_INLINE_SIZE_CALCULATION";
+
     /** How often real invocation of inline size calculation will be skipped. */
-    private static final int THROTTLE_INLINE_SIZE_CALCULATION = 1_000;
+    private static final int THROTTLE_INLINE_SIZE_CALCULATION =
+        Integer.getInteger(IGNITE_THROTTLE_INLINE_SIZE_CALCULATION, 1_000);
 
     /** Counter of inline size calculation for throttling real invocations. */
     private final ThreadLocal<Long> inlineSizeCalculationCntr = ThreadLocal.withInitial(() -> 0L);
