@@ -86,9 +86,6 @@ public class WebSocketsManager {
     private static final PingMessage PING = new PingMessage(UTF_8.encode("PING"));
 
     /** */
-    protected final AccountsRepository accRepo;
-
-    /** */
     protected final Map<WebSocketSession, AgentDescriptor> agents;
 
     /** */
@@ -101,25 +98,19 @@ public class WebSocketsManager {
     private final Map<String, TopologySnapshot> clusters;
 
     /** */
-    private final Map<String, String> supportedAgents;
-
-    /** */
     private final Map<String, VisorTaskDescriptor> visorTasks;
 
     /** */
     private volatile Announcement lastAnn;
 
     /**
-     * @param accRepo Repository to work with accounts.
+     * Default constructor.
      */
-    public WebSocketsManager(AccountsRepository accRepo) {
-        this.accRepo = accRepo;
-
+    public WebSocketsManager() {
         agents = new ConcurrentLinkedHashMap<>();
         browsers = new ConcurrentHashMap<>();
         clusters = new ConcurrentHashMap<>();
         requests = new ConcurrentHashMap<>();
-        supportedAgents = new ConcurrentHashMap<>();
         visorTasks = new ConcurrentHashMap<>();
     }
 
@@ -166,6 +157,15 @@ public class WebSocketsManager {
         catch (Throwable e) {
             log.error("Failed to send error message [session=" + wsBrowser + ", event=" + evt + "]", e);
         }
+    }
+
+    public void sendResponseToBrowser(WebSocketEvent evt) throws IOException {
+        WebSocketSession browserWs = requests.remove(evt.getRequestId());
+
+        if (browserWs != null)
+            sendMessage(browserWs, evt);
+        else
+            log.warn("Failed to send event to browser: " + evt);
     }
 
     /**
@@ -244,7 +244,7 @@ public class WebSocketsManager {
      * @param wsAgent Session.
      * @param newTop Topology snapshot.
      */
-    protected void processTopologyUpdate(WebSocketSession wsAgent, TopologySnapshot newTop) {
+    public void processTopologyUpdate(WebSocketSession wsAgent, TopologySnapshot newTop) {
         TopologySnapshot oldTop = null;
 
         AgentDescriptor desc = agents.get(wsAgent);
@@ -308,33 +308,9 @@ public class WebSocketsManager {
         throw new IllegalStateException("Account can't be found [session=" + ws + "]");
     }
 
-    /**
-     * @param req Agent handshake.
-     */
-    private void validateAgentHandshake(AgentHandshakeRequest req) {
-        if (F.isEmpty(req.getTokens()))
-            throw new IllegalArgumentException("Tokens not set. Please reload agent or check settings.");
-
-        if (!F.isEmpty(req.getVersion()) && !F.isEmpty(req.getBuildTime()) & !F.isEmpty(supportedAgents)) {
-            // TODO WC-1053 Implement version check in beta2 stage.
-            throw new IllegalArgumentException("You are using an older version of the agent. Please reload agent.");
-        }
+    public void saveAgentSession(WebSocketSession ws, Set<UUID> accIds) {
+        agents.put(ws, new AgentDescriptor(accIds));
     }
-
-    /**
-     * @param tokens Tokens.
-     */
-    private Collection<Account> loadAccounts(Set<String> tokens) {
-        Collection<Account> accounts = accRepo.getAllByTokens(tokens);
-
-        if (accounts.isEmpty()) {
-            throw new IllegalArgumentException("Failed to authenticate with token(s): " + tokens + ". " +
-                "Please reload agent or check settings.");
-        }
-
-        return accounts;
-    }
-
 
     /**
      * @param c Collection of Objects.
@@ -342,81 +318,6 @@ public class WebSocketsManager {
      */
     private <T, R> Set<R> mapToSet(Collection<T> c, Function<? super T, ? extends R> mapper) {
         return c.stream().map(mapper).collect(Collectors.toSet());
-    }
-
-    /**
-     * @param ws Websocket.
-     * @param msg Incoming message.
-     * @throws IOException If failed to handle event.
-     */
-    public void handleAgentMessage(WebSocketSession ws, TextMessage msg) throws IOException {
-        WebSocketEvent evt = fromJson(msg.getPayload(), WebSocketEvent.class);
-
-        switch (evt.getEventType()) {
-            case AGENT_HANDSHAKE:
-                try {
-                    AgentHandshakeRequest req = fromJson(evt.getPayload(), AgentHandshakeRequest.class);
-
-                    validateAgentHandshake(req);
-
-                    Collection<Account> accounts = loadAccounts(req.getTokens());
-
-                    evt.setPayload(toJson(new AgentHandshakeResponse(mapToSet(accounts, Account::getToken))));
-
-                    sendMessage(ws, evt);
-
-                    log.info("Agent connected: " + req);
-
-                    agents.put(ws, new AgentDescriptor(mapToSet(accounts, Account::getId)));
-                }
-                catch (Exception e) {
-                    log.warn("Failed to establish connection in handshake: " + evt, e);
-
-                    sendMessage(ws, evt.setPayload(toJson(new AgentHandshakeResponse(e))));
-
-                    ws.close();
-                }
-
-                break;
-
-            case CLUSTER_TOPOLOGY:
-                TopologySnapshot top = fromJson(evt.getPayload(), TopologySnapshot.class);
-
-                processTopologyUpdate(ws, top);
-
-                break;
-
-            default:
-                WebSocketSession browserWs = requests.remove(evt.getRequestId());
-
-                if (browserWs != null)
-                    sendMessage(browserWs, evt);
-                else
-                    log.warn("Failed to send event to browser: " + evt);
-        }
-    }
-
-    /**
-     * @param ws Websocket.
-     * @param msg Incoming message.
-     * @throws IOException If failed to handle event.
-     */
-    public void handleBrowserEvents(WebSocketSession ws, TextMessage msg) throws IOException {
-        WebSocketEvent evt = fromJson(msg.getPayload(), WebSocketEvent.class);
-
-        switch (evt.getEventType()) {
-            case SCHEMA_IMPORT_DRIVERS:
-            case SCHEMA_IMPORT_SCHEMAS:
-            case SCHEMA_IMPORT_METADATA:
-            case NODE_REST:
-            case NODE_VISOR:
-                sendToAgent(ws, evt);
-
-                break;
-
-            default:
-                throw new IllegalStateException("Unknown event: " + evt);
-        }
     }
 
     /**

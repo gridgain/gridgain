@@ -16,6 +16,7 @@
 
 package org.apache.ignite.console.web.socket;
 
+import org.apache.ignite.console.websocket.WebSocketEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,13 @@ import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
+
+import static org.apache.ignite.console.json.JsonUtils.fromJson;
+import static org.apache.ignite.console.websocket.WebSocketConsts.NODE_REST;
+import static org.apache.ignite.console.websocket.WebSocketConsts.NODE_VISOR;
+import static org.apache.ignite.console.websocket.WebSocketConsts.SCHEMA_IMPORT_DRIVERS;
+import static org.apache.ignite.console.websocket.WebSocketConsts.SCHEMA_IMPORT_METADATA;
+import static org.apache.ignite.console.websocket.WebSocketConsts.SCHEMA_IMPORT_SCHEMAS;
 
 /**
  * Browsers web sockets handler.
@@ -45,7 +53,21 @@ public class BrowsersHandler extends TextWebSocketHandler {
     /** {@inheritDoc} */
     @Override public void handleTextMessage(WebSocketSession ws, TextMessage msg) {
         try {
-            wsm.handleBrowserEvents(ws, msg);
+            WebSocketEvent evt = fromJson(msg.getPayload(), WebSocketEvent.class);
+
+            switch (evt.getEventType()) {
+                case SCHEMA_IMPORT_DRIVERS:
+                case SCHEMA_IMPORT_SCHEMAS:
+                case SCHEMA_IMPORT_METADATA:
+                case NODE_REST:
+                case NODE_VISOR:
+                    wsm.sendToAgent(ws, evt);
+
+                    break;
+
+                default:
+                    throw new IllegalStateException("Unknown event: " + evt);
+            }
         }
         catch (Throwable e) {
             log.error("Failed to process message from browser [session=" + ws + ", msg=" + msg + "]", e);
