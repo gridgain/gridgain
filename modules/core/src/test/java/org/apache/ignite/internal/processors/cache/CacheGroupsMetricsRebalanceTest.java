@@ -169,108 +169,6 @@ public class CacheGroupsMetricsRebalanceTest extends GridCommonAbstractTest {
         assertTrue(ratio > 0.9 && ratio < 1.1);
     }
 
-    @Test
-    public void test1() throws Exception {
-        testRebalanceEstimateFinishTime();
-    }
-
-    @Test
-    public void test2() throws Exception {
-        testRebalanceEstimateFinishTime();
-    }
-
-    @Test
-    public void test3() throws Exception {
-        testRebalanceEstimateFinishTime();
-    }
-
-    @Test
-    public void test4() throws Exception {
-        testRebalanceEstimateFinishTime();
-    }
-
-    @Test
-    public void test5() throws Exception {
-        testRebalanceEstimateFinishTime();
-    }
-
-    @Test
-    public void test6() throws Exception {
-        testRebalanceEstimateFinishTime();
-    }
-
-    @Test
-    public void test7() throws Exception {
-        testRebalanceEstimateFinishTime();
-    }
-
-    @Test
-    public void test8() throws Exception {
-        testRebalanceEstimateFinishTime();
-    }
-
-
-    @Test
-    public void test9() throws Exception {
-        testRebalanceEstimateFinishTime();
-    }
-
-    @Test
-    public void test10() throws Exception {
-        testRebalanceEstimateFinishTime();
-    }
-
-    @Test
-    public void test11() throws Exception {
-        testRebalanceEstimateFinishTime();
-    }
-
-    @Test
-    public void test12() throws Exception {
-        testRebalanceEstimateFinishTime();
-    }
-
-    @Test
-    public void test13() throws Exception {
-        testRebalanceEstimateFinishTime();
-    }
-
-    @Test
-    public void test14() throws Exception {
-        testRebalanceEstimateFinishTime();
-    }
-
-
-    @Test
-    public void test15() throws Exception {
-        testRebalanceEstimateFinishTime();
-    }
-
-    @Test
-    public void test16() throws Exception {
-        testRebalanceEstimateFinishTime();
-    }
-
-    @Test
-    public void test17() throws Exception {
-        testRebalanceEstimateFinishTime();
-    }
-
-    @Test
-    public void test18() throws Exception {
-        testRebalanceEstimateFinishTime();
-    }
-
-    @Test
-    public void test19() throws Exception {
-        testRebalanceEstimateFinishTime();
-    }
-
-    @Test
-    public void test20() throws Exception {
-        testRebalanceEstimateFinishTime();
-    }
-
     /**
      * @throws Exception If failed.
      */
@@ -341,6 +239,7 @@ public class CacheGroupsMetricsRebalanceTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
+    @Test
     public void testRebalanceEstimateFinishTime() throws Exception {
         System.setProperty(IGNITE_REBALANCE_STATISTICS_TIME_INTERVAL, String.valueOf(10_000));
 
