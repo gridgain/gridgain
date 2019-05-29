@@ -20,10 +20,10 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZonedDateTime;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.UUID;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.console.db.CacheHolder;
@@ -79,7 +79,7 @@ public class ActivitiesRepository {
             Set<UUID> ids = activitiesIdx.cache().get(activityKey);
 
             if (ids == null)
-                ids = new TreeSet<>();
+                ids = Collections.emptySet();
 
             Collection<Activity> activities = activitiesTbl.loadAll(ids);
 
