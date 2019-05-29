@@ -49,11 +49,13 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridTopic;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
 import org.apache.ignite.internal.managers.discovery.CustomMessageWrapper;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.DynamicCacheChangeBatch;
+import org.apache.ignite.internal.processors.datastreamer.DataStreamerRequest;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.twostep.PartitionReservation;
 import org.apache.ignite.internal.processors.query.h2.twostep.PartitionReservationManager;
@@ -73,7 +75,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.runners.Parameterized;
 
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
@@ -83,7 +85,7 @@ import static org.apache.ignite.internal.util.IgniteUtils.resolveIgnitePath;
  * Test KILL QUERY requested from the same node where quere was executed.
  */
 @SuppressWarnings({"ThrowableNotThrown", "AssertWithSideEffects"})
-@RunWith(JUnit4.class)
+@RunWith(Parameterized.class)
 public class KillQueryTest extends GridCommonAbstractTest {
     /** IP finder. */
     private static final TcpDiscoveryIpFinder IP_FINDER = new TcpDiscoveryVmIpFinder(true);
@@ -126,6 +128,25 @@ public class KillQueryTest extends GridCommonAbstractTest {
     /** Barrier. */
     private static volatile CyclicBarrier barrier;
 
+    private volatile boolean enableLog = true;
+
+    /**
+     * Whether current test execution shuould use async or non-async cancel mechanism.
+     */
+    @Parameterized.Parameter
+    public boolean asyncCancel;
+
+    /**
+     * Generates values for the {@link #asyncCancel} parameter.
+     */
+    @Parameterized.Parameters(name = "asyncCancel = {0}")
+    public static Iterable<Object[]> valuesForAsync() {
+        return Arrays.asList(new Object[][] {
+            {true},
+            {false}
+        });
+    }
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
@@ -143,13 +164,20 @@ public class KillQueryTest extends GridCommonAbstractTest {
         if (++cntr == NODES_COUNT)
             cfg.setClientMode(true);
 
+        TestRecordingCommunicationSpi commSpi = new TestRecordingCommunicationSpi();
+
+        commSpi.closure((node, msg) -> {
+            if (msg instanceof DataStreamerRequest)
+                log.error("+++ node = " + node.id() + " , msg = " + msg);
+        });
+
         cfg.setDiscoverySpi(new TcpDiscoverySpi() {
 
             @Override public void sendCustomEvent(DiscoverySpiCustomMessage msg) throws IgniteException {
-                if (CustomMessageWrapper.class.isAssignableFrom(msg.getClass())) {
+                if (msg instanceof CustomMessageWrapper) {
                     DiscoveryCustomMessage delegate = ((CustomMessageWrapper)msg).delegate();
 
-                    if (DynamicCacheChangeBatch.class.isAssignableFrom(delegate.getClass())) {
+                    if (delegate instanceof DynamicCacheChangeBatch) {
                         try {
                             awaitTimeout();
                         }
@@ -158,7 +186,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
                         }
 
                     }
-                    else if (SchemaProposeDiscoveryMessage.class.isAssignableFrom(delegate.getClass())) {
+                    else if (delegate instanceof SchemaProposeDiscoveryMessage) {
                         try {
                             awaitTimeout();
                         }
@@ -170,7 +198,8 @@ public class KillQueryTest extends GridCommonAbstractTest {
 
                 super.sendCustomEvent(msg);
             }
-        }.setIpFinder(IP_FINDER));
+        }.setIpFinder(IP_FINDER))
+            .setCommunicationSpi(commSpi);
 
         return cfg;
     }
@@ -246,31 +275,11 @@ public class KillQueryTest extends GridCommonAbstractTest {
 
     /**
      * Trying to cancel COPY FROM command.
-     *
-     * @throws Exception In case of failure.
      */
     @Test
     public void testBulkLoadCancellationUnsupported() throws Exception {
-        checkCreateTableCancellationUnsupported(false);
-    }
+        enableLog = true;
 
-    /**
-     * Trying to async cancel COPY FROM command.
-     *
-     * @throws Exception In case of failure.
-     */
-    @Test
-    public void testAsyncBulkLoadCancellationUnsupported() throws Exception {
-        checkCreateTableCancellationUnsupported(true);
-    }
-
-    /**
-     * Trying to cancel COPY FROM command.
-     *
-     * @param async execute cancellation in ASYNC mode.
-     * @throws Exception In case of failure.
-     */
-    public void checkBulkLoadCancellationUnsupported(boolean async) throws Exception {
         String path = Objects.requireNonNull(resolveIgnitePath("/modules/clients/src/test/resources/bulkload1.csv"))
             .getAbsolutePath();
 
@@ -284,137 +293,49 @@ public class KillQueryTest extends GridCommonAbstractTest {
         checkCancellationUnsupported(
             Arrays.asList(sqlPrepare),
             sqlCmd,
-            async);
+            asyncCancel);
     }
 
     /**
      * Trying to cancel CREATE TABLE command.
-     *
-     * @throws Exception In case of failure.
      */
     @Test
     public void testCreateTableCancellationUnsupported() throws Exception {
-        checkCreateTableCancellationUnsupported(false);
-    }
-
-    /**
-     * Trying to async cancel CREATE TABLE command.
-     *
-     * @throws Exception In case of failure.
-     */
-    @Test
-    public void testAsyncCreateTableCancellationUnsupported() throws Exception {
-        checkCreateTableCancellationUnsupported(true);
-    }
-
-    /**
-     * Trying to cancel CREATE TABLE command.
-     *
-     * @param async execute cancellation in ASYNC mode.
-     * @throws Exception In case of failure.
-     */
-    public void checkCreateTableCancellationUnsupported(boolean async) throws Exception {
         checkCancellationUnsupported(Collections.<String>emptyList(),
             "CREATE TABLE " + currentTestTableName() + " (id INTEGER PRIMARY KEY, name VARCHAR)",
-            async);
+            asyncCancel);
     }
 
     /**
      * Trying to cancel ALTER TABLE command.
-     *
-     * @throws Exception In case of failure.
      */
     @Test
     public void testAlterTableCancellationUnsupported() throws Exception {
-        checkAlterTableCancellationUnsupported(false);
-    }
-
-    /**
-     * Trying to async cancel ALTER TABLE command.
-     *
-     * @throws Exception In case of failure.
-     */
-    @Test
-    public void testAsyncAlterTableCancellationUnsupported() throws Exception {
-        checkAlterTableCancellationUnsupported(true);
-    }
-
-    /**
-     * Trying to cancel ALTER TABLE command.
-     *
-     * @param async execute cancellation in ASYNC mode.
-     * @throws Exception In case of failure.
-     */
-    private void checkAlterTableCancellationUnsupported(boolean async) throws Exception {
         checkCancellationUnsupported(Arrays.asList("CREATE TABLE " + currentTestTableName() + " (id INTEGER PRIMARY KEY, name VARCHAR)"),
             "ALTER TABLE " + currentTestTableName() + " ADD COLUMN COL VARCHAR",
-            async);
+            asyncCancel);
     }
 
     /**
      * Trying to cancel CREATE INDEX command.
-     *
-     * @throws Exception In case of failure.
      */
     @Test
     public void testCreateIndexCancellationUnsupported() throws Exception {
-        checkCreateIndexCancellationUnsupported(false);
-    }
-
-    /**
-     * Trying to async cancel CREATE INDEX command.
-     *
-     * @throws Exception In case of failure.
-     */
-    @Test
-    public void testAsyncCreateIndexCancellationUnsupported() throws Exception {
-        checkCreateIndexCancellationUnsupported(true);
-    }
-
-    /**
-     * Trying to cancel CREATE INDEX command.
-     *
-     * @param async execute cancellation in ASYNC mode.
-     * @throws Exception In case of failure.
-     */
-    private void checkCreateIndexCancellationUnsupported(boolean async) throws Exception {
         checkCancellationUnsupported(Arrays.asList("CREATE TABLE " + currentTestTableName() + " (id INTEGER PRIMARY KEY, name VARCHAR)"),
             "CREATE INDEX " + currentTestTableName() + "_IDX ON " + currentTestTableName() + "(name, id)",
-            async);
+            asyncCancel);
     }
 
     /**
      * Trying to cancel DROP INDEX command.
-     *
-     * @throws Exception In case of failure.
      */
     @Test
     public void testDropIndexCancellationUnsupported() throws Exception {
-        checkDropIndexCancellationUnsupported(false);
-    }
-
-    /**
-     * Trying to async cancel DROP INDEX command.
-     *
-     * @throws Exception In case of failure.
-     */
-    @Test
-    public void testAsyncDropIndexCancellationUnsupported() throws Exception {
-        checkDropIndexCancellationUnsupported(true);
-    }
-
-    /**
-     * Trying to cancel DROP INDEX command.
-     *
-     * @param async execute cancellation in ASYNC mode.
-     * @throws Exception In case of failure.
-     */
-    private void checkDropIndexCancellationUnsupported(boolean async) throws Exception {
         checkCancellationUnsupported(
             Arrays.asList("CREATE TABLE " + currentTestTableName() + " (id INTEGER PRIMARY KEY, name VARCHAR)",
                 "CREATE INDEX " + currentTestTableName() + "_IDX ON " + currentTestTableName() + "(name, id)"),
             "DROP INDEX " + currentTestTableName() + "_IDX",
-            async);
+            asyncCancel);
     }
 
     /**
@@ -457,32 +378,15 @@ public class KillQueryTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Trying to cancel unexist query.
+     * Trying to cancel non-existing query.
      */
     @Test
     public void testKillUnknownQry() {
-        checkKillUnknownQry(false);
-    }
-
-    /**
-     * Trying to async cancel unexist query.
-     */
-    @Test
-    public void testAsyncKillUnknownQry() {
-        checkKillUnknownQry(true);
-    }
-
-    /**
-     * Trying to cancel unexist query.
-     *
-     * @param async execute cancellation in ASYNC mode.
-     */
-    private void checkKillUnknownQry(boolean async) {
         UUID nodeId = ignite.localNode().id();
 
         GridTestUtils.assertThrows(log, () -> {
             igniteForKillRequest.cache(DEFAULT_CACHE_NAME)
-                .query(createKillQuery(nodeId, Long.MAX_VALUE, async));
+                .query(createKillQuery(nodeId, Long.MAX_VALUE, asyncCancel));
 
             return null;
         }, CacheException.class, "Query with provided ID doesn't exist [nodeId=" + nodeId);
@@ -493,26 +397,9 @@ public class KillQueryTest extends GridCommonAbstractTest {
      */
     @Test
     public void testKillQryUnknownNode() {
-        checkKillQryUnknownNode(false);
-    }
-
-    /**
-     * Trying to async cancel query on unknown node.
-     */
-    @Test
-    public void testAsyncKillQryUnknownNode() {
-        checkKillQryUnknownNode(true);
-    }
-
-    /**
-     * Trying to cancel query on unexist node.
-     *
-     * @param async execute cancellation in ASYNC mode.
-     */
-    private void checkKillQryUnknownNode(boolean async) {
         GridTestUtils.assertThrows(log, () -> {
             igniteForKillRequest.cache(DEFAULT_CACHE_NAME)
-                .query(createKillQuery(UUID.randomUUID(), Long.MAX_VALUE, async));
+                .query(createKillQuery(UUID.randomUUID(), Long.MAX_VALUE, asyncCancel));
 
             return null;
         }, CacheException.class, "Failed to cancel query, node is not alive");
@@ -520,31 +407,9 @@ public class KillQueryTest extends GridCommonAbstractTest {
 
     /**
      * Trying to kill already killed query. No exceptions expected.
-     *
-     * @throws Exception If failed.
      */
     @Test
     public void testKillAlreadyKilledQuery() throws Exception {
-        checkKillAlreadyKilledQuery(false);
-    }
-
-    /**
-     * Trying to kill already killed query. No exceptions expected.
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testAsyncKillAlreadyKilledQuery() throws Exception {
-        checkKillAlreadyKilledQuery(true);
-    }
-
-    /**
-     * Trying to kill already killed query. No exceptions expected.
-     *
-     * @param async execute cancellation in ASYNC mode.
-     * @throws Exception If failed.
-     */
-    private void checkKillAlreadyKilledQuery(boolean async) throws Exception {
         IgniteCache<Object, Object> cache = ignite.cache(DEFAULT_CACHE_NAME);
 
         FieldsQueryCursor<List<?>> cur = cache.query(new SqlFieldsQuery("select * from Integer"));
@@ -553,7 +418,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
 
         GridRunningQueryInfo runQryInfo = runningQueries.get(0);
 
-        SqlFieldsQuery killQry = createKillQuery(runQryInfo.globalQueryId(), async);
+        SqlFieldsQuery killQry = createKillQuery(runQryInfo.globalQueryId(), asyncCancel);
 
         IgniteCache<Object, Object> reqCache = igniteForKillRequest.cache(DEFAULT_CACHE_NAME);
 
@@ -592,32 +457,10 @@ public class KillQueryTest extends GridCommonAbstractTest {
 
     /**
      * Trying to cancel long running query. No exceptions expected.
-     *
-     * @throws Exception If failed.
      */
     @Test
     public void testCancelQuery() throws Exception {
-        checkCancelQuery(false);
-    }
-
-    /**
-     * Trying to async cancel long running query. No exceptions expected.
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testAsyncCancelQuery() throws Exception {
-        checkCancelQuery(true);
-    }
-
-    /**
-     * Trying to cancel long running query. No exceptions expected.
-     *
-     * @param async execute cancellation in ASYNC mode.
-     * @throws Exception If failed.
-     */
-    private void checkCancelQuery(boolean async) throws Exception {
-        IgniteInternalFuture cancelRes = cancel(1, async);
+        IgniteInternalFuture cancelRes = cancel(1, asyncCancel);
 
         GridTestUtils.assertThrows(log, () -> {
             stmt.executeQuery("select * from Integer where _key in " +
@@ -631,29 +474,12 @@ public class KillQueryTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Verifies that local query can be caneled (non-async method).
-     */
-    @Test
-    public void testCancelLocalQuery() throws Exception {
-        checkCancelLocalQueryNative(false);
-    }
-
-    /**
-     * Verifies that local query can be caneled (async method).
-     */
-    @Test
-    public void testAsyncCancelLocalQuery() throws Exception {
-        checkCancelLocalQueryNative(true);
-    }
-
-    /**
      * Check that local query can be canceled either using async or non-async method. Local query is performed using
      * cache.query() API with "local" property "true".
-     *
-     * @param async whether cancelation method is async.
      */
-    private void checkCancelLocalQueryNative(boolean async) throws Exception {
-        IgniteInternalFuture cancelRes = cancel(1, async);
+    @Test
+    public void testCancelLocalQueryNative() throws Exception {
+        IgniteInternalFuture cancelRes = cancel(1, asyncCancel);
 
         GridTestUtils.assertThrows(log, () -> {
             ignite.cache(DEFAULT_CACHE_NAME).query(
@@ -670,32 +496,10 @@ public class KillQueryTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Trying to cancel long running multiple statements query. No exceptions expected.
-     *
-     * @throws Exception If failed.
+     * Trying to async cancel long running multiple statements query. No exceptions expected.
      */
     @Test
     public void testKillMultipleStatementsQuery() throws Exception {
-        checkKillMultipleStatementsQuery(false);
-    }
-
-    /**
-     * Trying to async cancel long running multiple statements query. No exceptions expected.
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testAsyncKillMultipleStatementsQuery() throws Exception {
-        checkKillMultipleStatementsQuery(true);
-    }
-
-    /**
-     * Trying to async cancel long running multiple statements query. No exceptions expected.
-     *
-     * @param async execute cancellation in ASYNC mode.
-     * @throws Exception If failed.
-     */
-    private void checkKillMultipleStatementsQuery(boolean async) throws Exception {
         try (Statement anotherStatement = conn.createStatement()) {
             anotherStatement.setFetchSize(1);
 
@@ -705,7 +509,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
 
             assert rs.next();
 
-            IgniteInternalFuture cancelRes = cancel(3, async, sql);
+            IgniteInternalFuture cancelRes = cancel(3, asyncCancel, sql);
 
             GridTestUtils.assertThrows(log, () -> {
                 // Executes multiple long running query
@@ -729,26 +533,6 @@ public class KillQueryTest extends GridCommonAbstractTest {
      */
     @Test
     public void testCancelBatchQuery() throws Exception {
-        checkCancelBatchQuery(false);
-    }
-
-    /**
-     * Trying to async cancel long running batch query. No exceptions expected.     *
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testAsyncCancelBatchQuery() throws Exception {
-        checkCancelBatchQuery(true);
-    }
-
-    /**
-     * Trying to cancel long running batch query. No exceptions expected.     *
-     *
-     * @param async execute cancellation in ASYNC mode.
-     * @throws Exception If failed.
-     */
-    private void checkCancelBatchQuery(boolean async) throws Exception {
         try (Statement stmt2 = conn.createStatement()) {
             stmt2.setFetchSize(1);
 
@@ -758,7 +542,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
 
             Assert.assertTrue(rs.next());
 
-            IgniteInternalFuture cancelRes = cancel(2, async, sql);
+            IgniteInternalFuture cancelRes = cancel(2, asyncCancel, sql);
 
             GridTestUtils.assertThrows(log, () -> {
                 stmt.addBatch("update Long set _val = _val + 1 where _key < sleep_func (30)");
@@ -778,27 +562,12 @@ public class KillQueryTest extends GridCommonAbstractTest {
     }
 
     /**
-     * If query hangs due to partitions for it can't be reserved, we're still able to cancel it. Used non-async
-     * cancellation method.
+     * Check if query hangs due to partitions for it can't be reserved, we still able to cancel it. Used mocked indexing
+     * simulates for sure such case.
      */
     @Test
-    public void testCancelQueryIfPartitionsCantBeReserved() throws Exception {
-        checkCancelQueryIfPartitionsCantBeReserved(false);
-    }
-
-    /**
-     * If query hangs due to partitions for it can't be reserved, we're still able to cancel it. Used async cancellation
-     * method.
-     */
-    @Test
-    public void testAsyncCancelQueryIfPartitionsCantBeReserved() throws Exception {
-        checkCancelQueryIfPartitionsCantBeReserved(true);
-    }
-
-    /**
-     * Check if query hangs due to partitions for it can't be reserved, we still able to cancel it.
-     */
-    public void checkCancelQueryIfPartitionsCantBeReserved(boolean async) throws Exception {
+    public void testCancelQueryIfPartitionsCantBeReservedOnMapNodes() throws Exception {
+        // Releases thread that kills query when map nodes receive query request. At least one map node received is ok.
         GridMessageListener qryStarted = (node, msg, plc) -> {
             if (msg instanceof GridH2QueryRequest)
                 TestSQLFunctions.cancelLatch.countDown();
@@ -810,7 +579,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
         IndexingWithMockedReservation.failReservations = true;
 
         try {
-            IgniteInternalFuture cancelFut = cancel(1, async);
+            IgniteInternalFuture cancelFut = cancel(1, asyncCancel);
 
             GridTestUtils.assertThrows(log, () -> {
                 ignite.cache(DEFAULT_CACHE_NAME).query(
@@ -828,23 +597,17 @@ public class KillQueryTest extends GridCommonAbstractTest {
         }
     }
 
-    @Test
-    public void testAsyncCancelQueryWithPartitions() throws Exception {
-        checkCancelQueryWithPartitions(false);
-    }
-
+    /**
+     * Test if user specified partitions for query explicitly, such query is cancealble.
+     */
     @Test
     public void testCancelQueryWithPartitions() throws Exception {
-        checkCancelQueryWithPartitions(false);
-    }
-
-    public void checkCancelQueryWithPartitions(boolean async) throws Exception {
-        IgniteInternalFuture cancelRes = cancel(1, async);
+        IgniteInternalFuture cancelRes = cancel(1, asyncCancel);
 
         GridTestUtils.assertThrows(log, () -> {
             ignite.cache(DEFAULT_CACHE_NAME).query(
                 new SqlFieldsQuery("select * from Integer where _key <> awaitLatchCancelled()")
-                .setPartitions(1, 2, 3)
+                    .setPartitions(1, 2, 3)
             ).getAll();
 
             return null;
