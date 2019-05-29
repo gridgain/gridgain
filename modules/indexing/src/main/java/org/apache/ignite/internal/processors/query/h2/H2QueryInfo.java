@@ -145,6 +145,9 @@ public class H2QueryInfo {
 
             return "[error on calculate plan: " + e.getMessage() + ']';
         }
+        finally {
+            H2Utils.resetSession(c);
+        }
     }
 
     /**

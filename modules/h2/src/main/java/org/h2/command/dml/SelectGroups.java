@@ -12,10 +12,10 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
-
 import org.h2.engine.Constants;
 import org.h2.engine.Session;
 import org.h2.expression.Expression;
+import org.h2.expression.aggregate.AggregateData;
 import org.h2.expression.analysis.DataAnalysisOperation;
 import org.h2.expression.analysis.PartitionData;
 import org.h2.value.Value;
@@ -73,6 +73,11 @@ public abstract class SelectGroups {
         @Override
         public void reset() {
             super.reset();
+            if (groupByData != null) {
+                for (Object[] aggrs : groupByData.values())
+                    cleanupAggregates(aggrs);
+            }
+
             groupByData = new TreeMap<>(session.getDatabase().getCompareMode());
             currentGroupsKey = null;
             cursor = null;
@@ -97,7 +102,7 @@ public abstract class SelectGroups {
                 values = createRow();
                 groupByData.put(currentGroupsKey, values);
 
-                onUpdate(null, null, values);
+                onUpdate(currentGroupsKey, null, values);
             }
             currentGroupByExprData = values;
             currentGroupRowId++;
@@ -153,6 +158,7 @@ public abstract class SelectGroups {
         @Override
         public void resetLazy() {
             super.resetLazy();
+            assert groupByData == null || !groupByData.containsKey(currentGroupsKey);
             currentGroupsKey = null;
         }
     }
@@ -173,6 +179,11 @@ public abstract class SelectGroups {
         @Override
         public void reset() {
             super.reset();
+            if (rows != null) {
+                for (Object[] r : rows)
+                    cleanupAggregates(r);
+            }
+
             rows = new ArrayList<>();
             cursor = null;
         }
@@ -450,9 +461,24 @@ public abstract class SelectGroups {
     }
 
     /**
+     * @param aggrs Aggregates to cleanup.
+     */
+    void cleanupAggregates(Object[] aggrs) {
+        if (aggrs == null || !trackable())
+            return;
+
+        for (Object agg : aggrs) {
+            if (agg instanceof AggregateData)
+                ((AggregateData)agg).cleanup(session);
+        }
+    }
+
+    /**
      * Moves group data to the next group in lazy mode.
      */
     public void nextLazyGroup() {
+        cleanupAggregates(currentGroupByExprData);
+
         currentGroupByExprData = new Object[Math.max(exprToIndexInGroupByData.size(), expressions.size())];
     }
 
@@ -484,19 +510,18 @@ public abstract class SelectGroups {
         if (!trackable())
             return;
 
-        long size;
-
         assert old != null || row != null;
 
-        /* TODO: GG-18628: Estimate Aggregate objects size. */
+        long size;
+
         if (row != null && old != null)
             size = (row.length - old.length) * Constants.MEMORY_OBJECT;
         else if (old == null) {
-            size = groupKey != null && groupKey.track() ? groupKey.getMemory() : 0;
+            size = groupKey != null ? groupKey.getMemory() : 0;
             size += Constants.MEMORY_ARRAY + row.length * Constants.MEMORY_OBJECT;
         }
         else {
-            size = groupKey != null && groupKey.untrack() ? -groupKey.getMemory() : 0;
+            size = groupKey != null ? -groupKey.getMemory() : 0;
             size -= Constants.MEMORY_ARRAY + old.length * Constants.MEMORY_OBJECT;
         }
 

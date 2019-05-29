@@ -38,6 +38,8 @@ class AggregateDataCollecting extends AggregateData implements Iterable<Value> {
 
     private Value shared;
 
+    private long allocated;
+
     /**
      * Creates new instance of data for collecting aggregates.
      *
@@ -53,15 +55,15 @@ class AggregateDataCollecting extends AggregateData implements Iterable<Value> {
             return;
         }
         Collection<Value> c = values;
-        H2MemoryTracker memTracker;
         if (c == null) {
             values = c = distinct ? new TreeSet<>(ses.getDatabase().getCompareMode()) : new ArrayList<Value>();
         }
+        H2MemoryTracker memTracker;
         if (c.add(v) && (memTracker = ses.queryMemoryTracker()) != null) {
             long size = distinct ? 40 /* TreeMap.Entry */ : Constants.MEMORY_POINTER;
 
-            if (v.track())
-                size += v.getMemory();
+            size += v.getMemory();
+            allocated += size;
 
             memTracker.allocate(size);
         }
@@ -122,4 +124,13 @@ class AggregateDataCollecting extends AggregateData implements Iterable<Value> {
         return shared;
     }
 
+    /** {@inheritDoc} */
+    @Override public void cleanup(Session ses) {
+        H2MemoryTracker memTracker;
+        if (values != null && (memTracker = ses.queryMemoryTracker()) != null) {
+            values = null;
+
+            memTracker.free(allocated);
+        }
+    }
 }

@@ -92,9 +92,11 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
     @Override public void testLazyQueryWithGroupByThenSort() {
         maxMem = 512 * 1024;
 
+        // Query failed on map side due too many groups.
         checkQueryExpectOOM("select K.indexed, sum(K.grp) as a from K " +
             "GROUP BY K.indexed ORDER BY a DESC", true);
 
+        // Result on reduce side.
         assertEquals(1, localResults.size());
         assertEquals(0, localResults.get(0).memoryAllocated());
         assertEquals(0, localResults.get(0).getRowCount());
@@ -120,7 +122,7 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
         //Map
         assertEquals(100, localResults.get(0).getRowCount());
         // Reduce
-        assertEquals(100, localResults.get(0).getRowCount());
+        assertEquals(100, localResults.get(1).getRowCount());
     }
 
     /** Check GROUP BY operation on indexed col. */

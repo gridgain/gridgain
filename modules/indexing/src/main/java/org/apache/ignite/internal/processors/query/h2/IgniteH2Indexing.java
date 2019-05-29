@@ -809,9 +809,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
             throw new IgniteCheckedException("Failed to execute SQL query. " + e.getMessage(), e);
         }
-        finally {
-            H2Utils.resetSession(conn);
-        }
     }
 
     /**
@@ -898,6 +895,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             return rs;
         }
         catch (Throwable e) {
+            H2Utils.resetSession(conn);
+
             if (qryInfo != null && qryInfo.time() > longRunningQryMgr.getTimeout()) {
                 qryInfo.printLogMessage(log, connMgr, "Long running query is finished with error: "
                     + e.getMessage());

@@ -444,7 +444,7 @@ public class H2Utils {
 
         H2QueryContext oldCtx = s.getQueryContext();
 
-        assert oldCtx == null || oldCtx == qctx || oldCtx.queryMemoryManager() == null;
+        assert oldCtx == null || oldCtx == qctx || oldCtx.queryMemoryTracker() == null : oldCtx;
 
         s.setQueryContext(qctx);
     }
@@ -457,8 +457,8 @@ public class H2Utils {
     public static void resetSession(Connection conn) {
         Session s = session(conn);
 
-        s.setQueryContext(null);
         U.closeQuiet(s.queryMemoryTracker());
+        s.setQueryContext(null);
     }
 
     /**

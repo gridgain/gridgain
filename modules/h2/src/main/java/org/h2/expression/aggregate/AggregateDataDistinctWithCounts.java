@@ -6,6 +6,8 @@
 package org.h2.expression.aggregate;
 
 import java.util.TreeMap;
+import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
+import org.h2.engine.Constants;
 import org.h2.engine.Database;
 import org.h2.engine.Session;
 import org.h2.value.Value;
@@ -15,13 +17,15 @@ import org.h2.value.ValueNull;
  * Data stored while calculating an aggregate that needs distinct values with
  * their counts.
  */
-class AggregateDataDistinctWithCounts extends AggregateData {
+class AggregateDataDistinctWithCounts extends AggregateData  {
 
     private final boolean ignoreNulls;
 
     private final int maxDistinctCount;
 
     private TreeMap<Value, LongDataCounter> values;
+
+    private long allocated;
 
     /**
      * Creates new instance of data for aggregate that needs distinct values
@@ -52,6 +56,16 @@ class AggregateDataDistinctWithCounts extends AggregateData {
             }
             a = new LongDataCounter();
             values.put(v, a);
+
+            H2MemoryTracker memTracker;
+            if ((memTracker = ses.queryMemoryTracker()) != null) {
+                long size = Constants.MEMORY_OBJECT;
+
+                size += v.getMemory();
+                allocated += size;
+
+                memTracker.allocate(size);
+            }
         }
         a.count++;
     }
@@ -70,4 +84,13 @@ class AggregateDataDistinctWithCounts extends AggregateData {
         return values;
     }
 
+    /** {@inheritDoc} */
+    @Override public void cleanup(Session ses) {
+        H2MemoryTracker memTracker;
+        if (values != null && (memTracker = ses.queryMemoryTracker()) != null) {
+            values = null;
+
+            memTracker.free(allocated);
+        }
+    }
 }

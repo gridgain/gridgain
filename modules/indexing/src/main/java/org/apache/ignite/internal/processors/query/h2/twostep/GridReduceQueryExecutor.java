@@ -658,8 +658,14 @@ public class GridReduceQueryExecutor {
                         qryCtxRegistry.setThreadLocal(qctx);
 
                         try {
-                            if (qry.explain())
-                                return explainPlan(r.connection(), qry, params);
+                            if (qry.explain()) {
+                                try {
+                                    return explainPlan(r.connection(), qry, params);
+                                }
+                                finally {
+                                    H2Utils.resetSession(r.connection());
+                                }
+                            }
 
                             GridCacheSqlQuery rdc = qry.reduceQuery();
 

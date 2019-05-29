@@ -196,7 +196,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     /** Check UNION operation with large sub-selects. */
     @Test
     public void testUnionSimple() {
-        maxMem = 4L * 1024 * 1024;
+        maxMem = 8L * 1024 * 1024;
 
         execQuery("select * from T as T0, T as T1 where T0.id < 2 " +
             "UNION " +
@@ -331,7 +331,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     /** Check lazy query with GROUP BY indexed col and with and DISTINCT aggregates. */
     @Test
     public void testLazyQueryWithGroupByIndexedColAndDistinctAggregates() {
-        execQuery("select K.grp_indexed, count(DISTINCT k.name) from K GROUP BY K.grp_indexed", true);
+        execQuery("select K.grp_indexed, count(DISTINCT k.name) from K  USE INDEX (K_GRP_IDX) GROUP BY K.grp_indexed", true);
 
         assertEquals(0, localResults.size());
     }

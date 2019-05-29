@@ -23,5 +23,5 @@ public interface H2QueryContext {
     /**
      * @return Query memory tracker.
      */
-    H2MemoryTracker queryMemoryManager();
+    H2MemoryTracker queryMemoryTracker();
 }

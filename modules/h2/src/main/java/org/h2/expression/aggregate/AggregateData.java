@@ -14,7 +14,7 @@ import org.h2.value.Value;
 /**
  * Abstract class for the computation of an aggregate.
  */
-abstract class AggregateData {
+public abstract class AggregateData {
 
     /**
      * Create an AggregateData object of the correct sub-type.
@@ -90,4 +90,10 @@ abstract class AggregateData {
      * @return the value
      */
     abstract Value getValue(Database database, int dataType);
+
+    /**
+     * Cleanup aggregate data.
+     * @param ses Session.
+     */
+    public void cleanup(Session ses) {}
 }

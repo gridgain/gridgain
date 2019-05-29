@@ -115,7 +115,7 @@ public class QueryContext implements H2QueryContext {
     /**
      * @return Query memory tracker.
      */
-    @Nullable public H2MemoryTracker queryMemoryManager() {
+    @Override public @Nullable H2MemoryTracker queryMemoryTracker() {
         return memTracker;
     }
 
