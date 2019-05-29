@@ -45,19 +45,19 @@ public class DeployingContextImpl implements DeployingContext {
 
     /** {@inheritDoc} */
     @Override public void initByClientObject(Object jobObj) {
-        if(jobObj == null) {
+        if (jobObj == null) {
             logger.warn("Attempt to initialize deploy context by null");
             return;
         }
 
-        if(preprocessorClass != null)
+        if (preprocessorClass != null)
             logger.warn("Reinitialize deploying context [class=" + jobObj.getClass().getName() + "]");
 
         Object objectToDeploy = jobObj;
-        while(objectToDeploy instanceof DeployableObject) {
+        while (objectToDeploy instanceof DeployableObject) {
             // TODO: GG-19105
             List<Object> deps = ((DeployableObject)objectToDeploy).getDependencies();
-            if(deps.isEmpty())
+            if (deps.isEmpty())
                 break;
             else
                 objectToDeploy = deps.get(0);

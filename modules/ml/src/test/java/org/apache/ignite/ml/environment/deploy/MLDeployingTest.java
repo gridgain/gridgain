@@ -25,6 +25,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.ml.dataset.DatasetBuilder;
 import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
 import org.apache.ignite.ml.dataset.feature.extractor.impl.DummyVectorizer;
+import org.apache.ignite.ml.dataset.impl.cache.CacheBasedDatasetBuilder;
 import org.apache.ignite.ml.environment.LearningEnvironmentBuilder;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.math.primitives.vector.VectorUtils;
@@ -57,6 +58,9 @@ public class MLDeployingTest extends GridCommonAbstractTest {
 
     /** */
     private static final String EXT_PREPROCESSOR_2 = "org.apache.ignite.tests.p2p.ml.CustomPreprocessor2";
+
+    /** */
+    private static final int NUMBER_OF_COMPUTE_RETTRIES = 3;
 
     /** */
     private Ignite ignite1;
@@ -144,7 +148,7 @@ public class MLDeployingTest extends GridCommonAbstractTest {
                 .addPreprocessingTrainer(new NormalizationTrainer<Integer, Vector>()
                     .withP(1))
                 .addTrainer(new DecisionTreeClassificationTrainer(5, 0))
-                .fit(ignite1, cache);
+                .fit(cache);
 
             assertEquals(0., mdl.predict(VectorUtils.of(0., 0.)), 1.);
         });
@@ -155,7 +159,8 @@ public class MLDeployingTest extends GridCommonAbstractTest {
         IgniteCache<Integer, Vector> cache = null;
         try {
             cache = prepareCache(ignite1, cacheName);
-            body.accept(cache);
+            body.accept(new CacheBasedDatasetBuilder<>(ignite1, cache)
+                .withRetriesNumber(NUMBER_OF_COMPUTE_RETTRIES));
         } finally {
             if(cache != null)
                 cache.destroy();
@@ -163,10 +168,10 @@ public class MLDeployingTest extends GridCommonAbstractTest {
     }
 
     /** */
-    private void fitAndTestModel(IgniteCache<Integer, Vector> cache,
+    private void fitAndTestModel(CacheBasedDatasetBuilder<Integer, Vector> datasetBuilder,
         Preprocessor<Integer, Vector> preprocessor) {
         LogisticRegressionSGDTrainer trainer = new LogisticRegressionSGDTrainer();
-        LogisticRegressionModel model = trainer.fit(ignite1, cache, preprocessor);
+        LogisticRegressionModel model = trainer.fit(datasetBuilder, preprocessor);
 
         // For this case any answer is valid.
         assertEquals(0., model.predict(VectorUtils.of(0., 0.)), 1.);
@@ -230,6 +235,6 @@ public class MLDeployingTest extends GridCommonAbstractTest {
     /** */
     @FunctionalInterface
     private static interface TestCacheConsumer {
-        public void accept(IgniteCache<Integer, Vector> cache) throws Exception;
+        public void accept(CacheBasedDatasetBuilder<Integer, Vector> datasetBuilder) throws Exception;
     }
 }
