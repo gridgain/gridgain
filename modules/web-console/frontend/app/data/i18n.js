@@ -49,6 +49,8 @@ export default {
     'base.settings.profile': 'User profile',
     'base.sql.notebook': 'Query notebook',
     'base.sql.tabs.notebooks-list': 'Query notebooks',
+    'base.sql.tabs.queries-history': 'Queries history',
+    'base.sql.tabs.running-queries': 'Running queries',
     'base.monitoring.rolling-updates': 'Rolling Update',
 
     // app/components/page-signin/template.pug

@@ -16,8 +16,9 @@
 
 package org.apache.ignite.console.services;
 
+import java.util.Collection;
 import java.util.UUID;
-import org.apache.ignite.console.json.JsonArray;
+import org.apache.ignite.console.dto.Activity;
 import org.apache.ignite.console.repositories.ActivitiesRepository;
 import org.springframework.stereotype.Service;
 
@@ -51,7 +52,7 @@ public class ActivitiesService {
      * @param endDate End date.
      * @return Collection of user activities.
      */
-    public JsonArray activitiesForPeriod(UUID accId, long startDate, long endDate) {
-        return new JsonArray(activitiesRepo.activitiesForPeriod(accId, startDate, endDate));
+    public Collection<Activity> activitiesForPeriod(UUID accId, long startDate, long endDate) {
+        return activitiesRepo.activitiesForPeriod(accId, startDate, endDate);
     }
 }
