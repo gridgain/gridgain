@@ -18,9 +18,9 @@ package org.apache.ignite.console.web.socket;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.ignite.console.dto.Account;
@@ -52,7 +52,7 @@ public class AgentsHandler extends TextWebSocketHandler {
     private static final Logger log = LoggerFactory.getLogger(AgentsHandler.class);
 
     /** */
-    private Map<String, String> supportedAgents;
+    private Map<String, String> supportedAgents = new HashMap<>();
 
     /** */
     private AccountsRepository accRepo;
@@ -65,8 +65,6 @@ public class AgentsHandler extends TextWebSocketHandler {
      * @param wsm Web sockets manager.
      */
     public AgentsHandler(AccountsRepository accRepo, WebSocketsManager wsm) {
-        supportedAgents = new ConcurrentHashMap<>();
-
         this.accRepo = accRepo;
         this.wsm = wsm;
     }
@@ -174,6 +172,6 @@ public class AgentsHandler extends TextWebSocketHandler {
     @Override public void afterConnectionClosed(WebSocketSession ws, CloseStatus status) {
         log.info("Agent session closed [socket=" + ws + ", status=" + status + "]");
 
-        wsm.closeAgentSession(ws);
+        wsm.onAgentConnectionClosed(ws);
     }
 }

@@ -80,9 +80,6 @@ public class WebSocketsManager {
     private static final Logger log = LoggerFactory.getLogger(WebSocketsManager.class);
 
     /** */
-    private static final String VISOR_IGNITE = "org.apache.ignite.internal.visor.";
-
-    /** */
     private static final PingMessage PING = new PingMessage(UTF_8.encode("PING"));
 
     /** */
@@ -98,9 +95,6 @@ public class WebSocketsManager {
     private final Map<String, TopologySnapshot> clusters;
 
     /** */
-    private final Map<String, VisorTaskDescriptor> visorTasks;
-
-    /** */
     private volatile Announcement lastAnn;
 
     /**
@@ -111,24 +105,24 @@ public class WebSocketsManager {
         browsers = new ConcurrentHashMap<>();
         clusters = new ConcurrentHashMap<>();
         requests = new ConcurrentHashMap<>();
-        visorTasks = new ConcurrentHashMap<>();
     }
 
     /**
      * @param ws Session to close.
      */
-    public void closeAgentSession(WebSocketSession ws) {
+    public void onAgentConnectionClosed(WebSocketSession ws) {
         AgentDescriptor desc = agents.remove(ws);
 
         updateClusterInBrowsers(desc.accIds);
 
+        // TODO GG-18839 Do not remove if exists agent connected to this cluster.
         clusters.remove(desc.clusterId);
     }
 
     /**
      * @param ws Session to close.
      */
-    public void closeBrowserSession(WebSocketSession ws) {
+    public void onBrowserConnectionClosed(WebSocketSession ws) {
         browsers.remove(ws);
     }
 
@@ -174,7 +168,7 @@ public class WebSocketsManager {
      * @param wsBrowser Browser session.
      * @param evt Event to send.
      */
-    public void sendToAgent(WebSocketSession wsBrowser, WebSocketEvent evt) {
+    public void sendToFirstAgent(WebSocketSession wsBrowser, WebSocketEvent evt) {
         try {
             UUID accId = browsers.get(wsBrowser);
 
@@ -188,9 +182,6 @@ public class WebSocketsManager {
 
             if (log.isDebugEnabled())
                 log.debug("Found agent session [token=" + accId + ", session=" + wsAgent + ", event=" + evt + "]");
-
-            if (NODE_VISOR.equals(evt.getEventType()))
-                prepareNodeVisorParams(evt);
 
             requests.put(evt.getRequestId(), wsBrowser);
 
@@ -426,128 +417,6 @@ public class WebSocketsManager {
     public void pingClients() {
         agents.keySet().forEach(this::ping);
         browsers.keySet().forEach(this::ping);
-    }
-
-    /**
-     * @param shortName Class short name.
-     * @return Full class name.
-     */
-    protected String igniteVisor(String shortName) {
-        return VISOR_IGNITE + shortName;
-    }
-
-    /**
-     * @param taskId Task ID.
-     * @param taskCls Task class name.
-     * @param argCls Arguments classes names.
-     */
-    protected void registerVisorTask(String taskId, String taskCls, String... argCls) {
-        visorTasks.put(taskId, new VisorTaskDescriptor(taskCls, argCls));
-    }
-
-    /**
-     * Register Visor tasks.
-     */
-    @PostConstruct
-    protected void registerVisorTasks() {
-        registerVisorTask(
-            "querySql",
-            igniteVisor("query.VisorQueryTask"),
-            igniteVisor("query.VisorQueryArg"));
-
-        registerVisorTask("querySqlV2",
-            igniteVisor("query.VisorQueryTask"),
-            igniteVisor("query.VisorQueryArgV2"));
-
-        registerVisorTask("querySqlV3",
-            igniteVisor("query.VisorQueryTask"),
-            igniteVisor("query.VisorQueryArgV3"));
-
-        registerVisorTask("querySqlX2",
-            igniteVisor("query.VisorQueryTask"),
-            igniteVisor("query.VisorQueryTaskArg"));
-
-        registerVisorTask("queryScanX2",
-            igniteVisor("query.VisorScanQueryTask"),
-            igniteVisor("query.VisorScanQueryTaskArg"));
-
-        registerVisorTask("queryFetch",
-            igniteVisor("query.VisorQueryNextPageTask"),
-            IgniteBiTuple.class.getName(), String.class.getName(), Integer.class.getName());
-
-        registerVisorTask("queryFetchX2",
-            igniteVisor("query.VisorQueryNextPageTask"),
-            igniteVisor("query.VisorQueryNextPageTaskArg"));
-
-        registerVisorTask("queryFetchFirstPage",
-            igniteVisor("query.VisorQueryFetchFirstPageTask"),
-            igniteVisor("query.VisorQueryNextPageTaskArg"));
-
-        registerVisorTask("queryClose",
-            igniteVisor("query.VisorQueryCleanupTask"),
-            Map.class.getName(), UUID.class.getName(), Set.class.getName());
-
-        registerVisorTask("queryCloseX2",
-            igniteVisor("query.VisorQueryCleanupTask"),
-            igniteVisor("query.VisorQueryCleanupTaskArg"));
-
-        registerVisorTask("toggleClusterState",
-            igniteVisor("misc.VisorChangeGridActiveStateTask"),
-            igniteVisor("misc.VisorChangeGridActiveStateTaskArg"));
-
-        registerVisorTask("cacheNamesCollectorTask",
-            igniteVisor("cache.VisorCacheNamesCollectorTask"),
-            Void.class.getName());
-
-        registerVisorTask("cacheNodesTask",
-            igniteVisor("cache.VisorCacheNodesTask"),
-            String.class.getName());
-
-        registerVisorTask("cacheNodesTaskX2",
-            igniteVisor("cache.VisorCacheNodesTask"),
-            igniteVisor("cache.VisorCacheNodesTaskArg"));
-    }
-
-    /**
-     * Prepare task event for execution on agent.
-     *
-     * @param evt Task event.
-     */
-    private void prepareNodeVisorParams(WebSocketEvent evt) {
-        JsonObject payload = fromJson(evt.getPayload());
-
-        JsonObject params = payload.getJsonObject("params");
-
-        String taskId = params.getString("taskId");
-
-        if (F.isEmpty(taskId))
-            throw new IllegalStateException("Task ID not specified [evt=" + evt + "]");
-
-        String nids = params.getString("nids");
-
-        VisorTaskDescriptor desc = visorTasks.get(taskId);
-
-        if (desc == null)
-            throw new IllegalStateException("Unknown task  [taskId=" + taskId + ", evt=" + evt + "]");
-
-        JsonObject exeParams =  new JsonObject()
-            .add("cmd", "exe")
-            .add("name", "org.apache.ignite.internal.visor.compute.VisorGatewayTask")
-            .add("p1", nids)
-            .add("p2", desc.getTaskClass());
-
-        AtomicInteger idx = new AtomicInteger(3);
-
-        Arrays.stream(desc.getArgumentsClasses()).forEach(arg ->  exeParams.put("p" + idx.getAndIncrement(), arg));
-
-        JsonArray args = params.getJsonArray("args");
-
-        if (!F.isEmpty(args))
-            args.forEach(arg -> exeParams.put("p" + idx.getAndIncrement(), arg));
-
-        payload.put("params", exeParams);
-
-        evt.setPayload(toJson(payload));
     }
 
     /**
