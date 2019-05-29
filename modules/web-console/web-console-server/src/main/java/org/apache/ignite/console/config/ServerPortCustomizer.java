@@ -26,9 +26,12 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class ServerPortCustomizer implements EmbeddedServletContainerCustomizer, Ordered {
+    /** */
+    private static final int DFLT_PORT = 3000;
+
     /** {@inheritDoc} */
     @Override public void customize(ConfigurableEmbeddedServletContainer container) {
-        container.setPort(3000);
+        container.setPort(DFLT_PORT);
     }
 
     /** {@inheritDoc} */

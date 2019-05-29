@@ -34,11 +34,7 @@ interface ISigninFormController extends ng.IFormController {
 export default class PageSignIn implements ng.IPostLink {
     activationToken?: PageSigninStateParams['activationToken'];
 
-    data: ISiginData = {
-        email: null,
-        password: null,
-        activationToken: this.activationToken
-    };
+    data: ISiginData;
 
     form: ISigninFormController;
 
@@ -49,6 +45,14 @@ export default class PageSignIn implements ng.IPostLink {
     static $inject = ['Auth', 'IgniteMessages', 'IgniteFormUtils', '$element'];
 
     constructor(private Auth: AuthService, private IgniteMessages, private IgniteFormUtils, private el: JQLite) {}
+
+    $onInit() {
+        this.data = {
+            email: null,
+            password: null,
+            activationToken: this.activationToken
+        };
+    }
 
     canSubmitForm(form: ISigninFormController) {
         return form.$error.server ? true : !form.$invalid;
