@@ -16,28 +16,44 @@
 
 package org.apache.ignite.console.web.controller;
 
-import org.apache.ignite.console.json.JsonArray;
-import org.apache.ignite.console.json.JsonObject;
+import io.swagger.annotations.ApiOperation;
+import org.apache.ignite.console.dto.Account;
+import org.apache.ignite.console.services.ActivitiesService;
+import org.apache.ignite.console.web.model.ActivityRequest;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import springfox.documentation.annotations.ApiIgnore;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 /**
- * Dummy controller, just for migration to Java.
+ * Controller for activities API.
  */
-@ApiIgnore
 @RestController
-public class DummyController {
+@RequestMapping(path = "/api/v1/activities")
+public class ActivitiesController {
+    /** */
+    private final ActivitiesService activitiesSrv;
+
     /**
-     * Dummy handler for: /api/v1/activities/page
+     * @param activitiesSrv Activities service.
      */
-    @PostMapping(path = "/api/v1/activities/page", consumes = APPLICATION_JSON_VALUE)
-    public ResponseEntity<JsonArray> dummyActivitiesPage(@RequestBody JsonObject params) {
-        System.out.println("dummyActivitiesPage: " + params);
+    @Autowired
+    public ActivitiesController(ActivitiesService activitiesSrv) {
+        this.activitiesSrv = activitiesSrv;
+    }
+
+    /**
+     * @param acc Account.
+     */
+    @ApiOperation(value = "Save user's activity.")
+    @PostMapping(path = "/page", consumes = APPLICATION_JSON_VALUE)
+    public ResponseEntity<Void> save(@AuthenticationPrincipal Account acc, @RequestBody ActivityRequest req) {
+        activitiesSrv.save(acc.getId(), req.getGroup(), req.getAction());
 
         return ResponseEntity.ok().build();
     }

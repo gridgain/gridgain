@@ -17,7 +17,7 @@
 package org.apache.ignite.console.json;
 
 import java.util.ArrayList;
-import java.util.List;
+import java.util.Collection;
 
 /**
  * A simple representation of a JSON array.
@@ -35,7 +35,7 @@ public class JsonArray extends ArrayList<Object> {
      *
      * @param list List with items.
      */
-    public JsonArray(List<Object> list) {
+    public JsonArray(Collection list) {
         super(list);
     }
 

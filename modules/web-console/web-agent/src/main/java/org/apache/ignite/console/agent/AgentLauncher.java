@@ -174,8 +174,6 @@ public class AgentLauncher {
         return cfg;
     }
 
-
-
     /**
      * @param args Args.
      */

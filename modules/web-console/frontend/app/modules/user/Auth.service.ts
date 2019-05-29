@@ -73,7 +73,7 @@ export default class AuthService {
                 if (action === 'password/forgot')
                     return;
 
-                this.User.read()
+                return this.User.read()
                     .then((user) => {
                         if (loginAfterwards) {
                             this.$root.$broadcast('user', user);
