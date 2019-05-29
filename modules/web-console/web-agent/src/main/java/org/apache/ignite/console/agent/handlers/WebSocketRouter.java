@@ -24,6 +24,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
 import org.apache.ignite.IgniteLogger;
@@ -34,6 +36,7 @@ import org.apache.ignite.console.websocket.WebSocketEvent;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.logger.slf4j.Slf4jLogger;
+import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.StatusCode;
@@ -48,6 +51,7 @@ import org.eclipse.jetty.websocket.client.WebSocketClient;
 import org.slf4j.LoggerFactory;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.apache.ignite.console.agent.AgentUtils.configureProxy;
 import static org.apache.ignite.console.agent.AgentUtils.secured;
 import static org.apache.ignite.console.agent.AgentUtils.sslContextFactory;
 import static org.apache.ignite.console.json.JsonUtils.fromJson;
@@ -72,13 +76,19 @@ public class WebSocketRouter implements AutoCloseable {
     private static final ByteBuffer PONG_MSG = UTF_8.encode("PONG");
 
     /** */
+    private final CountDownLatch closeLatch = new CountDownLatch(1);
+
+    /** */
+    private final WebSocketSession wss = new WebSocketSession();
+
+    /** Agent configuration. */
     private final AgentConfiguration cfg;
 
-    /** */
-    private final CountDownLatch closeLatch;
+    /** Http client. */
+    private final HttpClient httpClient;
 
-    /** */
-    private final WebSocketSession wss;
+    /** Web Socket Client. */
+    private WebSocketClient client;
 
     /** */
     private final ClusterHandler clusterHnd;
@@ -87,34 +97,66 @@ public class WebSocketRouter implements AutoCloseable {
     private final DatabaseHandler dbHnd;
 
     /** */
-    private WebSocketClient client;
-
-    /** */
     private int reconnectCnt;
 
     /**
      * @param cfg Configuration.
-     * @throws Exception If failed to create websocket handler.
      */
-    public WebSocketRouter(AgentConfiguration cfg) throws Exception {
+    public WebSocketRouter(AgentConfiguration cfg) {
         this.cfg = cfg;
 
-        closeLatch = new CountDownLatch(1);
-        wss = new WebSocketSession();
+        httpClient = new HttpClient(createSslFactory(cfg));
+
+//        TODO GG-18379 Investigate how to establish native websocket connection with proxy.
+        configureProxy(httpClient, cfg.serverUri());
+
         clusterHnd = new ClusterHandler(cfg, wss);
         dbHnd = new DatabaseHandler(cfg, wss);
     }
 
     /**
+     * @param cfg Config.
+     */
+    private static SslContextFactory createSslFactory(AgentConfiguration cfg) {
+        boolean trustAll = Boolean.getBoolean("trust.all");
+
+        if (trustAll && !F.isEmpty(cfg.serverTrustStore())) {
+            log.warning("Options contains both '--server-trust-store' and '-Dtrust.all=true'. " +
+                "Option '-Dtrust.all=true' will be ignored on connect to Web server.");
+
+            trustAll = false;
+        }
+
+        boolean ssl = trustAll || !F.isEmpty(cfg.serverTrustStore()) || !F.isEmpty(cfg.serverKeyStore());
+
+        if (!ssl)
+            return null;
+
+        return sslContextFactory(
+            cfg.serverKeyStore(),
+            cfg.serverKeyStorePassword(),
+            trustAll,
+            cfg.serverTrustStore(),
+            cfg.serverTrustStorePassword(),
+            cfg.cipherSuites()
+        );
+    }
+
+    /**
      * Start websocket client.
      */
-    public void start() {
+    public void start() throws Exception {
         log.info("Starting Web Console Agent...");
         log.info("Connecting to: " + cfg.serverUri());
 
-        connect();
+        httpClient.start();
 
-        clusterHnd.start();
+        try {
+            reconnect();
+        }
+        catch (Throwable e) {
+            log.error("Failed to connect to the server", e);
+        }
     }
 
     /** {@inheritDoc} */
@@ -137,53 +179,32 @@ public class WebSocketRouter implements AutoCloseable {
     }
 
     /**
-     * Connect to websocket.
-     */
-    @SuppressWarnings("deprecation")
-    private void connect() {
-        boolean trustAll = Boolean.getBoolean("trust.all");
-
-        if (trustAll && !F.isEmpty(cfg.serverTrustStore())) {
-            log.warning("Options contains both '--server-trust-store' and '-Dtrust.all=true'. " +
-                "Option '-Dtrust.all=true' will be ignored on connect to Web server.");
-
-            trustAll = false;
-        }
-
-        boolean ssl = trustAll || !F.isEmpty(cfg.serverTrustStore()) || !F.isEmpty(cfg.serverKeyStore());
-
-        if (ssl) {
-            SslContextFactory sslCtxFactory = sslContextFactory(
-                cfg.serverKeyStore(),
-                cfg.serverKeyStorePassword(),
-                trustAll,
-                cfg.serverTrustStore(),
-                cfg.serverTrustStorePassword(),
-                cfg.cipherSuites()
-            );
-
-            client = new WebSocketClient(sslCtxFactory);
-        }
-        else
-            client = new WebSocketClient();
-
-        try {
-            reconnect();
-        }
-        catch (Throwable e) {
-            log.error("Failed to connect to the server", e);
-        }
-    }
-
-    /**
      * Reconnect to backend.
-     * @throws Exception If failed.
+     * @throws Exception If failed to connect to server.
      */
     private void reconnect() throws Exception {
-        client.start();
-        client.connect(this, new URI(cfg.serverUri()).resolve(AGENTS_PATH)).get();
+        if (!isRunning())
+            return;
 
-        reconnectCnt = 0;
+        if (client != null) {
+            client.destroy();
+
+            wss.close(StatusCode.NORMAL, null);
+        }
+
+        client = new WebSocketClient(httpClient);
+
+        try {
+            client.start();
+            client.connect(this, new URI(cfg.serverUri()).resolve(AGENTS_PATH)).get(10L, TimeUnit.SECONDS);
+
+            reconnectCnt = 0;
+
+            clusterHnd.start();
+        }
+        catch (ConnectException | TimeoutException ignored) {
+            // No-op.
+        }
     }
 
     /**
@@ -198,21 +219,6 @@ public class WebSocketRouter implements AutoCloseable {
      */
     private boolean isRunning() {
         return closeLatch.getCount() > 0;
-    }
-
-    /**
-     *
-     * @param statusCode Close status code.
-     * @param reason Close reason.
-     */
-    @OnWebSocketClose
-    public void onClose(int statusCode, String reason) {
-        log.info("Connection closed [code=" + statusCode + ", reason=" + reason + "]");
-
-        wss.close(StatusCode.NORMAL, null);
-
-        if (isRunning())
-            connect();
     }
 
     /**
@@ -385,7 +391,7 @@ public class WebSocketRouter implements AutoCloseable {
     public void onError(Throwable e) {
         // Reconnect only in case of ConnectException.
         if (e instanceof ConnectException) {
-            LT.error(log, e, "Failed to connect to the server");
+            LT.error(log, e.getCause(), "Failed to connect to the server");
 
             if (reconnectCnt < 10)
                 reconnectCnt++;
@@ -398,6 +404,23 @@ public class WebSocketRouter implements AutoCloseable {
             catch (Throwable ignore) {
                 // No-op.
             }
+        }
+    }
+
+    /**
+     *
+     * @param statusCode Close status code.
+     * @param reason Close reason.
+     */
+    @OnWebSocketClose
+    public void onClose(int statusCode, String reason) {
+        log.info("Connection closed [code=" + statusCode + ", reason=" + reason + "]");
+
+        try {
+            reconnect();
+        }
+        catch (Throwable ignore) {
+            // No-op.
         }
     }
 }

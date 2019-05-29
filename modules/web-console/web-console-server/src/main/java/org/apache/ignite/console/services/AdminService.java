@@ -52,6 +52,9 @@ public class AdminService {
     private final NotebooksService notebooksSrv;
 
     /** */
+    private final ActivitiesService activitiesSrv;
+
+    /** */
     private final NotificationService notificationSrv;
 
     /** */
@@ -65,6 +68,7 @@ public class AdminService {
      * @param accountsSrv Service to work with accounts.
      * @param cfgsSrv Service to work with configurations.
      * @param notebooksSrv Service to work with notebooks.
+     * @param activitiesSrv Service to work with activities.
      * @param notificationSrv Service to send notifications.
      * @param annRepo Repository to work with announcement.
      * @param wsm Web sockets manager.
@@ -74,6 +78,7 @@ public class AdminService {
         AccountsService accountsSrv,
         ConfigurationsService cfgsSrv,
         NotebooksService notebooksSrv,
+        ActivitiesService activitiesSrv,
         NotificationService notificationSrv,
         AnnouncementRepository annRepo,
         WebSocketsManager wsm
@@ -82,15 +87,18 @@ public class AdminService {
         this.accountsSrv = accountsSrv;
         this.cfgsSrv = cfgsSrv;
         this.notebooksSrv = notebooksSrv;
+        this.activitiesSrv = activitiesSrv;
         this.notificationSrv = notificationSrv;
         this.annRepo = annRepo;
         this.wsm = wsm;
     }
 
     /**
+     * @param startDate Start date.
+     * @param endDate End date.
      * @return List of all users.
      */
-    public JsonArray list() {
+    public JsonArray list(long startDate, long endDate) {
         List<Account> accounts = accountsSrv.list();
 
         JsonArray res = new JsonArray();
@@ -112,6 +120,7 @@ public class AdminService {
                     .add("caches", 0)
                     .add("models", 0)
                     .add("igfs", 0))
+                .add("activitiesDetail", activitiesSrv.activitiesForPeriod(account.getId(), startDate, endDate))
             )
         );
 

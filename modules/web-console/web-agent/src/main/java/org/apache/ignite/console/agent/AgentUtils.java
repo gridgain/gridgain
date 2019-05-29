@@ -17,6 +17,8 @@
 package org.apache.ignite.console.agent;
 
 import java.io.File;
+import java.net.InetSocketAddress;
+import java.net.ProxySelector;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.ProtectionDomain;
@@ -25,7 +27,18 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.log4j.Logger;
+import org.eclipse.jetty.client.HttpClient;
+import org.eclipse.jetty.client.HttpProxy;
+import org.eclipse.jetty.client.Origin;
+import org.eclipse.jetty.client.ProxyConfiguration;
+import org.eclipse.jetty.client.Socks4Proxy;
+import org.eclipse.jetty.client.util.BasicAuthentication;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
+
+import static java.net.Proxy.NO_PROXY;
+import static java.net.Proxy.Type.SOCKS;
+import static java.util.stream.Collectors.toList;
+import static org.eclipse.jetty.client.api.Authentication.ANY_REALM;
 
 /**
  * Utility methods.
@@ -177,5 +190,71 @@ public class AgentUtils {
      */
     public static String secured(Collection<String> c) {
         return c.stream().map(AgentUtils::secured).collect(Collectors.joining(", "));
+    }
+
+    /**
+     * @param httpClient Http client.
+     * @param proxies Proxies.
+     */
+    private static void addAuthentication(HttpClient httpClient, List<ProxyConfiguration.Proxy> proxies) {
+        proxies.forEach(p -> {
+            String user, pwd;
+
+            if (p instanceof HttpProxy) {
+                String scheme = p.getURI().getScheme();
+
+                user = System.getProperty(scheme + ".proxyUsername");
+                pwd = System.getProperty(scheme + ".proxyPassword");
+            }
+            else {
+                user = System.getProperty("java.net.socks.username");
+                pwd = System.getProperty("java.net.socks.password");
+            }
+
+            httpClient.getAuthenticationStore().addAuthentication(
+                new BasicAuthentication(p.getURI(), ANY_REALM, user, pwd)
+            );
+        });
+    }
+
+    /**
+     * @param str Server uri.
+     */
+    public static void configureProxy(HttpClient httpClient, String str) {
+        try {
+            URI uri = URI.create(str);
+
+            URI proxyUri = new URI("ws".equalsIgnoreCase(uri.getScheme()) ? "http" : "https",
+                uri.getUserInfo(),
+                uri.getHost(),
+                uri.getPort(),
+                uri.getPath(),
+                uri.getQuery(),
+                uri.getFragment()
+            );
+
+            boolean secure = "https".equalsIgnoreCase(proxyUri.getScheme());
+
+            List<ProxyConfiguration.Proxy> proxies = ProxySelector.getDefault().select(proxyUri).stream()
+                .filter(p -> !p.equals(NO_PROXY))
+                .map(p -> {
+                    InetSocketAddress inetAddr = (InetSocketAddress)p.address();
+
+                    Origin.Address addr = new Origin.Address(inetAddr.getHostName(), inetAddr.getPort());
+
+                    if (p.type().equals(SOCKS))
+                        return new Socks4Proxy(addr, secure);
+
+                    return new HttpProxy(addr, secure);
+                })
+                .collect(toList());
+
+            httpClient.getProxyConfiguration().getProxies().addAll(proxies);
+
+            addAuthentication(httpClient, proxies);
+        }
+        catch (Exception e) {
+            log.warn("Failed to configure proxy.", e);
+        }
     }
 }
