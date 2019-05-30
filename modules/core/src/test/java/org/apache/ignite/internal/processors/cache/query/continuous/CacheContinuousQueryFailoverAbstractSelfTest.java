@@ -1752,6 +1752,9 @@ public abstract class CacheContinuousQueryFailoverAbstractSelfTest extends GridC
                 if (System.currentTimeMillis() > startFilterTime) {
                     // Stop filter and check events.
                     if (dinQry != null) {
+                        // If sync callback is used then we can close a query before checking notifications
+                        // because CQ listeners on a server side have a pending notification upon each
+                        // successfull cache update operations completion.
                         if (!asyncCallback())
                             dinQry.close();
 
@@ -1759,6 +1762,10 @@ public abstract class CacheContinuousQueryFailoverAbstractSelfTest extends GridC
 
                         checkEvents(expEvtsNewLsnr, dinLsnr, backups == 0);
 
+                        // If async callback is used and we close a query before checking notifications then
+                        // some updates can be missed because a callback submitted in parallel can be executed
+                        // after CQ is closed and no notification will be sent as a result.
+                        // So, we close CQ after the check.
                         if (asyncCallback())
                             dinQry.close();
                     }
