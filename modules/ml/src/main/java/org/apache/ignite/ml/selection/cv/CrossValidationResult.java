@@ -76,6 +76,8 @@ public class CrossValidationResult {
     /**
      * Gets the the average value of best score array.
      *
+     * Default value is Double.MIN_VALUE.
+     *
      * @return The value.
      */
     public double getBestAvgScore() {

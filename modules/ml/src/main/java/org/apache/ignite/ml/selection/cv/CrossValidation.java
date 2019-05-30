@@ -18,10 +18,12 @@ package org.apache.ignite.ml.selection.cv;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import org.apache.ignite.Ignite;
@@ -135,7 +137,18 @@ public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
 
         CrossValidationResult cvRes = new CrossValidationResult();
 
-        paramSets.forEach(paramSet -> {
+        double goodFitness = 0.9;
+        long seed = 1235L;
+        Random rnd = new Random(seed);
+
+        List<Double[]> paramSetsCp = new ArrayList<>(paramSets);
+
+        int MAX_TRIES = 200;
+        int maxTries = 0;
+        while (cvRes.getBestAvgScore() <= goodFitness && maxTries < MAX_TRIES && !paramSetsCp.isEmpty()) {
+            int idx = rnd.nextInt(paramSetsCp.size());
+            Double[] paramSet = paramSetsCp.get(idx);
+
             Map<String, Double> paramMap = injectAndGetParametersToPipeline(trainer, paramGrid, paramSet);
 
             double[] locScores = score(trainer, scoreCalculator, ignite, upstreamCache, filter, preprocessor,
@@ -148,12 +161,13 @@ public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
             if (locAvgScore > cvRes.getBestAvgScore()) {
                 cvRes.setBestScore(locScores);
                 cvRes.setBestHyperParams(paramMap);
-                System.out.println(paramMap.toString());
+                System.out.println(paramMap.toString()); // only hyperparameters that improves the locAvgScore
             }
-        });
 
+            paramSetsCp.remove(idx);
+            maxTries++;
+        }
         return cvRes;
-
 
     }
 
