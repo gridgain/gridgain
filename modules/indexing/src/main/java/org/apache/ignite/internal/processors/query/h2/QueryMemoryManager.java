@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -27,7 +29,7 @@ public class QueryMemoryManager extends H2MemoryTracker {
     /**
      * Memory pool size available for SQL queries.
      */
-    public static final long DFLT_SQL_MEMORY_POOL = Long.getLong(IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE,
+    private static final long DFLT_SQL_MEMORY_POOL = Long.getLong(IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE,
         (long)(Runtime.getRuntime().maxMemory() * 0.6d));
 
     /**
@@ -36,14 +38,14 @@ public class QueryMemoryManager extends H2MemoryTracker {
      * Note: Actually, it is  per query (Map\Reduce) stage limit. With QueryParallelism every query-thread will be
      * treated as separate Map query.
      */
-    public static final long DFLT_SQL_QRY_MEMORY_LIMIT = DFLT_SQL_MEMORY_POOL / IgniteConfiguration.DFLT_QUERY_THREAD_POOL_SIZE;
+    private static final long DFLT_SQL_QRY_MEMORY_LIMIT = DFLT_SQL_MEMORY_POOL / IgniteConfiguration.DFLT_QUERY_THREAD_POOL_SIZE;
 
     /** Global query memory quota. */
     //TODO GG-18628: it looks safe to make this configurable at runtime.
     private final long globalQuota;
 
     /** Memory allocated by running queries. */
-    private AtomicLong allocated;
+    private AtomicLong allocated = new AtomicLong();
 
     /**
      * @param globalQuota Node memory available for sql queries.
@@ -62,11 +64,12 @@ public class QueryMemoryManager extends H2MemoryTracker {
         if (size == 0)
             return; // Nothing to do.
 
-        allocated.accumulateAndGet(size, (a, b) -> {
-            if (a + b > globalQuota)
-                throw new IgniteSQLException("SQL query run out of memory: Global quota exceeded.", IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY);
+        allocated.accumulateAndGet(size, (prev, x) -> {
+            if (prev + x > globalQuota)
+                throw new IgniteSQLException("SQL query run out of memory: Global quota exceeded. "+x,
+                    IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY);
 
-            return a + b;
+            return prev + x;
         });
     }
 
@@ -77,11 +80,12 @@ public class QueryMemoryManager extends H2MemoryTracker {
         if (size == 0)
             return; // Nothing to do.
 
-        allocated.accumulateAndGet(-size, (a, b) -> {
-            if (a + b < 0)
-                throw new IllegalStateException("Try to free more memory than ever be allocated.");
+        allocated.accumulateAndGet(-size, (prev, x) -> {
+            if (prev + x < 0)
+                throw new IllegalStateException("Try to free more memory that ever be allocated: [" +
+                    "allocated=" + prev + ", toFree=" + x + ']');
 
-            return a + b;
+            return prev + x;
         });
     }
 
@@ -94,7 +98,7 @@ public class QueryMemoryManager extends H2MemoryTracker {
      * @return Query memory tracker.
      */
     public QueryMemoryTracker createQueryMemoryTracker(long maxQueryMemory) {
-        assert globalQuota > maxQueryMemory;
+        assert globalQuota == 0 || globalQuota > maxQueryMemory : globalQuota;
 
         //TODO: GG-18628: Should we register newly created tracker? This can be helpful in debugging 'memory leaks'.
         return new QueryMemoryTracker(this, maxQueryMemory > 0 ? maxQueryMemory : DFLT_SQL_QRY_MEMORY_LIMIT);

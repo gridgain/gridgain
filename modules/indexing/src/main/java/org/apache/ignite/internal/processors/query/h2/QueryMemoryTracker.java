@@ -74,11 +74,22 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
         if (size == 0)
             return;
 
-        //TODO: GG-18628: tries to allocate memory from parent first. Let's make this allocation coarse-grained.
-        parent.allocate(size);
+        ALLOC_UPD.accumulateAndGet(this, size, (prev, x) -> {
+                if (prev + x > maxMem)
+                    throw new IgniteSQLException("SQL query run out of memory: Query quota exceeded. "+x, IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY);
 
-        if (ALLOC_UPD.addAndGet(this, size) >= maxMem)
-            throw new IgniteSQLException("SQL query run out of memory.", IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY);
+                return prev + x;
+            });
+
+        //TODO: GG-18628: tries to allocate memory from parent first. Let's make this allocation coarse-grained.
+        try {
+            parent.allocate(size);
+        }
+        catch (Throwable e) {
+            ALLOC_UPD.addAndGet(this, -size);
+
+            throw e;
+        }
     }
 
     /** {@inheritDoc} */
@@ -88,18 +99,24 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
         if (size == 0)
             return;
 
-        parent.release(size);
+        long allocated = ALLOC_UPD.accumulateAndGet(this, -size, (prev, x) -> {
+            if (prev + x < 0)
+                throw new IllegalStateException("Try to free more memory that ever be allocated: [" +
+                    "allocated=" + prev + ", toFree=" + x + ']');
 
-        long allocated = ALLOC_UPD.addAndGet(this, -size);
+            return prev + x;
+        });
 
         assert !closed && allocated >= 0 || allocated == 0 : "Invalid allocated memory size:" + allocated;
+
+        parent.release(size);
     }
 
     /**
      * @return Memory allocated by tracker.
      */
     public long getAllocated() {
-        return allocated;
+        return ALLOC_UPD.get(this);
     }
 
     /**
@@ -113,7 +130,7 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
     @Override public void close() {
         // It is not expected to be called concurrently with allocate\free.
         if (CLOSED_UPD.compareAndSet(this, Boolean.FALSE, Boolean.TRUE))
-            release(allocated);
+            release(getAllocated());
     }
 
     /** {@inheritDoc} */

@@ -62,9 +62,10 @@ class AggregateDataDistinctWithCounts extends AggregateData  {
                 long size = Constants.MEMORY_OBJECT;
 
                 size += v.getMemory();
-                allocated += size;
 
                 memTracker.allocate(size);
+
+                allocated += size;
             }
         }
         a.count++;

@@ -63,9 +63,10 @@ class AggregateDataCollecting extends AggregateData implements Iterable<Value> {
             long size = distinct ? 40 /* TreeMap.Entry */ : Constants.MEMORY_POINTER;
 
             size += v.getMemory();
-            allocated += size;
 
             memTracker.allocate(size);
+
+            allocated += size;
         }
     }
 

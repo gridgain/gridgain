@@ -55,28 +55,30 @@ public class H2ManagedLocalResult extends H2BaseLocalResult {
 
         long memory;
 
+        // Replace old row.
         if (oldRow != null) {
             memory = (row.length - oldRow.length) * Constants.MEMORY_POINTER;
 
             for (int i = 0; i < oldRow.length; i++)
                 memory -= oldRow[i].getMemory();
         }
+        // Add new row.
         else {
             memory = Constants.MEMORY_ARRAY + row.length * Constants.MEMORY_POINTER;
 
             if (distinctRowKey != null)
                 memory += distinctRowKey.getMemory();
-
-            for (int i = 0; i < row.length; i++)
-                memory += row[i].getMemory();
         }
 
-        allocMem += memory;
+        for (int i = 0; i < row.length; i++)
+            memory += row[i].getMemory();
 
         if (memory < 0)
             mem.release(memory);
         else
             mem.allocate(memory);
+
+        allocMem += memory;
     }
 
     /** {@inheritDoc} */
@@ -89,10 +91,23 @@ public class H2ManagedLocalResult extends H2BaseLocalResult {
         if (!isClosed()) {
             super.close();
 
-            distinctRows = null;
-            rows = null;
-
-            mem.release(allocMem);
+            onClose();
         }
+    }
+
+    /**
+     * @return Query memory tracker.
+     */
+    protected H2MemoryTracker getMemoryTracker() {
+        return mem;
+    }
+
+    /** Close event handler. */
+    protected void onClose() {
+        // Allow results to be collected by GC before mark memory released.
+        distinctRows = null;
+        rows = null;
+
+        mem.release(allocMem);
     }
 }

@@ -17,25 +17,36 @@
 package org.apache.ignite.internal.processors.query.oom;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.cache.query.FieldsQueryCursor;
+import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.h2.H2LocalResultFactory;
 import org.apache.ignite.internal.processors.query.h2.H2ManagedLocalResult;
+import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
+import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
+import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.h2.engine.Session;
 import org.h2.expression.Expression;
+import org.h2.result.H2BaseLocalResult;
 import org.h2.result.LocalResult;
 import org.junit.Test;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
+
+import static org.apache.ignite.internal.util.IgniteUtils.MB;
 
 /**
  * Query memory manager tests.
@@ -45,7 +56,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     private static final int SMALL_TABLE_SIZE = 1000;
 
     /** Row count. */
-    static final int BIG_TABLE_SIZE = 10000;
+    static final int BIG_TABLE_SIZE = 10_000;
 
     /** Query local results. */
     static final List<H2ManagedLocalResult> localResults = new ArrayList<>();
@@ -61,6 +72,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         super.beforeTestsStarted();
 
         System.setProperty(IgniteSystemProperties.IGNITE_H2_LOCAL_RESULT_FACTORY, TestH2LocalResultFactory.class.getName());
+        System.setProperty(IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE, Long.toString(10L * MB));
 
         startGrid(0);
 
@@ -77,6 +89,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     @Override protected void afterTestsStopped() throws Exception {
         stopAllGrids();
 
+        System.clearProperty(IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE);
         System.clearProperty(IgniteSystemProperties.IGNITE_H2_LOCAL_RESULT_FACTORY);
     }
 
@@ -84,9 +97,59 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
-        maxMem = 1024 * 1024;
+        maxMem = MB;
 
         localResults.clear();
+
+        resetMemoryManagerState(grid(0));
+
+        if (!isLocal())
+            resetMemoryManagerState(grid(1));
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        checkMemoryManagerState(grid(0));
+
+        if (client)
+            checkMemoryManagerState(grid(1));
+
+        super.afterTest();
+    }
+
+    /**
+     * Check if all allocated memory was correctly released.
+     * @param node Node.
+     */
+    private void checkMemoryManagerState(IgniteEx node) {
+        long memAllocated = memoryManager(node).allocated();
+
+        assertEquals("Potential memory leak in SQL engine: allocated=" + memAllocated, 0, memAllocated);
+    }
+
+    /**
+     * Resets node query memory manager state.
+     *
+     * @param grid Node.
+     */
+    private void resetMemoryManagerState(IgniteEx grid) {
+        QueryMemoryManager memoryManager = memoryManager(grid);
+
+        // Reset memory manager.
+        if (memoryManager.allocated() > 0)
+            memoryManager.release(memoryManager.allocated());
+    }
+
+    /**
+     * Return node query memory manager.
+     *
+     * @param node Node.
+     * @return Query memory manager.
+     */
+    private QueryMemoryManager memoryManager(IgniteEx node) {
+        IgniteH2Indexing h2 = (IgniteH2Indexing)node.context().query().getIndexing();
+
+        return h2.memoryManager();
     }
 
     /** {@inheritDoc} */
@@ -199,7 +262,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     /** Check UNION operation with large sub-selects. */
     @Test
     public void testUnionSimple() throws Exception {
-        maxMem = 8L * 1024 * 1024;
+        maxMem = 8L * MB;
 
         execQuery("select * from T as T0, T as T1 where T0.id < 2 " +
             "UNION " +
@@ -221,7 +284,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
             "select * from T as T2, T as T3 where T2.id >= 2 AND T2.id < 6", true);
 
         assertEquals(2, localResults.size());
-        assertTrue(maxMem < localResults.get(1).memoryAllocated());
+        assertTrue(maxMem < localResults.get(1).memoryAllocated() + 500);
         assertTrue(4000 > localResults.get(0).getRowCount());
         assertTrue(4000 > localResults.get(1).getRowCount());
     }
@@ -229,7 +292,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     /** Check large UNION operation with small enough sub-selects, but large result set. */
     @Test
     public void testUnionOfSmallDataSetsWithLargeResult() throws Exception {
-        maxMem = 3 * 1024 * 1024;
+        maxMem = 4L * MB;
 
         checkQueryExpectOOM("select * from T as T0, T as T1 where T0.id < 2 " +
             "UNION " +
@@ -257,7 +320,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         checkQueryExpectOOM("select * from T as T0, T as T1", false);
 
         assertEquals(1, localResults.size());
-        assertTrue(maxMem < localResults.get(0).memoryAllocated());
+        assertTrue(maxMem < localResults.get(0).memoryAllocated() + 500);
 
     }
 
@@ -268,7 +331,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         checkQueryExpectOOM("select * from T as T0, T as T1 ORDER BY T1.id", true);
 
         assertEquals(1, localResults.size());
-        assertTrue(maxMem < localResults.get(0).memoryAllocated());
+        assertTrue(maxMem < localResults.get(0).memoryAllocated() + 500);
     }
 
     /** Check GROUP BY operation on large data set with small result set. */
@@ -317,7 +380,6 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         assertEquals(1, localResults.size());
         assertTrue(maxMem > localResults.get(0).memoryAllocated());
         assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
-        //TODO: GG-18840: Add global limit check.
     }
 
     /** Check query with GROUP BY non-indexed col and with DISTINCT aggregates. */
@@ -342,7 +404,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     /** Check lazy query with GROUP BY indexed col (small result), then sort. */
     @Test
     public void testLazyQueryWithGroupByThenSort() throws Exception {
-        maxMem = 512 * 1024;
+        maxMem = MB / 2;
 
         checkQueryExpectOOM("select K.indexed, sum(K.grp) as a from K " +
             "GROUP BY K.indexed ORDER BY a DESC", true);
@@ -358,7 +420,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
         // Local result is quite small.
         assertEquals(1, localResults.size());
-        assertTrue(maxMem < localResults.get(0).memoryAllocated());
+        assertTrue(maxMem < localResults.get(0).memoryAllocated() + 500);
         assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
     }
 
@@ -375,11 +437,54 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         checkQueryExpectOOM("select DISTINCT K.id from K", true);
     }
 
+    /** Check query failure due to global memory quota exceeded. */
+    @Test
+    public void testGlobalQuota() throws Exception {
+        final List<QueryCursor> cursors = new ArrayList<>();
+
+        IgniteH2Indexing h2 = (IgniteH2Indexing)grid(0).context().query().getIndexing();
+
+        try {
+            CacheException ex = (CacheException)GridTestUtils.assertThrows(log, () -> {
+                for (int i = 0; i < 100; i++) {
+                    QueryCursor<List<?>> cur = query("select T.name, avg(T.id), sum(T.ref_key) from T GROUP BY T.name",
+                        true);
+
+                    cursors.add(cur);
+
+                    Iterator<List<?>> iter = cur.iterator();
+                    iter.next();
+                }
+
+                return null;
+            }, CacheException.class, "SQL query run out of memory: Global quota exceeded.");
+
+            assertEquals(78, localResults.size());
+            assertEquals(40, cursors.size());
+
+            long globalAllocated = h2.memoryManager().allocated();
+
+            assertTrue("Allocated: " + globalAllocated, h2.memoryManager().maxMemory() < globalAllocated + MB);
+        }
+        finally {
+            for (QueryCursor c : cursors)
+                IgniteUtils.closeQuiet(c);
+        }
+    }
+
     /**
      * @param sql SQL query
      * @return Results set.
      */
     protected List<List<?>> execQuery(String sql, boolean lazy) throws Exception {
+        return query(sql, lazy).getAll();
+    }
+
+    /**
+     * @param sql SQL query
+     * @return Results set.
+     */
+    FieldsQueryCursor<List<?>> query(String sql, boolean lazy) throws Exception {
         boolean localQry = isLocal();
 
         return grid(client ? 1 : 0).context().query().querySqlFields(
@@ -387,7 +492,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
                 .setLocal(localQry)
                 .setMaxMemory(maxMem)
                 .setLazy(lazy)
-                .setPageSize(100), false).getAll();
+                .setPageSize(100), false);
     }
 
     /**
@@ -413,11 +518,11 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
             execQuery(sql, lazy);
 
             return null;
-        }, CacheException.class, "SQL query run out of memory");
+        }, CacheException.class, "SQL query run out of memory: Query quota exceeded.");
 
         IgniteSQLException sqlEx = X.cause(ex, IgniteSQLException.class);
 
-        assertNotNull("SQL exception missed.", sql);
+        assertNotNull("SQL exception missed.", sqlEx);
         assertEquals(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY, sqlEx.statusCode());
         assertEquals(IgniteQueryErrorCode.codeToSqlState(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY), sqlEx.sqlState());
     }
@@ -428,14 +533,23 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     public static class TestH2LocalResultFactory extends H2LocalResultFactory {
         /** {@inheritDoc} */
         @Override public LocalResult create(Session ses, Expression[] expressions, int visibleColCnt) {
-            LocalResult res = super.create(ses, expressions, visibleColCnt);
+            H2MemoryTracker memoryTracker = ses.queryMemoryTracker();
 
-            if (res instanceof H2ManagedLocalResult)
-                localResults.add((H2ManagedLocalResult)res);
-            else
-                assert ses.getQueryContext() == null;
+            if (memoryTracker != null) {
+                H2ManagedLocalResult res = new H2ManagedLocalResult(ses, memoryTracker, expressions, visibleColCnt) {
+                    @Override public void onClose() {
+                        // Just prevent 'rows' from being nullified for test purposes.
 
-            return res;
+                        getMemoryTracker().release(memoryAllocated());
+                    }
+                };
+
+                localResults.add(res);
+
+                return res;
+            }
+
+            return new H2BaseLocalResult(ses, expressions, visibleColCnt);
         }
 
         /** {@inheritDoc} */

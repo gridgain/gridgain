@@ -150,6 +150,8 @@ public abstract class SelectGroups {
             currentGroupByExprData = null;
             currentGroupRowId--;
 
+            cleanupAggregates(curEntry.getValue());
+
             onUpdate(curEntry.getKey(), curEntry.getValue(), null);
             
             curEntry = null;
@@ -525,12 +527,12 @@ public abstract class SelectGroups {
             size -= Constants.MEMORY_ARRAY + old.length * Constants.MEMORY_OBJECT;
         }
 
-        allocMem += size;
-
         if (size > 0)
             session.queryMemoryTracker().allocate(size);
         else
             session.queryMemoryTracker().release(size);
+
+        allocMem += size;
     }
 
     /**
