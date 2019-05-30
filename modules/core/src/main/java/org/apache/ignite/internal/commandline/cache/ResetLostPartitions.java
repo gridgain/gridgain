@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.commandline.cache;
 
 import java.util.Set;
+import java.util.logging.Logger;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.commandline.Command;
@@ -35,11 +36,11 @@ import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.RESE
  */
 public class ResetLostPartitions implements Command<Set<String>> {
     /** {@inheritDoc} */
-    @Override public void printUsage(CommandLogger logger) {
+    @Override public void printUsage() {
         String CACHES = "cacheName1,...,cacheNameN";
         String description = "Reset the state of lost partitions for the specified caches.";
 
-        usageCache(logger, RESET_LOST_PARTITIONS, description, null, CACHES);
+        usageCache(RESET_LOST_PARTITIONS, description, null, CACHES);
     }
 
     /**
@@ -53,7 +54,7 @@ public class ResetLostPartitions implements Command<Set<String>> {
     }
 
     /** {@inheritDoc} */
-    @Override public Object execute(GridClientConfiguration clientCfg, CommandLogger logger) throws Exception {
+    @Override public Object execute(GridClientConfiguration clientCfg, Logger logger) throws Exception {
         CacheResetLostPartitionsTaskArg taskArg = new CacheResetLostPartitionsTaskArg(caches);
 
         try (GridClient client = Command.startClient(clientCfg)) {

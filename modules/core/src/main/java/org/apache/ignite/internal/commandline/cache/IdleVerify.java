@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import org.apache.ignite.IgniteException;
@@ -73,7 +74,7 @@ import static org.apache.ignite.internal.visor.verify.CacheFilterEnum.USER;
  */
 public class IdleVerify implements Command<IdleVerify.Arguments> {
     /** {@inheritDoc} */
-    @Override public void printUsage(CommandLogger logger) {
+    @Override public void printUsage() {
         String CACHES = "cacheName1,...,cacheNameN";
         String description = "Verify counters and hash sums of primary and backup partitions for the specified caches/cache " +
             "groups on an idle cluster and print out the differences, if any. When no parameters are specified, " +
@@ -84,7 +85,7 @@ public class IdleVerify implements Command<IdleVerify.Arguments> {
             " you can verify: only " + USER + " caches, only user " + PERSISTENT + " caches, only user " +
             NOT_PERSISTENT + " caches, only " + SYSTEM + " caches, or " + ALL + " of the above.";
 
-        usageCache(logger,
+        usageCache(
             IDLE_VERIFY,
             description,
             Collections.singletonMap(CHECK_CRC.toString(),
@@ -183,7 +184,7 @@ public class IdleVerify implements Command<IdleVerify.Arguments> {
     }
 
     /** {@inheritDoc} */
-    @Override public Object execute(GridClientConfiguration clientCfg, CommandLogger logger) throws Exception {
+    @Override public Object execute(GridClientConfiguration clientCfg, Logger logger) throws Exception {
         try (GridClient client = Command.startClient(clientCfg)) {
             Collection<GridClientNode> nodes = client.compute().nodes(GridClientNode::connectable);
 
@@ -307,7 +308,7 @@ public class IdleVerify implements Command<IdleVerify.Arguments> {
     private void cacheIdleVerifyDump(
         GridClient client,
         GridClientConfiguration clientCfg,
-        CommandLogger logger
+        Logger logger
     ) throws GridClientException {
         VisorIdleVerifyDumpTaskArg arg = new VisorIdleVerifyDumpTaskArg(
             args.caches(),
@@ -319,7 +320,7 @@ public class IdleVerify implements Command<IdleVerify.Arguments> {
 
         String path = executeTask(client, VisorIdleVerifyDumpTask.class, arg, clientCfg);
 
-        logger.log("VisorIdleVerifyDumpTask successfully written output to '" + path + "'");
+        logger.info("VisorIdleVerifyDumpTask successfully written output to '" + path + "'");
     }
 
 
@@ -348,7 +349,7 @@ public class IdleVerify implements Command<IdleVerify.Arguments> {
     private void legacyCacheIdleVerify(
         GridClient client,
         GridClientConfiguration clientCfg,
-        CommandLogger logger
+        Logger logger
     ) throws GridClientException {
         VisorIdleVerifyTaskResult res = executeTask(
             client,
@@ -359,17 +360,17 @@ public class IdleVerify implements Command<IdleVerify.Arguments> {
         Map<PartitionKey, List<PartitionHashRecord>> conflicts = res.getConflicts();
 
         if (conflicts.isEmpty()) {
-            logger.log("idle_verify check has finished, no conflicts have been found.");
-            logger.nl();
+            logger.info("idle_verify check has finished, no conflicts have been found.");
+            logger.info("");
         }
         else {
-            logger.log("idle_verify check has finished, found " + conflicts.size() + " conflict partitions.");
-            logger.nl();
+            logger.info("idle_verify check has finished, found " + conflicts.size() + " conflict partitions.");
+            logger.info("");
 
             for (Map.Entry<PartitionKey, List<PartitionHashRecord>> entry : conflicts.entrySet()) {
-                logger.log("Conflict partition: " + entry.getKey());
+                logger.info("Conflict partition: " + entry.getKey());
 
-                logger.log("Partition instances: " + entry.getValue());
+                logger.info("Partition instances: " + entry.getValue());
             }
         }
     }

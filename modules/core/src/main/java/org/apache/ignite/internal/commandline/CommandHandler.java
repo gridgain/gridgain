@@ -71,6 +71,8 @@ public class CommandHandler {
 
         result = Logger.getLogger(getClass().getName());
         result.setLevel(Level.INFO);
+
+        // Adding logging to file.
         try {
             String namePattern = "control-utility-%g.log";
             String absPathPattern;
@@ -83,6 +85,7 @@ public class CommandHandler {
             System.out.println("Failed to configure logging to file");
         }
 
+        // Adding logging to console.
         StreamHandler streamHandler = new StreamHandler(System.out, new JavaLoggerFormatter());
         result.addHandler(streamHandler);
 
@@ -188,7 +191,7 @@ public class CommandHandler {
                 try {
                     logger.info("Command [" + commandName + "] started");
                     logger.info("Arguments: " + String.join(" ", rawArgs));
-                    lastOperationRes = command.execute(clientCfg, commandLogger);
+                    lastOperationRes = command.execute(clientCfg, logger);
                 }
                 catch (Throwable e) {
                     if (tryConnectMaxCount > 0 && isAuthError(e)) {
@@ -474,7 +477,7 @@ public class CommandHandler {
 
         commandLogger.log("This utility can do the following commands:");
 
-        Arrays.stream(CommandList.values()).forEach(c -> c.command().printUsage(commandLogger));
+        Arrays.stream(CommandList.values()).forEach(c -> c.command().printUsage());
 
         commandLogger.log("By default commands affecting the cluster require interactive confirmation.");
         commandLogger.log("Use " + CMD_AUTO_CONFIRMATION + " option to disable it.");
