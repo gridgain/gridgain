@@ -130,7 +130,7 @@ import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_REA
 public abstract class CacheContinuousQueryFailoverAbstractSelfTest extends GridCommonAbstractTest {
     @Parameterized.Parameters
     public static List<Object[]> pars() {
-        return IntStream.range(0, 10)
+        return IntStream.range(0, 4)
             .mapToObj(i -> new Object[0])
             .collect(Collectors.toList());
     }
