@@ -36,6 +36,15 @@ public class ParamGrid {
     /** Parameter search strategy. */
     private HyperParameterSearchingStrategy parameterSearchStrategy = HyperParameterSearchingStrategy.BRUT_FORCE;
 
+    /** Satisfactory fitness to stop the hyperparameter search. */
+    private double satisfactoryFitness = 0.5;
+
+    /** Max tries to stop the hyperparameter search. */
+    private int maxTries = 100;
+
+    /** Seed. */
+    private long seed = 1234L;
+
     /** */
     public Map<Integer, Double[]> getParamValuesByParamIdx() {
         return Collections.unmodifiableMap(paramValuesByParamIdx);
@@ -59,7 +68,7 @@ public class ParamGrid {
      *
      * @param parameterSearchStrategy Parameter search strategy.
      */
-    public ParamGrid setParameterSearchStrategy(HyperParameterSearchingStrategy parameterSearchStrategy) {
+    public ParamGrid withParameterSearchStrategy(HyperParameterSearchingStrategy parameterSearchStrategy) {
         this.parameterSearchStrategy = parameterSearchStrategy;
         return this;
     }
@@ -74,5 +83,54 @@ public class ParamGrid {
     /** */
     public String getParamNameByIndex(int idx) {
         return paramNamesByParamIdx.get(idx);
+    }
+
+    /** */
+    public long getSeed() {
+        return seed;
+    }
+
+    /**
+     * Set up the seed number.
+     *
+     * @param seed Seed.
+     */
+    public ParamGrid withSeed(long seed) {
+        this.seed = seed;
+        return this;
+    }
+
+    /**
+     *
+     */
+    public double getSatisfactoryFitness() {
+        return satisfactoryFitness;
+    }
+
+    /**
+     * Set up the satisfactory fitness to stop the hyperparameter search.
+     *
+     * @param fitness Fitness.
+     */
+    public ParamGrid withSatisfactoryFitness(double fitness) {
+        this.satisfactoryFitness = fitness;
+        return this;
+    }
+
+    /**
+     *
+     */
+    public int getMaxTries() {
+        return maxTries;
+    }
+
+    /**
+     * Set up the max number of tries to stop the hyperparameter search.
+     *
+     * @param maxTries Max tries.
+     */
+    public ParamGrid withMaxTries(int maxTries) {
+        this.maxTries = maxTries;
+        return this;
     }
 }

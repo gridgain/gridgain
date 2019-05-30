@@ -137,15 +137,12 @@ public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
 
         CrossValidationResult cvRes = new CrossValidationResult();
 
-        double goodFitness = 0.9;
-        long seed = 1235L;
-        Random rnd = new Random(seed);
+        Random rnd = new Random(paramGrid.getSeed());
 
         List<Double[]> paramSetsCp = new ArrayList<>(paramSets);
 
-        int MAX_TRIES = 200;
         int maxTries = 0;
-        while (cvRes.getBestAvgScore() <= goodFitness && maxTries < MAX_TRIES && !paramSetsCp.isEmpty()) {
+        while (cvRes.getBestAvgScore() <= paramGrid.getSatisfactoryFitness() && maxTries < paramGrid.getMaxTries() && !paramSetsCp.isEmpty()) {
             int idx = rnd.nextInt(paramSetsCp.size());
             Double[] paramSet = paramSetsCp.get(idx);
 

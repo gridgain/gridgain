@@ -123,7 +123,10 @@ public class Step_8_CV_with_Param_Grid_Random_Serach_and_metrics {
                     = new CrossValidation<>();
 
                 ParamGrid paramGrid = new ParamGrid()
-                    .setParameterSearchStrategy(HyperParameterSearchingStrategy.RANDOM_SEARCH)
+                    .withParameterSearchStrategy(HyperParameterSearchingStrategy.RANDOM_SEARCH)
+                    .withMaxTries(10)
+                    .withSatisfactoryFitness(0.74)
+                    .withSeed(12L)
                     .addHyperParam("maxDeep", new Double[]{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0})
                     .addHyperParam("minImpurityDecrease", new Double[]{0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0});
 
