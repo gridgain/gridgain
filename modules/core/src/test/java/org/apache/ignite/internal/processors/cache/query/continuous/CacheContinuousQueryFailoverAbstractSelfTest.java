@@ -37,6 +37,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import javax.cache.Cache;
 import javax.cache.CacheException;
 import javax.cache.event.CacheEntryEvent;
@@ -104,7 +106,13 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionRollbackException;
 import org.apache.ignite.transactions.TransactionSerializationException;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestRule;
+import org.junit.runner.Description;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.model.Statement;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.MINUTES;
@@ -118,7 +126,28 @@ import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_REA
 /**
  *
  */
+@RunWith(Parameterized.class)
 public abstract class CacheContinuousQueryFailoverAbstractSelfTest extends GridCommonAbstractTest {
+    @Parameterized.Parameters
+    public static List<Object[]> pars() {
+        return IntStream.range(0, 10)
+            .mapToObj(i -> new Object[0])
+            .collect(Collectors.toList());
+    }
+
+    @Rule
+    public TestRule filterByName = new TestRule() {
+        @Override public Statement apply(Statement base, Description description) {
+            if (description.getMethodName().contains("testFailoverStartStopBackup"))
+                return base;
+
+            return new Statement() {
+                @Override public void evaluate() throws Throwable {
+                    // do nothing
+                }
+            };
+        }
+    };
     /** */
     private static final int BACKUP_ACK_THRESHOLD = 100;
 
