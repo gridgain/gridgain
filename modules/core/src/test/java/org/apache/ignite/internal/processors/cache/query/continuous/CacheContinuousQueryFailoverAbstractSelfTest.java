@@ -1752,11 +1752,15 @@ public abstract class CacheContinuousQueryFailoverAbstractSelfTest extends GridC
                 if (System.currentTimeMillis() > startFilterTime) {
                     // Stop filter and check events.
                     if (dinQry != null) {
-                        dinQry.close();
+                        if (!asyncCallback())
+                            dinQry.close();
 
-                        log.info("Continuous query listener closed. Await events: " + expEvtsNewLsnr.size());
+                        log.info("Await events: " + expEvtsNewLsnr.size());
 
                         checkEvents(expEvtsNewLsnr, dinLsnr, backups == 0);
+
+                        if (asyncCallback())
+                            dinQry.close();
                     }
 
                     dinLsnr = new CacheEventListener2();
