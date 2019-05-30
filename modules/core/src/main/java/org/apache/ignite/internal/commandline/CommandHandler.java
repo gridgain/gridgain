@@ -159,18 +159,20 @@ public class CommandHandler {
         logger.info("Time: " + LocalDateTime.now());
         logger.info(DELIM);
 
-        if (F.isEmpty(rawArgs) || (rawArgs.size() == 1 && CMD_HELP.equalsIgnoreCase(rawArgs.get(0)))) {
-            printHelp();
-
-            return EXIT_CODE_OK;
-        }
-
-        ConnectionAndSslParameters args = new CommonArgParser(commandLogger).parseAndValidate(rawArgs.iterator());
-
-        Command command = args.command();
-        String commandName = command.name();
+        String commandName = "";
 
         try {
+            if (F.isEmpty(rawArgs) || (rawArgs.size() == 1 && CMD_HELP.equalsIgnoreCase(rawArgs.get(0)))) {
+                printHelp();
+
+                return EXIT_CODE_OK;
+            }
+
+            ConnectionAndSslParameters args = new CommonArgParser(commandLogger).parseAndValidate(rawArgs.iterator());
+
+            Command command = args.command();
+            commandName = command.name();
+
             if (!args.autoConfirmation() && !confirm(command.confirmationPrompt())) {
                 logger.info("Operation cancelled.");
 
