@@ -16,8 +16,6 @@
 
 package org.apache.ignite.ml.selection.cv;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -25,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.function.BiFunction;
+import java.util.function.DoubleConsumer;
 import java.util.function.Function;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
@@ -146,20 +145,7 @@ public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
             int idx = rnd.nextInt(paramSetsCp.size());
             Double[] paramSet = paramSetsCp.get(idx);
 
-            Map<String, Double> paramMap = injectAndGetParametersToPipeline(trainer, paramGrid, paramSet);
-
-            double[] locScores = score(trainer, scoreCalculator, ignite, upstreamCache, filter, preprocessor,
-                new SHA256UniformMapper<>(), amountOfFolds);
-
-            cvRes.addScores(locScores, paramMap);
-
-            final double locAvgScore = Arrays.stream(locScores).average().orElse(Double.MIN_VALUE);
-
-            if (locAvgScore > cvRes.getBestAvgScore()) {
-                cvRes.setBestScore(locScores);
-                cvRes.setBestHyperParams(paramMap);
-                System.out.println(paramMap.toString()); // only hyperparameters that improves the locAvgScore
-            }
+            updateCrossValidationResultForTheGivenParamSet(trainer, scoreCalculator, ignite, upstreamCache, filter, preprocessor, amountOfFolds, paramGrid, cvRes, paramSet);
 
             paramSetsCp.remove(idx);
             maxTries++;
@@ -177,57 +163,41 @@ public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
 
         CrossValidationResult cvRes = new CrossValidationResult();
 
-        paramSets.forEach(paramSet -> {
-            Map<String, Double> paramMap = injectAndGetParametersToPipeline(trainer, paramGrid, paramSet);
-
-            double[] locScores = score(trainer, scoreCalculator, ignite, upstreamCache, filter, preprocessor,
-                new SHA256UniformMapper<>(), amountOfFolds);
-
-            cvRes.addScores(locScores, paramMap);
-
-            final double locAvgScore = Arrays.stream(locScores).average().orElse(Double.MIN_VALUE);
-
-            if (locAvgScore > cvRes.getBestAvgScore()) {
-                cvRes.setBestScore(locScores);
-                cvRes.setBestHyperParams(paramMap);
-                System.out.println(paramMap.toString());
-            }
-        });
+        paramSets.forEach(paramSet -> updateCrossValidationResultForTheGivenParamSet(trainer, scoreCalculator, ignite, upstreamCache, filter, preprocessor, amountOfFolds, paramGrid, cvRes, paramSet));
 
         return cvRes;
     }
 
-    // TODO: it should work with preprocessor parameters too
-    @NotNull private Map<String, Double> injectAndGetParametersToPipeline(DatasetTrainer<M, L> trainer, ParamGrid paramGrid, Double[] paramSet) {
+    private void updateCrossValidationResultForTheGivenParamSet(DatasetTrainer<M, L> trainer, Metric<L> scoreCalculator,
+        Ignite ignite, IgniteCache<K, V> upstreamCache, IgniteBiPredicate<K, V> filter, Preprocessor<K, V> preprocessor,
+        int amountOfFolds, ParamGrid paramGrid, CrossValidationResult cvRes, Double[] paramSet) {
+
+        Map<String, Double> paramMap = injectAndGetParametersFromPipeline(paramGrid, paramSet);
+
+        double[] locScores = score(trainer, scoreCalculator, ignite, upstreamCache, filter, preprocessor,
+            new SHA256UniformMapper<>(), amountOfFolds);
+
+        cvRes.addScores(locScores, paramMap);
+
+        final double locAvgScore = Arrays.stream(locScores).average().orElse(Double.MIN_VALUE);
+
+        if (locAvgScore > cvRes.getBestAvgScore()) {
+            cvRes.setBestScore(locScores);
+            cvRes.setBestHyperParams(paramMap);
+        }
+    }
+
+    @NotNull private Map<String, Double> injectAndGetParametersFromPipeline(ParamGrid paramGrid, Double[] paramSet) {
         Map<String, Double> paramMap = new HashMap<>();
 
         for (int paramIdx = 0; paramIdx < paramSet.length; paramIdx++) {
-            String paramName = paramGrid.getParamNameByIndex(paramIdx);
+            DoubleConsumer setter = paramGrid.getSetterByIndex(paramIdx);
+
             Double paramVal = paramSet[paramIdx];
+            setter.accept(paramVal);
 
-            paramMap.put(paramName, paramVal);
+            paramMap.put(paramGrid.getParamNameByIndex(paramIdx), paramVal);
 
-            try {
-                final String mtdName = "with" +
-                    paramName.substring(0, 1).toUpperCase() +
-                    paramName.substring(1);
-
-                Method trainerSetter = null;
-
-                // We should iterate along all methods due to we have no info about signature and passed types.
-                for (Method method : trainer.getClass().getDeclaredMethods()) {
-                    if (method.getName().equals(mtdName))
-                        trainerSetter = method;
-                }
-
-                if (trainerSetter != null)
-                    trainerSetter.invoke(trainer, paramVal);
-                else
-                    throw new NoSuchMethodException(mtdName);
-
-            } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
-                e.printStackTrace();
-            }
         }
         return paramMap;
     }
@@ -409,10 +379,8 @@ public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
 
         CrossValidationResult cvRes = new CrossValidationResult();
 
-        DatasetTrainer trainer = pipeline.getTrainer();
-
         paramSets.forEach(paramSet -> {
-            Map<String, Double> paramMap = injectAndGetParametersToPipeline(trainer, paramGrid, paramSet);
+            Map<String, Double> paramMap = injectAndGetParametersFromPipeline(paramGrid, paramSet);
 
             double[] locScores = scorePipeline(
                 pipeline,

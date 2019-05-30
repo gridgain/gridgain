@@ -19,5 +19,7 @@ package org.apache.ignite.ml.selection.paramgrid;
 public enum HyperParameterSearchingStrategy {
     BRUT_FORCE,
 
+    GRADIENT_SEARCH,
+
     RANDOM_SEARCH
 }

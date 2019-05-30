@@ -19,6 +19,7 @@ package org.apache.ignite.ml.selection.paramgrid;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.DoubleConsumer;
 
 /**
  * Keeps the grid of parameters.
@@ -26,6 +27,9 @@ import java.util.Map;
 public class ParamGrid {
     /** Parameter values by parameter index. */
     private Map<Integer, Double[]> paramValuesByParamIdx = new HashMap<>();
+
+    /** Parameter names by parameter index. */
+    private Map<Integer, DoubleConsumer> settersByParamIdx = new HashMap<>();
 
     /** Parameter names by parameter index. */
     private Map<Integer, String> paramNamesByParamIdx = new HashMap<>();
@@ -53,12 +57,14 @@ public class ParamGrid {
     /**
      * Adds a grid for the specific hyper parameter.
      * @param paramName The parameter name.
+     * @param setter The method reference to trainer or preprocessor trainer setter.
      * @param params The array of the given hyper parameter values.
      * @return The updated ParamGrid.
      */
-    public ParamGrid addHyperParam(String paramName, Double[] params) {
+    public ParamGrid addHyperParam(String paramName, DoubleConsumer setter, Double[] params) {
         paramValuesByParamIdx.put(paramCntr, params);
         paramNamesByParamIdx.put(paramCntr, paramName);
+        settersByParamIdx.put(paramCntr, setter);
         paramCntr++;
         return this;
     }
@@ -78,6 +84,11 @@ public class ParamGrid {
      */
     public HyperParameterSearchingStrategy getParameterSearchStrategy() {
         return parameterSearchStrategy;
+    }
+
+    /** */
+    public DoubleConsumer getSetterByIndex(int idx) {
+        return settersByParamIdx.get(idx);
     }
 
     /** */
