@@ -92,6 +92,9 @@ public class VerifyBackupPartitionsTaskV2 extends ComputeTaskAdapter<VisorIdleVe
     private IgniteLogger log;
 
     /** */
+    private VisorIdleVerifyTaskArg arg;
+
+    /** */
     private static final long serialVersionUID = 0L;
 
     /** {@inheritDoc} */
@@ -99,6 +102,8 @@ public class VerifyBackupPartitionsTaskV2 extends ComputeTaskAdapter<VisorIdleVe
         List<ClusterNode> subgrid,
         VisorIdleVerifyTaskArg arg
     ) throws IgniteException {
+        this.arg = arg;
+
         Map<ComputeJob, ClusterNode> jobs = new HashMap<>();
 
         for (ClusterNode node : subgrid)
@@ -118,7 +123,7 @@ public class VerifyBackupPartitionsTaskV2 extends ComputeTaskAdapter<VisorIdleVe
         if (results.size() != exceptions.size())
             return checkConflicts(clusterHashes, exceptions);
         else
-            return new IdleVerifyResultV2(new HashMap<>(), new HashMap<>(), new HashMap<>(), exceptions);
+            return new IdleVerifyResultV2(new HashMap<>(), new HashMap<>(), new HashMap<>(), exceptions, arg);
     }
 
     /** {@inheritDoc} */
@@ -186,7 +191,7 @@ public class VerifyBackupPartitionsTaskV2 extends ComputeTaskAdapter<VisorIdleVe
             }
         }
 
-        return new IdleVerifyResultV2(updateCntrConflicts, hashConflicts, movingParts, exceptions);
+        return new IdleVerifyResultV2(updateCntrConflicts, hashConflicts, movingParts, exceptions, arg);
     }
 
     /** */

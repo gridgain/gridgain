@@ -1478,7 +1478,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
         );
         testCacheIdleVerifyMultipleCacheFilterOptionsCommon(
             true,
-            "There are no caches matching given filter options.",
+            "There are no caches matching given filter options: caches=[], excluded=[.*], cacheFilter=[none]",
             null,
             "--cache", "idle_verify", "--exclude-caches", ".*"
         );

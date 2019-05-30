@@ -25,14 +25,19 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.VisorDataTransferObject;
+import org.apache.ignite.internal.visor.verify.CacheFilterEnum;
+import org.apache.ignite.internal.visor.verify.VisorIdleVerifyDumpTaskArg;
+import org.apache.ignite.internal.visor.verify.VisorIdleVerifyTaskArg;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.IDLE_VERIFY;
@@ -66,6 +71,18 @@ public class IdleVerifyResultV2 extends VisorDataTransferObject {
     @GridToStringInclude
     private Map<ClusterNode, Exception> exceptions;
 
+    /** Cache regexps set from task arguments. */
+    @GridToStringInclude
+    private Set<String> caches;
+
+    /** Exclude cache regexps set from task arguments. */
+    @GridToStringInclude
+    private Set<String> excludeCaches;
+
+    /** Cache filter from task arguments. */
+    @GridToStringInclude
+    private CacheFilterEnum cacheFilter;
+
     /**
      * @param cntrConflicts Counter conflicts.
      * @param hashConflicts Hash conflicts.
@@ -76,12 +93,23 @@ public class IdleVerifyResultV2 extends VisorDataTransferObject {
         Map<PartitionKeyV2, List<PartitionHashRecordV2>> cntrConflicts,
         Map<PartitionKeyV2, List<PartitionHashRecordV2>> hashConflicts,
         Map<PartitionKeyV2, List<PartitionHashRecordV2>> movingPartitions,
-        Map<ClusterNode, Exception> exceptions
+        Map<ClusterNode, Exception> exceptions,
+        VisorIdleVerifyTaskArg taskArg
     ) {
         this.cntrConflicts = cntrConflicts;
         this.hashConflicts = hashConflicts;
         this.movingPartitions = movingPartitions;
         this.exceptions = exceptions;
+
+        if (taskArg != null) {
+            this.caches = taskArg.getCaches();
+
+            this.excludeCaches = taskArg.getExcludeCaches();
+
+            this.cacheFilter = (taskArg instanceof VisorIdleVerifyDumpTaskArg)
+                ? ((VisorIdleVerifyDumpTaskArg)taskArg).getCacheFilterEnum()
+                : null;
+        }
     }
 
     /**
@@ -92,7 +120,7 @@ public class IdleVerifyResultV2 extends VisorDataTransferObject {
 
     /** {@inheritDoc} */
     @Override public byte getProtocolVersion() {
-        return V2;
+        return V3;
     }
 
     /** {@inheritDoc} */
@@ -101,6 +129,11 @@ public class IdleVerifyResultV2 extends VisorDataTransferObject {
         U.writeMap(out, hashConflicts);
         U.writeMap(out, movingPartitions);
         U.writeMap(out, exceptions);
+
+        U.writeCollection(out, caches);
+        U.writeCollection(out, excludeCaches);
+
+        U.writeEnum(out, cacheFilter);
     }
 
     /** {@inheritDoc} */
@@ -112,6 +145,13 @@ public class IdleVerifyResultV2 extends VisorDataTransferObject {
 
         if (protoVer >= V2)
             exceptions = U.readMap(in);
+
+        if (protoVer >= V3) {
+            caches = U.readSet(in);
+            excludeCaches = U.readSet(in);
+
+            cacheFilter = CacheFilterEnum.fromOrdinal(in.readByte());
+        }
     }
 
     /**
@@ -233,24 +273,35 @@ public class IdleVerifyResultV2 extends VisorDataTransferObject {
         else {
             printer.accept("idle_verify failed.\n");
 
-            if (noMatchingCaches)
-                printer.accept("There are no caches matching given filter options.\n");
+            if (noMatchingCaches) {
+                SB options = new SB();
+
+                options
+                    .a("caches=[")
+                    .a(caches == null ? "" : String.join(", ", caches))
+                    .a("], excluded=[")
+                    .a(excludeCaches == null ? "" : String.join(", ", excludeCaches))
+                    .a("], cacheFilter=[")
+                    .a(cacheFilter == null ? "none": cacheFilter)
+                    .a("]");
+
+                printer.accept("\nThere are no caches matching given filter options: " + options.toString() + "\n");
+            }
         }
 
         if (!F.isEmpty(exceptions())) {
-            printer.accept("Idle verify failed on nodes:\n");
+            printer.accept("\nIdle verify failed on nodes:\n");
 
             for (Map.Entry<ClusterNode, Exception> e : exceptions().entrySet()) {
                 ClusterNode n = e.getKey();
 
-                printer.accept("Node ID: " + n.id() + " " + n.addresses() + " consistent ID: " + n.consistentId() + "\n");
+                printer.accept("\nNode ID: " + n.id() + " " + n.addresses() + "\nConsistent ID: " + n.consistentId() + "\n");
 
                 if (printExceptionMessages) {
                     String msg = e.getValue().getMessage();
 
-                    printer.accept("Exception message:\n");
-                    printer.accept(e.getValue().getClass().getCanonicalName());
-                    printer.accept(msg == null ? "\n" : ": " + msg + "\n");
+                    printer.accept("Exception: " + e.getValue().getClass().getCanonicalName() + "\n");
+                    printer.accept(msg == null ? "" : msg + "\n");
                 }
             }
         }
