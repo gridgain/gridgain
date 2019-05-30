@@ -34,31 +34,37 @@ import static org.apache.ignite.console.websocket.WebSocketConsts.BROWSERS_PATH;
 @EnableWebSocket
 public class WebSocketConfig implements WebSocketConfigurer {
 	/** */
-	private final WebSocketHandler wsm;
+	private final AgentsHandler agentsHandler;
 
 	/** */
-	@Value("${websocket.ssl.enabled:false}")
-	private boolean sslEnabled;
+	private final BrowsersHandler browsersHandler;
+
+	/** */
+	@Value("${websocket.cors.enabled:false}")
+	private boolean corsEnabled;
 
 	/** */
 	@Value("${websocket.allowed.origin:https://localhost}")
 	private String allowedOrigin;
 
 	/**
-	 * @param wsm Websocket manager.
+	 * @param agentsHandler Agents handler.
+	 * @param browsersHandler Browsers handler.
 	 */
-	@Autowired
-	public WebSocketConfig(WebSocketHandler wsm) {
-		this.wsm = wsm;
+	public WebSocketConfig(AgentsHandler agentsHandler, BrowsersHandler browsersHandler) {
+		this.agentsHandler = agentsHandler;
+		this.browsersHandler = browsersHandler;
 	}
 
 	/**
 	 * @param registry Registry.
 	 */
 	@Override public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-		WebSocketHandlerRegistration reg = registry.addHandler(wsm, AGENTS_PATH, BROWSERS_PATH);
+		registry.addHandler(agentsHandler, AGENTS_PATH);
 
-		if (sslEnabled)
-			reg.setAllowedOrigins(allowedOrigin);
+		WebSocketHandlerRegistration browsersReg = registry.addHandler(browsersHandler, BROWSERS_PATH);
+
+		if (corsEnabled)
+			browsersReg.setAllowedOrigins(allowedOrigin);
 	}
 }

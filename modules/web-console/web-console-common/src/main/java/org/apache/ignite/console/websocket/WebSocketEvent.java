@@ -40,15 +40,13 @@ public class WebSocketEvent {
     }
 
     /**
-     * Full constructor.
+     * Copy constructor.
      *
-     * @param reqId Request ID.
-     * @param evtType Event type.
-     * @param payload Payload.
+     * @param evt Event.
      */
-    public WebSocketEvent(String reqId, String evtType, String payload) {
-        this.reqId = reqId;
-        this.evtType = evtType;
+    public WebSocketEvent(WebSocketEvent evt, String payload) {
+        this.reqId = evt.getRequestId();
+        this.evtType = evt.getEventType();
         this.payload = payload;
     }
 
@@ -59,7 +57,9 @@ public class WebSocketEvent {
      * @param payload Payload.
      */
     public WebSocketEvent(String evtType, String payload) {
-        this(UUID.randomUUID().toString(), evtType, payload);
+        this.reqId = UUID.randomUUID().toString();
+        this.evtType = evtType;
+        this.payload = payload;
     }
 
     /**
