@@ -17,38 +17,24 @@
 package org.apache.ignite.console.web.socket;
 
 import java.io.IOException;
-import java.security.Principal;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import javax.annotation.PostConstruct;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.dto.Announcement;
-import org.apache.ignite.console.json.JsonArray;
-import org.apache.ignite.console.json.JsonObject;
-import org.apache.ignite.console.repositories.AccountsRepository;
-import org.apache.ignite.console.web.model.VisorTaskDescriptor;
-import org.apache.ignite.console.websocket.AgentHandshakeRequest;
-import org.apache.ignite.console.websocket.AgentHandshakeResponse;
 import org.apache.ignite.console.websocket.TopologySnapshot;
 import org.apache.ignite.console.websocket.WebSocketEvent;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.lang.IgniteBiTuple;
 import org.jsr166.ConcurrentLinkedHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.PingMessage;
@@ -56,20 +42,10 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.apache.ignite.console.json.JsonUtils.errorToJson;
-import static org.apache.ignite.console.json.JsonUtils.fromJson;
 import static org.apache.ignite.console.json.JsonUtils.toJson;
 import static org.apache.ignite.console.websocket.WebSocketConsts.ADMIN_ANNOUNCEMENT;
-import static org.apache.ignite.console.websocket.WebSocketConsts.AGENT_HANDSHAKE;
 import static org.apache.ignite.console.websocket.WebSocketConsts.AGENT_REVOKE_TOKEN;
 import static org.apache.ignite.console.websocket.WebSocketConsts.AGENT_STATUS;
-import static org.apache.ignite.console.websocket.WebSocketConsts.CLUSTER_TOPOLOGY;
-import static org.apache.ignite.console.websocket.WebSocketConsts.ERROR;
-import static org.apache.ignite.console.websocket.WebSocketConsts.NODE_REST;
-import static org.apache.ignite.console.websocket.WebSocketConsts.NODE_VISOR;
-import static org.apache.ignite.console.websocket.WebSocketConsts.SCHEMA_IMPORT_DRIVERS;
-import static org.apache.ignite.console.websocket.WebSocketConsts.SCHEMA_IMPORT_METADATA;
-import static org.apache.ignite.console.websocket.WebSocketConsts.SCHEMA_IMPORT_SCHEMAS;
 
 /**
  * Web sockets manager.
@@ -108,6 +84,27 @@ public class WebSocketsManager {
     }
 
     /**
+     * @param ws Browser session.
+     * @param accId Account Id.
+     */
+    public void onBrowserConnect(WebSocketSession ws, UUID accId) {
+        browsers.put(ws, accId);
+
+        if (lastAnn != null)
+            sendAnnouncement(Collections.singleton(ws), lastAnn);
+
+        sendAgentStats(ws, accId);
+    }
+
+    /**
+     * @param ws Agent session.
+     * @param accIds Account ids.
+     */
+    public void onAgentConnect(WebSocketSession ws, Set<UUID> accIds) {
+        agents.put(ws, new AgentDescriptor(accIds));
+    }
+
+    /**
      * @param ws Session to close.
      */
     public void onAgentConnectionClosed(WebSocketSession ws) {
@@ -115,8 +112,14 @@ public class WebSocketsManager {
 
         updateClusterInBrowsers(desc.accIds);
 
-        // TODO GG-18839 Do not remove if exists agent connected to this cluster.
-        clusters.remove(desc.clusterId);
+        if (!F.isEmpty(desc.clusterId)) {
+            Optional<AgentDescriptor> conn = agents.values().stream()
+                .filter(agent -> desc.getClusterId().equals(agent.getClusterId()))
+                .findFirst();
+
+            if (!conn.isPresent())
+                clusters.remove(desc.clusterId);
+        }
     }
 
     /**
@@ -127,93 +130,66 @@ public class WebSocketsManager {
     }
 
     /**
-     * @param ws Session to send message.
      * @param evt Event.
-     * @throws IOException If failed to send message.
      */
-    protected void sendMessage(WebSocketSession ws, WebSocketEvent evt) throws IOException {
-        ws.sendMessage(new TextMessage(toJson(evt)));
-    }
-
-    /**
-     * @param wsBrowser Session.
-     * @param evt Event.
-     * @param errMsg Error message.
-     * @param err Error.
-     */
-    private void sendError(WebSocketSession wsBrowser, WebSocketEvent evt, String errMsg, Throwable err) {
-        try {
-            evt.setEventType(ERROR);
-            evt.setPayload(errorToJson(errMsg, err));
-
-            sendMessage(wsBrowser, evt);
-        }
-        catch (Throwable e) {
-            log.error("Failed to send error message [session=" + wsBrowser + ", event=" + evt + "]", e);
-        }
-    }
-
     public void sendResponseToBrowser(WebSocketEvent evt) throws IOException {
-        WebSocketSession browserWs = requests.remove(evt.getRequestId());
+        WebSocketSession ws = requests.remove(evt.getRequestId());
 
-        if (browserWs != null)
-            sendMessage(browserWs, evt);
-        else
+        if (ws == null) {
             log.warn("Failed to send event to browser: " + evt);
+
+            return;
+        }
+
+        sendMessage(ws, evt);
     }
 
     /**
-     * Broadcast event to all connected agents.
+     * Send event to first from connected agent.
      *
-     * @param wsBrowser Browser session.
+     * @param ws Browser session.
      * @param evt Event to send.
      */
-    public void sendToFirstAgent(WebSocketSession wsBrowser, WebSocketEvent evt) {
-        try {
-            UUID accId = browsers.get(wsBrowser);
+    public void sendToFirstAgent(WebSocketSession ws, WebSocketEvent evt) throws IOException {
+        UUID accId = browsers.get(ws);
 
-            WebSocketSession wsAgent = agents
-                .entrySet()
-                .stream()
-                .filter(e -> e.getValue().isActiveAccount(accId))
-                .findFirst()
-                .map(Map.Entry::getKey)
-                .orElseThrow(() -> new IllegalStateException("Failed to find agent for account."));
+        WebSocketSession wsAgent = agents.entrySet().stream()
+            .filter(e -> e.getValue().isActiveAccount(accId))
+            .findFirst()
+            .map(Map.Entry::getKey)
+            .orElseThrow(() -> new IllegalStateException("Failed to find agent for account: " + accId));
 
-            if (log.isDebugEnabled())
-                log.debug("Found agent session [token=" + accId + ", session=" + wsAgent + ", event=" + evt + "]");
+        if (log.isDebugEnabled())
+            log.debug("Found agent session [accountId=" + accId + ", session=" + wsAgent + ", event=" + evt + "]");
 
-            requests.put(evt.getRequestId(), wsBrowser);
+        sendMessage(wsAgent, evt);
 
-            sendMessage(wsAgent, evt);
-        }
-        catch (Throwable e) {
-            String errMsg = "Failed to send event to agent: " + evt;
-
-            log.error(errMsg, e);
-
-            sendError(wsBrowser, evt, errMsg, e);
-        }
+        requests.put(evt.getRequestId(), ws);
     }
 
     /**
-     * @param ws Session to ping.
+     * Send event to first agent connected to specific cluster.
+     * 
+     * @param ws Ws.
+     * @param clusterId Cluster id.
+     * @param evt Event.
      */
-    private void ping(WebSocketSession ws) {
-        try {
-            if (ws.isOpen())
-                ws.sendMessage(PING);
-        }
-        catch (Throwable e) {
-            log.error("Failed to send PING request [session=" + ws + "]");
+    public void sendToNode(WebSocketSession ws, String clusterId, WebSocketEvent evt) throws IOException {
+        UUID accId = browsers.get(ws);
 
-            try {
-                ws.close(CloseStatus.SESSION_NOT_RELIABLE);
-            }
-            catch (IOException ignored) {
-                // No-op.
-            }
-        }
+        WebSocketSession wsAgent = agents.entrySet().stream()
+            .filter(e -> e.getValue().isActiveAccount(accId))
+            .filter(e -> clusterId.equals(e.getValue().getClusterId()))
+            .findFirst()
+            .map(Map.Entry::getKey)
+            .orElseThrow(() -> new IllegalStateException("Failed to find agent for cluster [accountId=" + accId+", clusterId=" + clusterId + " ]"));
+
+        if (log.isDebugEnabled())
+            log.debug("Found agent session [accountId=" + accId + ", session=" + wsAgent + ", event=" + evt + "]");
+
+        sendMessage(wsAgent, evt);
+
+        requests.put(evt.getRequestId(), ws);
     }
 
     /**
@@ -266,52 +242,6 @@ public class WebSocketsManager {
     }
 
     /**
-     * @param wsBrowser Browser session.
-     */
-    public void onBrowserConnect(WebSocketSession wsBrowser) {
-        Account acc = extractAccount(wsBrowser);
-
-        browsers.put(wsBrowser, acc.getId());
-
-        sendAgentStats(wsBrowser, acc.getId());
-
-        sendAnnouncement(wsBrowser);
-    }
-
-    /**
-     * Extract account from session.
-     *
-     * @param ws Websocket.
-     * @return Account.
-     */
-    protected Account extractAccount(WebSocketSession ws) {
-        Principal p = ws.getPrincipal();
-
-        if (p instanceof UsernamePasswordAuthenticationToken) {
-            UsernamePasswordAuthenticationToken t = (UsernamePasswordAuthenticationToken)p;
-
-            Object tp = t.getPrincipal();
-
-            if (tp instanceof Account)
-                return (Account)tp;
-        }
-
-        throw new IllegalStateException("Account can't be found [session=" + ws + "]");
-    }
-
-    public void saveAgentSession(WebSocketSession ws, Set<UUID> accIds) {
-        agents.put(ws, new AgentDescriptor(accIds));
-    }
-
-    /**
-     * @param c Collection of Objects.
-     * @param mapper Mapper.
-     */
-    private <T, R> Set<R> mapToSet(Collection<T> c, Function<? super T, ? extends R> mapper) {
-        return c.stream().map(mapper).collect(Collectors.toSet());
-    }
-
-    /**
      * @param ann Announcement.
      */
     public void broadcastAnnouncement(Announcement ann) {
@@ -327,26 +257,18 @@ public class WebSocketsManager {
     }
 
     /**
-     * @param wsBrowser Browser to send current announcement.
-     */
-    private void sendAnnouncement(WebSocketSession wsBrowser) {
-        if (lastAnn != null)
-            sendAnnouncement(Collections.singleton(wsBrowser), lastAnn);
-    }
-
-    /**
      * @param browsers Browsers to send announcement.
      * @param ann Announcement.
      */
     private void sendAnnouncement(Set<WebSocketSession> browsers, Announcement ann) {
         WebSocketEvent evt = new WebSocketEvent(ADMIN_ANNOUNCEMENT, toJson(ann));
 
-        for (WebSocketSession browserWs : browsers) {
+        for (WebSocketSession ws : browsers) {
             try {
-                sendMessage(browserWs, evt);
+                sendMessage(ws, evt);
             }
             catch (Throwable e) {
-                log.error("Failed to send announcement to: " + browserWs, e);
+                log.error("Failed to send announcement to: " + ws, e);
             }
         }
     }
@@ -354,7 +276,7 @@ public class WebSocketsManager {
     /**
      * Send to browser info about agent status.
      */
-    private void sendAgentStats(WebSocketSession wsBrowser, UUID accId) {
+    private void sendAgentStats(WebSocketSession ws, UUID accId) {
         List<TopologySnapshot> tops = new ArrayList<>();
 
         agents.forEach((wsAgent, desc) -> {
@@ -373,10 +295,10 @@ public class WebSocketsManager {
         res.put("clusters", tops);
 
         try {
-            sendMessage(wsBrowser, new WebSocketEvent(AGENT_STATUS, toJson(res)));
+            sendMessage(ws, new WebSocketEvent(AGENT_STATUS, toJson(res)));
         }
         catch (Throwable e) {
-            log.error("Failed to update agent status [session=" + wsBrowser + ", token=" + accId + "]", e);
+            log.error("Failed to update agent status [session=" + ws + ", token=" + accId + "]", e);
         }
     }
 
@@ -417,6 +339,35 @@ public class WebSocketsManager {
     public void pingClients() {
         agents.keySet().forEach(this::ping);
         browsers.keySet().forEach(this::ping);
+    }
+
+    /**
+     * @param ws Session to ping.
+     */
+    private void ping(WebSocketSession ws) {
+        try {
+            if (ws.isOpen())
+                ws.sendMessage(PING);
+        }
+        catch (Throwable e) {
+            log.error("Failed to send PING request [session=" + ws + "]");
+
+            try {
+                ws.close(CloseStatus.SESSION_NOT_RELIABLE);
+            }
+            catch (IOException ignored) {
+                // No-op.
+            }
+        }
+    }
+
+    /**
+     * @param ws Session to send message.
+     * @param evt Event.
+     * @throws IOException If failed to send message.
+     */
+    protected void sendMessage(WebSocketSession ws, WebSocketEvent evt) throws IOException {
+        ws.sendMessage(new TextMessage(toJson(evt)));
     }
 
     /**

@@ -44,9 +44,10 @@ public class WebSocketEvent {
      *
      * @param evt Event.
      */
-    public WebSocketEvent(WebSocketEvent evt) {
+    public WebSocketEvent(WebSocketEvent evt, String payload) {
         this.reqId = evt.getRequestId();
         this.evtType = evt.getEventType();
+        this.payload = payload;
     }
 
     /**

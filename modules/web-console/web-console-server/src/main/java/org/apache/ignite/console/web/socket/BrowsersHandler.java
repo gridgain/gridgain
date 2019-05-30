@@ -16,25 +16,27 @@
 
 package org.apache.ignite.console.web.socket;
 
+import java.security.Principal;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.json.JsonArray;
 import org.apache.ignite.console.json.JsonObject;
+import org.apache.ignite.console.web.AbstractHandler;
 import org.apache.ignite.console.web.model.VisorTaskDescriptor;
 import org.apache.ignite.console.websocket.WebSocketEvent;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.CloseStatus;
-import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
-import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import static org.apache.ignite.console.json.JsonUtils.fromJson;
 import static org.apache.ignite.console.json.JsonUtils.toJson;
@@ -48,7 +50,7 @@ import static org.apache.ignite.console.websocket.WebSocketConsts.SCHEMA_IMPORT_
  * Browsers web sockets handler.
  */
 @Service
-public class BrowsersHandler extends TextWebSocketHandler {
+public class BrowsersHandler extends AbstractHandler {
     /** */
     private static final Logger log = LoggerFactory.getLogger(BrowsersHandler.class);
 
@@ -70,11 +72,41 @@ public class BrowsersHandler extends TextWebSocketHandler {
         registerVisorTasks();
     }
 
-    /** {@inheritDoc} */
-    @Override public void handleTextMessage(WebSocketSession ws, TextMessage msg) {
-        try {
-            WebSocketEvent evt = fromJson(msg.getPayload(), WebSocketEvent.class);
+    /**
+     * Extract account from session.
+     *
+     * @param ws Websocket.
+     * @return Account.
+     */
+    protected Account extractAccount(WebSocketSession ws) {
+        Principal p = ws.getPrincipal();
 
+        if (p instanceof UsernamePasswordAuthenticationToken) {
+            UsernamePasswordAuthenticationToken t = (UsernamePasswordAuthenticationToken)p;
+
+            Object tp = t.getPrincipal();
+
+            if (tp instanceof Account)
+                return (Account)tp;
+        }
+
+        throw new IllegalStateException("Account can't be found [session=" + ws + "]");
+    }
+
+    /** {@inheritDoc} */
+    @Override public void afterConnectionEstablished(WebSocketSession ws) {
+        log.info("Browser session opened [socket=" + ws + "]");
+
+        ws.setTextMessageSizeLimit(10 * 1024 * 1024);
+
+        Account acc = extractAccount(ws);
+
+        wsm.onBrowserConnect(ws, acc.getId());
+    }
+
+    /** {@inheritDoc} */
+    @Override public void handleEvent(WebSocketSession ws, WebSocketEvent evt) {
+        try {
             switch (evt.getEventType()) {
                 case SCHEMA_IMPORT_DRIVERS:
                 case SCHEMA_IMPORT_SCHEMAS:
@@ -84,13 +116,18 @@ public class BrowsersHandler extends TextWebSocketHandler {
                     break;
 
                 case NODE_REST:
-                    wsm.sendToFirstAgent(ws, evt);
-
-                    break;
                 case NODE_VISOR:
+                    JsonObject payload = fromJson(evt.getPayload());
 
+                    String clusterId = payload.getString("clusterId");
 
-                    wsm.sendToFirstAgent(ws, evt);
+                    if (F.isEmpty(clusterId))
+                        throw new IllegalArgumentException("Missing cluster id parameter.");
+
+                    WebSocketEvent reqEvt = evt.getEventType().equals(NODE_REST) ?
+                        evt : new WebSocketEvent(evt, prepareNodeVisorParams(payload));
+
+                    wsm.sendToNode(ws, clusterId, reqEvt);
 
                     break;
 
@@ -99,23 +136,12 @@ public class BrowsersHandler extends TextWebSocketHandler {
             }
         }
         catch (Throwable e) {
-            log.error("Failed to process message from browser [session=" + ws + ", msg=" + msg + "]", e);
-
-            String errMsg = "Failed to send event to agent: " + evt;
+            String errMsg = "Failed to send event to agent: " + evt.getPayload();
 
             log.error(errMsg, e);
 
-            sendError(wsBrowser, evt, errMsg, e);
+            sendError(ws, evt, errMsg, e);
         }
-    }
-
-    /** {@inheritDoc} */
-    @Override public void afterConnectionEstablished(WebSocketSession ws) {
-        log.info("Browser session opened [socket=" + ws + "]");
-
-        ws.setTextMessageSizeLimit(10 * 1024 * 1024);
-
-        wsm.onBrowserConnect(ws);
     }
 
     /** {@inheritDoc} */
@@ -207,24 +233,22 @@ public class BrowsersHandler extends TextWebSocketHandler {
     /**
      * Prepare task event for execution on agent.
      *
-     * @param evt Task event.
+     * @param payload Task event.
      */
-    private void prepareNodeVisorParams(WebSocketEvent evt) {
-        JsonObject payload = fromJson(evt.getPayload());
-
+    private String prepareNodeVisorParams(JsonObject payload) {
         JsonObject params = payload.getJsonObject("params");
 
         String taskId = params.getString("taskId");
 
         if (F.isEmpty(taskId))
-            throw new IllegalStateException("Task ID not specified [evt=" + evt + "]");
+            throw new IllegalStateException("Task ID not specified [evt=" + payload + "]");
 
         String nids = params.getString("nids");
 
         VisorTaskDescriptor desc = visorTasks.get(taskId);
 
         if (desc == null)
-            throw new IllegalStateException("Unknown task  [taskId=" + taskId + ", evt=" + evt + "]");
+            throw new IllegalStateException("Unknown task  [taskId=" + taskId + ", evt=" + payload + "]");
 
         JsonObject exeParams =  new JsonObject()
             .add("cmd", "exe")
@@ -243,6 +267,6 @@ public class BrowsersHandler extends TextWebSocketHandler {
 
         payload.put("params", exeParams);
 
-        evt.setPayload(toJson(payload));
+        return toJson(payload);
     }
 }
