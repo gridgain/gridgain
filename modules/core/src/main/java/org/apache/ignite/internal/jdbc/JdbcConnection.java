@@ -66,7 +66,7 @@ import static org.apache.ignite.IgniteJdbcDriver.PROP_PORT;
 public class JdbcConnection implements Connection {
     /** Validation task name. */
     private static final String VALID_TASK_NAME =
-        "org.apache.ignite.internal.processors.cache.query.jdbc.GridCacheQueryJdbcValidationTask";
+        "org.apache.ignite.internal.jdbc.JdbcConnectionValidationTask";
 
     /** Ignite client. */
     private final GridClient client;
