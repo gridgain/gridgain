@@ -136,16 +136,18 @@ public class Step_8_CV_with_Param_Grid_Random_Serach_and_metrics {
                     .withPositiveClsLb(1.0)
                     .withMetric(BinaryClassificationMetricValues::accuracy);
 
-                CrossValidationResult crossValidationRes = scoreCalculator.score(
-                    trainerCV,
-                    metrics,
-                    ignite,
-                    dataCache,
-                    split.getTrainFilter(),
-                    normalizationPreprocessor,
-                    3,
-                    paramGrid
-                );
+                scoreCalculator
+                    .withTrainer(trainerCV)
+                    .withMetric(metrics)
+                    .withFilter(split.getTrainFilter())
+                    .withIgnite(ignite)
+                    .withUpstreamCache(dataCache)
+                    .withAmountOfParts(1)
+                    .withPreprocessor(normalizationPreprocessor)
+                    .withAmountOfFolds(3)
+                    .withParamGrid(paramGrid);
+
+                CrossValidationResult crossValidationRes = scoreCalculator.score();
 
                 System.out.println("Train with maxDeep: " + crossValidationRes.getBest("maxDeep")
                     + " and minImpurityDecrease: " + crossValidationRes.getBest("minImpurityDecrease"));

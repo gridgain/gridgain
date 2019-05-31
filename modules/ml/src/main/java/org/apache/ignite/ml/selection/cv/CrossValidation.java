@@ -63,6 +63,115 @@ import org.jetbrains.annotations.NotNull;
  * @param <V> Type of a value in {@code upstream} data.
  */
 public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
+    private DatasetTrainer<M, L> trainer;
+
+    private Metric<L> metric;
+
+    private Ignite ignite;
+
+    private IgniteCache<K, V> upstreamCache;
+
+    private Map<K, V> upstreamMap;
+
+    private Preprocessor<K, V> preprocessor;
+
+    private IgniteBiPredicate<K, V> filter = (k, v) -> true;
+
+    private int amountOfFolds;
+
+    private int parts;
+
+    private ParamGrid paramGrid;
+
+    private boolean isRunningOnIgnite = true;
+
+    private boolean isRunningOnPipeline = true;
+
+    public CrossValidationResult score() {
+
+        switch (paramGrid.getParameterSearchStrategy()) {
+            case BRUT_FORCE:
+                return scoreBrutForceHyperparameterOptimiztion();
+            case RANDOM_SEARCH:
+                return scoreRandomSearchHyperparameterOptimiztion();
+            default:
+                throw new UnsupportedOperationException("This strategy "
+                    + paramGrid.getParameterSearchStrategy().name() + " is unsupported");
+        }
+    }
+
+
+    // TODO: https://en.wikipedia.org/wiki/Random_search
+    private CrossValidationResult scoreRandomSearchHyperparameterOptimiztion() {
+        List<Double[]> paramSets = new ParameterSetGenerator(paramGrid.getParamValuesByParamIdx()).generate();
+
+        CrossValidationResult cvRes = new CrossValidationResult();
+
+        Random rnd = new Random(paramGrid.getSeed());
+
+        List<Double[]> paramSetsCp = new ArrayList<>(paramSets);
+
+        int maxTries = 0;
+        while (cvRes.getBestAvgScore() <= paramGrid.getSatisfactoryFitness() && maxTries < paramGrid.getMaxTries() && !paramSetsCp.isEmpty()) {
+            int idx = rnd.nextInt(paramSetsCp.size());
+            Double[] paramSet = paramSetsCp.get(idx);
+
+            updateCrossValidationResultForTheGivenParamSet(cvRes, paramSet);
+
+            paramSetsCp.remove(idx);
+            maxTries++;
+        }
+        return cvRes;
+
+    }
+
+
+    private CrossValidationResult scoreBrutForceHyperparameterOptimiztion() {
+        List<Double[]> paramSets = new ParameterSetGenerator(paramGrid.getParamValuesByParamIdx()).generate();
+
+        CrossValidationResult cvRes = new CrossValidationResult();
+
+        paramSets.forEach(paramSet -> updateCrossValidationResultForTheGivenParamSet(cvRes, paramSet));
+
+        return cvRes;
+    }
+
+    private void updateCrossValidationResultForTheGivenParamSet(CrossValidationResult cvRes, Double[] paramSet) {
+        Map<String, Double> paramMap = injectAndGetParametersFromPipeline(paramGrid, paramSet);
+
+        double[] locScores;
+        if(isRunningOnIgnite) {
+            locScores = score(trainer, metric, ignite, upstreamCache, filter, preprocessor,
+                new SHA256UniformMapper<>(), amountOfFolds);
+        } else
+            locScores = score(trainer, metric, upstreamMap, filter, parts, preprocessor, amountOfFolds);
+
+
+        cvRes.addScores(locScores, paramMap);
+
+        final double locAvgScore = Arrays.stream(locScores).average().orElse(Double.MIN_VALUE);
+
+        if (locAvgScore > cvRes.getBestAvgScore()) {
+            cvRes.setBestScore(locScores);
+            cvRes.setBestHyperParams(paramMap);
+        }
+    }
+
+    @NotNull private Map<String, Double> injectAndGetParametersFromPipeline(ParamGrid paramGrid, Double[] paramSet) {
+        Map<String, Double> paramMap = new HashMap<>();
+
+        for (int paramIdx = 0; paramIdx < paramSet.length; paramIdx++) {
+            DoubleConsumer setter = paramGrid.getSetterByIndex(paramIdx);
+
+            Double paramVal = paramSet[paramIdx];
+            setter.accept(paramVal);
+
+            paramMap.put(paramGrid.getParamNameByIndex(paramIdx), paramVal);
+
+        }
+        return paramMap;
+    }
+
     /**
      * Computes cross-validated metrics.
      *
@@ -99,108 +208,9 @@ public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
             new SHA256UniformMapper<>(), cv);
     }
 
-    /**
-     * Computes cross-validated metrics with a passed parameter grid.
-     *
-     * The real cross-validation training will be called each time for each parameter set.
-     *
-     * @param trainer          Trainer of the model.
-     * @param scoreCalculator  Base score calculator.
-     * @param ignite           Ignite instance.
-     * @param upstreamCache    Ignite cache with {@code upstream} data.
-     * @param filter           Base {@code upstream} data filter.
-     * @param preprocessor      Preprocessor.
-     * @param amountOfFolds    Amount of folds.
-     * @param paramGrid        Parameter grid.
-     * @return Array of scores of the estimator for each run of the cross validation.
-     */
-    public CrossValidationResult score(DatasetTrainer<M, L> trainer, Metric<L> scoreCalculator, Ignite ignite,
-                                       IgniteCache<K, V> upstreamCache, IgniteBiPredicate<K, V> filter,
-                                       Preprocessor<K, V> preprocessor, int amountOfFolds,
-                                       ParamGrid paramGrid) {
 
-        switch (paramGrid.getParameterSearchStrategy()) {
-            case BRUT_FORCE:
-                return scoreBrutForceHyperparameterOptimiztion(trainer, scoreCalculator, ignite, upstreamCache, filter, preprocessor, amountOfFolds, paramGrid);
-            case RANDOM_SEARCH:
-                return scoreRandomSearchHyperparameterOptimiztion(trainer, scoreCalculator, ignite, upstreamCache, filter, preprocessor, amountOfFolds, paramGrid);
-            default:
-                throw new UnsupportedOperationException("This strategy "
-                    + paramGrid.getParameterSearchStrategy().name() + " is unsupported");
-        }
-    }
 
-    // TODO: https://en.wikipedia.org/wiki/Random_search
-    private CrossValidationResult scoreRandomSearchHyperparameterOptimiztion(DatasetTrainer<M, L> trainer, Metric<L> scoreCalculator, Ignite ignite, IgniteCache<K, V> upstreamCache, IgniteBiPredicate<K, V> filter, Preprocessor<K, V> preprocessor, int amountOfFolds, ParamGrid paramGrid) {
-        List<Double[]> paramSets = new ParameterSetGenerator(paramGrid.getParamValuesByParamIdx()).generate();
 
-        CrossValidationResult cvRes = new CrossValidationResult();
-
-        Random rnd = new Random(paramGrid.getSeed());
-
-        List<Double[]> paramSetsCp = new ArrayList<>(paramSets);
-
-        int maxTries = 0;
-        while (cvRes.getBestAvgScore() <= paramGrid.getSatisfactoryFitness() && maxTries < paramGrid.getMaxTries() && !paramSetsCp.isEmpty()) {
-            int idx = rnd.nextInt(paramSetsCp.size());
-            Double[] paramSet = paramSetsCp.get(idx);
-
-            updateCrossValidationResultForTheGivenParamSet(trainer, scoreCalculator, ignite, upstreamCache, filter, preprocessor, amountOfFolds, paramGrid, cvRes, paramSet);
-
-            paramSetsCp.remove(idx);
-            maxTries++;
-        }
-        return cvRes;
-
-    }
-
-    private CrossValidationResult scoreBrutForceHyperparameterOptimiztion(DatasetTrainer<M, L> trainer, Metric<L> scoreCalculator, Ignite ignite,
-                                                                          IgniteCache<K, V> upstreamCache, IgniteBiPredicate<K, V> filter,
-                                                                          Preprocessor<K, V> preprocessor, int amountOfFolds,
-                                                                          ParamGrid paramGrid) {
-
-        List<Double[]> paramSets = new ParameterSetGenerator(paramGrid.getParamValuesByParamIdx()).generate();
-
-        CrossValidationResult cvRes = new CrossValidationResult();
-
-        paramSets.forEach(paramSet -> updateCrossValidationResultForTheGivenParamSet(trainer, scoreCalculator, ignite, upstreamCache, filter, preprocessor, amountOfFolds, paramGrid, cvRes, paramSet));
-
-        return cvRes;
-    }
-
-    private void updateCrossValidationResultForTheGivenParamSet(DatasetTrainer<M, L> trainer, Metric<L> scoreCalculator,
-        Ignite ignite, IgniteCache<K, V> upstreamCache, IgniteBiPredicate<K, V> filter, Preprocessor<K, V> preprocessor,
-        int amountOfFolds, ParamGrid paramGrid, CrossValidationResult cvRes, Double[] paramSet) {
-
-        Map<String, Double> paramMap = injectAndGetParametersFromPipeline(paramGrid, paramSet);
-
-        double[] locScores = score(trainer, scoreCalculator, ignite, upstreamCache, filter, preprocessor,
-            new SHA256UniformMapper<>(), amountOfFolds);
-
-        cvRes.addScores(locScores, paramMap);
-
-        final double locAvgScore = Arrays.stream(locScores).average().orElse(Double.MIN_VALUE);
-
-        if (locAvgScore > cvRes.getBestAvgScore()) {
-            cvRes.setBestScore(locScores);
-            cvRes.setBestHyperParams(paramMap);
-        }
-    }
-
-    @NotNull private Map<String, Double> injectAndGetParametersFromPipeline(ParamGrid paramGrid, Double[] paramSet) {
-        Map<String, Double> paramMap = new HashMap<>();
-
-        for (int paramIdx = 0; paramIdx < paramSet.length; paramIdx++) {
-            DoubleConsumer setter = paramGrid.getSetterByIndex(paramIdx);
-
-            Double paramVal = paramSet[paramIdx];
-            setter.accept(paramVal);
-
-            paramMap.put(paramGrid.getParamNameByIndex(paramIdx), paramVal);
-
-        }
-        return paramMap;
-    }
 
     /**
      * Computes cross-validated metrics.
@@ -458,5 +468,66 @@ public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
         }
 
         return scores;
+    }
+
+    public CrossValidation<M, L, K, V> withTrainer(DatasetTrainer<M, L> trainer) {
+        this.trainer = trainer;
+        return this;
+    }
+
+    public CrossValidation<M, L, K, V>  withMetric(Metric<L> metric) {
+        this.metric = metric;
+        return this;
+    }
+
+    public CrossValidation<M, L, K, V>  withIgnite(Ignite ignite) {
+        this.ignite = ignite;
+        return this;
+    }
+
+    public CrossValidation<M, L, K, V>  withUpstreamCache(IgniteCache<K, V> upstreamCache) {
+        this.upstreamCache = upstreamCache;
+        return this;
+    }
+
+    public CrossValidation<M, L, K, V>  withPreprocessor(Preprocessor<K, V> preprocessor) {
+        this.preprocessor = preprocessor;
+        return this;
+    }
+
+    public CrossValidation<M, L, K, V>  withFilter(IgniteBiPredicate<K, V> filter) {
+        this.filter = filter;
+        return this;
+    }
+
+    public CrossValidation<M, L, K, V>  withAmountOfFolds(int amountOfFolds) {
+        this.amountOfFolds = amountOfFolds;
+        return this;
+    }
+
+    public CrossValidation<M, L, K, V>  withParamGrid(ParamGrid paramGrid) {
+        this.paramGrid = paramGrid;
+        return this;
+    }
+
+    public CrossValidation<M, L, K, V>  isRunningOnIgnite(boolean runningOnIgnite) {
+        isRunningOnIgnite = runningOnIgnite;
+        return this;
+    }
+
+    public CrossValidation<M, L, K, V>  isRunningOnPipeline(boolean runningOnPipeline) {
+        isRunningOnPipeline = runningOnPipeline;
+        return this;
+    }
+
+
+    public CrossValidation<M, L, K, V>  withUpstreamMap(Map<K, V> upstreamMap) {
+        this.upstreamMap = upstreamMap;
+        return this;
+    }
+
+    public CrossValidation<M, L, K, V>  withAmountOfParts(int parts) {
+        this.parts = parts;
+        return this;
     }
 }

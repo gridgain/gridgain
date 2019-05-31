@@ -122,16 +122,18 @@ public class Step_8_CV_with_Param_Grid {
                     .addHyperParam("maxDeep", trainerCV::withMaxDeep, new Double[]{1.0, 2.0, 3.0, 4.0, 5.0, 10.0, 10.0})
                     .addHyperParam("minImpurityDecrease", trainerCV::withMinImpurityDecrease, new Double[]{0.0, 0.25, 0.5});
 
-                CrossValidationResult crossValidationRes = scoreCalculator.score(
-                    trainerCV,
-                    new Accuracy<>(),
-                    ignite,
-                    dataCache,
-                    split.getTrainFilter(),
-                    normalizationPreprocessor,
-                    3,
-                    paramGrid
-                );
+                scoreCalculator
+                    .withTrainer(trainerCV)
+                    .withMetric(new Accuracy<>())
+                    .withFilter(split.getTrainFilter())
+                    .withIgnite(ignite)
+                    .withUpstreamCache(dataCache)
+                    .withAmountOfParts(1)
+                    .withPreprocessor(normalizationPreprocessor)
+                    .withAmountOfFolds(3)
+                    .withParamGrid(paramGrid);
+
+                CrossValidationResult crossValidationRes = scoreCalculator.score();
 
                 System.out.println("Train with maxDeep: " + crossValidationRes.getBest("maxDeep")
                     + " and minImpurityDecrease: " + crossValidationRes.getBest("minImpurityDecrease"));
