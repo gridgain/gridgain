@@ -176,7 +176,6 @@ public class GridDhtColocatedCache<K, V> extends GridDhtTransactionalCacheAdapte
 
     /** {@inheritDoc} */
     @Override protected IgniteInternalFuture<V> getAsync(final K key,
-        boolean forcePrimary,
         boolean skipTx,
         @Nullable UUID subjId,
         String taskName,
@@ -263,7 +262,7 @@ public class GridDhtColocatedCache<K, V> extends GridDhtTransactionalCacheAdapte
             ctx.toCacheKeyObject(key),
             topVer,
             opCtx == null || !opCtx.skipStore(),
-            forcePrimary,
+            false,
             subjId,
             taskName,
             deserializeBinary,
