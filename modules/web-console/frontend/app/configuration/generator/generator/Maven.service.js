@@ -37,8 +37,8 @@ export default class IgniteMavenGenerator {
         sb.append(`<${tag}>${val}</${tag}>`);
     }
 
-    addDependency(deps, groupId, artifactId, version, jar) {
-        deps.push({groupId, artifactId, version, jar});
+    addDependency(deps, groupId, artifactId, version, jar, exclude) {
+        deps.push({groupId, artifactId, version, jar, exclude});
     }
 
     pickDependency(acc, key, artifactGrp, dfltVer, igniteVer) {
@@ -51,8 +51,8 @@ export default class IgniteMavenGenerator {
             return _.isArray(version) ? _.find(version, (v) => versionService.since(igniteVer, v.range)).version : version;
         };
 
-        _.forEach(_.castArray(deps), ({groupId, artifactId, version, jar}) => {
-            this.addDependency(acc, groupId || artifactGrp, artifactId, extractVersion(version) || dfltVer, jar);
+        _.forEach(_.castArray(deps), ({groupId, artifactId, version, jar, exclude}) => {
+            this.addDependency(acc, groupId || artifactGrp, artifactId, extractVersion(version) || dfltVer, jar, exclude);
         });
     }
 
@@ -89,6 +89,17 @@ export default class IgniteMavenGenerator {
             if (dep.jar) {
                 this.addProperty(sb, 'scope', 'system');
                 this.addProperty(sb, 'systemPath', '${project.basedir}/jdbc-drivers/' + dep.jar);
+            }
+
+            if (dep.exclude) {
+                sb.startBlock('<exclusions>');
+                _.forEach(dep.exclude, (e) => {
+                    sb.startBlock('<exclusion>');
+                    this.addProperty(sb, 'groupId', e.groupId);
+                    this.addProperty(sb, 'artifactId', e.artifactId);
+                    sb.endBlock('</exclusion>');
+                });
+                sb.endBlock('</exclusions>');
             }
 
             sb.endBlock('</dependency>');
