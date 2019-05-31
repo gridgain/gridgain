@@ -46,6 +46,7 @@ import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.GridTopic;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -61,6 +62,7 @@ import org.apache.ignite.internal.processors.query.h2.twostep.PartitionReservati
 import org.apache.ignite.internal.processors.query.h2.twostep.PartitionReservationManager;
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2QueryRequest;
 import org.apache.ignite.internal.processors.query.schema.message.SchemaProposeDiscoveryMessage;
+import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.spi.discovery.DiscoverySpiCustomMessage;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
@@ -643,7 +645,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
         }
         finally {
             for (int i = 0; i < NODES_COUNT; i++)
-                grid(i).context().io().removeMessageListener(GridTopic.TOPIC_CACHE, qryStarted);
+                grid(i).context().io().removeMessageListener(GridTopic.TOPIC_QUERY, qryStarted);
         }
     }
 
@@ -955,42 +957,30 @@ public class KillQueryTest extends GridCommonAbstractTest {
      */
     static class IndexingWithMockedReservation extends IgniteH2Indexing {
         /**
-         * If this flag is set to {@code true}, this indexing will always return mocked {@link
-         * PartitionReservationManager} which never is able to reserve partitions. Acts like normal indexing by
-         * default.
+         * If this flag is set to {@code true}, no partitions can be reserved. Acts like normal indexing by default.
          */
         static volatile boolean failReservations = false;
 
         /**
-         * Manager that fails to reserve partitions.
+         * Sets reservation manager that can fail all the partition reservation attepts if our test condition is met.
          */
-        private PartitionReservationManager failToReserveMgr;
+        @Override public void start(GridKernalContext ctx, GridSpinBusyLock busyLock) throws IgniteCheckedException {
+            super.start(ctx, busyLock);
 
-        /**
-         * Initializes manager lazily. This is required because, at the time constructor gets called, we don't have
-         * kernal context yet. At the time this method gets called, {@link super#ctx} is already initialized.
-         */
-        private PartitionReservationManager getManagerLazy() {
-            if (failToReserveMgr == null)
-                failToReserveMgr = new PartitionReservationManager(super.ctx) {
-                    @Override public PartitionReservation reservePartitions(
-                        @Nullable List<Integer> cacheIds,
-                        AffinityTopologyVersion reqTopVer,
-                        int[] explicitParts, UUID nodeId,
-                        long reqId) throws IgniteCheckedException {
+            partReservationMgr = new PartitionReservationManager(super.ctx) {
+                @Override public PartitionReservation reservePartitions(
+                    @Nullable List<Integer> cacheIds,
+                    AffinityTopologyVersion reqTopVer,
+                    int[] explicitParts, UUID nodeId,
+                    long reqId) throws IgniteCheckedException {
+
+                    if (failReservations)
                         return new PartitionReservation(null,
                             "[TESTS]: Failed to reserve partitions for the testing purpose!");
-                    }
-                };
-            return failToReserveMgr;
-        }
-
-        /** {@inheritDoc} */
-        @Override public PartitionReservationManager partitionReservationManager() {
-            if (failReservations)
-                return getManagerLazy();
-            else
-                return super.partitionReservationManager();
+                    else
+                        return super.reservePartitions(cacheIds, reqTopVer, explicitParts, nodeId, reqId);
+                }
+            };
         }
     }
 }
