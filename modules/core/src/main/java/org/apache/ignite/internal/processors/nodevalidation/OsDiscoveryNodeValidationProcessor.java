@@ -16,12 +16,19 @@
 
 package org.apache.ignite.internal.processors.nodevalidation;
 
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
+import org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult;
+import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.spi.IgniteNodeValidationResult;
 import org.jetbrains.annotations.Nullable;
 
@@ -68,5 +75,25 @@ public class OsDiscoveryNodeValidationProcessor extends GridProcessorAdapter imp
         }
 
         return null;
+    }
+
+    /** {@inheritDoc} */
+    @Override public RollingUpgradeModeChangeResult setRollingUpgradeMode(boolean enable) {
+        throw new UnsupportedOperationException("OS nodes do not support Rolling Upgrade.");
+    }
+
+    /** {@inheritDoc} */
+    @Override public void enableForcedRollingUpgradeMode() {
+        throw new UnsupportedOperationException("OS nodes do not support Rolling Upgrade.");
+    }
+
+    /** {@inheritDoc} */
+    @Override public RollingUpgradeStatus getRollingUpgradeStatus() {
+        return new RollingUpgradeStatus(
+            false,
+            IgniteProductVersion.fromString(ctx.discovery().localNode().attribute(ATTR_BUILD_VER)),
+            null,
+            true,
+            new HashSet<>(Arrays.asList(IgniteFeatures.values())));
     }
 }
