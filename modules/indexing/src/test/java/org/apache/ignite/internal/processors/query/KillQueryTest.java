@@ -128,17 +128,14 @@ public class KillQueryTest extends GridCommonAbstractTest {
     /** Barrier. */
     private static volatile CyclicBarrier barrier;
 
-    private volatile boolean enableLog = true;
+    /** Allows to block messages, issued FROM the client node. */
+    private static TestRecordingCommunicationSpi clientBlocker;
 
-    /**
-     * Whether current test execution shuould use async or non-async cancel mechanism.
-     */
+    /** Whether current test execution shuould use async or non-async cancel mechanism. */
     @Parameterized.Parameter
     public boolean asyncCancel;
 
-    /**
-     * Generates values for the {@link #asyncCancel} parameter.
-     */
+    /** Generates values for the {@link #asyncCancel} parameter. */
     @Parameterized.Parameters(name = "asyncCancel = {0}")
     public static Iterable<Object[]> valuesForAsync() {
         return Arrays.asList(new Object[][] {
@@ -161,18 +158,17 @@ public class KillQueryTest extends GridCommonAbstractTest {
 
         cfg.setCacheConfiguration(cache);
 
-        if (++cntr == NODES_COUNT)
-            cfg.setClientMode(true);
-
         TestRecordingCommunicationSpi commSpi = new TestRecordingCommunicationSpi();
 
-        commSpi.closure((node, msg) -> {
-            if (msg instanceof DataStreamerRequest)
-                log.error("+++ node = " + node.id() + " , msg = " + msg);
-        });
+        cfg.setCommunicationSpi(commSpi);
+
+        if (++cntr == NODES_COUNT) {
+            cfg.setClientMode(true);
+
+            clientBlocker = commSpi;
+        }
 
         cfg.setDiscoverySpi(new TcpDiscoverySpi() {
-
             @Override public void sendCustomEvent(DiscoverySpiCustomMessage msg) throws IgniteException {
                 if (msg instanceof CustomMessageWrapper) {
                     DiscoveryCustomMessage delegate = ((CustomMessageWrapper)msg).delegate();
@@ -198,8 +194,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
 
                 super.sendCustomEvent(msg);
             }
-        }.setIpFinder(IP_FINDER))
-            .setCommunicationSpi(commSpi);
+        }.setIpFinder(IP_FINDER));
 
         return cfg;
     }
@@ -274,27 +269,82 @@ public class KillQueryTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Trying to cancel COPY FROM command.
+     * Tries to cancel COPY FROM command, then checks such cancellation is unsupported.
+     *
+     * 1) Run COPY query, got it suspended in the middle.
+     * 2) Try to cancel it, get expected exception.
+     * 3) Wake up the COPY.
+     * 4) Check COPY is done.
      */
     @Test
     public void testBulkLoadCancellationUnsupported() throws Exception {
-        enableLog = true;
-
         String path = Objects.requireNonNull(resolveIgnitePath("/modules/clients/src/test/resources/bulkload1.csv"))
             .getAbsolutePath();
 
-        String sqlPrepare = "CREATE TABLE " + currentTestTableName() +
+        String createTab = "CREATE TABLE " + currentTestTableName() +
             "(id integer primary key, age integer, firstName varchar, lastname varchar)";
-        String sqlCmd = "COPY FROM '" + path + "'" +
+
+        String copy = "COPY FROM '" + path + "'" +
             " INTO " + currentTestTableName() +
-            " (_key, age, firstName, lastName)" +
+            " (id, age, firstName, lastName)" +
             " format csv charset 'ascii'";
 
-        checkCancellationUnsupported(
-            Arrays.asList(sqlPrepare),
-            sqlCmd,
-            asyncCancel);
+        // It's importaint to COPY from the client node: in this case datastreamer doesn't perform local updates so
+        // it sends communication messages which we can hold.
+        IgniteEx clientNode = grid(NODES_COUNT - 1);
+
+        try (Connection clConn = GridTestUtils.connect(clientNode, null);
+             final Statement client = clConn.createStatement()) {
+            client.execute(createTab);
+
+            // Suspend further copy query by holding data streamer messages.
+            clientBlocker.blockMessages((dstNode, msg) -> msg instanceof DataStreamerRequest);
+
+            IgniteInternalFuture<Boolean> copyIsDone = GridTestUtils.runAsync(() -> client.execute(copy));
+
+            // Wait at least one streamer message, that means copy started.
+            clientBlocker.waitForBlocked(1, TIMEOUT);
+
+            // Query can be found only on the connected node.
+            String globQryId = findOneRunningQuery(copy, clientNode);
+
+            GridTestUtils.assertThrowsAnyCause(log,
+                () -> igniteForKillRequest.cache(DEFAULT_CACHE_NAME).query(createKillQuery(globQryId, asyncCancel)),
+                CacheException.class,
+                "Query doesn't support cancellation");
+
+            // Releases copy.
+            clientBlocker.stopBlock(true);
+
+            copyIsDone.get(TIMEOUT);
+
+            int tabSize = clientNode.cache(DEFAULT_CACHE_NAME)
+                .query(new SqlFieldsQuery("SELECT * FROM " + currentTestTableName() + " ").setSchema("PUBLIC"))
+                .getAll()
+                .size();
+
+            assertEquals("COPY command inserted incorrect number of rows.", 1, tabSize);
+        }
     }
+
+    /**
+     * Finds global id of the specified query on the specified node. Expecting exactly one result.
+     *
+     * @param query Query text to find id for.
+     * @param node Node handle to the node, which initiated the query.
+     */
+    private String findOneRunningQuery(String query, IgniteEx node) {
+        List<GridRunningQueryInfo> allQrs = (List<GridRunningQueryInfo>)node.context().query().runningQueries(-1);
+
+        List<GridRunningQueryInfo> qryList = allQrs.stream()
+            .filter(q -> q.query().equals(query))
+            .collect(Collectors.toList());
+
+        assertEquals("Expected only one running query: " + query + "\nBut found: " + qryList, 1, qryList.size());
+
+        return qryList.get(0).globalQueryId();
+    }
+
 
     /**
      * Trying to cancel CREATE TABLE command.
