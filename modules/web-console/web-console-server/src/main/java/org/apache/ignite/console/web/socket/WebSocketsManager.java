@@ -110,16 +110,20 @@ public class WebSocketsManager {
     public void onAgentConnectionClosed(WebSocketSession ws) {
         AgentDescriptor desc = agents.remove(ws);
 
-        updateClusterInBrowsers(desc.accIds);
+        if (desc != null) {
+            updateClusterInBrowsers(desc.accIds);
 
-        if (!F.isEmpty(desc.clusterId)) {
-            Optional<AgentDescriptor> conn = agents.values().stream()
-                .filter(agent -> desc.getClusterId().equals(agent.getClusterId()))
-                .findFirst();
+            if (!F.isEmpty(desc.clusterId)) {
+                Optional<AgentDescriptor> conn = agents.values().stream()
+                    .filter(agent -> desc.getClusterId().equals(agent.getClusterId()))
+                    .findFirst();
 
-            if (!conn.isPresent())
-                clusters.remove(desc.clusterId);
+                if (!conn.isPresent())
+                    clusters.remove(desc.clusterId);
+            }
         }
+        else
+            log.warn("Agent descriptor not found for session: " + ws);
     }
 
     /**

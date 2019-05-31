@@ -107,7 +107,7 @@ public class WebSocketRouter implements AutoCloseable {
 
         httpClient = new HttpClient(createSslFactory(cfg));
 
-//        TODO GG-18379 Investigate how to establish native websocket connection with proxy.
+        // TODO GG-18379 Investigate how to establish native websocket connection with proxy.
         configureProxy(httpClient, cfg.serverUri());
 
         clusterHnd = new ClusterHandler(cfg, wss);
@@ -147,7 +147,7 @@ public class WebSocketRouter implements AutoCloseable {
      */
     public void start() throws Exception {
         log.info("Starting Web Console Agent...");
-        log.info("Connecting to: " + cfg.serverUri());
+        log.info("Connecting to server: " + cfg.serverUri());
 
         httpClient.start();
 
@@ -280,6 +280,12 @@ public class WebSocketRouter implements AutoCloseable {
                 if (!F.isEmpty(missedTokens)) {
                     log.warning("Failed to validate token(s): " + secured(missedTokens) + "." +
                         " Please reload agent archive or check settings.");
+                }
+
+                if (F.isEmpty(validTokens)) {
+                    log.warning("Valid tokens not found. Stopping agent...");
+
+                    closeLatch.countDown();
                 }
 
                 log.info("Successful handshake with server.");

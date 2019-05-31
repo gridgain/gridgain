@@ -101,9 +101,14 @@ public class AgentsHandler extends AbstractHandler {
 
                     validateAgentHandshake(req);
 
-                    Collection<Account> accounts = loadAccounts(req.getTokens());
+                    Set<String> agentTokens = req.getTokens();
 
-                    sendResponse(ws, evt, new AgentHandshakeResponse(mapToSet(accounts, Account::getToken)));
+                    Collection<Account> accounts = loadAccounts(agentTokens);
+
+                    Set<String> validTokens = mapToSet(accounts, Account::getToken);
+                    validTokens.retainAll(agentTokens);
+
+                    sendResponse(ws, evt, new AgentHandshakeResponse(validTokens));
 
                     wsm.onAgentConnect(ws, mapToSet(accounts, Account::getId));
 
