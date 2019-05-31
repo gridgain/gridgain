@@ -16,7 +16,6 @@
 
 package org.apache.ignite.ml.selection.cv;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
@@ -252,16 +251,9 @@ public class CrossValidationTest {
 
         CrossValidationResult crossValidationRes = scoreCalculator.score();
 
-        System.out.println("Best score: " + Arrays.toString(crossValidationRes.getBestScore()));
-        System.out.println("Best hyper params: " + crossValidationRes.getBestHyperParams());
-        System.out.println("Best average score: " + crossValidationRes.getBestAvgScore());
-
-        crossValidationRes.getScoringBoard().forEach((hyperParams, score)
-            -> System.out.println("Score " + Arrays.toString(score) + " for hyper params " + hyperParams));
-
-        /*assertArrayEquals(crossValidationRes.getBestScore(), new double[]{0.9745762711864406, 1.0, 0.8968253968253969, 0.8661417322834646}, 1e-6);
-        assertEquals(crossValidationRes.getBestAvgScore(), 0.9343858500738256, 1e-6);
-        assertEquals(crossValidationRes.getScoringBoard().size(), 80);*/
+        assertArrayEquals(crossValidationRes.getBestScore(), new double[]{0.8389830508474576, 0.917910447761194, 0.7936507936507936, 0.889763779527559}, 1e-6);
+        assertEquals(crossValidationRes.getBestAvgScore(), 0.8600770179467511, 1e-6);
+        assertEquals(crossValidationRes.getScoringBoard().size(), 10);
     }
 
     /** */
