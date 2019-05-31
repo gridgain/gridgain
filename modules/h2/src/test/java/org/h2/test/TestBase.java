@@ -120,7 +120,7 @@ public abstract class TestBase {
     public TestBase init(TestAll conf) throws Exception {
         baseDir = getTestDir("");
         FileUtils.createDirectories(baseDir);
-        System.setProperty("java.io.tmpdir", TEMP_DIR);
+//        System.setProperty("java.io.tmpdir", TEMP_DIR);
         this.config = conf;
         return this;
     }
@@ -1445,6 +1445,9 @@ public abstract class TestBase {
      * @return the classpath list
      */
     protected String getClassPath() {
+        String cp = System.getProperty("surefire.test.class.path", null);
+        if (cp != null)
+            return cp;
         return System.getProperty("java.class.path");
     }
 
@@ -1453,7 +1456,7 @@ public abstract class TestBase {
      *
      * @return the path to java
      */
-    private static String getJVM() {
+    public static String getJVM() {
         return System.getProperty("java.home") + File.separatorChar + "bin"
                 + File.separator + "java";
     }
@@ -1658,7 +1661,6 @@ public abstract class TestBase {
             throw new RuntimeException(e);
         }
     }
-
 
     /**
      * Construct a stream of 20 KB that fails while reading with the provided

@@ -109,7 +109,7 @@
         </dependency>
 
         <dependency>
-            <groupId>org.apache.ignite</groupId>
+            <groupId>org.gridgain</groupId>
             <artifactId>ignite-h2</artifactId>
             <version>${project.version}</version>
         </dependency>

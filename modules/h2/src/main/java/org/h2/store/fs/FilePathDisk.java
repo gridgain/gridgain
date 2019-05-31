@@ -20,12 +20,10 @@ import java.nio.channels.FileLock;
 import java.nio.channels.NonWritableChannelException;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.h2.api.ErrorCode;
 import org.h2.engine.SysProperties;
 import org.h2.message.DbException;
 import org.h2.util.IOUtils;
-import org.h2.util.New;
 
 /**
  * This file system stores files on disk.
@@ -162,7 +160,7 @@ public class FilePathDisk extends FilePath {
 
     @Override
     public List<FilePath> newDirectoryStream() {
-        ArrayList<FilePath> list = New.arrayList();
+        ArrayList<FilePath> list = new ArrayList<>();
         File f = new File(name);
         try {
             String[] files = f.list();
@@ -171,6 +169,7 @@ public class FilePathDisk extends FilePath {
                 if (!base.endsWith(SysProperties.FILE_SEPARATOR)) {
                     base += SysProperties.FILE_SEPARATOR;
                 }
+                list.ensureCapacity(files.length);
                 for (String file : files) {
                     list.add(getPath(base + file));
                 }

@@ -121,7 +121,7 @@ public class TestFunctions extends TestBase implements AggregateFunction {
         testThatCurrentTimestampIsSane();
         testThatCurrentTimestampStaysTheSameWithinATransaction();
         testThatCurrentTimestampUpdatesOutsideATransaction();
-        testAnnotationProcessorsOutput();
+//        testAnnotationProcessorsOutput();
         testRound();
         testSignal();
 

@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -32,13 +31,14 @@ public class H2TestSuiteBuilder extends TestAll {
      * Constructor.
      */
     public H2TestSuiteBuilder() {
+        travis = true;
         // Force test failure
         stopOnError = true;
 
         // Defaults, copied from base class (TestAll).
         smallLog = big = networked = memory = ssl = false;
         diskResult = traceSystemOut = diskUndo = false;
-        traceTest = stopOnError = false;
+        traceTest = false;
         defrag = false;
         traceLevelFile = throttle = 0;
         cipher = null;
@@ -55,7 +55,7 @@ public class H2TestSuiteBuilder extends TestAll {
      * @return Suite suite.
      */
     public TestSuite buildSuite(Class<?> suiteClass, boolean baseTests) {
-        return buildSuite(suiteClass, baseTests, false, false);
+        return buildSuite(suiteClass, baseTests, false);
     }
 
     /**
@@ -65,26 +65,12 @@ public class H2TestSuiteBuilder extends TestAll {
      * @return Suite suite.
      */
     public TestSuite buildSuite(Class<?> suiteClass, boolean baseTests, boolean additionalTests) {
-        return buildSuite(suiteClass, baseTests, additionalTests, false);
-    }
-
-    /**
-     * @param suiteClass Suite class.
-     * @param baseTests Include base suite to suite.
-     * @param additionalTests Include additional suite to suite.
-     * @param utilTests Include utils suite to suite.
-     * @return Suite suite.
-     */
-    public TestSuite buildSuite(Class<?> suiteClass, boolean baseTests, boolean additionalTests, boolean utilTests) {
         suite = new TestSuite(suiteClass.getName()) {
+            /** {@inheritDoc} */
             @Override public void run(TestResult result) {
                 try {
                     beforeTest();
-
                     super.run(result);
-                }
-                catch (SQLException e) {
-                    throw new AssertionError("Failed to start suite.", e);
                 }
                 finally {
                     afterTest();
@@ -97,10 +83,7 @@ public class H2TestSuiteBuilder extends TestAll {
                 test();
 
             if (additionalTests)
-                testAdditional();
-
-            if (utilTests)
-                testUtils();
+                testUnit();
         }
         catch (SQLException e) {
             assert false : e;
@@ -111,5 +94,21 @@ public class H2TestSuiteBuilder extends TestAll {
         suite = null;
 
         return suite0;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void beforeTest() {
+        try {
+            super.beforeTest();
+        }
+        catch (Exception e) {
+            e.printStackTrace(System.err);
+            throw new AssertionError("Failed to start suite.", e);
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void afterTest() {
+        super.afterTest();
     }
 }

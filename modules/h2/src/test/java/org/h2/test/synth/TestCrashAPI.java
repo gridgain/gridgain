@@ -113,7 +113,7 @@ public class TestCrashAPI extends TestBase implements Runnable {
 
     private static void recoverAll() {
         org.h2.Driver.load();
-        File[] files = new File("temp/backup").listFiles();
+        File[] files = new File("target/temp/backup").listFiles();
         Arrays.sort(files, new Comparator<File>() {
             @Override
             public int compare(File o1, File o2) {
@@ -124,14 +124,14 @@ public class TestCrashAPI extends TestBase implements Runnable {
             if (!f.getName().startsWith("db-")) {
                 continue;
             }
-            DeleteDbFiles.execute("data", null, true);
+            DeleteDbFiles.execute("target/data", null, true);
             try {
                 Restore.execute(f.getAbsolutePath(), "data", null);
             } catch (Exception e) {
                 System.out.println(f.getName() + " restore error " + e);
                 // ignore
             }
-            ArrayList<String> dbFiles = FileLister.getDatabaseFiles("data", null, false);
+            ArrayList<String> dbFiles = FileLister.getDatabaseFiles("target/data", null, false);
             for (String name: dbFiles) {
                 if (!name.endsWith(".h2.db")) {
                     continue;
@@ -213,7 +213,7 @@ public class TestCrashAPI extends TestBase implements Runnable {
 //      url += ";TRACE_LEVEL_FILE=3";
 
         Connection conn = null;
-        String fileName = "temp/backup/db-" + uniqueId++ + ".zip";
+        String fileName = "target/temp/backup/db-" + uniqueId++ + ".zip";
         Backup.execute(fileName, getBaseDir() + "/" + DIR, dbName, true);
         // close databases earlier
         System.gc();

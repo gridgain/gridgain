@@ -354,6 +354,7 @@ public class SourceCompiler {
     private static void javacProcess(File javaFile) {
         exec("javac",
                 "-sourcepath", COMPILE_DIR,
+                "-cp", System.getProperty("surefire.test.class.path", "target/classes:target/test-classes"),
                 "-d", COMPILE_DIR,
                 "-encoding", "UTF-8",
                 javaFile.getAbsolutePath());
@@ -403,6 +404,7 @@ public class SourceCompiler {
             compile.invoke(javac, (Object) new String[] {
                     "-sourcepath", COMPILE_DIR,
                     // "-Xlint:unchecked",
+                    "-cp", System.getProperty("surefire.test.class.path", "target/classes:target/test-classes"),
                     "-d", COMPILE_DIR,
                     "-encoding", "UTF-8",
                     javaFile.getAbsolutePath() });

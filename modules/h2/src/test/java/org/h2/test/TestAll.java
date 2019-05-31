@@ -13,6 +13,7 @@ import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
 import org.h2.Driver;
 import org.h2.engine.Constants;
+import org.h2.jdbcx.JdbcDataSourceFactory;
 import org.h2.store.fs.FilePathRec;
 import org.h2.store.fs.FileUtils;
 import org.h2.test.bench.TestPerformance;
@@ -34,7 +35,6 @@ import org.h2.test.db.TestDrop;
 import org.h2.test.db.TestDuplicateKeyUpdate;
 import org.h2.test.db.TestEncryptedDb;
 import org.h2.test.db.TestExclusive;
-import org.h2.test.db.TestFullText;
 import org.h2.test.db.TestFunctionOverload;
 import org.h2.test.db.TestFunctions;
 import org.h2.test.db.TestGeneralCommonTableQueries;
@@ -234,7 +234,6 @@ import org.h2.test.utils.TestColumnNamer;
 import org.h2.tools.DeleteDbFiles;
 import org.h2.tools.Server;
 import org.h2.util.AbbaLockingDetector;
-import org.h2.util.New;
 import org.h2.util.Profiler;
 import org.h2.util.StringUtils;
 import org.h2.util.Task;
@@ -404,7 +403,7 @@ java org.h2.test.TestAll timer
     /**
      * The THROTTLE value to use.
      */
-    int throttle;
+    public int throttle;
 
     /**
      * The THROTTLE value to use by default.
@@ -414,7 +413,7 @@ java org.h2.test.TestAll timer
     /**
      * If the test should stop when the first error occurs.
      */
-    boolean stopOnError;
+    public boolean stopOnError;
 
     /**
      * If the database should always be defragmented when closing.
@@ -438,7 +437,7 @@ java org.h2.test.TestAll timer
     /**
      * The list of tests.
      */
-    ArrayList<TestBase> tests = New.arrayList();
+    ArrayList<TestBase> tests = new ArrayList<>();
 
     private Server server;
 
@@ -468,6 +467,7 @@ java org.h2.test.TestAll timer
 
         System.setProperty("h2.maxMemoryRows", "100");
 
+        //TODO: GG-19169: What does check2 made?
         System.setProperty("h2.check2", "true");
         System.setProperty("h2.delayWrongPasswordMin", "0");
         System.setProperty("h2.delayWrongPasswordMax", "0");
@@ -743,7 +743,6 @@ kill -9 `jps -l | grep "org.h2.test." | cut -d " " -f 1`
         addTest(new TestDuplicateKeyUpdate());
         addTest(new TestEncryptedDb());
         addTest(new TestExclusive());
-        addTest(new TestFullText());
         addTest(new TestFunctionOverload());
         addTest(new TestFunctions());
         addTest(new TestInit());
@@ -878,7 +877,7 @@ kill -9 `jps -l | grep "org.h2.test." | cut -d " " -f 1`
         afterTest();
     }
 
-    private void testUnit() {
+    protected void testUnit() {
         // mv store
         addTest(new TestCacheConcurrentLIRS());
         addTest(new TestCacheLIRS());
@@ -971,7 +970,6 @@ kill -9 `jps -l | grep "org.h2.test." | cut -d " " -f 1`
         addTest(new TestValueMemory());
 
         runAddedTests(1);
-
     }
 
     protected void addTest(TestBase test) {
@@ -1057,9 +1055,9 @@ kill -9 `jps -l | grep "org.h2.test." | cut -d " " -f 1`
         Driver.load();
         FileUtils.deleteRecursive(TestBase.BASE_TEST_DIR, true);
         DeleteDbFiles.execute(TestBase.BASE_TEST_DIR, null, true);
-        FileUtils.deleteRecursive("trace.db", false);
+        FileUtils.deleteRecursive("target/trace.db", false);
         if (networked) {
-            String[] args = ssl ? new String[] { "-tcpSSL" } : new String[0];
+            String[] args = ssl ? new String[] { "-ifNotExists", "-tcpSSL" } : new String[] { "-ifNotExists" };
             server = Server.createTcpServer(args);
             try {
                 server.start();
@@ -1077,7 +1075,8 @@ kill -9 `jps -l | grep "org.h2.test." | cut -d " " -f 1`
         if (networked && server != null) {
             server.stop();
         }
-        FileUtils.deleteRecursive("trace.db", true);
+        JdbcDataSourceFactory.getTraceSystem().close();
+        FileUtils.deleteRecursive("target/trace.db", true);
         FileUtils.deleteRecursive(TestBase.BASE_TEST_DIR, true);
     }
 

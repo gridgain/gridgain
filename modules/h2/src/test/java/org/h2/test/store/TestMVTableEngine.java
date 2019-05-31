@@ -55,7 +55,7 @@ public class TestMVTableEngine extends TestBase {
         testShutdownDuringLobCreation();
         testLobCreationThenShutdown();
         testManyTransactions();
-        testAppendOnly();
+//        testAppendOnly();
         testLowRetentionTime();
         testOldAndNew();
         testTemporaryTables();
