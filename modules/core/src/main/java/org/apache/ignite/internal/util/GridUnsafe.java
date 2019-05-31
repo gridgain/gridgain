@@ -29,6 +29,7 @@ import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.util.typedef.internal.A;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import sun.misc.Unsafe;
@@ -1201,7 +1202,11 @@ public abstract class GridUnsafe {
      * @return address.
      */
     public static long allocateMemory(long size) {
-        return UNSAFE.allocateMemory(size);
+        long ptr = UNSAFE.allocateMemory(size);
+
+        System.out.println("<><> Allocated memory: 0x" + U.hexLong(ptr) + " " + U.readableSize(size, false));
+
+        return ptr;
     }
 
     /**
@@ -1212,7 +1217,11 @@ public abstract class GridUnsafe {
      * @return address.
      */
     public static long reallocateMemory(long addr, long len) {
-        return UNSAFE.reallocateMemory(addr, len);
+        long ptr = UNSAFE.reallocateMemory(addr, len);
+
+        System.out.println("<><> REallocated memory: 0x" + U.hexLong(ptr) + " " + U.readableSize(len, false));
+
+        return ptr;
     }
 
     /**
