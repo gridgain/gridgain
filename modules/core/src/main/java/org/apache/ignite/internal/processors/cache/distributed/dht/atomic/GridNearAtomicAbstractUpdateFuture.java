@@ -808,6 +808,13 @@ public abstract class GridNearAtomicAbstractUpdateFuture extends GridCacheFuture
          * @param cctx Context.
          */
         private void initMapping(List<UUID> nodeIds, GridCacheContext cctx) {
+            //Should to trust primary mapping.
+            if (req.initMappingLocally()) {
+                mappedNodes = U.newHashMap(nodeIds.size());
+
+                rcvdCnt = 0;
+            }
+
             assert rcvdCnt <= nodeIds.size();
 
             expCnt = nodeIds.size();
