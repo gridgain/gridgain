@@ -173,8 +173,8 @@ public class RestExecutorSelfTest {
         String trustStore,
         String trustStorePwd,
         List<String> cipherSuites
-    ) throws Exception {
-        try(Ignite ignite = Ignition.getOrStart(nodeCfg)) {
+    ) throws Throwable {
+        try(Ignite ignored = Ignition.getOrStart(nodeCfg)) {
             AgentConfiguration cfg = new AgentConfiguration();
 
             cfg
@@ -185,7 +185,7 @@ public class RestExecutorSelfTest {
                 .nodeTrustStorePassword(trustStorePwd)
                 .cipherSuites(cipherSuites);
 
-            RestExecutor exec = new RestExecutor(cfg);
+            RestExecutor exec = new RestExecutor(null);
 
             JsonObject params = new JsonObject()
                 .add("cmd", "top")
@@ -193,7 +193,7 @@ public class RestExecutorSelfTest {
                 .add("mtr", false)
                 .add("caches", false);
 
-            RestResult res = exec.sendRequest(params);
+            RestResult res = exec.sendRequest(uri, params);
 
             JsonNode json = toJson(res);
 
@@ -209,7 +209,7 @@ public class RestExecutorSelfTest {
 
     /** */
     @Test
-    public void nodeNoSslAgentNoSsl() throws Exception {
+    public void nodeNoSslAgentNoSsl() throws Throwable {
         checkRest(
             nodeConfiguration(""),
             HTTP_URI,
@@ -221,7 +221,7 @@ public class RestExecutorSelfTest {
 
     /** */
     @Test
-    public void nodeNoSslAgentWithSsl() throws Exception {
+    public void nodeNoSslAgentWithSsl() throws Throwable {
         // Check Web Agent with SSL.
         ruleForExpectedException.expect(SSLException.class);
         checkRest(
@@ -235,7 +235,7 @@ public class RestExecutorSelfTest {
 
     /** */
     @Test
-    public void nodeWithSslAgentNoSsl() throws Exception {
+    public void nodeWithSslAgentNoSsl() throws Throwable {
         ruleForExpectedException.expect(IOException.class);
         checkRest(
             nodeConfiguration(JETTY_WITH_SSL),
@@ -248,7 +248,7 @@ public class RestExecutorSelfTest {
 
     /** */
     @Test
-    public void nodeWithSslAgentWithSsl() throws Exception {
+    public void nodeWithSslAgentWithSsl() throws Throwable {
         checkRest(
             nodeConfiguration(JETTY_WITH_SSL),
             HTTPS_URI,
@@ -260,7 +260,7 @@ public class RestExecutorSelfTest {
 
     /** */
     @Test
-    public void nodeNoCiphersAgentWithCiphers() throws Exception {
+    public void nodeNoCiphersAgentWithCiphers() throws Throwable {
         ruleForExpectedException.expect(SSLHandshakeException.class);
         checkRest(
             nodeConfiguration(JETTY_WITH_SSL),
@@ -273,7 +273,7 @@ public class RestExecutorSelfTest {
 
     /** */
     @Test
-    public void nodeWithCiphersAgentNoCiphers() throws Exception {
+    public void nodeWithCiphersAgentNoCiphers() throws Throwable {
         ruleForExpectedException.expect(SSLHandshakeException.class);
         checkRest(
             nodeConfiguration(JETTY_WITH_CIPHERS_0),
@@ -286,7 +286,7 @@ public class RestExecutorSelfTest {
 
     /** */
     @Test
-    public void nodeWithCiphersAgentWithCiphers() throws Exception {
+    public void nodeWithCiphersAgentWithCiphers() throws Throwable {
         checkRest(
             nodeConfiguration(JETTY_WITH_CIPHERS_1),
             HTTPS_URI,
@@ -298,7 +298,7 @@ public class RestExecutorSelfTest {
 
     /** */
     @Test
-    public void differentCiphers1() throws Exception {
+    public void differentCiphers1() throws Throwable {
         ruleForExpectedException.expect(SSLHandshakeException.class);
         checkRest(
             nodeConfiguration(JETTY_WITH_CIPHERS_1),
@@ -311,7 +311,7 @@ public class RestExecutorSelfTest {
 
     /** */
     @Test
-    public void differentCiphers2() throws Exception {
+    public void differentCiphers2() throws Throwable {
         ruleForExpectedException.expect(SSLException.class);
         checkRest(
             nodeConfiguration(JETTY_WITH_CIPHERS_2),
@@ -324,7 +324,7 @@ public class RestExecutorSelfTest {
 
     /** */
     @Test
-    public void commonCiphers() throws Exception {
+    public void commonCiphers() throws Throwable {
         checkRest(
             nodeConfiguration(JETTY_WITH_CIPHERS_1),
             HTTPS_URI,

@@ -23,7 +23,7 @@ public class RestResult {
     /** REST http code. */
     private int status;
 
-    /** The field contains description of error if server could not handle the request. */
+    /** The field contains description of withError if server could not handle the request. */
     private String error;
 
     /** The field contains result of command. */
@@ -34,7 +34,7 @@ public class RestResult {
 
     /**
      * @param status REST http code.
-     * @param error The field contains description of error if server could not handle the request.
+     * @param error The field contains description of withError if server could not handle the request.
      * @param data The field contains result of command.
      */
     private RestResult(int status, String error, String data) {
@@ -45,7 +45,7 @@ public class RestResult {
 
     /**
      * @param status REST http code.
-     * @param error The field contains description of error if server could not handle the request.
+     * @param error The field contains description of withError if server could not handle the request.
      * @return Request result.
      */
     public static RestResult fail(int status, String error) {
@@ -72,7 +72,7 @@ public class RestResult {
     }
 
     /**
-     * @return The field contains description of error if server could not handle the request.
+     * @return The field contains description of withError if server could not handle the request.
      */
     public String getError() {
         return error;

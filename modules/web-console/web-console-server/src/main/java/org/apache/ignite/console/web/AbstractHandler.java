@@ -28,10 +28,9 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-import static org.apache.ignite.console.json.JsonUtils.errorToJson;
-import static org.apache.ignite.console.json.JsonUtils.fromJson;
-import static org.apache.ignite.console.json.JsonUtils.toJson;
-import static org.apache.ignite.console.websocket.WebSocketConsts.ERROR;
+import static org.apache.ignite.console.utils.Utils.extractErrorMessage;
+import static org.apache.ignite.console.utils.Utils.fromJson;
+import static org.apache.ignite.console.utils.Utils.toJson;
 
 /**
  * Base class for web sockets handler.
@@ -59,6 +58,14 @@ public abstract class AbstractHandler extends TextWebSocketHandler {
     }
 
     /**
+     * @param c Collection of Objects.
+     * @param mapper Mapper.
+     */
+    protected <T, R> Set<R> mapToSet(Collection<T> c, Function<? super T, ? extends R> mapper) {
+        return c.stream().map(mapper).collect(Collectors.toSet());
+    }
+
+    /**
      * @param ws Session to send message.
      * @param evt Event.
      * @throws IOException If failed to send message.
@@ -73,34 +80,21 @@ public abstract class AbstractHandler extends TextWebSocketHandler {
      * @throws IOException If failed to send message.
      */
     protected void sendResponse(WebSocketSession ws, WebSocketEvent reqEvt, Object payload) throws IOException {
-        WebSocketEvent resEvt = new WebSocketEvent(reqEvt, toJson(payload));
-
-        sendMessage(ws, resEvt);
-    }
-
-    /**
-     * @param c Collection of Objects.
-     * @param mapper Mapper.
-     */
-    protected <T, R> Set<R> mapToSet(Collection<T> c, Function<? super T, ? extends R> mapper) {
-        return c.stream().map(mapper).collect(Collectors.toSet());
+        sendMessage(ws, reqEvt.withPayload(toJson(payload)));
     }
 
     /**
      * @param ws Websocket session.
      * @param evt Event.
-     * @param errMsg Error message.
+     * @param prefix Error message.
      * @param err Error.
      */
-    protected void sendError(WebSocketSession ws, WebSocketEvent evt, String errMsg, Throwable err) {
+    protected void sendError(WebSocketSession ws, WebSocketEvent evt, String prefix, Throwable err) {
         try {
-            evt.setEventType(ERROR);
-            evt.setPayload(errorToJson(errMsg, err));
-
-            sendMessage(ws, evt);
+            sendMessage(ws, evt.withError(extractErrorMessage(prefix, err)));
         }
         catch (Throwable e) {
-            log.error("Failed to send error message [session=" + ws + ", event=" + evt + "]", e);
+            log.error("Failed to send error in response [session=" + ws + ", event=" + evt + "]", e);
         }
     }
 }

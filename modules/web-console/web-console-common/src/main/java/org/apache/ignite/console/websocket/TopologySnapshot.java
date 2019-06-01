@@ -16,12 +16,10 @@
 
 package org.apache.ignite.console.websocket;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientNodeBean;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -29,46 +27,55 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteProductVersion;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_NAME;
-import static org.apache.ignite.console.json.JsonUtils.attribute;
+import static org.apache.ignite.console.utils.Utils.attribute;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_BUILD_VER;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_CLIENT_MODE;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IPS;
 import static org.apache.ignite.internal.visor.util.VisorTaskUtils.sortAddresses;
 import static org.apache.ignite.internal.visor.util.VisorTaskUtils.splitAddresses;
+import static org.apache.ignite.lang.IgniteProductVersion.fromString;
 
 /**
  * Topology snapshot POJO.
  */
 public class TopologySnapshot {
     /** Optional Ignite cluster ID. */
-    private static final String IGNITE_CLUSTER_ID = "IGNITE_CLUSTER_ID";
+    public static final String IGNITE_CLUSTER_ID = "IGNITE_CLUSTER_ID";
 
-    /** */
+    /**
+     * Cluster ID.
+     */
     private String id;
 
-    /** */
+    /**
+     * Cluster name.
+     */
     private String name;
 
-    /** */
-    private Collection<UUID> nids;
-
-    /** */
-    private Map<UUID, String> addrs;
-
-    /** */
-    private Map<UUID, Boolean> clients;
-
-    /** */
-    private String clusterVerStr;
-
-    /** */
-    private IgniteProductVersion clusterVer;
-
-    /** */
+    /**
+     * Cluster active flag.
+     */
     private boolean active;
 
-    /** */
+    /**
+     * Configured security flag.
+     */
     private boolean secured;
+
+    /**
+     * Cluster demo flag.
+     */
+    private boolean demo;
+
+    /**
+     * Cluster version.
+     */
+    private String clusterVer;
+
+    /**
+     * Cluster nodes.
+     */
+    private Map<UUID, NodeBean> nodes;
 
     /**
      * Default constructor for serialization.
@@ -85,16 +92,14 @@ public class TopologySnapshot {
     public TopologySnapshot(Collection<GridClientNodeBean> nodes) {
         int sz = nodes.size();
 
-        nids = new ArrayList<>(sz);
-        addrs = U.newHashMap(sz);
-        clients = U.newHashMap(sz);
+        this.nodes = U.newHashMap(sz);
         active = false;
         secured = false;
 
+        IgniteProductVersion minNodeVer = null;
+
         for (GridClientNodeBean node : nodes) {
             UUID nid = node.getNodeId();
-
-            nids.add(nid);
 
             Map<String, Object> attrs = node.getAttributes();
 
@@ -104,9 +109,15 @@ public class TopologySnapshot {
             if (F.isEmpty(name))
                 name = attribute(attrs, IGNITE_CLUSTER_NAME);
 
-            Boolean client = attribute(attrs, ATTR_CLIENT_MODE);
+            String nodeVerAttr = attribute(attrs, ATTR_BUILD_VER);
+            IgniteProductVersion nodeVer = fromString(nodeVerAttr);
 
-            clients.put(nid, client);
+            if (minNodeVer == null || minNodeVer.compareTo(nodeVer) > 0) {
+                minNodeVer = nodeVer;
+                clusterVer = nodeVerAttr;
+            }
+
+            Boolean client = attribute(attrs, ATTR_CLIENT_MODE);
 
             Collection<String> nodeAddrs = client
                 ? splitAddresses(attribute(attrs, ATTR_IPS))
@@ -114,16 +125,7 @@ public class TopologySnapshot {
 
             String firstIP = F.first(sortAddresses(nodeAddrs));
 
-            addrs.put(nid, firstIP);
-
-            String nodeVerStr = attribute(attrs, ATTR_BUILD_VER);
-
-            IgniteProductVersion nodeVer = IgniteProductVersion.fromString(nodeVerStr);
-
-            if (clusterVer == null || clusterVer.compareTo(nodeVer) > 0) {
-                clusterVer = nodeVer;
-                clusterVerStr = nodeVerStr;
-            }
+            this.nodes.put(nid, new NodeBean(client, firstIP));
         }
 
         if (F.isEmpty(name))
@@ -154,7 +156,7 @@ public class TopologySnapshot {
     /**
      * @param name Cluster name.
      */
-    public void setClusterName(String name) {
+    public void setName(String name) {
         this.name = name;
     }
 
@@ -162,14 +164,14 @@ public class TopologySnapshot {
      * @return Cluster version.
      */
     public String getClusterVersion() {
-        return clusterVerStr;
+        return clusterVer;
     }
 
     /**
-     * @param clusterVerStr Cluster version.
+     * @param clusterVer Cluster version.
      */
-    public void setClusterVersion(String clusterVerStr) {
-        this.clusterVerStr = clusterVerStr;
+    public void setClusterVersion(String clusterVer) {
+        this.clusterVer = clusterVer;
     }
 
     /**
@@ -201,59 +203,38 @@ public class TopologySnapshot {
     }
 
     /**
+     * @return If demo cluster.
+     */
+    public boolean isDemo() {
+        return demo;
+    }
+
+    /**
+     * @param demo Cluster demo flag.
+     */
+    public void setDemo(boolean demo) {
+        this.demo = demo;
+    }
+
+    /**
+     * @return Cluster nodes.
+     */
+    public Map<UUID, NodeBean> getNodes() {
+        return nodes;
+    }
+
+    /**
+     * @param nodes Cluster nodes.
+     */
+    public void setNodes(Map<UUID, NodeBean> nodes) {
+        this.nodes = nodes;
+    }
+
+    /**
      * @return Cluster nodes IDs.
      */
-    public Collection<UUID> getNids() {
-        return nids;
-    }
-
-    /**
-     * @param nids Cluster nodes IDs.
-     */
-    public void setNids(Collection<UUID> nids) {
-        this.nids = nids;
-    }
-
-    /**
-     * @return Cluster nodes with IPs.
-     */
-    public Map<UUID, String> getAddresses() {
-        return addrs;
-    }
-
-    /**
-     * @param addrs Cluster nodes with IPs.
-     */
-    public void setAddresses(Map<UUID, String> addrs) {
-        this.addrs = addrs;
-    }
-
-    /**
-     * @return Cluster nodes with client mode flag.
-     */
-    public Map<UUID, Boolean> getClients() {
-        return clients;
-    }
-
-    /**
-     * @param clients Cluster nodes with client mode flag.
-     */
-    public void setClients(Map<UUID, Boolean> clients) {
-        this.clients = clients;
-    }
-
-    /**
-     * @return Cluster version.
-     */
-    public IgniteProductVersion clusterVersion() {
-        return clusterVer;
-    }
-
-    /**
-     * @return String with short node UUIDs.
-     */
-    public String nid8() {
-        return nids.stream().map(nid -> U.id8(nid).toUpperCase()).collect(Collectors.joining(",", "[", "]"));
+    public Collection<UUID> nids() {
+        return nodes.keySet();
     }
 
     /**
@@ -261,16 +242,57 @@ public class TopologySnapshot {
      * @return {@code true} in case if current topology is a different cluster.
      */
     public boolean differentCluster(TopologySnapshot other) {
-        return other == null || F.isEmpty(other.nids) || Collections.disjoint(nids, other.nids);
+        return other == null || F.isEmpty(other.nids()) || Collections.disjoint(nids(), other.nids());
     }
 
     /**
-     * @param other Other topology.
-     * @return {@code true} in case if current topology is the same cluster, but topology changed.
+     * Node bean.
      */
-    public boolean topologyChanged(TopologySnapshot other) {
-        return other != null && !other.nids.equals(nids);
+    public static class NodeBean {
+        /** Is client node. */
+        private boolean client;
+
+        /** Canonical ip address. */
+        private String addr;
+
+        /**
+         * @param client Is client node. .
+         * @param addr Canonical ip address.
+         */
+        public NodeBean(boolean client, String addr) {
+            this.client = client;
+            this.addr = addr;
+        }
+
+        /**
+         * @return Is client node.
+         */
+        public boolean isClient() {
+            return client;
+        }
+
+        /**
+         * @param client New is client node.
+         */
+        public void setClient(boolean client) {
+            this.client = client;
+        }
+
+        /**
+         * @return Canonical ip address.
+         */
+        public String getAddress() {
+            return addr;
+        }
+
+        /**
+         * @param addr New canonical ip address.
+         */
+        public void setAddress(String addr) {
+            this.addr = addr;
+        }
     }
+
 
     /** {@inheritDoc} */
     @Override public String toString() {

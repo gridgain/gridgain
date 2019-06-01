@@ -40,7 +40,7 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
      *
      * @param e Service exception.
      * @param req Web request.
-     * @return {@link ErrorResponse} instance with error code and message.
+     * @return {@link ErrorResponse} instance with withError code and message.
      */
     @ExceptionHandler(value = {MissingConfirmRegistrationException.class})
     protected ResponseEntity<Object> handleDisabledAccountException(MissingConfirmRegistrationException e, WebRequest req) {
@@ -52,7 +52,7 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
      *
      * @param ex Service exception.
      * @param req Web request.
-     * @return {@link ErrorResponse} instance with error code and message.
+     * @return {@link ErrorResponse} instance with withError code and message.
      */
     @ExceptionHandler(value = {AuthenticationException.class})
     protected ResponseEntity<Object> handleAuthException(AuthenticationException ex, WebRequest req) {
@@ -64,7 +64,7 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
      *
      * @param ex Service exception.
      * @param req Web request.
-     * @return {@link ErrorResponse} instance with error code and message.
+     * @return {@link ErrorResponse} instance with withError code and message.
      */
     @ExceptionHandler(value = {Exception.class})
     protected ResponseEntity<Object> handleGenericException(Exception ex, WebRequest req) {

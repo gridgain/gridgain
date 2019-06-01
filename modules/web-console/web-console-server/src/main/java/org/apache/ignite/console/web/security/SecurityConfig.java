@@ -48,8 +48,8 @@ import org.springframework.session.config.annotation.web.http.EnableSpringHttpSe
 
 import static org.apache.ignite.console.dto.Account.ROLE_ADMIN;
 import static org.apache.ignite.console.dto.Account.ROLE_USER;
-import static org.apache.ignite.console.websocket.WebSocketConsts.AGENTS_PATH;
-import static org.apache.ignite.console.websocket.WebSocketConsts.BROWSERS_PATH;
+import static org.apache.ignite.console.websocket.WebSocketEvents.AGENTS_PATH;
+import static org.apache.ignite.console.websocket.WebSocketEvents.BROWSERS_PATH;
 
 /**
  * Security settings provider.

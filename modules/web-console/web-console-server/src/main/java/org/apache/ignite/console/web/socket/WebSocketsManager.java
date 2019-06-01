@@ -42,10 +42,10 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.apache.ignite.console.json.JsonUtils.toJson;
-import static org.apache.ignite.console.websocket.WebSocketConsts.ADMIN_ANNOUNCEMENT;
-import static org.apache.ignite.console.websocket.WebSocketConsts.AGENT_REVOKE_TOKEN;
-import static org.apache.ignite.console.websocket.WebSocketConsts.AGENT_STATUS;
+import static org.apache.ignite.console.utils.Utils.toJson;
+import static org.apache.ignite.console.websocket.WebSocketEvents.ADMIN_ANNOUNCEMENT;
+import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_REVOKE_TOKEN;
+import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_STATUS;
 
 /**
  * Web sockets manager.
@@ -112,13 +112,13 @@ public class WebSocketsManager {
 
         updateClusterInBrowsers(desc.accIds);
 
-        if (!F.isEmpty(desc.clusterId)) {
+        if (!F.isEmpty(desc.clusterIds)) {
             Optional<AgentDescriptor> conn = agents.values().stream()
-                .filter(agent -> desc.getClusterId().equals(agent.getClusterId()))
+                .filter(agent -> !Collections.disjoint(desc.getClusterIds(), agent.getClusterIds()))
                 .findFirst();
 
             if (!conn.isPresent())
-                clusters.remove(desc.clusterId);
+                clusters.remove(desc.clusterIds);
         }
     }
 
@@ -179,7 +179,7 @@ public class WebSocketsManager {
 
         WebSocketSession wsAgent = agents.entrySet().stream()
             .filter(e -> e.getValue().isActiveAccount(accId))
-            .filter(e -> clusterId.equals(e.getValue().getClusterId()))
+            .filter(e -> e.getValue().getClusterIds().contains(clusterId))
             .findFirst()
             .map(Map.Entry::getKey)
             .orElseThrow(() -> new IllegalStateException("Failed to find agent for cluster [accountId=" + accId+", clusterId=" + clusterId + " ]"));
@@ -200,8 +200,8 @@ public class WebSocketsManager {
     protected void updateTopology(WebSocketSession wsAgent, TopologySnapshot oldTop, TopologySnapshot newTop) {
         AgentDescriptor desc = agents.get(wsAgent);
 
-        if (!newTop.getId().equals(desc.clusterId)) {
-            desc.clusterId = newTop.getId();
+        if (!newTop.getId().equals(desc.clusterIds)) {
+            desc.clusterIds = Collections.singleton(newTop.getId());
 
             updateClusterInBrowsers(desc.accIds);
         }
@@ -216,8 +216,8 @@ public class WebSocketsManager {
 
         AgentDescriptor desc = agents.get(wsAgent);
 
-        if (desc.clusterId != null)
-            oldTop = clusters.remove(desc.clusterId);
+        if (desc.clusterIds != null)
+            oldTop = clusters.remove(desc.clusterIds);
 
         if (F.isEmpty(newTop.getId())) {
             String clusterId = null;
@@ -261,7 +261,7 @@ public class WebSocketsManager {
      * @param ann Announcement.
      */
     private void sendAnnouncement(Set<WebSocketSession> browsers, Announcement ann) {
-        WebSocketEvent evt = new WebSocketEvent(ADMIN_ANNOUNCEMENT, toJson(ann));
+        WebSocketEvent evt = new WebSocketEvent(ADMIN_ANNOUNCEMENT, ann);
 
         for (WebSocketSession ws : browsers) {
             try {
@@ -281,7 +281,7 @@ public class WebSocketsManager {
 
         agents.forEach((wsAgent, desc) -> {
             if (desc.isActiveAccount(accId)) {
-                TopologySnapshot top = clusters.get(desc.clusterId);
+                TopologySnapshot top = clusters.get(desc.clusterIds);
 
                 if (top != null && tops.stream().allMatch(t -> t.differentCluster(top)))
                     tops.add(top);
@@ -295,7 +295,7 @@ public class WebSocketsManager {
         res.put("clusters", tops);
 
         try {
-            sendMessage(ws, new WebSocketEvent(AGENT_STATUS, toJson(res)));
+            sendMessage(ws, new WebSocketEvent(AGENT_STATUS, res));
         }
         catch (Throwable e) {
             log.error("Failed to update agent status [session=" + ws + ", token=" + accId + "]", e);
@@ -378,7 +378,7 @@ public class WebSocketsManager {
         private Set<UUID> accIds;
 
         /** */
-        private String clusterId;
+        private Set<String> clusterIds;
 
         /**
          * @param accIds Account IDs.
@@ -420,8 +420,8 @@ public class WebSocketsManager {
         /**
          * @return Cluster id.
          */
-        public String getClusterId() {
-            return clusterId;
+        public Set<String> getClusterIds() {
+            return clusterIds;
         }
     }
 }

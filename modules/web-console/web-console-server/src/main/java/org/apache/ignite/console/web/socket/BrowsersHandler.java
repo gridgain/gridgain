@@ -38,13 +38,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketSession;
 
-import static org.apache.ignite.console.json.JsonUtils.fromJson;
-import static org.apache.ignite.console.json.JsonUtils.toJson;
-import static org.apache.ignite.console.websocket.WebSocketConsts.NODE_REST;
-import static org.apache.ignite.console.websocket.WebSocketConsts.NODE_VISOR;
-import static org.apache.ignite.console.websocket.WebSocketConsts.SCHEMA_IMPORT_DRIVERS;
-import static org.apache.ignite.console.websocket.WebSocketConsts.SCHEMA_IMPORT_METADATA;
-import static org.apache.ignite.console.websocket.WebSocketConsts.SCHEMA_IMPORT_SCHEMAS;
+import static org.apache.ignite.console.utils.Utils.fromJson;
+import static org.apache.ignite.console.utils.Utils.toJson;
+import static org.apache.ignite.console.websocket.WebSocketEvents.NODE_REST;
+import static org.apache.ignite.console.websocket.WebSocketEvents.NODE_VISOR;
+import static org.apache.ignite.console.websocket.WebSocketEvents.SCHEMA_IMPORT_DRIVERS;
+import static org.apache.ignite.console.websocket.WebSocketEvents.SCHEMA_IMPORT_METADATA;
+import static org.apache.ignite.console.websocket.WebSocketEvents.SCHEMA_IMPORT_SCHEMAS;
 
 /**
  * Browsers web sockets handler.
@@ -125,7 +125,7 @@ public class BrowsersHandler extends AbstractHandler {
                         throw new IllegalArgumentException("Missing cluster id parameter.");
 
                     WebSocketEvent reqEvt = evt.getEventType().equals(NODE_REST) ?
-                        evt : new WebSocketEvent(evt, prepareNodeVisorParams(payload));
+                        evt : evt.withPayload(prepareNodeVisorParams(payload));
 
                     wsm.sendToNode(ws, clusterId, reqEvt);
 

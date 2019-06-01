@@ -21,15 +21,20 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
+import java.util.stream.Stream;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.console.agent.AgentConfiguration;
+import org.apache.ignite.console.agent.rest.RestResult;
+import org.apache.ignite.console.json.JsonObject;
 import org.apache.ignite.console.websocket.AgentHandshakeRequest;
 import org.apache.ignite.console.websocket.AgentHandshakeResponse;
 import org.apache.ignite.console.websocket.WebSocketEvent;
@@ -39,7 +44,6 @@ import org.apache.ignite.logger.slf4j.Slf4jLogger;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.websocket.api.Session;
-import org.eclipse.jetty.websocket.api.StatusCode;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketClose;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketConnect;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketError;
@@ -50,19 +54,24 @@ import org.eclipse.jetty.websocket.api.extensions.Frame;
 import org.eclipse.jetty.websocket.client.WebSocketClient;
 import org.slf4j.LoggerFactory;
 
+import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.ignite.console.agent.AgentUtils.configureProxy;
+import static org.apache.ignite.console.agent.AgentUtils.entriesToMap;
+import static org.apache.ignite.console.agent.AgentUtils.entry;
 import static org.apache.ignite.console.agent.AgentUtils.secured;
+import static org.apache.ignite.console.agent.AgentUtils.send;
 import static org.apache.ignite.console.agent.AgentUtils.sslContextFactory;
-import static org.apache.ignite.console.json.JsonUtils.fromJson;
-import static org.apache.ignite.console.websocket.WebSocketConsts.AGENTS_PATH;
-import static org.apache.ignite.console.websocket.WebSocketConsts.AGENT_HANDSHAKE;
-import static org.apache.ignite.console.websocket.WebSocketConsts.AGENT_REVOKE_TOKEN;
-import static org.apache.ignite.console.websocket.WebSocketConsts.NODE_REST;
-import static org.apache.ignite.console.websocket.WebSocketConsts.NODE_VISOR;
-import static org.apache.ignite.console.websocket.WebSocketConsts.SCHEMA_IMPORT_DRIVERS;
-import static org.apache.ignite.console.websocket.WebSocketConsts.SCHEMA_IMPORT_METADATA;
-import static org.apache.ignite.console.websocket.WebSocketConsts.SCHEMA_IMPORT_SCHEMAS;
+import static org.apache.ignite.console.utils.Utils.extractErrorMessage;
+import static org.apache.ignite.console.utils.Utils.fromJson;
+import static org.apache.ignite.console.websocket.WebSocketEvents.AGENTS_PATH;
+import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_HANDSHAKE;
+import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_REVOKE_TOKEN;
+import static org.apache.ignite.console.websocket.WebSocketEvents.NODE_REST;
+import static org.apache.ignite.console.websocket.WebSocketEvents.NODE_VISOR;
+import static org.apache.ignite.console.websocket.WebSocketEvents.SCHEMA_IMPORT_DRIVERS;
+import static org.apache.ignite.console.websocket.WebSocketEvents.SCHEMA_IMPORT_METADATA;
+import static org.apache.ignite.console.websocket.WebSocketEvents.SCHEMA_IMPORT_SCHEMAS;
 
 /**
  * Router that listen for web socket and redirect messages to event bus.
@@ -72,14 +81,20 @@ public class WebSocketRouter implements AutoCloseable {
     /** */
     private static final IgniteLogger log = new Slf4jLogger(LoggerFactory.getLogger(WebSocketRouter.class));
 
-    /** */
+    /** Pong message. */
     private static final ByteBuffer PONG_MSG = UTF_8.encode("PONG");
 
-    /** */
-    private final CountDownLatch closeLatch = new CountDownLatch(1);
+    /** Default withError messages. */
+    private static final Map<String, String> ERROR_MSGS = Collections.unmodifiableMap(Stream.of(
+        entry(SCHEMA_IMPORT_DRIVERS, "Failed to collect list of JDBC drivers"),
+        entry(SCHEMA_IMPORT_SCHEMAS, "Failed to collect database schemas"),
+        entry(SCHEMA_IMPORT_METADATA, "Failed to collect database metadata"),
+        entry(NODE_REST, "Failed to handle REST request"),
+        entry(NODE_VISOR, "Failed to handle Visor task request")).
+        collect(entriesToMap()));
 
-    /** */
-    private final WebSocketSession wss = new WebSocketSession();
+    /** Close agent latch. */
+    private final CountDownLatch closeLatch = new CountDownLatch(1);
 
     /** Agent configuration. */
     private final AgentConfiguration cfg;
@@ -87,16 +102,22 @@ public class WebSocketRouter implements AutoCloseable {
     /** Http client. */
     private final HttpClient httpClient;
 
-    /** Web Socket Client. */
+    /** Websocket Client. */
     private WebSocketClient client;
 
-    /** */
+    /** Schema import handler. */
+    private final DatabaseHandler dbHnd;
+    
+    /** Cluster handler. */
     private final ClusterHandler clusterHnd;
 
-    /** */
-    private final DatabaseHandler dbHnd;
+    /** Demo cluster handler. */
+    private final DemoClusterHandler demoClusterHnd;
 
-    /** */
+    /** Cluster watcher. */
+    private final ClustersWatcher watcher;
+
+    /** Reconnect count. */
     private int reconnectCnt;
 
     /**
@@ -105,19 +126,22 @@ public class WebSocketRouter implements AutoCloseable {
     public WebSocketRouter(AgentConfiguration cfg) {
         this.cfg = cfg;
 
-        httpClient = new HttpClient(createSslFactory(cfg));
+        httpClient = new HttpClient(createServerSslFactory(cfg));
 
 //        TODO GG-18379 Investigate how to establish native websocket connection with proxy.
         configureProxy(httpClient, cfg.serverUri());
 
-        clusterHnd = new ClusterHandler(cfg, wss);
-        dbHnd = new DatabaseHandler(cfg, wss);
+        dbHnd = new DatabaseHandler(cfg);
+        clusterHnd = new ClusterHandler(cfg);
+        demoClusterHnd = new DemoClusterHandler(cfg);
+
+        watcher = new ClustersWatcher(cfg, clusterHnd, demoClusterHnd);
     }
 
     /**
      * @param cfg Config.
      */
-    private static SslContextFactory createSslFactory(AgentConfiguration cfg) {
+    private static SslContextFactory createServerSslFactory(AgentConfiguration cfg) {
         boolean trustAll = Boolean.getBoolean("trust.all");
 
         if (trustAll && !F.isEmpty(cfg.serverTrustStore())) {
@@ -155,13 +179,20 @@ public class WebSocketRouter implements AutoCloseable {
             reconnect();
         }
         catch (Throwable e) {
-            log.error("Failed to connect to the server", e);
+            log.error("Failed to establish websocket connection with server: " + cfg.serverUri());
         }
     }
 
     /** {@inheritDoc} */
     @Override public void close() {
         log.info("Stopping Web Console Agent...");
+
+        try {
+            watcher.close();
+        }
+        catch (Throwable e) {
+            log.error("Failed to stop cluster watcher", e);
+        }
 
         try {
             client.stop();
@@ -171,15 +202,16 @@ public class WebSocketRouter implements AutoCloseable {
         }
 
         try {
-            clusterHnd.stop();
+            httpClient.stop();
         }
         catch (Throwable e) {
-            log.error("Failed to stop cluster handler", e);
+            log.error("Failed to close http client", e);
         }
     }
 
     /**
      * Reconnect to backend.
+     *
      * @throws Exception If failed to connect to server.
      */
     private void reconnect() throws Exception {
@@ -187,20 +219,20 @@ public class WebSocketRouter implements AutoCloseable {
             return;
 
         if (client != null) {
-            client.destroy();
+            client.stop();
 
-            wss.close(StatusCode.NORMAL, null);
+            watcher.stopWatchTask();
         }
 
         client = new WebSocketClient(httpClient);
 
         try {
             client.start();
-            client.connect(this, new URI(cfg.serverUri()).resolve(AGENTS_PATH)).get(10L, TimeUnit.SECONDS);
+            Session ses = client.connect(this, new URI(cfg.serverUri()).resolve(AGENTS_PATH)).get(10L, TimeUnit.SECONDS);
 
             reconnectCnt = 0;
 
-            clusterHnd.start();
+            watcher.startWatchTask(ses);
         }
         catch (ConnectException | TimeoutException ignored) {
             // No-op.
@@ -228,8 +260,6 @@ public class WebSocketRouter implements AutoCloseable {
     public void onConnect(Session ses) {
         log.info("Connected to server: " + ses.getRemoteAddress());
 
-        wss.open(ses);
-
         try {
             String ver = "";
             String buildTime = "";
@@ -255,43 +285,34 @@ public class WebSocketRouter implements AutoCloseable {
                 cfg.tokens()
             );
 
-            wss.send(AGENT_HANDSHAKE, req);
+            send(ses, new WebSocketEvent(AGENT_HANDSHAKE, req));
         }
         catch (Throwable e) {
-            log.error("Failed to send handshake to server", e);
+            log.error("Failed to send processHandshakeResponse to server", e);
         }
     }
 
     /**
-     * @param json Response from server in JSON format.
+     * @param res Response from server.
      */
-    private void handshake(String json) {
-        try {
-            AgentHandshakeResponse res = fromJson(json, AgentHandshakeResponse.class);
+    private void processHandshakeResponse(AgentHandshakeResponse res) {
+        if (F.isEmpty(res.getError())) {
+            Set<String> validTokens = res.getTokens();
+            List<String> missedTokens = cfg.tokens();
 
-            if (F.isEmpty(res.getError())) {
-                Set<String> validTokens = res.getTokens();
-                List<String> missedTokens = cfg.tokens();
+            cfg.tokens(new ArrayList<>(validTokens));
 
-                cfg.tokens(new ArrayList<>(validTokens));
+            missedTokens.removeAll(validTokens);
 
-                missedTokens.removeAll(validTokens);
-
-                if (!F.isEmpty(missedTokens)) {
-                    log.warning("Failed to validate token(s): " + secured(missedTokens) + "." +
-                        " Please reload agent archive or check settings.");
-                }
-
-                log.info("Successful handshake with server.");
+            if (!F.isEmpty(missedTokens)) {
+                log.warning("Failed to validate token(s): " + secured(missedTokens) + "." +
+                    " Please reload agent archive or check settings.");
             }
-            else {
-                log.error(res.getError());
 
-                closeLatch.countDown();
-            }
+            log.info("Successful processHandshakeResponse with server.");
         }
-        catch (Throwable e) {
-            log.error("Failed to process handshake response from server", e);
+        else {
+            log.error(res.getError());
 
             closeLatch.countDown();
         }
@@ -300,15 +321,13 @@ public class WebSocketRouter implements AutoCloseable {
     /**
      * @param tok Token to revoke.
      */
-    private void revokeToken(String tok) {
+    private void processRevokeToken(String tok) {
         log.warning("Security token has been revoked: " + tok);
 
         cfg.tokens().remove(tok);
 
         if (F.isEmpty(cfg.tokens())) {
             log.warning("Web Console Agent will be stopped because no more valid tokens available");
-
-            wss.close(StatusCode.SHUTDOWN, "No more valid tokens available");
 
             closeLatch.countDown();
         }
@@ -318,50 +337,84 @@ public class WebSocketRouter implements AutoCloseable {
      * @param msg Message.
      */
     @OnWebSocketMessage
-    public void onMessage(String msg) {
+    public void onMessage(Session ses, String msg) {
+        WebSocketEvent evt = null;
+
         try {
-            WebSocketEvent evt = fromJson(msg, WebSocketEvent.class);
+            evt = fromJson(msg, WebSocketEvent.class);
 
-            String evtType = evt.getEventType();
+            switch (evt.getEventType()) {
+                case AGENT_HANDSHAKE: {
+                    AgentHandshakeResponse req0 = fromJson(evt.getPayload(), AgentHandshakeResponse.class);
 
-            switch (evtType) {
-                case AGENT_HANDSHAKE:
-                    handshake(evt.getPayload());
+                    processHandshakeResponse(req0);
 
-                    break;
-
+                    return;
+                }
                 case AGENT_REVOKE_TOKEN:
-                    revokeToken(evt.getPayload());
+                    processRevokeToken(evt.getPayload());
 
-                    break;
+                    return;
 
                 case SCHEMA_IMPORT_DRIVERS:
-                    dbHnd.collectJdbcDrivers(evt);
+                    send(ses, evt.withPayload(dbHnd.collectJdbcDrivers()));
 
                     break;
 
                 case SCHEMA_IMPORT_SCHEMAS:
-                    dbHnd.collectDbSchemas(evt);
+                    send(ses, evt.withPayload(dbHnd.collectDbSchemas(evt)));
 
                     break;
 
                 case SCHEMA_IMPORT_METADATA:
-                    dbHnd.collectDbMetadata(evt);
+                    send(ses, evt.withPayload(dbHnd.collectDbMetadata(evt)));
 
                     break;
 
                 case NODE_REST:
-                case NODE_VISOR:
-                    clusterHnd.restRequest(evt);
+                case NODE_VISOR: {
+                    if (log.isDebugEnabled())
+                        log.debug("Processing REST request: " + evt);
+
+                    RestRequest req0 = fromJson(evt.getPayload(), RestRequest.class);
+
+                    JsonObject params = req0.getParams();
+
+                    RestResult res;
+
+                    try {
+                        res = req0.isDemo() ?
+                            demoClusterHnd.restCommand(params) : clusterHnd.restCommand(params);
+                    }
+                    catch (Throwable e) {
+                        res = RestResult.fail(HTTP_INTERNAL_ERROR, e.getMessage());
+                    }
+
+                    send(ses, evt.withPayload(res));
 
                     break;
-
+                }
                 default:
                     log.warning("Unknown event: " + evt);
             }
         }
         catch (Throwable e) {
-            log.error("Failed to process message: " + msg, e);
+            if (evt == null) {
+                log.error("Failed to process message: " + msg, e);
+
+                return;
+            }
+
+            String errMsg = ERROR_MSGS.get(evt.getEventType());
+
+            log.error(errMsg, e);
+
+            try {
+                send(ses, evt.withError(extractErrorMessage(errMsg, e)));
+            }
+            catch (Exception ex) {
+                log.error("Failed to send response with error", e);
+            }
         }
     }
 
@@ -408,7 +461,6 @@ public class WebSocketRouter implements AutoCloseable {
     }
 
     /**
-     *
      * @param statusCode Close status code.
      * @param reason Close reason.
      */

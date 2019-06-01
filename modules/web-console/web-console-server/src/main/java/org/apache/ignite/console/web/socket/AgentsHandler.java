@@ -35,9 +35,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketSession;
 
-import static org.apache.ignite.console.json.JsonUtils.fromJson;
-import static org.apache.ignite.console.websocket.WebSocketConsts.AGENT_HANDSHAKE;
-import static org.apache.ignite.console.websocket.WebSocketConsts.CLUSTER_TOPOLOGY;
+import static org.apache.ignite.console.utils.Utils.fromJson;
+import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_HANDSHAKE;
+import static org.apache.ignite.console.websocket.WebSocketEvents.CLUSTER_TOPOLOGY;
 
 /**
  * Agents web sockets handler.

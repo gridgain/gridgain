@@ -20,7 +20,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.springframework.http.HttpStatus;
 
 /**
- * Error response JSON bean with the error code and technical error message.
+ * Error response JSON bean with the withError code and technical withError message.
  */
 public class ErrorResponse {
     /** */

@@ -40,9 +40,9 @@ import static java.util.stream.Collectors.toMap;
 import static org.apache.ignite.console.common.Utils.diff;
 import static org.apache.ignite.console.common.Utils.idsFromJson;
 import static org.apache.ignite.console.common.Utils.toJsonArray;
-import static org.apache.ignite.console.json.JsonUtils.asJson;
-import static org.apache.ignite.console.json.JsonUtils.fromJson;
-import static org.apache.ignite.console.json.JsonUtils.toJson;
+import static org.apache.ignite.console.utils.Utils.asJson;
+import static org.apache.ignite.console.utils.Utils.fromJson;
+import static org.apache.ignite.console.utils.Utils.toJson;
 
 /**
  * Repository to work with configurations.
