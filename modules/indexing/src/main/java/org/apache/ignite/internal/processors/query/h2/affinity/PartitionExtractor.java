@@ -173,7 +173,6 @@ public class PartitionExtractor {
             else
                 tree = new PartitionCompositeNode(tree, qryRes.tree(), PartitionCompositeNodeOperator.OR);
 
-
             if (affinityTopVer == null)
                 affinityTopVer = qryRes.topologyVersion();
             else

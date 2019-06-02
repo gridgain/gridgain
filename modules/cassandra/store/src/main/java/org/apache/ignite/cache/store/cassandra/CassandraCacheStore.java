@@ -423,7 +423,6 @@ public class CassandraCacheStore<K, V> implements CacheStore<K, V> {
                     return controller.bindKey(statement, key);
                 }
 
-
                 /** {@inheritDoc} */
                 @Override public KeyValuePersistenceSettings getPersistenceSettings() {
                     return controller.getPersistenceSettings();

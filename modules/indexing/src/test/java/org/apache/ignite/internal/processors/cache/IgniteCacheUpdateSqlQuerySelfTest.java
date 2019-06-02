@@ -396,7 +396,6 @@ public class IgniteCacheUpdateSqlQuerySelfTest extends IgniteCacheAbstractSqlDml
         return ignite(0).cache("L2AT").query(qry.setSchema("PUBLIC")).getAll();
     }
 
-
     /**
      *
      */

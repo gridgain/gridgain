@@ -828,7 +828,6 @@ public class GridSqlQuerySplitter {
             //  T0   T1  T2  T3
             //  ^-----^
 
-
             //     join3
             //      / \
             //   join2 \
@@ -856,7 +855,6 @@ public class GridSqlQuerySplitter {
             //    / \   \   \
             //  T0   T1  T2  T3
             //       ^----^
-
 
             //        join3
             //         / \

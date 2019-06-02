@@ -699,7 +699,6 @@ public class TxRollbackOnTimeoutTest extends GridCommonAbstractTest {
         doTestRollbackOnTimeoutTxRemap(PESSIMISTIC, SERIALIZABLE, false);
     }
 
-
     /**
      * @param concurrency Concurrency.
      * @param isolation Isolation.

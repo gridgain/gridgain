@@ -32,6 +32,7 @@ public class VisorDrStateTaskResult extends IgniteDataTransferObject {
 
     /** Data center id. */
     private byte dataCenterId;
+
     /** Result messages. */
     private List<String> resultMessages = new ArrayList<>();
 

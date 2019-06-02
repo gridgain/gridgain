@@ -1003,6 +1003,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
         checkPartitions(secondParts);
         checkPartitions(mixedParts);
     }
+
     /**
      * Test if user specified partitions for query explicitly, such query is cancealble.
      *

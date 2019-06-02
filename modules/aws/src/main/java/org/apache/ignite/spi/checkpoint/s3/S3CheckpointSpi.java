@@ -594,7 +594,6 @@ public class S3CheckpointSpi extends IgniteSpiAdapter implements CheckpointSpi {
         s3.putObject(bucketName, data.getKey(), new ByteArrayInputStream(buf), meta);
     }
 
-
     /**
      * Deletes checkpoint data.
      *

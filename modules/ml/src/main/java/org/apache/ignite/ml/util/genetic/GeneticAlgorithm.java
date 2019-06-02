@@ -321,7 +321,6 @@ public class GeneticAlgorithm {
             child2.setGene(i, secondParent.getGene(i));
         }
 
-
         for (int i = locusPnt; i < size; i++) {
             child1.setGene(i, secondParent.getGene(i));
             child2.setGene(i, firstParent.getGene(i));
@@ -397,6 +396,7 @@ public class GeneticAlgorithm {
         this.amountOfGenerations = amountOfGenerations;
         return this;
     }
+
     /**
      * @param mutationOperator Mutation operator.
      */

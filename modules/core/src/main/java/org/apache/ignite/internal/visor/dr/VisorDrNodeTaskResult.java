@@ -29,28 +29,40 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 public class VisorDrNodeTaskResult extends IgniteDataTransferObject {
     /** Serial version uid. */
     private static final long serialVersionUID = 0L;
+
     /** Data center id. */
     private byte dataCenterId;
+
     /** Data node. */
     private boolean dataNode;
+
     /** Addresses. */
     private String addresses;
+
     /** Mode. */
     private String mode;
+
     /** Sender data centers. */
     private List<T2<Byte, List<String>>> senderDataCenters;
+
     /** Receiver address. */
     private String receiverAddress;
+
     /** Common config. */
     private List<T2<String, Object>> commonConfig;
+
     /** Sender config. */
     private List<T2<String, Object>> senderConfig;
+
     /** Receiver config. */
     private List<T2<String, Object>> receiverConfig;
+
     /** Sender metrics. */
     private List<T2<String, Object>> senderMetrics;
+
     /** Receiver metrics. */
     private List<T2<String, Object>> receiverMetrics;
+
     /** Response messages. */
     private List<String> responseMsgs = new ArrayList<>();
 

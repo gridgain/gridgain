@@ -685,6 +685,7 @@ public class OptimizedMarshallerTest extends GridCommonAbstractTest {
             return null;
         }
     }
+
     /**
      * Some serializable class.
      */

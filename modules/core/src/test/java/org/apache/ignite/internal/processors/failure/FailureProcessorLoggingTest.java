@@ -236,6 +236,7 @@ public class FailureProcessorLoggingTest extends GridCommonAbstractTest {
         public void expectedThreadDumpMessage(String expThreadDumpMsg) {
             this.expThreadDumpMsg = expThreadDumpMsg;
         }
+
         /**
          * @return Warn flag.
          */

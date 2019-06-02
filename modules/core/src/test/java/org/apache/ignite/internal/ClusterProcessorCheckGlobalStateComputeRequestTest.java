@@ -27,11 +27,11 @@ import org.junit.Test;
  * Tests that the GridInternal annotation for GridClusterStateProcessor.CheckGlobalStateComputeRequest works correctly.
  */
 public class ClusterProcessorCheckGlobalStateComputeRequestTest extends GridCommonAbstractTest {
-
+    /**
+     */
     public ClusterProcessorCheckGlobalStateComputeRequestTest() {
         super(false);
     }
-
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -41,7 +41,6 @@ public class ClusterProcessorCheckGlobalStateComputeRequestTest extends GridComm
 
         return cfg;
     }
-
 
     /**
      * @throws Exception If failed.
@@ -61,7 +60,6 @@ public class ClusterProcessorCheckGlobalStateComputeRequestTest extends GridComm
         checkBeanForAGrid(grid(0), "Thread Pools", "GridManagementExecutor", "TaskCount", 100L);
     }
 
-
     /** Checks that a bean with the specified group and name is available and has the expected attribute */
     private void checkBeanForAGrid(Ignite ignite, String grp, String name, String attributeName, Object expAttributeVal) throws Exception {
         ObjectName mBeanName = IgniteUtils.makeMBeanName(ignite.name(), grp, name);
@@ -69,6 +67,4 @@ public class ClusterProcessorCheckGlobalStateComputeRequestTest extends GridComm
 
         assertEquals(expAttributeVal, attributeVal);
     }
-
-
 }

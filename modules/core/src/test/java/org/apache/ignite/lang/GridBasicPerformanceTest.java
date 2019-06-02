@@ -959,7 +959,6 @@ public class GridBasicPerformanceTest {
             GridUnsafe.freeMemory(l);
     }
 
-
     /**
      * Test unsafe vs. new.
      * @throws InterruptedException If failed.

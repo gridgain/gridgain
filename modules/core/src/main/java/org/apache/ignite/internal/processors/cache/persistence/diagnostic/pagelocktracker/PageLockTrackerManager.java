@@ -240,6 +240,7 @@ public class PageLockTrackerManager implements LifecycleAware {
    public static class MemoryCalculator {
         /** */
         private final AtomicLong heapUsed = new AtomicLong();
+
         /** */
         private final AtomicLong offHeapUsed = new AtomicLong();
 

@@ -22,6 +22,7 @@ package org.apache.ignite.internal.processors.cache.persistence.metastorage;
 public class MetsatorageSearchRowImpl implements MetastorageSearchRow {
     /** */
     private final String key;
+
     /** */
     private final long link;
 

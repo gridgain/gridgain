@@ -3079,10 +3079,13 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
     private static class OrderedMessageContainer {
         /** */
         GridIoMessage message;
+
         /** */
         long addedTime;
+
         /** */
         IgniteRunnable closure;
+
         /** */
         Span parentSpan;
 

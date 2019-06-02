@@ -253,7 +253,6 @@ public abstract class GridCacheInterceptorAbstractSelfTest extends GridCacheAbst
 
         log.info("GetAsync 1.");
 
-
         if (needVer)
             assertEquals((Integer)101, cache.getEntryAsync(key).get().getValue());
         else

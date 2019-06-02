@@ -476,6 +476,7 @@ public abstract class ClientAbstractSelfTest extends GridCommonAbstractTest {
 
         assertEquals(0, failed);
     }
+
     /**
      * @throws Exception If failed.
      */

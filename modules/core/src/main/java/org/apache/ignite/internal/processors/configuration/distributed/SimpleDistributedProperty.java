@@ -30,12 +30,16 @@ import org.jetbrains.annotations.NotNull;
 public class SimpleDistributedProperty<T extends Serializable> implements DistributedChangeableProperty<T> {
     /** Name of property. */
     private final String name;
+
     /** Property value. */
     protected volatile T val;
+
     /** Sign of attachment to the processor. */
     private volatile boolean attached = false;
+
     /** Listeners of property update. */
     private final ConcurrentLinkedQueue<DistributePropertyListener<? super T>> updateListeners = new ConcurrentLinkedQueue<>();
+
     /**
      * Specific consumer for update value in cluster. It is null when property doesn't ready to update value on cluster
      * wide.

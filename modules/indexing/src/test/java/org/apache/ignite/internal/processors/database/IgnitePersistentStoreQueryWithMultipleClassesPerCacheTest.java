@@ -147,7 +147,6 @@ public class IgnitePersistentStoreQueryWithMultipleClassesPerCacheTest extends G
         }
     }
 
-
     /**
      *
      */

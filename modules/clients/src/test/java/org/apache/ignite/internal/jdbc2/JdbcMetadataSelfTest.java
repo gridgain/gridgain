@@ -101,7 +101,6 @@ public class JdbcMetadataSelfTest extends GridCommonAbstractTest {
 
         cfg.setSqlConfiguration(new SqlConfiguration().setSqlSchemas("PREDEFINED_SCHEMAS_1", "PREDEFINED_SCHEMAS_2"));
 
-
         return cfg;
     }
 

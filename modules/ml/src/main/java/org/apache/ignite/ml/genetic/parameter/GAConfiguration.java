@@ -42,6 +42,7 @@ public class GAConfiguration {
 
     /** Criteria used to describe a chromosome */
     private ChromosomeCriteria chromosomeCriteria = null;
+
     /**
      * Percentage of most fit chromosomes to be maintained and utilized to copy into new population.
      *
@@ -50,6 +51,7 @@ public class GAConfiguration {
      * Accepted values between 0 and 1
      */
     private double truncateRate;
+
     /**
      * Elitism is the concept that the strongest members of the population will be preserved from generation to
      * generation. <br/>
@@ -65,6 +67,7 @@ public class GAConfiguration {
      * isHigherFitnessValueFitter=true is considered fittest.
      */
     private boolean isHigherFitnessValFitter = true;
+
     /**
      * Population size represents the number of potential solutions (ie: chromosomes) between each generation Default
      * size is 500
@@ -78,6 +81,7 @@ public class GAConfiguration {
 
     /** Number of genes within a chromosome */
     private int chromosomeLen = 0;
+
     /**
      * Crossover rate is the probability that two chromosomes will breed with each other. offspring with traits of each
      * of the parents.
@@ -85,6 +89,7 @@ public class GAConfiguration {
      * Accepted values are between 0 and 1
      */
     private double crossOverRate = .50;
+
     /**
      * Mutation rate is the probability that a chromosome will be mutated offspring with traits of each of the parents.
      *
@@ -92,6 +97,7 @@ public class GAConfiguration {
      * Accepted values are between 0 and 1
      */
     private double mutationRate = .50;
+
     /**
      * Call back interface used to terminate Genetic algorithm.
      *

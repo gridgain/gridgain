@@ -194,7 +194,6 @@ public class CacheRebalancingSelfTest extends GridCommonAbstractTest {
         testLocalCacheSize(ig0, totalKeysCnt, null);
         testLocalCacheSize(ig1, before_ig1, null);
 
-
         ig1.rebalanceEnabled(true);
 
         testLocalCacheSize(ig0, totalKeysCnt, null);

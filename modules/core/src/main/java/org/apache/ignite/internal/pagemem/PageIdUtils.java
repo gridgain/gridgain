@@ -126,7 +126,6 @@ public final class PageIdUtils {
         return (pageId & ~EFFECTIVE_PAGE_ID_MASK) == 0;
     }
 
-
     /**
      * Index of the item inside of data page.
      *

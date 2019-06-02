@@ -33,11 +33,13 @@ public class VectorizedViewMatrixStorage implements VectorStorage {
 
     /** */
     private int row;
+
     /** */
     private int col;
 
     /** */
     private int rowStride;
+
     /** */
     private int colStride;
 

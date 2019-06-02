@@ -135,7 +135,6 @@ public abstract class IgnitePdsDestroyCacheAbstractTest extends GridCommonAbstra
         }
     }
 
-
     /**
      * @param ignite Ignite instance.
      */

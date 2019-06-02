@@ -161,6 +161,7 @@ public class CacheContinuousQueryOperationP2PTest extends GridCommonAbstractTest
 
         testContinuousQuery(ccfg, false);
     }
+
     /**
      * @throws Exception If failed.
      */
@@ -212,6 +213,7 @@ public class CacheContinuousQueryOperationP2PTest extends GridCommonAbstractTest
 
         testContinuousQuery(ccfg, false);
     }
+
     /**
      * @throws Exception If failed.
      */

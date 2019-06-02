@@ -38,7 +38,6 @@ public class GridQueryKillResponse implements Message {
     /** Request id.*/
     private long reqId;
 
-
     /**
      * Default constructor.
      */

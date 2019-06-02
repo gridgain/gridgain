@@ -117,7 +117,6 @@ public class CacheDataRowAdapter implements CacheDataRow {
         initFromLink(grp, rowData, false);
     }
 
-
     /**
      * Read row from data pages.
      *

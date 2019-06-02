@@ -110,7 +110,6 @@ public class VisorCacheRebalanceCollectorTask extends VisorMultiNodeTask<VisorCa
 
             long start0 = U.currentTimeMillis();
 
-
             if (ignite.cluster().active()) {
                 try {
                     int partitions = 0;

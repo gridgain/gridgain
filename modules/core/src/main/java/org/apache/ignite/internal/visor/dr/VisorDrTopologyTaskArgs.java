@@ -28,10 +28,13 @@ public class VisorDrTopologyTaskArgs extends IgniteDataTransferObject {
 
     /** */
     public static final int SENDER_HUBS_FLAG = 0x01;
+
     /** */
     public static final int RECEIVER_HUBS_FLAG = 0x02;
+
     /** */
     public static final int DATA_NODES_FLAG = 0x04;
+
     /** */
     public static final int OTHER_NODES_FLAG = 0x08;
 

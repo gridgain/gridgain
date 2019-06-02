@@ -3164,6 +3164,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     private final class TxRecoveryInitRunnable implements GridPlainRunnable {
         /** */
         private final ClusterNode node;
+
         /** */
         private final MvccCoordinator mvccCrd;
 

@@ -114,6 +114,7 @@ public class GridFilenameUtils {
      * The separator character that is the opposite of the system separator.
      */
     private static final char OTHER_SEPARATOR;
+
     static {
         if (isSystemWindows())
             OTHER_SEPARATOR = UNIX_SEPARATOR;
@@ -193,6 +194,7 @@ public class GridFilenameUtils {
     public static String normalize(String filename) {
         return doNormalize(filename, SYSTEM_SEPARATOR, true);
     }
+
     /**
      * Normalizes a path, removing double and single dot path steps.
      * <p>

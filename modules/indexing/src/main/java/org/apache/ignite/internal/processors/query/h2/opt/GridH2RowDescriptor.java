@@ -150,7 +150,6 @@ public class GridH2RowDescriptor {
         return type;
     }
 
-
     /**
      * Gets cache context info for this row descriptor.
      *

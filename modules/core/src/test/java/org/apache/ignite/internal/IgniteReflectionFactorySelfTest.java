@@ -73,18 +73,25 @@ public class IgniteReflectionFactorySelfTest {
     public static class TestClass {
         /** */
         private byte byteField;
+
         /** */
         private short shortField;
+
         /** */
         private int iField;
+
         /** */
         private long longField;
+
         /** */
         private float floatField;
+
         /** */
         private double doubleField;
+
         /** */
         private char cField;
+
         /** */
         private boolean booleanField;
 

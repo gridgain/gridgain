@@ -627,10 +627,13 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
     static final class TestPerson {
         /** */
         private final int id;
+
         /** */
         private final String firstName;
+
         /** */
         private final String surname;
+
         /** */
         private TestAddress addr;
 
@@ -651,10 +654,13 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
     static final class TestAddress {
         /** */
         private final int id;
+
         /** */
         private final String country;
+
         /** */
         private final String city;
+
         /** */
         private final String address;
 
@@ -679,10 +685,13 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
     static final class TestAccount {
         /** */
         private final TestPerson person;
+
         /** */
         private final int accountId;
+
         /** */
         private final long accountBalance;
+
         /** */
         TestAccount(
             TestPerson person, int id, long balance) {

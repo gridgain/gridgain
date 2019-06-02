@@ -2378,7 +2378,6 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
                     ds.addData(map);
                 }
 
-
                 break;
         }
 

@@ -1061,7 +1061,6 @@ public class IgniteAuthenticationProcessor extends GridProcessorAdapter implemen
         /** Error. */
         private IgniteCheckedException err;
 
-
         /**
          * @param opId User management operation ID.
          */

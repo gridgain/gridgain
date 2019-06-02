@@ -182,7 +182,6 @@ public class CacheViewer implements Command<CacheViewer.Arguments> {
                 printCacheInfos(res.cacheInfos(), args.cacheCommand(), logger);
         }
 
-
         return res;
     }
 

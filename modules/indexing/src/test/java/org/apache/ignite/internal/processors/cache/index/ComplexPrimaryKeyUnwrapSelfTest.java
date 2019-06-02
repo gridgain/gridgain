@@ -317,12 +317,15 @@ public class ComplexPrimaryKeyUnwrapSelfTest extends AbstractIndexingCommonTest 
         /** */
         @QuerySqlField()
         private String name;
+
         /** */
         @QuerySqlField()
         private String company;
+
         /** */
         @QuerySqlField()
         private String city;
+
         /** */
         @QuerySqlField()
         private int age;

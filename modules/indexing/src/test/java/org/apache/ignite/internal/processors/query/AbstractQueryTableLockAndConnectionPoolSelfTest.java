@@ -385,7 +385,6 @@ public abstract class AbstractQueryTableLockAndConnectionPoolSelfTest extends Ab
             }
         }, qryThreads, "usr-qry");
 
-
         long tEnd = U.currentTimeMillis() + TEST_DUR;
 
         while (U.currentTimeMillis() < tEnd) {
@@ -541,7 +540,6 @@ public abstract class AbstractQueryTableLockAndConnectionPoolSelfTest extends Ab
 
             assertBaseQueryResults(rows);
         }
-
 
         // Test full iteration.
         {
@@ -793,7 +791,6 @@ public abstract class AbstractQueryTableLockAndConnectionPoolSelfTest extends Ab
     private FieldsQueryCursor<List<?>> execute(Ignite node, SqlFieldsQuery qry) {
         return ((IgniteEx)node).context().query().querySqlFields(qry.setLazy(lazy()), false);
     }
-
 
     /**
      * @return Lazy mode.

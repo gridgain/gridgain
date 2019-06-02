@@ -105,7 +105,6 @@ public class FilterDataForClientNodeDiscoveryTest extends GridCommonAbstractTest
         }
     }
 
-
     /**
      * @param nodeIdx Node index.
      * @param client Client flag.

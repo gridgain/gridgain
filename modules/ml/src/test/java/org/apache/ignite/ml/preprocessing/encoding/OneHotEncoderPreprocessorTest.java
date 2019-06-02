@@ -183,7 +183,6 @@ public class OneHotEncoderPreprocessorTest {
 
         Vectorizer<Integer, Vector, Integer, Double> vectorizer = new DummyVectorizer<>(0, 1, 2);
 
-
         OneHotEncoderPreprocessor<Integer, Vector> preprocessor = new OneHotEncoderPreprocessor<Integer, Vector>(
             new HashMap[]{new HashMap() {
                 {

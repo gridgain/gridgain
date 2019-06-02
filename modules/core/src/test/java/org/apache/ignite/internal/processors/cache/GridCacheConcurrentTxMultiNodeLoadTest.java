@@ -300,7 +300,6 @@ public class GridCacheConcurrentTxMultiNodeLoadTest extends GridCommonAbstractTe
         /** */
         private static GridAtomicLong submitTime = new GridAtomicLong();
 
-
         /** */
         private Ignite g;
 
@@ -358,7 +357,6 @@ public class GridCacheConcurrentTxMultiNodeLoadTest extends GridCommonAbstractTe
             }
         }
     }
-
 
     /**
      *

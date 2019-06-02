@@ -1826,7 +1826,6 @@ public final class GridTestUtils {
             cls = cls.getSuperclass();
         } while (cls != Object.class);
 
-
         throw new RuntimeException("Failed to find method" +
             " [obj=" + obj + ", mtd=" + mtd + ", params=" + Arrays.toString(params) + ']');
     }
@@ -2017,7 +2016,6 @@ public final class GridTestUtils {
 
         return factory;
     }
-
 
     /**
      * Creates test-purposed SSL context factory from test key store with disabled trust manager.
@@ -2410,10 +2408,12 @@ public final class GridTestUtils {
         return grid.context().config().getMBeanServer().getAttribute(U.makeMBeanName(grid.name(), grp, name), attr);
     }
 
-
+    /**
+     */
     public static class SqlTestFunctions {
         /** Sleep milliseconds. */
         public static volatile long sleepMs;
+
         /** Fail flag. */
         public static volatile boolean fail;
 

@@ -107,6 +107,7 @@ public class TestTransformers {
         private static final long serialVersionUID = -7332027566186690945L;
 
         private String key;
+
         private String value;
 
         public TestObject(String key, String value) {

@@ -49,12 +49,16 @@ public class DrCacheCommand extends
 {
     /** Config parameter. */
     public static final String CONFIG_PARAM = "--config";
+
     /** Metrics parameter. */
     public static final String METRICS_PARAM = "--metrics";
+
     /** Cache filter parameter. */
     public static final String CACHE_FILTER_PARAM = "--cache-filter";
+
     /** Sender group parameter. */
     public static final String SENDER_GROUP_PARAM = "--sender-group";
+
     /** Action parameter. */
     public static final String ACTION_PARAM = "--action";
 
@@ -353,24 +357,34 @@ public class DrCacheCommand extends
     public static class DrCacheArguments implements DrAbstractRemoteSubCommand.Arguments<VisorDrCacheTaskArgs> {
         /** Regex. */
         private final String regex;
+
         /** Pattern. */
         private final Pattern pattern;
+
         /** Config. */
         private final boolean config;
+
         /** Metrics. */
         private final boolean metrics;
+
         /** Filter. */
         private final CacheFilter filter;
+
         /** Sender group. */
         private final SenderGroup senderGroup;
+
         /** Sender group name. */
         private final String senderGroupName;
+
         /** Action. */
         private final Action action;
+
         /** Remote data center id. */
         private final byte remoteDataCenterId;
+
         /** Cache names map. */
         private Map<String, UUID> cacheNamesMap;
+
         /** Action coordinator. */
         private UUID actionCoordinator;
 

@@ -2140,7 +2140,6 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
         this.consistentId = consistentId;
     }
 
-
     /** @return Topology version. */
     public long topologyVersion() {
         return topSnap.get().topVer.topologyVersion();
@@ -2781,16 +2780,22 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
     private static class NotificationEvent {
         /** Type. */
         int type;
+
         /** Topology version. */
         AffinityTopologyVersion topVer;
+
         /** Node. */
         ClusterNode node;
+
         /** Disco cache. */
         DiscoCache discoCache;
+
         /** Topology snapshot. */
         Collection<ClusterNode> topSnapshot;
+
         /** Data. */
         @Nullable DiscoveryCustomMessage data;
+
         /** Span container. */
         SpanContainer spanContainer;
 

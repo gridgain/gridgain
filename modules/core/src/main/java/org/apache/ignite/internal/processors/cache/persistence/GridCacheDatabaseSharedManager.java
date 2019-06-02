@@ -4552,8 +4552,10 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         private class DbCheckpointContextImpl implements DbCheckpointListener.Context {
             /** Current checkpoint progress. */
             private final CheckpointProgressImpl curr;
+
             /** Partition map. */
             private final PartitionAllocationMap map;
+
             /** Pending tasks from executor. */
             private GridCompoundFuture pendingTaskFuture;
 

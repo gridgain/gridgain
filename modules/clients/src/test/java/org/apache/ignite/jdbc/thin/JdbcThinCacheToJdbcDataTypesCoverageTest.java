@@ -440,7 +440,6 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
         for (int i = 0; i < valsToCheck.length; i++)
             keyValMap.put(valsToCheck[i], valsToCheck[valsToCheck.length - i - 1]);
 
-
         for (Map.Entry<Serializable, Serializable> keyValEntry : keyValMap.entrySet()) {
             Object originalKey;
             Object sqlStrKey;
