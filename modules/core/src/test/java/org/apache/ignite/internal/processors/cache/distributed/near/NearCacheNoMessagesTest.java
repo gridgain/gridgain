@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
+import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -71,9 +72,45 @@ public class NearCacheNoMessagesTest extends GridCommonAbstractTest {
      *
      */
     @Test
-    public void testNearGetsDoNotTriggerNetworkCommunication() {
-        ignite(0).createCache(new CacheConfiguration<>("testCache")
-            .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL).setBackups(1).setReadFromBackup(true));
+    public void testNearGetsDoNotTriggerNetworkCommunication_Transactional_Replicated() {
+        testNoMessage(CacheAtomicityMode.TRANSACTIONAL, CacheMode.REPLICATED);
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void testNearGetsDoNotTriggerNetworkCommunication_Transactional_Partitioned() {
+        testNoMessage(CacheAtomicityMode.TRANSACTIONAL, CacheMode.PARTITIONED);
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void testNearGetsDoNotTriggerNetworkCommunication_Atomic_Replicated() {
+        testNoMessage(CacheAtomicityMode.ATOMIC, CacheMode.REPLICATED);
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void testNearGetsDoNotTriggerNetworkCommunication_Atomic_Partitioned() {
+        testNoMessage(CacheAtomicityMode.ATOMIC, CacheMode.PARTITIONED);
+    }
+
+    /**
+     * @param atomicityMode Cache atomicity mode.
+     * @param cacheMode Cache mode.
+     */
+    private void testNoMessage(CacheAtomicityMode atomicityMode, CacheMode cacheMode) {
+        ignite(0).createCache(
+            new CacheConfiguration<>("testCache")
+                .setAtomicityMode(atomicityMode)
+                .setCacheMode(cacheMode)
+                .setBackups(1)
+                .setReadFromBackup(true));
 
         try {
             {
