@@ -145,15 +145,19 @@ public class Table<T extends AbstractDto> extends CacheHolder<UUID, T> {
      * @return Saved DTO.
      */
     public T save(T val) throws IgniteException {
-        T oldVal = cache.getAndPut(val.getId(), val);
+        UUID id = val.getId();
+
+        T oldVal = cache.getAndPut(id, val);
 
         for (UniqueIndex<T> idx : uniqueIndexes) {
-            UUID prevId = indexCache().getAndPutIfAbsent(idx.key(val), val.getId());
+            Object newIdxKey = idx.key(val);
 
-            if (prevId != null && !val.getId().equals(prevId))
+            UUID oldId = indexCache().getAndPutIfAbsent(newIdxKey, id);
+
+            if (oldId != null && !id.equals(oldId))
                 throw new IgniteException(idx.message(val));
 
-            if (oldVal != null)
+            if (oldVal != null && !idx.key(oldVal).equals(newIdxKey))
                 indexCache().remove(idx.key(oldVal));
         }
 

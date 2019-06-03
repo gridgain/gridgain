@@ -99,6 +99,9 @@ public class WebSocketRouter implements AutoCloseable {
     /** */
     private int reconnectCnt;
 
+    /** Active tokens after handshake. */
+    private Set<String> validTokens;
+
     /**
      * @param cfg Configuration.
      */
@@ -270,10 +273,8 @@ public class WebSocketRouter implements AutoCloseable {
             AgentHandshakeResponse res = fromJson(json, AgentHandshakeResponse.class);
 
             if (F.isEmpty(res.getError())) {
-                Set<String> validTokens = res.getTokens();
-                List<String> missedTokens = cfg.tokens();
-
-                cfg.tokens(new ArrayList<>(validTokens));
+                validTokens = res.getTokens();
+                List<String> missedTokens = new ArrayList<>(cfg.tokens());
 
                 missedTokens.removeAll(validTokens);
 
@@ -309,9 +310,9 @@ public class WebSocketRouter implements AutoCloseable {
     private void revokeToken(String tok) {
         log.warning("Security token has been revoked: " + tok);
 
-        cfg.tokens().remove(tok);
+        validTokens.remove(tok);
 
-        if (F.isEmpty(cfg.tokens())) {
+        if (F.isEmpty(validTokens)) {
             log.warning("Web Console Agent will be stopped because no more valid tokens available");
 
             wss.close(StatusCode.SHUTDOWN, "No more valid tokens available");

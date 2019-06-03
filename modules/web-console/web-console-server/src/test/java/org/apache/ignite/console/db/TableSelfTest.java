@@ -69,6 +69,10 @@ public class TableSelfTest extends GridCommonAbstractTest {
 
             assertFalse("Unique index should be created", objTbl.loadAllByIndex(Collections.singleton("1")).isEmpty());
 
+            objTbl.save(obj1);
+
+            assertFalse("Unique index should exists", objTbl.loadAllByIndex(Collections.singleton("1")).isEmpty());
+
             obj1.setIndex("2");
 
             objTbl.save(obj1);
