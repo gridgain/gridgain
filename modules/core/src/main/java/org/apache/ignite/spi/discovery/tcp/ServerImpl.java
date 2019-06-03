@@ -2887,16 +2887,18 @@ class ServerImpl extends TcpDiscoveryImpl {
                 return;
             }
 
+            //TODO: Extract this logic to separate method.
             if (msg instanceof TraceableMessage) {
                 TraceableMessage tMsg = (TraceableMessage) msg;
 
-                // If we read this message from socket
+                // If we read this message from socket.
                 if (fromSocket)
                     tracing.messages().afterReceive(tMsg);
                 else { // If we're going to send this message.
-                    if (tMsg.trace().serializedSpan() == null) {
+                    if (!msg.verified() && tMsg.trace().serializedSpan() == null) {
                         Span rootSpan = tracing.create(tMsg.traceName())
                             .addTag("node.id", getLocalNodeId().toString())
+                            .addTag("stack_trace", U.stackTrace())
                             .end();
 
                         // This root span will be parent both from local and remote nodes.
@@ -3136,6 +3138,7 @@ class ServerImpl extends TcpDiscoveryImpl {
             if (msg instanceof TraceableMessage &&
                 (msg instanceof TcpDiscoveryNodeAddedMessage
                     || msg instanceof TcpDiscoveryJoinRequestMessage
+                    || msg instanceof TcpDiscoveryNodeFailedMessage
                     || notifiedDiscovery.get())) {
                 TraceableMessage tMsg = (TraceableMessage) msg;
 
@@ -5456,7 +5459,9 @@ class ServerImpl extends TcpDiscoveryImpl {
                     joiningNodes.remove(failedNode.id());
                 }
 
-                notifyDiscovery(EVT_NODE_FAILED, topVer, failedNode, msg.trace());
+                boolean notified = notifyDiscovery(EVT_NODE_FAILED, topVer, failedNode, msg.trace());
+
+                notifiedDiscovery.set(notified);
 
                 spi.stats.onNodeFailed();
             }

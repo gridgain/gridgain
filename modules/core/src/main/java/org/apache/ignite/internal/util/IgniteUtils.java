@@ -1467,6 +1467,15 @@ public abstract class IgniteUtils {
         printThreadInfo(threadInfo, sb, Collections.<Long>emptySet());
     }
 
+    public static String stackTrace() {
+        GridStringBuilder sb = new GridStringBuilder();
+        long threadId = Thread.currentThread().getId();
+
+        printStackTrace(threadId, sb);
+
+        return sb.toString();
+    }
+
     /**
      * @return {@code true} if there is java level deadlock.
      */

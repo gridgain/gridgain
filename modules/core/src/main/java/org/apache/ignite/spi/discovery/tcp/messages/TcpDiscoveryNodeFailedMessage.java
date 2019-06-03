@@ -91,10 +91,6 @@ public class TcpDiscoveryNodeFailedMessage extends TcpDiscoveryAbstractMessage i
         return order;
     }
 
-    public void setTrace(Trace trace) {
-        this.trace = trace;
-    }
-
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(TcpDiscoveryNodeFailedMessage.class, this, "super", super.toString());

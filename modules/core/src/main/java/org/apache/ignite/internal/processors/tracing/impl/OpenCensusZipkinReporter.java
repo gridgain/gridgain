@@ -19,6 +19,7 @@ public class OpenCensusZipkinReporter implements Reporter {
         try {
             ZipkinTraceExporter.createAndRegister(url, serviceName);
         }
+        //TODO: This exception handling is needed to allow tracing exporting with multiple nodes in single JVM environment.
         catch (Exception ignored) {}
     }
 
