@@ -19,8 +19,11 @@ package org.apache.ignite.console.web.socket;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.repositories.AccountsRepository;
 import org.apache.ignite.console.web.AbstractHandler;
@@ -28,6 +31,7 @@ import org.apache.ignite.console.websocket.AgentHandshakeRequest;
 import org.apache.ignite.console.websocket.AgentHandshakeResponse;
 import org.apache.ignite.console.websocket.TopologySnapshot;
 import org.apache.ignite.console.websocket.WebSocketEvent;
+import org.apache.ignite.internal.processors.rest.client.message.GridClientNodeBean;
 import org.apache.ignite.internal.util.typedef.F;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +39,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketSession;
 
+import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.console.utils.Utils.fromJson;
 import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_HANDSHAKE;
 import static org.apache.ignite.console.websocket.WebSocketEvents.CLUSTER_TOPOLOGY;
@@ -103,7 +108,7 @@ public class AgentsHandler extends AbstractHandler {
 
                     Collection<Account> accounts = loadAccounts(req.getTokens());
 
-                    sendResponse(ws, evt, new AgentHandshakeResponse(mapToSet(accounts, Account::getToken)));
+                    sendResponse(ws, evt, new AgentHandshakeResponse(accounts.stream().map(Account::getToken).collect(toList())));
 
                     wsm.onAgentConnect(ws, mapToSet(accounts, Account::getId));
 
@@ -121,9 +126,12 @@ public class AgentsHandler extends AbstractHandler {
 
             case CLUSTER_TOPOLOGY:
                 try {
-                    TopologySnapshot top = fromJson(evt.getPayload(), TopologySnapshot.class);
+                    Collection<TopologySnapshot> tops = fromJson(
+                        evt.getPayload(),
+                        new TypeReference<Collection<TopologySnapshot>>() {}
+                    );
 
-                    wsm.processTopologyUpdate(ws, top);
+                    wsm.processTopologyUpdate(ws, tops);
                 }
                 catch (Exception e) {
                     log.warn("Failed to process topology update: " + evt, e);

@@ -18,7 +18,10 @@ package org.apache.ignite.console.web.socket;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +29,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.dto.Announcement;
 import org.apache.ignite.console.websocket.TopologySnapshot;
@@ -42,6 +46,7 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.console.utils.Utils.toJson;
 import static org.apache.ignite.console.websocket.WebSocketEvents.ADMIN_ANNOUNCEMENT;
 import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_REVOKE_TOKEN;
@@ -110,15 +115,22 @@ public class WebSocketsManager {
     public void onAgentConnectionClosed(WebSocketSession ws) {
         AgentDescriptor desc = agents.remove(ws);
 
-        updateClusterInBrowsers(desc.accIds);
+        if (desc != null) {
+            updateClusterInBrowsers(desc.accIds);
 
-        if (!F.isEmpty(desc.clusterIds)) {
-            Optional<AgentDescriptor> conn = agents.values().stream()
-                .filter(agent -> !Collections.disjoint(desc.getClusterIds(), agent.getClusterIds()))
-                .findFirst();
+            if (!F.isEmpty(desc.getClusterIds())) {
+                for (String clusterId : desc.getClusterIds()) {
+                    Optional<AgentDescriptor> conn = agents.values().stream()
+                        .filter(agent -> agent.getClusterIds().contains(clusterId))
+                        .findFirst();
 
-            if (!conn.isPresent())
-                clusters.remove(desc.clusterIds);
+                    if (!conn.isPresent())
+                        clusters.remove(clusterId);
+                }
+            }
+
+            if (F.isEmpty(desc.clusterIds)) 
+                log.warn("Agent descriptor not found for session: " + ws);
         }
     }
 
@@ -200,7 +212,7 @@ public class WebSocketsManager {
     protected void updateTopology(WebSocketSession wsAgent, TopologySnapshot oldTop, TopologySnapshot newTop) {
         AgentDescriptor desc = agents.get(wsAgent);
 
-        if (!newTop.getId().equals(desc.clusterIds)) {
+        if (desc.clusterIds.contains(newTop.getId())) {
             desc.clusterIds = Collections.singleton(newTop.getId());
 
             updateClusterInBrowsers(desc.accIds);
@@ -209,36 +221,38 @@ public class WebSocketsManager {
 
     /**
      * @param wsAgent Session.
-     * @param newTop Topology snapshot.
+     * @param tops Topology snapshots.
      */
-    public void processTopologyUpdate(WebSocketSession wsAgent, TopologySnapshot newTop) {
-        TopologySnapshot oldTop = null;
-
+    public void processTopologyUpdate(WebSocketSession wsAgent, Collection<TopologySnapshot> tops) {
         AgentDescriptor desc = agents.get(wsAgent);
 
-        if (desc.clusterIds != null)
-            oldTop = clusters.remove(desc.clusterIds);
+        for (TopologySnapshot newTop : tops) {
+            TopologySnapshot oldTop = null;
 
-        if (F.isEmpty(newTop.getId())) {
-            String clusterId = null;
+            if (desc.clusterIds != null)
+                oldTop = clusters.remove(newTop.getId());
 
-            if (oldTop != null && !oldTop.differentCluster(newTop))
-                clusterId = oldTop.getId();
+            if (F.isEmpty(newTop.getId())) {
+                String clusterId = null;
 
-            if (F.isEmpty(clusterId)) {
-                clusterId = clusters.entrySet().stream()
-                    .filter(e -> !e.getValue().differentCluster(newTop))
-                    .map(Map.Entry::getKey)
-                    .findFirst()
-                    .orElse(null);
+                if (oldTop != null && !oldTop.differentCluster(newTop))
+                    clusterId = oldTop.getId();
+
+                if (F.isEmpty(clusterId)) {
+                    clusterId = clusters.entrySet().stream()
+                        .filter(e -> !e.getValue().differentCluster(newTop))
+                        .map(Map.Entry::getKey)
+                        .findFirst()
+                        .orElse(null);
+                }
+
+                newTop.setId(F.isEmpty(clusterId) ? UUID.randomUUID().toString() : clusterId);
             }
 
-            newTop.setId(F.isEmpty(clusterId) ? UUID.randomUUID().toString() : clusterId);
+            clusters.put(newTop.getId(), newTop);
+
+            updateTopology(wsAgent, oldTop, newTop);
         }
-
-        clusters.put(newTop.getId(), newTop);
-
-        updateTopology(wsAgent, oldTop, newTop);
     }
 
     /**
@@ -277,22 +291,34 @@ public class WebSocketsManager {
      * Send to browser info about agent status.
      */
     private void sendAgentStats(WebSocketSession ws, UUID accId) {
-        List<TopologySnapshot> tops = new ArrayList<>();
+        Map<String, TopologySnapshot> tops = new HashMap<>();
 
         agents.forEach((wsAgent, desc) -> {
             if (desc.isActiveAccount(accId)) {
-                TopologySnapshot top = clusters.get(desc.clusterIds);
+                for (String clusterId : desc.clusterIds) {
+                    if (!tops.containsKey(clusterId)) {
+                        TopologySnapshot top = clusters.get(clusterId);
 
-                if (top != null && tops.stream().allMatch(t -> t.differentCluster(top)))
-                    tops.add(top);
+                        if (top != null)
+                            tops.put(top.getId(), top);
+                    }
+                }
             }
         });
 
+        boolean hasDemo = tops.values().stream().anyMatch(TopologySnapshot::isDemo);
+
+        boolean isDemo = Boolean.parseBoolean(ws.getHandshakeHeaders().getFirst("IgniteDemoMode")) ;
+
+        Collection<TopologySnapshot> clusters = tops.values().stream()
+            .filter(t -> t.isDemo() == isDemo)
+            .collect(toList());
+
         Map<String, Object> res = new LinkedHashMap<>();
 
-        res.put("count", tops.size());
-        res.put("hasDemo", false);
-        res.put("clusters", tops);
+        res.put("count", clusters.size());
+        res.put("hasDemo", hasDemo);
+        res.put("clusters", clusters);
 
         try {
             sendMessage(ws, new WebSocketEvent(AGENT_STATUS, res));

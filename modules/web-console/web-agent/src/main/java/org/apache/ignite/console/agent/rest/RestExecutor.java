@@ -105,6 +105,9 @@ public class RestExecutor implements AutoCloseable {
 
     /** */
     public RestResult sendRequest(String url, JsonObject params) throws Throwable {
+        if (!httpClient.isRunning())
+            httpClient.start();
+
         Request req = httpClient
             .newRequest(url)
             .path("/ignite")

@@ -39,12 +39,6 @@ public class ClusterHandler extends AbstractClusterHandler {
     /** */
     private static final IgniteLogger log = new Slf4jLogger(LoggerFactory.getLogger(ClusterHandler.class));
 
-    /** */
-    private static final String EXPIRED_SES_ERROR_MSG = "Failed to handle request - unknown session token (maybe expired session)";
-
-    /** Session token. */
-    private String sesTok;
-
     /** Index of alive node URI. */
     private final Map<List<String>, Integer> startIdxs = U.newHashMap(2);
 

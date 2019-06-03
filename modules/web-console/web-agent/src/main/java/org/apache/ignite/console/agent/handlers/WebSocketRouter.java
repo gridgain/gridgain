@@ -107,7 +107,7 @@ public class WebSocketRouter implements AutoCloseable {
 
     /** Schema import handler. */
     private final DatabaseHandler dbHnd;
-    
+
     /** Cluster handler. */
     private final ClusterHandler clusterHnd;
 
@@ -120,6 +120,9 @@ public class WebSocketRouter implements AutoCloseable {
     /** Reconnect count. */
     private int reconnectCnt;
 
+    /** Active tokens after handshake. */
+    private List<String> validTokens;
+
     /**
      * @param cfg Configuration.
      */
@@ -128,7 +131,7 @@ public class WebSocketRouter implements AutoCloseable {
 
         httpClient = new HttpClient(createServerSslFactory(cfg));
 
-//        TODO GG-18379 Investigate how to establish native websocket connection with proxy.
+        // TODO GG-18379 Investigate how to establish native websocket connection with proxy.
         configureProxy(httpClient, cfg.serverUri());
 
         dbHnd = new DatabaseHandler(cfg);
@@ -171,7 +174,7 @@ public class WebSocketRouter implements AutoCloseable {
      */
     public void start() throws Exception {
         log.info("Starting Web Console Agent...");
-        log.info("Connecting to: " + cfg.serverUri());
+        log.info("Connecting to server: " + cfg.serverUri());
 
         httpClient.start();
 
@@ -228,11 +231,9 @@ public class WebSocketRouter implements AutoCloseable {
 
         try {
             client.start();
-            Session ses = client.connect(this, new URI(cfg.serverUri()).resolve(AGENTS_PATH)).get(10L, TimeUnit.SECONDS);
+            client.connect(this, new URI(cfg.serverUri()).resolve(AGENTS_PATH)).get(10L, TimeUnit.SECONDS);
 
             reconnectCnt = 0;
-
-            watcher.startWatchTask(ses);
         }
         catch (ConnectException | TimeoutException ignored) {
             // No-op.
@@ -288,7 +289,7 @@ public class WebSocketRouter implements AutoCloseable {
             send(ses, new WebSocketEvent(AGENT_HANDSHAKE, req));
         }
         catch (Throwable e) {
-            log.error("Failed to send processHandshakeResponse to server", e);
+            log.error("Failed to send handshake to server", e);
         }
     }
 
@@ -297,10 +298,9 @@ public class WebSocketRouter implements AutoCloseable {
      */
     private void processHandshakeResponse(AgentHandshakeResponse res) {
         if (F.isEmpty(res.getError())) {
-            Set<String> validTokens = res.getTokens();
-            List<String> missedTokens = cfg.tokens();
+            validTokens = res.getTokens();
 
-            cfg.tokens(new ArrayList<>(validTokens));
+            List<String> missedTokens = new ArrayList<>(cfg.tokens());
 
             missedTokens.removeAll(validTokens);
 
@@ -309,7 +309,13 @@ public class WebSocketRouter implements AutoCloseable {
                     " Please reload agent archive or check settings.");
             }
 
-            log.info("Successful processHandshakeResponse with server.");
+            if (F.isEmpty(validTokens)) {
+                log.warning("Valid tokens not found. Stopping agent...");
+
+                closeLatch.countDown();
+            }
+
+            log.info("Successful handshake with server.");
         }
         else {
             log.error(res.getError());
@@ -324,9 +330,9 @@ public class WebSocketRouter implements AutoCloseable {
     private void processRevokeToken(String tok) {
         log.warning("Security token has been revoked: " + tok);
 
-        cfg.tokens().remove(tok);
+        validTokens.remove(tok);
 
-        if (F.isEmpty(cfg.tokens())) {
+        if (F.isEmpty(validTokens)) {
             log.warning("Web Console Agent will be stopped because no more valid tokens available");
 
             closeLatch.countDown();
@@ -348,6 +354,9 @@ public class WebSocketRouter implements AutoCloseable {
                     AgentHandshakeResponse req0 = fromJson(evt.getPayload(), AgentHandshakeResponse.class);
 
                     processHandshakeResponse(req0);
+
+                    if (closeLatch.getCount() > 0)
+                        watcher.startWatchTask(ses);
 
                     return;
                 }

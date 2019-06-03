@@ -114,8 +114,11 @@ public class ClustersWatcher implements Closeable {
      * Start watch cluster.
      */
     void startWatchTask(Session ses) {
-        if (refreshTask != null && !refreshTask.isCancelled())
-            return;
+        if (refreshTask != null && !refreshTask.isCancelled()) {
+            log.warning("Trying to start second cluster watch task ");
+
+            refreshTask.cancel(true);
+        }
 
         refreshTask = pool.scheduleWithFixedDelay(() -> {
             try {

@@ -80,7 +80,7 @@ public abstract class AbstractHandler extends TextWebSocketHandler {
      * @throws IOException If failed to send message.
      */
     protected void sendResponse(WebSocketSession ws, WebSocketEvent reqEvt, Object payload) throws IOException {
-        sendMessage(ws, reqEvt.withPayload(toJson(payload)));
+        sendMessage(ws, reqEvt.withPayload(payload));
     }
 
     /**
