@@ -444,6 +444,8 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
         IgniteH2Indexing h2 = (IgniteH2Indexing)grid(0).context().query().getIndexing();
 
+        assertEquals(10L * MB, h2.memoryManager().maxMemory());
+
         try {
             CacheException ex = (CacheException)GridTestUtils.assertThrows(log, () -> {
                 for (int i = 0; i < 100; i++) {
