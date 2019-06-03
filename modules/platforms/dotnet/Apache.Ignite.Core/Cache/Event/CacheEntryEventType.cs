@@ -24,17 +24,17 @@ namespace Apache.Ignite.Core.Cache.Event
         /// <summary>
         /// An event type indicating that the cache entry was created.
         /// </summary>
-        Created,
+        Created = 0,
 
         /// <summary>
         /// An event type indicating that the cache entry was updated. i.e. a previous
         /// mapping existed.
         /// </summary>
-        Updated,
+        Updated = 1,
 
         /// <summary>
         /// An event type indicating that the cache entry was removed.
         /// </summary>
-        Removed
+        Removed = 2,
     }
 }
