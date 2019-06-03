@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import javax.cache.CacheException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
@@ -518,12 +519,16 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             if (mvccEnabled)
                 mvccSnapshot = mvccTracker.snapshot();
 
+            long maxMem = qryParams.maxMemory();
+
             final QueryContext qctx = new QueryContext(
                 0,
                 filter,
                 null,
                 mvccSnapshot,
-                null
+                null,
+                maxMem < 0 ? null : new QueryMemoryTracker(maxMem),
+                true
             );
 
             return new GridQueryFieldsResultAdapter(select.meta(), null) {
@@ -537,7 +542,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                     try {
                         Connection conn0 = conn.object().connection(qryDesc.schemaName());
 
-                        H2Utils.setupConnection(conn0,
+                        H2Utils.setupConnection(conn0, qctx,
                             qryDesc.distributedJoins(), qryDesc.enforceJoinOrder(), qryParams.lazy());
 
                         List<Object> args = F.asList(qryParams.arguments());
@@ -560,9 +565,11 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                             new H2QueryInfo(H2QueryInfo.QueryType.LOCAL, stmt, qry)
                         );
 
-                        return new H2FieldsIterator(rs, mvccTracker, conn);
+                        return new H2FieldsIterator(rs, mvccTracker, qctx, conn);
                     }
                     catch (IgniteCheckedException | RuntimeException | Error e) {
+                        U.closeQuiet(qctx.queryMemoryManager());
+
                         conn.recycle();
 
                         try {
@@ -882,11 +889,13 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             ResultSet rs = executeSqlQuery(conn, stmt, timeoutMillis, cancel);
 
             if (qryInfo != null && qryInfo.time() > longRunningQryMgr.getTimeout())
-                qryInfo.printLogMessage(log, connMgr, "Long running query is finished");            return rs;
+                qryInfo.printLogMessage(log, "Long running query is finished");
+
+            return rs;
         }
         catch (Throwable e) {
             if (qryInfo != null && qryInfo.time() > longRunningQryMgr.getTimeout()) {
-                qryInfo.printLogMessage(log, connMgr, "Long running query is finished with error: "
+                qryInfo.printLogMessage(log, "Long running query is finished with error: "
                     + e.getMessage());
             }
 
@@ -1380,7 +1389,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                     return new GridQueryCacheObjectsIterator(res.iterator(), objectContext(), keepBinary);
                 }
                 catch (IgniteCheckedException e) {
-                    throw new IgniteException(e);
+                    throw new CacheException(e);
                 }
             };
         }
@@ -1667,7 +1676,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                             qryParams.lazy(),
                             mvccTracker,
                             qryParams.dataPageScanEnabled(),
-                            qryParams.pageSize()
+                            qryParams.pageSize(),
+                            qryParams.maxMemory()
                         );
                     }
                     catch (Throwable e) {
@@ -1981,10 +1991,18 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             try {
                 boolean processed = true;
 
-                if (msg instanceof GridQueryNextPageRequest)
+                boolean tracebleMsg = false;
+
+                if (msg instanceof GridQueryNextPageRequest) {
                     mapQueryExecutor().onNextPageRequest(node, (GridQueryNextPageRequest)msg);
-                else if (msg instanceof GridQueryNextPageResponse)
+
+                    tracebleMsg = true;
+                }
+                else if (msg instanceof GridQueryNextPageResponse) {
                     reduceQueryExecutor().onNextPage(node, (GridQueryNextPageResponse)msg);
+
+                    tracebleMsg = true;
+                }
                 else if (msg instanceof GridH2QueryRequest)
                     mapQueryExecutor().onQueryRequest(node, (GridH2QueryRequest)msg);
                 else if (msg instanceof GridH2DmlRequest)
@@ -1998,11 +2016,11 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 else
                     processed = false;
 
-                if (processed && log.isDebugEnabled())
-                    log.debug("Processed message " + msg.getClass().getName() + ": " + nodeId + "->" + ctx.localNodeId() + " " + msg);
+                if (processed && log.isDebugEnabled() && (!tracebleMsg || log.isTraceEnabled()))
+                    log.debug("Processed message: [srcNodeId=" + nodeId + ", msg=" + msg + ']');
             }
             catch (Throwable th) {
-                U.error(log, "Failed to process message: " + msg, th);
+                U.error(log, "Failed to process message: [srcNodeId=" + nodeId + ", msg=" + msg + ']', th);
             }
         }
         finally {
