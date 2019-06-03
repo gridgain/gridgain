@@ -40,7 +40,7 @@ public class TransactionManager {
      * @param ignite Ignite.
      */
     @Autowired
-    protected TransactionManager(Ignite ignite) {
+    public TransactionManager(Ignite ignite) {
         this.ignite = ignite;
     }
 
