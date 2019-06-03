@@ -36,11 +36,10 @@ namespace ignite
             typedef common::concurrent::SharedPointer<ClusterNodeImpl> SP_ClusterNodeImpl;
 
             /**
-             * Cluster group implementation.
+             * Cluster node implementation.
              */
             class IGNITE_FRIEND_EXPORT ClusterNodeImpl
             {
-                typedef common::concurrent::SharedPointer<binary::BinaryReaderImpl> SP_BinaryReaderImpl;
             public:
                 /**
                  * Constructor used to create new instance.
@@ -59,7 +58,7 @@ namespace ignite
                  *
                  * @return Node Guid.
                  */
-                Guid Id();
+                Guid GetId();
 
             private:
                 IGNITE_NO_COPY_ASSIGNMENT(ClusterNodeImpl);

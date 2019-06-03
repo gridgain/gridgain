@@ -22,6 +22,7 @@
 using namespace ignite;
 using namespace ignite::common;
 using namespace ignite::common::concurrent;
+using namespace ignite::cluster;
 
 using namespace boost::unit_test;
 
@@ -85,99 +86,72 @@ struct ClusterTestSuiteFixtureIsolated
 
 BOOST_FIXTURE_TEST_SUITE(ClusterTestSuite, ClusterTestSuiteFixture)
 
-BOOST_AUTO_TEST_CASE(IgniteImplProjection)
+BOOST_AUTO_TEST_CASE(IgniteGetCluster)
 {
-    impl::IgniteImpl* impl = impl::IgniteImpl::GetFromProxy(node);
+    IgniteCluster cluster = node.GetCluster();
 
-    BOOST_REQUIRE(impl != 0);
-    BOOST_REQUIRE(impl->GetProjection().IsValid());
+    BOOST_REQUIRE(cluster.IsActive());
 }
 
-BOOST_AUTO_TEST_CASE(IgniteImplGetNodes)
+BOOST_AUTO_TEST_CASE(IgniteGetNodes)
 {
-    impl::IgniteImpl* impl = impl::IgniteImpl::GetFromProxy(node);
+    IgniteCluster cluster = node.GetCluster();
 
-    BOOST_REQUIRE(impl != 0);
+    BOOST_REQUIRE(cluster.IsActive());
 
-    SharedPointer<impl::cluster::ClusterGroupImpl> clusterGroup = impl->GetProjection();
+    ClusterGroup group = cluster.ForAll();
 
-    BOOST_REQUIRE(clusterGroup.IsValid());
-
-    std::vector<SharedPointer<impl::cluster::ClusterNodeImpl> > nodes = clusterGroup.Get()->GetNodes();
+    std::vector<ClusterNode> nodes = group.GetNodes();
 
     BOOST_REQUIRE(nodes.size() == 1);
-    BOOST_REQUIRE(nodes.front().IsValid());
 }
 
-BOOST_AUTO_TEST_CASE(IgniteImplGetCluster)
+BOOST_AUTO_TEST_CASE(IgniteForAttribute)
 {
-    impl::IgniteImpl* impl = impl::IgniteImpl::GetFromProxy(node);
+    IgniteCluster cluster = node.GetCluster();
 
-    BOOST_REQUIRE(impl != 0);
+    BOOST_REQUIRE(cluster.IsActive());
 
-    SharedPointer<impl::cluster::IgniteClusterImpl> igniteCluster = impl->GetCluster();
+    ClusterGroup group1 = cluster.ForAll().ForAttribute("TestAttribute", "Value");
+    ClusterGroup group2 = cluster.ForAll().ForAttribute("NotExistAttribute", "Value");
 
-    BOOST_REQUIRE(igniteCluster.IsValid());
+    BOOST_REQUIRE(group1.GetNodes().size() == 1);
+    BOOST_REQUIRE(group2.GetNodes().size() == 0);
 }
 
-BOOST_AUTO_TEST_CASE(IgniteImplForAttribute)
+BOOST_AUTO_TEST_CASE(IgniteForDataNodes)
 {
-    impl::IgniteImpl* impl = impl::IgniteImpl::GetFromProxy(node);
+    IgniteCluster cluster = node.GetCluster();
 
-    BOOST_REQUIRE(impl != 0);
+    BOOST_REQUIRE(cluster.IsActive());
 
-    SharedPointer<impl::cluster::ClusterGroupImpl> clusterGroup = impl->GetProjection();
+    ClusterGroup group1 = cluster.ForAll().ForDataNodes("cache1");
+    ClusterGroup group2 = cluster.ForAll().ForDataNodes("notExist");
 
-    BOOST_REQUIRE(clusterGroup.IsValid());
-
-    IgniteError err;
-
-    BOOST_REQUIRE(clusterGroup.Get()->ForAttribute("my_attr", "value1").IsValid());
+    BOOST_REQUIRE(group1.GetNodes().size() == 1);
+    BOOST_REQUIRE(group2.GetNodes().size() == 0);
 }
 
-BOOST_AUTO_TEST_CASE(IgniteImplForDataNodes)
+BOOST_AUTO_TEST_CASE(IgniteForServers)
 {
-    impl::IgniteImpl* impl = impl::IgniteImpl::GetFromProxy(node);
+    IgniteCluster cluster = node.GetCluster();
 
-    BOOST_REQUIRE(impl != 0);
+    BOOST_REQUIRE(cluster.IsActive());
 
-    SharedPointer<impl::cluster::ClusterGroupImpl> clusterGroup = impl->GetProjection();
+    ClusterGroup group = cluster.ForAll().ForServers();
 
-    BOOST_REQUIRE(clusterGroup.IsValid());
-
-    IgniteError err;
-
-    BOOST_REQUIRE(clusterGroup.Get()->ForDataNodes("default").IsValid());
+    BOOST_REQUIRE(group.GetNodes().size() == 1);
 }
 
-BOOST_AUTO_TEST_CASE(IgniteImplForServers)
+BOOST_AUTO_TEST_CASE(IgniteForCpp)
 {
-    impl::IgniteImpl* impl = impl::IgniteImpl::GetFromProxy(node);
+    IgniteCluster cluster = node.GetCluster();
 
-    BOOST_REQUIRE(impl != 0);
+    BOOST_REQUIRE(cluster.IsActive());
 
-    SharedPointer<impl::cluster::ClusterGroupImpl> clusterGroup = impl->GetProjection();
+    ClusterGroup group = cluster.ForAll().ForCpp();
 
-    BOOST_REQUIRE(clusterGroup.IsValid());
-
-    IgniteError err;
-
-    BOOST_REQUIRE(clusterGroup.Get()->ForServers().IsValid());
-}
-
-BOOST_AUTO_TEST_CASE(IgniteImplForCpp)
-{
-    impl::IgniteImpl* impl = impl::IgniteImpl::GetFromProxy(node);
-
-    BOOST_REQUIRE(impl != 0);
-
-    SharedPointer<impl::cluster::ClusterGroupImpl> clusterGroup = impl->GetProjection();
-
-    BOOST_REQUIRE(clusterGroup.IsValid());
-
-    IgniteError err;
-
-    BOOST_REQUIRE(clusterGroup.Get()->ForCpp().IsValid());
+    BOOST_REQUIRE(group.GetNodes().size() == 1);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

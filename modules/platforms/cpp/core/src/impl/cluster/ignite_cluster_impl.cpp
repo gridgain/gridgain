@@ -46,7 +46,7 @@ namespace ignite
                 impl.Get()->SetActive(active);
             }
 
-            SP_ClusterGroupImpl IgniteClusterImpl::ForLocal()
+            SP_ClusterGroupImpl IgniteClusterImpl::ForAll()
             {
                 return impl;
             }

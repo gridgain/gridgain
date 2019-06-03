@@ -14,9 +14,15 @@
  * limitations under the License.
  */
 
+#include <ignite/cluster/cluster_group.h>
+#include <ignite/cluster/cluster_node.h>
+
+#include <ignite/impl/cluster/cluster_node_impl.h>
 #include "ignite/impl/cluster/cluster_group_impl.h"
 
 using namespace ignite::common;
+using namespace ignite::common::concurrent;
+using namespace ignite::cluster;
 using namespace ignite::jni::java;
 using namespace ignite::impl::cluster;
 
@@ -51,30 +57,8 @@ namespace ignite
                 };
             };
 
-            class ClusterNodesHolder
-            {
-            public:
-                ClusterNodesHolder() {}
-                void SetNodes(const std::vector<SP_ClusterNodeImpl>& nodes);
-                std::vector<SP_ClusterNodeImpl> GetNodes();
-
-            private:
-                std::vector<SP_ClusterNodeImpl> nodes;
-                IGNITE_NO_COPY_ASSIGNMENT(ClusterNodesHolder);
-            };
-
-            void  ClusterNodesHolder::SetNodes(const std::vector<SP_ClusterNodeImpl>& nodes)
-            {
-                this->nodes = nodes;
-            }
-
-            std::vector<SP_ClusterNodeImpl> ClusterNodesHolder::GetNodes()
-            {
-                return nodes;
-            }
-
             ClusterGroupImpl::ClusterGroupImpl(SP_IgniteEnvironment env, jobject javaRef) :
-                InteropTarget(env, javaRef), nodes(new ClusterNodesHolder()), topVer(0)
+                InteropTarget(env, javaRef), nodes(new std::vector<ClusterNode>()), topVer(0)
             {
                 computeImpl = InternalGetCompute();
             }
@@ -86,7 +70,7 @@ namespace ignite
 
             SP_ClusterGroupImpl ClusterGroupImpl::ForAttribute(std::string name, std::string val)
             {
-                common::concurrent::SharedPointer<interop::InteropMemory> mem = GetEnvironment().AllocateMemory();
+                SharedPointer<interop::InteropMemory> mem = GetEnvironment().AllocateMemory();
                 interop::InteropOutputStream out(mem.Get());
                 binary::BinaryWriterImpl writer(&out, GetEnvironment().GetTypeManager());
 
@@ -128,7 +112,12 @@ namespace ignite
                 return computeImpl;
             }
 
-            std::vector<SP_ClusterNodeImpl> ClusterGroupImpl::GetNodes()
+            ClusterGroupImpl::SP_ComputeImpl ClusterGroupImpl::GetCompute(ClusterGroup grp)
+            {
+                return grp.GetImpl().Get()->GetCompute();
+            }
+
+            std::vector<ClusterNode> ClusterGroupImpl::GetNodes()
             {
                 return RefreshNodes();
             }
@@ -155,7 +144,7 @@ namespace ignite
 
             SP_ClusterGroupImpl ClusterGroupImpl::ForCacheNodes(std::string name, int32_t op)
             {
-                common::concurrent::SharedPointer<interop::InteropMemory> mem = GetEnvironment().AllocateMemory();
+                SharedPointer<interop::InteropMemory> mem = GetEnvironment().AllocateMemory();
                 interop::InteropOutputStream out(mem.Get());
                 binary::BinaryWriterImpl writer(&out, GetEnvironment().GetTypeManager());
 
@@ -182,16 +171,16 @@ namespace ignite
                 return SP_ComputeImpl(new compute::ComputeImpl(GetEnvironmentPointer(), computeProc));
             }
 
-            std::vector<SP_ClusterNodeImpl> ClusterGroupImpl::RefreshNodes()
+            std::vector<ClusterNode> ClusterGroupImpl::RefreshNodes()
             {
-                long oldTopVer = 0;
+                CsLockGuard mtx(nodesLock);
 
-                common::concurrent::SharedPointer<interop::InteropMemory> memIn = GetEnvironment().AllocateMemory();
-                common::concurrent::SharedPointer<interop::InteropMemory> memOut = GetEnvironment().AllocateMemory();
+                SharedPointer<interop::InteropMemory> memIn = GetEnvironment().AllocateMemory();
+                SharedPointer<interop::InteropMemory> memOut = GetEnvironment().AllocateMemory();
                 interop::InteropOutputStream out(memIn.Get());
                 binary::BinaryWriterImpl writer(&out, GetEnvironment().GetTypeManager());
 
-                writer.WriteInt64(oldTopVer);
+                writer.WriteInt64(topVer);
 
                 out.Synchronize();
 
@@ -205,24 +194,23 @@ namespace ignite
                 bool wasUpdated = reader.ReadBool();
                 if (wasUpdated)
                 {
-                    int64_t newTopVer = reader.ReadInt64();
+                    topVer = reader.ReadInt64();
                     int cnt = reader.ReadInt32();
 
-                    std::vector<SP_ClusterNodeImpl> newNodes;
+                    SP_ClusterNodes newNodes(new std::vector<ClusterNode>());
                     for (int i = 0; i < cnt; i++)
                     {
-                        SP_ClusterNodeImpl node = GetEnvironment().GetNode(reader.ReadGuid());
-                        if (node.IsValid())
-                            newNodes.push_back(node);
+                        SP_ClusterNodeImpl impl = GetEnvironment().GetNode(reader.ReadGuid());
+                        if (impl.IsValid())
+                            newNodes.Get()->push_back(ClusterNode(impl));
                     }
 
-                    topVer = newTopVer;
-                    nodes.Get()->SetNodes(newNodes);
+                    nodes = newNodes;
 
-                    return newNodes;
+                    return *nodes.Get();
                 }
 
-                return nodes.Get()->GetNodes();
+                return *nodes.Get();
             }
         }
     }

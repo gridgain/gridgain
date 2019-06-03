@@ -28,11 +28,17 @@ namespace ignite
 {
     namespace cluster
     {
+        /**
+         * Interface representing a single cluster node.
+         * Use GetAttribute(String) or GetMetrics() to get static and dynamic information about cluster nodes.
+         */
         class IGNITE_IMPORT_EXPORT ClusterNode
         {
         public:
             /**
              * Constructor.
+             *
+             * @param pointer to cluster node implementation.
              */
             ClusterNode(common::concurrent::SharedPointer<ignite::impl::cluster::ClusterNodeImpl> impl);
 
@@ -41,7 +47,7 @@ namespace ignite
              *
              * @return Node Guid.
              */
-            Guid Id();
+            Guid GetId();
 
         private:
             common::concurrent::SharedPointer<ignite::impl::cluster::ClusterNodeImpl> impl;

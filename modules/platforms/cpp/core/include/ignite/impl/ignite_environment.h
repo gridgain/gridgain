@@ -34,7 +34,6 @@ namespace ignite
         /* Forward declarations. */
         class IgniteBindingImpl;
         class ModuleManager;
-        class ClusterNodesHolder;
         namespace cluster {
             class ClusterNodeImpl;
         }
@@ -197,9 +196,9 @@ namespace ignite
             binary::BinaryTypeUpdater* GetTypeUpdater();
 
             /**
-             * Get cluster node by id.
+             * Get cluster node implementation by id.
              *
-             * @return Cluster node or NULL if does not exist.
+             * @return Cluster node implementation or NULL if does not exist.
              */
             SP_ClusterNodeImpl GetNode(Guid Id);
 
@@ -333,7 +332,10 @@ namespace ignite
             common::concurrent::SharedPointer<ModuleManager> moduleMgr;
 
             /** Cluster nodes. */
-            common::concurrent::SharedPointer<ClusterNodesHolder> nodes;
+            common::concurrent::SharedPointer<std::map<Guid, SP_ClusterNodeImpl> > nodes;
+
+            /** Cluster nodes lock. */
+            common::concurrent::CriticalSection nodesLock;
 
             IGNITE_NO_COPY_ASSIGNMENT(IgniteEnvironment);
         };

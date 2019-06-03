@@ -18,7 +18,6 @@
 #define _IGNITE_IMPL_CLUSTER_CLUSTER_GROUP_IMPL
 
 #include <ignite/common/concurrent.h>
-#include <ignite/common/dynamic_size_array.h>
 #include <ignite/jni/java.h>
 
 #include <ignite/impl/interop/interop_target.h>
@@ -27,13 +26,19 @@
 
 namespace ignite
 {
+    /* Forward declaration of interfaces. */
+    namespace cluster
+    {
+        class ClusterGroup;
+        class ClusterNode;
+    }
+
     namespace impl
     {
         namespace cluster
         {
             /* Forward declaration. */
             class ClusterGroupImpl;
-            class ClusterNodesHolder;
 
             /* Shared pointer. */
             typedef common::concurrent::SharedPointer<ClusterGroupImpl> SP_ClusterGroupImpl;
@@ -45,7 +50,7 @@ namespace ignite
             {
                 typedef common::concurrent::SharedPointer<IgniteEnvironment> SP_IgniteEnvironment;
                 typedef common::concurrent::SharedPointer<compute::ComputeImpl> SP_ComputeImpl;
-                typedef common::concurrent::SharedPointer<ClusterNodesHolder> SP_ClusterNodesHolder;
+                typedef common::concurrent::SharedPointer<std::vector<ignite::cluster::ClusterNode> > SP_ClusterNodes;
             public:
                 /**
                  * Constructor used to create new instance.
@@ -96,11 +101,18 @@ namespace ignite
                 SP_ComputeImpl GetCompute();
 
                 /**
+                 * Get compute instance over specified cluster group.
+                 *
+                 * @return Compute instance.
+                 */
+                SP_ComputeImpl GetCompute(ignite::cluster::ClusterGroup grp);
+
+                /**
                  * Get container of cluster nodes over this cluster group.
                  *
                  * @return Vector of cluster nodes.
                  */
-                std::vector<SP_ClusterNodeImpl> GetNodes();
+                std::vector<ignite::cluster::ClusterNode> GetNodes();
 
                 /**
                  * Check if the Ignite grid is active.
@@ -146,17 +158,20 @@ namespace ignite
                 SP_ComputeImpl InternalGetCompute();
 
                 /**
-                 * Get container of refreshed cluster nodes over this cluster group..
+                 * Get container of refreshed cluster nodes over this cluster group.
                  *
                  * @return Instance of compute.
                  */
-                std::vector<SP_ClusterNodeImpl> RefreshNodes();
+                std::vector<ignite::cluster::ClusterNode> RefreshNodes();
 
                 /** Compute for the cluster group. */
                 SP_ComputeImpl computeImpl;
 
                 /** Cluster nodes. */
-                SP_ClusterNodesHolder nodes;
+                SP_ClusterNodes nodes;
+
+                /** Cluster nodes lock. */
+                common::concurrent::CriticalSection nodesLock;
 
                 /** Cluster nodes top version. */
                 int64_t topVer;

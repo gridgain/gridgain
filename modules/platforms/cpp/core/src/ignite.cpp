@@ -24,11 +24,6 @@ using namespace ignite::impl;
 
 namespace ignite
 {
-    ignite::impl::cluster::SP_ClusterGroupImpl cluster::GetClusterGroupImpl(cluster::ClusterGroup* grp)
-    {
-        return grp->impl;
-    }
-
     Ignite::Ignite() : impl(SharedPointer<IgniteImpl>())
     {
         // No-op.
@@ -81,7 +76,7 @@ namespace ignite
 
     compute::Compute Ignite::GetCompute(cluster::ClusterGroup grp)
     {
-        return compute::Compute(impl.Get()->GetCompute(GetClusterGroupImpl(&grp)));
+        return compute::Compute(impl.Get()->GetCompute(grp));
     }
 
     IgniteBinding Ignite::GetBinding()

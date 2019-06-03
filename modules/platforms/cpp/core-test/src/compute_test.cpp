@@ -97,8 +97,9 @@ struct ComputeTestSuiteFixtureClusterGroup
         }
 
 #ifdef IGNITE_TESTS_32
-        std::replace(config.begin(), config.end(), ".xml", "-32.xml");
+        config.replace(config.begin() + config.find(".xml"), config.end(), "-32.xml");
 #endif
+
         return StartNode(config.c_str(), name);
     }
 
@@ -106,7 +107,7 @@ struct ComputeTestSuiteFixtureClusterGroup
      * Constructor.
      */
     ComputeTestSuiteFixtureClusterGroup() :
-        node(MakeNode("ClientNode"))
+        node(MakeNode("ServerNode0"))
     {
         // No-op.
     }
@@ -597,7 +598,7 @@ BOOST_AUTO_TEST_CASE(IgniteGetClusterGroupForServers)
     Ignite server2 = MakeNode("ServerNode2", SERVER_NODE_ATTRIBUTE_VALUE1);
     Ignite client = MakeNode("ClinetNode", CLIENT_NODE);
 
-    cluster::ClusterGroup localGroup = client.GetCluster().ForLocal();
+    cluster::ClusterGroup localGroup = client.GetCluster().ForAll();
     cluster::ClusterGroup group = localGroup.ForServers();
 
     Compute compute = client.GetCompute(group);
@@ -617,9 +618,9 @@ BOOST_AUTO_TEST_CASE(IgniteGetClusterGroupForAttribute)
     Ignite server2 = MakeNode("ServerNode2", SERVER_NODE_ATTRIBUTE_VALUE1);
     Ignite client = MakeNode("ClinetNode", CLIENT_NODE);
 
-    cluster::ClusterGroup localGroup = client.GetCluster().ForLocal();
-    cluster::ClusterGroup group1 = localGroup.ForAttribute("DemoAttribute", "Value0");
-    cluster::ClusterGroup group2 = localGroup.ForAttribute("DemoAttribute", "Value1");
+    cluster::ClusterGroup localGroup = client.GetCluster().ForAll();
+    cluster::ClusterGroup group1 = localGroup.ForAttribute("TestAttribute", "Value0");
+    cluster::ClusterGroup group2 = localGroup.ForAttribute("TestAttribute", "Value1");
 
     Compute compute1 = client.GetCompute(group1);
     Compute compute2 = client.GetCompute(group2);

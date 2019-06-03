@@ -35,7 +35,7 @@ namespace ignite
                 // No-op.
             }
 
-            Guid ClusterNodeImpl::Id()
+            Guid ClusterNodeImpl::GetId()
             {
                 return id;
             }

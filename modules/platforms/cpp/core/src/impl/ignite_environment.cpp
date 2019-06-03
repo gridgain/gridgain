@@ -91,18 +91,6 @@ namespace ignite
             };
         };
 
-        class ClusterNodesHolder
-        {
-        public:
-            ClusterNodesHolder() {}
-            void AddNode(SP_ClusterNodeImpl node);
-            SP_ClusterNodeImpl GetNode(Guid Id);
-
-        private:
-            std::map<Guid, SP_ClusterNodeImpl> nodes;
-            IGNITE_NO_COPY_ASSIGNMENT(ClusterNodesHolder);
-        };
-
         /**
          * InLongOutLong callback.
          * 
@@ -119,11 +107,13 @@ namespace ignite
             {
                 case OperationCallback::NODE_INFO:
                 {
+                    CsLockGuard mtx(env->Get()->nodesLock);
+
                     SharedPointer<InteropMemory> mem = env->Get()->GetMemory(val);
                     interop::InteropInputStream inStream(mem.Get());
                     binary::BinaryReaderImpl reader(&inStream);
                     SP_ClusterNodeImpl node = (new impl::cluster::ClusterNodeImpl(reader));
-                    env->Get()->nodes.Get()->AddNode(node);
+                    env->Get()->nodes.Get()->insert(std::pair<Guid, SP_ClusterNodeImpl>(node.Get()->GetId(), node));
                     break;
                 }
 
@@ -290,19 +280,6 @@ namespace ignite
             return res;
         }
 
-        void  ClusterNodesHolder::AddNode(SP_ClusterNodeImpl node)
-        {
-            nodes[node.Get()->Id()] = node;
-        }
-
-        SP_ClusterNodeImpl ClusterNodesHolder::GetNode(Guid Id)
-        {
-            if (nodes.find(Id) != nodes.end())
-                return nodes[Id];
-
-            return 0;
-        }
-
         IgniteEnvironment::IgniteEnvironment(const IgniteConfiguration& cfg) :
             cfg(new IgniteConfiguration(cfg)),
             ctx(SharedPointer<JniContext>()),
@@ -314,7 +291,7 @@ namespace ignite
             metaUpdater(0),
             binding(),
             moduleMgr(),
-            nodes(new ClusterNodesHolder())
+            nodes(new std::map<Guid, SP_ClusterNodeImpl>())
         {
             binding = SharedPointer<IgniteBindingImpl>(new IgniteBindingImpl(*this));
 
@@ -433,7 +410,12 @@ namespace ignite
 
         IgniteEnvironment::SP_ClusterNodeImpl IgniteEnvironment::GetNode(Guid Id)
         {
-            return nodes.Get()->GetNode(Id);
+            CsLockGuard mtx(nodesLock);
+
+            if (nodes.Get()->find(Id) != nodes.Get()->end())
+                return nodes.Get()->at(Id);
+
+            return NULL;
         }
 
         SharedPointer<IgniteBindingImpl> IgniteEnvironment::GetBinding() const

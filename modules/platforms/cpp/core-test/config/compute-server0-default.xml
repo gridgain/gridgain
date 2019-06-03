@@ -51,10 +51,10 @@
             </bean>
         </property>
 
-        <!-- User attributes to allow to manipulate nodes in cluster. -->
+        <!-- User attributes to allow to manipulate nodes in the cluster. -->
         <property name="userAttributes">
             <map>
-                <entry key="DemoAttribute" value="Value0"/>
+                <entry key="TestAttribute" value="Value0"/>
             </map>
         </property>
     </bean>

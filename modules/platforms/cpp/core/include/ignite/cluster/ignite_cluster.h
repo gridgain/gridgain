@@ -30,11 +30,18 @@ namespace ignite
 {
     namespace cluster
     {
+        /**
+         * Represents whole cluster (all available nodes). Node-local map is useful for saving shared state
+         * between job executions on the grid. Additionally you can also ping, start, and restart remote nodes, map keys to
+         * caching nodes, and get other useful information about topology.
+         */
         class IGNITE_IMPORT_EXPORT IgniteCluster
         {
         public:
             /**
              * Constructor.
+             *
+             * @param pointer to ignite cluster implementation.
              */
             IgniteCluster(common::concurrent::SharedPointer<ignite::impl::cluster::IgniteClusterImpl> impl);
 
@@ -54,11 +61,11 @@ namespace ignite
             void SetActive(bool active);
 
             /**
-             * Gets a cluster group impl consisting from the local node.
+             * Gets an underlying ClusterGroup object.
              *
-             * @return Cluster group impl consisting from local node.
+             * @return ClusterGroup instance.
              */
-            cluster::ClusterGroup ForLocal();
+            cluster::ClusterGroup ForAll();
 
         private:
             common::concurrent::SharedPointer<ignite::impl::cluster::IgniteClusterImpl> impl;

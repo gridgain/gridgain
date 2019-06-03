@@ -21,6 +21,7 @@
 #include <ignite/common/utils.h>
 #include <ignite/common/concurrent.h>
 #include <ignite/common/lazy.h>
+#include <ignite/cluster/cluster_group.h>
 
 #include <ignite/impl/ignite_environment.h>
 #include <ignite/impl/cache/cache_impl.h>
@@ -190,7 +191,7 @@ namespace ignite
              *
              * @return ComputeImpl instance.
              */
-            SP_ComputeImpl GetCompute(cluster::SP_ClusterGroupImpl grp);
+            SP_ComputeImpl GetCompute(ignite::cluster::ClusterGroup grp);
 
             /**
              * Check if the Ignite grid is active.

@@ -228,7 +228,7 @@ namespace ignite
          *
          * This method should only be called on the valid instance.
          *
-         * @return Compute class ove the specified cluster group.
+         * @return Compute class of the specified cluster group.
          */
         compute::Compute GetCompute(cluster::ClusterGroup grp);
 

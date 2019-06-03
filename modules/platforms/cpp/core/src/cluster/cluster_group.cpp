@@ -16,6 +16,8 @@
 
 #include "ignite/cluster/cluster_group.h"
 
+#include "ignite/impl/cluster/cluster_node_impl.h"
+
 using namespace ignite::common::concurrent;
 using namespace ignite::impl::cluster;
 
@@ -34,9 +36,29 @@ namespace ignite
             return ClusterGroup(impl.Get()->ForAttribute(name, val));
         }
 
+        ClusterGroup ClusterGroup::ForDataNodes(std::string cacheName)
+        {
+            return ClusterGroup(impl.Get()->ForDataNodes(cacheName));
+        }
+
         ClusterGroup ClusterGroup::ForServers()
         {
             return ClusterGroup(impl.Get()->ForServers());
+        }
+
+        ClusterGroup ClusterGroup::ForCpp()
+        {
+            return ClusterGroup(impl.Get()->ForCpp());
+        }
+
+        std::vector<ClusterNode> ClusterGroup::GetNodes()
+        {
+            return impl.Get()->GetNodes();
+        }
+
+        impl::cluster::SP_ClusterGroupImpl ClusterGroup::GetImpl()
+        {
+            return impl;
         }
     }
 }

@@ -39,9 +39,9 @@ namespace ignite
             impl.Get()->SetActive(active);
         }
 
-        cluster::ClusterGroup IgniteCluster::ForLocal()
+        cluster::ClusterGroup IgniteCluster::ForAll()
         {
-            return cluster::ClusterGroup(impl.Get()->ForLocal());
+            return cluster::ClusterGroup(impl.Get()->ForAll());
         }
     }
 }
