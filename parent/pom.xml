@@ -942,10 +942,12 @@
                                         <exclude>**/web-console/frontend/node_modules/**</exclude>
                                         <exclude>**/web-console/frontend/**/*.png</exclude>
                                         <exclude>**/web-console/frontend/**/*.svg</exclude>
+                                        <!-- H2 forked module. -->
+                                        <exclude>**/org/h2/**</exclude>
+                                        <exclude>src/test/tools/WEB-INF/console.html</exclude>
+                                        <exclude>src/test/tools/WEB-INF/web.xml</exclude>
                                         <!--Packaging -->
                                         <exclude>packaging/**</exclude>
-                                        <!-- H2 forked module. -->
-                                        <exclude>modules/h2/**</exclude>
                                     </excludes>
                                 </configuration>
                             </execution>
