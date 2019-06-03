@@ -211,7 +211,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
 
         cntr = 0;
 
-        GridQueryProcessor.idxCls = IndexingWithMockedReservation.class;
+        GridQueryProcessor.idxCls = MockedIndexing.class;
 
         startGrids(NODES_COUNT);
 
@@ -252,8 +252,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
 
         igniteForKillRequest = getKillRequestNode();
 
-        // Reset to default behaviour.
-        IndexingWithMockedReservation.failReservations = false;
+        MockedIndexing.resetToDefault();
     }
 
     /**
@@ -263,6 +262,8 @@ public class KillQueryTest extends GridCommonAbstractTest {
      */
     @After
     public void after() throws Exception {
+        MockedIndexing.resetToDefault();
+
         if (stmt != null && !stmt.isClosed()) {
             stmt.close();
 
@@ -340,17 +341,20 @@ public class KillQueryTest extends GridCommonAbstractTest {
      * @param node Node handle to the node, which initiated the query.
      */
     private String findOneRunningQuery(String query, IgniteEx node) {
-        List<GridRunningQueryInfo> allQrs = (List<GridRunningQueryInfo>)node.context().query().runningQueries(-1);
-
-        List<GridRunningQueryInfo> qryList = allQrs.stream()
-            .filter(q -> q.query().equals(query))
-            .collect(Collectors.toList());
+        List<GridRunningQueryInfo> qryList = findQueriesOnNode(query, node);
 
         assertEquals("Expected only one running query: " + query + "\nBut found: " + qryList, 1, qryList.size());
 
         return qryList.get(0).globalQueryId();
     }
 
+    private List<GridRunningQueryInfo> findQueriesOnNode(String query, IgniteEx node) {
+        List<GridRunningQueryInfo> allQrs = (List<GridRunningQueryInfo>)node.context().query().runningQueries(-1);
+
+        return allQrs.stream()
+            .filter(q -> q.query().equals(query))
+            .collect(Collectors.toList());
+    }
 
     /**
      * Trying to cancel CREATE TABLE command.
@@ -633,7 +637,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
             grid(i).context().io().addMessageListener(GridTopic.TOPIC_QUERY, qryStarted);
 
         // Suspends distributed queries on the map nodes.
-        IndexingWithMockedReservation.failReservations = true;
+        MockedIndexing.failReservations = true;
 
         try {
             IgniteInternalFuture cancelFut = cancel(1, asyncCancel);
@@ -660,16 +664,53 @@ public class KillQueryTest extends GridCommonAbstractTest {
      */
     @Test
     public void testCancelQueryIfUnableToGetNodesForPartitions() throws Exception {
-        GridTestUtils.runAsync(() -> {
+        // Force query to spin retrying to get nodes for partitions.
+        MockedIndexing.retryNodePartMapping = true;
 
-            GridTestUtils.assertThrows(log, () -> {
-                ignite.cache(DEFAULT_CACHE_NAME).query(
-                    new SqlFieldsQuery("select * from Integer where _val <> 42")
-                ).getAll();
+        String select = "select * from Integer where _val <> 42";
 
-                return null;
-            }, CacheException.class, "The query was cancelled while executing.");
-        })
+        IgniteInternalFuture runQueryFut = GridTestUtils.runAsync(() ->
+            ignite.cache(DEFAULT_CACHE_NAME).query(
+                new SqlFieldsQuery(select)
+            ).getAll());
+
+        boolean gotOneFreezedSelect = GridTestUtils.waitForCondition(
+            () -> findQueriesOnNode(select, ignite).size() == 1, TIMEOUT);
+
+        if (!gotOneFreezedSelect) {
+            if (runQueryFut.isDone())
+                printFuturesException("Got exception getting running the query.", runQueryFut);
+
+            Assert.fail("Failed to wait for query to be in running queries list exactly one time " +
+                "[select=" + select + ", node=" + ignite.localNode().id() + ", timeout=" + TIMEOUT + "ms].");
+
+        }
+
+        SqlFieldsQuery killQry = createKillQuery(findOneRunningQuery(select, ignite), asyncCancel);
+
+        ignite.cache(DEFAULT_CACHE_NAME).query(killQry);
+
+        GridTestUtils.assertThrowsAnyCause(
+            log,
+            () -> runQueryFut.get(CHECK_RESULT_TIMEOUT),
+            CacheException.class,
+            "The query was cancelled while executing.");
+
+    }
+
+    /**
+     * Print to log exception that have been catched on other thread and have been put to specified future.
+     *
+     * @param msg message to add.
+     * @param fut future containing the exception.
+     */
+    private void printFuturesException(String msg, IgniteInternalFuture fut) {
+        try {
+            fut.get(TIMEOUT);
+        }
+        catch (Exception e) {
+            log.error(msg, e);
+        }
     }
 
 
@@ -977,10 +1018,10 @@ public class KillQueryTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Mocked indexing to test the case, when partitions can't be reserved due to any reasons (never ending PMEs, for
-     * example very unstable cluster topology).
+     * Mocked indexing to eventually suspend mapper or reducer code. It simulates never ending PMEs, unstable topologies
+     * and etc.
      */
-    static class IndexingWithMockedReservation extends IgniteH2Indexing {
+    static class MockedIndexing extends IgniteH2Indexing {
         /**
          * All the time this flag is set to {@code true}, no partitions can be reserved. Acts like normal indexing by
          * default.
@@ -992,6 +1033,18 @@ public class KillQueryTest extends GridCommonAbstractTest {
          * mapper says "retry later".
          */
         static volatile boolean retryNodePartMapping = false;
+
+        /**
+         * Result of the mapping partitions to nodes, that indicates that caller should retry request later.
+         */
+        private static final ReducePartitionMapResult RETRY_RESULT = new ReducePartitionMapResult(null, null, null);
+
+
+        static void resetToDefault() {
+            failReservations = false;
+
+            retryNodePartMapping = false;
+        }
 
         /**
          * Setups mock objects into this indexing, just after super initialization is done.
@@ -1018,7 +1071,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
                 @Override public ReducePartitionMapResult nodesForPartitions(List<Integer> cacheIds,
                     AffinityTopologyVersion topVer, int[] parts, boolean isReplicatedOnly, long qryId) {
                     if (retryNodePartMapping)
-                        return null; // Means couldn't map, "retry".
+                        return RETRY_RESULT;
                     else
                         return super.nodesForPartitions(cacheIds, topVer, parts, isReplicatedOnly, qryId);
                 }
