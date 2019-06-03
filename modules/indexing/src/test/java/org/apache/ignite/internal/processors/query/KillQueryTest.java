@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.query;
 
 import java.io.Serializable;
+import java.lang.reflect.Field;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -58,8 +59,11 @@ import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.DynamicCacheChangeBatch;
 import org.apache.ignite.internal.processors.datastreamer.DataStreamerRequest;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
+import org.apache.ignite.internal.processors.query.h2.twostep.GridReduceQueryExecutor;
 import org.apache.ignite.internal.processors.query.h2.twostep.PartitionReservation;
 import org.apache.ignite.internal.processors.query.h2.twostep.PartitionReservationManager;
+import org.apache.ignite.internal.processors.query.h2.twostep.ReducePartitionMapResult;
+import org.apache.ignite.internal.processors.query.h2.twostep.ReducePartitionMapper;
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2QueryRequest;
 import org.apache.ignite.internal.processors.query.schema.message.SchemaProposeDiscoveryMessage;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
@@ -628,6 +632,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
         for (int i = 0; i < NODES_COUNT; i++)
             grid(i).context().io().addMessageListener(GridTopic.TOPIC_QUERY, qryStarted);
 
+        // Suspends distributed queries on the map nodes.
         IndexingWithMockedReservation.failReservations = true;
 
         try {
@@ -648,6 +653,26 @@ public class KillQueryTest extends GridCommonAbstractTest {
                 grid(i).context().io().removeMessageListener(GridTopic.TOPIC_QUERY, qryStarted);
         }
     }
+
+
+    /**
+     * Check if query hangs due to reducer cannot get nodes for partitions, it still can be killed.
+     */
+    @Test
+    public void testCancelQueryIfUnableToGetNodesForPartitions() throws Exception {
+        GridTestUtils.runAsync(() -> {
+
+            GridTestUtils.assertThrows(log, () -> {
+                ignite.cache(DEFAULT_CACHE_NAME).query(
+                    new SqlFieldsQuery("select * from Integer where _val <> 42")
+                ).getAll();
+
+                return null;
+            }, CacheException.class, "The query was cancelled while executing.");
+        })
+    }
+
+
 
     /**
      * Test if user specified partitions for query explicitly, such query is cancealble.
@@ -957,12 +982,19 @@ public class KillQueryTest extends GridCommonAbstractTest {
      */
     static class IndexingWithMockedReservation extends IgniteH2Indexing {
         /**
-         * If this flag is set to {@code true}, no partitions can be reserved. Acts like normal indexing by default.
+         * All the time this flag is set to {@code true}, no partitions can be reserved. Acts like normal indexing by
+         * default.
          */
         static volatile boolean failReservations = false;
 
         /**
-         * Sets reservation manager that can fail all the partition reservation attepts if our test condition is met.
+         * All the time this flag is set to {@code true}, reducer is not able to get nodes for given partitions because
+         * mapper says "retry later".
+         */
+        static volatile boolean retryNodePartMapping = false;
+
+        /**
+         * Setups mock objects into this indexing, just after super initialization is done.
          */
         @Override public void start(GridKernalContext ctx, GridSpinBusyLock busyLock) throws IgniteCheckedException {
             super.start(ctx, busyLock);
@@ -981,6 +1013,35 @@ public class KillQueryTest extends GridCommonAbstractTest {
                         return super.reservePartitions(cacheIds, reqTopVer, explicitParts, nodeId, reqId);
                 }
             };
+
+            setMapper(new ReducePartitionMapper(ctx, ctx.log(GridReduceQueryExecutor.class)) {
+                @Override public ReducePartitionMapResult nodesForPartitions(List<Integer> cacheIds,
+                    AffinityTopologyVersion topVer, int[] parts, boolean isReplicatedOnly, long qryId) {
+                    if (retryNodePartMapping)
+                        return null; // Means couldn't map, "retry".
+                    else
+                        return super.nodesForPartitions(cacheIds, topVer, parts, isReplicatedOnly, qryId);
+                }
+            });
+
+        }
+
+        /**
+         * Injects specified (possibly mocked) {@link ReducePartitionMapper} into reducer of this indexing instance.
+         */
+        private void setMapper(ReducePartitionMapper mock) {
+            try {
+                GridReduceQueryExecutor rdcExec = this.reduceQueryExecutor();
+
+                Field mapperFld = GridReduceQueryExecutor.class.getDeclaredField("mapper");
+
+                mapperFld.setAccessible(true);
+
+                mapperFld.set(rdcExec, mock);
+            }
+            catch (Exception rethrown) {
+                throw new RuntimeException(rethrown);
+            }
         }
     }
 }
