@@ -24,6 +24,7 @@ import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.AffinityFunction;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.configuration.TransactionConfiguration;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -220,7 +221,9 @@ public class GridCacheAttributes implements Serializable {
 
     /**
      * @return Preload batch size.
+     * @deprecated Use {@link IgniteConfiguration#getRebalanceBatchSize()} instead.
      */
+    @Deprecated
     public int rebalanceBatchSize() {
         return ccfg.getRebalanceBatchSize();
     }
@@ -234,7 +237,9 @@ public class GridCacheAttributes implements Serializable {
 
     /**
      * @return Rebalance prefetch count.
+     * @deprecated Use {@link IgniteConfiguration#getRebalanceBatchesPrefetchCount()} instead.
      */
+    @Deprecated
     public long rebalanceBatchesPrefetchCount() {
         return ccfg.getRebalanceBatchesPrefetchCount();
     }
@@ -248,14 +253,18 @@ public class GridCacheAttributes implements Serializable {
 
     /**
      * @return Rebalance throttle.
+     * @deprecated Use {@link IgniteConfiguration#getRebalanceThrottle()} instead.
      */
+    @Deprecated
     public long rebalanceThrottle() {
         return ccfg.getRebalanceThrottle();
     }
 
     /**
      * @return Rebalance timeout.
+     * @deprecated Use {@link IgniteConfiguration#getRebalanceTimeout()} instead.
      */
+    @Deprecated
     public long rebalanceTimeout() {
         return ccfg.getRebalanceTimeout();
     }
