@@ -5,7 +5,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.tracing.impl.OpenCensusTracingSpi;
-import org.apache.ignite.internal.processors.tracing.impl.OpenCensusZipkinReporter;
+import org.apache.ignite.internal.processors.tracing.impl.OpenCensusZipkinTraceExporter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -13,7 +13,7 @@ public class TracingProcessor extends GridProcessorAdapter implements Tracing {
     // TODO: Make configurable in Ignite configuration (Tracing section?).
     private final TracingSpi spi;
 
-    private final Reporter reporter;
+    private final TraceExporter traceExporter;
 
     private final TracingMessagesProcessor msgProc;
 
@@ -25,7 +25,7 @@ public class TracingProcessor extends GridProcessorAdapter implements Tracing {
 
         spi = new OpenCensusTracingSpi();
 
-        reporter = new OpenCensusZipkinReporter(
+        traceExporter = new OpenCensusZipkinTraceExporter(
             ZipkinExporterConfiguration.builder()
                 .setV2Url("http://localhost:9411/api/v2/spans")
                 .setServiceName("ignite")
@@ -38,15 +38,15 @@ public class TracingProcessor extends GridProcessorAdapter implements Tracing {
     @Override public void start() throws IgniteCheckedException {
         super.start();
 
-        reporter.start();
+        traceExporter.start();
 
-        log.info("Started tracing processor with configured spi " + spi + " and reporter " + reporter);
+        log.info("Started tracing processor with configured spi " + spi + " and traceExporter " + traceExporter);
     }
 
     @Override public void stop(boolean cancel) throws IgniteCheckedException {
         super.stop(cancel);
 
-        //reporter.stop();
+        //traceExporter.stop();
     }
 
     /** {@inheritDoc} */

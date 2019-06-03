@@ -3,12 +3,12 @@ package org.apache.ignite.internal.processors.tracing.impl;
 import io.opencensus.exporter.trace.zipkin.ZipkinExporterConfiguration;
 import io.opencensus.exporter.trace.zipkin.ZipkinTraceExporter;
 import io.opencensus.trace.Tracing;
-import org.apache.ignite.internal.processors.tracing.Reporter;
+import org.apache.ignite.internal.processors.tracing.TraceExporter;
 
-public class OpenCensusZipkinReporter implements Reporter {
+public class OpenCensusZipkinTraceExporter implements TraceExporter {
     private final ZipkinExporterConfiguration cfg;
 
-    public OpenCensusZipkinReporter(ZipkinExporterConfiguration cfg) {
+    public OpenCensusZipkinTraceExporter(ZipkinExporterConfiguration cfg) {
         this.cfg = cfg;
     }
 
@@ -28,6 +28,6 @@ public class OpenCensusZipkinReporter implements Reporter {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return "OpenCensus Zipkin Reporter [cfg=" + cfg + "]";
+        return "OpenCensus Zipkin TraceExporter [cfg=" + cfg + "]";
     }
 }

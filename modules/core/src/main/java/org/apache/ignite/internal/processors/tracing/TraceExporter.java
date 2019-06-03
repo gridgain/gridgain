@@ -1,6 +1,6 @@
 package org.apache.ignite.internal.processors.tracing;
 
-public interface Reporter {
+public interface TraceExporter {
     void start();
     void stop();
 }
