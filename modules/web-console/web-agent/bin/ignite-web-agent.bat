@@ -65,7 +65,7 @@ for /f "tokens=* USEBACKQ" %%f in (`%cmd% -version 2^>^&1`) do (
 for /f "tokens=1-3  delims= " %%a in ("%var%") do set JAVA_VER_STR=%%c
 set JAVA_VER_STR=%JAVA_VER_STR:"=%
 
-for /f "tokens=1,2 delims=." %%a in ("%JAVA_VER_STR%.x") do set MAJOR_JAVA_VER=%% a & set MINOR_JAVA_VER=%%b
+for /f "tokens=1,2 delims=." %%a in ("%JAVA_VER_STR%.x") do set MAJOR_JAVA_VER=%%a& set MINOR_JAVA_VER=%%b
 if %MAJOR_JAVA_VER% == 1 set MAJOR_JAVA_VER=%MINOR_JAVA_VER%
 
 if %MAJOR_JAVA_VER% LSS 8 (
