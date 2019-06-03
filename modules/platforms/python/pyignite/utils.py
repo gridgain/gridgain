@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 import ctypes
+from datetime import datetime
 import decimal
 from functools import wraps
 from typing import Any, Callable, Type, Tuple, Union
@@ -204,6 +205,16 @@ def decimal_hashcode(value: decimal.Decimal) -> int:
             int_hash = (31 * int_hash + (v & LONG_MASK)) & LONG_MASK
 
     return ctypes.c_int(31 * int_hash * sign - scale).value
+
+
+def datetime_hashcode(value: int) -> int:
+    """
+    Calculates hashcode from UNIX epoch.
+
+    :param value: UNIX time,
+    :return: Java hashcode.
+    """
+    return (value & LONG_MASK) ^ (unsigned(value, ctypes.c_ulonglong) >> 32)
 
 
 def status_to_exception(exc: Type[Exception]):

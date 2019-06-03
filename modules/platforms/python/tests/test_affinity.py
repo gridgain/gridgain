@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from datetime import datetime, timedelta
 import decimal
 import time
 from uuid import UUID, uuid4
@@ -108,6 +109,11 @@ def test_get_node_partitions(client):
         # decimal (BigInteger internal representation in Java)
         (decimal.Decimal('12345671234567123.45671234567'), None),
         (decimal.Decimal('-845678456.7845678456784567845'), None),
+
+        # date and time
+        (datetime(1980, 1, 1), None),
+        ((datetime(1980, 1, 1), 999), TimestampObject),
+        (timedelta(days=99), TimeObject),
 
     ],
 )

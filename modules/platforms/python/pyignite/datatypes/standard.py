@@ -17,10 +17,11 @@ import ctypes
 from datetime import date, datetime, time, timedelta
 import decimal
 from math import ceil
+from typing import Tuple
 import uuid
 
 from pyignite.constants import *
-from pyignite.utils import decimal_hashcode, hashcode
+from pyignite.utils import datetime_hashcode, decimal_hashcode, hashcode
 from .base import IgniteDataType
 from .type_codes import *
 from .type_ids import *
@@ -343,6 +344,10 @@ class TimestampObject(StandardObject):
     pythonic = tuple
     default = (datetime(1970, 1, 1), 0)
 
+    @staticmethod
+    def hashcode(value: Tuple[datetime, int]) -> int:
+        return datetime_hashcode(int(value[0].timestamp() * 1000))
+
     @classmethod
     def build_c_type(cls):
         if cls._object_c_type is None:
@@ -401,6 +406,10 @@ class DateObject(StandardObject):
     pythonic = datetime
     default = datetime(1970, 1, 1)
 
+    @staticmethod
+    def hashcode(value: datetime) -> int:
+        return datetime_hashcode(int(value.timestamp() * 1000))
+
     @classmethod
     def build_c_type(cls):
         if cls._object_c_type is None:
@@ -454,6 +463,10 @@ class TimeObject(StandardObject):
     type_code = TC_TIME
     pythonic = timedelta
     default = timedelta()
+
+    @staticmethod
+    def hashcode(value: timedelta) -> int:
+        return datetime_hashcode(int(value.total_seconds() * 1000))
 
     @classmethod
     def build_c_type(cls):
