@@ -66,6 +66,7 @@ import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.IgniteClientDisconnectedCheckedException;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFeatures;
+import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.IgniteKernal;
@@ -2957,7 +2958,23 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
                 else
                     fut = oldFut;
 
-                client = fut.get();
+                WorkersRegistry registry = getWorkersRegistry(ignite);
+                long clientReserveWaitTimeout = registry.getSystemWorkerBlockedTimeout() / 3;
+
+                //this cycle will eventually quit when future is completed by concurrent thread reserving client
+                while (true) {
+                    try {
+                        client = fut.get(clientReserveWaitTimeout, TimeUnit.MILLISECONDS);
+
+                        break;
+                    }
+                    catch (IgniteFutureTimeoutCheckedException ignored) {
+                        GridWorker wrkr = registry.worker(Thread.currentThread().getName());
+
+                        if (wrkr != null)
+                            wrkr.updateHeartbeat();
+                    }
+                }
 
                 if (client == null) {
                     if (isLocalNodeDisconnected())
