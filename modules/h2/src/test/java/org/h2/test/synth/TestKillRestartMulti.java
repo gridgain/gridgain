@@ -83,7 +83,7 @@ public class TestKillRestartMulti extends TestBase {
         // show up in our log.
         ProcessBuilder pb = new ProcessBuilder().redirectError(Redirect.INHERIT)
                 .command("java", selfDestruct, "-cp", getClassPath(),
-                        "-ea,",
+                        "-ea",
                         getClass().getName(), "-url", url, "-user", user,
                         "-password", password);
         deleteDb("killRestartMulti");

@@ -29,7 +29,7 @@ public class Compact {
      * @param args the command line parameters
      */
     public static void main(String... args) throws Exception {
-        DeleteDbFiles.execute("./data", "test", true);
+        DeleteDbFiles.execute("./target/data", "test", true);
         Class.forName("org.h2.Driver");
         Connection conn = DriverManager.getConnection("jdbc:h2:./data/test", "sa", "");
         Statement stat = conn.createStatement();
@@ -38,7 +38,7 @@ public class Compact {
         stat.close();
         conn.close();
         System.out.println("Compacting...");
-        compact("./data", "test", "sa", "");
+        compact("./target/data", "test", "sa", "");
         System.out.println("Done.");
     }
 
@@ -53,7 +53,7 @@ public class Compact {
     public static void compact(String dir, String dbName,
             String user, String password) throws SQLException {
         String url = "jdbc:h2:" + dir + "/" + dbName;
-        String file = "data/test.sql";
+        String file = "target/data/test.sql";
         Script.process(url, user, password, file, "", "");
         DeleteDbFiles.execute(dir, dbName, true);
         RunScript.execute(url, user, password, file, null, false);
