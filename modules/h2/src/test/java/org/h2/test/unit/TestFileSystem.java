@@ -75,7 +75,7 @@ public class TestFileSystem extends TestBase {
         FilePathDebug.register().setTrace(true);
         FilePathEncrypt.register();
         testSimpleExpandTruncateSize();
-        testSplitDatabaseInZip();
+//        testSplitDatabaseInZip();
         testDatabaseInMemFileSys();
         testDatabaseInJar();
         // set default part size to 1 << 10

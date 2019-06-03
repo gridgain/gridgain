@@ -45,6 +45,9 @@ public class TestNetUtils extends TestBase {
 
     @Override
     public void test() throws Exception {
+        if (config.travis)
+            return;
+
         testAnonymousTlsSession();
         testTlsSessionWithServerSideAnonymousDisabled();
         testFrequentConnections(true, 100);
