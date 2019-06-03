@@ -99,6 +99,9 @@ public class WebSocketRouter implements AutoCloseable {
     /** */
     private int reconnectCnt;
 
+    /** Active tokens after handshake. */
+    private Set<String> validTokens;
+
     /**
      * @param cfg Configuration.
      */
@@ -107,7 +110,7 @@ public class WebSocketRouter implements AutoCloseable {
 
         httpClient = new HttpClient(createSslFactory(cfg));
 
-//        TODO GG-18379 Investigate how to establish native websocket connection with proxy.
+        // TODO GG-18379 Investigate how to establish native websocket connection with proxy.
         configureProxy(httpClient, cfg.serverUri());
 
         clusterHnd = new ClusterHandler(cfg, wss);
@@ -147,7 +150,7 @@ public class WebSocketRouter implements AutoCloseable {
      */
     public void start() throws Exception {
         log.info("Starting Web Console Agent...");
-        log.info("Connecting to: " + cfg.serverUri());
+        log.info("Connecting to server: " + cfg.serverUri());
 
         httpClient.start();
 
@@ -270,16 +273,20 @@ public class WebSocketRouter implements AutoCloseable {
             AgentHandshakeResponse res = fromJson(json, AgentHandshakeResponse.class);
 
             if (F.isEmpty(res.getError())) {
-                Set<String> validTokens = res.getTokens();
-                List<String> missedTokens = cfg.tokens();
-
-                cfg.tokens(new ArrayList<>(validTokens));
+                validTokens = res.getTokens();
+                List<String> missedTokens = new ArrayList<>(cfg.tokens());
 
                 missedTokens.removeAll(validTokens);
 
                 if (!F.isEmpty(missedTokens)) {
                     log.warning("Failed to validate token(s): " + secured(missedTokens) + "." +
                         " Please reload agent archive or check settings.");
+                }
+
+                if (F.isEmpty(validTokens)) {
+                    log.warning("Valid tokens not found. Stopping agent...");
+
+                    closeLatch.countDown();
                 }
 
                 log.info("Successful handshake with server.");
@@ -303,9 +310,9 @@ public class WebSocketRouter implements AutoCloseable {
     private void revokeToken(String tok) {
         log.warning("Security token has been revoked: " + tok);
 
-        cfg.tokens().remove(tok);
+        validTokens.remove(tok);
 
-        if (F.isEmpty(cfg.tokens())) {
+        if (F.isEmpty(validTokens)) {
             log.warning("Web Console Agent will be stopped because no more valid tokens available");
 
             wss.close(StatusCode.SHUTDOWN, "No more valid tokens available");

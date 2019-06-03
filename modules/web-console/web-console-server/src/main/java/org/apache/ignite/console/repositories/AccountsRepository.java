@@ -103,7 +103,7 @@ public class AccountsRepository {
      *
      * @param account Account to save.
      * @return Saved account.
-     * @throws AuthenticationServiceException if failed to save account.
+     * @throws IgniteException if failed to save account.
      */
     @SuppressWarnings("unchecked")
     public Account create(Account account) throws AuthenticationServiceException {
@@ -111,7 +111,7 @@ public class AccountsRepository {
             IgniteCache cache = accountsTbl.cache();
 
             if (accountsTbl.getByIndex(account.getUsername()) != null)
-                throw new AuthenticationServiceException("Account with email already exists: " + account.getUsername());
+                throw new IgniteException("Account with email already exists: " + account.getUsername());
 
             Object firstUserMarker = cache.getAndPutIfAbsent(FIRST_USER_MARKER_KEY, account.getId());
 
