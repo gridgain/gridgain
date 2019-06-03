@@ -804,10 +804,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                 updateRebalanceVersion(aff.topologyVersion(), aff.assignment());
 
-                if (readyTopVer.initialized() && readyTopVer.equals(rebalancedTopVer)) {
-                    U.dumpStack(log, "Topology is stable.");
-                }
-
                 consistencyCheck();
 
                 if (log.isTraceEnabled()) {
@@ -1602,12 +1598,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                     updateRebalanceVersion(aff.topologyVersion(), aff.assignment());
                 }
 
-                if (readyTopVer.initialized() && readyTopVer.equals(rebalancedTopVer) && lastTopChangeVer.equals(readyTopVer)) {
-                    U.dumpStack(log, "Topology is stable.");
-
-                    // Set volatile map.
-                }
-
                 if (partSizes != null)
                     this.globalPartSizes = partSizes;
 
@@ -1937,10 +1927,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
             if (updateRebalanceVer)
                 updateRebalanceVersion(assignment.topologyVersion(), assignment.assignment());
-
-            if (readyTopVer.initialized() && readyTopVer.equals(rebalancedTopVer)) {
-                U.dumpStack(log, "Topology is stable.");
-            }
         }
         finally {
             lock.writeLock().unlock();
@@ -2947,10 +2933,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             }
 
             rebalancedTopVer = readyTopVer;
-
-            if (lastTopChangeVer.equals(rebalancedTopVer)) {
-                U.dumpStack(log, "Topology is stable.");
-            }
 
             if (log.isDebugEnabled())
                 log.debug("Updated rebalanced version [grp=" + grp.cacheOrGroupName() + ", ver=" + rebalancedTopVer + ']');
