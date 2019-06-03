@@ -27,8 +27,6 @@ import org.apache.ignite.internal.visor.VisorDataTransferObject;
 import org.apache.ignite.internal.visor.cache.VisorCache;
 import org.apache.ignite.internal.visor.cache.VisorMemoryMetrics;
 import org.apache.ignite.internal.visor.event.VisorGridEvent;
-import org.apache.ignite.internal.visor.igfs.VisorIgfs;
-import org.apache.ignite.internal.visor.igfs.VisorIgfsEndpoint;
 import org.apache.ignite.internal.visor.util.VisorExceptionWrapper;
 
 /**
@@ -64,15 +62,6 @@ public class VisorNodeDataCollectorJobResult extends VisorDataTransferObject {
 
     /** Exception while collecting node caches. */
     private VisorExceptionWrapper cachesEx;
-
-    /** Node IGFSs. */
-    private List<VisorIgfs> igfss = new ArrayList<>();
-
-    /** All IGFS endpoints collected from nodes. */
-    private List<VisorIgfsEndpoint> igfsEndpoints = new ArrayList<>();
-
-    /** Exception while collecting node IGFSs. */
-    private VisorExceptionWrapper igfssEx;
 
     /** Errors count. */
     private long errCnt;
@@ -205,34 +194,6 @@ public class VisorNodeDataCollectorJobResult extends VisorDataTransferObject {
     }
 
     /**
-     * @return Collected IGFSs metrics.
-     */
-    public List<VisorIgfs> getIgfss() {
-        return igfss;
-    }
-
-    /**
-     * @return Collected IGFSs endpoints.
-     */
-    public List<VisorIgfsEndpoint> getIgfsEndpoints() {
-        return igfsEndpoints;
-    }
-
-    /**
-     * @return Exception caught during collecting IGFSs metrics.
-     */
-    public VisorExceptionWrapper getIgfssEx() {
-        return igfssEx;
-    }
-
-    /**
-     * @param igfssEx Exception caught during collecting IGFSs metrics.
-     */
-    public void setIgfssEx(VisorExceptionWrapper igfssEx) {
-        this.igfssEx = igfssEx;
-    }
-
-    /**
      * @return Errors count.
      */
     public long getErrorCount() {
@@ -334,9 +295,9 @@ public class VisorNodeDataCollectorJobResult extends VisorDataTransferObject {
         out.writeObject(memoryMetricsEx);
         U.writeCollection(out, caches);
         out.writeObject(cachesEx);
-        U.writeCollection(out, igfss);
-        U.writeCollection(out, igfsEndpoints);
-        out.writeObject(igfssEx);
+        U.writeCollection(out, null);
+        U.writeCollection(out, null);
+        out.writeObject(null);
         out.writeLong(errCnt);
         out.writeObject(readyTopVer);
         out.writeBoolean(hasPendingExchange);
@@ -356,9 +317,9 @@ public class VisorNodeDataCollectorJobResult extends VisorDataTransferObject {
         memoryMetricsEx = (VisorExceptionWrapper)in.readObject();
         caches = U.readList(in);
         cachesEx = (VisorExceptionWrapper)in.readObject();
-        igfss = U.readList(in);
-        igfsEndpoints = U.readList(in);
-        igfssEx = (VisorExceptionWrapper)in.readObject();
+        U.readList(in);
+        U.readList(in);
+        in.readObject();
         errCnt = in.readLong();
         readyTopVer = (VisorAffinityTopologyVersion)in.readObject();
         hasPendingExchange = in.readBoolean();

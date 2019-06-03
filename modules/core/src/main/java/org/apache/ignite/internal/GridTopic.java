@@ -69,9 +69,6 @@ public enum GridTopic {
     TOPIC_REPLICATION,
 
     /** */
-    TOPIC_IGFS,
-
-    /** */
     TOPIC_DATASTREAM,
 
     /** */
@@ -90,9 +87,6 @@ public enum GridTopic {
     TOPIC_TIME_SYNC,
 
     /** */
-    TOPIC_HADOOP,
-
-    /** */
     TOPIC_QUERY,
 
     /** */
@@ -106,9 +100,6 @@ public enum GridTopic {
 
     /** */
     TOPIC_MAPPING_MARSH,
-
-    /** */
-    TOPIC_HADOOP_MSG,
 
     /** */
     TOPIC_METADATA_REQ,

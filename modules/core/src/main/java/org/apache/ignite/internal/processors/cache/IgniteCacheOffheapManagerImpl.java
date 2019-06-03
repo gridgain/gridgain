@@ -2523,8 +2523,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 if (newRow.link() != oldRow.link())
                     rowStore.removeRow(oldRow.link(), grp.statisticsHolderData());
             }
-
-            updateIgfsMetrics(cctx, key, (oldRow != null ? oldRow.value() : null), newRow.value());
         }
 
         /**
@@ -2594,8 +2592,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             if (oldRow != null)
                 rowStore.removeRow(oldRow.link(), grp.statisticsHolderData());
-
-            updateIgfsMetrics(cctx, key, (oldRow != null ? oldRow.value() : null), null);
         }
 
         /**
@@ -2910,57 +2906,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         /** {@inheritDoc} */
         @Override public void preload() throws IgniteCheckedException {
             // No-op.
-        }
-
-        /**
-         * @param cctx Cache context.
-         * @param key Key.
-         * @param oldVal Old value.
-         * @param newVal New value.
-         */
-        private void updateIgfsMetrics(
-            GridCacheContext cctx,
-            KeyCacheObject key,
-            CacheObject oldVal,
-            CacheObject newVal
-        ) {
-            GridCacheAdapter cache = cctx.cache();
-            if (cache == null)
-                return;
-
-            // In case we deal with IGFS cache, count updated data
-            if (cache.isIgfsDataCache() &&
-                !cctx.isNear() &&
-                ctx.kernalContext()
-                    .igfsHelper()
-                    .isIgfsBlockKey(key.value(cctx.cacheObjectContext(), false))) {
-                int oldSize = valueLength(cctx, oldVal);
-                int newSize = valueLength(cctx, newVal);
-
-                int delta = newSize - oldSize;
-
-                if (delta != 0)
-                    cache.onIgfsDataSizeChanged(delta);
-            }
-        }
-
-        /**
-         * Isolated method to get length of IGFS block.
-         *
-         * @param cctx Cache context.
-         * @param val Value.
-         * @return Length of value.
-         */
-        private int valueLength(GridCacheContext cctx, @Nullable CacheObject val) {
-            if (val == null)
-                return 0;
-
-            byte[] bytes = val.value(cctx.cacheObjectContext(), false);
-
-            if (bytes != null)
-                return bytes.length;
-            else
-                return 0;
         }
 
         /** */

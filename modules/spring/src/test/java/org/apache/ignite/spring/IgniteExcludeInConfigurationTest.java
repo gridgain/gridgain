@@ -53,8 +53,6 @@ public class IgniteExcludeInConfigurationTest extends GridCommonAbstractTest {
 
         assertTrue(F.isEmpty(cfg.getCacheConfiguration()[0].getQueryEntities()));
 
-        assertNull(cfg.getFileSystemConfiguration());
-
         cfgs = spring.loadConfigurations(cfgLocation, "keyType").get1();
 
         assertNotNull(cfgs);
