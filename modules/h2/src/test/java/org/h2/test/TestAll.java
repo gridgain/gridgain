@@ -885,7 +885,7 @@ kill -9 `jps -l | grep "org.h2.test." | cut -d " " -f 1`
 
         // unit
         addTest(new TestAnsCompression());
-        addTest(new TestAutoReconnect());
+//        addTest(new TestAutoReconnect());
         addTest(new TestBinaryArithmeticStream());
         addTest(new TestBitField());
         addTest(new TestBitStream());
@@ -945,11 +945,11 @@ kill -9 `jps -l | grep "org.h2.test." | cut -d " " -f 1`
         addTest(new TestCluster());
         addTest(new TestConcurrent());
         addTest(new TestFileLockSerialized());
-        addTest(new TestFileLockProcess());
+//        addTest(new TestFileLockProcess());
         addTest(new TestFileSystem());
         addTest(new TestNetUtils());
         addTest(new TestPattern());
-        addTest(new TestTools());
+//        addTest(new TestTools());
         addTest(new TestSampleApps());
         addTest(new TestStringCache());
         addTest(new TestValueMemory());
