@@ -23,6 +23,7 @@ import org.apache.ignite.ml.dataset.feature.extractor.impl.DoubleArrayVectorizer
 import org.apache.ignite.ml.nn.UpdatesStrategy;
 import org.apache.ignite.ml.optimization.updatecalculators.SimpleGDParameterUpdate;
 import org.apache.ignite.ml.optimization.updatecalculators.SimpleGDUpdateCalculator;
+import org.apache.ignite.ml.pipeline.Pipeline;
 import org.apache.ignite.ml.regressions.logistic.LogisticRegressionModel;
 import org.apache.ignite.ml.regressions.logistic.LogisticRegressionSGDTrainer;
 import org.apache.ignite.ml.selection.paramgrid.HyperParameterSearchingStrategy;
@@ -35,9 +36,7 @@ import org.apache.ignite.ml.tree.DecisionTreeNode;
 import org.junit.Test;
 
 import static org.apache.ignite.ml.common.TrainerTest.twoLinearlySeparableClasses;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 /**
  * Tests for {@link CrossValidation}.
@@ -60,24 +59,17 @@ public class CrossValidationTest {
 
         int folds = 4;
 
-        verifyScores(folds, scoreCalculator.score(
-            trainer,
-            new Accuracy<>(),
-            data,
-            1,
-            vectorizer,
-            folds
-        ));
+        scoreCalculator
+            .withTrainer(trainer)
+            .withMetric(new Accuracy<>())
+            .withUpstreamMap(data)
+            .withAmountOfParts(1)
+            .withPreprocessor(vectorizer)
+            .withAmountOfFolds(folds)
+            .isRunningOnPipeline(false)
+            .isRunningOnIgnite(false);
 
-        verifyScores(folds, scoreCalculator.score(
-            trainer,
-            new Accuracy<>(),
-            data,
-            (e1, e2) -> true,
-            1,
-            vectorizer,
-            folds
-        ));
+        verifyScores(folds, scoreCalculator.scoreByFolds());
     }
 
     /** */
@@ -100,24 +92,17 @@ public class CrossValidationTest {
         BinaryClassificationMetrics metrics = (BinaryClassificationMetrics) new BinaryClassificationMetrics()
             .withMetric(BinaryClassificationMetricValues::accuracy);
 
-        verifyScores(folds, scoreCalculator.score(
-            trainer,
-            metrics,
-            data,
-            1,
-            vectorizer,
-            folds
-        ));
+        scoreCalculator
+            .withTrainer(trainer)
+            .withMetric(metrics)
+            .withUpstreamMap(data)
+            .withAmountOfParts(1)
+            .withPreprocessor(vectorizer)
+            .withAmountOfFolds(folds)
+            .isRunningOnPipeline(false)
+            .isRunningOnIgnite(false);
 
-        verifyScores(folds, scoreCalculator.score(
-            trainer,
-            new Accuracy<>(),
-            data,
-            (e1, e2) -> true,
-            1,
-            vectorizer,
-            folds
-        ));
+        verifyScores(folds, scoreCalculator.scoreByFolds());
     }
 
     /** */
@@ -146,14 +131,17 @@ public class CrossValidationTest {
         BinaryClassificationMetrics metrics = (BinaryClassificationMetrics) new BinaryClassificationMetrics()
             .withMetric(BinaryClassificationMetricValues::accuracy);
 
-        double[] scores = scoreCalculator.score(
-            trainer,
-            metrics,
-            data,
-            1,
-            vectorizer,
-            folds
-        );
+        scoreCalculator
+            .withTrainer(trainer)
+            .withMetric(metrics)
+            .withUpstreamMap(data)
+            .withAmountOfParts(1)
+            .withPreprocessor(vectorizer)
+            .withAmountOfFolds(folds)
+            .isRunningOnPipeline(false)
+            .isRunningOnIgnite(false);
+
+        double[] scores = scoreCalculator.scoreByFolds();
 
         assertEquals(0.8389830508474576, scores[0], 1e-6);
         assertEquals(0.9402985074626866, scores[1], 1e-6);
@@ -199,7 +187,7 @@ public class CrossValidationTest {
                 .isRunningOnIgnite(false)
                 .withParamGrid(paramGrid);
 
-        CrossValidationResult crossValidationRes = scoreCalculator.score();
+        CrossValidationResult crossValidationRes = scoreCalculator.tuneHyperParamterers();
 
 
         assertArrayEquals(crossValidationRes.getBestScore(), new double[]{0.9745762711864406, 1.0, 0.8968253968253969, 0.8661417322834646}, 1e-6);
@@ -249,7 +237,63 @@ public class CrossValidationTest {
                 .isRunningOnIgnite(false)
                 .withParamGrid(paramGrid);
 
-        CrossValidationResult crossValidationRes = scoreCalculator.score();
+        CrossValidationResult crossValidationRes = scoreCalculator.tuneHyperParamterers();
+
+        assertArrayEquals(crossValidationRes.getBestScore(), new double[]{0.8389830508474576, 0.917910447761194, 0.7936507936507936, 0.889763779527559}, 1e-6);
+        assertEquals(crossValidationRes.getBestAvgScore(), 0.8600770179467511, 1e-6);
+        assertEquals(crossValidationRes.getScoringBoard().size(), 10);
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void testRandomSearchWithPipeline() {
+        Map<Integer, double[]> data = new HashMap<>();
+
+        for (int i = 0; i < twoLinearlySeparableClasses.length; i++)
+            data.put(i, twoLinearlySeparableClasses[i]);
+
+        LogisticRegressionSGDTrainer trainer = new LogisticRegressionSGDTrainer()
+            .withUpdatesStgy(new UpdatesStrategy<>(new SimpleGDUpdateCalculator(0.2),
+                SimpleGDParameterUpdate.SUM_LOCAL, SimpleGDParameterUpdate.AVG))
+            .withMaxIterations(100000)
+            .withLocIterations(100)
+            .withBatchSize(14)
+            .withSeed(123L);
+
+        Vectorizer<Integer, double[], Integer, Double> vectorizer = new DoubleArrayVectorizer<Integer>().labeled(Vectorizer.LabelCoordinate.FIRST);
+
+        BinaryClassificationMetrics metrics = (BinaryClassificationMetrics) new BinaryClassificationMetrics()
+            .withMetric(BinaryClassificationMetricValues::accuracy);
+
+        ParamGrid paramGrid = new ParamGrid()
+            .withParameterSearchStrategy(HyperParameterSearchingStrategy.RANDOM_SEARCH)
+            .withSeed(1234L)
+            .withSatisfactoryFitness(0.9)
+            .withMaxTries(10)
+            .addHyperParam("maxIterations", trainer::withMaxIterations, new Double[]{10.0, 100.0, 1000.0, 10000.0})
+            .addHyperParam("locIterations", trainer::withLocIterations, new Double[]{10.0, 100.0, 1000.0, 10000.0})
+            .addHyperParam("batchSize", trainer::withBatchSize, new Double[]{1.0, 2.0, 4.0, 8.0, 16.0});
+
+
+        Pipeline<Integer, double[], Integer, Double> pipeline = new Pipeline<Integer, double[], Integer, Double>()
+            .addVectorizer(vectorizer)
+            .addTrainer(trainer);
+
+        CrossValidation<LogisticRegressionModel, Double, Integer, double[]> scoreCalculator =
+            new CrossValidation<LogisticRegressionModel, Double, Integer, double[]>()
+                .withPipeline(pipeline)
+                .withMetric(metrics)
+                .withUpstreamMap(data)
+                .withAmountOfParts(1)
+                .withPreprocessor(vectorizer)
+                .withAmountOfFolds(4)
+                .isRunningOnPipeline(true)
+                .isRunningOnIgnite(false)
+                .withParamGrid(paramGrid);
+
+        CrossValidationResult crossValidationRes = scoreCalculator.tuneHyperParamterers();
 
         assertArrayEquals(crossValidationRes.getBestScore(), new double[]{0.8389830508474576, 0.917910447761194, 0.7936507936507936, 0.889763779527559}, 1e-6);
         assertEquals(crossValidationRes.getBestAvgScore(), 0.8600770179467511, 1e-6);
@@ -273,14 +317,18 @@ public class CrossValidationTest {
 
         int folds = 4;
 
-        double[] scores = scoreCalculator.score(
-            trainer,
-            new Accuracy<>(),
-            data,
-            1,
-            vectorizer,
-            folds
-        );
+        scoreCalculator
+            .withTrainer(trainer)
+            .withMetric(new Accuracy<>())
+            .withUpstreamMap(data)
+            .withAmountOfParts(1)
+            .withPreprocessor(vectorizer)
+            .withAmountOfFolds(folds)
+            .isRunningOnPipeline(false)
+            .isRunningOnIgnite(false);
+
+
+        double[] scores = scoreCalculator.scoreByFolds();
 
         assertEquals(folds, scores.length);
 

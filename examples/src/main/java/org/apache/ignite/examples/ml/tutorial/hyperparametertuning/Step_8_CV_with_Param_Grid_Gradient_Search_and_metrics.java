@@ -150,7 +150,7 @@ public class Step_8_CV_with_Param_Grid_Gradient_Search_and_metrics {
                     .withAmountOfFolds(3)
                     .withParamGrid(paramGrid);
 
-                CrossValidationResult crossValidationRes = scoreCalculator.score();
+                CrossValidationResult crossValidationRes = scoreCalculator.tuneHyperParamterers();
 
                 System.out.println("Train with maxDeep: " + crossValidationRes.getBest("maxDeep")
                     + " and minImpurityDecrease: " + crossValidationRes.getBest("minImpurityDecrease"));

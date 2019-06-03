@@ -92,14 +92,15 @@ public class BaggedLogisticRegressionSGDTrainerExample {
                 Vectorizer<Integer, Vector, Integer, Double> vectorizer = new DummyVectorizer<Integer>()
                     .labeled(Vectorizer.LabelCoordinate.FIRST);
 
-                double[] score = new CrossValidation<BaggedModel, Double, Integer, Vector>().score(
-                    baggedTrainer,
-                    new Accuracy<>(),
-                    ignite,
-                    dataCache,
-                    vectorizer,
-                    3
-                );
+                double[] score = new CrossValidation<BaggedModel, Double, Integer, Vector>()
+                    .withTrainer(baggedTrainer)
+                    .withMetric(new Accuracy<>())
+                    .withIgnite(ignite)
+                    .withUpstreamCache(dataCache)
+                    .withPreprocessor(vectorizer)
+                    .withAmountOfFolds(3)
+                    .isRunningOnPipeline(false)
+                    .scoreByFolds();
 
                 System.out.println(">>> ---------------------------------");
 

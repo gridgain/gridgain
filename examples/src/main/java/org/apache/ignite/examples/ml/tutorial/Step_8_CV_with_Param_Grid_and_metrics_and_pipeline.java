@@ -101,15 +101,18 @@ public class Step_8_CV_with_Param_Grid_and_metrics_and_pipeline {
                     .withPositiveClsLb(1.0)
                     .withMetric(BinaryClassificationMetricValues::accuracy);
 
-                CrossValidationResult crossValidationRes = scoreCalculator.score(
-                    pipeline,
-                    metrics,
-                    ignite,
-                    dataCache,
-                    split.getTrainFilter(),
-                    3,
-                    paramGrid
-                );
+                scoreCalculator
+                    .withPipeline(pipeline)
+                    .withMetric(metrics)
+                    .withFilter(split.getTrainFilter())
+                    .withIgnite(ignite)
+                    .withUpstreamCache(dataCache)
+                    .withAmountOfParts(1)
+                    .withPreprocessor(vectorizer)
+                    .withAmountOfFolds(3)
+                    .withParamGrid(paramGrid);
+
+                CrossValidationResult crossValidationRes = scoreCalculator.tuneHyperParamterers();
 
                 System.out.println("Train with maxDeep: " + crossValidationRes.getBest("maxDeep")
                     + " and minImpurityDecrease: " + crossValidationRes.getBest("minImpurityDecrease"));

@@ -78,14 +78,15 @@ public class CrossValidationExample {
                 CrossValidation<DecisionTreeNode, Double, Integer, LabeledVector<Double>> scoreCalculator
                     = new CrossValidation<>();
 
-                double[] accuracyScores = scoreCalculator.score(
-                    trainer,
-                    new Accuracy<>(),
-                    ignite,
-                    trainingSet,
-                    vectorizer,
-                    4
-                );
+                double[] accuracyScores = scoreCalculator
+                    .withTrainer(trainer)
+                    .withMetric(new Accuracy<>())
+                    .withIgnite(ignite)
+                    .withUpstreamCache(trainingSet)
+                    .withPreprocessor(vectorizer)
+                    .withAmountOfFolds(4)
+                    .isRunningOnPipeline(false)
+                    .scoreByFolds();
 
                 System.out.println(">>> Accuracy: " + Arrays.toString(accuracyScores));
 
@@ -94,14 +95,9 @@ public class CrossValidationExample {
                     .withPositiveClsLb(1.0)
                     .withMetric(BinaryClassificationMetricValues::balancedAccuracy);
 
-                double[] balancedAccuracyScores = scoreCalculator.score(
-                    trainer,
-                    metrics,
-                    ignite,
-                    trainingSet,
-                    vectorizer,
-                    4
-                );
+                double[] balancedAccuracyScores = scoreCalculator
+                    .withMetric(metrics)
+                    .scoreByFolds();
 
                 System.out.println(">>> Balanced Accuracy: " + Arrays.toString(balancedAccuracyScores));
 
