@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -71,7 +71,7 @@ import org.apache.ignite.internal.processors.continuous.GridMessageListenSelfTes
 import org.apache.ignite.internal.processors.database.BPlusTreeFakeReuseSelfTest;
 import org.apache.ignite.internal.processors.database.BPlusTreeReuseSelfTest;
 import org.apache.ignite.internal.processors.database.BPlusTreeSelfTest;
-import org.apache.ignite.internal.processors.database.CacheFreeListImplSelfTest;
+import org.apache.ignite.internal.processors.database.CacheFreeListSelfTest;
 import org.apache.ignite.internal.processors.database.DataRegionMetricsSelfTest;
 import org.apache.ignite.internal.processors.database.IndexStorageSelfTest;
 import org.apache.ignite.internal.processors.database.SwapPathConstructionSelfTest;
@@ -201,7 +201,7 @@ public class IgniteBasicTestSuite {
         suite.addTest(new JUnit4TestAdapter(BPlusTreeFakeReuseSelfTest.class));
         suite.addTest(new JUnit4TestAdapter(BPlusTreeReuseSelfTest.class));
         suite.addTest(new JUnit4TestAdapter(IndexStorageSelfTest.class));
-        suite.addTest(new JUnit4TestAdapter(CacheFreeListImplSelfTest.class));
+        suite.addTest(new JUnit4TestAdapter(CacheFreeListSelfTest.class));
         suite.addTest(new JUnit4TestAdapter(DataRegionMetricsSelfTest.class));
         suite.addTest(new JUnit4TestAdapter(SwapPathConstructionSelfTest.class));
         suite.addTest(new JUnit4TestAdapter(BitSetIntSetTest.class));
