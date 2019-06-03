@@ -68,6 +68,8 @@ public class H2FieldsIterator extends H2ResultSetIterator<List<?>> {
             super.onClose();
         }
         finally {
+            H2Utils.resetSession(detachedConn.object().connection());
+
             detachedConn.recycle();
 
             if (mvccTracker != null)

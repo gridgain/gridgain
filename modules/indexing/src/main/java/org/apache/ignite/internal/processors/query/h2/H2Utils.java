@@ -431,7 +431,7 @@ public class H2Utils {
      */
     public static void setupConnection(
         Connection conn,
-        QueryContext qctx,
+        H2QueryContext qctx,
         boolean distributedJoins,
         boolean enforceJoinOrder,
         boolean lazy
@@ -441,7 +441,24 @@ public class H2Utils {
         s.setForceJoinOrder(enforceJoinOrder);
         s.setJoinBatchEnabled(distributedJoins);
         s.setLazyQueryExecution(lazy);
+
+        H2QueryContext oldCtx = s.getQueryContext();
+
+        assert oldCtx == null || oldCtx == qctx || oldCtx.queryMemoryTracker() == null : oldCtx;
+
         s.setQueryContext(qctx);
+    }
+
+    /**
+     * Clean up session for further reuse.
+     *
+     * @param conn Connection to use.
+     */
+    public static void resetSession(Connection conn) {
+        Session s = session(conn);
+
+        U.closeQuiet(s.queryMemoryTracker());
+        s.setQueryContext(null);
     }
 
     /**
