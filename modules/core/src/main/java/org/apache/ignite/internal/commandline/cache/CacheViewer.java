@@ -27,7 +27,6 @@ import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.client.GridClientException;
 import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
-import org.apache.ignite.internal.commandline.CommandLogger;
 import org.apache.ignite.internal.commandline.OutputFormat;
 import org.apache.ignite.internal.commandline.TaskExecutor;
 import org.apache.ignite.internal.commandline.argument.CommandArgUtils;
