@@ -33,12 +33,12 @@ import org.jetbrains.annotations.Nullable;
  * See documentation of {@link org.apache.ignite.IgniteJdbcDriver} for details.
  */
 @Deprecated
-public class JdbcConnectionValidationTask extends ComputeTaskSplitAdapter<Void, Boolean> {
+public class JdbcConnectionValidationTask extends ComputeTaskSplitAdapter<Object, Boolean> {
     /** */
     private static final long serialVersionUID = 0L;
 
     /** {@inheritDoc} */
-    @Override protected Collection<? extends ComputeJob> split(int gridSize, Void arg) throws IgniteException {
+    @Override protected Collection<? extends ComputeJob> split(int gridSize, Object arg) throws IgniteException {
         return Collections.singletonList(new ComputeJobAdapter() {
             @Override public Object execute() throws IgniteException {
                 return true;
