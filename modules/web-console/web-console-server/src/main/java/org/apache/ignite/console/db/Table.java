@@ -141,25 +141,25 @@ public class Table<T extends AbstractDto> extends CacheHolder<UUID, T> {
     }
 
     /**
-     * @param val Value.
-     */
-    private void putToUniqueIndexes(T val) {
-        for (UniqueIndex<T> idx : uniqueIndexes) {
-            UUID prevId = indexCache().getAndPutIfAbsent(idx.key(val), val.getId());
-
-            if (prevId != null && !val.getId().equals(prevId))
-                throw new IgniteException(idx.message(val));
-        }
-    }
-
-    /**
      * @param val DTO.
      * @return Saved DTO.
      */
     public T save(T val) throws IgniteException {
-        putToUniqueIndexes(val);
+        UUID id = val.getId();
 
-        cache.put(val.getId(), val);
+        T oldVal = cache.getAndPut(id, val);
+
+        for (UniqueIndex<T> idx : uniqueIndexes) {
+            Object newIdxKey = idx.key(val);
+
+            UUID oldId = indexCache().getAndPutIfAbsent(newIdxKey, id);
+
+            if (oldId != null && !id.equals(oldId))
+                throw new IgniteException(idx.message(val));
+
+            if (oldVal != null && !idx.key(oldVal).equals(newIdxKey))
+                indexCache().remove(idx.key(oldVal));
+        }
 
         return val;
     }
@@ -168,12 +168,14 @@ public class Table<T extends AbstractDto> extends CacheHolder<UUID, T> {
      * @param map Map of DTOs.
      */
     public void saveAll(Map<UUID, T> map) throws IgniteException {
-        if (!F.isEmpty(uniqueIndexes)) {
-            for (T item : map.values())
-                putToUniqueIndexes(item);
+        if (F.isEmpty(uniqueIndexes)) {
+            cache.putAll(map);
+            
+            return;
         }
 
-        cache.putAll(map);
+        for (T item : map.values())
+            save(item);
     }
 
     /**
