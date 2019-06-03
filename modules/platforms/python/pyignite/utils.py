@@ -14,11 +14,16 @@
 # limitations under the License.
 #
 import ctypes
+import decimal
 from functools import wraps
 from typing import Any, Callable, Type, Tuple, Union
 
 from pyignite.datatypes.base import IgniteDataType
 from .constants import *
+
+
+LONG_MASK = 0xffffffff
+DIGITS_PER_INT = 9
 
 
 def is_pow2(value: int) -> bool:
@@ -161,6 +166,46 @@ def schema_id(schema: Union[int, dict]) -> int:
     return s_id
 
 
+def decimal_hashcode(value: decimal.Decimal) -> int:
+    """
+    This is a translation of `java.math.BigDecimal` class `hashCode()` method
+    to Python.
+
+    :param value: pythonic decimal value,
+    :return: hashcode.
+    """
+    sign, digits, scale = value.normalize().as_tuple()
+    sign = -1 if sign else 1
+    value = int(''.join([str(d) for d in digits]))
+
+    if value < MAX_LONG:
+        # this is the case when Java BigDecimal digits are stored
+        # compactly, in the internal 64-bit integer field
+        int_hash = (
+            (unsigned(value, ctypes.c_ulonglong) >> 32) * 31
+            + (value & LONG_MASK)
+        ) & LONG_MASK
+    else:
+        # digits are not fit in the 64-bit long, so they get split internally
+        # to an array of values within 32-bit integer range each (it is really
+        # a part of `java.math.BigInteger` class internals)
+        magnitude = []
+        order = 0
+        while True:
+            elem = value >> order
+            if elem > 1:
+                magnitude.insert(0, ctypes.c_int(elem).value)
+                order += 32
+            else:
+                break
+
+        int_hash = 0
+        for v in magnitude:
+            int_hash = (31 * int_hash + (v & LONG_MASK)) & LONG_MASK
+
+    return ctypes.c_int(31 * int_hash * sign - scale).value
+
+
 def status_to_exception(exc: Type[Exception]):
     """
     Converts erroneous status code with error message to an exception
@@ -220,4 +265,5 @@ def get_field_by_id(
 
 
 def unsigned(value: int, c_type: ctypes._SimpleCData = ctypes.c_uint) -> int:
+    """ Convert signed integer value to unsigned. """
     return c_type(value).value

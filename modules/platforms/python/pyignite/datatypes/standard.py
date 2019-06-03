@@ -20,6 +20,7 @@ from math import ceil
 import uuid
 
 from pyignite.constants import *
+from pyignite.utils import decimal_hashcode, hashcode
 from .base import IgniteDataType
 from .type_codes import *
 from .type_ids import *
@@ -72,6 +73,10 @@ class String(IgniteDataType):
     _type_id = TYPE_STRING
     type_code = TC_STRING
     pythonic = str
+
+    @staticmethod
+    def hashcode(value: str) -> int:
+        return hashcode(value)
 
     @classmethod
     def build_c_type(cls, length: int):
@@ -138,6 +143,10 @@ class DecimalObject(IgniteDataType):
     type_code = TC_DECIMAL
     pythonic = decimal.Decimal
     default = decimal.Decimal('0.00')
+
+    @staticmethod
+    def hashcode(value: decimal.Decimal) -> int:
+        return decimal_hashcode(value)
 
     @classmethod
     def build_c_header(cls):
@@ -267,6 +276,13 @@ class UUIDObject(StandardObject):
     UUID_BYTE_ORDER = (7, 6, 5, 4, 3, 2, 1, 0, 15, 14, 13, 12, 11, 10, 9, 8)
 
     UUID_BYTE_ORDER = (7, 6, 5, 4, 3, 2, 1, 0, 15, 14, 13, 12, 11, 10, 9, 8)
+
+    @staticmethod
+    def hashcode(value: 'UUID') -> int:
+        msb = value.int >> 64
+        lsb = value.int & 0xffffffffffffffff
+        hilo = msb ^ lsb
+        return (hilo >> 32) ^ (hilo & 0xffffffff)
 
     @classmethod
     def build_c_type(cls):

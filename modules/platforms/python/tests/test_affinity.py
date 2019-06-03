@@ -13,11 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import decimal
 import time
+from uuid import UUID, uuid4
+
+import pytest
 
 from pyignite.api import *
+from pyignite.constants import *
 from pyignite.datatypes import *
-from pyignite.datatypes.key_value import PeekModes
 from pyignite.datatypes.cache_config import CacheMode
 from pyignite.datatypes.prop_codes import *
 
@@ -40,7 +44,7 @@ def test_get_node_partitions(client):
     cache_4 = client.get_or_create_cache('test_cache_4')
     cache_5 = client.get_or_create_cache('test_cache_5')
 
-    time.sleep(1)
+    time.sleep(0.1)
 
     result = cache_get_node_partitions(
         conn,
@@ -49,21 +53,88 @@ def test_get_node_partitions(client):
     assert result.status == 0, result.message
 
 
-def test_affinity(client):
+@pytest.mark.parametrize(
+    'key, key_hint', [
+        # integers
+        (42, None),
+        (43, ByteObject),
+        (-44, ByteObject),
+        (45, IntObject),
+        (-46, IntObject),
+        (47, ShortObject),
+        (-48, ShortObject),
+        (49, LongObject),
+        (MAX_INT-50, LongObject),
+        (MAX_INT+51, LongObject),
 
-    cache_1 = client.get_or_create_cache('test_cache_1')
-    k = '1234'
-    v = 2
+        # floating point
+        (5.2, None),
+        (5.354, FloatObject),
+        (-5.556, FloatObject),
+        (-57.58, DoubleObject),
 
-    cache_1.put(k, v)
+        # boolean
+        (True, None),
+        (True, BoolObject),
+        (False, BoolObject),
 
-    best_node = cache_1.get_best_node(k)
+        # char
+        ('A', CharObject),
+        ('Z', CharObject),
+        ('⅓', CharObject),
+        ('á', CharObject),
+        ('ы', CharObject),
+        ('カ', CharObject),
+        ('Ø', CharObject),
+        ('ß', CharObject),
+
+        # string
+        ('This is a test string', None),
+        ('Кириллица', None),
+        ('Little Mary had a lamb', String),
+
+        # UUID
+        (UUID('12345678123456789876543298765432'), None),
+        (UUID('74274274274274274274274274274274'), UUIDObject),
+        (uuid4(), None),
+
+        # decimal (long internal representation in Java)
+        (decimal.Decimal('-234.567'), None),
+        (decimal.Decimal('200.0'), None),
+        (decimal.Decimal('123.456'), DecimalObject),
+        (decimal.Decimal('1.0'), None),
+        (decimal.Decimal('0.02'), None),
+
+        # decimal (BigInteger internal representation in Java)
+        (decimal.Decimal('12345671234567123.45671234567'), None),
+        (decimal.Decimal('-845678456.7845678456784567845'), None),
+
+    ],
+)
+def test_affinity(client, key, key_hint):
+
+    time.sleep(0.1)
+
+    cache_1 = client.create_cache({
+        PROP_NAME: 'test_cache_1',
+        PROP_CACHE_MODE: CacheMode.PARTITIONED,
+    })
+    value = 42
+    cache_1.put(key, value, key_hint=key_hint)
+
+    best_node = cache_1.get_best_node(key, key_hint=key_hint)
 
     for node in client._nodes.values():
         result = cache_local_peek(
-            node, cache_1.cache_id, k,
+            node, cache_1.cache_id, key, key_hint=key_hint,
         )
         if node is best_node:
-            assert result.value == v
+            assert result.value == value, (
+                'Affinity calculation error for {}'.format(key)
+            )
         else:
-            assert result.value is None
+            assert result.value is None, (
+                'Affinity calculation error for {}'.format(key)
+            )
+
+    cache_1.destroy()

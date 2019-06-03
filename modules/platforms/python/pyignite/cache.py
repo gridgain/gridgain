@@ -24,7 +24,7 @@ from .exceptions import (
     CacheCreationError, CacheError, ParameterError, SQLError,
 )
 from .utils import (
-    cache_id, get_field_by_id, hashcode, is_wrapped, select_version,
+    cache_id, get_field_by_id, is_wrapped, select_version,
     status_to_exception, unsigned, unwrap_binary,
 )
 from .api.cache_config import (
@@ -274,7 +274,7 @@ class Cache:
 
             # calculate partition for key or affinity key
             # (algorithm is taken from `RendezvousAffinityFunction.java`)
-            base_value = hashcode(key_hint.from_python(key))
+            base_value = key_hint.hashcode(key)
             mask = parts - 1
 
             if parts & mask == 0:

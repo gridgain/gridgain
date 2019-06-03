@@ -16,6 +16,7 @@
 import ctypes
 
 from pyignite.constants import *
+from pyignite.utils import unsigned
 from .base import IgniteDataType
 from .type_codes import *
 from .type_ids import *
@@ -87,6 +88,10 @@ class ByteObject(DataObject):
     pythonic = int
     default = 0
 
+    @staticmethod
+    def hashcode(value: int) -> int:
+        return value
+
 
 class ShortObject(DataObject):
     _type_name = NAME_SHORT
@@ -95,6 +100,10 @@ class ShortObject(DataObject):
     type_code = TC_SHORT
     pythonic = int
     default = 0
+
+    @staticmethod
+    def hashcode(value: int) -> int:
+        return value
 
 
 class IntObject(DataObject):
@@ -105,6 +114,10 @@ class IntObject(DataObject):
     pythonic = int
     default = 0
 
+    @staticmethod
+    def hashcode(value: int) -> int:
+        return value
+
 
 class LongObject(DataObject):
     _type_name = NAME_LONG
@@ -113,6 +126,10 @@ class LongObject(DataObject):
     type_code = TC_LONG
     pythonic = int
     default = 0
+
+    @staticmethod
+    def hashcode(value: int) -> int:
+        return value ^ (unsigned(value, ctypes.c_ulonglong) >> 32)
 
 
 class FloatObject(DataObject):
@@ -123,6 +140,13 @@ class FloatObject(DataObject):
     pythonic = float
     default = 0.0
 
+    @staticmethod
+    def hashcode(value: float) -> int:
+        return ctypes.cast(
+            ctypes.pointer(ctypes.c_float(value)),
+            ctypes.POINTER(ctypes.c_int)
+        ).contents.value
+
 
 class DoubleObject(DataObject):
     _type_name = NAME_DOUBLE
@@ -131,6 +155,14 @@ class DoubleObject(DataObject):
     type_code = TC_DOUBLE
     pythonic = float
     default = 0.0
+
+    @staticmethod
+    def hashcode(value: float) -> int:
+        bits = ctypes.cast(
+            ctypes.pointer(ctypes.c_double(value)),
+            ctypes.POINTER(ctypes.c_longlong)
+        ).contents.value
+        return (bits & 0xffffffff) ^ (unsigned(bits, ctypes.c_longlong) >> 32)
 
 
 class CharObject(DataObject):
@@ -146,6 +178,10 @@ class CharObject(DataObject):
     type_code = TC_CHAR
     pythonic = str
     default = ' '
+
+    @staticmethod
+    def hashcode(value: str) -> int:
+        return ord(value)
 
     @classmethod
     def to_python(cls, ctype_object, *args, **kwargs):
@@ -175,3 +211,7 @@ class BoolObject(DataObject):
     type_code = TC_BOOL
     pythonic = bool
     default = False
+
+    @staticmethod
+    def hashcode(value: bool) -> int:
+        return 1231 if value else 1237
