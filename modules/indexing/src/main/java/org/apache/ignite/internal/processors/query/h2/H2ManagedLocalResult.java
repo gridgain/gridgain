@@ -79,7 +79,7 @@ public class H2ManagedLocalResult extends H2BaseLocalResult {
             mem.allocate(memory);
     }
 
-    /** {@inheritDoc} */
+    /** */
     public long memoryAllocated() {
         return allocMem;
     }

@@ -48,6 +48,9 @@ public class QueryContext implements H2QueryContext {
     /** */
     private QueryMemoryTracker memTracker;
 
+    /** {@code True} for local queries, {@code false} for distributed ones. */
+    private final boolean loc;
+
     /**
      * Constructor.
      * @param segment Index segment ID.
@@ -55,6 +58,7 @@ public class QueryContext implements H2QueryContext {
      * @param distributedJoinCtx Distributed join context.
      * @param mvccSnapshot MVCC snapshot.
      * @param memTracker Query memory tracker.
+     * @param loc {@code True} for local queries, {@code false} for distributed ones.
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
     public QueryContext(
@@ -63,13 +67,16 @@ public class QueryContext implements H2QueryContext {
         @Nullable DistributedJoinContext distributedJoinCtx,
         @Nullable MvccSnapshot mvccSnapshot,
         @Nullable PartitionReservation reservations,
-        @Nullable QueryMemoryTracker memTracker) {
+        @Nullable QueryMemoryTracker memTracker,
+        boolean loc
+    ) {
         this.segment = segment;
         this.filter = filter;
         this.distributedJoinCtx = distributedJoinCtx;
         this.mvccSnapshot = mvccSnapshot;
         this.reservations = reservations;
         this.memTracker = memTracker;
+        this.loc = loc;
     }
 
     /**
@@ -117,6 +124,13 @@ public class QueryContext implements H2QueryContext {
      */
     @Override public @Nullable H2MemoryTracker queryMemoryTracker() {
         return memTracker;
+    }
+
+    /**
+     * @return {@code True} for local queries, {@code false} for distributed ones.
+     */
+    public boolean local() {
+        return loc;
     }
 
     /** {@inheritDoc} */
