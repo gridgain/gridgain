@@ -1,5 +1,6 @@
 package org.apache.ignite.internal.processors.tracing;
 
+import io.opencensus.exporter.trace.zipkin.ZipkinExporterConfiguration;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
@@ -24,7 +25,12 @@ public class TracingProcessor extends GridProcessorAdapter implements Tracing {
 
         spi = new OpenCensusTracingSpi();
 
-        reporter = new OpenCensusZipkinReporter("http://localhost:9411/api/v2/spans", "ignite");
+        reporter = new OpenCensusZipkinReporter(
+            ZipkinExporterConfiguration.builder()
+                .setV2Url("http://localhost:9411/api/v2/spans")
+                .setServiceName("ignite")
+                .build()
+        );
 
         msgProc = new TracingMessagesProcessor(ctx, spi);
     }

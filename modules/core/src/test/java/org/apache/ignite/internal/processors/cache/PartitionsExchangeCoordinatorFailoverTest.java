@@ -468,7 +468,7 @@ public class PartitionsExchangeCoordinatorFailoverTest extends GridCommonAbstrac
     public void testSimple() throws Exception {
         newCaches = false;
 
-        startGrid(0);
+        IgniteEx ignite = startGrid(0);
 
         startGrid(1);
 
