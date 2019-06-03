@@ -41,6 +41,12 @@ public class VisorIdleVerifyTaskArg extends VisorDataTransferObject {
     /** Check CRC */
     private boolean checkCrc;
 
+    /** */
+    private boolean skipZeros;
+
+    /** Cache kind. */
+    private CacheFilterEnum cacheFilterEnum;
+
     /**
      * Default constructor.
      */
@@ -51,11 +57,21 @@ public class VisorIdleVerifyTaskArg extends VisorDataTransferObject {
     /**
      * @param caches Caches.
      * @param excludeCaches Exclude caches or group.
+     * @param skipZeros Skip zeros partitions.
+     * @param cacheFilterEnum Cache kind.
      * @param checkCrc Check CRC sum on stored pages on disk.
      */
-    public VisorIdleVerifyTaskArg(Set<String> caches, Set<String> excludeCaches, boolean checkCrc) {
+    public VisorIdleVerifyTaskArg(
+        Set<String> caches,
+        Set<String> excludeCaches,
+        boolean skipZeros,
+        CacheFilterEnum cacheFilterEnum,
+        boolean checkCrc
+    ) {
         this.caches = caches;
         this.excludeCaches = excludeCaches;
+        this.skipZeros = skipZeros;
+        this.cacheFilterEnum = cacheFilterEnum;
         this.checkCrc = checkCrc;
     }
 
@@ -96,7 +112,7 @@ public class VisorIdleVerifyTaskArg extends VisorDataTransferObject {
 
     /** {@inheritDoc} */
     @Override public byte getProtocolVersion() {
-        return V3;
+        return V4;
     }
 
     /** {@inheritDoc} */
@@ -113,6 +129,18 @@ public class VisorIdleVerifyTaskArg extends VisorDataTransferObject {
             U.writeCollection(out, excludeCaches);
 
             out.writeBoolean(checkCrc);
+
+            /**
+             * Since protocol version 2 we must save class instance new fields to end of output object. It's needs for
+             * support backward compatibility in extended (child) classes.
+             *
+             * TODO: https://issues.apache.org/jira/browse/IGNITE-10932 Will remove in 3.0
+             */
+            if (instanceOfCurrentClass()) {
+                out.writeBoolean(skipZeros);
+
+                U.writeEnum(out, cacheFilterEnum);
+            }
         }
     }
 
@@ -135,6 +163,12 @@ public class VisorIdleVerifyTaskArg extends VisorDataTransferObject {
 
             if (protoVer >= V3)
                 checkCrc = in.readBoolean();
+
+            if (protoVer >= V4) {
+                skipZeros = in.readBoolean();
+
+                cacheFilterEnum = CacheFilterEnum.fromOrdinal(in.readByte());
+            }
         }
     }
 
@@ -146,6 +180,30 @@ public class VisorIdleVerifyTaskArg extends VisorDataTransferObject {
     /** */
     protected void checkCrc(boolean checkCrc) {
         this.checkCrc = checkCrc;
+    }
+
+    /**
+     * @return Skip zeros partitions.
+     */
+    public boolean isSkipZeros() {
+        return skipZeros;
+    }
+
+    /** */
+    protected void setSkipZeros(boolean skipZeros) {
+        this.skipZeros = skipZeros;
+    }
+
+    /** */
+    protected void setCacheFilterEnum(CacheFilterEnum cacheFilterEnum) {
+        this.cacheFilterEnum = cacheFilterEnum;
+    }
+
+    /**
+     * @return Kind fo cache.
+     */
+    public CacheFilterEnum getCacheFilterEnum() {
+        return cacheFilterEnum;
     }
 
     /** {@inheritDoc} */

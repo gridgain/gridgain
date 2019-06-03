@@ -61,7 +61,6 @@ import org.apache.ignite.internal.util.lang.GridIterator;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.internal.visor.verify.VisorIdleVerifyDumpTaskArg;
 import org.apache.ignite.internal.visor.verify.VisorIdleVerifyTaskArg;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgniteProductVersion;
@@ -499,38 +498,32 @@ public class VerifyBackupPartitionsTaskV2 extends ComputeTaskAdapter<VisorIdleVe
          * @param desc Cache descriptor.
          */
         private boolean isCacheMatchFilter(DynamicCacheDescriptor desc) {
-            if (arg instanceof VisorIdleVerifyDumpTaskArg) {
-                DataStorageConfiguration dsCfg = ignite.context().config().getDataStorageConfiguration();
+            DataStorageConfiguration dsCfg = ignite.context().config().getDataStorageConfiguration();
 
-                CacheConfiguration cc = desc.cacheConfiguration();
+            CacheConfiguration cc = desc.cacheConfiguration();
 
-                VisorIdleVerifyDumpTaskArg vdta = (VisorIdleVerifyDumpTaskArg)arg;
+            switch (arg.getCacheFilterEnum()) {
+                case DEFAULT:
+                    return desc.cacheType().userCache() || !F.isEmpty(arg.getCaches());
 
-                switch (vdta.getCacheFilterEnum()) {
-                    case DEFAULT:
-                        return desc.cacheType().userCache() || !F.isEmpty(arg.getCaches());
+                case USER:
+                    return desc.cacheType().userCache();
 
-                    case USER:
-                        return desc.cacheType().userCache();
+                case SYSTEM:
+                    return !desc.cacheType().userCache();
 
-                    case SYSTEM:
-                        return !desc.cacheType().userCache();
+                case NOT_PERSISTENT:
+                    return desc.cacheType().userCache() && !GridCacheUtils.isPersistentCache(cc, dsCfg);
 
-                    case NOT_PERSISTENT:
-                        return desc.cacheType().userCache() && !GridCacheUtils.isPersistentCache(cc, dsCfg);
+                case PERSISTENT:
+                    return desc.cacheType().userCache() && GridCacheUtils.isPersistentCache(cc, dsCfg);
 
-                    case PERSISTENT:
-                        return desc.cacheType().userCache() && GridCacheUtils.isPersistentCache(cc, dsCfg);
+                case ALL:
+                    return true;
 
-                    case ALL:
-                        return true;
-
-                    default:
-                        assert false : "Illegal cache filter: " + vdta.getCacheFilterEnum();
-                }
+                default:
+                    throw new IgniteException("Illegal cache filter: " + arg.getCacheFilterEnum());
             }
-
-            return desc.cacheType().userCache() || !F.isEmpty(arg.getCaches());
         }
 
         /**

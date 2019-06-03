@@ -1507,6 +1507,12 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
             null,
             "--cache", "idle_verify", "--dump", "--cache-filter", "PERSISTENT"
         );
+        testCacheIdleVerifyMultipleCacheFilterOptionsCommon(
+            true,
+            "There are no caches matching given filter options.",
+            null,
+            "--cache", "idle_verify", "--cache-filter", "NOT_PERSISTENT"
+        );
     }
 
     /** */
