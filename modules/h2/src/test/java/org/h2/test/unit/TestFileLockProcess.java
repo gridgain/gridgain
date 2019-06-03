@@ -110,6 +110,7 @@ public class TestFileLockProcess extends TestBase {
             // No idea where it is coming from.
             String processOutput = buff.toString();
             processOutput = processOutput.replaceAll("Picked up _JAVA_OPTIONS: -Xmx2048m -Xms512m", "").trim();
+            processOutput = processOutput.replaceAll("Picked up JAVA_TOOL_OPTIONS:", "").trim();
 
             assertEquals(0, proc.exitValue());
             assertTrue(i + ": " + buff.toString(), processOutput.isEmpty());
