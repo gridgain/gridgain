@@ -36,12 +36,15 @@ import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxKey;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.processors.tracing.Span;
+import org.apache.ignite.internal.processors.tracing.Status;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteReducer;
 import org.apache.ignite.lang.IgniteUuid;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.NOOP;
 
@@ -94,6 +97,9 @@ public abstract class GridNearTxPrepareFutureAdapter extends
     /** Trackable flag. */
     protected boolean trackable = true;
 
+    /** */
+    protected Span prepareSpan;
+
     /**
      * @param cctx Context.
      * @param tx Transaction.
@@ -108,6 +114,9 @@ public abstract class GridNearTxPrepareFutureAdapter extends
         this.tx = tx;
 
         futId = IgniteUuid.randomUuid();
+
+        if (tx.rootTransactionSpan() != null)
+            prepareSpan = cctx.kernalContext().tracing().create("prepare", tx.rootTransactionSpan());
 
         if (log == null) {
             msgLog = cctx.txFinishMessageLogger();
@@ -188,6 +197,16 @@ public abstract class GridNearTxPrepareFutureAdapter extends
             if (backups.size() <= 1)
                 tx.onePhaseCommit(true);
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override protected boolean onDone(@Nullable IgniteInternalTx res, @Nullable Throwable err, boolean cancel) {
+        boolean done = super.onDone(res, err, cancel);
+
+        if (done)
+            prepareSpan.setStatus(err == null ? Status.OK : Status.ABORTED).end();
+
+        return done;
     }
 
     /**
