@@ -5094,19 +5094,19 @@ public class Parser {
 
     private CreateFunctionAlias parseCreateFunctionAlias(boolean force) {
         boolean ifNotExists = readIfNotExists();
-        final boolean newAliasSameNameAsBuiltin = Function.getFunction(database, currentToken) != null;
         String aliasName;
-        if (database.isAllowBuiltinAliasOverride() && newAliasSameNameAsBuiltin) {
+        if (currentTokenType != IDENTIFIER) {
             aliasName = currentToken;
-            schemaName = session.getCurrentSchemaName();
             read();
+            schemaName = session.getCurrentSchemaName();
         } else {
             aliasName = readIdentifierWithSchema();
         }
+        final boolean newAliasSameNameAsBuiltin = Function.getFunction(database, aliasName) != null;
         if (database.isAllowBuiltinAliasOverride() && newAliasSameNameAsBuiltin) {
             // fine
         } else if (isKeyword(aliasName) ||
-                Function.getFunction(database, aliasName) != null ||
+                newAliasSameNameAsBuiltin ||
                 getAggregateType(aliasName) != null) {
             throw DbException.get(ErrorCode.FUNCTION_ALIAS_ALREADY_EXISTS_1,
                     aliasName);
