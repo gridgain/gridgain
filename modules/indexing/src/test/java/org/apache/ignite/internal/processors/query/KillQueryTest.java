@@ -39,6 +39,7 @@ import java.util.stream.Stream;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.QueryCancelledException;
@@ -215,10 +216,14 @@ public class KillQueryTest extends GridCommonAbstractTest {
 
         startGrids(NODES_COUNT);
 
-        for (int i = 0; i < MAX_ROWS; ++i) {
-            grid(0).cache(GridAbstractTest.DEFAULT_CACHE_NAME).put(i, i);
+        try (IgniteDataStreamer<Object, Object> ds = grid(0).dataStreamer(GridAbstractTest.DEFAULT_CACHE_NAME)) {
+            for (int i = 0; i < MAX_ROWS; ++i) {
+                ds.allowOverwrite(false);
 
-            grid(0).cache(GridAbstractTest.DEFAULT_CACHE_NAME).put((long)i, (long)i);
+                ds.addData(i, i);
+
+                ds.addData((long)i, (long)i);
+            }
         }
     }
 
