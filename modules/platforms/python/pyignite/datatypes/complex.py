@@ -496,7 +496,7 @@ class BinaryObject(IgniteDataType):
     def from_python(cls, value: object):
 
         if getattr(value, '_buffer', None) is None:
-            client = find_client()
+            client = cls.find_client()
 
             # if no client can be found, the class of the `value` is discarded
             # and the new dataclass is automatically registered later on
