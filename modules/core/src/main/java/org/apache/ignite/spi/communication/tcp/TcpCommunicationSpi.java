@@ -2965,7 +2965,7 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
 
                 long currTimeout = System.currentTimeMillis();
 
-                //this cycle will eventually quit when future is completed by concurrent thread reserving client
+                // This cycle will eventually quit when future is completed by concurrent thread reserving client.
                 while (true) {
                     try {
                         client = fut.get(clientReserveWaitTimeout, TimeUnit.MILLISECONDS);
