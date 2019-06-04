@@ -528,8 +528,12 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             throw new IgniteCheckedException("Cannot have more than " + CacheConfiguration.MAX_PARTITIONS_COUNT +
                 " partitions [cacheName=" + cc.getName() + ", partitions=" + cc.getAffinity().partitions() + ']');
 
-        if (cc.getRebalanceMode() != CacheRebalanceMode.NONE)
+        if (cc.getRebalanceMode() != CacheRebalanceMode.NONE) {
             assertParameter(cc.getRebalanceBatchSize() > 0, "rebalanceBatchSize > 0");
+            assertParameter(cc.getRebalanceTimeout() >= 0, "rebalanceTimeout >= 0");
+            assertParameter(cc.getRebalanceThrottle() >= 0, "rebalanceThrottle >= 0");
+            assertParameter(cc.getRebalanceBatchesPrefetchCount() > 0, "rebalanceBatchesPrefetchCount > 0");
+        }
 
         if (cc.getCacheMode() == PARTITIONED || cc.getCacheMode() == REPLICATED) {
             if (cc.getAtomicityMode() == ATOMIC && cc.getWriteSynchronizationMode() == FULL_ASYNC)
@@ -3286,8 +3290,37 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                 ((GridServiceProcessor)ctx.service()).updateUtilityCache();
         }
 
+        rollbackCoveredTx(exchActions);
+
         if (err == null)
             processCacheStopRequestOnExchangeDone(exchActions);
+    }
+
+    /**
+     * Rollback tx covered by stopped caches.
+     *
+     * @param exchActions Change requests.
+     */
+    private void rollbackCoveredTx(ExchangeActions exchActions) {
+        if (!exchActions.cacheGroupsToStop().isEmpty() || !exchActions.cacheStopRequests().isEmpty()) {
+            Set<Integer> cachesToStop = new HashSet<>();
+
+            for (ExchangeActions.CacheGroupActionData act : exchActions.cacheGroupsToStop()) {
+                @Nullable CacheGroupContext grpCtx = context().cache().cacheGroup(act.descriptor().groupId());
+
+                if (grpCtx != null && grpCtx.sharedGroup())
+                    cachesToStop.addAll(grpCtx.cacheIds());
+            }
+
+            for (ExchangeActions.CacheActionData act : exchActions.cacheStopRequests())
+                cachesToStop.add(act.descriptor().cacheId());
+
+            if (!cachesToStop.isEmpty()) {
+                IgniteTxManager tm = context().tm();
+
+                tm.rollbackTransactionsForCaches(cachesToStop);
+            }
+        }
     }
 
     /**

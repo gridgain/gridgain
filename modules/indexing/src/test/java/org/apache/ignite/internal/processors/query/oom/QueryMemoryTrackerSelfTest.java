@@ -132,7 +132,7 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
         execQuery("select K.grp, avg(K.id), min(K.id), sum(K.id) from K GROUP BY K.grp", false); // Tiny local result.
 
         assertEquals(2, localResults.size());
-        // Map
+        //Map
         assertEquals(100, localResults.get(0).getRowCount());
         // Reduce
         assertEquals(100, localResults.get(1).getRowCount());

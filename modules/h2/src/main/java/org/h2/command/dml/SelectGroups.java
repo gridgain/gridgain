@@ -153,7 +153,7 @@ public abstract class SelectGroups {
             cleanupAggregates(curEntry.getValue());
 
             onUpdate(curEntry.getKey(), curEntry.getValue(), null);
-            
+
             curEntry = null;
         }
 

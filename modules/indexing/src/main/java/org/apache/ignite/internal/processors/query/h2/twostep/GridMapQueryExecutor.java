@@ -348,7 +348,9 @@ public class GridMapQueryExecutor {
                 distributedJoinCtx,
                 mvccSnapshot,
                 reserved,
-                maxMem < 0 ? null : h2.memoryManager().createQueryMemoryTracker(maxMem));
+                maxMem < 0 ? null : h2.memoryManager().createQueryMemoryTracker(maxMem),
+                true
+            );
 
             qryResults = new MapQueryResults(h2, reqId, qrys.size(), mainCctx, lazy, qctx);
 

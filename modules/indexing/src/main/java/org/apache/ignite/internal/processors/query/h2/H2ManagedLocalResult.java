@@ -81,7 +81,7 @@ public class H2ManagedLocalResult extends H2BaseLocalResult {
         allocMem += memory;
     }
 
-    /** {@inheritDoc} */
+    /** */
     public long memoryAllocated() {
         return allocMem;
     }

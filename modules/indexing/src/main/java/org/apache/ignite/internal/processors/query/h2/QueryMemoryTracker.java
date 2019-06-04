@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.query.h2;
 
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -28,7 +29,6 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  * Track query memory usage and throws an exception if query tries to allocate memory over limit.
  */
 public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable {
-
     /** Allocated field updater. */
     private static final AtomicLongFieldUpdater<QueryMemoryTracker> ALLOC_UPD =
         AtomicLongFieldUpdater.newUpdater(QueryMemoryTracker.class, "allocated");

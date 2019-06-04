@@ -292,7 +292,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     /** Check large UNION operation with small enough sub-selects, but large result set. */
     @Test
     public void testUnionOfSmallDataSetsWithLargeResult() throws Exception {
-        maxMem = 4L * MB;
+        maxMem = 3L * MB;
 
         checkQueryExpectOOM("select * from T as T0, T as T1 where T0.id < 2 " +
             "UNION " +
