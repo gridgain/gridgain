@@ -44,13 +44,16 @@ import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.PingMessage;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 import static org.apache.ignite.console.utils.Utils.toJson;
 import static org.apache.ignite.console.websocket.WebSocketEvents.ADMIN_ANNOUNCEMENT;
 import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_REVOKE_TOKEN;
 import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_STATUS;
+import static org.springframework.web.util.UriComponentsBuilder.fromUri;
 
 /**
  * Web sockets manager.
@@ -212,11 +215,7 @@ public class WebSocketsManager {
     protected void updateTopology(WebSocketSession wsAgent, TopologySnapshot oldTop, TopologySnapshot newTop) {
         AgentDescriptor desc = agents.get(wsAgent);
 
-        if (desc.clusterIds.contains(newTop.getId())) {
-            desc.clusterIds = Collections.singleton(newTop.getId());
-
-            updateClusterInBrowsers(desc.accIds);
-        }
+        updateClusterInBrowsers(desc.accIds);
     }
 
     /**
@@ -226,33 +225,37 @@ public class WebSocketsManager {
     public void processTopologyUpdate(WebSocketSession wsAgent, Collection<TopologySnapshot> tops) {
         AgentDescriptor desc = agents.get(wsAgent);
 
+        Set<TopologySnapshot> oldTops = desc.getClusterIds().stream().map(clusters::get).collect(toSet());
+
         for (TopologySnapshot newTop : tops) {
-            TopologySnapshot oldTop = null;
+            String clusterId = newTop.getId();
 
-            if (desc.clusterIds != null)
-                oldTop = clusters.remove(newTop.getId());
-
-            if (F.isEmpty(newTop.getId())) {
-                String clusterId = null;
-
-                if (oldTop != null && !oldTop.differentCluster(newTop))
-                    clusterId = oldTop.getId();
-
-                if (F.isEmpty(clusterId)) {
-                    clusterId = clusters.entrySet().stream()
-                        .filter(e -> !e.getValue().differentCluster(newTop))
-                        .map(Map.Entry::getKey)
-                        .findFirst()
-                        .orElse(null);
-                }
-
-                newTop.setId(F.isEmpty(clusterId) ? UUID.randomUUID().toString() : clusterId);
+            if (F.isEmpty(clusterId)) {
+                clusterId = oldTops.stream()
+                    .filter(t -> !t.differentCluster(newTop))
+                    .map(TopologySnapshot::getId)
+                    .findFirst()
+                    .orElse(null);
             }
 
-            clusters.put(newTop.getId(), newTop);
+            if (F.isEmpty(clusterId)) {
+                clusterId = clusters.entrySet().stream()
+                    .filter(e -> !e.getValue().differentCluster(newTop))
+                    .map(Map.Entry::getKey)
+                    .findFirst()
+                    .orElse(null);
+            }
+
+            newTop.setId(F.isEmpty(clusterId) ? UUID.randomUUID().toString() : clusterId);
+
+            TopologySnapshot oldTop = clusters.put(newTop.getId(), newTop);
 
             updateTopology(wsAgent, oldTop, newTop);
         }
+
+        desc.setClusterIds(tops.stream().map(TopologySnapshot::getId).collect(Collectors.toSet()));
+
+        // TODO GG-17577 Cleanup clusters.
     }
 
     /**
@@ -308,7 +311,7 @@ public class WebSocketsManager {
 
         boolean hasDemo = tops.values().stream().anyMatch(TopologySnapshot::isDemo);
 
-        boolean isDemo = Boolean.parseBoolean(ws.getHandshakeHeaders().getFirst("IgniteDemoMode")) ;
+        boolean isDemo = Boolean.parseBoolean(fromUri(ws.getUri()).build().getQueryParams().getFirst("demo"));
 
         Collection<TopologySnapshot> clusters = tops.values().stream()
             .filter(t -> t.isDemo() == isDemo)
@@ -401,10 +404,10 @@ public class WebSocketsManager {
      */
     protected static class AgentDescriptor {
         /** */
-        private Set<UUID> accIds;
+        private final Set<UUID> accIds;
 
         /** */
-        private Set<String> clusterIds;
+        private Set<String> clusterIds = Collections.emptySet();
 
         /**
          * @param accIds Account IDs.
@@ -448,6 +451,13 @@ public class WebSocketsManager {
          */
         public Set<String> getClusterIds() {
             return clusterIds;
+        }
+
+        /**
+         * @param clusterIds Cluster ids.
+         */
+        public void setClusterIds(Set<String> clusterIds) {
+            this.clusterIds = clusterIds;
         }
     }
 }

@@ -35,14 +35,19 @@ import static org.apache.ignite.console.websocket.TopologySnapshot.IGNITE_CLUSTE
 import static org.apache.ignite.internal.IgniteVersionUtils.VER_STR;
 import static org.apache.ignite.internal.visor.util.VisorTaskUtils.sortAddresses;
 
+/**
+ * API to transfer topology from demo cluster to Web Console.
+ */
 public class DemoClusterHandler extends AbstractClusterHandler{
+    public static final String DEMO_CLUSTER_ID = UUID.randomUUID().toString();
+
     /**
      * @param cfg Config.
      */
     public DemoClusterHandler(AgentConfiguration cfg) {
         super(cfg, null);
 
-        System.setProperty(IGNITE_CLUSTER_ID, UUID.randomUUID().toString());
+        System.setProperty(IGNITE_CLUSTER_ID, DEMO_CLUSTER_ID);
         System.setProperty(IGNITE_CLUSTER_NAME, "demo-cluster");
     }
 

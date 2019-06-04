@@ -19,21 +19,29 @@ package org.apache.ignite.console.websocket;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
+import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
+
+import static java.util.stream.Collectors.toSet;
+import static java.util.stream.Stream.of;
 
 /**
  * Handshake request from Web Console Agent.
  */
 public class AgentHandshakeRequest {
-    /** */
-    private boolean disableDemo;
+    /** Version 8.8.0 Initial version. */
+    public static final String VER_8_8_0 = "8.8.0";
+
+    /** Current version. */
+    public static final String CURRENT_VER = VER_8_8_0;
+
+    /** Supported versions. */
+    public static final Set<String> SUPPORTED_VERS = of(CURRENT_VER).collect(toSet());
 
     /** */
     private String ver;
-
-    /** */
-    private String buildTime;
 
     /** */
     @GridToStringInclude
@@ -49,35 +57,15 @@ public class AgentHandshakeRequest {
     /**
      * Full constructor.
      *
-     * @param disableDemo Disable demo flag.
      * @param ver Agent version.
-     * @param buildTime Agent build time.
      * @param toks Tokens.
      */
     public AgentHandshakeRequest(
-        boolean disableDemo,
         String ver,
-        String buildTime,
         Collection<String> toks
     ) {
-        this.disableDemo = disableDemo;
         this.ver = ver;
-        this.buildTime = buildTime;
         this.toks = new HashSet<>(toks);
-    }
-
-    /**
-     * @return Disable demo flag.
-     */
-    public boolean isDisableDemo() {
-        return disableDemo;
-    }
-
-    /**
-     * @param disableDemo Disable demo flag.
-     */
-    public void setDisableDemo(boolean disableDemo) {
-        this.disableDemo = disableDemo;
     }
 
     /**
@@ -92,20 +80,6 @@ public class AgentHandshakeRequest {
      */
     public void setVersion(String ver) {
         this.ver = ver;
-    }
-
-    /**
-     * @return Agent built time.
-     */
-    public String getBuildTime() {
-        return buildTime;
-    }
-
-    /**
-     * @param buildTime Agent built time.
-     */
-    public void setBuildTime(String buildTime) {
-        this.buildTime = buildTime;
     }
 
     /**

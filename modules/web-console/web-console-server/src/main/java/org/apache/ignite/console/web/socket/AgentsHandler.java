@@ -19,10 +19,8 @@ package org.apache.ignite.console.web.socket;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.repositories.AccountsRepository;
@@ -31,7 +29,6 @@ import org.apache.ignite.console.websocket.AgentHandshakeRequest;
 import org.apache.ignite.console.websocket.AgentHandshakeResponse;
 import org.apache.ignite.console.websocket.TopologySnapshot;
 import org.apache.ignite.console.websocket.WebSocketEvent;
-import org.apache.ignite.internal.processors.rest.client.message.GridClientNodeBean;
 import org.apache.ignite.internal.util.typedef.F;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +38,7 @@ import org.springframework.web.socket.WebSocketSession;
 
 import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.console.utils.Utils.fromJson;
+import static org.apache.ignite.console.websocket.AgentHandshakeRequest.SUPPORTED_VERS;
 import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_HANDSHAKE;
 import static org.apache.ignite.console.websocket.WebSocketEvents.CLUSTER_TOPOLOGY;
 
@@ -77,10 +75,9 @@ public class AgentsHandler extends AbstractHandler {
         if (F.isEmpty(req.getTokens()))
             throw new IllegalArgumentException("Tokens not set. Please reload agent or check settings.");
 
-        if (!F.isEmpty(req.getVersion()) && !F.isEmpty(req.getBuildTime()) & !F.isEmpty(supportedAgents)) {
-            // TODO GG-18524 Implement version check in beta3 stage.
+        // TODO GG-18524 Implement version check in beta3 stage.
+        if (!SUPPORTED_VERS.contains(req.getVersion()))
             throw new IllegalArgumentException("You are using an older version of the agent. Please reload agent.");
-        }
     }
 
     /**

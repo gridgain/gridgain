@@ -235,7 +235,7 @@ public class BrowsersHandler extends AbstractHandler {
      *
      * @param payload Task event.
      */
-    private String prepareNodeVisorParams(JsonObject payload) {
+    private JsonObject prepareNodeVisorParams(JsonObject payload) {
         JsonObject params = payload.getJsonObject("params");
 
         String taskId = params.getString("taskId");
@@ -267,6 +267,6 @@ public class BrowsersHandler extends AbstractHandler {
 
         payload.put("params", exeParams);
 
-        return toJson(payload);
+        return payload;
     }
 }

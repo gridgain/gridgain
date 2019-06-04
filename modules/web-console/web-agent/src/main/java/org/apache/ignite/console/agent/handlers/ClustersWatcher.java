@@ -134,7 +134,7 @@ public class ClustersWatcher implements Closeable {
 
                     if (newTop.differentCluster(top))
                         log.info("Connection successfully established to cluster with nodes: " + nid8(newTop.nids()));
-                    else if (Objects.equals(top.nids(), newTop.nids()))
+                    else if (!Objects.equals(top.nids(), newTop.nids()))
                         log.info("Cluster topology changed, new topology: " + nid8(newTop.nids()));
 
                     boolean active = active(fromString(newTop.getClusterVersion()), F.first(newTop.nids()));
@@ -171,7 +171,8 @@ public class ClustersWatcher implements Closeable {
      * Stop cluster watch.
      */
     void stopWatchTask() {
-        refreshTask.cancel(true);
+        if (refreshTask != null)
+            refreshTask.cancel(true);
     }
 
     /**

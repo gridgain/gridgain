@@ -23,23 +23,23 @@ import org.apache.ignite.console.json.JsonObject;
  */
 public class RestRequest {
     /** Is request for demo cluster. */
-    private boolean demo;
+    private String clusterId;
 
     /** REST params. */
     private JsonObject params;
 
     /**
-     * @return Is request for demo cluster.
+     * @return value of clusterId
      */
-    public boolean isDemo() {
-        return demo;
+    public String getClusterId() {
+        return clusterId;
     }
 
     /**
-     * @param demo New is request for demo cluster.
+     * @param clusterId Cluster id.
      */
-    public void setDemo(boolean demo) {
-        this.demo = demo;
+    public void setClusterId(String clusterId) {
+        this.clusterId = clusterId;
     }
 
     /**

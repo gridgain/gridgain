@@ -18,18 +18,14 @@ package org.apache.ignite.console.agent.handlers;
 
 import java.net.ConnectException;
 import java.net.URI;
-import java.net.URL;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.jar.Attributes;
-import java.util.jar.Manifest;
 import java.util.stream.Stream;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.console.agent.AgentConfiguration;
@@ -62,8 +58,10 @@ import static org.apache.ignite.console.agent.AgentUtils.entry;
 import static org.apache.ignite.console.agent.AgentUtils.secured;
 import static org.apache.ignite.console.agent.AgentUtils.send;
 import static org.apache.ignite.console.agent.AgentUtils.sslContextFactory;
+import static org.apache.ignite.console.agent.handlers.DemoClusterHandler.DEMO_CLUSTER_ID;
 import static org.apache.ignite.console.utils.Utils.extractErrorMessage;
 import static org.apache.ignite.console.utils.Utils.fromJson;
+import static org.apache.ignite.console.websocket.AgentHandshakeRequest.CURRENT_VER;
 import static org.apache.ignite.console.websocket.WebSocketEvents.AGENTS_PATH;
 import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_HANDSHAKE;
 import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_REVOKE_TOKEN;
@@ -262,29 +260,7 @@ public class WebSocketRouter implements AutoCloseable {
         log.info("Connected to server: " + ses.getRemoteAddress());
 
         try {
-            String ver = "";
-            String buildTime = "";
-
-            String clsName = WebSocketRouter.class.getSimpleName() + ".class";
-            String clsPath = WebSocketRouter.class.getResource(clsName).toString();
-
-            if (clsPath.startsWith("jar")) {
-                String manifestPath = clsPath.substring(0, clsPath.lastIndexOf('!') + 1) + "/META-INF/MANIFEST.MF";
-
-                Manifest manifest = new Manifest(new URL(manifestPath).openStream());
-
-                Attributes attr = manifest.getMainAttributes();
-
-                ver = attr.getValue("Implementation-Version");
-                buildTime = attr.getValue("Build-Time");
-            }
-
-            AgentHandshakeRequest req = new AgentHandshakeRequest(
-                cfg.disableDemo(),
-                ver,
-                buildTime,
-                cfg.tokens()
-            );
+            AgentHandshakeRequest req = new AgentHandshakeRequest(CURRENT_VER, cfg.tokens());
 
             send(ses, new WebSocketEvent(AGENT_HANDSHAKE, req));
         }
@@ -392,7 +368,7 @@ public class WebSocketRouter implements AutoCloseable {
                     RestResult res;
 
                     try {
-                        res = req0.isDemo() ?
+                        res = DEMO_CLUSTER_ID.equals(req0.getClusterId()) ?
                             demoClusterHnd.restCommand(params) : clusterHnd.restCommand(params);
                     }
                     catch (Throwable e) {

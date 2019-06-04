@@ -20,6 +20,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientNodeBean;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -256,10 +258,18 @@ public class TopologySnapshot {
         private String addr;
 
         /**
+         * Default constructor for serialization.
+         */
+        public NodeBean() {
+            // No-op.
+        }
+
+        /**
          * @param client Is client node. .
          * @param addr Canonical ip address.
          */
-        public NodeBean(boolean client, String addr) {
+        @JsonCreator
+        public NodeBean(@JsonProperty("name") boolean client, @JsonProperty("address") String addr) {
             this.client = client;
             this.addr = addr;
         }
