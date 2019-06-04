@@ -16,8 +16,6 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -27,18 +25,12 @@ import org.apache.ignite.internal.processors.query.IgniteSQLException;
 public class QueryMemoryManager extends H2MemoryTracker {
     //TODO: GG-18629: Move defaults to memory quotas configuration.
     /**
-     * Memory pool size available for SQL queries.
-     */
-    private static final long DFLT_SQL_MEMORY_POOL = Long.getLong(IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE,
-        (long)(Runtime.getRuntime().maxMemory() * 0.6d));
-
-    /**
      * Default query memory limit.
      *
      * Note: Actually, it is  per query (Map\Reduce) stage limit. With QueryParallelism every query-thread will be
      * treated as separate Map query.
      */
-    private static final long DFLT_SQL_QRY_MEMORY_LIMIT = DFLT_SQL_MEMORY_POOL / IgniteConfiguration.DFLT_QUERY_THREAD_POOL_SIZE;
+    private final long dfltSqlQryMemoryLimit;
 
     /** Global query memory quota. */
     //TODO GG-18628: it looks safe to make this configurable at runtime.
@@ -54,7 +46,15 @@ public class QueryMemoryManager extends H2MemoryTracker {
         //TODO GG-18628: Add check if Heap has enough free memory.
         assert Runtime.getRuntime().maxMemory() > globalQuota;
 
-        this.globalQuota = globalQuota > 0 ? globalQuota : DFLT_SQL_MEMORY_POOL;
+        if (globalQuota == 0) {
+            globalQuota = Long.getLong(IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE,
+                (long)(Runtime.getRuntime().maxMemory() * 0.6d));
+        }
+
+        dfltSqlQryMemoryLimit = Long.getLong(IgniteSystemProperties.IGNITE_DEFAULT_SQL_QUERY_MEMORY_LIMIT,
+        globalQuota / IgniteConfiguration.DFLT_QUERY_THREAD_POOL_SIZE);
+
+        this.globalQuota = globalQuota;
     }
 
     /** {@inheritDoc} */
@@ -91,7 +91,7 @@ public class QueryMemoryManager extends H2MemoryTracker {
 
     /**
      * Query memory tracker factory method.
-     * Note: If 'maxQueryMemory' is zero, then {@link QueryMemoryManager#DFLT_SQL_QRY_MEMORY_LIMIT}  will be used.
+     * Note: If 'maxQueryMemory' is zero, then {@link QueryMemoryManager#dfltSqlQryMemoryLimit}  will be used.
      * Note: Negative values are reserved for disable memory tracking.
      *
      * @param maxQueryMemory Query memory limit in bytes.
@@ -101,7 +101,7 @@ public class QueryMemoryManager extends H2MemoryTracker {
         assert globalQuota == 0 || globalQuota > maxQueryMemory : globalQuota;
 
         //TODO: GG-18628: Should we register newly created tracker? This can be helpful in debugging 'memory leaks'.
-        return new QueryMemoryTracker(this, maxQueryMemory > 0 ? maxQueryMemory : DFLT_SQL_QRY_MEMORY_LIMIT);
+        return new QueryMemoryTracker(this, maxQueryMemory > 0 ? maxQueryMemory : dfltSqlQryMemoryLimit);
     }
 
     /**
