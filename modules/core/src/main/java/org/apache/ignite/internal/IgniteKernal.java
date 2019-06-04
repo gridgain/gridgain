@@ -758,10 +758,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         if (clsPathEntry.isDirectory()) {
             String[] list = clsPathEntry.list();
 
-            if (list != null) {
-                for (String listElement : list)
-                    ackClassPathElementRecursive(new File(clsPathEntry, listElement), clsPathContent);
-            }
+            for (String listElement : list)
+                ackClassPathElementRecursive(new File(clsPathEntry, listElement), clsPathContent);
         }
         else {
             String path = clsPathEntry.getAbsolutePath();
@@ -775,20 +773,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     private void ackClassPathEntry(String clsPathEntry, SB clsPathContent) {
         File clsPathElementFile = new File(clsPathEntry);
 
-        if (clsPathElementFile.isDirectory()) {
-            String[] list = clsPathElementFile.list();
-
-            if (list != null) {
-                for (String listElement : list) {
-                    File listElementFile = new File(listElement);
-
-                    if (listElementFile.isDirectory())
-                        ackClassPathElementRecursive(listElementFile, clsPathContent);
-                    else
-                        clsPathContent.a(listElementFile.getAbsolutePath()).a(";");
-                }
-            }
-        }
+        if (clsPathElementFile.isDirectory())
+            ackClassPathElementRecursive(clsPathElementFile, clsPathContent);
         else {
             String extension = clsPathEntry.length() >= 4
                 ? clsPathEntry.substring(clsPathEntry.length() - 4).toLowerCase()
@@ -801,12 +787,25 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
     /** */
     private void ackClassPathWildCard(String clsPathEntry, SB clsPathContent) {
-        int lastSeparatorIdx = clsPathEntry.lastIndexOf(File.separator);
+        final int lastSeparatorIdx = clsPathEntry.lastIndexOf(File.separator);
 
-        String fileMask =
-            (clsPathEntry.length() == lastSeparatorIdx) ? "*.jar" : clsPathEntry.substring(lastSeparatorIdx + 1);
+        final int asteriskIdx = clsPathEntry.indexOf('*');
 
-        Path path = Paths.get(clsPathEntry.substring(0, lastSeparatorIdx));
+        //just to log possibly incorrent entries to err
+        if (asteriskIdx >= 0 && asteriskIdx < lastSeparatorIdx)
+            throw new RuntimeException("Could not parse classpath entry");
+
+        final int fileMaskFirstIdx = lastSeparatorIdx < 0 ? 0 : lastSeparatorIdx + 1;
+
+        final String fileMask =
+            (fileMaskFirstIdx >= clsPathEntry.length()) ? "*.jar" : clsPathEntry.substring(fileMaskFirstIdx);
+
+        Path path = Paths.get(lastSeparatorIdx > 0 ? clsPathEntry.substring(0, lastSeparatorIdx) : ".")
+            .toAbsolutePath()
+            .normalize();
+
+        if (lastSeparatorIdx == 0)
+            path = path.getRoot();
 
         try {
             DirectoryStream<Path> files =
@@ -835,7 +834,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         if (enabled) {
             String clsPath = System.getProperty("java.class.path", ".");
 
-            String[] clsPathElements = clsPath.split(System.getProperty("path.separator"));
+            String[] clsPathElements = clsPath.split(File.pathSeparator);
 
             U.log(log, "Classpath value: " + clsPath);
 

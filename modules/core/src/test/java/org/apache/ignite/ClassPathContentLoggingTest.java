@@ -22,6 +22,7 @@ import java.nio.file.Paths;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -30,6 +31,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_LOG_CLASSPATH_CONT
 /**
  *
  */
+@WithSystemProperty(key = IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP, value = "true")
 public class ClassPathContentLoggingTest extends GridCommonAbstractTest {
     /** */
     private final ListeningTestLogger listeningLog = new ListeningTestLogger(false, log);
@@ -49,8 +51,6 @@ public class ClassPathContentLoggingTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
-
-        System.setProperty(IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP, "true");
 
         javaClassPath = System.getProperty("java.class.path", ".");
 
