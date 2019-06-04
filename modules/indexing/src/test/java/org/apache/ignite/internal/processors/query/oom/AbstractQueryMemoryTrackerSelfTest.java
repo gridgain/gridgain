@@ -17,9 +17,11 @@
 package org.apache.ignite.internal.processors.query.oom;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentSkipListSet;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
@@ -53,13 +55,13 @@ import static org.apache.ignite.internal.util.IgniteUtils.MB;
  */
 public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstractTest {
     /** Row count. */
-    private static final int SMALL_TABLE_SIZE = 1000;
+    static final int SMALL_TABLE_SIZE = 1000;
 
     /** Row count. */
     static final int BIG_TABLE_SIZE = 10_000;
 
     /** Query local results. */
-    static final List<H2ManagedLocalResult> localResults = new ArrayList<>();
+    static final List<H2ManagedLocalResult> localResults = Collections.synchronizedList(new ArrayList<>());
 
     /** Query memory limit. */
     long maxMem;
@@ -81,6 +83,8 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
             startGrid(1);
         }
+
+        createSchema();
 
         populateData();
     }
@@ -161,16 +165,21 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
      *
      */
     private void populateData() {
-        execSql("create table T (id int primary key, ref_key int, name varchar)");
-        execSql("create table K (id int primary key, indexed int, grp int, grp_indexed int, name varchar)");
-        execSql("create index K_IDX on K(indexed)");
-        execSql("create index K_GRP_IDX on K(grp_indexed)");
-
         for (int i = 0; i < SMALL_TABLE_SIZE; ++i)
             execSql("insert into T VALUES (?, ?, ?)", i, i, UUID.randomUUID().toString());
 
         for (int i = 0; i < BIG_TABLE_SIZE; ++i)
             execSql("insert into K VALUES (?, ?, ?, ?, ?)", i, i, i % 100, i % 100, UUID.randomUUID().toString());
+    }
+
+    /**
+     *
+     */
+    protected void createSchema() {
+        execSql("create table T (id int primary key, ref_key int, name varchar)");
+        execSql("create table K (id int primary key, indexed int, grp int, grp_indexed int, name varchar)");
+        execSql("create index K_IDX on K(indexed)");
+        execSql("create index K_GRP_IDX on K(grp_indexed)");
     }
 
     /** Check simple query on small data set. */
@@ -192,7 +201,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
     /** Check simple query failure on large data set. */
     @Test
-    public void testSimpleQueryLargeResult() {
+    public void testSimpleQueryLargeResult() throws Exception {
         checkQueryExpectOOM("select * from K", false);
 
         assertEquals(1, localResults.size());
@@ -222,6 +231,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         checkQueryExpectOOM("select * from K LIMIT 8000", false);
 
         assertEquals(1, localResults.size());
+        assertTrue(maxMem < localResults.get(0).memoryAllocated() + 1000);
         assertTrue(8000 > localResults.get(0).getRowCount());
     }
 
@@ -291,7 +301,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
     /** Check large UNION operation with small enough sub-selects, but large result set. */
     @Test
-    public void testUnionOfSmallDataSetsWithLargeResult() throws Exception {
+    public void testUnionOfSmallDataSetsWithLargeResult() {
         maxMem = 3L * MB;
 
         checkQueryExpectOOM("select * from T as T0, T as T1 where T0.id < 2 " +
@@ -466,7 +476,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
             long globalAllocated = h2.memoryManager().allocated();
 
-            assertTrue("Allocated: " + globalAllocated, h2.memoryManager().maxMemory() < globalAllocated + MB);
+            assertTrue(h2.memoryManager().maxMemory() < globalAllocated + MB);
         }
         finally {
             for (QueryCursor c : cursors)
@@ -479,7 +489,9 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
      * @return Results set.
      */
     protected List<List<?>> execQuery(String sql, boolean lazy) throws Exception {
-        return query(sql, lazy).getAll();
+        try (FieldsQueryCursor<List<?>> cursor = query(sql, lazy)) {
+            return cursor.getAll();
+        }
     }
 
     /**
@@ -506,7 +518,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
      * @param sql SQL query
      * @param args Query parameters.
      */
-    private void execSql(String sql, Object... args) {
+    protected void execSql(String sql, Object... args) {
         grid(0).context().query().querySqlFields(
             new SqlFieldsQuery(sql).setArgs(args), false).getAll();
     }

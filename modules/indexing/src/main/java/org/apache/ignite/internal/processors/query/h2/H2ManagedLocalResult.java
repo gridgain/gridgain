@@ -98,7 +98,7 @@ public class H2ManagedLocalResult extends H2BaseLocalResult {
     /**
      * @return Query memory tracker.
      */
-    protected H2MemoryTracker getMemoryTracker() {
+    public H2MemoryTracker getMemoryTracker() {
         return mem;
     }
 

@@ -95,7 +95,7 @@ public class JdbcQueryMemoryTrackerSelfTest extends QueryMemoryTrackerSelfTest {
 
             long globalAllocated = h2.memoryManager().allocated();
 
-            assertTrue("Allocated: " + globalAllocated, h2.memoryManager().maxMemory() < globalAllocated + MB);
+            assertTrue(h2.memoryManager().maxMemory() < globalAllocated + MB);
         }
         finally {
             for (ResultSet rs : results)

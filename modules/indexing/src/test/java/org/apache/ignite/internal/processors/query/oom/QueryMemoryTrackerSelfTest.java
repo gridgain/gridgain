@@ -217,7 +217,7 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
 
             long globalAllocated = h2.memoryManager().allocated();
 
-            assertTrue("Allocated: " + globalAllocated, h2.memoryManager().maxMemory() < globalAllocated + MB);
+            assertTrue(h2.memoryManager().maxMemory() < globalAllocated + MB);
         }
         finally {
             for (QueryCursor c : cursors)
