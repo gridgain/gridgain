@@ -2959,7 +2959,9 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
                     fut = oldFut;
 
                 WorkersRegistry registry = getWorkersRegistry(ignite);
-                long clientReserveWaitTimeout = registry.getSystemWorkerBlockedTimeout() / 3;
+
+                long clientReserveWaitTimeout = registry != null ? registry.getSystemWorkerBlockedTimeout() / 3
+                    : connTimeout / 3;
 
                 long currTimeout = System.currentTimeMillis();
 
@@ -2976,10 +2978,12 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
                         if (log.isDebugEnabled())
                             log.debug("Still waiting for reestablishing connection to node [nodeId=" + node.id() + ", waitingTime=" + currTimeout + "ms]");
 
-                        GridWorker wrkr = registry.worker(Thread.currentThread().getName());
+                        if (registry != null) {
+                            GridWorker wrkr = registry.worker(Thread.currentThread().getName());
 
-                        if (wrkr != null)
-                            wrkr.updateHeartbeat();
+                            if (wrkr != null)
+                                wrkr.updateHeartbeat();
+                        }
                     }
                 }
 
