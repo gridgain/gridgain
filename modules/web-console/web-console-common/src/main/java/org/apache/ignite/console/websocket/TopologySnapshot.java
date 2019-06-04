@@ -265,11 +265,11 @@ public class TopologySnapshot {
         }
 
         /**
-         * @param client Is client node. .
+         * @param client Is client node.
          * @param addr Canonical ip address.
          */
         @JsonCreator
-        public NodeBean(@JsonProperty("name") boolean client, @JsonProperty("address") String addr) {
+        public NodeBean(@JsonProperty("client") boolean client, @JsonProperty("address") String addr) {
             this.client = client;
             this.addr = addr;
         }

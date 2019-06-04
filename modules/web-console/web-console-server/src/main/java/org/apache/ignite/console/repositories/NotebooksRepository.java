@@ -17,6 +17,7 @@
 package org.apache.ignite.console.repositories;
 
 import java.util.Collection;
+import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
 import org.apache.ignite.Ignite;
@@ -39,7 +40,7 @@ public class NotebooksRepository {
     private final Table<Notebook> notebooksTbl;
 
     /** */
-    private final OneToManyIndex notebooksIdx;
+    private final OneToManyIndex<UUID> notebooksIdx;
 
     /**
      * @param ignite Ignite.
@@ -51,7 +52,7 @@ public class NotebooksRepository {
         notebooksTbl = new Table<Notebook>(ignite, "wc_notebooks")
             .addUniqueIndex(Notebook::getName, (notebook) -> "Notebook '" + notebook.getName() + "' already exits");
 
-        notebooksIdx = new OneToManyIndex(ignite, "wc_account_notebooks_idx");
+        notebooksIdx = new OneToManyIndex<>(ignite, "wc_account_notebooks_idx");
     }
 
     /**
@@ -60,7 +61,7 @@ public class NotebooksRepository {
      */
     public Collection<Notebook> list(UUID accId) {
         try (Transaction ignored = txMgr.txStart()) {
-            TreeSet<UUID> notebooksIds = notebooksIdx.load(accId);
+            Set<UUID> notebooksIds = notebooksIdx.load(accId);
 
             return notebooksTbl.loadAll(notebooksIds);
         }
@@ -74,7 +75,7 @@ public class NotebooksRepository {
      */
     public void save(UUID accId, Notebook notebook) {
         try (Transaction tx = txMgr.txStart()) {
-            notebooksIdx.validateSave(accId, notebook.getId(), notebooksTbl);
+            notebooksIdx.validateBeforeSave(accId, notebook.getId(), notebooksTbl);
 
             notebooksTbl.save(notebook);
 
@@ -113,7 +114,7 @@ public class NotebooksRepository {
      */
     public void deleteAll(UUID accId) {
         try(Transaction tx = txMgr.txStart()) {
-            TreeSet<UUID> notebooksIds = notebooksIdx.delete(accId);
+            Set<UUID> notebooksIds = notebooksIdx.delete(accId);
 
             notebooksTbl.deleteAll(notebooksIds);
 

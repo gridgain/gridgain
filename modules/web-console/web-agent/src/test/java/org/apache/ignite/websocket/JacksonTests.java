@@ -26,7 +26,13 @@ import org.junit.Test;
 import static org.apache.ignite.console.utils.Utils.fromJson;
 import static org.apache.ignite.console.utils.Utils.toJson;
 
+/**
+ * Test for Jackson serialization/deserialization/
+ */
 public class JacksonTests {
+    /**
+     * Test with agent handshake error object.
+     */
     @Test
     public void handshakeError() throws IOException {
         AgentHandshakeResponse exp = new AgentHandshakeResponse(new IllegalAccessException("Failed to authenticate with token(s): [bff05108-404d-4f84-b743-6cd90b0ae205]. Please reload agent or check settings."));
@@ -39,6 +45,9 @@ public class JacksonTests {
         Assert.assertEquals(exp.getTokens(), actual.getTokens());
     }
 
+    /**
+     * Test with agent handshake.
+     */
     @Test
     public void handshakeTokens() throws IOException {
         AgentHandshakeResponse exp = new AgentHandshakeResponse(Collections.singletonList("bff05108-404d-4f84-b743-6cd90b0ae205"));

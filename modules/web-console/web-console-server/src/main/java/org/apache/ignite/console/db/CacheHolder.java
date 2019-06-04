@@ -39,7 +39,7 @@ public class CacheHolder<K, V> {
     protected final String cacheName;
 
     /** */
-    protected IgniteCache<K, V> cache;
+    protected IgniteCache cache;
 
     /**
      * @param ignite Ignite.

@@ -82,7 +82,7 @@ public class WebSocketRouter implements AutoCloseable {
     /** Pong message. */
     private static final ByteBuffer PONG_MSG = UTF_8.encode("PONG");
 
-    /** Default withError messages. */
+    /** Default error messages. */
     private static final Map<String, String> ERROR_MSGS = Collections.unmodifiableMap(Stream.of(
         entry(SCHEMA_IMPORT_DRIVERS, "Failed to collect list of JDBC drivers"),
         entry(SCHEMA_IMPORT_SCHEMAS, "Failed to collect database schemas"),
