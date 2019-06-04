@@ -81,7 +81,7 @@ public class VisorIdleVerifyDumpTaskArg extends VisorIdleVerifyTaskArg {
     ) throws IOException, ClassNotFoundException {
         super.readExternalData(protoVer, in);
 
-        setSkipZeros(in.readBoolean());
+        skipZeros(in.readBoolean());
 
         /**
          * Since protocol version 2 we must read class instance new fields from end of input object. It's needs for
@@ -91,9 +91,9 @@ public class VisorIdleVerifyDumpTaskArg extends VisorIdleVerifyTaskArg {
          */
         if (instanceOfCurrentClass()) {
             if (protoVer >= V2)
-                setCacheFilterEnum(CacheFilterEnum.fromOrdinal(in.readByte()));
+                cacheFilterEnum(CacheFilterEnum.fromOrdinal(in.readByte()));
             else
-                setCacheFilterEnum(CacheFilterEnum.DEFAULT);
+                cacheFilterEnum(CacheFilterEnum.DEFAULT);
 
             if (protoVer >= V2)
                 excludeCaches(U.readSet(in));

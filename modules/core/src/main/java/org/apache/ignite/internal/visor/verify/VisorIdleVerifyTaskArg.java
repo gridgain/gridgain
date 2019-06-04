@@ -130,17 +130,9 @@ public class VisorIdleVerifyTaskArg extends VisorDataTransferObject {
 
             out.writeBoolean(checkCrc);
 
-            /**
-             * Since protocol version 2 we must save class instance new fields to end of output object. It's needs for
-             * support backward compatibility in extended (child) classes.
-             *
-             * TODO: https://issues.apache.org/jira/browse/IGNITE-10932 Will remove in 3.0
-             */
-            if (instanceOfCurrentClass()) {
-                out.writeBoolean(skipZeros);
+            out.writeBoolean(skipZeros);
 
-                U.writeEnum(out, cacheFilterEnum);
-            }
+            U.writeEnum(out, cacheFilterEnum);
         }
     }
 
@@ -190,12 +182,12 @@ public class VisorIdleVerifyTaskArg extends VisorDataTransferObject {
     }
 
     /** */
-    protected void setSkipZeros(boolean skipZeros) {
+    protected void skipZeros(boolean skipZeros) {
         this.skipZeros = skipZeros;
     }
 
     /** */
-    protected void setCacheFilterEnum(CacheFilterEnum cacheFilterEnum) {
+    protected void cacheFilterEnum(CacheFilterEnum cacheFilterEnum) {
         this.cacheFilterEnum = cacheFilterEnum;
     }
 
