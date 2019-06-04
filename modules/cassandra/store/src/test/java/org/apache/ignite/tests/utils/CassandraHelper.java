@@ -21,6 +21,7 @@ import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.Statement;
+import java.io.File;
 import java.lang.reflect.Field;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -338,6 +339,8 @@ public class CassandraHelper {
 
         ClassLoader clsLdr = CassandraHelper.class.getClassLoader();
         URL url = clsLdr.getResource(EMBEDDED_CASSANDRA_YAML);
+
+        new File("./data").mkdirs();
 
         embeddedCassandraBean = new CassandraLifeCycleBean();
         embeddedCassandraBean.setCassandraConfigFile(url.getFile());
