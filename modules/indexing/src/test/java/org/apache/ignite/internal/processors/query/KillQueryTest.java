@@ -812,6 +812,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
                         ));
                 }
 
+                // This sleep is required to wait for kill queries get started.
                 doSleep(500);
 
                 assertEquals(expQryNum, runningQueries.size());
