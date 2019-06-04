@@ -1681,6 +1681,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
     /**
      * @param ignite Ignite.
      * @param cacheFilter cacheFilter.
+     * @param dump whether idle_verify should be launched with dump option or not
      */
     private void corruptingAndCheckDefaultCache(IgniteEx ignite, String cacheFilter, boolean dump) throws IOException {
         injectTestSystemOut();
@@ -1691,17 +1692,17 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         corruptDataEntry(cacheCtx, cacheCtx.config().getAffinity().partitions() / 2, false, true);
 
+        String resReport = null;
+
         if (dump) {
             assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify", "--dump", "--cache-filter", cacheFilter));
 
             Matcher fileNameMatcher = dumpFileNameMatcher();
 
             if (fileNameMatcher.find()) {
-                String dumpWithConflicts = new String(Files.readAllBytes(Paths.get(fileNameMatcher.group(1))));
+                resReport = new String(Files.readAllBytes(Paths.get(fileNameMatcher.group(1))));
 
-                log.info(dumpWithConflicts);
-
-                assertContains(log, dumpWithConflicts, "found 2 conflict partitions: [counterConflicts=1, hashConflicts=1]");
+                log.info(resReport);
             }
             else
                 fail("Should be found dump with conflicts");
@@ -1709,8 +1710,10 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
         else {
             assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify", "--cache-filter", cacheFilter));
 
-            assertContains(log, testOut.toString(), "found 2 conflict partitions: [counterConflicts=1, hashConflicts=1]");
+            resReport = testOut.toString();
         }
+
+        assertContains(log, resReport, "found 2 conflict partitions: [counterConflicts=1, hashConflicts=1]");
     }
 
     /**

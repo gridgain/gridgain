@@ -92,21 +92,21 @@ public class VisorIdleVerifyTaskArg extends VisorDataTransferObject {
     }
 
     /** */
-    public boolean isCheckCrc() {
+    public boolean checkCrc() {
         return checkCrc;
     }
 
     /**
      * @return Caches.
      */
-    public Set<String> getCaches() {
+    public Set<String> caches() {
         return caches;
     }
 
     /**
      * @return Exclude caches or groups.
      */
-    public Set<String> getExcludeCaches() {
+    public Set<String> excludeCaches() {
         return excludeCaches;
     }
 
@@ -177,7 +177,7 @@ public class VisorIdleVerifyTaskArg extends VisorDataTransferObject {
     /**
      * @return Skip zeros partitions.
      */
-    public boolean isSkipZeros() {
+    public boolean skipZeros() {
         return skipZeros;
     }
 
@@ -194,7 +194,7 @@ public class VisorIdleVerifyTaskArg extends VisorDataTransferObject {
     /**
      * @return Kind fo cache.
      */
-    public CacheFilterEnum getCacheFilterEnum() {
+    public CacheFilterEnum cacheFilterEnum() {
         return cacheFilterEnum;
     }
 
