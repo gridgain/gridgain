@@ -122,7 +122,7 @@ def test_affinity(client, key, key_hint):
 
     time.sleep(0.1)
 
-    cache_1 = client.create_cache({
+    cache_1 = client.get_or_create_cache({
         PROP_NAME: 'test_cache_1',
         PROP_CACHE_MODE: CacheMode.PARTITIONED,
     })
