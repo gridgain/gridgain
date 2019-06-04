@@ -48,9 +48,12 @@ public abstract class AbstractModelStorageTest {
         assertTrue(mdlStorage.exists("/test"));
         assertArrayEquals(data, mdlStorage.getFile("/test"));
 
+        Set<String> paths = mdlStorage.listFiles("/");
+        assertTrue(paths.contains("/test"));
         mdlStorage.remove("/test");
 
         assertFalse(mdlStorage.exists("/test"));
+        assertTrue(mdlStorage.listFiles("/").isEmpty());
     }
 
     /** */

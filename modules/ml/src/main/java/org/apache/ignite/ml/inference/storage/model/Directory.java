@@ -65,6 +65,8 @@ class Directory implements FileOrDirectory {
 
     /** {@inheritDoc} */
     @Override public FileOrDirectory updateModifictaionTs(long modificationTs) {
-        return new Directory(modificationTs);
+        Directory directory = new Directory(modificationTs);
+        directory.getFiles().addAll(this.files);
+        return directory;
     }
 }

@@ -31,8 +31,8 @@ public interface CustomQueryProcessor {
      * Call operation of processor by its id.
      *
      * @param requestId Request id.
-     * @param opId Opearation id.
+     * @param methodId Opearation id.
      * @param reader Reader with arguments of operation.
      */
-    public ClientResponse call(long requestId, byte opId, BinaryRawReader reader);
+    public ClientResponse call(long requestId, byte methodId, BinaryRawReader reader);
 }

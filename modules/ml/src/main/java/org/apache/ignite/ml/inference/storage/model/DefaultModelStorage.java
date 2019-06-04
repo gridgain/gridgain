@@ -66,11 +66,11 @@ public class DefaultModelStorage implements ModelStorage {
                 throw new IllegalArgumentException("Cannot create file because parent is not a directory [path="
                     + path + "]");
 
-            Directory dir = (Directory) parent;
+            Directory dir = (Directory)parent;
             // Update parent if it's a new file.
             if (!dir.getFiles().contains(path)) {
                 dir.getFiles().add(path);
-                storageProvider.put(parentPath, parent.updateModifictaionTs());
+                storageProvider.put(parentPath, dir/*.updateModifictaionTs()*/);
             }
 
             // Save file into cache.
@@ -78,7 +78,7 @@ public class DefaultModelStorage implements ModelStorage {
         }, pathLock, parentPathLock);
     }
 
-    /**  {@inheritDoc}*/
+    /** {@inheritDoc} */
     @Override public byte[] getFile(String path) {
         FileOrDirectory fileOrDir = storageProvider.get(path);
 
@@ -93,7 +93,7 @@ public class DefaultModelStorage implements ModelStorage {
             if (!fileOrDir.isFile())
                 throw new IllegalArgumentException("File is not a regular file [path=" + path + "]");
 
-            return ((File) fileOrDir).getData();
+            return ((File)fileOrDir).getData();
         }, pathLock);
     }
 
@@ -130,11 +130,11 @@ public class DefaultModelStorage implements ModelStorage {
                 throw new IllegalArgumentException("Cannot create directory because parent is not a directory [path="
                     + path + "]");
 
-            Directory dir = (Directory) parent;
+            Directory dir = (Directory)parent;
             dir.getFiles().add(path);
 
             // Update parent and save directory into cache.
-            storageProvider.put(parentPath, parent.updateModifictaionTs());
+            storageProvider.put(parentPath, parent/*.updateModifictaionTs()*/);
             storageProvider.put(path, new Directory());
         }, pathLock, parentPathLock);
     }
@@ -174,7 +174,7 @@ public class DefaultModelStorage implements ModelStorage {
                 if (parentWithLock != null) {
                     Directory parentDir = (Directory)storageProvider.get(parentWithLock.get1());
                     parentDir.getFiles().add(pathWithLock.get1());
-                    storageProvider.put(parentWithLock.get1(), parentDir.updateModifictaionTs());
+                    storageProvider.put(parentWithLock.get1(), parentDir/*.updateModifictaionTs()*/);
                     parentWithLock.get2().unlock();
                 }
 
@@ -208,23 +208,32 @@ public class DefaultModelStorage implements ModelStorage {
                 throw new IllegalArgumentException("Specified path is not associated with directory [path=" + path
                     + "]");
 
-            return ((Directory) dir).getFiles();
+            return ((Directory)dir).getFiles();
         }, pathLock);
     }
 
     /** {@inheritDoc} */
     @Override public void remove(String path) {
+        String parentPath = getParent(path);
+
         Lock pathLock = storageProvider.lock(path);
+        Lock parentLock = storageProvider.lock(parentPath);
 
         synchronize(() -> {
             FileOrDirectory file = storageProvider.get(path);
             storageProvider.remove(path);
 
             if (file.isDirectory()) {
-                for (String s : ((Directory) file).getFiles())
+                for (String s : ((Directory)file).getFiles())
                     remove(s);
             }
-        }, pathLock);
+
+            Directory parent = (Directory)storageProvider.get(parentPath);
+            if (parent != null) {
+                parent.getFiles().remove(path);
+                storageProvider.put(parentPath, parent);
+            }
+        }, pathLock, parentLock);
     }
 
     /** {@inheritDoc} */
@@ -244,6 +253,32 @@ public class DefaultModelStorage implements ModelStorage {
         FileOrDirectory file = storageProvider.get(path);
 
         return file != null && file.isFile();
+    }
+
+    /** {@inheritDoc} */
+    @Override public FileStat getFileStat(String path) {
+        FileOrDirectory file = storageProvider.get(path);
+        if (file == null)
+            throw new IllegalArgumentException("File not found [path=" + path + "]");
+
+        int size = 0;
+        if (file.isFile())
+            size = ((File)file).getData().length;
+        return new FileStat(file.isDirectory(), file.getModificationTs(), size);
+    }
+
+    /** {@inheritDoc} */
+    @Override public <T> T lockPaths(Supplier<T> supplier, String... paths) {
+        Lock[] locks = new Lock[paths.length * 2];
+        int idx = 0;
+        for(String path : paths) {
+            String parent = getParent(path);
+            locks[idx] = storageProvider.lock(path);
+            locks[idx + 1] = storageProvider.lock(parent);
+            idx += 2;
+        }
+
+        return synchronize(supplier, locks);
     }
 
     /**
@@ -272,6 +307,7 @@ public class DefaultModelStorage implements ModelStorage {
 
     /**
      * Wraps task execution into locks. Util method.
+     *
      * @param task Task to executed.
      * @param locks List of locks.
      */
@@ -299,26 +335,14 @@ public class DefaultModelStorage implements ModelStorage {
 
         if (ex != null) {
             if (ex instanceof RuntimeException)
-                throw (RuntimeException) ex;
+                throw (RuntimeException)ex;
 
             if (ex instanceof Error)
-                throw (Error) ex;
+                throw (Error)ex;
 
             throw new IllegalStateException("Unexpected type of throwable");
         }
 
         return res;
-    }
-
-    /** {@inheritDoc} */
-    @Override public FileStat getFileStat(String path) {
-        FileOrDirectory file = storageProvider.get(path);
-        if (file == null)
-            throw new IllegalArgumentException("File not found [path=" + path + "]");
-
-        int size = 0;
-        if (file.isFile())
-            size = ((File)file).getData().length;
-        return new FileStat(file.isDirectory(), file.getModificationTs(), size);
     }
 }

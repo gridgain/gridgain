@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.platform.client;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.binary.BinaryRawReader;
 
@@ -25,23 +26,23 @@ import org.apache.ignite.binary.BinaryRawReader;
  */
 public class ThinClientCustomQueryRegistry {
     /** Processors map. */
-    private static ConcurrentHashMap<String, CustomQueryProcessor> processors = new ConcurrentHashMap<>();
+    private static ConcurrentMap<String, CustomQueryProcessor> processors = new ConcurrentHashMap<>();
 
     /**
      * Finds processor by its name and call its operation.
      *
      * @param requestId Request id.
      * @param processorId Processor Id.
-     * @param opId Operation Id.
+     * @param methodId Method Id.
      * @param reader Reader.
      * @return Response for client.
      */
-    public static ClientResponse call(long requestId, String processorId, byte opId, BinaryRawReader reader) {
+    public static ClientResponse call(long requestId, String processorId, byte methodId, BinaryRawReader reader) {
         CustomQueryProcessor processor = processors.get(processorId);
         if(processor == null)
             return new ClientResponse(requestId, "Cannot find processor with id = " + processorId);
 
-        return processor.call(requestId, opId, reader);
+        return processor.call(requestId, methodId, reader);
     }
 
     /**

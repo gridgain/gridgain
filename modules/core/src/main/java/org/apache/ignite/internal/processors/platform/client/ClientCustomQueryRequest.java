@@ -29,7 +29,7 @@ public class ClientCustomQueryRequest extends ClientRequest {
     private final String processorId;
 
     /** Operation id. */
-    private final byte opId;
+    private final byte methodId;
 
     /**
      * Creates an instance of request.
@@ -40,12 +40,12 @@ public class ClientCustomQueryRequest extends ClientRequest {
         super(reader);
 
         this.processorId = reader.readString();
-        this.opId = reader.readByte();
+        this.methodId = reader.readByte();
         this.reader = reader;
     }
 
     /** {@inheritDoc} */
     @Override public ClientResponse process(ClientConnectionContext ctx) {
-        return ThinClientCustomQueryRegistry.call(requestId(), processorId, opId, reader);
+        return ThinClientCustomQueryRegistry.call(requestId(), processorId, methodId, reader);
     }
 }

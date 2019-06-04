@@ -30,7 +30,7 @@ public class ModelStorateThinClientProcessor implements CustomQueryProcessor {
     /**
      * Operations of model storage for GGFS client.
      */
-    public enum Operation {
+    public enum Method {
         /** */ WRITE_FILE(0),
         /** */ READ_FILE(1),
         /** */ MOVE(2),
@@ -48,7 +48,7 @@ public class ModelStorateThinClientProcessor implements CustomQueryProcessor {
          *
          * @param id Id of operation.
          */
-        Operation(int id) {
+        Method(int id) {
             this.id = id;
         }
 
@@ -58,8 +58,8 @@ public class ModelStorateThinClientProcessor implements CustomQueryProcessor {
          * @param id Operation Id.
          * @return Operation.
          */
-        static Operation find(int id) {
-            for (Operation op : Operation.values()) {
+        static Method find(int id) {
+            for (Method op : Method.values()) {
                 if (op.id == id)
                     return op;
             }
@@ -84,10 +84,10 @@ public class ModelStorateThinClientProcessor implements CustomQueryProcessor {
     }
 
     /** {@inheritDoc} */
-    @Override public ClientResponse call(long requestId, byte opId, BinaryRawReader reader) {
-        Operation op = Operation.find(opId);
+    @Override public ClientResponse call(long requestId, byte methodId, BinaryRawReader reader) {
+        Method op = Method.find(methodId);
         if (op == null)
-            return error(requestId, "Operation was not found [id=" + opId + "]");
+            return error(requestId, "Operation was not found [id=" + methodId + "]");
 
         switch (op) {
             case WRITE_FILE:
@@ -120,27 +120,30 @@ public class ModelStorateThinClientProcessor implements CustomQueryProcessor {
      */
     private ClientResponse writeFile(long reqId, BinaryRawReader reader) {
         String path = reader.readString();
-        boolean append = reader.readBoolean();
-        boolean replaceIfExists = reader.readBoolean();
-        byte[] newData = reader.readByteArray();
 
-        boolean fileAlreadyExists = modelStorage.exists(path);
-        if (fileAlreadyExists && !replaceIfExists && !append)
-            return error(reqId, "File already exists [path=" + path + "]");
+        return modelStorage.lockPaths(() -> {
+            boolean append = reader.readBoolean();
+            boolean replaceIfExists = reader.readBoolean();
+            byte[] newData = reader.readByteArray();
 
-        byte[] currentData = new byte[0];
-        if (fileAlreadyExists) {
-            if (append)
-                currentData = modelStorage.getFile(path);
-            modelStorage.remove(path);
-        }
+            boolean fileAlreadyExists = modelStorage.exists(path);
+            if (fileAlreadyExists && !replaceIfExists && !append)
+                return error(reqId, "File already exists [path=" + path + "]");
 
-        byte[] result = new byte[currentData.length + newData.length];
-        System.arraycopy(currentData, 0, result, 0, currentData.length);
-        System.arraycopy(newData, 0, result, currentData.length, newData.length);
-        modelStorage.putFile(path, result);
+            byte[] currentData = new byte[0];
+            if (fileAlreadyExists) {
+                if (append)
+                    currentData = modelStorage.getFile(path);
+                modelStorage.remove(path);
+            }
 
-        return new ClientResponse(reqId);
+            byte[] result = new byte[currentData.length + newData.length];
+            System.arraycopy(currentData, 0, result, 0, currentData.length);
+            System.arraycopy(newData, 0, result, currentData.length, newData.length);
+            modelStorage.putFile(path, result);
+
+            return new ClientResponse(reqId);
+        }, path);
     }
 
     /**
@@ -152,10 +155,13 @@ public class ModelStorateThinClientProcessor implements CustomQueryProcessor {
      */
     private ClientResponse readFile(long reqId, BinaryRawReader reader) {
         String path = reader.readString();
-        if (!modelStorage.exists(path))
-            return error(reqId, "File not found [path=" + path + "]");
 
-        return new FileRespose(reqId, modelStorage.getFile(path));
+        return modelStorage.lockPaths(() -> {
+            if (!modelStorage.exists(path))
+                return error(reqId, "File not found [path=" + path + "]");
+
+            return new FileRespose(reqId, modelStorage.getFile(path));
+        }, path);
     }
 
     /**
@@ -168,15 +174,18 @@ public class ModelStorateThinClientProcessor implements CustomQueryProcessor {
     private ClientResponse moveFile(long reqId, BinaryRawReader reader) {
         String from = reader.readString();
         String to = reader.readString();
-        if (!modelStorage.exists(from))
-            return error(reqId, "File not found [path=" + from + "]");
-        if (modelStorage.exists(to))
-            return error(reqId, "File already exists [path=" + to + "]");
 
-        byte[] file = modelStorage.getFile(from);
-        modelStorage.remove(from);
-        modelStorage.putFile(to, file);
-        return new ClientResponse(reqId);
+        return modelStorage.lockPaths(() -> {
+            if (!modelStorage.exists(from))
+                return error(reqId, "File not found [path=" + from + "]");
+            if (modelStorage.exists(to))
+                return error(reqId, "File already exists [path=" + to + "]");
+
+            byte[] file = modelStorage.getFile(from);
+            modelStorage.remove(from);
+            modelStorage.putFile(to, file);
+            return new ClientResponse(reqId);
+        }, from, to);
     }
 
     /**
@@ -188,10 +197,13 @@ public class ModelStorateThinClientProcessor implements CustomQueryProcessor {
      */
     private ClientResponse getFileStat(long reqId, BinaryRawReader reader) {
         String path = reader.readString();
-        if (!modelStorage.exists(path))
-            return error(reqId, "File not found [path=" + path + "]");
 
-        return new FileStatResponse(reqId, modelStorage.getFileStat(path));
+        return modelStorage.lockPaths(() -> {
+            if (!modelStorage.exists(path))
+                return error(reqId, "File not found [path=" + path + "]");
+
+            return new FileStatResponse(reqId, modelStorage.getFileStat(path));
+        }, path);
     }
 
     /**
@@ -215,10 +227,13 @@ public class ModelStorateThinClientProcessor implements CustomQueryProcessor {
      */
     private ClientResponse remove(long reqId, BinaryRawReader reader) {
         String path = reader.readString();
-        if (modelStorage.exists(path))
-            modelStorage.remove(path);
 
-        return new ClientResponse(reqId);
+        return modelStorage.lockPaths(() -> {
+            if (modelStorage.exists(path))
+                modelStorage.remove(path);
+
+            return new ClientResponse(reqId);
+        }, path);
     }
 
     /**
@@ -230,11 +245,14 @@ public class ModelStorateThinClientProcessor implements CustomQueryProcessor {
      */
     private ClientResponse mkdir(long reqId, BinaryRawReader reader) {
         String path = reader.readString();
-        if (modelStorage.exists(path))
-            return error(reqId, "Directory already exists [path=" + path + "]");
 
-        modelStorage.mkdir(path);
-        return new ClientResponse(reqId);
+        return modelStorage.lockPaths(() -> {
+            if (modelStorage.exists(path))
+                return error(reqId, "Directory already exists [path=" + path + "]");
+
+            modelStorage.mkdir(path);
+            return new ClientResponse(reqId);
+        }, path);
     }
 
     /**
@@ -246,14 +264,17 @@ public class ModelStorateThinClientProcessor implements CustomQueryProcessor {
      */
     private ClientResponse listFiles(long reqId, BinaryRawReader reader) {
         String path = reader.readString();
-        if (!modelStorage.exists(path))
-            return error(reqId, "Direcrory not found [path=" + path + "]");
 
-        if (modelStorage.isFile(path))
-            return error(reqId, "Specified path is not associated with directory [path=" + path + "]");
+        return modelStorage.lockPaths(() -> {
+            if (!modelStorage.exists(path))
+                return error(reqId, "Direcrory not found [path=" + path + "]");
 
-        Set<String> files = modelStorage.listFiles(path);
-        return new FilesListResponse(reqId, files);
+            if (modelStorage.isFile(path))
+                return error(reqId, "Specified path is not associated with directory [path=" + path + "]");
+
+            Set<String> files = modelStorage.listFiles(path);
+            return new FilesListResponse(reqId, files);
+        }, path);
     }
 
     /**
