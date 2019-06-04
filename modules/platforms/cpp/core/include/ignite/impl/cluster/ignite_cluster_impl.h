@@ -38,7 +38,7 @@ namespace ignite
                 /**
                  * Constructor used to create new instance.
                  *
-                 * @param pointer to ClusterGroupImpl.
+                 * @param impl Pointer to ClusterGroupImpl.
                  */
                 IgniteClusterImpl(SP_ClusterGroupImpl impl);
 
@@ -63,7 +63,7 @@ namespace ignite
                 void SetActive(bool active);
 
                 /**
-                 * Gets an underlying cluster group implementation object.
+                 * Gets an underlying cluster group object.
                  *
                  * @return ClusterGroupImpl instance.
                  */

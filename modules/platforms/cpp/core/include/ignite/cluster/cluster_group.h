@@ -50,35 +50,38 @@ namespace ignite
             /**
              * Get cluster group for nodes containing given name and value specified in user attributes.
              *
-             * @return Specified nodes cluster group.
+             * @param name Name of the attribute.
+             * @param val Optional attribute value to match.
+             * @return Cluster group for nodes containing specified attribute.
              */
             ClusterGroup ForAttribute(std::string name, std::string val);
 
             /**
              * Get ClusterGroup for all data nodes that have the cache with the specified name running.
              *
-             * @return All data nodes ClusterGroup.
+             * @param cacheName Cache name.
+             * @return Cluster group over nodes that have the cache with the specified name running.
              */
             ClusterGroup ForDataNodes(std::string cacheName);
 
             /**
-             * Get server nodes cluster group.
+             * Creates a cluster group of nodes started in server mode.
              *
-             * @return Server nodes cluster group.
+             * @return Cluster group of nodes started in server mode.
              */
             ClusterGroup ForServers();
 
             /**
-             * Get cpp nodes cluster group.
+             * Creates a cluster group of cpp nodes.
              *
-             * @return Cpp nodes cluster group.
+             * @return Cluster group of cpp nodes.
              */
             ClusterGroup ForCpp();
 
             /**
-             * Get container of cluster nodes over this cluster group.
+             * Gets the vector of nodes in this cluster group.
              *
-             * @return Vector of cluster nodes.
+             * @return All nodes in this cluster group.
              */
             std::vector<ClusterNode> GetNodes();
 

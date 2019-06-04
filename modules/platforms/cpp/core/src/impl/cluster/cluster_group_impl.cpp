@@ -173,12 +173,12 @@ namespace ignite
 
             std::vector<ClusterNode> ClusterGroupImpl::RefreshNodes()
             {
-                CsLockGuard mtx(nodesLock);
-
                 SharedPointer<interop::InteropMemory> memIn = GetEnvironment().AllocateMemory();
                 SharedPointer<interop::InteropMemory> memOut = GetEnvironment().AllocateMemory();
                 interop::InteropOutputStream out(memIn.Get());
                 binary::BinaryWriterImpl writer(&out, GetEnvironment().GetTypeManager());
+
+                CsLockGuard mtx(nodesLock);
 
                 writer.WriteInt64(topVer);
 

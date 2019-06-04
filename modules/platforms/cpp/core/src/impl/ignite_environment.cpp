@@ -107,12 +107,14 @@ namespace ignite
             {
                 case OperationCallback::NODE_INFO:
                 {
-                    CsLockGuard mtx(env->Get()->nodesLock);
-
                     SharedPointer<InteropMemory> mem = env->Get()->GetMemory(val);
                     interop::InteropInputStream inStream(mem.Get());
                     binary::BinaryReaderImpl reader(&inStream);
+
                     SP_ClusterNodeImpl node = (new impl::cluster::ClusterNodeImpl(reader));
+
+                    CsLockGuard mtx(env->Get()->nodesLock);
+
                     env->Get()->nodes.Get()->insert(std::pair<Guid, SP_ClusterNodeImpl>(node.Get()->GetId(), node));
                     break;
                 }

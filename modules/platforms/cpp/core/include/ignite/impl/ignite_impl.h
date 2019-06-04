@@ -189,6 +189,7 @@ namespace ignite
             /**
              * Get compute from cluster group.
              *
+             * @param grp Specified cluster group instance.
              * @return ComputeImpl instance.
              */
             SP_ComputeImpl GetCompute(ignite::cluster::ClusterGroup grp);

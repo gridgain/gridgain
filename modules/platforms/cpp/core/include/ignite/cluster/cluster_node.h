@@ -38,12 +38,12 @@ namespace ignite
             /**
              * Constructor.
              *
-             * @param pointer to cluster node implementation.
+             * @param impl Pointer to cluster node implementation.
              */
             ClusterNode(common::concurrent::SharedPointer<ignite::impl::cluster::ClusterNodeImpl> impl);
 
             /**
-             * Gets globally unique ID.
+             * Gets globally unique node ID. A new ID is generated every time a node restarts.
              *
              * @return Node Guid.
              */

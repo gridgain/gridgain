@@ -41,7 +41,7 @@ namespace ignite
             /**
              * Constructor.
              *
-             * @param pointer to ignite cluster implementation.
+             * @param impl Pointer to ignite cluster implementation.
              */
             IgniteCluster(common::concurrent::SharedPointer<ignite::impl::cluster::IgniteClusterImpl> impl);
 
@@ -61,7 +61,7 @@ namespace ignite
             void SetActive(bool active);
 
             /**
-             * Gets an underlying ClusterGroup object.
+             * Gets an underlying cluster group object.
              *
              * @return ClusterGroup instance.
              */
