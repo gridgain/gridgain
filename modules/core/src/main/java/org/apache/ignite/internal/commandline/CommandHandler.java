@@ -77,7 +77,7 @@ public class CommandHandler {
             String namePattern = "control-utility-%g.log";
             String absPathPattern;
             absPathPattern = new File(JavaLoggerFileHandler.logDirectory(U.defaultWorkDirectory()), namePattern).getAbsolutePath();
-            FileHandler fileHandler = new FileHandler(absPathPattern, 1024*1024*1024, 5);
+            FileHandler fileHandler = new FileHandler(absPathPattern, 1024 * 1024 * 1024, 5);
             fileHandler.setFormatter(new JavaLoggerFormatter());
             result.addHandler(fileHandler);
         }
@@ -223,32 +223,32 @@ public class CommandHandler {
                 }
             }
 
-            logger.info("Command [" + commandName + "] finished with code " + EXIT_CODE_OK);
+            logger.info("Command [" + commandName + "] finished with code: " + EXIT_CODE_OK);
             return EXIT_CODE_OK;
         }
         catch (IllegalArgumentException e) {
             logger.severe("Check arguments. " + CommandLogger.errorMessage(e));
-            logger.info("Command [" + commandName + "] finished with code " + EXIT_CODE_INVALID_ARGUMENTS);
+            logger.info("Command [" + commandName + "] finished with code: " + EXIT_CODE_INVALID_ARGUMENTS);
 
             return EXIT_CODE_INVALID_ARGUMENTS;
         }
         catch (Throwable e) {
             if (isAuthError(e)) {
                 logger.severe("Authentication error. " + CommandLogger.errorMessage(e));
-                logger.info("Command [" + commandName + "] finished with code " + ERR_AUTHENTICATION_FAILED);
+                logger.info("Command [" + commandName + "] finished with code: " + ERR_AUTHENTICATION_FAILED);
 
                 return ERR_AUTHENTICATION_FAILED;
             }
 
             if (isConnectionError(e)) {
                 logger.severe("Connection to cluster failed. " + CommandLogger.errorMessage(e));
-                logger.info("Command [" + commandName + "] finished with code " + EXIT_CODE_CONNECTION_FAILED);
+                logger.info("Command [" + commandName + "] finished with code: " + EXIT_CODE_CONNECTION_FAILED);
 
                 return EXIT_CODE_CONNECTION_FAILED;
             }
 
             logger.severe(CommandLogger.errorMessage(e));
-            logger.info("Command [" + commandName + "] finished with code " + EXIT_CODE_UNEXPECTED_ERROR);
+            logger.info("Command [" + commandName + "] finished with code: " + EXIT_CODE_UNEXPECTED_ERROR);
 
             return EXIT_CODE_UNEXPECTED_ERROR;
         }

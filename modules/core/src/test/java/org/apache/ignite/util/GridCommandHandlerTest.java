@@ -2449,8 +2449,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
         String dataLine = outLines.get(firstIndex + 1);
         String userArrtDataLine = outLines.get(lastIndex + 1);
 
-        long commaNum = dataLine.chars().filter(i -> i==',').count();
-        long userArrtCommaNum = userArrtDataLine.chars().filter(i -> i==',').count();
+        long commaNum = dataLine.chars().filter(i -> i == ',').count();
+        long userArrtCommaNum = userArrtDataLine.chars().filter(i -> i == ',').count();
 
         // Check that number of columns increased by 3
         assertEquals(3, userArrtCommaNum - commaNum);

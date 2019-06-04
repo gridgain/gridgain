@@ -104,8 +104,7 @@ public class CommandLogger {
 
         if (F.isEmpty(msg))
             msg = e.getClass().getName();
-
-        if (msg.startsWith("Failed to handle request")) {
+        else if (msg.startsWith("Failed to handle request")) {
             int p = msg.indexOf("err=");
 
             msg = msg.substring(p + 4, msg.length() - 1);
