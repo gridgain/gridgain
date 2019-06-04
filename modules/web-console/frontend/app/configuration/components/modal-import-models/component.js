@@ -94,7 +94,7 @@ export class ModalImportModels {
     /** @type {ng.ICompiledExpression} */
     onHide;
 
-    static $inject = ['$uiRouter', 'ConfigSelectors', 'ConfigEffects', 'ConfigureState', 'IgniteConfirm', 'IgniteConfirmBatch', 'IgniteFocus', 'SqlTypes', 'JavaTypes', 'IgniteMessages', '$scope', '$rootScope', 'AgentManager', 'IgniteActivitiesData', 'IgniteLoading', 'IgniteFormUtils', 'IgniteLegacyUtils'];
+    static $inject = ['$uiRouter', 'ConfigSelectors', 'ConfigEffects', 'ConfigureState', 'IgniteConfirm', 'IgniteConfirmBatch', 'IgniteFocus', 'SqlTypes', 'JavaTypes', 'IgniteMessages', '$scope', '$rootScope', 'AgentManager', 'IgniteActivitiesData', 'IgniteLoading', 'IgniteFormUtils', 'IgniteLegacyUtils', 'IgniteVersion'];
 
     /**
      * @param {UIRouter} $uiRouter
@@ -109,7 +109,7 @@ export class ModalImportModels {
      * @param {AgentManager} agentMgr
      * @param {ActivitiesData} ActivitiesData
      */
-    constructor($uiRouter, ConfigSelectors, ConfigEffects, ConfigureState, Confirm, ConfirmBatch, Focus, SqlTypes, JavaTypes, Messages, $scope, $root, agentMgr, ActivitiesData, Loading, FormUtils, LegacyUtils) {
+    constructor($uiRouter, ConfigSelectors, ConfigEffects, ConfigureState, Confirm, ConfirmBatch, Focus, SqlTypes, JavaTypes, Messages, $scope, $root, agentMgr, ActivitiesData, Loading, FormUtils, LegacyUtils, IgniteVersion) {
         this.$uiRouter = $uiRouter;
         this.ConfirmBatch = ConfirmBatch;
         this.ConfigSelectors = ConfigSelectors;
@@ -121,7 +121,7 @@ export class ModalImportModels {
         this.JavaTypes = JavaTypes;
         this.SqlTypes = SqlTypes;
         this.ActivitiesData = ActivitiesData;
-        Object.assign(this, {Confirm, Focus, Messages, Loading, FormUtils, LegacyUtils});
+        Object.assign(this, {Confirm, Focus, Messages, Loading, FormUtils, LegacyUtils, IgniteVersion});
     }
 
     loadData() {
@@ -384,6 +384,12 @@ export class ModalImportModels {
                 jdbcDriverClass: 'org.h2.Driver',
                 jdbcUrl: 'jdbc:h2:tcp://[host]/[database]',
                 user: 'sa'
+            },
+            {
+                db: 'Hive',
+                jdbcDriverClass: 'org.apache.hive.jdbc.HiveDriver',
+                jdbcUrl: 'jdbc:hive2://[host]:[port]/[database]',
+                user: 'hiveuser'
             }
         ];
 
@@ -815,13 +821,18 @@ export class ModalImportModels {
 
                         const catalog = $scope.importDomain.catalog;
 
+                        const dsFactoryBean = {
+                            dataSourceBean: 'ds' + dialect + '_' + catalog,
+                            dialect,
+                            implementationVersion: $scope.selectedPreset.jdbcDriverImplementationVersion
+                        };
+
                         newCache.cacheStoreFactory = {
-                            kind: 'CacheJdbcPojoStoreFactory',
-                            CacheJdbcPojoStoreFactory: {
-                                dataSourceBean: 'ds' + dialect + '_' + catalog,
-                                dialect,
-                                implementationVersion: $scope.selectedPreset.jdbcDriverImplementationVersion
-                            },
+                            kind: dialect === 'Hive' && this.IgniteVersion.currentSbj.getValue().hiveVersion
+                                ? 'HiveCacheJdbcPojoStoreFactory'
+                                : 'CacheJdbcPojoStoreFactory',
+                            HiveCacheJdbcPojoStoreFactory: dsFactoryBean,
+                            CacheJdbcPojoStoreFactory: dsFactoryBean,
                             CacheJdbcBlobStoreFactory: { connectVia: 'DataSource' }
                         };
                     }
