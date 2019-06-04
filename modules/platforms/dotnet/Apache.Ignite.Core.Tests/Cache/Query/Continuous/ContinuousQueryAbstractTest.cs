@@ -920,7 +920,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Query.Continuous
         }
 
         /// <summary>
-        /// Craate entry.
+        /// Create entry.
         /// </summary>
         /// <param name="val">Value.</param>
         /// <returns>Entry.</returns>

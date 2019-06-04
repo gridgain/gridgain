@@ -84,14 +84,14 @@ namespace Apache.Ignite.Core.Impl.Cache.Query.Continuous
 
             Debug.Assert(hasVal || hasOldVal);
 
-            var eventType = (CacheEntryEventType)reader.ReadByte();
+            var eventType = reader.ReadByte();
             switch (eventType)
             {
-                case CacheEntryEventType.Created:
+                case 0:
                     return new CacheEntryCreateEvent<TK, TV>(key, val);
-                case CacheEntryEventType.Updated:
+                case 1:
                     return new CacheEntryUpdateEvent<TK, TV>(key, oldVal, val);
-                case CacheEntryEventType.Removed:
+                case 2:
                     return new CacheEntryRemoveEvent<TK, TV>(key, oldVal);
                 default:
                     throw new NotSupportedException(eventType.ToString());
