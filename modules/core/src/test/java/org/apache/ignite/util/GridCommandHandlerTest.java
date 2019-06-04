@@ -2572,6 +2572,39 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
     }
 
     /**
+     * Tests enabling/disabling rolling upgrade.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testRollingUpgrade() throws Exception {
+        Ignite ignite = startGrid(0);
+
+        // Apache Ignite does not support rolling upgrade from out of the box.
+        assertEquals(EXIT_CODE_UNEXPECTED_ERROR, execute("--rolling-upgrade", "on"));
+
+        assertEquals(EXIT_CODE_UNEXPECTED_ERROR, execute("--rolling-upgrade", "off"));
+    }
+
+    /**
+     * Tests execution of '--rolling-upgrade state' command.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testRollingUpgradeStatus() throws Exception {
+        Ignite ignite = startGrid(0);
+
+        injectTestSystemOut();
+
+        assertEquals(EXIT_CODE_OK, execute("--rolling-upgrade", "status"));
+
+        String out = testOut.toString();
+
+        assertContains(log, out, "Rolling upgrade is disabled");
+    }
+
+    /**
      * Starts several long transactions in order to test --tx command.
      * Transactions will last until unlock latch is released: first transaction will wait for unlock latch directly,
      * some others will wait for key lock acquisition.

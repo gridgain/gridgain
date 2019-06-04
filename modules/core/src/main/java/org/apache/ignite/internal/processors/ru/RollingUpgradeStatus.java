@@ -48,6 +48,12 @@ public class RollingUpgradeStatus extends IgniteDataTransferObject {
     private Set<IgniteFeatures> supportedFeatures;
 
     /**
+     * Creates a new instance of RollingUpgradeStatus.
+     */
+    public RollingUpgradeStatus() {
+    }
+
+    /**
      * Creates a new instance of the Rolling Upgrade status with the given parameters.
      *
      * @param upgradeInProgress {@code true} if Rolling Upgrade is in progress.
