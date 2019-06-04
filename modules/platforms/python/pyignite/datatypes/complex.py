@@ -16,10 +16,10 @@
 from collections import OrderedDict
 import ctypes
 import inspect
+from typing import Iterable, Dict
 
 from pyignite.constants import *
 from pyignite.exceptions import ParseError
-from pyignite.utils import entity_id, hashcode
 from .base import IgniteDataType
 from .internal import AnyDataObject, infer_from_python
 from .type_codes import *
@@ -42,6 +42,11 @@ class ObjectArrayObject(IgniteDataType):
     _type_id = TYPE_OBJ_ARR
     type_code = TC_OBJECT_ARRAY
     type_or_id_name = 'type_id'
+
+    @staticmethod
+    def hashcode(value: Iterable) -> int:
+        # Arrays are not supported as keys at the moment.
+        return 0
 
     @classmethod
     def build_header(cls):
@@ -186,6 +191,11 @@ class CollectionObject(ObjectArrayObject):
     pythonic = list
     default = []
 
+    @staticmethod
+    def hashcode(value: Iterable) -> int:
+        # Collections are not supported as keys at the moment.
+        return 0
+
     @classmethod
     def build_header(cls):
         return type(
@@ -213,6 +223,11 @@ class Map(IgniteDataType):
     _type_id = TYPE_MAP
     HASH_MAP = 1
     LINKED_HASH_MAP = 2
+
+    @staticmethod
+    def hashcode(value: Dict) -> int:
+        # Maps are not supported as keys at the moment.
+        return 0
 
     @classmethod
     def build_header(cls):

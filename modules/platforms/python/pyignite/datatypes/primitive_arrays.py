@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 import ctypes
+from typing import Any
 
 from pyignite.constants import *
 from .base import IgniteDataType
@@ -39,6 +40,11 @@ class PrimitiveArray(IgniteDataType):
     _type_id = None
     primitive_type = None
     type_code = None
+
+    @staticmethod
+    def hashcode(value: Any) -> int:
+        # Arrays are not supported as keys at the moment.
+        return 0
 
     @classmethod
     def build_header_class(cls):

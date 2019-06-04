@@ -17,7 +17,7 @@ import ctypes
 from datetime import date, datetime, time, timedelta
 import decimal
 from math import ceil
-from typing import Tuple
+from typing import Any, Tuple
 import uuid
 
 from pyignite.constants import *
@@ -580,6 +580,11 @@ class StandardArray(IgniteDataType):
     _type_id = None
     standard_type = None
     type_code = None
+
+    @staticmethod
+    def hashcode(value: Any) -> int:
+        # Arrays are not supported as keys at the moment.
+        return 0
 
     @classmethod
     def build_header_class(cls):
