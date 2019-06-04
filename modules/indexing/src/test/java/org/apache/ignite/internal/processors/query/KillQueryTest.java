@@ -269,6 +269,8 @@ public class KillQueryTest extends GridCommonAbstractTest {
     public void after() throws Exception {
         MockedIndexing.resetToDefault();
 
+        clientBlocker.stopBlock(false);
+
         if (stmt != null && !stmt.isClosed()) {
             stmt.close();
 
@@ -627,8 +629,8 @@ public class KillQueryTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Check if query hangs due to partitions for it can't be reserved, we still able to cancel it. Used mocked indexing
-     * simulates for sure such case.
+     * Check if query hangs (due to reducer spins retrying to reserve partitions but they can't be reserved), we still
+     * able to cancel it. Used mocked indexing simulates 100% unability.
      */
     @Test
     public void testCancelQueryIfPartitionsCantBeReservedOnMapNodes() throws Exception {
