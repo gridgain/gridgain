@@ -217,9 +217,9 @@ public class KillQueryTest extends GridCommonAbstractTest {
         startGrids(NODES_COUNT);
 
         try (IgniteDataStreamer<Object, Object> ds = grid(0).dataStreamer(GridAbstractTest.DEFAULT_CACHE_NAME)) {
-            for (int i = 0; i < MAX_ROWS; ++i) {
-                ds.allowOverwrite(false);
+            ds.allowOverwrite(false);
 
+            for (int i = 0; i < MAX_ROWS; ++i) {
                 ds.addData(i, i);
 
                 ds.addData((long)i, (long)i);
