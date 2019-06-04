@@ -156,6 +156,7 @@ import static org.apache.ignite.events.EventType.EVT_NODE_METRICS_UPDATED;
 import static org.apache.ignite.events.EventType.EVT_NODE_SEGMENTED;
 import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
 import static org.apache.ignite.failure.FailureType.SYSTEM_WORKER_TERMINATION;
+import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_BUILD_VER_OVERRIDE;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_DATA_REGIONS_OFFHEAP_SIZE;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_DEPLOYMENT_MODE;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
@@ -357,7 +358,12 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
     @Override public void onBeforeSpiStart() {
         DiscoverySpi spi = getSpi();
 
-        spi.setNodeAttributes(ctx.nodeAttributes(), VER);
+        String overrideVer = (String) ctx.nodeAttributes().get(ATTR_BUILD_VER_OVERRIDE);
+
+        spi.setNodeAttributes(
+            ctx.nodeAttributes(),
+            overrideVer == null ? VER : IgniteProductVersion.fromString(overrideVer)
+        );
     }
 
     /**

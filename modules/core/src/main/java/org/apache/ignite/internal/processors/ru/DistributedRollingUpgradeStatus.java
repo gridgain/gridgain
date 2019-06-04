@@ -13,30 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.ignite.internal.processors.ru;
 
-import org.apache.ignite.internal.processors.GridProcessor;
+import org.apache.ignite.internal.processors.configuration.distributed.DistributedProperty;
 
 /**
- * Defines public API for Rolling Upgrade process.
+ * The wrapper of {@link RollingUpgradeStatus} for the distributed metastorage binding.
  */
-public interface RollingUpgradeProcessor extends GridProcessor {
+public class DistributedRollingUpgradeStatus extends DistributedProperty<RollingUpgradeStatus> {
     /**
-     * Enables or disables rolling upgrade mode.
-     *
-     * @param enable {@code true} in order to enable rolling upgrade mode.
+     * @param name Name of property.
      */
-    RollingUpgradeModeChangeResult setRollingUpgradeMode(boolean enable);
+    public DistributedRollingUpgradeStatus(String name) {
+        super(name);
+    }
 
     /**
-     * Returns cluster-wide status of Rolling Upgrade process.
-     *
-     * @return status of Rolling Upgrade process.
+     * @param name Name of property.
+     * @return Property detached from processor.(Distributed updating are not accessable).
      */
-    RollingUpgradeStatus getDistributedStatus();
-
-    /**
-     * Disables strict validation mode.
-     */
-    void enableForcedRollingUpgradeMode();
+    public static DistributedRollingUpgradeStatus detachedProperty(String name) {
+        return new DistributedRollingUpgradeStatus(name);
+    }
 }
