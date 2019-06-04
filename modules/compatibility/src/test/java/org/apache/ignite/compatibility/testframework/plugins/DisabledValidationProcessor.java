@@ -20,6 +20,8 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.nodevalidation.DiscoveryNodeValidationProcessor;
+import org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult;
+import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
 import org.apache.ignite.spi.IgniteNodeValidationResult;
 import org.jetbrains.annotations.Nullable;
 
@@ -35,7 +37,22 @@ public class DisabledValidationProcessor extends GridProcessorAdapter implements
     }
 
     /** {@inheritDoc} */
-    @Nullable @Override public IgniteNodeValidationResult validateNode(ClusterNode node) {
+    @Nullable public IgniteNodeValidationResult validateNode(ClusterNode node) {
         return null;
+    }
+
+    /** {@inheritDoc} */
+    public RollingUpgradeModeChangeResult setRollingUpgradeMode(boolean enable) {
+        throw new RuntimeException("TODO");
+    }
+
+    /** {@inheritDoc} */
+    public RollingUpgradeStatus getDistributedStatus() {
+        throw new RuntimeException("TODO");
+    }
+
+    /** {@inheritDoc} */
+    @Override public void enableForcedRollingUpgradeMode() {
+        throw new RuntimeException("TODO");
     }
 }

@@ -64,6 +64,10 @@ public class RollingUpgradeModeChangeResult extends IgniteDataTransferObject {
     /** The reason why the operation was failed. */
     private Exception cause;
 
+    /** Default constructor. */
+    public RollingUpgradeModeChangeResult() {
+    }
+
     /**
      * Creates a new instance with the given {@code status}.
      *
