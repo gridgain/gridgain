@@ -185,6 +185,9 @@ public abstract class GridAbstractTest extends JUnit3TestLegacySupport {
         }
     };
 
+    /** Allows easy repeating for test. */
+    @Rule public transient RepeatRule repeatRule = new RepeatRule();
+
     /** */
     private static transient boolean startGrid;
 

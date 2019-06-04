@@ -258,6 +258,10 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
                 if (part.state() == RENTING) {
                     if (part.reserve()) {
                         part.moving();
+
+                        if (exchFut != null)
+                            exchFut.addClearingPartition(grp, part.id());
+
                         part.clearAsync();
 
                         part.release();
@@ -282,7 +286,8 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
                         histSupplier = ctx.discovery().node(nodeId);
                 }
 
-                if (histSupplier != null) {
+                // Clearing partition should always be fully reloaded.
+                if (histSupplier != null && !exchFut.isClearingPartition(grp, p)) {
                     assert grp.persistenceEnabled();
                     assert remoteOwners(p, topVer).contains(histSupplier) : remoteOwners(p, topVer);
 
@@ -296,6 +301,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
                         );
                     }
 
+                    // TODO FIXME https://issues.apache.org/jira/browse/IGNITE-11790
                     msg.partitions().addHistorical(p, part.initialUpdateCounter(), countersMap.updateCounter(p), partitions);
                 }
                 else {
