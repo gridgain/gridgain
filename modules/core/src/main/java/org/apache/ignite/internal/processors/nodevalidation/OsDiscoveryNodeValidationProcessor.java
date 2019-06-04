@@ -78,17 +78,17 @@ public class OsDiscoveryNodeValidationProcessor extends GridProcessorAdapter imp
     }
 
     /** {@inheritDoc} */
-    @Override public RollingUpgradeModeChangeResult setRollingUpgradeMode(boolean enable) {
+    @Override public RollingUpgradeModeChangeResult setMode(boolean enable) {
         throw new UnsupportedOperationException("OS nodes do not support Rolling Upgrade.");
     }
 
     /** {@inheritDoc} */
-    @Override public void enableForcedRollingUpgradeMode() {
+    @Override public void enableForcedMode() {
         throw new UnsupportedOperationException("OS nodes do not support Rolling Upgrade.");
     }
 
     /** {@inheritDoc} */
-    @Override public RollingUpgradeStatus getDistributedStatus() {
+    @Override public RollingUpgradeStatus getStatus() {
         return new RollingUpgradeStatus(
             false,
             IgniteProductVersion.fromString(ctx.discovery().localNode().attribute(ATTR_BUILD_VER)),
