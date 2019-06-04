@@ -274,7 +274,7 @@ class Cache:
 
             # calculate partition for key or affinity key
             # (algorithm is taken from `RendezvousAffinityFunction.java`)
-            base_value = key_hint.hashcode(key)
+            base_value = key_hint.hashcode(key, self._client)
             mask = parts - 1
 
             if parts & mask == 0:

@@ -89,7 +89,7 @@ class ByteObject(DataObject):
     default = 0
 
     @staticmethod
-    def hashcode(value: int) -> int:
+    def hashcode(value: int, *args, **kwargs) -> int:
         return value
 
 
@@ -102,7 +102,7 @@ class ShortObject(DataObject):
     default = 0
 
     @staticmethod
-    def hashcode(value: int) -> int:
+    def hashcode(value: int, *args, **kwargs) -> int:
         return value
 
 
@@ -115,7 +115,7 @@ class IntObject(DataObject):
     default = 0
 
     @staticmethod
-    def hashcode(value: int) -> int:
+    def hashcode(value: int, *args, **kwargs) -> int:
         return value
 
 
@@ -128,7 +128,7 @@ class LongObject(DataObject):
     default = 0
 
     @staticmethod
-    def hashcode(value: int) -> int:
+    def hashcode(value: int, *args, **kwargs) -> int:
         return value ^ (unsigned(value, ctypes.c_ulonglong) >> 32)
 
 
@@ -141,7 +141,7 @@ class FloatObject(DataObject):
     default = 0.0
 
     @staticmethod
-    def hashcode(value: float) -> int:
+    def hashcode(value: float, *args, **kwargs) -> int:
         return ctypes.cast(
             ctypes.pointer(ctypes.c_float(value)),
             ctypes.POINTER(ctypes.c_int)
@@ -157,7 +157,7 @@ class DoubleObject(DataObject):
     default = 0.0
 
     @staticmethod
-    def hashcode(value: float) -> int:
+    def hashcode(value: float, *args, **kwargs) -> int:
         bits = ctypes.cast(
             ctypes.pointer(ctypes.c_double(value)),
             ctypes.POINTER(ctypes.c_longlong)
@@ -180,7 +180,7 @@ class CharObject(DataObject):
     default = ' '
 
     @staticmethod
-    def hashcode(value: str) -> int:
+    def hashcode(value: str, *args, **kwargs) -> int:
         return ord(value)
 
     @classmethod
@@ -213,5 +213,5 @@ class BoolObject(DataObject):
     default = False
 
     @staticmethod
-    def hashcode(value: bool) -> int:
+    def hashcode(value: bool, *args, **kwargs) -> int:
         return 1231 if value else 1237

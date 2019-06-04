@@ -76,7 +76,7 @@ class String(IgniteDataType):
     pythonic = str
 
     @staticmethod
-    def hashcode(value: str) -> int:
+    def hashcode(value: str, *args, **kwargs) -> int:
         return hashcode(value)
 
     @classmethod
@@ -146,7 +146,7 @@ class DecimalObject(IgniteDataType):
     default = decimal.Decimal('0.00')
 
     @staticmethod
-    def hashcode(value: decimal.Decimal) -> int:
+    def hashcode(value: decimal.Decimal, *args, **kwargs) -> int:
         return decimal_hashcode(value)
 
     @classmethod
@@ -279,7 +279,7 @@ class UUIDObject(StandardObject):
     UUID_BYTE_ORDER = (7, 6, 5, 4, 3, 2, 1, 0, 15, 14, 13, 12, 11, 10, 9, 8)
 
     @staticmethod
-    def hashcode(value: 'UUID') -> int:
+    def hashcode(value: 'UUID', *args, **kwargs) -> int:
         msb = value.int >> 64
         lsb = value.int & 0xffffffffffffffff
         hilo = msb ^ lsb
@@ -345,7 +345,7 @@ class TimestampObject(StandardObject):
     default = (datetime(1970, 1, 1), 0)
 
     @staticmethod
-    def hashcode(value: Tuple[datetime, int]) -> int:
+    def hashcode(value: Tuple[datetime, int], *args, **kwargs) -> int:
         return datetime_hashcode(int(value[0].timestamp() * 1000))
 
     @classmethod
@@ -407,7 +407,7 @@ class DateObject(StandardObject):
     default = datetime(1970, 1, 1)
 
     @staticmethod
-    def hashcode(value: datetime) -> int:
+    def hashcode(value: datetime, *args, **kwargs) -> int:
         return datetime_hashcode(int(value.timestamp() * 1000))
 
     @classmethod
@@ -465,7 +465,7 @@ class TimeObject(StandardObject):
     default = timedelta()
 
     @staticmethod
-    def hashcode(value: timedelta) -> int:
+    def hashcode(value: timedelta, *args, **kwargs) -> int:
         return datetime_hashcode(int(value.total_seconds() * 1000))
 
     @classmethod

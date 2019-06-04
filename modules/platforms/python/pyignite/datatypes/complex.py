@@ -339,6 +339,46 @@ class BinaryObject(IgniteDataType):
     OFFSET_TWO_BYTES = 0x0010
     COMPACT_FOOTER = 0x0020
 
+    @staticmethod
+    def find_client():
+        """
+        A nice hack. Extracts the nearest `Client` instance from the
+        call stack.
+        """
+        from pyignite import Client
+        from pyignite.connection import Connection
+
+        frame = None
+        try:
+            for rec in inspect.stack()[2:]:
+                frame = rec[0]
+                code = frame.f_code
+                for varname in code.co_varnames:
+                    suspect = frame.f_locals[varname]
+                    if isinstance(suspect, Client):
+                        return suspect
+                    if isinstance(suspect, Connection):
+                        return suspect.client
+        finally:
+            del frame
+
+    @staticmethod
+    def hashcode(
+        value: object, client: 'Client' = None, *args, **kwargs
+    ) -> int:
+        # binary objects's hashcode implementation is special in the sense
+        # that you need to fully serialize the object to calculate
+        # its hashcode
+        if value._hashcode is None:
+
+            # …and for to serialize it you need a Client instance
+            if client is None:
+                client = BinaryObject.find_client()
+
+            value._build(client)
+
+        return value._hashcode
+
     @classmethod
     def build_header(cls):
         return type(
@@ -455,87 +495,19 @@ class BinaryObject(IgniteDataType):
     @classmethod
     def from_python(cls, value: object):
 
-        def find_client():
-            """
-            A nice hack. Extracts the nearest `Client` instance from the
-            call stack.
-            """
-            from pyignite import Client
-            from pyignite.connection import Connection
+        if getattr(value, '_buffer', None) is None:
+            client = find_client()
 
-            frame = None
-            try:
-                for rec in inspect.stack()[2:]:
-                    frame = rec[0]
-                    code = frame.f_code
-                    for varname in code.co_varnames:
-                        suspect = frame.f_locals[varname]
-                        if isinstance(suspect, Client):
-                            return suspect
-                        if isinstance(suspect, Connection):
-                            return suspect.client
-            finally:
-                del frame
-
-        compact_footer = True  # this is actually used
-        client = find_client()
-        if client:
             # if no client can be found, the class of the `value` is discarded
             # and the new dataclass is automatically registered later on
-            client.register_binary_type(value.__class__)
-            compact_footer = client.compact_footer
-        else:
-            raise Warning(
-                'Can not register binary type {}'.format(value.type_name)
-            )
-
-        # prepare header
-        header_class = cls.build_header()
-        header = header_class()
-        header.type_code = int.from_bytes(
-            cls.type_code,
-            byteorder=PROTOCOL_BYTE_ORDER
-        )
-
-        header.flags = cls.USER_TYPE | cls.HAS_SCHEMA
-        if compact_footer:
-            header.flags |= cls.COMPACT_FOOTER
-        header.version = value.version
-        header.type_id = value.type_id
-        header.schema_id = value.schema_id
-
-        # create fields and calculate offsets
-        field_buffer = b''
-        offsets = [ctypes.sizeof(header_class)]
-        schema_items = list(value.schema.items())
-        for field_name, field_type in schema_items:
-            partial_buffer = field_type.from_python(
-                getattr(
-                    value, field_name, getattr(field_type, 'default', None)
+            if client:
+                client.register_binary_type(value.__class__)
+            else:
+                raise Warning(
+                    'Can not register binary type {}'.format(value.type_name)
                 )
-            )
-            offsets.append(max(offsets) + len(partial_buffer))
-            field_buffer += partial_buffer
 
-        offsets = offsets[:-1]
+            # build binary representation
+            value._build(client)
 
-        # create footer
-        if max(offsets, default=0) < 255:
-            header.flags |= cls.OFFSET_ONE_BYTE
-        elif max(offsets) < 65535:
-            header.flags |= cls.OFFSET_TWO_BYTES
-        schema_class = cls.schema_type(header.flags) * len(offsets)
-        schema = schema_class()
-        if compact_footer:
-            for i, offset in enumerate(offsets):
-                schema[i] = offset
-        else:
-            for i, offset in enumerate(offsets):
-                schema[i].field_id = entity_id(schema_items[i][0])
-                schema[i].offset = offset
-        # calculate size and hash code
-        header.schema_offset = ctypes.sizeof(header_class) + len(field_buffer)
-        header.length = header.schema_offset + ctypes.sizeof(schema_class)
-        header.hash_code = hashcode(field_buffer + bytes(schema))
-
-        return bytes(header) + field_buffer + bytes(schema)
+        return value._buffer

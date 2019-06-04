@@ -20,6 +20,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
+from pyignite import GenericObjectMeta
 from pyignite.api import *
 from pyignite.constants import *
 from pyignite.datatypes import *
@@ -136,6 +137,48 @@ def test_affinity(client, key, key_hint):
         )
         if node is best_node:
             assert result.value == value, (
+                'Affinity calculation error for {}'.format(key)
+            )
+        else:
+            assert result.value is None, (
+                'Affinity calculation error for {}'.format(key)
+            )
+
+    cache_1.destroy()
+
+
+def test_affinity_for_generic_object(client):
+
+    time.sleep(0.1)
+
+    cache_1 = client.get_or_create_cache({
+        PROP_NAME: 'test_cache_1',
+        PROP_CACHE_MODE: CacheMode.PARTITIONED,
+    })
+
+    class KeyClass(
+        metaclass=GenericObjectMeta,
+        schema={
+            'NO': IntObject,
+            'NAME': String,
+        },
+    ):
+        pass
+
+    key = KeyClass()
+    key.NO = 1
+    key.NAME = 'test_string'
+
+    cache_1.put(key, 42, key_hint=BinaryObject)
+
+    best_node = cache_1.get_best_node(key, key_hint=BinaryObject)
+
+    for node in client._nodes.values():
+        result = cache_local_peek(
+            node, cache_1.cache_id, key, key_hint=BinaryObject,
+        )
+        if node is best_node:
+            assert result.value == 42, (
                 'Affinity calculation error for {}'.format(key)
             )
         else:

@@ -14,10 +14,9 @@
 # limitations under the License.
 #
 import ctypes
-from datetime import datetime
 import decimal
 from functools import wraps
-from typing import Any, Callable, Type, Tuple, Union
+from typing import Any, Callable, Optional, Type, Tuple, Union
 
 from pyignite.datatypes.base import IgniteDataType
 from .constants import *
@@ -132,13 +131,15 @@ def cache_id(cache: Union[str, int]) -> int:
     return cache if type(cache) is int else hashcode(cache)
 
 
-def entity_id(cache: Union[str, int]) -> int:
+def entity_id(cache: Union[str, int]) -> Optional[int]:
     """
     Create a type ID from type name or field ID from field name.
 
     :param cache: entity name or ID,
     :return: entity ID.
     """
+    if cache is None:
+        return None
     return cache if type(cache) is int else hashcode(cache.lower())
 
 
