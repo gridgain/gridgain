@@ -25,8 +25,10 @@ import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.processors.platform.client.ThinClientCustomQueryRegistry;
 import org.apache.ignite.ml.inference.storage.descriptor.ModelDescriptorStorageFactory;
 import org.apache.ignite.ml.inference.storage.model.ModelStorageFactory;
+import org.apache.ignite.ml.inference.storage.model.thinclient.ModelStorateThinClientProcessor;
 import org.apache.ignite.plugin.CachePluginContext;
 import org.apache.ignite.plugin.CachePluginProvider;
 import org.apache.ignite.plugin.ExtensionRegistry;
@@ -170,6 +172,10 @@ public class MLPluginProvider implements PluginProvider<MLPluginConfiguration> {
             storageCfg.setBackups(cfg.getMdlStorageBackups());
 
         ignite.getOrCreateCache(storageCfg);
+
+        ThinClientCustomQueryRegistry.register(
+            new ModelStorateThinClientProcessor(new ModelStorageFactory().getModelStorage(ignite))
+        );
 
         log.info("ML model storage is ready");
     }

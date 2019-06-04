@@ -70,7 +70,7 @@ public class DefaultModelStorage implements ModelStorage {
             // Update parent if it's a new file.
             if (!dir.getFiles().contains(path)) {
                 dir.getFiles().add(path);
-                storageProvider.put(parentPath, parent);
+                storageProvider.put(parentPath, parent.updateModifictaionTs());
             }
 
             // Save file into cache.
@@ -134,7 +134,7 @@ public class DefaultModelStorage implements ModelStorage {
             dir.getFiles().add(path);
 
             // Update parent and save directory into cache.
-            storageProvider.put(parentPath, parent);
+            storageProvider.put(parentPath, parent.updateModifictaionTs());
             storageProvider.put(path, new Directory());
         }, pathLock, parentPathLock);
     }
@@ -174,7 +174,7 @@ public class DefaultModelStorage implements ModelStorage {
                 if (parentWithLock != null) {
                     Directory parentDir = (Directory)storageProvider.get(parentWithLock.get1());
                     parentDir.getFiles().add(pathWithLock.get1());
-                    storageProvider.put(parentWithLock.get1(), parentDir);
+                    storageProvider.put(parentWithLock.get1(), parentDir.updateModifictaionTs());
                     parentWithLock.get2().unlock();
                 }
 
@@ -308,5 +308,17 @@ public class DefaultModelStorage implements ModelStorage {
         }
 
         return res;
+    }
+
+    /** {@inheritDoc} */
+    @Override public FileStat getFileStat(String path) {
+        FileOrDirectory file = storageProvider.get(path);
+        if (file == null)
+            throw new IllegalArgumentException("File not found [path=" + path + "]");
+
+        int size = 0;
+        if (file.isFile())
+            size = ((File)file).getData().length;
+        return new FileStat(file.isDirectory(), file.getModificationTs(), size);
     }
 }

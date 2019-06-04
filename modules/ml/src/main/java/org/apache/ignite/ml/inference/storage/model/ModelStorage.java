@@ -111,4 +111,12 @@ public interface ModelStorage {
      * @return {@code true} if the specified path associated with a regular file.
      */
     public boolean isFile(String path);
+
+    /**
+     * Returns statistics for file.
+     *
+     * @param path Path to directory or file.
+     * @return Statistics for file or directory.
+     */
+    public FileStat getFileStat(String path);
 }
