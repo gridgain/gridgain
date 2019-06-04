@@ -31,6 +31,8 @@
         <property name="clientFailureDetectionTimeout" value="10000"/>
         <property name="networkTimeout" value="10000"/>
 
+        <property name="connectorConfiguration"><null/></property>
+
         <property name="cacheConfiguration">
             <bean class="org.apache.ignite.configuration.CacheConfiguration">
                 <property name="name" value="*"/>
