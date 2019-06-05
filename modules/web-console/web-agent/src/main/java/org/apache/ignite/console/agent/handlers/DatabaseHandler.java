@@ -45,7 +45,7 @@ import org.slf4j.LoggerFactory;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.ignite.console.agent.AgentUtils.resolvePath;
-import static org.apache.ignite.console.json.JsonUtils.fromJson;
+import static org.apache.ignite.console.utils.Utils.fromJson;
 
 /**
  * Handler extract database metadata for "Metadata import" dialog on Web Console.
@@ -61,9 +61,6 @@ public class DatabaseHandler {
     private static final String BUNDLE_VERSION = "Bundle-Version";
 
     /** */
-    private final WebSocketSession wss;
-
-    /** */
     private final File driversFolder;
 
     /** */
@@ -71,11 +68,8 @@ public class DatabaseHandler {
 
     /**
      * @param cfg Config.
-     * @param wss Websocket session.
      */
-    public DatabaseHandler(AgentConfiguration cfg, WebSocketSession wss) {
-        this.wss = wss;
-
+    public DatabaseHandler(AgentConfiguration cfg) {
         driversFolder = resolvePath(F.isEmpty(cfg.driversFolder()) ? "jdbc-drivers" : cfg.driversFolder());
 
         dbMetaReader = new DbMetadataReader();
@@ -104,102 +98,85 @@ public class DatabaseHandler {
     /**
      * Collect list of JDBC drivers.
      *
-     * @param evt Websocket event.
+     * @return List of JDBC drivers.
      */
-    public void collectJdbcDrivers(WebSocketEvent evt) {
-        try {
-            List<Map<String, String>> drivers = new ArrayList<>();
+    public List<Map<String, String>> collectJdbcDrivers() {
+        List<Map<String, String>> drivers = new ArrayList<>();
 
-            if (driversFolder != null) {
-                log.info("Collecting JDBC drivers in folder: " + driversFolder.getPath());
+        if (driversFolder != null) {
+            log.info("Collecting JDBC drivers in folder: " + driversFolder.getPath());
 
-                File[] list = driversFolder.listFiles((dir, name) -> name.endsWith(".jar"));
+            File[] list = driversFolder.listFiles((dir, name) -> name.endsWith(".jar"));
 
-                if (list != null) {
-                    for (File file : list) {
-                        try {
-                            boolean win = System.getProperty("os.name").contains("win");
+            if (list != null) {
+                for (File file : list) {
+                    try {
+                        boolean win = System.getProperty("os.name").contains("win");
 
-                            URL url = new URL("jar", null,
-                                "file:" + (win ? "/" : "") + file.getPath() + "!/META-INF/services/java.sql.Driver");
+                        URL url = new URL("jar", null,
+                            "file:" + (win ? "/" : "") + file.getPath() + "!/META-INF/services/java.sql.Driver");
 
-                            try (
-                                BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream(), UTF_8));
-                                JarFile jar = new JarFile(file.getPath())
-                            ) {
-                                Manifest m = jar.getManifest();
-                                Object ver = m.getMainAttributes().getValue(IMPLEMENTATION_VERSION);
+                        try (
+                            BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream(), UTF_8));
+                            JarFile jar = new JarFile(file.getPath())
+                        ) {
+                            Manifest m = jar.getManifest();
+                            Object ver = m.getMainAttributes().getValue(IMPLEMENTATION_VERSION);
 
-                                if (ver == null)
-                                    ver = m.getMainAttributes().getValue(BUNDLE_VERSION);
+                            if (ver == null)
+                                ver = m.getMainAttributes().getValue(BUNDLE_VERSION);
 
-                                String jdbcDriverCls = reader.readLine();
+                            String jdbcDriverCls = reader.readLine();
 
-                                drivers.add(driver(file.getName(), jdbcDriverCls, ver != null ? ver.toString() : null));
+                            drivers.add(driver(file.getName(), jdbcDriverCls, ver != null ? ver.toString() : null));
 
-                                log.info("Found: [driver=" + file + ", class=" + jdbcDriverCls + "]");
-                            }
-                        }
-                        catch (IOException e) {
-                            drivers.add(driver(file.getName(), null, null));
-
-                            log.info("Found: [driver=" + file + "]");
-                            log.error("Failed to detect driver class: " + e.getMessage());
+                            log.info("Found: [driver=" + file + ", class=" + jdbcDriverCls + "]");
                         }
                     }
+                    catch (IOException e) {
+                        drivers.add(driver(file.getName(), null, null));
+
+                        log.info("Found: [driver=" + file + "]");
+                        log.error("Failed to detect driver class: " + e.getMessage());
+                    }
                 }
-                else
-                    throw new IllegalStateException("JDBC drivers folder has no files");
             }
             else
-                throw new IllegalStateException("JDBC drivers folder not specified");
-
-            wss.reply(evt, drivers);
+                throw new IllegalStateException("JDBC drivers folder has no files");
         }
-        catch (Throwable e) {
-            String errMsg = "Failed to collect list of JDBC drivers";
+        else
+            throw new IllegalStateException("JDBC drivers folder not specified");
 
-            log.error(errMsg, e);
-
-            wss.fail(evt, errMsg, e);
-        }
+        return drivers;
     }
 
     /**
      * Collect DB schemas.
      *
      * @param evt Websocket event.
+     * @return DB schemas.
      */
-    public void collectDbSchemas(WebSocketEvent evt) {
+    public DbSchema collectDbSchemas(WebSocketEvent evt) throws SQLException {
         log.info("Collecting database schemas...");
 
-        try {
-            JsonObject args = fromJson(evt.getPayload());
+        JsonObject args = fromJson(evt.getPayload());
 
-            try (Connection conn = connect(args)) {
-                String catalog = conn.getCatalog();
+        try (Connection conn = connect(args)) {
+            String catalog = conn.getCatalog();
 
-                if (catalog == null) {
-                    String jdbcUrl = args.getString("jdbcUrl", "");
+            if (catalog == null) {
+                String jdbcUrl = args.getString("jdbcUrl", "");
 
-                    String[] parts = jdbcUrl.split("[/:=]");
+                String[] parts = jdbcUrl.split("[/:=]");
 
-                    catalog = parts.length > 0 ? parts[parts.length - 1] : "NONE";
-                }
-
-                Collection<String> schemas = dbMetaReader.schemas(conn);
-
-                log.info("Collected database schemas:" + schemas.size());
-
-                wss.reply(evt, new DbSchema(catalog, schemas));
+                catalog = parts.length > 0 ? parts[parts.length - 1] : "NONE";
             }
-        }
-        catch (Throwable e) {
-            String errMsg = "Failed to collect database schemas";
 
-            log.error(errMsg, e);
+            Collection<String> schemas = dbMetaReader.schemas(conn);
 
-            wss.fail(evt, errMsg, e);
+            log.info("Collected database schemas:" + schemas.size());
+
+            return new DbSchema(catalog, schemas);
         }
     }
 
@@ -207,38 +184,30 @@ public class DatabaseHandler {
      * Collect DB metadata.
      *
      * @param evt Websocket event.
+     * @return DB metadata
      */
     @SuppressWarnings("unchecked")
-    public void collectDbMetadata(WebSocketEvent evt) {
+    public Collection<DbTable> collectDbMetadata(WebSocketEvent evt) throws SQLException {
         log.info("Collecting database metadata...");
 
-        try {
-            JsonObject args = fromJson(evt.getPayload());
+        JsonObject args = fromJson(evt.getPayload());
 
-            if (!args.containsKey("schemas"))
-                throw new IllegalArgumentException("Missing schemas in arguments: " + args);
+        if (!args.containsKey("schemas"))
+            throw new IllegalArgumentException("Missing schemas in arguments: " + args);
 
-            List<String> schemas = (List)args.get("schemas");
+        List<String> schemas = (List)args.get("schemas");
 
-            if (!args.containsKey("tablesOnly"))
-                throw new IllegalArgumentException("Missing tablesOnly in arguments: " + args);
+        if (!args.containsKey("tablesOnly"))
+            throw new IllegalArgumentException("Missing tablesOnly in arguments: " + args);
 
-            boolean tblsOnly = args.getBoolean("tablesOnly", false);
+        boolean tblsOnly = args.getBoolean("tablesOnly", false);
 
-            try (Connection conn = connect(args)) {
-                Collection<DbTable> metadata = dbMetaReader.metadata(conn, schemas, tblsOnly);
+        try (Connection conn = connect(args)) {
+            Collection<DbTable> metadata = dbMetaReader.metadata(conn, schemas, tblsOnly);
 
-                log.info("Collected database metadata: " + metadata.size());
+            log.info("Collected database metadata: " + metadata.size());
 
-                wss.reply(evt, metadata);
-            }
-        }
-        catch (Throwable e) {
-            String errMsg = "Failed to collect database metadata";
-
-            log.error(errMsg, e);
-
-            wss.fail(evt, errMsg, e);
+            return metadata;
         }
     }
 

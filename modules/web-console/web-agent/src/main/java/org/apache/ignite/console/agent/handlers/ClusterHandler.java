@@ -16,308 +16,111 @@
 
 package org.apache.ignite.console.agent.handlers;
 
-import java.io.IOException;
 import java.net.ConnectException;
 import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
-import com.fasterxml.jackson.core.type.TypeReference;
+import java.util.Map;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.console.agent.AgentConfiguration;
-import org.apache.ignite.console.agent.rest.RestExecutor;
 import org.apache.ignite.console.agent.rest.RestResult;
 import org.apache.ignite.console.json.JsonObject;
-import org.apache.ignite.console.websocket.TopologySnapshot;
-import org.apache.ignite.console.websocket.WebSocketEvent;
-import org.apache.ignite.internal.processors.rest.client.message.GridClientNodeBean;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.LT;
-import org.apache.ignite.lang.IgniteProductVersion;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.logger.slf4j.Slf4jLogger;
+import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.slf4j.LoggerFactory;
 
-import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
-import static org.apache.ignite.console.json.JsonUtils.fromJson;
-import static org.apache.ignite.console.websocket.WebSocketConsts.CLUSTER_DISCONNECTED;
-import static org.apache.ignite.console.websocket.WebSocketConsts.CLUSTER_TOPOLOGY;
-import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_SUCCESS;
-import static org.apache.ignite.internal.processors.rest.client.message.GridClientResponse.STATUS_FAILED;
+import static org.apache.ignite.console.agent.AgentUtils.sslContextFactory;
 
 /**
  * API to transfer topology from Ignite cluster to Web Console.
  */
-public class ClusterHandler {
+public class ClusterHandler extends AbstractClusterHandler {
     /** */
     private static final IgniteLogger log = new Slf4jLogger(LoggerFactory.getLogger(ClusterHandler.class));
 
-    /** */
-    private static final IgniteProductVersion IGNITE_2_0 = IgniteProductVersion.fromString("2.0.0");
-
-    /** */
-    private static final IgniteProductVersion IGNITE_2_1 = IgniteProductVersion.fromString("2.1.0");
-
-    /** */
-    private static final IgniteProductVersion IGNITE_2_3 = IgniteProductVersion.fromString("2.3.0");
-
-    /** Unique Visor key to get events last order. */
-    private static final String EVT_LAST_ORDER_KEY = "WEB_AGENT_" + UUID.randomUUID().toString();
-
-    /** Unique Visor key to get events throttle counter. */
-    private static final String EVT_THROTTLE_CNTR_KEY = "WEB_AGENT_" + UUID.randomUUID().toString();
-
-    /** */
-    private static final String EXPIRED_SES_ERROR_MSG = "Failed to handle request - unknown session token (maybe expired session)";
-
-    /** */
-    private String sesTok;
-
-    /** Topology refresh frequency. */
-    private static final long REFRESH_FREQ = 3000L;
-
-    /** Latest topology snapshot. */
-    private TopologySnapshot top;
-
-    /** */
-    private final AgentConfiguration cfg;
-
-    /** */
-    private final WebSocketSession wss;
-
-    /** */
-    private final RestExecutor restExecutor;
-
-    /** */
-    private static final ScheduledExecutorService pool = Executors.newScheduledThreadPool(1);
-
-    /** */
-    private ScheduledFuture<?> refreshTask;
+    /** Index of alive node URI. */
+    private final Map<List<String>, Integer> startIdxs = U.newHashMap(2);
 
     /**
      * @param cfg Web agent configuration.
-     * @param wss Websocket session.
      */
-    public ClusterHandler(AgentConfiguration cfg, WebSocketSession wss) {
-        this.cfg = cfg;
-        this.wss = wss;
-
-        restExecutor = new RestExecutor(cfg);
+    public ClusterHandler(AgentConfiguration cfg) {
+        super(cfg, createNodeSslFactory(cfg));
     }
 
     /**
-     * Callback on disconnect from cluster.
+     * @param cfg Config.
      */
-    private void clusterDisconnect() {
-        if (top == null)
-            return;
+    private static SslContextFactory createNodeSslFactory(AgentConfiguration cfg) {
+        boolean trustAll = Boolean.getBoolean("trust.all");
 
-        top = null;
+        if (trustAll && !F.isEmpty(cfg.nodeTrustStore())) {
+            log.warning("Options contains both '--node-trust-store' and '-Dtrust.all=true'. " +
+                "Option '-Dtrust.all=true' will be ignored on connect to cluster.");
 
-        log.info("Connection to cluster was lost");
-
-        try {
-            wss.send(CLUSTER_DISCONNECTED, null);
+            trustAll = false;
         }
-        catch (Throwable e) {
-            log.error("Failed to send 'Cluster disconnected' event to server", e);
-        }
+
+        boolean ssl = trustAll || !F.isEmpty(cfg.nodeTrustStore()) || !F.isEmpty(cfg.nodeKeyStore());
+
+        if (!ssl)
+            return null;
+
+        return sslContextFactory(
+            cfg.nodeKeyStore(),
+            cfg.nodeKeyStorePassword(),
+            trustAll,
+            cfg.nodeTrustStore(),
+            cfg.nodeTrustStorePassword(),
+            cfg.cipherSuites()
+        );
     }
-
+    
     /**
-     * Execute REST command under agent user.
+     * Send request to cluster.
      *
-     * @param params Command params.
-     * @return Command result.
-     * @throws Exception If failed to execute.
+     * @param params Map with request params.
+     * @return Response from cluster.
+     * @throws Throwable if failed to send request to cluster.
      */
-    private RestResult restCommand(JsonObject params) throws Exception {
-        if (!F.isEmpty(sesTok))
-            params.put("sessionToken", sesTok);
-        else if (!F.isEmpty(cfg.nodeLogin()) && !F.isEmpty(cfg.nodePassword())) {
-            params.put("user", cfg.nodeLogin());
-            params.put("password", cfg.nodePassword());
-        }
+    @Override public RestResult restCommand(JsonObject params) throws Throwable {
+        List<String> nodeURIs = cfg.nodeURIs();
 
-        RestResult res = restExecutor.sendRequest(params);
+        Integer startIdx = startIdxs.getOrDefault(nodeURIs, 0);
 
-        switch (res.getStatus()) {
-            case STATUS_SUCCESS:
-                sesTok = res.getSessionToken();
+        int urlsCnt = nodeURIs.size();
 
-                return res;
+        for (int i = 0;  i < urlsCnt; i++) {
+            int currIdx = (startIdx + i) % urlsCnt;
 
-            case STATUS_FAILED:
-                if (res.getError().startsWith(EXPIRED_SES_ERROR_MSG)) {
-                    sesTok = null;
-
-                    params.remove("sessionToken");
-
-                    return restCommand(params);
-                }
-
-            default:
-                return res;
-        }
-    }
-
-    /**
-     * @param ver Cluster version.
-     * @param nid Node ID.
-     * @return Cluster active state.
-     * @throws Exception If failed to collect cluster active state.
-     */
-    private boolean active(IgniteProductVersion ver, UUID nid) throws Exception {
-        // 1.x clusters are always active.
-        if (ver.compareTo(IGNITE_2_0) < 0)
-            return true;
-
-        JsonObject params = new JsonObject();
-
-        boolean v23 = ver.compareTo(IGNITE_2_3) >= 0;
-
-        if (v23)
-            params.put("cmd", "currentState");
-        else {
-            params.put("cmd", "exe");
-            params.put("name", "org.apache.ignite.internal.visor.compute.VisorGatewayTask");
-            params.put("p1", nid);
-            params.put("p2", "org.apache.ignite.internal.visor.node.VisorNodeDataCollectorTask");
-            params.put("p3", "org.apache.ignite.internal.visor.node.VisorNodeDataCollectorTaskArg");
-            params.put("p4", false);
-            params.put("p5", EVT_LAST_ORDER_KEY);
-            params.put("p6", EVT_THROTTLE_CNTR_KEY);
-
-            if (ver.compareTo(IGNITE_2_1) >= 0)
-                params.put("p7", false);
-            else {
-                params.put("p7", 10);
-                params.put("p8", false);
-            }
-        }
-
-        RestResult res = restCommand(params);
-
-        if (res.getStatus() == STATUS_SUCCESS)
-            return v23 ? Boolean.valueOf(res.getData()) : res.getData().contains("\"active\":true");
-
-        return false;
-    }
-
-    /**
-     * Collect topology.
-     *
-     * @return REST result.
-     * @throws Exception If failed to collect cluster topology.
-     */
-    private RestResult topology() throws Exception {
-        JsonObject params = new JsonObject()
-            .add("cmd", "top")
-            .add("attr", true)
-            .add("mtr", false)
-            .add("caches", false);
-
-        return restCommand(params);
-    }
-
-    /**
-     * Start watch cluster.
-     */
-    public void start() {
-        if (refreshTask != null && !refreshTask.isCancelled())
-            return;
-
-        refreshTask = pool.scheduleWithFixedDelay(() -> {
-            try {
-                RestResult res = topology();
-
-                if (res.getStatus() == STATUS_SUCCESS) {
-                    List<GridClientNodeBean> nodes = fromJson(
-                        res.getData(),
-                        new TypeReference<List<GridClientNodeBean>>() {}
-                    );
-
-                    TopologySnapshot newTop = new TopologySnapshot(nodes);
-
-                    if (newTop.differentCluster(top))
-                        log.info("Connection successfully established to cluster with nodes: " + newTop.nid8());
-                    else if (newTop.topologyChanged(top))
-                        log.info("Cluster topology changed, new topology: " + newTop.nid8());
-
-                    boolean active = active(newTop.clusterVersion(), F.first(newTop.getNids()));
-
-                    newTop.setActive(active);
-                    newTop.setSecured(!F.isEmpty(res.getSessionToken()));
-
-                    top = newTop;
-
-                    wss.send(CLUSTER_TOPOLOGY, top);
-                }
-                else {
-                    LT.warn(log, res.getError());
-
-                    clusterDisconnect();
-                }
-            }
-            catch (ConnectException ignored) {
-                // No-op.
-            }
-            catch (Throwable e) {
-                LT.error(log, e, "WatchTask failed");
-
-                clusterDisconnect();
-            }
-        }, 0L, REFRESH_FREQ, TimeUnit.MILLISECONDS);
-    }
-
-    /**
-     * Stop cluster watch.
-     */
-    public void stop() {
-        refreshTask.cancel(true);
-
-        pool.shutdownNow();
-    }
-
-    /**
-     * @param evt Websocket event.
-     */
-    public void restRequest(WebSocketEvent evt) {
-        if (log.isDebugEnabled())
-            log.debug("Processing REST request: " + evt);
-
-        try {
-            JsonObject args = fromJson(evt.getPayload());
-
-            JsonObject params = args.containsKey("params") ? args.getJsonObject("params") : new JsonObject();
-
-            // TODO IGNITE-5617 Restore demo mode.
-//            if (!args.containsKey("demo"))
-//                throw new IllegalArgumentException("Missing demo flag in arguments: " + args);
-
-//            boolean demo = (boolean)args.get("demo");
-//
-//            if (F.isEmpty((String)args.get("token")))
-//                return RestResult.fail(401, "Request does not contain user token.");
-
-            RestResult res;
+            String nodeUrl = nodeURIs.get(currIdx);
 
             try {
-                res = restExecutor.sendRequest(params);
+                RestResult res = restExecutor.sendRequest(nodeUrl, params);
+
+                // If first attempt failed then throttling should be cleared.
+                if (i > 0)
+                    LT.clear();
+
+                LT.info(log, "Connected to cluster [url=" + nodeUrl + "]");
+
+                startIdxs.put(nodeURIs, currIdx);
+
+                return res;
             }
             catch (Throwable e) {
-                res = RestResult.fail(HTTP_INTERNAL_ERROR, e.getMessage());
+                if (log.isDebugEnabled())
+                    log.error("Failed connect to cluster [url=" + nodeUrl + "]", e);
+                else
+                    LT.warn(log, "Failed connect to cluster [url=" + nodeUrl + "]");
             }
-
-            wss.reply(evt, res);
         }
-        catch (Throwable e) {
-            String errMsg = "Failed to handle REST request: " + evt;
 
-            log.error(errMsg, e);
+        LT.warn(log, "Failed connect to cluster. " +
+            "Please ensure that nodes have [ignite-rest-http] module in classpath " +
+            "(was copied from libs/optional to libs folder).");
 
-            wss.fail(evt, errMsg, e);
-        }
+        throw new ConnectException("Failed connect to cluster [urls=" + nodeURIs + ", parameters=" + params + "]");
     }
 }

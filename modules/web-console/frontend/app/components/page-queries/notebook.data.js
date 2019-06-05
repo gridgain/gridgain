@@ -81,7 +81,7 @@ export default class NotebookData {
      * @param {ng.IQService} $q    
      */
     constructor($root, $http, $q) {
-        this.demo = $root.IgniteDemoMode;
+        this.demo = $root.demoMode;
 
         this.initLatch = null;
         this.notebooks = null;

@@ -16,8 +16,13 @@
 
 package org.apache.ignite.console.websocket;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.internal.util.typedef.internal.S;
+
+import static org.apache.ignite.console.utils.Utils.toJson;
+import static org.apache.ignite.console.websocket.WebSocketEvents.ERROR;
 
 /**
  * Websocket event POJO.
@@ -40,24 +45,24 @@ public class WebSocketEvent {
     }
 
     /**
-     * Copy constructor.
-     *
-     * @param evt Event.
-     */
-    public WebSocketEvent(WebSocketEvent evt, String payload) {
-        this.reqId = evt.getRequestId();
-        this.evtType = evt.getEventType();
-        this.payload = payload;
-    }
-
-    /**
      * Constructor with auto generated ID.
      *
      * @param evtType Event type.
      * @param payload Payload.
      */
-    public WebSocketEvent(String evtType, String payload) {
-        this.reqId = UUID.randomUUID().toString();
+    public WebSocketEvent(String evtType, Object payload) {
+        this(UUID.randomUUID().toString(), evtType, toJson(payload));
+    }
+
+    /**
+     * Constructor.
+     *
+     * @param reqId Request ID.
+     * @param evtType Event type.
+     * @param payload Payload.
+     */
+    private WebSocketEvent(String reqId, String evtType, String payload) {
+        this.reqId = reqId;
         this.evtType = evtType;
         this.payload = payload;
     }
@@ -71,12 +76,9 @@ public class WebSocketEvent {
 
     /**
      * @param reqId New request ID.
-     * @return {@code this} for chaining.
      */
-    public WebSocketEvent setRequestId(String reqId) {
+    public void setRequestId(String reqId) {
         this.reqId = reqId;
-
-        return this;
     }
 
     /**
@@ -88,12 +90,9 @@ public class WebSocketEvent {
 
     /**
      * @param evtType New event type.
-     * @return {@code this} for chaining.
      */
-    public WebSocketEvent setEventType(String evtType) {
+    public void setEventType(String evtType) {
         this.evtType = evtType;
-
-        return this;
     }
 
     /**
@@ -105,14 +104,33 @@ public class WebSocketEvent {
 
     /**
      * @param payload New payload.
-     * @return {@code this} for chaining.
      */
-    public WebSocketEvent setPayload(String payload) {
+    public void setPayload(String payload) {
         this.payload = payload;
-
-        return this;
     }
 
+    /**
+     * Create event with payload for response with same ID.
+     *
+     * @param payload Payload.
+     */
+    public WebSocketEvent withPayload(Object payload) {
+        return new WebSocketEvent(this.reqId, evtType, toJson(payload));
+    }
+
+    /**
+     * Create event with error for response with same ID.
+     *
+     * @param msg Message.
+     */
+    public WebSocketEvent withError(String msg) {
+        Map<String, String> err = new HashMap<>();
+
+        err.put("message", msg);
+
+        return new WebSocketEvent(this.reqId, ERROR, toJson(err));
+    }
+    
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(WebSocketEvent.class, this);

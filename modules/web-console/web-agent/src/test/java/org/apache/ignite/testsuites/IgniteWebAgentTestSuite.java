@@ -17,6 +17,7 @@
 package org.apache.ignite.testsuites;
 
 import org.apache.ignite.console.agent.rest.RestExecutorSelfTest;
+import org.apache.ignite.websocket.JsonTests;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -25,7 +26,8 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-    RestExecutorSelfTest.class
+    RestExecutorSelfTest.class,
+    JsonTests.class
 })
 public class IgniteWebAgentTestSuite {
     // No-op.

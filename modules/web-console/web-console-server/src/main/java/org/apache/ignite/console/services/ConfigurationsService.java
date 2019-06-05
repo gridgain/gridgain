@@ -19,12 +19,11 @@ package org.apache.ignite.console.services;
 import java.util.Collection;
 import java.util.TreeSet;
 import java.util.UUID;
-import org.apache.ignite.console.db.OneToManyIndex;
-import org.apache.ignite.console.db.Table;
 import org.apache.ignite.console.dto.DataObject;
-import org.apache.ignite.console.repositories.ConfigurationsRepository;
 import org.apache.ignite.console.json.JsonArray;
 import org.apache.ignite.console.json.JsonObject;
+import org.apache.ignite.console.repositories.ConfigurationsRepository;
+import org.apache.ignite.console.web.model.ConfigurationKey;
 import org.springframework.stereotype.Service;
 
 /**
@@ -48,60 +47,61 @@ public class ConfigurationsService {
      * @param accId Account ID.
      */
     void deleteByAccountId(UUID accId) {
-        cfgsRepo.deleteByAccountId(accId);
+        cfgsRepo.deleteByAccountId(new ConfigurationKey(accId, true));
+        cfgsRepo.deleteByAccountId(new ConfigurationKey(accId, false));
     }
 
     /**
-     * @param accId Account ID.
+     * @param key Configuration key.
      * @param clusterId Cluster ID.
      * @return Configuration.
      */
-    public JsonObject loadConfiguration(UUID accId, UUID clusterId) {
-        return cfgsRepo.loadConfiguration(accId, clusterId);
+    public JsonObject loadConfiguration(ConfigurationKey key, UUID clusterId) {
+        return cfgsRepo.loadConfiguration(key, clusterId);
     }
 
     /**
-     * @param accId Account ID.
+     * @param key Account ID.
      * @return List of clusters for specified account.
      */
-    public JsonArray loadClusters(UUID accId) {
-        return cfgsRepo.loadClusters(accId);
+    public JsonArray loadClusters(ConfigurationKey key) {
+        return cfgsRepo.loadClusters(key);
     }
 
     /**
-     * @param accId Account ID.
+     * @param key Configuration key.
      * @param clusterId Cluster ID.
      * @return Cluster.
      */
-    public String loadCluster(UUID accId, UUID clusterId) {
-        return cfgsRepo.loadCluster(accId, clusterId).json();
+    public String loadCluster(ConfigurationKey key, UUID clusterId) {
+        return cfgsRepo.loadCluster(key, clusterId).json();
     }
 
     /**
-     * @param accId Account ID.
+     * @param key Configuration key.
      * @param cacheId Cache ID.
      * @return Cache.
      */
-    public String loadCache(UUID accId, UUID cacheId) {
-        return cfgsRepo.loadCache(accId, cacheId).json();
+    public String loadCache(ConfigurationKey key, UUID cacheId) {
+        return cfgsRepo.loadCache(key, cacheId).json();
     }
 
     /**
-     * @param accId Account ID.
+     * @param key Configuration key.
      * @param mdlId Model ID.
      * @return Model.
      */
-    public String loadModel(UUID accId, UUID mdlId) {
-        return cfgsRepo.loadModel(accId, mdlId).json();
+    public String loadModel(ConfigurationKey key, UUID mdlId) {
+        return cfgsRepo.loadModel(key, mdlId).json();
     }
 
     /**
-     * @param accId Account ID.
+     * @param key Configuration key.
      * @param igfsId IGFS ID.
      * @return IGFS.
      */
-    public String loadIgfs(UUID accId, UUID igfsId) {
-        return cfgsRepo.loadIgfs(accId, igfsId).json();
+    public String loadIgfs(ConfigurationKey key, UUID igfsId) {
+        return cfgsRepo.loadIgfs(key, igfsId).json();
     }
 
     /**
@@ -119,68 +119,59 @@ public class ConfigurationsService {
     }
 
     /**
-     * @param accId Account ID.
+     * @param key Configuration key.
      * @param clusterId Cluster ID.
      * @return Collection of cluster caches.
      */
-    public JsonArray loadShortCaches(UUID accId, UUID clusterId) {
-        return toShortList(cfgsRepo.loadCaches(accId, clusterId));
+    public JsonArray loadShortCaches(ConfigurationKey key, UUID clusterId) {
+        return toShortList(cfgsRepo.loadCaches(key, clusterId));
     }
 
     /**
-     * @param accId Account ID.
+     * @param key Configuration key.
      * @param clusterId Cluster ID.
      * @return Collection of cluster models.
      */
-    public JsonArray loadShortModels(UUID accId, UUID clusterId) {
-        return toShortList(cfgsRepo.loadModels(accId, clusterId));
+    public JsonArray loadShortModels(ConfigurationKey key, UUID clusterId) {
+        return toShortList(cfgsRepo.loadModels(key, clusterId));
     }
 
     /**
      * Save full cluster.
      *
-     * @param accId Account ID.
+     * @param key Configuration key.
      * @param changedItems Items to save.
      */
-    public void saveAdvancedCluster(UUID accId, JsonObject changedItems) {
-        cfgsRepo.saveAdvancedCluster(accId, changedItems);
+    public void saveAdvancedCluster(ConfigurationKey key, JsonObject changedItems) {
+        cfgsRepo.saveAdvancedCluster(key, changedItems);
     }
 
     /**
-     * @param accId Account ID.
+     * @param key Configuration key.
      * @param clusterId Cluster ID.
      * @return Collection of cluster IGFSs.
      */
-    public JsonArray loadShortIgfss(UUID accId, UUID clusterId) {
-        return toShortList(cfgsRepo.loadIgfss(accId, clusterId));
+    public JsonArray loadShortIgfss(ConfigurationKey key, UUID clusterId) {
+        return toShortList(cfgsRepo.loadIgfss(key, clusterId));
     }
 
     /**
      * Save basic cluster.
      *
-     * @param accId Account ID.
+     * @param key Configuration key.
      * @param changedItems Items to save.
      */
-    public void saveBasicCluster(UUID accId, JsonObject changedItems) {
-        cfgsRepo.saveBasicCluster(accId, changedItems);
-    }
-
-    /**
-     * @param clusterId Cluster ID.
-     */
-    private void removeClusterObjects(UUID clusterId, Table<? extends DataObject> tbl, OneToManyIndex idx) {
-        TreeSet<UUID> ids = idx.delete(clusterId);
-
-        tbl.deleteAll(ids);
+    public void saveBasicCluster(ConfigurationKey key, JsonObject changedItems) {
+        cfgsRepo.saveBasicCluster(key, changedItems);
     }
 
     /**
      * Delete clusters.
      *
-     * @param accId Account ID.
+     * @param key Configuration key.
      * @param clusterIds Clusters IDs to delete.
      */
-    public void deleteClusters(UUID accId, TreeSet<UUID> clusterIds) {
-        cfgsRepo.deleteClusters(accId, clusterIds);
+    public void deleteClusters(ConfigurationKey key, TreeSet<UUID> clusterIds) {
+        cfgsRepo.deleteClusters(key, clusterIds);
     }
 }

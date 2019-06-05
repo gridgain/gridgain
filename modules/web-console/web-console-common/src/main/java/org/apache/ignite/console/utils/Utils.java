@@ -14,27 +14,33 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.console.json;
+package org.apache.ignite.console.utils;
 
 import java.io.IOException;
 import java.io.Reader;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeSet;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.ignite.console.json.JsonArray;
+import org.apache.ignite.console.json.JsonObject;
 import org.apache.ignite.internal.processors.rest.protocols.http.jetty.GridJettyObjectMapper;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.T2;
 
 /**
- * Utility methods.
+ * Utilities.
  */
-public class JsonUtils {
+public class Utils {
     /** */
     private static final GridJettyObjectMapper MAPPER = new GridJettyObjectMapper();
 
     /**
      * Private constructor for utility class.
      */
-    private JsonUtils() {
+    private Utils() {
         // No-op.
     }
 
@@ -123,24 +129,6 @@ public class JsonUtils {
     }
 
     /**
-     * @param errMsg Error message.
-     * @param cause Exception.
-     * @return JSON.
-     * @throws IOException If serialization failed.
-     */
-    public static String errorToJson(String errMsg, Throwable cause) throws IOException {
-        String causeMsg = "";
-
-        if (cause != null)
-            causeMsg = ": " + (F.isEmpty(cause.getMessage()) ? cause.getClass().getName() : cause.getMessage());
-
-        Map<String, String> data = new HashMap<>();
-        data.put("message", errMsg + causeMsg);
-
-        return MAPPER.writeValueAsString(data);
-    }
-
-    /**
      * Helper method to get attribute.
      *
      * @param attrs Map with attributes.
@@ -149,5 +137,25 @@ public class JsonUtils {
      */
     public static <T> T attribute(Map<String, Object> attrs, String name) {
         return (T)attrs.get(name);
+    }
+
+    /**
+     * @param cause Error.
+     * @return Error message or exception class name.
+     */
+    public static String errorMessage(Throwable cause) {
+        String msg = cause.getMessage();
+
+        return F.isEmpty(msg) ? cause.getClass().getName() : msg;
+    }
+
+    /**
+     * @param prefix Message prefix.
+     * @param e Exception.
+     */
+    public static String extractErrorMessage(String prefix, Throwable e) {
+        String causeMsg = F.isEmpty(e.getMessage()) ? e.getClass().getName() : e.getMessage();
+
+        return prefix + ": " + causeMsg;
     }
 }

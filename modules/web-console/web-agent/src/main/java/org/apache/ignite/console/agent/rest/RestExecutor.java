@@ -18,9 +18,6 @@ package org.apache.ignite.console.agent.rest;
 
 import java.io.IOException;
 import java.io.StringWriter;
-import java.net.ConnectException;
-import java.util.List;
-import java.util.Map;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
@@ -29,11 +26,7 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.console.agent.AgentConfiguration;
 import org.apache.ignite.console.json.JsonObject;
-import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.internal.util.typedef.internal.LT;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.logger.slf4j.Slf4jLogger;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.ContentResponse;
@@ -48,8 +41,7 @@ import static com.fasterxml.jackson.core.JsonToken.START_ARRAY;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
-import static org.apache.ignite.console.agent.AgentUtils.sslContextFactory;
-import static org.apache.ignite.console.json.JsonUtils.fromJson;
+import static org.apache.ignite.console.utils.Utils.fromJson;
 import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_AUTH_FAILED;
 import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_FAILED;
 import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_SUCCESS;
@@ -62,51 +54,13 @@ public class RestExecutor implements AutoCloseable {
     private static final IgniteLogger log = new Slf4jLogger(LoggerFactory.getLogger(RestExecutor.class));
 
     /** */
-    private final AgentConfiguration cfg;
-
-    /** */
     private final HttpClient httpClient;
 
-    /** Index of alive node URI. */
-    private final Map<List<String>, Integer> startIdxs = U.newHashMap(2);
-
     /**
-     * @param cfg Config.
+     * @param sslCtxFactory Ssl context factory.
      */
-    public RestExecutor(AgentConfiguration cfg) {
-        this.cfg = cfg;
-
-        SslContextFactory sslCtxFactory = createSslFactory(cfg);
-
+    public RestExecutor(SslContextFactory sslCtxFactory) {
         httpClient = new HttpClient(sslCtxFactory);
-    }
-
-    /**
-     * @param cfg Config.
-     */
-    private static SslContextFactory createSslFactory(AgentConfiguration cfg) {
-        boolean trustAll = Boolean.getBoolean("trust.all");
-
-        if (trustAll && !F.isEmpty(cfg.nodeTrustStore())) {
-            log.warning("Options contains both '--node-trust-store' and '-Dtrust.all=true'. " +
-                "Option '-Dtrust.all=true' will be ignored on connect to cluster.");
-
-            trustAll = false;
-        }
-
-        boolean ssl = trustAll || !F.isEmpty(cfg.nodeTrustStore()) || !F.isEmpty(cfg.nodeKeyStore());
-
-        if (!ssl)
-            return null;
-
-        return sslContextFactory(
-            cfg.nodeKeyStore(),
-            cfg.nodeKeyStorePassword(),
-            trustAll,
-            cfg.nodeTrustStore(),
-            cfg.nodeTrustStorePassword(),
-            cfg.cipherSuites()
-        );
     }
 
     /** {@inheritDoc} */
@@ -150,7 +104,10 @@ public class RestExecutor implements AutoCloseable {
     }
 
     /** */
-    private RestResult sendRequest(String url, JsonObject params) throws Throwable {
+    public RestResult sendRequest(String url, JsonObject params) throws Throwable {
+        if (!httpClient.isRunning())
+            httpClient.start();
+
         Request req = httpClient
             .newRequest(url)
             .path("/ignite")
@@ -161,56 +118,6 @@ public class RestExecutor implements AutoCloseable {
         ContentResponse res = req.send();
 
         return parseResponse(res);
-    }
-
-    /**
-     * Send request to cluster.
-     *
-     * @param params Map with request params.
-     * @return Response from cluster.
-     * @throws Exception if failed to send request to cluster to cluster.
-     */
-    public RestResult sendRequest(JsonObject params) throws Exception {
-        if (!httpClient.isStarted())
-            httpClient.start();
-
-        List<String> nodeURIs = cfg.nodeURIs();
-
-        Integer startIdx = startIdxs.getOrDefault(nodeURIs, 0);
-
-        int urlsCnt = nodeURIs.size();
-
-        for (int i = 0;  i < urlsCnt; i++) {
-            int currIdx = (startIdx + i) % urlsCnt;
-
-            String nodeUrl = nodeURIs.get(currIdx);
-
-            try {
-                RestResult res = sendRequest(nodeUrl, params);
-
-                // If first attempt failed then throttling should be cleared.
-                if (i > 0)
-                    LT.clear();
-
-                LT.info(log, "Connected to cluster [url=" + nodeUrl + "]");
-
-                startIdxs.put(nodeURIs, currIdx);
-
-                return res;
-            }
-            catch (Throwable e) {
-                if (log.isDebugEnabled())
-                    log.error("Failed connect to cluster [url=" + nodeUrl + "]", e);
-                else
-                    LT.warn(log, "Failed connect to cluster [url=" + nodeUrl + "]");
-            }
-        }
-
-        LT.warn(log, "Failed connect to cluster. " +
-            "Please ensure that nodes have [ignite-rest-http] module in classpath " +
-            "(was copied from libs/optional to libs folder).");
-
-        throw new ConnectException("Failed connect to cluster [urls=" + nodeURIs + ", parameters=" + params + "]");
     }
 
     /**

@@ -44,7 +44,7 @@ const mocks = () => new Map([
     }],
     ['$q', Promise],
     ['$rootScope', {
-        IgniteDemoMode: true
+        demoMode: true
     }],
     ['PageConfigure', {
         getClusterConfiguration: () => Promise.resolve({clusters: [{id: 1, name: 'An Cluster'}]})
@@ -92,14 +92,14 @@ suite('page-configure, ConfigurationDownload service', () => {
             assert.deepEqual(service.summaryZipper.getCall(0).args, [{
                 cluster,
                 data: {},
-                IgniteDemoMode: true,
+                demoMode: true,
                 targetVer: '2.0'
             }], 'summary zipper arguments are correct');
             assert.deepEqual(service.saver.saveAs.getCall(0).args, [
                 {
                     cluster,
                     data: {},
-                    IgniteDemoMode: true,
+                    demoMode: true,
                     targetVer: '2.0'
                 },
                 'An_Cluster-project.zip'
