@@ -358,12 +358,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
     @Override public void onBeforeSpiStart() {
         DiscoverySpi spi = getSpi();
 
-        String overrideVer = (String) ctx.nodeAttributes().get(ATTR_BUILD_VER_OVERRIDE);
-
-        spi.setNodeAttributes(
-            ctx.nodeAttributes(),
-            overrideVer == null ? VER : IgniteProductVersion.fromString(overrideVer)
-        );
+        spi.setNodeAttributes(ctx.nodeAttributes(), VER);
     }
 
     /**

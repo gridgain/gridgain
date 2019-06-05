@@ -33,7 +33,7 @@ public interface RollingUpgradeProcessor extends GridProcessor {
      *
      * @return status of Rolling Upgrade process.
      */
-    RollingUpgradeStatus getStatus();
+    RollingUpgradeStatus getRollingUpgradeStatus();
 
     /**
      * Disables strict validation mode.

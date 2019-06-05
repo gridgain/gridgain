@@ -1575,10 +1575,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
         // Stick in some system level attributes
         add(ATTR_JIT_NAME, U.getCompilerMx() == null ? "" : U.getCompilerMx().getName());
-
-        String ver = userAttrs != null && userAttrs.get(IgniteNodeAttributes.ATTR_BUILD_VER_OVERRIDE) != null ?
-            userAttrs.get(IgniteNodeAttributes.ATTR_BUILD_VER_OVERRIDE).toString() : VER_STR;
-        add(ATTR_BUILD_VER, ver);
+        add(ATTR_BUILD_VER, VER_STR);
 
         add(ATTR_BUILD_DATE, BUILD_TSTAMP_STR);
         add(ATTR_MARSHALLER, cfg.getMarshaller().getClass().getName());
@@ -3636,6 +3633,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         Ignition.stop(igniteInstanceName, true);
     }
 
+    /** {@inheritDoc} */
     @Override public <K> Affinity<K> affinity(String cacheName) {
         CU.validateCacheName(cacheName);
         checkClusterState();
