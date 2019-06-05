@@ -33,7 +33,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketSession;
@@ -80,8 +80,8 @@ public class BrowsersHandler extends AbstractHandler {
     protected Account extractAccount(WebSocketSession ws) {
         Principal p = ws.getPrincipal();
 
-        if (p instanceof UsernamePasswordAuthenticationToken) {
-            UsernamePasswordAuthenticationToken t = (UsernamePasswordAuthenticationToken)p;
+        if (p instanceof Authentication) {
+            Authentication t = (Authentication)p;
 
             Object tp = t.getPrincipal();
 
