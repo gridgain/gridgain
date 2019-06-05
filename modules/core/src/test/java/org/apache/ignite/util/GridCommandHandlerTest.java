@@ -87,6 +87,7 @@ import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
 import org.apache.ignite.internal.processors.cache.transactions.TransactionProxyImpl;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.datastructures.GridCacheInternalKeyImpl;
+import org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
@@ -118,6 +119,7 @@ import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_UN
 import static org.apache.ignite.internal.commandline.OutputFormat.MULTI_LINE;
 import static org.apache.ignite.internal.commandline.OutputFormat.SINGLE_LINE;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.HELP;
+import static org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult.Status.FAIL;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
@@ -2580,10 +2582,26 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
     public void testRollingUpgrade() throws Exception {
         Ignite ignite = startGrid(0);
 
-        // Apache Ignite does not support rolling upgrade from out of the box.
-        assertEquals(EXIT_CODE_UNEXPECTED_ERROR, execute("--rolling-upgrade", "on"));
+        CommandHandler hnd = new CommandHandler();
 
-        assertEquals(EXIT_CODE_UNEXPECTED_ERROR, execute("--rolling-upgrade", "off"));
+        // Apache Ignite does not support rolling upgrade from out of the box.
+        assertEquals(EXIT_CODE_OK, execute(hnd, "--rolling-upgrade", "on"));
+
+        RollingUpgradeModeChangeResult res = hnd.getLastOperationResult();
+
+        assertTrue("Enabling rolling upgrade should fail [res=" + res + ']', FAIL == res.status());
+        assertTrue(
+            "The cause of the failure should be UnsupportedOperationException [cause=" + res.cause() + ']',
+            X.hasCause(res.cause(), UnsupportedOperationException.class));
+
+        assertEquals(EXIT_CODE_OK, execute(hnd, "--rolling-upgrade", "off"));
+
+        res = hnd.getLastOperationResult();
+
+        assertTrue("Disabling rolling upgrade should fail [res=" + res + ']', FAIL == res.status());
+        assertTrue(
+            "The cause of the failure should be UnsupportedOperationException [cause=" + res.cause() + ']',
+            X.hasCause(res.cause(), UnsupportedOperationException.class));
     }
 
     /**

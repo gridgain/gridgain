@@ -66,6 +66,12 @@ public class RollingUpgradeModeChangeResult extends IgniteDataTransferObject {
 
     /**
      * Creates a new instance with the given {@code status}.
+     */
+    public RollingUpgradeModeChangeResult() {
+    }
+
+    /**
+     * Creates a new instance with the given {@code status}.
      *
      * @param status status of the operation.
      */

@@ -33,6 +33,7 @@ import org.apache.ignite.spi.IgniteNodeValidationResult;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_BUILD_VER;
+import static org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult.Status.FAIL;
 
 /**
  * Node validation.
@@ -79,7 +80,14 @@ public class OsDiscoveryNodeValidationProcessor extends GridProcessorAdapter imp
 
     /** {@inheritDoc} */
     @Override public RollingUpgradeModeChangeResult setRollingUpgradeMode(boolean enable) {
-        throw new UnsupportedOperationException("OS nodes do not support Rolling Upgrade.");
+        ClusterNode locNode = ctx.discovery().localNode();
+
+        return new RollingUpgradeModeChangeResult(
+            FAIL,
+            new UnsupportedOperationException("Local node does not support Rolling Upgrade "
+                + "[locNodeId=" + locNode.id() + ", locNodeAddrs=" + U.addressesAsString(locNode)
+                + ", locBuildVer=" + locNode.attribute(ATTR_BUILD_VER)
+            ));
     }
 
     /** {@inheritDoc} */

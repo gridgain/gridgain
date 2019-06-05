@@ -1,3 +1,19 @@
+/*
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.ignite.internal.visor.ru;
 
 import org.apache.ignite.IgniteException;
@@ -8,6 +24,8 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorOneNodeTask;
 import org.jetbrains.annotations.Nullable;
+
+import static org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult.Status.SUCCESS;
 
 /**
  * The task that represents enabling/disabling rolling upgrade mode.
@@ -40,29 +58,24 @@ public class VisorRollingUpgradeChangeModeTask extends VisorOneNodeTask<VisorRol
 
         /** {@inheritDoc} */
         @Override protected RollingUpgradeModeChangeResult run(
-            @Nullable VisorRollingUpgradeChangeModeTaskArg arg
+            VisorRollingUpgradeChangeModeTaskArg arg
         ) throws IgniteException {
-            RollingUpgradeModeChangeResult res;
-
             switch (arg.operation()) {
                 case ENABLE:
-                    res = ignite.context().rollingUpgrade().setRollingUpgradeMode(true);
-
-                    if (arg.isForcedMode())
+                    if (arg.isForcedMode()) {
                         ignite.context().rollingUpgrade().enableForcedRollingUpgradeMode();
 
-                    break;
+                        return new RollingUpgradeModeChangeResult(SUCCESS);
+                    }
+
+                    return ignite.context().rollingUpgrade().setRollingUpgradeMode(true);
 
                 case DISABLE:
-                    res = ignite.context().rollingUpgrade().setRollingUpgradeMode(false);
-
-                    break;
+                    return ignite.context().rollingUpgrade().setRollingUpgradeMode(false);
 
                 default:
                     throw new IgniteException("Unexpected rolling upgrade operation arg=[" + arg + ']');
             }
-
-            return res;
         }
 
         /** {@inheritDoc} */
