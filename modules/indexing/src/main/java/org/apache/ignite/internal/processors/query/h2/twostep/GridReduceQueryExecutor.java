@@ -717,8 +717,6 @@ public class GridReduceQueryExecutor {
             catch (IgniteCheckedException | RuntimeException e) {
                 release = true;
 
-                U.closeQuiet(r.connection());
-
                 if (e instanceof CacheException) {
                     if (wasCancelled((CacheException)e))
                         throw new CacheException("Failed to run reduce query locally.",

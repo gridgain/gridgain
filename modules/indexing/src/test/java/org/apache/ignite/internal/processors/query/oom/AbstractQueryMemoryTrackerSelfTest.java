@@ -153,7 +153,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
      * @param node Node.
      * @return Query memory manager.
      */
-    private QueryMemoryManager memoryManager(IgniteEx node) {
+    QueryMemoryManager memoryManager(IgniteEx node) {
         IgniteH2Indexing h2 = (IgniteH2Indexing)node.context().query().getIndexing();
 
         return h2.memoryManager();
