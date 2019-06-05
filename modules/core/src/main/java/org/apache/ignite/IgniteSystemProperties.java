@@ -1187,14 +1187,16 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_H2_LOCAL_RESULT_FACTORY = "IGNITE_H2_LOCAL_RESULT_FACTORY";
 
     /**
-     * Defines default memory limit for sql query.
+     * Defines default memory limit for every single sql query (query quota).
+     * Note: Negative value disables memory tracking (for both: query and global quotas) for query by default.
      *
      * Default: MaxHeapSize/AvailableCPUs.
      */
     public static final String IGNITE_DEFAULT_SQL_QUERY_MEMORY_LIMIT = "IGNITE_DEFAULT_SQL_QUERY_MEMORY_LIMIT";
 
     /**
-     * Defines memory pool size available for sql queries on node.
+     * Defines memory pool size available for sql queries on node (global quota).
+     * Note: Negative value disables global memory quota for SQL, but it doesn't affects query quota.
      *
      * Default: 60% MaxHeapSize.
      */

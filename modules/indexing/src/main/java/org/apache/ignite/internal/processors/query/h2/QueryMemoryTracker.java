@@ -82,13 +82,15 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
             });
 
         //TODO: GG-18628: tries to allocate memory from parent first. Let's make this allocation coarse-grained.
-        try {
-            parent.allocate(size);
-        }
-        catch (Throwable e) {
-            ALLOC_UPD.addAndGet(this, -size);
+        if (parent != null) {
+            try {
+                parent.allocate(size);
+            }
+            catch (Throwable e) {
+                ALLOC_UPD.addAndGet(this, -size);
 
-            throw e;
+                throw e;
+            }
         }
     }
 
@@ -109,7 +111,8 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
 
         assert !closed && allocated >= 0 || allocated == 0 : "Invalid allocated memory size:" + allocated;
 
-        parent.release(size);
+        if (parent != null)
+            parent.release(size);
     }
 
     /**
