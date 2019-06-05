@@ -26,17 +26,17 @@ public interface RollingUpgradeProcessor extends GridProcessor {
      *
      * @param enable {@code true} in order to enable rolling upgrade mode.
      */
-    RollingUpgradeModeChangeResult setRollingUpgradeMode(boolean enable);
+    RollingUpgradeModeChangeResult setMode(boolean enable);
 
     /**
      * Returns cluster-wide status of Rolling Upgrade process.
      *
      * @return status of Rolling Upgrade process.
      */
-    RollingUpgradeStatus getDistributedStatus();
+    RollingUpgradeStatus getRollingUpgradeStatus();
 
     /**
      * Disables strict validation mode.
      */
-    void enableForcedRollingUpgradeMode();
+    void enableForcedMode();
 }

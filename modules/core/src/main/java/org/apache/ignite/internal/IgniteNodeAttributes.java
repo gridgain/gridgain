@@ -26,9 +26,6 @@ public final class IgniteNodeAttributes {
     /** Node compound version. */
     public static final String ATTR_BUILD_VER = ATTR_PREFIX + ".build.ver";
 
-    /** Allows to override {@link #ATTR_BUILD_VER} by adding this attribute in the user attributes. */
-    public static final String ATTR_BUILD_VER_OVERRIDE = "override." + ATTR_BUILD_VER;
-
     /** Internal attribute name constant. */
     public static final String ATTR_BUILD_DATE = ATTR_PREFIX + ".build.date";
 
