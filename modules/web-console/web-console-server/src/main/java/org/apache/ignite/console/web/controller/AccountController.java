@@ -32,6 +32,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationToken;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -99,7 +100,11 @@ public class AccountController {
         @AuthenticationPrincipal Account acc,
         @Valid @RequestBody ChangeUserRequest changes
     ) {
-        accountsSrv.save(acc.getId(), changes);
+        Account userObj = accountsSrv.save(acc.getId(), changes);
+
+        Authentication authentication = new PreAuthenticatedAuthenticationToken(userObj, userObj.getPassword(), userObj.getAuthorities());
+
+        SecurityContextHolder.getContext().setAuthentication(authentication);
 
         return ResponseEntity.ok().build();
     }
