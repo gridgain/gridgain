@@ -30,6 +30,7 @@ import java.util.stream.Stream;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.console.agent.AgentConfiguration;
 import org.apache.ignite.console.agent.rest.RestResult;
+import org.apache.ignite.console.demo.AgentClusterDemo;
 import org.apache.ignite.console.json.JsonObject;
 import org.apache.ignite.console.websocket.AgentHandshakeRequest;
 import org.apache.ignite.console.websocket.AgentHandshakeResponse;
@@ -243,6 +244,8 @@ public class WebSocketRouter implements AutoCloseable {
      */
     public void awaitClose() throws InterruptedException {
         closeLatch.await();
+
+        AgentClusterDemo.stop();
     }
 
     /**

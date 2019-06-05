@@ -131,7 +131,7 @@ public class AgentClusterDemo {
 
         cfg.getConnectorConfiguration().setPort(basePort);
 
-        System.setProperty(IGNITE_JETTY_PORT, String.valueOf(basePort + 10));
+        System.setProperty(IGNITE_JETTY_PORT, String.valueOf(basePort + 10 + gridIdx));
 
         TcpDiscoveryVmIpFinder ipFinder = new TcpDiscoveryVmIpFinder();
 
@@ -225,7 +225,7 @@ public class AgentClusterDemo {
 
             final ScheduledExecutorService execSrv = newScheduledThreadPool(1, "demo-nodes-start");
 
-            execSrv.scheduleAtFixedRate(() -> {
+            execSrv.scheduleWithFixedDelay(() -> {
                 int idx = cnt.incrementAndGet();
                 int port = basePort.get();
 
