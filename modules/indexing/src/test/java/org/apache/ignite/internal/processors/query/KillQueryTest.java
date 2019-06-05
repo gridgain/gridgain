@@ -758,9 +758,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
         checkPartitions(firstParts);
         checkPartitions(secondParts);
         checkPartitions(mixedParts);
-
     }
-
     /**
      * Test if user specified partitions for query explicitly, such query is cancealble.
      *
@@ -775,8 +773,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
             ignite.cache(DEFAULT_CACHE_NAME).query(
                 new SqlFieldsQuery("select * from Integer where _key in " +
                     "(select _key from Integer where awaitLatchCancelled() = 0) and shouldNotBeCalledInCaseOfCancellation()")
-                    .setPartitions(0, 1, 2, 3, 4 , 5, 6)
-                    .setDataPageScanEnabled(true)
+                    //.setPartitions(partitions)
             ).getAll();
 
             return null;
@@ -859,6 +856,10 @@ public class KillQueryTest extends GridCommonAbstractTest {
 
                 // This sleep is required to wait for kill queries get started.
                 doSleep(500);
+
+                if (expQryNum != runningQueries.size())
+                    log.error("Found running queries are incorrect, " +
+                        "expected only " + expQryNum + " queries. Found : " + runningQueries);
 
                 assertEquals(expQryNum, runningQueries.size());
 
