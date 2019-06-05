@@ -41,7 +41,6 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.cache.affinity.Affinity;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.QueryCancelledException;
@@ -488,7 +487,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
     public void testKillAlreadyKilledQuery() throws Exception {
         IgniteCache<Object, Object> cache = ignite.cache(DEFAULT_CACHE_NAME);
 
-        FieldsQueryCursor<List<?>> cur = cache.query(new SqlFieldsQuery("select * from Integer"));
+        FieldsQueryCursor<List<?>> cur = cache.query(new SqlFieldsQuery("select * from Integer where awaitLatchCancelled() = 0"));
 
         List<GridRunningQueryInfo> runningQueries = (List<GridRunningQueryInfo>)ignite.context().query().runningQueries(-1);
 
@@ -498,7 +497,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
 
         IgniteCache<Object, Object> reqCache = igniteForKillRequest.cache(DEFAULT_CACHE_NAME);
 
-        IgniteInternalFuture killFut = GridTestUtils.runAsync(() -> reqCache.query(killQry));
+        IgniteInternalFuture killFut = cancel(1, asyncCancel);
 
         GridTestUtils.assertThrows(log,
             () -> cur.iterator().next(),
