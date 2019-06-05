@@ -124,7 +124,7 @@ public class RollingUpgradeCommand implements Command<RollingUpgradeArguments> {
      * @param status Rolling upgrade status.
      */
     private void printRollingUpgradeStatus(CommandLogger log, RollingUpgradeStatus status) {
-        log.log("Rolling upgrade is " + (status.isInProgress()? "enabled" : "disabled"));
+        log.log("Rolling upgrade is " + (status.isEnabled()? "enabled" : "disabled"));
         log.log("Initial version: " + status.getInitialVersion());
         log.log("Update version: " + status.getUpdateVersion());
 
