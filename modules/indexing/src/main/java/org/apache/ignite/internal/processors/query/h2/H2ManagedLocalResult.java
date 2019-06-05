@@ -313,11 +313,6 @@ public class H2ManagedLocalResult implements LocalResult {
         external = distinct || distinctIndexes != null || sort != null ?
             new SortedExternalResult(ctx, session, distinct, distinctIndexes, visibleColumnCount, sort, memTracker) :
             new PlainExternalResult(ctx);
-
-        if (memTracker != null)
-            memTracker.free(allocMem);
-
-        allocMem = 0;
     }
 
     /** {@inheritDoc} */
@@ -352,6 +347,12 @@ public class H2ManagedLocalResult implements LocalResult {
         if (external == null) {
             createExternalResult();
         }
+
+        if (memTracker != null)
+            memTracker.free(allocMem);
+
+        allocMem = 0;
+
         rowCount = external.addRows(rows);
         rows.clear();
     }
