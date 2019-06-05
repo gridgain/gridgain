@@ -346,6 +346,9 @@ public class IdleVerify implements Command<IdleVerify.Arguments> {
     }
 
     /**
+     * Passes idle_verify parsed arguments to given log consumer.
+     *
+     * @param args idle_verify arguments.
      * @param logConsumer Logger.
      */
     public static void logParsedArgs(VisorIdleVerifyTaskArg args, Consumer<String> logConsumer) {
@@ -356,18 +359,13 @@ public class IdleVerify implements Command<IdleVerify.Arguments> {
             .a(args.getCaches() == null ? "" : String.join(", ", args.getCaches()))
             .a("], excluded=[")
             .a(args.getExcludeCaches() == null ? "" : String.join(", ", args.getExcludeCaches()))
-            .a("]");
-
-        if (args instanceof VisorIdleVerifyDumpTaskArg) {
-            VisorIdleVerifyDumpTaskArg dumpArgs = (VisorIdleVerifyDumpTaskArg)args;
-
-            options
-                .a(", cacheFilter=[")
-                .a(dumpArgs.getCacheFilterEnum() == null ? "none": dumpArgs.getCacheFilterEnum().toString())
-                .a("]");
-        }
-
-        options.a("\n");
+            .a("]")
+            .a(", cacheFilter=[")
+            .a(args instanceof VisorIdleVerifyDumpTaskArg
+                ? ((VisorIdleVerifyDumpTaskArg) args).getCacheFilterEnum().toString()
+                : "DEFAULT"
+            )
+            .a("]\n");
 
         logConsumer.accept(options.toString());
     }
