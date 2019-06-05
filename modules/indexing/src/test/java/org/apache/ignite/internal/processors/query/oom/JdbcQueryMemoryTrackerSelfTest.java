@@ -86,15 +86,6 @@ public class JdbcQueryMemoryTrackerSelfTest extends QueryMemoryTrackerSelfTest {
 
             assertEquals(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY, ex.getErrorCode());
             assertEquals(IgniteQueryErrorCode.codeToSqlState(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY), ex.getSQLState());
-
-            assertEquals(78, localResults.size());
-            assertEquals(91, results.size());
-
-            IgniteH2Indexing h2 = (IgniteH2Indexing)grid(0).context().query().getIndexing();
-
-            long globalAllocated = h2.memoryManager().allocated();
-
-            assertTrue(h2.memoryManager().maxMemory() < globalAllocated + MB);
         }
         finally {
             for (ResultSet rs : results)
