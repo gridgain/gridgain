@@ -200,7 +200,7 @@ public class JdbcConnection implements Connection {
         enforceJoinOrder = Boolean.parseBoolean(props.getProperty(PROP_ENFORCE_JOIN_ORDER));
         lazy = Boolean.parseBoolean(props.getProperty(PROP_LAZY));
         txAllowed = Boolean.parseBoolean(props.getProperty(PROP_TX_ALLOWED));
-        maxMemory = Long.parseLong(props.getProperty(PROP_MAX_MEMORY));
+        maxMemory = Long.parseLong(props.getProperty(PROP_MAX_MEMORY, "0"));
 
         stream = Boolean.parseBoolean(props.getProperty(PROP_STREAMING));
 

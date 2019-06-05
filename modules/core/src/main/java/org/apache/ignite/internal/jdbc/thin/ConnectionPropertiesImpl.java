@@ -203,7 +203,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
     /** Query memory limit. */
     private LongProperty maxMemory = new LongProperty("maxMemory",
         "Query max memory limit. Set to 0 to use default value. Set to negative value to disable memory limits.",
-        null, false, 1, Integer.MAX_VALUE);
+        0L, false, Long.MIN_VALUE, Long.MAX_VALUE);
 
     /** Properties array. */
     private final ConnectionProperty [] propsArray = {
@@ -545,7 +545,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
 
     /** {@inheritDoc} */
     @Override public Long getQueryMaxMemory() {
-        return this.maxMemory.value();
+        return maxMemory.value();
     }
 
     /** {@inheritDoc} */
@@ -1153,7 +1153,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
          * @param min Lower bound of allowed range.
          * @param max Upper bound of allowed range.
          */
-        LongProperty(String name, String desc, Number dfltVal, boolean required, int min, int max) {
+        LongProperty(String name, String desc, Number dfltVal, boolean required, long min, long max) {
             super(name, desc, dfltVal, required, min, max);
         }
 
@@ -1166,7 +1166,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
          * @return Property value.
          */
         Long value() {
-            return val != null ? val.longValue() : null;
+            return val != null ? val.longValue() : 0L;
         }
     }
 
