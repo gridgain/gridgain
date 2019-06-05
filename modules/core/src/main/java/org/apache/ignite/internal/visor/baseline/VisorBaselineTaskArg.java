@@ -51,6 +51,20 @@ public class VisorBaselineTaskArg extends VisorDataTransferObject {
     }
 
     /**
+     * Do not change that constructor. It is used for compatibility with previous versions of Web console.
+     *
+     * @param topVer Topology version.
+     * @param consistentIds Consistent ids.
+     */
+    public VisorBaselineTaskArg(
+        VisorBaselineOperation op,
+        long topVer,
+        List<String> consistentIds
+    ) {
+        this(op, topVer, consistentIds, null);
+    }
+
+    /**
      * @param topVer Topology version.
      * @param consistentIds Consistent ids.
      * @param autoAdjustSettings Baseline autoadjustment settings.
