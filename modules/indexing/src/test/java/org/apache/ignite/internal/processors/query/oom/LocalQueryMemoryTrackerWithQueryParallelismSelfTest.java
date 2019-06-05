@@ -52,7 +52,7 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends Abstrac
     /** {@inheritDoc} */
     @Test
     @Override public void testSimpleQuerySmallResult() throws Exception {
-        List<List<?>> res = execQuery("select * from T", false);
+        execQuery("select * from T", false);
 
         long rowCount = localResults.stream().mapToLong(r -> r.getRowCount()).sum();
 
@@ -236,7 +236,7 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends Abstrac
     @Override public void testUnionSimple() throws Exception {
         maxMem = 2L * MB;
 
-        List<List<?>> lists = execQuery("select * from T as T0, T as T1 where T0.id < 2 " +
+        execQuery("select * from T as T0, T as T1 where T0.id < 2 " +
             "UNION " +
             "select * from T as T2, T as T3 where T2.id >= 1 AND T2.id < 2", true);
 

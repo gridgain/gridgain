@@ -80,7 +80,7 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
                 return prev + x;
             });
 
-        //TODO: GG-18628: tries to allocate memory from parent first. Let's make this allocation coarse-grained.
+        //TODO: GG-18840: tries to allocate memory from parent first. Let's make this allocation coarse-grained.
         if (parent != null) {
             try {
                 parent.allocate(size);

@@ -21,7 +21,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentSkipListSet;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
@@ -125,8 +124,12 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
      * Check if all allocated memory was correctly released.
      * @param node Node.
      */
-    private void checkMemoryManagerState(IgniteEx node) {
-        long memAllocated = memoryManager(node).allocated();
+    private void checkMemoryManagerState(IgniteEx node) throws Exception {
+        final QueryMemoryManager memMgr = memoryManager(node);
+
+        GridTestUtils.waitForCondition(() -> memMgr.allocated() == 0, 5_000);
+
+        long memAllocated = memMgr.allocated();
 
         assertEquals("Potential memory leak in SQL engine: allocated=" + memAllocated, 0, memAllocated);
     }
@@ -272,7 +275,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     /** Check UNION operation with large sub-selects. */
     @Test
     public void testUnionSimple() throws Exception {
-        maxMem = 8L * MB;
+        maxMem = 6L * MB;
 
         execQuery("select * from T as T0, T as T1 where T0.id < 2 " +
             "UNION " +

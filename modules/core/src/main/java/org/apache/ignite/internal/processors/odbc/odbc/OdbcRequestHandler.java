@@ -170,7 +170,7 @@ public class OdbcRequestHandler implements ClientListenerRequestHandler {
             skipReducerOnUpdate,
             null,
             null,
-            0 //TODO: GG-18542: Fix odbc client.
+            0 //TODO: GG-18629: Fix odbc client.
         );
 
         this.busyLock = busyLock;

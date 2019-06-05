@@ -33,7 +33,7 @@ public class QueryMemoryManager extends H2MemoryTracker {
     private final long dfltSqlQryMemoryLimit;
 
     /** Global query memory quota. */
-    //TODO GG-18628: it looks safe to make this configurable at runtime.
+    //TODO GG-18840: it looks safe to make this configurable at runtime.
     private final long globalQuota;
 
     /** Memory allocated by running queries. */
@@ -103,7 +103,7 @@ public class QueryMemoryManager extends H2MemoryTracker {
         if (maxQueryMemory == 0)
             maxQueryMemory = dfltSqlQryMemoryLimit;
 
-        assert globalQuota < 0 || globalQuota > maxQueryMemory : globalQuota;
+        assert globalQuota < 0 || globalQuota >= maxQueryMemory : globalQuota;
 
         //TODO: GG-18628: Should we register newly created tracker? This can be helpful in debugging 'memory leaks'.
         return new QueryMemoryTracker(globalQuota < 0 ? null : this, maxQueryMemory);
