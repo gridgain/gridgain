@@ -251,7 +251,7 @@ public class WebSocketsManager {
 
         desc.setClusterIds(tops.stream().map(TopologySnapshot::getId).collect(Collectors.toSet()));
 
-        // TODO GG-17577 Cleanup clusters.
+        // TODO GG-19218 Cleanup clusters.
     }
 
     /**
