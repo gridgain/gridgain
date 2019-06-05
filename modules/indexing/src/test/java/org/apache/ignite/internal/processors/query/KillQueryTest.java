@@ -35,12 +35,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.cache.affinity.Affinity;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.QueryCancelledException;
@@ -85,6 +87,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import static java.util.Arrays.stream;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.internal.util.IgniteUtils.resolveIgnitePath;
@@ -732,9 +735,40 @@ public class KillQueryTest extends GridCommonAbstractTest {
 
     /**
      * Test if user specified partitions for query explicitly, such query is cancealble.
+     *
+     * We check 3 scenarious in which partitions are belong to:
+     * 1) only first node <br/>
+     * 2) only second node <br/>
+     * 3) some to first, the others to second <br/>
      */
     @Test
     public void testCancelQueryWithPartitions() throws Exception {
+        Affinity<Object> aff = ignite.affinity(DEFAULT_CACHE_NAME);
+
+        int halfOfNodeParts = PARTS_CNT / 4;
+
+        int[] firstParts = stream(aff.primaryPartitions(grid(0).localNode())).limit(halfOfNodeParts).toArray();
+        int[] secondParts = stream(aff.primaryPartitions(grid(1).localNode())).limit(halfOfNodeParts).toArray();
+
+        int[] mixedParts = IntStream.concat(
+            stream(firstParts).limit(halfOfNodeParts),
+            stream(secondParts).limit(halfOfNodeParts)
+        ).toArray();
+
+        checkPartitions(firstParts);
+        checkPartitions(secondParts);
+        checkPartitions(mixedParts);
+
+    }
+
+    /**
+     * Test if user specified partitions for query explicitly, such query is cancealble.
+     *
+     * @param partitions user specified partitions, could contain partitions that are mapped on one or both nodes.
+     */
+    public void checkPartitions(int[] partitions) throws Exception {
+        TestSQLFunctions.init();
+
         IgniteInternalFuture cancelRes = cancel(1, asyncCancel);
 
         GridTestUtils.assertThrows(log, () -> {
@@ -751,6 +785,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
         // Ensures that there were no exceptions within async cancellation process.
         cancelRes.get(CHECK_RESULT_TIMEOUT);
     }
+
 
     /**
      * Cancels current query which wait on barrier.
