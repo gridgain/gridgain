@@ -661,8 +661,6 @@ public class GridReduceQueryExecutor {
 
                         QueryContextRegistry qryCtxRegistry = h2.queryContextRegistry();
 
-                        qryCtxRegistry.setThreadLocal(qctx);
-
                         try {
                             if (qry.explain()) {
                                 try {
@@ -701,8 +699,6 @@ public class GridReduceQueryExecutor {
                         finally {
                             if (detachedConn != null)
                                 H2Utils.resetSession(detachedConn.object().connection());
-
-                            qryCtxRegistry.clearThreadLocal();
                         }
                     }
                 }
