@@ -92,7 +92,7 @@ public class IdleVerifyResultV2 extends VisorDataTransferObject {
 
     /** {@inheritDoc} */
     @Override public byte getProtocolVersion() {
-        return V3;
+        return V2;
     }
 
     /** {@inheritDoc} */
