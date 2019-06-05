@@ -44,4 +44,9 @@ public class FileRespose extends ClientResponse {
         super.encode(ctx, writer);
         writer.writeByteArray(data);
     }
+
+    /** Returns file data. */
+    byte[] getData() {
+        return data;
+    }
 }

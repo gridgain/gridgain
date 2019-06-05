@@ -66,10 +66,17 @@ public class ModelStorateThinClientProcessor implements CustomQueryProcessor {
 
             return null;
         }
+
+        /**
+         * @return Id of method.
+         */
+        public byte id() {
+            return (byte) id;
+        }
     }
 
     /** Processor id. */
-    private static final String PROCESSOR_ID = "ML_MODEL_STORAGE";
+    public static final String PROCESSOR_ID = "ML_MODEL_STORAGE";
 
     /** Model storage. */
     private final ModelStorage modelStorage;
@@ -122,17 +129,17 @@ public class ModelStorateThinClientProcessor implements CustomQueryProcessor {
         String path = reader.readString();
 
         return modelStorage.lockPaths(() -> {
+            boolean create = reader.readBoolean();
             boolean append = reader.readBoolean();
-            boolean replaceIfExists = reader.readBoolean();
             byte[] newData = reader.readByteArray();
 
             boolean fileAlreadyExists = modelStorage.exists(path);
-            if (fileAlreadyExists && !replaceIfExists && !append)
-                return error(reqId, "File already exists [path=" + path + "]");
+            if (!create && !fileAlreadyExists)
+                return error(reqId, "File doesn't exist [path=" + path + "]");
 
             byte[] currentData = new byte[0];
             if (fileAlreadyExists) {
-                if (append)
+                if (append && !create)
                     currentData = modelStorage.getFile(path);
                 modelStorage.remove(path);
             }
@@ -160,6 +167,9 @@ public class ModelStorateThinClientProcessor implements CustomQueryProcessor {
             if (!modelStorage.exists(path))
                 return error(reqId, "File not found [path=" + path + "]");
 
+            if(!modelStorage.isFile(path))
+                return error(reqId, "File is not regular file [path" + path + "]");
+
             return new FileRespose(reqId, modelStorage.getFile(path));
         }, path);
     }
@@ -180,6 +190,8 @@ public class ModelStorateThinClientProcessor implements CustomQueryProcessor {
                 return error(reqId, "File not found [path=" + from + "]");
             if (modelStorage.exists(to))
                 return error(reqId, "File already exists [path=" + to + "]");
+            if (!modelStorage.isFile(from))
+                return error(reqId, "File is not regular file [path=" + from + "]");
 
             byte[] file = modelStorage.getFile(from);
             modelStorage.remove(from);

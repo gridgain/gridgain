@@ -48,4 +48,11 @@ public class FileStatResponse extends ClientResponse {
         writer.writeInt(stat.getSize());
         writer.writeLong(stat.getModificationTime());
     }
+
+    /**
+     * @return Returns file's stat.
+     */
+    FileStat getStat() {
+        return stat;
+    }
 }

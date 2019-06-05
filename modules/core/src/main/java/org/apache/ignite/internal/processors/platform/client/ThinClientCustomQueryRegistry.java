@@ -39,7 +39,7 @@ public class ThinClientCustomQueryRegistry {
      */
     public static ClientResponse call(long requestId, String processorId, byte methodId, BinaryRawReader reader) {
         CustomQueryProcessor processor = processors.get(processorId);
-        if(processor == null)
+        if (processor == null)
             return new ClientResponse(requestId, "Cannot find processor with id = " + processorId);
 
         return processor.call(requestId, methodId, reader);
@@ -52,7 +52,20 @@ public class ThinClientCustomQueryRegistry {
      */
     public static void register(CustomQueryProcessor processor) {
         String processorId = processor.id();
-        if(processors.putIfAbsent(processorId, processor) != null)
+        if (processors.putIfAbsent(processorId, processor) != null)
             throw new IgniteException("Processor is already registered [id=" + processorId + "]");
+    }
+
+    /**
+     * Upregisters given processor.
+     *
+     * @param processor Processor.
+     */
+    public static void unregister(CustomQueryProcessor processor) {
+        if (processor == null)
+            return;
+
+        String processorId = processor.id();
+        processors.remove(processorId, processor);
     }
 }

@@ -47,4 +47,11 @@ public class FilesListResponse extends ClientResponse {
         for(String fileName : filesList)
             writer.writeString(fileName);
     }
+
+    /**
+     * @return Files list.
+     */
+    Set<String> getFilesList() {
+        return filesList;
+    }
 }
