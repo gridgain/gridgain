@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.function.Function;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.console.db.OneToManyIndex;
 import org.apache.ignite.console.db.Table;
@@ -37,6 +38,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.transactions.Transaction;
 import org.springframework.stereotype.Repository;
 
+import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 import static org.apache.ignite.console.common.Utils.diff;
 import static org.apache.ignite.console.common.Utils.idsFromJson;
@@ -432,7 +434,7 @@ public class ConfigurationsRepository {
         Map<UUID, Igfs> igfss = jsonIgfss
             .stream()
             .map(item -> Igfs.fromJson(asJson(item)))
-            .collect(toMap(Igfs::getId, i -> i));
+            .collect(toMap(Igfs::getId, identity()));
 
         Set<UUID> igfsIds = igfss.keySet();
 

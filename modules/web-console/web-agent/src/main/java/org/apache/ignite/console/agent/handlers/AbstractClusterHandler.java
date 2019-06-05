@@ -27,10 +27,10 @@ import org.eclipse.jetty.util.ssl.SslContextFactory;
  */
 public abstract class AbstractClusterHandler {
     /** Agent configuration. */
-    final AgentConfiguration cfg;
+    protected final AgentConfiguration cfg;
 
     /** Rest executor. */
-    final RestExecutor restExecutor;
+    protected final RestExecutor restExecutor;
 
     /**
      * @param cfg Web agent configuration.

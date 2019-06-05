@@ -35,9 +35,6 @@ import org.apache.ignite.internal.util.typedef.T2;
  */
 public class Utils {
     /** */
-    private static final JsonObject EMPTY_OBJ = new JsonObject();
-
-    /** */
     private static final GridJettyObjectMapper MAPPER = new GridJettyObjectMapper();
 
     /**
@@ -150,66 +147,6 @@ public class Utils {
         String msg = cause.getMessage();
 
         return F.isEmpty(msg) ? cause.getClass().getName() : msg;
-    }
-
-    /**
-     * @param a First set.
-     * @param b Second set.
-     * @return Elements exists in a and not in b.
-     */
-    public static TreeSet<UUID> diff(TreeSet<UUID> a, TreeSet<UUID> b) {
-        return a.stream().filter(item -> !b.contains(item)).collect(Collectors.toCollection(TreeSet::new));
-    }
-
-    /**
-     * @param json JSON object.
-     * @param key Key with IDs.
-     * @return Set of IDs.
-     */
-    public static TreeSet<UUID> idsFromJson(JsonObject json, String key) {
-        TreeSet<UUID> res = new TreeSet<>();
-
-        JsonArray ids = json.getJsonArray(key);
-
-        if (ids != null)
-            ids.forEach(item -> res.add(UUID.fromString(item.toString())));
-
-        return res;
-    }
-
-    /**
-     * @param json JSON to travers.
-     * @param path Dot separated list of properties.
-     * @return Tuple with unwind JSON and key to extract from it.
-     */
-    private static T2<JsonObject, String> xpath(JsonObject json, String path) {
-        String[] keys = path.split("\\.");
-
-        for (int i = 0; i < keys.length - 1; i++) {
-            json = json.getJsonObject(keys[i]);
-
-            if (json == null)
-                json = EMPTY_OBJ;
-        }
-
-        String key = keys[keys.length - 1];
-
-        if (json.containsKey(key))
-            return new T2<>(json, key);
-
-        throw new IllegalStateException("Parameter not found: " + path);
-    }
-
-    /**
-     * @param json JSON object.
-     * @param path Dot separated list of properties.
-     * @param def Default value.
-     * @return the value or {@code def} if no entry present.
-     */
-    public static boolean boolParam(JsonObject json, String path, boolean def) {
-        T2<JsonObject, String> t = xpath(json, path);
-
-        return t.getKey().getBoolean(t.getValue(), def);
     }
 
     /**

@@ -110,7 +110,7 @@ public class WebSocketEvent {
     }
 
     /**
-     * Constructor with auto generated ID.
+     * Create event with payload for response with same ID.
      *
      * @param payload Payload.
      */
@@ -119,7 +119,7 @@ public class WebSocketEvent {
     }
 
     /**
-     * Constructor with auto generated ID.
+     * Create event with error for response with same ID.
      *
      * @param msg Message.
      */

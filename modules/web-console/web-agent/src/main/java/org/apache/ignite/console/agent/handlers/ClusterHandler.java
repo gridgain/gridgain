@@ -84,7 +84,7 @@ public class ClusterHandler extends AbstractClusterHandler {
      * @return Response from cluster.
      * @throws Throwable if failed to send request to cluster.
      */
-    public RestResult restCommand(JsonObject params) throws Throwable {
+    @Override public RestResult restCommand(JsonObject params) throws Throwable {
         List<String> nodeURIs = cfg.nodeURIs();
 
         Integer startIdx = startIdxs.getOrDefault(nodeURIs, 0);

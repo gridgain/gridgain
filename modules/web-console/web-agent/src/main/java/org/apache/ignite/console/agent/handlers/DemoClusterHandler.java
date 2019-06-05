@@ -39,12 +39,13 @@ import static org.apache.ignite.internal.visor.util.VisorTaskUtils.sortAddresses
  * API to transfer topology from demo cluster to Web Console.
  */
 public class DemoClusterHandler extends AbstractClusterHandler{
-    public static final String DEMO_CLUSTER_ID = UUID.randomUUID().toString();
+    /** Demo cluster ID. */
+    static final String DEMO_CLUSTER_ID = UUID.randomUUID().toString();
 
     /**
      * @param cfg Config.
      */
-    public DemoClusterHandler(AgentConfiguration cfg) {
+    DemoClusterHandler(AgentConfiguration cfg) {
         super(cfg, null);
 
         System.setProperty(IGNITE_CLUSTER_ID, DEMO_CLUSTER_ID);
@@ -69,7 +70,7 @@ public class DemoClusterHandler extends AbstractClusterHandler{
     /**
      * @return Topology snapshot for demo cluster.
      */
-    public TopologySnapshot topologySnapshot() {
+    TopologySnapshot topologySnapshot() {
         TopologySnapshot top = new TopologySnapshot();
 
         top.setId(System.getProperty(IGNITE_CLUSTER_ID));
