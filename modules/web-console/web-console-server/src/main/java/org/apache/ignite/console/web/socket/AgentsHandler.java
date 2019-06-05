@@ -21,6 +21,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.repositories.AccountsRepository;
 import org.apache.ignite.console.web.AbstractHandler;
@@ -35,9 +36,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketSession;
 
-import static org.apache.ignite.console.json.JsonUtils.fromJson;
-import static org.apache.ignite.console.websocket.WebSocketConsts.AGENT_HANDSHAKE;
-import static org.apache.ignite.console.websocket.WebSocketConsts.CLUSTER_TOPOLOGY;
+import static java.util.stream.Collectors.toList;
+import static org.apache.ignite.console.utils.Utils.fromJson;
+import static org.apache.ignite.console.websocket.AgentHandshakeRequest.SUPPORTED_VERS;
+import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_HANDSHAKE;
+import static org.apache.ignite.console.websocket.WebSocketEvents.CLUSTER_TOPOLOGY;
 
 /**
  * Agents web sockets handler.
@@ -72,10 +75,9 @@ public class AgentsHandler extends AbstractHandler {
         if (F.isEmpty(req.getTokens()))
             throw new IllegalArgumentException("Tokens not set. Please reload agent or check settings.");
 
-        if (!F.isEmpty(req.getVersion()) && !F.isEmpty(req.getBuildTime()) & !F.isEmpty(supportedAgents)) {
-            // TODO GG-18524 Implement version check in beta3 stage.
+        // TODO GG-18524 Implement version check in beta3 stage.
+        if (!SUPPORTED_VERS.contains(req.getVersion()))
             throw new IllegalArgumentException("You are using an older version of the agent. Please reload agent.");
-        }
     }
 
     /**
@@ -103,7 +105,7 @@ public class AgentsHandler extends AbstractHandler {
 
                     Collection<Account> accounts = loadAccounts(req.getTokens());
 
-                    sendResponse(ws, evt, new AgentHandshakeResponse(mapToSet(accounts, Account::getToken)));
+                    sendResponse(ws, evt, new AgentHandshakeResponse(accounts.stream().map(Account::getToken).collect(toList())));
 
                     wsm.onAgentConnect(ws, mapToSet(accounts, Account::getId));
 
@@ -121,9 +123,12 @@ public class AgentsHandler extends AbstractHandler {
 
             case CLUSTER_TOPOLOGY:
                 try {
-                    TopologySnapshot top = fromJson(evt.getPayload(), TopologySnapshot.class);
+                    Collection<TopologySnapshot> tops = fromJson(
+                        evt.getPayload(),
+                        new TypeReference<Collection<TopologySnapshot>>() {}
+                    );
 
-                    wsm.processTopologyUpdate(ws, top);
+                    wsm.processTopologyUpdate(ws, tops);
                 }
                 catch (Exception e) {
                     log.warn("Failed to process topology update: " + evt, e);

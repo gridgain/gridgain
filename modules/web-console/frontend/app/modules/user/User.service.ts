@@ -78,9 +78,9 @@ export default function User(
         clean() {
             delete $root.user;
 
-            delete $root.IgniteDemoMode;
+            delete $root.demoMode;
 
-            sessionStorage.removeItem('IgniteDemoMode');
+            sessionStorage.removeItem('demoMode');
         },
 
         async save(user: Partial<User>): Promise<User> {

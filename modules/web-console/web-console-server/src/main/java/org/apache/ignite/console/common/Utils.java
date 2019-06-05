@@ -27,7 +27,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-import static org.apache.ignite.console.json.JsonUtils.fromJson;
+import static org.apache.ignite.console.utils.Utils.fromJson;
 
 /**
  * Utilities.

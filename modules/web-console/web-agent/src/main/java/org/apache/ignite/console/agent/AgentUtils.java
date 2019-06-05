@@ -22,10 +22,16 @@ import java.net.ProxySelector;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.ProtectionDomain;
+import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
+import org.apache.ignite.console.websocket.WebSocketEvent;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.log4j.Logger;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.HttpProxy;
@@ -34,10 +40,12 @@ import org.eclipse.jetty.client.ProxyConfiguration;
 import org.eclipse.jetty.client.Socks4Proxy;
 import org.eclipse.jetty.client.util.BasicAuthentication;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
+import org.eclipse.jetty.websocket.api.Session;
 
 import static java.net.Proxy.NO_PROXY;
 import static java.net.Proxy.Type.SOCKS;
 import static java.util.stream.Collectors.toList;
+import static org.apache.ignite.console.utils.Utils.toJson;
 import static org.eclipse.jetty.client.api.Authentication.ANY_REALM;
 
 /**
@@ -256,5 +264,40 @@ public class AgentUtils {
         catch (Exception e) {
             log.warn("Failed to configure proxy.", e);
         }
+    }
+
+    /**
+     * @return String with short node UUIDs.
+     */
+    public static String nid8(Collection<UUID> nids) {
+        return nids.stream().map(nid -> U.id8(nid).toUpperCase()).collect(Collectors.joining(",", "[", "]"));
+    }
+
+    /**
+     * Simple entry generator.
+     * 
+     * @param key Key.
+     * @param val Value.
+     */
+    public static <K, V> Map.Entry<K, V> entry(K key, V val) {
+        return new AbstractMap.SimpleEntry<>(key, val);
+    }
+
+    /**
+     * Collector.
+     */
+    public static <K, U> Collector<Map.Entry<K, U>, ?, Map<K, U>> entriesToMap() {
+        return Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue);
+    }
+
+    /**
+     * Send event to websocket.
+     *
+     * @param ses Websocket session.
+     * @param evt Event.
+     * @throws Exception If failed to send event.
+     */
+    public static void send(Session ses, WebSocketEvent evt) throws Exception {
+        ses.getRemote().sendStringByFuture(toJson(evt)).get();
     }
 }

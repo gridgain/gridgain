@@ -33,18 +33,17 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketSession;
 
-import static org.apache.ignite.console.json.JsonUtils.fromJson;
-import static org.apache.ignite.console.json.JsonUtils.toJson;
-import static org.apache.ignite.console.websocket.WebSocketConsts.NODE_REST;
-import static org.apache.ignite.console.websocket.WebSocketConsts.NODE_VISOR;
-import static org.apache.ignite.console.websocket.WebSocketConsts.SCHEMA_IMPORT_DRIVERS;
-import static org.apache.ignite.console.websocket.WebSocketConsts.SCHEMA_IMPORT_METADATA;
-import static org.apache.ignite.console.websocket.WebSocketConsts.SCHEMA_IMPORT_SCHEMAS;
+import static org.apache.ignite.console.utils.Utils.fromJson;
+import static org.apache.ignite.console.websocket.WebSocketEvents.NODE_REST;
+import static org.apache.ignite.console.websocket.WebSocketEvents.NODE_VISOR;
+import static org.apache.ignite.console.websocket.WebSocketEvents.SCHEMA_IMPORT_DRIVERS;
+import static org.apache.ignite.console.websocket.WebSocketEvents.SCHEMA_IMPORT_METADATA;
+import static org.apache.ignite.console.websocket.WebSocketEvents.SCHEMA_IMPORT_SCHEMAS;
 
 /**
  * Browsers web sockets handler.
@@ -81,8 +80,8 @@ public class BrowsersHandler extends AbstractHandler {
     protected Account extractAccount(WebSocketSession ws) {
         Principal p = ws.getPrincipal();
 
-        if (p instanceof UsernamePasswordAuthenticationToken) {
-            UsernamePasswordAuthenticationToken t = (UsernamePasswordAuthenticationToken)p;
+        if (p instanceof Authentication) {
+            Authentication t = (Authentication)p;
 
             Object tp = t.getPrincipal();
 
@@ -125,7 +124,7 @@ public class BrowsersHandler extends AbstractHandler {
                         throw new IllegalArgumentException("Missing cluster id parameter.");
 
                     WebSocketEvent reqEvt = evt.getEventType().equals(NODE_REST) ?
-                        evt : new WebSocketEvent(evt, prepareNodeVisorParams(payload));
+                        evt : evt.withPayload(prepareNodeVisorParams(payload));
 
                     wsm.sendToNode(ws, clusterId, reqEvt);
 
@@ -235,7 +234,7 @@ public class BrowsersHandler extends AbstractHandler {
      *
      * @param payload Task event.
      */
-    private String prepareNodeVisorParams(JsonObject payload) {
+    private JsonObject prepareNodeVisorParams(JsonObject payload) {
         JsonObject params = payload.getJsonObject("params");
 
         String taskId = params.getString("taskId");
@@ -267,6 +266,6 @@ public class BrowsersHandler extends AbstractHandler {
 
         payload.put("params", exeParams);
 
-        return toJson(payload);
+        return payload;
     }
 }

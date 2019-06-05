@@ -16,7 +16,9 @@
 
 package org.apache.ignite.console.websocket;
 
-import java.util.Set;
+import java.util.List;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
@@ -29,27 +31,31 @@ public class AgentHandshakeResponse {
 
     /** */
     @GridToStringInclude
-    private Set<String> toks;
+    private List<String> tokens;
 
     /**
-     * Default constructor for serialization.
+     * Constructor for deserialization.
+     *
+     * @param tokens Tokens.
      */
-    public AgentHandshakeResponse() {
-        // No-op.
+    @JsonCreator
+    private AgentHandshakeResponse(@JsonProperty("error") String err, @JsonProperty("tokens") List<String> tokens) {
+        this.err = err;
+        this.tokens = tokens;
     }
 
     /**
      * @param err Error message.
      */
     public AgentHandshakeResponse(Exception err) {
-        this.err = err.getMessage();
+        this(err.getMessage(), null);
     }
 
     /**
      * @param toks Tokens.
      */
-    public AgentHandshakeResponse(Set<String> toks) {
-        this.toks = toks;
+    public AgentHandshakeResponse(List<String> toks) {
+        this(null, toks);
     }
 
     /**
@@ -60,24 +66,10 @@ public class AgentHandshakeResponse {
     }
 
     /**
-     * @param err Error message.
+     * @return value of tokens
      */
-    public void setError(String err) {
-        this.err = err;
-    }
-
-    /**
-     * @return Tokens.
-     */
-    public Set<String> getTokens() {
-        return toks;
-    }
-
-    /**
-     * @param toks Tokens.
-     */
-    public void setTokens(Set<String> toks) {
-        this.toks = toks;
+    public List<String> getTokens() {
+        return tokens;
     }
 
     /** {@inheritDoc} */

@@ -23,7 +23,7 @@ import org.apache.ignite.console.json.JsonObject;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
-import static org.apache.ignite.console.json.JsonUtils.toJson;
+import static org.apache.ignite.console.utils.Utils.toJson;
 
 /**
  * DTO for cluster cache.
