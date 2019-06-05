@@ -46,7 +46,7 @@ public class Model extends DataObject {
 
         return new Model(
             id,
-            false, // TODO IGNITE-5617 DETECT INDEXES !!!
+            false, // TODO GG-19220 DETECT INDEXES !!!
             json.getString("keyType"),
             json.getString("valueType"),
             toJson(json)
