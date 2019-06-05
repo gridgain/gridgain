@@ -795,7 +795,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         if (asteriskIdx >= 0 && asteriskIdx < lastSeparatorIdx)
             throw new RuntimeException("Could not parse classpath entry");
 
-        final int fileMaskFirstIdx = lastSeparatorIdx < 0 ? 0 : lastSeparatorIdx + 1;
+        final int fileMaskFirstIdx = lastSeparatorIdx + 1;
 
         final String fileMask =
             (fileMaskFirstIdx >= clsPathEntry.length()) ? "*.jar" : clsPathEntry.substring(fileMaskFirstIdx);
