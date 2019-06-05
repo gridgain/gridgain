@@ -41,6 +41,8 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.cache.affinity.Affinity;
+import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.QueryCancelledException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
@@ -114,6 +116,9 @@ public class KillQueryTest extends GridCommonAbstractTest {
     /** Timeout for checking async result. */
     public static final int CHECK_RESULT_TIMEOUT = 1_000;
 
+    /** Number of partitions in the test chache. Keep it small to have enough rows in each partitions. */
+    private static final int PARTS_CNT = 20;
+
     /** Connection. */
     private Connection conn;
 
@@ -156,6 +161,8 @@ public class KillQueryTest extends GridCommonAbstractTest {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         CacheConfiguration<?, ?> cache = GridAbstractTest.defaultCacheConfiguration();
+
+        cache.setAffinity(new RendezvousAffinityFunction(false, PARTS_CNT));
 
         cache.setCacheMode(PARTITIONED);
         cache.setBackups(1);
@@ -225,6 +232,8 @@ public class KillQueryTest extends GridCommonAbstractTest {
                 ds.addData((long)i, (long)i);
             }
         }
+
+        awaitPartitionMapExchange();
     }
 
     /**
@@ -731,8 +740,10 @@ public class KillQueryTest extends GridCommonAbstractTest {
 
         GridTestUtils.assertThrows(log, () -> {
             ignite.cache(DEFAULT_CACHE_NAME).query(
-                new SqlFieldsQuery("select * from Integer where _key <> awaitLatchCancelled()")
-                    .setPartitions(1, 2, 3)
+                new SqlFieldsQuery("select * from Integer where _key in " +
+                    "(select _key from Integer where awaitLatchCancelled() = 0) and shouldNotBeCalledInCaseOfCancellation()")
+                    .setPartitions(0, 1)
+                    .setDataPageScanEnabled(true)
             ).getAll();
 
             return null;
