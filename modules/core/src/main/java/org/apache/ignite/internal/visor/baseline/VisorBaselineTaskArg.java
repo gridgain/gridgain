@@ -51,7 +51,8 @@ public class VisorBaselineTaskArg extends VisorDataTransferObject {
     }
 
     /**
-     * Do not change that constructor. It is used for compatibility with previous versions of Web console.
+     * This constructor is required by Web Console.
+     * Do not remove or change signature.
      *
      * @param topVer Topology version.
      * @param consistentIds Consistent ids.
