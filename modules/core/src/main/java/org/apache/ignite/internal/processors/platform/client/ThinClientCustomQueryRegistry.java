@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.platform.client;
 
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.ignite.IgniteException;
@@ -65,7 +66,22 @@ public class ThinClientCustomQueryRegistry {
         if (processor == null)
             return;
 
-        String processorId = processor.id();
-        processors.remove(processorId, processor);
+        unregister(processor.id());
+    }
+
+    /**
+     * Upregisters processor by id.
+     *
+     * @param processorId Processor id.
+     */
+    public static void unregister(String processorId) {
+        processors.remove(processorId);
+    }
+
+    /**
+     * @return Registered processors.
+     */
+    public static Set<String> registeredProcessors() {
+        return processors.keySet();
     }
 }

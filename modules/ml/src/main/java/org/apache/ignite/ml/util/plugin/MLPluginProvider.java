@@ -173,9 +173,13 @@ public class MLPluginProvider implements PluginProvider<MLPluginConfiguration> {
 
         ignite.getOrCreateCache(storageCfg);
 
-        ThinClientCustomQueryRegistry.register(
-            new ModelStorateThinClientProcessor(new ModelStorageFactory().getModelStorage(ignite))
-        );
+        if(!ThinClientCustomQueryRegistry.registeredProcessors().contains(ModelStorateThinClientProcessor.PROCESSOR_ID)) {
+            ThinClientCustomQueryRegistry.register(
+                new ModelStorateThinClientProcessor(
+                    new ModelStorageFactory().getModelStorage(ignite)
+                )
+            );
+        }
 
         log.info("ML model storage is ready");
     }

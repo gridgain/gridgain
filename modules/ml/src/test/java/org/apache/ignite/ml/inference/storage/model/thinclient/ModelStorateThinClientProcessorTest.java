@@ -44,7 +44,10 @@ import org.apache.ignite.internal.processors.platform.client.ClientResponse;
 import org.apache.ignite.internal.processors.platform.client.ClientStatus;
 import org.apache.ignite.internal.processors.platform.client.ThinClientCustomQueryRegistry;
 import org.apache.ignite.logger.NullLogger;
+import org.apache.ignite.ml.inference.storage.model.DefaultModelStorage;
+import org.apache.ignite.ml.inference.storage.model.FileOrDirectory;
 import org.apache.ignite.ml.inference.storage.model.FileStat;
+import org.apache.ignite.ml.inference.storage.model.IgniteModelStorageProvider;
 import org.apache.ignite.ml.inference.storage.model.ModelStorage;
 import org.apache.ignite.ml.inference.storage.model.ModelStorageFactory;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
@@ -83,26 +86,38 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
         new NullLogger()
     );
 
-    private static final String pathToFile1 = "/a/b/file_1";
+    /** */
     private static final byte[] file1 = new byte[] {0, 1, 2, 3, 4, 5};
 
+    /** */
+    private static final String pathToFile1 = "/a/b/file_1";
+
+    /** */
     private Ignite ignite;
+
+    /** */
     private ModelStorage ms;
+
+    /** */
     private ModelStorateThinClientProcessor msp;
-    private IgniteCache<String, byte[]> cache;
+
+    /** */
+    private IgniteCache<String, FileOrDirectory> cache;
 
     @Before
     public void setUp() throws Exception {
+        ThinClientCustomQueryRegistry.unregister(ModelStorateThinClientProcessor.PROCESSOR_ID);
+
         ignite = startGrid(0);
 
-        CacheConfiguration<String, byte[]> storageCfg = new CacheConfiguration<>();
+        CacheConfiguration<String, FileOrDirectory> storageCfg = new CacheConfiguration<>();
 
         storageCfg.setName(ModelStorageFactory.MODEL_STORAGE_CACHE_NAME);
         storageCfg.setCacheMode(CacheMode.PARTITIONED);
         storageCfg.setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL);
-        cache = ignite.getOrCreateCache(storageCfg);
+        cache = ignite.createCache(storageCfg);
 
-        ms = new ModelStorageFactory().getModelStorage(ignite);
+        ms = new DefaultModelStorage(new IgniteModelStorageProvider(cache));
         msp = new ModelStorateThinClientProcessor(ms);
 
         ThinClientCustomQueryRegistry.register(msp);
