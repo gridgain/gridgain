@@ -63,15 +63,15 @@ public class VisorRollingUpgradeChangeModeTask extends VisorOneNodeTask<VisorRol
             switch (arg.operation()) {
                 case ENABLE:
                     if (arg.isForcedMode()) {
-                        ignite.context().rollingUpgrade().enableForcedRollingUpgradeMode();
+                        ignite.context().rollingUpgrade().enableForcedMode();
 
                         return new RollingUpgradeModeChangeResult(SUCCESS);
                     }
 
-                    return ignite.context().rollingUpgrade().setRollingUpgradeMode(true);
+                    return ignite.context().rollingUpgrade().setMode(true);
 
                 case DISABLE:
-                    return ignite.context().rollingUpgrade().setRollingUpgradeMode(false);
+                    return ignite.context().rollingUpgrade().setMode(false);
 
                 default:
                     throw new IgniteException("Unexpected rolling upgrade operation arg=[" + arg + ']');

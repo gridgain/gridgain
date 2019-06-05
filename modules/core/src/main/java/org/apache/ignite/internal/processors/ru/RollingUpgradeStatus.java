@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.ru;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.Collections;
 import java.util.Set;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
@@ -32,8 +33,8 @@ public class RollingUpgradeStatus extends IgniteDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;
 
-    /** {@code true} if Rolling Upgrade is in progress. */
-    private boolean upgradeInProgress;
+    /** {@code true} if Rolling Upgrade is enabled. */
+    private boolean enabled;
 
     /** Represents the version that is used as starting point for Rolling Upgrade. */
     private IgniteProductVersion initVer;
@@ -47,6 +48,14 @@ public class RollingUpgradeStatus extends IgniteDataTransferObject {
     /** Feature set that is supported by nodes. */
     private Set<IgniteFeatures> supportedFeatures;
 
+    /** Creates a new instance with default values. */
+    public static RollingUpgradeStatus disabledRollingUpgradeStatus() {
+        return new RollingUpgradeStatus(false, null, null, false, Collections.EMPTY_SET);
+    }
+
+    /** Default constructor. */
+    public RollingUpgradeStatus() {}
+
     /**
      * Creates a new instance of RollingUpgradeStatus.
      */
@@ -56,20 +65,20 @@ public class RollingUpgradeStatus extends IgniteDataTransferObject {
     /**
      * Creates a new instance of the Rolling Upgrade status with the given parameters.
      *
-     * @param upgradeInProgress {@code true} if Rolling Upgrade is in progress.
+     * @param enabled {@code true} if Rolling Upgrade is enabled.
      * @param initVer Initial version.
      * @param updateVer Resulting version.
      * @param strictVerCheck {@code true} if strict mode is enabled.
      * @param supportedFeatures Feature set that is supported by nodes.
      */
     public RollingUpgradeStatus(
-        boolean upgradeInProgress,
+        boolean enabled,
         IgniteProductVersion initVer,
         IgniteProductVersion updateVer,
         boolean strictVerCheck,
         Set<IgniteFeatures> supportedFeatures
     ) {
-        this.upgradeInProgress = upgradeInProgress;
+        this.enabled = enabled;
         this.initVer = initVer;
         this.updateVer = updateVer;
         this.strictVerCheck = strictVerCheck;
@@ -81,8 +90,8 @@ public class RollingUpgradeStatus extends IgniteDataTransferObject {
      *
      * @return {@code true} if Rolling Upgrade is in progress.
      */
-    public boolean isInProgress() {
-        return upgradeInProgress;
+    public boolean isEnabled() {
+        return enabled;
     }
 
     /**
@@ -121,7 +130,7 @@ public class RollingUpgradeStatus extends IgniteDataTransferObject {
 
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
-        out.writeBoolean(upgradeInProgress);
+        out.writeBoolean(enabled);
         out.writeObject(initVer);
         out.writeObject(updateVer);
         out.writeBoolean(strictVerCheck);
@@ -131,7 +140,7 @@ public class RollingUpgradeStatus extends IgniteDataTransferObject {
     /** {@inheritDoc} */
     @Override protected void readExternalData(byte protoVer, ObjectInput in)
         throws IOException, ClassNotFoundException {
-        upgradeInProgress = in.readBoolean();
+        enabled = in.readBoolean();
         initVer = (IgniteProductVersion)in.readObject();
         updateVer = (IgniteProductVersion)in.readObject();
         strictVerCheck = in.readBoolean();

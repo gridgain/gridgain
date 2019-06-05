@@ -57,7 +57,7 @@ public class VisorRollingUpgradeStatusTask extends VisorOneNodeTask<Void, Rollin
 
         /** {@inheritDoc} */
         @Override protected RollingUpgradeStatus run(Void arg) throws IgniteException {
-            return ignite.context().rollingUpgrade().getRollingUpgradeStatus();
+            return ignite.context().rollingUpgrade().getStatus();
         }
 
         /** {@inheritDoc} */
