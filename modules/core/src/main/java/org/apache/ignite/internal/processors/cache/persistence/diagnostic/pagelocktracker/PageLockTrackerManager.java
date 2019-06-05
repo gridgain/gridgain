@@ -22,18 +22,25 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.processors.cache.persistence.DataStructure;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.SharedPageLockTracker.State;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.dumpprocessors.ToFileDumpProcessor;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.dumpprocessors.ToStringDumpProcessor;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lifecycle.LifecycleAware;
 import org.jetbrains.annotations.NotNull;
+
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_PAGE_LOCK_TRACKER_TYPE;
+import static org.apache.ignite.IgniteSystemProperties.getInteger;
+import static org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.LockTrackerFactory.HEAP_LOG;
 
 /**
  * Page lock manager.
  */
-public class PageLockTrackerManager {
+public class PageLockTrackerManager implements LifecycleAware {
     /** */
     private static final long OVERHEAD_SIZE = 16 + 8  + 8 + 8 + 8;
 
@@ -55,6 +62,8 @@ public class PageLockTrackerManager {
     /** */
     private final String managerNameId;
 
+    private final boolean trackingEnable;
+
 
     /**
      * Default constructor.
@@ -67,12 +76,11 @@ public class PageLockTrackerManager {
      * Default constructor.
      */
     public PageLockTrackerManager(IgniteLogger log, String managerNameId) {
+        this.trackingEnable = !(getInteger(IGNITE_PAGE_LOCK_TRACKER_TYPE, HEAP_LOG) == -1);
         this.managerNameId = managerNameId;
         this.mxBean = new PageLockTrackerMXBeanImpl(this, memoryCalculator);
         this.sharedPageLockTracker = new SharedPageLockTracker(this::onHangThreads, memoryCalculator);
         this.log = log;
-
-        sharedPageLockTracker.onStart();
 
         memoryCalculator.onHeapAllocated(OVERHEAD_SIZE);
     }
@@ -124,6 +132,9 @@ public class PageLockTrackerManager {
      * @return Instance of {@link PageLockListener} for tracking lock/unlock operations.
      */
     public PageLockListener createPageLockTracker(String name) {
+        if (!trackingEnable)
+            return DataStructure.NOOP_LSNR;
+
         return sharedPageLockTracker.registrateStructure(name);
     }
 
@@ -206,6 +217,16 @@ public class PageLockTrackerManager {
      */
     public long getTotalOverhead() {
         return getHeapOverhead() + getOffHeapOverhead();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void start() throws IgniteException {
+        sharedPageLockTracker.start();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void stop() throws IgniteException {
+        sharedPageLockTracker.stop();
     }
 
     /**
