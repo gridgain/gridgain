@@ -1061,7 +1061,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
         /** {@inheritDoc} */
         @Override void init(String str) throws SQLException {
             if (str == null)
-                val = dfltVal != null ? (int)dfltVal : null;
+                val = dfltVal != null ? (Number)dfltVal : null;
             else {
                 try {
                     setValue(parse(str));
