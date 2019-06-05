@@ -109,9 +109,14 @@ public class QueryMemoryManager extends H2MemoryTracker {
         assert globalQuota < 0 || globalQuota >= maxQueryMemory : globalQuota;
 
         //TODO: GG-18628: Should we register newly created tracker? This can be helpful in debugging 'memory leaks'.
-        return new QueryMemoryTracker(globalQuota < 0 ? null : this, maxQueryMemory);
+        QueryMemoryTracker tracker = new QueryMemoryTracker(globalQuota < 0 ? null : this, maxQueryMemory);
+
+        trackers.add(tracker);
+
+        return tracker;
     }
 
+    static List<QueryMemoryTracker> trackers = Collections.synchronizedList(new ArrayList<>());
     /**
      * Gets memory allocated by running queries.
      *

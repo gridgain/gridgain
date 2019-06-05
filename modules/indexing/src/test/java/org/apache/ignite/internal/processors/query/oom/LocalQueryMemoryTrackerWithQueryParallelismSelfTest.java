@@ -56,7 +56,8 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends Abstrac
 
         long rowCount = localResults.stream().mapToLong(r -> r.getRowCount()).sum();
 
-        assertEquals(4, localResults.size());
+        assertFalse(localResults.isEmpty());
+        assertTrue(localResults.size() <= 4);
         assertEquals(SMALL_TABLE_SIZE, rowCount);
     }
 
@@ -132,7 +133,8 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends Abstrac
         // Query with huge local result.
         checkQueryExpectOOM("select * from T as T0, T as T1 ORDER BY T1.id", true);
 
-        assertEquals(4, localResults.size());
+        assertFalse(localResults.isEmpty());
+        assertTrue(localResults.size() <= 4);
         assertTrue(localResults.stream().anyMatch(r -> r.memoryAllocated() + 500 > maxMem));
     }
 
@@ -179,7 +181,8 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends Abstrac
         // Query with single huge local result.
         checkQueryExpectOOM("select * from T as T0, T as T1", false);
 
-        assertEquals(4, localResults.size());
+        assertFalse(localResults.isEmpty());
+        assertTrue(localResults.size() <= 4);
         assertTrue(localResults.stream().anyMatch(r -> r.memoryAllocated() + 1000 > maxMem));
     }
 
@@ -216,7 +219,8 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends Abstrac
         checkQueryExpectOOM("select K.name, count(K.id), sum(K.grp) from K GROUP BY K.name", true);
 
         // Local result is quite small.
-        assertEquals(4, localResults.size());
+        assertFalse(localResults.isEmpty());
+        assertTrue(localResults.size() <= 4);
         assertTrue(BIG_TABLE_SIZE >  localResults.stream().mapToLong(r -> r.getRowCount()).sum());
     }
 
@@ -318,7 +322,8 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends Abstrac
     @Override public void testSimpleQueryLargeResult() throws Exception {
         execQuery("select * from K", false);
 
-        assertEquals(4, localResults.size());
+        assertFalse(localResults.isEmpty());
+        assertTrue(localResults.size() <= 4);
         assertEquals(BIG_TABLE_SIZE, localResults.stream().limit(4).mapToLong(r -> r.getRowCount()).sum());
     }
 
