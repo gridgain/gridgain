@@ -783,7 +783,7 @@ public class GridDhtPartitionDemander {
                             // then we take ownership.
                             if (last) {
                                 if (ctx.kernalContext().txDr().shouldApplyUpdateCounterOnRebalance())
-                                    grp.offheap().onPartitionInitialCounterUpdated(p, supplyMsg.last().get(p));
+                                    grp.offheap().onPartitionInitialCounterUpdated(p, supplyMsg.last().get(p) - 1, 1);
 
                                 fut.partitionDone(nodeId, p, true);
 
