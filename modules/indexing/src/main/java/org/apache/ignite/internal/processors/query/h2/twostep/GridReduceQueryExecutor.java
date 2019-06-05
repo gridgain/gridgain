@@ -389,7 +389,6 @@ public class GridReduceQueryExecutor {
                 cancel.checkCancelled();
             }
             catch (IgniteCheckedException cancelEx) {
-                // FIXME: check for possible unclosed resources leak.
                 throw new CacheException("Failed to run reduce query locally. " + cancelEx.getMessage(),  cancelEx);
             }
 
@@ -712,7 +711,6 @@ public class GridReduceQueryExecutor {
 
                 U.closeQuiet(r.connection());
 
-                // TODO: ????
                 if (e instanceof CacheException) {
                     if (wasCancelled((CacheException)e))
                         throw new CacheException("Failed to run reduce query locally.",
