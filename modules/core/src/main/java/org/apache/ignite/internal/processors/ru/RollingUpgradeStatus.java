@@ -53,8 +53,11 @@ public class RollingUpgradeStatus extends IgniteDataTransferObject {
         return new RollingUpgradeStatus(false, null, null, false, Collections.EMPTY_SET);
     }
 
-    /** Default constructor. */
-    public RollingUpgradeStatus() {}
+    /**
+     * Creates a new instance of RollingUpgradeStatus.
+     */
+    public RollingUpgradeStatus() {
+    }
 
     /**
      * Creates a new instance of the Rolling Upgrade status with the given parameters.

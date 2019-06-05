@@ -13,30 +13,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.internal.processors.ru;
 
-import org.apache.ignite.internal.processors.GridProcessor;
+package org.apache.ignite.internal.visor.ru;
+
+import org.jetbrains.annotations.Nullable;
 
 /**
- * Defines public API for Rolling Upgrade process.
+ * Rolling upgrade operations.
  */
-public interface RollingUpgradeProcessor extends GridProcessor {
+public enum VisorRollingUpgradeOperation {
     /**
-     * Enables or disables rolling upgrade mode.
-     *
-     * @param enable {@code true} in order to enable rolling upgrade mode.
+     * Enable rolling upgrade.
      */
-    RollingUpgradeModeChangeResult setMode(boolean enable);
+    ENABLE,
 
     /**
-     * Returns cluster-wide status of Rolling Upgrade process.
-     *
-     * @return status of Rolling Upgrade process.
+     * Disable rolling upgrade.
      */
-    RollingUpgradeStatus getStatus();
+    DISABLE,
 
     /**
-     * Disables strict validation mode.
+     * Remove nodes from baseline.
      */
-    void enableForcedMode();
+    STATUS;
+
+    /** Enumerated values. */
+    private static final VisorRollingUpgradeOperation[] VALS = values();
+
+    /**
+     * Efficiently gets enumerated value from its ordinal.
+     *
+     * @param ord Ordinal value.
+     * @return Enumerated value or {@code null} if ordinal out of range.
+     */
+    @Nullable public static VisorRollingUpgradeOperation fromOrdinal(int ord) {
+        return ord >= 0 && ord < VALS.length ? VALS[ord] : null;
+    }
 }
