@@ -76,14 +76,8 @@ public class ClusterHandler extends AbstractClusterHandler {
             cfg.cipherSuites()
         );
     }
-    
-    /**
-     * Send request to cluster.
-     *
-     * @param params Map with request params.
-     * @return Response from cluster.
-     * @throws Throwable if failed to send request to cluster.
-     */
+
+    /** {@inheritDoc} */
     @Override public RestResult restCommand(JsonObject params) throws Throwable {
         List<String> nodeURIs = cfg.nodeURIs();
 

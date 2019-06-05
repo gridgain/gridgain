@@ -291,7 +291,8 @@ public class ClustersWatcher implements Closeable {
 
     /** {@inheritDoc} */
     @Override public void close() {
-        refreshTask.cancel(true);
+        if (refreshTask != null)
+            refreshTask.cancel(true);
 
         pool.shutdownNow();
     }

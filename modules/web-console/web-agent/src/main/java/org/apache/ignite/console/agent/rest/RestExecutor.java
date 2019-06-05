@@ -103,7 +103,12 @@ public class RestExecutor implements AutoCloseable {
             code + ", msg=" + res.getReason() + "]");
     }
 
-    /** */
+    /**
+     * @param url Request URL.
+     * @param params Request parameters.
+     * @return Request result.
+     * @throws Throwable If failed to send request.
+     */
     public RestResult sendRequest(String url, JsonObject params) throws Throwable {
         if (!httpClient.isRunning())
             httpClient.start();
