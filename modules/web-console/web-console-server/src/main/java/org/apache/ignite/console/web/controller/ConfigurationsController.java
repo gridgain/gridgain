@@ -19,9 +19,9 @@ package org.apache.ignite.console.web.controller;
 import java.util.UUID;
 import io.swagger.annotations.ApiOperation;
 import org.apache.ignite.console.dto.Account;
-import org.apache.ignite.console.services.ConfigurationsService;
 import org.apache.ignite.console.json.JsonArray;
 import org.apache.ignite.console.json.JsonObject;
+import org.apache.ignite.console.services.ConfigurationsService;
 import org.apache.ignite.console.web.model.ConfigurationKey;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -61,7 +61,7 @@ public class ConfigurationsController {
     @GetMapping(path = "/{clusterId}")
     public ResponseEntity<JsonObject> loadConfiguration(
         @AuthenticationPrincipal Account acc,
-        @RequestHeader(value = "IgniteDemoMode", defaultValue = "false") boolean demo,
+        @RequestHeader(value = "demoMode", defaultValue = "false") boolean demo,
         @PathVariable("clusterId") UUID clusterId
     ) {
         return ResponseEntity.ok(cfgsSrv.loadConfiguration(new ConfigurationKey(acc.getId(), demo), clusterId));
@@ -75,7 +75,7 @@ public class ConfigurationsController {
     @GetMapping(path = "/clusters")
     public ResponseEntity<JsonArray> loadClustersShortList(
         @AuthenticationPrincipal Account acc,
-        @RequestHeader(value = "IgniteDemoMode", defaultValue = "false") boolean demo
+        @RequestHeader(value = "demoMode", defaultValue = "false") boolean demo
     ) {
         return ResponseEntity.ok(cfgsSrv.loadClusters(new ConfigurationKey(acc.getId(), demo)));
     }
@@ -89,7 +89,7 @@ public class ConfigurationsController {
     @GetMapping(path = "/clusters/{clusterId}")
     public ResponseEntity<String> loadCluster(
         @AuthenticationPrincipal Account acc,
-        @RequestHeader(value = "IgniteDemoMode", defaultValue = "false") boolean demo,
+        @RequestHeader(value = "demoMode", defaultValue = "false") boolean demo,
         @PathVariable("clusterId") UUID clusterId
     ) {
         return ResponseEntity.ok(cfgsSrv.loadCluster(new ConfigurationKey(acc.getId(), demo), clusterId));
@@ -106,7 +106,7 @@ public class ConfigurationsController {
     @GetMapping(path = "/clusters/{clusterId}/caches")
     public ResponseEntity<JsonArray> loadCachesShortList(
         @AuthenticationPrincipal Account acc,
-        @RequestHeader(value = "IgniteDemoMode", defaultValue = "false") boolean demo,
+        @RequestHeader(value = "demoMode", defaultValue = "false") boolean demo,
         @PathVariable("clusterId") UUID clusterId
     ) {
         return ResponseEntity.ok(cfgsSrv.loadShortCaches(new ConfigurationKey(acc.getId(), demo), clusterId));
@@ -123,7 +123,7 @@ public class ConfigurationsController {
     @GetMapping(path = "/clusters/{clusterId}/models")
     public ResponseEntity<JsonArray> loadModelsShortList(
         @AuthenticationPrincipal Account acc,
-        @RequestHeader(value = "IgniteDemoMode", defaultValue = "false") boolean demo,
+        @RequestHeader(value = "demoMode", defaultValue = "false") boolean demo,
         @PathVariable("clusterId") UUID clusterId
     ) {
         return ResponseEntity.ok(cfgsSrv.loadShortModels(new ConfigurationKey(acc.getId(), demo), clusterId));
@@ -140,7 +140,7 @@ public class ConfigurationsController {
     @GetMapping(path = "/clusters/{clusterId}/igfss")
     public ResponseEntity<JsonArray> loadIgfssShortList(
         @AuthenticationPrincipal Account acc,
-        @RequestHeader(value = "IgniteDemoMode", defaultValue = "false") boolean demo,
+        @RequestHeader(value = "demoMode", defaultValue = "false") boolean demo,
         @PathVariable("clusterId") UUID clusterId
     ) {
         return ResponseEntity.ok(cfgsSrv.loadShortIgfss(new ConfigurationKey(acc.getId(), demo), clusterId));
@@ -154,7 +154,7 @@ public class ConfigurationsController {
     @GetMapping(path = "/caches/{cacheId}")
     public ResponseEntity<String> loadCache(
         @AuthenticationPrincipal Account acc,
-        @RequestHeader(value = "IgniteDemoMode", defaultValue = "false") boolean demo,
+        @RequestHeader(value = "demoMode", defaultValue = "false") boolean demo,
         @PathVariable("cacheId") UUID cacheId
     ) {
         return ResponseEntity.ok(cfgsSrv.loadCache(new ConfigurationKey(acc.getId(), demo), cacheId));
@@ -168,7 +168,7 @@ public class ConfigurationsController {
     @GetMapping(path = "/domains/{modelId}")
     public ResponseEntity<String> loadModel(
         @AuthenticationPrincipal Account acc,
-        @RequestHeader(value = "IgniteDemoMode", defaultValue = "false") boolean demo,
+        @RequestHeader(value = "demoMode", defaultValue = "false") boolean demo,
         @PathVariable("modelId") UUID mdlId
     ) {
         return ResponseEntity.ok(cfgsSrv.loadModel(new ConfigurationKey(acc.getId(), demo), mdlId));
@@ -181,7 +181,7 @@ public class ConfigurationsController {
     @GetMapping(path = "/igfs/{igfsId}")
     public ResponseEntity<String> loadIgfs(
         @AuthenticationPrincipal Account acc,
-        @RequestHeader(value = "IgniteDemoMode", defaultValue = "false") boolean demo,
+        @RequestHeader(value = "demoMode", defaultValue = "false") boolean demo,
         @PathVariable("igfsId") UUID igfsId
     ) {
         return ResponseEntity.ok(cfgsSrv.loadIgfs(new ConfigurationKey(acc.getId(), demo), igfsId));
@@ -197,7 +197,7 @@ public class ConfigurationsController {
     @PutMapping(path = "/clusters", consumes = APPLICATION_JSON_VALUE)
     public ResponseEntity<Void> saveAdvancedCluster(
         @AuthenticationPrincipal Account acc,
-        @RequestHeader(value = "IgniteDemoMode", defaultValue = "false") boolean demo,
+        @RequestHeader(value = "demoMode", defaultValue = "false") boolean demo,
         @RequestBody JsonObject changedItems
     ) {
         cfgsSrv.saveAdvancedCluster(new ConfigurationKey(acc.getId(), demo), changedItems);
@@ -215,7 +215,7 @@ public class ConfigurationsController {
     @PutMapping(path = "/clusters/basic", consumes = APPLICATION_JSON_VALUE)
     public ResponseEntity<Void> saveBasicCluster(
         @AuthenticationPrincipal Account acc,
-        @RequestHeader(value = "IgniteDemoMode", defaultValue = "false") boolean demo,
+        @RequestHeader(value = "demoMode", defaultValue = "false") boolean demo,
         @RequestBody JsonObject changedItems
     ) {
         cfgsSrv.saveBasicCluster(new ConfigurationKey(acc.getId(), demo), changedItems);
@@ -233,7 +233,7 @@ public class ConfigurationsController {
     @PostMapping(path = "/clusters/remove", consumes = APPLICATION_JSON_VALUE)
     public ResponseEntity<Void> deleteClusters(
         @AuthenticationPrincipal Account acc,
-        @RequestHeader(value = "IgniteDemoMode", defaultValue = "false") boolean demo,
+        @RequestHeader(value = "demoMode", defaultValue = "false") boolean demo,
         @RequestBody JsonObject clusterIDs
     ) {
         cfgsSrv.deleteClusters(new ConfigurationKey(acc.getId(), demo), idsFromJson(clusterIDs, "clusterIDs"));

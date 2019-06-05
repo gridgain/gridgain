@@ -18,7 +18,6 @@ package org.apache.ignite.console.agent.handlers;
 
 import java.io.Closeable;
 import java.net.ConnectException;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;

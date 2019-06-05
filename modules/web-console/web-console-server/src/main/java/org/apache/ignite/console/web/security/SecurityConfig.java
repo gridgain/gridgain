@@ -74,7 +74,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     private static final String RESET_PASSWORD_ROUTE = "/api/v1/password/reset";
 
     /** Resend activation token. */
-    private static final String ACTIVATION_RESEND = "/api/v1/activation/resend/";
+    private static final String ACTIVATION_RESEND = "/api/v1/activation/resend";
 
     /** Public routes. */
     private static final String[] PUBLIC_ROUTES = new String[] {

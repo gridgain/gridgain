@@ -17,7 +17,6 @@
 package org.apache.ignite.websocket;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collections;
 import org.apache.ignite.console.websocket.AgentHandshakeResponse;
 import org.junit.Assert;
@@ -27,9 +26,9 @@ import static org.apache.ignite.console.utils.Utils.fromJson;
 import static org.apache.ignite.console.utils.Utils.toJson;
 
 /**
- * Test for Jackson serialization/deserialization/
+ * Test for Jackson serialization/deserialization.
  */
-public class JacksonTests {
+public class JsonTests {
     /**
      * Test with agent handshake error object.
      */

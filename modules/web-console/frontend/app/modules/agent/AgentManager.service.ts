@@ -209,7 +209,7 @@ export default class AgentManager {
     }
 
     isDemoMode() {
-        return !!this.$root.IgniteDemoMode;
+        return !!this.$root.demoMode;
     }
 
     getClusterVersion(cluster) {
@@ -228,7 +228,7 @@ export default class AgentManager {
         const host = this.$location.host();
         const port = this.$location.port();
 
-        const uri = `${protocol === 'https' ? 'wss' : 'ws'}://${host}:${port}/browsers?demo=${this.isDemoMode()}`;
+        const uri = `${protocol === 'https' ? 'wss' : 'ws'}://${host}:${port}/browsers?demoMode=${this.isDemoMode()}`;
 
         // Open websocket connection to backend.
         this.ws = new Sockette(uri, {

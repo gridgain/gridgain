@@ -18,7 +18,6 @@ package org.apache.ignite.console.repositories;
 
 import java.util.Collection;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.UUID;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.console.db.OneToManyIndex;

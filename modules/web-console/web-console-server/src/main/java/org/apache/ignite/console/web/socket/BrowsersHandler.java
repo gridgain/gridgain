@@ -39,7 +39,6 @@ import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketSession;
 
 import static org.apache.ignite.console.utils.Utils.fromJson;
-import static org.apache.ignite.console.utils.Utils.toJson;
 import static org.apache.ignite.console.websocket.WebSocketEvents.NODE_REST;
 import static org.apache.ignite.console.websocket.WebSocketEvents.NODE_VISOR;
 import static org.apache.ignite.console.websocket.WebSocketEvents.SCHEMA_IMPORT_DRIVERS;

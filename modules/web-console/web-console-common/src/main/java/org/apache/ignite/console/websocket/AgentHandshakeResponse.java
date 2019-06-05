@@ -38,7 +38,7 @@ public class AgentHandshakeResponse {
      *
      * @param tokens Tokens.
      */
-    @JsonCreator(mode = JsonCreator.Mode.PROPERTIES)
+    @JsonCreator
     private AgentHandshakeResponse(@JsonProperty("error") String err, @JsonProperty("tokens") List<String> tokens) {
         this.err = err;
         this.tokens = tokens;
@@ -66,24 +66,10 @@ public class AgentHandshakeResponse {
     }
 
     /**
-     * @param err Error message.
-     */
-    public void setError(String err) {
-        this.err = err;
-    }
-
-    /**
      * @return value of tokens
      */
     public List<String> getTokens() {
         return tokens;
-    }
-
-    /**
-     * @param tokens Tokens.
-     */
-    public void setTokens(List<String> tokens) {
-        this.tokens = tokens;
     }
 
     /** {@inheritDoc} */

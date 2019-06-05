@@ -97,7 +97,7 @@ export default class ModalPreviewProjectController {
             return this.summaryZipper({
                 cluster,
                 data: {},
-                IgniteDemoMode: isDemo,
+                demoMode: isDemo,
                 targetVer: this.IgniteVersion.currentSbj.getValue()
             });
         })

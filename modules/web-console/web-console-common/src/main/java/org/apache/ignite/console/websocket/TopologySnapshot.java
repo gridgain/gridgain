@@ -258,13 +258,6 @@ public class TopologySnapshot {
         private String addr;
 
         /**
-         * Default constructor for serialization.
-         */
-        public NodeBean() {
-            // No-op.
-        }
-
-        /**
          * @param client Is client node.
          * @param addr Canonical ip address.
          */
@@ -282,27 +275,12 @@ public class TopologySnapshot {
         }
 
         /**
-         * @param client New is client node.
-         */
-        public void setClient(boolean client) {
-            this.client = client;
-        }
-
-        /**
          * @return Canonical ip address.
          */
         public String getAddress() {
             return addr;
         }
-
-        /**
-         * @param addr New canonical ip address.
-         */
-        public void setAddress(String addr) {
-            this.addr = addr;
-        }
     }
-
 
     /** {@inheritDoc} */
     @Override public String toString() {

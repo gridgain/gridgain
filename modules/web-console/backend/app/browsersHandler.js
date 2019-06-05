@@ -167,7 +167,7 @@ module.exports = {
             }
 
             agentListeners(sock) {
-                const demo = sock.request._query.IgniteDemoMode === 'true';
+                const demo = sock.request._query.demoMode === 'true';
                 const account = () => sock.request.user;
 
                 // Return available drivers to browser.
@@ -214,7 +214,7 @@ module.exports = {
                     if (!_.isFunction(cb))
                         cb = console.log;
 
-                    const demo = _.get(sock, 'request._query.IgniteDemoMode') === 'true';
+                    const demo = _.get(sock, 'request._query.demoMode') === 'true';
 
                     if ((_.isNil(clusterId) && !demo) || _.isNil(params)) {
                         console.log('Received invalid message: "node:rest" on socket:', JSON.stringify(sock.handshake));
@@ -263,7 +263,7 @@ module.exports = {
                     if (!_.isFunction(cb))
                         cb = console.log;
 
-                    const demo = _.get(sock, 'request._query.IgniteDemoMode') === 'true';
+                    const demo = _.get(sock, 'request._query.demoMode') === 'true';
 
                     if ((_.isNil(clusterId) && !demo) || _.isNil(params)) {
                         console.log('Received invalid message: "node:visor" on socket:', JSON.stringify(sock.handshake));
