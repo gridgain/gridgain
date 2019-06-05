@@ -42,12 +42,22 @@ public:
         // No-op.
     }
 
+    /*
+     * Constructor.
+     *
+     * @param text Text.
+     */
     PrintMsg(std::string msg) :
         msg(msg)
     {
         // No-op.
     }
 
+    /**
+     * Callback.
+     * Just print the message.
+     *
+     */
     virtual void Call()
     {
         std::cout << "# MESSAGE => " <<  msg << std::endl;
@@ -106,12 +116,12 @@ int main()
         std::cout << ">>> Cluster compute example started." << std::endl;
         std::cout << std::endl;
 
-        // Get binding instances and registering our classes as a compute functions.
+        // Get binding instances and register our classes as a compute functions.
         node1.GetBinding().RegisterComputeFunc<PrintMsg>();
         node2.GetBinding().RegisterComputeFunc<PrintMsg>();
         node3.GetBinding().RegisterComputeFunc<PrintMsg>();
 
-        // Create cluster groups splitted by demo attribute value.
+        // Create cluster groups splitted up by demo attribute value.
         ClusterGroup localGroup = client.GetCluster().ForAll();
         ClusterGroup group1 = localGroup.ForAttribute("DemoAttribute", "Value0");
         ClusterGroup group2 = localGroup.ForAttribute("DemoAttribute", "Value1");
