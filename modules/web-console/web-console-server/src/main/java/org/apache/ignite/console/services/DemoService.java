@@ -16,9 +16,7 @@
 
 package org.apache.ignite.console.services;
 
-import java.net.URI;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -32,7 +30,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
+import org.springframework.util.FileCopyUtils;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.console.utils.Utils.asJson;
 import static org.apache.ignite.console.utils.Utils.fromJson;
@@ -103,9 +103,9 @@ public class DemoService {
 
         if (F.isEmpty(clusters)) {
             try {
-                URI uri = new ClassPathResource("demo-clusters.json").getURI();
+                ClassPathResource res = new ClassPathResource("demo-clusters.json");
 
-                String content = new String(Files.readAllBytes(Paths.get(uri)));
+                String content = FileCopyUtils.copyToString(new InputStreamReader(res.getInputStream(), UTF_8));
 
                 clusters = fromJson(content, new TypeReference<List<JsonObject>>() { });
             }
