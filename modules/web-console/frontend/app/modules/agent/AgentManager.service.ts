@@ -108,7 +108,7 @@ class ConnectionState {
             const updatedCluster = _.find(clusters, {id: this.cluster.id});
 
             if (updatedCluster)
-                this.cluster = updatedCluster;
+                _.merge(this.cluster, updatedCluster);
             else
                 this.cluster = _.head(clusters);
         }
