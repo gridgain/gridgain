@@ -121,7 +121,7 @@ public class JdbcThinTcpIo {
     private final BufferedInputStream in;
 
     /** Connected flag. */
-    private boolean connected;
+    private volatile boolean connected;
 
     /** Ignite server version. */
     private final IgniteProductVersion igniteVer;
@@ -423,10 +423,9 @@ public class JdbcThinTcpIo {
 
         JdbcResponse resp = readResponse();
 
-        if (stmt != null && stmt.isCancelled())
-            return new JdbcResponse(IgniteQueryErrorCode.QUERY_CANCELED, QueryCancelledException.ERR_MSG);
-        else
-            return resp;
+        return stmt != null && stmt.isCancelled() ?
+            new JdbcResponse(IgniteQueryErrorCode.QUERY_CANCELED, QueryCancelledException.ERR_MSG) :
+            resp;
     }
 
     /**
@@ -650,5 +649,19 @@ public class JdbcThinTcpIo {
      */
     public UUID nodeId() {
         return nodeId;
+    }
+
+    /**
+     * @return Socket address.
+     */
+    public InetSocketAddress socketAddress() {
+        return sockAddr;
+    }
+
+    /**
+     * @return Connected flag.
+     */
+    public boolean connected() {
+        return connected;
     }
 }
