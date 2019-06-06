@@ -773,7 +773,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
             ignite.cache(DEFAULT_CACHE_NAME).query(
                 new SqlFieldsQuery("select * from Integer where _key in " +
                     "(select _key from Integer where awaitLatchCancelled() = 0) and shouldNotBeCalledInCaseOfCancellation()")
-                    //.setPartitions(partitions)
+                    .setPartitions(partitions)
             ).getAll();
 
             return null;
