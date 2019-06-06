@@ -52,7 +52,7 @@ public class QueryMemoryManager extends H2MemoryTracker {
      * @param globalQuota Node memory available for sql queries.
      */
     public QueryMemoryManager(GridKernalContext ctx, long globalQuota) {
-        if (Runtime.getRuntime().maxMemory() > globalQuota)
+        if (Runtime.getRuntime().maxMemory() <= globalQuota)
             throw new IllegalStateException("Sql memory pool size can't be more than heap memory max size.");
 
         if (globalQuota == 0) {
@@ -63,7 +63,7 @@ public class QueryMemoryManager extends H2MemoryTracker {
         long dfltSqlQryMemoryLimit = Long.getLong(IgniteSystemProperties.IGNITE_DEFAULT_SQL_QUERY_MEMORY_LIMIT, 0);
 
         if (dfltSqlQryMemoryLimit == 0)
-            dfltSqlQryMemoryLimit = globalQuota / IgniteConfiguration.DFLT_QUERY_THREAD_POOL_SIZE;
+            dfltSqlQryMemoryLimit = globalQuota > 0 ? globalQuota / IgniteConfiguration.DFLT_QUERY_THREAD_POOL_SIZE : -1;
 
         this.globalQuota = globalQuota;
         this.dfltSqlQryMemoryLimit = dfltSqlQryMemoryLimit;
@@ -118,7 +118,7 @@ public class QueryMemoryManager extends H2MemoryTracker {
         if (maxQueryMemory == 0)
             maxQueryMemory = dfltSqlQryMemoryLimit;
 
-        if (globalQuota > 0 || globalQuota < maxQueryMemory) {
+        if (globalQuota > 0 && globalQuota < maxQueryMemory) {
             U.warn(log, "Max query memory can't exceeds SQL memory pool size. Will be reduced down to: " + globalQuota);
 
             maxQueryMemory = globalQuota;
