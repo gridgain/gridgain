@@ -74,13 +74,15 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
             return;
 
         ALLOC_UPD.accumulateAndGet(this, size, (prev, x) -> {
-                if (prev + x > maxMem)
-                    throw new IgniteSQLException("SQL query run out of memory: Query quota exceeded. "+x, IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY);
+            if (prev + x > maxMem) {
+                throw new IgniteSQLException("SQL query run out of memory: Query quota exceeded. " + x,
+                    IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY);
+            }
 
-                return prev + x;
-            });
+            return prev + x;
+        });
 
-        //TODO: GG-18840: tries to allocate memory from parent first. Let's make this allocation coarse-grained.
+        //TODO: GG-18840: Let's make this allocation coarse-grained.
         if (parent != null) {
             try {
                 parent.allocate(size);
@@ -131,6 +133,7 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
     /** {@inheritDoc} */
     @Override public void close() {
         // It is not expected to be called concurrently with allocate\free.
+        // But query can be cancelled concurrently on query finish.
         if (CLOSED_UPD.compareAndSet(this, Boolean.FALSE, Boolean.TRUE))
             release(getAllocated());
     }

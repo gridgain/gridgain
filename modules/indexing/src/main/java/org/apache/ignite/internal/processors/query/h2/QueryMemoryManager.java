@@ -17,10 +17,13 @@
 package org.apache.ignite.internal.processors.query.h2;
 
 import java.util.concurrent.atomic.AtomicLong;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 public class QueryMemoryManager extends H2MemoryTracker {
     //TODO: GG-18629: Move defaults to memory quotas configuration.
@@ -33,18 +36,24 @@ public class QueryMemoryManager extends H2MemoryTracker {
     private final long dfltSqlQryMemoryLimit;
 
     /** Global query memory quota. */
-    //TODO GG-18840: it looks safe to make this configurable at runtime.
+    //TODO GG-18629: it looks safe to make this configurable at runtime.
     private final long globalQuota;
 
+    /** Logger. */
+    private final IgniteLogger log;
+
     /** Memory allocated by running queries. */
-    private AtomicLong allocated = new AtomicLong();
+    private final AtomicLong allocated = new AtomicLong();
 
     /**
+     * Constructor.
+     *
+     * @param ctx Kernal context.
      * @param globalQuota Node memory available for sql queries.
      */
-    public QueryMemoryManager(long globalQuota) {
-        //TODO GG-18628: Add check if Heap has enough free memory.
-        assert Runtime.getRuntime().maxMemory() > globalQuota;
+    public QueryMemoryManager(GridKernalContext ctx, long globalQuota) {
+        if (Runtime.getRuntime().maxMemory() > globalQuota)
+            throw new IllegalStateException("Sql memory pool size can't be more than heap memory max size.");
 
         if (globalQuota == 0) {
             globalQuota = Long.getLong(IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE,
@@ -58,6 +67,8 @@ public class QueryMemoryManager extends H2MemoryTracker {
 
         this.globalQuota = globalQuota;
         this.dfltSqlQryMemoryLimit = dfltSqlQryMemoryLimit;
+
+        this.log = ctx.log(QueryMemoryManager.class);
     }
 
     /** {@inheritDoc} */
@@ -107,9 +118,12 @@ public class QueryMemoryManager extends H2MemoryTracker {
         if (maxQueryMemory == 0)
             maxQueryMemory = dfltSqlQryMemoryLimit;
 
-        assert globalQuota < 0 || globalQuota >= maxQueryMemory : "glblQuota=" + globalQuota + ", qryQuota=" + maxQueryMemory;
+        if (globalQuota > 0 || globalQuota < maxQueryMemory) {
+            U.warn(log, "Max query memory can't exceeds SQL memory pool size. Will be reduced down to: " + globalQuota);
 
-        //TODO: GG-18628: Should we register newly created tracker? This can be helpful in debugging 'memory leaks'.
+            maxQueryMemory = globalQuota;
+        }
+
         return new QueryMemoryTracker(globalQuota < 0 ? null : this, maxQueryMemory);
     }
 
@@ -142,6 +156,6 @@ public class QueryMemoryManager extends H2MemoryTracker {
 
     /** {@inheritDoc} */
     @Override public void close() {
-        // No-op.
+        assert allocated.get() == 0 : "Potential memory leak in SQL processor. Some queries forget to free memory.";
     }
 }
