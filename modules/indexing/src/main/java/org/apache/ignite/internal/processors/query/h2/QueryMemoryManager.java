@@ -16,9 +16,6 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -54,10 +51,13 @@ public class QueryMemoryManager extends H2MemoryTracker {
                 (long)(Runtime.getRuntime().maxMemory() * 0.6d));
         }
 
-        dfltSqlQryMemoryLimit = Long.getLong(IgniteSystemProperties.IGNITE_DEFAULT_SQL_QUERY_MEMORY_LIMIT,
-        globalQuota / IgniteConfiguration.DFLT_QUERY_THREAD_POOL_SIZE);
+        long dfltSqlQryMemoryLimit = Long.getLong(IgniteSystemProperties.IGNITE_DEFAULT_SQL_QUERY_MEMORY_LIMIT, 0);
+
+        if (dfltSqlQryMemoryLimit == 0)
+            dfltSqlQryMemoryLimit = globalQuota / IgniteConfiguration.DFLT_QUERY_THREAD_POOL_SIZE;
 
         this.globalQuota = globalQuota;
+        this.dfltSqlQryMemoryLimit = dfltSqlQryMemoryLimit;
     }
 
     /** {@inheritDoc} */
@@ -69,7 +69,7 @@ public class QueryMemoryManager extends H2MemoryTracker {
 
         allocated.accumulateAndGet(size, (prev, x) -> {
             if (prev + x > globalQuota)
-                throw new IgniteSQLException("SQL query run out of memory: Global quota exceeded. "+x,
+                throw new IgniteSQLException("SQL query run out of memory: Global quota exceeded.",
                     IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY);
 
             return prev + x;
@@ -94,6 +94,7 @@ public class QueryMemoryManager extends H2MemoryTracker {
 
     /**
      * Query memory tracker factory method.
+     *
      * Note: If 'maxQueryMemory' is zero, then {@link QueryMemoryManager#dfltSqlQryMemoryLimit}  will be used.
      * Note: Negative values are reserved for disable memory tracking.
      *
@@ -106,17 +107,12 @@ public class QueryMemoryManager extends H2MemoryTracker {
         if (maxQueryMemory == 0)
             maxQueryMemory = dfltSqlQryMemoryLimit;
 
-        assert globalQuota < 0 || globalQuota >= maxQueryMemory : globalQuota;
+        assert globalQuota < 0 || globalQuota >= maxQueryMemory : "glblQuota=" + globalQuota + ", qryQuota=" + maxQueryMemory;
 
         //TODO: GG-18628: Should we register newly created tracker? This can be helpful in debugging 'memory leaks'.
-        QueryMemoryTracker tracker = new QueryMemoryTracker(globalQuota < 0 ? null : this, maxQueryMemory);
-
-        trackers.add(tracker);
-
-        return tracker;
+        return new QueryMemoryTracker(globalQuota < 0 ? null : this, maxQueryMemory);
     }
 
-    static List<QueryMemoryTracker> trackers = Collections.synchronizedList(new ArrayList<>());
     /**
      * Gets memory allocated by running queries.
      *
