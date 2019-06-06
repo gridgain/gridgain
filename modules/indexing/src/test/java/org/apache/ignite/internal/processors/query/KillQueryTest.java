@@ -31,6 +31,7 @@ import java.util.UUID;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -56,6 +57,7 @@ import org.apache.ignite.internal.GridTopic;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
+import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
 import org.apache.ignite.internal.managers.discovery.CustomMessageWrapper;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
@@ -783,6 +785,28 @@ public class KillQueryTest extends GridCommonAbstractTest {
         cancelRes.get(CHECK_RESULT_TIMEOUT);
     }
 
+    /**
+     * Wait until all map parts are finished on the specified node.
+     *
+     * @param node node for which map request completion to wait.
+     */
+    private void ensureMapQueriesHasFinished(IgniteEx node) throws Exception {
+        boolean noTasksInQryPool = GridTestUtils.waitForCondition(() -> queryPoolIsEmpty(node), TIMEOUT);
+
+        Assert.assertTrue("Node " + node.localNode().id() + " has not finished its tasks in the query pool",
+            noTasksInQryPool);
+    }
+
+    /**
+     * @param node node which query pool to check.
+     * @return {@code True} if {@link GridIoPolicy#QUERY_POOL} is empty. This means no queries are currntly executed and
+     * no queries are executed at the moment; {@code false} otherwise.
+     */
+    private boolean queryPoolIsEmpty(IgniteEx node) {
+        ThreadPoolExecutor qryPool = (ThreadPoolExecutor)node.context().getQueryExecutorService();
+
+        return qryPool.getQueue().isEmpty() && qryPool.getActiveCount() == 0;
+    }
 
     /**
      * Cancels current query which wait on barrier.
@@ -867,6 +891,11 @@ public class KillQueryTest extends GridCommonAbstractTest {
 
                 for (IgniteInternalFuture fut : res)
                     fut.get(TIMEOUT);
+
+                // Currently canceled query returns (unblocks the caller code) without waiting for map parts of the
+                // query to be finished. We need to wait for them.
+                ensureMapQueriesHasFinished(grid(0));
+                ensureMapQueriesHasFinished(grid(1));
             }
             catch (Exception e) {
                 log.error("Unexpected exception.", e);
@@ -923,13 +952,13 @@ public class KillQueryTest extends GridCommonAbstractTest {
      */
     public static class TestSQLFunctions {
         /** Request latch. */
-        static CountDownLatch reqLatch;
+        static volatile CountDownLatch reqLatch;
 
         /** Cancel latch. */
-        static CountDownLatch cancelLatch;
+        static volatile CountDownLatch cancelLatch;
 
         /** Suspend query latch. */
-        static CountDownLatch suspendQryLatch;
+        static volatile CountDownLatch suspendQryLatch;
 
         /**
          * Recreate latches.
