@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
+import java.io.File;
 import java.sql.BatchUpdateException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -212,6 +213,12 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         H2ExtrasInnerIO.register();
         H2ExtrasLeafIO.register();
     }
+
+    /**
+     *  Spill directory path. Spill directory is used for the disk offloading
+     *  of intermediate results of the heavy queries.
+     */
+    public static final String DISK_SPILL_DIR = "tmp/spill";
 
     /** Default number of attempts to re-run DELETE and UPDATE queries in case of concurrent modifications of values. */
     private static final int DFLT_UPDATE_RERUN_ATTEMPTS = 4;
@@ -1966,6 +1973,26 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             U.warn(log, "Custom H2 serialization is already configured, will override.");
 
         JdbcUtils.serializer = h2Serializer();
+
+        cleanSpillDirectory();
+    }
+
+    /**
+     * Cleans spill directory. Spill directory is used for disk
+     * offloading of the intermediate results of heavy queries.
+     */
+    private void cleanSpillDirectory() {
+        try {
+            File spillDir = U.resolveWorkDirectory(
+                ctx.config().getWorkDirectory(),
+                DISK_SPILL_DIR,
+                false);
+
+            U.delete(spillDir);
+        }
+        catch (Exception e) {
+            log.debug("Failed to delete spill directory.", X.getFullStackTrace(e));
+        }
     }
 
     /**

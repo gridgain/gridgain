@@ -17,7 +17,7 @@
 package org.apache.ignite.internal.processors.query.h2;
 
 /**
- * Abstract memory tracker.
+ * Memory tracker.
  */
 public abstract class H2MemoryTracker implements AutoCloseable {
     /**
@@ -26,12 +26,22 @@ public abstract class H2MemoryTracker implements AutoCloseable {
      * @param size Allocated size in bytes.
      * @return {@code True} if memory limit is not exceeded. {@code False} otherwise.
      */
-    public abstract boolean allocate(long size);
+    public abstract boolean reserved(long size);
 
     /**
-     * Free allocated memory.
+     * Memory release callback.
      *
-     * @param size Free size in bytes.
+     * @param size Released memory size in bytes.
      */
-    public abstract void free(long size);
+    public abstract void released(long size);
+
+    /**
+     * @return Reserved memory size.
+     */
+    public abstract long reservedSize();
+
+    /**
+     * @return Max memory limit.
+     */
+    public abstract long memoryLimit();
 }

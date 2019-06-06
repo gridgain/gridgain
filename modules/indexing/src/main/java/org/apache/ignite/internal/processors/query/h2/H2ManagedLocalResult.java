@@ -38,7 +38,6 @@ import org.h2.value.ValueRow;
 import static org.apache.ignite.internal.processors.query.h2.H2Utils.calculateMemoryDelta;
 
 /** */
-//TODO: GG-18632 Add external result and merge with {@link org.h2.result.LocalResultImpl}.
 public class H2ManagedLocalResult implements LocalResult {
     private Session session;
     private int visibleColumnCount;
@@ -104,26 +103,24 @@ public class H2ManagedLocalResult implements LocalResult {
     }
 
     /** */
-    protected boolean onUpdate(ValueRow distinctRowKey, Value[] oldRow, Value[] row) { //TODO Rename
+    private boolean onUpdate(ValueRow distinctRowKey, Value[] oldRow, Value[] row) { //TODO Rename
         assert !isClosed();
         assert row != null;
 
         if (memTracker == null)
             return true; // No memory management set.
 
-        // TODO row Size in byte extract method
-        // TODO deallocate when spilling to disk
         long memory = calculateMemoryDelta(distinctRowKey, oldRow, row);
 
         allocMem += memory;
 
         if (memory < 0) {
-            memTracker.free(-memory);
+            memTracker.released(-memory);
 
             return true;
         }
         else
-            return memTracker.allocate(memory);
+            return memTracker.reserved(memory);
     }
 
     @Override public boolean isLazy() {
@@ -322,7 +319,7 @@ public class H2ManagedLocalResult implements LocalResult {
 
         external = distinct || distinctIndexes != null || sort != null ?
             new SortedExternalResult(ctx, session, distinct, distinctIndexes, visibleColumnCount, sort, memTracker) :
-            new PlainExternalResult(ctx);
+            new PlainExternalResult(ctx, memTracker);
     }
 
     /** {@inheritDoc} */
@@ -359,7 +356,7 @@ public class H2ManagedLocalResult implements LocalResult {
         }
 
         if (memTracker != null)
-            memTracker.free(allocMem);
+            memTracker.released(allocMem);
 
         allocMem = 0;
 
@@ -452,7 +449,7 @@ public class H2ManagedLocalResult implements LocalResult {
     }
 
     private void trimExternal(int offset, int limit) {
-        ResultExternal temp = external; // TODO
+        ResultExternal temp = external; // TODO limit offset
         external = null;
         temp.reset();
         while (--offset >= 0) {
@@ -525,7 +522,7 @@ public class H2ManagedLocalResult implements LocalResult {
     @Override public void close() {
         if (!closed) {
             if (memTracker != null)
-                memTracker.free(allocMem);
+                memTracker.released(allocMem);
 
             if (external != null) {
                 external.close();

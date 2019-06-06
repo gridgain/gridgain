@@ -18,31 +18,37 @@ package org.apache.ignite.internal.processors.query.h2.disk;
 
 import java.util.Collection;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.h2.result.ResultExternal;
 import org.h2.store.Data;
 import org.h2.value.Value;
 
 /**
- * TODO: Add class description.
  * TODO: Add in-memory buffer with memory tracker.
+ * This class is intended for spilling to the disk (disk offloading) unsorted intermediate query results.
  */
 public class PlainExternalResult extends AbstractExternalResult {
-
-    public PlainExternalResult(GridKernalContext ctx) {
-        super(ctx);
+    /**
+     * @param ctx Kernal context.
+     * @param memTracker Memory tracker.
+     */
+    public PlainExternalResult(GridKernalContext ctx, H2MemoryTracker memTracker) {
+        super(ctx, memTracker);
     }
 
+    /** {@inheritDoc} */
     @Override public void reset() {
         rewindFile();
     }
 
+    /** {@inheritDoc} */
     @Override public Value[] next() {
         Value[] row = readRowFromFile();
 
         return row;
     }
 
-
+    /** {@inheritDoc} */
     @Override public int addRow(Value[] row) {
         Data buff = createDataBuffer();
 
@@ -53,6 +59,7 @@ public class PlainExternalResult extends AbstractExternalResult {
         return ++size;
     }
 
+    /** {@inheritDoc} */
     @Override public int addRows(Collection<Value[]> rows) {
         if (rows.isEmpty())
             return size;
@@ -67,14 +74,17 @@ public class PlainExternalResult extends AbstractExternalResult {
         return size += rows.size();
     }
 
+    /** {@inheritDoc} */
     @Override public int removeRow(Value[] values) {
         throw new UnsupportedOperationException(); // Supported only by sorted result.
     }
 
+    /** {@inheritDoc} */
     @Override public boolean contains(Value[] values) {
         throw new UnsupportedOperationException(); // Supported only by sorted result.
     }
 
+    /** {@inheritDoc} */
     @Override public ResultExternal createShallowCopy() {
         // TODO: CODE: implement.
 

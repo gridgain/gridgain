@@ -1044,7 +1044,14 @@ public class H2Utils {
         return rowSize;
     }
 
-
+    /**
+     * Calculates memory delta when old row was replaced with a new one.
+     *
+     * @param distinctRowKey Distinct row key.
+     * @param oldRow Old row.
+     * @param newRow New row.
+     * @return Memory delta.
+     */
     public static long calculateMemoryDelta(ValueRow distinctRowKey, Value[] oldRow, Value[] newRow) {
         long oldRowSize = rowSizeInBytes(oldRow);
         long newRowSize = rowSizeInBytes(newRow);

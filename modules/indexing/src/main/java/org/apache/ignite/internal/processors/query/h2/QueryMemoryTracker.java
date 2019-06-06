@@ -41,7 +41,7 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
 
     /** Allocated field updater. */
     private static final AtomicLongFieldUpdater<QueryMemoryTracker> ALLOC_UPD =
-        AtomicLongFieldUpdater.newUpdater(QueryMemoryTracker.class, "allocated");
+        AtomicLongFieldUpdater.newUpdater(QueryMemoryTracker.class, "reservedSize");
 
     /** Closed flag updater. */
     private static final AtomicReferenceFieldUpdater<QueryMemoryTracker, Boolean> CLOSED_UPD =
@@ -50,8 +50,8 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
     /** Memory limit. */
     private final long maxMem;
 
-    /** Memory allocated. */
-    private volatile long allocated;
+    /** Reserved memory size. */
+    private volatile long reservedSize;
 
     /**
      * Defines an action that occurs when the memory limit is exceeded. Possible variants:
@@ -81,7 +81,7 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
     }
 
     /** {@inheritDoc} */
-    @Override public boolean allocate(long size) {
+    @Override public boolean reserved(long size) {
         assert !closed && size >= 0;
 
         if (size == 0)
@@ -98,7 +98,7 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
     }
 
     /** {@inheritDoc} */
-    @Override public void free(long size) {
+    @Override public void released(long size) {
         assert size >= 0;
 
         if (size == 0)
@@ -109,11 +109,14 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
         assert !closed && allocated >= 0 || allocated == 0 : "Invalid allocated memory size:" + allocated;
     }
 
-    /**
-     * @return Memory allocated by tracker.
-     */
-    public long getAllocated() {
-        return allocated;
+    /** {@inheritDoc} */
+    @Override public long reservedSize() {
+        return reservedSize;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long memoryLimit() {
+        return maxMem;
     }
 
     /**
@@ -127,7 +130,7 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
     @Override public void close() {
         // It is not expected to be called concurrently with allocate\free.
         if (CLOSED_UPD.compareAndSet(this, Boolean.FALSE, Boolean.TRUE))
-            free(allocated);
+            released(reservedSize);
     }
 
     /** {@inheritDoc} */

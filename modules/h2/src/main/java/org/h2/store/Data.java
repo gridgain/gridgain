@@ -1279,10 +1279,6 @@ public class Data {
         }
     }
 
-    public void trim() {
-        data = Arrays.copyOf(data, pos);
-    }
-
     /**
      * The number of bytes required for a variable size int.
      *

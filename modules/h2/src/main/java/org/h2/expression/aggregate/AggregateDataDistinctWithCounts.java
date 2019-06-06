@@ -63,7 +63,7 @@ class AggregateDataDistinctWithCounts extends AggregateData  {
 
                 size += v.getMemory();
 
-                memTracker.allocate(size);
+                memTracker.reserved(size);
 
                 allocated += size;
             }
@@ -91,7 +91,7 @@ class AggregateDataDistinctWithCounts extends AggregateData  {
         if (values != null && (memTracker = ses.queryMemoryTracker()) != null) {
             values = null;
 
-            memTracker.free(allocated);
+            memTracker.released(allocated);
         }
     }
 }

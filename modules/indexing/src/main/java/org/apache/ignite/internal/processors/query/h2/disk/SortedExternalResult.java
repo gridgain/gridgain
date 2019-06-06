@@ -42,28 +42,46 @@ import org.h2.value.ValueRow;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * TODO: Add class description.
+ * This class is intended for spilling to the disk (disk offloading) sorted intermediate query results.
  */
 @SuppressWarnings("MissortedModifiers")
 public class SortedExternalResult extends AbstractExternalResult {
-
+    /** Distinct flag. */
     private final boolean distinct;
+
+    /** {@code DISTINCT ON(...)} expressions. */
     private final int[] distinctIndexes;
+
+    /** Visible columns count. */
     private final int visibleColCnt;
+
+    /** Sort order. */
     private final SortOrder sort;
-    private final H2MemoryTracker memTracker;
+
+    /** Last written to file position. */
     private long lastWrittenPos;
 
-    private TreeMap<ValueRow, Value[]> rowsBuffer;
+    /** In-memory buffer for gathering rows before spilling to disk. */
+    private TreeMap<ValueRow, Value[]> rowsBuf;
 
+    /** Sorted chunks addresses on disk. */
     private final Collection<Chunk> chunks = new ArrayList<>();
 
-    // TODO replace with a disk-based map
-    private HashMap<Integer, GridLongList> hashIndex;
+    /**
+     * Hash index for fast lookup of the distinct rows.
+     * RowKey hashcode -> list of row addressed with the same hashcode.
+     */
+    private HashMap<Integer, GridLongList> hashIndex;// TODO replace with a disk-based map
 
+    /**
+     * Result queue.
+     */
     private Queue<Chunk> resultQueue;
 
-    private Comparator cmp;
+    /**
+     * Comparator for {@code rowsBuf}.
+     */
+    private Comparator<Value> cmp;
 
     /**
      *
@@ -81,19 +99,19 @@ public class SortedExternalResult extends AbstractExternalResult {
         int visibleColCnt,
         SortOrder sort,
         H2MemoryTracker memTracker) {
-        super(ctx);
+        super(ctx, memTracker);
 
         this.distinct = distinct;
         this.distinctIndexes = distinctIndexes;
         this.visibleColCnt = visibleColCnt;
         this.sort = sort;
-        this.memTracker = memTracker;
         this.cmp = ses.getDatabase().getCompareMode();
 
         if (isAnyDistinct())
             hashIndex = new HashMap<>();
     }
 
+    /** {@inheritDoc} */
     @Override public Value[] next() {
         Chunk batch = resultQueue.poll();
 
@@ -108,6 +126,7 @@ public class SortedExternalResult extends AbstractExternalResult {
         return row;
     }
 
+    /** {@inheritDoc} */
     @Override public int addRows(Collection<Value[]> rows) {
         for (Value[] row : rows)
             addRow(row);
@@ -115,6 +134,7 @@ public class SortedExternalResult extends AbstractExternalResult {
         return size;
     }
 
+    /** {@inheritDoc} */
     @Override public int addRow(Value[] values) {
         if (isAnyDistinct()) {
             if (containsRowWithOrderCheck(values))
@@ -129,15 +149,20 @@ public class SortedExternalResult extends AbstractExternalResult {
         return size++;
     }
 
-     // TODO merge removeRow and getPreviousRow
-    private boolean containsRowWithOrderCheck(Value[] values) {
-        Value[] previous = getPreviousRow(values);
+    /**
+     * Checks if current result contains given row with sort order check.
+     *
+     * @param row Row.
+     * @return {@code True} if current result does not contain th given row.
+     */
+    private boolean containsRowWithOrderCheck(Value[] row) { // TODO merge removeRow and getPreviousRow
+        Value[] previous = getPreviousRow(row);
 
         if (previous == null)
             return false;
 
-        if (sort != null && sort.compare(previous, values) > 0) {
-            removeRow(values);
+        if (sort != null && sort.compare(previous, row) > 0) {
+            removeRow(row); // It is need to replace old row with a new one because of sort order.
 
             return false;
         }
@@ -145,15 +170,20 @@ public class SortedExternalResult extends AbstractExternalResult {
         return true;
     }
 
-    // TODO merge removeRow and getPreviousRow
-    @Nullable private Value[] getPreviousRow(Value[] values) {
-        ValueRow distKey = getRowKey(values);
+    /**
+     * Returns the previous row.
+     *
+     * @param row Row.
+     * @return Previous row.
+     */
+    @Nullable private Value[] getPreviousRow(Value[] row) { // TODO merge removeRow and getPreviousRow
+        ValueRow distKey = getRowKey(row);
 
         Value[] previous = null;
 
         // Check in memory - it might not has been spilled yet.
-        if (rowsBuffer != null) {
-            previous = rowsBuffer.get(distKey);
+        if (rowsBuf != null) {
+            previous = rowsBuf.get(distKey);
 
             if (previous != null)
                 return previous;
@@ -182,36 +212,46 @@ public class SortedExternalResult extends AbstractExternalResult {
         return previous;
     }
 
+    /**
+     * @return {@code True} if it is need to spill rows to disk.
+     */
     private boolean needToSpill() {
-        return !memTracker.allocate(0);
+        return !memTracker.reserved(0);
     }
 
+    /**
+     * Adds row in-memory row buffer.
+     * @param row Row.
+     */
     private void addRowToBuffer(Value[] row) {
-        if (rowsBuffer == null)
-            rowsBuffer = new TreeMap<>(cmp);
+        if (rowsBuf == null)
+            rowsBuf = new TreeMap<>(cmp);
 
         ValueRow key = getRowKey(row);
 
         long delta = H2Utils.calculateMemoryDelta(null, null, row);
 
-        memTracker.allocate(delta);
+        memTracker.reserved(delta);
 
-        rowsBuffer.put(key, row);
+        rowsBuf.put(key, row);
     }
 
+    /**
+     * Spills rows to disk from the in-memory buffer.
+     */
     private void spillRowsBufferToDisk() {
-        if (F.isEmpty(rowsBuffer))
+        if (F.isEmpty(rowsBuf))
             return;
 
-        ArrayList<Value[]> rows = new ArrayList<>(rowsBuffer.values());
+        ArrayList<Value[]> rows = new ArrayList<>(rowsBuf.values());
 
-        for (Map.Entry<ValueRow, Value[]> e : rowsBuffer.entrySet()) {
+        for (Map.Entry<ValueRow, Value[]> e : rowsBuf.entrySet()) {
             long delta = H2Utils.calculateMemoryDelta(null, e.getValue(), null);
 
-            memTracker.free(-delta);
+            memTracker.released(-delta);
         }
 
-        rowsBuffer = null;
+        rowsBuf = null;
 
         if (sort != null)
             sort.sort(rows);
@@ -239,6 +279,12 @@ public class SortedExternalResult extends AbstractExternalResult {
         chunks.add(new Chunk(initFilePos, lastWrittenPos));
     }
 
+    /**
+     * Adds row to hash index.
+     *
+     * @param row Row.
+     * @param rowPosInFile Row position in file.
+     */
     private void addRowToHashIndex(Value[] row, long rowPosInFile) {
         ValueRow distKey = getRowKey(row);
 
@@ -247,6 +293,7 @@ public class SortedExternalResult extends AbstractExternalResult {
         addrs.add(rowPosInFile);
     }
 
+    /** {@inheritDoc} */
     @Override public void reset() {
         spillRowsBufferToDisk();
 
@@ -271,16 +318,17 @@ public class SortedExternalResult extends AbstractExternalResult {
         }
     }
 
+    /** {@inheritDoc} */
     @Override public void close() {
-        U.closeQuiet(fileChannel);
+        U.closeQuiet(fileCh);
     }
 
-    // TODO merge removeRow and getPreviousRow
-    @Override public int removeRow(Value[] values) {
+    /** {@inheritDoc} */
+    @Override public int removeRow(Value[] values) { // TODO merge removeRow and getPreviousRow
         ValueRow key = getRowKey(values);
 
-        if (rowsBuffer != null) {
-            Object prev = rowsBuffer.remove(key);
+        if (rowsBuf != null) {
+            Object prev = rowsBuf.remove(key);
 
             if (prev != null)
                 return size--;
@@ -311,11 +359,12 @@ public class SortedExternalResult extends AbstractExternalResult {
         return size; // Nothing was removed.
     }
 
-
+    /** {@inheritDoc} */
     @Override public boolean contains(Value[] values) {
         return getPreviousRow(values) != null;
     }
 
+    /** {@inheritDoc} */
     @Override public ResultExternal createShallowCopy() {
         //return null; // TODO: CODE: implement.
 
@@ -329,41 +378,61 @@ public class SortedExternalResult extends AbstractExternalResult {
         return distinct || distinctIndexes != null;
     }
 
-    private ValueRow getRowKey(Value[] values) {
+    /**
+     * Extracts distinct row key from the row.
+     * @param row Row.
+     * @return Distinct key.
+     */
+    private ValueRow getRowKey(Value[] row) {
         if (distinctIndexes != null) {
             int cnt = distinctIndexes.length;
 
             Value[] newValues = new Value[cnt];
 
             for (int i = 0; i < cnt; i++)
-                newValues[i] = values[distinctIndexes[i]];
+                newValues[i] = row[distinctIndexes[i]];
 
-            values = newValues;
-        } else if (values.length > visibleColCnt)
-            values = Arrays.copyOf(values, visibleColCnt);
+            row = newValues;
+        } else if (row.length > visibleColCnt)
+            row = Arrays.copyOf(row, visibleColCnt);
 
-        return ValueRow.get(values);
+        return ValueRow.get(row);
     }
 
+    /**
+     * Sorted rows chunk on the disk.
+     */
     private class Chunk {
+        /** Start chunk position. */
         private final long start;
+
+        /** End chunk position. */
         private final long end;
 
+        /** Current position within the chunk */
         private long curPos;
 
+        /** Current row. */
         private Value[] curRow;
 
+        /**
+         * @param start Start position.
+         * @param end End position.
+         */
         Chunk(long start, long end) {
             this.start = start;
             this.curPos = start;
             this.end = end;
         }
 
+        /**
+         * @return {@code True} if next row is available within a chunk.
+         */
         boolean next() {
             while (curPos < end) {
                 setFilePosition(curPos);
 
-                curRow = readRowFromFile();
+                curRow = readRowFromFile(); // TODO read multiple rows and cache it if possible.
 
                 curPos = currentFilePosition();
 
@@ -374,11 +443,17 @@ public class SortedExternalResult extends AbstractExternalResult {
             return false;
         }
 
+        /**
+         * Resets position in a chunk to the begin.
+         */
         void reset() {
             curPos = start;
             curRow = null;
         }
 
+        /**
+         * @return Current row.
+         */
         Value[] currentRow() {
             return curRow;
         }

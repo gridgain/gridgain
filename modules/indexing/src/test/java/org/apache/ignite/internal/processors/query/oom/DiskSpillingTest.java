@@ -45,15 +45,20 @@ import org.junit.Test;
  */
 @WithSystemProperty(key = "IGNITE_SQL_FAIL_ON_QUERY_MEMORY_LIMIT_EXCEED", value = "false")
 public class DiskSpillingTest extends GridCommonAbstractTest {
+    /** */
     private static final int PERS_CNT = 1000;
 
+    /** */
     private static final int DEPS_CNT = 100;
 
+    /** */
     private static final long SMALL_MEM_LIMIT = 2048;
 
+    /** */
     private static final long HUGE_MEM_LIMIT = Long.MAX_VALUE;
 
-    boolean checkSortOrder;
+    /** */
+    private boolean checkSortOrder;
 
 
     /** {@inheritDoc} */
@@ -77,6 +82,7 @@ public class DiskSpillingTest extends GridCommonAbstractTest {
         populateData();
     }
 
+    /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
