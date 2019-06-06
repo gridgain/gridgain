@@ -422,6 +422,7 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
         String path1 = "/a/b/test_mk_dir";
         BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID, ModelStorateThinClientProcessor.Method.MKDIR);
         message.writeString(path1);
+        message.writeBoolean(false);
         ClientCustomQueryRequest req = new ClientCustomQueryRequest(toReader(message));
         ClientResponse resp = req.process(connCtx);
         BinaryRawWriterEx out = createWriter();
@@ -434,18 +435,39 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
 
     /** */
     @Test
-    public void testRepeatedMkDir() {
+    public void testRepeatedMkDir1() {
         long reqId = 15;
         String path = "/mk/dirs/test";
         ms.mkdirs(path);
 
         BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID, ModelStorateThinClientProcessor.Method.MKDIR);
         message.writeString(path);
+        message.writeBoolean(true); // only if not exists
 
         ClientCustomQueryRequest req = new ClientCustomQueryRequest(toReader(message));
         ClientResponse resp = req.process(connCtx);
         assertEquals(ClientStatus.FAILED, resp.status()); // error
         assertFalse(resp.error().isEmpty());
+    }
+
+    /** */
+    @Test
+    public void testRepeatedMkDir2() {
+        long reqId = 15;
+        String path = "/mk/dirs/test";
+        ms.mkdirs(path);
+
+        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID, ModelStorateThinClientProcessor.Method.MKDIR);
+        message.writeString(path);
+        message.writeBoolean(false); // only if not exists
+
+        ClientCustomQueryRequest req = new ClientCustomQueryRequest(toReader(message));
+        ClientResponse resp = req.process(connCtx);
+        BinaryRawWriterEx out = createWriter();
+        resp.encode(connCtx, out);
+        byte[] result = out.out().arrayCopy();
+
+        assertArrayEquals(getExpectedMessageHeader(reqId).out().arrayCopy(), result);
     }
 
     /** */

@@ -38,7 +38,8 @@ public class ModelStorateThinClientProcessor implements CustomQueryProcessor {
         /** */ EXISTS(4),
         /** */ REMOVE(5),
         /** */ MKDIR(6),
-        /** */ LIST_FILES(7);
+        /** */ MKDIRS(7),
+        /** */ LIST_FILES(8);
 
         /** Operaion id. */
         private final int id;
@@ -111,6 +112,8 @@ public class ModelStorateThinClientProcessor implements CustomQueryProcessor {
                 return remove(requestId, reader);
             case MKDIR:
                 return mkdir(requestId, reader);
+            case MKDIRS:
+                return mkdirs(requestId, reader);
             case LIST_FILES:
                 return listFiles(requestId, reader);
         }
@@ -257,12 +260,33 @@ public class ModelStorateThinClientProcessor implements CustomQueryProcessor {
      */
     private ClientResponse mkdir(long reqId, BinaryRawReader reader) {
         String path = reader.readString();
+        boolean onlyIfNotExists = reader.readBoolean();
 
         return modelStorage.lockPaths(() -> {
-            if (modelStorage.exists(path))
+            if (onlyIfNotExists && modelStorage.exists(path))
                 return error(reqId, "Directory already exists [path=" + path + "]");
 
-            modelStorage.mkdir(path);
+            modelStorage.mkdir(path, onlyIfNotExists);
+            return new ClientResponse(reqId);
+        }, path);
+    }
+
+    /**
+     * Creates directories in model storage in recursive manner.
+     *
+     * @param reqId Request id.
+     * @param reader Reader.
+     * @return Response.
+     */
+    private ClientResponse mkdirs(long reqId, BinaryRawReader reader) {
+        String path = reader.readString();
+        boolean onlyIfNotExists = reader.readBoolean();
+
+        return modelStorage.lockPaths(() -> {
+            if (onlyIfNotExists && modelStorage.exists(path))
+                return error(reqId, "Directory already exists [path=" + path + "]");
+
+            modelStorage.mkdirs(path);
             return new ClientResponse(reqId);
         }, path);
     }

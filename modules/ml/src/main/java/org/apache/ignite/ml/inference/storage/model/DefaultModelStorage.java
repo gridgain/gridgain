@@ -194,8 +194,6 @@ public class DefaultModelStorage implements ModelStorage {
     @Override public Set<String> listFiles(String path) {
         Lock pathLock = storageProvider.lock(path);
 
-        pathLock.lock();
-
         return synchronize(() -> {
             FileOrDirectory dir = storageProvider.get(path);
 
@@ -269,14 +267,9 @@ public class DefaultModelStorage implements ModelStorage {
 
     /** {@inheritDoc} */
     @Override public <T> T lockPaths(Supplier<T> supplier, String... paths) {
-        Lock[] locks = new Lock[paths.length * 2];
-        int idx = 0;
-        for(String path : paths) {
-            String parent = getParent(path);
-            locks[idx] = storageProvider.lock(path);
-            locks[idx + 1] = storageProvider.lock(parent);
-            idx += 2;
-        }
+        Lock[] locks = new Lock[paths.length];
+        for(int i = 0; i < paths.length; i++)
+            locks[i] = storageProvider.lock(paths[i]);
 
         return synchronize(supplier, locks);
     }
