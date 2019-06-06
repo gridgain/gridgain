@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.commandline;
 
 import org.apache.ignite.internal.commandline.cache.CacheCommands;
+import org.apache.ignite.internal.commandline.diagnostic.DiagnosticCommand;
 import org.apache.ignite.internal.commandline.ru.RollingUpgradeCommand;
 
 /**
@@ -43,6 +44,9 @@ public enum CommandList {
 
     /** */
     WAL("--wal", new WalCommands()),
+
+    /** */
+    DIAGNOSTIC("--diagnostic", new DiagnosticCommand()),
 
     /** */
     ROLLING_UPGRADE("--rolling-upgrade", new RollingUpgradeCommand());
@@ -95,5 +99,12 @@ public enum CommandList {
     /** {@inheritDoc} */
     @Override public String toString() {
         return text;
+    }
+
+    /**
+     * @return command name
+     */
+    public String toCommandName() {
+        return text.substring(2).toUpperCase();
     }
 }
