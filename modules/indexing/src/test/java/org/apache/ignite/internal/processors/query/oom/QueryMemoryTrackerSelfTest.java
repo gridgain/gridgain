@@ -53,12 +53,12 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
         assertEquals(5, localResults.size());
 
         // Map side
-        assertTrue(maxMem > localResults.get(0).memoryAllocated() + localResults.get(1).memoryAllocated());
+        assertTrue(maxMem > localResults.get(0).memoryReserved() + localResults.get(1).memoryReserved());
         assertEquals(1000, localResults.get(0).getRowCount());
         assertEquals(1000, localResults.get(1).getRowCount());
 
         // Reduce side
-        assertTrue(maxMem > localResults.get(3).memoryAllocated() + localResults.get(4).memoryAllocated());
+        assertTrue(maxMem > localResults.get(3).memoryReserved() + localResults.get(4).memoryReserved());
         assertEquals(1000, localResults.get(3).getRowCount());
         assertEquals(1000, localResults.get(4).getRowCount());
         assertTrue(2000 > localResults.get(2).getRowCount());
@@ -111,7 +111,7 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
 
         // Result on reduce side.
         assertEquals(1, localResults.size());
-        assertEquals(0, localResults.get(0).memoryAllocated());
+        assertEquals(0, localResults.get(0).memoryReserved());
         assertEquals(0, localResults.get(0).getRowCount());
     }
 
@@ -122,7 +122,7 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
 
         // Local result is quite small.
         assertEquals(1, localResults.size());
-        assertTrue(maxMem > localResults.get(0).memoryAllocated());
+        assertTrue(maxMem > localResults.get(0).memoryReserved());
         assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
     }
 
@@ -158,7 +158,7 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
         checkQueryExpectOOM("select K.indexed, sum(K.grp) from K GROUP BY K.indexed", true);
 
         assertEquals(1, localResults.size());
-        assertTrue(maxMem > localResults.get(0).memoryAllocated());
+        assertTrue(maxMem > localResults.get(0).memoryReserved());
         assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
     }
 
@@ -169,7 +169,7 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
         checkQueryExpectOOM("select K.indexed, sum(K.grp) from K GROUP BY K.indexed", true);
 
         assertEquals(1, localResults.size());
-        assertTrue(maxMem > localResults.get(0).memoryAllocated());
+        assertTrue(maxMem > localResults.get(0).memoryReserved());
         assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
     }
 
@@ -180,7 +180,7 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
         checkQueryExpectOOM("select K.grp_indexed, count(DISTINCT k.name) from K GROUP BY K.grp_indexed", true);
 
         assertEquals(1, localResults.size());
-        assertTrue(maxMem > localResults.get(0).memoryAllocated());
+        assertTrue(maxMem > localResults.get(0).memoryReserved());
         assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
     }
 
@@ -215,7 +215,7 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
 
             IgniteH2Indexing h2 = (IgniteH2Indexing)grid(0).context().query().getIndexing();
 
-            long globalAllocated = h2.memoryManager().allocated();
+            long globalAllocated = h2.memoryManager().memoryReserved();
 
             assertTrue(h2.memoryManager().maxMemory() < globalAllocated + MB);
         }

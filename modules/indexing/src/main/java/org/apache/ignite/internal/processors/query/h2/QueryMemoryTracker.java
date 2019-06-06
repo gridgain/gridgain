@@ -29,8 +29,8 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  */
 public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable {
     /** Allocated field updater. */
-    private static final AtomicLongFieldUpdater<QueryMemoryTracker> ALLOC_UPD =
-        AtomicLongFieldUpdater.newUpdater(QueryMemoryTracker.class, "allocated");
+    private static final AtomicLongFieldUpdater<QueryMemoryTracker> RESERVED_UPD =
+        AtomicLongFieldUpdater.newUpdater(QueryMemoryTracker.class, "reserved");
 
     /** Closed flag updater. */
     private static final AtomicReferenceFieldUpdater<QueryMemoryTracker, Boolean> CLOSED_UPD =
@@ -42,8 +42,8 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
     /** Parent tracker. */
     private final H2MemoryTracker parent;
 
-    /** Memory allocated. */
-    private volatile long allocated;
+    /** Memory reserved. */
+    private volatile long reserved;
 
     /** Close flag to prevent tracker reuse. */
     private volatile Boolean closed = Boolean.FALSE;
@@ -61,19 +61,14 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
         this.maxMem = maxMem;
     }
 
-    /**
-     * Check allocated size is less than query memory pool threshold.
-     *
-     * @param size Allocated size in bytes.
-     * @throws IgniteSQLException if memory limit has been exceeded.
-     */
-    @Override public void allocate(long size) {
+    /** {@inheritDoc} */
+    @Override public void reserve(long size) {
         assert !closed && size >= 0;
 
         if (size == 0)
             return;
 
-        ALLOC_UPD.accumulateAndGet(this, size, (prev, x) -> {
+        RESERVED_UPD.accumulateAndGet(this, size, (prev, x) -> {
             if (prev + x > maxMem) {
                 throw new IgniteSQLException("SQL query run out of memory: Query quota exceeded. " + x,
                     IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY);
@@ -82,13 +77,14 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
             return prev + x;
         });
 
-        //TODO: GG-18840: Let's make this allocation coarse-grained.
+        //TODO: GG-18840: Let's make this reservation coarse-grained.
+        //TODO: GG-18840: Let's make this reservation coarse-grained.
         if (parent != null) {
             try {
-                parent.allocate(size);
+                parent.reserve(size);
             }
             catch (Throwable e) {
-                ALLOC_UPD.addAndGet(this, -size);
+                RESERVED_UPD.addAndGet(this, -size);
 
                 throw e;
             }
@@ -102,25 +98,25 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
         if (size == 0)
             return;
 
-        long allocated = ALLOC_UPD.accumulateAndGet(this, -size, (prev, x) -> {
+        long reserved = RESERVED_UPD.accumulateAndGet(this, -size, (prev, x) -> {
             if (prev + x < 0)
-                throw new IllegalStateException("Try to free more memory that ever be allocated: [" +
-                    "allocated=" + prev + ", toFree=" + x + ']');
+                throw new IllegalStateException("Try to release more memory that were reserved: [" +
+                    "reserved=" + prev + ", toRelease=" + x + ']');
 
             return prev + x;
         });
 
-        assert !closed && allocated >= 0 || allocated == 0 : "Invalid allocated memory size:" + allocated;
+        assert !closed && reserved >= 0 || reserved == 0 : "Invalid reserved memory size:" + reserved;
 
         if (parent != null)
             parent.release(size);
     }
 
     /**
-     * @return Memory allocated by tracker.
+     * @return Memory reserved by tracker.
      */
-    public long getAllocated() {
-        return ALLOC_UPD.get(this);
+    public long memoryReserved() {
+        return RESERVED_UPD.get(this);
     }
 
     /**
@@ -132,10 +128,10 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
 
     /** {@inheritDoc} */
     @Override public void close() {
-        // It is not expected to be called concurrently with allocate\free.
+        // It is not expected to be called concurrently with reserve\release.
         // But query can be cancelled concurrently on query finish.
         if (CLOSED_UPD.compareAndSet(this, Boolean.FALSE, Boolean.TRUE))
-            release(getAllocated());
+            release(RESERVED_UPD.get(this));
     }
 
     /** {@inheritDoc} */

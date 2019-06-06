@@ -261,11 +261,11 @@ public abstract class SelectGroups {
     int currentGroupRowId;
 
     /**
-     * Memory allocated in bytes.
+     * Memory reserved in bytes.
      *
      * Note: Poison value '-1' means memory tracking is disabled.
      */
-    long allocMem;
+    long memReserved;
 
     /**
      * Creates new instance of grouped data.
@@ -290,7 +290,7 @@ public abstract class SelectGroups {
         this.expressions = expressions;
 
         if (session.queryMemoryTracker() == null)
-            allocMem = -1;
+            memReserved = -1;
     }
 
     /**
@@ -419,9 +419,9 @@ public abstract class SelectGroups {
         currentGroupRowId = 0;
 
         if (trackable()) {
-            session.queryMemoryTracker().release(allocMem);
+            session.queryMemoryTracker().release(memReserved);
 
-            allocMem = 0;
+            memReserved = 0;
         }
     }
 
@@ -528,19 +528,19 @@ public abstract class SelectGroups {
         }
 
         if (size > 0)
-            session.queryMemoryTracker().allocate(size);
+            session.queryMemoryTracker().reserve(size);
         else
             session.queryMemoryTracker().release(size);
 
-        allocMem += size;
+        memReserved += size;
     }
 
     /**
      * @return {@code True} if memory tracker available, {@code False} otherwise.
      */
     boolean trackable() {
-        assert allocMem == -1 || session.queryMemoryTracker() != null;
+        assert memReserved == -1 || session.queryMemoryTracker() != null;
 
-        return allocMem != -1;
+        return memReserved != -1;
     }
 }

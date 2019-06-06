@@ -42,8 +42,8 @@ public class QueryMemoryManager extends H2MemoryTracker {
     /** Logger. */
     private final IgniteLogger log;
 
-    /** Memory allocated by running queries. */
-    private final AtomicLong allocated = new AtomicLong();
+    /** Memory reserved by running queries. */
+    private final AtomicLong reserved = new AtomicLong();
 
     /**
      * Constructor.
@@ -72,13 +72,13 @@ public class QueryMemoryManager extends H2MemoryTracker {
     }
 
     /** {@inheritDoc} */
-    @Override public void allocate(long size) {
+    @Override public void reserve(long size) {
         assert size >= 0;
 
         if (size == 0)
             return; // Nothing to do.
 
-        allocated.accumulateAndGet(size, (prev, x) -> {
+        reserved.accumulateAndGet(size, (prev, x) -> {
             if (prev + x > globalQuota)
                 throw new IgniteSQLException("SQL query run out of memory: Global quota exceeded.",
                     IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY);
@@ -94,10 +94,10 @@ public class QueryMemoryManager extends H2MemoryTracker {
         if (size == 0)
             return; // Nothing to do.
 
-        allocated.accumulateAndGet(-size, (prev, x) -> {
+        reserved.accumulateAndGet(-size, (prev, x) -> {
             if (prev + x < 0)
-                throw new IllegalStateException("Try to free more memory that ever be allocated: [" +
-                    "allocated=" + prev + ", toFree=" + x + ']');
+                throw new IllegalStateException("Try to free more memory that ever be reserved: [" +
+                    "reserved=" + prev + ", toFree=" + x + ']');
 
             return prev + x;
         });
@@ -128,12 +128,12 @@ public class QueryMemoryManager extends H2MemoryTracker {
     }
 
     /**
-     * Gets memory allocated by running queries.
+     * Gets memory reserved by running queries.
      *
-     * @return Allocated memory in bytes.
+     * @return Reserved memory in bytes.
      */
-    public long allocated() {
-        return allocated.get();
+    public long memoryReserved() {
+        return reserved.get();
     }
 
     /**
@@ -141,8 +141,8 @@ public class QueryMemoryManager extends H2MemoryTracker {
      *
      * @return Available memory in bytes.
      */
-    public long free() {
-        return globalQuota - allocated.get();
+    public long memoryAvailable() {
+        return globalQuota - reserved.get();
     }
 
     /**
@@ -156,6 +156,6 @@ public class QueryMemoryManager extends H2MemoryTracker {
 
     /** {@inheritDoc} */
     @Override public void close() {
-        assert allocated.get() == 0 : "Potential memory leak in SQL processor. Some queries forget to free memory.";
+        assert reserved.get() == 0 : "Potential memory leak in SQL processor. Some queries forget to free memory.";
     }
 }

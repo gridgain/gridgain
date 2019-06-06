@@ -121,17 +121,17 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     }
 
     /**
-     * Check if all allocated memory was correctly released.
+     * Check if all reserved memory was correctly released.
      * @param node Node.
      */
     private void checkMemoryManagerState(IgniteEx node) throws Exception {
         final QueryMemoryManager memMgr = memoryManager(node);
 
-        GridTestUtils.waitForCondition(() -> memMgr.allocated() == 0, 5_000);
+        GridTestUtils.waitForCondition(() -> memMgr.memoryReserved() == 0, 5_000);
 
-        long memAllocated = memMgr.allocated();
+        long memReserved = memMgr.memoryReserved();
 
-        assertEquals("Potential memory leak in SQL engine: allocated=" + memAllocated, 0, memAllocated);
+        assertEquals("Potential memory leak in SQL engine: reserved=" + memReserved, 0, memReserved);
     }
 
     /**
@@ -143,8 +143,8 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         QueryMemoryManager memoryManager = memoryManager(grid);
 
         // Reset memory manager.
-        if (memoryManager.allocated() > 0)
-            memoryManager.release(memoryManager.allocated());
+        if (memoryManager.memoryReserved() > 0)
+            memoryManager.release(memoryManager.memoryReserved());
     }
 
     /**
@@ -234,7 +234,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         checkQueryExpectOOM("select * from K LIMIT 8000", false);
 
         assertEquals(1, localResults.size());
-        assertTrue(maxMem < localResults.get(0).memoryAllocated() + 1000);
+        assertTrue(maxMem < localResults.get(0).memoryReserved() + 1000);
         assertTrue(8000 > localResults.get(0).getRowCount());
     }
 
@@ -282,7 +282,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
             "select * from T as T2, T as T3 where T2.id >= 1 AND T2.id < 2", true);
 
         assertEquals(3, localResults.size());
-        assertTrue(maxMem > localResults.get(1).memoryAllocated() + localResults.get(2).memoryAllocated());
+        assertTrue(maxMem > localResults.get(1).memoryReserved() + localResults.get(2).memoryReserved());
         assertEquals(2000, localResults.get(1).getRowCount());
         assertEquals(1000, localResults.get(2).getRowCount());
         assertEquals(2000, localResults.get(0).getRowCount());
@@ -297,7 +297,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
             "select * from T as T2, T as T3 where T2.id >= 2 AND T2.id < 6", true);
 
         assertEquals(2, localResults.size());
-        assertTrue(maxMem < localResults.get(1).memoryAllocated() + 500);
+        assertTrue(maxMem < localResults.get(1).memoryReserved() + 500);
         assertTrue(4000 > localResults.get(0).getRowCount());
         assertTrue(4000 > localResults.get(1).getRowCount());
     }
@@ -312,7 +312,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
             "select * from T as T2, T as T3 where T2.id > 2 AND T2.id < 4", false);
 
         assertEquals(3, localResults.size());
-        assertTrue(maxMem > localResults.get(1).memoryAllocated() + localResults.get(2).memoryAllocated());
+        assertTrue(maxMem > localResults.get(1).memoryReserved() + localResults.get(2).memoryReserved());
         assertEquals(2000, localResults.get(1).getRowCount());
         assertEquals(1000, localResults.get(2).getRowCount());
         assertTrue(3000 > localResults.get(0).getRowCount());
@@ -333,7 +333,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         checkQueryExpectOOM("select * from T as T0, T as T1", false);
 
         assertEquals(1, localResults.size());
-        assertTrue(maxMem < localResults.get(0).memoryAllocated() + 500);
+        assertTrue(maxMem < localResults.get(0).memoryReserved() + 500);
 
     }
 
@@ -344,7 +344,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         checkQueryExpectOOM("select * from T as T0, T as T1 ORDER BY T1.id", true);
 
         assertEquals(1, localResults.size());
-        assertTrue(maxMem < localResults.get(0).memoryAllocated() + 500);
+        assertTrue(maxMem < localResults.get(0).memoryReserved() + 500);
     }
 
     /** Check GROUP BY operation on large data set with small result set. */
@@ -391,7 +391,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
         // Local result is quite small.
         assertEquals(1, localResults.size());
-        assertTrue(maxMem > localResults.get(0).memoryAllocated());
+        assertTrue(maxMem > localResults.get(0).memoryReserved());
         assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
     }
 
@@ -402,7 +402,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
         // Local result is quite small.
         assertEquals(1, localResults.size());
-        assertTrue(maxMem > localResults.get(0).memoryAllocated());
+        assertTrue(maxMem > localResults.get(0).memoryReserved());
         assertTrue(100 > localResults.get(0).getRowCount());
     }
 
@@ -433,7 +433,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
         // Local result is quite small.
         assertEquals(1, localResults.size());
-        assertTrue(maxMem < localResults.get(0).memoryAllocated() + 500);
+        assertTrue(maxMem < localResults.get(0).memoryReserved() + 500);
         assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
     }
 
@@ -477,9 +477,9 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
             assertEquals(78, localResults.size());
             assertEquals(40, cursors.size());
 
-            long globalAllocated = h2.memoryManager().allocated();
+            long globallyReserved = h2.memoryManager().memoryReserved();
 
-            assertTrue(h2.memoryManager().maxMemory() < globalAllocated + MB);
+            assertTrue(h2.memoryManager().maxMemory() < globallyReserved + MB);
         }
         finally {
             for (QueryCursor c : cursors)
@@ -557,7 +557,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
                     @Override public void onClose() {
                         // Just prevent 'rows' from being nullified for test purposes.
 
-                        getMemoryTracker().release(memoryAllocated());
+                        getMemoryTracker().release(memoryReserved());
                     }
                 };
 

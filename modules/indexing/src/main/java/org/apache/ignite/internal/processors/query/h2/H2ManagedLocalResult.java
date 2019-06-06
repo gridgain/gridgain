@@ -30,8 +30,8 @@ public class H2ManagedLocalResult extends H2BaseLocalResult {
     /** Query memory tracker. */
     private H2MemoryTracker mem;
 
-    /** Allocated memory. */
-    private long allocMem;
+    /** Reserved memory. */
+    private long reserved;
 
     /**
      * Constructor.
@@ -76,14 +76,14 @@ public class H2ManagedLocalResult extends H2BaseLocalResult {
         if (memory < 0)
             mem.release(memory);
         else
-            mem.allocate(memory);
+            mem.reserve(memory);
 
-        allocMem += memory;
+        reserved += memory;
     }
 
     /** */
-    public long memoryAllocated() {
-        return allocMem;
+    public long memoryReserved() {
+        return reserved;
     }
 
     /** {@inheritDoc} */
@@ -108,6 +108,6 @@ public class H2ManagedLocalResult extends H2BaseLocalResult {
         distinctRows = null;
         rows = null;
 
-        mem.release(allocMem);
+        mem.release(reserved);
     }
 }
