@@ -69,10 +69,9 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccVersion;
-import org.apache.ignite.internal.processors.cache.persistence.freelist.CacheFreeListImpl;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.AbstractFreeList;
-import org.apache.ignite.internal.processors.cache.persistence.freelist.SimpleDataRow;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.CacheFreeList;
+import org.apache.ignite.internal.processors.cache.persistence.freelist.SimpleDataRow;
 import org.apache.ignite.internal.processors.cache.persistence.migration.UpgradePendingTreeToPerPartitionTask;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryEx;
 import org.apache.ignite.internal.processors.cache.persistence.partstate.GroupPartitionId;
@@ -1570,7 +1569,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         private PendingEntriesTree pendingTree;
 
         /** */
-        private volatile CacheDataStore delegate;
+        private volatile CacheDataStoreImpl delegate;
 
         /**
          * Cache id which should be throttled.
@@ -1689,19 +1688,21 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                             return pageMem.allocatePage(grpId, partId, PageIdAllocator.FLAG_DATA);
                         }
                     };
-                    String dataTreeName = dataTreeName();
 
                     RootPage partMetastoreReuseListRoot = metas.partMetastoreReuseListRoot;
 
+                    String partMetastoreName = partitionMetaStoreName();
+
                     partStorage = new PartitionMetaStorageImpl<SimpleDataRow>(
                         grp.groupId(),
-                        grp.cacheOrGroupName() + "-partstore-" + partId,
+                        partMetastoreName,
                         grp.dataRegion().memoryMetrics(),
                         grp.dataRegion(),
-                        freeList,
+                        null, // TODO: cannot use reuseList
                         ctx.wal(),
                         partMetastoreReuseListRoot.pageId().pageId(),
-                        partMetastoreReuseListRoot.isAllocated()) {
+                        partMetastoreReuseListRoot.isAllocated(),
+                        ctx.diagnostic().pageLockTracker().createPageLockTracker(partMetastoreName)) {
                         /** {@inheritDoc} */
                         @Override protected long allocatePageNoReuse() throws IgniteCheckedException {
                             assert grp.shared().database().checkpointLockIsHeldByThread();
@@ -1709,6 +1710,8 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                             return pageMem.allocatePage(grpId, partId, PageIdAllocator.FLAG_DATA);
                         }
                     };
+
+                    String dataTreeName = dataTreeName();
 
                     CacheDataRowStore rowStore = new CacheDataRowStore(grp, freeList, partId);
 

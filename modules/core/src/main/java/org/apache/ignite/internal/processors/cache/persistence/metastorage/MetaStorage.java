@@ -62,7 +62,6 @@ import org.apache.ignite.internal.processors.cache.persistence.partstorage.Parti
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandler;
-import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -253,7 +252,7 @@ public class MetaStorage implements DbCheckpointListener, ReadWriteMetastorage {
             
             MetastorageRowStore rowStore = new MetastorageRowStore(partStorage, db);
 
-            tree = new MetastorageTree(METASTORAGE_CACHE_ID, dataRegion.pageMemory(), wal, rmvId,
+            tree = new MetastorageTree(METASTORAGE_CACHE_ID, treeName, dataRegion.pageMemory(), wal, rmvId,
                 partStorage, rowStore, treeRoot.pageId().pageId(), treeRoot.isAllocated(), failureProcessor, partId,
                 diagnosticMgr.pageLockTracker().createPageLockTracker(treeName));
 
