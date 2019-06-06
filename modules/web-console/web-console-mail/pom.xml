@@ -72,7 +72,7 @@
         <dependency>
             <groupId>org.gridgain</groupId>
             <artifactId>ignite-core</artifactId>
-            <version>${project.version}</version>
+            <version>${web-console.ignite.version}</version>
         </dependency>
 
         <dependency>

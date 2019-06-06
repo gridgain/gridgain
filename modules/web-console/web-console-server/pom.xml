@@ -36,6 +36,7 @@
     <properties>
         <commons.compress.version>1.18</commons.compress.version>
         <spring.boot.version>1.5.20.RELEASE</spring.boot.version>
+        <swagger2.version>2.9.2</swagger2.version>
     </properties>
 
     <profiles>
@@ -125,20 +126,20 @@
         <dependency>
             <groupId>io.springfox</groupId>
             <artifactId>springfox-swagger2</artifactId>
-            <version>2.9.2</version>
+            <version>${swagger2.version}</version>
         </dependency>
 
         <dependency>
             <groupId>io.springfox</groupId>
             <artifactId>springfox-swagger-ui</artifactId>
-            <version>2.9.2</version>
+            <version>${swagger2.version}</version>
         </dependency>
 
         <!-- Ignite dependencies -->
         <dependency>
             <groupId>org.gridgain</groupId>
             <artifactId>ignite-core</artifactId>
-            <version>${project.version}</version>
+            <version>${web-console.ignite.version}</version>
         </dependency>
 
         <dependency>
