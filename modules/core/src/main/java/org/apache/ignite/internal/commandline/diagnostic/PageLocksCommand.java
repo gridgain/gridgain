@@ -78,6 +78,8 @@ public class PageLocksCommand implements Command<PageLocksCommand.Args> {
 
         Set<String> nodeIds = args.nodeIds;
 
+        Map<ClusterNode, VisorPageLocksResult> res;
+
         try (GridClient client = Command.startClient(clientCfg)) {
             if (args.allNodes) {
                 client.compute().nodes().forEach(n -> {
@@ -85,13 +87,9 @@ public class PageLocksCommand implements Command<PageLocksCommand.Args> {
                     nodeIds.add(n.nodeId().toString());
                 });
             }
-        }
 
-        VisorPageLocksTrackerArgs taskArg = new VisorPageLocksTrackerArgs(args.op, args.type, args.filePath, nodeIds);
+            VisorPageLocksTrackerArgs taskArg = new VisorPageLocksTrackerArgs(args.op, args.type, args.filePath, nodeIds);
 
-        Map<ClusterNode, VisorPageLocksResult> res;
-
-        try (GridClient client = Command.startClient(clientCfg)) {
             res = TaskExecutor.executeTask(
                 client,
                 VisorPageLocksTask.class,
@@ -121,21 +119,33 @@ public class PageLocksCommand implements Command<PageLocksCommand.Args> {
 
                 Set<String> nodeIds = new TreeSet<>();
 
-                while (argIter.hasNextArg()){
-                    String nextArg = argIter.nextArg("").toLowerCase();
+                loop:
+                while (argIter.hasNextArg()) {
+                    String nextArg = argIter.peekNextArg().toLowerCase();
 
-                    if ("--all".equals(nextArg))
-                        allNodes = true;
-                    else if ("--nodes".equals(nextArg)) {
-                        while (argIter.hasNextArg()){
-                            nextArg = argIter.nextArg("").toLowerCase();
+                    switch (nextArg) {
+                        case "--all":
+                            argIter.nextArg("");
 
-                            nodeIds.add(nextArg);
-                        }
-                    }
-                    else {
-                        if (new File(nextArg).isDirectory())
-                            filePath = nextArg;
+                            allNodes = true;
+                            break;
+                        case "--nodes":
+                            argIter.nextArg("");
+
+                            nodeIds.addAll(argIter.nextStringSet(nextArg));
+                            break;
+                        case "--path":
+                            argIter.nextArg("");
+
+                            String path = argIter.nextArg("").toLowerCase();
+
+                            if (new File(path).isDirectory())
+                                filePath = path;
+                            else
+                                throw new IllegalStateException("Incorrect path to directory, path=" + path);
+                            break;
+                        default:
+                            break loop;
                     }
                 }
 

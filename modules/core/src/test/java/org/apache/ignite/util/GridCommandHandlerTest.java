@@ -2607,21 +2607,23 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump"));
         assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump_log"));
-        assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump", dir));
+        assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump", "--path", dir));
 
         assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump", "--all"));
         assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump_log", "--all"));
-        assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump", dir, "--all"));
+        assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump", "--path", dir, "--all"));
 
         assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump", "--nodes",
-            node0.id().toString(), node2.id().toString()));
+            node0.id().toString() + "," + node2.id().toString()));
+
         assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump", "--nodes",
-            node0.consistentId().toString(), node2.consistentId().toString()));
+            node0.consistentId().toString() + "," + node2.consistentId().toString()));
 
         assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump_log", "--nodes",
-            node1.id().toString(), node3.id().toString()));
-        assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump", dir, "--nodes",
-            node1.consistentId().toString(), node3.consistentId().toString()));
+            node1.id().toString() + "," + node3.id().toString()));
+
+        assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump", "--path", dir, "--nodes",
+            node1.consistentId().toString() + "," + node3.consistentId().toString()));
     }
 
     /**
