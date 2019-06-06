@@ -16,11 +16,13 @@
 
 package org.apache.ignite.internal.processors.query.oom;
 
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 
 /**
  * Query memory manager test for distributed queries.
  */
+@WithSystemProperty(key = "IGNITE_SQL_FAIL_ON_QUERY_MEMORY_LIMIT_EXCEED", value = "true")
 public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTest {
     /** {@inheritDoc} */
     @Override protected boolean isLocal() {

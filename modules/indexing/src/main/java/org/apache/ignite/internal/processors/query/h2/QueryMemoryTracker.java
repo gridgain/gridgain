@@ -47,6 +47,12 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
     private static final AtomicReferenceFieldUpdater<QueryMemoryTracker, Boolean> CLOSED_UPD =
         AtomicReferenceFieldUpdater.newUpdater(QueryMemoryTracker.class, Boolean.class, "closed");
 
+    /** Memory limit. */
+    private final long maxMem;
+
+    /** Memory allocated. */
+    private volatile long allocated;
+
     /**
      * Defines an action that occurs when the memory limit is exceeded. Possible variants:
      * <ul>
@@ -56,16 +62,6 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
      *
      * Default: false.
      */
-    public static final boolean DFLT_FAIL_ON_QRY_MEMORY_LIMIT_EXCEED =
-        Boolean.getBoolean(IgniteSystemProperties.IGNITE_SQL_FAIL_ON_QUERY_MEMORY_LIMIT_EXCEED);
-
-    /** Memory limit. */
-    private final long maxMem;
-
-    /** Memory allocated. */
-    private volatile long allocated;
-
-    /** Whether to throw exception when memory limit is exceeded. */
     private final boolean failOnMemLimitExceed;
 
     /** Close flag to prevent tracker reuse. */
@@ -81,7 +77,7 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
         assert maxMem >= 0;
 
         this.maxMem = maxMem > 0 ? maxMem : DFLT_QRY_MEMORY_LIMIT;
-        this.failOnMemLimitExceed = DFLT_FAIL_ON_QRY_MEMORY_LIMIT_EXCEED;
+        failOnMemLimitExceed = Boolean.getBoolean(IgniteSystemProperties.IGNITE_SQL_FAIL_ON_QUERY_MEMORY_LIMIT_EXCEED);
     }
 
     /** {@inheritDoc} */

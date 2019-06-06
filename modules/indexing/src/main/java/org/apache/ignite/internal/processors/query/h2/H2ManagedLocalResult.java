@@ -1,7 +1,17 @@
 /*
- * Copyright 2004-2019 H2 Group. Multiple-Licensed under the MPL 2.0,
- * and the EPL 1.0 (http://h2database.com/html/license.html).
- * Initial Developer: H2 Group
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package org.apache.ignite.internal.processors.query.h2;
@@ -93,7 +103,7 @@ public class H2ManagedLocalResult implements LocalResult {
         }
     }
 
-    /** {@inheritDoc} */
+    /** */
     protected boolean onUpdate(ValueRow distinctRowKey, Value[] oldRow, Value[] row) { //TODO Rename
         assert !isClosed();
         assert row != null;
@@ -587,7 +597,7 @@ public class H2ManagedLocalResult implements LocalResult {
         // ignore
     }
 
-    /** {@inheritDoc} */
+    /** */
     public long memoryAllocated() {
         return allocMem;
     }
