@@ -3393,8 +3393,10 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @throws IgniteCheckedException If failed.
      */
     @SuppressWarnings("unchecked")
-    private GridCacheSharedContext createSharedContext(GridKernalContext kernalCtx,
-        Collection<CacheStoreSessionListener> storeSesLsnrs) throws IgniteCheckedException {
+    private GridCacheSharedContext createSharedContext(
+        GridKernalContext kernalCtx,
+        Collection<CacheStoreSessionListener> storeSesLsnrs
+    ) throws IgniteCheckedException {
         IgniteTxManager tm = new IgniteTxManager();
         GridCacheMvccManager mvccMgr = new GridCacheMvccManager();
         GridCacheVersionManager verMgr = new GridCacheVersionManager();
@@ -3445,6 +3447,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         DeadlockDetectionManager deadlockDetectionMgr = new DeadlockDetectionManager();
 
+        CacheDiagnosticManager diagnosticMgr = new CacheDiagnosticManager();
+
         return new GridCacheSharedContext(
             kernalCtx,
             tm,
@@ -3464,7 +3468,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             jta,
             storeSesLsnrs,
             mvccCachingMgr,
-            deadlockDetectionMgr
+            deadlockDetectionMgr,
+            diagnosticMgr
         );
     }
 

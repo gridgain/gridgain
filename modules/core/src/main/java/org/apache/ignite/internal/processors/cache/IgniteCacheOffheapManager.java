@@ -90,7 +90,7 @@ public interface IgniteCacheOffheapManager {
      * @return Number of processed partitions.
      * @throws IgniteCheckedException If failed.
      */
-    long restorePartitionStates(Map<GroupPartitionId, Integer> partitionRecoveryStates) throws IgniteCheckedException;
+    public long restorePartitionStates(Map<GroupPartitionId, Integer> partitionRecoveryStates) throws IgniteCheckedException;
 
     /**
      * Partition counter update callback. May be overridden by plugin-provided subclasses.
@@ -589,38 +589,33 @@ public interface IgniteCacheOffheapManager {
          *
          * @return {@code True} if initialized.
          */
-        boolean init();
+        public boolean init();
 
         /**
          * @return Partition ID.
          */
-        int partId();
-
-        /**
-         * @return Store name.
-         */
-        String name();
+        public int partId();
 
         /**
          * @param cacheId Cache ID.
          * @return Size.
          */
-        long cacheSize(int cacheId);
+        public long cacheSize(int cacheId);
 
         /**
          * @return Cache sizes if store belongs to group containing multiple caches.
          */
-        Map<Integer, Long> cacheSizes();
+        public Map<Integer, Long> cacheSizes();
 
         /**
          * @return Total size.
          */
-        long fullSize();
+        public long fullSize();
 
         /**
          * @return {@code True} if there are no items in the store.
          */
-        boolean isEmpty();
+        public boolean isEmpty();
 
         /**
          * Updates size metric for particular cache.
@@ -628,39 +623,39 @@ public interface IgniteCacheOffheapManager {
          * @param cacheId Cache ID.
          * @param delta Size delta.
          */
-        void updateSize(int cacheId, long delta);
+        public void updateSize(int cacheId, long delta);
 
         /**
          * @return Update counter (LWM).
          */
-        long updateCounter();
+        public long updateCounter();
 
         /**
          * @return Reserved counter (HWM).
          */
-        long reservedCounter();
+        public long reservedCounter();
 
         /**
          * @return Update counter or {@code null} if store is not yet created.
          */
-        @Nullable PartitionUpdateCounter partUpdateCounter();
+        public @Nullable PartitionUpdateCounter partUpdateCounter();
 
         /**
          * @param delta Delta.
          */
-        long reserve(long delta);
+        public long reserve(long delta);
 
         /**
          * @param val Update counter.
          */
-        void updateCounter(long val);
+        public void updateCounter(long val);
 
         /**
          * Updates counters from start value by delta value.
          * @param start Start.
          * @param delta Delta.
          */
-        boolean updateCounter(long start, long delta);
+        public boolean updateCounter(long start, long delta);
 
         /**
          * @return Next update counter.
@@ -690,7 +685,7 @@ public interface IgniteCacheOffheapManager {
          * @return New row.
          * @throws IgniteCheckedException If failed.
          */
-        CacheDataRow createRow(
+        public CacheDataRow createRow(
             GridCacheContext cctx,
             KeyCacheObject key,
             CacheObject val,
@@ -725,7 +720,7 @@ public interface IgniteCacheOffheapManager {
          * @param oldRow Old row if available.
          * @throws IgniteCheckedException If failed.
          */
-        void update(
+        public void update(
             GridCacheContext cctx,
             KeyCacheObject key,
             CacheObject val,
@@ -761,7 +756,7 @@ public interface IgniteCacheOffheapManager {
          * @param hist Full entry history.
          * @return {@code True} if entry history applied successfully, {@code False} otherwise.
          */
-        boolean mvccApplyHistoryIfAbsent(
+        public boolean mvccApplyHistoryIfAbsent(
             GridCacheContext cctx,
             KeyCacheObject key,
             List<GridCacheMvccEntryInfo> hist) throws IgniteCheckedException;
@@ -780,7 +775,7 @@ public interface IgniteCacheOffheapManager {
          * @return {@code true} on success.
          * @throws IgniteCheckedException, if failed.
          */
-        boolean mvccUpdateRowWithPreloadInfo(
+        public boolean mvccUpdateRowWithPreloadInfo(
             GridCacheContext cctx,
             KeyCacheObject key,
             @Nullable CacheObject val,
@@ -810,7 +805,7 @@ public interface IgniteCacheOffheapManager {
          * @return Update result.
          * @throws IgniteCheckedException If failed.
          */
-        MvccUpdateResult mvccUpdate(
+        public MvccUpdateResult mvccUpdate(
             GridCacheContext cctx,
             KeyCacheObject key,
             CacheObject val,
@@ -839,7 +834,7 @@ public interface IgniteCacheOffheapManager {
          * @return List of transactions to wait for.
          * @throws IgniteCheckedException If failed.
          */
-        MvccUpdateResult mvccRemove(
+        public MvccUpdateResult mvccRemove(
             GridCacheContext cctx,
             KeyCacheObject key,
             MvccSnapshot mvccSnapshot,
@@ -856,7 +851,7 @@ public interface IgniteCacheOffheapManager {
          * @return List of transactions to wait for.
          * @throws IgniteCheckedException If failed.
          */
-        MvccUpdateResult mvccLock(
+        public MvccUpdateResult mvccLock(
             GridCacheContext cctx,
             KeyCacheObject key,
             MvccSnapshot mvccSnapshot) throws IgniteCheckedException;
@@ -866,7 +861,7 @@ public interface IgniteCacheOffheapManager {
          * @param key Key.
          * @throws IgniteCheckedException If failed.
          */
-        void mvccRemoveAll(GridCacheContext cctx, KeyCacheObject key) throws IgniteCheckedException;
+        public void mvccRemoveAll(GridCacheContext cctx, KeyCacheObject key) throws IgniteCheckedException;
 
         /**
          * @param cctx Cache context.
@@ -886,7 +881,7 @@ public interface IgniteCacheOffheapManager {
          * @param mvccVer Mvcc version.
          * @throws IgniteCheckedException
          */
-        void mvccApplyUpdate(GridCacheContext cctx,
+        public void mvccApplyUpdate(GridCacheContext cctx,
             KeyCacheObject key,
             CacheObject val,
             GridCacheVersion ver,
@@ -919,7 +914,7 @@ public interface IgniteCacheOffheapManager {
          * @return Iterator over all versions.
          * @throws IgniteCheckedException If failed.
          */
-        GridCursor<CacheDataRow> mvccAllVersionsCursor(GridCacheContext cctx, KeyCacheObject key, Object x)
+        public GridCursor<CacheDataRow> mvccAllVersionsCursor(GridCacheContext cctx, KeyCacheObject key, Object x)
             throws IgniteCheckedException;
 
         /**
@@ -939,7 +934,7 @@ public interface IgniteCacheOffheapManager {
          * @return All stored versions for given key.
          * @throws IgniteCheckedException If failed.
          */
-        List<IgniteBiTuple<Object, MvccVersion>> mvccFindAllVersions(GridCacheContext cctx, KeyCacheObject key)
+        public List<IgniteBiTuple<Object, MvccVersion>> mvccFindAllVersions(GridCacheContext cctx, KeyCacheObject key)
             throws IgniteCheckedException;
 
         /**
@@ -1067,7 +1062,7 @@ public interface IgniteCacheOffheapManager {
         /**
          * Reset counters for partition.
          */
-        void resetUpdateCounter();
+        public void resetUpdateCounter();
 
         /**
          * Partition storage.
