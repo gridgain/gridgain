@@ -22,6 +22,7 @@ import java.sql.Statement;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -35,7 +36,7 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 public class JdbcSchemaCacheSelfTest extends GridCommonAbstractTest {
     /** JDBC URL. */
     private static final String BASE_URL = CFG_URL_PREFIX
-        + "cache=default:multipleStatementsAllowed=true@modules/clients/src/test/config/jdbc-config.xml";
+        + "multipleStatementsAllowed=true:transactionsAllowed=true@modules/clients/src/test/config/jdbc-config.xml";
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -55,8 +56,8 @@ public class JdbcSchemaCacheSelfTest extends GridCommonAbstractTest {
     }
 
     /** {@inheritDoc} */
-    @Override protected void beforeTestsStarted() throws Exception {
-        startGrids(1);
+    @Override protected void beforeTest() throws Exception {
+        startGrid("srv");
     }
 
     /**
@@ -66,8 +67,9 @@ public class JdbcSchemaCacheSelfTest extends GridCommonAbstractTest {
     public void testExecuteQuery() throws Exception {
         try(Connection c = DriverManager.getConnection(BASE_URL)) {
             try (Statement stmt = c.createStatement()) {
-                stmt.execute("CREATE TABLE Q(ID INT PRIMARY KEY, VAL VARCHAR)");
-                stmt.execute("INSERT INTO Q VALUES(1, '1')");
+                stmt.execute("CREATE TABLE PUBLIC.Q(ID INT PRIMARY KEY, VAL VARCHAR)");
+                stmt.execute("INSERT INTO PUBLIC.Q VALUES(1, '1')");
+                stmt.execute("DROP TABLE IF EXISTS PUBLIC.Q ");
             }
         }
     }
