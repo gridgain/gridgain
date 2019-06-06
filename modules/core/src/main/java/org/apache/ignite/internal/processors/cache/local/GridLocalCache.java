@@ -199,8 +199,6 @@ public class GridLocalCache<K, V> extends GridCacheAdapter<K, V> {
     @Override public void unlockAll(
         Collection<? extends K> keys
     ) throws IgniteCheckedException {
-        AffinityTopologyVersion topVer = ctx.affinity().affinityTopologyVersion();
-
         for (K key : keys) {
             GridLocalCacheEntry entry = peekExx(ctx.toCacheKeyObject(key));
 
@@ -357,7 +355,7 @@ public class GridLocalCache<K, V> extends GridCacheAdapter<K, V> {
         final boolean needVer
     ) {
         if (F.isEmpty(keys))
-            return new GridFinishedFuture<>(Collections.<K1, V1>emptyMap());
+            return new GridFinishedFuture<>(Collections.emptyMap());
 
         GridNearTxLocal tx = null;
 
@@ -377,9 +375,6 @@ public class GridLocalCache<K, V> extends GridCacheAdapter<K, V> {
 
             Set<GridCacheEntryEx> newLocalEntries = null;
 
-            final AffinityTopologyVersion topVer = tx == null ? ctx.affinity().affinityTopologyVersion() :
-                tx.topologyVersion();
-
             try {
                 int keysSize = keys.size();
 
@@ -392,7 +387,7 @@ public class GridLocalCache<K, V> extends GridCacheAdapter<K, V> {
 
                 final Map<K1, V1> map = keysSize == 1 ?
                     (Map<K1, V1>)new IgniteBiTuple<>() :
-                    U.<K1, V1>newHashMap(keysSize);
+                    U.newHashMap(keysSize);
 
                 final boolean storeEnabled = !skipVals && readThrough && ctx.readThrough();
 
@@ -661,8 +656,7 @@ public class GridLocalCache<K, V> extends GridCacheAdapter<K, V> {
                                 }
 
                                 // There were no misses.
-                                return new GridFinishedFuture<>(Collections.<K,
-                                    V>emptyMap());
+                                return new GridFinishedFuture<>(Collections.emptyMap());
                             }
                         },
                         new C2<Map<K1, V1>, Exception, Map<K1, V1>>() {

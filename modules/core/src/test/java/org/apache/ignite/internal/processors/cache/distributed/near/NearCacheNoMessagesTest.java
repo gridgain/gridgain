@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CachePeekMode;
@@ -30,6 +31,7 @@ import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_READ_LOAD_BALANCING;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MACS_OVERRIDE;
 
 /**
@@ -105,12 +107,41 @@ public class NearCacheNoMessagesTest extends GridCommonAbstractTest {
      * @param cacheMode Cache mode.
      */
     private void testNoMessage(CacheAtomicityMode atomicityMode, CacheMode cacheMode) {
+        testNoMessage(atomicityMode, cacheMode, true, true);
+        testNoMessage(atomicityMode, cacheMode, true, false);
+        testNoMessage(atomicityMode, cacheMode, false, true);
+        testNoMessage(atomicityMode, cacheMode, false, false);
+    }
+
+    /**
+     * @param atomicityMode Cache atomicity mode.
+     * @param cacheMode Cache mode.
+     * @param readFromBackup Read from backup allowed or not.
+     * @param readLoadBalancing Read load balancing is enabled.
+     */
+    private void testNoMessage(
+        CacheAtomicityMode atomicityMode,
+        CacheMode cacheMode,
+        boolean readFromBackup,
+        boolean readLoadBalancing
+    ) {
+        IgniteLogger log = ignite(0).log();
+
+        if (log.isInfoEnabled())
+            log.info("Starting test with parameters [atomicityMode=" + atomicityMode +
+                ", cacheMode=" + cacheMode + ", readFromBackup=" + readFromBackup +
+                ", readLoadBalancing=" + readLoadBalancing + "]");
+
+        String oldValue = System.getProperty(IGNITE_READ_LOAD_BALANCING);
+
+        System.setProperty(IGNITE_READ_LOAD_BALANCING, readLoadBalancing? "true" : "false");
+
         ignite(0).createCache(
             new CacheConfiguration<>("testCache")
                 .setAtomicityMode(atomicityMode)
                 .setCacheMode(cacheMode)
                 .setBackups(1)
-                .setReadFromBackup(true));
+                .setReadFromBackup(readFromBackup));
 
         try {
             {
@@ -146,6 +177,14 @@ public class NearCacheNoMessagesTest extends GridCommonAbstractTest {
         }
         finally {
             ignite(0).destroyCache("testCache");
+
+            if (oldValue == null)
+                System.clearProperty(IGNITE_READ_LOAD_BALANCING);
+            else
+                System.setProperty(IGNITE_READ_LOAD_BALANCING, oldValue);
+
+            if (log.isInfoEnabled())
+                log.info("Stopping test");
         }
     }
 }
