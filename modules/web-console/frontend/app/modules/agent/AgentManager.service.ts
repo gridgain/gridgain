@@ -102,9 +102,16 @@ class ConnectionState {
 
         if (_.isEmpty(this.clusters))
             this.cluster = null;
-
-        if (_.isNil(this.cluster) || !_.find(clusters, {id: this.cluster.id}))
+        else if (_.isNil(this.cluster))
             this.cluster = _.head(clusters);
+        else {
+            const updatedCluster = _.find(clusters, {id: this.cluster.id});
+
+            if (updatedCluster)
+                _.merge(this.cluster, updatedCluster);
+            else
+                this.cluster = _.head(clusters);
+        }
 
         this.hasDemo = hasDemo;
 
