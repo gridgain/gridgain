@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
@@ -189,8 +189,11 @@ namespace Apache.Ignite.Core.Impl.Client
                 }
             }
 
-            throw new AggregateException("Failed to establish Ignite thin client connection, " +
-                                         "examine inner exceptions for details.", errors);
+            if (_socket == null && errors != null)
+            {
+                throw new AggregateException("Failed to establish Ignite thin client connection, " +
+                                             "examine inner exceptions for details.", errors);
+            }
         }
 
         /// <summary>
