@@ -553,7 +553,10 @@ public class ZookeeperDiscoveryCommunicationFailureTest extends ZookeeperDiscove
 
         helper.clientMode(true);
 
-        startGridsMultiThreaded(2, 2);
+        startGrid(2);
+        startGrid(3);
+
+        helper.clientMode(false);
 
         awaitPartitionMapExchange();
 
