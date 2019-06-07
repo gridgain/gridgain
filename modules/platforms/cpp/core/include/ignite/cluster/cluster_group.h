@@ -34,7 +34,7 @@ namespace ignite
          * Defines a cluster group which contains all or a subset of cluster nodes.
          * Cluster group allows to group cluster nodes into various subgroups to perform distributed operations on them.
          * The IgniteCluster interface itself also contains the ClusterGroup which makes an instance of IgniteCluster
-         * into a cluster group containing all cluster nodes. Use IgniteCluster::ForAll() to get the cluster group in this case.
+         * into a cluster group containing all cluster nodes. Use IgniteCluster::AsClusterGroup() to get the cluster group in this case.
          */
         class IGNITE_IMPORT_EXPORT ClusterGroup
         {

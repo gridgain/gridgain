@@ -596,9 +596,9 @@ BOOST_AUTO_TEST_CASE(IgniteGetClusterGroupForServers)
 {
     Ignite server1 = MakeNode("ServerNode1", SERVER_NODE_ATTRIBUTE_VALUE1);
     Ignite server2 = MakeNode("ServerNode2", SERVER_NODE_ATTRIBUTE_VALUE1);
-    Ignite client = MakeNode("ClinetNode", CLIENT_NODE);
+    Ignite client = MakeNode("ClientNode", CLIENT_NODE);
 
-    cluster::ClusterGroup localGroup = client.GetCluster().ForAll();
+    cluster::ClusterGroup localGroup = client.GetCluster().AsClusterGroup();
     cluster::ClusterGroup group = localGroup.ForServers();
 
     Compute compute = client.GetCompute(group);
@@ -616,9 +616,9 @@ BOOST_AUTO_TEST_CASE(IgniteGetClusterGroupForAttribute)
 {
     Ignite server1 = MakeNode("ServerNode1", SERVER_NODE_ATTRIBUTE_VALUE1);
     Ignite server2 = MakeNode("ServerNode2", SERVER_NODE_ATTRIBUTE_VALUE1);
-    Ignite client = MakeNode("ClinetNode", CLIENT_NODE);
+    Ignite client = MakeNode("ClientNode", CLIENT_NODE);
 
-    cluster::ClusterGroup localGroup = client.GetCluster().ForAll();
+    cluster::ClusterGroup localGroup = client.GetCluster().AsClusterGroup();
     cluster::ClusterGroup group1 = localGroup.ForAttribute("TestAttribute", "Value0");
     cluster::ClusterGroup group2 = localGroup.ForAttribute("TestAttribute", "Value1");
 

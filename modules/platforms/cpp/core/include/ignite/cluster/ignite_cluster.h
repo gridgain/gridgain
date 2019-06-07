@@ -61,11 +61,11 @@ namespace ignite
             void SetActive(bool active);
 
             /**
-             * Gets an underlying cluster group object.
+             * Gets cluster group consisting of all cluster nodes.
              *
              * @return ClusterGroup instance.
              */
-            cluster::ClusterGroup ForAll();
+            cluster::ClusterGroup AsClusterGroup();
 
         private:
             common::concurrent::SharedPointer<ignite::impl::cluster::IgniteClusterImpl> impl;

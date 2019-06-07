@@ -198,6 +198,7 @@ namespace ignite
                     int cnt = reader.ReadInt32();
 
                     SP_ClusterNodes newNodes(new std::vector<ClusterNode>());
+                    newNodes.Get()->reserve(cnt);
                     for (int i = 0; i < cnt; i++)
                     {
                         SP_ClusterNodeImpl impl = GetEnvironment().GetNode(reader.ReadGuid());
@@ -206,8 +207,6 @@ namespace ignite
                     }
 
                     nodes = newNodes;
-
-                    return *nodes.Get();
                 }
 
                 return *nodes.Get();
