@@ -18,8 +18,6 @@ package org.apache.ignite.console.web.socket;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Set;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.ignite.console.dto.Account;
@@ -49,9 +47,6 @@ import static org.apache.ignite.console.websocket.WebSocketEvents.CLUSTER_TOPOLO
 public class AgentsHandler extends AbstractHandler {
     /** */
     private static final Logger log = LoggerFactory.getLogger(AgentsHandler.class);
-
-    /** */
-    private Map<String, String> supportedAgents = new HashMap<>();
 
     /** */
     private AccountsRepository accRepo;
