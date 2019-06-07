@@ -34,6 +34,7 @@
 #include "ignite/date.h"
 #include "ignite/timestamp.h"
 #include "ignite/time.h"
+#include "ignite/binary/binary_enum.h"
 
 namespace ignite
 {
@@ -878,6 +879,33 @@ namespace ignite
                 }
 
                 /**
+                 * Read enum value.
+                 *
+                 * @return Enum value.
+                 */
+                template<typename T>
+                T ReadEnum()
+                {
+                    ignite::binary::BinaryEnumEntry entry = ReadBinaryEnum();
+
+                    return DeserializeEnumEntry<T>(entry);
+                }
+
+                /**
+                 * Read enum value.
+                 *
+                 * @param fieldName Field name.
+                 * @return Enum value.
+                 */
+                template<typename T>
+                T ReadEnum(const char* fieldName)
+                {
+                    ignite::binary::BinaryEnumEntry entry = ReadBinaryEnum(fieldName);
+
+                    return DeserializeEnumEntry<T>(entry);
+                }
+
+                /**
                  * Try read object.
                  * Reads value, stores it to res and returns true if the value is
                  * not null. Otherwise just returns false.
@@ -1121,6 +1149,36 @@ namespace ignite
                 BinaryOffsetType::Type schemaType;
 
                 IGNITE_NO_COPY_ASSIGNMENT(BinaryReaderImpl)
+
+                /**
+                 * Deserialize EnumEntry into user type.
+                 *
+                 * @param entry Entry to deserialize.
+                 * @return User type value.
+                 */
+                template<typename T>
+                T DeserializeEnumEntry(ignite::binary::BinaryEnumEntry entry)
+                {
+                    typedef ignite::binary::BinaryEnum<T> TypeMeta;
+
+                    if (entry.IsNull())
+                    {
+                        T res;
+
+                        TypeMeta::GetNull(res);
+
+                        return res;
+                    }
+
+                    if (entry.GetTypeId() != TypeMeta::GetTypeId())
+                    {
+                        IGNITE_ERROR_FORMATTED_2(ignite::IgniteError::IGNITE_ERR_BINARY,
+                            "Unexpected type ID during deserialization of the enum: ",
+                            "expected", TypeMeta::GetTypeId(), "actual", entry.GetTypeId());
+                    }
+
+                    return TypeMeta::FromOrdinal(entry.GetOrdinal());
+                }
                     
                 /**
                  * Internal routine to read Guid array.

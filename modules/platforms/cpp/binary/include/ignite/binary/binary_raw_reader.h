@@ -458,6 +458,17 @@ namespace ignite
             }
 
             /**
+             * Read enum value.
+             *
+             * @return Enum value.
+             */
+            template<typename T>
+            T ReadEnum()
+            {
+                return impl->ReadEnum<T>();
+            }
+
+            /**
              * Try read object.
              * Reads value, stores it to res and returns true if the value is
              * not null. Otherwise just returns false.

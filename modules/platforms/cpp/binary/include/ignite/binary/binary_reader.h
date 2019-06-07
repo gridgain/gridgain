@@ -479,6 +479,17 @@ namespace ignite
             }
 
             /**
+             * Read enum value.
+             *
+             * @return Enum value.
+             */
+            template<typename T>
+            T ReadEnum(const char* fieldName)
+            {
+                return impl->ReadEnum<T>(fieldName);
+            }
+
+            /**
              * Get raw reader for this reader.
              *
              * @return Raw reader.
