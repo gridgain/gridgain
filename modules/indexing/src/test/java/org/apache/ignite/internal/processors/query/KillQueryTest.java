@@ -662,13 +662,15 @@ public class KillQueryTest extends GridCommonAbstractTest {
     public void testCancelDistributeJoin() throws Exception {
         IgniteInternalFuture cancelRes = cancel(1, asyncCancel);
 
+        final int ROWS_ALLOWED_TO_PROCESS_AFTER_CANCEL = (int)(MAX_ROWS * 0.8);
+
         GridTestUtils.assertThrows(log, () -> {
             ignite.cache(DEFAULT_CACHE_NAME).query(
                 new SqlFieldsQuery("SELECT p1.rec_id, p1.id, p2.rec_id " +
                     "FROM PERS1.Person p1 JOIN PERS2.Person p2 " +
                     "ON p1.id = p2.id " +
-                    "AND awaitLatchCancelled() = 0" +
-                    "")
+                    "AND shouldNotBeCalledMoreThan(" + ROWS_ALLOWED_TO_PROCESS_AFTER_CANCEL + ")" +
+                    "AND awaitLatchCancelled() = 0")
                     .setDistributedJoins(true)
             ).getAll();
 
