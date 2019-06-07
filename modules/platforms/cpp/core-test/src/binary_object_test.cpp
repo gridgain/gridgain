@@ -20,6 +20,9 @@
 #include <ignite/common/fixed_size_array.h>
 #include <ignite/binary/binary_object.h>
 #include <ignite/binary/binary_writer.h>
+#include <ignite/binary/binary_enum.h>
+#include <ignite/binary/binary_enum_entry.h>
+#include <ignite/ignition.h>
 
 #include "ignite/binary_test_defs.h"
 #include "ignite/test_type.h"
@@ -386,6 +389,44 @@ BOOST_AUTO_TEST_CASE(GetEnumValueInvalid)
     BinaryObjectImpl binObj(mem, 0, &resolver, 0);
 
     BOOST_CHECK_THROW(binObj.GetEnumValue(), IgniteError);
+}
+
+void CheckBinaryEnumEntry(int32_t typeId, int32_t ordinal)
+{
+    InteropUnpooledMemory mem(1024);
+    InteropOutputStream outStream(&mem);
+    BinaryWriterImpl writer(&outStream, 0);
+
+    BinaryEnumEntry original(typeId, ordinal);
+
+    writer.WriteBinaryEnum(original);
+
+    outStream.Synchronize();
+
+    InteropInputStream inStream(&mem);
+    BinaryReaderImpl reader(&inStream);
+
+    BinaryEnumEntry result = reader.ReadBinaryEnum();
+
+    if (original.IsNull())
+    {
+        BOOST_CHECK(result.IsNull());
+
+        return;
+    }
+
+    BOOST_CHECK_EQUAL(original.GetTypeId(), result.GetTypeId());
+    BOOST_CHECK_EQUAL(original.GetOrdinal(), result.GetOrdinal());
+}
+
+BOOST_AUTO_TEST_CASE(ReadWriteBinaryEnum)
+{
+    CheckBinaryEnumEntry(1234567, 42);
+    CheckBinaryEnumEntry(1234567, 1);
+    CheckBinaryEnumEntry(1, 1);
+    CheckBinaryEnumEntry(6754, 0);
+    CheckBinaryEnumEntry(0, 0);
+    CheckBinaryEnumEntry(0, 1);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

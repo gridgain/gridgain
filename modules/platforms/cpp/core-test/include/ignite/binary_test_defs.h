@@ -129,6 +129,17 @@ namespace ignite_test
                     return new DummyIdResolver();
                 }
             };
+
+            enum TestEnum
+            {
+                TEST_ZERO,
+
+                TEST_NON_ZERO,
+
+                TEST_NEGATIVE_42 = -42,
+
+                TEST_SOME_BIG = 1241267,
+            };
         }
     }
 }
@@ -298,6 +309,13 @@ namespace ignite
                 dst.val1 = rawReader.ReadString();
                 dst.val2 = rawReader.ReadInt32();
             }
+        };
+
+        template<>
+        struct BinaryEnum<ignite_test::core::binary::TestEnum> :
+            BinaryEnumDefaultAll<ignite_test::core::binary::TestEnum>
+        {
+            // Empty;
         };
     }
 }

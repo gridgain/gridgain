@@ -16,7 +16,7 @@
 
 /**
  * @file
- * Declares ignite::binary::BinaryEnum class template and helping macros
+ * Declares ignite::binary::BinaryEnum class template and helping classes
  * to declare enum type specialization for user types.
  */
 
@@ -50,13 +50,13 @@ namespace ignite
          * implemented by a user directly.
          */
         template<typename T>
-        struct IGNITE_IMPORT_EXPORT BinaryEnum { };
+        struct BinaryEnum { };
 
         /**
          * Default implementations of BinaryEnum.
          */
         template<typename T>
-        struct IGNITE_IMPORT_EXPORT BinaryEnumDefault
+        struct BinaryEnumDefault
         {
             /**
              * Get type ID for the enum type.
@@ -96,7 +96,7 @@ namespace ignite
          * Default implementations of BinaryType hashing functions and non-null type behaviour.
          */
         template<typename T>
-        struct IGNITE_IMPORT_EXPORT BinaryEnumDefaultAll :
+        struct BinaryEnumDefaultAll :
             BinaryEnumDefault<T>,
             BinaryTypeNonNullableType<T> { };
 
