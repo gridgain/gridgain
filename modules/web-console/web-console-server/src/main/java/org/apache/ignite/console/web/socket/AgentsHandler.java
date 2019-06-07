@@ -75,7 +75,6 @@ public class AgentsHandler extends AbstractHandler {
         if (F.isEmpty(req.getTokens()))
             throw new IllegalArgumentException("Tokens not set. Please reload agent or check settings.");
 
-        // TODO GG-18524 Implement version check in beta3 stage.
         if (!SUPPORTED_VERS.contains(req.getVersion()))
             throw new IllegalArgumentException("You are using an older version of the agent. Please reload agent.");
     }
