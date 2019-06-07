@@ -28,7 +28,7 @@ import static org.apache.ignite.console.utils.Utils.toJson;
 /**
  * Test for Jackson serialization/deserialization.
  */
-public class JsonTests {
+public class SerializationTests {
     /**
      * Test with agent handshake error object.
      */
