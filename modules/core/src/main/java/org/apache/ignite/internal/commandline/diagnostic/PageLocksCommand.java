@@ -137,12 +137,8 @@ public class PageLocksCommand implements Command<PageLocksCommand.Args> {
                         case "--path":
                             argIter.nextArg("");
 
-                            String path = argIter.nextArg("").toLowerCase();
+                            filePath = argIter.nextArg("").toLowerCase();
 
-                            if (new File(path).isDirectory())
-                                filePath = path;
-                            else
-                                throw new IllegalStateException("Incorrect path to directory, path=" + path);
                             break;
                         default:
                             break loop;
