@@ -230,9 +230,9 @@ public class KillQueryTest extends GridCommonAbstractTest {
      * size of such join (with eq condition) is {@link #MAX_ROWS} rows.
      *
      * @param cacheName name of the created cache.
-     * @param idx cache index.
+     * @param shift integer to avoid collocation, put different value for the different caches.
      */
-    private void createJoinCache(String cacheName, int idx) {
+    private void createJoinCache(String cacheName, int shift) {
         CacheConfiguration<Long, Person> ccfg = GridAbstractTest.defaultCacheConfiguration();
 
         ccfg.setName(cacheName);
@@ -258,7 +258,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
 
             for (int recordId = 0; recordId < MAX_ROWS; recordId++) {
                 // If two caches has the same PK, FK fields ("id") will be different.
-                int intTabIdFK = (recordId + idx) % MAX_ROWS;
+                int intTabIdFK = (recordId + shift) % MAX_ROWS;
 
                 ds.addData(recordId,
                     new Person(intTabIdFK,
@@ -652,7 +652,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
             ).getAll();
 
             return null;
-        }, IgniteException.class, "The query was cancelled while executing.");
+        }, CacheException.class, "The query was cancelled while executing.");
 
         // Ensures that there were no exceptions within async cancellation process.
         cancelRes.get(CHECK_RESULT_TIMEOUT);
