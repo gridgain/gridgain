@@ -540,7 +540,7 @@ public class ZookeeperDiscoveryCommunicationFailureTest extends ZookeeperDiscove
      * Test verifies scenario when communication connectivity is broken between one client node
      * and the rest of the cluster.
      *
-     * In that case client node should be shut down but the default {@link CommunicationFailureResolver}.
+     * In that case client node should be shut down by the default {@link CommunicationFailureResolver}.
      *
      * @throws Exception If failed.
      */
