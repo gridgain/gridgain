@@ -1681,7 +1681,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
     /**
      * @param ignite Ignite.
      * @param cacheFilter cacheFilter.
-     * @param dump whether idle_verify should be launched with dump option or not
+     * @param dump Whether idle_verify should be launched with dump option or not.
      */
     private void corruptingAndCheckDefaultCache(IgniteEx ignite, String cacheFilter, boolean dump) throws IOException {
         injectTestSystemOut();
