@@ -19,7 +19,6 @@ package org.apache.ignite.internal.processors.platform.client;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.binary.BinaryRawReader;
 
 /**
@@ -50,11 +49,11 @@ public class ThinClientCustomQueryRegistry {
      * Registers processor.
      *
      * @param processor Custom query processor.
+     * @return True if processor registered successfully, false if such processor had registered already.
      */
-    public static void register(CustomQueryProcessor processor) {
+    public static boolean registerIfAbsent(CustomQueryProcessor processor) {
         String processorId = processor.id();
-        if (processors.putIfAbsent(processorId, processor) != null)
-            throw new IgniteException("Processor is already registered [id=" + processorId + "]");
+        return processors.putIfAbsent(processorId, processor) == null;
     }
 
     /**

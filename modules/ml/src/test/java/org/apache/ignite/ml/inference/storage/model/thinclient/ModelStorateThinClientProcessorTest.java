@@ -120,7 +120,7 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
         ms = new DefaultModelStorage(new IgniteModelStorageProvider(cache));
         msp = new ModelStorateThinClientProcessor(ms);
 
-        ThinClientCustomQueryRegistry.register(msp);
+        ThinClientCustomQueryRegistry.registerIfAbsent(msp);
 
         ms.mkdirs(pathToFile1);
         ms.putFile(pathToFile1, file1);
@@ -391,7 +391,7 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
 
     /** */
     @Test
-    public void testRemoveDirectory() {
+    public void testRemoveNonEmptyDirectory() {
         long reqId = 13;
 
         String path1 = "/a/b/test_dir/to_remove_1";
@@ -404,13 +404,28 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
         message.writeString("/a/b/test_dir");
         ClientCustomQueryRequest req = new ClientCustomQueryRequest(toReader(message));
         ClientResponse resp = req.process(connCtx);
+        assertEquals(ClientStatus.FAILED, resp.status()); // error
+        assertFalse(resp.error().isEmpty());
+    }
+
+    /** */
+    @Test
+    public void testRemoveEmptyDirectory() {
+        long reqId = 13;
+
+        ms.mkdirs("/a/b/test_dir");
+
+        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID, ModelStorateThinClientProcessor.Method.REMOVE);
+        message.writeString("/a/b/test_dir");
+        ClientCustomQueryRequest req = new ClientCustomQueryRequest(toReader(message));
+        ClientResponse resp = req.process(connCtx);
+
         BinaryRawWriterEx out = createWriter();
         resp.encode(connCtx, out);
         byte[] result = out.out().arrayCopy();
 
-        assertFalse(ms.exists(path1));
-        assertFalse(ms.exists(path2));
         assertFalse(ms.exists("/a/b/test_dir"));
+        assertTrue(ms.exists("/a/b"));
         assertArrayEquals(getExpectedMessageHeader(reqId).out().arrayCopy(), result);
     }
 

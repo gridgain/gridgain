@@ -16,6 +16,7 @@
 
 package org.apache.ignite.ml.inference.storage.model.thinclient;
 
+import java.util.Arrays;
 import java.util.Set;
 import org.apache.ignite.binary.BinaryRawReader;
 import org.apache.ignite.internal.processors.platform.client.ClientBooleanResponse;
@@ -31,15 +32,15 @@ public class ModelStorateThinClientProcessor implements CustomQueryProcessor {
      * Operations of model storage for GGFS client.
      */
     public enum Method {
-        /** */ WRITE_FILE(0),
-        /** */ READ_FILE(1),
-        /** */ MOVE(2),
-        /** */ STAT(3),
-        /** */ EXISTS(4),
-        /** */ REMOVE(5),
-        /** */ MKDIR(6),
-        /** */ MKDIRS(7),
-        /** */ LIST_FILES(8);
+        /** */WRITE_FILE(0),
+        /** */READ_FILE(1),
+        /** */MOVE(2),
+        /** */STAT(3),
+        /** */EXISTS(4),
+        /** */REMOVE(5),
+        /** */MKDIR(6),
+        /** */MKDIRS(7),
+        /** */LIST_FILES(8);
 
         /** Operaion id. */
         private final int id;
@@ -72,7 +73,7 @@ public class ModelStorateThinClientProcessor implements CustomQueryProcessor {
          * @return Id of method.
          */
         public byte id() {
-            return (byte) id;
+            return (byte)id;
         }
     }
 
@@ -170,7 +171,7 @@ public class ModelStorateThinClientProcessor implements CustomQueryProcessor {
             if (!modelStorage.exists(path))
                 return error(reqId, "File not found [path=" + path + "]");
 
-            if(!modelStorage.isFile(path))
+            if (!modelStorage.isFile(path))
                 return error(reqId, "File is not regular file [path" + path + "]");
 
             return new FileRespose(reqId, modelStorage.getFile(path));
@@ -188,6 +189,14 @@ public class ModelStorateThinClientProcessor implements CustomQueryProcessor {
         String from = reader.readString();
         String to = reader.readString();
 
+        String[] pathsToLock = new String[] {from, to};
+        Arrays.sort(pathsToLock, (s1, s2) -> {
+            if (s1.length() == s2.length())
+                return s1.compareTo(s2);
+            else
+                return Integer.compare(s1.length(), s2.length());
+        });
+
         return modelStorage.lockPaths(() -> {
             if (!modelStorage.exists(from))
                 return error(reqId, "File not found [path=" + from + "]");
@@ -200,7 +209,7 @@ public class ModelStorateThinClientProcessor implements CustomQueryProcessor {
             modelStorage.remove(from);
             modelStorage.putFile(to, file);
             return new ClientResponse(reqId);
-        }, from, to);
+        }, pathsToLock);
     }
 
     /**
@@ -245,7 +254,12 @@ public class ModelStorateThinClientProcessor implements CustomQueryProcessor {
 
         return modelStorage.lockPaths(() -> {
             if (modelStorage.exists(path))
-                modelStorage.remove(path);
+                try {
+                    modelStorage.remove(path);
+                }
+                catch (IllegalArgumentException e) {
+                    return error(reqId, "Cannot delete non-empty directory [path= " + path + "]");
+                }
 
             return new ClientResponse(reqId);
         }, path);

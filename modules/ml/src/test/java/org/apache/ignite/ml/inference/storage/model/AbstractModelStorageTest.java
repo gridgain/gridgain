@@ -104,8 +104,8 @@ public abstract class AbstractModelStorageTest {
     }
 
     /** */
-    @Test
-    public void testRemoveDirectory() {
+    @Test(expected = IllegalArgumentException.class)
+    public void testRemoveNonEmptyDirectory() {
         ModelStorage mdlStorage = getModelStorage();
 
         mdlStorage.mkdirs("/a/b/c");
@@ -115,15 +115,31 @@ public abstract class AbstractModelStorageTest {
         mdlStorage.putFile("/a/b/test", new byte[0]);
 
         mdlStorage.remove("/a/b");
+    }
+
+    @Test
+    public void testRemoveEmptyDirectory() {
+        ModelStorage mdlStorage = getModelStorage();
+
+        mdlStorage.mkdirs("/a/b/c");
+        mdlStorage.mkdirs("/a/b/d");
+        mdlStorage.mkdirs("/a/c");
+        mdlStorage.putFile("/a/b/c/test", new byte[0]);
+        mdlStorage.putFile("/a/b/test", new byte[0]);
+
+        mdlStorage.remove("/a/b/c/test");
+        mdlStorage.remove("/a/b/c");
+        mdlStorage.remove("/a/b/d");
+        mdlStorage.remove("/a/b/test");
+        mdlStorage.remove("/a/b");
 
         assertFalse(mdlStorage.exists("/a/b"));
         assertFalse(mdlStorage.exists("/a/b/c"));
         assertFalse(mdlStorage.exists("/a/b/d"));
-        assertFalse(mdlStorage.exists("/a/b/test"));
         assertFalse(mdlStorage.exists("/a/b/c/test"));
-
+        assertFalse(mdlStorage.exists("/a/b/test"));
         assertTrue(mdlStorage.exists("/a"));
-        assertTrue(mdlStorage.exists("/a/c"));
+
     }
 
     /** */

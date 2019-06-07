@@ -219,13 +219,13 @@ public class DefaultModelStorage implements ModelStorage {
 
         synchronize(() -> {
             FileOrDirectory file = storageProvider.get(path);
-            storageProvider.remove(path);
-
-            if (file.isDirectory()) {
-                for (String s : ((Directory)file).getFiles())
-                    remove(s);
+            if(file.isDirectory()) {
+                Directory dir = (Directory) file;
+                if(!dir.getFiles().isEmpty())
+                    throw new IllegalArgumentException("Cannot delete non-empty directory [path=" + path + "]");
             }
 
+            storageProvider.remove(path);
             Directory parent = (Directory)storageProvider.get(parentPath);
             if (parent != null) {
                 parent.getFiles().remove(path);
