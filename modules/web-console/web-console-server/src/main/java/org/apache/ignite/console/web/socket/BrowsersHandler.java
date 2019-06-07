@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.json.JsonArray;
 import org.apache.ignite.console.json.JsonObject;
@@ -263,6 +264,8 @@ public class BrowsersHandler extends AbstractHandler {
 
         if (!F.isEmpty(args))
             args.forEach(arg -> exeParams.put("p" + idx.getAndIncrement(), arg));
+
+        Stream.of("user", "password", "sessionToken").forEach(p -> exeParams.add(p, params.get(p)));
 
         payload.put("params", exeParams);
 

@@ -297,7 +297,7 @@ public class WebSocketRouter implements AutoCloseable {
             log.info("Successful handshake with server.");
         }
         else {
-            log.error(res.getError());
+            log.error(res.getError() + " Please reload agent or check settings.");
 
             closeLatch.countDown();
         }

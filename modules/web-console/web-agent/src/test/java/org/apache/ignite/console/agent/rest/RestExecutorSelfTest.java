@@ -70,6 +70,9 @@ public class RestExecutorSelfTest {
     private static final String JETTY_WITH_SSL = "jetty-with-ssl.xml";
 
     /** */
+    private static final String JETTY_WITH_HTTPS = "jetty-with-https.xml";
+
+    /** */
     private static final String JETTY_WITH_CIPHERS_0 = "jetty-with-ciphers-0.xml";
 
     /** */
@@ -164,6 +167,7 @@ public class RestExecutorSelfTest {
      * @param uri Node URI.
      * @param keyStore Key store.
      * @param keyStorePwd Key store password.
+     * @param trustAll Whether to trust all certificates.
      * @param trustStore Trust store.
      * @param trustStorePwd Trust store password.
      * @param cipherSuites Cipher suites.
@@ -174,6 +178,7 @@ public class RestExecutorSelfTest {
         String uri,
         String keyStore,
         String keyStorePwd,
+        boolean trustAll,
         String trustStore,
         String trustStorePwd,
         List<String> cipherSuites
@@ -182,7 +187,7 @@ public class RestExecutorSelfTest {
             RestExecutor exec = new RestExecutor(sslContextFactory(
                 keyStore,
                 keyStorePwd,
-                false,
+                trustAll,
                 trustStore,
                 trustStorePwd,
                 cipherSuites
@@ -215,6 +220,7 @@ public class RestExecutorSelfTest {
             nodeConfiguration(""),
             HTTP_URI,
             null, null,
+            false,
             null, null,
             null
         );
@@ -228,6 +234,7 @@ public class RestExecutorSelfTest {
             nodeConfiguration(""),
             HTTPS_URI,
             resolvePath("client.jks"), "123456",
+            false,
             resolvePath("ca.jks"), "123456",
             null
         );
@@ -241,6 +248,7 @@ public class RestExecutorSelfTest {
             nodeConfiguration(JETTY_WITH_SSL),
             HTTP_URI,
             null, null,
+            false,
             null, null,
             null
         );
@@ -253,6 +261,7 @@ public class RestExecutorSelfTest {
             nodeConfiguration(JETTY_WITH_SSL),
             HTTPS_URI,
             resolvePath("client.jks"), "123456",
+            false,
             resolvePath("ca.jks"), "123456",
             null
         );
@@ -266,6 +275,7 @@ public class RestExecutorSelfTest {
             nodeConfiguration(JETTY_WITH_SSL),
             HTTPS_URI,
             resolvePath("client.jks"), "123456",
+            false,
             resolvePath("ca.jks"), "123456",
             CIPHER_0
         );
@@ -279,6 +289,7 @@ public class RestExecutorSelfTest {
             nodeConfiguration(JETTY_WITH_CIPHERS_0),
             HTTPS_URI,
             resolvePath("client.jks"), "123456",
+            false,
             resolvePath("ca.jks"), "123456",
             null
         );
@@ -291,6 +302,7 @@ public class RestExecutorSelfTest {
             nodeConfiguration(JETTY_WITH_CIPHERS_1),
             HTTPS_URI,
             resolvePath("client.jks"), "123456",
+            false,
             resolvePath("ca.jks"), "123456",
             CIPHER_1
         );
@@ -304,6 +316,7 @@ public class RestExecutorSelfTest {
             nodeConfiguration(JETTY_WITH_CIPHERS_1),
             HTTPS_URI,
             resolvePath("client.jks"), "123456",
+            false,
             resolvePath("ca.jks"), "123456",
             CIPHER_2
         );
@@ -317,6 +330,7 @@ public class RestExecutorSelfTest {
             nodeConfiguration(JETTY_WITH_CIPHERS_2),
             HTTPS_URI,
             resolvePath("client.jks"), "123456",
+            false,
             resolvePath("ca.jks"), "123456",
             CIPHER_1
         );
@@ -329,8 +343,24 @@ public class RestExecutorSelfTest {
             nodeConfiguration(JETTY_WITH_CIPHERS_1),
             HTTPS_URI,
             resolvePath("client.jks"), "123456",
+            false,
             resolvePath("ca.jks"), "123456",
             COMMON_CIPHERS
         );
+   }
+
+    /** */
+    @Test
+   public void testHttps() throws Throwable {
+       checkRest(
+           nodeConfiguration(JETTY_WITH_HTTPS),
+           HTTPS_URI,
+           null,
+           null,
+           true,
+           null,
+           null,
+           null
+       );
    }
 }

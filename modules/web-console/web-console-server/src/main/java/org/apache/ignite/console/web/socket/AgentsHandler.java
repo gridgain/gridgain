@@ -18,8 +18,6 @@ package org.apache.ignite.console.web.socket;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Set;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.ignite.console.dto.Account;
@@ -51,9 +49,6 @@ public class AgentsHandler extends AbstractHandler {
     private static final Logger log = LoggerFactory.getLogger(AgentsHandler.class);
 
     /** */
-    private Map<String, String> supportedAgents = new HashMap<>();
-
-    /** */
     private AccountsRepository accRepo;
 
     /** */
@@ -73,11 +68,10 @@ public class AgentsHandler extends AbstractHandler {
      */
     private void validateAgentHandshake(AgentHandshakeRequest req) {
         if (F.isEmpty(req.getTokens()))
-            throw new IllegalArgumentException("Tokens not set. Please reload agent or check settings.");
+            throw new IllegalArgumentException("Tokens not set.");
 
-        // TODO GG-18524 Implement version check in beta3 stage.
         if (!SUPPORTED_VERS.contains(req.getVersion()))
-            throw new IllegalArgumentException("You are using an older version of the agent. Please reload agent.");
+            throw new IllegalArgumentException("Unsupported version of the agent.");
     }
 
     /**
@@ -86,10 +80,8 @@ public class AgentsHandler extends AbstractHandler {
     private Collection<Account> loadAccounts(Set<String> tokens) {
         Collection<Account> accounts = accRepo.getAllByTokens(tokens);
 
-        if (accounts.isEmpty()) {
-            throw new IllegalArgumentException("Failed to authenticate with token(s): " + tokens + ". " +
-                "Please reload agent or check settings.");
-        }
+        if (accounts.isEmpty())
+            throw new IllegalArgumentException("Failed to authenticate with token(s): " + tokens + ".");
 
         return accounts;
     }
@@ -110,6 +102,13 @@ public class AgentsHandler extends AbstractHandler {
                     wsm.onAgentConnect(ws, mapToSet(accounts, Account::getId));
 
                     log.info("Agent connected: " + req);
+                }
+                catch (IllegalArgumentException e) {
+                    log.warn("Failed to establish connection in handshake. " + e.getMessage());
+
+                    sendResponse(ws, evt, new AgentHandshakeResponse(e));
+
+                    ws.close();
                 }
                 catch (Exception e) {
                     log.warn("Failed to establish connection in handshake: " + evt, e);
