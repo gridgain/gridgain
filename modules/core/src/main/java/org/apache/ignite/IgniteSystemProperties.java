@@ -1204,6 +1204,13 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE = "IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE";
 
     /**
+     * Defines default memory reservatio block size.
+     *
+     * Default: 128K.
+     */
+    public static final String IGNITE_DEFAULT_SQL_MEMORY_BLOCK_SIZE = "IGNITE_DEFAULT_SQL_MEMORY_BLOCK_SIZE";
+
+    /**
      * Page lock tracker type.
      * -1 - Disable lock tracking.
      *  1 - HEAP_STACK

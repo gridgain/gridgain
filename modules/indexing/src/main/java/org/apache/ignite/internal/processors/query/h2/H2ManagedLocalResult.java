@@ -31,7 +31,7 @@ public class H2ManagedLocalResult extends H2BaseLocalResult {
     private H2MemoryTracker mem;
 
     /** Reserved memory. */
-    private long reserved;
+    private long memReserved;
 
     /**
      * Constructor.
@@ -78,12 +78,12 @@ public class H2ManagedLocalResult extends H2BaseLocalResult {
         else
             mem.reserve(memory);
 
-        reserved += memory;
+        memReserved += memory;
     }
 
     /** */
     public long memoryReserved() {
-        return reserved;
+        return memReserved;
     }
 
     /** {@inheritDoc} */
@@ -108,6 +108,6 @@ public class H2ManagedLocalResult extends H2BaseLocalResult {
         distinctRows = null;
         rows = null;
 
-        mem.release(reserved);
+        mem.release(memReserved);
     }
 }

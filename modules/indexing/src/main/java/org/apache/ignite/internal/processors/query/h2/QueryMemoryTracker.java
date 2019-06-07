@@ -28,7 +28,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  * Track query memory usage and throws an exception if query tries to allocate memory over limit.
  */
 public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable {
-    /** Allocated field updater. */
+    /** Resered field updater. */
     private static final AtomicLongFieldUpdater<QueryMemoryTracker> RESERVED_UPD =
         AtomicLongFieldUpdater.newUpdater(QueryMemoryTracker.class, "reserved");
 
@@ -36,13 +36,19 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
     private static final AtomicReferenceFieldUpdater<QueryMemoryTracker, Boolean> CLOSED_UPD =
         AtomicReferenceFieldUpdater.newUpdater(QueryMemoryTracker.class, Boolean.class, "closed");
 
-    /** Memory limit. */
-    private final long maxMem;
-
     /** Parent tracker. */
     private final H2MemoryTracker parent;
 
-    /** Memory reserved. */
+    /** Query memory limit. */
+    private final long maxMem;
+
+    /** Reservation block size. */
+    private final long blockSize;
+
+    /** Memory reserved on parent. */
+    private volatile long reservedFromParent;
+
+    /** Memory reserved by query. */
     private volatile long reserved;
 
     /** Close flag to prevent tracker reuse. */
@@ -53,12 +59,14 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
      *
      * @param parent Parent memory tracker.
      * @param maxMem Query memory limit in bytes.
+     * @param blockSize Reservation block size.
      */
-    QueryMemoryTracker(H2MemoryTracker parent, long maxMem) {
+    QueryMemoryTracker(H2MemoryTracker parent, long maxMem, long blockSize) {
         assert maxMem > 0;
 
         this.parent = parent;
         this.maxMem = maxMem;
+        this.blockSize = blockSize;
     }
 
     /** {@inheritDoc} */
@@ -68,7 +76,7 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
         if (size == 0)
             return;
 
-        RESERVED_UPD.accumulateAndGet(this, size, (prev, x) -> {
+        long reserved0 = RESERVED_UPD.accumulateAndGet(this, size, (prev, x) -> {
             if (prev + x > maxMem) {
                 throw new IgniteSQLException("SQL query run out of memory: Query quota exceeded. " + x,
                     IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY);
@@ -77,16 +85,27 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
             return prev + x;
         });
 
-        //TODO: GG-18840: Let's make this reservation coarse-grained.
-        //TODO: GG-18840: Let's make this reservation coarse-grained.
-        if (parent != null) {
-            try {
-                parent.reserve(size);
-            }
-            catch (Throwable e) {
-                RESERVED_UPD.addAndGet(this, -size);
+        if (parent != null && reserved0 > reservedFromParent) {
+            synchronized (this) {
+                if (reserved0 <= reservedFromParent)
+                    return;
 
-                throw e;
+                // If single block size is too small.
+                long blockSize = Math.max(reserved0 - reservedFromParent, this.blockSize);
+                // If we are too close to limit.
+                blockSize = Math.min(blockSize, maxMem - reservedFromParent);
+
+                try {
+                    parent.reserve(blockSize);
+
+                    reservedFromParent += blockSize;
+                }
+                catch (Throwable e) {
+                    // Fallback if failed to reserve.
+                    RESERVED_UPD.addAndGet(this, -size);
+
+                    throw e;
+                }
             }
         }
     }
@@ -108,15 +127,16 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
 
         assert !closed && reserved >= 0 || reserved == 0 : "Invalid reserved memory size:" + reserved;
 
-        if (parent != null)
-            parent.release(size);
-    }
+        // For now, won'tQ release memory to parent until tracker closed.
+       /* if (parent != null && preAllocated - reserved >= 2 * blockSize) {
+            synchronized (this) {
+                if (preAllocated - reserved >= 2 * blockSize) {
+                    parent.release(blockSize);
 
-    /**
-     * @return Memory reserved by tracker.
-     */
-    public long memoryReserved() {
-        return RESERVED_UPD.get(this);
+                    preAllocated -= blockSize;
+                }
+            }
+        }*/
     }
 
     /**
@@ -130,8 +150,12 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
     @Override public void close() {
         // It is not expected to be called concurrently with reserve\release.
         // But query can be cancelled concurrently on query finish.
-        if (CLOSED_UPD.compareAndSet(this, Boolean.FALSE, Boolean.TRUE))
-            release(RESERVED_UPD.get(this));
+        if (CLOSED_UPD.compareAndSet(this, Boolean.FALSE, Boolean.TRUE)) {
+            release(reserved);
+
+            if (parent != null)
+                parent.release(reservedFromParent);
+        }
     }
 
     /** {@inheritDoc} */

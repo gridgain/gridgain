@@ -23,10 +23,16 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 public class QueryMemoryManager extends H2MemoryTracker {
     //TODO: GG-18629: Move defaults to memory quotas configuration.
+    /**
+     * Default memory reservation block size.
+     */
+    private static final long DFLT_MEMORY_RESERVATION_BLOCK_SIZE = 128L * IgniteUtils.KB;
+
     /**
      * Default query memory limit.
      *
@@ -35,12 +41,16 @@ public class QueryMemoryManager extends H2MemoryTracker {
      */
     private final long dfltSqlQryMemoryLimit;
 
+    /** Logger. */
+    private final IgniteLogger log;
+
     /** Global query memory quota. */
     //TODO GG-18629: it looks safe to make this configurable at runtime.
     private final long globalQuota;
 
-    /** Logger. */
-    private final IgniteLogger log;
+    /** Reservation block size. */
+    //TODO GG-18629: it looks safe to make this configurable at runtime.
+    private final long blockSize;
 
     /** Memory reserved by running queries. */
     private final AtomicLong reserved = new AtomicLong();
@@ -65,6 +75,7 @@ public class QueryMemoryManager extends H2MemoryTracker {
         if (dfltSqlQryMemoryLimit == 0)
             dfltSqlQryMemoryLimit = globalQuota > 0 ? globalQuota / IgniteConfiguration.DFLT_QUERY_THREAD_POOL_SIZE : -1;
 
+        this.blockSize = Long.getLong(IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_BLOCK_SIZE, DFLT_MEMORY_RESERVATION_BLOCK_SIZE);
         this.globalQuota = globalQuota;
         this.dfltSqlQryMemoryLimit = dfltSqlQryMemoryLimit;
 
@@ -124,7 +135,9 @@ public class QueryMemoryManager extends H2MemoryTracker {
             maxQueryMemory = globalQuota;
         }
 
-        return new QueryMemoryTracker(globalQuota < 0 ? null : this, maxQueryMemory);
+        assert maxQueryMemory >= blockSize;
+
+        return new QueryMemoryTracker(globalQuota < 0 ? null : this, maxQueryMemory, blockSize);
     }
 
     /**

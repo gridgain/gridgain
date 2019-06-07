@@ -47,6 +47,7 @@ import org.h2.result.LocalResult;
 import org.junit.Test;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
+import static org.apache.ignite.internal.util.IgniteUtils.KB;
 import static org.apache.ignite.internal.util.IgniteUtils.MB;
 
 /**
@@ -74,6 +75,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
         System.setProperty(IgniteSystemProperties.IGNITE_H2_LOCAL_RESULT_FACTORY, TestH2LocalResultFactory.class.getName());
         System.setProperty(IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE, Long.toString(10L * MB));
+        System.setProperty(IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_BLOCK_SIZE, Long.toString(KB));
 
         startGrid(0);
 
@@ -92,6 +94,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     @Override protected void afterTestsStopped() throws Exception {
         stopAllGrids();
 
+        System.clearProperty(IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_BLOCK_SIZE);
         System.clearProperty(IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE);
         System.clearProperty(IgniteSystemProperties.IGNITE_H2_LOCAL_RESULT_FACTORY);
     }
@@ -474,8 +477,8 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
                 return null;
             }, CacheException.class, "SQL query run out of memory: Global quota exceeded.");
 
-            assertEquals(78, localResults.size());
-            assertEquals(40, cursors.size());
+            assertEquals(34, localResults.size());
+            assertEquals(18, cursors.size());
 
             long globallyReserved = h2.memoryManager().memoryReserved();
 

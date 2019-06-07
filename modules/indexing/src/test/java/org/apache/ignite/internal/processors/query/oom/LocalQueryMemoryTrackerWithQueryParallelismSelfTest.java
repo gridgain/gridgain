@@ -99,7 +99,7 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends Abstrac
                 return null;
             }, CacheException.class, "SQL query run out of memory: Global quota exceeded.");
 
-            assertEquals(40, cursors.size());
+            assertEquals(18, cursors.size());
 
             assertTrue(h2.memoryManager().maxMemory() < h2.memoryManager().memoryReserved() + MB);
         }
