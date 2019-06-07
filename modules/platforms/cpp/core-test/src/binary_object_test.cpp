@@ -505,5 +505,4 @@ BOOST_AUTO_TEST_CASE(ReadWriteUserEnumNullPtr)
     delete result;
 }
 
-
 BOOST_AUTO_TEST_SUITE_END()

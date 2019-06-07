@@ -143,6 +143,13 @@ namespace ignite_test
                     TEST_SOME_BIG = 1241267,
                 };
             };
+
+            struct TypeWithEnumField
+            {
+                int32_t i32Field;
+                TestEnum::Type enumField;
+                std::string strField;
+            };
         }
     }
 }
@@ -315,8 +322,7 @@ namespace ignite
         };
 
         template<>
-        struct BinaryEnum<ignite_test::core::binary::TestEnum::Type> :
-            BinaryEnumDefaultAll<ignite_test::core::binary::TestEnum::Type>
+        struct BinaryEnum<gt::TestEnum::Type> : BinaryEnumDefaultAll<gt::TestEnum::Type>
         {
             /**
              * Get binary object type name.
@@ -326,6 +332,29 @@ namespace ignite
             static void GetTypeName(std::string& dst)
             {
                 dst = "TestEnum";
+            }
+        };
+
+        template<>
+        struct BinaryType<gt::TypeWithEnumField> : BinaryTypeDefaultAll<gt::TypeWithEnumField>
+        {
+            static void GetTypeName(std::string& dst)
+            {
+                dst = "TypeWithEnumField";
+            }
+
+            static void Write(BinaryWriter& writer, const gt::TypeWithEnumField& obj)
+            {
+                writer.WriteInt32("i32Field", obj.i32Field);
+                writer.WriteEnum("enumField", obj.enumField);
+                writer.WriteString("strField", obj.strField);
+            }
+
+            static void Read(BinaryReader& reader, gt::TypeWithEnumField& dst)
+            {
+                dst.i32Field = reader.ReadInt32("i32Field");
+                dst.enumField = reader.ReadEnum<gt::TestEnum::Type>("enumField");
+                dst.strField = reader.ReadString("strField");
             }
         };
     }

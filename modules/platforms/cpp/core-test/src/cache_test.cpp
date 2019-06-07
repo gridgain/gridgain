@@ -20,6 +20,7 @@
 #include "ignite/ignite.h"
 #include "ignite/ignition.h"
 #include "ignite/test_utils.h"
+#include "ignite/binary_test_defs.h"
 
 using namespace ignite;
 using namespace boost::unit_test;
@@ -94,6 +95,26 @@ struct CacheTestSuiteFixture
         grid0 = ignite_test::StartNode("cache-test.xml", "grid-0");
         grid1 = ignite_test::StartNode("cache-test.xml", "grid-1");
 #endif
+    }
+
+    void PutGetStructWithEnumField(int32_t i32Field, ignite_test::core::binary::TestEnum::Type enumField,
+        const std::string& strField)
+    {
+        typedef ignite_test::core::binary::TypeWithEnumField TypeWithEnumField;
+
+        TypeWithEnumField val;
+        val.i32Field = i32Field;
+        val.enumField = enumField;
+        val.strField = strField;
+
+        cache::Cache<int, TypeWithEnumField> cache = grid0.GetOrCreateCache<int, TypeWithEnumField>("PutGetStructWithEnumField");
+        cache.Put(i32Field, val);
+
+        TypeWithEnumField res = cache.Get(i32Field);
+
+        BOOST_CHECK_EQUAL(val.i32Field, res.i32Field);
+        BOOST_CHECK_EQUAL(val.enumField, res.enumField);
+        BOOST_CHECK_EQUAL(val.strField, res.strField);
     }
 
     /*
@@ -688,6 +709,20 @@ BOOST_AUTO_TEST_CASE(TestGetBigString)
     cache.Put(5, longStr);
 
     BOOST_REQUIRE(longStr == cache.Get(5));
+}
+
+BOOST_AUTO_TEST_CASE(TestPutGetStructWithEnumField)
+{
+    typedef ignite_test::core::binary::TestEnum TestEnum;
+
+    PutGetStructWithEnumField(0, TestEnum::TEST_ZERO, "");
+    PutGetStructWithEnumField(1, TestEnum::TEST_ZERO, "");
+    PutGetStructWithEnumField(0, TestEnum::TEST_NON_ZERO, "");
+    PutGetStructWithEnumField(0, TestEnum::TEST_ZERO, "Lorem ipsum");
+    PutGetStructWithEnumField(1, TestEnum::TEST_NON_ZERO, "Lorem ipsum");
+
+    PutGetStructWithEnumField(13, TestEnum::TEST_NEGATIVE_42, "hishib");
+    PutGetStructWithEnumField(1337, TestEnum::TEST_SOME_BIG, "Some test value");
 }
 
 BOOST_AUTO_TEST_SUITE_END()
