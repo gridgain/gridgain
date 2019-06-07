@@ -106,9 +106,7 @@ public class DiagnosticCommand implements Command<DiagnosticSubCommand> {
 
     /** {@inheritDoc} */
     @Override public void printUsage() {
-        logger.info("View diagnostic information in a cluster. For more details type:");
-        logger.info(join(" ", UTILITY_NAME, DIAGNOSTIC, HELP));
-        logger.info("\n");
+        Command.usage("View diagnostic information in a cluster:", DIAGNOSTIC);
     }
 
     /**
