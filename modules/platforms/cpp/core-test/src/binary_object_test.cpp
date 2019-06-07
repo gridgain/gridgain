@@ -485,5 +485,25 @@ BOOST_AUTO_TEST_CASE(ReadWriteUserEnumPtr)
     CheckUserEnumPtr(TestEnum::TEST_SOME_BIG);
 }
 
+BOOST_AUTO_TEST_CASE(ReadWriteUserEnumNullPtr)
+{
+    InteropUnpooledMemory mem(1024);
+    InteropOutputStream outStream(&mem);
+    BinaryWriterImpl writer(&outStream, 0);
+
+    writer.WriteEnum<TestEnum::Type*>(0);
+
+    outStream.Synchronize();
+
+    InteropInputStream inStream(&mem);
+    BinaryReaderImpl reader(&inStream);
+
+    TestEnum::Type* result = reader.ReadEnum<TestEnum::Type*>();
+
+    BOOST_CHECK(result == 0);
+
+    delete result;
+}
+
 
 BOOST_AUTO_TEST_SUITE_END()
