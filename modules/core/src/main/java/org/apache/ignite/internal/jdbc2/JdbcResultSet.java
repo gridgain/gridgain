@@ -227,7 +227,7 @@ public class JdbcResultSet implements ResultSet {
 
         // Connections from new clients send queries with new tasks, so we have to continue in the same manner
         JdbcQueryTask qryTask = JdbcQueryTaskV3.createTask(loc ? ignite : null, conn.cacheName(), conn.schemaName(),
-            null,true, loc, null, fetchSize, uuid, conn.getMaxMemory(), conn.isLocalQuery(),
+            null,true, loc, null, fetchSize, uuid, conn.getQueryMaxMemory(), conn.isLocalQuery(),
             conn.isCollocatedQuery(), conn.isDistributedJoins(), conn.isEnforceJoinOrder(), conn.isLazy(),
             updateMetadata, false);
 

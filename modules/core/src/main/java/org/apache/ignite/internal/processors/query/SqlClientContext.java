@@ -64,7 +64,7 @@ public class SqlClientContext implements AutoCloseable {
     private final @Nullable Integer updateBatchSize;
 
     /** Query memory limit.*/
-    private long maxMemory;
+    private long qryMaxMemory;
 
     /** Monitor for stream operations. */
     private final Object muxStreamer = new Object();
@@ -111,12 +111,12 @@ public class SqlClientContext implements AutoCloseable {
      * @param skipReducerOnUpdate Skip reducer on update flag.
      * @param dataPageScanEnabled Enable scan data page mode.
      * @param updateBatchSize Size of internal batch for DML queries.
-     * @param maxMemory Query memory limit.
+     * @param qryMaxMemory Query memory limit.
      */
     public SqlClientContext(GridKernalContext ctx, Factory<GridWorker> orderedBatchWorkerFactory,
         boolean distributedJoins, boolean enforceJoinOrder,
         boolean collocated, boolean replicatedOnly, boolean lazy, boolean skipReducerOnUpdate,
-        @Nullable Boolean dataPageScanEnabled, @Nullable Integer updateBatchSize, long maxMemory
+        @Nullable Boolean dataPageScanEnabled, @Nullable Integer updateBatchSize, long qryMaxMemory
         ) {
         this.ctx = ctx;
         this.orderedBatchWorkerFactory = orderedBatchWorkerFactory;
@@ -128,7 +128,7 @@ public class SqlClientContext implements AutoCloseable {
         this.skipReducerOnUpdate = skipReducerOnUpdate;
         this.dataPageScanEnabled = dataPageScanEnabled;
         this.updateBatchSize = updateBatchSize;
-        this.maxMemory = maxMemory;
+        this.qryMaxMemory = qryMaxMemory;
 
         log = ctx.log(SqlClientContext.class.getName());
     }
@@ -249,7 +249,7 @@ public class SqlClientContext implements AutoCloseable {
      * @return Query memory limit in bytes.
      */
     public long maxMemory() {
-        return maxMemory;
+        return qryMaxMemory;
     }
 
     /**

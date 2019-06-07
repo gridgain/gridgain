@@ -161,7 +161,7 @@ public class JdbcStatement implements Statement {
                 isQuery = true;
 
         JdbcQueryTask qryTask = JdbcQueryTaskV3.createTask(loc ? ignite : null, conn.cacheName(), conn.schemaName(),
-            sql, isQuery, loc, getArgs(), fetchSize, uuid, conn.getMaxMemory(), conn.isLocalQuery(), conn.isCollocatedQuery(),
+            sql, isQuery, loc, getArgs(), fetchSize, uuid, conn.getQueryMaxMemory(), conn.isLocalQuery(), conn.isCollocatedQuery(),
             conn.isDistributedJoins(), conn.isEnforceJoinOrder(), conn.isLazy(), false, conn.skipReducerOnUpdate());
 
         try {

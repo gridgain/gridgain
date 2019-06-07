@@ -212,7 +212,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
         1_000, false, 1, Integer.MAX_VALUE);
 
     /** Query memory limit. */
-    private LongProperty maxMemory = new LongProperty("maxMemory",
+    private LongProperty qryMaxMemory = new LongProperty("maxMemory",
         "Query max memory limit. Set to 0 to use default value. Set to negative value to disable memory limits.",
         0L, false, Long.MIN_VALUE, Long.MAX_VALUE);
 
@@ -230,7 +230,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
         updateBatchSize,
         affinityAwarenessSQLCacheSize,
         affinityAwarenessPartDistributionsCacheSize,
-        maxMemory
+        qryMaxMemory
     };
 
     /** {@inheritDoc} */
@@ -581,12 +581,12 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
 
     /** {@inheritDoc} */
     @Override public Long getQueryMaxMemory() {
-        return maxMemory.value();
+        return qryMaxMemory.value();
     }
 
     /** {@inheritDoc} */
     @Override public void setQueryMaxMemory(Long maxMemory) throws SQLException {
-        this.maxMemory.setValue(maxMemory);
+        this.qryMaxMemory.setValue(maxMemory);
     }
 
     /**
