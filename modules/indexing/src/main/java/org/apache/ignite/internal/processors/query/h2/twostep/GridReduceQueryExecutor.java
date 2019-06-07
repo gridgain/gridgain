@@ -391,7 +391,7 @@ public class GridReduceQueryExecutor {
             try {
                 cancel.checkCancelled();
             }
-            catch (IgniteCheckedException cancelEx) {
+            catch (QueryCancelledException cancelEx) {
                 throw new CacheException("Failed to run reduce query locally. " + cancelEx.getMessage(),  cancelEx);
             }
 
