@@ -264,6 +264,15 @@ public class BrowsersHandler extends AbstractHandler {
         if (!F.isEmpty(args))
             args.forEach(arg -> exeParams.put("p" + idx.getAndIncrement(), arg));
 
+        if (params.containsKey("user"))
+            exeParams.add("user", params.get("user"));
+
+        if (params.containsKey("password"))
+            exeParams.add("password", params.get("password"));
+
+        if (params.containsKey("sessionToken"))
+            exeParams.add("sessionToken", params.get("sessionToken"));
+
         payload.put("params", exeParams);
 
         return payload;
