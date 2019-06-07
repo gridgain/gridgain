@@ -60,7 +60,7 @@ public class ThinClientCustomQueryRegistryTest {
     /** */
     @Test
     public void testRegisterAndCall() {
-        ThinClientCustomQueryRegistry.register(qp1);
+        ThinClientCustomQueryRegistry.registerIfAbsent(qp1);
         ThinClientCustomQueryRegistry.call(0, TEST_QUERY_PROCESSOR_ID, (byte) 0, null);
         assertEquals(1, TEST_VAL.get());
     }
@@ -68,16 +68,16 @@ public class ThinClientCustomQueryRegistryTest {
     /** */
     @Test(expected = IgniteException.class)
     public void testRepeatedRegister() {
-        ThinClientCustomQueryRegistry.register(qp1);
-        ThinClientCustomQueryRegistry.register(qp2);
+        ThinClientCustomQueryRegistry.registerIfAbsent(qp1);
+        ThinClientCustomQueryRegistry.registerIfAbsent(qp2);
     }
 
     /** */
     @Test
     public void testUregister() {
-        ThinClientCustomQueryRegistry.register(qp1);
+        ThinClientCustomQueryRegistry.registerIfAbsent(qp1);
         ThinClientCustomQueryRegistry.unregister(qp1);
-        ThinClientCustomQueryRegistry.register(qp2);
+        ThinClientCustomQueryRegistry.registerIfAbsent(qp2);
         ThinClientCustomQueryRegistry.call(0, TEST_QUERY_PROCESSOR_ID, (byte) 0, null);
         assertEquals(2, TEST_VAL.get());
     }
