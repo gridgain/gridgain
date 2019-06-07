@@ -26,6 +26,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteDiagnosticAware;
 import org.apache.ignite.internal.IgniteDiagnosticPrepareContext;
+import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
@@ -353,7 +354,8 @@ public final class GridDhtTxFinishFuture<K, V> extends GridCacheCompoundIdentity
                 false,
                 false,
                 tx.mvccSnapshot(),
-                cctx.tm().txHandler().filterUpdateCountersForBackupNode(tx, n));
+                IgniteFeatures.nodeSupports(n, IgniteFeatures.TX_TRACKING_UPDATE_COUNTER) ?
+                cctx.tm().txHandler().filterUpdateCountersForBackupNode(tx, n) : null);
 
             try {
                 cctx.io().send(n, req, tx.ioPolicy());
