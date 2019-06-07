@@ -130,7 +130,10 @@ int main()
         client.GetCompute(group1).Broadcast(PrintMsg("DemoAttribute=Value0"));
         client.GetCompute(group2).Broadcast(PrintMsg("DemoAttribute=Value1"));
 
-        // Stop all.
+        // Stop client node first.
+        Ignition::Stop(client.GetName(), true);
+
+        // Stop server nodes.
         Ignition::StopAll(false);
     }
     catch (IgniteError& err)
