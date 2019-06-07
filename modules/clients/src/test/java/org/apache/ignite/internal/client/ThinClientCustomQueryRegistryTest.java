@@ -27,6 +27,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Tests for ThinClientCustomQueryRegistry.
@@ -66,10 +68,10 @@ public class ThinClientCustomQueryRegistryTest {
     }
 
     /** */
-    @Test(expected = IgniteException.class)
+    @Test
     public void testRepeatedRegister() {
-        ThinClientCustomQueryRegistry.registerIfAbsent(qp1);
-        ThinClientCustomQueryRegistry.registerIfAbsent(qp2);
+        assertTrue(ThinClientCustomQueryRegistry.registerIfAbsent(qp1));
+        assertFalse(ThinClientCustomQueryRegistry.registerIfAbsent(qp2));
     }
 
     /** */
