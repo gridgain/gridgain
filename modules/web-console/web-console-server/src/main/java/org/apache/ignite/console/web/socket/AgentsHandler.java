@@ -68,10 +68,10 @@ public class AgentsHandler extends AbstractHandler {
      */
     private void validateAgentHandshake(AgentHandshakeRequest req) {
         if (F.isEmpty(req.getTokens()))
-            throw new IllegalArgumentException("Tokens not set.");
+            throw new IllegalArgumentException("Tokens not specified in agent handshake request");
 
         if (!SUPPORTED_VERS.contains(req.getVersion()))
-            throw new IllegalArgumentException("Unsupported version of the agent.");
+            throw new IllegalArgumentException("Unsupported version of the agent: " + req.getVersion());
     }
 
     /**
@@ -81,7 +81,7 @@ public class AgentsHandler extends AbstractHandler {
         Collection<Account> accounts = accRepo.getAllByTokens(tokens);
 
         if (accounts.isEmpty())
-            throw new IllegalArgumentException("Failed to authenticate with token(s): " + tokens + ".");
+            throw new IllegalArgumentException("Failed to authenticate with token(s): " + tokens);
 
         return accounts;
     }

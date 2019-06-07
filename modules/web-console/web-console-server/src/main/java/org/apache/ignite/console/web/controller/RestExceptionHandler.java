@@ -35,16 +35,20 @@ import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
  */
 @ControllerAdvice
 public class RestExceptionHandler extends ResponseEntityExceptionHandler {
+    /** */
+    private static final int EMAIL_NOT_CONFIRMED = 10104;
+
     /**
      * Handles account disabled exceptions.
      *
-     * @param e Service exception.
+     * @param ex Service exception.
      * @param req Web request.
      * @return {@link ErrorResponse} instance with error code and message.
      */
     @ExceptionHandler(value = {MissingConfirmRegistrationException.class})
-    protected ResponseEntity<Object> handleDisabledAccountException(MissingConfirmRegistrationException e, WebRequest req) {
-        return handleExceptionInternal(e, new ErrorWithEmailResponse(10104, errorMessage(e), e.getUsername()), null, FORBIDDEN, req);
+    protected ResponseEntity<Object> handleDisabledAccountException(MissingConfirmRegistrationException ex, WebRequest req) {
+        return handleExceptionInternal(ex,
+            new ErrorWithEmailResponse(EMAIL_NOT_CONFIRMED, errorMessage(ex), ex.getUsername()), null, FORBIDDEN, req);
     }
 
     /**
