@@ -31,62 +31,56 @@ import org.jetbrains.annotations.Nullable;
 public class VisorPageLocksTrackerArgs extends IgniteDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;
-
     /** */
     private String op;
     /** */
-    private String type;
-    /** */
     private String filePath;
     /** */
-    @Nullable private Set<String> consistentIds;
+    @Nullable private Set<String> nodeIds;
 
+    /** */
     public VisorPageLocksTrackerArgs() {
 
     }
 
-    public VisorPageLocksTrackerArgs(String op, String type, String filePath, Set<String> consistentIds) {
+    /**
+     * @param op Operation.
+     * @param filePath File path.
+     * @param nodeIds Set of ids.
+     */
+    public VisorPageLocksTrackerArgs(String op, String filePath, Set<String> nodeIds) {
         this.op = op;
-        this.type = type;
         this.filePath = filePath;
-        this.consistentIds = consistentIds;
+        this.nodeIds = nodeIds;
     }
 
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         if (op == null)
-            out.writeInt(0);
+            out.writeInt(-1);
         else {
             byte[] bytes = op.getBytes();
             out.writeInt(bytes.length);
             out.write(bytes);
         }
 
-        if (type == null)
-            out.writeInt(0);
-        else {
-            byte[] bytes = type.getBytes();
-            out.writeInt(bytes.length);
-            out.write(bytes);
-        }
-
         if (filePath == null)
-            out.writeInt(0);
+            out.writeInt(-1);
         else {
             byte[] bytes = filePath.getBytes();
             out.writeInt(bytes.length);
             out.write(bytes);
         }
 
-        if (consistentIds != null)
-            U.writeCollection(out, consistentIds);
+        if (nodeIds != null)
+            U.writeCollection(out, nodeIds);
     }
 
     /** {@inheritDoc} */
     @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
         int opLenght = in.readInt();
 
-        if (opLenght != 0) {
+        if (opLenght != -1) {
             byte[] bytes = new byte[opLenght];
 
             in.read(bytes);
@@ -94,19 +88,9 @@ public class VisorPageLocksTrackerArgs extends IgniteDataTransferObject {
             op = new String(bytes);
         }
 
-        int typeLenght = in.readInt();
-
-        if (typeLenght != 0) {
-            byte[] bytes = new byte[typeLenght];
-
-            in.read(bytes);
-
-            type = new String(bytes);
-        }
-
         int filePathLenght = in.readInt();
 
-        if (filePathLenght != 0) {
+        if (filePathLenght != -1) {
             byte[] bytes = new byte[filePathLenght];
 
             in.read(bytes);
@@ -114,22 +98,21 @@ public class VisorPageLocksTrackerArgs extends IgniteDataTransferObject {
             filePath = new String(bytes);
         }
 
-        consistentIds = U.readSet(in);
+        nodeIds = U.readSet(in);
     }
 
+    /** */
     public String operation() {
         return op;
     }
 
-    public String type() {
-        return type;
-    }
-
+    /** */
     public String filePath() {
         return filePath;
     }
 
+    /** */
     public Set<String> nodeIds(){
-        return Collections.unmodifiableSet(consistentIds);
+        return Collections.unmodifiableSet(nodeIds);
     }
 }

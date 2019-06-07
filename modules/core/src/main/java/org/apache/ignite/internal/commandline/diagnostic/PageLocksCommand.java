@@ -16,10 +16,9 @@
 
 package org.apache.ignite.internal.commandline.diagnostic;
 
-import java.io.File;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.logging.Logger;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.client.GridClient;
@@ -28,6 +27,8 @@ import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.CommandLogger;
 import org.apache.ignite.internal.commandline.TaskExecutor;
+import org.apache.ignite.internal.commandline.argument.CommandArg;
+import org.apache.ignite.internal.commandline.argument.CommandArgUtils;
 import org.apache.ignite.internal.visor.diagnostic.VisorPageLocksResult;
 import org.apache.ignite.internal.visor.diagnostic.VisorPageLocksTask;
 import org.apache.ignite.internal.visor.diagnostic.VisorPageLocksTrackerArgs;
@@ -39,56 +40,31 @@ import static org.apache.ignite.internal.commandline.diagnostic.DiagnosticSubCom
 /**
  *
  */
-public class PageLocksCommand implements Command<PageLocksCommand.Args> {
-    /**
-     *
-     */
-    public static final String DUMP = "dump";
-    /**
-     *
-     */
-    public static final String DUMP_LOG = "dump_log";
+public class PageLocksCommand implements Command<PageLocksCommand.Arguments> {
+    /** */
+    private Arguments arguments;
 
-    /**
-     *
-     */
-    private Args args;
-
-    /**
-     *
-     */
+    /** */
     private Logger logger;
 
-    /**
-     *
-     */
-    private boolean help;
 
     /** {@inheritDoc} */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger logger) throws Exception {
         this.logger = logger;
 
-        if (help) {
-            help = false;
-
-            printUsage();
-
-            return null;
-        }
-
-        Set<String> nodeIds = args.nodeIds;
+        Set<String> nodeIds = arguments.nodeIds;
 
         Map<ClusterNode, VisorPageLocksResult> res;
 
         try (GridClient client = Command.startClient(clientCfg)) {
-            if (args.allNodes) {
+            if (arguments.allNodes) {
                 client.compute().nodes().forEach(n -> {
                     nodeIds.add(String.valueOf(n.consistentId()));
                     nodeIds.add(n.nodeId().toString());
                 });
             }
 
-            VisorPageLocksTrackerArgs taskArg = new VisorPageLocksTrackerArgs(args.op, args.type, args.filePath, nodeIds);
+            VisorPageLocksTrackerArgs taskArg = new VisorPageLocksTrackerArgs(arguments.op, arguments.filePath, nodeIds);
 
             res = TaskExecutor.executeTask(
                 client,
@@ -104,63 +80,61 @@ public class PageLocksCommand implements Command<PageLocksCommand.Args> {
     }
 
     /** {@inheritDoc} */
-    @Override public Args arg() {
-        return args;
+    @Override public Arguments arg() {
+        return arguments;
     }
 
     /** {@inheritDoc} */
     @Override public void parseArguments(CommandArgIterator argIter) {
-        if (argIter.hasNextSubArg()) {
-            String cmd = argIter.nextArg("").toLowerCase();
+        String op = PageLocksCommandArg.DUMP_LOG.name;
+        String path = null;
+        boolean allNodes = false;
+        Set<String> nodeIds = new HashSet<>();
 
-            if (DUMP.equals(cmd) || DUMP_LOG.equals(cmd)) {
-                boolean allNodes = false;
-                String filePath = null;
+        while (argIter.hasNextArg()) {
+            String nextArg = argIter.nextArg("");
 
-                Set<String> nodeIds = new TreeSet<>();
+            PageLocksCommandArg arg = CommandArgUtils.of(nextArg, PageLocksCommandArg.class);
 
-                loop:
-                while (argIter.hasNextArg()) {
-                    String nextArg = argIter.peekNextArg().toLowerCase();
+            if (arg == null)
+                break;
 
-                    switch (nextArg) {
-                        case "--all":
-                            argIter.nextArg("");
+            switch (arg) {
+                case DUMP:
+                    op = PageLocksCommandArg.DUMP.name;
 
-                            allNodes = true;
-                            break;
-                        case "--nodes":
-                            argIter.nextArg("");
+                    break;
+                case DUMP_LOG:
+                    op = PageLocksCommandArg.DUMP_LOG.name;
 
-                            nodeIds.addAll(argIter.nextStringSet(nextArg));
-                            break;
-                        case "--path":
-                            argIter.nextArg("");
+                    break;
+                case ALL:
+                    allNodes = true;
 
-                            filePath = argIter.nextArg("").toLowerCase();
+                    break;
+                case NODES:
+                    nodeIds.addAll(argIter.nextStringSet(""));
 
-                            break;
-                        default:
-                            break loop;
-                    }
-                }
+                    break;
+                case PATH:
+                    path = argIter.nextArg("");
 
-                args = new Args(DUMP, cmd, filePath, allNodes, nodeIds);
+                    break;
             }
-            else
-                help = true;
         }
+
+        arguments = new Arguments(op, path, allNodes, nodeIds);
     }
 
     /** {@inheritDoc} */
     @Override public void printUsage() {
         logger.info("View pages locks state information on the node or nodes.");
         logger.info(CommandLogger.join(" ",
-            UTILITY_NAME, DIAGNOSTIC, PAGE_LOCKS, DUMP,
+            UTILITY_NAME, DIAGNOSTIC, PAGE_LOCKS, PageLocksCommandArg.DUMP,
             "[--path path_to_directory] [--all|--nodes nodeId1,nodeId2,..|--nodes consistentId1,consistentId2,..]",
             "// Save page locks dump to file generated in IGNITE_HOME/work directory."));
         logger.info(CommandLogger.join(" ",
-            UTILITY_NAME, DIAGNOSTIC, PAGE_LOCKS, DUMP_LOG,
+            UTILITY_NAME, DIAGNOSTIC, PAGE_LOCKS, PageLocksCommandArg.DUMP_LOG,
             "[--all|--nodes nodeId1,nodeId2,..|--nodes consistentId1,consistentId2,..]",
             "// Pring page locks dump to console on the node or nodes."));
         logger.info("\n");
@@ -168,7 +142,7 @@ public class PageLocksCommand implements Command<PageLocksCommand.Args> {
 
     /** {@inheritDoc} */
     @Override public String name() {
-        return "Page locks dump";
+        return PAGE_LOCKS.toString();
     }
 
     /**
@@ -180,43 +154,67 @@ public class PageLocksCommand implements Command<PageLocksCommand.Args> {
         });
     }
 
-    /**
-     *
-     */
-    public static class Args {
-        /**
-         *
-         */
+    /** */
+    public static class Arguments {
+        /** */
         private final String op;
-        /**
-         *
-         */
-        private final String type;
-        /**
-         *
-         */
+        /** */
         private final String filePath;
-        /**
-         *
-         */
+        /** */
         private final boolean allNodes;
-        /**
-         *
-         */
+        /** */
         private final Set<String> nodeIds;
 
         /**
          * @param op Operation.
-         * @param type Type.
          * @param filePath File path.
          * @param nodeIds Node ids.
          */
-        public Args(String op, String type, String filePath, boolean allNodes, Set<String> nodeIds) {
+        public Arguments(
+            String op,
+            String filePath,
+            boolean allNodes,
+            Set<String> nodeIds
+        ) {
             this.op = op;
-            this.type = type;
             this.filePath = filePath;
             this.allNodes = allNodes;
             this.nodeIds = nodeIds;
+        }
+    }
+
+    private enum PageLocksCommandArg implements CommandArg{
+        /** */
+        DUMP("dump"),
+
+        /** */
+        DUMP_LOG("dump_log"),
+
+        /** */
+        PATH("--path"),
+
+        /** */
+        NODES("--nodes"),
+
+        /** */
+        ALL("--all");
+
+        /** Option name. */
+        private final String name;
+
+        /** */
+        PageLocksCommandArg(String name) {
+            this.name = name;
+        }
+
+        /** {@inheritDoc} */
+        @Override public String argName() {
+            return name;
+        }
+
+        /** {@inheritDoc} */
+        @Override public String toString() {
+            return name;
         }
     }
 }

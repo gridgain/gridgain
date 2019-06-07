@@ -132,6 +132,30 @@ import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED
  * Command line handler test.
  */
 public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
+    /** */
+    private File defaultDiagnosticDir;
+    /** */
+    private File customDiagnosticDir;
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
+        defaultDiagnosticDir = new File(U.defaultWorkDirectory() + "/" + DEFAULT_TARGET_FOLDER + "/");
+        customDiagnosticDir = new File(U.defaultWorkDirectory() + "/diagnostic_test_dir/");
+
+        U.delete(defaultDiagnosticDir);
+        U.delete(customDiagnosticDir);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        super.afterTest();
+
+        U.delete(defaultDiagnosticDir);
+        U.delete(customDiagnosticDir);
+    }
+
     /** {@inheritDoc} */
     @Override public String getTestIgniteInstanceName() {
         return "gridCommandHandlerTest";
@@ -2602,68 +2626,45 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         ignite.cluster().active(true);
 
-        File default0 = new File(U.defaultWorkDirectory() + "/" + DEFAULT_TARGET_FOLDER + "/");
-        File testDir = new File(U.defaultWorkDirectory() + "/diagnostic_test_dir/");
+        assertEquals(EXIT_CODE_OK, execute("--diagnostic"));
+        assertEquals(EXIT_CODE_OK, execute("--diagnostic", "help"));
 
-        if (default0.exists())
-            assertTrue(U.delete(default0));
+        assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump"));
 
-        if (testDir.exists())
-            assertTrue(U.delete(testDir));
+        checkNumberFiles(defaultDiagnosticDir, 1);
 
-        boolean success = false;
+        assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump_log"));
+        assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump", "--path",
+            customDiagnosticDir.getAbsolutePath()));
 
-        try {
-            assertEquals(EXIT_CODE_OK, execute("--diagnostic"));
-            assertEquals(EXIT_CODE_OK, execute("--diagnostic", "help"));
-            assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "help"));
+        checkNumberFiles(customDiagnosticDir, 1);
 
-            assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump"));
+        assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump", "--all"));
 
-            checkNumberFiles(default0, 1);
+        checkNumberFiles(defaultDiagnosticDir, 5);
 
-            assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump_log"));
-            assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump", "--path",
-                testDir.getAbsolutePath()));
+        assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump_log", "--all"));
+        assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump",
+            "--path", customDiagnosticDir.getAbsolutePath(), "--all"));
 
-            checkNumberFiles(testDir, 1);
+        checkNumberFiles(customDiagnosticDir, 5);
 
-            assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump", "--all"));
+        assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump",
+            "--nodes", node0.id().toString() + "," + node2.id().toString()));
 
-            checkNumberFiles(default0, 5);
+        checkNumberFiles(defaultDiagnosticDir, 7);
 
-            assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump_log", "--all"));
-            assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump",
-                "--path", testDir.getAbsolutePath(), "--all"));
+        assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump",
+            "--nodes", node0.consistentId().toString() + "," + node2.consistentId().toString()));
 
-            checkNumberFiles(testDir, 5);
+        assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump_log",
+            "--nodes", node1.id().toString() + "," + node3.id().toString()));
 
-            assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump",
-                "--nodes", node0.id().toString() + "," + node2.id().toString()));
+        assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump",
+            "--path", customDiagnosticDir.getAbsolutePath(),
+            "--nodes", node1.consistentId().toString() + "," + node3.consistentId().toString()));
 
-            checkNumberFiles(default0, 7);
-
-            assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump",
-                "--nodes", node0.consistentId().toString() + "," + node2.consistentId().toString()));
-
-            assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump_log",
-                "--nodes", node1.id().toString() + "," + node3.id().toString()));
-
-            assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump",
-                "--path", testDir.getAbsolutePath(),
-                "--nodes", node1.consistentId().toString() + "," + node3.consistentId().toString()));
-
-            checkNumberFiles(testDir, 7);
-
-            success = true;
-        }
-        finally {
-            if (success) {
-                U.delete(default0);
-
-                U.delete(testDir);
-            }
-        }
+        checkNumberFiles(customDiagnosticDir, 7);
     }
 
     /**
@@ -2671,11 +2672,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
      * @param numberFiles Number of files.
      */
     private void checkNumberFiles(File dir, int numberFiles) {
-        File[] files = dir.listFiles(new FilenameFilter() {
-            @Override public boolean accept(File dir0, String name) {
-                return name.startsWith(ToFileDumpProcessor.PREFIX_NAME);
-            }
-        });
+        File[] files = dir.listFiles((d, name) -> name.startsWith(ToFileDumpProcessor.PREFIX_NAME));
 
         assertEquals(numberFiles, files.length);
 

@@ -29,6 +29,7 @@ import java.util.UUID;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeJobResult;
+import org.apache.ignite.internal.cluster.NodeOrderComparator;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.dumpprocessors.ToStringDumpProcessor;
 import org.apache.ignite.internal.processors.task.GridInternal;
@@ -73,7 +74,7 @@ public class VisorPageLocksTask
     @Nullable @Override protected Map<ClusterNode, VisorPageLocksResult> reduce0(
         List<ComputeJobResult> results
     ) throws IgniteException {
-        Map<ClusterNode, VisorPageLocksResult> mapRes = new TreeMap<>();
+        Map<ClusterNode, VisorPageLocksResult> mapRes = new TreeMap<>(NodeOrderComparator.getInstance());
 
         results.forEach(j -> {
             if (j.getException() == null)
@@ -110,25 +111,23 @@ public class VisorPageLocksTask
         @Override protected VisorPageLocksResult run(VisorPageLocksTrackerArgs arg) {
             PageLockTrackerManager lockTrackerMgr = ignite.context().cache().context().diagnostic().pageLockTracker();
 
-            String op = arg.type();
-
             String result;
 
-            if ("dump".equals(op)) {
+            if ("dump".equals(arg.operation())) {
                 String filePath = arg.filePath() != null ?
                     lockTrackerMgr.dumpLocksToFile(arg.filePath()) :
                     lockTrackerMgr.dumpLocksToFile();
 
                 result = "Page locks dump was writtern to file " + filePath;
             }
-            else if ("dump_log".equals(op)) {
+            else if ("dump_log".equals(arg.operation())) {
                 lockTrackerMgr.dumpLocksToLog();
 
                 result = "Page locks dump was printed to console " +
                     ToStringDumpProcessor.DATE_FMT.format(new Date(System.currentTimeMillis()));
             }
             else
-                result = "Unsupported operation: " + op;
+                result = "Unsupported operation: " + arg.operation();
 
             return new VisorPageLocksResult(result);
         }
