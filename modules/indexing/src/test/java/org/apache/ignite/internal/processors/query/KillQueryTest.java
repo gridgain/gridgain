@@ -43,6 +43,7 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.affinity.Affinity;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
@@ -80,6 +81,7 @@ import org.apache.ignite.spi.discovery.tcp.ipfinder.TcpDiscoveryIpFinder;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.GridAbstractTest;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
 import org.junit.After;
@@ -99,6 +101,9 @@ import static org.apache.ignite.internal.util.IgniteUtils.resolveIgnitePath;
  */
 @SuppressWarnings({"ThrowableNotThrown", "AssertWithSideEffects"})
 @RunWith(Parameterized.class)
+// We need to set this threshold bigger than partitions count to force partition prunning for the BETWEEN case.
+// see org.apache.ignite.internal.processors.query.h2.affinity.PartitionExtractor.tryExtractBetween
+@WithSystemProperty(key = IgniteSystemProperties.IGNITE_SQL_MAX_EXTRACTED_PARTS_FROM_BETWEEN, value = "21")
 public class KillQueryTest extends GridCommonAbstractTest {
     /** IP finder. */
     private static final TcpDiscoveryIpFinder IP_FINDER = new TcpDiscoveryVmIpFinder(true);
@@ -121,7 +126,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
     public static final int CHECK_RESULT_TIMEOUT = 1_000;
 
     /** Number of partitions in the test chache. Keep it small to have enough rows in each partitions. */
-    private static final int PARTS_CNT = 20;
+    public static final int PARTS_CNT = 20;
 
     /** Connection. */
     private Connection conn;
@@ -554,6 +559,29 @@ public class KillQueryTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Trying to cancel long running query if partition prunning does it job. It's important to set {@link
+     * IgniteSystemProperties#IGNITE_SQL_MAX_EXTRACTED_PARTS_FROM_BETWEEN} bigger than partitions count {@link
+     * #PARTS_CNT}
+     */
+    @Test
+    public void testCancelQueryPartitionPrunning() throws Exception {
+        IgniteInternalFuture cancelRes = cancel(1, asyncCancel);
+
+        final int ROWS_ALLOWED_TO_PROCESS_AFTER_CANCEL = 400;
+
+        GridTestUtils.assertThrows(log, () -> {
+            stmt.executeQuery("select * from Integer where _key between 1000 and 2000 " +
+                "and awaitLatchCancelled() = 0 " +
+                "and shouldNotBeCalledMoreThan(" + ROWS_ALLOWED_TO_PROCESS_AFTER_CANCEL + ")");
+
+            return null;
+        }, SQLException.class, "The query was cancelled while executing.");
+
+        // Ensures that there were no exceptions within async cancellation process.
+        cancelRes.get(CHECK_RESULT_TIMEOUT);
+    }
+
+    /**
      * Check that local query can be canceled either using async or non-async method. Local query is performed using
      * cache.query() API with "local" property "true".
      */
@@ -960,6 +988,9 @@ public class KillQueryTest extends GridCommonAbstractTest {
         /** Suspend query latch. */
         static volatile CountDownLatch suspendQryLatch;
 
+        /** How many times function {@link #shouldNotBeCalledMoreThan} have been called so far. */
+        static volatile AtomicInteger funCallCnt;
+
         /**
          * Recreate latches.
          */
@@ -969,6 +1000,8 @@ public class KillQueryTest extends GridCommonAbstractTest {
             cancelLatch = new CountDownLatch(1);
 
             suspendQryLatch = new CountDownLatch(1);
+
+            funCallCnt = new AtomicInteger(0);
         }
 
         /**
@@ -1004,6 +1037,22 @@ public class KillQueryTest extends GridCommonAbstractTest {
             }
 
             return 0;
+        }
+
+        /**
+         * Asserts that this function have not been called more than specified number times. Otherwise we're failing.
+         * Intended to check that query is canceled but since cancel is not instant (query continues to process some
+         * number of rows), it don't process all the rows in the table (in case of full scan, of course).
+         *
+         * @param times deadline times.
+         * @return always {@link true}.
+         */
+        @QuerySqlFunction
+        public static boolean shouldNotBeCalledMoreThan(int times) {
+            if (funCallCnt.incrementAndGet() >= times)
+                fail("Query is running too long since it was canceled.");
+
+            return true;
         }
 
         /**
