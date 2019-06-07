@@ -53,6 +53,7 @@ import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.MapH2QueryInfo;
 import org.apache.ignite.internal.processors.query.h2.UpdateResult;
+import org.apache.ignite.internal.processors.query.h2.QueryMemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RetryException;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContextRegistry;
@@ -230,7 +231,8 @@ public class GridMapQueryExecutor {
                             params,
                             lazy,
                             req.mvccSnapshot(),
-                            dataPageScanEnabled);
+                            dataPageScanEnabled,
+                            req.maxMemory());
 
                         return null;
                     }
@@ -255,7 +257,8 @@ public class GridMapQueryExecutor {
             params,
             lazy,
             req.mvccSnapshot(),
-            dataPageScanEnabled);
+            dataPageScanEnabled,
+            req.maxMemory());
     }
 
     /**
@@ -277,6 +280,7 @@ public class GridMapQueryExecutor {
      * @param lazy Streaming flag.
      * @param mvccSnapshot MVCC snapshot.
      * @param dataPageScanEnabled If data page scan is enabled.
+     * @param maxMem Query memory limit.
      */
     private void onQueryRequest0(
         final ClusterNode node,
@@ -296,8 +300,8 @@ public class GridMapQueryExecutor {
         final Object[] params,
         boolean lazy,
         @Nullable final MvccSnapshot mvccSnapshot,
-        Boolean dataPageScanEnabled
-    ) {
+        Boolean dataPageScanEnabled,
+        long maxMem) {
         // Prepare to run queries.
         GridCacheContext<?, ?> mainCctx = mainCacheContext(cacheIds);
 
@@ -306,6 +310,8 @@ public class GridMapQueryExecutor {
         MapQueryResults qryResults = null;
 
         PartitionReservation reserved = null;
+
+        QueryContext qctx = null;
 
         try {
             if (topVer != null) {
@@ -339,20 +345,20 @@ public class GridMapQueryExecutor {
                 );
             }
 
-            QueryContext qctx = new QueryContext(
+            qctx = new QueryContext(
                 segmentId,
                 h2.backupFilter(topVer, parts),
                 distributedJoinCtx,
                 mvccSnapshot,
-                reserved
+                reserved,
+                maxMem < 0 ? null : new QueryMemoryTracker(maxMem),
+                true
             );
 
             qryResults = new MapQueryResults(h2, reqId, qrys.size(), mainCctx, lazy, qctx);
 
             // qctx is set, we have to release reservations inside of it.
             reserved = null;
-
-            qryCtxRegistry.setThreadLocal(qctx);
 
             if (distributedJoinCtx != null)
                 qryCtxRegistry.setShared(node.id(), reqId, qctx);
@@ -481,7 +487,7 @@ public class GridMapQueryExecutor {
                 qryResults.close();
             }
             else
-                releaseReservations();
+                releaseReservations(qctx);
 
             if (e instanceof QueryCancelledException)
                 sendError(node, reqId, e);
@@ -521,8 +527,6 @@ public class GridMapQueryExecutor {
         finally {
             if (reserved != null)
                 reserved.release();
-
-            qryCtxRegistry.clearThreadLocal();
         }
     }
 
@@ -536,13 +540,11 @@ public class GridMapQueryExecutor {
 
     /**
      * Releases reserved partitions.
+     *
+     * @param qctx Query context.
      */
-    private void releaseReservations() {
-        QueryContext qctx = qryCtxRegistry.getThreadLocal();
-
-        if (qctx != null) { // No-op if already released.
-            qryCtxRegistry.clearThreadLocal();
-
+    private void releaseReservations(QueryContext qctx) {
+        if (qctx != null) {
             if (qctx.distributedJoinContext() == null)
                 qctx.clearContext(false);
         }
@@ -740,13 +742,6 @@ public class GridMapQueryExecutor {
             sendQueryCancel(node, reqId);
         else {
             try {
-                QueryContext qctxReduce = qryCtxRegistry.getThreadLocal();
-
-                if (qctxReduce != null)
-                    qryCtxRegistry.clearThreadLocal();
-
-                qryCtxRegistry.setThreadLocal(qryResults.queryContext());
-
                 MapQueryResult res = qryResults.result(req.query());
 
                 assert res != null;
@@ -772,11 +767,6 @@ public class GridMapQueryExecutor {
                     sendNextPage(node, msg);
                 }
                 finally {
-                    qryCtxRegistry.clearThreadLocal();
-
-                    if (qctxReduce != null)
-                        qryCtxRegistry.setThreadLocal(qctxReduce);
-
                     try {
                         res.unlockTables();
                     }
@@ -840,6 +830,8 @@ public class GridMapQueryExecutor {
             qr.closeResult(qry);
 
             if (qr.isAllClosed()) {
+                qr.close();
+
                 nodeRess.remove(qr.queryRequestId(), segmentId, qr);
 
                 // Clear context, release reservations

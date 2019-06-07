@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import javax.cache.CacheException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
@@ -77,6 +78,7 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusMetaIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
+import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryMarshallable;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryType;
 import org.apache.ignite.internal.processors.cache.query.GridCacheTwoStepQuery;
@@ -518,24 +520,26 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             if (mvccEnabled)
                 mvccSnapshot = mvccTracker.snapshot();
 
+            long maxMem = qryParams.maxMemory();
+
             final QueryContext qctx = new QueryContext(
                 0,
                 filter,
                 null,
                 mvccSnapshot,
-                null
+                null,
+                maxMem < 0 ? null : new QueryMemoryTracker(maxMem),
+                true
             );
 
             return new GridQueryFieldsResultAdapter(select.meta(), null) {
                 @Override public GridCloseableIterator<List<?>> iterator() throws IgniteCheckedException {
-                    assert qryCtxRegistry.getThreadLocal() == null;
-
-                    qryCtxRegistry.setThreadLocal(qctx);
-
                     ThreadLocalObjectPool<H2ConnectionWrapper>.Reusable conn = connMgr.detachThreadConnection();
 
+                    Connection conn0 = null;
+
                     try {
-                        Connection conn0 = conn.object().connection(qryDesc.schemaName());
+                        conn0 = conn.object().connection(qryDesc.schemaName());
 
                         H2Utils.setupConnection(conn0, qctx,
                             qryDesc.distributedJoins(), qryDesc.enforceJoinOrder(), qryParams.lazy());
@@ -563,6 +567,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                         return new H2FieldsIterator(rs, mvccTracker, conn);
                     }
                     catch (IgniteCheckedException | RuntimeException | Error e) {
+                        if (conn0 != null)
+                            H2Utils.resetSession(conn0);
+
                         conn.recycle();
 
                         try {
@@ -574,9 +581,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                         }
 
                         throw e;
-                    }
-                    finally {
-                        qryCtxRegistry.clearThreadLocal();
                     }
                 }
             };
@@ -882,11 +886,15 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             ResultSet rs = executeSqlQuery(conn, stmt, timeoutMillis, cancel);
 
             if (qryInfo != null && qryInfo.time() > longRunningQryMgr.getTimeout())
-                qryInfo.printLogMessage(log, connMgr, "Long running query is finished");            return rs;
+                qryInfo.printLogMessage(log, "Long running query is finished");
+
+            return rs;
         }
         catch (Throwable e) {
+            H2Utils.resetSession(conn);
+
             if (qryInfo != null && qryInfo.time() > longRunningQryMgr.getTimeout()) {
-                qryInfo.printLogMessage(log, connMgr, "Long running query is finished with error: "
+                qryInfo.printLogMessage(log, "Long running query is finished with error: "
                     + e.getMessage());
             }
 
@@ -1380,7 +1388,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                     return new GridQueryCacheObjectsIterator(res.iterator(), objectContext(), keepBinary);
                 }
                 catch (IgniteCheckedException e) {
-                    throw new IgniteException(e);
+                    throw new CacheException(e);
                 }
             };
         }
@@ -1667,7 +1675,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                             qryParams.lazy(),
                             mvccTracker,
                             qryParams.dataPageScanEnabled(),
-                            qryParams.pageSize()
+                            qryParams.pageSize(),
+                            qryParams.maxMemory()
                         );
                     }
                     catch (Throwable e) {
@@ -2228,6 +2237,11 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         int inlineSize = getInlineSize(page, grpId, pageMemory);
 
+        String grpName = ctx.cache().cacheGroup(grpId).cacheOrGroupName();
+
+        PageLockListener lockLsnr = ctx.cache().context().diagnostic()
+            .pageLockTracker().createPageLockTracker(grpName + "IndexTree##" + indexName);
+
         BPlusTree<H2Row, H2Row> tree = new BPlusTree<H2Row, H2Row>(
             indexName,
             grpId,
@@ -2238,7 +2252,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             reuseList,
             H2ExtrasInnerIO.getVersions(inlineSize, mvccEnabled),
             H2ExtrasLeafIO.getVersions(inlineSize, mvccEnabled),
-            ctx.failure()
+            ctx.failure(),
+            lockLsnr
         ) {
             @Override protected int compare(BPlusIO io, long pageAddr, int idx, H2Row row) {
                 throw new AssertionError();
