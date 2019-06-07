@@ -536,6 +536,7 @@ namespace ignite
                 CheckSingleMode(true);
 
                 WriteFieldId(fieldName, IGNITE_TYPE_ENUM);
+                stream->WriteInt8(IGNITE_TYPE_ENUM);
 
                 BinaryUtils::WriteBinaryEnumEntry(stream, entry);
             }
