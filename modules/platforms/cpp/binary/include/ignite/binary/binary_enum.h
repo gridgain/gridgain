@@ -93,12 +93,39 @@ namespace ignite
         };
 
         /**
+         * Implementations of BinaryEnum nullability when INT32_MIN ordinal value used as a NULL indicator.
+         */
+        template<typename T>
+        struct BinaryEnumIntMinNull
+        {
+            /**
+             * Check whether passed binary object should be interpreted as NULL.
+             *
+             * @return True if binary object should be interpreted as NULL.
+             */
+            static bool IsNull(const T& val)
+            {
+                return val == BinaryEnum<T>::FromOrdinal(INT32_MIN);
+            }
+
+            /**
+             * Get NULL value for the given binary type.
+             *
+             * @param dst Null value for the type.
+             */
+            static void GetNull(T& dst)
+            {
+                dst = BinaryEnum<T>::FromOrdinal(INT32_MIN);
+            }
+        };
+
+        /**
          * Default implementations of BinaryType hashing functions and non-null type behaviour.
          */
         template<typename T>
         struct BinaryEnumDefaultAll :
             BinaryEnumDefault<T>,
-            BinaryTypeNonNullableType<T> { };
+            BinaryEnumIntMinNull<T> { };
 
         /**
          * BinaryEnum template specialization for pointers.
