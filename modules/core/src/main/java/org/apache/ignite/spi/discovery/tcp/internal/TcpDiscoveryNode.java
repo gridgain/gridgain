@@ -103,10 +103,14 @@ public class TcpDiscoveryNode extends GridMetadataAwareAdapter implements Ignite
 
     /** The most recent time when metrics update message was received from the node. */
     @GridToStringExclude
-    private volatile long lastUpdateTime = U.currentTimeMillis();
+    private volatile long lastUpdateTimeNanos = System.nanoTime();
 
     /** The most recent time when node exchanged a message with a remote node. */
     private volatile long lastExchangeTime = U.currentTimeMillis();
+
+    /** Same as {@link #lastExchangeTime} but as returned by {@link System#nanoTime()} */
+    @GridToStringExclude
+    private volatile long lastExchangeTimeNanos = System.nanoTime();
 
     /** Metrics provider (transient). */
     @GridToStringExclude
@@ -124,7 +128,7 @@ public class TcpDiscoveryNode extends GridMetadataAwareAdapter implements Ignite
 
     /** Alive check time (used by clients). */
     @GridToStringExclude
-    private transient volatile long aliveCheckTime;
+    private transient volatile long aliveCheckTimeNanos;
 
     /** Client router node ID. */
     @GridToStringExclude
@@ -413,36 +417,45 @@ public class TcpDiscoveryNode extends GridMetadataAwareAdapter implements Ignite
      * @return Time of the last metrics update.
      */
     public long lastUpdateTime() {
-        return lastUpdateTime;
+        return System.currentTimeMillis() - U.nanosToMillis(System.nanoTime() - lastUpdateTimeNanos);
+    }
+
+    /**
+     * Gets node last update time.
+     *
+     * @return Time of the last metrics update as returned by {@link System#nanoTime()}.
+     */
+    public long lastUpdateTimeNanos() {
+        return lastUpdateTimeNanos;
     }
 
     /**
      * Sets node last update.
      *
-     * @param lastUpdateTime Time of last metrics update.
+     * @param lastUpdateTimeNanos Time of last metrics update.
      */
-    public void lastUpdateTime(long lastUpdateTime) {
-        assert lastUpdateTime > 0;
-
-        this.lastUpdateTime = lastUpdateTime;
+    public void lastUpdateTimeNanos(long lastUpdateTimeNanos) {
+        this.lastUpdateTimeNanos = lastUpdateTimeNanos;
     }
 
     /**
      * Gets the last time a node exchanged a message with a remote node.
      *
-     * @return Time in milliseconds.
+     * @return Time in nanoseconds as returned by {@link System#nanoTime()}.
      */
-    public long lastExchangeTime() {
-        return lastExchangeTime;
+    public long lastExchangeTimeNanos() {
+        return lastExchangeTimeNanos;
     }
 
     /**
      * Sets the last time a node exchanged a message with a remote node.
      *
      * @param lastExchangeTime Time in milliseconds.
+     * @param lastExchangeTimeNanos Time in nanoseconds.
      */
-    public void lastExchangeTime(long lastExchangeTime) {
+    public void lastExchangeTime(long lastExchangeTime, long lastExchangeTimeNanos) {
         this.lastExchangeTime = lastExchangeTime;
+        this.lastExchangeTimeNanos = lastExchangeTimeNanos;
     }
 
     /**
@@ -484,7 +497,7 @@ public class TcpDiscoveryNode extends GridMetadataAwareAdapter implements Ignite
     public boolean isClientAlive() {
         assert isClient() : this;
 
-        return (aliveCheckTime - U.currentTimeMillis()) >= 0;
+        return (aliveCheckTimeNanos - System.nanoTime()) >= 0;
     }
 
     /**
@@ -495,14 +508,14 @@ public class TcpDiscoveryNode extends GridMetadataAwareAdapter implements Ignite
     public void clientAliveTime(long aliveTime) {
         assert isClient() : this;
 
-        this.aliveCheckTime = U.currentTimeMillis() + aliveTime;
+        aliveCheckTimeNanos = System.nanoTime() + U.millisToNanos(aliveTime);
     }
 
     /**
-     * @return Client alive check time.
+     * @return {@code true} if client alive check time initialized.
      */
-    public long clientAliveTime() {
-        return aliveCheckTime;
+    public boolean clientAliveTimeSet() {
+        return aliveCheckTimeNanos != 0;
     }
 
     /**

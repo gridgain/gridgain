@@ -42,7 +42,7 @@ public abstract class IgniteTxLocalStateAdapter implements IgniteTxLocalState {
      */
     protected final void onTxEnd(GridCacheContext cacheCtx, IgniteInternalTx tx, boolean commit) {
         if (cacheCtx.statisticsEnabled()) {
-            long durationNanos = TimeUnit.MILLISECONDS.toNanos(U.currentTimeMillis() - tx.startTime());
+            long durationNanos = U.millisToNanos(U.currentTimeMillis() - tx.startTime());
 
             if (commit)
                 cacheCtx.cache().metrics0().onTxCommit(durationNanos);
