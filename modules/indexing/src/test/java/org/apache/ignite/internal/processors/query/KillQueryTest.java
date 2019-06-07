@@ -31,6 +31,7 @@ import java.util.UUID;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -44,6 +45,8 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.cache.QueryEntity;
+import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.affinity.Affinity;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
@@ -101,7 +104,7 @@ import static org.apache.ignite.internal.util.IgniteUtils.resolveIgnitePath;
  */
 @SuppressWarnings({"ThrowableNotThrown", "AssertWithSideEffects"})
 @RunWith(Parameterized.class)
-// We need to set this threshold bigger than partitions count to force partition prunning for the BETWEEN case.
+// We need to set this threshold bigger than partitions count to force partition pruning for the BETWEEN case.
 // see org.apache.ignite.internal.processors.query.h2.affinity.PartitionExtractor.tryExtractBetween
 @WithSystemProperty(key = IgniteSystemProperties.IGNITE_SQL_MAX_EXTRACTED_PARTS_FROM_BETWEEN, value = "21")
 public class KillQueryTest extends GridCommonAbstractTest {
@@ -222,6 +225,43 @@ public class KillQueryTest extends GridCommonAbstractTest {
         return cfg;
     }
 
+
+    private void createJoinCache(String cacheName) {
+        CacheConfiguration<Long, Person> ccfg = GridAbstractTest.defaultCacheConfiguration();
+
+        ccfg.setName(cacheName);
+
+        ccfg.setCacheMode(PARTITIONED);
+        ccfg.setBackups(1);
+        ccfg.setWriteSynchronizationMode(FULL_SYNC);
+        ccfg.setSqlFunctionClasses(TestSQLFunctions.class);
+
+        ccfg.setQueryEntities(Collections.singleton(
+            new QueryEntity(Integer.class.getName(), Person.class.getName())
+                .setTableName("PERSON")
+                .setKeyFieldName("rec_id") // PK
+                .addQueryField("rec_id", Integer.class.getName(), null)
+                .addQueryField("id", Integer.class.getName(), null)
+                .addQueryField("lastName", String.class.getName(), null)
+                .setIndexes(Collections.singleton(new QueryIndex("id", true, "idx_" + cacheName)))
+        ));
+
+        grid(0).createCache(ccfg);
+
+        try (IgniteDataStreamer<Object, Object> ds = grid(0).dataStreamer(cacheName)) {
+            for (int recordId = 0; recordId < MAX_ROWS; recordId++) {
+                int intTabIdFK = ThreadLocalRandom.current().nextInt(MAX_ROWS);
+
+                ds.addData(recordId,
+                    new Person(intTabIdFK,
+                        "Name_" + recordId,
+                        "LastName_" + recordId,
+                        42));
+            }
+        }
+    }
+
+
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
@@ -241,6 +281,9 @@ public class KillQueryTest extends GridCommonAbstractTest {
                 ds.addData((long)i, (long)i);
             }
         }
+
+        createJoinCache("PERS1");
+        createJoinCache("PERS2");
 
         awaitPartitionMapExchange();
     }
@@ -559,12 +602,12 @@ public class KillQueryTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Trying to cancel long running query if partition prunning does it job. It's important to set {@link
+     * Trying to cancel long running query if partition pruning does it job. It's important to set {@link
      * IgniteSystemProperties#IGNITE_SQL_MAX_EXTRACTED_PARTS_FROM_BETWEEN} bigger than partitions count {@link
      * #PARTS_CNT}
      */
     @Test
-    public void testCancelQueryPartitionPrunning() throws Exception {
+    public void testCancelQueryPartitionPruning() throws Exception {
         IgniteInternalFuture cancelRes = cancel(1, asyncCancel);
 
         final int ROWS_ALLOWED_TO_PROCESS_AFTER_CANCEL = 400;
@@ -602,6 +645,31 @@ public class KillQueryTest extends GridCommonAbstractTest {
         // Ensures that there were no exceptions within async cancellation process.
         cancelRes.get(CHECK_RESULT_TIMEOUT);
     }
+
+    /**
+     * Check distributed query can be canceled.
+     */
+    @Test
+    public void testCancelDistributeJoin() throws Exception {
+        IgniteInternalFuture cancelRes = cancel(1, asyncCancel);
+
+        GridTestUtils.assertThrows(log, () -> {
+            ignite.cache(DEFAULT_CACHE_NAME).query(
+                new SqlFieldsQuery("SELECT p1.rec_id, p1.id, p2.rec_id " +
+                    "FROM PERS1.Person p1 JOIN PERS2.Person p2 " +
+                    "ON p1.id = p2.id " +
+                    "AND awaitLatchCancelled() = 0" +
+                    "")
+                    .setDistributedJoins(true)
+            ).getAll();
+
+            return null;
+        }, CacheException.class, "The query was cancelled while executing.");
+
+        // Ensures that there were no exceptions within async cancellation process.
+        cancelRes.get(CHECK_RESULT_TIMEOUT);
+    }
+
 
     /**
      * Trying to async cancel long running multiple statements query. No exceptions expected.
