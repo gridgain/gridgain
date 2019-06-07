@@ -896,7 +896,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Wait until all map parts are finished on the specified node.
+     * Wait until all map parts are finished on the specified node. Not needed when IGN-13862 is done.
      *
      * @param node node for which map request completion to wait.
      */
@@ -1003,7 +1003,8 @@ public class KillQueryTest extends GridCommonAbstractTest {
                     fut.get(TIMEOUT);
 
                 // Currently canceled query returns (unblocks the caller code) without waiting for map parts of the
-                // query to be finished. We need to wait for them.
+                // query to be finished. We need to wait for them. This is a workaround for IGN-13862 because we
+                // observe side effects if map parts of canceled query are still running.
                 ensureMapQueriesHasFinished(grid(0));
                 ensureMapQueriesHasFinished(grid(1));
             }
