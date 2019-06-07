@@ -458,6 +458,20 @@ namespace ignite
             }
 
             /**
+             * Write enum entry.
+             *
+             * @param fieldName Field name.
+             * @param val Binary enum entry.
+             *
+             * @trapam T Enum type. BinaryEnum class template should be specialized for the type.
+             */
+            template<typename T>
+            void WriteEnum(const char* fieldName, T val)
+            {
+                impl->WriteEnum(fieldName, val);
+            }
+
+            /**
              * Get raw writer for this reader.
              *
              * @return Raw writer.

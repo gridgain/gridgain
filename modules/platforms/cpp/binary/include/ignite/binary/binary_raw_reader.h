@@ -450,6 +450,8 @@ namespace ignite
              * Read object.
              *
              * @return Object.
+             *
+             * @trapam T Object type. BinaryType class template should be specialized for the type.
              */
             template<typename T>
             T ReadObject()
@@ -461,6 +463,8 @@ namespace ignite
              * Read enum value.
              *
              * @return Enum value.
+             *
+             * @trapam T Enum type. BinaryEnum class template should be specialized for the type.
              */
             template<typename T>
             T ReadEnum()

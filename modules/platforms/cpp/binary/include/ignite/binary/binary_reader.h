@@ -471,6 +471,8 @@ namespace ignite
              *
              * @param fieldName Field name.
              * @return Object.
+             *
+             * @trapam T Object type. BinaryType class template should be specialized for the type.
              */
             template<typename T>
             T ReadObject(const char* fieldName)
@@ -482,6 +484,8 @@ namespace ignite
              * Read enum value.
              *
              * @return Enum value.
+             *
+             * @trapam T Enum type. BinaryEnum class template should be specialized for the type.
              */
             template<typename T>
             T ReadEnum(const char* fieldName)

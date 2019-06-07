@@ -709,6 +709,55 @@ namespace ignite
                 }
 
                 /**
+                 * Write enum entry.
+                 *
+                 * @param val Binary enum entry.
+                 *
+                 * @trapam T Enum type. BinaryEnum class template should be specialized for the type.
+                 */
+                template<typename T>
+                void WriteEnum(T val)
+                {
+                    typedef ignite::binary::BinaryEnum<T> TypeMeta;
+
+                    if (TypeMeta::IsNull(val))
+                    {
+                        WriteNull();
+
+                        return;
+                    }
+
+                    ignite::binary::BinaryEnumEntry entry(TypeMeta::GetTypeId(), TypeMeta::GetOrdinal(val));
+
+                    WriteBinaryEnum(entry);
+                }
+
+                /**
+                 * Write enum entry.
+                 *
+                 * @param fieldName Field name.
+                 * @param val Binary enum entry.
+                 *
+                 * @trapam T Enum type. BinaryEnum class template should be specialized for the type.
+                 */
+                template<typename T>
+                void WriteEnum(const char* fieldName, T val)
+                {
+                    typedef ignite::binary::BinaryEnum<T> TypeMeta;
+
+                    if (TypeMeta::IsNull(val))
+                    {
+                        WriteNull(fieldName);
+
+                        return;
+                    }
+
+                    ignite::binary::BinaryEnumEntry entry(TypeMeta::GetTypeId(), TypeMeta::GetOrdinal(val));
+
+                    WriteBinaryEnum(fieldName, entry);
+                }
+
+                /**
                  * Set raw mode.
                  */
                 void SetRawMode();
