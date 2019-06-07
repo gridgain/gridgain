@@ -130,15 +130,18 @@ namespace ignite_test
                 }
             };
 
-            enum TestEnum
+            struct TestEnum
             {
-                TEST_ZERO,
+                enum Type
+                {
+                    TEST_ZERO,
 
-                TEST_NON_ZERO,
+                    TEST_NON_ZERO,
 
-                TEST_NEGATIVE_42 = -42,
+                    TEST_NEGATIVE_42 = -42,
 
-                TEST_SOME_BIG = 1241267,
+                    TEST_SOME_BIG = 1241267,
+                };
             };
         }
     }
@@ -312,10 +315,18 @@ namespace ignite
         };
 
         template<>
-        struct BinaryEnum<ignite_test::core::binary::TestEnum> :
-            BinaryEnumDefaultAll<ignite_test::core::binary::TestEnum>
+        struct BinaryEnum<ignite_test::core::binary::TestEnum::Type> :
+            BinaryEnumDefaultAll<ignite_test::core::binary::TestEnum::Type>
         {
-            // Empty;
+            /**
+             * Get binary object type name.
+             *
+             * @param dst Output type name.
+             */
+            static void GetTypeName(std::string& dst)
+            {
+                dst = "TestEnum";
+            }
         };
     }
 }
