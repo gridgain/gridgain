@@ -463,16 +463,18 @@ void CheckUserEnumPtr(T val)
     InteropOutputStream outStream(&mem);
     BinaryWriterImpl writer(&outStream, 0);
 
-    writer.WriteEnum(val);
+    writer.WriteEnum(&val);
 
     outStream.Synchronize();
 
     InteropInputStream inStream(&mem);
     BinaryReaderImpl reader(&inStream);
 
-    T result = reader.ReadEnum<T>();
+    T* result = reader.ReadEnum<T*>();
 
-    BOOST_CHECK_EQUAL(val, result);
+    BOOST_CHECK_EQUAL(val, *result);
+
+    delete result;
 }
 
 BOOST_AUTO_TEST_CASE(ReadWriteUserEnumPtr)
