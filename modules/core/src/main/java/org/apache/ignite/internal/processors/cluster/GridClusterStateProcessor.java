@@ -43,6 +43,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.cluster.ClusterGroupAdapter;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.cluster.DistributedBaselineConfiguration;
@@ -191,6 +192,13 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
     /** {@inheritDoc} */
     @Override public @Nullable IgniteNodeValidationResult validateNode(ClusterNode node) {
+        if (node.attribute(IgniteNodeAttributes.ATTR_IGFS) != null) {
+            return new IgniteNodeValidationResult(
+                node.id(),
+                "Joining node with IGFS couldn't be allowed due to IGFS doesn't supported anymore"
+            );
+        }
+
         if (!isBaselineAutoAdjustEnabled() || baselineAutoAdjustTimeout() != 0)
             return null;
 
@@ -783,6 +791,9 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
     /** {@inheritDoc} */
     @Override public void onGridDataReceived(DiscoveryDataBag.GridDiscoveryData data) {
+        if (ctx.discovery().allNodes().stream().anyMatch(it -> it.attribute(IgniteNodeAttributes.ATTR_IGFS) != null))
+            throw new IgniteException("Can not join to cluster with IGFS because it is not supported anymore");
+
         if (data.commonData() instanceof DiscoveryDataClusterState) {
             if (globalState != null && globalState.baselineTopology() != null)
                 //node with BaselineTopology is not allowed to join mixed cluster
