@@ -42,8 +42,8 @@ namespace ignite
          *   static int32_t GetTypeId() - should return Type ID.
          *   static int32_t GetOrdinal(T) - should return ordinal value for enum value.
          *   static T FromOrdinal(int32_t) - should return enum value for a given ordinal value.
-         *   static bool IsNull(T) - check whether passed enum object should be interpreted as NULL.
-         *   static T GetNull() - get NULL value for the given enum type.
+         *   static bool IsNull(const T&) - check whether passed enum object should be interpreted as NULL.
+         *   static void GetNull(T&) - get NULL value for the given enum type.
          *
          * It is recommended to use BinaryEnumDefault as a base class for default implementation of GetTypeId(),
          * GetOrdinal() and FromOrdinal() methods for plain enum types. In this case, only GetTypeName() should be
