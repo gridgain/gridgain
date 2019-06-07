@@ -22,6 +22,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
+import org.apache.ignite.internal.processors.ru.IgniteRollingUpgradeStatus;
 import org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult;
 import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
 import org.apache.ignite.internal.util.typedef.F;
@@ -96,7 +97,7 @@ public class OsDiscoveryNodeValidationProcessor extends GridProcessorAdapter imp
 
     /** {@inheritDoc} */
     @Override public RollingUpgradeStatus getStatus() {
-        return new RollingUpgradeStatus(
+        return new IgniteRollingUpgradeStatus(
             false,
             IgniteProductVersion.fromString(ctx.discovery().localNode().attribute(ATTR_BUILD_VER)),
             null,

@@ -17,4 +17,4 @@
 /**
  * This package contains classes related to Rolling Upgrade process.
  */
-package org.apache.ignite.internal.processors.cache.ru;
+package org.apache.ignite.internal.processors.ru;
