@@ -40,6 +40,9 @@ import org.apache.ignite.internal.visor.VisorMultiNodeTask;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.internal.visor.diagnostic.Operation.DUMP_FILE;
+import static org.apache.ignite.internal.visor.diagnostic.Operation.DUMP_LOG;
+
 @GridInternal
 public class VisorPageLocksTask
     extends VisorMultiNodeTask<VisorPageLocksTrackerArgs, Map<ClusterNode, VisorPageLocksResult>, VisorPageLocksResult> {
@@ -113,14 +116,14 @@ public class VisorPageLocksTask
 
             String result;
 
-            if ("dump".equals(arg.operation())) {
+            if (DUMP_FILE == arg.operation()) {
                 String filePath = arg.filePath() != null ?
                     lockTrackerMgr.dumpLocksToFile(arg.filePath()) :
                     lockTrackerMgr.dumpLocksToFile();
 
                 result = "Page locks dump was writtern to file " + filePath;
             }
-            else if ("dump_log".equals(arg.operation())) {
+            else if (DUMP_LOG == arg.operation()) {
                 lockTrackerMgr.dumpLocksToLog();
 
                 result = "Page locks dump was printed to console " +
@@ -137,4 +140,5 @@ public class VisorPageLocksTask
             return S.toString(VisorPageLocksTrackerJob.class, this);
         }
     }
+
 }

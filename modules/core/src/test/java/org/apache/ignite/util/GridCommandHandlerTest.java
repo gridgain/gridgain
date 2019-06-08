@@ -111,6 +111,7 @@ import org.apache.ignite.transactions.TransactionTimeoutException;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
+import static java.io.File.separatorChar;
 import static java.util.Arrays.asList;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
@@ -141,17 +142,33 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
-        defaultDiagnosticDir = new File(U.defaultWorkDirectory() + "/" + DEFAULT_TARGET_FOLDER + "/");
-        customDiagnosticDir = new File(U.defaultWorkDirectory() + "/diagnostic_test_dir/");
+        initDiagnosticDir();
 
-        U.delete(defaultDiagnosticDir);
-        U.delete(customDiagnosticDir);
+        cleanDiagnosticDir();
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         super.afterTest();
 
+        cleanDiagnosticDir();
+    }
+
+    /**
+     * @throws IgniteCheckedException If failed.
+     */
+    private void initDiagnosticDir() throws IgniteCheckedException {
+        defaultDiagnosticDir = new File(U.defaultWorkDirectory()
+            + separatorChar + DEFAULT_TARGET_FOLDER + separatorChar);
+
+        customDiagnosticDir = new File(U.defaultWorkDirectory()
+            + separatorChar + "diagnostic_test_dir" + separatorChar);
+    }
+
+    /**
+     *
+     */
+    private void cleanDiagnosticDir(){
         U.delete(defaultDiagnosticDir);
         U.delete(customDiagnosticDir);
     }
@@ -2626,44 +2643,92 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         ignite.cluster().active(true);
 
-        assertEquals(EXIT_CODE_OK, execute("--diagnostic"));
-        assertEquals(EXIT_CODE_OK, execute("--diagnostic", "help"));
+        assertEquals(
+            EXIT_CODE_OK,
+            execute("--diagnostic")
+        );
 
-        assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump"));
+        assertEquals(
+            EXIT_CODE_OK,
+            execute("--diagnostic", "help")
+        );
 
+        // Dump locks only on connected node.
+        assertEquals(
+            EXIT_CODE_OK,
+            execute("--diagnostic", "pageLocks", "dump")
+        );
+
+        // Check file dump.
         checkNumberFiles(defaultDiagnosticDir, 1);
 
-        assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump_log"));
-        assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump", "--path",
-            customDiagnosticDir.getAbsolutePath()));
+        assertEquals(
+            EXIT_CODE_OK,
+            execute("--diagnostic", "pageLocks", "dump_log")
+        );
+
+        assertEquals(
+            EXIT_CODE_OK,
+            execute("--diagnostic", "pageLocks", "dump", "--path", customDiagnosticDir.getAbsolutePath())
+        );
 
         checkNumberFiles(customDiagnosticDir, 1);
 
-        assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump", "--all"));
+        // Dump locks only all nodes.
+        assertEquals(
+            EXIT_CODE_OK,
+            execute("--diagnostic", "pageLocks", "dump", "--all")
+        );
 
+        // Current cluster 4 nodes -> 4 files + 1 from previous operation.
         checkNumberFiles(defaultDiagnosticDir, 5);
 
-        assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump_log", "--all"));
-        assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump",
-            "--path", customDiagnosticDir.getAbsolutePath(), "--all"));
+        assertEquals(
+            EXIT_CODE_OK,
+            execute("--diagnostic", "pageLocks", "dump_log", "--all")
+        );
 
+        assertEquals(
+            EXIT_CODE_OK,
+            execute("--diagnostic", "pageLocks", "dump",
+                "--path", customDiagnosticDir.getAbsolutePath(), "--all")
+        );
+
+        // Current cluster 4 nodes -> 4 files + 1 from previous operation.
         checkNumberFiles(customDiagnosticDir, 5);
 
-        assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump",
-            "--nodes", node0.id().toString() + "," + node2.id().toString()));
+        // Dump locks only 2 nodes use nodeIds as arg.
+        assertEquals(
+            EXIT_CODE_OK,
+            execute("--diagnostic", "pageLocks", "dump",
+                "--nodes", node0.id().toString() + "," + node2.id().toString())
+        );
 
+        // Dump locks only for 2 nodes -> 2 files + 5 from previous operation.
         checkNumberFiles(defaultDiagnosticDir, 7);
 
-        assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump",
-            "--nodes", node0.consistentId().toString() + "," + node2.consistentId().toString()));
+        // Dump locks only for 2 nodes use constIds as arg.
+        assertEquals(
+            EXIT_CODE_OK,
+            execute("--diagnostic", "pageLocks", "dump",
+                "--nodes", node0.consistentId().toString() + "," + node2.consistentId().toString())
+        );
 
-        assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump_log",
-            "--nodes", node1.id().toString() + "," + node3.id().toString()));
+        assertEquals(
+            EXIT_CODE_OK,
+            execute("--diagnostic", "pageLocks", "dump_log",
+                "--nodes", node1.id().toString() + "," + node3.id().toString())
+        );
 
-        assertEquals(EXIT_CODE_OK, execute("--diagnostic", "pageLocks", "dump",
-            "--path", customDiagnosticDir.getAbsolutePath(),
-            "--nodes", node1.consistentId().toString() + "," + node3.consistentId().toString()));
+        assertEquals(
+            EXIT_CODE_OK,
+            execute(
+                "--diagnostic", "pageLocks", "dump",
+                "--path", customDiagnosticDir.getAbsolutePath(),
+                "--nodes", node1.consistentId().toString() + "," + node3.consistentId().toString())
+        );
 
+        // Dump locks only for 2 nodes -> 2 files + 5 from previous operation.
         checkNumberFiles(customDiagnosticDir, 7);
     }
 

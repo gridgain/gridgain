@@ -121,7 +121,7 @@ public class DiagnosticCommand implements Command<DiagnosticSubCommand> {
 
         CommandLogger.logWithIndent("Subcommands:");
 
-        Arrays.stream(CacheCommandList.values()).forEach(c -> {
+        Arrays.stream(DiagnosticSubCommand.values()).forEach(c -> {
             if (c.subcommand() != null) c.subcommand().printUsage();
         });
 

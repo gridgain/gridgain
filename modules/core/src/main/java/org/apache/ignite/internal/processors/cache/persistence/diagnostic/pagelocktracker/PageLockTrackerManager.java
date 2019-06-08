@@ -32,6 +32,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lifecycle.LifecycleAware;
 import org.jetbrains.annotations.NotNull;
 
+import static java.io.File.separatorChar;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PAGE_LOCK_TRACKER_TYPE;
 import static org.apache.ignite.IgniteSystemProperties.getInteger;
 import static org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.LockTrackerFactory.HEAP_LOG;
@@ -120,8 +121,8 @@ public class PageLockTrackerManager implements LifecycleAware {
 
             try {
                 // Write dump to file.
-                ToFileDumpProcessor.toFileDump(dump, new File(
-                    U.defaultWorkDirectory() + "/" + DEFAULT_TARGET_FOLDER + "/"), managerNameId);
+                ToFileDumpProcessor.toFileDump(dump, new File(U.defaultWorkDirectory() +
+                    separatorChar + DEFAULT_TARGET_FOLDER +  separatorChar), managerNameId);
             }
             catch (IgniteCheckedException e) {
                 log.warning("Faile to save locks dump file.", e);
@@ -167,8 +168,9 @@ public class PageLockTrackerManager implements LifecycleAware {
         ThreadPageLocksDumpLock dump = sharedPageLockTracker.dump();
 
         try {
-            return ToFileDumpProcessor.toFileDump(dump, new File(
-                U.defaultWorkDirectory() + "/" + DEFAULT_TARGET_FOLDER + "/"), managerNameId);
+            return ToFileDumpProcessor.toFileDump(dump,
+                new File(U.defaultWorkDirectory() +
+                    File.separatorChar + DEFAULT_TARGET_FOLDER +  File.separatorChar), managerNameId);
         }
         catch (IgniteCheckedException e) {
             throw U.convertException(e);

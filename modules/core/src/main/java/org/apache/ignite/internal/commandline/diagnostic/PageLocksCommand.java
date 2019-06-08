@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal.commandline.diagnostic;
 
+import java.io.File;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -29,6 +31,7 @@ import org.apache.ignite.internal.commandline.CommandLogger;
 import org.apache.ignite.internal.commandline.TaskExecutor;
 import org.apache.ignite.internal.commandline.argument.CommandArg;
 import org.apache.ignite.internal.commandline.argument.CommandArgUtils;
+import org.apache.ignite.internal.visor.diagnostic.Operation;
 import org.apache.ignite.internal.visor.diagnostic.VisorPageLocksResult;
 import org.apache.ignite.internal.visor.diagnostic.VisorPageLocksTask;
 import org.apache.ignite.internal.visor.diagnostic.VisorPageLocksTrackerArgs;
@@ -36,6 +39,7 @@ import org.apache.ignite.internal.visor.diagnostic.VisorPageLocksTrackerArgs;
 import static org.apache.ignite.internal.commandline.CommandHandler.UTILITY_NAME;
 import static org.apache.ignite.internal.commandline.CommandList.DIAGNOSTIC;
 import static org.apache.ignite.internal.commandline.diagnostic.DiagnosticSubCommand.PAGE_LOCKS;
+import static org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor.DEFAULT_TARGET_FOLDER;
 
 /**
  *
@@ -86,7 +90,8 @@ public class PageLocksCommand implements Command<PageLocksCommand.Arguments> {
 
     /** {@inheritDoc} */
     @Override public void parseArguments(CommandArgIterator argIter) {
-        String op = PageLocksCommandArg.DUMP_LOG.name;
+        Operation op = Operation.DUMP_LOG;
+
         String path = null;
         boolean allNodes = false;
         Set<String> nodeIds = new HashSet<>();
@@ -101,11 +106,11 @@ public class PageLocksCommand implements Command<PageLocksCommand.Arguments> {
 
             switch (arg) {
                 case DUMP:
-                    op = PageLocksCommandArg.DUMP.name;
+                    op = Operation.DUMP_FILE;
 
                     break;
                 case DUMP_LOG:
-                    op = PageLocksCommandArg.DUMP_LOG.name;
+                    op = Operation.DUMP_LOG;
 
                     break;
                 case ALL:
@@ -120,6 +125,9 @@ public class PageLocksCommand implements Command<PageLocksCommand.Arguments> {
                     path = argIter.nextArg("");
 
                     break;
+                default:
+                    throw new IllegalArgumentException(
+                        "Unexpected argumetn:" + arg + ", supported:" + Arrays.toString(PageLocksCommandArg.values()));
             }
         }
 
@@ -128,16 +136,22 @@ public class PageLocksCommand implements Command<PageLocksCommand.Arguments> {
 
     /** {@inheritDoc} */
     @Override public void printUsage() {
-        logger.info("View pages locks state information on the node or nodes.");
-        logger.info(CommandLogger.join(" ",
+        CommandLogger.log("View pages locks state information on the node or nodes.");
+        CommandLogger.log(CommandLogger.join(" ",
             UTILITY_NAME, DIAGNOSTIC, PAGE_LOCKS, PageLocksCommandArg.DUMP,
-            "[--path path_to_directory] [--all|--nodes nodeId1,nodeId2,..|--nodes consistentId1,consistentId2,..]",
-            "// Save page locks dump to file generated in IGNITE_HOME/work directory."));
-        logger.info(CommandLogger.join(" ",
+            CommandLogger.optional(PageLocksCommandArg.PATH, "path_to_directory"),
+            CommandLogger.optional(PageLocksCommandArg.ALL),
+            CommandLogger.optional(CommandLogger.or(PageLocksCommandArg.NODES, "nodeId1,nodeId2,..")),
+            CommandLogger.optional(CommandLogger.or(PageLocksCommandArg.NODES, "consistentId1,consistentId2,..")),
+            "// Save page locks dump to file generated in IGNITE_HOME" +
+                File.separatorChar + "work" + File.separatorChar + DEFAULT_TARGET_FOLDER + " directory."));
+        CommandLogger.log(CommandLogger.join(" ",
             UTILITY_NAME, DIAGNOSTIC, PAGE_LOCKS, PageLocksCommandArg.DUMP_LOG,
-            "[--all|--nodes nodeId1,nodeId2,..|--nodes consistentId1,consistentId2,..]",
+            CommandLogger.optional(PageLocksCommandArg.ALL),
+            CommandLogger.optional( CommandLogger.or(PageLocksCommandArg.NODES, "nodeId1,nodeId2,..")),
+            CommandLogger.optional(   CommandLogger.or(PageLocksCommandArg.NODES, "consistentId1,consistentId2,..")),
             "// Pring page locks dump to console on the node or nodes."));
-        logger.info("\n");
+        CommandLogger.nl();
     }
 
     /** {@inheritDoc} */
@@ -157,7 +171,7 @@ public class PageLocksCommand implements Command<PageLocksCommand.Arguments> {
     /** */
     public static class Arguments {
         /** */
-        private final String op;
+        private final Operation op;
         /** */
         private final String filePath;
         /** */
@@ -171,7 +185,7 @@ public class PageLocksCommand implements Command<PageLocksCommand.Arguments> {
          * @param nodeIds Node ids.
          */
         public Arguments(
-            String op,
+            Operation op,
             String filePath,
             boolean allNodes,
             Set<String> nodeIds

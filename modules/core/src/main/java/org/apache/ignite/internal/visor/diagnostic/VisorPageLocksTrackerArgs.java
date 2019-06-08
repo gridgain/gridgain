@@ -32,7 +32,7 @@ public class VisorPageLocksTrackerArgs extends IgniteDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;
     /** */
-    private String op;
+    private Operation op;
     /** */
     private String filePath;
     /** */
@@ -48,7 +48,7 @@ public class VisorPageLocksTrackerArgs extends IgniteDataTransferObject {
      * @param filePath File path.
      * @param nodeIds Set of ids.
      */
-    public VisorPageLocksTrackerArgs(String op, String filePath, Set<String> nodeIds) {
+    public VisorPageLocksTrackerArgs(Operation op, String filePath, Set<String> nodeIds) {
         this.op = op;
         this.filePath = filePath;
         this.nodeIds = nodeIds;
@@ -56,53 +56,24 @@ public class VisorPageLocksTrackerArgs extends IgniteDataTransferObject {
 
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
-        if (op == null)
-            out.writeInt(-1);
-        else {
-            byte[] bytes = op.getBytes();
-            out.writeInt(bytes.length);
-            out.write(bytes);
-        }
+        out.writeObject(op);
 
-        if (filePath == null)
-            out.writeInt(-1);
-        else {
-            byte[] bytes = filePath.getBytes();
-            out.writeInt(bytes.length);
-            out.write(bytes);
-        }
+        U.writeString(out,filePath);
 
-        if (nodeIds != null)
-            U.writeCollection(out, nodeIds);
+        U.writeCollection(out, nodeIds);
     }
 
     /** {@inheritDoc} */
     @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
-        int opLenght = in.readInt();
+        op = (Operation)in.readObject();
 
-        if (opLenght != -1) {
-            byte[] bytes = new byte[opLenght];
-
-            in.read(bytes);
-
-            op = new String(bytes);
-        }
-
-        int filePathLenght = in.readInt();
-
-        if (filePathLenght != -1) {
-            byte[] bytes = new byte[filePathLenght];
-
-            in.read(bytes);
-
-            filePath = new String(bytes);
-        }
+        filePath = U.readString(in);
 
         nodeIds = U.readSet(in);
     }
 
     /** */
-    public String operation() {
+    public Operation operation() {
         return op;
     }
 
