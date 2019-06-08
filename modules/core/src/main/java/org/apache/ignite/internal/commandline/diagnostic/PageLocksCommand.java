@@ -148,8 +148,8 @@ public class PageLocksCommand implements Command<PageLocksCommand.Arguments> {
         CommandLogger.log(CommandLogger.join(" ",
             UTILITY_NAME, DIAGNOSTIC, PAGE_LOCKS, PageLocksCommandArg.DUMP_LOG,
             CommandLogger.optional(PageLocksCommandArg.ALL),
-            CommandLogger.optional( CommandLogger.or(PageLocksCommandArg.NODES, "nodeId1,nodeId2,..")),
-            CommandLogger.optional(   CommandLogger.or(PageLocksCommandArg.NODES, "consistentId1,consistentId2,..")),
+            CommandLogger.optional(CommandLogger.or(PageLocksCommandArg.NODES, "nodeId1,nodeId2,..")),
+            CommandLogger.optional(CommandLogger.or(PageLocksCommandArg.NODES, "consistentId1,consistentId2,..")),
             "// Pring page locks dump to console on the node or nodes."));
         CommandLogger.nl();
     }
