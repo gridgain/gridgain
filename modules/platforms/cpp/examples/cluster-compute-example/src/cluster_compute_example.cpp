@@ -120,6 +120,7 @@ int main()
         node1.GetBinding().RegisterComputeFunc<PrintMsg>();
         node2.GetBinding().RegisterComputeFunc<PrintMsg>();
         node3.GetBinding().RegisterComputeFunc<PrintMsg>();
+        client.GetBinding().RegisterComputeFunc<PrintMsg>();
 
         // Create cluster groups splitted up by demo attribute value.
         ClusterGroup localGroup = client.GetCluster().AsClusterGroup();
@@ -129,6 +130,12 @@ int main()
         // Making calls.
         client.GetCompute(group1).Broadcast(PrintMsg("DemoAttribute=Value0"));
         client.GetCompute(group2).Broadcast(PrintMsg("DemoAttribute=Value1"));
+
+        // Waiting the compute jobs.
+        std::cout << std::endl;
+        std::cout << ">>> Waiting all compute jobs done, before shutting down the cluster, press 'Enter to continue ..." << std::endl;
+        std::cout << std::endl;
+        std::cin.get();
 
         // Stop client node first.
         Ignition::Stop(client.GetName(), true);
