@@ -49,8 +49,8 @@ public class RollingUpgradeStatus extends IgniteDataTransferObject {
     private Set<IgniteFeatures> supportedFeatures;
 
     /** Creates a new instance with default values. */
-    public static RollingUpgradeStatus disabledRollingUpgradeStatus() {
-        return new RollingUpgradeStatus(false, null, null, false, Collections.EMPTY_SET);
+    public static RollingUpgradeStatus disabledRollingUpgradeStatus(IgniteProductVersion initVer) {
+        return new RollingUpgradeStatus(false, initVer, null, false, Collections.EMPTY_SET);
     }
 
     /**
