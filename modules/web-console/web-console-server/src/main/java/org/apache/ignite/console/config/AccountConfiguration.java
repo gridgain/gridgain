@@ -20,8 +20,8 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.crypto.password.Pbkdf2PasswordEncoder;
 
 /**
  * Account configuration.
@@ -39,12 +39,12 @@ public class AccountConfiguration {
     public PasswordEncoder passwordEncoder() {
         // Pbkdf2PasswordEncoder is compatible with passport.js, but BCryptPasswordEncoder is recommended by Spring.
         // We can return to Pbkdf2PasswordEncoder if we decided to import old users.
-        //  Pbkdf2PasswordEncoder encoder = new Pbkdf2PasswordEncoder("", 25000, HASH_WIDTH); // HASH_WIDTH = 512
-        //
-        //  encoder.setAlgorithm(PBKDF2WithHmacSHA256);
-        //  encoder.setEncodeHashAsBase64(true);
+        Pbkdf2PasswordEncoder encoder = new Pbkdf2PasswordEncoder("", 25000, 512);
 
-        return new BCryptPasswordEncoder();
+        encoder.setAlgorithm(Pbkdf2PasswordEncoder.SecretKeyFactoryAlgorithm.PBKDF2WithHmacSHA256);
+        encoder.setEncodeHashAsBase64(true);
+
+        return encoder;
     }
 
     /**
