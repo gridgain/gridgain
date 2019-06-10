@@ -3019,6 +3019,11 @@ class ServerImpl extends TcpDiscoveryImpl {
             else if (msg instanceof TcpDiscoveryRingLatencyCheckMessage)
                 processRingLatencyCheckMessage((TcpDiscoveryRingLatencyCheckMessage)msg);
 
+            else if (msg instanceof TcpDiscoveryAuthFailedMessage) {
+                TcpDiscoveryAuthFailedMessage authFailedMsg = (TcpDiscoveryAuthFailedMessage)msg;
+
+                trySendMessageDirectly(authFailedMsg.getTargetNode(), authFailedMsg);
+            }
             else
                 assert false : "Unknown message type: " + msg.getClass().getSimpleName();
 
@@ -3964,8 +3969,10 @@ class ServerImpl extends TcpDiscoveryImpl {
                                     U.addressesAsString(node));
 
                             try {
-                                trySendMessageDirectly(node, new TcpDiscoveryAuthFailedMessage(locNodeId,
-                                    spi.locHost));
+                                trySendMessageDirectly(
+                                    node,
+                                    new TcpDiscoveryAuthFailedMessage(locNodeId, spi.locHost, node)
+                                );
                             }
                             catch (IgniteSpiException e) {
                                 if (log.isDebugEnabled())
@@ -4000,8 +4007,10 @@ class ServerImpl extends TcpDiscoveryImpl {
                                         ", addrs=" + U.addressesAsString(node));
 
                                 try {
-                                    trySendMessageDirectly(node, new TcpDiscoveryAuthFailedMessage(locNodeId,
-                                        spi.locHost));
+                                    trySendMessageDirectly(
+                                        node,
+                                        new TcpDiscoveryAuthFailedMessage(locNodeId, spi.locHost, node)
+                                    );
                                 }
                                 catch (IgniteSpiException e) {
                                     if (log.isDebugEnabled())
@@ -4622,8 +4631,10 @@ class ServerImpl extends TcpDiscoveryImpl {
                     finally {
                         if (authFailed) {
                             try {
-                                trySendMessageDirectly(node, new TcpDiscoveryAuthFailedMessage(locNodeId,
-                                    spi.locHost));
+                                trySendMessageDirectly(
+                                    node,
+                                    new TcpDiscoveryAuthFailedMessage(locNodeId, spi.locHost, node)
+                                );
                             }
                             catch (IgniteSpiException e) {
                                 if (log.isDebugEnabled())
@@ -4687,7 +4698,7 @@ class ServerImpl extends TcpDiscoveryImpl {
 
                             if (spi.nodeAuth != null && spi.nodeAuth.isGlobalNodeAuthentication()) {
                                 TcpDiscoveryAbstractMessage authFail =
-                                    new TcpDiscoveryAuthFailedMessage(locNodeId, spi.locHost);
+                                    new TcpDiscoveryAuthFailedMessage(locNodeId, spi.locHost, node);
 
                                 try {
                                     byte[] rmSubj = node.attribute(IgniteNodeAttributes.ATTR_SECURITY_SUBJECT);
@@ -6675,10 +6686,6 @@ class ServerImpl extends TcpDiscoveryImpl {
                             // Send receipt back.
                             spi.writeToSocket(msg, sock, RES_OK, sockTimeout);
 
-                            boolean ignored = false;
-
-                            TcpDiscoverySpiState state = null;
-
                             synchronized (mux) {
                                 if (spiState == CONNECTING) {
                                     joinRes.set(msg);
@@ -6688,15 +6695,18 @@ class ServerImpl extends TcpDiscoveryImpl {
                                     mux.notifyAll();
                                 }
                                 else {
-                                    ignored = true;
+                                    TcpDiscoveryNode targetNode = ((TcpDiscoveryAuthFailedMessage)msg).getTargetNode();
 
-                                    state = spiState;
+                                    if (targetNode == null || targetNode.id().equals(locNodeId)) {
+                                        if (log.isDebugEnabled())
+                                            log.debug("Auth failed message has been ignored [msg=" + msg +
+                                                ", spiState=" + spiState + ']');
+                                    }
+                                    else
+                                        //It can happen when current node is router node and target node is client.
+                                        msgWorker.addMessage(msg);
                                 }
                             }
-
-                            if (ignored && log.isDebugEnabled())
-                                log.debug("Auth failed message has been ignored [msg=" + msg +
-                                    ", spiState=" + state + ']');
 
                             continue;
                         }

@@ -23,6 +23,7 @@ import java.net.InetAddress;
 import java.util.UUID;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
 
 /**
  * Message telling joining node that its authentication failed on coordinator.
@@ -34,16 +35,28 @@ public class TcpDiscoveryAuthFailedMessage extends TcpDiscoveryAbstractMessage {
     /** Coordinator address. */
     private transient InetAddress addr;
 
+    /** Node for which authentication was failed. */
+    private transient TcpDiscoveryNode targetNode;
+
     /**
      * Constructor.
      *
      * @param creatorNodeId Creator node ID.
      * @param addr Coordinator address.
+     * @param targetNode Node for which authentication was failed.
      */
-    public TcpDiscoveryAuthFailedMessage(UUID creatorNodeId, InetAddress addr) {
+    public TcpDiscoveryAuthFailedMessage(UUID creatorNodeId, InetAddress addr, TcpDiscoveryNode targetNode) {
         super(creatorNodeId);
 
         this.addr = addr;
+        this.targetNode = targetNode;
+    }
+
+    /**
+     * @return Node for which authentication was failed.
+     */
+    public TcpDiscoveryNode getTargetNode() {
+        return targetNode;
     }
 
     /**
@@ -60,6 +73,7 @@ public class TcpDiscoveryAuthFailedMessage extends TcpDiscoveryAbstractMessage {
         out.defaultWriteObject();
 
         U.writeByteArray(out, addr.getAddress());
+        out.writeObject(targetNode);
     }
 
     /**
@@ -69,6 +83,7 @@ public class TcpDiscoveryAuthFailedMessage extends TcpDiscoveryAbstractMessage {
         in.defaultReadObject();
 
         addr = InetAddress.getByAddress(U.readByteArray(in));
+        targetNode = (TcpDiscoveryNode)in.readObject();
     }
 
     /** {@inheritDoc} */
