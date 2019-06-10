@@ -43,6 +43,9 @@ public class VisorExecutorServiceConfiguration extends VisorDataTransferObject {
     /** Management pool size. */
     private int mgmtPoolSize;
 
+    /** IGFS pool size. */
+    private int igfsPoolSize;
+
     /** Peer-to-peer pool size. */
     private int p2pPoolSz;
 
@@ -137,6 +140,13 @@ public class VisorExecutorServiceConfiguration extends VisorDataTransferObject {
     }
 
     /**
+     * @return IGFS pool size.
+     */
+    public int getIgfsThreadPoolSize() {
+        return igfsPoolSize;
+    }
+
+    /**
      * @return Peer-to-peer pool size.
      */
     public int getPeerClassLoadingThreadPoolSize() {
@@ -218,6 +228,7 @@ public class VisorExecutorServiceConfiguration extends VisorDataTransferObject {
         out.writeInt(pubPoolSize);
         out.writeInt(sysPoolSz);
         out.writeInt(mgmtPoolSize);
+        out.writeInt(igfsPoolSize);
         out.writeInt(p2pPoolSz);
         out.writeInt(rebalanceThreadPoolSize);
         out.writeInt(restPoolSz);
@@ -236,6 +247,7 @@ public class VisorExecutorServiceConfiguration extends VisorDataTransferObject {
         pubPoolSize = in.readInt();
         sysPoolSz = in.readInt();
         mgmtPoolSize = in.readInt();
+        igfsPoolSize = in.readInt();
         p2pPoolSz = in.readInt();
         rebalanceThreadPoolSize = in.readInt();
         restPoolSz = in.readInt();
