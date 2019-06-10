@@ -22,8 +22,8 @@ import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.CommandLogger;
-import org.apache.ignite.internal.commandline.cache.CacheCommandList;
 
+import static org.apache.ignite.internal.commandline.Command.usage;
 import static org.apache.ignite.internal.commandline.CommandHandler.UTILITY_NAME;
 import static org.apache.ignite.internal.commandline.CommandList.DIAGNOSTIC;
 import static org.apache.ignite.internal.commandline.CommandLogger.join;
@@ -34,14 +34,10 @@ import static org.apache.ignite.internal.commandline.diagnostic.DiagnosticSubCom
  *
  */
 public class DiagnosticCommand implements Command<DiagnosticSubCommand> {
-    /**
-     *
-     */
+    /** */
     private DiagnosticSubCommand subcommand;
 
-    /**
-     *
-     */
+    /** */
     private Logger logger;
 
     /** {@inheritDoc} */
@@ -108,11 +104,11 @@ public class DiagnosticCommand implements Command<DiagnosticSubCommand> {
 
     /** {@inheritDoc} */
     @Override public void printUsage() {
-        Command.usage("View diagnostic information in a cluster:", DIAGNOSTIC);
+        usage("View diagnostic information in a cluster:", DIAGNOSTIC);
     }
 
     /**
-     *
+     * Print diagnosric command help.
      */
     private void printDiagnosticHelp() {
         CommandLogger.logWithIndent(join(" ", UTILITY_NAME, DIAGNOSTIC, PAGE_LOCKS + " - dump page locks info."));

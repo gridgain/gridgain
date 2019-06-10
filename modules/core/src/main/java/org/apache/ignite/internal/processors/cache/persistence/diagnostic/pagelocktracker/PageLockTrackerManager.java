@@ -125,7 +125,7 @@ public class PageLockTrackerManager implements LifecycleAware {
                     separatorChar + DEFAULT_TARGET_FOLDER +  separatorChar), managerNameId);
             }
             catch (IgniteCheckedException e) {
-                log.warning("Faile to save locks dump file.", e);
+                log.warning("Failed to save locks dump file.", e);
             }
         }
     }
