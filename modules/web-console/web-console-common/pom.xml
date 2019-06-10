@@ -38,13 +38,13 @@
         <dependency>
             <groupId>org.gridgain</groupId>
             <artifactId>ignite-core</artifactId>
-            <version>${project.version}</version>
+            <version>${web-console.ignite.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.gridgain</groupId>
             <artifactId>ignite-rest-http</artifactId>
-            <version>${project.version}</version>
+            <version>${web-console.ignite.version}</version>
             <exclusions>
                 <exclusion>
                     <groupId>*</groupId>

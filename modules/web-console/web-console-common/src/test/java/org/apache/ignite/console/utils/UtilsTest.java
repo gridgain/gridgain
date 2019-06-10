@@ -14,21 +14,17 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.testsuites;
+package org.apache.ignite.console.utils;
 
-import org.apache.ignite.console.agent.rest.RestExecutorSelfTest;
-import org.apache.ignite.websocket.SerializationTests;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+import org.junit.Test;
 
 /**
- * Web Agent test suite.
+ * Test for Web Console utils.
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-    RestExecutorSelfTest.class,
-    SerializationTests.class
-})
-public class IgniteWebAgentTestSuite {
-    // No-op.
+public class UtilsTest {
+    /** */
+    @Test
+    public void testDummy() {
+        System.out.println("Dummy test");
+    }
 }

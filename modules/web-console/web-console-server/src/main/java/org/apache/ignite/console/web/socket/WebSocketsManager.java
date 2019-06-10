@@ -244,6 +244,9 @@ public class WebSocketsManager {
 
             newTop.setId(F.isEmpty(clusterId) ? UUID.randomUUID().toString() : clusterId);
 
+            if (F.isEmpty(newTop.getName()))
+                newTop.setName("Cluster " + newTop.getId().substring(0, 8).toUpperCase());
+
             TopologySnapshot oldTop = clusters.put(newTop.getId(), newTop);
 
             updateTopology(wsAgent, oldTop, newTop);

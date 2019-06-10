@@ -8,7 +8,7 @@ GridGain Web Console Standalone Docker Image Build Instructions
 =============================================================
 1) Build ignite-web-console module
 
-        mvn clean install -P web-console -DskipTests -T 2C -pl :ignite-web-console -am
+        mvn clean install -P web-console -DskipTests -pl :ignite-web-console -am
 
 2) Copy ignite-web-console-agent-<version>.zip from 'modules/web-console/web-agent/target'
    to 'docker/web-console/standalone' directory

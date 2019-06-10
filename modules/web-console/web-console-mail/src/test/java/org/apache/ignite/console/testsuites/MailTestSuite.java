@@ -14,21 +14,18 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.testsuites;
+package org.apache.ignite.console.testsuites;
 
-import org.apache.ignite.console.agent.rest.RestExecutorSelfTest;
-import org.apache.ignite.websocket.SerializationTests;
+import org.apache.ignite.console.services.MailServiceTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
 /**
- * Web Agent test suite.
+ * Mail service test suite.
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-    RestExecutorSelfTest.class,
-    SerializationTests.class
+    MailServiceTest.class,
 })
-public class IgniteWebAgentTestSuite {
-    // No-op.
+public class MailTestSuite {
 }
