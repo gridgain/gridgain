@@ -36,7 +36,9 @@ public interface RollingUpgradeProcessor extends GridProcessor {
     RollingUpgradeStatus getStatus();
 
     /**
-     * Disables strict validation mode.
+     * Enables forced mode of rolling upgrade.
+     * This means that the strict version checking of the node should not be used and therefore
+     * this mode allows to coexist more than two versions of Ignite nodes in the cluster.
      */
     void enableForcedMode();
 }

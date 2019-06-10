@@ -32,6 +32,11 @@ public interface RollingUpgradeStatus {
     public boolean isEnabled();
 
     /**
+     * @return {@code true} if strict mode is enabled.
+     */
+    public boolean isForcedModeEnabled();
+
+    /**
      * Returns the version that is used as starting point for Rolling Upgrade.
      *
      * @return Initial version.
@@ -46,11 +51,6 @@ public interface RollingUpgradeStatus {
      * @return Resulting version.
      */
     public @Nullable IgniteProductVersion getUpdateVersion();
-
-    /**
-     * @return {@code true} if strict mode is enabled.
-     */
-    public boolean isStrictVersionCheck();
 
     /**
      * Returns a set of features that is supported by all nodes in the cluster.

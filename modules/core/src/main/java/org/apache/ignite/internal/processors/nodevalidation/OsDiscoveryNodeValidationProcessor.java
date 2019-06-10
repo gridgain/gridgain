@@ -99,9 +99,9 @@ public class OsDiscoveryNodeValidationProcessor extends GridProcessorAdapter imp
     @Override public RollingUpgradeStatus getStatus() {
         return new IgniteRollingUpgradeStatus(
             false,
+            false,
             IgniteProductVersion.fromString(ctx.discovery().localNode().attribute(ATTR_BUILD_VER)),
             null,
-            true,
             new HashSet<>(Arrays.asList(IgniteFeatures.values())));
     }
 }

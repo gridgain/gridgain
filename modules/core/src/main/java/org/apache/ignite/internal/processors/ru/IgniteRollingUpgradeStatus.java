@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.ru;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.util.Collections;
 import java.util.Set;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
@@ -36,22 +35,17 @@ public class IgniteRollingUpgradeStatus extends IgniteDataTransferObject impleme
     /** {@code true} if Rolling Upgrade is enabled. */
     private boolean enabled;
 
+    /** {@code true} if forced mode is enabled. */
+    private boolean forcedModeEnabled;
+
     /** Represents the version that is used as starting point for Rolling Upgrade. */
     private IgniteProductVersion initVer;
 
     /** Represents the resulting version.*/
     private IgniteProductVersion updateVer;
 
-    /** Strict mode of version check. */
-    private boolean strictVerCheck;
-
     /** Feature set that is supported by nodes. */
     private Set<IgniteFeatures> supportedFeatures;
-
-    /** Creates a new instance with default values. */
-    public static RollingUpgradeStatus disabledRollingUpgradeStatus() {
-        return new IgniteRollingUpgradeStatus(false, null, null, false, Collections.EMPTY_SET);
-    }
 
     /**
      * Creates a new instance of IgniteRollingUpgradeStatus.
@@ -63,28 +57,35 @@ public class IgniteRollingUpgradeStatus extends IgniteDataTransferObject impleme
      * Creates a new instance of the Rolling Upgrade status with the given parameters.
      *
      * @param enabled {@code true} if Rolling Upgrade is enabled.
+     * @param forcedModeEnabled {@code true} if forced mode is enabled.
      * @param initVer Initial version.
      * @param updateVer Resulting version.
-     * @param strictVerCheck {@code true} if strict mode is enabled.
      * @param supportedFeatures Feature set that is supported by nodes.
      */
     public IgniteRollingUpgradeStatus(
         boolean enabled,
+        boolean forcedModeEnabled,
         IgniteProductVersion initVer,
         IgniteProductVersion updateVer,
-        boolean strictVerCheck,
         Set<IgniteFeatures> supportedFeatures
     ) {
+        assert enabled || !forcedModeEnabled: "Forced mode cannot be enabled if Rolling Upgrade is disabled.";
+
         this.enabled = enabled;
+        this.forcedModeEnabled = forcedModeEnabled;
         this.initVer = initVer;
         this.updateVer = updateVer;
-        this.strictVerCheck = strictVerCheck;
         this.supportedFeatures = supportedFeatures;
     }
 
     /** {@inheritDoc} */
     @Override public boolean isEnabled() {
         return enabled;
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean isForcedModeEnabled() {
+        return forcedModeEnabled;
     }
 
     /** {@inheritDoc} */
@@ -98,11 +99,6 @@ public class IgniteRollingUpgradeStatus extends IgniteDataTransferObject impleme
     }
 
     /** {@inheritDoc} */
-    @Override public boolean isStrictVersionCheck() {
-        return strictVerCheck;
-    }
-
-    /** {@inheritDoc} */
     @Override public Set<IgniteFeatures> getSupportedFeatures() {
         return supportedFeatures;
     }
@@ -110,9 +106,9 @@ public class IgniteRollingUpgradeStatus extends IgniteDataTransferObject impleme
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         out.writeBoolean(enabled);
+        out.writeBoolean(forcedModeEnabled);
         out.writeObject(initVer);
         out.writeObject(updateVer);
-        out.writeBoolean(strictVerCheck);
         out.writeObject(supportedFeatures);
     }
 
@@ -120,9 +116,9 @@ public class IgniteRollingUpgradeStatus extends IgniteDataTransferObject impleme
     @Override protected void readExternalData(byte protoVer, ObjectInput in)
         throws IOException, ClassNotFoundException {
         enabled = in.readBoolean();
+        forcedModeEnabled = in.readBoolean();
         initVer = (IgniteProductVersion)in.readObject();
         updateVer = (IgniteProductVersion)in.readObject();
-        strictVerCheck = in.readBoolean();
         supportedFeatures = (Set)in.readObject();
     }
 

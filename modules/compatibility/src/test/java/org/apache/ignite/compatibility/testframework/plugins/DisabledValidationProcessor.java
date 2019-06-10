@@ -23,6 +23,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.nodevalidation.DiscoveryNodeValidationProcessor;
+import org.apache.ignite.internal.processors.ru.IgniteRollingUpgradeStatus;
 import org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult;
 import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -68,11 +69,11 @@ public class DisabledValidationProcessor extends GridProcessorAdapter implements
 
     /** {@inheritDoc} */
     @Override public RollingUpgradeStatus getStatus() {
-        return new RollingUpgradeStatus(
+        return new IgniteRollingUpgradeStatus(
+            false,
             false,
             IgniteProductVersion.fromString(ctx.discovery().localNode().attribute(ATTR_BUILD_VER)),
             null,
-            true,
             new HashSet<>(Arrays.asList(IgniteFeatures.values())));
     }
 }
