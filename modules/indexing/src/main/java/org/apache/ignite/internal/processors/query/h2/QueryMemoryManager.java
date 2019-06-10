@@ -23,15 +23,16 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
-import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.internal.U;
+
+import static org.apache.ignite.internal.util.IgniteUtils.KB;
 
 public class QueryMemoryManager extends H2MemoryTracker {
     //TODO: GG-18629: Move defaults to memory quotas configuration.
     /**
      * Default memory reservation block size.
      */
-    private static final long DFLT_MEMORY_RESERVATION_BLOCK_SIZE = 128L * IgniteUtils.KB;
+    private static final long DFLT_MEMORY_RESERVATION_BLOCK_SIZE = 128L * KB;
 
     /**
      * Default query memory limit.
