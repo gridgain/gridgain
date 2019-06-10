@@ -16,10 +16,12 @@
 
 package org.apache.ignite.internal.visor.diagnostic;
 
-/** */
+/**
+ * Operation type for {@link VisorPageLocksTask}
+ */
 public enum Operation {
-    /** */
+    /** Dump page locks to file operation. */
     DUMP_FILE,
-    /** */
+    /** Dump page locks to log. */
     DUMP_LOG
 }

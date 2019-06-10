@@ -39,6 +39,11 @@ import org.apache.ignite.internal.visor.diagnostic.VisorPageLocksTrackerArgs;
 import static org.apache.ignite.internal.commandline.CommandHandler.UTILITY_NAME;
 import static org.apache.ignite.internal.commandline.CommandList.DIAGNOSTIC;
 import static org.apache.ignite.internal.commandline.diagnostic.DiagnosticSubCommand.PAGE_LOCKS;
+import static org.apache.ignite.internal.commandline.diagnostic.PageLocksCommand.PageLocksCommandArg.ALL;
+import static org.apache.ignite.internal.commandline.diagnostic.PageLocksCommand.PageLocksCommandArg.NODES;
+import static org.apache.ignite.internal.commandline.diagnostic.PageLocksCommand.PageLocksCommandArg.PATH;
+import static org.apache.ignite.internal.commandline.diagnostic.PageLocksCommand.PageLocksCommandArg.DUMP;
+import static org.apache.ignite.internal.commandline.diagnostic.PageLocksCommand.PageLocksCommandArg.DUMP_LOG;
 import static org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor.DEFAULT_TARGET_FOLDER;
 
 /**
@@ -127,7 +132,8 @@ public class PageLocksCommand implements Command<PageLocksCommand.Arguments> {
                     break;
                 default:
                     throw new IllegalArgumentException(
-                        "Unexpected argumetn:" + arg + ", supported:" + Arrays.toString(PageLocksCommandArg.values()));
+                        "Unexpected argumetn:" + arg + ", supported:" + Arrays.toString(PageLocksCommandArg.values())
+                    );
             }
         }
 
@@ -138,18 +144,18 @@ public class PageLocksCommand implements Command<PageLocksCommand.Arguments> {
     @Override public void printUsage() {
         CommandLogger.log("View pages locks state information on the node or nodes.");
         CommandLogger.log(CommandLogger.join(" ",
-            UTILITY_NAME, DIAGNOSTIC, PAGE_LOCKS, PageLocksCommandArg.DUMP,
-            CommandLogger.optional(PageLocksCommandArg.PATH, "path_to_directory"),
-            CommandLogger.optional(PageLocksCommandArg.ALL),
-            CommandLogger.optional(CommandLogger.or(PageLocksCommandArg.NODES, "nodeId1,nodeId2,..")),
-            CommandLogger.optional(CommandLogger.or(PageLocksCommandArg.NODES, "consistentId1,consistentId2,..")),
+            UTILITY_NAME, DIAGNOSTIC, PAGE_LOCKS, DUMP,
+            CommandLogger.optional(PATH, "path_to_directory"),
+            CommandLogger.optional(ALL),
+            CommandLogger.optional(CommandLogger.or(NODES, "nodeId1,nodeId2,..")),
+            CommandLogger.optional(CommandLogger.or(NODES, "consistentId1,consistentId2,..")),
             "// Save page locks dump to file generated in IGNITE_HOME" +
                 File.separatorChar + "work" + File.separatorChar + DEFAULT_TARGET_FOLDER + " directory."));
         CommandLogger.log(CommandLogger.join(" ",
-            UTILITY_NAME, DIAGNOSTIC, PAGE_LOCKS, PageLocksCommandArg.DUMP_LOG,
-            CommandLogger.optional(PageLocksCommandArg.ALL),
-            CommandLogger.optional(CommandLogger.or(PageLocksCommandArg.NODES, "nodeId1,nodeId2,..")),
-            CommandLogger.optional(CommandLogger.or(PageLocksCommandArg.NODES, "consistentId1,consistentId2,..")),
+            UTILITY_NAME, DIAGNOSTIC, PAGE_LOCKS, DUMP_LOG,
+            CommandLogger.optional(ALL),
+            CommandLogger.optional(CommandLogger.or(NODES, "nodeId1,nodeId2,..")),
+            CommandLogger.optional(CommandLogger.or(NODES, "consistentId1,consistentId2,..")),
             "// Pring page locks dump to console on the node or nodes."));
         CommandLogger.nl();
     }
@@ -182,6 +188,7 @@ public class PageLocksCommand implements Command<PageLocksCommand.Arguments> {
         /**
          * @param op Operation.
          * @param filePath File path.
+         * @param allNodes If {@code True} include all available nodes for command. If {@code False} include only subset.
          * @param nodeIds Node ids.
          */
         public Arguments(
@@ -197,7 +204,7 @@ public class PageLocksCommand implements Command<PageLocksCommand.Arguments> {
         }
     }
 
-    private enum PageLocksCommandArg implements CommandArg{
+    enum PageLocksCommandArg implements CommandArg {
         /** */
         DUMP("dump"),
 

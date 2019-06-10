@@ -116,21 +116,25 @@ public class VisorPageLocksTask
 
             String result;
 
-            if (DUMP_FILE == arg.operation()) {
-                String filePath = arg.filePath() != null ?
-                    lockTrackerMgr.dumpLocksToFile(arg.filePath()) :
-                    lockTrackerMgr.dumpLocksToFile();
+            switch (arg.operation()) {
+                case DUMP_LOG:
+                    lockTrackerMgr.dumpLocksToLog();
 
-                result = "Page locks dump was writtern to file " + filePath;
-            }
-            else if (DUMP_LOG == arg.operation()) {
-                lockTrackerMgr.dumpLocksToLog();
+                    result = "Page locks dump was printed to console " +
+                        ToStringDumpProcessor.DATE_FMT.format(new Date(System.currentTimeMillis()));
 
-                result = "Page locks dump was printed to console " +
-                    ToStringDumpProcessor.DATE_FMT.format(new Date(System.currentTimeMillis()));
+                    break;
+                case DUMP_FILE:
+                    String filePath = arg.filePath() != null ?
+                        lockTrackerMgr.dumpLocksToFile(arg.filePath()) :
+                        lockTrackerMgr.dumpLocksToFile();
+
+                    result = "Page locks dump was writtern to file " + filePath;
+
+                    break;
+                default:
+                    result = "Unsupported operation: " + arg.operation();
             }
-            else
-                result = "Unsupported operation: " + arg.operation();
 
             return new VisorPageLocksResult(result);
         }
@@ -140,5 +144,4 @@ public class VisorPageLocksTask
             return S.toString(VisorPageLocksTrackerJob.class, this);
         }
     }
-
 }

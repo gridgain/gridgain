@@ -54,7 +54,7 @@ public class VisorPageLocksResult extends IgniteDataTransferObject {
     /** {@inheritDoc} */
     @Override protected void readExternalData(byte protoVer, ObjectInput in)
         throws IOException, ClassNotFoundException {
-        U.readString(in);
+        payload = U.readString(in);
     }
 
     /**

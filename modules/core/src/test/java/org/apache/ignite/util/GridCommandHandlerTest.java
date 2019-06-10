@@ -166,9 +166,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
     }
 
     /**
-     *
+     * Clean diagnostic directories.
      */
-    private void cleanDiagnosticDir(){
+    private void cleanDiagnosticDir() {
         U.delete(defaultDiagnosticDir);
         U.delete(customDiagnosticDir);
     }
