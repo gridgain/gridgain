@@ -122,7 +122,7 @@ int main()
         node3.GetBinding().RegisterComputeFunc<PrintMsg>();
 
         // Create cluster groups splitted up by demo attribute value.
-        ClusterGroup localGroup = client.GetCluster().ForAll();
+        ClusterGroup localGroup = client.GetCluster().AsClusterGroup();
         ClusterGroup group1 = localGroup.ForAttribute("DemoAttribute", "Value0");
         ClusterGroup group2 = localGroup.ForAttribute("DemoAttribute", "Value1");
 
