@@ -91,6 +91,33 @@ namespace ignite
             };
         };
 
+        /*
+         * Stores cluster nodes in thread-safe manner.
+         */
+        class ClusterNodesHolder
+        {
+            CriticalSection nodesLock;
+            std::map<Guid, SP_ClusterNodeImpl> nodes;
+
+        public:
+            void AddNode(SP_ClusterNodeImpl node)
+            {
+                CsLockGuard mtx(nodesLock);
+
+                nodes.insert(std::pair<Guid, SP_ClusterNodeImpl>(node.Get()->GetId(), node));
+            }
+
+            SP_ClusterNodeImpl GetNode(Guid Id)
+            {
+                CsLockGuard mtx(nodesLock);
+
+                if (nodes.find(Id) != nodes.end())
+                    return nodes.at(Id);
+
+                return NULL;
+            }
+        };
+
         /**
          * InLongOutLong callback.
          * 
@@ -107,13 +134,12 @@ namespace ignite
             {
                 case OperationCallback::NODE_INFO:
                 {
-                    CsLockGuard mtx(env->Get()->nodesLock);
-
                     SharedPointer<InteropMemory> mem = env->Get()->GetMemory(val);
                     interop::InteropInputStream inStream(mem.Get());
                     binary::BinaryReaderImpl reader(&inStream);
+
                     SP_ClusterNodeImpl node = (new impl::cluster::ClusterNodeImpl(reader));
-                    env->Get()->nodes.Get()->insert(std::pair<Guid, SP_ClusterNodeImpl>(node.Get()->GetId(), node));
+                    env->Get()->nodes.Get()->AddNode(node);
                     break;
                 }
 
@@ -291,7 +317,7 @@ namespace ignite
             metaUpdater(0),
             binding(),
             moduleMgr(),
-            nodes(new std::map<Guid, SP_ClusterNodeImpl>())
+            nodes(new ClusterNodesHolder())
         {
             binding = SharedPointer<IgniteBindingImpl>(new IgniteBindingImpl(*this));
 
@@ -410,12 +436,7 @@ namespace ignite
 
         IgniteEnvironment::SP_ClusterNodeImpl IgniteEnvironment::GetNode(Guid Id)
         {
-            CsLockGuard mtx(nodesLock);
-
-            if (nodes.Get()->find(Id) != nodes.Get()->end())
-                return nodes.Get()->at(Id);
-
-            return NULL;
+            return nodes.Get()->GetNode(Id);
         }
 
         SharedPointer<IgniteBindingImpl> IgniteEnvironment::GetBinding() const

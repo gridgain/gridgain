@@ -66,51 +66,54 @@ namespace ignite
                 ~ClusterGroupImpl();
 
                 /**
-                 * Get cluster group implementation for nodes containing given name and value specified in user attributes.
+                 * Get cluster group for nodes containing given name and value specified in user attributes.
                  *
-                 * @return Specified nodes cluster group implementation.
+                 * @param name Name of the attribute.
+                 * @param val Optional attribute value to match.
+                 * @return Pointer to cluster group for nodes containing specified attribute.
                  */
                 SP_ClusterGroupImpl ForAttribute(std::string name, std::string val);
 
                 /**
-                 * Get cluster group implementation for all data nodes that have the cache with the specified name running.
+                 * Get cluster group for all data nodes that have the cache with the specified name running.
                  *
-                 * @return All data nodes cluster group implementation.
+                 * @param cacheName Cache name.
+                 * @return Pointer to cluster group over nodes that have the cache with the specified name running.
                  */
                 SP_ClusterGroupImpl ForDataNodes(std::string cacheName);
 
                 /**
-                 * Get server nodes cluster group implementation.
+                 * Creates a cluster group of nodes started in server mode.
                  *
-                 * @return Server nodes cluster group implementation.
+                 * @return Pointer to cluster group of nodes started in server mode.
                  */
                 SP_ClusterGroupImpl ForServers();
 
                 /**
-                 * Get server nodes cluster group implementation.
+                 * Creates a cluster group of cpp nodes.
                  *
-                 * @return Cpp nodes cluster group implementation.
+                 * @return Pointer to cluster group of cpp nodes.
                  */
                 SP_ClusterGroupImpl ForCpp();
 
                 /**
                  * Get compute instance over this cluster group.
                  *
-                 * @return Compute instance.
+                 * @return Pointer to compute instance.
                  */
                 SP_ComputeImpl GetCompute();
 
                 /**
                  * Get compute instance over specified cluster group.
                  *
-                 * @return Compute instance.
+                 * @return Pointer to compute instance.
                  */
                 SP_ComputeImpl GetCompute(ignite::cluster::ClusterGroup grp);
 
                 /**
-                 * Get container of cluster nodes over this cluster group.
+                 * Gets the vector of nodes in this cluster group.
                  *
-                 * @return Vector of cluster nodes.
+                 * @return All nodes in this cluster group.
                  */
                 std::vector<ignite::cluster::ClusterNode> GetNodes();
 
@@ -137,23 +140,23 @@ namespace ignite
                  *
                  * @param cache name to include into cluster group.
                  * @param operation id.
-                 * @return New cluster group implementation.
+                 * @return Pointer to cluster group.
                  */
                 SP_ClusterGroupImpl ForCacheNodes(std::string name, int32_t op);
 
                 /**
-                 * Make cluster group implementation using java reference and
+                 * Make cluster group using java reference and
                  * internal state of this cluster group.
                  *
                  * @param javaRef Java reference to cluster group to be created.
-                 * @return New cluster group implementation.
+                 * @return Pointer to cluster group.
                  */
                 SP_ClusterGroupImpl FromTarget(jobject javaRef);
 
                 /**
                  * Gets instance of compute internally.
                  *
-                 * @return Instance of compute.
+                 * @return Pointer to compute.
                  */
                 SP_ComputeImpl InternalGetCompute();
 

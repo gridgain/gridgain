@@ -76,9 +76,12 @@ struct ComputeTestSuiteFixtureClusterGroup
         CLIENT_NODE,
     };
 
-    Ignite node;
+    Ignite server0;
+    Ignite server1;
+    Ignite server2;
+    Ignite client;
 
-    Ignite MakeNode(const char* name, NodeType type = SERVER_NODE_ATTRIBUTE_VALUE0)
+    Ignite MakeNode(const char* name, NodeType type)
     {
         std::string config;
 
@@ -107,7 +110,10 @@ struct ComputeTestSuiteFixtureClusterGroup
      * Constructor.
      */
     ComputeTestSuiteFixtureClusterGroup() :
-        node(MakeNode("ServerNode0"))
+        server0(MakeNode("ServerNode0", SERVER_NODE_ATTRIBUTE_VALUE0)),
+        server1(MakeNode("ServerNode1", SERVER_NODE_ATTRIBUTE_VALUE1)),
+        server2(MakeNode("ServerNode2", SERVER_NODE_ATTRIBUTE_VALUE1)),
+        client(MakeNode("ClientNode", CLIENT_NODE))
     {
         // No-op.
     }
@@ -594,11 +600,7 @@ BOOST_FIXTURE_TEST_SUITE(ComputeTestSuiteClusterGroup, ComputeTestSuiteFixtureCl
 
 BOOST_AUTO_TEST_CASE(IgniteGetClusterGroupForServers)
 {
-    Ignite server1 = MakeNode("ServerNode1", SERVER_NODE_ATTRIBUTE_VALUE1);
-    Ignite server2 = MakeNode("ServerNode2", SERVER_NODE_ATTRIBUTE_VALUE1);
-    Ignite client = MakeNode("ClinetNode", CLIENT_NODE);
-
-    cluster::ClusterGroup localGroup = client.GetCluster().ForAll();
+    cluster::ClusterGroup localGroup = client.GetCluster().AsClusterGroup();
     cluster::ClusterGroup group = localGroup.ForServers();
 
     Compute compute = client.GetCompute(group);
@@ -614,11 +616,7 @@ BOOST_AUTO_TEST_CASE(IgniteGetClusterGroupForServers)
 
 BOOST_AUTO_TEST_CASE(IgniteGetClusterGroupForAttribute)
 {
-    Ignite server1 = MakeNode("ServerNode1", SERVER_NODE_ATTRIBUTE_VALUE1);
-    Ignite server2 = MakeNode("ServerNode2", SERVER_NODE_ATTRIBUTE_VALUE1);
-    Ignite client = MakeNode("ClinetNode", CLIENT_NODE);
-
-    cluster::ClusterGroup localGroup = client.GetCluster().ForAll();
+    cluster::ClusterGroup localGroup = client.GetCluster().AsClusterGroup();
     cluster::ClusterGroup group1 = localGroup.ForAttribute("TestAttribute", "Value0");
     cluster::ClusterGroup group2 = localGroup.ForAttribute("TestAttribute", "Value1");
 

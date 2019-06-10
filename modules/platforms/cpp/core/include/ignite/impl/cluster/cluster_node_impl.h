@@ -44,7 +44,7 @@ namespace ignite
                 /**
                  * Constructor used to create new instance.
                  *
-                 * @param binary reader.
+                 * @param reader Binary reader.
                  */
                 ClusterNodeImpl(binary::BinaryReaderImpl& reader);
 

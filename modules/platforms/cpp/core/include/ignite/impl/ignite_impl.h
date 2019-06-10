@@ -180,15 +180,18 @@ namespace ignite
             SP_IgniteClusterImpl GetCluster();
 
             /**
-             * Get compute.
+             * Gets compute instance over all cluster nodes started in server mode.
              *
              * @return ComputeImpl instance.
              */
             SP_ComputeImpl GetCompute();
 
             /**
-             * Get compute from cluster group.
+             * Gets compute instance over the specified cluster group. All operations
+             * on the returned compute instance will only include nodes from
+             * this cluster group.
              *
+             * @param grp Specified cluster group instance.
              * @return ComputeImpl instance.
              */
             SP_ComputeImpl GetCompute(ignite::cluster::ClusterGroup grp);

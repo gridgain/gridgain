@@ -34,6 +34,7 @@ namespace ignite
         /* Forward declarations. */
         class IgniteBindingImpl;
         class ModuleManager;
+        class ClusterNodesHolder;
         namespace cluster {
             class ClusterNodeImpl;
         }
@@ -332,10 +333,7 @@ namespace ignite
             common::concurrent::SharedPointer<ModuleManager> moduleMgr;
 
             /** Cluster nodes. */
-            common::concurrent::SharedPointer<std::map<Guid, SP_ClusterNodeImpl> > nodes;
-
-            /** Cluster nodes lock. */
-            common::concurrent::CriticalSection nodesLock;
+            common::concurrent::SharedPointer<ClusterNodesHolder> nodes;
 
             IGNITE_NO_COPY_ASSIGNMENT(IgniteEnvironment);
         };

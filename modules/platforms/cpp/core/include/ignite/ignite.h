@@ -215,7 +215,7 @@ namespace ignite
         cluster::IgniteCluster GetCluster();
 
         /**
-         * Get compute.
+         * Gets compute instance over all cluster nodes started in server mode.
          *
          * This method should only be called on the valid instance.
          *
@@ -224,11 +224,14 @@ namespace ignite
         compute::Compute GetCompute();
 
         /**
-         * Get compute.
+         * Gets compute instance over the specified cluster group. All operations
+         * on the returned compute instance will only include nodes from
+         * this cluster group.
          *
          * This method should only be called on the valid instance.
          *
-         * @return Compute class of the specified cluster group.
+         * @param grp Specified cluster group instance.
+         * @return Compute class instance over the specified cluster group.
          */
         compute::Compute GetCompute(cluster::ClusterGroup grp);
 

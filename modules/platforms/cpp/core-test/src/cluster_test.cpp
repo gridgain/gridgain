@@ -99,7 +99,7 @@ BOOST_AUTO_TEST_CASE(IgniteGetNodes)
 
     BOOST_REQUIRE(cluster.IsActive());
 
-    ClusterGroup group = cluster.ForAll();
+    ClusterGroup group = cluster.AsClusterGroup();
 
     std::vector<ClusterNode> nodes = group.GetNodes();
 
@@ -112,8 +112,8 @@ BOOST_AUTO_TEST_CASE(IgniteForAttribute)
 
     BOOST_REQUIRE(cluster.IsActive());
 
-    ClusterGroup group1 = cluster.ForAll().ForAttribute("TestAttribute", "Value");
-    ClusterGroup group2 = cluster.ForAll().ForAttribute("NotExistAttribute", "Value");
+    ClusterGroup group1 = cluster.AsClusterGroup().ForAttribute("TestAttribute", "Value");
+    ClusterGroup group2 = cluster.AsClusterGroup().ForAttribute("NotExistAttribute", "Value");
 
     BOOST_REQUIRE(group1.GetNodes().size() == 1);
     BOOST_REQUIRE(group2.GetNodes().size() == 0);
@@ -125,8 +125,8 @@ BOOST_AUTO_TEST_CASE(IgniteForDataNodes)
 
     BOOST_REQUIRE(cluster.IsActive());
 
-    ClusterGroup group1 = cluster.ForAll().ForDataNodes("cache1");
-    ClusterGroup group2 = cluster.ForAll().ForDataNodes("notExist");
+    ClusterGroup group1 = cluster.AsClusterGroup().ForDataNodes("cache1");
+    ClusterGroup group2 = cluster.AsClusterGroup().ForDataNodes("notExist");
 
     BOOST_REQUIRE(group1.GetNodes().size() == 1);
     BOOST_REQUIRE(group2.GetNodes().size() == 0);
@@ -138,7 +138,7 @@ BOOST_AUTO_TEST_CASE(IgniteForServers)
 
     BOOST_REQUIRE(cluster.IsActive());
 
-    ClusterGroup group = cluster.ForAll().ForServers();
+    ClusterGroup group = cluster.AsClusterGroup().ForServers();
 
     BOOST_REQUIRE(group.GetNodes().size() == 1);
 }
@@ -149,7 +149,7 @@ BOOST_AUTO_TEST_CASE(IgniteForCpp)
 
     BOOST_REQUIRE(cluster.IsActive());
 
-    ClusterGroup group = cluster.ForAll().ForCpp();
+    ClusterGroup group = cluster.AsClusterGroup().ForCpp();
 
     BOOST_REQUIRE(group.GetNodes().size() == 1);
 }
