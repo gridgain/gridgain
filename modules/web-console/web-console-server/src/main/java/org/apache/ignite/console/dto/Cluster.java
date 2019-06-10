@@ -47,15 +47,20 @@ public class Cluster extends DataObject {
         if (F.isEmpty(name))
             throw new IllegalStateException("Cluster name is empty");
 
-        String discovery = json.getJsonObject("discovery").getString("kind");
+        JsonObject discovery = json.getJsonObject("discovery");
 
-        if (F.isEmpty(discovery))
+        if (discovery == null)
+            throw new IllegalStateException("Cluster discovery not found");
+
+        String discoveryKind = discovery.getString("kind");
+
+        if (F.isEmpty(discoveryKind))
             throw new IllegalStateException("Cluster discovery not found");
 
         return new Cluster(
             id,
             name,
-            discovery,
+            discoveryKind,
             toJson(json)
         );
     }

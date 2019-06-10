@@ -82,7 +82,7 @@ public class Notebook extends AbstractDto {
     /**
      * Paragraph in notebook.
      */
-    private static class Paragraph {
+    public static class Paragraph {
         /** Name. */
         @NotNull
         @NotEmpty
@@ -347,7 +347,7 @@ public class Notebook extends AbstractDto {
     /**
      *  Result presentation type.
      */
-    private enum ResultType {
+    public enum ResultType {
         /** None. */
         NONE,
 
@@ -370,7 +370,7 @@ public class Notebook extends AbstractDto {
     /**
      * Chart settings.
      */
-    private static class ChartOptions {
+    public static class ChartOptions {
         /** Is Bar chart stacked. */
         private boolean barChartStacked = true;
 
@@ -409,7 +409,7 @@ public class Notebook extends AbstractDto {
     /**
      * Refresh descriptor.
      */
-    private static class Rate {
+    public static class Rate {
         /** Scale. */
         private int unit;
 
