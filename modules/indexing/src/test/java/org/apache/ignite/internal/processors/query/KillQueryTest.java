@@ -161,8 +161,8 @@ public class KillQueryTest extends GridCommonAbstractTest {
     /** Table count. */
     private static AtomicInteger tblCnt = new AtomicInteger();
 
-    /** Barrier. */
-    private static volatile CyclicBarrier barrier;
+    /** Barrier. Needed to test unsupported cancelation. Doesn't block threads (parties=1) by default. */
+    private static volatile CyclicBarrier barrier = new CyclicBarrier(1);
 
     /** Allows to block messages, issued FROM the client node. */
     private static TestRecordingCommunicationSpi clientBlocker;
@@ -280,6 +280,19 @@ public class KillQueryTest extends GridCommonAbstractTest {
 
         startGrids(NODES_COUNT);
 
+        // Let's set baseline topology manually. Doing so we are sure that partitions are distributed beetween our 2 srv
+        // nodes, not belong only one node.
+        awaitPartitionMapExchange(true, true, null);
+
+        long curTop = grid(0).cluster().topologyVersion();
+
+        grid(0).cluster().baselineAutoAdjustEnabled(false);
+
+        grid(0).cluster().setBaselineTopology(curTop);
+
+        awaitPartitionMapExchange(true, true, null);
+
+        // Populate data.
         try (IgniteDataStreamer<Object, Object> ds = grid(0).dataStreamer(GridAbstractTest.DEFAULT_CACHE_NAME)) {
             for (int i = 0; i < MAX_ROWS; ++i) {
                 ds.addData(i, i);
@@ -290,8 +303,6 @@ public class KillQueryTest extends GridCommonAbstractTest {
 
         createJoinCache("PERS1", 1);
         createJoinCache("PERS2", 2);
-
-        awaitPartitionMapExchange();
     }
 
     @Override protected void afterTestsStopped() throws Exception {
@@ -314,7 +325,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
      */
     @Before
     public void before() throws Exception {
-        TestSQLFunctions.init();
+        TestSQLFunctions.reset();
 
         newBarrier(1);
 
@@ -877,7 +888,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
      * @param partitions user specified partitions, could contain partitions that are mapped on one or both nodes.
      */
     public void checkPartitions(int[] partitions) throws Exception {
-        TestSQLFunctions.init();
+        TestSQLFunctions.reset();
 
         IgniteInternalFuture cancelRes = cancel(1, asyncCancel);
 
@@ -1046,6 +1057,9 @@ public class KillQueryTest extends GridCommonAbstractTest {
      * @param parties the number of threads that must invoke await method before the barrier is tripped
      */
     private static void newBarrier(int parties) {
+        if (barrier != null)
+            barrier.reset();
+
         barrier = new CyclicBarrier(parties);
     }
 
@@ -1075,9 +1089,11 @@ public class KillQueryTest extends GridCommonAbstractTest {
         static volatile AtomicInteger funCallCnt;
 
         /**
-         * Recreate latches.
+         * Recreate latches. Old latches are released.
          */
-        static void init() {
+        static void reset() {
+            releaseLatches(reqLatch, cancelLatch, suspendQryLatch);
+
             reqLatch = new CountDownLatch(1);
 
             cancelLatch = new CountDownLatch(1);
@@ -1085,6 +1101,16 @@ public class KillQueryTest extends GridCommonAbstractTest {
             suspendQryLatch = new CountDownLatch(1);
 
             funCallCnt = new AtomicInteger(0);
+        }
+
+        /**
+         * @param latches latches to release. Our latches have initial count = 1.
+         */
+        private static void releaseLatches(CountDownLatch... latches) {
+            for (CountDownLatch l : latches) {
+                if (l != null)
+                    l.countDown();
+            }
         }
 
         /**
