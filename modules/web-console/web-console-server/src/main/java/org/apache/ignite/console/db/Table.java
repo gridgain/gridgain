@@ -28,11 +28,8 @@ import java.util.UUID;
 import java.util.function.Function;
 import javax.cache.Cache;
 import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.cache.query.Query;
-import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.console.dto.AbstractDto;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -68,19 +65,12 @@ public class Table<T extends AbstractDto> extends CacheHolder<UUID, T> {
         return this;
     }
 
-    /** */
-    private IgniteCache<Object, UUID> indexCache() {
-        IgniteCache c = cache;
-
-        return (IgniteCache<Object, UUID>)c;
-    }
-
     /**
      * @param id ID.
      * @return {@code true} If table contains specified key.
      */
     public boolean contains(UUID id) {
-        return cache.containsKey(id);
+        return cache().containsKey(id);
     }
 
     /**
@@ -88,7 +78,7 @@ public class Table<T extends AbstractDto> extends CacheHolder<UUID, T> {
      * @return DTO.
      */
     @Nullable public T load(UUID id) {
-        return cache.get(id);
+        return cache().get(id);
     }
 
     /**
@@ -96,12 +86,12 @@ public class Table<T extends AbstractDto> extends CacheHolder<UUID, T> {
      * @return DTO.
      */
     @Nullable public T getByIndex(Object key) {
-        UUID id = indexCache().get(key);
+        Object id = cache.get(key);
 
         if (id == null)
             return null;
 
-        return cache.get(id);
+        return (T)cache.get(id);
     }
 
     /**
@@ -122,7 +112,7 @@ public class Table<T extends AbstractDto> extends CacheHolder<UUID, T> {
      * @return Collection of DTOs.
      */
     public Collection<T> loadAllByIndex(Set<?> keys) {
-        Map<?, UUID> ids = indexCache().getAll(keys);
+        Map ids = cache.getAll(keys);
 
         if (ids.isEmpty())
             return Collections.emptyList();
@@ -134,10 +124,28 @@ public class Table<T extends AbstractDto> extends CacheHolder<UUID, T> {
      * @param ids IDs.
      * @return Collection of DTOs.
      */
-    public Collection<T> loadAll(Set<UUID> ids) {
-        Map<UUID, T> res = cache.getAll(ids);
+    public Collection<T> loadAll(Set<?> ids) {
+        Map<?, T> res = cache.getAll(ids);
 
         return F.isEmpty(res) ? Collections.emptyList() : res.values();
+    }
+
+    /**
+     * @param idx Index.
+     * @param newVal New value.
+     * @param oldVal Old value.
+     */
+    public void saveUniqueIndexValue(UniqueIndex<T> idx, T newVal, T oldVal) {
+        Object newIdxKey = idx.key(newVal);
+        UUID newId = newVal.getId();
+
+        Object oldId = cache.getAndPutIfAbsent(newIdxKey, newId);
+
+        if (oldId != null && !newId.equals(oldId))
+            throw new IgniteException(idx.message(newVal));
+
+        if (oldVal != null && !idx.key(oldVal).equals(newIdxKey))
+            cache.remove(idx.key(oldVal));
     }
 
     /**
@@ -145,23 +153,12 @@ public class Table<T extends AbstractDto> extends CacheHolder<UUID, T> {
      * @return Saved DTO.
      */
     public T save(T val) throws IgniteException {
-        UUID id = val.getId();
+        T oldVal = cache().getAndPut(val.getId(), val);
 
-        T oldVal = cache.getAndPut(id, val);
+        for (UniqueIndex<T> idx : uniqueIndexes)
+            saveUniqueIndexValue(idx, val, oldVal);
 
-        for (UniqueIndex<T> idx : uniqueIndexes) {
-            Object newIdxKey = idx.key(val);
-
-            UUID oldId = indexCache().getAndPutIfAbsent(newIdxKey, id);
-
-            if (oldId != null && !id.equals(oldId))
-                throw new IgniteException(idx.message(val));
-
-            if (oldVal != null && !idx.key(oldVal).equals(newIdxKey))
-                indexCache().remove(idx.key(oldVal));
-        }
-
-        return val;
+        return oldVal;
     }
 
     /**
@@ -169,7 +166,7 @@ public class Table<T extends AbstractDto> extends CacheHolder<UUID, T> {
      */
     public void saveAll(Map<UUID, T> map) throws IgniteException {
         if (F.isEmpty(uniqueIndexes)) {
-            cache.putAll(map);
+            cache().putAll(map);
             
             return;
         }
@@ -183,9 +180,9 @@ public class Table<T extends AbstractDto> extends CacheHolder<UUID, T> {
      * @return Previous value.
      */
     @Nullable public T delete(UUID id) {
-        T val = cache.getAndRemove(id);
+        T val = cache().getAndRemove(id);
 
-        indexCache().removeAll(uniqueIndexes.stream().map(idx -> idx.key(val)).collect(toSet()));
+        cache.removeAll(uniqueIndexes.stream().map(idx -> idx.key(val)).collect(toSet()));
 
         return val;
     }
@@ -195,27 +192,17 @@ public class Table<T extends AbstractDto> extends CacheHolder<UUID, T> {
      */
     public void deleteAll(Set<UUID> ids) {
         Set<Object> idxIds = ids.stream()
-            .map(cache::getAndRemove)
+            .map(cache()::getAndRemove)
             .flatMap((payload) -> uniqueIndexes.stream().map(idx -> idx.key(payload)))
             .collect(toSet());
 
-        indexCache().removeAll(idxIds);
-    }
-
-    /**
-     * Queries cache.
-     *
-     * @param qry Query to execute.
-     * @return Cursor.
-     */
-     public <R> QueryCursor<R> query(Query<R> qry) {
-        return cache.query(qry);
+        cache.removeAll(idxIds);
     }
 
     /**
      * Index for unique constraint.
      */
-    private static class UniqueIndex<T> {
+    public static class UniqueIndex<T> {
         /** */
         private final Function<T, Object> keyGenerator;
 

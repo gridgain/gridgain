@@ -42,7 +42,7 @@ export default class ConfigurationDownload {
         private summaryZipper: SummaryZipper,
         private Version: Version,
         private $q: ng.IQService,
-        private $rootScope: ng.IRootScopeService & {IgniteDemoMode: boolean},
+        private $rootScope: ng.IRootScopeService & {demoMode: boolean},
         private PageConfigure: PageConfigure
     ) {}
 
@@ -51,7 +51,7 @@ export default class ConfigurationDownload {
     downloadClusterConfiguration(cluster: ClusterLike) {
         this.activitiesData.post({action: '/configuration/download'});
 
-        return this.PageConfigure.getClusterConfiguration({clusterID: cluster.id, isDemo: !!this.$rootScope.IgniteDemoMode})
+        return this.PageConfigure.getClusterConfiguration({clusterID: cluster.id, isDemo: !!this.$rootScope.demoMode})
             .then((data) => this.configuration.populate(data))
             .then(({clusters}) => {
                 return clusters.find(({id}) => id === cluster.id)
@@ -61,7 +61,7 @@ export default class ConfigurationDownload {
                 return this.summaryZipper({
                     cluster,
                     data: {},
-                    IgniteDemoMode: this.$rootScope.IgniteDemoMode,
+                    demoMode: this.$rootScope.demoMode,
                     targetVer: this.Version.currentSbj.getValue()
                 });
             })

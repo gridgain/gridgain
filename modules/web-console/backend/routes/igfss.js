@@ -67,7 +67,7 @@ module.exports.factory = function(mongo, igfssService) {
          * Remove all IGFSs.
          */
         router.post('/remove/all', (req, res) => {
-            igfssService.removeAll(req.currentUserId(), req.header('IgniteDemoMode'))
+            igfssService.removeAll(req.currentUserId(), req.demo())
                 .then(res.api.ok)
                 .catch(res.api.error);
         });

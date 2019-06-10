@@ -16,7 +16,6 @@
 
 package org.apache.ignite.console.web.socket;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
@@ -24,8 +23,8 @@ import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistration;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
 
-import static org.apache.ignite.console.websocket.WebSocketConsts.AGENTS_PATH;
-import static org.apache.ignite.console.websocket.WebSocketConsts.BROWSERS_PATH;
+import static org.apache.ignite.console.websocket.WebSocketEvents.AGENTS_PATH;
+import static org.apache.ignite.console.websocket.WebSocketEvents.BROWSERS_PATH;
 
 /**
  * Websocket configuration.

@@ -20,7 +20,7 @@ import java.util.UUID;
 import org.apache.ignite.console.json.JsonObject;
 import org.apache.ignite.igfs.IgfsMode;
 
-import static org.apache.ignite.console.json.JsonUtils.toJson;
+import static org.apache.ignite.console.utils.Utils.toJson;
 import static org.apache.ignite.igfs.IgfsMode.PRIMARY;
 
 /**

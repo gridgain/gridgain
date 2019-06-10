@@ -20,7 +20,7 @@ import java.util.UUID;
 import org.apache.ignite.console.json.JsonObject;
 import org.apache.ignite.internal.util.typedef.F;
 
-import static org.apache.ignite.console.json.JsonUtils.toJson;
+import static org.apache.ignite.console.utils.Utils.toJson;
 
 /**
  * DTO for cluster configuration.

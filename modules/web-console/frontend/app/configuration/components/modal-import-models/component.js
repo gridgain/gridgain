@@ -317,7 +317,7 @@ export class ModalImportModels {
         };
 
         this.actions = [
-            {value: 'connect', label: this.$root.IgniteDemoMode ? 'Description' : 'Connection'},
+            {value: 'connect', label: this.$root.demoMode ? 'Description' : 'Connection'},
             {value: 'schemas', label: 'Schemas'},
             {value: 'tables', label: 'Tables'},
             {value: 'options', label: 'Options'}
@@ -528,7 +528,7 @@ export class ModalImportModels {
                     $scope.importDomain.loadingOptions = LOADING_SCHEMAS;
                     Loading.start('importDomainFromDb');
 
-                    if ($root.IgniteDemoMode)
+                    if ($root.demoMode)
                         return agentMgr.schemas($scope.demoConnection);
 
                     const preset = $scope.selectedPreset;
@@ -1001,7 +1001,7 @@ export class ModalImportModels {
             }
         };
 
-        const demo = $root.IgniteDemoMode;
+        const demo = $root.demoMode;
 
         $scope.importDomain = {
             demo,

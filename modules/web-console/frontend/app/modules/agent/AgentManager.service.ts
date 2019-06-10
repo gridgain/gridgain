@@ -102,9 +102,16 @@ class ConnectionState {
 
         if (_.isEmpty(this.clusters))
             this.cluster = null;
-
-        if (_.isNil(this.cluster) || !_.find(clusters, {id: this.cluster.id}))
+        else if (_.isNil(this.cluster))
             this.cluster = _.head(clusters);
+        else {
+            const updatedCluster = _.find(clusters, {id: this.cluster.id});
+
+            if (updatedCluster)
+                _.merge(this.cluster, updatedCluster);
+            else
+                this.cluster = _.head(clusters);
+        }
 
         this.hasDemo = hasDemo;
 
@@ -209,7 +216,7 @@ export default class AgentManager {
     }
 
     isDemoMode() {
-        return this.$root.IgniteDemoMode;
+        return !!this.$root.demoMode;
     }
 
     getClusterVersion(cluster) {
@@ -224,14 +231,11 @@ export default class AgentManager {
         if (nonNil(this.ws))
             return;
 
-        // TODO IGNITE-5617 support demo mode.
-        // const options = this.isDemoMode() ? {query: 'IgniteDemoMode=true'} : {};
-
         const protocol = this.$location.protocol();
         const host = this.$location.host();
         const port = this.$location.port();
 
-        const uri = `${protocol === 'https' ? 'wss' : 'ws'}://${host}:${port}/browsers`;
+        const uri = `${protocol === 'https' ? 'wss' : 'ws'}://${host}:${port}/browsers?demoMode=${this.isDemoMode()}`;
 
         // Open websocket connection to backend.
         this.ws = new Sockette(uri, {
@@ -456,7 +460,7 @@ export default class AgentManager {
      * @private
      */
     _executeOnActiveCluster(cluster, credentials, event, params) {
-        return this._sendToAgent(event, {clusterId: cluster.id, params, credentials})
+        return this._sendToAgent(event, {clusterId: cluster.id, params: _.merge({}, credentials, params)})
             .then(async(res) => {
                 const {status = SuccessStatus.STATUS_SUCCESS} = res;
 
@@ -503,9 +507,6 @@ export default class AgentManager {
      * @private
      */
     _executeOnCluster(event, params) {
-        if (this.isDemoMode())
-            return Promise.resolve(this._executeOnActiveCluster({}, {}, event, params));
-
         return this.connectionSbj.pipe(first()).toPromise()
             .then(({cluster}) => {
                 if (_.isNil(cluster))

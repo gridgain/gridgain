@@ -19,7 +19,7 @@ package org.apache.ignite.console.websocket;
 /**
  * Contains web socket endpoint names.
  */
-public interface WebSocketConsts {
+public interface WebSocketEvents {
     /** */
     public static final String AGENTS_PATH = "/agents";
 

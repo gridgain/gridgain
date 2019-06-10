@@ -302,7 +302,7 @@ export class NotebookCtrl {
         $ctrl.chartSettingsTemplateUrl = chartSettingsTemplateUrl;
         $ctrl.demoStarted = false;
 
-        this.isDemo = $root.IgniteDemoMode;
+        this.isDemo = $root.demoMode;
 
         const _tryStopRefresh = function(paragraph) {
             paragraph.cancelRefresh($interval);
@@ -340,7 +340,7 @@ export class NotebookCtrl {
 
         $scope.modes = LegacyUtils.mkOptions(['PARTITIONED', 'REPLICATED', 'LOCAL']);
 
-        $scope.loadingText = $root.IgniteDemoMode ? 'Demo grid is starting. Please wait...' : 'Loading query notebook screen...';
+        $scope.loadingText = $root.demoMode ? 'Demo grid is starting. Please wait...' : 'Loading query notebook screen...';
 
         $scope.timeUnit = [
             {value: 1000, label: 'seconds', short: 's'},
@@ -933,7 +933,7 @@ export class NotebookCtrl {
                     });
 
                     // Await for demo caches.
-                    if (!$ctrl.demoStarted && $root.IgniteDemoMode && nonEmpty(cacheNames)) {
+                    if (!$ctrl.demoStarted && $root.demoMode && nonEmpty(cacheNames)) {
                         $ctrl.demoStarted = true;
 
                         Loading.finish('sqlLoading');
@@ -948,7 +948,7 @@ export class NotebookCtrl {
 
         const _startWatch = () => {
             const finishLoading$ = defer(() => {
-                if (!$root.IgniteDemoMode)
+                if (!$root.demoMode)
                     Loading.finish('sqlLoading');
             }).pipe(take(1));
 
@@ -1013,7 +1013,7 @@ export class NotebookCtrl {
                     $scope.rebuildScrollParagraphs();
             })
             .then(() => {
-                if ($root.IgniteDemoMode && sessionStorage.showDemoInfo !== 'true') {
+                if ($root.demoMode && sessionStorage.showDemoInfo !== 'true') {
                     sessionStorage.showDemoInfo = 'true';
 
                     this.DemoInfo.show().then(_startWatch);
