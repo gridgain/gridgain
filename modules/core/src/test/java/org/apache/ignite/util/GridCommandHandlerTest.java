@@ -2653,13 +2653,13 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
             execute("--diagnostic", "help")
         );
 
-        // Dump locks only on connected node.
+        // Dump locks only on connected node to default path.
         assertEquals(
             EXIT_CODE_OK,
             execute("--diagnostic", "pageLocks", "dump")
         );
 
-        // Check file dump.
+        // Check file dump in default path.
         checkNumberFiles(defaultDiagnosticDir, 1);
 
         assertEquals(
@@ -2667,11 +2667,13 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
             execute("--diagnostic", "pageLocks", "dump_log")
         );
 
+        // Dump locks only on connected node to specific path.
         assertEquals(
             EXIT_CODE_OK,
             execute("--diagnostic", "pageLocks", "dump", "--path", customDiagnosticDir.getAbsolutePath())
         );
 
+        // Check file dump in specific path.
         checkNumberFiles(customDiagnosticDir, 1);
 
         // Dump locks only all nodes.
