@@ -17,8 +17,6 @@
 package org.apache.ignite.console.services;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
-import java.util.Locale;
 import java.util.Properties;
 import javax.mail.MessagingException;
 import javax.mail.Session;
@@ -42,7 +40,6 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
 import static org.mockito.Matchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -63,7 +60,7 @@ public class MailServiceTest {
 
     /** Message properties. */
     @Autowired
-    MailPropertiesEx props;
+    private MailPropertiesEx props;
 
     /** Argument capture  */
     @Captor
@@ -86,7 +83,7 @@ public class MailServiceTest {
 
     /** Test send e-mail. */
     @Test
-    public void shouldSendEmail() throws MessagingException, IOException, URISyntaxException {
+    public void shouldSendEmail() throws MessagingException, IOException {
         INotificationDescriptor desc = new INotificationDescriptor() {
             @Override public String subjectCode() {
                 return "subject";
@@ -117,7 +114,7 @@ public class MailServiceTest {
 
     /** Test send e-mail with message template. */
     @Test
-    public void shouldSendEmailWithExpressionInSubject() throws MessagingException, IOException, URISyntaxException {
+    public void shouldSendEmailWithExpressionInSubject() throws MessagingException, IOException {
         INotificationDescriptor desc = new INotificationDescriptor() {
             @Override public String subjectCode() {
                 return "Hello ${recipient.firstName} ${recipient.lastName}! subject";
@@ -151,6 +148,7 @@ public class MailServiceTest {
         private String fn = "firstName";
 
         /** Last name. */
+        @SuppressWarnings({"PublicField", "unused"})
         public String lastName = "lastName";
 
         /** {@inheritDoc} */
