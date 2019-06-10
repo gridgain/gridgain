@@ -69,11 +69,7 @@
             </bean>
         </property>
 
-        <property name="clientConnectorConfiguration">
-            <bean class="org.apache.ignite.configuration.ClientConnectorConfiguration">
-                <property name="port" value="${random.int[10000,65000]}"/>
-            </bean>
-        </property>
+        <property name="clientConnectorConfiguration"><null/></property>
 
         <property name="communicationSpi">
             <bean class="org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi">
