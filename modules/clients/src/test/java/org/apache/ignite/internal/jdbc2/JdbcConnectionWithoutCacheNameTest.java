@@ -53,7 +53,6 @@ public class JdbcConnectionWithoutCacheNameTest extends GridCommonAbstractTest {
 
         cfg.setConnectorConfiguration(new ConnectorConfiguration());
 
-
         return cfg;
     }
 
@@ -78,9 +77,9 @@ public class JdbcConnectionWithoutCacheNameTest extends GridCommonAbstractTest {
     public void testWithoutCache() throws Exception {
         try (Connection c = DriverManager.getConnection(CFG_URL_PREFIX + CFG_PATH)) {
             try (Statement stmt = c.createStatement()) {
-                stmt.execute("CREATE TABLE PUBLIC.TEST(ID INT PRIMARY KEY, VAL VARCHAR)");
-                stmt.execute("INSERT INTO PUBLIC.TEST VALUES(1, '1')");
-                stmt.execute("DROP TABLE PUBLIC.TEST ");
+                stmt.execute("CREATE TABLE TEST(ID INT PRIMARY KEY, VAL VARCHAR)");
+                stmt.execute("INSERT INTO TEST VALUES(1, '1')");
+                stmt.execute("DROP TABLE TEST ");
             }
         }
     }
@@ -111,11 +110,11 @@ public class JdbcConnectionWithoutCacheNameTest extends GridCommonAbstractTest {
     public void testFailOnMultipleStatements() throws Exception {
         try (Connection c = DriverManager.getConnection(CFG_URL_PREFIX + CFG_PATH)) {
             try (Statement stmt = c.createStatement()) {
-                stmt.execute("CREATE TABLE PUBLIC.TEST(ID INT PRIMARY KEY, VAL VARCHAR)");
+                stmt.execute("CREATE TABLE TEST(ID INT PRIMARY KEY, VAL VARCHAR)");
 
                 GridTestUtils.assertThrows(log, () -> {
-                    stmt.execute("INSERT INTO PUBLIC.TEST VALUES(0, '0'); " +
-                        "INSERT INTO PUBLIC.TEST VALUES(1, '1');");
+                    stmt.execute("INSERT INTO TEST VALUES(0, '0'); " +
+                        "INSERT INTO TEST VALUES(1, '1');");
 
                     return null;
                 }, SQLException.class, "Multiple statements queries are not supported.");
