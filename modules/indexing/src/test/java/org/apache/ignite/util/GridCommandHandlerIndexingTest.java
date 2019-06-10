@@ -77,7 +77,7 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerAbstractTe
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "validate_indexes", CACHE_NAME));
 
-        assertContains(log, testOut.toString(), "no issues found");
+        assertContains(log, TEST_OUT.toString(), "no issues found");
     }
 
     /**
@@ -99,7 +99,7 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerAbstractTe
                 "--check-first", "10000",
                 "--check-through", "10"));
 
-        String out = testOut.toString();
+        String out = TEST_OUT.toString();
 
         assertContains(log, out, "issues found (listed above)");
 
@@ -119,7 +119,7 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerAbstractTe
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "validate_indexes", CACHE_NAME));
 
-        assertContains(log, testOut.toString(), "issues found (listed above)");
+        assertContains(log, TEST_OUT.toString(), "issues found (listed above)");
     }
 
     /** */
@@ -161,7 +161,7 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerAbstractTe
             loadThread.join();
         }
 
-        String out = testOut.toString();
+        String out = TEST_OUT.toString();
 
         assertContains(log, out, "Index validation failed");
         assertContains(log, out, "Checkpoint with dirty pages started! Cluster not idle!");
@@ -190,7 +190,7 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerAbstractTe
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "validate_indexes", CACHE_NAME));
 
-        assertContains(log, testOut.toString(), "issues found (listed above)");
+        assertContains(log, TEST_OUT.toString(), "issues found (listed above)");
     }
 
     /**
@@ -223,7 +223,7 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerAbstractTe
         injectTestSystemOut();
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "validate_indexes", DEFAULT_CACHE_NAME, "--check-through", "10"));
-        assertContains(log, testOut.toString(), "no issues found");
+        assertContains(log, TEST_OUT.toString(), "no issues found");
     }
 
     /**

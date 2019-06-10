@@ -66,7 +66,7 @@ public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
     protected PrintStream sysOut;
 
     /** Test out - can be injected via {@link #injectTestSystemOut()} instead of System.out and analyzed in test. */
-    protected ByteArrayOutputStream testOut;
+    protected static final ByteArrayOutputStream TEST_OUT = new ByteArrayOutputStream(40 * 1024 * 1024);
 
     /** Atomic configuration. */
     protected AtomicConfiguration atomicConfiguration;
@@ -103,7 +103,7 @@ public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
 
         sysOut = System.out;
 
-        testOut = new ByteArrayOutputStream(40 * 1024 * 1024);
+        TEST_OUT.reset();
 
         checkpointFreq = DataStorageConfiguration.DFLT_CHECKPOINT_FREQ;
     }
@@ -125,8 +125,8 @@ public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
         System.setOut(sysOut);
 
         log.info("----------------------------------------");
-        if (testOut != null)
-            System.out.println(testOut.toString());
+        if (TEST_OUT != null)
+            System.out.println(TEST_OUT.toString());
     }
 
     /** */
@@ -216,7 +216,7 @@ public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
 
     /** */
     protected void injectTestSystemOut() {
-        System.setOut(new PrintStream(testOut));
+        System.setOut(new PrintStream(TEST_OUT));
     }
 
     /**

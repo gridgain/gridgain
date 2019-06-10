@@ -229,7 +229,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         stopGrid(0);
 
-        testOut.reset();
+        TEST_OUT.reset();
 
         assertEquals(EXIT_CODE_OK, execute("--baseline", "--port", "11212"));
 
@@ -240,7 +240,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         startGrid(0);
 
-        testOut.reset();
+        TEST_OUT.reset();
 
         assertEquals(EXIT_CODE_OK, execute("--baseline", "--port", "11212"));
 
@@ -251,7 +251,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         stopGrid(1);
 
-        testOut.reset();
+        TEST_OUT.reset();
 
         assertEquals(EXIT_CODE_OK, execute("--baseline", "--port", "11211"));
 
@@ -281,28 +281,28 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "find_garbage", "--port", "11212"));
 
-        assertTrue(testOut.toString().contains("garbage not found"));
+        assertTrue(TEST_OUT.toString().contains("garbage not found"));
 
-        testOut.reset();
+        TEST_OUT.reset();
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "find_garbage",
             ignite(0).localNode().id().toString(), "--port", "11212"));
 
-        assertTrue(testOut.toString().contains("garbage not found"));
+        assertTrue(TEST_OUT.toString().contains("garbage not found"));
 
-        testOut.reset();
+        TEST_OUT.reset();
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "find_garbage",
             "groupGarbage", "--port", "11212"));
 
-        assertTrue(testOut.toString().contains("garbage not found"));
+        assertTrue(TEST_OUT.toString().contains("garbage not found"));
     }
 
     /**
      * @return utility information about coordinator
      */
     private String findCrdInfo() {
-        String outStr = testOut.toString();
+        String outStr = TEST_OUT.toString();
 
         int i = outStr.indexOf("(Coordinator: ConsistentId=");
 
@@ -407,7 +407,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         assertEquals(EXIT_CODE_UNEXPECTED_ERROR, execute("--baseline", "remove", offlineNodeConsId));
 
-        assertContains(log, testOut.toString(), "Changing BaselineTopology on inactive cluster is not allowed.");
+        assertContains(log, TEST_OUT.toString(), "Changing BaselineTopology on inactive cluster is not allowed.");
     }
 
     /**
@@ -496,7 +496,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
         assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "auto_adjust", "disable", "x"));
 
         log.info("================================================");
-        System.out.println(testOut.toString());
+        System.out.println(TEST_OUT.toString());
 
         log.info("================================================");
     }
@@ -780,7 +780,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
             for (GridCacheVersion nearXid : nearXids)
                 assertEquals(EXIT_CODE_OK, execute("--tx", "--info", nearXid.toString()));
 
-            String out = testOut.toString();
+            String out = TEST_OUT.toString();
 
             for (GridCacheVersion nearXid : nearXids)
                 assertContains(log, out, nearXid.toString());
@@ -843,9 +843,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
         for (GridCacheVersion nearXid : nearXids) {
             assertEquals(EXIT_CODE_OK, execute("--tx", "--info", nearXid.toString()));
 
-            String out = testOut.toString();
+            String out = TEST_OUT.toString();
 
-            testOut.reset();
+            TEST_OUT.reset();
 
             assertContains(log, out, "Transaction was found in completed versions history of the following nodes:");
 
@@ -1139,7 +1139,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         assertEquals(EXIT_CODE_UNEXPECTED_ERROR, execute("--baseline", "add", consistentIDs));
 
-        assertContains(log, testOut.toString(), "Changing BaselineTopology on inactive cluster is not allowed.");
+        assertContains(log, TEST_OUT.toString(), "Changing BaselineTopology on inactive cluster is not allowed.");
 
         consistentIDs =
             getTestIgniteInstanceName(1) + ", " +
@@ -1148,7 +1148,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         assertEquals(EXIT_CODE_UNEXPECTED_ERROR, execute("--baseline", "add", consistentIDs));
 
-        String testOutStr = testOut.toString();
+        String testOutStr = TEST_OUT.toString();
 
         // Ignite instase 1 can be logged only in arguments list.
         boolean isInstanse1Found = Arrays.stream(testOutStr.split("\n"))
@@ -1167,7 +1167,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "help"));
 
-        String output = testOut.toString();
+        String output = TEST_OUT.toString();
 
         for (CacheSubcommands cmd : CacheSubcommands.values()) {
             if (cmd != HELP) {
@@ -1206,7 +1206,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         assertEquals(EXIT_CODE_OK, execute("--help"));
 
-        String testOutStr = testOut.toString();
+        String testOutStr = TEST_OUT.toString();
 
         for (CommandList cmd : CommandList.values())
             assertContains(log, testOutStr, cmd.toString());
@@ -1227,7 +1227,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify"));
 
-        assertContains(log, testOut.toString(), "no conflicts have been found");
+        assertContains(log, TEST_OUT.toString(), "no conflicts have been found");
 
         HashSet<Integer> clearKeys = new HashSet<>(asList(1, 2, 3, 4, 5, 6));
 
@@ -1235,7 +1235,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify"));
 
-        assertContains(log, testOut.toString(), "conflict partitions");
+        assertContains(log, TEST_OUT.toString(), "conflict partitions");
     }
 
     /**
@@ -1263,7 +1263,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify", DEFAULT_CACHE_NAME));
 
-        assertContains(log, testOut.toString(), "no conflicts have been found");
+        assertContains(log, TEST_OUT.toString(), "no conflicts have been found");
     }
 
     /**
@@ -1283,7 +1283,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify"));
 
-        assertContains(log, testOut.toString(), "no conflicts have been found");
+        assertContains(log, TEST_OUT.toString(), "no conflicts have been found");
 
         GridCacheContext<Object, Object> cacheCtx = ignite.cachex(DEFAULT_CACHE_NAME).context();
 
@@ -1293,7 +1293,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify"));
 
-        assertContains(log, testOut.toString(), "found 2 conflict partitions");
+        assertContains(log, TEST_OUT.toString(), "found 2 conflict partitions");
     }
 
     /**
@@ -1328,7 +1328,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         assertSort(emptyPartId, zeroUpdateCntrs);
 
-        testOut.reset();
+        TEST_OUT.reset();
 
         // The result of the following cache operations is that
         // the size of the 32-th partition is equal to zero and update counter is equal to 2.
@@ -1552,7 +1552,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
             loadThread.join();
         }
 
-        String out = testOut.toString();
+        String out = TEST_OUT.toString();
 
         assertContains(log, out, "idle_verify failed");
         assertContains(log, out, "See log for additional information.");
@@ -1579,13 +1579,13 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
         String cmdExp,
         String... args
     ) throws IOException {
-        testOut.reset();
+        TEST_OUT.reset();
 
         Set<String> argsSet = new HashSet<>(asList(args));
 
         int exitCode = execute(args);
 
-        assertEquals(testOut.toString(), exitOk, EXIT_CODE_OK == exitCode);
+        assertEquals(TEST_OUT.toString(), exitOk, EXIT_CODE_OK == exitCode);
 
         if (exitCode == EXIT_CODE_OK) {
             Matcher fileNameMatcher = dumpFileNameMatcher();
@@ -1607,10 +1607,10 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
             else {
                 assertNotContains(log, argsSet, "--dump");
 
-                assertContains(log, testOut.toString(), outputExp);
+                assertContains(log, TEST_OUT.toString(), outputExp);
             }
         } else
-            assertContains(log, testOut.toString(), outputExp);
+            assertContains(log, TEST_OUT.toString(), outputExp);
     }
 
     /**
@@ -1774,7 +1774,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
     public void testCacheIdleVerifyCrcWithCorruptedPartition() throws Exception {
         testCacheIdleVerifyWithCorruptedPartition("--cache", "idle_verify", "--check-crc");
 
-        String out = testOut.toString();
+        String out = TEST_OUT.toString();
 
         assertContains(log, out, "idle_verify failed on 1 node.");
         assertContains(log, out, "See log for additional information.");
@@ -1785,7 +1785,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
     public void testCacheIdleVerifyDumpCrcWithCorruptedPartition() throws Exception {
         testCacheIdleVerifyWithCorruptedPartition("--cache", "idle_verify", "--dump", "--check-crc");
 
-        String parts[] = testOut.toString().split("VisorIdleVerifyDumpTask successfully written output to '");
+        String parts[] = TEST_OUT.toString().split("VisorIdleVerifyDumpTask successfully written output to '");
 
         assertEquals(2, parts.length);
 
@@ -1794,7 +1794,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
         for (String line : Files.readAllLines(new File(dumpFile).toPath()))
             System.out.println(line);
 
-        String outputStr = testOut.toString();
+        String outputStr = TEST_OUT.toString();
 
         assertTrue(outputStr, outputStr.contains("idle_verify failed on 1 node."));
         assertTrue(outputStr, outputStr.contains("idle_verify check has finished, no conflicts have been found."));
@@ -2106,7 +2106,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
     @NotNull private Matcher dumpFileNameMatcher() {
         Pattern fileNamePattern = Pattern.compile(".*VisorIdleVerifyDumpTask successfully written output to '(.*)'");
 
-        return fileNamePattern.matcher(testOut.toString());
+        return fileNamePattern.matcher(TEST_OUT.toString());
     }
 
     /**
@@ -2133,7 +2133,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify"));
 
-        assertContains(log, testOut.toString(), "no conflicts have been found");
+        assertContains(log, TEST_OUT.toString(), "no conflicts have been found");
 
         startGrid(2);
 
@@ -2141,7 +2141,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify"));
 
-        assertContains(log, testOut.toString(), "MOVING partitions");
+        assertContains(log, TEST_OUT.toString(), "MOVING partitions");
     }
 
     /**
@@ -2206,7 +2206,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
             l2.countDown();
 
-            String out = testOut.toString();
+            String out = TEST_OUT.toString();
 
             assertContains(log, out, "TxEntry");
             assertContains(log, out, "op=READ");
@@ -2241,7 +2241,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "list", "testSeq.*", "--seq"));
 
-        String out = testOut.toString();
+        String out = TEST_OUT.toString();
 
         assertContains(log, out, "testSeq");
         assertContains(log, out, "testSeq2");
@@ -2269,7 +2269,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "list", ".*", "--groups"));
 
-        assertContains(log, testOut.toString(), "G100");
+        assertContains(log, TEST_OUT.toString(), "G100");
     }
 
     /**
@@ -2293,7 +2293,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "list", ".*"));
 
-        String out = testOut.toString();
+        String out = TEST_OUT.toString();
 
         assertContains(log, out, "cacheName=" + DEFAULT_CACHE_NAME);
         assertContains(log, out, "prim=32");
@@ -2390,7 +2390,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         assertEquals(EXIT_CODE_OK, exitCode);
 
-        String outStr = testOut.toString();
+        String outStr = TEST_OUT.toString();
 
         if (outputFormat == null || SINGLE_LINE.text().equals(outputFormat)) {
             for (int i = 0; i < cachesCnt; i++)
@@ -2426,7 +2426,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
         // Run distribution for all node and all cache
         assertEquals(EXIT_CODE_OK, execute("--cache", "distribution", "null"));
 
-        String out = testOut.toString();
+        String out = TEST_OUT.toString();
 
         // Result include info by cache "default"
         assertContains(log ,out, "[next group: id=1544803905, name=default]");
@@ -2437,7 +2437,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
         // Run distribution for all node and all cache and include additional user attribute
         assertEquals(EXIT_CODE_OK, execute("--cache", "distribution", "null", "--user-attributes", "ZONE,CELL,DC"));
 
-        out = testOut.toString();
+        out = TEST_OUT.toString();
 
         List<String> outLines = Arrays.stream(out.split("\n"))
                                 .map(String::trim)
@@ -2471,7 +2471,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "reset_lost_partitions", "ignite-sys-cache,default"));
 
-        final String out = testOut.toString();
+        final String out = TEST_OUT.toString();
 
         assertContains(log, out, "Reset LOST-partitions performed successfully. Cache group (name = 'ignite-sys-cache'");
 
@@ -2523,18 +2523,18 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         assertEquals(EXIT_CODE_OK, execute("--wal", "print"));
 
-        String out = testOut.toString();
+        String out = TEST_OUT.toString();
 
         for (String id : nodes)
             assertContains(log, out, id);
 
         assertNotContains(log, out, "error");
 
-        testOut.reset();
+        TEST_OUT.reset();
 
         assertEquals(EXIT_CODE_OK, execute("--wal", "print", nodes.get(0)));
 
-        out = testOut.toString();
+        out = TEST_OUT.toString();
 
         assertNotContains(log, out, nodes.get(1));
 
@@ -2561,18 +2561,18 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         assertEquals(EXIT_CODE_OK, execute("--wal", "delete"));
 
-        String out = testOut.toString();
+        String out = TEST_OUT.toString();
 
         for (String id : nodes)
             assertContains(log, out, id);
 
         assertNotContains(log, out, "error");
 
-        testOut.reset();
+        TEST_OUT.reset();
 
         assertEquals(EXIT_CODE_OK, execute("--wal", "delete", nodes.get(0)));
 
-        out = testOut.toString();
+        out = TEST_OUT.toString();
 
         assertNotContains(log, out, nodes.get(1));
 
