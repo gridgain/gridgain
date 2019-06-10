@@ -35,7 +35,7 @@
         <property name="arguments">
             <!-- The new Properties -->
             <util:properties>
-                <prop key="IGNITE_JETTY_PORT">60800</prop>
+                <prop key="IGNITE_JETTY_PORT">60080</prop>
             </util:properties>
         </property>
     </bean>
