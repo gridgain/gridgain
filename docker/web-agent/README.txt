@@ -8,7 +8,7 @@ Build image
 ===========
 1) Build GridGain Web Console Agent module
 
-        mvn clean install -T 2C \
+        mvn clean install \
                           -Pall-java,all-scala,licenses,web-console \
                           -pl :ignite-web-console-agent -am \
                           -DskipTests
