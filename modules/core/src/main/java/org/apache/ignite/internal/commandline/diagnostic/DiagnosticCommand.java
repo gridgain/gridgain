@@ -108,7 +108,7 @@ public class DiagnosticCommand implements Command<DiagnosticSubCommand> {
     }
 
     /**
-     * Print diagnosric command help.
+     * Print diagnostic command help.
      */
     private void printDiagnosticHelp() {
         CommandLogger.logWithIndent(join(" ", UTILITY_NAME, DIAGNOSTIC, PAGE_LOCKS + " - dump page locks info."));
