@@ -129,9 +129,6 @@ public class TopologySnapshot {
 
             this.nodes.put(nid, new NodeBean(client, firstIP));
         }
-
-        if (F.isEmpty(name))
-            name = UUID.randomUUID().toString().toUpperCase().substring(0, 8);
     }
 
     /**
