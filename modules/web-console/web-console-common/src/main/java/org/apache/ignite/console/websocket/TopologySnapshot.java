@@ -131,7 +131,7 @@ public class TopologySnapshot {
         }
 
         if (F.isEmpty(name))
-            name = "NO_CLUSTER_NAME";
+            name = UUID.randomUUID().toString().toUpperCase().substring(0, 8);
     }
 
     /**
