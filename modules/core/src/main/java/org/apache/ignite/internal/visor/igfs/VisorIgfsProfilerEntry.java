@@ -27,6 +27,7 @@ import org.apache.ignite.internal.visor.VisorDataTransferObject;
 /**
  * Visor IGFS profiler information about one file.
  */
+@Deprecated
 public class VisorIgfsProfilerEntry extends VisorDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;

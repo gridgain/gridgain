@@ -26,6 +26,7 @@ import org.apache.ignite.internal.visor.VisorOneNodeTask;
  * Task to set IGFS instance sampling state.
  */
 @GridInternal
+@Deprecated
 public class VisorIgfsSamplingStateTask extends VisorOneNodeTask<VisorIgfsSamplingStateTaskArg, Void> {
     /** */
     private static final long serialVersionUID = 0L;

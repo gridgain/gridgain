@@ -23,6 +23,7 @@ import org.apache.ignite.internal.util.typedef.F;
 /**
  * Various global constants for IGFS profiler.
  */
+@Deprecated
 public class VisorIgfsProfiler {
     /** Default file block size to calculate uniformity. */
     public static final int UNIFORMITY_DFLT_BLOCK_SIZE = 4096;

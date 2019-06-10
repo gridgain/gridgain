@@ -25,6 +25,7 @@ import org.apache.ignite.internal.visor.VisorDataTransferObject;
 /**
  * Data transfer object.
  */
+@Deprecated
 public class VisorIgfsMetrics extends VisorDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;

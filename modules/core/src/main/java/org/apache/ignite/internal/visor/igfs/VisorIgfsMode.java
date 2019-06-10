@@ -23,6 +23,7 @@ import org.jetbrains.annotations.Nullable;
  * Secondary Hadoop file system is provided for pass-through, write-through, and
  * read-through purposes.
  */
+@Deprecated
 public enum VisorIgfsMode {
     /**
      * In this mode IGFS will not delegate to secondary Hadoop file system and will

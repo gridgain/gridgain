@@ -27,6 +27,7 @@ import org.apache.ignite.internal.visor.VisorOneNodeTask;
  * Task that parse hadoop profiler logs.
  */
 @GridInternal
+@Deprecated
 public class VisorIgfsProfilerTask extends VisorOneNodeTask<VisorIgfsProfilerTaskArg, List<VisorIgfsProfilerEntry>> {
     /** */
     private static final long serialVersionUID = 0L;
