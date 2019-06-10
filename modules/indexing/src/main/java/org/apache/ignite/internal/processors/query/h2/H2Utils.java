@@ -419,6 +419,8 @@ public class H2Utils {
      */
     public static void setupConnection(Connection conn, QueryContext qctx,
         boolean distributedJoins, boolean enforceJoinOrder) {
+        assert qctx != null;
+
         setupConnection(conn, qctx, distributedJoins, enforceJoinOrder, false);
     }
 
@@ -431,7 +433,7 @@ public class H2Utils {
      */
     public static void setupConnection(
         Connection conn,
-        QueryContext qctx,
+        H2QueryContext qctx,
         boolean distributedJoins,
         boolean enforceJoinOrder,
         boolean lazy
@@ -442,15 +444,23 @@ public class H2Utils {
         s.setJoinBatchEnabled(distributedJoins);
         s.setLazyQueryExecution(lazy);
 
-        //TODO: GG-18628: Fix memory release on query finish.
-        Object oldCtx = s.getQueryContext();
+        H2QueryContext oldCtx = s.getQueryContext();
 
-        assert  oldCtx == null || oldCtx == qctx
-            || ((QueryContext)oldCtx).queryMemoryManager() == null
-            || ((QueryContext)oldCtx).queryMemoryManager().closed() &&
-            ((QueryContext)oldCtx).queryMemoryManager().getAllocated() == 0L: oldCtx;
+        assert oldCtx == null || oldCtx == qctx || oldCtx.queryMemoryTracker() == null : oldCtx;
 
         s.setQueryContext(qctx);
+    }
+
+    /**
+     * Clean up session for further reuse.
+     *
+     * @param conn Connection to use.
+     */
+    public static void resetSession(Connection conn) {
+        Session s = session(conn);
+
+        U.closeQuiet(s.queryMemoryTracker());
+        s.setQueryContext(null);
     }
 
     /**
@@ -998,4 +1008,21 @@ public class H2Utils {
         return keyCols.toArray(EMPTY_COLUMNS);
     }
 
+    /**
+     * @param ses H2 session.
+     * @return Query context.
+     */
+    public static QueryContext context(Session ses) {
+        assert ses != null;
+
+        return (QueryContext)ses.getQueryContext();
+    }
+
+    /**
+     * @param c Connection.
+     * @return Query context.
+     */
+    public static QueryContext context(Connection c) {
+        return (QueryContext)((Session)((JdbcConnection)c).getSession()).getQueryContext();
+    }
 }
