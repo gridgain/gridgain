@@ -1132,6 +1132,8 @@ class ServerImpl extends TcpDiscoveryImpl {
 
             for (InetSocketAddress addr : addrs) {
                 try {
+                    U.enhanceThreadName("conn " + addr);
+
                     IgniteSpiOperationTimeoutHelper timeoutHelper = new IgniteSpiOperationTimeoutHelper(spi, true);
 
                     Integer res;
@@ -1144,6 +1146,8 @@ class ServerImpl extends TcpDiscoveryImpl {
                     finally {
                         SecurityUtils.restoreDefaultSerializeVersion();
                     }
+
+                    System.out.println("Join response [addr=" + addr + ", res=" + res + ']');
 
                     assert res != null;
 
@@ -6135,6 +6139,12 @@ class ServerImpl extends TcpDiscoveryImpl {
                             ", localHost=" + spi.locHost +
                             ", locNodeId=" + spi.ignite().configuration().getNodeId() +
                             ']');
+
+                        System.out.println("Successfully bound to TCP port [port=" + port +
+                            ", localHost=" + spi.locHost +
+                            ", locNodeId=" + spi.ignite().configuration().getNodeId() +
+                            ']');
+
                     }
 
                     return;
