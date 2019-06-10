@@ -22,7 +22,6 @@ import java.sql.Statement;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -33,10 +32,10 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 /**
  * Statement test.
  */
-public class JdbcSchemaCacheSelfTest extends GridCommonAbstractTest {
+public class JdbcConnectionWithoutCacheNameTest extends GridCommonAbstractTest {
     /** JDBC URL. */
     private static final String BASE_URL = CFG_URL_PREFIX
-        + "multipleStatementsAllowed=true:transactionsAllowed=true@modules/clients/src/test/config/jdbc-config.xml";
+        + "modules/clients/src/test/config/jdbc-config.xml";
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {

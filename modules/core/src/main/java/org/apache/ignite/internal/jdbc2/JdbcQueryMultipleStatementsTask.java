@@ -122,7 +122,8 @@ class JdbcQueryMultipleStatementsTask implements IgniteCallable<List<JdbcStateme
 
         GridKernalContext ctx = ((IgniteKernal)ignite).context();
 
-        List<FieldsQueryCursor<List<?>>> curs = ctx.query().querySqlFields(qry, true, false);
+        List<FieldsQueryCursor<List<?>>> curs = ctx.query().querySqlFields(
+            qry, true, !allowMultipleStatements());
 
         List<JdbcStatementResultInfo> resultsInfo = new ArrayList<>(curs.size());
 
@@ -164,4 +165,10 @@ class JdbcQueryMultipleStatementsTask implements IgniteCallable<List<JdbcStateme
         return resultsInfo;
     }
 
+    /**
+     * @return {@code true} if query with multiple statements is allowed.
+     */
+    protected boolean allowMultipleStatements() {
+        return true;
+    }
 }
