@@ -29,27 +29,28 @@ import static org.junit.Assert.assertTrue;
  */
 public class GridCountDownCallbackTest {
     /** */
-    @Test
-    public void testCountDownCallback() throws InterruptedException {
+    private void testCountDownCallback() throws InterruptedException {
         AtomicInteger cntr = new AtomicInteger(0);
         AtomicInteger performedCntr = new AtomicInteger(0);
 
         AtomicBoolean res = new AtomicBoolean();
 
-        int countsTillCb = 30;
+        final int countsTillCb = 30;
 
         GridCountDownCallback cb = new GridCountDownCallback(
             countsTillCb,
             () -> res.set(cntr.get() == countsTillCb && performedCntr.get() == countsTillCb / 5),
-            0
+            countsTillCb / 5
         );
 
         ExecutorService es = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
-        for (int i = 1; i < 100; i++) {
+        for (int i = 0; i < countsTillCb; i++) {
+            final int fi = i;
+
             es.submit(() -> {
                 synchronized (es) {
-                    int fi = cntr.incrementAndGet();
+                    cntr.incrementAndGet();
 
                     if (fi % 5 == 0)
                         performedCntr.incrementAndGet();
@@ -64,5 +65,12 @@ public class GridCountDownCallbackTest {
         es.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
 
         assertTrue(res.get());
+    }
+
+    /** */
+    @Test
+    public void testStability() throws InterruptedException {
+        for (int i = 0; i < 1000; i++)
+            testCountDownCallback();
     }
 }
