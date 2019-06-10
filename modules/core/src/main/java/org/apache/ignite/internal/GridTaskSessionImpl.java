@@ -339,7 +339,7 @@ public class GridTaskSessionImpl implements GridTaskSessionInternal {
         if (end > endTime)
             end = endTime;
 
-        timeout = end - startTime;
+        timeout = end - now;
 
         long startNanos = System.nanoTime();
 
@@ -383,7 +383,7 @@ public class GridTaskSessionImpl implements GridTaskSessionInternal {
         if (end > endTime)
             end = endTime;
 
-        timeout = end - startTime;
+        timeout = end - now;
 
         long startNanos = System.nanoTime();
 
@@ -430,7 +430,7 @@ public class GridTaskSessionImpl implements GridTaskSessionInternal {
         if (end > endTime)
             end = endTime;
 
-        timeout = end - startTime;
+        timeout = end - now;
 
         long startNanos = System.nanoTime();
 

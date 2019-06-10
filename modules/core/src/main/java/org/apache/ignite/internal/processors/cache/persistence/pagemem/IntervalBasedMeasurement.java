@@ -82,7 +82,7 @@ class IntervalBasedMeasurement {
      * @param maxMeasurements Max historical measurements to keep.
      */
     IntervalBasedMeasurement(int intervalSwitchMs, int maxMeasurements) {
-        this.intervalSwitchNanos = intervalSwitchMs > 0 ? intervalSwitchMs * U.millisToNanos(1) : -1;
+        this.intervalSwitchNanos = intervalSwitchMs > 0 ? U.millisToNanos(intervalSwitchMs) : -1;
         this.maxMeasurements = maxMeasurements;
     }
 
