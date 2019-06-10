@@ -76,6 +76,9 @@ public class VisorGridConfiguration extends VisorDataTransferObject {
     /** User attributes. */
     private Map<String, ?> userAttrs;
 
+    /** IGFSs. */
+    private List<VisorIgfsConfiguration> igfss;
+
     /** Environment. */
     private Map<String, String> env;
 
@@ -105,6 +108,9 @@ public class VisorGridConfiguration extends VisorDataTransferObject {
 
     /** List of cache key configurations. */
     private List<VisorCacheKeyConfiguration> cacheKeyCfgs;
+
+    /** Hadoop configuration. */
+    private VisorHadoopConfiguration hadoopCfg;
 
     /** SQL connector configuration. */
     private VisorSqlConnectorConfiguration sqlConnCfg;
@@ -263,6 +269,13 @@ public class VisorGridConfiguration extends VisorDataTransferObject {
     }
 
     /**
+     * @return Igfss.
+     */
+    public List<VisorIgfsConfiguration> getIgfss() {
+        return igfss;
+    }
+
+    /**
      * @return Environment.
      */
     public Map<String, String> getEnv() {
@@ -330,6 +343,13 @@ public class VisorGridConfiguration extends VisorDataTransferObject {
      */
     public List<VisorCacheKeyConfiguration> getCacheKeyConfigurations() {
         return cacheKeyCfgs;
+    }
+
+    /**
+     * @return Hadoop configuration.
+     */
+    public VisorHadoopConfiguration getHadoopConfiguration() {
+        return hadoopCfg;
     }
 
     /**
@@ -417,7 +437,7 @@ public class VisorGridConfiguration extends VisorDataTransferObject {
         inclEvtTypes = (int[])in.readObject();
         rest = (VisorRestConfiguration)in.readObject();
         userAttrs = U.readMap(in);
-        U.readList(in);
+        igfss = U.readList(in);
         env = U.readMap(in);
         sysProps = (Properties)in.readObject();
         atomic = (VisorAtomicConfiguration)in.readObject();
@@ -428,7 +448,7 @@ public class VisorGridConfiguration extends VisorDataTransferObject {
         warmupClos = U.readString(in);
         binaryCfg = (VisorBinaryConfiguration)in.readObject();
         cacheKeyCfgs = U.readList(in);
-        in.readObject();
+        hadoopCfg = (VisorHadoopConfiguration)in.readObject();
         sqlConnCfg = (VisorSqlConnectorConfiguration) in.readObject();
         srvcCfgs = U.readList(in);
 

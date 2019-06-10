@@ -16,14 +16,12 @@
 
 package org.apache.ignite.internal.visor.node;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.ignite.DataRegionMetrics;
 import org.apache.ignite.cache.CacheMetrics;
-import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
@@ -38,7 +36,6 @@ import org.apache.ignite.internal.visor.cache.VisorCache;
 import org.apache.ignite.internal.visor.cache.VisorMemoryMetrics;
 import org.apache.ignite.internal.visor.compute.VisorComputeMonitoringHolder;
 import org.apache.ignite.internal.visor.util.VisorExceptionWrapper;
-import org.apache.ignite.lang.IgniteProductVersion;
 
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isSystemCache;
 import static org.apache.ignite.internal.visor.compute.VisorComputeMonitoringHolder.COMPUTE_MONITORING_HOLDER_KEY;
@@ -125,18 +122,6 @@ public class VisorNodeDataCollectorJob extends VisorJob<VisorNodeDataCollectorTa
         catch (Exception e) {
             res.setEventsEx(new VisorExceptionWrapper(e));
         }
-    }
-
-    /**
-     * @param ver Version to check.
-     * @return {@code true} if found at least one compatible node with specified version.
-     */
-    protected boolean compatibleWith(IgniteProductVersion ver) {
-        for (ClusterNode node : ignite.cluster().nodes())
-            if (node.version().compareToIgnoreTimestamp(ver) <= 0)
-                return true;
-
-        return false;
     }
 
     /**

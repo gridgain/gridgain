@@ -31,6 +31,8 @@ import org.apache.ignite.internal.visor.VisorDataTransferObject;
 import org.apache.ignite.internal.visor.cache.VisorCache;
 import org.apache.ignite.internal.visor.cache.VisorMemoryMetrics;
 import org.apache.ignite.internal.visor.event.VisorGridEvent;
+import org.apache.ignite.internal.visor.igfs.VisorIgfs;
+import org.apache.ignite.internal.visor.igfs.VisorIgfsEndpoint;
 import org.apache.ignite.internal.visor.util.VisorExceptionWrapper;
 
 /**
@@ -76,6 +78,15 @@ public class VisorNodeDataCollectorTaskResult extends VisorDataTransferObject {
     /** Exceptions caught during collecting caches from nodes. */
     private Map<UUID, VisorExceptionWrapper> cachesEx = new HashMap<>();
 
+    /** All IGFS collected from nodes. */
+    private Map<UUID, Collection<VisorIgfs>> igfss = new HashMap<>();
+
+    /** All IGFS endpoints collected from nodes. */
+    private Map<UUID, Collection<VisorIgfsEndpoint>> igfsEndpoints = new HashMap<>();
+
+    /** Exceptions caught during collecting IGFS from nodes. */
+    private Map<UUID, VisorExceptionWrapper> igfssEx = new HashMap<>();
+
     /** Topology version of latest completed partition exchange from nodes. */
     private Map<UUID, VisorAffinityTopologyVersion> readyTopVers = new HashMap<>();
 
@@ -113,6 +124,9 @@ public class VisorNodeDataCollectorTaskResult extends VisorDataTransferObject {
             memoryMetricsEx.isEmpty() &&
             caches.isEmpty() &&
             cachesEx.isEmpty() &&
+            igfss.isEmpty() &&
+            igfsEndpoints.isEmpty() &&
+            igfssEx.isEmpty() &&
             readyTopVers.isEmpty() &&
             pendingExchanges.isEmpty() &&
             persistenceMetrics.isEmpty() &&
@@ -205,6 +219,27 @@ public class VisorNodeDataCollectorTaskResult extends VisorDataTransferObject {
     }
 
     /**
+     * @return All IGFS collected from nodes.
+     */
+    public Map<UUID, Collection<VisorIgfs>> getIgfss() {
+        return igfss;
+    }
+
+    /**
+     * @return All IGFS endpoints collected from nodes.
+     */
+    public Map<UUID, Collection<VisorIgfsEndpoint>> getIgfsEndpoints() {
+        return igfsEndpoints;
+    }
+
+    /**
+     * @return Exceptions caught during collecting IGFS from nodes.
+     */
+    public Map<UUID, VisorExceptionWrapper> getIgfssEx() {
+        return igfssEx;
+    }
+
+    /**
      * @return Nodes error counts.
      */
     public Map<UUID, Long> getErrorCounts() {
@@ -271,6 +306,9 @@ public class VisorNodeDataCollectorTaskResult extends VisorDataTransferObject {
         memoryMetricsEx.putAll(res.getMemoryMetricsEx());
         caches.putAll(res.getCaches());
         cachesEx.putAll(res.getCachesEx());
+        igfss.putAll(res.getIgfss());
+        igfsEndpoints.putAll(res.getIgfsEndpoints());
+        igfssEx.putAll(res.getIgfssEx());
         readyTopVers.putAll(res.getReadyAffinityVersions());
         pendingExchanges.putAll(res.getPendingExchanges());
         persistenceMetrics.putAll(res.getPersistenceMetrics());
@@ -292,6 +330,9 @@ public class VisorNodeDataCollectorTaskResult extends VisorDataTransferObject {
         U.writeMap(out, memoryMetricsEx);
         U.writeMap(out, caches);
         U.writeMap(out, cachesEx);
+        U.writeMap(out, igfss);
+        U.writeMap(out, igfsEndpoints);
+        U.writeMap(out, igfssEx);
         U.writeMap(out, readyTopVers);
         U.writeMap(out, pendingExchanges);
         U.writeMap(out, persistenceMetrics);
@@ -313,6 +354,9 @@ public class VisorNodeDataCollectorTaskResult extends VisorDataTransferObject {
         memoryMetricsEx = U.readMap(in);
         caches = U.readMap(in);
         cachesEx = U.readMap(in);
+        igfss = U.readMap(in);
+        igfsEndpoints = U.readMap(in);
+        igfssEx = U.readMap(in);
         readyTopVers = U.readMap(in);
         pendingExchanges = U.readMap(in);
         persistenceMetrics = U.readMap(in);
