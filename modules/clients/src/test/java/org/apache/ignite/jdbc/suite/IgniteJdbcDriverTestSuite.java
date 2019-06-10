@@ -19,6 +19,7 @@ package org.apache.ignite.jdbc.suite;
 import org.apache.ignite.internal.jdbc2.JdbcBlobTest;
 import org.apache.ignite.internal.jdbc2.JdbcBulkLoadSelfTest;
 import org.apache.ignite.internal.jdbc2.JdbcConnectionReopenTest;
+import org.apache.ignite.internal.jdbc2.JdbcConnectionWithoutCacheNameTest;
 import org.apache.ignite.internal.jdbc2.JdbcDistributedJoinsQueryTest;
 import org.apache.ignite.internal.jdbc2.JdbcSchemaCaseSelfTest;
 import org.apache.ignite.jdbc.JdbcComplexQuerySelfTest;
@@ -231,6 +232,8 @@ import org.junit.runners.Suite;
 
     JdbcThinPreparedStatementLeakTest.class,
     JdbcThinTransactionsLeaksMvccTest.class,
+
+    JdbcConnectionWithoutCacheNameTest.class,
 })
 public class IgniteJdbcDriverTestSuite {
 }
