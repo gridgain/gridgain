@@ -1396,7 +1396,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
             final boolean rmtSrvcProcMode = rmtSrvcProcModeAttr != null ? rmtSrvcProcModeAttr : false;
 
-            if (!F.eq(locSrvcProcMode, rmtSrvcProcMode)) {
+            if (rmtSrvcProcModeAttr != null && !F.eq(locSrvcProcMode, rmtSrvcProcMode)) {
                 throw new IgniteCheckedException("Local node's " + IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED +
                     " property value differs from remote node's value " +
                     "(to make sure all nodes in topology have identical service processor mode, " +

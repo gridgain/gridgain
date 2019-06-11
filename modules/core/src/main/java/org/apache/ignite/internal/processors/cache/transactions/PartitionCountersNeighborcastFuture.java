@@ -91,7 +91,7 @@ public class PartitionCountersNeighborcastFuture extends GridCacheCompoundIdenti
 
             ClusterNode n = cctx.discovery().node(tx.topologyVersionSnapshot(), peer);
 
-            assert n != null : "Failed to find node in locked tx topology [tx=" + CU.txString(tx) +
+            assert n != null : "Failed to find a node within locked tx topology [tx=" + CU.txString(tx) +
                 ", nodeId=" + peer + ']';
 
             if (!IgniteFeatures.nodeSupports(n, IgniteFeatures.TX_TRACKING_UPDATE_COUNTER))
