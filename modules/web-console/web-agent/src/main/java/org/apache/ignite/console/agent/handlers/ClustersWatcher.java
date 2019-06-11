@@ -18,6 +18,7 @@ package org.apache.ignite.console.agent.handlers;
 
 import java.io.Closeable;
 import java.net.ConnectException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -34,17 +35,15 @@ import org.apache.ignite.console.websocket.TopologySnapshot;
 import org.apache.ignite.console.websocket.WebSocketEvent;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientNodeBean;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.internal.util.typedef.internal.LT;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.logger.slf4j.Slf4jLogger;
 import org.eclipse.jetty.websocket.api.Session;
 import org.slf4j.LoggerFactory;
 
-import static java.util.Collections.singletonList;
 import static org.apache.ignite.console.agent.AgentUtils.nid8;
 import static org.apache.ignite.console.agent.AgentUtils.send;
 import static org.apache.ignite.console.utils.Utils.fromJson;
-import static org.apache.ignite.console.websocket.WebSocketEvents.CLUSTER_DISCONNECTED;
 import static org.apache.ignite.console.websocket.WebSocketEvents.CLUSTER_TOPOLOGY;
 import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_SUCCESS;
 import static org.apache.ignite.internal.processors.rest.client.message.GridClientResponse.STATUS_FAILED;
@@ -110,6 +109,21 @@ public class ClustersWatcher implements Closeable {
     }
 
     /**
+     * Send event to websocket.
+     *
+     * @param ses Websocket session.
+     * @param tops Topologies.
+     */
+    private void sendTopology(Session ses, List<TopologySnapshot> tops) {
+        try {
+            send(ses, new WebSocketEvent(CLUSTER_TOPOLOGY, tops));
+        }
+        catch (Throwable e) {
+            log.error("Failed to send 'Cluster disconnected' event to server", e);
+        }
+    }
+
+    /**
      * Start watch cluster.
      */
     void startWatchTask(Session ses) {
@@ -120,53 +134,47 @@ public class ClustersWatcher implements Closeable {
         }
 
         refreshTask = pool.scheduleWithFixedDelay(() -> {
+           List<TopologySnapshot> tops = new ArrayList<>(F.asList(demoClusterHnd.topologySnapshot()));
+
             try {
                 RestResult res = topology();
 
-                if (res.getStatus() == STATUS_SUCCESS) {
-                    List<GridClientNodeBean> nodes = fromJson(
-                        res.getData(),
-                        new TypeReference<List<GridClientNodeBean>>() {}
-                    );
+                if (res.getStatus() != STATUS_SUCCESS)
+                    throw new IllegalStateException(res.getError());
 
-                    TopologySnapshot newTop = new TopologySnapshot(nodes);
+                List<GridClientNodeBean> nodes = fromJson(
+                    res.getData(),
+                    new TypeReference<List<GridClientNodeBean>>() {}
+                );
 
-                    if (newTop.differentCluster(top))
-                        log.info("Connection successfully established to cluster with nodes: " + nid8(newTop.nids()));
-                    else if (!Objects.equals(top.nids(), newTop.nids()))
-                        log.info("Cluster topology changed, new topology: " + nid8(newTop.nids()));
+                TopologySnapshot newTop = new TopologySnapshot(nodes);
 
-                    boolean active = active(fromString(newTop.getClusterVersion()), F.first(newTop.nids()));
+                if (newTop.differentCluster(top))
+                    log.info("Connection successfully established to cluster with nodes: " + nid8(newTop.nids()));
+                else if (!Objects.equals(top.nids(), newTop.nids()))
+                    log.info("Cluster topology changed, new topology: " + nid8(newTop.nids()));
 
-                    newTop.setDemo(false);
-                    newTop.setActive(active);
-                    newTop.setSecured(!F.isEmpty(res.getSessionToken()));
+                boolean active = active(fromString(newTop.getClusterVersion()), F.first(newTop.nids()));
 
-                    top = newTop;
+                newTop.setDemo(false);
+                newTop.setActive(active);
+                newTop.setSecured(!F.isEmpty(res.getSessionToken()));
 
-                    List<TopologySnapshot> tops = cfg.disableDemo() ?
-                        singletonList(top) : F.asList(top, demoClusterHnd.topologySnapshot());
+                top = newTop;
+                
+                tops.add(newTop);
 
-                    send(ses, new WebSocketEvent(CLUSTER_TOPOLOGY, tops));
-                }
-                else {
-                    LT.warn(log, res.getError());
-
-                    clusterDisconnect(ses);
-                }
-            }
-            catch (ConnectException ignored) {
-                // No-op.
+                sendTopology(ses, tops);
             }
             catch (Throwable e) {
-                LT.error(log, e, "WatchTask failed");
+                clusterDisconnect(e);
 
-                clusterDisconnect(ses);
+                sendTopology(ses, tops);
             }
         }, 0L, REFRESH_FREQ, TimeUnit.MILLISECONDS);
     }
 
-    /**
+    /**                                                                        `
      * Stop cluster watch.
      */
     void stopWatchTask() {
@@ -273,20 +281,18 @@ public class ClustersWatcher implements Closeable {
     /**
      * Callback on disconnect from cluster.
      */
-    private void clusterDisconnect(Session ses) {
+    private void clusterDisconnect(Throwable e) {
         if (top == null)
             return;
 
         top = null;
 
-        log.info("Connection to cluster was lost");
-
-        try {
-            send(ses, new WebSocketEvent(CLUSTER_DISCONNECTED, null));
-        }
-        catch (Throwable e) {
-            log.error("Failed to send 'Cluster disconnected' event to server", e);
-        }
+        if (X.hasCause(e, ConnectException.class))
+            log.info("Connection to cluster was lost");
+        else if (X.hasCause(e, IllegalStateException.class))
+            log.error("Connection to cluster was lost. " + e.getMessage());
+        else
+            log.error("Connection to cluster was lost", e);
     }
 
     /** {@inheritDoc} */
