@@ -58,6 +58,21 @@ public class TcpDiscoveryStatusCheckMessage extends TcpDiscoveryAbstractMessage 
         super(creatorNode.id());
 
         this.creatorNode = creatorNode;
+
+        this.failedNodeId = failedNodeId;
+    }
+
+    /**
+     * Constructor.
+     *
+     * @param creatorNodeId Creator node ID.
+     * @param failedNodeId Failed node id.
+     */
+    public TcpDiscoveryStatusCheckMessage(UUID creatorNodeId, UUID failedNodeId) {
+        super(creatorNodeId);
+
+        this.creatorNode = null;
+
         this.failedNodeId = failedNodeId;
     }
 
@@ -67,9 +82,11 @@ public class TcpDiscoveryStatusCheckMessage extends TcpDiscoveryAbstractMessage 
     public TcpDiscoveryStatusCheckMessage(TcpDiscoveryStatusCheckMessage msg) {
         super(msg);
 
-        this.creatorNode = msg.creatorNode;
         this.failedNodeId = msg.failedNodeId;
+
         this.status = msg.status;
+
+        this.creatorNode = null;
     }
 
     /**
@@ -118,7 +135,7 @@ public class TcpDiscoveryStatusCheckMessage extends TcpDiscoveryAbstractMessage 
 
         TcpDiscoveryStatusCheckMessage other = (TcpDiscoveryStatusCheckMessage)obj;
 
-        return F.eqNodes(other.creatorNode, creatorNode) &&
+        return F.eqNodes(other.creatorNodeId(), creatorNodeId()) &&
             F.eq(other.failedNodeId, failedNodeId) &&
             status == other.status;
     }

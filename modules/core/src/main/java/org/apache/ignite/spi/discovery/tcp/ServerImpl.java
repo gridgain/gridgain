@@ -163,6 +163,8 @@ import static org.apache.ignite.events.EventType.EVT_NODE_METRICS_UPDATED;
 import static org.apache.ignite.events.EventType.EVT_NODE_SEGMENTED;
 import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
 import static org.apache.ignite.failure.FailureType.SYSTEM_WORKER_TERMINATION;
+import static org.apache.ignite.internal.IgniteFeatures.TCP_DISCOVERY_MESSAGE_NODE_SERIALIZATION_OPTIMIZATION;
+import static org.apache.ignite.internal.IgniteFeatures.allNodesSupports;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_LATE_AFFINITY_ASSIGNMENT;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MARSHALLER;
@@ -617,10 +619,37 @@ class ServerImpl extends TcpDiscoveryImpl {
         if (!res && node.clientRouterNodeId() == null && nodeAlive(nodeId)) {
             LT.warn(log, "Failed to ping node (status check will be initiated): " + nodeId);
 
-            msgWorker.addMessage(new TcpDiscoveryStatusCheckMessage(locNode, node.id()));
+            msgWorker.addMessage(createTcpDiscoveryStatusCheckMessage(locNode, node.id()));
         }
 
         return res;
+    }
+
+    /** */
+    private TcpDiscoveryStatusCheckMessage createTcpDiscoveryStatusCheckMessage(
+        TcpDiscoveryNode locNode,
+        UUID nodeId
+    ) {
+        TcpDiscoveryStatusCheckMessage msg;
+
+        if (allNodesSupports(ring.allNodes(), TCP_DISCOVERY_MESSAGE_NODE_SERIALIZATION_OPTIMIZATION))
+            msg = new TcpDiscoveryStatusCheckMessage(locNode.id(), nodeId);
+        else
+            msg = new TcpDiscoveryStatusCheckMessage(locNode, nodeId);
+
+        return msg;
+    }
+
+    /** */
+    private TcpDiscoveryDuplicateIdMessage createTcpDiscoveryDuplicateIdMessage(UUID creatorNodeId, TcpDiscoveryNode node) {
+        TcpDiscoveryDuplicateIdMessage msg;
+
+        if (allNodesSupports(ring.allNodes(), TCP_DISCOVERY_MESSAGE_NODE_SERIALIZATION_OPTIMIZATION))
+            msg = new TcpDiscoveryDuplicateIdMessage(creatorNodeId, node);
+        else
+            msg = new TcpDiscoveryDuplicateIdMessage(creatorNodeId, node.id());
+
+        return msg;
     }
 
     /**
@@ -3876,8 +3905,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                         }
 
                         try {
-                            trySendMessageDirectly(node, new TcpDiscoveryDuplicateIdMessage(locNodeId,
-                                existingNode));
+                            trySendMessageDirectly(node, createTcpDiscoveryDuplicateIdMessage(locNodeId, existingNode));
                         }
                         catch (IgniteSpiException e) {
                             if (log.isDebugEnabled())
@@ -3939,8 +3967,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                     if (!node.isClient() && !node.isDaemon()) {
                         if (nodesIdsHist.contains(node.id())) {
                             try {
-                                trySendMessageDirectly(node, new TcpDiscoveryDuplicateIdMessage(locNodeId,
-                                    node));
+                                trySendMessageDirectly(node, createTcpDiscoveryDuplicateIdMessage(locNodeId, node));
                             }
                             catch (IgniteSpiException e) {
                                 if (log.isDebugEnabled())
@@ -4419,6 +4446,17 @@ class ServerImpl extends TcpDiscoveryImpl {
                 onException("Failed to send marshaller check failed message to node " +
                     "[node=" + node + ", err=" + e.getMessage() + ']', e);
             }
+        }
+
+        /**
+         * Tries to send a message to all node's available addresses.
+         *
+         * @param nodeId Node id to send message to.
+         * @param msg Message.
+         * @throws IgniteSpiException Last failure if all attempts failed.
+         */
+        private void trySendMessageDirectly(UUID nodeId, TcpDiscoveryAbstractMessage msg) {
+            trySendMessageDirectly(ring.node(nodeId), msg);
         }
 
         /**
@@ -5431,7 +5469,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                                 }
 
                                 try {
-                                    trySendMessageDirectly(msg0.creatorNode(), msg0);
+                                    trySendMessageDirectly(msg0.creatorNodeId(), msg0);
 
                                     if (log.isDebugEnabled())
                                         log.debug("Responded to status check message " +
@@ -5448,7 +5486,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                                             "[recipient=" + msg0.creatorNodeId() + ", status=" + msg0.status() + ']', e);
                                     }
                                     else if (!spi.isNodeStopping0()) {
-                                        if (pingNode(msg0.creatorNode()))
+                                        if (pingNode(msg0.creatorNodeId()))
                                             // Node exists and accepts incoming connections.
                                             U.error(log, "Failed to respond to status check message [recipient=" +
                                                 msg0.creatorNodeId() + ", status=" + msg0.status() + ']', e);
@@ -6032,7 +6070,7 @@ class ServerImpl extends TcpDiscoveryImpl {
             if (elapsed > 0)
                 return;
 
-            msgWorker.addMessage(new TcpDiscoveryStatusCheckMessage(locNode, null));
+            msgWorker.addMessage(createTcpDiscoveryStatusCheckMessage(locNode, null));
 
             lastTimeStatusMsgSentNanos = System.nanoTime();
         }
