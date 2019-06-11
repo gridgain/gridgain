@@ -18,7 +18,9 @@ package org.apache.ignite.console.dto;
 
 import java.util.UUID;
 import org.apache.ignite.console.json.JsonObject;
+import org.apache.ignite.internal.util.typedef.F;
 
+import static java.lang.Boolean.FALSE;
 import static org.apache.ignite.console.utils.Utils.toJson;
 
 /**
@@ -44,9 +46,15 @@ public class Model extends DataObject {
         if (id == null)
             throw new IllegalStateException("Model ID not found");
 
+        boolean generatePojo = FALSE.equals(json.getBoolean("generatePojo"));
+        boolean missingDb = F.isEmpty(json.getString("databaseSchema")) && F.isEmpty(json.getString("databaseTable"));
+
+        boolean hasIdx = !F.isEmpty(json.getJsonArray("keyFields")) ||
+            "Annotations".equals(json.getString("queryMetadata")) && (generatePojo || missingDb);
+
         return new Model(
             id,
-            false, // TODO GG-19220 DETECT INDEXES !!!
+            hasIdx,
             json.getString("keyType"),
             json.getString("valueType"),
             toJson(json)
