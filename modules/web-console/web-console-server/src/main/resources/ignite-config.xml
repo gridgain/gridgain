@@ -22,6 +22,7 @@
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
                            http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
 
+    <!-- Set up jetty port from the spring config. -->
     <bean class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
         <property name="targetObject">
             <!-- System.getProperties() -->
@@ -33,9 +34,8 @@
         
         <property name="targetMethod" value="putAll"/>
         <property name="arguments">
-            <!-- The new Properties -->
             <util:properties>
-                <prop key="IGNITE_JETTY_PORT">60080</prop>
+                <prop key="IGNITE_JETTY_PORT">${random.int[60080,60090]}</prop>
             </util:properties>
         </property>
     </bean>
@@ -65,7 +65,7 @@
 
         <property name="connectorConfiguration">
             <bean class="org.apache.ignite.configuration.ConnectorConfiguration">
-                <property name="port" value="${random.int[10000,65000]}"/>
+                <property name="port" value="60300"/>
             </bean>
         </property>
 
@@ -73,7 +73,7 @@
 
         <property name="communicationSpi">
             <bean class="org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi">
-                <property name="localPort" value="${random.int[10000,65000]}"/>
+                <property name="localPort" value="60200"/>
                 <!-- Sets socket write timeout for TCP connection. -->
                 <property name="socketWriteTimeout" value="10000"/>
             </bean>
@@ -125,7 +125,7 @@
 
         <property name="discoverySpi">
             <bean class="org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi">
-                <property name="localPort" value="${random.int[10000,65000]}"/>
+                <property name="localPort" value="60100"/>
                 
                 <property name="ipFinder">
                     <bean class="org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder">
