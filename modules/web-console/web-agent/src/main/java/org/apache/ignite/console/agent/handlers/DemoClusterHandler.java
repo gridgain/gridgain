@@ -71,6 +71,9 @@ public class DemoClusterHandler extends AbstractClusterHandler{
      * @return Topology snapshot for demo cluster.
      */
     TopologySnapshot topologySnapshot() {
+        if (cfg.disableDemo())
+            return null;
+
         TopologySnapshot top = new TopologySnapshot();
 
         top.setId(System.getProperty(IGNITE_CLUSTER_ID));
