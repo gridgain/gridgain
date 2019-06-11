@@ -104,26 +104,4 @@ public class JdbcNoDefaultCacheTest extends GridCommonAbstractTest {
             assertTrue(((JdbcConnection)conn).ignite().configuration().isClientMode());
         }
     }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testNoCacheNameQuery() throws Exception {
-        try (
-            Connection conn = DriverManager.getConnection(CFG_URL_PREFIX + CFG_URL);
-            final Statement stmt = conn.createStatement()) {
-            assertNotNull(stmt);
-            assertFalse(stmt.isClosed());
-
-            Throwable throwable = GridTestUtils.assertThrows(null, new Callable<Void>() {
-                @Override public Void call() throws Exception {
-                    stmt.execute("select t._key, t._val from \"cache1\".Integer t");
-                    return null;
-                }
-            }, SQLException.class, "Failed to query Ignite.");
-
-            assertEquals(throwable.getCause().getMessage(), "Ouch! Argument is invalid: Cache name must not be null or empty.");
-        }
-    }
 }
