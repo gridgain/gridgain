@@ -195,7 +195,7 @@ public class VisorIdleVerifyTaskArg extends VisorDataTransferObject {
      * @return Kind fo cache.
      */
     public CacheFilterEnum cacheFilterEnum() {
-        return cacheFilterEnum;
+        return cacheFilterEnum == null ? CacheFilterEnum.DEFAULT : cacheFilterEnum;
     }
 
     /** {@inheritDoc} */
