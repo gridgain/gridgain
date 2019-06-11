@@ -76,16 +76,7 @@ export default class PCFormFieldSizeController<T> implements IInputErrorNotifier
         if (!this.min) this.min = 0;
         if (!this.sizesMenu) this.setDefaultSizeType();
         this.$element.addClass('form-field');
-        this.ngModel.$render = () => {
-            const rawValue = this.ngModel.$viewValue;
-
-            if (rawValue) {
-                this._sizeScale = _.findLast(this.sizesMenu,
-                    (val) => val.value <= rawValue && Number.isInteger(rawValue / val.value));
-            }
-
-            this.assignValue(rawValue);
-        };
+        this.ngModel.$render = () => this.assignValue(this.ngModel.$viewValue);
     }
 
     $postLink() {
