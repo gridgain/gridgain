@@ -29,33 +29,37 @@ import static org.junit.Assert.assertTrue;
  */
 public class GridCountDownCallbackTest {
     /** */
+    private static final int COUNTS_TILL_CB = 30;
+
+    /** */
+    private static final int PERFORMED_CNTR_DIVISOR = 5;
+
+    /** */
     private void testCountDownCallback() throws InterruptedException {
         AtomicInteger cntr = new AtomicInteger(0);
         AtomicInteger performedCntr = new AtomicInteger(0);
 
         AtomicBoolean res = new AtomicBoolean();
 
-        final int countsTillCb = 30;
-
         GridCountDownCallback cb = new GridCountDownCallback(
-            countsTillCb,
-            () -> res.set(cntr.get() == countsTillCb && performedCntr.get() == countsTillCb / 5),
-            countsTillCb / 5
+            COUNTS_TILL_CB,
+            () -> res.set(cntr.get() == COUNTS_TILL_CB && performedCntr.get() == COUNTS_TILL_CB / PERFORMED_CNTR_DIVISOR),
+            COUNTS_TILL_CB / PERFORMED_CNTR_DIVISOR
         );
 
         ExecutorService es = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
-        for (int i = 0; i < countsTillCb; i++) {
+        for (int i = 0; i < COUNTS_TILL_CB; i++) {
             final int fi = i;
 
             es.submit(() -> {
                 synchronized (es) {
                     cntr.incrementAndGet();
 
-                    if (fi % 5 == 0)
+                    if (fi % PERFORMED_CNTR_DIVISOR == 0)
                         performedCntr.incrementAndGet();
 
-                    cb.countDown(fi % 5 == 0);
+                    cb.countDown(fi % PERFORMED_CNTR_DIVISOR == 0);
                 }
             });
         }
