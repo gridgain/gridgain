@@ -89,7 +89,13 @@ public class IgniteVersionUtils {
         VER = IgniteProductVersion.fromString(VER_STR + '-' + BUILD_TSTAMP + '-' + REV_HASH_STR);
     }
 
-    /** Builds string date representation in "yyyyMMdd" format. */
+    /**
+     * Builds string date representation in "yyyyMMdd" format.
+     * "synchronized" because it uses {@link SimpleDateFormat} which is not shreadsafe.
+     *
+     * @param ts Timestamp.
+     * @return Timestamp date in UTC timezone.
+     */
     public static synchronized String formatBuildTimeStamp(long ts) {
         return BUILD_TSTAMP_DATE_FORMATTER.format(new Date(ts));
     }
