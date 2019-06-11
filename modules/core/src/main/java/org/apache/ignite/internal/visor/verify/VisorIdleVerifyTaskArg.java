@@ -71,7 +71,7 @@ public class VisorIdleVerifyTaskArg extends VisorDataTransferObject {
         this.caches = caches;
         this.excludeCaches = excludeCaches;
         this.skipZeros = skipZeros;
-        this.cacheFilterEnum = cacheFilterEnum;
+        this.cacheFilterEnum = (cacheFilterEnum == null ? CacheFilterEnum.DEFAULT : cacheFilterEnum);
         this.checkCrc = checkCrc;
     }
 
@@ -159,7 +159,9 @@ public class VisorIdleVerifyTaskArg extends VisorDataTransferObject {
             if (protoVer >= V4) {
                 skipZeros = in.readBoolean();
 
-                cacheFilterEnum = CacheFilterEnum.fromOrdinal(in.readByte());
+                CacheFilterEnum cfe = CacheFilterEnum.fromOrdinal(in.readByte());
+
+                cacheFilterEnum = (cfe == null ? CacheFilterEnum.DEFAULT : cfe);
             }
         }
     }
@@ -188,14 +190,14 @@ public class VisorIdleVerifyTaskArg extends VisorDataTransferObject {
 
     /** */
     protected void cacheFilterEnum(CacheFilterEnum cacheFilterEnum) {
-        this.cacheFilterEnum = cacheFilterEnum;
+        this.cacheFilterEnum = (cacheFilterEnum == null ? CacheFilterEnum.DEFAULT : cacheFilterEnum);
     }
 
     /**
      * @return Kind fo cache.
      */
     public CacheFilterEnum cacheFilterEnum() {
-        return cacheFilterEnum == null ? CacheFilterEnum.DEFAULT : cacheFilterEnum;
+        return cacheFilterEnum;
     }
 
     /** {@inheritDoc} */
