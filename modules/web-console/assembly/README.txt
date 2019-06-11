@@ -21,7 +21,7 @@ NOTE: Cluster URL should be specified in `ignite-web-console-agent-x.x.x\default
 Technical details
 -------------------------------------
 1. Package content:
-    `libs` - this folder contains Web Console and MongoDB binaries.
+    `libs` - this folder contains Web Console dependencies.
     `work` - this folder contains all Web Console data (registered users, created objects, ...) and
      should be preserved in case of update to new version.
     `agent_dists` - this folder contains Web Agent.
