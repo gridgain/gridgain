@@ -530,13 +530,7 @@ export default class AgentManager {
 
                 return {cluster, credentials: {}};
             })
-            .then(({cluster, credentials}) => this._executeOnActiveCluster(cluster, credentials, event, params))
-            .catch((err) => {
-                if (err instanceof CancellationError)
-                    return;
-
-                throw err;
-            });
+            .then(({cluster, credentials}) => this._executeOnActiveCluster(cluster, credentials, event, params));
     }
 
     /**
