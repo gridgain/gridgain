@@ -464,7 +464,7 @@ public class IgniteJdbcDriver implements Driver {
             new JdbcDriverPropertyInfo("Transactions Allowed", info.getProperty(PROP_TX_ALLOWED), ""),
             new JdbcDriverPropertyInfo("Queries with multiple statements allowed", info.getProperty(PROP_MULTIPLE_STMTS), ""),
             new JdbcDriverPropertyInfo("Skip reducer on update", info.getProperty(PROP_SKIP_REDUCER_ON_UPDATE), ""),
-        new JdbcDriverPropertyInfo("Schema name", info.getProperty(PROP_SCHEMA), "")
+            new JdbcDriverPropertyInfo("Schema name", info.getProperty(PROP_SCHEMA), "")
         );
 
         if (info.getProperty(PROP_CFG) != null)

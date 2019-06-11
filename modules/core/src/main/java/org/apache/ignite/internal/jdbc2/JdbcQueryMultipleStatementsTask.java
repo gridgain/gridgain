@@ -139,7 +139,6 @@ class JdbcQueryMultipleStatementsTask implements IgniteCallable<List<JdbcStateme
 
             QueryCursorImpl<List<?>> cur = (QueryCursorImpl<List<?>>)cur0;
 
-
             long updCnt = -1;
 
             UUID qryId = null;

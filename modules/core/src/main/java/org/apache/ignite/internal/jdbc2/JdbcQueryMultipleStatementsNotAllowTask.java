@@ -23,12 +23,9 @@ import org.apache.ignite.IgniteJdbcDriver;
  * Task for SQL queries execution through {@link IgniteJdbcDriver}.
  * The query can contains several SQL statements.
  */
-class JdbcQueryMultipleStatementsTaskV2 extends JdbcQueryMultipleStatementsTask {
+class JdbcQueryMultipleStatementsNotAllowTask extends JdbcQueryMultipleStatementsTask {
     /** Serial version uid. */
     private static final long serialVersionUID = 0L;
-
-    /** Allow multiple statements. */
-    private boolean allowMultStmts;
 
     /**
      * @param ignite Ignite.
@@ -43,19 +40,16 @@ class JdbcQueryMultipleStatementsTaskV2 extends JdbcQueryMultipleStatementsTask 
      * @param distributedJoins Distributed joins flag.
      * @param enforceJoinOrder Enforce joins order falg.
      * @param lazy Lazy query execution flag.
-     * @param allowMultStmts Allow multiple statements.
      */
-    public JdbcQueryMultipleStatementsTaskV2(Ignite ignite, String schemaName, String sql, Boolean isQry, boolean loc,
+    public JdbcQueryMultipleStatementsNotAllowTask(Ignite ignite, String schemaName, String sql, Boolean isQry, boolean loc,
         Object[] args, int fetchSize, boolean locQry, boolean collocatedQry, boolean distributedJoins,
-        boolean enforceJoinOrder, boolean lazy, boolean allowMultStmts) {
+        boolean enforceJoinOrder, boolean lazy) {
         super(ignite, schemaName, sql, isQry, loc, args, fetchSize, locQry, collocatedQry, distributedJoins,
             enforceJoinOrder, lazy);
-
-        this.allowMultStmts = allowMultStmts;
     }
 
     /** {@inheritDoc} */
     @Override protected boolean allowMultipleStatements() {
-        return allowMultStmts;
+        return false;
     }
 }
