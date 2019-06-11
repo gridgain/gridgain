@@ -161,7 +161,7 @@ public class ClustersWatcher implements Closeable {
                 newTop.setSecured(!F.isEmpty(res.getSessionToken()));
 
                 top = newTop;
-                
+
                 tops.add(newTop);
 
                 sendTopology(ses, tops);
@@ -174,7 +174,7 @@ public class ClustersWatcher implements Closeable {
         }, 0L, REFRESH_FREQ, TimeUnit.MILLISECONDS);
     }
 
-    /**                                                                        `
+    /**
      * Stop cluster watch.
      */
     void stopWatchTask() {
