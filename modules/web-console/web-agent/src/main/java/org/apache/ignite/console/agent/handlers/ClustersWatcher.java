@@ -119,7 +119,7 @@ public class ClustersWatcher implements Closeable {
             send(ses, new WebSocketEvent(CLUSTER_TOPOLOGY, tops));
         }
         catch (Throwable e) {
-            log.error("Failed to send 'Cluster disconnected' event to server", e);
+            log.error("Failed to send topology to server", e);
         }
     }
 
