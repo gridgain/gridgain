@@ -44,6 +44,40 @@ public class AccountConfiguration {
         //  encoder.setAlgorithm(PBKDF2WithHmacSHA256);
         //  encoder.setEncodeHashAsBase64(true);
 
+
+//        /** TODO IGNITE-5617 Revert to 25000 before release. */
+//        private static final int ITERATIONS = 10;
+//
+//        /** */
+//        private static final int KEY_LEN = 512 * 8;
+
+//        /**
+//         * @return Salt for hashing.
+//         */
+//        private String generateSalt() {
+//            byte[] salt = new byte[32];
+//
+//            rnd.nextBytes(salt);
+//
+//            return U.byteArray2HexString(salt);
+//        }
+//
+
+//        private String computeHash(String pwd, String salt) throws Exception {
+//            // TODO IGNITE-5617: How about to re-hash on first successful compare?
+//            PBEKeySpec spec = new PBEKeySpec(
+//                pwd.toCharArray(),
+//                salt.getBytes(StandardCharsets.UTF_8), // For compatibility with hashing data imported from NodeJS.
+//                ITERATIONS,
+//                KEY_LEN);
+//
+//            SecretKeyFactory skf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+//
+//            byte[] hash = skf.generateSecret(spec).getEncoded();
+//
+//            return U.byteArray2HexString(hash);
+//        }
+
         return new BCryptPasswordEncoder();
     }
 

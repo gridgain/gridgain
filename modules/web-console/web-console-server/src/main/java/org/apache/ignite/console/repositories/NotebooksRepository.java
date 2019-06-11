@@ -48,8 +48,7 @@ public class NotebooksRepository {
     public NotebooksRepository(Ignite ignite, TransactionManager txMgr) {
         this.txMgr = txMgr;
 
-        notebooksTbl = new Table<Notebook>(ignite, "wc_notebooks")
-            .addUniqueIndex(Notebook::getName, (notebook) -> "Notebook '" + notebook.getName() + "' already exits");
+        notebooksTbl = new Table<>(ignite, "wc_notebooks");
 
         notebooksIdx = new OneToManyIndex<>(ignite, "wc_account_notebooks_idx");
     }

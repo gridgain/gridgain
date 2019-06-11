@@ -62,7 +62,7 @@ public class Model extends DataObject {
      * @param valType Value type name.
      * @param json JSON payload.
      */
-    protected Model(UUID id, boolean hasIdx, String keyType, String valType, String json) {
+    public Model(UUID id, boolean hasIdx, String keyType, String valType, String json) {
         super(id, json);
 
         this.hasIdx = hasIdx;

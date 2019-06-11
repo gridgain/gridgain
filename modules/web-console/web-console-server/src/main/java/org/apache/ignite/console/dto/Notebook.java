@@ -17,10 +17,7 @@
 package org.apache.ignite.console.dto;
 
 import javax.validation.constraints.NotNull;
-import org.apache.ignite.internal.processors.rest.request.RestQueryRequest;
 import org.hibernate.validator.constraints.NotEmpty;
-
-import static org.apache.ignite.internal.processors.rest.request.RestQueryRequest.QueryType.SQL_FIELDS;
 
 /**
  * Queries notebooks.
@@ -90,7 +87,7 @@ public class Notebook extends AbstractDto {
 
         /** Query type. */
         @NotNull
-        private RestQueryRequest.QueryType qryType = SQL_FIELDS;
+        private QueryType qryType = QueryType.SQL_FIELDS;
 
         /** Query. */
         @NotNull
@@ -150,14 +147,14 @@ public class Notebook extends AbstractDto {
         /**
          * @return Query type.
          */
-        public RestQueryRequest.QueryType getQueryType() {
+        public QueryType getQueryType() {
             return qryType;
         }
 
         /**
          * @param qryType New query type.
          */
-        public void setQueryType(RestQueryRequest.QueryType qryType) {
+        public void setQueryType(QueryType qryType) {
             this.qryType = qryType;
         }
 
@@ -248,7 +245,7 @@ public class Notebook extends AbstractDto {
         /**
          * @return Use selected cache as default schema.
          */
-        public boolean setUseAsDefaultSchema() {
+        public boolean getUseAsDefaultSchema() {
             return useAsDfltSchema;
         }
 
@@ -342,6 +339,14 @@ public class Notebook extends AbstractDto {
         public void setRate(Rate rate) {
             this.rate = rate;
         }
+    }
+
+    public enum QueryType {
+        /** */
+        SQL_FIELDS,
+
+        /** */
+        SCAN;
     }
 
     /**
