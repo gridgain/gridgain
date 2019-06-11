@@ -120,29 +120,30 @@ public class CacheCommands implements Command<CacheSubcommands> {
     private void printCacheHelp(Logger logger) {
         logger.info(INDENT + "The '" + CACHE + " subcommand' is used to get information about and perform actions" +
             " with caches. The command has the following syntax:");
-        logger.info("");;
+        logger.info("");
         logger.info(INDENT + CommandLogger.join(" ", UTILITY_NAME, CommandLogger.join(" ", getCommonOptions())) + " " +
             CACHE + " [subcommand] <subcommand_parameters>");
-        logger.info("");;
+        logger.info("");
         logger.info(INDENT + "The subcommands that take " + OP_NODE_ID + " as an argument ('" + LIST + "', '"
             + FIND_AND_DELETE_GARBAGE+ "', '" + CONTENTION + "' and '" + VALIDATE_INDEXES +
             "') will be executed on the given node or on all server nodes" +
             " if the option is not specified. Other commands will run on a random server node.");
-        logger.info("");;
-        logger.info("");;
+        logger.info("");
+        logger.info("");
         logger.info(INDENT + "Subcommands:");
 
         Arrays.stream(CacheCommandList.values()).forEach(c -> {
             if (c.subcommand() != null) c.subcommand().printUsage(logger);
         });
 
-        logger.info("");;
+        logger.info("");
     }
 
 
     /**
      * Print cache command usage with default indention.
      *
+     * @param logger Logger to use.
      * @param cmd Cache command.
      * @param description Command description.
      * @param paramsDesc Parameter desciptors.
