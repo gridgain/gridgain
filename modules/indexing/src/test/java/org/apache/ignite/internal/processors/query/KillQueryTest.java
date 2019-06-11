@@ -305,6 +305,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
         createJoinCache("PERS2", 2);
     }
 
+    /** {@inheritDoc} */
     @Override protected void afterTestsStopped() throws Exception {
         GridQueryProcessor.idxCls = null;
 
@@ -439,6 +440,12 @@ public class KillQueryTest extends GridCommonAbstractTest {
         return qryList.get(0).globalQueryId();
     }
 
+    /**
+     * Finds queries that has specified text and are initially runned on the specified server node.
+     *
+     * @param query text of the query to find.
+     * @param node server node that runs the reduce query.
+     */
     private List<GridRunningQueryInfo> findQueriesOnNode(String query, IgniteEx node) {
         List<GridRunningQueryInfo> allQrs = (List<GridRunningQueryInfo>)node.context().query().runningQueries(-1);
 
