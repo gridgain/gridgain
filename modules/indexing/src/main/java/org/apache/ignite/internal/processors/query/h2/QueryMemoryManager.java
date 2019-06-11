@@ -170,6 +170,7 @@ public class QueryMemoryManager extends H2MemoryTracker {
 
     /** {@inheritDoc} */
     @Override public void close() {
-        assert reserved.get() == 0 : "Potential memory leak in SQL processor. Some queries forget to free memory.";
+        if (reserved.get() >= 0)
+            log.warning("Potential memory leak in SQL processor. Some queries forget to free memory.");
     }
 }
