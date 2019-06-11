@@ -91,7 +91,7 @@ public class IgniteVersionUtils {
 
     /**
      * Builds string date representation in "yyyyMMdd" format.
-     * "synchronized" because it uses {@link SimpleDateFormat} which is not shreadsafe.
+     * "synchronized" because it uses {@link SimpleDateFormat} which is not threadsafe.
      *
      * @param ts Timestamp.
      * @return Timestamp date in UTC timezone.
