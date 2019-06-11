@@ -821,6 +821,10 @@ module.exports.factory = function() {
             protocols: [String]
         },
         rebalanceThreadPoolSize: Number,
+        rebalanceBatchSize: Number,
+        rebalanceBatchesPrefetchCount: Number,
+        rebalanceTimeout: Number,
+        rebalanceThrottle: Number,
         odbc: {
             odbcEnabled: Boolean,
             endpointAddress: String,

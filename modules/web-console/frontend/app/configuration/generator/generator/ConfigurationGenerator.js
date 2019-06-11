@@ -122,6 +122,7 @@ export default class IgniteConfigurationGenerator {
         if (available(['2.1.0', '2.3.0']))
             this.clusterQuery(cluster, available, cfg);
 
+        this.clusterRebalance(cluster, available, cfg);
         this.clusterServiceConfiguration(cluster.serviceConfigurations, cluster.caches, cfg);
         this.clusterSsl(cluster, available, cfg);
 
@@ -1942,6 +1943,18 @@ export default class IgniteConfigurationGenerator {
             .longProperty('walAutoArchiveAfterInactivity');
 
         cfg.beanProperty('persistentStoreConfiguration', bean);
+
+        return cfg;
+    }
+
+    // Generate cluster rebalance group.
+    static clusterRebalance(cluster, available, cfg = this.igniteConfigurationBean(cluster)) {
+        if (available('2.5.0')) {
+            cfg.intProperty('rebalanceBatchSize')
+                .longProperty('rebalanceBatchesPrefetchCount')
+                .longProperty('rebalanceTimeout')
+                .longProperty('rebalanceThrottle');
+        }
 
         return cfg;
     }

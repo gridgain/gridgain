@@ -209,6 +209,10 @@ public class WebConsoleConfigurationSelfTest {
         igniteCfgProps.add("failureHandler");
         igniteCfgProps.add("rebalanceThreadPoolSize");
         igniteCfgProps.add("localEventListeners");
+        igniteCfgProps.add("rebalanceBatchSize");
+        igniteCfgProps.add("rebalanceBatchesPrefetchCount");
+        igniteCfgProps.add("rebalanceTimeout");
+        igniteCfgProps.add("rebalanceThrottle");
 
         Set<String> igniteCfgPropsDep = new HashSet<>();
         igniteCfgPropsDep.add("gridName");
@@ -419,6 +423,7 @@ public class WebConsoleConfigurationSelfTest {
         Set<String> discoverySpiExclProps = new HashSet<>();
         discoverySpiExclProps.addAll(SPI_EXCLUDED_FIELDS);
         discoverySpiExclProps.add("nodeAttributes");
+        discoverySpiExclProps.add("gridStartTime");
         metadata.put(TcpDiscoverySpi.class, new MetadataInfo(discoverySpiProps, EMPTY_FIELDS, discoverySpiExclProps));
 
         Set<String> connectorProps = new HashSet<>();
