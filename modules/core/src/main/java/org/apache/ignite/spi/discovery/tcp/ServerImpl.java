@@ -6021,7 +6021,7 @@ class ServerImpl extends TcpDiscoveryImpl {
 
             msgWorker.addMessage(new TcpDiscoveryStatusCheckMessage(locNode, null));
 
-            lastTimeStatusMsgSentNanos = U.currentTimeMillis();
+            lastTimeStatusMsgSentNanos = System.nanoTime();
         }
 
         /**
