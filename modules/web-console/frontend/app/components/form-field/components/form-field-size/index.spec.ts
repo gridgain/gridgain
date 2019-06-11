@@ -20,18 +20,13 @@ import angular from 'angular';
 import componentModule from '../../index';
 
 suite('form-field-size', () => {
-    /** @type {ng.IScope} */
-    let $scope;
-    /** @type {ng.ICompileService} */
-    let $compile;
-    angular.module('test', [componentModule.name]);
-
-    const click = (el) => el[0].querySelector('.panel-collapsible__status-icon').click();
+    let $scope: ng.IScope;
+    let $compile: ng.ICompileService;
 
     setup(() => {
         angular.module('test', [componentModule.name]);
         angular.mock.module('test');
-        angular.mock.inject((_$rootScope_, _$compile_) => {
+        angular.mock.inject((_$rootScope_: ng.IScope, _$compile_: ng.ICompileService) => {
             $compile = _$compile_;
             $scope = _$rootScope_.$new();
         });
@@ -48,13 +43,14 @@ suite('form-field-size', () => {
                 size-type='time'
                 size-scale-label='sec'
                 min='0'
+                ng-ref='ctrl'
             />
         `);
         $compile(el)($scope);
         $scope.$digest();
-        const ctrl = $scope.$$childHead.$ctrl;
+        const ctrl = $scope.ctrl;
         ctrl.sizeScale = {label: 'hour', value: 60 * 60};
         $scope.$digest();
-        assert.equal($scope.model, 60*60, 'Model value is recalculated on measure switch');
+        assert.equal($scope.model, 60 * 60, 'Model value is recalculated on measure switch');
     });
 });
