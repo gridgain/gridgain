@@ -27,6 +27,38 @@ import org.jetbrains.annotations.Nullable;
  * Component type.
  */
 public enum IgniteComponentType {
+    /** @deprecated Should be removed. */
+    @Deprecated
+    IGFS(
+        "org.apache.ignite.internal.processors.igfs.IgfsNoopProcessor",
+        "org.apache.ignite.internal.processors.igfs.IgfsProcessor",
+        "ignite-hadoop"
+    ),
+
+    /** @deprecated Should be removed. */
+    @Deprecated
+    HADOOP(
+        "org.apache.ignite.internal.processors.hadoop.HadoopNoopProcessor",
+        "org.apache.ignite.internal.processors.hadoop.HadoopProcessor",
+        "ignite-hadoop"
+    ),
+
+    /** @deprecated Should be removed. */
+    @Deprecated
+    HADOOP_HELPER(
+        "org.apache.ignite.internal.processors.hadoop.HadoopNoopHelper",
+        "org.apache.ignite.internal.processors.hadoop.HadoopHelperImpl",
+        "ignite-hadoop"
+    ),
+
+    /** @deprecated Should be removed. */
+    @Deprecated
+    IGFS_HELPER(
+        "org.apache.ignite.internal.processors.igfs.IgfsNoopHelper",
+        "org.apache.ignite.internal.processors.igfs.IgfsHelperImpl",
+        "ignite-hadoop"
+    ),
+
     /** Spring XML parsing. */
     SPRING(
         null,
