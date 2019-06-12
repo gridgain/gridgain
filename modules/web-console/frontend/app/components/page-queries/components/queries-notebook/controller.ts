@@ -334,7 +334,7 @@ export class NotebookCtrl {
             {label: '100', value: 100}
         ];
 
-        $scope.timeLineSpans = ['1', '5', '10', '15', '30'];
+        $scope.timeLineSpans = [1, 5, 10, 15, 30];
 
         $scope.aggregateFxs = ['FIRST', 'LAST', 'MIN', 'MAX', 'SUM', 'AVG', 'COUNT'];
 
@@ -472,7 +472,7 @@ export class NotebookCtrl {
                         const chartData = _.find(datum, {series: valCol.label});
 
                         const leftBound = new Date();
-                        leftBound.setMinutes(leftBound.getMinutes() - parseInt(paragraph.timeLineSpan, 10));
+                        leftBound.setMinutes(leftBound.getMinutes() - paragraph.timeLineSpan);
 
                         if (chartData) {
                             const lastItem = _.last(paragraph.chartHistory);
@@ -2035,13 +2035,6 @@ export class NotebookCtrl {
 
         $scope.paragraphTimeSpanVisible = function(paragraph) {
             return paragraph.timeLineSupported() && paragraph.chartTimeLineEnabled();
-        };
-
-        $scope.paragraphTimeLineSpan = function(paragraph) {
-            if (paragraph && paragraph.timeLineSpan)
-                return paragraph.timeLineSpan.toString();
-
-            return '1';
         };
 
         $scope.applyChartSettings = function(paragraph) {
