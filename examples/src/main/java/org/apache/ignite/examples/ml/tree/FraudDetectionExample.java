@@ -47,6 +47,11 @@ import org.apache.ignite.ml.util.SandboxMLCache;
  * Description of entropy can be found in: https://en.wikipedia.org/wiki/Evaluation_of_binary_classifiers .
  */
 public class FraudDetectionExample {
+    /**
+     * Executes example.
+     *
+     * @param args Command line arguments, none required.
+     */
     public static void main(String[] args) throws FileNotFoundException {
         try (Ignite ignite = Ignition.start("examples/config/example-ignite.xml")) {
             System.out.println(">>> Ignite grid started.");
