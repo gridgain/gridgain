@@ -40,9 +40,9 @@ suite('Angular form-field-errors component', () => {
         `
     })
     class HostComponent {
-        @ViewChild('inline', {read: ElementRef})
+        @ViewChild('inline', {read: ElementRef, static: false})
         inline: HTMLElement
-        @ViewChild('icon', {read: ElementRef})
+        @ViewChild('icon', {read: ElementRef, static: false})
         icon: HTMLElement
         errorType = 'unique'
     }
