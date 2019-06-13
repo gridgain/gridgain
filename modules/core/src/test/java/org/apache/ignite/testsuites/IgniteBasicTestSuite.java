@@ -122,6 +122,8 @@ import org.junit.runners.Suite;
 
     IgnitePlatformsTestSuite.class,
 
+    SecurityTestSuite.class,
+
     GridSelfTest.class,
     ClusterGroupHostsSelfTest.class,
     IgniteMessagingWithClientTest.class,
