@@ -24,7 +24,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  * Web console launcher.
  */
 @SpringBootApplication
-@EnableScheduling
 public class Application {
     /**
      * @param args Args.

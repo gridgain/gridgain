@@ -22,19 +22,24 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.dto.Announcement;
 import org.apache.ignite.console.websocket.TopologySnapshot;
 import org.apache.ignite.console.websocket.WebSocketEvent;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.worker.GridWorker;
+import org.apache.ignite.logger.slf4j.Slf4jLogger;
+import org.apache.ignite.thread.IgniteThread;
+import org.jetbrains.annotations.Nullable;
 import org.jsr166.ConcurrentLinkedHashMap;
-import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.CloseStatus;
@@ -43,6 +48,7 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.ignite.console.utils.Utils.toJson;
@@ -55,9 +61,16 @@ import static org.springframework.web.util.UriComponentsBuilder.fromUri;
  * Web sockets manager.
  */
 @Service
+@EnableScheduling
 public class WebSocketsManager {
     /** */
-    private static final Logger log = LoggerFactory.getLogger(WebSocketsManager.class);
+    private static final IgniteLogger log = new Slf4jLogger(LoggerFactory.getLogger(WebSocketsManager.class));
+
+    /** Default for cluster topology expire. */
+    private static final long DEFAULT_MAX_INACTIVE_INTERVAL = MINUTES.toMillis(10);
+
+    /** Delay between sessions timeout checks. */
+    private static final long TOPOLOGY_TIMEOUT_CHECK_DELAY = MINUTES.toMillis(1);
 
     /** */
     private static final PingMessage PING = new PingMessage(UTF_8.encode("PING"));
@@ -80,11 +93,13 @@ public class WebSocketsManager {
     /**
      * Default constructor.
      */
-    public WebSocketsManager() {
+    public WebSocketsManager(Ignite ignite) {
         agents = new ConcurrentLinkedHashMap<>();
         browsers = new ConcurrentHashMap<>();
         clusters = new ConcurrentHashMap<>();
         requests = new ConcurrentHashMap<>();
+
+        new IgniteThread(new ClusterTimeoutWorker(ignite.name(), "session-timeout-worker", log)).start();
     }
 
     /**
@@ -114,23 +129,13 @@ public class WebSocketsManager {
     public void onAgentConnectionClosed(WebSocketSession ws) {
         AgentDescriptor desc = agents.remove(ws);
 
-        if (desc != null) {
-            updateClusterInBrowsers(desc.accIds);
-
-            if (!F.isEmpty(desc.getClusterIds())) {
-                for (String clusterId : desc.getClusterIds()) {
-                    Optional<AgentDescriptor> conn = agents.values().stream()
-                        .filter(agent -> agent.getClusterIds().contains(clusterId))
-                        .findFirst();
-
-                    if (!conn.isPresent())
-                        clusters.remove(clusterId);
-                }
-            }
-
-            if (F.isEmpty(desc.clusterIds)) 
-                log.warn("Agent descriptor not found for session: " + ws);
+        if (desc == null) {
+            log.warning("Agent descriptor not found for session: " + ws);
+            
+            return;
         }
+
+        updateClusterInBrowsers(desc.accIds);
     }
 
     /**
@@ -147,7 +152,7 @@ public class WebSocketsManager {
         WebSocketSession ws = requests.remove(evt.getRequestId());
 
         if (ws == null) {
-            log.warn("Failed to send event to browser: " + evt);
+            log.warning("Failed to send event to browser: " + evt);
 
             return;
         }
@@ -253,8 +258,6 @@ public class WebSocketsManager {
         }
 
         desc.setClusterIds(tops.stream().map(TopologySnapshot::getId).collect(Collectors.toSet()));
-
-        // TODO GG-19218 Cleanup clusters.
     }
 
     /**
@@ -363,7 +366,7 @@ public class WebSocketsManager {
     /**
      * Periodically ping connected clients to keep connections alive.
      */
-    @Scheduled(fixedRate = 5000)
+    @Scheduled(fixedRate = 3_000)
     public void pingClients() {
         agents.keySet().forEach(this::ping);
         browsers.keySet().forEach(this::ping);
@@ -457,6 +460,46 @@ public class WebSocketsManager {
          */
         public void setClusterIds(Set<String> clusterIds) {
             this.clusterIds = clusterIds;
+        }
+    }
+
+    /**
+     * Worker that cleanup expired cluster topology.
+     */
+    private class ClusterTimeoutWorker extends GridWorker {
+        /**
+         * @param instanceName Ignite instance name.
+         * @param name Name.
+         * @param log Logger.
+         */
+        private ClusterTimeoutWorker(@Nullable String instanceName, String name, IgniteLogger log) {
+            super(instanceName, name, log);
+        }
+
+        /** {@inheritDoc} */
+        @Override protected void body() throws InterruptedException {
+            while (!isCancelled()) {
+                Thread.sleep(TOPOLOGY_TIMEOUT_CHECK_DELAY);
+
+                clusters.forEach((clusterId, snapshot) -> {
+                    if (snapshot.isExpired(DEFAULT_MAX_INACTIVE_INTERVAL)) {
+                        clusters.remove(clusterId);
+
+                        for (Map.Entry<WebSocketSession, AgentDescriptor> entry : agents.entrySet()) {
+                            AgentDescriptor desc = entry.getValue();
+
+                            if (desc.clusterIds.contains(clusterId)) {
+                                desc.clusterIds.remove(clusterId);
+
+                                log.error("Failed to receive topology update from agent [agent="
+                                    + entry.getKey() + ", clusterId=" + clusterId + "]");
+
+                                updateClusterInBrowsers(desc.accIds);
+                            }
+                        }
+                    }
+                });
+            }
         }
     }
 }
