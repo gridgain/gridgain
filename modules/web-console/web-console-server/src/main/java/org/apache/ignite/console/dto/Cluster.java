@@ -55,7 +55,7 @@ public class Cluster extends DataObject {
         String discoveryKind = discovery.getString("kind");
 
         if (F.isEmpty(discoveryKind))
-            throw new IllegalStateException("Cluster discovery not found");
+            throw new IllegalStateException("Cluster discovery kind not found");
 
         return new Cluster(
             id,

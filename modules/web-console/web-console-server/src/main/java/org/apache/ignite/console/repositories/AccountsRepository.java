@@ -99,23 +99,30 @@ public class AccountsRepository {
     }
 
     /**
+     * @return {@code true} If current user is the first ine.
+     */
+    @SuppressWarnings("unchecked")
+    public boolean ensureFirstUser() {
+        IgniteCache cache = accountsTbl.cache();
+
+        Object firstUserMarker = cache.getAndPutIfAbsent(FIRST_USER_MARKER_KEY, FIRST_USER_MARKER_KEY);
+
+        return firstUserMarker == null;
+    }
+
+    /**
      * Save account.
      *
      * @param account Account to save.
      * @return Saved account.
      * @throws IgniteException if failed to save account.
      */
-    @SuppressWarnings("unchecked")
     public Account create(Account account) throws AuthenticationServiceException {
         try (Transaction tx = txMgr.txStart()) {
-            IgniteCache cache = accountsTbl.cache();
-
             if (accountsTbl.getByIndex(account.getUsername()) != null)
                 throw new IgniteException("Account with email already exists: " + account.getUsername());
 
-            Object firstUserMarker = cache.getAndPutIfAbsent(FIRST_USER_MARKER_KEY, account.getId());
-
-            account.setAdmin(firstUserMarker == null);
+            account.setAdmin(ensureFirstUser());
 
             save(account);
 
