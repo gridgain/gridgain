@@ -791,7 +791,9 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
     /** {@inheritDoc} */
     @Override public void onGridDataReceived(DiscoveryDataBag.GridDiscoveryData data) {
-        if (ctx.discovery().allNodes().stream().anyMatch(it -> it.attribute(IgniteNodeAttributes.ATTR_IGFS) != null))
+        Collection<ClusterNode> nodes = ctx.discovery().allNodes();
+
+        if (nodes != null && nodes.stream().anyMatch(it -> it.attribute(IgniteNodeAttributes.ATTR_IGFS) != null))
             throw new IgniteException("Can not join to cluster with IGFS because it is not supported anymore");
 
         if (data.commonData() instanceof DiscoveryDataClusterState) {
