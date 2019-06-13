@@ -35,7 +35,7 @@ public class TcpDiscoveryAuthFailedMessage extends TcpDiscoveryAbstractMessage {
     private transient InetAddress addr;
 
     /** Node id for which authentication was failed. */
-    private transient UUID targetNodeId;
+    private UUID targetNodeId;
 
     /**
      * Constructor.
@@ -72,7 +72,6 @@ public class TcpDiscoveryAuthFailedMessage extends TcpDiscoveryAbstractMessage {
         out.defaultWriteObject();
 
         U.writeByteArray(out, addr.getAddress());
-        out.writeObject(targetNodeId);
     }
 
     /**
@@ -82,7 +81,6 @@ public class TcpDiscoveryAuthFailedMessage extends TcpDiscoveryAbstractMessage {
         in.defaultReadObject();
 
         addr = InetAddress.getByAddress(U.readByteArray(in));
-        targetNodeId = (UUID)in.readObject();
     }
 
     /** {@inheritDoc} */
