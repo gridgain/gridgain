@@ -35,28 +35,28 @@ public class TcpDiscoveryAuthFailedMessage extends TcpDiscoveryAbstractMessage {
     /** Coordinator address. */
     private transient InetAddress addr;
 
-    /** Node for which authentication was failed. */
-    private transient TcpDiscoveryNode targetNode;
+    /** Node id for which authentication was failed. */
+    private transient UUID targetNodeId;
 
     /**
      * Constructor.
      *
      * @param creatorNodeId Creator node ID.
      * @param addr Coordinator address.
-     * @param targetNode Node for which authentication was failed.
+     * @param targetNodeId Node for which authentication was failed.
      */
-    public TcpDiscoveryAuthFailedMessage(UUID creatorNodeId, InetAddress addr, TcpDiscoveryNode targetNode) {
+    public TcpDiscoveryAuthFailedMessage(UUID creatorNodeId, InetAddress addr, UUID targetNodeId) {
         super(creatorNodeId);
 
         this.addr = addr;
-        this.targetNode = targetNode;
+        this.targetNodeId = targetNodeId;
     }
 
     /**
      * @return Node for which authentication was failed.
      */
-    public TcpDiscoveryNode getTargetNode() {
-        return targetNode;
+    public UUID getTargetNodeId() {
+        return targetNodeId;
     }
 
     /**
@@ -73,7 +73,7 @@ public class TcpDiscoveryAuthFailedMessage extends TcpDiscoveryAbstractMessage {
         out.defaultWriteObject();
 
         U.writeByteArray(out, addr.getAddress());
-        out.writeObject(targetNode);
+        out.writeObject(targetNodeId);
     }
 
     /**
@@ -83,7 +83,7 @@ public class TcpDiscoveryAuthFailedMessage extends TcpDiscoveryAbstractMessage {
         in.defaultReadObject();
 
         addr = InetAddress.getByAddress(U.readByteArray(in));
-        targetNode = (TcpDiscoveryNode)in.readObject();
+        targetNodeId = (UUID)in.readObject();
     }
 
     /** {@inheritDoc} */
