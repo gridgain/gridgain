@@ -126,7 +126,6 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.rules.RuleChain;
-import org.junit.rules.RuleChain;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
@@ -188,7 +187,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
             assert getName() != null : "getName returned null";
 
             runTest(base);
-        }));
+        }};
 
     /**
      * Supports obtaining test name for JUnit4 framework in a way that makes it available for methods invoked
@@ -210,7 +209,8 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * first.
      */
     @Rule public transient RuleChain nameAndRunRulesChain = RuleChain
-        .outerRule(nameRule)
+        .outerRule(new SystemPropertiesRule())
+        .around(nameRule)
         .around(runRule);
 
     /** */
