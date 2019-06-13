@@ -65,6 +65,12 @@ import static org.apache.ignite.ssl.SslContextFactory.DFLT_SSL_PROTOCOL;
  * Class that execute several commands passed via command line.
  */
 public class CommandHandler {
+    /** Command logger. */
+    private final CommandLogger commandLogger= new CommandLogger();
+
+    /** JULs logger. */
+    private static final Logger staticLogger = setupJavaLogger();
+
     /** */
     static final String CMD_HELP = "--help";
 
@@ -105,7 +111,7 @@ public class CommandHandler {
     public static final String NULL = "null";
 
     /** JULs logger. */
-    private final Logger logger = setupJavaLogger();
+    private Logger logger = setupJavaLogger();
 
     /** Session. */
     protected final String ses = U.id8(UUID.randomUUID());
@@ -128,10 +134,10 @@ public class CommandHandler {
     /**
      * @return prepared JULs logger.
      */
-    private Logger setupJavaLogger() {
+    private static Logger setupJavaLogger() {
         Logger result;
 
-        result = Logger.getLogger(getClass().getName() + "Log");
+        result = Logger.getLogger(CommandHandler.class.getName() + "Log");
         result.setLevel(Level.INFO);
         result.setUseParentHandlers(false);
 
@@ -158,6 +164,20 @@ public class CommandHandler {
         result.addHandler(streamHandler);
 
         return result;
+    }
+
+    /**
+     *
+     */
+    public CommandHandler() {
+        logger = staticLogger;
+    }
+
+    /**
+     * @param logger Logger to use.
+     */
+    public CommandHandler(Logger logger) {
+        this.logger = logger;
     }
 
     /**
