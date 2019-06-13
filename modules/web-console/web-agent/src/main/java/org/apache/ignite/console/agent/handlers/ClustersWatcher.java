@@ -36,6 +36,7 @@ import org.apache.ignite.console.websocket.WebSocketEvent;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientNodeBean;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.logger.slf4j.Slf4jLogger;
 import org.eclipse.jetty.websocket.api.Session;
@@ -87,7 +88,7 @@ public class ClustersWatcher implements Closeable {
     private DemoClusterHandler demoClusterHnd;
 
     /** Latest topology snapshot. */
-    private TopologySnapshot top;
+    private TopologySnapshot latestTop;
 
     /** Executor pool. */
     private static final ScheduledExecutorService pool = Executors.newScheduledThreadPool(1);
@@ -149,9 +150,9 @@ public class ClustersWatcher implements Closeable {
 
                 TopologySnapshot newTop = new TopologySnapshot(nodes);
 
-                if (newTop.differentCluster(top))
+                if (newTop.differentCluster(latestTop))
                     log.info("Connection successfully established to cluster with nodes: " + nid8(newTop.nids()));
-                else if (!Objects.equals(top.nids(), newTop.nids()))
+                else if (!Objects.equals(latestTop.nids(), newTop.nids()))
                     log.info("Cluster topology changed, new topology: " + nid8(newTop.nids()));
 
                 boolean active = active(fromString(newTop.getClusterVersion()), F.first(newTop.nids()));
@@ -160,14 +161,16 @@ public class ClustersWatcher implements Closeable {
                 newTop.setActive(active);
                 newTop.setSecured(!F.isEmpty(res.getSessionToken()));
 
-                top = newTop;
+                latestTop = newTop;
 
                 tops.add(newTop);
 
                 sendTopology(ses, tops);
             }
             catch (Throwable e) {
-                clusterDisconnect(e);
+                onFailedClusterRequest(e);
+
+                latestTop = null;
 
                 sendTopology(ses, tops);
             }
@@ -178,8 +181,13 @@ public class ClustersWatcher implements Closeable {
      * Stop cluster watch.
      */
     void stopWatchTask() {
-        if (refreshTask != null)
+        if (refreshTask != null) {
             refreshTask.cancel(true);
+
+            refreshTask = null;
+
+            log.info("Topology watch process was suspended");
+        }
     }
 
     /**
@@ -281,18 +289,21 @@ public class ClustersWatcher implements Closeable {
     /**
      * Callback on disconnect from cluster.
      */
-    private void clusterDisconnect(Throwable e) {
-        if (top == null)
-            return;
+    private void onFailedClusterRequest(Throwable e) {
+        String msg = latestTop == null ? "Failed to establish connection to node" : "Connection to cluster was lost";
 
-        top = null;
+        boolean failed = X.hasCause(e, IllegalStateException.class);
 
         if (X.hasCause(e, ConnectException.class))
-            log.info("Connection to cluster was lost");
-        else if (X.hasCause(e, IllegalStateException.class))
-            log.error("Connection to cluster was lost. " + e.getMessage());
+            LT.info(log, msg);
+        else if (failed && "Failed to handle request - session token not found or invalid".equals(e.getMessage()))
+            LT.error(log, null, "Failed to establish connection to secured cluster - missing credentials. Please pass '--node-login' and '--node-password' options");
+        else if (failed && e.getMessage().startsWith("Failed to authenticate remote client (invalid credentials?):"))
+            LT.error(log, null, "Failed to establish connection to secured cluster - invalid credentials. Please check '--node-login' and '--node-password' options");
+        else if (failed)
+            LT.error(log, null, msg + ". " + e.getMessage());
         else
-            log.error("Connection to cluster was lost", e);
+            LT.error(log, e, msg);
     }
 
     /** {@inheritDoc} */
