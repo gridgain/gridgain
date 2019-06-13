@@ -55,31 +55,31 @@ public class ConfigurationsRepository {
     protected final TransactionManager txMgr;
 
     /** */
-    private final Table<Cluster> clustersTbl;
+    protected final Table<Cluster> clustersTbl;
 
     /** */
-    private final Table<Cache> cachesTbl;
+    protected final Table<Cache> cachesTbl;
 
     /** */
-    private final Table<Model> modelsTbl;
+    protected final Table<Model> modelsTbl;
 
     /** */
-    private final Table<Igfs> igfssTbl;
+    protected final Table<Igfs> igfssTbl;
 
     /** */
-    private final OneToManyIndex<UUID> cachesIdx;
+    protected final OneToManyIndex<UUID> cachesIdx;
 
     /** */
-    private final OneToManyIndex<UUID> modelsIdx;
+    protected final OneToManyIndex<UUID> modelsIdx;
 
     /** */
-    private final OneToManyIndex<UUID> igfssIdx;
+    protected final OneToManyIndex<UUID> igfssIdx;
 
     /** */
     protected final OneToManyIndex<ConfigurationKey> clustersIdx;
 
     /** */
-    private final OneToManyIndex<ConfigurationKey> cfgIdx;
+    protected final OneToManyIndex<ConfigurationKey> cfgIdx;
 
     /**
      * @param ignite Ignite.

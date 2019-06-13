@@ -42,13 +42,13 @@ import static java.time.ZoneOffset.UTC;
 @Repository
 public class ActivitiesRepository {
     /** */
-    private final TransactionManager txMgr;
+    protected final TransactionManager txMgr;
 
     /** */
-    private final Table<Activity> activitiesTbl;
+    protected final Table<Activity> activitiesTbl;
 
     /** */
-    private final CacheHolder<ActivityKey, Set<UUID>> activitiesIdx;
+    protected final CacheHolder<ActivityKey, Set<UUID>> activitiesIdx;
 
     /**
      * @param ignite Ignite.
