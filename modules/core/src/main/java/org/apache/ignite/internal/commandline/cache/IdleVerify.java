@@ -204,7 +204,7 @@ public class IdleVerify implements Command<IdleVerify.Arguments> {
             if (args.dump())
                 cacheIdleVerifyDump(client, clientCfg, logger);
             else if (idleVerifyV2)
-                cacheIdleVerifyV2(client, clientCfg);
+                cacheIdleVerifyV2(client, clientCfg, logger);
             else
                 legacyCacheIdleVerify(client, clientCfg, logger);
         }
@@ -329,15 +329,23 @@ public class IdleVerify implements Command<IdleVerify.Arguments> {
      */
     private void cacheIdleVerifyV2(
         GridClient client,
-        GridClientConfiguration clientCfg
+        GridClientConfiguration clientCfg,
+        Logger log
     ) throws GridClientException {
         IdleVerifyResultV2 res = executeTask(
             client,
             VisorIdleVerifyTaskV2.class,
-            new VisorIdleVerifyTaskArg(args.caches(), args.excludeCaches(), args.idleCheckCrc()),
-            clientCfg);
+            new VisorIdleVerifyTaskArg(
+                args.caches(),
+                args.excludeCaches(),
+                args.isSkipZeros(),
+                args.getCacheFilterEnum(),
+                args.idleCheckCrc()
+            ),
+            clientCfg
+        );
 
-        res.print(System.out::print);
+        res.print(log::info);
     }
 
 
@@ -353,7 +361,13 @@ public class IdleVerify implements Command<IdleVerify.Arguments> {
         VisorIdleVerifyTaskResult res = executeTask(
             client,
             VisorIdleVerifyTask.class,
-            new VisorIdleVerifyTaskArg(args.caches(), args.excludeCaches(), args.idleCheckCrc()),
+            new VisorIdleVerifyTaskArg(
+                args.caches(),
+                args.excludeCaches(),
+                args.isSkipZeros(),
+                args.getCacheFilterEnum(),
+                args.idleCheckCrc()
+            ),
             clientCfg);
 
         Map<PartitionKey, List<PartitionHashRecord>> conflicts = res.getConflicts();
