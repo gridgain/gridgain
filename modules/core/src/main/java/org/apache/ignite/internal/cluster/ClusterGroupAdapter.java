@@ -225,7 +225,7 @@ public class ClusterGroupAdapter implements ClusterGroupEx, Externalizable {
         if (messaging == null) {
             assert ctx != null;
 
-            messaging = new IgniteMessagingImpl(ctx, this, false);
+            messaging = new IgniteMessagingImpl(ctx, this);
         }
 
         return messaging;
@@ -238,7 +238,7 @@ public class ClusterGroupAdapter implements ClusterGroupEx, Externalizable {
         if (evts == null) {
             assert ctx != null;
 
-            evts = new IgniteEventsImpl(ctx, this, false);
+            evts = new IgniteEventsImpl(ctx, this);
         }
 
         return evts;
@@ -251,7 +251,7 @@ public class ClusterGroupAdapter implements ClusterGroupEx, Externalizable {
         if (svcs == null) {
             assert ctx != null;
 
-            svcs = new IgniteServicesImpl(ctx, this, false);
+            svcs = new IgniteServicesImpl(ctx, this);
         }
 
         return svcs;

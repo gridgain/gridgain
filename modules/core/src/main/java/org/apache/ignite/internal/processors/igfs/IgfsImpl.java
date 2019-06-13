@@ -1626,21 +1626,6 @@ public final class IgfsImpl implements IgfsEx {
         return new IgfsFileImpl(path, info, data.groupBlockSize());
     }
 
-    /** {@inheritDoc} */
-    @Override public IgniteFileSystem withAsync() {
-        return new IgfsAsyncImpl(this);
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean isAsync() {
-        return false;
-    }
-
-    /** {@inheritDoc} */
-    @Override public <R> IgniteFuture<R> future() {
-        throw new IllegalStateException("Asynchronous mode is not enabled.");
-    }
-
     /**
      * Space calculation task.
      */

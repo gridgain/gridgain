@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.igfs;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.IgniteFileSystem;
 import org.apache.ignite.configuration.FileSystemConfiguration;
 import org.apache.ignite.igfs.IgfsBlockLocation;
 import org.apache.ignite.igfs.IgfsFile;
@@ -406,27 +405,6 @@ public class IgfsMock implements IgfsEx {
     /** {@inheritDoc} */
     @Override public void await(IgfsPath... paths) {
         throwUnsupported();
-    }
-
-    /** {@inheritDoc} */
-    @Override public IgniteFileSystem withAsync() {
-        throwUnsupported();
-
-        return null;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean isAsync() {
-        throwUnsupported();
-
-        return false;
-    }
-
-    /** {@inheritDoc} */
-    @Override public <R> IgniteFuture<R> future() {
-        throwUnsupported();
-
-        return null;
     }
 
     /**

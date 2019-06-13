@@ -4522,7 +4522,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
      */
     public TransactionProxy proxy() {
         if (proxy == null)
-            proxy = new TransactionProxyImpl(this, cctx, false);
+            proxy = new TransactionProxyImpl(this, cctx);
 
         return proxy;
     }
@@ -4532,7 +4532,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
      */
     public TransactionProxy rollbackOnlyProxy() {
         if (rollbackOnlyProxy == null)
-            rollbackOnlyProxy = new TransactionProxyRollbackOnlyImpl<>(this, cctx, false);
+            rollbackOnlyProxy = new TransactionProxyRollbackOnlyImpl<>(this, cctx);
 
         return rollbackOnlyProxy;
     }

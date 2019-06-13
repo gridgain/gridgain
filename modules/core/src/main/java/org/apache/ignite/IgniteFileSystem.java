@@ -29,7 +29,6 @@ import org.apache.ignite.igfs.IgfsPath;
 import org.apache.ignite.igfs.IgfsPathSummary;
 import org.apache.ignite.igfs.mapreduce.IgfsRecordResolver;
 import org.apache.ignite.igfs.mapreduce.IgfsTask;
-import org.apache.ignite.lang.IgniteAsyncSupport;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteUuid;
 import org.jetbrains.annotations.Nullable;
@@ -66,7 +65,7 @@ import org.apache.ignite.igfs.IgfsPathNotFoundException;
  * <p>
  * <b>NOTE:</b> integration with Hadoop is available only in {@code In-Memory Accelerator For Hadoop} edition.
  */
-public interface IgniteFileSystem extends IgniteAsyncSupport {
+public interface IgniteFileSystem {
     /** IGFS scheme name. */
     public static final String IGFS_SCHEME = "igfs";
 
@@ -309,8 +308,6 @@ public interface IgniteFileSystem extends IgniteAsyncSupport {
     /**
      * Executes IGFS task with overridden maximum range length (see
      * {@link org.apache.ignite.configuration.FileSystemConfiguration#getMaximumTaskRangeLength()} for more information).
-     * <p>
-     * Supports asynchronous execution (see {@link IgniteAsyncSupport}).
      *
      * @param task Task to execute.
      * @param rslvr Optional resolver to control split boundaries.
@@ -348,8 +345,6 @@ public interface IgniteFileSystem extends IgniteAsyncSupport {
 
     /**
      * Executes IGFS task.
-     * <p>
-     * Supports asynchronous execution (see {@link IgniteAsyncSupport}).
      *
      * @param taskCls Task class to execute.
      * @param rslvr Optional resolver to control split boundaries.
@@ -378,8 +373,6 @@ public interface IgniteFileSystem extends IgniteAsyncSupport {
     /**
      * Executes IGFS task with overridden maximum range length (see
      * {@link org.apache.ignite.configuration.FileSystemConfiguration#getMaximumTaskRangeLength()} for more information).
-     * <p>
-     * Supports asynchronous execution (see {@link IgniteAsyncSupport}).
      *
      * @param taskCls Task class to execute.
      * @param rslvr Optional resolver to control split boundaries.
@@ -535,8 +528,4 @@ public interface IgniteFileSystem extends IgniteAsyncSupport {
      * @throws IgniteException In case of error.
      */
     public long usedSpaceSize() throws IgniteException;
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override public IgniteFileSystem withAsync();
 }
