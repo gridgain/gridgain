@@ -120,11 +120,9 @@ public class DemoService {
 
                 cluster.put("id", UUID.randomUUID().toString());
 
-                List<Object> igfsIds = fillId(json, "igfss");
                 List<Object> mdlIds = fillId(json, "models");
                 List<Object> cacheIds = fillId(json, "caches");
 
-                cluster.put("igfss", igfsIds);
                 cluster.put("models", mdlIds);
                 cluster.put("caches", cacheIds);
 

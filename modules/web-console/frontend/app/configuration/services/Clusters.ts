@@ -97,10 +97,6 @@ export default class Clusters {
         return this.$http.get<{data: ShortDomainModel[]}>(`/api/v1/configuration/clusters/${clusterID}/models`);
     }
 
-    getClusterIGFSs(clusterID) {
-        return this.$http.get(`/api/v1/configuration/clusters/${clusterID}/igfss`);
-    }
-
     getClustersOverview() {
         return this.$http.get<{data: ShortCluster[]}>('/api/v1/configuration/clusters/');
     }
@@ -152,9 +148,6 @@ export default class Clusters {
                     maxSize: null
                 }]
             },
-            hadoopConfiguration: {
-                nativeLibraryNames: []
-            },
             serviceConfigurations: [],
             executorConfiguration: [],
             sqlConnectorConfiguration: {
@@ -182,7 +175,6 @@ export default class Clusters {
             failoverSpi: [],
             logger: {Log4j: { mode: 'Default'}},
             caches: [],
-            igfss: [],
             models: [],
             checkpointSpi: [],
             loadBalancingSpi: [],
@@ -203,8 +195,7 @@ export default class Clusters {
             name: cluster.name,
             discovery: cluster.discovery.kind,
             cachesCount: (cluster.caches || []).length,
-            modelsCount: (cluster.models || []).length,
-            igfsCount: (cluster.igfss || []).length
+            modelsCount: (cluster.models || []).length
         };
     }
 

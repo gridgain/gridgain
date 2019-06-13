@@ -118,8 +118,7 @@ public class AdminService {
                 .add("counters", new JsonObject()
                     .add("clusters", 0)
                     .add("caches", 0)
-                    .add("models", 0)
-                    .add("igfs", 0))
+                    .add("models", 0))
                 .add("activitiesDetail", activitiesSrv.activitiesForPeriod(account.getId(), startDate, endDate))
             )
         );
