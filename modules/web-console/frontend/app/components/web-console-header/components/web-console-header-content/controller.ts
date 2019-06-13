@@ -15,31 +15,42 @@
  */
 
 import {StateService} from '@uirouter/angularjs';
+import {UserService, User} from 'app/modules/user/User.service';
+import {tap} from 'rxjs/operators';
 
 export default class WebConsoleHeaderContent {
-    static $inject = ['$rootScope', '$state'];
+    static $inject = ['$rootScope', '$state', 'User'];
 
     constructor(
         private $rootScope: ng.IRootScopeService,
-        private $state: StateService
+        private $state: StateService,
+        private User: UserService
     ) {}
 
     static connectedClusterInvisibleStates = [
         '403', '404', 'signin'
     ];
 
+    user: User
+
+    _subscriber = this.User.current$.pipe(tap((user) => this.user = user)).subscribe()
+
     get showConnectedClusters(): boolean {
-        return this.$rootScope.user &&
+        return this.user &&
             !this.$rootScope.IgniteDemoMode &&
             !this.constructor.connectedClusterInvisibleStates.some((state) => this.$state.includes(state)) &&
-            !this.$rootScope.user.becomeUsed;
+            !this.user.becomeUsed;
     }
 
     get showUserMenu(): boolean {
-        return !!this.$rootScope.user;
+        return !!this.user;
     }
 
     get showDemoModeButton(): boolean {
-        return this.$rootScope.user && !this.$rootScope.user.becomeUsed && !this.$rootScope.IgniteDemoMode;
+        return this.user && !this.user.becomeUsed && !this.$rootScope.IgniteDemoMode;
+    }
+
+    $onDestroy() {
+        if (this._subscriber) this._subscriber.unsubscribe();
     }
 }

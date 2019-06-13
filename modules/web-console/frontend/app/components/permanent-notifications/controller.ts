@@ -14,14 +14,20 @@
  * limitations under the License.
  */
 
+import {UserService} from '../../modules/user/User.service';
+import {pluck} from 'rxjs/operators';
+
 export default class PermanentNotifications {
-    static $inject = ['UserNotifications', '$rootScope', '$window'];
+    static $inject = ['UserNotifications', 'User', '$window', '$rootScope'];
 
     constructor(
         private UserNotifications: unknown,
-        private $rootScope: ng.IRootScopeService,
-        private $window: ng.IWindowService
+        private User: UserService,
+        private $window: ng.IWindowService,
+        private $rootScope: ng.IRootScopeService
     ) {}
+
+    user$ = this.User.current$
 
     closeDemo() {
         this.$window.close();

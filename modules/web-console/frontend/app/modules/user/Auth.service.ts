@@ -17,7 +17,7 @@
 import {StateService} from '@uirouter/angularjs';
 import MessagesFactory from '../../services/Messages.service';
 import {service as GettingsStartedFactory} from '../../modules/getting-started/GettingStarted.provider';
-import UserServiceFactory from './User.service';
+import {UserService} from './User.service';
 
 type SignupUserInfo = {
     email: string,
@@ -41,7 +41,7 @@ export default class AuthService {
         private $window: ng.IWindowService,
         private Messages: ReturnType<typeof MessagesFactory>,
         private gettingStarted: ReturnType<typeof GettingsStartedFactory>,
-        private User: ReturnType<typeof UserServiceFactory>
+        private User: UserService
     ) {}
 
     signup(userInfo: SignupUserInfo, loginAfterSignup: boolean = true) {
@@ -69,11 +69,11 @@ export default class AuthService {
                 this.User.read()
                     .then((user) => {
                         if (loginAfterwards) {
-                            this.$root.$broadcast('user', user);
+                            this.User.current$.next(user);
                             this.$state.go('default-state');
                             this.$root.gettingStarted.tryShow();
                         } else
-                            this.$root.$broadcast('userCreated');
+                            this.User.created$.next(user);
                     });
             });
     }

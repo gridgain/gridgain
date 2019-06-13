@@ -83,6 +83,7 @@ import {CSV} from './services/CSV';
 import {$exceptionHandler} from './services/exceptionHandler';
 
 import {Store} from './services/store';
+import {UserService} from './modules/user/User.service';
 
 import AngularStrapTooltip from './services/AngularStrapTooltip.decorator';
 import AngularStrapSelect from './services/AngularStrapSelect.decorator';
@@ -332,15 +333,14 @@ export default angular
             $root.gettingStarted = gettingStarted;
         }
     ])
-    .run(['$rootScope', 'AgentManager',
+    .run(['User', 'AgentManager',
         /**
-         * @param {ng.IRootScopeService} $root
          * @param {import('./modules/agent/AgentManager.service').default} agentMgr
          */
-        ($root, agentMgr) => {
+        (User: UserService, agentMgr) => {
             let lastUser;
 
-            $root.$on('user', (e, user) => {
+            User.current$.subscribe((user) => {
                 if (lastUser)
                     return;
 

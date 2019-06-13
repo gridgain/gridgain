@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-export default ['$rootScope', '$scope', 'IgniteDialog', function($root, $scope, IgniteDialog) {
+export default ['$scope', 'IgniteDialog', function($scope, IgniteDialog) {
     const ctrl = this;
 
     this.$onInit = () => {

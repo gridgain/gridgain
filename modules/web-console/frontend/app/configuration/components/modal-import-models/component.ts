@@ -38,6 +38,7 @@ import {default as SqlTypes} from 'app/services/SqlTypes.service';
 import {default as JavaTypes} from 'app/services/JavaTypes.service';
 // eslint-disable-next-line
 import {default as ActivitiesData} from 'app/core/activities/Activities.data';
+import {UserService} from 'app/modules/user/User.service';
 
 function _mapCaches(caches = []) {
     return caches.map((cache) => {
@@ -93,7 +94,7 @@ export class ModalImportModels {
     /** @type {ng.ICompiledExpression} */
     onHide;
 
-    static $inject = ['$uiRouter', 'ConfigSelectors', 'ConfigEffects', 'ConfigureState', 'IgniteConfirm', 'IgniteConfirmBatch', 'IgniteFocus', 'SqlTypes', 'JavaTypes', 'IgniteMessages', '$scope', '$rootScope', 'AgentManager', 'IgniteActivitiesData', 'IgniteLoading', 'IgniteFormUtils', 'IgniteLegacyUtils', 'IgniteVersion'];
+    static $inject = ['$uiRouter', 'ConfigSelectors', 'ConfigEffects', 'ConfigureState', 'IgniteConfirm', 'IgniteConfirmBatch', 'IgniteFocus', 'SqlTypes', 'JavaTypes', 'IgniteMessages', '$scope', '$rootScope', 'AgentManager', 'IgniteActivitiesData', 'IgniteLoading', 'IgniteFormUtils', 'IgniteLegacyUtils', 'IgniteVersion', 'User'];
 
     /**
      * @param {UIRouter} $uiRouter
@@ -108,7 +109,7 @@ export class ModalImportModels {
      * @param {AgentManager} agentMgr
      * @param {ActivitiesData} ActivitiesData
      */
-    constructor($uiRouter, ConfigSelectors, ConfigEffects, ConfigureState, Confirm, ConfirmBatch, Focus, SqlTypes, JavaTypes, Messages, $scope, $root, agentMgr, ActivitiesData, Loading, FormUtils, LegacyUtils, IgniteVersion) {
+    constructor($uiRouter, ConfigSelectors, ConfigEffects, ConfigureState, Confirm, ConfirmBatch, Focus, SqlTypes, JavaTypes, Messages, $scope, $root, agentMgr, ActivitiesData, Loading, FormUtils, LegacyUtils, IgniteVersion, private User: UserService) {
         this.$uiRouter = $uiRouter;
         this.ConfirmBatch = ConfirmBatch;
         this.ConfigSelectors = ConfigSelectors;
@@ -261,7 +262,7 @@ export class ModalImportModels {
         if (this.saveSubscription) this.saveSubscription.unsubscribe();
     }
 
-    $onInit() {
+    async $onInit() {
         // Restores old behavior
         const {Confirm, ConfirmBatch, Focus, SqlTypes, JavaTypes, Messages, $scope, $root, agentMgr, ActivitiesData, Loading, FormUtils, LegacyUtils} = this;
 
@@ -293,7 +294,7 @@ export class ModalImportModels {
             usePrimitives: true,
             generateTypeAliases: true,
             generateFieldAliases: true,
-            packageNameUserInput: _makeDefaultPackageName($root.user)
+            packageNameUserInput: _makeDefaultPackageName(await this.User.current$.pipe(take(1)).toPromise())
         };
         this.$scope.$hide = importDomainModal.hide;
 
