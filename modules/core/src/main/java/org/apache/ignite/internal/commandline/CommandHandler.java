@@ -50,6 +50,7 @@ import org.apache.ignite.plugin.security.SecurityCredentialsBasicProvider;
 import org.apache.ignite.plugin.security.SecurityCredentialsProvider;
 import org.apache.ignite.ssl.SslContextFactory;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.IgniteVersionUtils.ACK_VER_STR;
 import static org.apache.ignite.internal.IgniteVersionUtils.COPYRIGHT;
@@ -129,18 +130,15 @@ public class CommandHandler {
     /**
      * @return prepared JULs logger.
      */
-    private static Logger setupJavaLogger() {
-        Logger result;
-
-        result = Logger.getLogger(CommandHandler.class.getName() + "Log");
-        result.setLevel(Level.INFO);
-        result.setUseParentHandlers(false);
+    private Logger setupJavaLogger() {
+        Logger result = initLogger(CommandHandler.class.getName() + "Log");
 
         // Adding logging to file.
         try {
             String absPathPattern = new File(JavaLoggerFileHandler.logDirectory(U.defaultWorkDirectory()), "control-utility-%g.log").getAbsolutePath();
 
             FileHandler fileHandler = new FileHandler(absPathPattern, 5 * 1024 * 1024, 5);
+
             fileHandler.setFormatter(new JavaLoggerFormatter());
 
             result.addHandler(fileHandler);
@@ -155,12 +153,34 @@ public class CommandHandler {
         return result;
     }
 
+    /**
+     * @return StreamHandler with empty formatting
+     */
     public static StreamHandler setupStreamHandler() {
         return new StreamHandler(System.out, new Formatter() {
             @Override public String format(LogRecord record) {
                 return record.getMessage() + "\n";
             }
         });
+    }
+
+    /**
+     * Initialises JULs logger with basic settings
+     * @param loggerName logger name. If {@code null} anonymous logger is returned.
+     * @return logger
+     */
+    public static Logger initLogger(@Nullable String loggerName) {
+        Logger result;
+
+        if (loggerName == null)
+            result = Logger.getAnonymousLogger();
+        else
+            result = Logger.getLogger(loggerName);
+
+        result.setLevel(Level.INFO);
+        result.setUseParentHandlers(false);
+
+        return result;
     }
 
     /**
@@ -284,10 +304,11 @@ public class CommandHandler {
             logger.info("Command [" + commandName + "] finished with code: " + EXIT_CODE_UNEXPECTED_ERROR);
 
             return EXIT_CODE_UNEXPECTED_ERROR;
-        } finally {
-           Arrays.stream(logger.getHandlers())
-                 .filter(handler -> handler instanceof FileHandler)
-                 .forEach(Handler::close);
+        }
+        finally {
+            Arrays.stream(logger.getHandlers())
+                  .filter(handler -> handler instanceof FileHandler)
+                  .forEach(Handler::close);
         }
     }
 

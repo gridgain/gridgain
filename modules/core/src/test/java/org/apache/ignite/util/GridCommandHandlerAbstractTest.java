@@ -142,7 +142,7 @@ public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
      * @return Logger.
      */
     private Logger createTestLogger() {
-        Logger log = Logger.getAnonymousLogger();
+        Logger log = CommandHandler.initLogger(null);
 
         // Adding logging to console.
         log.addHandler(CommandHandler.setupStreamHandler());
