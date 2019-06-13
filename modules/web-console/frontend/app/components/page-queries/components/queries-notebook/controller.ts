@@ -968,20 +968,16 @@ export class NotebookCtrl {
             const checkState$ = combineLatest(
                 cluster$,
                 agentMgr.currentCluster$.pipe(pluck('state'), distinctUntilChanged())
-            ).pipe(
-                tap(([cluster, state]) => {
-                    if (state === 'CONNECTED')
-                        this.clusterIsAvailable = (!!cluster && cluster.active === true) || agentMgr.isDemoMode();
-                })
             );
 
             this.refresh$ = checkState$.pipe(
-                switchMap(([cluster, state]) => {
-                    if (state !== 'CONNECTED' || (!cluster && !agentMgr.isDemoMode())) {
+                tap(([cluster, state]) => {
+                    if (state !== 'CONNECTED' || (!cluster && !agentMgr.isDemoMode()))
                         $scope.caches = [];
-
+                }),
+                switchMap(([cluster, state]) => {
+                    if (state !== 'CONNECTED' || (!cluster && !agentMgr.isDemoMode()))
                         return of(EMPTY);
-                    }
 
                     return of(cluster).pipe(
                         tap(() => Loading.start('sqlLoading')),
