@@ -23,11 +23,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Predicate;
-import java.util.logging.Formatter;
 import java.util.logging.Level;
-import java.util.logging.LogRecord;
 import java.util.logging.Logger;
-import java.util.logging.StreamHandler;
 import org.apache.ignite.internal.commandline.baseline.BaselineArguments;
 import org.apache.ignite.internal.commandline.cache.CacheCommands;
 import org.apache.ignite.internal.commandline.cache.CacheSubcommands;
@@ -672,13 +669,7 @@ public class CommandHandlerParsingTest {
         result.setLevel(Level.INFO);
         result.setUseParentHandlers(false);
 
-        StreamHandler streamHandler = new StreamHandler(System.out, new Formatter() {
-            @Override public String format(LogRecord record) {
-                return record.getMessage() + "\n";
-            }
-        });
-
-        result.addHandler(streamHandler);
+        result.addHandler(CommandHandler.setupStreamHandler());
 
         return result;
     }

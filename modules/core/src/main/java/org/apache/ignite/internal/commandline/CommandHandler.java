@@ -53,6 +53,7 @@ import org.jetbrains.annotations.NotNull;
 
 import static org.apache.ignite.internal.IgniteVersionUtils.ACK_VER_STR;
 import static org.apache.ignite.internal.IgniteVersionUtils.COPYRIGHT;
+import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
 import static org.apache.ignite.internal.commandline.CommandLogger.DOUBLE_INDENT;
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
 import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_AUTO_CONFIRMATION;
@@ -508,7 +509,7 @@ public class CommandHandler {
             "The command has the following syntax:");
         logger.info("");
 
-        logger.info(DOUBLE_INDENT + CommandLogger.join(" ", CommandLogger.join(" ", UTILITY_NAME, CommandLogger.join(" ", getCommonOptions())),
+        logger.info(INDENT + CommandLogger.join(" ", CommandLogger.join(" ", UTILITY_NAME, CommandLogger.join(" ", getCommonOptions())),
             optional("command"), "<command_parameters>"));
         logger.info("");
         logger.info("");
