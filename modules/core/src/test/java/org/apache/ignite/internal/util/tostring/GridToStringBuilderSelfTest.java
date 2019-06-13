@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal.util.tostring;
 
+import com.sun.management.ThreadMXBean;
+import java.lang.management.ManagementFactory;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -676,6 +678,37 @@ public class GridToStringBuilderSelfTest extends GridCommonAbstractTest {
 
         //field after faulty field was written successfully to string representation
         assertTrue(strRep.contains("str=str"));
+    }
+
+    /**
+     * Test GridToStringBuilder memory consumption.
+     */
+    @Test
+    public void testMemoryConsumption() {
+        int objCnt = 100;
+
+        ThreadMXBean bean = (ThreadMXBean)ManagementFactory.getThreadMXBean();
+
+        TestClass2 obj = new TestClass2(new String(new char[1_000_000]));
+
+        List<TestClass2> arr = new ArrayList<>(objCnt);
+
+        for (int i = 1; i <= objCnt; i++)
+            arr.add(new TestClass2(new String(new char[i])));
+
+        GridToStringBuilder.toString(TestClass2.class, obj);
+
+        long allocated0 = bean.getThreadAllocatedBytes(Thread.currentThread().getId());
+
+        for (TestClass2 item : arr)
+            GridToStringBuilder.toString(TestClass2.class, item);
+
+        long allocated1 = bean.getThreadAllocatedBytes(Thread.currentThread().getId());
+
+        log.info("Memory allocated by GridToStringBuilder for " + objCnt + " objects: " + (allocated1 - allocated0));
+
+        assertTrue("Too much memory allocated by GridToStringBuilder: " + (allocated1 - allocated0),
+            allocated1 - allocated0 < 1_000_000);
     }
 
     /**
