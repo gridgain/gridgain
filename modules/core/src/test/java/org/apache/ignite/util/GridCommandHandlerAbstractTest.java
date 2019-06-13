@@ -145,9 +145,7 @@ public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
         Logger log = Logger.getAnonymousLogger();
 
         // Adding logging to console.
-        StreamHandler streamHandler = new StreamHandler(testOut, new JavaLoggerFormatter());
-
-        log.addHandler(streamHandler);
+        log.addHandler(CommandHandler.setupStreamHandler());
 
         return log;
     }
