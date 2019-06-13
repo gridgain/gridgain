@@ -130,23 +130,6 @@ public class ConfigurationsController {
     }
 
     /**
-     * Get cluster IGFSs short list.
-     *
-     * @param acc Account.
-     * @param clusterId Cluster ID.
-     * @return IGFSs short list.
-     */
-    @ApiOperation(value = "Get IGFSs short list.")
-    @GetMapping(path = "/clusters/{clusterId}/igfss")
-    public ResponseEntity<JsonArray> loadIgfssShortList(
-        @AuthenticationPrincipal Account acc,
-        @RequestHeader(value = "demoMode", defaultValue = "false") boolean demo,
-        @PathVariable("clusterId") UUID clusterId
-    ) {
-        return ResponseEntity.ok(cfgsSrv.loadShortIgfss(new ConfigurationKey(acc.getId(), demo), clusterId));
-    }
-
-    /**
      * @param acc Account.
      * @param cacheId Cache ID.
      */
@@ -172,19 +155,6 @@ public class ConfigurationsController {
         @PathVariable("modelId") UUID mdlId
     ) {
         return ResponseEntity.ok(cfgsSrv.loadModel(new ConfigurationKey(acc.getId(), demo), mdlId));
-    }
-
-    /**
-     * @param igfsId IGFS ID.
-     */
-    @ApiOperation(value = "Get IGFS configuration.")
-    @GetMapping(path = "/igfs/{igfsId}")
-    public ResponseEntity<String> loadIgfs(
-        @AuthenticationPrincipal Account acc,
-        @RequestHeader(value = "demoMode", defaultValue = "false") boolean demo,
-        @PathVariable("igfsId") UUID igfsId
-    ) {
-        return ResponseEntity.ok(cfgsSrv.loadIgfs(new ConfigurationKey(acc.getId(), demo), igfsId));
     }
 
     /**

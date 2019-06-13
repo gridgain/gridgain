@@ -96,15 +96,6 @@ public class ConfigurationsService {
     }
 
     /**
-     * @param key Configuration key.
-     * @param igfsId IGFS ID.
-     * @return IGFS.
-     */
-    public String loadIgfs(ConfigurationKey key, UUID igfsId) {
-        return cfgsRepo.loadIgfs(key, igfsId).json();
-    }
-
-    /**
      * Convert list of DTOs to short view.
      *
      * @param items List of DTOs to convert.
@@ -144,15 +135,6 @@ public class ConfigurationsService {
      */
     public void saveAdvancedCluster(ConfigurationKey key, JsonObject changedItems) {
         cfgsRepo.saveAdvancedCluster(key, changedItems);
-    }
-
-    /**
-     * @param key Configuration key.
-     * @param clusterId Cluster ID.
-     * @return Collection of cluster IGFSs.
-     */
-    public JsonArray loadShortIgfss(ConfigurationKey key, UUID clusterId) {
-        return toShortList(cfgsRepo.loadIgfss(key, clusterId));
     }
 
     /**

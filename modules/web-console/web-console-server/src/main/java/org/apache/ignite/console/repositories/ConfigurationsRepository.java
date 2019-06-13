@@ -27,7 +27,6 @@ import org.apache.ignite.console.db.Table;
 import org.apache.ignite.console.dto.Cache;
 import org.apache.ignite.console.dto.Cluster;
 import org.apache.ignite.console.dto.DataObject;
-import org.apache.ignite.console.dto.Igfs;
 import org.apache.ignite.console.dto.Model;
 import org.apache.ignite.console.json.JsonArray;
 import org.apache.ignite.console.json.JsonObject;
@@ -37,7 +36,6 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.transactions.Transaction;
 import org.springframework.stereotype.Repository;
 
-import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 import static org.apache.ignite.console.common.Utils.diff;
 import static org.apache.ignite.console.common.Utils.idsFromJson;
@@ -64,16 +62,10 @@ public class ConfigurationsRepository {
     private final Table<Model> modelsTbl;
 
     /** */
-    private final Table<Igfs> igfssTbl;
-
-    /** */
     private final OneToManyIndex<UUID> cachesIdx;
 
     /** */
     private final OneToManyIndex<UUID> modelsIdx;
-
-    /** */
-    private final OneToManyIndex<UUID> igfssIdx;
 
     /** */
     protected final OneToManyIndex<ConfigurationKey> clustersIdx;
@@ -91,11 +83,9 @@ public class ConfigurationsRepository {
         clustersTbl = new Table<>(ignite, "wc_account_clusters");
         cachesTbl = new Table<>(ignite, "wc_cluster_caches");
         modelsTbl = new Table<>(ignite, "wc_cluster_models");
-        igfssTbl = new Table<>(ignite, "wc_cluster_igfss");
 
         cachesIdx = new OneToManyIndex<>(ignite, "wc_cluster_caches_idx");
         modelsIdx = new OneToManyIndex<>(ignite, "wc_cluster_models_idx");
-        igfssIdx = new OneToManyIndex<>(ignite, "wc_cluster_igfss_idx");
 
         clustersIdx = new OneToManyIndex<>(ignite, "wc_account_clusters_idx");
         cfgIdx = new OneToManyIndex<>(ignite, "wc_account_configs_idx");
@@ -117,13 +107,11 @@ public class ConfigurationsRepository {
 
             Collection<Cache> caches = cachesTbl.loadAll(cachesIdx.load(clusterId));
             Collection<Model> models = modelsTbl.loadAll(modelsIdx.load(clusterId));
-            Collection<Igfs> igfss = igfssTbl.loadAll(igfssIdx.load(clusterId));
 
             return new JsonObject()
                 .add("cluster", fromJson(cluster.json()))
                 .add("caches", toJsonArray(caches))
-                .add("models", toJsonArray(models))
-                .add("igfss", toJsonArray(igfss));
+                .add("models", toJsonArray(models));
         }
     }
 
@@ -136,15 +124,13 @@ public class ConfigurationsRepository {
 
         int cachesCnt = cachesIdx.load(clusterId).size();
         int modelsCnt = modelsIdx.load(clusterId).size();
-        int igfsCnt = igfssIdx.load(clusterId).size();
 
         return new JsonObject()
             .add("id", cluster.getId())
             .add("name", cluster.name())
             .add("discovery", cluster.discovery())
             .add("cachesCount", cachesCnt)
-            .add("modelsCount", modelsCnt)
-            .add("igfsCount", igfsCnt);
+            .add("modelsCount", modelsCnt);
     }
 
     /**
@@ -221,24 +207,6 @@ public class ConfigurationsRepository {
 
     /**
      * @param key Configuration key.
-     * @param igfsId IGFS ID.
-     * @return IGFS.
-     */
-    public Igfs loadIgfs(ConfigurationKey key, UUID igfsId) {
-        try (Transaction ignored = txMgr.txStart()) {
-            Igfs igfs = igfssTbl.load(igfsId);
-
-            if (igfs == null)
-                throw new IllegalStateException("IGFS not found for ID: " + igfsId);
-
-            cfgIdx.validate(key, igfsId);
-
-            return igfs;
-        }
-    }
-
-    /**
-     * @param key Configuration key.
      * @param clusterId Cluster ID.
      * @return Collection of cluster caches.
      */
@@ -268,23 +236,6 @@ public class ConfigurationsRepository {
             cfgIdx.validateAll(key, modelsIds);
 
             return modelsTbl.loadAll(modelsIds);
-        }
-    }
-
-    /**
-     * @param key Configuration key.
-     * @param clusterId Cluster ID.
-     * @return Collection of cluster IGFSs.
-     */
-    public Collection<Igfs> loadIgfss(ConfigurationKey key, UUID clusterId) {
-        try (Transaction ignored = txMgr.txStart()) {
-            clustersIdx.validate(key, clusterId);
-
-            Set<UUID> igfsIds = igfssIdx.load(clusterId);
-
-            cfgIdx.validateAll(key, igfsIds);
-
-            return igfssTbl.loadAll(igfsIds);
         }
     }
 
@@ -342,7 +293,6 @@ public class ConfigurationsRepository {
 
             removedInCluster(key, cachesTbl, cachesIdx, clusterId, oldClusterJson, jsonCluster, "caches");
             removedInCluster(key, modelsTbl, modelsIdx, clusterId, oldClusterJson, jsonCluster, "models");
-            removedInCluster(key, igfssTbl, igfssIdx, clusterId, oldClusterJson, jsonCluster, "igfss");
         }
 
         clustersTbl.save(newCluster);
@@ -421,32 +371,6 @@ public class ConfigurationsRepository {
     }
 
     /**
-     * @param cluster Cluster.
-     * @param json JSON data.
-     */
-    private void saveIgfss(ConfigurationKey key, Cluster cluster, JsonObject json) {
-        JsonArray jsonIgfss = json.getJsonArray("igfss");
-
-        if (F.isEmpty(jsonIgfss))
-            return;
-
-        Map<UUID, Igfs> igfss = jsonIgfss
-            .stream()
-            .map(item -> Igfs.fromJson(asJson(item)))
-            .collect(toMap(Igfs::getId, identity()));
-
-        Set<UUID> igfsIds = igfss.keySet();
-
-        cfgIdx.validateBeforeSave(key, igfsIds, igfssTbl);
-
-        cfgIdx.addAll(key, igfsIds);
-
-        igfssIdx.addAll(cluster.getId(), igfsIds);
-
-        igfssTbl.saveAll(igfss);
-    }
-
-    /**
      * Save full cluster.
      *
      * @param key Configuration key.
@@ -458,7 +382,6 @@ public class ConfigurationsRepository {
 
             saveCaches(key, cluster, json, false);
             saveModels(key, cluster, json);
-            saveIgfss(key, cluster, json);
 
             tx.commit();
         }
@@ -504,7 +427,6 @@ public class ConfigurationsRepository {
     protected void deleteAllClusterObjects(ConfigurationKey key, UUID clusterId) {
         deleteClusterObjects(key, clusterId, cachesIdx, cachesTbl);
         deleteClusterObjects(key, clusterId, modelsIdx, modelsTbl);
-        deleteClusterObjects(key, clusterId, igfssIdx, igfssTbl);
     }
 
     /**
