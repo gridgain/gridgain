@@ -87,14 +87,14 @@ public class MLDeployingTest extends GridCommonAbstractTest {
 
     /** */
     @Before
-    public void setUp() throws Exception {
+    public void setUpTests() throws Exception {
         ignite1 = startGrid(1);
         ignite2 = startGrid(2);
     }
 
     /** */
     @After
-    public void tearDown() throws Exception {
+    public void tearDownTests() throws Exception {
         stopAllGrids();
     }
 
