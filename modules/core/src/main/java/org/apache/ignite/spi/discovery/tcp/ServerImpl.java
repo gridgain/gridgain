@@ -4306,7 +4306,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                 // Null if old version is joining.
                 final boolean rmtSrvcProcMode = rmtSrvcProcModeAttr != null ? rmtSrvcProcModeAttr : false;
 
-                if (rmtSrvcProcModeAttr != null && !F.eq(locSrvcProcMode, rmtSrvcProcMode)) {
+                if (!F.eq(locSrvcProcMode, rmtSrvcProcMode)) {
                     utilityPool.execute(
                         new Runnable() {
                             @Override public void run() {
