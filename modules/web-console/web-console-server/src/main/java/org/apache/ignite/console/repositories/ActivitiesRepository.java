@@ -32,6 +32,7 @@ import org.apache.ignite.console.dto.Activity;
 import org.apache.ignite.console.dto.ActivityKey;
 import org.apache.ignite.console.tx.TransactionManager;
 import org.apache.ignite.transactions.Transaction;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Repository;
 
 import static java.time.ZoneOffset.UTC;
@@ -39,6 +40,7 @@ import static java.time.ZoneOffset.UTC;
 /**
  * Repository to work with activities.
  */
+@Primary
 @Repository
 public class ActivitiesRepository {
     /** */
