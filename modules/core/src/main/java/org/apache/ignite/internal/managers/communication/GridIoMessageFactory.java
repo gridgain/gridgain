@@ -265,16 +265,6 @@ public class GridIoMessageFactory implements MessageFactory {
 
                 break;
 
-            case -42:
-            case -41:
-            case -40:
-            case -39:
-            case -38:
-            case -37:
-                //Removed hadoop messages.
-
-                break;
-
             case -36:
                 msg = new GridDhtAtomicSingleUpdateRequest();
 
@@ -1086,6 +1076,7 @@ public class GridIoMessageFactory implements MessageFactory {
             // [-4..-22, -30..-35] - SQL
             // [2048..2053] - Snapshots
             // [4096..4096] - TxDR
+            // [-42..-37] - former hadoop.
             // [64..71] - former IGFS.
             default:
                 if (ext != null) {
