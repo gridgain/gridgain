@@ -23,7 +23,6 @@ import java.net.InetAddress;
 import java.util.UUID;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
 
 /**
  * Message telling joining node that its authentication failed on coordinator.
