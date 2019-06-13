@@ -429,6 +429,10 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
             catch (Throwable ex) {
                 finishFut.onDone(ex);
 
+                System.err.println("!!!!!!!");
+
+                ex.printStackTrace();
+
                 if (cctx.kernalContext().isStopping()) {
                     LT.warn(log, ex, "Partition eviction failed (current node is stopping).",
                         false,
