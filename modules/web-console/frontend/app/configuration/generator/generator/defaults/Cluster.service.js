@@ -348,7 +348,8 @@ const DFLT_CLUSTER = {
             metricsEnabled: false,
             metricsSubIntervalCount: 5,
             metricsRateTimeInterval: 60000,
-            checkpointPageBufferSize: 0
+            checkpointPageBufferSize: 0,
+            lazyMemoryAllocation: true
         },
         metricsEnabled: false,
         alwaysWriteFullPages: false,
@@ -376,7 +377,8 @@ const DFLT_CLUSTER = {
         metricsSubIntervalCount: 5,
         metricsRateTimeInterval: 60000,
         maxWalArchiveSize: 1073741824,
-        walCompactionLevel: 1
+        walCompactionLevel: 1,
+        walPageCompression: {clsName: 'org.apache.ignite.configuration.DiskPageCompression', value: 'DISABLED'}
     },
     utilityCacheKeepAliveTime: 60000,
     hadoopConfiguration: {
@@ -440,7 +442,8 @@ const DFLT_CLUSTER = {
         thinClientEnabled: true,
         sslEnabled: false,
         useIgniteSslContextFactory: true,
-        sslClientAuth: false
+        sslClientAuth: false,
+        handshakeTimeout: 10000
     },
     encryptionSpi: {
         Keystore: {

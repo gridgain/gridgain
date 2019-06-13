@@ -1007,7 +1007,8 @@ module.exports.factory = function() {
             sslEnabled: Boolean,
             useIgniteSslContextFactory: {type: Boolean, default: true},
             sslClientAuth: Boolean,
-            sslContextFactory: String
+            sslContextFactory: String,
+            handshakeTimeout: Number
         },
         loadBalancingSpi: [{
             kind: {type: String, enum: ['RoundRobin', 'Adaptive', 'WeightedRandom', 'Custom']},
@@ -1135,7 +1136,8 @@ module.exports.factory = function() {
                 metricsSubIntervalCount: Number,
                 metricsRateTimeInterval: Number,
                 persistenceEnabled: Boolean,
-                checkpointPageBufferSize: Number
+                checkpointPageBufferSize: Number,
+                lazyMemoryAllocation: {type: Boolean, default: true}
             },
             dataRegionConfigurations: [{
                 name: String,
@@ -1149,7 +1151,8 @@ module.exports.factory = function() {
                 metricsSubIntervalCount: Number,
                 metricsRateTimeInterval: Number,
                 persistenceEnabled: Boolean,
-                checkpointPageBufferSize: Number
+                checkpointPageBufferSize: Number,
+                lazyMemoryAllocation: {type: Boolean, default: true}
             }],
             storagePath: String,
             metricsEnabled: Boolean,
@@ -1177,7 +1180,9 @@ module.exports.factory = function() {
             walCompactionEnabled: Boolean,
             checkpointReadLockTimeout: Number,
             maxWalArchiveSize: Number,
-            walCompactionLevel: Number
+            walCompactionLevel: Number,
+            walPageCompression: {type: String, enum: ['DISABLED', 'SKIP_GARBAGE', 'ZSTD', 'LZ4', 'SNAPPY']},
+            walPageCompressionLevel: Number
         },
         memoryConfiguration: {
             systemCacheInitialSize: Number,
