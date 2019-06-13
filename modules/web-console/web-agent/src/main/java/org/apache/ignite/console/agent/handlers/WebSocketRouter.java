@@ -71,6 +71,7 @@ import static org.apache.ignite.console.websocket.WebSocketEvents.NODE_VISOR;
 import static org.apache.ignite.console.websocket.WebSocketEvents.SCHEMA_IMPORT_DRIVERS;
 import static org.apache.ignite.console.websocket.WebSocketEvents.SCHEMA_IMPORT_METADATA;
 import static org.apache.ignite.console.websocket.WebSocketEvents.SCHEMA_IMPORT_SCHEMAS;
+import static org.eclipse.jetty.websocket.api.StatusCode.SERVER_ERROR;
 
 /**
  * Router that listen for web socket and redirect messages to event bus.
@@ -178,7 +179,7 @@ public class WebSocketRouter implements AutoCloseable {
         httpClient.start();
 
         try {
-            reconnect();
+            connect();
         }
         catch (Throwable e) {
             log.error("Failed to establish websocket connection with server: " + cfg.serverUri());
@@ -212,11 +213,11 @@ public class WebSocketRouter implements AutoCloseable {
     }
 
     /**
-     * Reconnect to backend.
+     * Connect to backend.
      *
      * @throws Exception If failed to connect to server.
      */
-    private void reconnect() throws Exception {
+    private void connect() throws Exception {
         if (!isRunning())
             return;
 
@@ -235,6 +236,23 @@ public class WebSocketRouter implements AutoCloseable {
             reconnectCnt = 0;
         }
         catch (ConnectException | TimeoutException ignored) {
+            LT.error(log, null, "Failed to connect to the server");
+        }
+    }
+
+    /**
+     * Reconnect to backend.
+     */
+    private void reconnect() {
+        if (reconnectCnt < 10)
+            reconnectCnt++;
+
+        try {
+            Thread.sleep(reconnectCnt * 1000);
+
+            connect();
+        }
+        catch (Throwable ignore) {
             // No-op.
         }
     }
@@ -434,17 +452,7 @@ public class WebSocketRouter implements AutoCloseable {
         if (e instanceof ConnectException) {
             LT.error(log, e.getCause(), "Failed to connect to the server");
 
-            if (reconnectCnt < 10)
-                reconnectCnt++;
-
-            try {
-                Thread.sleep(reconnectCnt * 1000);
-
-                reconnect();
-            }
-            catch (Throwable ignore) {
-                // No-op.
-            }
+            reconnect();
         }
     }
 
@@ -454,13 +462,9 @@ public class WebSocketRouter implements AutoCloseable {
      */
     @OnWebSocketClose
     public void onClose(int statusCode, String reason) {
-        log.info("Connection closed [code=" + statusCode + ", reason=" + reason + "]");
+        if (statusCode != SERVER_ERROR)
+            log.info("Connection closed [code=" + statusCode + ", reason=" + reason + "]");
 
-        try {
-            reconnect();
-        }
-        catch (Throwable ignore) {
-            // No-op.
-        }
+        reconnect();
     }
 }

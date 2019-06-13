@@ -43,6 +43,7 @@ import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.session.ExpiringSession;
 import org.springframework.session.MapSession;
+import org.springframework.session.Session;
 import org.springframework.session.SessionRepository;
 import org.springframework.session.config.annotation.web.http.EnableSpringHttpSession;
 
@@ -58,6 +59,9 @@ import static org.apache.ignite.console.websocket.WebSocketEvents.BROWSERS_PATH;
 @EnableWebSecurity
 @EnableSpringHttpSession
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
+    /** The number of seconds that the {@link Session} should be kept alive between client requests. */
+    private static final int MAX_INACTIVE_INTERVAL_SECONDS = 60 * 60 * 24 * 30;
+
     /** Sign in route. */
     public static final String SIGN_IN_ROUTE = "/api/v1/signin";
 
@@ -187,7 +191,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             .setName("sessions")
             .setCacheMode(CacheMode.REPLICATED);
 
-        return new IgniteSessionRepository(ignite.getOrCreateCache(cfg));
+        return new IgniteSessionRepository(ignite.getOrCreateCache(cfg))
+            .setDefaultMaxInactiveInterval(MAX_INACTIVE_INTERVAL_SECONDS);
     }
 
     /**

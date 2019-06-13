@@ -1195,6 +1195,61 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_SQL_QUERY_MEMORY_LIMIT = "IGNITE_SQL_QUERY_MEMORY_LIMIT";
 
     /**
+     * Page lock tracker type.
+     * -1 - Disable lock tracking.
+     *  1 - HEAP_STACK
+     *  2 - HEAP_LOG
+     *  3 - OFF_HEAP_STACK
+     *  4 - OFF_HEAP_LOG
+     *
+     * Default is 2 - HEAP_LOG.
+     */
+    public static final String IGNITE_PAGE_LOCK_TRACKER_TYPE = "IGNITE_PAGE_LOCK_TRACKER_TYPE";
+
+    /**
+     * Capacity in pages for storing in page lock tracker strucuture.
+     *
+     * Default is 512 pages.
+     */
+    public static final String IGNITE_PAGE_LOCK_TRACKER_CAPACITY = "IGNITE_PAGE_LOCK_TRACKER_CAPACITY";
+
+    /**
+     * Page lock tracker thread for checking hangs threads interval.
+     *
+     * Default is 60_000 ms.
+     */
+    public static final String IGNITE_PAGE_LOCK_TRACKER_CHECK_INTERVAL = "IGNITE_PAGE_LOCK_TRACKER_CHECK_INTERVAL";
+
+    /**
+     * Enables threads locks dumping on critical node failure.
+     *
+     * Default is {@code true}.
+     */
+    public static final String IGNITE_DUMP_PAGE_LOCK_ON_FAILURE = "IGNITE_DUMP_PAGE_LOCK_ON_FAILURE";
+
+    /**
+     * Scan the classpath on startup and log all the files containing in it.
+     */
+    public static final String IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP = "IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP";
+
+    /**
+     * Maximum size of table (rows count) when temporary hash index can be built on fly.
+     *
+     * Default: 100_000 (rows).
+     */
+    public static final String IGNITE_HASH_JOIN_MAX_TABLE_SIZE = "IGNITE_HASH_JOIN_MAX_TABLE_SIZE";
+
+    /**
+     * Enable hash join (create hash index on the fly) for query optimizer.
+     * When disabled hash join may be enabled only by index hint.
+     * e.g.: SELECT * from A, B USE INDEX (HASH_JOIN_IDX) WHERE A.jid = B.jid
+     * hash index will be created for B.jid on the fly.
+     *
+     * Default: false.
+     */
+    public static final String IGNITE_ENABLE_HASH_JOIN = "IGNITE_ENABLE_HASH_JOIN";
+
+    /**
      * Enforces singleton.
      */
     private IgniteSystemProperties() {

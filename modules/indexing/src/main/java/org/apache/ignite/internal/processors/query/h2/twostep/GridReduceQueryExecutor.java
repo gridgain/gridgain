@@ -564,7 +564,7 @@ public class GridReduceQueryExecutor {
 
                 boolean retry = false;
 
-                int flags = singlePartMode && !enforceJoinOrder ? 0 : GridH2QueryRequest.FLAG_ENFORCE_JOIN_ORDER;
+                int flags = enforceJoinOrder || qry.distributedJoins() ? GridH2QueryRequest.FLAG_ENFORCE_JOIN_ORDER : 0;
 
                 // Distributed joins flag is set if it is either reald
                 if (qry.distributedJoins())
@@ -656,8 +656,6 @@ public class GridReduceQueryExecutor {
 
                         QueryContextRegistry qryCtxRegistry = h2.queryContextRegistry();
 
-                        qryCtxRegistry.setThreadLocal(qctx);
-
                         try {
                             if (qry.explain()) {
                                 try {
@@ -696,8 +694,6 @@ public class GridReduceQueryExecutor {
                         finally {
                             if (detachedConn != null)
                                 H2Utils.resetSession(detachedConn.object().connection());
-
-                            qryCtxRegistry.clearThreadLocal();
                         }
                     }
                 }

@@ -154,6 +154,7 @@ import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridPlainClosure;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.lang.IgniteOutClosureX;
 import org.apache.ignite.internal.util.lang.IgniteThrowableFunction;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
@@ -3390,8 +3391,10 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @throws IgniteCheckedException If failed.
      */
     @SuppressWarnings("unchecked")
-    private GridCacheSharedContext createSharedContext(GridKernalContext kernalCtx,
-        Collection<CacheStoreSessionListener> storeSesLsnrs) throws IgniteCheckedException {
+    private GridCacheSharedContext createSharedContext(
+        GridKernalContext kernalCtx,
+        Collection<CacheStoreSessionListener> storeSesLsnrs
+    ) throws IgniteCheckedException {
         IgniteTxManager tm = new IgniteTxManager();
         GridCacheMvccManager mvccMgr = new GridCacheMvccManager();
         GridCacheVersionManager verMgr = new GridCacheVersionManager();
@@ -3442,6 +3445,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         DeadlockDetectionManager deadlockDetectionMgr = new DeadlockDetectionManager();
 
+        CacheDiagnosticManager diagnosticMgr = new CacheDiagnosticManager();
+
         return new GridCacheSharedContext(
             kernalCtx,
             tm,
@@ -3461,7 +3466,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             jta,
             storeSesLsnrs,
             mvccCachingMgr,
-            deadlockDetectionMgr
+            deadlockDetectionMgr,
+            diagnosticMgr
         );
     }
 
@@ -6252,7 +6258,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         /** {@inheritDoc} */
         @Override public void onTimeout() {
-            ctx.closure().runLocalSafe(new Runnable() {
+            ctx.closure().runLocalSafe(new GridPlainRunnable() {
                 @Override public void run() {
                     try {
                         for (CacheGroupContext grp : sharedCtx.cache().cacheGroups()) {
