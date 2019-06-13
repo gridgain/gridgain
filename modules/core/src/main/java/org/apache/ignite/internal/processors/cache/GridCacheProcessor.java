@@ -153,6 +153,7 @@ import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridPlainClosure;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.lang.IgniteOutClosureX;
 import org.apache.ignite.internal.util.lang.IgniteThrowableFunction;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
@@ -2812,7 +2813,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         String memPlcName = cfg.getDataRegionName();
 
-        DataRegion dataRegion = affNode ? sharedCtx.database().dataRegion(memPlcName) : null;
+        DataRegion dataRegion = sharedCtx.database().dataRegion(memPlcName);
         FreeList freeList = sharedCtx.database().freeList(memPlcName);
         ReuseList reuseList = sharedCtx.database().reuseList(memPlcName);
 
@@ -6239,7 +6240,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         /** {@inheritDoc} */
         @Override public void onTimeout() {
-            ctx.closure().runLocalSafe(new Runnable() {
+            ctx.closure().runLocalSafe(new GridPlainRunnable() {
                 @Override public void run() {
                     try {
                         for (CacheGroupContext grp : sharedCtx.cache().cacheGroups()) {
