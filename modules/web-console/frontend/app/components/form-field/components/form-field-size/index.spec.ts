@@ -16,7 +16,6 @@
 
 import 'mocha';
 import {assert} from 'chai';
-import angular from 'angular';
 import componentModule from '../../index';
 
 suite('form-field-size', () => {
