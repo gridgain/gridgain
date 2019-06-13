@@ -659,47 +659,33 @@ public class GridReduceQueryExecutor {
 
                         H2Utils.setupConnection(r.connection(), qctx, false, enforceJoinOrder);
 
-                        QueryContextRegistry qryCtxRegistry = h2.queryContextRegistry();
+                        if (qry.explain())
+                            return explainPlan(r.connection(), qry, params);
 
-                        try {
-                            if (qry.explain()) {
-                                try {
-                                    return explainPlan(r.connection(), qry, params);
-                                }
-                                finally {
-                                    H2Utils.resetSession(r.connection());
-                                }
-                            }
+                        GridCacheSqlQuery rdc = qry.reduceQuery();
 
-                            GridCacheSqlQuery rdc = qry.reduceQuery();
+                        Collection<Object> params0 = F.asList(rdc.parameters(params));
 
-                            Collection<Object> params0 = F.asList(rdc.parameters(params));
+                        final PreparedStatement stmt = h2.preparedStatementWithParams(r.connection(), rdc.query(),
+                            params0, false);
 
-                            final PreparedStatement stmt = h2.preparedStatementWithParams(r.connection(), rdc.query(),
-                                params0, false);
+                        ReduceH2QueryInfo qryInfo = new ReduceH2QueryInfo(stmt, qry.originalSql(), qryReqId);
 
-                            ReduceH2QueryInfo qryInfo = new ReduceH2QueryInfo(stmt, qry.originalSql(), qryReqId);
+                        ResultSet res = h2.executeSqlQueryWithTimer(stmt, r.connection(),
+                            rdc.query(),
+                            F.asList(rdc.parameters(params)),
+                            timeoutMillis,
+                            cancel,
+                            dataPageScanEnabled,
+                            qryInfo
+                        );
 
-                            ResultSet res = h2.executeSqlQueryWithTimer(stmt, r.connection(),
-                                rdc.query(),
-                                F.asList(rdc.parameters(params)),
-                                timeoutMillis,
-                                cancel,
-                                dataPageScanEnabled,
-                                qryInfo
-                                );
+                        resIter = new H2FieldsIterator(res, mvccTracker, detachedConn);
 
-                            resIter = new H2FieldsIterator(res, mvccTracker, detachedConn);
+                        // don't recycle at final block
+                        detachedConn = null;
 
-                            // don't recycle at final block
-                            detachedConn = null;
-
-                            mvccTracker = null; // To prevent callback inside finally block;
-                        }
-                        finally {
-                            if (detachedConn != null)
-                                H2Utils.resetSession(detachedConn.object().connection());
-                        }
+                        mvccTracker = null; // To prevent callback inside finally block;
                     }
                 }
                 else {
@@ -738,8 +724,11 @@ public class GridReduceQueryExecutor {
                 throw new CacheException("Failed to run reduce query locally. " + cause.getMessage(), cause);
             }
             finally {
-                if (detachedConn != null)
+                if (detachedConn != null) {
+                    H2Utils.resetSession(detachedConn.object().connection());
+
                     detachedConn.recycle();
+                }
 
                 if (release) {
                     releaseRemoteResources(finalNodes, r, qryReqId, qry.distributedJoins(), mvccTracker);
@@ -1192,6 +1181,7 @@ public class GridReduceQueryExecutor {
             return tbl;
         }
         catch (Exception e) {
+            H2Utils.resetSession(conn);
             U.closeQuiet(conn);
 
             throw new IgniteCheckedException(e);

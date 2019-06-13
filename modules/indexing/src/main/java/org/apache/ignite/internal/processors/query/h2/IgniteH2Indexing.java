@@ -768,6 +768,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             stmt = useStmtCache ? connMgr.prepareStatement(conn, sql) : connMgr.prepareStatementNoCache(conn, sql);
         }
         catch (SQLException e) {
+            H2Utils.resetSession(conn);
+
             throw new IgniteCheckedException("Failed to parse SQL query: " + sql, e);
         }
 
@@ -2173,9 +2175,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         longRunningQryMgr.stop();
         connMgr.stop();
 
-        memoryManager.close();
-
         cmdProc.stop();
+
+        memoryManager.close();
 
         if (log.isDebugEnabled())
             log.debug("Cache query index stopped.");

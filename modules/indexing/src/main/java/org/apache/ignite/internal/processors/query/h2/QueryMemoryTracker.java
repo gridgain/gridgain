@@ -155,10 +155,8 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
         if (CLOSED_UPD.compareAndSet(this, Boolean.FALSE, Boolean.TRUE)) {
             release(RESERVED_UPD.get(this));
 
-            synchronized (this) {
-                if (parent != null)
-                    parent.release(reservedFromParent);
-            }
+            if (parent != null)
+                parent.release(reservedFromParent);
         }
     }
 
