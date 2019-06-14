@@ -122,7 +122,7 @@ public class BrowsersHandler extends AbstractHandler {
                     String clusterId = payload.getString("clusterId");
 
                     if (F.isEmpty(clusterId))
-                        throw new IllegalArgumentException("Missing cluster id parameter.");
+                        throw new IllegalStateException("Missing cluster id parameter.");
 
                     WebSocketEvent reqEvt = evt.getEventType().equals(NODE_REST) ?
                         evt : evt.withPayload(prepareNodeVisorParams(payload));
@@ -134,6 +134,11 @@ public class BrowsersHandler extends AbstractHandler {
                 default:
                     throw new IllegalStateException("Unknown event: " + evt);
             }
+        }
+        catch (IllegalStateException e) {
+            log.warn(e.toString());
+
+            sendError(ws, evt, "Failed to send event to agent: " + evt.getPayload(), e);
         }
         catch (Throwable e) {
             String errMsg = "Failed to send event to agent: " + evt.getPayload();
