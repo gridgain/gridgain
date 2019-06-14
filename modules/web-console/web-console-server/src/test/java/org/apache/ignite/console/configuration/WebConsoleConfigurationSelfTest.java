@@ -210,7 +210,6 @@ public class WebConsoleConfigurationSelfTest {
         igniteCfgPropsExcl.add("clientMode");
         igniteCfgPropsExcl.add("indexingSpi");
         igniteCfgPropsExcl.add("nodeId");
-        igniteCfgPropsExcl.add("platformConfiguration");
         igniteCfgPropsExcl.add("segmentCheckFrequency");
         igniteCfgPropsExcl.add("allSegmentationResolversPassRequired");
         igniteCfgPropsExcl.add("segmentationPolicy");
@@ -224,11 +223,11 @@ public class WebConsoleConfigurationSelfTest {
         metadata.put(IgniteConfiguration.class,
             new MetadataInfo(igniteCfgProps, igniteCfgPropsDep, igniteCfgPropsExcl));
 
-        Set<String> encriptionSpiProps = new HashSet<>();
-        encriptionSpiProps.add("keySize");
-        encriptionSpiProps.add("masterKeyName");
-        encriptionSpiProps.add("keyStorePath");
-        metadata.put(KeystoreEncryptionSpi.class, new MetadataInfo(encriptionSpiProps, EMPTY_FIELDS, SPI_EXCLUDED_FIELDS));
+        Set<String> encryptionSpiProps = new HashSet<>();
+        encryptionSpiProps.add("keySize");
+        encryptionSpiProps.add("masterKeyName");
+        encryptionSpiProps.add("keyStorePath");
+        metadata.put(KeystoreEncryptionSpi.class, new MetadataInfo(encryptionSpiProps, EMPTY_FIELDS, SPI_EXCLUDED_FIELDS));
 
         Set<String> cacheKeyCfgProps = new HashSet<>();
         cacheKeyCfgProps.add("typeName");
@@ -402,8 +401,7 @@ public class WebConsoleConfigurationSelfTest {
         discoverySpiProps.add("reconnectDelay");
         discoverySpiProps.add("soLinger");
 
-        Set<String> discoverySpiExclProps = new HashSet<>();
-        discoverySpiExclProps.addAll(SPI_EXCLUDED_FIELDS);
+        Set<String> discoverySpiExclProps = new HashSet<>(SPI_EXCLUDED_FIELDS);
         discoverySpiExclProps.add("nodeAttributes");
         metadata.put(TcpDiscoverySpi.class, new MetadataInfo(discoverySpiProps, EMPTY_FIELDS, discoverySpiExclProps));
 
