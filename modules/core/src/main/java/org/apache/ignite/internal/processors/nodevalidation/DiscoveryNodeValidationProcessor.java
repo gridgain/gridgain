@@ -17,10 +17,11 @@
 package org.apache.ignite.internal.processors.nodevalidation;
 
 import org.apache.ignite.internal.processors.GridProcessor;
+import org.apache.ignite.internal.processors.ru.RollingUpgradeProcessor;
 
 /**
  * Node validation.
  */
-public interface DiscoveryNodeValidationProcessor extends GridProcessor {
+public interface DiscoveryNodeValidationProcessor extends GridProcessor, RollingUpgradeProcessor {
     //No-op.
 }
