@@ -42,7 +42,7 @@ the local (class-wise) registry for Ignite Complex objects.
 
 from collections import defaultdict, OrderedDict
 import random
-from typing import Iterable, Type, Union
+from typing import Dict, Iterable, Tuple, Type, Union
 
 from .api.binary import get_binary_type, put_binary_type
 from .api.cache_config import cache_get_names
@@ -52,7 +52,9 @@ from .connection import Connection
 from .constants import *
 from .datatypes import BinaryObject
 from .datatypes.internal import tc_map
-from .exceptions import BinaryTypeError, CacheError, SQLError
+from .exceptions import (
+    BinaryTypeError, CacheError, ReconnectError, SQLError, connection_errors,
+)
 from .utils import (
     entity_id, schema_id, select_version, status_to_exception, is_iterable
 )
@@ -74,12 +76,14 @@ class Client:
      * binary types registration endpoint.
     """
 
-    affinity_version = None
-    protocol_version = None
     _registry = defaultdict(dict)
-    _compact_footer = None
-    _connection_args = None
-    _current_node = 0
+    _compact_footer: bool = None
+    _connection_args: Dict = None
+    _current_node: int = None
+    _nodes: Union[Iterable[Connection], Dict['UUID', Connection]] = None
+
+    affinity_version: Tuple = None
+    protocol_version = None
 
     def __init__(self, compact_footer: bool = None, **kwargs):
         """
@@ -93,7 +97,7 @@ class Client:
         """
         self._compact_footer = compact_footer
         self._connection_args = kwargs
-        self._nodes = None
+        self._current_node = 0
         self.affinity_version = (0, 0)
 
     def get_protocol_version(self):
@@ -108,7 +112,7 @@ class Client:
         collection (connection pool).
         """
         if self._nodes is None:
-            self._nodes = OrderedDict()
+            self._nodes = {}
 
         if conn is None:
             conn = Connection(self, **self._connection_args)
@@ -166,23 +170,64 @@ class Client:
         for host, port in nodes:
             self._add_node(host, port)
 
+    @select_version
     def close(self):
         """
         Close all connections to the server and clean the connection pool.
         """
-        all_nodes = self._nodes if isinstance(self._nodes, list) else self._nodes.values()
+        for conn in self._nodes.values():
+            conn.close()
+        self._nodes.clear()
 
-        for conn in all_nodes:
+    def close_120(self):
+        """
+        Close all connections to the server and clean the connection pool.
+        """
+        for conn in self._nodes:
             conn.close()
         self._nodes.clear()
 
     @property
     @select_version
     def random_node(self) -> Connection:
-        return random.choice(list(self._nodes.values()))
+        """ Return random usable node. """
+        try:
+            return random.choice(
+                list(n for n in self._nodes.values() if n.alive)
+            )
+        except IndexError:
+            # cannot choose from an empty sequence
+            raise ReconnectError('Can not reconnect: out of nodes.') from None
 
     def random_node_120(self):
-        return self._nodes[self._current_node]
+        """ Return the next usable node. """
+        node = self._nodes[self._current_node]
+        if node.alive:
+            return node
+
+        # close current (supposedly failed) node
+        self._nodes[self._current_node].close()
+
+        # advance the node index
+        self._current_node += 1
+        if self._current_node >= len(self._nodes):
+            self._current_node = 0
+
+        # prepare the list of node indexes to try to connect to
+        seq = list(range(len(self._nodes)))
+        seq = seq[self._current_node:] + seq[self._current_node:]
+
+        for i in seq:
+            node = self._nodes[i]
+            try:
+                node.connect()
+            except connection_errors:
+                pass
+            else:
+                return node
+
+        # no nodes left
+        raise ReconnectError('Can not reconnect: out of nodes.')
 
     @status_to_exception(BinaryTypeError)
     def get_binary_type(self, binary_type: Union[str, int]) -> dict:

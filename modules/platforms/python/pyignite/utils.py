@@ -16,6 +16,7 @@
 import ctypes
 import decimal
 from functools import wraps
+from threading import Event, Thread
 from typing import Any, Callable, Optional, Type, Tuple, Union
 
 from pyignite.datatypes.base import IgniteDataType
@@ -279,3 +280,22 @@ def get_field_by_id(
 def unsigned(value: int, c_type: ctypes._SimpleCData = ctypes.c_uint) -> int:
     """ Convert signed integer value to unsigned. """
     return c_type(value).value
+
+
+class StoppableThread(Thread):
+    """
+    The event with a `stop` flag, which can be set from outside and queried
+    from the target function.
+    """
+    _stop_event = None
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._stop_event = Event()
+
+    def stop(self):
+        self._stop_event.set()
+
+    @property
+    def stopped(self):
+        return self._stop_event.is_set()

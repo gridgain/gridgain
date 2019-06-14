@@ -24,7 +24,9 @@ import socket
 from typing import Union
 
 from pyignite.constants import *
-from pyignite.exceptions import HandshakeError, ParameterError, SocketError
+from pyignite.exceptions import (
+    HandshakeError, ParameterError, SocketError, connection_errors,
+)
 from pyignite.datatypes import Byte, Int, Short, String, UUIDObject
 from pyignite.datatypes.internal import Struct
 from pyignite.utils import select_version
@@ -48,6 +50,8 @@ class Connection:
     """
 
     _socket = None
+    _failed = None
+
     client = None
     host = None
     port = None
@@ -126,6 +130,30 @@ class Connection:
         if all([self.username, self.password, 'use_ssl' not in ssl_params]):
             ssl_params['use_ssl'] = True
         self.ssl_params = ssl_params
+        self._failed = False
+
+    @property
+    def socket(self) -> socket.socket:
+        """ Network socket. """
+        return self._socket
+
+    @property
+    def closed(self) -> bool:
+        """ Tells if socket is closed. """
+        return self._socket is None
+
+    @property
+    def failed(self) -> bool:
+        """ Tells if connection is failed. """
+        return self._failed
+
+    @property
+    def alive(self) -> bool:
+        """ Tells if connection is up and no failure detected. """
+        return not (self._failed or self.closed)
+
+    def __repr__(self) -> str:
+        return '{}:{}'.format(self.host or '?', self.port or '?')
 
     _wrap = wrap
 
@@ -187,21 +215,6 @@ class Connection:
             end = end_class.from_buffer_copy(end_buffer)
             data.update(response_end.to_python(end))
         return data
-
-    @property
-    def socket(self) -> socket.socket:
-        """
-        Network socket.
-        """
-        if self._socket is None:
-            self.connect(self.host, self.port)
-        return self._socket
-
-    def __repr__(self) -> str:
-        if self.host and self.port:
-            return '{}:{}'.format(self.host, self.port)
-        else:
-            return '<not connected>'
 
     def connect(
         self, host: str = None, port: int = None
@@ -282,12 +295,23 @@ class Connection:
 
     def reconnect(self):
         """
-        Tries to reconnect
+        Tries to reconnect.
         """
-        if self.host and self.port:
-            self._socket.shutdown(socket.SHUT_RDWR)
-            self._socket.close()
+        if self.alive:
+            return
+
+        # return connection to initial state
+        self._failed = True
+        if not self.closed:
+            self.close()
+
+        # connect
+        try:
             self.connect(self.host, self.port)
+        except connection_errors:
+            pass
+        else:
+            self._failed = False
 
     def _transfer_params(self, to: 'Connection'):
         """
@@ -298,6 +322,8 @@ class Connection:
         to.username = self.username
         to.password = self.password
         to.client = self.client
+        to.host = self.host
+        to.port = self.port
 
     def clone(self, prefetch: bytes = b'') -> 'Connection':
         """
@@ -307,7 +333,7 @@ class Connection:
         """
         clone = self.__class__(self.client, **self.ssl_params)
         self._transfer_params(to=clone)
-        if self.port and self.host:
+        if self.alive:
             clone.connect(self.host, self.port)
         clone.prefetch = prefetch
         return clone
@@ -319,6 +345,9 @@ class Connection:
         :param data: bytes to send,
         :param flags: (optional) OS-specific flags.
         """
+        if not self.alive:
+            raise SocketError('Attempt to use dead connection.')
+
         kwargs = {}
         if flags is not None:
             kwargs['flags'] = flags
@@ -332,11 +361,12 @@ class Connection:
                     **kwargs
                 )
             except OSError:
-                self._socket = self.host = self.port = None
+                self._failed = True
+                self.reconnect()
                 raise
             if bytes_sent == 0:
-                self.socket.close()
-                raise SocketError('Socket connection broken.')
+                self._failed = True
+                raise SocketError('Connection broken.')
             total_bytes_sent += bytes_sent
 
     def recv(self, buffersize, flags=None) -> bytes:
@@ -347,14 +377,18 @@ class Connection:
         :param flags: (optional) OS-specific flags,
         :return: data received.
         """
+        if not self.alive:
+            raise SocketError('Attempt to use dead connection.')
+
         pref_size = len(self.prefetch)
         if buffersize > pref_size:
             result = self.prefetch
             self.prefetch = b''
             try:
                 result += self._recv(buffersize-pref_size, flags)
-            except (SocketError, OSError):
-                self._socket = self.host = self.port = None
+            except connection_errors:
+                self._failed = True
+                self.reconnect()
                 raise
             return result
         else:
@@ -375,8 +409,9 @@ class Connection:
         while bytes_rcvd < buffersize:
             chunk = self.socket.recv(buffersize-bytes_rcvd, **kwargs)
             if chunk == b'':
-                self.socket.close()
-                raise SocketError('Socket connection broken.')
+                self._failed = True
+                self.reconnect()
+                raise SocketError('Connection broken.')
             chunks.append(chunk)
             bytes_rcvd += len(chunk)
 
@@ -385,8 +420,9 @@ class Connection:
     def close(self):
         """
         Mark socket closed. This is recommended but not required, since
-        sockets are automatically closed when they are garbage-collected.
+        sockets are automatically closed when garbage-collected.
         """
         if self._socket:
             self._socket.shutdown(socket.SHUT_RDWR)
             self._socket.close()
+            self._socket = None

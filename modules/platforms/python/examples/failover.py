@@ -31,7 +31,7 @@ print('Connected to {}'.format(client))
 
 my_cache = client.get_or_create_cache({
     PROP_NAME: 'my_cache',
-    PROP_CACHE_MODE: CacheMode.REPLICATED,
+    PROP_CACHE_MODE: CacheMode.PARTITIONED,
 })
 my_cache.put('test_key', 0)
 
@@ -39,7 +39,7 @@ my_cache.put('test_key', 0)
 while True:
     try:
         # do the work
-        test_value = my_cache.get('test_key')
+        test_value = my_cache.get('test_key') or 0
         my_cache.put('test_key', test_value + 1)
     except (OSError, SocketError) as e:
         # recover from error (repeat last command, check data

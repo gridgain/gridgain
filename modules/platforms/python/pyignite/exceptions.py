@@ -82,3 +82,6 @@ class SQLError(CacheError):
     An error in SQL query.
     """
     pass
+
+
+connection_errors = (SocketError, OSError)

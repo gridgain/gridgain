@@ -22,6 +22,7 @@ from .datatypes import prop_codes
 from .datatypes.internal import AnyDataObject
 from .exceptions import (
     CacheCreationError, CacheError, ParameterError, SQLError,
+    connection_errors,
 )
 from .utils import (
     cache_id, get_field_by_id, is_wrapped, select_version,
@@ -245,11 +246,16 @@ class Cache:
 
             if self.affinity['version'] < self._client.affinity_version:
                 # update partition mapping
-                try:
-                    self.affinity = self._get_affinity(conn)
-                except CacheError:
-                    # server did not create mapping in time
-                    return conn
+                while True:
+                    try:
+                        self.affinity = self._get_affinity(conn)
+                        break
+                    except connection_errors:
+                        # retry if connection failed
+                        pass
+                    except CacheError:
+                        # server did not create mapping in time
+                        return conn
 
                 # flatten it a bit
                 self.affinity.update(self.affinity['partition_mapping'][0])
@@ -291,7 +297,9 @@ class Cache:
                     in self.affinity['node_mapping'].items()
                     if part in p
                 )
-                conn = conn.client._nodes[node_uuid]
+                best_conn = conn.client._nodes[node_uuid]
+                if best_conn.alive:
+                    conn = best_conn
             except (StopIteration, KeyError):
                 pass
 
