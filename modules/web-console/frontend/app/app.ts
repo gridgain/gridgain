@@ -40,7 +40,6 @@ import './modules/user/user.module';
 import './modules/branding/branding.module';
 import './modules/navbar/navbar.module';
 import './modules/getting-started/GettingStarted.provider';
-import './modules/dialog/dialog.module';
 import './modules/ace.module';
 import './modules/loading/loading.module';
 import servicesModule from './services';
@@ -195,7 +194,6 @@ export default angular
         'ignite-console.states.errors',
         'ignite-console.states.settings',
         // Common modules.
-        'ignite-console.dialog',
         'ignite-console.navbar',
         'ignite-console.getting-started',
         'ignite-console.loading',
