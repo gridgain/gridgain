@@ -52,7 +52,7 @@ public class UserResponse extends User {
         super(acc);
 
         this.tok = acc.getToken();
-        this.admin = acc.getAdmin();
+        this.admin = acc.isAdmin();
     }
 
     /**

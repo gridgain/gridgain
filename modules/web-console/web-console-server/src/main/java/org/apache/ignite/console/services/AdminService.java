@@ -108,7 +108,7 @@ public class AdminService {
                 .add("id", account.getId())
                 .add("firstName", account.getFirstName())
                 .add("lastName", account.getLastName())
-                .add("admin", account.getAdmin())
+                .add("admin", account.isAdmin())
                 .add("email", account.getUsername())
                 .add("company", account.getCompany())
                 .add("country", account.getCountry())
