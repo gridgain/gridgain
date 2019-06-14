@@ -15,35 +15,27 @@
  */
 
 import _ from 'lodash';
+import {default as MessagesFactory} from 'app/services/Messages.service';
+import {default as CountriesFactory} from 'app/services/Countries.service';
+import {User} from 'app/modules/user/User.service';
 
 export default class IgniteAdminData {
     static $inject = ['$http', 'IgniteMessages', 'IgniteCountries'];
 
-    /**
-     * @param {ng.IHttpService} $http     
-     * @param {ReturnType<typeof import('app/services/Messages.service').default>} Messages
-     * @param {ReturnType<typeof import('app/services/Countries.service').default>} Countries
-     */
-    constructor($http, Messages, Countries) {
-        this.$http = $http;
-        this.Messages = Messages;
-        this.Countries = Countries;
-    }
+    constructor(
+        private $http: ng.IHttpService,
+        private Messages: ReturnType<typeof MessagesFactory>,
+        private Countries: ReturnType<typeof CountriesFactory>
+    ) {}
 
-    /**
-     * @param {string} viewedUserId
-     */
-    becomeUser(viewedUserId) {
+    becomeUser(viewedUserId: string) {
         return this.$http.get('/api/v1/admin/become', {
             params: {viewedUserId}
         })
         .catch(this.Messages.showError);
     }
 
-    /**
-     * @param {import('app/modules/user/User.service').User} user
-     */
-    removeUser(user) {
+    removeUser(user: User) {
         return this.$http.post('/api/v1/admin/remove', {
             userId: user._id
         })
@@ -58,10 +50,7 @@ export default class IgniteAdminData {
         });
     }
 
-    /**
-     * @param {import('app/modules/user/User.service').User} user
-     */
-    toggleAdmin(user) {
+    toggleAdmin(user: User) {
         const adminFlag = !user.admin;
 
         return this.$http.post('/api/v1/admin/toggle', {
@@ -78,10 +67,7 @@ export default class IgniteAdminData {
         });
     }
 
-    /**
-     * @param {import('app/modules/user/User.service').User} user
-     */
-    prepareUsers(user) {
+    prepareUsers(user: User) {
         const { Countries } = this;
 
         user.userName = user.firstName + ' ' + user.lastName;
