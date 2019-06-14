@@ -25,6 +25,7 @@ import {distinctUntilChanged, filter, map, pluck, switchMap, take, tap} from 'rx
 import ObjectID from 'bson-objectid';
 import {uniqueName} from 'app/utils/uniqueName';
 import {defaultNames} from '../../defaultNames';
+import {DemoService} from 'app/modules/demo/Demo.module';
 
 // eslint-disable-next-line
 import {UIRouter} from '@uirouter/angularjs'
@@ -94,7 +95,7 @@ export class ModalImportModels {
     /** @type {ng.ICompiledExpression} */
     onHide;
 
-    static $inject = ['$uiRouter', 'ConfigSelectors', 'ConfigEffects', 'ConfigureState', 'IgniteConfirm', 'IgniteConfirmBatch', 'IgniteFocus', 'SqlTypes', 'JavaTypes', 'IgniteMessages', '$scope', '$rootScope', 'AgentManager', 'IgniteActivitiesData', 'IgniteLoading', 'IgniteFormUtils', 'IgniteLegacyUtils', 'IgniteVersion', 'User'];
+    static $inject = ['$uiRouter', 'ConfigSelectors', 'ConfigEffects', 'ConfigureState', 'IgniteConfirm', 'IgniteConfirmBatch', 'IgniteFocus', 'SqlTypes', 'JavaTypes', 'IgniteMessages', '$scope', 'Demo', 'AgentManager', 'IgniteActivitiesData', 'IgniteLoading', 'IgniteFormUtils', 'IgniteLegacyUtils', 'IgniteVersion', 'User'];
 
     /**
      * @param {UIRouter} $uiRouter
@@ -105,17 +106,15 @@ export class ModalImportModels {
      * @param {SqlTypes} SqlTypes
      * @param {JavaTypes} JavaTypes
      * @param {ng.IScope} $scope
-     * @param {ng.IRootScopeService} $root
      * @param {AgentManager} agentMgr
      * @param {ActivitiesData} ActivitiesData
      */
-    constructor($uiRouter, ConfigSelectors, ConfigEffects, ConfigureState, Confirm, ConfirmBatch, Focus, SqlTypes, JavaTypes, Messages, $scope, $root, agentMgr, ActivitiesData, Loading, FormUtils, LegacyUtils, IgniteVersion, private User: UserService) {
+    constructor($uiRouter, ConfigSelectors, ConfigEffects, ConfigureState, Confirm, ConfirmBatch, Focus, SqlTypes, JavaTypes, Messages, $scope, private Demo: DemoService, agentMgr, ActivitiesData, Loading, FormUtils, LegacyUtils, IgniteVersion, private User: UserService) {
         this.$uiRouter = $uiRouter;
         this.ConfirmBatch = ConfirmBatch;
         this.ConfigSelectors = ConfigSelectors;
         this.ConfigEffects = ConfigEffects;
         this.ConfigureState = ConfigureState;
-        this.$root = $root;
         this.$scope = $scope;
         this.agentMgr = agentMgr;
         this.JavaTypes = JavaTypes;
@@ -264,7 +263,7 @@ export class ModalImportModels {
 
     async $onInit() {
         // Restores old behavior
-        const {Confirm, ConfirmBatch, Focus, SqlTypes, JavaTypes, Messages, $scope, $root, agentMgr, ActivitiesData, Loading, FormUtils, LegacyUtils} = this;
+        const {Confirm, ConfirmBatch, Focus, SqlTypes, JavaTypes, Messages, $scope, Demo, agentMgr, ActivitiesData, Loading, FormUtils, LegacyUtils} = this;
 
         /**
          * Convert some name to valid java package name.
@@ -323,7 +322,7 @@ export class ModalImportModels {
         };
 
         this.actions = [
-            {value: 'connect', label: this.$root.IgniteDemoMode ? 'Description' : 'Connection'},
+            {value: 'connect', label: this.Demo.enabled ? 'Description' : 'Connection'},
             {value: 'schemas', label: 'Schemas'},
             {value: 'tables', label: 'Tables'},
             {value: 'options', label: 'Options'}
@@ -534,7 +533,7 @@ export class ModalImportModels {
                     $scope.importDomain.loadingOptions = LOADING_SCHEMAS;
                     Loading.start('importDomainFromDb');
 
-                    if ($root.IgniteDemoMode)
+                    if (Demo.enabled)
                         return agentMgr.schemas($scope.demoConnection);
 
                     const preset = $scope.selectedPreset;
@@ -1007,7 +1006,7 @@ export class ModalImportModels {
             }
         };
 
-        const demo = $root.IgniteDemoMode;
+        const demo = Demo.enabled;
 
         $scope.importDomain = {
             demo,

@@ -16,13 +16,14 @@
 
 import {StateService} from '@uirouter/angularjs';
 import {UserService, User} from 'app/modules/user/User.service';
+import {DemoService} from 'app/modules/demo/Demo.module';
 import {tap} from 'rxjs/operators';
 
 export default class WebConsoleHeaderContent {
-    static $inject = ['$rootScope', '$state', 'User'];
+    static $inject = ['Demo', '$state', 'User'];
 
     constructor(
-        private $rootScope: ng.IRootScopeService,
+        private Demo: DemoService,
         private $state: StateService,
         private User: UserService
     ) {}
@@ -37,7 +38,7 @@ export default class WebConsoleHeaderContent {
 
     get showConnectedClusters(): boolean {
         return this.user &&
-            !this.$rootScope.IgniteDemoMode &&
+            !this.Demo.enabled &&
             !this.constructor.connectedClusterInvisibleStates.some((state) => this.$state.includes(state)) &&
             !this.user.becomeUsed;
     }
@@ -47,7 +48,7 @@ export default class WebConsoleHeaderContent {
     }
 
     get showDemoModeButton(): boolean {
-        return this.user && !this.user.becomeUsed && !this.$rootScope.IgniteDemoMode;
+        return this.user && !this.user.becomeUsed && !this.Demo.enabled;
     }
 
     $onDestroy() {

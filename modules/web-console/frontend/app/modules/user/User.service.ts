@@ -17,6 +17,7 @@
 import {ReplaySubject, Subject} from 'rxjs';
 import {StateService} from '@uirouter/angularjs';
 import {default as MessagesFactory} from 'app/services/Messages.service';
+import {DemoService} from 'app/modules/demo/Demo.module';
 
 export type User = {
     _id: string,
@@ -33,12 +34,12 @@ export type User = {
     token: string
 } | null
 
-UserFactory.$inject = ['$q', '$injector', '$rootScope', '$state', '$http', 'IgniteMessages'];
+UserFactory.$inject = ['$q', '$injector', 'Demo', '$state', '$http', 'IgniteMessages'];
 
 export default function UserFactory(
     $q: ng.IQService,
     $injector: ng.auto.IInjectorService,
-    $root: ng.IRootScopeService,
+    Demo: DemoService,
     $state: StateService,
     $http: ng.IHttpService,
     IgniteMessages: ReturnType<typeof MessagesFactory>
@@ -75,7 +76,7 @@ export default function UserFactory(
         clean() {
             current$.next(null);
 
-            delete $root.IgniteDemoMode;
+            delete Demo.enabled;
 
             sessionStorage.removeItem('IgniteDemoMode');
         },
