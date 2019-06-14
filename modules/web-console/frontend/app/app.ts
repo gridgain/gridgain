@@ -319,14 +319,6 @@ export default angular
             $urlRouterProvider.otherwise('/404');
             $locationProvider.html5Mode(true);
         }])
-    .run(['$rootScope',
-        /**
-         * @param {ng.IRootScopeService} $root
-         */
-        ($root, $state) => {
-            $root._ = _;
-        }
-    ])
     .run(['User', 'AgentManager',
         /**
          * @param {import('./modules/agent/AgentManager.service').default} agentMgr
