@@ -79,6 +79,9 @@ public class TopologySnapshot {
      */
     private Map<UUID, NodeBean> nodes;
 
+    /** */
+    private final long creationTime = U.currentTimeMillis();
+
     /**
      * Default constructor for serialization.
      */
@@ -242,6 +245,16 @@ public class TopologySnapshot {
      */
     public boolean differentCluster(TopologySnapshot other) {
         return other == null || F.isEmpty(other.nids()) || Collections.disjoint(nids(), other.nids());
+    }
+
+    /**
+     * Returns true if the snapshot is expired.
+     *
+     * @param maxInactiveInterval The maximum inactive interval.
+     * @return true if the snapshot is expired, else false.
+     */
+    public boolean isExpired(long maxInactiveInterval) {
+        return U.currentTimeMillis() - maxInactiveInterval >= creationTime;
     }
 
     /**

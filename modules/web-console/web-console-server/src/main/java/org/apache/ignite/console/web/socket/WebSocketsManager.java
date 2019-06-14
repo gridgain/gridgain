@@ -22,7 +22,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -43,6 +42,7 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.ignite.console.utils.Utils.toJson;
@@ -58,6 +58,9 @@ import static org.springframework.web.util.UriComponentsBuilder.fromUri;
 public class WebSocketsManager {
     /** */
     private static final Logger log = LoggerFactory.getLogger(WebSocketsManager.class);
+
+    /** Default for cluster topology expire. */
+    private static final long DEFAULT_MAX_INACTIVE_INTERVAL = MINUTES.toMillis(10);
 
     /** */
     private static final PingMessage PING = new PingMessage(UTF_8.encode("PING"));
@@ -114,23 +117,13 @@ public class WebSocketsManager {
     public void onAgentConnectionClosed(WebSocketSession ws) {
         AgentDescriptor desc = agents.remove(ws);
 
-        if (desc != null) {
-            updateClusterInBrowsers(desc.accIds);
-
-            if (!F.isEmpty(desc.getClusterIds())) {
-                for (String clusterId : desc.getClusterIds()) {
-                    Optional<AgentDescriptor> conn = agents.values().stream()
-                        .filter(agent -> agent.getClusterIds().contains(clusterId))
-                        .findFirst();
-
-                    if (!conn.isPresent())
-                        clusters.remove(clusterId);
-                }
-            }
-
-            if (F.isEmpty(desc.clusterIds)) 
-                log.warn("Agent descriptor not found for session: " + ws);
+        if (desc == null) {
+            log.warn("Agent descriptor not found for session: " + ws);
+            
+            return;
         }
+
+        updateClusterInBrowsers(desc.accIds);
     }
 
     /**
@@ -253,8 +246,6 @@ public class WebSocketsManager {
         }
 
         desc.setClusterIds(tops.stream().map(TopologySnapshot::getId).collect(Collectors.toSet()));
-
-        // TODO GG-19218 Cleanup clusters.
     }
 
     /**
@@ -365,10 +356,35 @@ public class WebSocketsManager {
     /**
      * Periodically ping connected clients to keep connections alive.
      */
-    @Scheduled(fixedRate = 5000)
+    @Scheduled(fixedRate = 3_000)
     public void pingClients() {
         agents.keySet().forEach(this::ping);
         browsers.keySet().forEach(this::ping);
+    }
+
+    /**
+     * Periodically cleanup expired cluster topology.
+     */
+    @Scheduled(fixedRate = 60_000)
+    public void cleanupClusters() {
+        clusters.forEach((clusterId, snapshot) -> {
+            if (snapshot.isExpired(DEFAULT_MAX_INACTIVE_INTERVAL)) {
+                clusters.remove(clusterId);
+
+                for (Map.Entry<WebSocketSession, AgentDescriptor> entry : agents.entrySet()) {
+                    AgentDescriptor desc = entry.getValue();
+
+                    if (desc.clusterIds.contains(clusterId)) {
+                        desc.clusterIds.remove(clusterId);
+
+                        log.error("Failed to receive topology update from agent [socket="
+                            + entry.getKey() + ", clusterId=" + clusterId + "]");
+
+                        updateClusterInBrowsers(desc.accIds);
+                    }
+                }
+            }
+        });
     }
 
     /**
