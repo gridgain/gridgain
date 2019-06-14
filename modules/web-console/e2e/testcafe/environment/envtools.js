@@ -15,7 +15,6 @@
  */
 
 const ClientFunction = require('testcafe').ClientFunction;
-
 const MongoClient = require('mongodb').MongoClient;
 const objectid = require('objectid');
 const { spawn } = require('child_process');
