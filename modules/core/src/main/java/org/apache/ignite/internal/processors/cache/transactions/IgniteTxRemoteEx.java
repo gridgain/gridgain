@@ -16,9 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.transactions;
 
-import java.util.Collection;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 
 /**
  * Local transaction API.
@@ -33,17 +31,6 @@ public interface IgniteTxRemoteEx extends IgniteInternalTx {
      *
      */
     public void rollbackRemoteTx();
-
-    /**
-     * @param baseVer Base version.
-     * @param committedVers Committed version.
-     * @param rolledbackVers Rolled back version.
-     * @param pendingVers Pending versions.
-     */
-    public void doneRemote(GridCacheVersion baseVer,
-        Collection<GridCacheVersion> committedVers,
-        Collection<GridCacheVersion> rolledbackVers,
-        Collection<GridCacheVersion> pendingVers);
 
     /**
      * @param cntrs Partition update indexes.

@@ -34,7 +34,6 @@ import org.apache.ignite.internal.processors.cache.CacheEntryInfoCollection;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
-import org.apache.ignite.internal.processors.cache.GridCacheEntryInfo;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryRemovedException;
 import org.apache.ignite.internal.processors.cache.GridCacheMessage;
 import org.apache.ignite.internal.processors.cache.GridCacheReturnCompletableWrapper;
@@ -63,7 +62,6 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
-import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxFinishFuture;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxFinishRequest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxFinishResponse;
@@ -103,12 +101,10 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYSTEM_POOL;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.UTILITY_CACHE_POOL;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.TRANSFORM;
-import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isNearEnabled;
 import static org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx.FinalizationStatus.USER_FINISH;
 import static org.apache.ignite.internal.util.lang.GridFunc.isEmpty;
 import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
-import static org.apache.ignite.transactions.TransactionState.PREPARED;
 import static org.apache.ignite.transactions.TransactionState.ROLLED_BACK;
 import static org.apache.ignite.transactions.TransactionState.ROLLING_BACK;
 
@@ -1191,26 +1187,12 @@ public class IgniteTxHandler {
                 req.version(),
                 req.futureId(),
                 req.miniId(),
-                req.deployInfo() != null);
+                req.deployInfo() != null,
+                req.nearMissed());
 
             // Start near transaction first.
-            nearTx = !F.isEmpty(req.nearWrites()) ? startNearRemoteTx(ctx.deploy().globalLoader(), nodeId, req) : null;
-            dhtTx = startRemoteTx(nodeId, req, res);
-
-            // Set evicted keys from near transaction.
-            if (nearTx != null)
-                res.nearEvicted(nearTx.evicted());
-
-            List<IgniteTxKey> writesCacheMissed = req.nearWritesCacheMissed();
-
-            if (writesCacheMissed != null) {
-                Collection<IgniteTxKey> evicted0 = res.nearEvicted();
-
-                if (evicted0 != null)
-                    writesCacheMissed.addAll(evicted0);
-
-                res.nearEvicted(writesCacheMissed);
-            }
+            nearTx = !F.isEmpty(req.nearWrites()) ? startNearRemoteTx(nodeId, req, res) : null;
+            dhtTx = startDhtRemoteTx(nodeId, req, res);
 
             if (dhtTx != null)
                 req.txState(dhtTx.txState());
@@ -1291,14 +1273,44 @@ public class IgniteTxHandler {
                 final GridDhtTxRemote dhtTx0 = dhtTx;
                 final GridNearTxRemote nearTx0 = nearTx;
 
-                completeFut.listen(new CI1<IgniteInternalFuture<IgniteInternalTx>>() {
-                    @Override public void apply(IgniteInternalFuture<IgniteInternalTx> fut) {
-                        sendReply(nodeId, req, res0, dhtTx0, nearTx0);
-                    }
-                });
+                completeFut.listen(f -> sendReply(nodeId, req, res0, dhtTx0, nearTx0));
             }
             else
                 sendReply(nodeId, req, res, dhtTx, nearTx);
+        }
+        else if (req.last()) {
+            IgniteInternalFuture lockFut;
+
+            IgniteInternalFuture<IgniteInternalTx> dhtLock = dhtTx == null ?
+                null : dhtTx.lockFuture();
+
+            IgniteInternalFuture<IgniteInternalTx> nearLock = nearTx == null ?
+                null : nearTx.lockFuture();
+
+            if (dhtLock != null && nearLock != null) {
+                GridCompoundFuture fut = new GridCompoundFuture();
+
+                fut.add(dhtLock);
+                fut.add(nearLock);
+
+                fut.markInitialized();
+
+                lockFut = fut;
+            }
+            else
+                lockFut = dhtLock != null ? dhtLock : nearLock;
+
+            assert lockFut != null;
+
+            if (lockFut.isDone())
+                sendReply(nodeId, req, res, dhtTx, nearTx);
+            else {
+                final GridDhtTxPrepareResponse res0 = res;
+                final GridDhtTxRemote dhtTx0 = dhtTx;
+                final GridNearTxRemote nearTx0 = nearTx;
+
+                lockFut.listen(f -> sendReply(nodeId, req, res0, dhtTx0, nearTx0));
+            }
         }
         else
             sendReply(nodeId, req, res, dhtTx, nearTx);
@@ -1437,9 +1449,6 @@ public class IgniteTxHandler {
                     tx.systemInvalidate(true);
                 tx.mvccSnapshot(req.mvccSnapshot());
 
-                // Complete remote candidates.
-                tx.doneRemote(req.baseVersion(), null, null, null);
-
                 tx.setPartitionUpdateCounters(
                     req.partUpdateCounters() != null ? req.partUpdateCounters().array() : null);
 
@@ -1449,7 +1458,6 @@ public class IgniteTxHandler {
                 if (tx.dht() && req.updateCounters() != null)
                     tx.txCounters(true).updateCounters(req.updateCounters());
 
-                tx.doneRemote(req.baseVersion(), null, null, null);
                 tx.mvccSnapshot(req.mvccSnapshot());
                 tx.rollbackRemoteTx();
             }
@@ -1489,9 +1497,6 @@ public class IgniteTxHandler {
             tx.commitVersion(req.writeVersion());
             tx.invalidate(req.isInvalidate());
             tx.mvccSnapshot(req.mvccSnapshot());
-
-            // Complete remote candidates.
-            tx.doneRemote(req.version(), null, null, null);
 
             tx.commitRemoteTx();
         }
@@ -1667,199 +1672,6 @@ public class IgniteTxHandler {
     }
 
     /**
-     * @param nodeId Node ID.
-     * @param req Request.
-     * @param res Response.
-     * @return Remote transaction.
-     * @throws IgniteCheckedException If failed.
-     */
-    @Nullable GridDhtTxRemote startRemoteTx(
-        UUID nodeId,
-        GridDhtTxPrepareRequest req,
-        GridDhtTxPrepareResponse res
-    ) throws IgniteCheckedException {
-        if (req.queryUpdate() || !F.isEmpty(req.writes())) {
-            GridDhtTxRemote tx = ctx.tm().tx(req.version());
-
-            if (tx == null) {
-                boolean single = req.last() && req.writes().size() == 1;
-
-                tx = new GridDhtTxRemote(
-                    ctx,
-                    req.nearNodeId(),
-                    req.futureId(),
-                    nodeId,
-                    req.topologyVersion(),
-                    req.version(),
-                    null,
-                    req.system(),
-                    req.policy(),
-                    req.concurrency(),
-                    req.isolation(),
-                    req.isInvalidate(),
-                    req.timeout(),
-                    req.writes() != null ? Math.max(req.writes().size(), req.txSize()) : req.txSize(),
-                    req.nearXidVersion(),
-                    req.transactionNodes(),
-                    req.subjectId(),
-                    req.taskNameHash(),
-                    single,
-                    req.storeWriteThrough(),
-                    req.txLabel());
-
-                tx.onePhaseCommit(req.onePhaseCommit());
-                tx.writeVersion(req.writeVersion());
-
-                tx = ctx.tm().onCreated(null, tx);
-
-                if (tx == null || !ctx.tm().onStarted(tx)) {
-                    if (log.isDebugEnabled())
-                        log.debug("Attempt to start a completed transaction (will ignore): " + tx);
-
-                    applyPartitionsUpdatesCounters(req.updateCounters());
-
-                    return null;
-                }
-
-                if (ctx.discovery().node(nodeId) == null) {
-                    tx.state(ROLLING_BACK);
-
-                    tx.state(ROLLED_BACK);
-
-                    ctx.tm().uncommitTx(tx);
-
-                    applyPartitionsUpdatesCounters(req.updateCounters());
-
-                    return null;
-                }
-            }
-            else {
-                tx.writeVersion(req.writeVersion());
-                tx.transactionNodes(req.transactionNodes());
-            }
-
-            if (req.updateCounters() != null)
-                tx.txCounters(true).updateCounters(req.updateCounters());
-
-            if (!tx.isSystemInvalidate()) {
-                int idx = 0;
-
-                for (IgniteTxEntry entry : req.writes()) {
-                    GridCacheContext cacheCtx = entry.context();
-
-                    int part = cacheCtx.affinity().partition(entry.key());
-
-                    GridDhtLocalPartition locPart = cacheCtx.topology().localPartition(part,
-                        req.topologyVersion(),
-                        false);
-
-                    if (locPart != null && locPart.reserve()) {
-                        try {
-                            tx.addWrite(entry, ctx.deploy().globalLoader());
-
-                            if (isNearEnabled(cacheCtx) && req.invalidateNearEntry(idx))
-                                invalidateNearEntry(cacheCtx, entry.key(), req.version());
-
-                            if (req.needPreloadKey(idx)) {
-                                GridCacheEntryEx cached = entry.cached();
-
-                                if (cached == null)
-                                    cached = cacheCtx.cache().entryEx(entry.key(), req.topologyVersion());
-
-                                GridCacheEntryInfo info = cached.info();
-
-                                if (info != null && !info.isNew() && !info.isDeleted())
-                                    res.addPreloadEntry(info);
-                            }
-
-                            if (cacheCtx.readThroughConfigured() &&
-                                !entry.skipStore() &&
-                                entry.op() == TRANSFORM &&
-                                entry.oldValueOnPrimary() &&
-                                !entry.hasValue()) {
-                                    while (true) {
-                                        try {
-                                            GridCacheEntryEx cached = entry.cached();
-
-                                            if (cached == null) {
-                                                cached = cacheCtx.cache().entryEx(entry.key(), req.topologyVersion());
-
-                                                entry.cached(cached);
-                                            }
-
-                                            CacheObject val = cached.innerGet(
-                                                /*ver*/null,
-                                                tx,
-                                                /*readThrough*/false,
-                                                /*updateMetrics*/false,
-                                                /*evt*/false,
-                                                tx.subjectId(),
-                                                /*transformClo*/null,
-                                                tx.resolveTaskName(),
-                                                /*expiryPlc*/null,
-                                                /*keepBinary*/true);
-
-                                            if (val == null)
-                                                val = cacheCtx.toCacheObject(cacheCtx.store().load(null, entry.key()));
-
-                                            if (val != null)
-                                                entry.readValue(val);
-
-                                        break;
-                                    }
-                                    catch (GridCacheEntryRemovedException ignored) {
-                                        if (log.isDebugEnabled())
-                                            log.debug("Got entry removed exception, will retry: " + entry.txKey());
-
-                                        entry.cached(cacheCtx.cache().entryEx(entry.key(), req.topologyVersion()));
-                                    }
-                                }
-                            }
-                        }
-                        catch (GridDhtInvalidPartitionException e) {
-                            tx.addInvalidPartition(cacheCtx, e.partition());
-
-                            tx.clearEntry(entry.txKey());
-                        }
-                        finally {
-                            locPart.release();
-                        }
-                    }
-                    else
-                        tx.addInvalidPartition(cacheCtx, part);
-
-                    idx++;
-                }
-            }
-
-            // Prepare prior to reordering, so the pending locks added
-            // in prepare phase will get properly ordered as well.
-            tx.prepareRemoteTx();
-
-            if (req.last()) {
-                assert !F.isEmpty(req.transactionNodes()) :
-                    "Received last prepare request with empty transaction nodes: " + req;
-
-                tx.state(PREPARED);
-            }
-
-            res.invalidPartitionsByCacheId(tx.invalidPartitions());
-
-            if (!req.queryUpdate() && tx.empty() && req.last()) {
-                tx.skipCompletedVersions(req.skipCompletedVersion());
-
-                tx.rollbackRemoteTx();
-
-                return null;
-            }
-
-            return tx;
-        }
-
-        return null;
-    }
-
-    /**
      * Writes updated values on the backup node.
      *
      * @param tx Transaction.
@@ -2020,43 +1832,29 @@ public class IgniteTxHandler {
     }
 
     /**
-     * @param cacheCtx Context.
-     * @param key Key
-     * @param ver Version.
-     * @throws IgniteCheckedException If invalidate failed.
-     */
-    private void invalidateNearEntry(GridCacheContext cacheCtx, KeyCacheObject key, GridCacheVersion ver)
-        throws IgniteCheckedException {
-        GridNearCacheAdapter near = cacheCtx.isNear() ? cacheCtx.near() : cacheCtx.dht().near();
-
-        GridCacheEntryEx nearEntry = near.peekEx(key);
-
-        if (nearEntry != null)
-            nearEntry.invalidate(ver);
-    }
-
-    /**
-     * Called while processing dht tx prepare request.
-     *
-     * @param ldr Loader.
-     * @param nodeId Sender node ID.
+     * @param nodeId Node ID.
      * @param req Request.
+     * @param res Response.
      * @return Remote transaction.
      * @throws IgniteCheckedException If failed.
      */
-    @Nullable private GridNearTxRemote startNearRemoteTx(ClassLoader ldr, UUID nodeId,
-        GridDhtTxPrepareRequest req) throws IgniteCheckedException {
-
-        if (!F.isEmpty(req.nearWrites())) {
-            GridNearTxRemote tx = ctx.tm().nearTx(req.version());
+    @Nullable GridDhtTxRemote startDhtRemoteTx(
+        UUID nodeId,
+        GridDhtTxPrepareRequest req,
+        GridDhtTxPrepareResponse res
+    ) throws IgniteCheckedException {
+        if (req.queryUpdate() || !F.isEmpty(req.writes())) {
+            GridDhtTxRemote tx = ctx.tm().tx(req.version());
 
             if (tx == null) {
-                tx = new GridNearTxRemote(
+                boolean single = req.last() && req.writes().size() == 1;
+
+                tx = new GridDhtTxRemote(
                     ctx,
-                    req.topologyVersion(),
-                    ldr,
-                    nodeId,
                     req.nearNodeId(),
+                    req.futureId(),
+                    nodeId,
+                    req.topologyVersion(),
                     req.version(),
                     null,
                     req.system(),
@@ -2065,10 +1863,178 @@ public class IgniteTxHandler {
                     req.isolation(),
                     req.isInvalidate(),
                     req.timeout(),
-                    req.nearWrites(),
+                    req.writes() != null ? Math.max(req.writes().size(), req.txSize()) : req.txSize(),
+                    req.nearXidVersion(),
+                    req.transactionNodes(),
+                    req.subjectId(),
+                    req.taskNameHash(),
+                    single,
+                    req.storeWriteThrough(),
+                    req.txLabel());
+
+                tx.onePhaseCommit(req.onePhaseCommit());
+                tx.writeVersion(req.writeVersion());
+
+                tx = ctx.tm().onCreated(null, tx);
+
+                if (tx == null || !ctx.tm().onStarted(tx)) {
+                    if (log.isDebugEnabled())
+                        log.debug("Attempt to start a completed transaction (will ignore): " + tx);
+
+                    applyPartitionsUpdatesCounters(req.updateCounters());
+
+                    return null;
+                }
+
+                if (ctx.discovery().node(nodeId) == null) {
+                    tx.state(ROLLING_BACK);
+
+                    tx.state(ROLLED_BACK);
+
+                    ctx.tm().uncommitTx(tx);
+
+                    applyPartitionsUpdatesCounters(req.updateCounters());
+
+                    return null;
+                }
+            }
+            else {
+                tx.writeVersion(req.writeVersion());
+                tx.transactionNodes(req.transactionNodes());
+            }
+
+            if (req.updateCounters() != null)
+                tx.txCounters(true).updateCounters(req.updateCounters());
+
+            if (!tx.isSystemInvalidate()) {
+                for (IgniteTxEntry entry : req.writes()) {
+                    GridCacheContext cacheCtx = entry.context();
+
+                    int part = cacheCtx.affinity().partition(entry.key());
+
+                    GridDhtLocalPartition locPart = cacheCtx.topology().localPartition(part,
+                        req.topologyVersion(),
+                        false);
+
+                    if (locPart != null && locPart.reserve()) {
+                        try {
+                            tx.addWrite(entry, ctx.deploy().globalLoader());
+
+                            if (cacheCtx.readThroughConfigured() &&
+                                !entry.skipStore() &&
+                                entry.op() == TRANSFORM &&
+                                entry.oldValueOnPrimary() &&
+                                !entry.hasValue()) {
+                                while (true) {
+                                    try {
+                                        GridCacheEntryEx cached = entry.cached();
+
+                                        if (cached == null) {
+                                            cached = cacheCtx.cache().entryEx(entry.key(), req.topologyVersion());
+
+                                            entry.cached(cached);
+                                        }
+
+                                        CacheObject val = cached.innerGet(
+                                            /*ver*/null,
+                                            tx,
+                                            /*readThrough*/false,
+                                            /*updateMetrics*/false,
+                                            /*evt*/false,
+                                            tx.subjectId(),
+                                            /*transformClo*/null,
+                                            tx.resolveTaskName(),
+                                            /*expiryPlc*/null,
+                                            /*keepBinary*/true);
+
+                                        if (val == null)
+                                            val = cacheCtx.toCacheObject(cacheCtx.store().load(null, entry.key()));
+
+                                        if (val != null)
+                                            entry.readValue(val);
+
+                                        break;
+                                    }
+                                    catch (GridCacheEntryRemovedException ignored) {
+                                        if (log.isDebugEnabled())
+                                            log.debug("Got entry removed exception, will retry: " + entry.txKey());
+
+                                        entry.cached(cacheCtx.cache().entryEx(entry.key(), req.topologyVersion()));
+                                    }
+                                }
+                            }
+                        }
+                        catch (GridDhtInvalidPartitionException e) {
+                            tx.addInvalidPartition(cacheCtx, e.partition());
+
+                            tx.clearEntry(entry.txKey());
+                        }
+                        finally {
+                            locPart.release();
+                        }
+                    }
+                    else
+                        tx.addInvalidPartition(cacheCtx, part);
+                }
+            }
+
+            // Prepare prior to reordering, so the pending locks added
+            // in prepare phase will get properly ordered as well.
+            tx.prepareRemoteTx(req.last());
+
+            res.invalidPartitionsByCacheId(tx.invalidPartitions());
+
+            if (!req.queryUpdate() && tx.empty() && req.last()) {
+                tx.skipCompletedVersions(req.skipCompletedVersion());
+
+                tx.rollbackRemoteTx();
+
+                return null;
+            }
+
+            return tx;
+        }
+
+        return null;
+    }
+
+    /**
+     * Called while processing dht tx prepare request.
+     *
+     * @param nodeId Sender node ID.
+     * @param req Request.
+     * @param res Response.
+     * @return Remote transaction.
+     * @throws IgniteCheckedException If failed.
+     */
+    @Nullable private GridNearTxRemote startNearRemoteTx(UUID nodeId,
+        GridDhtTxPrepareRequest req,
+        GridDhtTxPrepareResponse res) throws IgniteCheckedException {
+
+        if (!F.isEmpty(req.nearWrites())) {
+            GridNearTxRemote tx = ctx.tm().nearTx(req.version());
+
+            if (tx == null) {
+                boolean single = req.last() && req.writes().size() == 1;
+
+                tx = new GridNearTxRemote(
+                    ctx,
+                    req.topologyVersion(),
+                    nodeId,
+                    req.nearNodeId(),
+                    req.nearXidVersion(),
+                    req.version(),
+                    null,
+                    req.system(),
+                    req.policy(),
+                    req.concurrency(),
+                    req.isolation(),
+                    req.isInvalidate(),
+                    req.timeout(),
                     req.txSize(),
                     req.subjectId(),
                     req.taskNameHash(),
+                    single,
                     req.txLabel()
                 );
 
@@ -2081,17 +2047,25 @@ public class IgniteTxHandler {
                         throw new IgniteTxRollbackCheckedException("Attempt to start a completed transaction: " + tx);
                 }
             }
-            else
-                tx.addEntries(ldr, req.nearWrites());
+            else {
+                ArrayList<IgniteTxKey> evicted = null;
+                ClassLoader ldr = ctx.deploy().globalLoader();
 
-            tx.ownedVersions(req.owned());
+                for (IgniteTxEntry entry : req.nearWrites()) {
+                    if (!tx.addEntry(entry, ldr)) {
+                        if (evicted == null)
+                            evicted = new ArrayList<>();
+
+                        evicted.add(entry.txKey());
+                    }
+                }
+
+                res.nearEvicted(evicted);
+            }
 
             // Prepare prior to reordering, so the pending locks added
             // in prepare phase will get properly ordered as well.
-            tx.prepareRemoteTx();
-
-            if (req.last())
-                tx.state(PREPARED);
+            tx.prepareRemoteTx(req.last());
 
             return tx;
         }

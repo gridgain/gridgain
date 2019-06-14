@@ -704,7 +704,7 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
                 tx.xidVersion(),
                 /*tx*/true,
                 tx.implicitSingle(),
-                tx.ownedVersion(txKey())
+                null
             );
 
             return true;

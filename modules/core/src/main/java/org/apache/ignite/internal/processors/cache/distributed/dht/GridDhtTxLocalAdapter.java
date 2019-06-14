@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache.distributed.dht;
 
 import java.io.Externalizable;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -33,7 +34,6 @@ import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryRemovedException;
-import org.apache.ignite.internal.processors.cache.GridCacheReturn;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedTxMapping;
@@ -44,11 +44,7 @@ import org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxLocalAdapter;
 import org.apache.ignite.internal.processors.cache.transactions.TxCounters;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
-import org.apache.ignite.internal.util.F0;
 import org.apache.ignite.internal.util.GridLeanMap;
-import org.apache.ignite.internal.util.GridLeanSet;
-import org.apache.ignite.internal.util.future.GridEmbeddedFuture;
-import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
@@ -251,11 +247,6 @@ public abstract class GridDhtTxLocalAdapter extends IgniteTxLocalAdapter {
      * @param err Error, if any.
      */
     protected abstract void sendFinishReply(@Nullable Throwable err);
-
-    /** {@inheritDoc} */
-    @Override public boolean needsCompletedVersions() {
-        return nearOnOriginatingNode;
-    }
 
     /**
      * @return Versions for all pending locks that were in queue before tx locks were released.
@@ -534,7 +525,7 @@ public abstract class GridDhtTxLocalAdapter extends IgniteTxLocalAdapter {
 
     /**
      * @param cacheCtx Cache context.
-     * @param entries Entries to lock.
+     * @param keys Keys to lock.
      * @param msgId Message ID.
      * @param read Read flag.
      * @param createTtl TTL for create operation.
@@ -543,12 +534,12 @@ public abstract class GridDhtTxLocalAdapter extends IgniteTxLocalAdapter {
      * @param skipStore Skip store flag.
      * @param keepBinary Keep binary flag.
      * @param nearCache {@code True} if near cache enabled on originating node.
-     * @return Lock future.
+     * @return Enlisted keys.
+     * @throws IgniteCheckedException If failed.
      */
-    @SuppressWarnings("ForLoopReplaceableByForEach")
-    IgniteInternalFuture<GridCacheReturn> lockAllAsync(
+    List<KeyCacheObject> enlistLock(
         GridCacheContext cacheCtx,
-        List<GridCacheEntryEx> entries,
+        List<KeyCacheObject> keys,
         long msgId,
         final boolean read,
         final boolean needRetVal,
@@ -557,63 +548,42 @@ public abstract class GridDhtTxLocalAdapter extends IgniteTxLocalAdapter {
         boolean skipStore,
         boolean keepBinary,
         boolean nearCache
-    ) {
-        try {
-            checkValid();
-        }
-        catch (IgniteCheckedException e) {
-            return new GridFinishedFuture<>(e);
-        }
+    ) throws IgniteCheckedException {
+        assert pessimistic();
 
-        final GridCacheReturn ret = new GridCacheReturn(localResult(), false);
-
-        if (F.isEmpty(entries))
-            return new GridFinishedFuture<>(ret);
+        checkValid();
 
         init();
 
-        onePhaseCommit(onePhaseCommit);
-
         try {
-            GridFutureAdapter<GridCacheReturn> enlistFut = new GridFutureAdapter<>();
+            GridFutureAdapter<Boolean> enlistFut = new GridFutureAdapter<>();
 
-            if (!updateLockFuture(null, enlistFut))
-                return finishFuture(enlistFut, timedOut() ? timeoutException() : rollbackException(), false);
+            if (!updateLockFuture(null, enlistFut)) {
+                IgniteCheckedException ex = timedOut() ? timeoutException() : rollbackException();
 
-            Set<KeyCacheObject> skipped = null;
+                finishFuture(enlistFut, ex, false);
+
+                throw ex;
+            }
+
+            List<KeyCacheObject> res = new ArrayList<>(keys.size());
 
             try {
                 AffinityTopologyVersion topVer = topologyVersion();
 
-                GridDhtCacheAdapter dhtCache = cacheCtx.isNear() ? cacheCtx.near().dht() : cacheCtx.dht();
+                GridDhtCacheAdapter cache = cacheCtx.isNear() ? cacheCtx.near().dht() : cacheCtx.dht();
 
                 // Enlist locks into transaction.
-                for (int i = 0; i < entries.size(); i++) {
-                    GridCacheEntryEx entry = entries.get(i);
+                for (int i = 0; i < keys.size(); i++) {
+                    KeyCacheObject key = keys.get(i);
 
-                    KeyCacheObject key = entry.key();
-
-                    IgniteTxEntry txEntry = entry(entry.txKey());
+                    IgniteTxEntry txEntry = entry(cacheCtx.txKey(key));
 
                     // First time access.
                     if (txEntry == null) {
-                        GridDhtCacheEntry cached;
+                        addActiveCache(cache.context(), false);
 
-                        while (true) {
-                            try {
-                                cached = dhtCache.entryExx(key, topVer);
-
-                                cached.unswap(read);
-
-                                break;
-                            }
-                            catch (GridCacheEntryRemovedException ignore) {
-                                if (log.isDebugEnabled())
-                                    log.debug("Get removed entry: " + key);
-                            }
-                        }
-
-                        addActiveCache(dhtCache.context(), false);
+                        GridDhtCacheEntry cached = cache.entryExx(key, topVer);
 
                         txEntry = addEntry(NOOP,
                             null,
@@ -633,124 +603,23 @@ public abstract class GridDhtTxLocalAdapter extends IgniteTxLocalAdapter {
                         if (read)
                             txEntry.ttl(accessTtl);
 
-                        txEntry.cached(cached);
-
                         addReader(msgId, cached, txEntry, topVer);
-                    }
-                    else {
-                        if (skipped == null)
-                            skipped = new GridLeanSet<>();
 
-                        skipped.add(key);
+                        res.add(key);
                     }
                 }
+
+                return res;
             }
             finally {
                 finishFuture(enlistFut, null, true);
             }
-
-            assert pessimistic();
-
-            Collection<KeyCacheObject> keys = F.viewReadOnly(entries, CU.entry2Key());
-
-            // Acquire locks only after having added operation to the write set.
-            // Otherwise, during rollback we will not know whether locks need
-            // to be rolled back.
-            // Loose all skipped and previously locked (we cannot reenter locks here).
-            final Collection<KeyCacheObject> passedKeys = skipped != null ? F.view(keys, F0.notIn(skipped)) : keys;
-
-            if (log.isDebugEnabled())
-                log.debug("Lock keys: " + passedKeys);
-
-            return obtainLockAsync(cacheCtx,
-                ret,
-                passedKeys,
-                read,
-                needRetVal,
-                createTtl,
-                accessTtl,
-                skipStore,
-                keepBinary);
         }
         catch (IgniteCheckedException e) {
             setRollbackOnly();
 
-            return new GridFinishedFuture<>(e);
+            throw e;
         }
-    }
-
-    /**
-     * @param cacheCtx Context.
-     * @param ret Return value.
-     * @param passedKeys Passed keys.
-     * @param read {@code True} if read.
-     * @param needRetVal Return value flag.
-     * @param createTtl TTL for create operation.
-     * @param accessTtl TTL for read operation.
-     * @param skipStore Skip store flag.
-     * @return Future for lock acquisition.
-     */
-    private IgniteInternalFuture<GridCacheReturn> obtainLockAsync(
-        final GridCacheContext cacheCtx,
-        GridCacheReturn ret,
-        final Collection<KeyCacheObject> passedKeys,
-        final boolean read,
-        final boolean needRetVal,
-        final long createTtl,
-        final long accessTtl,
-        boolean skipStore,
-        boolean keepBinary) {
-        if (log.isDebugEnabled())
-            log.debug("Before acquiring transaction lock on keys [keys=" + passedKeys + ']');
-
-        if (passedKeys.isEmpty())
-            return new GridFinishedFuture<>(ret);
-
-        GridDhtTransactionalCacheAdapter<?, ?> dhtCache =
-            cacheCtx.isNear() ? cacheCtx.nearTx().dht() : cacheCtx.dhtTx();
-
-        long timeout = remainingTime();
-
-        if (timeout == -1)
-            return new GridFinishedFuture<>(timeoutException());
-
-        if (isRollbackOnly())
-            return new GridFinishedFuture<>(rollbackException());
-
-        IgniteInternalFuture<Boolean> fut = dhtCache.lockAllAsyncInternal(passedKeys,
-            timeout,
-            this,
-            isInvalidate(),
-            read,
-            needRetVal,
-            isolation,
-            createTtl,
-            accessTtl,
-            CU.empty0(),
-            skipStore,
-            keepBinary);
-
-        return new GridEmbeddedFuture<>(
-            fut,
-            new PLC1<GridCacheReturn>(ret) {
-                @Override protected GridCacheReturn postLock(GridCacheReturn ret) throws IgniteCheckedException {
-                    if (log.isDebugEnabled())
-                        log.debug("Acquired transaction lock on keys: " + passedKeys);
-
-                    postLockWrite(cacheCtx,
-                        passedKeys,
-                        ret,
-                        /*remove*/false,
-                        /*retval*/false,
-                        /*read*/read,
-                        accessTtl,
-                        CU.empty0(),
-                        /*computeInvoke*/false);
-
-                    return ret;
-                }
-            }
-        );
     }
 
     /** {@inheritDoc} */

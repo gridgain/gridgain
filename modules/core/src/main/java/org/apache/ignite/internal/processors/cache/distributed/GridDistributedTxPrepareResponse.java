@@ -69,7 +69,7 @@ public class GridDistributedTxPrepareResponse extends GridDistributedBaseMessage
      * @param addDepInfo Deployment info flag.
      */
     public GridDistributedTxPrepareResponse(int part, GridCacheVersion xid, boolean addDepInfo) {
-        super(xid, 0, addDepInfo);
+        super(xid, addDepInfo);
 
         this.part = part;
     }
@@ -81,7 +81,7 @@ public class GridDistributedTxPrepareResponse extends GridDistributedBaseMessage
      * @param addDepInfo Deployment info flag.
      */
     public GridDistributedTxPrepareResponse(int part, GridCacheVersion xid, Throwable err, boolean addDepInfo) {
-        super(xid, 0, addDepInfo);
+        super(xid, addDepInfo);
 
         this.part = part;
         this.err = err;
@@ -177,19 +177,19 @@ public class GridDistributedTxPrepareResponse extends GridDistributedBaseMessage
         }
 
         switch (writer.state()) {
-            case 8:
+            case 5:
                 if (!writer.writeByteArray("errBytes", errBytes))
                     return false;
 
                 writer.incrementState();
 
-            case 9:
+            case 6:
                 if (!writer.writeByte("flags", flags))
                     return false;
 
                 writer.incrementState();
 
-            case 10:
+            case 7:
                 if (!writer.writeInt("part", part))
                     return false;
 
@@ -211,7 +211,7 @@ public class GridDistributedTxPrepareResponse extends GridDistributedBaseMessage
             return false;
 
         switch (reader.state()) {
-            case 8:
+            case 5:
                 errBytes = reader.readByteArray("errBytes");
 
                 if (!reader.isLastRead())
@@ -219,7 +219,7 @@ public class GridDistributedTxPrepareResponse extends GridDistributedBaseMessage
 
                 reader.incrementState();
 
-            case 9:
+            case 6:
                 flags = reader.readByte("flags");
 
                 if (!reader.isLastRead())
@@ -227,7 +227,7 @@ public class GridDistributedTxPrepareResponse extends GridDistributedBaseMessage
 
                 reader.incrementState();
 
-            case 10:
+            case 7:
                 part = reader.readInt("part");
 
                 if (!reader.isLastRead())
@@ -247,7 +247,7 @@ public class GridDistributedTxPrepareResponse extends GridDistributedBaseMessage
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 11;
+        return 8;
     }
 
     /** {@inheritDoc} */

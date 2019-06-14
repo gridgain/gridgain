@@ -430,7 +430,10 @@ public final class GridCacheMvcc {
 
                     it.remove();
 
-                    reassign();
+                    if (cand.local())
+                        reassign();
+                    else
+                        reassignRemote();
 
                     return true;
                 }
@@ -788,6 +791,8 @@ public final class GridCacheMvcc {
         cctx.versions().onReceived(cand.nodeId(), cand.version());
 
         add0(cand);
+
+        reassignRemote();
     }
 
     /**
@@ -1156,6 +1161,18 @@ public final class GridCacheMvcc {
                 }
             }
         }
+    }
+
+    private void reassignRemote() {
+        assert localOwner() == null;
+
+        GridCacheMvccCandidate first = F.first(rmts);
+
+        if (first == null || first.owner())
+            return;
+
+        first.setOwner();
+        first.setUsed();
     }
 
     /**

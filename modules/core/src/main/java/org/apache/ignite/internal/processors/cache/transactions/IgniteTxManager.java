@@ -17,12 +17,10 @@
 package org.apache.ignite.internal.processors.cache.transactions;
 
 import java.io.Externalizable;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -79,7 +77,6 @@ import org.apache.ignite.internal.processors.cluster.BaselineTopology;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
 import org.apache.ignite.internal.transactions.IgniteTxOptimisticCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxTimeoutCheckedException;
-import org.apache.ignite.internal.util.GridBoundedConcurrentOrderedMap;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridPlainRunnable;
@@ -193,10 +190,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     private boolean txOwnerDumpRequestsAllowed =
         IgniteSystemProperties.getBoolean(IGNITE_TX_OWNER_DUMP_REQUESTS_ALLOWED, true);
 
-    /** Committed local transactions. */
-    private final GridBoundedConcurrentOrderedMap<GridCacheVersion, Boolean> completedVersSorted =
-        new GridBoundedConcurrentOrderedMap<>(
-            Integer.getInteger(IGNITE_MAX_COMPLETED_TX_COUNT, DFLT_MAX_COMPLETED_TX_CNT));
 
     /** Committed local transactions. */
     private final ConcurrentLinkedHashMap<GridCacheVersion, Object> completedVersHashMap =
@@ -492,7 +485,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         X.println(">>>   threadMapSize: " + threadMap.size());
         X.println(">>>   idMap [size=" + idMap.size() + ']');
         X.println(">>>   nearIdMap [size=" + nearIdMap.size() + ']');
-        X.println(">>>   completedVersSortedSize: " + completedVersSorted.size());
         X.println(">>>   completedVersHashMapSize: " + completedVersHashMap.sizex());
     }
 
@@ -951,7 +943,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * @param entries Entries to lock or {@code null} if use default {@link IgniteInternalTx#optimisticLockEntries()}.
      * @throws IgniteCheckedException If preparation failed.
      */
-    public void prepareTx(IgniteInternalTx tx, @Nullable Collection<IgniteTxEntry> entries) throws IgniteCheckedException {
+    public void prepareTx(IgniteInternalTx tx, Collection<IgniteTxEntry> entries) throws IgniteCheckedException {
         if (tx.state() == MARKED_ROLLBACK) {
             if (tx.remainingTime() == -1)
                 throw new IgniteTxTimeoutCheckedException("Transaction timed out: " + this);
@@ -972,7 +964,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         // Optimistic.
         assert tx.optimistic() || !tx.local();
 
-        if (!lockMultiple(tx, entries != null ? entries : tx.optimisticLockEntries())) {
+        if (!lockMultiple(tx, entries)) {
             tx.setRollbackOnly();
 
             throw new IgniteTxOptimisticCheckedException("Failed to prepare transaction (lock conflict): " + tx);
@@ -1016,35 +1008,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     }
 
     /**
-     * @param min Minimum version.
-     * @return Pair [committed, rolledback] - never {@code null}, elements potentially empty,
-     *      but also never {@code null}.
-     */
-    public IgnitePair<Collection<GridCacheVersion>> versions(GridCacheVersion min) {
-        Collection<GridCacheVersion> committed = null;
-        Collection<GridCacheVersion> rolledback = null;
-
-        for (Map.Entry<GridCacheVersion, Boolean> e : completedVersSorted.tailMap(min, true).entrySet()) {
-            if (e.getValue()) {
-                if (committed == null)
-                    committed = new ArrayList<>();
-
-                committed.add(e.getKey());
-            }
-            else {
-                if (rolledback == null)
-                    rolledback = new ArrayList<>();
-
-                rolledback.add(e.getKey());
-            }
-        }
-
-        return new IgnitePair<>(
-            committed == null ? Collections.<GridCacheVersion>emptyList() : committed,
-            rolledback == null ? Collections.<GridCacheVersion>emptyList() : rolledback);
-    }
-
-    /**
      * Peeks completed versions history map to find out whether transaction was committed or rolled back
      * in the recent past.
      *
@@ -1070,9 +1033,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      */
     public void removeCommittedTx(IgniteInternalTx tx) {
         completedVersHashMap.remove(tx.xidVersion(), true);
-
-        if (tx.needsCompletedVersions())
-            completedVersSorted.remove(tx.xidVersion(), true);
     }
 
     /**
@@ -1101,7 +1061,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * @param tx Tx.
      * @param xidVer Completed transaction version.
      * @param nearXidVer Optional near transaction ID.
-     * @return If transaction was not already present in completed set.
      */
     public boolean addCommittedTx(
         IgniteInternalTx tx,
@@ -1112,12 +1071,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             xidVer = new CommittedVersion(xidVer, nearXidVer);
 
         Object committed0 = completedVersHashMap.putIfAbsent(xidVer, true);
-
-        if (committed0 == null && (tx == null || tx.needsCompletedVersions())) {
-            Boolean b = completedVersSorted.putIfAbsent(xidVer, true);
-
-            assert b == null;
-        }
 
         Boolean committed = committed0 != null && !committed0.equals(Boolean.FALSE);
 
@@ -1154,12 +1107,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         GridCacheVersion xidVer
     ) {
         Object committed0 = completedVersHashMap.putIfAbsent(xidVer, false);
-
-        if (committed0 == null && (tx == null || tx.needsCompletedVersions())) {
-            Boolean b = completedVersSorted.putIfAbsent(xidVer, false);
-
-            assert b == null;
-        }
 
         Boolean committed = committed0 != null && !committed0.equals(Boolean.FALSE);
 
@@ -1199,110 +1146,12 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
     /**
      * @param tx Transaction.
-     */
-    private void processCompletedEntries(IgniteInternalTx tx) {
-        if (tx.needsCompletedVersions()) {
-            GridCacheVersion min = minVersion(tx.readEntries(), tx.xidVersion(), tx);
-
-            min = minVersion(tx.writeEntries(), min, tx);
-
-            assert min != null;
-
-            IgnitePair<Collection<GridCacheVersion>> versPair = versions(min);
-
-            tx.completedVersions(min, versPair.get1(), versPair.get2());
-        }
-    }
-
-    /**
-     * Collects versions for all pending locks for all entries within transaction
-     *
-     * @param dhtTxLoc Transaction being committed.
-     */
-    private void collectPendingVersions(GridDhtTxLocal dhtTxLoc) {
-        if (dhtTxLoc.needsCompletedVersions()) {
-            if (log.isDebugEnabled())
-                log.debug("Checking for pending locks with version less then tx version: " + dhtTxLoc);
-
-            Set<GridCacheVersion> vers = new LinkedHashSet<>();
-
-            collectPendingVersions(dhtTxLoc.readEntries(), dhtTxLoc.xidVersion(), vers);
-            collectPendingVersions(dhtTxLoc.writeEntries(), dhtTxLoc.xidVersion(), vers);
-
-            if (!vers.isEmpty())
-                dhtTxLoc.pendingVersions(vers);
-        }
-    }
-
-    /**
-     * Gets versions of all not acquired locks for collection of tx entries that are less then base version.
-     *
-     * @param entries Tx entries to process.
-     * @param baseVer Base version to compare with.
-     * @param vers Collection of versions that will be populated.
-     */
-    @SuppressWarnings("TypeMayBeWeakened")
-    private void collectPendingVersions(Iterable<IgniteTxEntry> entries,
-        GridCacheVersion baseVer, Set<GridCacheVersion> vers) {
-
-        // The locks are not released yet, so we can safely list pending candidates versions.
-        for (IgniteTxEntry txEntry : entries) {
-            GridCacheEntryEx cached = txEntry.cached();
-
-            try {
-                // If check should be faster then exception handling.
-                if (!cached.obsolete()) {
-                    for (GridCacheMvccCandidate cand : cached.localCandidates()) {
-                        if (!cand.owner() && cand.version().compareTo(baseVer) < 0) {
-                            if (log.isDebugEnabled())
-                                log.debug("Adding candidate version to pending set: " + cand);
-
-                            vers.add(cand.version());
-                        }
-                    }
-                }
-            }
-            catch (GridCacheEntryRemovedException ignored) {
-                if (log.isDebugEnabled())
-                    log.debug("There are no pending locks for entry (entry was deleted in transaction): " + txEntry);
-            }
-        }
-    }
-
-    /**
-     * Go through all candidates for entries involved in transaction and find their min
-     * version. We know that these candidates will commit after this transaction, and
-     * therefore we can grab the min version so we can send all committed and rolled
-     * back versions from min to current to remote nodes for re-ordering.
-     *
-     * @param entries Entries.
-     * @param min Min version so far.
-     * @param tx Transaction.
-     * @return Minimal available version.
-     */
-    private GridCacheVersion minVersion(Iterable<IgniteTxEntry> entries, GridCacheVersion min,
-        IgniteInternalTx tx) {
-        for (IgniteTxEntry txEntry : entries) {
-            GridCacheEntryEx cached = txEntry.cached();
-
-            // We are assuming that this method is only called on commit. In that
-            // case, if lock is held, entry can never be removed.
-            assert txEntry.isRead() || !cached.obsolete(tx.xidVersion()) :
-                "Invalid obsolete version for transaction [entry=" + cached + ", tx=" + tx + ']';
-
-            for (GridCacheMvccCandidate cand : cached.remoteMvccSnapshot())
-                if (min == null || cand.version().isLess(min))
-                    min = cand.version();
-        }
-
-        return min;
-    }
-
-    /**
-     * @param tx Transaction.
      * @return {@code True} if transaction read entries should be unlocked.
      */
     private boolean unlockReadEntries(IgniteInternalTx tx) {
+        if (!tx.local())
+            return false;
+
         if (tx.pessimistic())
             return !tx.readCommitted();
         else
@@ -1347,15 +1196,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         ConcurrentMap<GridCacheVersion, IgniteInternalTx> txIdMap = transactionMap(tx);
 
         if (txIdMap.remove(tx.xidVersion(), tx)) {
-            // 2. Must process completed entries before unlocking!
-            processCompletedEntries(tx);
-
-            if (tx instanceof GridDhtTxLocal) {
-                GridDhtTxLocal dhtTxLoc = (GridDhtTxLocal)tx;
-
-                collectPendingVersions(dhtTxLoc);
-            }
-
             // 3. Unlock write resources.
             unlockMultiple(tx, tx.writeEntries());
 
@@ -1758,35 +1598,33 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
         GridCacheVersion serOrder = (tx.serializable() && tx.optimistic()) ? tx.nearXidVersion() : null;
 
-        for (IgniteTxEntry txEntry1 : entries) {
+        for (IgniteTxEntry txEntry : entries) {
             // Check if this entry was prepared before.
-            if (!txEntry1.markPrepared() || txEntry1.explicitVersion() != null)
+            if (!txEntry.markPrepared() || txEntry.explicitVersion() != null)
                 continue;
 
-            GridCacheContext cacheCtx = txEntry1.context();
+            GridCacheContext cacheCtx = txEntry.context();
 
             while (true) {
                 cctx.database().checkpointReadLock();
 
                 try {
-                    GridCacheEntryEx entry1 = txEntry1.cached();
+                    GridCacheEntryEx entry = txEntry.cached();
 
-                    assert entry1 != null : txEntry1;
-                    assert !entry1.detached() : "Expected non-detached entry for near transaction " +
-                        "[locNodeId=" + cctx.localNodeId() + ", entry=" + entry1 + ']';
+                    assert entry != null : txEntry;
+                    assert !entry.detached() : "Expected non-detached entry for near transaction " +
+                        "[locNodeId=" + cctx.localNodeId() + ", entry=" + entry + ']';
 
-                    GridCacheVersion serReadVer = txEntry1.entryReadVersion();
+                    GridCacheVersion serReadVer = txEntry.entryReadVersion();
 
-                    assert serReadVer == null || (tx.optimistic() && tx.serializable()) : txEntry1;
+                    assert serReadVer == null || (tx.optimistic() && tx.serializable()) : txEntry;
 
-                    boolean read = serOrder != null && txEntry1.op() == READ;
+                    boolean read = serOrder != null && txEntry.op() == READ;
 
-                    entry1.unswap();
-
-                    if (!entry1.tmLock(tx, timeout, serOrder, serReadVer, read)) {
+                    if (!entry.tmLock(tx, timeout, serOrder, serReadVer, read)) {
                         // Unlock locks locked so far.
                         for (IgniteTxEntry txEntry2 : entries) {
-                            if (txEntry2 == txEntry1)
+                            if (txEntry2 == txEntry)
                                 break;
 
                             txUnlock(tx, txEntry2);
@@ -1799,11 +1637,11 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                 }
                 catch (GridCacheEntryRemovedException ignored) {
                     if (log.isDebugEnabled())
-                        log.debug("Got removed entry in TM lockMultiple(..) method (will retry): " + txEntry1);
+                        log.debug("Got removed entry in TM lockMultiple(..) method (will retry): " + txEntry);
 
                     try {
                         // Renew cache entry.
-                        txEntry1.cached(cacheCtx.cache().entryEx(txEntry1.key(), tx.topologyVersion()));
+                        txEntry.cached(cacheCtx.cache().entryEx(txEntry.key(), tx.topologyVersion()));
                     }
                     catch (GridDhtInvalidPartitionException e) {
                         assert tx.dht() : "Received invalid partition for non DHT transaction [tx=" +
@@ -2153,15 +1991,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                 log.info("Will not try to commit prepared transaction (could not mark finalized): " + tx);
 
             return;
-        }
-
-        if (tx instanceof IgniteTxRemoteEx) {
-            IgniteTxRemoteEx rmtTx = (IgniteTxRemoteEx)tx;
-
-            rmtTx.doneRemote(tx.xidVersion(),
-                Collections.<GridCacheVersion>emptyList(),
-                Collections.<GridCacheVersion>emptyList(),
-                Collections.<GridCacheVersion>emptyList());
         }
 
         if (commit)

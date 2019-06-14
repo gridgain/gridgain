@@ -418,7 +418,7 @@ public final class GridDhtGetFuture<K, V> extends GridCompoundIdentityFuture<Col
                         boolean addReader = !e.deleted();
 
                         if (addReader) {
-                            e.unswap(false);
+                            e.unswap();
 
                             // Entry will be removed on touch() if no data in cache,
                             // but they could be loaded from store,

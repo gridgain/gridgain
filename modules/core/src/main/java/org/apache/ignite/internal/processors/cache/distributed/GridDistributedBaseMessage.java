@@ -18,18 +18,12 @@ package org.apache.ignite.internal.processors.cache.distributed;
 
 import java.io.Externalizable;
 import java.nio.ByteBuffer;
-import java.util.Collection;
-import java.util.Collections;
-import org.apache.ignite.internal.GridDirectCollection;
-import org.apache.ignite.internal.GridDirectTransient;
 import org.apache.ignite.internal.processors.cache.GridCacheDeployable;
 import org.apache.ignite.internal.processors.cache.GridCacheIdMessage;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersionable;
-import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
@@ -45,25 +39,6 @@ public abstract class GridDistributedBaseMessage extends GridCacheIdMessage impl
     @GridToStringInclude
     protected GridCacheVersion ver;
 
-    /** */
-    @GridToStringExclude
-    private byte[] candsByIdxBytes;
-
-    /** Committed versions with order higher than one for this message (needed for commit ordering). */
-    @GridToStringInclude
-    @GridDirectCollection(GridCacheVersion.class)
-    private Collection<GridCacheVersion> committedVers;
-
-    /** Rolled back versions with order higher than one for this message (needed for commit ordering). */
-    @GridToStringInclude
-    @GridDirectCollection(GridCacheVersion.class)
-    private Collection<GridCacheVersion> rolledbackVers;
-
-    /** Count of keys referenced in candidates array (needed only locally for optimization). */
-    @GridToStringInclude
-    @GridDirectTransient
-    private int cnt;
-
     /**
      * Empty constructor required by {@link Externalizable}
      */
@@ -72,27 +47,21 @@ public abstract class GridDistributedBaseMessage extends GridCacheIdMessage impl
     }
 
     /**
-     * @param cnt Count of keys references in list of candidates.
      * @param addDepInfo Deployment info flag.
      */
-    protected GridDistributedBaseMessage(int cnt, boolean addDepInfo) {
-        assert cnt >= 0;
-
-        this.cnt = cnt;
+    protected GridDistributedBaseMessage(boolean addDepInfo) {
         this.addDepInfo = addDepInfo;
     }
 
     /**
      * @param ver Either lock or transaction version.
-     * @param cnt Key count.
      * @param addDepInfo Deployment info flag.
      */
-    protected GridDistributedBaseMessage(GridCacheVersion ver, int cnt, boolean addDepInfo) {
-        this(cnt, addDepInfo);
-
+    protected GridDistributedBaseMessage(GridCacheVersion ver, boolean addDepInfo) {
         assert ver != null;
 
         this.ver = ver;
+        this.addDepInfo = addDepInfo;
     }
 
     /** {@inheritDoc} */
@@ -114,37 +83,6 @@ public abstract class GridDistributedBaseMessage extends GridCacheIdMessage impl
         this.ver = ver;
     }
 
-    /**
-     * @param committedVers Committed versions.
-     * @param rolledbackVers Rolled back versions.
-     */
-    public void completedVersions(Collection<GridCacheVersion> committedVers,
-        Collection<GridCacheVersion> rolledbackVers) {
-        this.committedVers = committedVers;
-        this.rolledbackVers = rolledbackVers;
-    }
-
-    /**
-     * @return Committed versions.
-     */
-    public Collection<GridCacheVersion> committedVersions() {
-        return committedVers == null ? Collections.<GridCacheVersion>emptyList() : committedVers;
-    }
-
-    /**
-     * @return Rolled back versions.
-     */
-    public Collection<GridCacheVersion> rolledbackVersions() {
-        return rolledbackVers == null ? Collections.<GridCacheVersion>emptyList() : rolledbackVers;
-    }
-
-    /**
-     * @return Count of keys referenced in candidates array (needed only locally for optimization).
-     */
-    int keysCount() {
-        return cnt;
-    }
-
     /** {@inheritDoc} */
     @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
         writer.setBuffer(buf);
@@ -161,24 +99,6 @@ public abstract class GridDistributedBaseMessage extends GridCacheIdMessage impl
 
         switch (writer.state()) {
             case 4:
-                if (!writer.writeByteArray("candsByIdxBytes", candsByIdxBytes))
-                    return false;
-
-                writer.incrementState();
-
-            case 5:
-                if (!writer.writeCollection("committedVers", committedVers, MessageCollectionItemType.MSG))
-                    return false;
-
-                writer.incrementState();
-
-            case 6:
-                if (!writer.writeCollection("rolledbackVers", rolledbackVers, MessageCollectionItemType.MSG))
-                    return false;
-
-                writer.incrementState();
-
-            case 7:
                 if (!writer.writeMessage("ver", ver))
                     return false;
 
@@ -201,30 +121,6 @@ public abstract class GridDistributedBaseMessage extends GridCacheIdMessage impl
 
         switch (reader.state()) {
             case 4:
-                candsByIdxBytes = reader.readByteArray("candsByIdxBytes");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 5:
-                committedVers = reader.readCollection("committedVers", MessageCollectionItemType.MSG);
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 6:
-                rolledbackVers = reader.readCollection("rolledbackVers", MessageCollectionItemType.MSG);
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 7:
                 ver = reader.readMessage("ver");
 
                 if (!reader.isLastRead())

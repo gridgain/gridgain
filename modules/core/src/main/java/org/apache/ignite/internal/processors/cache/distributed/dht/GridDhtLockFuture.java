@@ -23,50 +23,31 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
-import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
-import org.apache.ignite.internal.processors.cache.CacheEntryPredicate;
 import org.apache.ignite.internal.processors.cache.CacheLockCandidates;
 import org.apache.ignite.internal.processors.cache.CacheObject;
-import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
-import org.apache.ignite.internal.processors.cache.GridCacheCompoundIdentityFuture;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
-import org.apache.ignite.internal.processors.cache.GridCacheEntryInfo;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryRemovedException;
+import org.apache.ignite.internal.processors.cache.GridCacheFutureAdapter;
 import org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate;
-import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.GridCacheVersionedFuture;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.GridCacheMappedVersion;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedLockCancelledException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.colocated.GridDhtColocatedLockFuture;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtInvalidPartitionException;
-import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheAdapter;
-import org.apache.ignite.internal.processors.cache.mvcc.MvccUpdateVersionAware;
-import org.apache.ignite.internal.processors.cache.mvcc.MvccVersionAware;
-import org.apache.ignite.internal.processors.cache.mvcc.txlog.TxState;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
-import org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry;
-import org.apache.ignite.internal.processors.cache.transactions.IgniteTxKey;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.dr.GridDrType;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
-import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
-import org.apache.ignite.internal.util.tostring.GridToStringInclude;
-import org.apache.ignite.internal.util.typedef.C1;
 import org.apache.ignite.internal.util.typedef.CI2;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -74,47 +55,33 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgniteUuid;
-import org.apache.ignite.transactions.TransactionIsolation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_OBJECT_LOADED;
-import static org.apache.ignite.internal.processors.dr.GridDrType.DR_NONE;
-import static org.apache.ignite.internal.processors.dr.GridDrType.DR_PRELOAD;
 
 /**
  * Cache lock future.
  */
-public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boolean>
-    implements GridCacheVersionedFuture<Boolean>, GridDhtFuture<Boolean>, GridCacheMappedVersion, DhtLockFuture<Boolean> {
-    /** */
-    private static final long serialVersionUID = 0L;
-
-    /** Logger reference. */
-    private static final AtomicReference<IgniteLogger> logRef = new AtomicReference<>();
-
+public final class GridDhtLockFuture extends GridCacheFutureAdapter<Boolean>
+    implements GridCacheVersionedFuture<Boolean>, GridCacheMappedVersion, DhtLockFuture<Boolean>, GridDhtFuture<Boolean> {
     /** Logger. */
     private static IgniteLogger log;
-
-    /** Logger. */
-    private static IgniteLogger msgLog;
-
+    /** Lock timeout. */
+    private final long timeout;
+    /** Pending locks. */
+    private final Collection<KeyCacheObject> pendingLocks;
+    /** Skip store flag. */
+    private final boolean skipStore;
     /** Cache registry. */
     @GridToStringExclude
     private GridCacheContext<?, ?> cctx;
-
     /** Near node ID. */
     private UUID nearNodeId;
-
     /** Near lock version. */
     private GridCacheVersion nearLockVer;
-
     /** Topology version. */
     private AffinityTopologyVersion topVer;
-
     /** Thread. */
     private long threadId;
-
     /**
      * Keys locked so far.
      *
@@ -128,117 +95,66 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
     @SuppressWarnings({"FieldAccessedSynchronizedAndUnsynchronized"})
     @GridToStringExclude
     private List<GridDhtCacheEntry> entries;
-
-    /** DHT mappings. */
-    private Map<ClusterNode, List<GridDhtCacheEntry>> dhtMap =
-        new ConcurrentHashMap<>();
-
     /** Future ID. */
     private IgniteUuid futId;
-
     /** Lock version. */
     private GridCacheVersion lockVer;
-
     /** Read flag. */
     private boolean read;
-
     /** Error. */
     private Throwable err;
-
     /** Timed out flag. */
     private volatile boolean timedOut;
-
     /** Timeout object. */
     @GridToStringExclude
     private LockTimeoutObject timeoutObj;
-
-    /** Lock timeout. */
-    private final long timeout;
-
-    /** Filter. */
-    private CacheEntryPredicate[] filter;
-
     /** Transaction. */
     private GridDhtTxLocalAdapter tx;
-
-    /** All replies flag. */
-    private boolean mapped;
-
-    /** */
-    private Collection<Integer> invalidParts;
-
-    /** Trackable flag. */
-    private boolean trackable = true;
-
-    /** Pending locks. */
-    private final Collection<KeyCacheObject> pendingLocks;
-
     /** TTL for create operation. */
     private long createTtl;
-
-    /** TTL for read operation. */
-    private long accessTtl;
-
-    /** Need return value flag. */
-    private boolean needReturnVal;
-
-    /** Skip store flag. */
-    private final boolean skipStore;
-
-    /** Keep binary. */
-    private final boolean keepBinary;
 
     /**
      * @param cctx Cache context.
      * @param nearNodeId Near node ID.
      * @param nearLockVer Near lock version.
      * @param topVer Topology version.
+     * @param tx Transaction.
      * @param cnt Number of keys to lock.
      * @param read Read flag.
-     * @param needReturnVal Need return value flag.
      * @param timeout Lock acquisition timeout.
-     * @param tx Transaction.
      * @param threadId Thread ID.
-     * @param accessTtl TTL for read operation.
-     * @param filter Filter.
+     * @param createTtl Ttl.
      * @param skipStore Skip store flag.
+     * @param keepBinary Keep binary flag.
      */
     public GridDhtLockFuture(
         GridCacheContext<?, ?> cctx,
         UUID nearNodeId,
         GridCacheVersion nearLockVer,
         @NotNull AffinityTopologyVersion topVer,
+        GridDhtTxLocalAdapter tx,
         int cnt,
         boolean read,
-        boolean needReturnVal,
         long timeout,
-        GridDhtTxLocalAdapter tx,
         long threadId,
         long createTtl,
-        long accessTtl,
-        CacheEntryPredicate[] filter,
         boolean skipStore,
         boolean keepBinary) {
-        super(CU.boolReducer());
 
         assert nearNodeId != null;
         assert nearLockVer != null;
         assert topVer.topologyVersion() > 0;
-        assert (tx != null && timeout >= 0) || tx == null;
+        assert tx == null || timeout >= 0;
 
         this.cctx = cctx;
         this.nearNodeId = nearNodeId;
         this.nearLockVer = nearLockVer;
         this.topVer = topVer;
         this.read = read;
-        this.needReturnVal = needReturnVal;
         this.timeout = timeout;
-        this.filter = filter;
         this.tx = tx;
         this.createTtl = createTtl;
-        this.accessTtl = accessTtl;
         this.skipStore = skipStore;
-        this.keepBinary = keepBinary;
 
         if (tx != null)
             tx.topologyVersion(topVer);
@@ -261,13 +177,11 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
         entries = new ArrayList<>(cnt);
         pendingLocks = U.newHashSet(cnt);
 
-        if (log == null) {
-            msgLog = cctx.shared().txLockMessageLogger();
-            log = U.logger(cctx.kernalContext(), logRef, GridDhtLockFuture.class);
-        }
+        if (log == null)
+            log = cctx.kernalContext().log(getClass());
 
         if (tx != null) {
-            while(true) {
+            while (true) {
                 IgniteInternalFuture fut = tx.lockFut;
 
                 if (fut != null) {
@@ -300,41 +214,8 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
     }
 
     /** {@inheritDoc} */
-    @Override public Collection<Integer> invalidPartitions() {
-        return invalidParts == null ? Collections.<Integer>emptyList() : invalidParts;
-    }
-
-    /**
-     * @param cacheCtx Cache context.
-     * @param invalidPart Partition to retry.
-     */
-    void addInvalidPartition(GridCacheContext<?, ?> cacheCtx, int invalidPart) {
-        if (invalidParts == null)
-            invalidParts = new HashSet<>();
-
-        invalidParts.add(invalidPart);
-
-        // Register invalid partitions with transaction.
-        if (tx != null)
-            tx.addInvalidPartition(cacheCtx, invalidPart);
-
-        if (log.isDebugEnabled())
-            log.debug("Added invalid partition to future [invalidPart=" + invalidPart + ", fut=" + this + ']');
-    }
-
-    /** {@inheritDoc} */
     @Override public GridCacheVersion version() {
         return lockVer;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean trackable() {
-        return trackable;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void markNotTrackable() {
-        trackable = false;
     }
 
     /**
@@ -387,20 +268,6 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
     }
 
     /**
-     * @return {@code True} if transaction is not {@code null} and has invalidate flag set.
-     */
-    private boolean isInvalidate() {
-        return tx != null && tx.isInvalidate();
-    }
-
-    /**
-     * @return Transaction isolation or {@code null} if no transaction.
-     */
-    @Nullable private TransactionIsolation isolation() {
-        return tx == null ? null : tx.isolation();
-    }
-
-    /**
      * Adds entry to future.
      *
      * @param entry Entry to add.
@@ -439,7 +306,7 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
             if (log.isDebugEnabled())
                 log.debug("Failed to acquire lock with negative timeout: " + entry);
 
-            onFailed(false);
+            onComplete(false, false, true);
 
             return null;
         }
@@ -463,64 +330,42 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
 
     /**
      * Undoes all locks.
-     *
-     * @param dist If {@code true}, then remove locks from remote nodes as well.
      */
-    private void undoLocks(boolean dist) {
+    private void undoLocks() {
         // Transactions will undo during rollback.
         Collection<GridDhtCacheEntry> entriesCp = entriesCopy();
 
-        if (dist && tx == null) {
-            cctx.dhtTx().removeLocks(nearNodeId, lockVer, F.viewReadOnly(entriesCp,
-                new C1<GridDhtCacheEntry, KeyCacheObject>() {
-                    @Override public KeyCacheObject apply(GridDhtCacheEntry e) {
-                        return e.key();
-                    }
-                }), false);
-        }
-        else {
-            if (tx != null) {
-                if (tx.setRollbackOnly()) {
-                    if (log.isDebugEnabled())
-                        log.debug("Marked transaction as rollback only because locks could not be acquired: " + tx);
-                }
-                else if (log.isDebugEnabled())
-                    log.debug("Transaction was not marked rollback-only while locks were not acquired: " + tx);
+        if (tx != null) {
+            if (tx.setRollbackOnly()) {
+                if (log.isDebugEnabled())
+                    log.debug("Marked transaction as rollback only because locks could not be acquired: " + tx);
             }
+            else if (log.isDebugEnabled())
+                log.debug("Transaction was not marked rollback-only while locks were not acquired: " + tx);
+        }
 
-            for (GridCacheEntryEx e : entriesCp) {
-                try {
-                    e.removeLock(lockVer);
-                }
-                catch (GridCacheEntryRemovedException ignored) {
-                    while (true) {
-                        try {
-                            e = cctx.cache().peekEx(e.key());
+        for (GridCacheEntryEx e : entriesCp) {
+            try {
+                e.removeLock(lockVer);
+            }
+            catch (GridCacheEntryRemovedException ignored) {
+                while (true) {
+                    try {
+                        e = cctx.cache().peekEx(e.key());
 
-                            if (e != null)
-                                e.removeLock(lockVer);
+                        if (e != null)
+                            e.removeLock(lockVer);
 
-                            break;
-                        }
-                        catch (GridCacheEntryRemovedException ignore) {
-                            if (log.isDebugEnabled())
-                                log.debug("Attempted to remove lock on removed entry (will retry) [ver=" +
-                                    lockVer + ", entry=" + e + ']');
-                        }
+                        break;
+                    }
+                    catch (GridCacheEntryRemovedException ignore) {
+                        if (log.isDebugEnabled())
+                            log.debug("Attempted to remove lock on removed entry (will retry) [ver=" +
+                                lockVer + ", entry=" + e + ']');
                     }
                 }
             }
         }
-    }
-
-    /**
-     *
-     * @param dist {@code True} if need to distribute lock release.
-     */
-    private void onFailed(boolean dist) {
-        undoLocks(dist);
-
-        onComplete(false, false, true);
     }
 
     /**
@@ -528,71 +373,13 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
      * @return {@code True} if node was in the list.
      */
     @Override public boolean onNodeLeft(UUID nodeId) {
-        boolean found = false;
+        if (nodeId.equals(nearNodeId)) {
+            onComplete(false, false, true);
 
-        for (IgniteInternalFuture<?> fut : futures()) {
-            MiniFuture f = (MiniFuture)fut;
-
-            if (f.node().id().equals(nodeId)) {
-                f.onResult();
-
-                found = true;
-            }
+            return true;
         }
 
-        return found;
-    }
-
-    /**
-     * @param nodeId Sender.
-     * @param res Result.
-     */
-    void onResult(UUID nodeId, GridDhtLockResponse res) {
-        if (!isDone()) {
-            MiniFuture mini = miniFuture(res.miniId());
-
-            if (mini != null) {
-                assert mini.node().id().equals(nodeId);
-
-                mini.onResult(res);
-
-                return;
-            }
-
-            U.warn(msgLog, "DHT lock fut, failed to find mini future [txId=" + nearLockVer +
-                ", dhtTxId=" + lockVer +
-                ", inTx=" + inTx() +
-                ", node=" + nodeId +
-                ", res=" + res +
-                ", fut=" + this + ']');
-        }
-    }
-
-    /**
-     * Finds pending mini future by the given mini ID.
-     *
-     * @param miniId Mini ID to find.
-     * @return Mini future.
-     */
-    private MiniFuture miniFuture(IgniteUuid miniId) {
-        // We iterate directly over the futs collection here to avoid copy.
-        synchronized (this) {
-            int size = futuresCountNoLock();
-
-            // Avoid iterator creation.
-            for (int i = 0; i < size; i++) {
-                MiniFuture mini = (MiniFuture) future(i);
-
-                if (mini.futureId().equals(miniId)) {
-                    if (!mini.isDone())
-                        return mini;
-                    else
-                        return null;
-                }
-            }
-        }
-
-        return null;
+        return false;
     }
 
     /**
@@ -616,7 +403,7 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
                     if (timeout < 0) {
                         if (owners == null || !owners.hasCandidate(lockVer)) {
                             // We did not send any requests yet.
-                            onFailed(false);
+                            onComplete(false, false, true);
 
                             return;
                         }
@@ -657,30 +444,6 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
     }
 
     /**
-     * @param cached Entry to check.
-     * @return {@code True} if filter passed.
-     */
-    private boolean filter(GridCacheEntryEx cached) {
-        try {
-            if (!cctx.isAll(cached, filter)) {
-                if (log.isDebugEnabled())
-                    log.debug("Filter didn't pass for entry (will fail lock): " + cached);
-
-                onFailed(true);
-
-                return false;
-            }
-
-            return true;
-        }
-        catch (IgniteCheckedException e) {
-            onError(e);
-
-            return false;
-        }
-    }
-
-    /**
      * Callback for whenever entry lock ownership changes.
      *
      * @param entry Entry whose lock ownership changed.
@@ -703,7 +466,7 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
             }
 
             if (isEmpty)
-                map(entries());
+                onComplete(true, false, true);
 
             return true;
         }
@@ -736,8 +499,6 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
         }
 
         assert err == null || !success;
-        assert !success || (initialized() && !hasPending()) : "Invalid done callback [success=" + success +
-            ", fut=" + this + ']';
 
         if (log.isDebugEnabled())
             log.debug("Received onDone(..) callback [success=" + success + ", err=" + err + ", fut=" + this + ']');
@@ -767,7 +528,7 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
             log.debug("Received onComplete(..) callback [success=" + success + ", fut=" + this + ']');
 
         if (!success && !stopping && unlock)
-            undoLocks(true);
+            undoLocks();
 
         boolean set = false;
 
@@ -808,7 +569,7 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
     /**
      *
      */
-    public void map() {
+    public void init() {
         if (F.isEmpty(entries)) {
             onComplete(true, false, true);
 
@@ -824,226 +585,6 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
         }
     }
 
-    /**
-     *
-     * @return {@code True} if future is done.
-     */
-    private boolean checkDone() {
-        if (isDone()) {
-            if (log.isDebugEnabled())
-                log.debug("Mapping won't proceed because future is done: " + this);
-
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * @param entries Entries.
-     */
-    private void map(Iterable<GridDhtCacheEntry> entries) {
-        synchronized (this) {
-            if (mapped)
-                return;
-
-            mapped = true;
-        }
-
-        try {
-            if (log.isDebugEnabled())
-                log.debug("Mapping entry for DHT lock future: " + this);
-
-            // Assign keys to primary nodes.
-            for (GridDhtCacheEntry entry : entries) {
-                try {
-                    while (true) {
-                        try {
-                            cctx.dhtMap(
-                                nearNodeId,
-                                topVer,
-                                entry,
-                                tx == null ? lockVer : null,
-                                log,
-                                dhtMap,
-                                null);
-
-                            GridCacheMvccCandidate cand = entry.candidate(lockVer);
-
-                            // Possible in case of lock cancellation.
-                            if (cand == null) {
-                                onFailed(false);
-
-                                // Will mark initialized in finally block.
-                                return;
-                            }
-
-                            break;
-                        }
-                        catch (GridCacheEntryRemovedException ignore) {
-                            if (log.isDebugEnabled())
-                                log.debug("Got removed entry when mapping DHT lock future (will retry): " + entry);
-
-                            entry = cctx.dht().entryExx(entry.key(), topVer);
-                        }
-                    }
-                }
-                catch (GridDhtInvalidPartitionException e) {
-                    assert false : "DHT lock should never get invalid partition [err=" + e + ", fut=" + this + ']';
-                }
-            }
-
-            if (checkDone())
-                return;
-
-            if (log.isDebugEnabled())
-                log.debug("Mapped DHT lock future [dhtMap=" + F.nodeIds(dhtMap.keySet()) + ", dhtLockFut=" + this + ']');
-
-            long timeout = inTx() ? tx.remainingTime() : this.timeout;
-
-            synchronized (this) { // Prevents entry removal on concurrent rollback.
-                if (checkDone())
-                    return;
-
-                // Create mini futures.
-                for (Map.Entry<ClusterNode, List<GridDhtCacheEntry>> mapped : dhtMap.entrySet()) {
-                    ClusterNode n = mapped.getKey();
-
-                    List<GridDhtCacheEntry> dhtMapping = mapped.getValue();
-
-                    int cnt = F.size(dhtMapping);
-
-                    if (cnt > 0) {
-                        assert !n.id().equals(cctx.localNodeId());
-
-                        if (inTx() && tx.remainingTime() == -1)
-                            return;
-
-                        MiniFuture fut = new MiniFuture(n, dhtMapping);
-
-                        GridDhtLockRequest req = new GridDhtLockRequest(
-                            cctx.cacheId(),
-                            nearNodeId,
-                            inTx() ? tx.nearXidVersion() : null,
-                            threadId,
-                            futId,
-                            fut.futureId(),
-                            lockVer,
-                            topVer,
-                            inTx(),
-                            read,
-                            isolation(),
-                            isInvalidate(),
-                            timeout,
-                            cnt,
-                            0,
-                            inTx() ? tx.size() : cnt,
-                            inTx() ? tx.subjectId() : null,
-                            inTx() ? tx.taskNameHash() : 0,
-                            read ? accessTtl : -1L,
-                            skipStore,
-                            cctx.store().configured(),
-                            keepBinary,
-                            cctx.deploymentEnabled(),
-                            inTx() ? tx.label() : null);
-
-                        try {
-                            for (ListIterator<GridDhtCacheEntry> it = dhtMapping.listIterator(); it.hasNext(); ) {
-                                GridDhtCacheEntry e = it.next();
-
-                                boolean needVal = false;
-
-                                try {
-                                    // Must unswap entry so that isNewLocked returns correct value.
-                                    e.unswap(false);
-
-                                    needVal = e.isNewLocked();
-
-                                    if (needVal) {
-                                        List<ClusterNode> owners = cctx.topology().owners(e.partition(),
-                                            tx != null ? tx.topologyVersion() : cctx.affinity().affinityTopologyVersion());
-
-                                        // Do not preload if local node is partition owner.
-                                        if (owners.contains(cctx.localNode()))
-                                            needVal = false;
-                                    }
-
-                                    // Skip entry if it is not new and is not present in updated mapping.
-                                    if (tx != null && !needVal)
-                                        continue;
-
-                                    boolean invalidateRdr = e.readerId(n.id()) != null;
-
-                                    req.addDhtKey(e.key(), invalidateRdr, cctx);
-
-                                    if (needVal) {
-                                        // Mark last added key as needed to be preloaded.
-                                        req.markLastKeyForPreload();
-
-                                        if (tx != null) {
-                                            IgniteTxEntry txEntry = tx.entry(e.txKey());
-
-                                            // NOOP entries will be sent to backups on prepare step.
-                                            if (txEntry.op() == GridCacheOperation.READ)
-                                                txEntry.op(GridCacheOperation.NOOP);
-                                        }
-                                    }
-
-                                    GridCacheMvccCandidate added = e.candidate(lockVer);
-
-                                    assert added != null;
-                                    assert added.dhtLocal();
-
-                                    if (added.ownerVersion() != null)
-                                        req.owned(e.key(), added.ownerVersion());
-                                }
-                                catch (GridCacheEntryRemovedException ex) {
-                                    assert false : "Entry cannot become obsolete when DHT local candidate is added " +
-                                        "[e=" + e + ", ex=" + ex + ']';
-                                }
-                            }
-
-                            if (!F.isEmpty(req.keys())) {
-                                if (tx != null)
-                                    tx.addLockTransactionNode(n);
-
-                                add(fut); // Append new future.
-
-                                cctx.io().send(n, req, cctx.ioPolicy());
-
-                                if (msgLog.isDebugEnabled()) {
-                                    msgLog.debug("DHT lock fut, sent request [txId=" + nearLockVer +
-                                        ", dhtTxId=" + lockVer +
-                                        ", inTx=" + inTx() +
-                                        ", nodeId=" + n.id() + ']');
-                                }
-                            }
-                        }
-                        catch (IgniteCheckedException e) {
-                            // Fail the whole thing.
-                            if (e instanceof ClusterTopologyCheckedException)
-                                fut.onResult();
-                            else {
-                                if (msgLog.isDebugEnabled()) {
-                                    msgLog.debug("DHT lock fut, failed to send request [txId=" + nearLockVer +
-                                        ", dhtTxId=" + lockVer +
-                                        ", inTx=" + inTx() +
-                                        ", node=" + n.id() +
-                                        ", err=" + e + ']');
-                                }
-
-                                fut.onResult(e);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        finally {
-            markInitialized();
-        }
-    }
-
     /** {@inheritDoc} */
     @Override public int hashCode() {
         return futId.hashCode();
@@ -1051,14 +592,6 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        Collection<String> futs = F.viewReadOnly(futures(), new C1<IgniteInternalFuture<?>, String>() {
-            @Override public String apply(IgniteInternalFuture<?> f) {
-                MiniFuture m = (MiniFuture)f;
-
-                return "[node=" + m.node().id() + ", loc=" + m.node().isLocal() + ", done=" + f.isDone() + "]";
-            }
-        });
-
         Collection<KeyCacheObject> locks;
 
         synchronized (this) {
@@ -1066,7 +599,6 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
         }
 
         return S.toString(GridDhtLockFuture.class, this,
-            "innerFuts", futs,
             "pendingLocks", locks,
             "super", super.toString());
     }
@@ -1075,14 +607,14 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
      *
      */
     private void loadMissingFromStore() {
-        if (!skipStore && (read || cctx.loadPreviousValue()) && cctx.readThrough() && (needReturnVal || read)) {
+        if (!skipStore && read && cctx.readThrough()) {
             final Map<KeyCacheObject, GridDhtCacheEntry> loadMap = new LinkedHashMap<>();
 
             final GridCacheVersion ver = version();
 
             for (GridDhtCacheEntry entry : entries) {
                 try {
-                    entry.unswap(false);
+                    entry.unswap();
 
                     if (!entry.hasValue())
                         loadMap.put(entry.key(), entry);
@@ -1150,6 +682,10 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
         }
     }
 
+    @Override public Collection<Integer> invalidPartitions() {
+        return Collections.emptyList();
+    }
+
     /**
      * Lock request timeout object.
      */
@@ -1179,8 +715,6 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
 
                 // Stop locks and responses processing.
                 pendingLocks.clear();
-
-                clear();
             }
 
             boolean releaseLocks = !(inTx() && cctx.tm().deadlockDetectionEnabled());
@@ -1251,210 +785,6 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
             }
 
             return sb.toString();
-        }
-    }
-
-    /**
-     * Mini-future for get operations. Mini-futures are only waiting on a single
-     * node as opposed to multiple nodes.
-     */
-    private class MiniFuture extends GridFutureAdapter<Boolean> {
-        /** */
-        private final IgniteUuid futId = IgniteUuid.randomUuid();
-
-        /** Node. */
-        @GridToStringExclude
-        private ClusterNode node;
-
-        /** DHT mapping. */
-        @GridToStringInclude
-        private List<GridDhtCacheEntry> dhtMapping;
-
-        /**
-         * @param node Node.
-         * @param dhtMapping Mapping.
-         */
-        MiniFuture(ClusterNode node, List<GridDhtCacheEntry> dhtMapping) {
-            assert node != null;
-
-            this.node = node;
-            this.dhtMapping = dhtMapping;
-        }
-
-        /**
-         * @return Future ID.
-         */
-        IgniteUuid futureId() {
-            return futId;
-        }
-
-        /**
-         * @return Node ID.
-         */
-        public ClusterNode node() {
-            return node;
-        }
-
-        /**
-         * @param e Error.
-         */
-        void onResult(Throwable e) {
-            if (log.isDebugEnabled())
-                log.debug("Failed to get future result [fut=" + this + ", err=" + e + ']');
-
-            // Fail.
-            onDone(e);
-        }
-
-        /**
-         */
-        void onResult() {
-            if (msgLog.isDebugEnabled()) {
-                msgLog.debug("DHT lock fut, mini future node left [txId=" + nearLockVer +
-                    ", dhtTxId=" + lockVer +
-                    ", inTx=" + inTx() +
-                    ", node=" + node.id() + ']');
-            }
-
-            if (tx != null)
-                tx.removeMapping(node.id());
-
-            onDone(true);
-        }
-
-        /**
-         * @param res Result callback.
-         */
-        void onResult(GridDhtLockResponse res) {
-            if (res.error() != null)
-                // Fail the whole compound future.
-                onError(res.error());
-            else {
-                Collection<Integer> invalidParts = res.invalidPartitions();
-
-                // Removing mappings for invalid partitions.
-                if (!F.isEmpty(invalidParts)) {
-                    for (Iterator<GridDhtCacheEntry> it = dhtMapping.iterator(); it.hasNext();) {
-                        GridDhtCacheEntry entry = it.next();
-
-                        if (invalidParts.contains(entry.partition())) {
-                            it.remove();
-
-                            if (log.isDebugEnabled())
-                                log.debug("Removed mapping for entry [nodeId=" + node.id() + ", entry=" + entry +
-                                    ", fut=" + GridDhtLockFuture.this + ']');
-
-                            if (tx != null)
-                                tx.removeDhtMapping(node.id(), entry);
-                            else
-                                entry.removeMapping(lockVer, node);
-                        }
-                    }
-
-                    if (dhtMapping.isEmpty())
-                        dhtMap.remove(node);
-                }
-
-                boolean replicate = cctx.isDrEnabled();
-
-                boolean rec = cctx.events().isRecordable(EVT_CACHE_REBALANCE_OBJECT_LOADED);
-
-                GridCacheAdapter<?, ?> cache0 = cctx.cache();
-
-                if (cache0.isNear())
-                    cache0 = ((GridNearCacheAdapter)cache0).dht();
-
-                synchronized (GridDhtLockFuture.this) { // Prevents entry re-creation on concurrent rollback.
-                    if (GridDhtLockFuture.this.checkDone())
-                        return;
-
-                    for (GridCacheEntryInfo info : res.preloadEntries()) {
-                        try {
-                            GridCacheEntryEx entry = cache0.entryEx(info.key(), topVer);
-
-                            cctx.shared().database().checkpointReadLock();
-
-                            try {
-                                if (entry.initialValue(info.value(),
-                                    info.version(),
-                                    cctx.mvccEnabled() ? ((MvccVersionAware)info).mvccVersion() : null,
-                                    cctx.mvccEnabled() ? ((MvccUpdateVersionAware)info).newMvccVersion() : null,
-                                    cctx.mvccEnabled() ? ((MvccVersionAware)entry).mvccTxState() : TxState.NA,
-                                    cctx.mvccEnabled() ? ((MvccUpdateVersionAware)entry).newMvccTxState() : TxState.NA,
-                                    info.ttl(),
-                                    info.expireTime(),
-                                    true,
-                                    topVer,
-                                    replicate ? DR_PRELOAD : DR_NONE,
-                                    false)) {
-                                    if (rec && !entry.isInternal())
-                                        cctx.events().addEvent(entry.partition(), entry.key(), cctx.localNodeId(), null,
-                                            null, null, EVT_CACHE_REBALANCE_OBJECT_LOADED, info.value(), true, null,
-                                            false, null, null, null, false);
-                                }
-                            }
-                            finally {
-                                cctx.shared().database().checkpointReadUnlock();
-                            }
-                        }
-                        catch (IgniteCheckedException e) {
-                            onDone(e);
-
-                            return;
-                        }
-                        catch (GridCacheEntryRemovedException e) {
-                            assert false : "Entry cannot become obsolete when DHT local candidate is added " +
-                                "[e=" + e + ", ex=" + e + ']';
-                        }
-                    }
-                }
-
-                // Finish mini future.
-                onDone(true);
-            }
-        }
-
-        /**
-         * @param cacheCtx Context.
-         * @param keys Keys to evict readers for.
-         * @param nodeId Node ID.
-         * @param msgId Message ID.
-         * @param entries Entries to check.
-         */
-        private void evictReaders(GridCacheContext<?, ?> cacheCtx, Collection<IgniteTxKey> keys, UUID nodeId, long msgId,
-            @Nullable List<GridDhtCacheEntry> entries) {
-            if (entries == null || keys == null || entries.isEmpty() || keys.isEmpty())
-                return;
-
-            for (ListIterator<GridDhtCacheEntry> it = entries.listIterator(); it.hasNext(); ) {
-                GridDhtCacheEntry cached = it.next();
-
-                if (keys.contains(cached.txKey())) {
-                    while (true) {
-                        try {
-                            cached.removeReader(nodeId, msgId);
-
-                            if (tx != null)
-                                tx.removeNearMapping(nodeId, cached);
-
-                            break;
-                        }
-                        catch (GridCacheEntryRemovedException ignore) {
-                            GridDhtCacheEntry e = cacheCtx.dht().peekExx(cached.key());
-
-                            if (e == null)
-                                break;
-
-                            it.set(e);
-                        }
-                    }
-                }
-            }
-        }
-
-        /** {@inheritDoc} */
-        @Override public String toString() {
-            return S.toString(MiniFuture.class, this, "nodeId", node.id(), "super", super.toString());
         }
     }
 }

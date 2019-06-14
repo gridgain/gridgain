@@ -57,9 +57,10 @@ public class GridDistributedUnlockRequest extends GridDistributedBaseMessage {
      * @param addDepInfo Deployment info flag.
      */
     public GridDistributedUnlockRequest(int cacheId, int keyCnt, boolean addDepInfo) {
-        super(keyCnt, addDepInfo);
+        super(addDepInfo);
 
         this.cacheId = cacheId;
+        this.keys = new ArrayList<>(keyCnt);
     }
 
     /**
@@ -75,9 +76,6 @@ public class GridDistributedUnlockRequest extends GridDistributedBaseMessage {
      * @throws IgniteCheckedException If failed.
      */
     public void addKey(KeyCacheObject key, GridCacheContext ctx) throws IgniteCheckedException {
-        if (keys == null)
-            keys = new ArrayList<>(keysCount());
-
         keys.add(key);
     }
 
@@ -121,7 +119,7 @@ public class GridDistributedUnlockRequest extends GridDistributedBaseMessage {
         }
 
         switch (writer.state()) {
-            case 8:
+            case 5:
                 if (!writer.writeCollection("keys", keys, MessageCollectionItemType.MSG))
                     return false;
 
@@ -143,7 +141,7 @@ public class GridDistributedUnlockRequest extends GridDistributedBaseMessage {
             return false;
 
         switch (reader.state()) {
-            case 8:
+            case 5:
                 keys = reader.readCollection("keys", MessageCollectionItemType.MSG);
 
                 if (!reader.isLastRead())
@@ -163,7 +161,7 @@ public class GridDistributedUnlockRequest extends GridDistributedBaseMessage {
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 9;
+        return 6;
     }
 
     /** {@inheritDoc} */

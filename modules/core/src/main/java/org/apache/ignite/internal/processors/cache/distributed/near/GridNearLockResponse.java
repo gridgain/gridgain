@@ -18,9 +18,7 @@ package org.apache.ignite.internal.processors.cache.distributed.near;
 
 import java.io.Externalizable;
 import java.nio.ByteBuffer;
-import java.util.Collection;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.internal.GridDirectCollection;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedLockResponse;
@@ -39,11 +37,6 @@ import org.jetbrains.annotations.Nullable;
 public class GridNearLockResponse extends GridDistributedLockResponse {
     /** */
     private static final long serialVersionUID = 0L;
-
-    /** Collection of versions that are pending and less than lock version. */
-    @GridToStringInclude
-    @GridDirectCollection(GridCacheVersion.class)
-    private Collection<GridCacheVersion> pending;
 
     /** */
     private int miniId;
@@ -110,24 +103,6 @@ public class GridNearLockResponse extends GridDistributedLockResponse {
      */
     @Nullable public AffinityTopologyVersion clientRemapVersion() {
         return clientRemapVer;
-    }
-
-    /**
-     * Gets pending versions that are less than {@link #version()}.
-     *
-     * @return Pending versions.
-     */
-    public Collection<GridCacheVersion> pending() {
-        return pending;
-    }
-
-    /**
-     * Sets pending versions that are less than {@link #version()}.
-     *
-     * @param pending Pending versions.
-     */
-    public void pending(Collection<GridCacheVersion> pending) {
-        this.pending = pending;
     }
 
     /**
@@ -207,38 +182,32 @@ public class GridNearLockResponse extends GridDistributedLockResponse {
         }
 
         switch (writer.state()) {
-            case 11:
+            case 8:
                 if (!writer.writeAffinityTopologyVersion("clientRemapVer", clientRemapVer))
                     return false;
 
                 writer.incrementState();
 
-            case 12:
+            case 9:
                 if (!writer.writeObjectArray("dhtVers", dhtVers, MessageCollectionItemType.MSG))
                     return false;
 
                 writer.incrementState();
 
-            case 13:
+            case 10:
                 if (!writer.writeBooleanArray("filterRes", filterRes))
                     return false;
 
                 writer.incrementState();
 
-            case 14:
+            case 11:
                 if (!writer.writeObjectArray("mappedVers", mappedVers, MessageCollectionItemType.MSG))
                     return false;
 
                 writer.incrementState();
 
-            case 15:
+            case 12:
                 if (!writer.writeInt("miniId", miniId))
-                    return false;
-
-                writer.incrementState();
-
-            case 16:
-                if (!writer.writeCollection("pending", pending, MessageCollectionItemType.MSG))
                     return false;
 
                 writer.incrementState();
@@ -259,7 +228,7 @@ public class GridNearLockResponse extends GridDistributedLockResponse {
             return false;
 
         switch (reader.state()) {
-            case 11:
+            case 8:
                 clientRemapVer = reader.readAffinityTopologyVersion("clientRemapVer");
 
                 if (!reader.isLastRead())
@@ -267,7 +236,7 @@ public class GridNearLockResponse extends GridDistributedLockResponse {
 
                 reader.incrementState();
 
-            case 12:
+            case 9:
                 dhtVers = reader.readObjectArray("dhtVers", MessageCollectionItemType.MSG, GridCacheVersion.class);
 
                 if (!reader.isLastRead())
@@ -275,7 +244,7 @@ public class GridNearLockResponse extends GridDistributedLockResponse {
 
                 reader.incrementState();
 
-            case 13:
+            case 10:
                 filterRes = reader.readBooleanArray("filterRes");
 
                 if (!reader.isLastRead())
@@ -283,7 +252,7 @@ public class GridNearLockResponse extends GridDistributedLockResponse {
 
                 reader.incrementState();
 
-            case 14:
+            case 11:
                 mappedVers = reader.readObjectArray("mappedVers", MessageCollectionItemType.MSG, GridCacheVersion.class);
 
                 if (!reader.isLastRead())
@@ -291,16 +260,8 @@ public class GridNearLockResponse extends GridDistributedLockResponse {
 
                 reader.incrementState();
 
-            case 15:
+            case 12:
                 miniId = reader.readInt("miniId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 16:
-                pending = reader.readCollection("pending", MessageCollectionItemType.MSG);
 
                 if (!reader.isLastRead())
                     return false;
@@ -319,7 +280,7 @@ public class GridNearLockResponse extends GridDistributedLockResponse {
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 17;
+        return 13;
     }
 
     /** {@inheritDoc} */

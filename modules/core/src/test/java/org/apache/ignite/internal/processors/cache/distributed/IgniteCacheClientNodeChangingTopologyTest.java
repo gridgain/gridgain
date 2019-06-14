@@ -1694,7 +1694,7 @@ public class IgniteCacheClientNodeChangingTopologyTest extends GridCommonAbstrac
                                 GridCacheEntryEx entry = cache0.entryEx(key);
 
                                 try {
-                                    entry.unswap(true);
+                                    entry.unswap();
 
                                     assertNotNull("No entry [node=" + node.name() + ", key=" + key + ']', entry);
 

@@ -300,14 +300,6 @@ public interface IgniteInternalTx {
     public Map<Integer, Set<Integer>> invalidPartitions();
 
     /**
-     * Gets owned version for near remote transaction.
-     *
-     * @param key Key to get version for.
-     * @return Owned version, if any.
-     */
-    @Nullable public GridCacheVersion ownedVersion(IgniteTxKey key);
-
-    /**
      * Gets ID of additional node involved. For example, in DHT case, other node is
      * near node ID.
      *
@@ -438,14 +430,6 @@ public interface IgniteInternalTx {
      * @return Transaction read map.
      */
     public Map<IgniteTxKey, IgniteTxEntry> readMap();
-
-    /**
-     * Gets a list of entries that needs to be locked on the next step of prepare stage of
-     * optimistic transaction.
-     *
-     * @return List of tx entries for optimistic locking.
-     */
-    public Collection<IgniteTxEntry> optimisticLockEntries();
 
     /**
      * Seals transaction for updates.
@@ -611,20 +595,6 @@ public interface IgniteInternalTx {
      * @return Alternate transaction versions.
      */
     public Collection<GridCacheVersion> alternateVersions();
-
-    /**
-     * @return {@code True} if transaction needs completed versions for processing.
-     */
-    public boolean needsCompletedVersions();
-
-    /**
-     * @param base Base for committed versions.
-     * @param committed Committed transactions relative to base.
-     * @param rolledback Rolled back transactions relative to base.
-     */
-    public void completedVersions(GridCacheVersion base,
-        Collection<GridCacheVersion> committed,
-        Collection<GridCacheVersion> rolledback);
 
     /**
      * @return {@code True} if transaction has at least one internal entry.

@@ -471,14 +471,6 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
     }
 
     /** {@inheritDoc} */
-    @Override public Collection<IgniteTxEntry> optimisticLockEntries() {
-        if (serializable() && optimistic())
-            return F.concat(false, writeEntries(), readEntries());
-
-        return writeEntries();
-    }
-
-    /** {@inheritDoc} */
     @Override public boolean storeEnabled() {
         return storeEnabled;
     }
@@ -721,11 +713,6 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
         if (log.isDebugEnabled())
             log.debug("Added invalid partition for transaction [cache=" + cacheCtx.name() + ", part=" + part +
                 ", tx=" + this + ']');
-    }
-
-    /** {@inheritDoc} */
-    @Override public GridCacheVersion ownedVersion(IgniteTxKey key) {
-        return null;
     }
 
     /** {@inheritDoc} */
@@ -994,17 +981,6 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
 
             this.commitVer = commitVer;
         }
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean needsCompletedVersions() {
-        return false;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void completedVersions(GridCacheVersion base, Collection<GridCacheVersion> committed,
-        Collection<GridCacheVersion> txs) {
-        /* No-op. */
     }
 
     /** {@inheritDoc} */
@@ -1464,7 +1440,7 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
                         boolean intercept = e.context().config().getInterceptor() != null;
 
                         if (intercept || !F.isEmpty(e.entryProcessors()))
-                            e.cached().unswap(false);
+                            e.cached().unswap();
 
                         IgniteBiTuple<GridCacheOperation, CacheObject> res = applyTransformClosures(e, false, null);
 
@@ -2332,11 +2308,6 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
         }
 
         /** {@inheritDoc} */
-        @Nullable @Override public GridCacheVersion ownedVersion(IgniteTxKey key) {
-            throw new IllegalStateException("Deserialized transaction can only be used as read-only.");
-        }
-
-        /** {@inheritDoc} */
         @Nullable @Override public UUID otherNodeId() {
             throw new IllegalStateException("Deserialized transaction can only be used as read-only.");
         }
@@ -2458,11 +2429,6 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
 
         /** {@inheritDoc} */
         @Override public Map<IgniteTxKey, IgniteTxEntry> readMap() {
-            return null;
-        }
-
-        /** {@inheritDoc} */
-        @Override public Collection<IgniteTxEntry> optimisticLockEntries() {
             return null;
         }
 
@@ -2606,16 +2572,6 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
         /** {@inheritDoc} */
         @Override public Collection<GridCacheVersion> alternateVersions() {
             return null;
-        }
-
-        /** {@inheritDoc} */
-        @Override public boolean needsCompletedVersions() {
-            return false;
-        }
-
-        /** {@inheritDoc} */
-        @Override public void completedVersions(GridCacheVersion base, Collection committed, Collection rolledback) {
-            // No-op.
         }
 
         /** {@inheritDoc} */

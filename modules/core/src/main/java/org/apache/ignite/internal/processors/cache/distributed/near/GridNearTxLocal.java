@@ -52,7 +52,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.GridCacheVersionedFuture;
 import org.apache.ignite.internal.processors.cache.IgniteCacheExpiryPolicy;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
-import org.apache.ignite.internal.processors.cache.distributed.GridDistributedCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedTxMapping;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxFinishFuture;
@@ -1362,7 +1361,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                 GridCacheEntryEx entry = entryEx(cacheCtx, txKey, entryTopVer != null ? entryTopVer : topologyVersion());
 
                 try {
-                    entry.unswap(false);
+                    entry.unswap();
 
                     // Check if lock is being explicitly acquired by the same thread.
                     if (!implicit && cctx.kernalContext().config().isCacheSanityCheckEnabled() &&
@@ -2943,13 +2942,6 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
         }
     }
 
-    /** {@inheritDoc} */
-    @Override public Collection<IgniteTxEntry> optimisticLockEntries() {
-        assert false : "Should not be called";
-
-        throw new UnsupportedOperationException();
-    }
-
     /**
      * @param cacheCtx Cache context.
      * @param readThrough Read through flag.
@@ -3589,78 +3581,6 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
         return fut != null && fut.onOwnerChanged(entry, owner);
     }
 
-    /**
-     * @param mapping Mapping to order.
-     * @param pendingVers Pending versions.
-     * @param committedVers Committed versions.
-     * @param rolledbackVers Rolled back versions.
-     */
-    void readyNearLocks(GridDistributedTxMapping mapping,
-        Collection<GridCacheVersion> pendingVers,
-        Collection<GridCacheVersion> committedVers,
-        Collection<GridCacheVersion> rolledbackVers)
-    {
-        assert mapping.hasNearCacheEntries() : mapping;
-
-        // Process writes, then reads.
-        for (IgniteTxEntry txEntry : mapping.entries()) {
-            if (CU.WRITE_FILTER_NEAR.apply(txEntry))
-                readyNearLock(txEntry, mapping.dhtVersion(), pendingVers, committedVers, rolledbackVers);
-        }
-
-        for (IgniteTxEntry txEntry : mapping.entries()) {
-            if (CU.READ_FILTER_NEAR.apply(txEntry))
-                readyNearLock(txEntry, mapping.dhtVersion(), pendingVers, committedVers, rolledbackVers);
-        }
-    }
-
-    /**
-     * @param txEntry TX entry.
-     * @param dhtVer DHT version.
-     * @param pendingVers Pending versions.
-     * @param committedVers Committed versions.
-     * @param rolledbackVers Rolled back versions.
-     */
-    private void readyNearLock(IgniteTxEntry txEntry,
-        GridCacheVersion dhtVer,
-        Collection<GridCacheVersion> pendingVers,
-        Collection<GridCacheVersion> committedVers,
-        Collection<GridCacheVersion> rolledbackVers)
-    {
-        while (true) {
-            GridCacheContext cacheCtx = txEntry.cached().context();
-
-            assert cacheCtx.isNear();
-
-            GridDistributedCacheEntry entry = (GridDistributedCacheEntry)txEntry.cached();
-
-            try {
-                // Handle explicit locks.
-                GridCacheVersion explicit = txEntry.explicitVersion();
-
-                if (explicit == null) {
-                    entry.readyNearLock(xidVer,
-                        dhtVer,
-                        committedVers,
-                        rolledbackVers,
-                        pendingVers);
-                }
-
-                break;
-            }
-            catch (GridCacheEntryRemovedException ignored) {
-                assert entry.obsoleteVersion() != null;
-
-                if (log.isDebugEnabled())
-                    log.debug("Replacing obsolete entry in remote transaction [entry=" + entry +
-                        ", tx=" + this + ']');
-
-                // Replace the entry.
-                txEntry.cached(txEntry.context().cache().entryEx(txEntry.key(), topologyVersion()));
-            }
-        }
-    }
-
     /** {@inheritDoc} */
     @Override public boolean localFinish(boolean commit, boolean clearThreadMap) throws IgniteCheckedException {
         if (log.isDebugEnabled())
@@ -4294,7 +4214,6 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
             isolation,
             createTtl,
             accessTtl,
-            CU.empty0(),
             skipStore,
             keepBinary);
 
@@ -4671,7 +4590,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
      * @return {@code True} if local node is current primary for given entry.
      */
     private boolean primaryLocal(GridCacheEntryEx entry) {
-        return entry.context().affinity().primaryByPartition(cctx.localNode(), entry.partition(), AffinityTopologyVersion.NONE);
+        return !cctx.localNode().isClient() && entry.context().affinity().primaryByPartition(cctx.localNode(), entry.partition(), AffinityTopologyVersion.NONE);
     }
 
     /**

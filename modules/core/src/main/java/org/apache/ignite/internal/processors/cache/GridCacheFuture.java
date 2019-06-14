@@ -55,10 +55,14 @@ public interface GridCacheFuture<R> extends IgniteInternalFuture<R> {
     /**
      * @return {@code True} if future should be tracked.
      */
-    public boolean trackable();
+    public default boolean trackable() {
+        return true;
+    }
 
     /**
      * Marks this future as non-trackable.
      */
-    public void markNotTrackable();
+    public default void markNotTrackable() {
+        // No-op.
+    }
 }

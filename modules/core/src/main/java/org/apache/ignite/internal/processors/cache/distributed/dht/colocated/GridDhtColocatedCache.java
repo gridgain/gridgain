@@ -28,7 +28,6 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
-import org.apache.ignite.internal.processors.cache.CacheEntryPredicate;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheOperationContext;
 import org.apache.ignite.internal.processors.cache.EntryGetResult;
@@ -36,18 +35,11 @@ import org.apache.ignite.internal.processors.cache.GridCacheConcurrentMap;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryRemovedException;
-import org.apache.ignite.internal.processors.cache.GridCacheLockTimeoutException;
 import org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate;
-import org.apache.ignite.internal.processors.cache.GridCacheReturn;
 import org.apache.ignite.internal.processors.cache.IgniteCacheExpiryPolicy;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedCacheEntry;
-import org.apache.ignite.internal.processors.cache.distributed.GridDistributedLockCancelledException;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedUnlockRequest;
-import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheEntry;
-import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtEmbeddedFuture;
-import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtFinishedFuture;
-import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtLockFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTransactionalCacheAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridPartitionedGetFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridPartitionedSingleGetFuture;
@@ -65,10 +57,7 @@ import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxKey;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxLocalEx;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
-import org.apache.ignite.internal.util.future.GridEmbeddedFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
-import org.apache.ignite.internal.util.lang.IgnitePair;
-import org.apache.ignite.internal.util.typedef.C2;
 import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.CI2;
 import org.apache.ignite.internal.util.typedef.CX1;
@@ -704,7 +693,6 @@ public class GridDhtColocatedCache<K, V> extends GridDhtTransactionalCacheAdapte
             timeout,
             createTtl,
             accessTtl,
-            CU.empty0(),
             opCtx != null && opCtx.skipStore(),
             opCtx != null && opCtx.isKeepBinary(),
             opCtx != null && opCtx.recovery());
@@ -908,19 +896,12 @@ public class GridDhtColocatedCache<K, V> extends GridDhtTransactionalCacheAdapte
             if (map == null || map.isEmpty())
                 return;
 
-            IgnitePair<Collection<GridCacheVersion>> versPair = ctx.tm().versions(ver);
-
-            Collection<GridCacheVersion> committed = versPair.get1();
-            Collection<GridCacheVersion> rolledback = versPair.get2();
-
             for (Map.Entry<ClusterNode, GridNearUnlockRequest> mapping : map.entrySet()) {
                 ClusterNode n = mapping.getKey();
 
                 GridDistributedUnlockRequest req = mapping.getValue();
 
                 if (!F.isEmpty(req.keys())) {
-                    req.completedVersions(committed, rolledback);
-
                     try {
                         // We don't wait for reply to this message.
                         ctx.io().send(n, req, ctx.ioPolicy());
@@ -941,223 +922,6 @@ public class GridDhtColocatedCache<K, V> extends GridDhtTransactionalCacheAdapte
         }
     }
 
-    /**
-     * @param cacheCtx Cache context.
-     * @param tx Started colocated transaction (if any).
-     * @param threadId Thread ID.
-     * @param ver Lock version.
-     * @param topVer Topology version.
-     * @param keys Mapped keys.
-     * @param txRead Tx read.
-     * @param retval Return value flag.
-     * @param timeout Lock timeout.
-     * @param createTtl TTL for create operation.
-     * @param accessTtl TTL for read operation.
-     * @param filter filter Optional filter.
-     * @param skipStore Skip store flag.
-     * @return Lock future.
-     */
-    IgniteInternalFuture<Exception> lockAllAsync(
-        final GridCacheContext<?, ?> cacheCtx,
-        @Nullable final GridNearTxLocal tx,
-        final long threadId,
-        final GridCacheVersion ver,
-        final AffinityTopologyVersion topVer,
-        final Collection<KeyCacheObject> keys,
-        final boolean txRead,
-        final boolean retval,
-        final long timeout,
-        final long createTtl,
-        final long accessTtl,
-        @Nullable final CacheEntryPredicate[] filter,
-        final boolean skipStore,
-        final boolean keepBinary
-    ) {
-        assert keys != null;
-
-        IgniteInternalFuture<Object> keyFut = ctx.group().preloader().request(cacheCtx, keys, topVer);
-
-        // Prevent embedded future creation if possible.
-        if (keyFut == null || keyFut.isDone()) {
-            // Check for exception.
-            if (keyFut != null && keyFut.error() != null)
-                return new GridFinishedFuture<>(keyFut.error());
-
-            return lockAllAsync0(cacheCtx,
-                tx,
-                threadId,
-                ver,
-                topVer,
-                keys,
-                txRead,
-                retval,
-                timeout,
-                createTtl,
-                accessTtl,
-                filter,
-                skipStore,
-                keepBinary);
-        }
-        else {
-            return new GridEmbeddedFuture<>(keyFut,
-                new C2<Object, Exception, IgniteInternalFuture<Exception>>() {
-                    @Override public IgniteInternalFuture<Exception> apply(Object o, Exception exx) {
-                        if (exx != null)
-                            return new GridDhtFinishedFuture<>(exx);
-
-                        return lockAllAsync0(cacheCtx,
-                            tx,
-                            threadId,
-                            ver,
-                            topVer,
-                            keys,
-                            txRead,
-                            retval,
-                            timeout,
-                            createTtl,
-                            accessTtl,
-                            filter,
-                            skipStore,
-                            keepBinary);
-                    }
-                }
-            );
-        }
-    }
-
-    /**
-     * @param cacheCtx Cache context.
-     * @param tx Started colocated transaction (if any).
-     * @param threadId Thread ID.
-     * @param ver Lock version.
-     * @param topVer Topology version.
-     * @param keys Mapped keys.
-     * @param txRead Tx read.
-     * @param retval Return value flag.
-     * @param timeout Lock timeout.
-     * @param createTtl TTL for create operation.
-     * @param accessTtl TTL for read operation.
-     * @param filter filter Optional filter.
-     * @param skipStore Skip store flag.
-     * @return Lock future.
-     */
-    private IgniteInternalFuture<Exception> lockAllAsync0(
-        GridCacheContext<?, ?> cacheCtx,
-        @Nullable final GridNearTxLocal tx,
-        long threadId,
-        final GridCacheVersion ver,
-        AffinityTopologyVersion topVer,
-        final Collection<KeyCacheObject> keys,
-        final boolean txRead,
-        boolean retval,
-        final long timeout,
-        final long createTtl,
-        final long accessTtl,
-        @Nullable final CacheEntryPredicate[] filter,
-        boolean skipStore,
-        boolean keepBinary) {
-        int cnt = keys.size();
-
-        if (tx == null) {
-            GridDhtLockFuture fut = new GridDhtLockFuture(ctx,
-                ctx.localNodeId(),
-                ver,
-                topVer,
-                cnt,
-                txRead,
-                retval,
-                timeout,
-                tx,
-                threadId,
-                createTtl,
-                accessTtl,
-                filter,
-                skipStore,
-                keepBinary);
-
-            // Add before mapping.
-            if (!ctx.mvcc().addFuture(fut))
-                throw new IllegalStateException("Duplicate future ID: " + fut);
-
-            boolean timedout = false;
-
-            for (KeyCacheObject key : keys) {
-                if (timedout)
-                    break;
-
-                while (true) {
-                    GridDhtCacheEntry entry = entryExx(key, topVer);
-
-                    try {
-                        fut.addEntry(key == null ? null : entry);
-
-                        if (fut.isDone())
-                            timedout = true;
-
-                        break;
-                    }
-                    catch (GridCacheEntryRemovedException ignore) {
-                        if (log.isDebugEnabled())
-                            log.debug("Got removed entry when adding lock (will retry): " + entry);
-                    }
-                    catch (GridDistributedLockCancelledException e) {
-                        if (log.isDebugEnabled())
-                            log.debug("Failed to add entry [err=" + e + ", entry=" + entry + ']');
-
-                        fut.onError(e);
-
-                        return new GridDhtFinishedFuture<>(e);
-                    }
-                }
-            }
-
-            // This will send remote messages.
-            fut.map();
-
-            return new GridDhtEmbeddedFuture<>(
-                new C2<Boolean, Exception, Exception>() {
-                    @Override public Exception apply(Boolean b, Exception e) {
-                        if (e != null)
-                            e = U.unwrap(e);
-                        else if (!b)
-                            e = new GridCacheLockTimeoutException(ver);
-
-                        return e;
-                    }
-                },
-                fut);
-        }
-        else {
-            // Handle implicit locks for pessimistic transactions.
-            ctx.tm().txContext(tx);
-
-            if (log.isDebugEnabled())
-                log.debug("Performing colocated lock [tx=" + tx + ", keys=" + keys + ']');
-
-            IgniteInternalFuture<GridCacheReturn> txFut = tx.lockAllAsync(cacheCtx,
-                keys,
-                retval,
-                txRead,
-                createTtl,
-                accessTtl,
-                skipStore,
-                keepBinary);
-
-            return new GridDhtEmbeddedFuture<>(
-                new C2<GridCacheReturn, Exception, Exception>() {
-                    @Override public Exception apply(GridCacheReturn ret,
-                        Exception e) {
-                        if (e != null)
-                            e = U.unwrap(e);
-
-                        assert !tx.empty();
-
-                        return e;
-                    }
-                },
-                txFut);
-        }
-    }
 
     /**
      * @param nodeId Node ID.

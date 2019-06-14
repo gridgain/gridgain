@@ -502,20 +502,14 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
     /** {@inheritDoc} */
     @Override public final CacheObject unswap() throws IgniteCheckedException, GridCacheEntryRemovedException {
-        return unswap(true);
-    }
-
-    /** {@inheritDoc} */
-    @Override public final CacheObject unswap(CacheDataRow row) throws IgniteCheckedException, GridCacheEntryRemovedException {
-        row = unswap(row, true);
+        CacheDataRow row = unswap(null, true);
 
         return row != null ? row.value() : null;
     }
 
     /** {@inheritDoc} */
-    @Nullable @Override public final CacheObject unswap(boolean needVal)
-        throws IgniteCheckedException, GridCacheEntryRemovedException {
-        CacheDataRow row = unswap(null, true);
+    @Override public final CacheObject unswap(CacheDataRow row) throws IgniteCheckedException, GridCacheEntryRemovedException {
+        row = unswap(row, true);
 
         return row != null ? row.value() : null;
     }
@@ -1482,7 +1476,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     cctx.continuousQueries().updateListeners(internal, false) : null;
 
             if (startVer && (retval || intercept || lsnrCol != null))
-                unswap(retval);
+                unswap();
 
             newVer = explicitVer != null ? explicitVer : tx == null ?
                 nextVersion() : tx.writeVersion();
@@ -3401,7 +3395,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             else {
                 if (cctx.mvccEnabled()) {
                     // cannot identify whether the entry is exist on the fly
-                    unswap(false);
+                    unswap();
 
                     if (update = p.apply(null)) {
                         // If entry is already unswapped and we are modifying it, we must run deletion callbacks for old value.

@@ -1069,17 +1069,6 @@ public interface GridCacheEntryEx {
         throws IgniteCheckedException, GridCacheEntryRemovedException;
 
     /**
-     * Unswap ignoring flags.
-     *
-     * @param needVal If {@code false} then do not need to deserialize value during unswap.
-     * @return Value.
-     * @throws IgniteCheckedException If failed.
-     * @throws GridCacheEntryRemovedException If entry was removed.
-     */
-    @Nullable public CacheObject unswap(boolean needVal)
-        throws IgniteCheckedException, GridCacheEntryRemovedException;
-
-    /**
      * Tests whether or not given metadata is set.
      *
      * @param key Key of the metadata to test.

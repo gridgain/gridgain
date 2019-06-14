@@ -1549,7 +1549,7 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
                         try {
                             entry = cache.entryEx(keys.get(i));
 
-                            entry.unswap(false);
+                            entry.unswap();
 
                             entry.updateTtl(vers.get(i), ttl);
 

@@ -125,15 +125,6 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
     /** Flag indicating with TM commit happened. */
     protected volatile int doneFlag;
 
-    /** Committed versions, relative to base. */
-    private Collection<GridCacheVersion> committedVers = Collections.emptyList();
-
-    /** Rolled back versions, relative to base. */
-    private Collection<GridCacheVersion> rolledbackVers = Collections.emptyList();
-
-    /** Base for completed versions. */
-    private GridCacheVersion completedBase;
-
     /** Flag indicating that transformed values should be sent to remote nodes. */
     private boolean sndTransformedVals;
 
@@ -412,7 +403,7 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
      * @param entries Entries to lock or {@code null} if use default {@link IgniteInternalTx#optimisticLockEntries()}.
      * @throws IgniteCheckedException If prepare step failed.
      */
-    public void userPrepare(@Nullable Collection<IgniteTxEntry> entries) throws IgniteCheckedException {
+    public void userPrepare(Collection<IgniteTxEntry> entries) throws IgniteCheckedException {
         if (state() != PREPARING) {
             if (remainingTime() == -1)
                 throw new IgniteTxTimeoutCheckedException("Transaction timed out: " + this);
@@ -612,7 +603,7 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
                                 boolean evt = !isNearLocallyMapped(txEntry, false);
 
                                 if (!F.isEmpty(txEntry.entryProcessors()) || !F.isEmpty(txEntry.filters()))
-                                    txEntry.cached().unswap(false);
+                                    txEntry.cached().unswap();
 
                                 IgniteBiTuple<GridCacheOperation, CacheObject> res = applyTransformClosures(txEntry,
                                     true, null);
@@ -632,7 +623,7 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
                                         ExpiryPolicy expiry = cacheCtx.expiryForTxEntry(txEntry);
 
                                         if (expiry != null) {
-                                            txEntry.cached().unswap(false);
+                                            txEntry.cached().unswap();
 
                                             Duration duration = cached.hasValue() ?
                                                 expiry.getExpiryForUpdate() : expiry.getExpiryForCreation();
@@ -945,12 +936,6 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
             if (DONE_FLAG_UPD.compareAndSet(this, 0, 1)) {
                 // Unlock all locks.
                 cctx.tm().commitTx(this);
-
-                boolean needsCompletedVersions = needsCompletedVersions();
-
-                assert !needsCompletedVersions || completedBase != null;
-                assert !needsCompletedVersions || committedVers != null;
-                assert !needsCompletedVersions || rolledbackVers != null;
             }
         }
     }
@@ -1012,47 +997,8 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
 
             state(commit ? COMMITTED : ROLLED_BACK);
 
-            if (commit) {
-                boolean needsCompletedVersions = needsCompletedVersions();
-
-                assert !needsCompletedVersions || completedBase != null : "Missing completed base for transaction: " + this;
-                assert !needsCompletedVersions || committedVers != null : "Missing committed versions for transaction: " + this;
-                assert !needsCompletedVersions || rolledbackVers != null : "Missing rolledback versions for transaction: " + this;
-            }
-
             cctx.mvccCaching().onTxFinished(this, commit);
         }
-    }
-
-    /** {@inheritDoc} */
-    @Override public void completedVersions(
-        GridCacheVersion completedBase,
-        Collection<GridCacheVersion> committedVers,
-        Collection<GridCacheVersion> rolledbackVers) {
-        this.completedBase = completedBase;
-        this.committedVers = committedVers;
-        this.rolledbackVers = rolledbackVers;
-    }
-
-    /**
-     * @return Completed base for ordering.
-     */
-    public GridCacheVersion completedBase() {
-        return completedBase;
-    }
-
-    /**
-     * @return Committed versions.
-     */
-    public Collection<GridCacheVersion> committedVersions() {
-        return committedVers;
-    }
-
-    /**
-     * @return Rolledback versions.
-     */
-    public Collection<GridCacheVersion> rolledbackVersions() {
-        return rolledbackVers;
     }
 
     /** {@inheritDoc} */
@@ -1134,7 +1080,7 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
     protected final void postLockWrite(
         GridCacheContext cacheCtx,
         Iterable<KeyCacheObject> keys,
-        GridCacheReturn ret,
+        @Nullable GridCacheReturn ret,
         boolean rmv,
         boolean retval,
         boolean read,

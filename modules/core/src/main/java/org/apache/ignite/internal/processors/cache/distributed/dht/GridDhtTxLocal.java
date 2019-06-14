@@ -399,7 +399,7 @@ public class GridDhtTxLocal extends GridDhtTxLocalAdapter implements GridCacheMa
                     addEntry(req.messageId(), e);
             }
 
-            userPrepare(null);
+            userPrepare(pessimistic() ? Collections.emptyList() : serializable() ? F.concat(false, req.writes(), req.reads()) : req.writes());
 
             // Make sure to add future before calling prepare on it.
             cctx.mvcc().addFuture(fut);

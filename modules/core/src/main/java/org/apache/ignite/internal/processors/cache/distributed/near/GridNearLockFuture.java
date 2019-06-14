@@ -37,7 +37,6 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.cluster.ClusterTopologyServerNotFoundException;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
-import org.apache.ignite.internal.processors.cache.CacheEntryPredicate;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheStoppedException;
 import org.apache.ignite.internal.processors.cache.GridCacheCompoundIdentityFuture;
@@ -134,9 +133,6 @@ public final class GridNearLockFuture extends GridCacheCompoundIdentityFuture<Bo
     /** Lock timeout. */
     private final long timeout;
 
-    /** Filter. */
-    private final CacheEntryPredicate[] filter;
-
     /** Transaction. */
     @GridToStringExclude
     private final GridNearTxLocal tx;
@@ -185,7 +181,6 @@ public final class GridNearLockFuture extends GridCacheCompoundIdentityFuture<Bo
      * @param timeout Lock acquisition timeout.
      * @param createTtl TTL for create operation.
      * @param accessTtl TTL for read operation.
-     * @param filter Filter.
      * @param skipStore skipStore
      * @param keepBinary Keep binary flag.
      * @param recovery Recovery flag.
@@ -199,7 +194,6 @@ public final class GridNearLockFuture extends GridCacheCompoundIdentityFuture<Bo
         long timeout,
         long createTtl,
         long accessTtl,
-        CacheEntryPredicate[] filter,
         boolean skipStore,
         boolean keepBinary,
         boolean recovery
@@ -217,7 +211,6 @@ public final class GridNearLockFuture extends GridCacheCompoundIdentityFuture<Bo
         this.timeout = timeout;
         this.createTtl = createTtl;
         this.accessTtl = accessTtl;
-        this.filter = filter;
         this.skipStore = skipStore;
         this.keepBinary = keepBinary;
         this.recovery = recovery;
@@ -315,7 +308,7 @@ public final class GridNearLockFuture extends GridCacheCompoundIdentityFuture<Bo
      */
     private boolean locked(GridCacheEntryEx cached) throws GridCacheEntryRemovedException {
         // Reentry-aware check (If filter failed, lock is failed).
-        return cached.lockedLocallyByIdOrThread(lockVer, threadId) && filter(cached);
+        return cached.lockedLocallyByIdOrThread(lockVer, threadId);
     }
 
     /**
@@ -607,30 +600,6 @@ public final class GridNearLockFuture extends GridCacheCompoundIdentityFuture<Bo
         synchronized (this) {
             if (err == null)
                 err = t;
-        }
-    }
-
-    /**
-     * @param cached Entry to check.
-     * @return {@code True} if filter passed.
-     */
-    private boolean filter(GridCacheEntryEx cached) {
-        try {
-            if (!cctx.isAll(cached, filter)) {
-                if (log.isDebugEnabled())
-                    log.debug("Filter didn't pass for entry (will fail lock): " + cached);
-
-                onFailed(true);
-
-                return false;
-            }
-
-            return true;
-        }
-        catch (IgniteCheckedException e) {
-            onError(e);
-
-            return false;
         }
     }
 
@@ -1042,15 +1011,6 @@ public final class GridNearLockFuture extends GridCacheCompoundIdentityFuture<Bo
                             try {
                                 entry = cctx.near().entryExx(key, topVer);
 
-                                if (!cctx.isAll(entry, filter)) {
-                                    if (log.isDebugEnabled())
-                                        log.debug("Entry being locked did not pass filter (will not lock): " + entry);
-
-                                    onComplete(false, false);
-
-                                    return;
-                                }
-
                                 // Removed exception may be thrown here.
                                 GridCacheMvccCandidate cand = addEntry(
                                     topVer,
@@ -1240,16 +1200,13 @@ public final class GridNearLockFuture extends GridCacheCompoundIdentityFuture<Bo
         final Collection<KeyCacheObject> mappedKeys = map.distributedKeys();
         final ClusterNode node = map.node();
 
-        if (filter != null && filter.length != 0)
-            req.filter(filter, cctx);
-
         if (node.isLocal()) {
             req.miniId(-1);
 
             if (log.isDebugEnabled())
                 log.debug("Before locally locking near request: " + req);
 
-            IgniteInternalFuture<GridNearLockResponse> fut = dht().lockAllAsync(cctx, cctx.localNode(), req, filter);
+            IgniteInternalFuture<GridNearLockResponse> fut = dht().lockAllAsync(cctx, cctx.localNode(), req);
 
             // Add new future.
             add(new GridEmbeddedFuture<>(
@@ -1297,7 +1254,7 @@ public final class GridNearLockFuture extends GridCacheCompoundIdentityFuture<Bo
                                         CacheObject newVal = res.value(i);
 
                                         GridCacheVersion dhtVer = res.dhtVersion(i);
-                                        GridCacheVersion mappedVer = res.mappedVersion(i);
+//                                        GridCacheVersion mappedVer = res.mappedVersion(i);
 
                                         // On local node don't record twice if DHT cache already recorded.
                                         boolean record = retval && oldValTup != null && oldValTup.get1().equals(dhtVer);
@@ -1314,9 +1271,6 @@ public final class GridNearLockFuture extends GridCacheCompoundIdentityFuture<Bo
                                         // Lock is held at this point, so we can set the
                                         // returned value if any.
                                         entry.resetFromPrimary(newVal, lockVer, dhtVer, node.id(), topVer);
-
-                                        entry.readyNearLock(lockVer, mappedVer, res.committedVersions(),
-                                            res.rolledbackVersions(), res.pending());
 
                                         if (inTx() && implicitTx() && tx.onePhaseCommit()) {
                                             boolean pass = res.filterResult(i);
@@ -1749,12 +1703,6 @@ public final class GridNearLockFuture extends GridCacheCompoundIdentityFuture<Bo
                                     tx.entry(cctx.txKey(k)).filters(pass ? CU.empty0() : CU.alwaysFalse0Arr());
                                 }
                             }
-
-                            entry.readyNearLock(lockVer,
-                                mappedVer,
-                                res.committedVersions(),
-                                res.rolledbackVersions(),
-                                res.pending());
 
                             if (retval) {
                                 if (readRecordable)

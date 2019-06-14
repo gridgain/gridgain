@@ -1107,6 +1107,9 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
     /** {@inheritDoc} */
     @Override public List<ClusterNode> nodes(int p, AffinityTopologyVersion topVer) {
+        if (rebalanceFinished(topVer))
+            return grp.affinity().readyAssignments(topVer).get(p);
+
         AffinityAssignment affAssignment = grp.affinity().cachedAffinity(topVer);
 
         List<ClusterNode> affNodes = affAssignment.get(p);

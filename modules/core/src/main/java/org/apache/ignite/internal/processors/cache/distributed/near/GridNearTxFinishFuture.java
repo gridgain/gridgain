@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors.cache.distributed.near;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -702,11 +701,6 @@ public final class GridNearTxFinishFuture<K, V> extends GridCacheCompoundIdentit
             GridCacheVersion xidVer = tx.xidVersion();
 
             mapping.dhtVersion(xidVer, xidVer);
-
-            tx.readyNearLocks(mapping,
-                Collections.<GridCacheVersion>emptyList(),
-                Collections.<GridCacheVersion>emptyList(),
-                Collections.<GridCacheVersion>emptyList());
         }
     }
 
@@ -887,10 +881,6 @@ public final class GridNearTxFinishFuture<K, V> extends GridCacheCompoundIdentit
             tx.ioPolicy(),
             false,
             tx.syncMode(),
-            null,
-            null,
-            null,
-            null,
             0,
             null,
             0,

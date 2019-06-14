@@ -892,11 +892,6 @@ public class GridCacheTestEntryEx extends GridMetadataAwareAdapter implements Gr
     }
 
     /** {@inheritDoc} */
-    @Override public CacheObject unswap(boolean needVal) throws IgniteCheckedException {
-        return null;
-    }
-
-    /** {@inheritDoc} */
     @Override public CacheObject unswap(CacheDataRow row) throws IgniteCheckedException {
         return null;
     }
