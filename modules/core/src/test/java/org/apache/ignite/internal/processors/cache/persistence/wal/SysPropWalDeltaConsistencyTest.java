@@ -53,6 +53,9 @@ public class SysPropWalDeltaConsistencyTest extends AbstractWalDeltaConsistencyT
 
         cfg.setPluginConfigurations();
 
+        // disable vaccuum cleanup as it can make changes invisible to checker used in test
+        cfg.setMvccVacuumFrequency(Long.MAX_VALUE);
+
         return cfg;
     }
 
