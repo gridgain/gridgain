@@ -17,15 +17,20 @@
 import _ from 'lodash';
 import {default as MessagesFactory} from 'app/services/Messages.service';
 import {default as CountriesFactory} from 'app/services/Countries.service';
-import {User} from 'app/modules/user/User.service';
+import {User, UserService} from 'app/modules/user/User.service';
+import {UIRouter} from '@uirouter/angularjs';
+import {default as NotebookData} from 'app/components/page-queries/notebook.data';
 
 export default class IgniteAdminData {
-    static $inject = ['$http', 'IgniteMessages', 'IgniteCountries'];
+    static $inject = ['$http', 'IgniteMessages', 'IgniteCountries', 'User', '$uiRouter', 'IgniteNotebookData'];
 
     constructor(
         private $http: ng.IHttpService,
         private Messages: ReturnType<typeof MessagesFactory>,
-        private Countries: ReturnType<typeof CountriesFactory>
+        private Countries: ReturnType<typeof CountriesFactory>,
+        private UserService: UserService,
+        private uiRouter: UIRouter,
+        private Notebook: NotebookData
     ) {}
 
     becomeUser(viewedUserId: string) {
@@ -33,6 +38,15 @@ export default class IgniteAdminData {
             params: {viewedUserId}
         })
         .catch(this.Messages.showError);
+    }
+
+    revertIdentity() {
+        this.$http.get('/api/v1/admin/revert/identity')
+            .then(() => this.UserService.load())
+            .then(() => this.uiRouter.stateService.go('base.settings.admin'))
+            // TODO GG-19514: separate side effect from main action.
+            .then(() => this.Notebook.load())
+            .catch(this.Messages.showError);
     }
 
     removeUser(user: User) {

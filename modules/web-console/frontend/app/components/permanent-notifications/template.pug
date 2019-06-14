@@ -16,7 +16,7 @@
 .wch-notification(ng-show='$ctrl.UserNotifications.isShown && $ctrl.UserNotifications.message' ng-bind-html='$ctrl.UserNotifications.message')
 
 .wch-notification(ng-show='($ctrl.user$|async:this).becomeUsed')
-    | You are currently viewing user #[strong {{($ctrl.user$|async:this).firstName}} {{($ctrl.user$|async:this).lastName}}] as administrator. #[a(ng-click='$ctrl.$rootScope.revertIdentity()') Revert to your identity?]
+    | You are currently viewing user #[strong {{($ctrl.user$|async:this).firstName}} {{($ctrl.user$|async:this).lastName}}] as administrator. #[a(ng-click='$ctrl.revertIdentity()') Revert to your identity?]
 
 .wch-notification.wch-notification--demo(ng-if='$ctrl.Demo.enabled')
     | You are now in Demo Mode. #[a(ng-click='$ctrl.closeDemo()') Close Demo?]

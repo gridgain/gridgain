@@ -369,25 +369,6 @@ export default angular
             });
         }
     ])
-    .run(['$rootScope', '$http', '$state', 'IgniteMessages', 'User', 'IgniteNotebookData',
-        /**
-         * @param {ng.IRootScopeService} $root
-         * @param {ng.IHttpService} $http
-         * @param $state
-         * @param {ReturnType<typeof import('./services/Messages.service').default>} Messages
-         * @param User
-         * @param Notebook
-         */
-        ($root, $http, $state, Messages, User, Notebook) => { // eslint-disable-line no-shadow
-            $root.revertIdentity = () => {
-                $http.get('/api/v1/admin/revert/identity')
-                    .then(() => User.load())
-                    .then(() => $state.go('base.settings.admin'))
-                    .then(() => Notebook.load())
-                    .catch(Messages.showError);
-            };
-        }
-    ])
     .run(['IgniteIcon',
         /**
          * @param {import('./components/ignite-icon/service').default} IgniteIcon
