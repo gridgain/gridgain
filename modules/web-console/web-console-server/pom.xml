@@ -138,12 +138,6 @@
 
         <dependency>
             <groupId>org.gridgain</groupId>
-            <artifactId>ignite-slf4j</artifactId>
-            <version>${web-console.ignite.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.gridgain</groupId>
             <artifactId>ignite-web-console-common</artifactId>
             <version>${project.version}</version>
         </dependency>
