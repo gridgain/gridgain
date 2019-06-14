@@ -14,6 +14,10 @@
 # limitations under the License.
 #
 
+migration:
+  enabled: true
+  mongo: console
+
 # Uncomment for HTTPS:
 #server:
 #  port: 443
