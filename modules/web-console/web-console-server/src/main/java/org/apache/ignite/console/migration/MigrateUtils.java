@@ -17,6 +17,7 @@
 package org.apache.ignite.console.migration;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -70,6 +71,14 @@ public class MigrateUtils {
             rawData.forEach(item -> res.add(((Number)item).longValue()));
 
         return res;
+    }
+
+    /**
+     * @param ids Collection of UUIDs.
+     * @return Collection of string values.
+     */
+    public static List<String> asStrings(Collection<UUID> ids) {
+        return ids.stream().map(UUID::toString).collect(toList());
     }
 
     /**
