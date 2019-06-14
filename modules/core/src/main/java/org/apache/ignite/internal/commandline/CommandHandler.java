@@ -321,6 +321,8 @@ public class CommandHandler {
             return EXIT_CODE_UNEXPECTED_ERROR;
         }
         finally {
+            logger.info("Control utility has completed execution at: " + LocalDateTime.now());
+
             Arrays.stream(logger.getHandlers())
                   .filter(handler -> handler instanceof FileHandler)
                   .forEach(Handler::close);
