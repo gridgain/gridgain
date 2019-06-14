@@ -4817,10 +4817,15 @@ public abstract class IgniteUtils {
     public static boolean joinThreads(Iterable<? extends Thread> workers, @Nullable IgniteLogger log) {
         boolean retval = true;
 
-        if (workers != null)
-            for (Thread worker : workers)
+        if (workers != null) {
+            for (Thread worker : workers) {
+                if (log != null)
+                    log.warning("Joining next thread " + worker);
+
                 if (!join(worker, log))
                     retval = false;
+            }
+        }
 
         return retval;
     }
