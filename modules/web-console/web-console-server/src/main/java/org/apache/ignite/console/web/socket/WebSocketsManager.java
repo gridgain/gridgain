@@ -358,6 +358,8 @@ public class WebSocketsManager {
                 log.error("Failed to revoke token: " + oldTok);
             }
         });
+
+        updateClusterInBrowsers(Collections.singleton(acc.getId()));
     }
 
     /**
