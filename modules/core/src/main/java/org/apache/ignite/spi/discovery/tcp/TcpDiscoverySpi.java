@@ -1974,7 +1974,8 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
             .append("(fix configuration and restart local node) [localNode=")
             .append(locNode)
             .append(", existingNode=")
-            .append((impl instanceof ServerImpl) ? ((ServerImpl) impl).ring().node(msg.nodeId()) : msg.nodeId())
+            .append(msg.node() == null ? "node" : msg.node())
+            //.append((impl instanceof ServerImpl) ? ((ServerImpl) impl).ring().node(msg.nodeId()) : msg.nodeId())
             .append(']');
 
         return new IgniteSpiException(errorMsgBldr.toString());

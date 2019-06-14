@@ -105,7 +105,7 @@ public abstract class TcpDiscoveryAbstractMessage implements Serializable {
      * @param msg Message.
      */
     protected TcpDiscoveryAbstractMessage(TcpDiscoveryAbstractMessage msg) {
-        this.id = msg.id;
+        this.id = msg.id == null ? IgniteUuid.fromUuid(msg.creatorNodeId()) : msg.id;
         this.verifierNodeId = msg.verifierNodeId;
         this.topVer = msg.topVer;
         this.flags = msg.flags;

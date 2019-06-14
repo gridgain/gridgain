@@ -644,9 +644,9 @@ class ServerImpl extends TcpDiscoveryImpl {
         TcpDiscoveryDuplicateIdMessage msg;
 
         if (allNodesSupports(ring.allNodes(), TCP_DISCOVERY_MESSAGE_NODE_SERIALIZATION_OPTIMIZATION))
-            msg = new TcpDiscoveryDuplicateIdMessage(creatorNodeId, node);
-        else
             msg = new TcpDiscoveryDuplicateIdMessage(creatorNodeId, node.id());
+        else
+            msg = new TcpDiscoveryDuplicateIdMessage(creatorNodeId, node);
 
         return msg;
     }
