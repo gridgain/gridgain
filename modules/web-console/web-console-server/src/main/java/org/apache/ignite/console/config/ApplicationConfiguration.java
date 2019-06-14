@@ -14,21 +14,15 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.console;
+package org.apache.ignite.console.config;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
- * Web console launcher.
- */
-@SpringBootApplication
-public class Application {
-    /**
-     * @param args Args.
-     */
-    public static void main(String[] args) {
-        SpringApplication.run(Application.class, args);
-    }
+ * Application configuration.
+ **/
+@Configuration
+@EnableScheduling
+public class ApplicationConfiguration {
 }

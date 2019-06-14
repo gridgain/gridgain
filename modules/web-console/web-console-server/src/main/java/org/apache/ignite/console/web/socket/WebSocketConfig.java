@@ -33,10 +33,10 @@ import static org.apache.ignite.console.websocket.WebSocketEvents.BROWSERS_PATH;
 @EnableWebSocket
 public class WebSocketConfig implements WebSocketConfigurer {
 	/** */
-	private final AgentsHandler agentsHandler;
+	private final AgentsHandler agentsHnd;
 
 	/** */
-	private final BrowsersHandler browsersHandler;
+	private final BrowsersHandler browsersHnd;
 
 	/** */
 	@Value("${websocket.cors.enabled:false}")
@@ -47,21 +47,21 @@ public class WebSocketConfig implements WebSocketConfigurer {
 	private String allowedOrigin;
 
 	/**
-	 * @param agentsHandler Agents handler.
-	 * @param browsersHandler Browsers handler.
+	 * @param agentsHnd Agents handler.
+	 * @param browsersHnd Browsers handler.
 	 */
-	public WebSocketConfig(AgentsHandler agentsHandler, BrowsersHandler browsersHandler) {
-		this.agentsHandler = agentsHandler;
-		this.browsersHandler = browsersHandler;
+	public WebSocketConfig(AgentsHandler agentsHnd, BrowsersHandler browsersHnd) {
+		this.agentsHnd = agentsHnd;
+		this.browsersHnd = browsersHnd;
 	}
 
 	/**
 	 * @param registry Registry.
 	 */
 	@Override public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-		registry.addHandler(agentsHandler, AGENTS_PATH);
+		registry.addHandler(agentsHnd, AGENTS_PATH);
 
-		WebSocketHandlerRegistration browsersReg = registry.addHandler(browsersHandler, BROWSERS_PATH);
+		WebSocketHandlerRegistration browsersReg = registry.addHandler(browsersHnd, BROWSERS_PATH);
 
 		if (corsEnabled)
 			browsersReg.setAllowedOrigins(allowedOrigin);
