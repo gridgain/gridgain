@@ -165,13 +165,6 @@
 
         <dependency>
             <groupId>org.gridgain</groupId>
-            <artifactId>ignite-hadoop</artifactId>
-            <version>${project.version}</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.gridgain</groupId>
             <artifactId>ignite-aws</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
