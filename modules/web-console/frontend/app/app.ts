@@ -319,16 +319,14 @@ export default angular
             $urlRouterProvider.otherwise('/404');
             $locationProvider.html5Mode(true);
         }])
-    .run(['$rootScope', '$state', 'gettingStarted',
+    .run(['$rootScope', '$state',
         /**
          * @param {ng.IRootScopeService} $root
          * @param {import('@uirouter/angularjs').StateService} $state
-         * @param {ReturnType<typeof import('./modules/getting-started/GettingStarted.provider').service>} gettingStarted
          */
-        ($root, $state, gettingStarted) => {
+        ($root, $state) => {
             $root._ = _;
             $root.$state = $state;
-            $root.gettingStarted = gettingStarted;
         }
     ])
     .run(['User', 'AgentManager',

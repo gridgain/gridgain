@@ -71,7 +71,7 @@ export default class AuthService {
                         if (loginAfterwards) {
                             this.User.current$.next(user);
                             this.$state.go('default-state');
-                            this.$root.gettingStarted.tryShow();
+                            this.gettingStarted.tryShow();
                         } else
                             this.User.created$.next(user);
                     });
