@@ -67,39 +67,37 @@ public class DemoRandomCacheLoadService implements Service {
     }
 
     /** {@inheritDoc} */
-    @Override public void init(ServiceContext ctx) throws Exception {
+    @Override public void init(ServiceContext ctx) {
         ignite.getOrCreateCache(cacheRandom());
 
         cachePool = AgentDemoUtils.newScheduledThreadPool(2, "demo-sql-random-load-cache-tasks");
     }
 
     /** {@inheritDoc} */
-    @Override public void execute(ServiceContext ctx) throws Exception {
-        cachePool.scheduleWithFixedDelay(new Runnable() {
-            @Override public void run() {
-                try {
-                    for (String cacheName : ignite.cacheNames()) {
-                        IgniteCache<Integer, Integer> cache = ignite.cache(cacheName);
+    @Override public void execute(ServiceContext ctx) {
+        cachePool.scheduleWithFixedDelay(() -> {
+            try {
+                for (String cacheName : ignite.cacheNames()) {
+                    IgniteCache<Integer, Integer> cache = ignite.cache(cacheName);
 
-                        if (cache != null &&
-                            !DemoCachesLoadService.DEMO_CACHES.contains(cacheName) &&
-                            !DFLT_SCHEMA.equalsIgnoreCase(cache.getConfiguration(CacheConfiguration.class).getSqlSchema())) {
-                            for (int i = 0, n = 1; i < cnt; i++, n++) {
-                                Integer key = rnd.nextInt(RND_CNT);
-                                Integer val = rnd.nextInt(RND_CNT);
+                    if (cache != null &&
+                        !DemoCachesLoadService.DEMO_CACHES.contains(cacheName) &&
+                        !DFLT_SCHEMA.equalsIgnoreCase(cache.getConfiguration(CacheConfiguration.class).getSqlSchema())) {
+                        for (int i = 0, n = 1; i < cnt; i++, n++) {
+                            Integer key = rnd.nextInt(RND_CNT);
+                            Integer val = rnd.nextInt(RND_CNT);
 
-                                cache.put(key, val);
+                            cache.put(key, val);
 
-                                if (rnd.nextInt(100) < 30)
-                                    cache.remove(key);
-                            }
+                            if (rnd.nextInt(100) < 30)
+                                cache.remove(key);
                         }
                     }
                 }
-                catch (Throwable e) {
-                    if (!e.getMessage().contains("cache is stopped"))
-                        ignite.log().error("Cache write task execution error", e);
-                }
+            }
+            catch (Throwable e) {
+                if (!e.getMessage().contains("cache is stopped"))
+                    ignite.log().error("Cache write task execution error", e);
             }
         }, 10, 3, TimeUnit.SECONDS);
     }

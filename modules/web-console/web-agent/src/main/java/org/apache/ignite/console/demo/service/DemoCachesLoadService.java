@@ -25,6 +25,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import javax.cache.CacheException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -118,77 +119,78 @@ public class DemoCachesLoadService implements Service {
     }
 
     /** {@inheritDoc} */
-    @Override public void init(ServiceContext ctx) throws Exception {
-        ignite.getOrCreateCaches(Arrays.asList(
-            cacheCountry(), cacheDepartment(), cacheEmployee(), cacheCar(), cacheParking()
-        ));
+    @Override public void init(ServiceContext ctx) {
+        try {
+            ignite.getOrCreateCaches(Arrays.asList(
+                cacheCountry(), cacheDepartment(), cacheEmployee(), cacheCar(), cacheParking()
+            ));
 
-        populateCacheEmployee();
-        populateCacheCar();
+            populateCacheEmployee();
+            populateCacheCar();
 
-        cachePool = AgentDemoUtils.newScheduledThreadPool(2, "demo-sql-load-cache-tasks");
+            cachePool = AgentDemoUtils.newScheduledThreadPool(2, "demo-sql-load-cache-tasks");
+        }
+        catch (CacheException ignored) {
+            // No-op.
+        }
     }
 
     /** {@inheritDoc} */
-    @Override public void execute(ServiceContext ctx) throws Exception {
-        cachePool.scheduleWithFixedDelay(new Runnable() {
-            @Override public void run() {
-                try {
-                    IgniteCache<Integer, Employee> cacheEmployee = ignite.cache(EMPLOYEE_CACHE_NAME);
+    @Override public void execute(ServiceContext ctx) {
+        cachePool.scheduleWithFixedDelay(() -> {
+            try {
+                IgniteCache<Integer, Employee> cacheEmployee = ignite.cache(EMPLOYEE_CACHE_NAME);
 
-                    if (cacheEmployee != null)
-                        try(Transaction tx = ignite.transactions().txStart(PESSIMISTIC, REPEATABLE_READ)) {
-                            for (int i = 0, n = 1; i < cnt; i++, n++) {
-                                Integer id = rnd.nextInt(EMPL_CNT);
+                if (cacheEmployee != null)
+                    try(Transaction tx = ignite.transactions().txStart(PESSIMISTIC, REPEATABLE_READ)) {
+                        for (int i = 0, n = 1; i < cnt; i++, n++) {
+                            int id = rnd.nextInt(EMPL_CNT);
 
-                                Integer depId = rnd.nextInt(DEP_CNT);
+                            int depId = rnd.nextInt(DEP_CNT);
 
-                                double r = rnd.nextDouble();
+                            double r = rnd.nextDouble();
 
-                                cacheEmployee.put(id, new Employee(id, depId, depId, "First name employee #" + n,
-                                    "Last name employee #" + n, "Email employee #" + n, "Phone number employee #" + n,
-                                    new java.sql.Date((long)(r * range)), "Job employee #" + n,
-                                    500 + AgentDemoUtils.round(r * 2000, 2)));
+                            cacheEmployee.put(id, new Employee(id, depId, depId, "First name employee #" + n,
+                                "Last name employee #" + n, "Email employee #" + n, "Phone number employee #" + n,
+                                new java.sql.Date((long)(r * range)), "Job employee #" + n,
+                                500 + AgentDemoUtils.round(r * 2000, 2)));
 
-                                if (rnd.nextBoolean())
-                                    cacheEmployee.remove(rnd.nextInt(EMPL_CNT));
+                            if (rnd.nextBoolean())
+                                cacheEmployee.remove(rnd.nextInt(EMPL_CNT));
 
-                                cacheEmployee.get(rnd.nextInt(EMPL_CNT));
-                            }
-
-                            if (rnd.nextInt(100) > 20)
-                                tx.commit();
+                            cacheEmployee.get(rnd.nextInt(EMPL_CNT));
                         }
-                }
-                catch (Throwable e) {
-                    if (!e.getMessage().contains("cache is stopped"))
-                        ignite.log().error("Cache write task execution error", e);
-                }
+
+                        if (rnd.nextInt(100) > 20)
+                            tx.commit();
+                    }
+            }
+            catch (Throwable e) {
+                if (!e.getMessage().contains("cache is stopped"))
+                    ignite.log().error("Cache write task execution error", e);
             }
         }, 10, 3, TimeUnit.SECONDS);
 
-        cachePool.scheduleWithFixedDelay(new Runnable() {
-            @Override public void run() {
-                try {
-                    IgniteCache<Integer, Car> cache = ignite.cache(CAR_CACHE_NAME);
+        cachePool.scheduleWithFixedDelay(() -> {
+            try {
+                IgniteCache<Integer, Car> cache = ignite.cache(CAR_CACHE_NAME);
 
-                    if (cache != null)
-                        for (int i = 0; i < cnt; i++) {
-                            Integer carId = rnd.nextInt(CAR_CNT);
+                if (cache != null)
+                    for (int i = 0; i < cnt; i++) {
+                        int carId = rnd.nextInt(CAR_CNT);
 
-                            cache.put(carId, new Car(carId, rnd.nextInt(PARK_CNT), "Car #" + (i + 1)));
+                        cache.put(carId, new Car(carId, rnd.nextInt(PARK_CNT), "Car #" + (i + 1)));
 
-                            if (rnd.nextBoolean())
-                                cache.remove(rnd.nextInt(CAR_CNT));
-                        }
-                }
-                catch (IllegalStateException ignored) {
-                    // No-op.
-                }
-                catch (Throwable e) {
-                    if (!e.getMessage().contains("cache is stopped"))
-                        ignite.log().error("Cache write task execution error", e);
-                }
+                        if (rnd.nextBoolean())
+                            cache.remove(rnd.nextInt(CAR_CNT));
+                    }
+            }
+            catch (IllegalStateException ignored) {
+                // No-op.
+            }
+            catch (Throwable e) {
+                if (!e.getMessage().contains("cache is stopped"))
+                    ignite.log().error("Cache write task execution error", e);
             }
         }, 10, 3, TimeUnit.SECONDS);
     }
@@ -439,7 +441,7 @@ public class DemoCachesLoadService implements Service {
         }
 
         for (int i = 0, n = 1; i < EMPL_CNT; i++, n++) {
-            Integer depId = rnd.nextInt(DEP_CNT);
+            int depId = rnd.nextInt(DEP_CNT);
 
             double r = rnd.nextDouble();
 
