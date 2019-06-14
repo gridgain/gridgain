@@ -4824,6 +4824,12 @@ public abstract class IgniteUtils {
 
                 if (!join(worker, log))
                     retval = false;
+
+                if (retval)
+                    if (log != null)
+                        log.warning("Join successful: " + worker);
+                    else
+                        System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis() + " join successful: " + worker);
             }
         }
 
