@@ -16,16 +16,11 @@
 
 import {WebSocketHook} from '../../mocks/WebSocketHook';
 import {agentStat, AGENT_DISCONNECTED_GRID} from '../../mocks/agentTasks';
-import {resolveUrl, dropTestDB, insertTestUser} from '../../environment/envtools';
+import {resolveUrl, dropTestDB, insertTestUser, enableDemoMode} from '../../environment/envtools';
 import {createRegularUser} from '../../roles';
 import {errorNotification} from '../../components/notifications';
-import {ClientFunction} from 'testcafe';
 
 const user = createRegularUser();
-const enableDemoMode = ClientFunction(() => {
-    window.sessionStorage.IgniteDemoMode = 'true';
-    window.location.reload();
-});
 
 fixture('Notebook')
     .beforeEach(async(t) => {
