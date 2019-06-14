@@ -52,6 +52,9 @@ public abstract class AbstractHandler extends TextWebSocketHandler {
 
             handleEvent(ws, evt);
         }
+        catch (NullPointerException | IOException e) {
+            log.warn("Failed to process message [session=" + ws + ", msg=" + msg + "errMsg=" + e.toString() + "]");
+        }
         catch (Throwable e) {
             log.error("Failed to process message [session=" + ws + ", msg=" + msg + "]", e);
         }
