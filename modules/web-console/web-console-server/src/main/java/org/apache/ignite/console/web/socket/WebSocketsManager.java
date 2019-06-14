@@ -26,18 +26,13 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
-import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.dto.Announcement;
 import org.apache.ignite.console.websocket.TopologySnapshot;
 import org.apache.ignite.console.websocket.WebSocketEvent;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.internal.util.worker.GridWorker;
-import org.apache.ignite.logger.slf4j.Slf4jLogger;
-import org.apache.ignite.thread.IgniteThread;
-import org.jetbrains.annotations.Nullable;
 import org.jsr166.ConcurrentLinkedHashMap;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -64,13 +59,10 @@ import static org.springframework.web.util.UriComponentsBuilder.fromUri;
 @EnableScheduling
 public class WebSocketsManager {
     /** */
-    private static final IgniteLogger log = new Slf4jLogger(LoggerFactory.getLogger(WebSocketsManager.class));
+    private static final Logger log = LoggerFactory.getLogger(WebSocketsManager.class);
 
     /** Default for cluster topology expire. */
     private static final long DEFAULT_MAX_INACTIVE_INTERVAL = MINUTES.toMillis(10);
-
-    /** Delay between sessions timeout checks. */
-    private static final long TOPOLOGY_TIMEOUT_CHECK_DELAY = MINUTES.toMillis(1);
 
     /** */
     private static final PingMessage PING = new PingMessage(UTF_8.encode("PING"));
@@ -93,13 +85,11 @@ public class WebSocketsManager {
     /**
      * Default constructor.
      */
-    public WebSocketsManager(Ignite ignite) {
+    public WebSocketsManager() {
         agents = new ConcurrentLinkedHashMap<>();
         browsers = new ConcurrentHashMap<>();
         clusters = new ConcurrentHashMap<>();
         requests = new ConcurrentHashMap<>();
-
-        new IgniteThread(new ClusterTimeoutWorker(ignite.name(), "session-timeout-worker", log)).start();
     }
 
     /**
@@ -130,7 +120,7 @@ public class WebSocketsManager {
         AgentDescriptor desc = agents.remove(ws);
 
         if (desc == null) {
-            log.warning("Agent descriptor not found for session: " + ws);
+            log.warn("Agent descriptor not found for session: " + ws);
             
             return;
         }
@@ -152,7 +142,7 @@ public class WebSocketsManager {
         WebSocketSession ws = requests.remove(evt.getRequestId());
 
         if (ws == null) {
-            log.warning("Failed to send event to browser: " + evt);
+            log.warn("Failed to send event to browser: " + evt);
 
             return;
         }
@@ -373,6 +363,31 @@ public class WebSocketsManager {
     }
 
     /**
+     * Periodically cleanup expired cluster topology.
+     */
+    @Scheduled(fixedRate = 60_000)
+    public void cleanupClusters() {
+        clusters.forEach((clusterId, snapshot) -> {
+            if (snapshot.isExpired(DEFAULT_MAX_INACTIVE_INTERVAL)) {
+                clusters.remove(clusterId);
+
+                for (Map.Entry<WebSocketSession, AgentDescriptor> entry : agents.entrySet()) {
+                    AgentDescriptor desc = entry.getValue();
+
+                    if (desc.clusterIds.contains(clusterId)) {
+                        desc.clusterIds.remove(clusterId);
+
+                        log.error("Failed to receive topology update from agent [socket="
+                            + entry.getKey() + ", clusterId=" + clusterId + "]");
+
+                        updateClusterInBrowsers(desc.accIds);
+                    }
+                }
+            }
+        });
+    }
+
+    /**
      * @param ws Session to ping.
      */
     private void ping(WebSocketSession ws) {
@@ -460,46 +475,6 @@ public class WebSocketsManager {
          */
         public void setClusterIds(Set<String> clusterIds) {
             this.clusterIds = clusterIds;
-        }
-    }
-
-    /**
-     * Worker that cleanup expired cluster topology.
-     */
-    private class ClusterTimeoutWorker extends GridWorker {
-        /**
-         * @param instanceName Ignite instance name.
-         * @param name Name.
-         * @param log Logger.
-         */
-        private ClusterTimeoutWorker(@Nullable String instanceName, String name, IgniteLogger log) {
-            super(instanceName, name, log);
-        }
-
-        /** {@inheritDoc} */
-        @Override protected void body() throws InterruptedException {
-            while (!isCancelled()) {
-                Thread.sleep(TOPOLOGY_TIMEOUT_CHECK_DELAY);
-
-                clusters.forEach((clusterId, snapshot) -> {
-                    if (snapshot.isExpired(DEFAULT_MAX_INACTIVE_INTERVAL)) {
-                        clusters.remove(clusterId);
-
-                        for (Map.Entry<WebSocketSession, AgentDescriptor> entry : agents.entrySet()) {
-                            AgentDescriptor desc = entry.getValue();
-
-                            if (desc.clusterIds.contains(clusterId)) {
-                                desc.clusterIds.remove(clusterId);
-
-                                log.error("Failed to receive topology update from agent [agent="
-                                    + entry.getKey() + ", clusterId=" + clusterId + "]");
-
-                                updateClusterInBrowsers(desc.accIds);
-                            }
-                        }
-                    }
-                });
-            }
         }
     }
 }
