@@ -64,7 +64,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     static final List<H2ManagedLocalResult> localResults = Collections.synchronizedList(new ArrayList<>());
 
     /** Query memory limit. */
-    long maxMem;
+    protected long maxMem;
 
     /** Node client mode flag. */
     private boolean client;
@@ -79,7 +79,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
         startGrid(0);
 
-        if (!isLocal()) {
+        if (startClient()) {
             client = true;
 
             startGrid(1);
@@ -109,7 +109,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
         resetMemoryManagerState(grid(0));
 
-        if (!isLocal())
+        if (startClient())
             resetMemoryManagerState(grid(1));
     }
 
@@ -117,7 +117,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     @Override protected void afterTest() throws Exception {
         checkMemoryManagerState(grid(0));
 
-        if (client)
+        if (startClient())
             checkMemoryManagerState(grid(1));
 
         super.afterTest();
@@ -156,7 +156,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
      * @param node Node.
      * @return Query memory manager.
      */
-    QueryMemoryManager memoryManager(IgniteEx node) {
+    private QueryMemoryManager memoryManager(IgniteEx node) {
         IgniteH2Indexing h2 = (IgniteH2Indexing)node.context().query().getIndexing();
 
         return h2.memoryManager();
@@ -164,7 +164,8 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        return super.getConfiguration(igniteInstanceName).setClientMode(client);
+        return super.getConfiguration(igniteInstanceName)
+            .setClientMode(client);
     }
 
     /**
@@ -507,7 +508,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     FieldsQueryCursor<List<?>> query(String sql, boolean lazy) throws Exception {
         boolean localQry = isLocal();
 
-        return grid(client ? 1 : 0).context().query().querySqlFields(
+        return grid(startClient() ? 1 : 0).context().query().querySqlFields(
             new SqlFieldsQueryEx(sql, null)
                 .setLocal(localQry)
                 .setMaxMemory(maxMem)
@@ -519,6 +520,13 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
      * @return Local query flag.
      */
     protected abstract boolean isLocal();
+
+    /**
+     * @return {@code True} if client node should be started, {@code False} otherwise.
+     */
+    protected boolean startClient() {
+        return !isLocal();
+    }
 
     /**
      * @param sql SQL query

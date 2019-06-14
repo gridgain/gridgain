@@ -63,8 +63,11 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
     /** Version 2.8.0: adds query id in order to implement cancel feature, affinity awareness support: IEP-23.*/
     static final ClientListenerProtocolVersion VER_2_8_0 = ClientListenerProtocolVersion.create(2, 8, 0);
 
+    /** Version 2.8.1: adds query memory quotas.*/
+    static final ClientListenerProtocolVersion VER_2_8_1 = ClientListenerProtocolVersion.create(2, 8, 1);
+
     /** Current version. */
-    private static final ClientListenerProtocolVersion CURRENT_VER = VER_2_8_0;
+    private static final ClientListenerProtocolVersion CURRENT_VER = VER_2_8_1;
 
     /** Supported versions. */
     private static final Set<ClientListenerProtocolVersion> SUPPORTED_VERS = new HashSet<>();
@@ -175,8 +178,10 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
 
             updateBatchSize = JdbcUtils.readNullableInteger(reader);
 
-            if (reader.readBoolean())
-                maxMemory = reader.readLong();
+            if (ver.compareTo(VER_2_8_1) >= 0){
+                if (reader.readBoolean())
+                    maxMemory = reader.readLong();
+            }
         }
 
         if (ver.compareTo(VER_2_5_0) >= 0) {

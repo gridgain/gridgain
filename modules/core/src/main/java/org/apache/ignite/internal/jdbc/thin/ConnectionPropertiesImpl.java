@@ -212,7 +212,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
         1_000, false, 1, Integer.MAX_VALUE);
 
     /** Query memory limit. */
-    private LongProperty qryMaxMemory = new LongProperty("maxMemory",
+    private LongProperty qryMaxMemory = new LongProperty("queryMaxMemory",
         "Query max memory limit. Set to 0 to use default value. Set to negative value to disable memory limits.",
         0L, false, Long.MIN_VALUE, Long.MAX_VALUE);
 

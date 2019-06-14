@@ -2134,6 +2134,7 @@ public class ErrorCode {
 
         // HY
         case GENERAL_ERROR_1: return "HY000";
+        case MEMORY_ALLOCATION_ERROR: return "HY001";
         case UNKNOWN_DATA_TYPE_1: return "HY004";
 
         case FEATURE_NOT_SUPPORTED_1: return "HYC00";

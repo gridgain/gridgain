@@ -27,6 +27,9 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static org.apache.ignite.internal.util.IgniteUtils.KB;
 
+/**
+ * Query memory manager.
+ */
 public class QueryMemoryManager extends H2MemoryTracker {
     //TODO: GG-18629: Move defaults to memory quotas configuration.
     /**
@@ -151,15 +154,6 @@ public class QueryMemoryManager extends H2MemoryTracker {
      */
     public long memoryReserved() {
         return reserved.get();
-    }
-
-    /**
-     * Gets memory available for queries.
-     *
-     * @return Available memory in bytes.
-     */
-    public long memoryAvailable() {
-        return globalQuota - reserved.get();
     }
 
     /**

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.query.oom;
+package org.apache.ignite.jdbc.thin;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -27,8 +27,10 @@ import java.util.List;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
+import org.apache.ignite.internal.processors.query.oom.QueryMemoryTrackerSelfTest;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.GridAbstractTest;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.util.IgniteUtils.MB;
@@ -36,9 +38,11 @@ import static org.apache.ignite.internal.util.IgniteUtils.MB;
 /**
  * Query memory manager for local queries.
  */
-public class JdbcQueryMemoryTrackerSelfTest extends QueryMemoryTrackerSelfTest {
-    /** URL. */
-    private String url = "jdbc:ignite:thin://127.0.0.1:10800..10802";
+public class JdbcThinQueryMemoryTrackerSelfTest extends QueryMemoryTrackerSelfTest {
+    /** {@inheritDoc} */
+    @Override protected boolean startClient() {
+        return false;
+    }
 
     /** {@inheritDoc} */
     @Test
@@ -69,7 +73,7 @@ public class JdbcQueryMemoryTrackerSelfTest extends QueryMemoryTrackerSelfTest {
                 ));
             }
 
-            SQLException ex = (SQLException)GridTestUtils.assertThrows(log, () -> {
+            SQLException ex = (SQLException)GridTestUtils.assertThrows(GridAbstractTest.log, () -> {
                 SQLException sqlEx = null;
 
                 for (IgniteInternalFuture f : futs) {
@@ -78,8 +82,7 @@ public class JdbcQueryMemoryTrackerSelfTest extends QueryMemoryTrackerSelfTest {
                     }
                     catch (IgniteCheckedException e) {
                         if (e.hasCause(SQLException.class))
-                            ;
-                        sqlEx = e.getCause(SQLException.class);
+                            sqlEx = e.getCause(SQLException.class);
                     }
                 }
 
@@ -136,8 +139,9 @@ public class JdbcQueryMemoryTrackerSelfTest extends QueryMemoryTrackerSelfTest {
      * @param lazy Lazy flag.
      * @throws SQLException If failed.
      */
-    private Connection createConnection(boolean lazy) throws SQLException {
-        Connection conn = DriverManager.getConnection(url + "?maxMemory=" + (maxMem) + "&lazy=" + lazy);
+    protected Connection createConnection(boolean lazy) throws SQLException {
+        Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1:10800..10802?" +
+            "queryMaxMemory=" + (maxMem) + "&lazy=" + lazy);
 
         conn.setSchema("\"PUBLIC\"");
 

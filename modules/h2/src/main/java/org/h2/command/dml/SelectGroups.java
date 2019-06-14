@@ -102,7 +102,7 @@ public abstract class SelectGroups {
                 values = createRow();
                 groupByData.put(currentGroupsKey, values);
 
-                onUpdate(currentGroupsKey, null, values);
+                onGroupChanged(currentGroupsKey, null, values);
             }
             currentGroupByExprData = values;
             currentGroupRowId++;
@@ -116,7 +116,7 @@ public abstract class SelectGroups {
                 // the groups map
                 Object[] old = groupByData.put(currentGroupsKey, currentGroupByExprData);
 
-                onUpdate(currentGroupsKey, old, currentGroupByExprData);
+                onGroupChanged(currentGroupsKey, old, currentGroupByExprData);
             }
         }
 
@@ -152,7 +152,7 @@ public abstract class SelectGroups {
 
             cleanupAggregates(curEntry.getValue());
 
-            onUpdate(curEntry.getKey(), curEntry.getValue(), null);
+            onGroupChanged(curEntry.getKey(), curEntry.getValue(), null);
 
             curEntry = null;
         }
@@ -197,14 +197,14 @@ public abstract class SelectGroups {
             currentGroupByExprData = values;
             currentGroupRowId++;
 
-            onUpdate(null, null, currentGroupByExprData);
+            onGroupChanged(null, null, currentGroupByExprData);
         }
 
         @Override
         void updateCurrentGroupExprData() {
             Object[] old = rows.set(rows.size() - 1, currentGroupByExprData);
 
-            onUpdate(null, old, currentGroupByExprData);
+            onGroupChanged(null, old, currentGroupByExprData);
         }
 
         @Override
@@ -502,13 +502,13 @@ public abstract class SelectGroups {
     }
 
     /**
-     * Group result update callback.
+     * Group result updated callback.
      *
      * @param groupKey Row key.
      * @param old Old row.
      * @param row New row.
      */
-    protected void onUpdate(ValueRow groupKey, Object[] old, Object[] row) {
+    protected void onGroupChanged(ValueRow groupKey, Object[] old, Object[] row) {
         if (!trackable())
             return;
 
@@ -516,12 +516,15 @@ public abstract class SelectGroups {
 
         long size;
 
+        // Group result changed.
         if (row != null && old != null)
             size = (row.length - old.length) * Constants.MEMORY_OBJECT;
+        // New group added.
         else if (old == null) {
             size = groupKey != null ? groupKey.getMemory() : 0;
             size += Constants.MEMORY_ARRAY + row.length * Constants.MEMORY_OBJECT;
         }
+        // Group removed.
         else {
             size = groupKey != null ? -groupKey.getMemory() : 0;
             size -= Constants.MEMORY_ARRAY + old.length * Constants.MEMORY_OBJECT;
