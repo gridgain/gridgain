@@ -17,7 +17,8 @@
 package org.apache.ignite.testframework.junits;
 
 import java.lang.reflect.Method;
-import java.util.LinkedList;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -120,31 +121,35 @@ public class SystemPropertiesRule implements TestRule {
      * @return List of updated properties in reversed order.
      */
     private List<T2<String, String>> setSystemPropertiesBeforeClass(Class<?> testCls) {
-        List<WithSystemProperty[]> allProps = new LinkedList<>();
+        List<WithSystemProperty[]> allProps = new ArrayList<>();
 
         for (Class<?> cls = testCls; cls != null; cls = cls.getSuperclass()) {
             SystemPropertiesList clsProps = cls.getAnnotation(SystemPropertiesList.class);
 
             if (clsProps != null)
-                allProps.add(0, clsProps.value());
+                allProps.add(clsProps.value());
             else {
                 WithSystemProperty clsProp = cls.getAnnotation(WithSystemProperty.class);
 
                 if (clsProp != null)
-                    allProps.add(0, new WithSystemProperty[] {clsProp});
+                    allProps.add(new WithSystemProperty[] {clsProp});
             }
         }
 
+        Collections.reverse(allProps);
+
         // List of system properties to set when all tests in class are finished.
-        final List<T2<String, String>> clsSysProps = new LinkedList<>();
+        final List<T2<String, String>> clsSysProps = new ArrayList<>();
 
         for (WithSystemProperty[] props : allProps) {
             for (WithSystemProperty prop : props) {
                 String oldVal = System.setProperty(prop.key(), prop.value());
 
-                clsSysProps.add(0, new T2<>(prop.key(), oldVal));
+                clsSysProps.add(new T2<>(prop.key(), oldVal));
             }
         }
+
+        Collections.reverse(clsSysProps);
 
         return clsSysProps;
     }
@@ -170,15 +175,17 @@ public class SystemPropertiesRule implements TestRule {
         }
 
         // List of system properties to set when test is finished.
-        List<T2<String, String>> testSysProps = new LinkedList<>();
+        List<T2<String, String>> testSysProps = new ArrayList<>();
 
         if (allProps != null) {
             for (WithSystemProperty prop : allProps) {
                 String oldVal = System.setProperty(prop.key(), prop.value());
 
-                testSysProps.add(0, new T2<>(prop.key(), oldVal));
+                testSysProps.add(new T2<>(prop.key(), oldVal));
             }
         }
+
+        Collections.reverse(testSysProps);
 
         return testSysProps;
     }

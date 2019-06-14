@@ -61,12 +61,41 @@ import org.junit.Rule;
  *  }
  * }</pre>
  *
- * Same applies to methods with the difference that annotation translates into {@link Before} and {@link After}.
- * {@link Rule} must also be used instead of {@link ClassRule} in this case.
+ * Same applies to methods with the difference that annotation translates into something like {@link Before} and
+ * {@link After}. {@link Rule} must also be used instead of {@link ClassRule} in this case:
  * <br/><br/>
+ * <pre>{@code  public class SomeTest {
+ *      @Rule
+ *      public final TestRule testRule = new SystemPropertiesRule();
+ *
+ *      @Test
+ *      @WithSystemProperty(key = "name", value = "val")
+ *      public void test() {
+ *          // ...
+ *      }
+ *  }
+ * }</pre>
+ * is equivalent to:
+ * <pre>{@code  public class SomeTest {
+ *      @Test
+ *      public void test() {
+ *          Object oldVal = System.getProperty("name");
+ *
+ *          try {
+ *              // ...
+ *          }
+ *          finally {
+ *              if (oldVal == null)
+ *                  System.clearProperty("name");
+ *              else
+ *                  System.setProperty("name", oldVal);
+ *          }
+ *      }
+ *  }
+ * }</pre>
  * For class level annotation it applies system properties for the whole class hierarchy (ignoring interfaces, there's
- * no linearization implemented). More specific classes have bigger priority and set their properties first. It all ends
- * with {@link Object} which, of course, is not annotated.<br/>
+ * no linearization implemented). More specific classes have bigger priority and set their properties last. It all
+ * starts with {@link Object} which, of course, is not annotated.<br/>
  * <br/>
  * Test methods do not inherit their annotations from overriden methods of super class.<br/>
  * <br/>
