@@ -265,4 +265,11 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
 
         return null;
     }
+
+    /**
+     * @return root security processor.
+     */
+    public GridSecurityProcessor gridSecurityProcessor() {
+        return secPrc;
+    }
 }
