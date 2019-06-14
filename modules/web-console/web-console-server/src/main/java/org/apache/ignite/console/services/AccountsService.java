@@ -137,18 +137,22 @@ public class AccountsService implements UserDetailsService {
      * @param params SignUp params.
      */
     public void register(SignUpRequest params) {
-        if (disableSignup)
-            throw new IllegalAccessError("Sign-up is not allowed. Ask your administrator to create account for you.");
+        try (Transaction tx = txMgr.txStart()) {
+            Account acc = create(params);
 
-        Account acc = create(params);
+            if (disableSignup && !acc.isAdmin())
+                throw new IllegalAccessError("Sign-up is not allowed. Ask your administrator to create account for you.");
 
-        if (activationEnabled) {
-            notificationSrv.sendEmail(ACTIVATION_LINK, acc);
+            tx.commit();
 
-            throw new MissingConfirmRegistrationException("Confirm your email", acc.getEmail());
+            if (activationEnabled) {
+                notificationSrv.sendEmail(ACTIVATION_LINK, acc);
+
+                throw new MissingConfirmRegistrationException("Confirm your email", acc.getEmail());
+            }
+
+            notificationSrv.sendEmail(WELCOME_LETTER, acc);
         }
-
-        notificationSrv.sendEmail(WELCOME_LETTER, acc);
     }
 
     /**
@@ -179,7 +183,7 @@ public class AccountsService implements UserDetailsService {
         try (Transaction tx = txMgr.txStart()) {
             Account account = accountsRepo.getById(accId);
 
-            if (account.getAdmin() != adminFlag) {
+            if (account.isAdmin() != adminFlag) {
                 account.setAdmin(adminFlag);
 
                 accountsRepo.save(account);

@@ -225,7 +225,7 @@ public class Account extends AbstractDto implements UserDetails, CredentialsCont
     /**
      * @return Admin flag.
      */
-    public boolean getAdmin() {
+    public boolean isAdmin() {
         return admin;
     }
 
