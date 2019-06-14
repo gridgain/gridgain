@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.console.db.Table;
@@ -99,15 +98,10 @@ public class AccountsRepository {
     }
 
     /**
-     * @return {@code true} If current user is the first ine.
+     * @return {@code true} If current user is the first one.
      */
-    @SuppressWarnings("unchecked")
     public boolean ensureFirstUser() {
-        IgniteCache cache = accountsTbl.cache();
-
-        Object firstUserMarker = cache.getAndPutIfAbsent(FIRST_USER_MARKER_KEY, FIRST_USER_MARKER_KEY);
-
-        return firstUserMarker == null;
+        return accountsTbl.cache().getAndPutIfAbsent(FIRST_USER_MARKER_KEY, new Account()) == null;
     }
 
     /**
