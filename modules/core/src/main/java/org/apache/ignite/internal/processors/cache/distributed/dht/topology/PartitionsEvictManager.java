@@ -250,8 +250,8 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
     }
 
     /** {@inheritDoc} */
-    @Override protected void stop0(boolean cancel) {
-        super.stop0(cancel);
+    @Override protected void onKernalStop0(boolean cancel) {
+        super.onKernalStop0(cancel);
 
         stop = true;
 
