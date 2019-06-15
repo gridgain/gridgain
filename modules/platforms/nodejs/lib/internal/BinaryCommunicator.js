@@ -51,8 +51,8 @@ class BinaryCommunicator {
         }
     }
 
-    async send(opCode, payloadWriter, payloadReader = null) {
-        await this._socket.send(opCode, payloadWriter, payloadReader);
+    async send(opCode, payloadWriter, payloadReader = null, affinityHint = null) {
+        await this._socket.send(opCode, payloadWriter, payloadReader, affinityHint);
     }
 
     get typeStorage() {
