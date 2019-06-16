@@ -203,8 +203,6 @@ class IgniteClient {
             async (payload) => {
                 payload.writeInteger(cacheId);
             });
-
-        this._router.removeActiveCache(cacheId);
     }
 
     /**

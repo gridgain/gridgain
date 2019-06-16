@@ -101,10 +101,6 @@ class Router {
         }
     }
 
-    removeActiveCache(cacheId) {
-        this._distributionMap.delete(cacheId);
-    }
-
     async _connect() {
         const errors = new Array();
         const endpoints = this._inactiveEndpoints;
@@ -399,49 +395,32 @@ class Router {
     }
 
     async _onAffinityTopologyChange(newVersion) {
-        // If affinityTopologyVer is null, we haven't requested cache partitions yet.
-        // Hence we don't have caches to request partitions for
-        if (!this._affinityAwarenessActive ||
-            this._affinityTopologyVer === null ||
-            this._affinityTopologyVer.compareTo(newVersion) >= 0) {
+        if (!this._versionIsNewer(newVersion)) {
             return;
         }
 
-        Logger.logDebug('New topology version reported...');
+        Logger.logDebug('New topology version reported: ' + newVersion);
 
-        await this._getCachePartitions();
+        this._affinityTopologyVer = newVersion;
+        this._distributionMap = new Map();
 
         this._runBackgroundConnect();
     }
 
-    async _getCachePartitions(newCache = null, tries = GET_CACHE_PARTITIONS_RETRIES) {
+    async _getCachePartitions(cacheId, tries = GET_CACHE_PARTITIONS_RETRIES) {
         if (tries <= 0) {
             return;
         }
 
         Logger.logDebug('Getting cache partitions info...');
 
-        const knownCachesNum = this._distributionMap.size;
-        if (knownCachesNum === 0 && newCache === null) {
-            Logger.logDebug('No caches to get cache partitions for...');
-            return;
-        }
-
         try {
             await this.send(
                 BinaryUtils.OPERATION.CACHE_PARTITIONS,
                 async (payload) => {
-                    if (newCache !== null) {
-                        payload.writeInteger(knownCachesNum + 1);
-                        payload.writeInteger(newCache);
-                    }
-                    else {
-                        payload.writeInteger(knownCachesNum);
-                    }
-
-                    for (const cacheId of this._distributionMap.keys()) {
-                        payload.writeInteger(cacheId);
-                    }
+                    // We always request partition map for one cache
+                    payload.writeInteger(1);
+                    payload.writeInteger(cacheId);
                 },
                 this._handleCachePartitions.bind(this));
         }
@@ -453,15 +432,22 @@ class Router {
             // Retries in case of an error (most probably
             // "Getting affinity for topology version earlier than affinity is calculated")
             await this._sleep(GET_CACHE_PARTITIONS_DELAY);
-            this._getCachePartitions(newCache, tries - 1);
+            this._getCachePartitions(cacheId, tries - 1);
         }
     }
 
     async _handleCachePartitions(payload) {
         const affinityTopologyVer = new AffinityAwarenessUtils.AffinityTopologyVersion(payload);
+
+        if (this._versionIsNewer(affinityTopologyVer)) {
+            this._distributionMap = new Map();
+            this._affinityTopologyVer = affinityTopologyVer;
+            Logger.logDebug('New affinity topology version: ' + affinityTopologyVer);
+        } else if (this._versionIsOlder(affinityTopologyVer)) {
+            return;
+        }
+
         const groupsNum = payload.readInteger();
-        // {cacheId -> CacheAffinityMap}
-        const distributionMap = new Map();
 
         for (let i = 0; i < groupsNum; i++) {
             const group = await AffinityAwarenessUtils.AffinityAwarenessCacheGroup.build(this._communicator, payload);
@@ -476,15 +462,11 @@ class Router {
 
             for (const [cacheId, config] of group.caches) {
                 const cacheAffinityMap = new AffinityAwarenessUtils.CacheAffinityMap(cacheId, partitionMapping, config);
-                distributionMap.set(cacheId, cacheAffinityMap);
+                this._distributionMap.set(cacheId, cacheAffinityMap);
             }
         }
 
-        this._distributionMap = distributionMap;
-        this._affinityTopologyVer = affinityTopologyVer;
-
         Logger.logDebug('Got cache partitions info');
-        Logger.logDebug('Affinity topology version: ' + affinityTopologyVer);
     }
 
     _getRandomConnection() {
@@ -517,6 +499,16 @@ class Router {
             default:
                 return 'UNKNOWN';
         }
+    }
+
+    _versionIsNewer(version) {
+        return this._affinityTopologyVer === null ||
+               this._affinityTopologyVer.compareTo(version) < 0;
+    }
+
+    _versionIsOlder(version) {
+        return this._affinityTopologyVer !== null &&
+               this._affinityTopologyVer.compareTo(version) > 0;
     }
 
     // Returns a random integer between 0 and max - 1

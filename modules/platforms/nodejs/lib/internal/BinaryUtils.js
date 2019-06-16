@@ -53,6 +53,7 @@ const OPERATION = Object.freeze({
     CACHE_REMOVE_KEYS : 1018,
     CACHE_REMOVE_ALL : 1019,
     CACHE_GET_SIZE : 1020,
+    CACHE_LOCAL_PEEK  : 1021,
     // Cache Configuration
     CACHE_GET_NAMES : 1050,
     CACHE_CREATE_WITH_NAME : 1051,
