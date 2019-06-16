@@ -66,7 +66,6 @@ public class CommandLogger {
         return sb;
     }
 
-
     /**
      * Join input parameters with space and wrap optional braces {@code []}.
      *
