@@ -296,8 +296,9 @@ class Router {
     /** Affinity Awareness methods */
 
     async _affinitySend(opCode, payloadWriter, payloadReader, affinityHint) {
+        let connection = await this._chooseConnection(affinityHint);
+
         while (true) {
-            const connection = await this._chooseConnection(affinityHint);
             Logger.logDebug('Endpoint chosen: ' + connection.endpoint);
 
             try {
@@ -318,17 +319,12 @@ class Router {
                 }
             }
 
-            // Now we have to choose a connection randomly
-            affinityHint = null;
+            connection = this._getRandomConnection();
+            Logger.logDebug('Node has been chosen randomly');
         }
     }
 
     async _chooseConnection(affinityHint) {
-        if (affinityHint === null) {
-            Logger.logDebug('Node has been chosen randomly because no affinity hint passed');
-            return this._getRandomConnection();
-        }
-
         const cacheId = affinityHint.cacheId;
 
         if (!this._distributionMap.has(cacheId)) {
