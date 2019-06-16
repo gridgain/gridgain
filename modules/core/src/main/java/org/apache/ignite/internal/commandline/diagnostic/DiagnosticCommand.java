@@ -40,7 +40,7 @@ public class DiagnosticCommand implements Command<DiagnosticSubCommand> {
     /** {@inheritDoc} */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger logger) throws Exception {
         if (subcommand == HELP) {
-            printDiagnosticHelp();
+            printDiagnosticHelp(logger);
 
             return null;
         }
@@ -105,7 +105,7 @@ public class DiagnosticCommand implements Command<DiagnosticSubCommand> {
     /**
      * Print diagnostic command help.
      */
-    private void printDiagnosticHelp() {
+    private void printDiagnosticHelp(Logger logger) {
         logger.info(INDENT + join(" ", UTILITY_NAME, DIAGNOSTIC, PAGE_LOCKS + " - dump page locks info."));
 
         logger.info(INDENT + "Subcommands:");
