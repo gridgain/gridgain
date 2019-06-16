@@ -145,7 +145,7 @@ class BinaryCommunicator {
                 await this._writeMap(buffer, object, objectType);
                 break;
             case BinaryUtils.TYPE_CODE.BINARY_OBJECT:
-                await this._writeBinaryObject(buffer, object, objectType);
+                await this._writeBinaryObject(buffer, object);
                 break;
             case BinaryUtils.TYPE_CODE.COMPLEX_OBJECT:
                 await this._writeComplexObject(buffer, object, objectType);

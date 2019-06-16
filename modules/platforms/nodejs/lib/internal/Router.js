@@ -23,6 +23,7 @@ const ClientSocket = require('./ClientSocket');
 const AffinityAwarenessUtils = require('./AffinityAwarenessUtils');
 const BinaryUtils = require('./BinaryUtils');
 const BinaryObject = require('../BinaryObject');
+const ObjectType = require('../ObjectType');
 const ArgumentChecker = require('./ArgumentChecker');
 const Logger = require('./Logger');
 
@@ -44,7 +45,7 @@ class Router {
         this._inactiveEndpoints = [];
 
         /** Affinity Awareness only fields */
-        // This flag indicates if we have at least one connection with known node UUID
+        // This flag indicates if we have at least two alive connections
         this._affinityAwarenessActive = false;
         // Contains the background task (promise) or null
         this._backgroundConnectTask = null;
@@ -88,11 +89,15 @@ class Router {
             throw new Errors.IllegalStateError();
         }
 
-        if (this._affinityAwarenessActive) {
+        if (this._affinityAwarenessActive && affinityHint) {
             await this._affinitySend(opCode, payloadWriter, payloadReader, affinityHint);
         }
         else {
-            await this._legacyConnection.sendRequest(opCode, payloadWriter, payloadReader);
+            // If _affinityAwarenessActive flag is not set, we have exactly one connection
+            // but it can be either a legacy one or a modern one
+            // If affinityHint has not been passed we want to always use one socket (as long as it is alive)
+            // because some SQL requests (e.g., cursor-related) require to be sent to the same cluster node
+            await this._getAllConnections()[0].sendRequest(opCode, payloadWriter, payloadReader);
         }
     }
 
@@ -127,9 +132,7 @@ class Router {
                 this._changeState(IgniteClient.STATE.CONNECTED);
                 this._addConnection(socket);
 
-                if (this._affinityAwarenessAllowed) {
-                    this._runBackgroundConnect();
-                }
+                this._runBackgroundConnect();
 
                 return;
             }
@@ -151,7 +154,7 @@ class Router {
     }
 
     _runBackgroundConnect() {
-        if (!this._backgroundConnectTask) {
+        if (this._affinityAwarenessAllowed && !this._backgroundConnectTask) {
             // Only one task can be active
             this._backgroundConnectTask = this._backgroundConnect();
             this._backgroundConnectTask.then(() => this._backgroundConnectTask = null);
@@ -208,12 +211,10 @@ class Router {
         this._legacyConnection = null;
         this._inactiveEndpoints = [];
 
-        if (this._affinityAwarenessActive) {
-            this._affinityAwarenessActive = false;
-            this._connections = {};
-            this._distributionMap = new Map();
-            this._affinityTopologyVer = null;
-        }
+        this._affinityAwarenessActive = false;
+        this._connections = {};
+        this._distributionMap = new Map();
+        this._affinityTopologyVer = null;
     }
 
     _getAllConnections() {
@@ -236,7 +237,6 @@ class Router {
                 this._connections[nodeUUID].disconnect();
             }
             this._connections[nodeUUID] = socket;
-            this._affinityAwarenessActive = true;
         }
         else {
             if (this._legacyConnection) {
@@ -251,6 +251,11 @@ class Router {
         if (index > -1) {
             this._inactiveEndpoints.splice(index, 1);
         }
+
+        if (!this._affinityAwarenessActive &&
+            this._getAllConnections().length >= 2) {
+            this._affinityAwarenessActive = true;
+        }
     }
 
     _removeConnection(socket) {
@@ -264,21 +269,27 @@ class Router {
             // Add the endpoint to _inactiveEndpoints
             this._inactiveEndpoints.push(socket.endpoint);
         }
+
+        if (this._affinityAwarenessActive &&
+            this._getAllConnections().length < 2) {
+            this._affinityAwarenessActive = false;
+        }
     }
 
     async _onSocketDisconnect(socket, error = null) {
-        if (this._affinityAwarenessActive) {
-            this._removeConnection(socket);
-            if (this._getAllConnections().length != 0) {
-                this._runBackgroundConnect();
-                return;
-            }
+        this._removeConnection(socket);
+
+        if (this._getAllConnections().length != 0) {
+            // We had more than one connection before this disconnection
+            this._runBackgroundConnect();
+            return;
         }
 
         try {
             await this._reconnect();
         }
         catch (err) {
+            this._cleanUp();
         }
     }
 
@@ -351,7 +362,10 @@ class Router {
         }
 
         const keyAffinityMap = cacheAffinityMap.keyConfig;
-        const keyTypeCode = BinaryUtils.getTypeCode(keyType);
+
+        const convertedKey = await this._convertKey(key, keyType);
+        key = convertedKey.key;
+        const keyTypeCode = convertedKey.typeCode;
 
         let affinityKey = key;
         let affinityKeyTypeCode = keyTypeCode;
@@ -359,7 +373,7 @@ class Router {
         if (keyAffinityMap.has(keyTypeCode)) {
             const affinityKeyId = keyAffinityMap.get(keyTypeCode);
 
-            if (key instanceof BinaryObject.BinaryObject &&
+            if (key instanceof BinaryObject &&
                 key._fields.has(affinityKeyId)) {
                 const field = key._fields.get(affinityKeyId);
                 affinityKey = field.getValue();
@@ -377,10 +391,22 @@ class Router {
         return nodeId;
     }
 
+    async _convertKey(key, keyType) {
+        let typeCode = BinaryUtils.getTypeCode(keyType);
+
+        if (keyType instanceof ObjectType.ComplexObjectType) {
+            key = await BinaryObject.fromObject(key, keyType);
+            typeCode = BinaryUtils.TYPE_CODE.BINARY_OBJECT;
+        }
+
+        return {"key": key, "typeCode": typeCode};
+    }
+
     async _onAffinityTopologyChange(newVersion) {
         // If affinityTopologyVer is null, we haven't requested cache partitions yet.
         // Hence we don't have caches to request partitions for
-        if (this._affinityTopologyVer === null ||
+        if (!this._affinityAwarenessActive ||
+            this._affinityTopologyVer === null ||
             this._affinityTopologyVer.compareTo(newVersion) >= 0) {
             return;
         }

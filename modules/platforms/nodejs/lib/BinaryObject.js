@@ -293,6 +293,9 @@ class BinaryObject {
         return result;
     }
 
+    /**
+     * @ignore
+     */
     async _getHashCode(communicator) {
         if (this._hashCode !== null && !this._modified) {
             return this._hashCode;
