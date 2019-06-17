@@ -27,7 +27,7 @@ import org.springframework.context.annotation.Configuration;
 @ConfigurationProperties("account.signup")
 public class SignUpConfiguration {
     /** Flag if self sign up enabled. */
-    private boolean enabled;
+    private boolean enabled = true;
 
     /**
      * @return {@code false} if sign up disabled and new accounts can be created only by administrator.
