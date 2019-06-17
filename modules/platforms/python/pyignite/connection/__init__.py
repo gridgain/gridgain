@@ -163,10 +163,15 @@ class Connection:
     def get_protocol_version(self):
         return self.client.protocol_version
 
+    @select_version
     def _fail(self):
         """ set client to failed state (v1.3). """
         self._failed = True
         self._in_use.release()
+
+    def _fail_120(self):
+        """ set client to failed state (v1.2). """
+        self._failed = True
 
     @select_version
     def read_response(self) -> Union[dict, OrderedDict]:
@@ -234,6 +239,14 @@ class Connection:
         :param port: Ignite server node's port number.
         """
 
+        # we may not know the version yet
+        if (
+            self.client.protocol_version and
+            self.client.protocol_version >= (1, 3, 0)
+        ):
+            if not self._in_use.acquire(timeout=self.timeout or 1):
+                raise ConnectionError('Connection is in use.')
+
         # choose highest version first
         if self.client.protocol_version is None:
             self.client.protocol_version = max(PROTOCOLS)
@@ -256,8 +269,6 @@ class Connection:
         :param host: Ignite server node's host name or IP,
         :param port: Ignite server node's port number.
         """
-        if not self._in_use.acquire(timeout=self.timeout or 1):
-            raise ConnectionError('Connection is in use.')
 
         host = host or IGNITE_DEFAULT_HOST
         port = port or IGNITE_DEFAULT_PORT

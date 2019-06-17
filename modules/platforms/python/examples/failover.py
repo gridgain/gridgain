@@ -29,7 +29,7 @@ nodes = [
 
 client = Client(timeout=4.0)
 client.connect(nodes)
-print('Connected to {}'.format(client))
+print('Connected')
 
 my_cache = client.get_or_create_cache({
     PROP_NAME: 'my_cache',
@@ -50,7 +50,7 @@ while True:
         # consistency or just continue − depends on the task)
         print('Error: {}'.format(e))
         print('Last value: {}'.format(test_value))
-        print('Reconnected to {}'.format(client))
+        print('Reconnected')
     except CacheError as e:
         # not sure what is going on here
         print('Error: {}'.format(e))

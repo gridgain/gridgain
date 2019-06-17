@@ -125,16 +125,17 @@ class Client:
         return node_uuid
 
     def _add_node_120(
-        self, host: str = None, port: int = None, conn: Connection = None
+        self, host: str = None, port: int = None, conn: Connection = None,
+        *args, **kwargs,
     ):
         if self._nodes is None:
             self._nodes = []
 
         if conn is None:
             conn = Connection(self, **self._connection_args)
+            conn.host = host
+            conn.port = port
 
-        conn.host = host
-        conn.port = port
         self._nodes.append(conn)
 
     def connect(self, *args):
@@ -167,7 +168,7 @@ class Client:
         # now we know protocol version
         self._add_node(
             conn=first_node,
-            node_uuid=first_node.connect(*next(nodes))['node_uuid'],
+            node_uuid=first_node.connect(*next(nodes)).get('node_uuid', None),
         )
 
         for host, port in nodes:
@@ -218,12 +219,12 @@ class Client:
 
         # prepare the list of node indexes to try to connect to
         seq = list(range(len(self._nodes)))
-        seq = seq[self._current_node:] + seq[self._current_node:]
+        seq = seq[self._current_node:] + seq[:self._current_node]
 
         for i in seq:
             node = self._nodes[i]
             try:
-                node.connect()
+                node.connect(node.host, node.port)
             except connection_errors:
                 pass
             else:
