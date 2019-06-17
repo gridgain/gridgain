@@ -1268,5 +1268,7 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
         Collection<UUID> notStopped = F.lose(started, true, stopped);
 
         assertEquals("Not stopped IDs: " + notStopped, 0, notStopped.size());
+
+        waitForTopology(3);
     }
 }
