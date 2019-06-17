@@ -1177,7 +1177,7 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
                             @Override public boolean apply(UUID uuid, Event evt) {
                                 return true;
                             }
-                        }, null, EVT_JOB_STARTED).get(3000);
+                        }, null, EVT_JOB_STARTED).get(30000);
 
                         started.add(consumeId);
 
