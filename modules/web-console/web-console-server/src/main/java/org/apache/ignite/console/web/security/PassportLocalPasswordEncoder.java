@@ -50,8 +50,8 @@ public class PassportLocalPasswordEncoder implements PasswordEncoder {
     private final int iterations;
 
     /**
-     * Constructs a standard password encoder with a secret value which is also included in the password hash. There
-     * will be {@value DEFAULT_ITERATIONS} iterations and a hash width of {@value DEFAULT_HASH_WIDTH}.
+     * Constructs a standard password encoder with a secret value which is also included in the password hash.
+     * There will be {@value #DEFAULT_ITERATIONS} iterations and a hash width of {@value #DEFAULT_HASH_WIDTH}.
      */
     public PassportLocalPasswordEncoder() {
         this(DEFAULT_ITERATIONS, DEFAULT_HASH_WIDTH);
