@@ -105,7 +105,8 @@ class Client:
 
     @select_version
     def _add_node(
-        self, host: str = None, port: int = None, conn: Connection = None,
+        self, host: str = None, port: int = None,
+        conn: Connection = None, node_uuid: 'UUID' = None,
     ) -> 'UUID':
         """
         Opens a connection to Ignite server and adds it to the nodes'
@@ -116,9 +117,9 @@ class Client:
 
         if conn is None:
             conn = Connection(self, **self._connection_args)
+            hs_response = conn.connect(host, port)
+            node_uuid = hs_response['node_uuid']
 
-        hs_response = conn.connect(host, port)
-        node_uuid = hs_response['node_uuid']
         if node_uuid:
             self._nodes[node_uuid] = conn
         return node_uuid
@@ -162,10 +163,12 @@ class Client:
         # TODO: open first node in foregroung, others − in background
 
         first_node = Connection(self, **self._connection_args)
-        first_node.connect(*next(nodes))
 
         # now we know protocol version
-        self._add_node(conn=first_node)
+        self._add_node(
+            conn=first_node,
+            node_uuid=first_node.connect(*next(nodes))['node_uuid'],
+        )
 
         for host, port in nodes:
             self._add_node(host, port)

@@ -21,6 +21,7 @@ as well as Ignite protocol handshaking.
 
 from collections import OrderedDict
 import socket
+from threading import Lock, Timer
 from typing import Union
 
 from pyignite.constants import *
@@ -51,6 +52,7 @@ class Connection:
 
     _socket = None
     _failed = None
+    _in_use = None
 
     client = None
     host = None
@@ -131,6 +133,7 @@ class Connection:
             ssl_params['use_ssl'] = True
         self.ssl_params = ssl_params
         self._failed = False
+        self._in_use = Lock()
 
     @property
     def socket(self) -> socket.socket:
@@ -159,6 +162,11 @@ class Connection:
 
     def get_protocol_version(self):
         return self.client.protocol_version
+
+    def _fail(self):
+        """ set client to failed state (v1.3). """
+        self._failed = True
+        self._in_use.release()
 
     @select_version
     def read_response(self) -> Union[dict, OrderedDict]:
@@ -248,13 +256,20 @@ class Connection:
         :param host: Ignite server node's host name or IP,
         :param port: Ignite server node's port number.
         """
+        if not self._in_use.acquire(timeout=self.timeout or 1):
+            raise ConnectionError('Connection is in use.')
+
         host = host or IGNITE_DEFAULT_HOST
         port = port or IGNITE_DEFAULT_PORT
 
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._socket.settimeout(self.timeout)
         self._socket = self._wrap(self.socket)
-        self._socket.connect((host, port))
+        try:
+            self._socket.connect((host, port))
+        except connection_errors:
+            self._fail()
+            raise
 
         protocol_version = self.client.protocol_version
 
@@ -293,25 +308,46 @@ class Connection:
         self.host, self.port = host, port
         return hs_response
 
-    def reconnect(self):
+    @select_version
+    def reconnect(self, seq_no=0):
         """
-        Tries to reconnect.
+        Tries to reconnect synchronously, then in background.
         """
-        if self.alive:
+
+        # stop trying to reconnect
+        if seq_no >= len(RECONNECT_BACKOFF_SEQUENCE):
+            self._failed = False
+
+        self._reconnect()
+
+        if self.failed:
+            Timer(
+                RECONNECT_BACKOFF_SEQUENCE[seq_no],
+                self.reconnect,
+                kwargs={'seq_no': seq_no + 1},
+            ).start()
+
+    def reconnect_120(self):
+        """
+        Tries to reconnect synchronously.
+        """
+        self._reconnect()
+
+    def _reconnect(self):
+        # do not reconnect if connection is already working
+        # or was closed on purpose
+        if not self.failed:
             return
 
         # return connection to initial state
-        self._failed = True
-        if not self.closed:
-            self.close()
+        self.close()
 
         # connect
         try:
             self.connect(self.host, self.port)
+            self._failed = False
         except connection_errors:
             pass
-        else:
-            self._failed = False
 
     def _transfer_params(self, to: 'Connection'):
         """
@@ -345,8 +381,8 @@ class Connection:
         :param data: bytes to send,
         :param flags: (optional) OS-specific flags.
         """
-        if not self.alive:
-            raise SocketError('Attempt to use dead connection.')
+        if self.closed:
+            raise SocketError('Attempt to use closed connection.')
 
         kwargs = {}
         if flags is not None:
@@ -360,12 +396,13 @@ class Connection:
                     data[total_bytes_sent:],
                     **kwargs
                 )
-            except OSError:
-                self._failed = True
+            except connection_errors:
+                self._fail()
                 self.reconnect()
                 raise
             if bytes_sent == 0:
-                self._failed = True
+                self._fail()
+                self.reconnect()
                 raise SocketError('Connection broken.')
             total_bytes_sent += bytes_sent
 
@@ -377,8 +414,8 @@ class Connection:
         :param flags: (optional) OS-specific flags,
         :return: data received.
         """
-        if not self.alive:
-            raise SocketError('Attempt to use dead connection.')
+        if self.closed:
+            raise SocketError('Attempt to use closed connection.')
 
         pref_size = len(self.prefetch)
         if buffersize > pref_size:
@@ -387,7 +424,7 @@ class Connection:
             try:
                 result += self._recv(buffersize-pref_size, flags)
             except connection_errors:
-                self._failed = True
+                self._fail()
                 self.reconnect()
                 raise
             return result
@@ -409,8 +446,6 @@ class Connection:
         while bytes_rcvd < buffersize:
             chunk = self.socket.recv(buffersize-bytes_rcvd, **kwargs)
             if chunk == b'':
-                self._failed = True
-                self.reconnect()
                 raise SocketError('Connection broken.')
             chunks.append(chunk)
             bytes_rcvd += len(chunk)
@@ -419,10 +454,14 @@ class Connection:
 
     def close(self):
         """
-        Mark socket closed. This is recommended but not required, since
-        sockets are automatically closed when garbage-collected.
+        Try to mark socket closed, then unlink it. This is recommended but
+        not required, since sockets are automatically closed when
+        garbage-collected.
         """
         if self._socket:
-            self._socket.shutdown(socket.SHUT_RDWR)
-            self._socket.close()
+            try:
+                self._socket.shutdown(socket.SHUT_RDWR)
+                self._socket.close()
+            except connection_errors:
+                pass
             self._socket = None

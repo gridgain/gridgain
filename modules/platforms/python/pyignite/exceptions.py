@@ -84,4 +84,4 @@ class SQLError(CacheError):
     pass
 
 
-connection_errors = (SocketError, OSError)
+connection_errors = (IOError, OSError)

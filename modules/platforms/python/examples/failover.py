@@ -13,10 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import time
+
 from pyignite import Client
 from pyignite.datatypes.cache_config import CacheMode
 from pyignite.datatypes.prop_codes import *
-from pyignite.exceptions import SocketError
+from pyignite.exceptions import CacheError, SocketError
 
 
 nodes = [
@@ -32,8 +34,10 @@ print('Connected to {}'.format(client))
 my_cache = client.get_or_create_cache({
     PROP_NAME: 'my_cache',
     PROP_CACHE_MODE: CacheMode.PARTITIONED,
+    PROP_BACKUPS_NUMBER: 2,
 })
 my_cache.put('test_key', 0)
+test_value = 0
 
 # abstract main loop
 while True:
@@ -45,8 +49,13 @@ while True:
         # recover from error (repeat last command, check data
         # consistency or just continue − depends on the task)
         print('Error: {}'.format(e))
-        print('Last value: {}'.format(my_cache.get('test_key')))
+        print('Last value: {}'.format(test_value))
         print('Reconnected to {}'.format(client))
+    except CacheError as e:
+        # not sure what is going on here
+        print('Error: {}'.format(e))
+        print('Cluster can not keep up with frequent requests, sleeping…')
+        time.sleep(1)
 
 # Connected to 127.0.0.1:10800
 # Error: [Errno 104] Connection reset by peer
