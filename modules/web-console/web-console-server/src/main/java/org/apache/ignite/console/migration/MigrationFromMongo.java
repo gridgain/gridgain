@@ -160,15 +160,15 @@ public class MigrationFromMongo {
 
     /**
      * @param doc Mongo document.
-     * @param accId Account ID.
+     * 
      * @return Account to save.
      */
-    protected Account createAccount(Document doc, UUID accId) {
+    protected Account createAccount(Document doc) {
         Account acc = new Account();
 
-        acc.setId(accId);
+        acc.setId(UUID.randomUUID());
         acc.setEmail(doc.getString("email"));
-        acc.setPassword("PBKDF2:" + doc.getString("salt") + ":" + doc.getString("hash"));
+        acc.setPassword("{pbkdf2}" + doc.getString("salt") + doc.getString("hash"));
         acc.setFirstName(doc.getString("firstName"));
         acc.setLastName(doc.getString("lastName"));
         acc.setPhone(doc.getString("phone"));
@@ -213,13 +213,13 @@ public class MigrationFromMongo {
 
                 log.info(off(2, "Migrating account [_id=" + mongoAccId + ", email=" + email + "]"));
 
-                UUID accId = UUID.randomUUID();
+                Account acc = createAccount(accMongo);
 
-                Account acc = createAccount(accMongo, accId);
-
-                try(Transaction tx = txMgr.txStart()) {
+                try (Transaction tx = txMgr.txStart()) {
                     accRepo.ensureFirstUser();
                     accRepo.save(acc);
+
+                    UUID accId = acc.getId();
 
                     migrateNotebooks(space, accId);
                     migrateConfigurations(space, accId);

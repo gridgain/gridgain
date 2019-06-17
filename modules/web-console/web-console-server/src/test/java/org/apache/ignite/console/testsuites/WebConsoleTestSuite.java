@@ -18,6 +18,7 @@ package org.apache.ignite.console.testsuites;
 
 import org.apache.ignite.console.configuration.WebConsoleConfigurationSelfTest;
 import org.apache.ignite.console.services.AccountServiceTest;
+import org.apache.ignite.console.web.security.PasswordEncoderTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -27,7 +28,8 @@ import org.junit.runners.Suite;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
     WebConsoleConfigurationSelfTest.class,
-    AccountServiceTest.class
+    AccountServiceTest.class,
+    PasswordEncoderTest.class
 })
 public class WebConsoleTestSuite {
 }
