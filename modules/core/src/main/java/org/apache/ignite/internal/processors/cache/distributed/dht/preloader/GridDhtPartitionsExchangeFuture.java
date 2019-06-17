@@ -741,8 +741,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
         assert !cctx.kernalContext().isDaemon();
 
-        initTs = System.nanoTime();
-
         cctx.exchange().exchangerBlockingSectionBegin();
 
         try {
@@ -776,6 +774,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 state = ExchangeLocalState.CRD;
             else
                 state = cctx.kernalContext().clientNode() ? ExchangeLocalState.CLIENT : ExchangeLocalState.SRV;
+
+            initTs = System.nanoTime();
 
             if (exchLog.isInfoEnabled()) {
                 exchLog.info("Started exchange init [topVer=" + topVer +
