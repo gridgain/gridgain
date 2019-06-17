@@ -72,12 +72,12 @@ public enum NotificationDescriptor implements INotificationDescriptor {
     }
 
     /** {@inheritDoc} */
-    public String subjectCode() {
+    @Override public String subjectCode() {
         return sbjCode;
     }
 
     /** {@inheritDoc} */
-    public String messageCode() {
+    @Override public String messageCode() {
         return msgCode;
     }
 }
