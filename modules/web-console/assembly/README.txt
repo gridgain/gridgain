@@ -227,5 +227,5 @@ migration.mongo.db.name=console
 
 4. It is recommended to remove "migration.mongo.db.name" from settings after migration.
 
-5. Migration possible only "clean" GridGain database.
+5. Migration possible only on "clean" GridGain database.
  If you need to repeat migration, just delete folder "work" and restart Web Console.
