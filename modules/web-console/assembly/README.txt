@@ -41,7 +41,7 @@ Various properties can be specified inside your application.properties file, ins
 This appendix provides a list of common Spring Boot properties and references to the underlying classes that consume them:
 
 # Sign up configuration.
-account.disable.signup=false # Disable self registration
+account.signup.enabled=true # Enable self registration
 account.activation.enabled=false # Enable account activation
 account.activation.timeout=1800000 # Activation timeout(milliseconds)
 account.activation.sendTimeout=180000 # Activation send email throttle (milliseconds)

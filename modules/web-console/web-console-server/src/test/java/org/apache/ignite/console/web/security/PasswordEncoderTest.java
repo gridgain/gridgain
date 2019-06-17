@@ -16,7 +16,7 @@
 
 package org.apache.ignite.console.web.security;
 
-import org.apache.ignite.console.config.AccountConfiguration;
+import org.apache.ignite.console.config.ApplicationConfiguration;
 import org.junit.Test;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -27,7 +27,7 @@ import static org.junit.Assert.assertTrue;
  */
 public class PasswordEncoderTest {
     /** Password encoder. */
-    private PasswordEncoder encoder = new AccountConfiguration().passwordEncoder();
+    private PasswordEncoder encoder = new ApplicationConfiguration().passwordEncoder();
 
     /** Check matches for migrated passwords. */
     @Test

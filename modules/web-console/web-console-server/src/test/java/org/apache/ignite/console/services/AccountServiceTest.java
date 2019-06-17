@@ -17,7 +17,7 @@
 package org.apache.ignite.console.services;
 
 import org.apache.ignite.console.TestConfiguration;
-import org.apache.ignite.console.config.AccountConfiguration;
+import org.apache.ignite.console.config.SignUpConfiguration;
 import org.apache.ignite.console.config.ActivationConfiguration;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.repositories.AccountsRepository;
@@ -72,7 +72,7 @@ public class AccountServiceTest {
     @Test
     public void disableSignUp() {
         srvc = new AccountsService(
-            new AccountConfiguration().setDisableSignup(true),
+            new SignUpConfiguration().setEnabled(false),
             new ActivationConfiguration(new NoopMailService()),
             NoOpPasswordEncoder.getInstance(),
             new WebSocketsManager(),

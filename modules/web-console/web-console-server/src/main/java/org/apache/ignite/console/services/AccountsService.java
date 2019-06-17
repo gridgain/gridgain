@@ -19,7 +19,7 @@ package org.apache.ignite.console.services;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
-import org.apache.ignite.console.config.AccountConfiguration;
+import org.apache.ignite.console.config.SignUpConfiguration;
 import org.apache.ignite.console.config.ActivationConfiguration;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.repositories.AccountsRepository;
@@ -75,6 +75,7 @@ public class AccountsService implements UserDetailsService {
     private long activationSndTimeout;
 
     /**
+     * @param signUpCfg Sign up configuration.
      * @param activationCfg Account activation configuration.
      * @param encoder Service interface for encoding passwords.
      * @param wsm Websocket manager.
@@ -83,7 +84,7 @@ public class AccountsService implements UserDetailsService {
      * @param notificationSrv Notification service.
      */
     public AccountsService(
-        AccountConfiguration accCfg,
+        SignUpConfiguration signUpCfg,
         ActivationConfiguration activationCfg,
         PasswordEncoder encoder,
         WebSocketsManager wsm,
@@ -91,7 +92,7 @@ public class AccountsService implements UserDetailsService {
         TransactionManager txMgr,
         NotificationService notificationSrv
     ) {
-        disableSignup = accCfg.isDisableSignup();
+        disableSignup = !signUpCfg.isEnabled();
         userDetailsChecker = activationCfg.getChecker();
         activationEnabled = activationCfg.isEnabled();
         activationSndTimeout = activationCfg.getSendTimeout();
