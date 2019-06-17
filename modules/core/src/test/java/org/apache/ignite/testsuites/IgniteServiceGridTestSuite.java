@@ -58,6 +58,7 @@ import org.apache.ignite.internal.processors.service.ServicePredicateAccessCache
 import org.apache.ignite.internal.processors.service.ServiceReassignmentFunctionSelfTest;
 import org.apache.ignite.internal.processors.service.SystemCacheNotConfiguredTest;
 import org.apache.ignite.services.ServiceThreadPoolSelfTest;
+import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -112,4 +113,9 @@ import org.junit.runners.Suite;
     ServiceHotRedeploymentViaDeploymentSpiTest.class,
 })
 public class IgniteServiceGridTestSuite {
+    /** Activate service grid for test it. */
+    @BeforeClass
+    public static void init() {
+        System.setProperty("IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED", "true");
+    }
 }
