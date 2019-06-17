@@ -91,7 +91,6 @@ public class IgniteMBeansManager {
      * @param stripedExecSvc Striped executor.
      * @param p2pExecSvc P2P executor service.
      * @param mgmtExecSvc Management executor service.
-     * @param igfsExecSvc IGFS executor service.
      * @param dataStreamExecSvc data stream executor service.
      * @param restExecSvc Reset executor service.
      * @param affExecSvc Affinity executor service.
@@ -111,7 +110,6 @@ public class IgniteMBeansManager {
         final StripedExecutor stripedExecSvc,
         ExecutorService p2pExecSvc,
         ExecutorService mgmtExecSvc,
-        ExecutorService igfsExecSvc,
         StripedExecutor dataStreamExecSvc,
         ExecutorService restExecSvc,
         ExecutorService affExecSvc,
@@ -167,7 +165,6 @@ public class IgniteMBeansManager {
         registerExecutorMBean("GridSystemExecutor", sysExecSvc);
         registerExecutorMBean("GridClassLoadingExecutor", p2pExecSvc);
         registerExecutorMBean("GridManagementExecutor", mgmtExecSvc);
-        registerExecutorMBean("GridIgfsExecutor", igfsExecSvc);
         registerExecutorMBean("GridDataStreamExecutor", dataStreamExecSvc);
         registerExecutorMBean("GridAffinityExecutor", affExecSvc);
         registerExecutorMBean("GridCallbackExecutor", callbackExecSvc);
