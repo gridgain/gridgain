@@ -996,6 +996,8 @@
                                         <exclude>**/web-console/**/.babelrc</exclude>
                                         <exclude>**/web-console/**/*.json</exclude>
                                         <exclude>**/web-console/**/*.json.sample</exclude>
+                                        <exclude>**/web-console/**/*.crt</exclude>
+                                        <exclude>**/web-console/**/*.nopass.key</exclude>
                                         <exclude>**/web-console/backend/build/**</exclude>
                                         <exclude>**/web-console/backend/node_modules/**</exclude>
                                         <exclude>**/web-console/e2e/testcafe/node_modules/**</exclude>
