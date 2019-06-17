@@ -379,7 +379,6 @@ public class IgniteDiagnosticMessagesTest extends GridCommonAbstractTest {
     @Test
     public void testLongRunningTx() throws Exception {
         checkLongRunningTx(TRANSACTIONAL);
-
     }
 
     /**
