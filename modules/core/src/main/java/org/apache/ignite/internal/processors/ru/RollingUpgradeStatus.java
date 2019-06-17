@@ -15,6 +15,7 @@
  */
 package org.apache.ignite.internal.processors.ru;
 
+import java.io.Serializable;
 import java.util.Set;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.lang.IgniteProductVersion;
@@ -23,7 +24,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Represetns a cluster-wide state of Rolling Upgrade process.
  */
-public interface RollingUpgradeStatus {
+public interface RollingUpgradeStatus extends Serializable {
     /**
      * Returns {@code true} if Rolling Upgrade is enabled and is in progress.
      *

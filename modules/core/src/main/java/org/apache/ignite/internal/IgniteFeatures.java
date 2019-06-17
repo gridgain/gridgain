@@ -131,7 +131,7 @@ public enum IgniteFeatures {
      * @return if feature is declared to be supported by all nodes
      */
     public static boolean allNodesSupports(GridKernalContext ctx, Iterable<ClusterNode> nodes, IgniteFeatures feature) {
-        if (ctx != null) {
+        if (ctx != null && nodes.iterator().hasNext()) {
             RollingUpgradeStatus status = ctx.rollingUpgrade().getStatus();
 
             if (status.isEnabled() && !status.isForcedModeEnabled())
