@@ -1187,8 +1187,11 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
                         // No-op.
                     }
                     catch (IgniteException e) {
-                        if (e.hasCause(IgniteFutureTimeoutCheckedException.class))
+                        if (e.hasCause(IgniteFutureTimeoutCheckedException.class)) {
+                            log.warning("->->-> IgniteFutureTimeoutCheckedException observed, dumping thread stack");
+
                             Thread.dumpStack();
+                        }
 
                         throw e;
                     }
