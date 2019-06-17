@@ -768,7 +768,7 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
                         // Apply update counters.
                         if (txCntrs != null)
                             cctx.tm().txHandler().applyPartitionsUpdatesCounters(txCntrs.updateCounters());
-                        else {
+                        else if (!near()){
                             // Apply counters from
                             for (IgniteTxEntry entry : writeMap.values()) {
                                 GridCacheContext ctx0 = cctx.cacheContext(entry.cacheId());
