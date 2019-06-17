@@ -32,38 +32,38 @@ import static org.apache.ignite.console.websocket.WebSocketEvents.BROWSERS_PATH;
 @Configuration
 @EnableWebSocket
 public class WebSocketConfig implements WebSocketConfigurer {
-	/** */
-	private final AgentsHandler agentsHnd;
+    /** */
+    private final AgentsHandler agentsHnd;
 
-	/** */
-	private final BrowsersHandler browsersHnd;
+    /** */
+    private final BrowsersHandler browsersHnd;
 
-	/** */
-	@Value("${websocket.cors.enabled:false}")
-	private boolean corsEnabled;
+    /** */
+    @Value("${websocket.cors.enabled:false}")
+    private boolean corsEnabled;
 
-	/** */
-	@Value("${websocket.allowed.origin:https://localhost}")
-	private String allowedOrigin;
+    /** */
+    @Value("${websocket.allowed.origin:https://localhost}")
+    private String allowedOrigin;
 
-	/**
-	 * @param agentsHnd Agents handler.
-	 * @param browsersHnd Browsers handler.
-	 */
-	public WebSocketConfig(AgentsHandler agentsHnd, BrowsersHandler browsersHnd) {
-		this.agentsHnd = agentsHnd;
-		this.browsersHnd = browsersHnd;
-	}
+    /**
+     * @param agentsHnd Agents handler.
+     * @param browsersHnd Browsers handler.
+     */
+    public WebSocketConfig(AgentsHandler agentsHnd, BrowsersHandler browsersHnd) {
+        this.agentsHnd = agentsHnd;
+        this.browsersHnd = browsersHnd;
+    }
 
-	/**
-	 * @param registry Registry.
-	 */
-	@Override public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-		registry.addHandler(agentsHnd, AGENTS_PATH);
+    /**
+     * @param registry Registry.
+     */
+    @Override public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
+        registry.addHandler(agentsHnd, AGENTS_PATH);
 
-		WebSocketHandlerRegistration browsersReg = registry.addHandler(browsersHnd, BROWSERS_PATH);
+        WebSocketHandlerRegistration browsersReg = registry.addHandler(browsersHnd, BROWSERS_PATH);
 
-		if (corsEnabled)
-			browsersReg.setAllowedOrigins(allowedOrigin);
-	}
+        if (corsEnabled)
+            browsersReg.setAllowedOrigins(allowedOrigin);
+    }
 }
