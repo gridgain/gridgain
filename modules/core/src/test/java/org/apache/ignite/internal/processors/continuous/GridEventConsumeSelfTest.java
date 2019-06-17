@@ -1199,6 +1199,8 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
                     U.sleep(10);
                 }
 
+                System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis() + " stop flag is set");
+
                 stop.set(true);
 
                 return null;

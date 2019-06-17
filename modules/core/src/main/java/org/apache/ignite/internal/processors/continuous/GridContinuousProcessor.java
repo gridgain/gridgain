@@ -2554,8 +2554,12 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
         void onLocalRegistered() {
             loc = true;
 
-            if (rmt && !isDone())
+            if (rmt && !isDone()) {
+                System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis()
+                    + " local routineId is done: " + routineId);
+
                 onDone(routineId);
+            }
         }
 
         /**
@@ -2566,7 +2570,7 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
 
             if (loc && !isDone()) {
                 System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis()
-                    + " routineId is done: " + routineId);
+                    + " remote routineId is done: " + routineId);
 
                 onDone(routineId);
             }
