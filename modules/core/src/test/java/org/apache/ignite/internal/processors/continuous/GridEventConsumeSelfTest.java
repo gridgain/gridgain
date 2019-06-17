@@ -1228,6 +1228,8 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
                     stopGrid("anotherGrid");
                 }
 
+                log.warning("node-restarted-thread finished");
+
                 return null;
             }
         }, 1, "node-restarter");
