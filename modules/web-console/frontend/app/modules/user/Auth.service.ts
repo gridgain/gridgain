@@ -32,11 +32,10 @@ type AuthActions = 'signin' | 'signup' | 'password/forgot';
 type AuthOptions = {email:string, password:string, activationToken?: string}|SignupUserInfo|{email:string};
 
 export default class AuthService {
-    static $inject = ['$http', '$rootScope', '$state', '$window', 'IgniteMessages', 'gettingStarted', 'User'];
+    static $inject = ['$http', '$state', '$window', 'IgniteMessages', 'gettingStarted', 'User'];
 
     constructor(
         private $http: ng.IHttpService,
-        private $root: ng.IRootScopeService,
         private $state: StateService,
         private $window: ng.IWindowService,
         private Messages: ReturnType<typeof MessagesFactory>,
