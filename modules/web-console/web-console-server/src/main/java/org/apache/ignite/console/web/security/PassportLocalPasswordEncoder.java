@@ -51,7 +51,6 @@ public class PassportLocalPasswordEncoder implements PasswordEncoder {
 
     /**
      * Constructs a standard password encoder with a secret value which is also included in the password hash.
-     * There will be {@value #DEFAULT_ITERATIONS} iterations and a hash width of {@value #DEFAULT_HASH_WIDTH}.
      */
     public PassportLocalPasswordEncoder() {
         this(DEFAULT_ITERATIONS, DEFAULT_HASH_WIDTH);
@@ -60,8 +59,8 @@ public class PassportLocalPasswordEncoder implements PasswordEncoder {
     /**
      * Constructs a standard password encoder with a secret value as well as iterations and hash.
      *
-     * @param iterations the number of iterations. Users should aim for taking about .5 seconds on their own system.
-     * @param hashWidth the size of the hash
+     * @param iterations Number of iterations.
+     * @param hashWidth Size of the hash.
      */
     public PassportLocalPasswordEncoder(int iterations, int hashWidth) {
         this.iterations = iterations;
