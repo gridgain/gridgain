@@ -636,6 +636,8 @@ class ServerImpl extends TcpDiscoveryImpl {
         else
             msg = new TcpDiscoveryStatusCheckMessage(locNode, nodeId);
 
+        //msg = new TcpDiscoveryStatusCheckMessage(locNode, nodeId);
+
         return msg;
     }
 
@@ -647,6 +649,8 @@ class ServerImpl extends TcpDiscoveryImpl {
             msg = new TcpDiscoveryDuplicateIdMessage(creatorNodeId, node.id());
         else
             msg = new TcpDiscoveryDuplicateIdMessage(creatorNodeId, node);
+
+        //msg = new TcpDiscoveryDuplicateIdMessage(creatorNodeId, node);
 
         return msg;
     }
@@ -4458,6 +4462,12 @@ class ServerImpl extends TcpDiscoveryImpl {
          */
         private void trySendMessageDirectly(TcpDiscoveryNode node, TcpDiscoveryAbstractMessage msg)
             throws IgniteSpiException {
+            /*if (node == null) {
+                log.debug("Trying to send message to node that is not in topology. Skipping.");
+
+                return;
+            }*/
+
             if (node.clientRouterNodeId() != null) {
                 TcpDiscoveryNode routerNode = ring.node(node.clientRouterNodeId());
 
@@ -5476,7 +5486,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                                             "[recipient=" + msg0.creatorNodeId() + ", status=" + msg0.status() + ']', e);
                                     }
                                     else if (!spi.isNodeStopping0()) {
-                                        if (pingNode(msg0.creatorNodeId()))
+                                        if (pingNode(msg0.creatorNode()))
                                             // Node exists and accepts incoming connections.
                                             U.error(log, "Failed to respond to status check message [recipient=" +
                                                 msg0.creatorNodeId() + ", status=" + msg0.status() + ']', e);
