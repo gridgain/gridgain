@@ -214,3 +214,18 @@ Example of grid configuration:
         </property>
     </bean>
 </beans>
+
+
+Migration from previous version of Web Console (based on Mongo DB).
+-------------------------------------
+1. Configure MongDB database name for migration:
+migration.mongo.db.name=console
+
+2. Start Mongo DB on the same host with Web Console backend.
+
+3. Start Web Console backed, data will be migrated during startup.
+
+4. It is recommended to remove "migration.mongo.db.name" from settings after migration.
+
+5. Migration possible only on "clean" GridGain database.
+ If you need to repeat migration, just delete folder "work" and restart Web Console.

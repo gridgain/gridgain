@@ -29,7 +29,7 @@ const DEMO_NOTEBOOK = {
                 'FROM "CarCache".Car'
             ].join('\n'),
             result: 'BAR',
-            timeLineSpan: '1',
+            timeLineSpan: 1,
             rate: {
                 value: 3,
                 unit: 1000,
@@ -42,7 +42,7 @@ const DEMO_NOTEBOOK = {
             pageSize: 100,
             query: 'SELECT * FROM "CarCache".Car',
             result: 'TABLE',
-            timeLineSpan: '1',
+            timeLineSpan: 1,
             rate: {
                 value: 30,
                 unit: 1000,
@@ -61,7 +61,7 @@ const DEMO_NOTEBOOK = {
                 'GROUP BY P.NAME'
             ].join('\n'),
             result: 'TABLE',
-            timeLineSpan: '1',
+            timeLineSpan: 1,
             rate: {
                 value: 30,
                 unit: 1000,

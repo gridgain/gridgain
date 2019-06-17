@@ -16,11 +16,15 @@
 
 package org.apache.ignite.console.config;
 
+import java.util.Map;
+import org.apache.ignite.console.web.security.PassportLocalPasswordEncoder;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.DelegatingPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 /**
@@ -37,14 +41,14 @@ public class AccountConfiguration {
      */
     @Bean
     public PasswordEncoder passwordEncoder() {
-        // Pbkdf2PasswordEncoder is compatible with passport.js, but BCryptPasswordEncoder is recommended by Spring.
-        // We can return to Pbkdf2PasswordEncoder if we decided to import old users.
-        //  Pbkdf2PasswordEncoder encoder = new Pbkdf2PasswordEncoder("", 25000, HASH_WIDTH); // HASH_WIDTH = 512
-        //
-        //  encoder.setAlgorithm(PBKDF2WithHmacSHA256);
-        //  encoder.setEncodeHashAsBase64(true);
+        String encodingId = "bcrypt";
 
-        return new BCryptPasswordEncoder();
+        Map<String, PasswordEncoder> encoders = F.asMap(
+            encodingId, new BCryptPasswordEncoder(),
+            "pbkdf2", new PassportLocalPasswordEncoder()
+        );
+
+        return new DelegatingPasswordEncoder(encodingId, encoders);
     }
 
     /**

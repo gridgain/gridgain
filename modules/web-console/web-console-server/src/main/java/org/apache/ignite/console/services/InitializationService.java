@@ -14,20 +14,32 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.console;
+package org.apache.ignite.console.services;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
+import javax.annotation.PostConstruct;
+import org.apache.ignite.console.migration.MigrationFromMongo;
+import org.springframework.stereotype.Service;
 
 /**
- * Web console launcher.
+ * Special service for application initialization logic.
  */
-@SpringBootApplication
-public class Application {
+@Service
+public class InitializationService {
+    /** */
+    private MigrationFromMongo migration;
+
     /**
-     * @param args Args.
+     * @param migration Service to migrate user data from MongoDB to GridGain persistence.
      */
-    public static void main(String[] args) {
-        SpringApplication.run(Application.class, args);
+    public InitializationService(MigrationFromMongo migration) {
+        this.migration = migration;
+    }
+
+    /**
+     * Initialize application.
+     */
+    @PostConstruct
+    public void init() {
+        migration.migrate();
     }
 }

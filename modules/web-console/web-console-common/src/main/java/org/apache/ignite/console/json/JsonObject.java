@@ -16,8 +16,8 @@
 
 package org.apache.ignite.console.json;
 
+import java.util.Collection;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -117,28 +117,28 @@ public class JsonObject extends LinkedHashMap<String, Object> {
      * Get the integer value for specified key.
      *
      * @param key Key.
-     * @param dflt Default value, if map does not contain key.
+     * @param dflt Default value, if map does not contain value for key.
      * @return Value or {@code dflt} if no value for that key.
      * @throws ClassCastException If the value is not a {@link Integer}.
      */
     public Integer getInteger(String key, Integer dflt) {
         Integer val = (Integer)get(key);
 
-        return val != null || containsKey(key) ? val : dflt;
+        return val != null ? val : dflt;
     }
 
     /**
      * Get the long value for specified key.
      *
      * @param key Key.
-     * @param dflt Default value, if map does not contain key.
+     * @param dflt Default value, if map does not contain value for key.
      * @return Value or {@code dflt} if no value for that key.
      * @throws ClassCastException If the value is not a {@link Long}.
      */
     public Long getLong(String key, Long dflt) {
         Long val = (Long)get(key);
 
-        return val != null || containsKey(key) ? val : dflt;
+        return val != null ? val : dflt;
     }
 
     /**
@@ -170,6 +170,7 @@ public class JsonObject extends LinkedHashMap<String, Object> {
      * @return Value or {@code null} if no value for that key.
      * @throws ClassCastException If the value is not a JSON object.
      */
+    @SuppressWarnings("unchecked")
     public JsonObject getJsonObject(String key) {
         Object val = get(key);
 
@@ -200,8 +201,8 @@ public class JsonObject extends LinkedHashMap<String, Object> {
         if (val instanceof JsonArray)
             return (JsonArray)val;
 
-        if (val instanceof List)
-            return new JsonArray((List)val);
+        if (val instanceof Collection)
+            return new JsonArray((Collection)val);
 
         throw new ClassCastException("Failed to get JSON from: " + val);
     }

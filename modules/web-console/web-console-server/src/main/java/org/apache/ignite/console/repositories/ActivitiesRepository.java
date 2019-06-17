@@ -23,14 +23,14 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.UUID;
 import org.apache.ignite.Ignite;
-import org.apache.ignite.console.db.CacheHolder;
+import org.apache.ignite.console.db.OneToManyIndex;
 import org.apache.ignite.console.db.Table;
 import org.apache.ignite.console.dto.Activity;
 import org.apache.ignite.console.dto.ActivityKey;
 import org.apache.ignite.console.tx.TransactionManager;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.transactions.Transaction;
 import org.springframework.stereotype.Repository;
 
@@ -48,7 +48,7 @@ public class ActivitiesRepository {
     private final Table<Activity> activitiesTbl;
 
     /** */
-    private final CacheHolder<ActivityKey, Set<UUID>> activitiesIdx;
+    private final OneToManyIndex<ActivityKey> activitiesIdx;
 
     /**
      * @param ignite Ignite.
@@ -59,7 +59,7 @@ public class ActivitiesRepository {
 
         activitiesTbl = new Table<>(ignite, "wc_activities");
 
-        activitiesIdx = new CacheHolder<>(ignite, "wc_account_activities_idx");
+        activitiesIdx = new OneToManyIndex<>(ignite, "wc_account_activities_idx");
     }
 
     /**
@@ -76,10 +76,7 @@ public class ActivitiesRepository {
 
             ActivityKey activityKey = new ActivityKey(accId, date);
 
-            Set<UUID> ids = activitiesIdx.cache().get(activityKey);
-
-            if (ids == null)
-                ids = new TreeSet<>();
+            Set<UUID> ids = activitiesIdx.load(activityKey);
 
             Collection<Activity> activities = activitiesTbl.loadAll(ids);
 
@@ -95,7 +92,7 @@ public class ActivitiesRepository {
 
             ids.add(activity.getId());
 
-            activitiesIdx.cache().put(activityKey, ids);
+            activitiesIdx.addAll(activityKey, ids);
 
             tx.commit();
         }
@@ -116,9 +113,9 @@ public class ActivitiesRepository {
             while (dtStart.isBefore(dtEnd)) {
                 ActivityKey key = new ActivityKey(accId, dtStart.toInstant().toEpochMilli());
 
-                Set<UUID> ids = activitiesIdx.cache().get(key);
+                Set<UUID> ids = activitiesIdx.load(key);
 
-                if (ids != null) {
+                if (!F.isEmpty(ids)) {
                     Collection<Activity> activities = activitiesTbl.loadAll(ids);
 
                     activities.forEach(activity -> {
@@ -135,6 +132,24 @@ public class ActivitiesRepository {
             }
 
             return totals.values();
+        }
+    }
+
+    /**
+     * @param activityKey Activity key.
+     * @param activity Activity to save.
+     */
+    public void save(ActivityKey activityKey, Activity activity) {
+        try (Transaction tx = txMgr.txStart()) {
+            Set<UUID> ids = activitiesIdx.load(activityKey);
+
+            activitiesTbl.save(activity);
+
+            ids.add(activity.getId());
+
+            activitiesIdx.addAll(activityKey, ids);
+
+            tx.commit();
         }
     }
 }

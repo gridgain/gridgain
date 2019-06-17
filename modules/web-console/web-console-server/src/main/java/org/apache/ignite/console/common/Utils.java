@@ -88,10 +88,7 @@ public class Utils {
 
         String key = keys[keys.length - 1];
 
-        if (json.containsKey(key))
-            return new T2<>(json, key);
-
-        throw new IllegalStateException("Parameter not found: " + path);
+        return new T2<>(json, key);
     }
 
     /**

@@ -71,7 +71,7 @@
     </dependencyManagement>
 
     <dependencies>
-        <!-- Third-party dependencies -->
+        <!-- Spring Boot dependencies -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-websocket</artifactId>
@@ -111,6 +111,7 @@
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
 
+        <!-- Third-party dependencies -->
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-compress</artifactId>
@@ -129,7 +130,13 @@
             <version>${swagger2.version}</version>
         </dependency>
 
-        <!-- Ignite dependencies -->
+        <dependency>
+            <groupId>org.mongodb</groupId>
+            <artifactId>mongodb-driver-sync</artifactId>
+            <version>3.10.1</version>
+        </dependency>
+
+        <!-- GridGain dependencies -->
         <dependency>
             <groupId>org.gridgain</groupId>
             <artifactId>ignite-core</artifactId>

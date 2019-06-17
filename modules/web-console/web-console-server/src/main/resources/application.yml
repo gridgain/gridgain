@@ -14,6 +14,9 @@
 # limitations under the License.
 #
 
+# Uncomment for migration of user data from MongoDB.
+#migration.mongo.db.name: console
+
 # Uncomment for HTTPS:
 #server:
 #  port: 443

@@ -17,10 +17,7 @@
 package org.apache.ignite.console.dto;
 
 import javax.validation.constraints.NotNull;
-import org.apache.ignite.internal.processors.rest.request.RestQueryRequest;
 import org.hibernate.validator.constraints.NotEmpty;
-
-import static org.apache.ignite.internal.processors.rest.request.RestQueryRequest.QueryType.SQL_FIELDS;
 
 /**
  * Queries notebooks.
@@ -82,7 +79,7 @@ public class Notebook extends AbstractDto {
     /**
      * Paragraph in notebook.
      */
-    private static class Paragraph {
+    public static class Paragraph {
         /** Name. */
         @NotNull
         @NotEmpty
@@ -90,7 +87,7 @@ public class Notebook extends AbstractDto {
 
         /** Query type. */
         @NotNull
-        private RestQueryRequest.QueryType qryType = SQL_FIELDS;
+        private QueryType qryType = QueryType.SQL_FIELDS;
 
         /** Query. */
         @NotNull
@@ -150,14 +147,14 @@ public class Notebook extends AbstractDto {
         /**
          * @return Query type.
          */
-        public RestQueryRequest.QueryType getQueryType() {
+        public QueryType getQueryType() {
             return qryType;
         }
 
         /**
          * @param qryType New query type.
          */
-        public void setQueryType(RestQueryRequest.QueryType qryType) {
+        public void setQueryType(QueryType qryType) {
             this.qryType = qryType;
         }
 
@@ -248,7 +245,7 @@ public class Notebook extends AbstractDto {
         /**
          * @return Use selected cache as default schema.
          */
-        public boolean setUseAsDefaultSchema() {
+        public boolean getUseAsDefaultSchema() {
             return useAsDfltSchema;
         }
 
@@ -345,9 +342,20 @@ public class Notebook extends AbstractDto {
     }
 
     /**
+     * Query type.
+     */
+    public enum QueryType {
+        /** */
+        SQL_FIELDS,
+
+        /** */
+        SCAN
+    }
+
+    /**
      *  Result presentation type.
      */
-    private enum ResultType {
+    public enum ResultType {
         /** None. */
         NONE,
 
@@ -370,7 +378,7 @@ public class Notebook extends AbstractDto {
     /**
      * Chart settings.
      */
-    private static class ChartOptions {
+    public static class ChartOptions {
         /** Is Bar chart stacked. */
         private boolean barChartStacked = true;
 
@@ -409,7 +417,7 @@ public class Notebook extends AbstractDto {
     /**
      * Refresh descriptor.
      */
-    private static class Rate {
+    public static class Rate {
         /** Scale. */
         private int unit;
 
