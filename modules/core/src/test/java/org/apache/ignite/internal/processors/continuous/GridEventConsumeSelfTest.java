@@ -29,6 +29,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteEvents;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
@@ -38,6 +39,7 @@ import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.JobEvent;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.util.typedef.F;
@@ -1184,6 +1186,12 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
                     catch (ClusterTopologyException ignored) {
                         // No-op.
                     }
+                    catch (IgniteException e) {
+                        if (e.hasCause(IgniteFutureTimeoutCheckedException.class))
+                            Thread.dumpStack();
+
+                        throw e;
+                    }
 
                     U.sleep(10);
                 }
@@ -1192,7 +1200,7 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
 
                 return null;
             }
-        }, 8, "consume-starter");
+        }, 16, "consume-starter");
 
         IgniteInternalFuture<?> stopperFut = multithreadedAsync(new Callable<Object>() {
             @Override public Object call() throws Exception {
@@ -1219,7 +1227,7 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
 
                 return null;
             }
-        }, 4, "consume-stopper");
+        }, 8, "consume-stopper");
 
         IgniteInternalFuture<?> nodeRestarterFut = multithreadedAsync(new Callable<Object>() {
             @Override public Object call() throws Exception {
