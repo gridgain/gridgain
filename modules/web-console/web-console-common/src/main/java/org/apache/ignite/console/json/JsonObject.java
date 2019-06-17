@@ -117,28 +117,28 @@ public class JsonObject extends LinkedHashMap<String, Object> {
      * Get the integer value for specified key.
      *
      * @param key Key.
-     * @param dflt Default value, if map does not contain key.
+     * @param dflt Default value, if map does not contain value for key.
      * @return Value or {@code dflt} if no value for that key.
      * @throws ClassCastException If the value is not a {@link Integer}.
      */
     public Integer getInteger(String key, Integer dflt) {
         Integer val = (Integer)get(key);
 
-        return val != null || containsKey(key) ? val : dflt;
+        return val != null ? val : dflt;
     }
 
     /**
      * Get the long value for specified key.
      *
      * @param key Key.
-     * @param dflt Default value, if map does not contain key.
+     * @param dflt Default value, if map does not contain value for key.
      * @return Value or {@code dflt} if no value for that key.
      * @throws ClassCastException If the value is not a {@link Long}.
      */
     public Long getLong(String key, Long dflt) {
         Long val = (Long)get(key);
 
-        return val != null || containsKey(key) ? val : dflt;
+        return val != null ? val : dflt;
     }
 
     /**

@@ -32,7 +32,6 @@ import org.apache.ignite.console.dto.ActivityKey;
 import org.apache.ignite.console.tx.TransactionManager;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.transactions.Transaction;
-import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Repository;
 
 import static java.time.ZoneOffset.UTC;
@@ -40,17 +39,16 @@ import static java.time.ZoneOffset.UTC;
 /**
  * Repository to work with activities.
  */
-@Primary
 @Repository
 public class ActivitiesRepository {
     /** */
-    protected final TransactionManager txMgr;
+    private final TransactionManager txMgr;
 
     /** */
-    protected final Table<Activity> activitiesTbl;
+    private final Table<Activity> activitiesTbl;
 
     /** */
-    protected final OneToManyIndex<ActivityKey> activitiesIdx;
+    private final OneToManyIndex<ActivityKey> activitiesIdx;
 
     /**
      * @param ignite Ignite.
@@ -134,6 +132,24 @@ public class ActivitiesRepository {
             }
 
             return totals.values();
+        }
+    }
+
+    /**
+     * @param activityKey Activity key.
+     * @param activity Activity to save.
+     */
+    public void save(ActivityKey activityKey, Activity activity) {
+        try (Transaction tx = txMgr.txStart()) {
+            Set<UUID> ids = activitiesIdx.load(activityKey);
+
+            activitiesTbl.save(activity);
+
+            ids.add(activity.getId());
+
+            activitiesIdx.addAll(activityKey, ids);
+
+            tx.commit();
         }
     }
 }

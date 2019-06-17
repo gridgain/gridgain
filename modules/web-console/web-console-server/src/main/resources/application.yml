@@ -14,9 +14,8 @@
 # limitations under the License.
 #
 
-migration:
-  enabled: true
-  mongo: console
+# Uncomment for migration of user data from MongoDB.
+#migration.mongo.db.name: console
 
 # Uncomment for HTTPS:
 #server:

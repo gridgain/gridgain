@@ -21,6 +21,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import org.apache.ignite.internal.util.typedef.F;
@@ -69,6 +70,25 @@ public class MigrateUtils {
 
         if (!F.isEmpty(rawData))
             rawData.forEach(item -> res.add(((Number)item).longValue()));
+
+        return res;
+    }
+
+    /**
+     * @param doc Mongo document.
+     * @param key Key.
+     * @return List of ObjectIDs values.
+     */
+    public static List<ObjectId> asListOfObjectIds(Document doc, String key) {
+        List<ObjectId> res = new ArrayList<>();
+
+        List<Object> rawData = (List<Object>)doc.get(key);
+
+        if (!F.isEmpty(rawData))
+            rawData.forEach(item -> {
+                if (item != null)
+                    res.add((ObjectId)item);
+            });
 
         return res;
     }
@@ -219,6 +239,7 @@ public class MigrateUtils {
         return mongoIds
             .stream()
             .map(mapping::get)
+            .filter(Objects::nonNull)
             .map(UUID::toString)
             .collect(toList());
 

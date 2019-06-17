@@ -35,6 +35,7 @@ import org.apache.ignite.console.dto.Notebook;
 import org.apache.ignite.console.json.JsonArray;
 import org.apache.ignite.console.json.JsonObject;
 import org.apache.ignite.console.repositories.AccountsRepository;
+import org.apache.ignite.console.repositories.ActivitiesRepository;
 import org.apache.ignite.console.repositories.ConfigurationsRepository;
 import org.apache.ignite.console.repositories.NotebooksRepository;
 import org.apache.ignite.console.tx.TransactionManager;
@@ -46,10 +47,10 @@ import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import static org.apache.ignite.console.migration.MigrateUtils.asListOfObjectIds;
 import static org.apache.ignite.console.migration.MigrateUtils.asPrimitives;
 import static org.apache.ignite.console.migration.MigrateUtils.asStrings;
 import static org.apache.ignite.console.migration.MigrateUtils.getDocument;
@@ -80,18 +81,13 @@ public class MigrationFromMongo {
     private final ConfigurationsRepository cfgsRepo;
 
     /** */
-    @Qualifier("migration")
-    private final MigrateActivitiesRepository activitiesRepo;
+    private final ActivitiesRepository activitiesRepo;
 
     /** */
     protected MongoDatabase mongoDb;
 
     /** */
-    @Value("${migration.enabled:false}")
-    private boolean enabled;
-
-    /** */
-    @Value("${migration.mongo:console}")
+    @Value("${migration.mongo.db.name:}")
     private String mongoDbName;
 
     /**
@@ -110,7 +106,7 @@ public class MigrationFromMongo {
         AccountsRepository accRepo,
         NotebooksRepository notebooksRepo,
         ConfigurationsRepository cfgsRepo,
-        MigrateActivitiesRepository activitiesRepo
+        ActivitiesRepository activitiesRepo
     ) {
         this.txMgr = txMgr;
         this.accRepo = accRepo;
@@ -123,8 +119,8 @@ public class MigrationFromMongo {
      * Migrate from Mongo to GridGain.
      */
     public void migrate() {
-        if (!enabled) {
-            log.info("Migration disabled.");
+        if (F.isEmpty(mongoDbName)) {
+            log.info("MongoDB database name was not specified. Migration disabled.");
 
             return;
         }
@@ -152,8 +148,6 @@ public class MigrationFromMongo {
 
             migrateAccounts();
 
-            migrateEx();
-
             log.info("Migration finished!");
         }
         catch (Throwable e) {
@@ -162,13 +156,6 @@ public class MigrationFromMongo {
         finally {
             U.closeQuiet(mongoClient);
         }
-    }
-
-    /**
-     * Extension point for migration of additional objects.
-     */
-    protected void migrateEx() {
-        // No-op.
     }
 
     /**
@@ -198,7 +185,7 @@ public class MigrationFromMongo {
     /**
      * Migrate accounts.
      */
-    private void migrateAccounts() {
+    protected void migrateAccounts() {
         MongoCollection<Document> accountsCollection = mongoDb.getCollection("accounts");
         MongoCollection<Document> spacesCollection = mongoDb.getCollection("spaces");
 
@@ -234,13 +221,13 @@ public class MigrationFromMongo {
                     accRepo.ensureFirstUser();
                     accRepo.save(acc);
 
+                    migrateNotebooks(space, accId);
+                    migrateConfigurations(space, accId);
+                    migrateActivities(space, accId);
+                    migrateAccountEx(accMongo, space, accId);
+
                     tx.commit();
                 }
-
-                migrateNotebooks(space, accId);
-                migrateConfigurations(space, accId);
-                migrateActivities(space, accId);
-                migrateAccountEx(accMongo, space, accId);
             }
         }
     }
@@ -248,9 +235,9 @@ public class MigrationFromMongo {
     /**
      * Extension point for migration of additional objects related to account.
      *
-     * @param accId Account ID.
      * @param accMongo Mongo document with account.
      * @param space Mongo document with account space.
+     * @param accId Account ID.
      */
     protected void migrateAccountEx(Document accMongo, Document space, UUID accId) {
         // No-op.
@@ -370,7 +357,7 @@ public class MigrationFromMongo {
 
                 Map<ObjectId, UUID> cacheIds = new HashMap<>();
 
-                List<ObjectId> cachesMongo = clusterMongo.getList("caches", ObjectId.class);
+                List<ObjectId> cachesMongo = asListOfObjectIds(clusterMongo, "caches");
 
                 if (!F.isEmpty(cachesMongo))
                     cachesMongo.forEach(oid -> cacheIds.put(oid, UUID.randomUUID()));
@@ -379,7 +366,7 @@ public class MigrationFromMongo {
 
                 Map<ObjectId, UUID> modelIds = new HashMap<>();
 
-                List<ObjectId> modelsMongo = clusterMongo.getList("models", ObjectId.class);
+                List<ObjectId> modelsMongo = asListOfObjectIds(clusterMongo, "models");
 
                 if (!F.isEmpty(modelsMongo))
                     modelsMongo.forEach(oid -> modelIds.put(oid, UUID.randomUUID()));
@@ -448,7 +435,7 @@ public class MigrationFromMongo {
 
                     cacheMongo.remove("clusters");
 
-                    List<ObjectId> cacheDomains = cacheMongo.getList("domains", ObjectId.class);
+                    List<ObjectId> cacheDomains = asListOfObjectIds(cacheMongo, "domains");
 
                     cacheMongo.put("id", cacheId.toString());
                     cacheMongo.put("domains", mongoIdsToNewIds(cacheDomains, modelIds));
@@ -488,7 +475,7 @@ public class MigrationFromMongo {
 
                     modelMongo.remove("clusters");
 
-                    List<ObjectId> modelCaches = modelMongo.getList("caches", ObjectId.class);
+                    List<ObjectId> modelCaches = asListOfObjectIds(modelMongo, "caches");
 
                     modelMongo.put("id", modelId.toString());
                     modelMongo.put("caches",  mongoIdsToNewIds(modelCaches, cacheIds));
@@ -539,7 +526,7 @@ public class MigrationFromMongo {
 
                 ActivityKey key = new ActivityKey(accId, date.getTime());
 
-                activitiesRepo.migrateActivity(key, activity);
+                activitiesRepo.save(key, activity);
             }
         }
     }
