@@ -35,7 +35,7 @@
         <property name="targetMethod" value="putAll"/>
         <property name="arguments">
             <util:properties>
-                <prop key="IGNITE_JETTY_PORT">${random.int[60080,60090]}</prop>
+                <prop key="IGNITE_JETTY_PORT">60080</prop>
             </util:properties>
         </property>
     </bean>
