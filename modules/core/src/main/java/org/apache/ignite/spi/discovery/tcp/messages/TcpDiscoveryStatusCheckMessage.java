@@ -16,6 +16,8 @@
 
 package org.apache.ignite.spi.discovery.tcp.messages;
 
+import java.net.InetSocketAddress;
+import java.util.Collection;
 import java.util.UUID;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
