@@ -407,17 +407,17 @@ export default class AgentManager {
     }
 
     /**
-     * @param {{jdbcDriverJar: String, jdbcDriverClass: String, jdbcUrl: String, user: String, password: String}}
+     * @param {{jdbcDriverJar: String, jdbcDriverClass: String, jdbcUrl: String, user: String, password: String, samples: Boolean, importSamples: Boolean}}
      * @returns {ng.IPromise}
      */
-    schemas({jdbcDriverJar, jdbcDriverClass, jdbcUrl, user, password}) {
+    schemas({jdbcDriverJar, jdbcDriverClass, jdbcUrl, user, password, samples, importSamples}) {
         const info = {user, password};
 
-        return this._sendToAgent('schemaImport:schemas', {jdbcDriverJar, jdbcDriverClass, jdbcUrl, info});
+        return this._sendToAgent('schemaImport:schemas', {jdbcDriverJar, jdbcDriverClass, jdbcUrl, info, importSamples: samples && importSamples});
     }
 
     /**
-     * @param {{jdbcDriverJar: String, jdbcDriverClass: String, jdbcUrl: String, user: String, password: String, schemas: String, tablesOnly: String}}
+     * @param {{jdbcDriverJar: String, jdbcDriverClass: String, jdbcUrl: String, user: String, password: String, schemas: String, tablesOnly: Boolean}}
      * @returns {ng.IPromise} Promise on list of tables (see org.apache.ignite.schema.parser.DbTable java class)
      */
     tables({jdbcDriverJar, jdbcDriverClass, jdbcUrl, user, password, schemas, tablesOnly}) {

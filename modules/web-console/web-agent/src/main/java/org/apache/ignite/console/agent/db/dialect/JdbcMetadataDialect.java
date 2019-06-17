@@ -76,18 +76,23 @@ public class JdbcMetadataDialect extends DatabaseMetadataDialect {
     private static final int IDX_ASC_OR_DESC_IDX = 10;
 
     /** {@inheritDoc} */
-    @Override public Collection<String> schemas(Connection conn) throws SQLException {
+    @Override public Collection<String> schemas(Connection conn, boolean importSamples) throws SQLException {
         Collection<String> schemas = new ArrayList<>();
 
         ResultSet rs = conn.getMetaData().getSchemas();
 
         Set<String> sys = systemSchemas();
+        Set<String> sample = sampleSchemas();
 
         while(rs.next()) {
             String schema = rs.getString(1);
 
             // Skip system schemas.
             if (sys.contains(schema))
+                continue;
+
+            // Skip sample schemas.
+            if (!importSamples && sample.contains(schema))
                 continue;
 
             schemas.add(schema);

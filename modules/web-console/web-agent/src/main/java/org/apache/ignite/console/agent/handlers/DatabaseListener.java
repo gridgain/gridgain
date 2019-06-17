@@ -87,7 +87,12 @@ public class DatabaseListener {
 
             info.putAll((Map)args.get("info"));
 
-            return schemas(driverPath, driverCls, url, info);
+            if (!args.containsKey("importSamples"))
+                throw new IllegalArgumentException("Missing importSamples in arguments: " + args);
+
+            boolean importSamples = (boolean)args.get("importSamples");
+
+            return schemas(driverPath, driverCls, url, info, importSamples);
         }
     };
 
@@ -225,11 +230,17 @@ public class DatabaseListener {
      * @param jdbcDriverCls JDBC driver class.
      * @param jdbcUrl JDBC URL.
      * @param jdbcInfo Properties to connect to database.
+     * @param importSamples If {@code true} include sample schemas.
      * @return Collection of schema names.
      * @throws SQLException If failed to collect schemas.
      */
-    protected DbSchema schemas(String jdbcDriverJarPath, String jdbcDriverCls, String jdbcUrl,
-        Properties jdbcInfo) throws SQLException {
+    protected DbSchema schemas(
+        String jdbcDriverJarPath,
+        String jdbcDriverCls,
+        String jdbcUrl,
+        Properties jdbcInfo,
+        boolean importSamples
+    ) throws SQLException {
         if (log.isDebugEnabled())
             log.debug("Start collecting database schemas [drvJar=" + jdbcDriverJarPath +
                 ", drvCls=" + jdbcDriverCls + ", jdbcUrl=" + jdbcUrl + "]");
@@ -243,7 +254,7 @@ public class DatabaseListener {
                 catalog = parts.length > 0 ? parts[parts.length - 1] : "NONE";
             }
 
-            Collection<String> schemas = dbMetaReader.schemas(conn);
+            Collection<String> schemas = dbMetaReader.schemas(conn, importSamples);
 
             if (log.isDebugEnabled())
                 log.debug("Finished collection of schemas [jdbcUrl=" + jdbcUrl + ", catalog=" + catalog +

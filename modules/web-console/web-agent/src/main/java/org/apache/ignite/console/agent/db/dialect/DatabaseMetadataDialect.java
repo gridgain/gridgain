@@ -41,10 +41,11 @@ public abstract class DatabaseMetadataDialect {
      * Gets schemas from database.
      *
      * @param conn Database connection.
+     * @param importSamples If {@code true} include sample schemas.
      * @return Collection of schema descriptors.
      * @throws SQLException If failed to get schemas.
      */
-    public abstract Collection<String> schemas(Connection conn) throws SQLException;
+    public abstract Collection<String> schemas(Connection conn, boolean importSamples) throws SQLException;
 
     /**
      * Gets tables from database.
@@ -63,6 +64,13 @@ public abstract class DatabaseMetadataDialect {
      */
     public Set<String> systemSchemas() {
         return Collections.singleton("INFORMATION_SCHEMA");
+    }
+
+    /**
+     * @return Collection of sample schemas.
+     */
+    public Set<String> sampleSchemas() {
+        return Collections.emptySet();
     }
 
     /**

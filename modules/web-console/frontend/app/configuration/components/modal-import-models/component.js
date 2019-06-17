@@ -347,7 +347,8 @@ export class ModalImportModels {
                 db: 'Oracle',
                 jdbcDriverClass: 'oracle.jdbc.OracleDriver',
                 jdbcUrl: 'jdbc:oracle:thin:@[host]:[port]:[database]',
-                user: 'system'
+                user: 'system',
+                samples: true
             },
             {
                 db: 'DB2',
@@ -405,7 +406,8 @@ export class ModalImportModels {
             jdbcUrl: 'jdbc:[database]',
             user: 'sa',
             password: '',
-            tablesOnly: true
+            tablesOnly: true,
+            importSamples: false
         };
 
         $scope.demoConnection = {
@@ -414,7 +416,8 @@ export class ModalImportModels {
             jdbcUrl: 'jdbc:h2:mem:demo-db',
             user: 'sa',
             password: '',
-            tablesOnly: true
+            tablesOnly: true,
+            importSamples: false
         };
 
         function _loadPresets() {
@@ -1117,6 +1120,7 @@ export class ModalImportModels {
                 selectedPreset.jdbcDriverImplementationVersion = foundPreset.jdbcDriverImplementationVersion;
                 selectedPreset.jdbcUrl = foundPreset.jdbcUrl;
                 selectedPreset.user = foundPreset.user;
+                selectedPreset.samples = !!foundPreset.samples;
             }
         }, true);
     }

@@ -39,18 +39,22 @@ public class MySQLMetadataDialect extends JdbcMetadataDialect {
     }
 
     /** {@inheritDoc} */
-    @Override public Collection<String> schemas(Connection conn) throws SQLException {
+    @Override public Collection<String> schemas(Connection conn, boolean importSamples) throws SQLException {
         Collection<String> schemas = new ArrayList<>();
 
         ResultSet rs = conn.getMetaData().getCatalogs();
 
         Set<String> sys = systemSchemas();
+        Set<String> samples = sampleSchemas();
 
         while(rs.next()) {
             String schema = rs.getString(1);
 
             // Skip system schemas.
             if (sys.contains(schema))
+                continue;
+
+            if (!importSamples && samples.contains(schema))
                 continue;
 
             schemas.add(schema);
