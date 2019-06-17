@@ -213,18 +213,13 @@ public class MigrationFromMongo {
 
                 log.info(off(2, "Migrating account [_id=" + mongoAccId + ", email=" + email + "]"));
 
-                Account acc = createAccount(accMongo);
-
                 try (Transaction tx = txMgr.txStart()) {
+                    Account acc = createAccount(accMongo);
+
                     accRepo.ensureFirstUser();
                     accRepo.save(acc);
 
-                    UUID accId = acc.getId();
-
-                    migrateNotebooks(space, accId);
-                    migrateConfigurations(space, accId);
-                    migrateActivities(space, accId);
-                    migrateAccountEx(accMongo, space, accId);
+                    migrateAccountObjects(accMongo, space, acc.getId());
 
                     tx.commit();
                 }
@@ -233,14 +228,16 @@ public class MigrationFromMongo {
     }
 
     /**
-     * Extension point for migration of additional objects related to account.
+     * Migrate objects related to account.
      *
      * @param accMongo Mongo document with account.
      * @param space Mongo document with account space.
      * @param accId Account ID.
      */
-    protected void migrateAccountEx(Document accMongo, Document space, UUID accId) {
-        // No-op.
+    protected void migrateAccountObjects(Document accMongo, Document space, UUID accId) {
+        migrateNotebooks(space, accId);
+        migrateConfigurations(space, accId);
+        migrateActivities(space, accId);
     }
 
     /**
