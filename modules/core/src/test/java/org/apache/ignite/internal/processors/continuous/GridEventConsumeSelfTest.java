@@ -1203,7 +1203,7 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
 
                 return null;
             }
-        }, 16, "consume-starter");
+        }, 8, "consume-starter");
 
         IgniteInternalFuture<?> stopperFut = multithreadedAsync(new Callable<Object>() {
             @Override public Object call() throws Exception {
@@ -1230,7 +1230,7 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
 
                 return null;
             }
-        }, 8, "consume-stopper");
+        }, 4, "consume-stopper");
 
         IgniteInternalFuture<?> nodeRestarterFut = multithreadedAsync(new Callable<Object>() {
             @Override public Object call() throws Exception {
