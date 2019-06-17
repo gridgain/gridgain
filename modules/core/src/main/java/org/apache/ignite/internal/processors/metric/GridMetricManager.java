@@ -22,6 +22,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.function.IntSupplier;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.managers.GridManagerAdapter;
@@ -127,7 +128,6 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> {
      * @param stripedExecSvc Striped executor.
      * @param p2pExecSvc P2P executor service.
      * @param mgmtExecSvc Management executor service.
-     * @param igfsExecSvc IGFS executor service.
      * @param dataStreamExecSvc Data stream executor service.
      * @param restExecSvc Reset executor service.
      * @param affExecSvc Affinity executor service.
@@ -145,7 +145,6 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> {
         StripedExecutor stripedExecSvc,
         ExecutorService p2pExecSvc,
         ExecutorService mgmtExecSvc,
-        ExecutorService igfsExecSvc,
         StripedExecutor dataStreamExecSvc,
         ExecutorService restExecSvc,
         ExecutorService affExecSvc,
@@ -162,7 +161,6 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> {
         monitorExecutor("GridSystemExecutor", sysExecSvc);
         monitorExecutor("GridClassLoadingExecutor", p2pExecSvc);
         monitorExecutor("GridManagementExecutor", mgmtExecSvc);
-        monitorExecutor("GridIgfsExecutor", igfsExecSvc);
         monitorExecutor("GridDataStreamExecutor", dataStreamExecSvc);
         monitorExecutor("GridAffinityExecutor", affExecSvc);
         monitorExecutor("GridCallbackExecutor", callbackExecSvc);
@@ -264,7 +262,7 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> {
             "True if all tasks have completed following shut down.");
 
         mset.register("TotalQueueSize",
-            svc::queueSize,
+            (IntSupplier) svc::queueSize,
             "Total queue size of all stripes.");
 
         mset.register("TotalCompletedTasksCount",
