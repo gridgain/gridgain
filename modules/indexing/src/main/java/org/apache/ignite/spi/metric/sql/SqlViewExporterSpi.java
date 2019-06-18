@@ -20,6 +20,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.function.Predicate;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.query.QueryUtils;
@@ -59,7 +60,12 @@ public class SqlViewExporterSpi extends IgniteSpiAdapter implements MetricExport
 
         SchemaManager mgr = ((IgniteH2Indexing)ctx.query().getIndexing()).schemaManager();
 
-        mgr.createSystemView(QueryUtils.SCHEMA_MONITORING, new MetricSetLocalSystemView(ctx));
+        try {
+            mgr.createSystemView(QueryUtils.SCHEMA_MONITORING, new MetricSetLocalSystemView(ctx));
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteSpiException(e);
+        }
 
         if (log.isDebugEnabled())
             log.debug(SYS_VIEW_NAME + " SQL view for metrics created.");

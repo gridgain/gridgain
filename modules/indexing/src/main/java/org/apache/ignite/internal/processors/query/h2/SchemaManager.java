@@ -32,7 +32,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
@@ -136,8 +135,7 @@ public class SchemaManager {
      * @param schema Schema to create view in.
      * @param view System view.
      */
-    public void createSystemView(String schema, SqlSystemView view) {
-
+    public void createSystemView(String schema, SqlSystemView view) throws IgniteCheckedException {
         boolean disabled = IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_SQL_DISABLE_SYSTEM_VIEWS);
 
         if (disabled) {
@@ -157,7 +155,7 @@ public class SchemaManager {
             }
         }
         catch (IgniteCheckedException | SQLException e) {
-            throw new IgniteException("Failed to register system view.", e);
+            throw new IgniteCheckedException("Failed to register system view.", e);
         }
     }
 
