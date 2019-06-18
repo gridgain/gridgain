@@ -56,6 +56,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -156,7 +157,6 @@ import org.apache.ignite.internal.processors.port.GridPortRecord;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
-import org.apache.ignite.internal.util.GridCountDownCallback;
 import org.apache.ignite.internal.util.GridMultiCollectionWrapper;
 import org.apache.ignite.internal.util.GridReadOnlyArrayView;
 import org.apache.ignite.internal.util.IgniteUtils;
@@ -1463,13 +1463,11 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     @Override public void rebuildIndexesIfNeeded(GridDhtPartitionsExchangeFuture fut) {
         GridQueryProcessor qryProc = cctx.kernalContext().query();
 
-        if (qryProc.moduleEnabled()) {
-            GridCountDownCallback rebuildIndexesCompleteCntr = new GridCountDownCallback(
-                cctx.cacheContexts().size(),
-                () -> log().info("Indexes rebuilding completed for all caches."),
-                1  //need at least 1 index rebuilded to print message about rebuilding completion
-            );
+        AtomicInteger indexesCntr = new AtomicInteger(cctx.cacheContexts().size());
 
+        AtomicBoolean rebuiltAlLeastOneIdx = new AtomicBoolean(false);
+
+        if (qryProc.moduleEnabled()) {
             for (final GridCacheContext cacheCtx : (Collection<GridCacheContext>)cctx.cacheContexts()) {
                 if (cacheCtx.startTopologyVersion().equals(fut.initialVersion())) {
                     final int cacheId = cacheCtx.cacheId();
@@ -1504,7 +1502,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                                     }
                                 }
 
-                                rebuildIndexesCompleteCntr.countDown(true);
+                                rebuiltAlLeastOneIdx.set(true);
+
+                                checkAndPrintRebuildAllIndexesMessage(indexesCntr, rebuiltAlLeastOneIdx.get());
                             }
                         });
                     }
@@ -1514,12 +1514,18 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                             usrFut.onDone();
 
-                            rebuildIndexesCompleteCntr.countDown(false);
+                            checkAndPrintRebuildAllIndexesMessage(indexesCntr, rebuiltAlLeastOneIdx.get());
                         }
                     }
                 }
             }
         }
+    }
+
+    /** */
+    private void checkAndPrintRebuildAllIndexesMessage(AtomicInteger indexesCntr, boolean doPrint) {
+        if (indexesCntr.decrementAndGet() == 0 && doPrint)
+            log().info("Indexes rebuilding completed for all caches.");
     }
 
     /** {@inheritDoc} */
