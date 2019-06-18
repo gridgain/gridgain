@@ -52,17 +52,17 @@ export default class ConfigurationDownload {
     downloadClusterConfiguration(cluster: ClusterLike) {
         this.activitiesData.post({action: '/configuration/download'});
 
-        return this.PageConfigure.getClusterConfiguration({clusterID: cluster._id, isDemo: !!this.Demo.enabled})
+        return this.PageConfigure.getClusterConfiguration({clusterID: cluster.id, isDemo: !!this.Demo.enabled})
             .then((data) => this.configuration.populate(data))
             .then(({clusters}) => {
-                return clusters.find(({_id}) => _id === cluster._id)
+                return clusters.find(({id}) => id === cluster.id)
                     || this.$q.reject({message: `Cluster ${cluster.name} not found`});
             })
             .then((cluster) => {
                 return this.summaryZipper({
                     cluster,
                     data: {},
-                    IgniteDemoMode: this.Demo.enabled,
+                    demoMode: this.Demo.enabled,
                     targetVer: this.Version.currentSbj.getValue()
                 });
             })

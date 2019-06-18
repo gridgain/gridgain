@@ -15,22 +15,22 @@
  */
 
 import {DemoService} from 'app/modules/demo/Demo.module';
+import _ from 'lodash';
 
 const DEMO_NOTEBOOK = {
     name: 'SQL demo',
-    _id: 'demo',
+    id: 'demo',
     paragraphs: [
         {
             name: 'Query with refresh rate',
-            qryType: 'query',
+            queryType: 'SQL_FIELDS',
             pageSize: 100,
-            limit: 0,
             query: [
                 'SELECT count(*)',
                 'FROM "CarCache".Car'
             ].join('\n'),
-            result: 'bar',
-            timeLineSpan: '1',
+            result: 'BAR',
+            timeLineSpan: 1,
             rate: {
                 value: 3,
                 unit: 1000,
@@ -39,12 +39,11 @@ const DEMO_NOTEBOOK = {
         },
         {
             name: 'Simple query',
-            qryType: 'query',
+            queryType: 'SQL_FIELDS',
             pageSize: 100,
-            limit: 0,
             query: 'SELECT * FROM "CarCache".Car',
-            result: 'table',
-            timeLineSpan: '1',
+            result: 'TABLE',
+            timeLineSpan: 1,
             rate: {
                 value: 30,
                 unit: 1000,
@@ -53,9 +52,8 @@ const DEMO_NOTEBOOK = {
         },
         {
             name: 'Query with aggregates',
-            qryType: 'query',
+            queryType: 'SQL_FIELDS',
             pageSize: 100,
-            limit: 0,
             query: [
                 'SELECT p.name, count(*) AS cnt',
                 'FROM "ParkingCache".Parking p',
@@ -63,8 +61,8 @@ const DEMO_NOTEBOOK = {
                 '  ON (p.id) = (c.parkingId)',
                 'GROUP BY P.NAME'
             ].join('\n'),
-            result: 'table',
-            timeLineSpan: '1',
+            result: 'TABLE',
+            timeLineSpan: 1,
             rate: {
                 value: 30,
                 unit: 1000,
@@ -105,10 +103,10 @@ export default class NotebookData {
         return this.load();
     }
 
-    find(_id) {
+    find(id) {
         return this.read()
             .then(() => {
-                const notebook = this.demo ? this.notebooks[0] : _.find(this.notebooks, {_id});
+                const notebook = this.demo ? this.notebooks[0] : _.find(this.notebooks, {id});
 
                 if (_.isNil(notebook))
                     return this.$q.reject('Failed to load notebook.');
@@ -119,23 +117,23 @@ export default class NotebookData {
 
     findIndex(notebook) {
         return this.read()
-            .then(() => _.findIndex(this.notebooks, {_id: notebook._id}));
+            .then(() => _.findIndex(this.notebooks, {id: notebook.id}));
     }
 
     save(notebook) {
         if (this.demo)
             return this.$q.when(DEMO_NOTEBOOK);
 
-        return this.$http.post('/api/v1/notebooks/save', notebook)
-            .then(({data}) => {
-                const idx = _.findIndex(this.notebooks, {_id: data._id});
+        return this.$http.put('/api/v1/notebooks', notebook)
+            .then(() => {
+                const idx = _.findIndex(this.notebooks, {id: notebook.id});
 
-                if (idx >= 0)
-                    this.notebooks[idx] = data;
+                if (idx < 0)
+                    this.notebooks.push(notebook);
                 else
-                    this.notebooks.push(data);
+                    this.notebooks[idx] = notebook;
 
-                return data;
+                return notebook;
             })
             .catch(({data}) => Promise.reject(data));
     }
@@ -144,11 +142,11 @@ export default class NotebookData {
         if (this.demo)
             return this.$q.reject(`Removing "${notebook.name}" notebook is not supported.`);
 
-        const key = {_id: notebook._id};
+        const notebookId = notebook.id;
 
-        return this.$http.post('/api/v1/notebooks/remove', key)
+        return this.$http.delete(`/api/v1/notebooks/${notebookId}`)
             .then(() => {
-                const idx = _.findIndex(this.notebooks, key);
+                const idx = _.findIndex(this.notebooks, {id: notebookId});
 
                 if (idx >= 0) {
                     this.notebooks.splice(idx, 1);

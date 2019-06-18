@@ -69,13 +69,13 @@ let paragraphId = 0;
 
 class Paragraph {
     name: string;
-    qryType: 'scan' | 'query';
+    qryType: 'SCAN' | 'SQL_FIELDS';
 
     constructor($animate, $timeout, JavaTypes, errorParser, paragraph) {
         const self = this;
 
         self.id = 'paragraph-' + paragraphId++;
-        self.qryType = paragraph.qryType || 'query';
+        self.qryType = paragraph.qryType || 'SQL_FIELDS';
         self.maxPages = 0;
         self.filter = '';
         self.useAsDefaultSchema = false;
@@ -153,7 +153,7 @@ class Paragraph {
         }});
 
         this.showLoading = (enable) => {
-            if (this.qryType === 'scan')
+            if (this.qryType === 'SCAN')
                 this.scanningInProgress = enable;
 
             this.loading = enable;
@@ -195,7 +195,7 @@ class Paragraph {
         if (_.isEmpty(this.rows))
             return 'empty';
 
-        return this.result === 'table' ? 'table' : 'chart';
+        return this.result === 'TABLE' ? 'table' : 'chart';
     }
 
     nonRefresh() {
@@ -203,11 +203,11 @@ class Paragraph {
     }
 
     table() {
-        return this.result === 'table';
+        return this.result === 'TABLE';
     }
 
     chart() {
-        return this.result !== 'table' && this.result !== 'none';
+        return this.result !== 'TABLE' && this.result !== 'NONE';
     }
 
     nonEmpty() {
@@ -219,11 +219,11 @@ class Paragraph {
     }
 
     scanExplain() {
-        return this.queryExecuted() && (this.qryType === 'scan' || this.queryArgs.query.startsWith('EXPLAIN '));
+        return this.queryExecuted() && (this.qryType === 'SCAN' || this.queryArgs.query.startsWith('EXPLAIN '));
     }
 
     timeLineSupported() {
-        return this.result !== 'pie';
+        return this.result !== 'PIE';
     }
 
     chartColumnsConfigured() {
@@ -335,7 +335,7 @@ export class NotebookCtrl {
             {label: '100', value: 100}
         ];
 
-        $scope.timeLineSpans = ['1', '5', '10', '15', '30'];
+        $scope.timeLineSpans = [1, 5, 10, 15, 30];
 
         $scope.aggregateFxs = ['FIRST', 'LAST', 'MIN', 'MAX', 'SUM', 'AVG', 'COUNT'];
 
@@ -473,7 +473,7 @@ export class NotebookCtrl {
                         const chartData = _.find(datum, {series: valCol.label});
 
                         const leftBound = new Date();
-                        leftBound.setMinutes(leftBound.getMinutes() - parseInt(paragraph.timeLineSpan, 10));
+                        leftBound.setMinutes(leftBound.getMinutes() - paragraph.timeLineSpan);
 
                         if (chartData) {
                             const lastItem = _.last(paragraph.chartHistory);
@@ -608,9 +608,7 @@ export class NotebookCtrl {
             const datum = _chartDatum(paragraph);
 
             if (_.isEmpty(paragraph.charts)) {
-                const stacked = paragraph.chartsOptions && paragraph.chartsOptions.barChart
-                    ? paragraph.chartsOptions.barChart.stacked
-                    : true;
+                const stacked = _.get(paragraph, 'chartsOptions.barChartStacked', true);
 
                 const options = {
                     chart: {
@@ -757,9 +755,7 @@ export class NotebookCtrl {
             const datum = _chartDatum(paragraph);
 
             if (_.isEmpty(paragraph.charts)) {
-                const style = paragraph.chartsOptions && paragraph.chartsOptions.areaChart
-                    ? paragraph.chartsOptions.areaChart.style
-                    : 'stack';
+                const style = _.get(paragraph, 'chartsOptions.areaChartStyle', 'stack');
 
                 const options = {
                     chart: {
@@ -801,19 +797,19 @@ export class NotebookCtrl {
 
             if (paragraph.chart() && paragraph.nonEmpty()) {
                 switch (paragraph.result) {
-                    case 'bar':
+                    case 'BAR':
                         _barChart(paragraph);
                         break;
 
-                    case 'pie':
+                    case 'PIE':
                         _pieChart(paragraph);
                         break;
 
-                    case 'line':
+                    case 'LINE':
                         _lineChart(paragraph);
                         break;
 
-                    case 'area':
+                    case 'AREA':
                         _areaChart(paragraph);
                         break;
 
@@ -1077,13 +1073,13 @@ export class NotebookCtrl {
                 query: '',
                 pageSize: $scope.pageSizesOptions[1].value,
                 timeLineSpan: $scope.timeLineSpans[0],
-                result: 'none',
+                result: 'NONE',
                 rate: {
                     value: 1,
                     unit: 60000,
                     installed: false
                 },
-                qryType: 'query',
+                qryType: 'SQL_FIELDS',
                 lazy: true
             });
 
@@ -1106,13 +1102,13 @@ export class NotebookCtrl {
                 query: '',
                 pageSize: $scope.pageSizesOptions[1].value,
                 timeLineSpan: $scope.timeLineSpans[0],
-                result: 'none',
+                result: 'NONE',
                 rate: {
                     value: 1,
                     unit: 60000,
                     installed: false
                 },
-                qryType: 'scan'
+                qryType: 'SCAN'
             });
 
             $scope.addParagraph(paragraph, sz);
@@ -1123,16 +1119,16 @@ export class NotebookCtrl {
                 const chart = paragraph.charts[0].api.getScope().chart;
 
                 if (!LegacyUtils.isDefined(paragraph.chartsOptions))
-                    paragraph.chartsOptions = {barChart: {stacked: true}, areaChart: {style: 'stack'}};
+                    paragraph.chartsOptions = {barChartStacked: true, areaChartStyle: 'stack'};
 
                 switch (paragraph.result) {
-                    case 'bar':
-                        paragraph.chartsOptions.barChart.stacked = chart.stacked();
+                    case 'BAR':
+                        paragraph.chartsOptions.barChartStacked = chart.stacked();
 
                         break;
 
-                    case 'area':
-                        paragraph.chartsOptions.areaChart.style = chart.style();
+                    case 'AREA':
+                        paragraph.chartsOptions.areaChartStyle = chart.style();
 
                         break;
 
@@ -1267,13 +1263,13 @@ export class NotebookCtrl {
         /**
          * Execute query and get first result page.
          *
-         * @param qryType Query type. 'query' or `scan`.
+         * @param qryType Query type. 'SQL_FIELDS' or `SCAN`.
          * @param qryArg Argument with query properties.
          * @param {(res) => any} onQueryStarted Action to execute when query ID is received.
          * @return {Observable<VisorQueryResult>} Observable with first query result page.
          */
         const _executeQuery0 = (qryType, qryArg, onQueryStarted: (res) => any = () => {}) => {
-            return from(qryType === 'scan' ? agentMgr.queryScan(qryArg) : agentMgr.querySql(qryArg)).pipe(
+            return from(qryType === 'SCAN' ? agentMgr.queryScan(qryArg) : agentMgr.querySql(qryArg)).pipe(
                 tap((res) => {
                     onQueryStarted(res);
                     $scope.$applyAsync();
@@ -1453,8 +1449,8 @@ export class NotebookCtrl {
 
             paragraph.showLoading(false);
 
-            if (_.isNil(paragraph.result) || paragraph.result === 'none' || paragraph.scanExplain())
-                paragraph.result = 'table';
+            if (_.isNil(paragraph.result) || paragraph.result === 'NONE' || paragraph.scanExplain())
+                paragraph.result = 'TABLE';
             else if (paragraph.chart()) {
                 let resetCharts = clearChart;
 
@@ -1861,7 +1857,7 @@ export class NotebookCtrl {
             paragraph.rows = res.rows;
 
             if (paragraph.chart()) {
-                if (paragraph.result === 'pie')
+                if (paragraph.result === 'PIE')
                     _updatePieChartsWithData(paragraph, _pieChartDatum(paragraph));
                 else
                     _updateChartsWithData(paragraph, _chartDatum(paragraph));
@@ -1955,7 +1951,7 @@ export class NotebookCtrl {
         const exportFileName = (paragraph, all) => {
             const args = paragraph.queryArgs;
 
-            if (paragraph.qryType === 'scan')
+            if (paragraph.qryType === 'SCAN')
                 return `export-scan-${args.cacheName}-${paragraph.name}${all ? '-all' : ''}.csv`;
 
             return `export-query-${paragraph.name}${all ? '-all' : ''}.csv`;
@@ -2042,13 +2038,6 @@ export class NotebookCtrl {
             return paragraph.timeLineSupported() && paragraph.chartTimeLineEnabled();
         };
 
-        $scope.paragraphTimeLineSpan = function(paragraph) {
-            if (paragraph && paragraph.timeLineSpan)
-                return paragraph.timeLineSpan.toString();
-
-            return '1';
-        };
-
         $scope.applyChartSettings = function(paragraph) {
             _chartApplySettings(paragraph, true);
         };
@@ -2122,7 +2111,7 @@ export class NotebookCtrl {
             if (!_.isNil(paragraph)) {
                 const scope = $scope.$new();
 
-                if (paragraph.qryType === 'scan') {
+                if (paragraph.qryType === 'SCAN') {
                     scope.title = 'SCAN query';
 
                     const filter = paragraph.queryArgs.filter;
@@ -2249,7 +2238,7 @@ export class NotebookCtrl {
         return true;
     }
 
-    scanActions: QueryActions<Paragraph & {type: 'scan'}> = [
+    scanActions: QueryActions<Paragraph & {type: 'SCAN'}> = [
         {
             text: 'Scan',
             click: (p) => this.$scope.scan(p),
@@ -2264,7 +2253,7 @@ export class NotebookCtrl {
         {text: 'Remove', click: (p) => this.removeParagraph(p), available: () => true}
     ];
 
-    queryActions: QueryActions<Paragraph & {type: 'query'}> = [
+    queryActions: QueryActions<Paragraph & {type: 'SQL_FIELDS'}> = [
         {
             text: 'Execute',
             click: (p) => this.$scope.execute(p),

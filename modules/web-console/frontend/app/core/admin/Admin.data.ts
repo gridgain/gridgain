@@ -33,11 +33,13 @@ export default class IgniteAdminData {
         private Notebook: NotebookData
     ) {}
 
-    becomeUser(viewedUserId: string) {
-        return this.$http.get('/api/v1/admin/become', {
-            params: {viewedUserId}
-        })
-        .catch(this.Messages.showError);
+    /**
+     * @param id User ID.
+     */
+    becomeUser(id: string) {
+        return this.$http
+            .post('/api/v1/admin/become', {id})
+            .catch(this.Messages.showError);
     }
 
     revertIdentity() {
@@ -50,35 +52,30 @@ export default class IgniteAdminData {
     }
 
     removeUser(user: User) {
-        return this.$http.post('/api/v1/admin/remove', {
-            userId: user._id
-        })
-        .then(() => {
-            this.Messages.showInfo(`User has been removed: "${user.userName}"`);
-        })
-        .catch(({data, status}) => {
-            if (status === 503)
-                this.Messages.showInfo(data);
-            else
-                this.Messages.showError('Failed to remove user: ', data);
-        });
+        return this.$http
+            .delete(`/api/v1/admin/users/${user.id}`)
+            .then(() => this.Messages.showInfo(`User has been removed: "${user.userName}"`))
+            .catch(({data, status}) => {
+                if (status === 503)
+                    this.Messages.showInfo(data);
+                else
+                    this.Messages.showError('Failed to remove user: ', data);
+            });
     }
 
     toggleAdmin(user: User) {
-        const adminFlag = !user.admin;
+        const admin = !user.admin;
 
-        return this.$http.post('/api/v1/admin/toggle', {
-            userId: user._id,
-            adminFlag
-        })
-        .then(() => {
-            user.admin = adminFlag;
+        return this.$http
+            .post('/api/v1/admin/toggle', {id: user.id, admin})
+            .then(() => {
+                user.admin = admin;
 
-            this.Messages.showInfo(`Admin rights was successfully ${adminFlag ? 'granted' : 'revoked'} for user: "${user.userName}"`);
-        })
-        .catch((res) => {
-            this.Messages.showError(`Failed to ${adminFlag ? 'grant' : 'revoke'} admin rights for user: "${user.userName}"`, res);
-        });
+                this.Messages.showInfo(`Admin rights was successfully ${admin ? 'granted' : 'revoked'} for user: "${user.userName}"`);
+            })
+            .catch((res) => {
+                this.Messages.showError(`Failed to ${admin ? 'grant' : 'revoke'} admin rights for user: "${user.userName}". <br/>`, res);
+            });
     }
 
     prepareUsers(user: User) {
@@ -92,10 +89,25 @@ export default class IgniteAdminData {
         return user;
     }
 
+    /**
+     * Load users.
+     *
+     * @param params Dates range.
+     * @return {*}
+     */
     loadUsers(params) {
         return this.$http.post('/api/v1/admin/list', params)
             .then(({ data }) => data)
             .then((users) => _.map(users, this.prepareUsers.bind(this)))
+            .catch(this.Messages.showError);
+    }
+
+    /**
+     * @param userInfo
+     */
+    registerUser(userInfo) {
+        return this.$http.put('/api/v1/admin/users', userInfo)
+            .then(({ data }) => data)
             .catch(this.Messages.showError);
     }
 }

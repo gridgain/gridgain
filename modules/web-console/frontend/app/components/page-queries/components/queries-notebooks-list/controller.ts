@@ -15,6 +15,7 @@
  */
 
 import {DemoService} from 'app/modules/demo/Demo.module';
+import _ from 'lodash';
 
 export class NotebooksListCtrl {
     static $inject = ['IgniteNotebook', 'IgniteMessages', 'IgniteLoading', 'IgniteInput', '$scope', '$modal', 'Demo'];
@@ -26,7 +27,7 @@ export class NotebooksListCtrl {
 
         this.rowsToShow = 8;
 
-        const notebookNameTemplate = `<div class="ui-grid-cell-contents notebook-name"><a ui-sref="base.sql.notebook({ noteId: row.entity._id })">{{ row.entity.name }}</a></div>`;
+        const notebookNameTemplate = `<div class="ui-grid-cell-contents notebook-name"><a ui-sref="base.sql.notebook({ noteId: row.entity.id })">{{ row.entity.name }}</a></div>`;
         const sqlQueryTemplate = `<div class="ui-grid-cell-contents">{{row.entity.sqlQueriesParagraphsLength}}</div>`;
         const scanQueryTemplate = `<div class="ui-grid-cell-contents">{{row.entity.scanQueriesPsaragraphsLength}}</div>`;
 
@@ -50,7 +51,7 @@ export class NotebooksListCtrl {
             },
             {
                 action: 'Rename',
-                click: this.renameNotebok.bind(this),
+                click: this.renameNotebook.bind(this),
                 available: true
             },
             {
@@ -85,15 +86,15 @@ export class NotebooksListCtrl {
 
     _preprocessNotebooksList(notebooks = []) {
         return notebooks.map((notebook) => {
-            notebook.sqlQueriesParagraphsLength = this._countParagraphs(notebook, 'query');
-            notebook.scanQueriesPsaragraphsLength = this._countParagraphs(notebook, 'scan');
+            notebook.sqlQueriesParagraphsLength = this._countParagraphs(notebook, 'SQL_FIELDS');
+            notebook.scanQueriesPsaragraphsLength = this._countParagraphs(notebook, 'SCAN');
 
             return notebook;
         });
     }
 
-    _countParagraphs(notebook, queryType = 'query') {
-        return notebook.paragraphs.filter((paragraph) => paragraph.qryType === queryType).length || 0;
+    _countParagraphs(notebook, queryType = 'SQL_FIELDS') {
+        return _.filter(notebook.paragraphs, (paragraph) => paragraph.queryType === queryType).length;
     }
 
     onSelectionChanged() {
@@ -130,7 +131,7 @@ export class NotebooksListCtrl {
         }
     }
 
-    async renameNotebok() {
+    async renameNotebook() {
         try {
             const currentNotebook = this.gridApi.selection.legacyGetSelectedRows()[0];
             const newNotebookName = await this.IgniteInput.input('Rename notebook', 'Notebook name', currentNotebook.name);
