@@ -1221,7 +1221,7 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
                     try {
                         IgniteEvents evts = grid(idx).events();
 
-                        evts.stopRemoteListenAsync(consumeId).get(3000);
+                        evts.stopRemoteListenAsync(consumeId).get(30000);
 
                         stopped.add(consumeId);
                     }
