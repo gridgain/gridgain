@@ -145,6 +145,12 @@
 
         <dependency>
             <groupId>org.gridgain</groupId>
+            <artifactId>ignite-log4j2</artifactId>
+            <version>${web-console.ignite.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.gridgain</groupId>
             <artifactId>ignite-web-console-common</artifactId>
             <version>${project.version}</version>
         </dependency>

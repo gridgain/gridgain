@@ -110,12 +110,8 @@
 
         <!-- Logging configuration. -->
         <property name="gridLogger">
-            <bean class="org.apache.ignite.logger.java.JavaLogger">
-                <constructor-arg type="java.util.logging.Logger">
-                    <bean class="java.util.logging.Logger">
-                        <constructor-arg type="java.lang.String" value="global"/>
-                    </bean>
-                </constructor-arg>
+            <bean class="org.apache.ignite.logger.log4j2.Log4J2Logger">
+                <constructor-arg type="java.lang.String" value="../log4j2-spring.xml"/>
             </bean>
         </property>
 
