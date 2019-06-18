@@ -381,19 +381,6 @@ const DFLT_CLUSTER = {
         walPageCompression: {clsName: 'org.apache.ignite.configuration.DiskPageCompression', value: 'DISABLED'}
     },
     utilityCacheKeepAliveTime: 60000,
-    hadoopConfiguration: {
-        mapReducePlanner: {
-            Weighted: {
-                localMapperWeight: 100,
-                remoteMapperWeight: 100,
-                localReducerWeight: 100,
-                remoteReducerWeight: 100,
-                preferLocalReducerThresholdWeight: 200
-            }
-        },
-        finishedJobInfoTtl: 30000,
-        maxTaskQueueSize: 8192
-    },
     serviceConfigurations: {
         maxPerNodeCount: 0,
         totalCount: 0

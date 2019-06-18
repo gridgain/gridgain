@@ -16,15 +16,15 @@
 
 import get from 'lodash/get';
 import find from 'lodash/find';
-import {from} from 'rxjs';
-import ObjectID from 'bson-objectid/objectid';
-import {uniqueName} from 'app/utils/uniqueName';
 import omit from 'lodash/fp/omit';
+import uuidv4 from 'uuid/v4';
+
+import {uniqueName} from 'app/utils/uniqueName';
 import {DiscoveryKinds, ShortDomainModel, ShortCluster, FailoverSPIs, LoadBalancingKinds, WalPageCompression} from '../types';
 import {Menu} from 'app/types';
 
 const uniqueNameValidator = (defaultName = '') => (a, items = []) => {
-    return a && !items.some((b) => b._id !== a._id && (a.name || defaultName) === (b.name || defaultName));
+    return a && !items.some((b) => b.id !== a.id && (a.name || defaultName) === (b.name || defaultName));
 };
 
 export default class Clusters {
@@ -88,11 +88,10 @@ export default class Clusters {
     constructor(private $http: ng.IHttpService, private JDBC_LINKS) {}
 
     getConfiguration(clusterID: string) {
-        return this.$http.get(`/api/v1/configuration/${clusterID}`);
-    }
-
-    getAllConfigurations() {
-        return this.$http.get('/api/v1/configuration/list');
+        return this.$http.get(`/api/v1/configuration/${clusterID}`)
+            .then((data) => {
+                return data;
+            });
     }
 
     getCluster(clusterID: string) {
@@ -107,32 +106,12 @@ export default class Clusters {
         return this.$http.get<{data: ShortDomainModel[]}>(`/api/v1/configuration/clusters/${clusterID}/models`);
     }
 
-    getClusterIGFSs(clusterID) {
-        return this.$http.get(`/api/v1/configuration/clusters/${clusterID}/igfss`);
-    }
-
     getClustersOverview() {
         return this.$http.get<{data: ShortCluster[]}>('/api/v1/configuration/clusters/');
     }
 
-    getClustersOverview$() {
-        return from(this.getClustersOverview());
-    }
-
-    saveCluster(cluster) {
-        return this.$http.post('/api/v1/configuration/clusters/save', cluster);
-    }
-
-    saveCluster$(cluster) {
-        return from(this.saveCluster(cluster));
-    }
-
-    removeCluster(cluster) {
-        return this.$http.post('/api/v1/configuration/clusters/remove', {_id: cluster});
-    }
-
-    removeCluster$(cluster) {
-        return from(this.removeCluster(cluster));
+    removeCluster(clusterIDs) {
+        return this.$http.post('/api/v1/configuration/clusters/remove', {clusterIDs});
     }
 
     saveBasic(changedItems) {
@@ -145,7 +124,7 @@ export default class Clusters {
 
     getBlankCluster() {
         return {
-            _id: ObjectID.generate(),
+            id: uuidv4(),
             activeOnStart: true,
             cacheSanityCheckEnabled: true,
             atomicConfiguration: {},
@@ -178,9 +157,6 @@ export default class Clusters {
                     maxSize: null
                 }]
             },
-            hadoopConfiguration: {
-                nativeLibraryNames: []
-            },
             serviceConfigurations: [],
             executorConfiguration: [],
             sqlConnectorConfiguration: {
@@ -208,7 +184,6 @@ export default class Clusters {
             failoverSpi: [],
             logger: {Log4j: { mode: 'Default'}},
             caches: [],
-            igfss: [],
             models: [],
             checkpointSpi: [],
             loadBalancingSpi: [],
@@ -225,12 +200,11 @@ export default class Clusters {
 
     toShortCluster(cluster) {
         return {
-            _id: cluster._id,
+            id: cluster.id,
             name: cluster.name,
             discovery: cluster.discovery.kind,
             cachesCount: (cluster.caches || []).length,
-            modelsCount: (cluster.models || []).length,
-            igfsCount: (cluster.igfss || []).length
+            modelsCount: (cluster.models || []).length
         };
     }
 
@@ -294,7 +268,7 @@ export default class Clusters {
     };
 
     makeBlankDataRegionConfiguration() {
-        return {_id: ObjectID.generate()};
+        return {id: uuidv4()};
     }
 
     addDataRegionConfiguration(cluster) {
@@ -335,7 +309,7 @@ export default class Clusters {
             },
             uniqueMemoryPolicyName: (a, items = []) => {
                 const def = this.memoryPolicy.name.default;
-                return !items.some((b) => b._id !== a._id && (a.name || def) === (b.name || def));
+                return !items.some((b) => b.id !== a.id && (a.name || def) === (b.name || def));
             }
         },
         emptyPagesPoolSize: {
@@ -415,7 +389,7 @@ export default class Clusters {
     ];
 
     makeBlankMemoryPolicy() {
-        return {_id: ObjectID.generate()};
+        return {id: uuidv4()};
     }
 
     addMemoryPolicy(cluster) {
@@ -497,11 +471,13 @@ export default class Clusters {
     };
 
     makeBlankServiceConfiguration() {
-        return {_id: ObjectID.generate()};
+        return {id: uuidv4()};
     }
 
     addServiceConfiguration(cluster) {
-        if (!cluster.serviceConfigurations) cluster.serviceConfigurations = [];
+        if (!cluster.serviceConfigurations)
+            cluster.serviceConfigurations = [];
+
         cluster.serviceConfigurations.push(Object.assign(this.makeBlankServiceConfiguration(), {
             name: uniqueName('New service configuration', cluster.serviceConfigurations)
         }));
@@ -531,9 +507,13 @@ export default class Clusters {
     };
 
     addExecutorConfiguration(cluster) {
-        if (!cluster.executorConfiguration) cluster.executorConfiguration = [];
-        const item = {_id: ObjectID.generate(), name: ''};
+        if (!cluster.executorConfiguration)
+            cluster.executorConfiguration = [];
+
+        const item = {id: uuidv4(), name: ''};
+
         cluster.executorConfiguration.push(item);
+
         return item;
     }
 
@@ -585,14 +565,20 @@ export default class Clusters {
     normalize = omit(['__v', 'space']);
 
     addPeerClassLoadingLocalClassPathExclude(cluster) {
-        if (!cluster.peerClassLoadingLocalClassPathExclude) cluster.peerClassLoadingLocalClassPathExclude = [];
+        if (!cluster.peerClassLoadingLocalClassPathExclude)
+            cluster.peerClassLoadingLocalClassPathExclude = [];
+
         return cluster.peerClassLoadingLocalClassPathExclude.push('');
     }
 
     addBinaryTypeConfiguration(cluster) {
-        if (!cluster.binaryConfiguration.typeConfigurations) cluster.binaryConfiguration.typeConfigurations = [];
-        const item = {_id: ObjectID.generate()};
+        if (!cluster.binaryConfiguration.typeConfigurations)
+            cluster.binaryConfiguration.typeConfigurations = [];
+
+        const item = {id: uuidv4()};
+
         cluster.binaryConfiguration.typeConfigurations.push(item);
+
         return item;
     }
 
@@ -600,7 +586,7 @@ export default class Clusters {
         if (!cluster.localEventListeners)
             cluster.localEventListeners = [];
 
-        const item = {_id: ObjectID.generate()};
+        const item = {id: uuidv4()};
 
         cluster.localEventListeners.push(item);
 
