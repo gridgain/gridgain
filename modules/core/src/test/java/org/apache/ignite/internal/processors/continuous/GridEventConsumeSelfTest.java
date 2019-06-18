@@ -78,7 +78,7 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
     private static final int GRID_CNT = 3;
 
     /** Number of created consumes per thread in multithreaded test. */
-    private static final int CONSUME_CNT = 500;
+    private static final int CONSUME_CNT = 200;
 
     /** Consume latch. */
     private static volatile CountDownLatch consumeLatch;
