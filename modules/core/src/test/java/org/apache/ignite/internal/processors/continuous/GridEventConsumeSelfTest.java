@@ -78,7 +78,7 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
     private static final int GRID_CNT = 3;
 
     /** Number of created consumes per thread in multithreaded test. */
-    private static final int CONSUME_CNT = 200;
+    private static final int CONSUME_CNT = 500;
 
     /** Consume latch. */
     private static volatile CountDownLatch consumeLatch;
@@ -1163,7 +1163,7 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
 
         final Random rnd = new Random();
 
-        final int consumeCnt = tcpDiscovery() ? CONSUME_CNT : CONSUME_CNT / 2;
+        final int consumeCnt = tcpDiscovery() ? CONSUME_CNT : CONSUME_CNT / 5;
 
         IgniteInternalFuture<?> starterFut = multithreadedAsync(new Callable<Object>() {
             @Override public Object call() throws Exception {
@@ -1177,7 +1177,7 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
                             @Override public boolean apply(UUID uuid, Event evt) {
                                 return true;
                             }
-                        }, null, EVT_JOB_STARTED).get(9000);
+                        }, null, EVT_JOB_STARTED).get(3000);
 
                         started.add(consumeId);
 
@@ -1186,20 +1186,9 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
                     catch (ClusterTopologyException ignored) {
                         // No-op.
                     }
-                    catch (IgniteException e) {
-                        if (e.hasCause(IgniteFutureTimeoutCheckedException.class)) {
-                            log.warning("->->-> IgniteFutureTimeoutCheckedException observed, dumping thread stack");
-
-                            U.dumpThreads(log);
-                        }
-
-                        throw e;
-                    }
 
                     U.sleep(10);
                 }
-
-                System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis() + " stop flag is set");
 
                 stop.set(true);
 
@@ -1221,7 +1210,7 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
                     try {
                         IgniteEvents evts = grid(idx).events();
 
-                        evts.stopRemoteListenAsync(consumeId).get(9000);
+                        evts.stopRemoteListenAsync(consumeId).get(3000);
 
                         stopped.add(consumeId);
                     }

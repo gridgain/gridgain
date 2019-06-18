@@ -865,8 +865,6 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
         try {
             StartFuture fut = new StartFuture(routineId);
 
-            System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis() + " routine registered " + routineId);
-
             startFuts.put(routineId, fut);
 
             try {
@@ -2554,12 +2552,8 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
         void onLocalRegistered() {
             loc = true;
 
-            if (rmt && !isDone()) {
-                System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis()
-                    + " local routineId is done: " + routineId);
-
+            if (rmt && !isDone())
                 onDone(routineId);
-            }
         }
 
         /**
@@ -2568,12 +2562,8 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
         void onRemoteRegistered() {
             rmt = true;
 
-            if (loc && !isDone()) {
-                System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis()
-                    + " remote routineId is done: " + routineId);
-
+            if (loc && !isDone())
                 onDone(routineId);
-            }
         }
 
         /** {@inheritDoc} */
