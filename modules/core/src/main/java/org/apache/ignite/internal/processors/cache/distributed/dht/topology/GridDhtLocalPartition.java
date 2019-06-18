@@ -1079,65 +1079,68 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         try {
             GridIterator<CacheDataRow> it0 = grp.offheap().partitionIterator(id);
 
-            while (it0.hasNext()) {
-                ctx.database().checkpointReadLock();
+            ctx.database().checkpointReadLock();
 
-                try {
-                    CacheDataRow row = it0.next();
+            try {
+                while (it0.hasNext()) {
+                    try {
+                        CacheDataRow row = it0.next();
 
-                    // Do not clear fresh rows in case of single partition clearing.
-                    if (row.version().compareTo(clearVer) >= 0 && (state() == MOVING && clear))
-                        continue;
+                        // Do not clear fresh rows in case of single partition clearing.
+                        if (row.version().compareTo(clearVer) >= 0 && (state() == MOVING && clear))
+                            continue;
 
-                    if (grp.sharedGroup() && (hld == null || hld.cctx.cacheId() != row.cacheId()))
-                        hld = cacheMapHolder(ctx.cacheContext(row.cacheId()));
+                        if (grp.sharedGroup() && (hld == null || hld.cctx.cacheId() != row.cacheId()))
+                            hld = cacheMapHolder(ctx.cacheContext(row.cacheId()));
 
-                    assert hld != null;
+                        assert hld != null;
 
-                    GridCacheMapEntry cached = putEntryIfObsoleteOrAbsent(
-                        hld,
-                        hld.cctx,
-                        grp.affinity().lastVersion(),
-                        row.key(),
-                        true,
-                        false);
+                        GridCacheMapEntry cached = putEntryIfObsoleteOrAbsent(
+                            hld,
+                            hld.cctx,
+                            grp.affinity().lastVersion(),
+                            row.key(),
+                            true,
+                            false);
 
-                    if (cached instanceof GridDhtCacheEntry && ((GridDhtCacheEntry)cached).clearInternal(clearVer, extras)) {
-                        removeEntry(cached);
+                        if (cached instanceof GridDhtCacheEntry && ((GridDhtCacheEntry)cached).clearInternal(clearVer, extras)) {
+                            removeEntry(cached);
 
-                        if (rec && !hld.cctx.config().isEventsDisabled()) {
-                            hld.cctx.events().addEvent(cached.partition(),
-                                cached.key(),
-                                ctx.localNodeId(),
-                                null,
-                                null,
-                                null,
-                                EVT_CACHE_REBALANCE_OBJECT_UNLOADED,
-                                null,
-                                false,
-                                cached.rawGet(),
-                                cached.hasValue(),
-                                null,
-                                null,
-                                null,
-                                false);
+                            if (rec && !hld.cctx.config().isEventsDisabled()) {
+                                hld.cctx.events().addEvent(cached.partition(),
+                                    cached.key(),
+                                    ctx.localNodeId(),
+                                    null,
+                                    null,
+                                    null,
+                                    EVT_CACHE_REBALANCE_OBJECT_UNLOADED,
+                                    null,
+                                    false,
+                                    cached.rawGet(),
+                                    cached.hasValue(),
+                                    null,
+                                    null,
+                                    null,
+                                    false);
+                            }
+
+                            cleared++;
                         }
 
-                        cleared++;
+                        // For each 'stopCheckingFreq' cleared entities check clearing process to stop.
+                        if (cleared % stopCheckingFreq == 0 && evictionCtx.shouldStop())
+                            return cleared;
                     }
+                    catch (GridDhtInvalidPartitionException e) {
+                        assert isEmpty() && state() == EVICTED : "Invalid error [e=" + e + ", part=" + this + ']';
 
-                    // For each 'stopCheckingFreq' cleared entities check clearing process to stop.
-                    if (cleared % stopCheckingFreq == 0 && evictionCtx.shouldStop())
-                        return cleared;
+                        break; // Partition is already concurrently cleared and evicted.
+                    }
                 }
-                catch (GridDhtInvalidPartitionException e) {
-                    assert isEmpty() && state() == EVICTED : "Invalid error [e=" + e + ", part=" + this + ']';
 
-                    break; // Partition is already concurrently cleared and evicted.
-                }
-                finally {
-                    ctx.database().checkpointReadUnlock();
-                }
+            }
+            finally {
+                ctx.database().checkpointReadUnlock();
             }
 
             if (forceTestCheckpointOnEviction) {
