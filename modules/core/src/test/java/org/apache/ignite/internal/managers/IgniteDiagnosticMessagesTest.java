@@ -704,6 +704,8 @@ public class IgniteDiagnosticMessagesTest extends GridCommonAbstractTest {
     private void emulateTxLockTimeout(IgniteEx node1, IgniteEx node2) throws Exception {
         node1.createCache(cacheConfiguration(TRANSACTIONAL).setBackups(1));
 
+        assertNotNull(node2.cache(DEFAULT_CACHE_NAME));
+
         // Delay finish message until dht lock future is triggered.
         TestRecordingCommunicationSpi.spi(node2).
                 blockMessages((node, message) -> message instanceof GridNearTxFinishRequest);
