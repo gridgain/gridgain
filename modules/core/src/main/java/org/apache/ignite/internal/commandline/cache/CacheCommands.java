@@ -101,6 +101,7 @@ public class CacheCommands implements Command<CacheSubcommands> {
             case FIND_AND_DELETE_GARBAGE:
             case CONTENTION:
             case DISTRIBUTION:
+            case AFFINITY:
                 cmd.subcommand().parseArguments(argIter);
 
                 break;

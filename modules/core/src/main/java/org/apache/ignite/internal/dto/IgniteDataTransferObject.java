@@ -29,6 +29,12 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Base class for data transfer objects.
+ *
+ * NOTE:
+ * 1. All child classes must explicitly implement default constructor
+ *    for proper deserialization.
+ * 2. Child class name must be added to
+ *    {@code incubator-ignite/modules/core/src/main/resources/META-INF/classnames.properties} file.
  */
 public abstract class IgniteDataTransferObject implements Externalizable {
     /** */

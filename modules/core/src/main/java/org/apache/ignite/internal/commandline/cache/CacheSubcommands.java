@@ -18,6 +18,7 @@ package org.apache.ignite.internal.commandline.cache;
 
 import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.argument.CommandArg;
+import org.apache.ignite.internal.commandline.cache.argument.AffinityViewCommandArg;
 import org.apache.ignite.internal.commandline.cache.argument.DistributionCommandArg;
 import org.apache.ignite.internal.commandline.cache.argument.FindAndDeleteGarbageArg;
 import org.apache.ignite.internal.commandline.cache.argument.IdleVerifyCommandArg;
@@ -67,7 +68,12 @@ public enum CacheSubcommands {
     /**
      * Find and remove garbage.
      */
-    FIND_AND_DELETE_GARBAGE("find_garbage", FindAndDeleteGarbageArg.class, new FindAndDeleteGarbage());
+    FIND_AND_DELETE_GARBAGE("find_garbage", FindAndDeleteGarbageArg.class, new FindAndDeleteGarbage()),
+
+    /**
+     *  Show affinity assignment
+     */
+    AFFINITY("affinity", AffinityViewCommandArg.class, new AffinityViewCommand());
 
 
     /** Enumerated values. */

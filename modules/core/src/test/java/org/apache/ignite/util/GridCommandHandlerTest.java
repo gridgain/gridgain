@@ -2562,6 +2562,61 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
         assertContains(log, out, "Reset LOST-partitions performed successfully. Cache group (name = 'default'");
     }
 
+    //TODO: complete this
+    //TODO: docs
+    @Test
+    public void testCacheAffinityViewer() throws Exception {
+        Thread.currentThread().setName("testThread");
+//        Ignite ignite = startGrids(4);
+//
+//        Collection<ClusterNode> nodes = ignite.cluster().nodes();
+//
+//        List<ClusterNode> nodes0 = new ArrayList<>(nodes);
+//
+//        ClusterNode node0 = nodes0.get(0);
+//        ClusterNode node1 = nodes0.get(1);
+//        ClusterNode node2 = nodes0.get(2);
+//        ClusterNode node3 = nodes0.get(3);
+//
+//        ignite.cluster().active(true);
+//
+//        String dir = U.defaultWorkDirectory() + "/diagnostic/";
+
+        IgniteEx ignite = startGrids(10);
+
+        ignite.cluster().active(true);
+
+        String groupName = "shared_grp";
+        ignite.createCache(new CacheConfiguration<>()
+            .setAffinity(new RendezvousAffinityFunction(false, 32))
+            .setGroupName(groupName)
+            .setBackups(2)
+            .setName(DEFAULT_CACHE_NAME));
+
+        ignite.createCache(new CacheConfiguration<>()
+            .setAffinity(new RendezvousAffinityFunction(false, 32))
+            .setGroupName(groupName)
+            .setBackups(2)
+            .setName(DEFAULT_CACHE_NAME + "_second"));
+
+        ignite.createCache(new CacheConfiguration<>()
+            .setAffinity(new RendezvousAffinityFunction(false, 64))
+            .setBackups(1)
+            .setName(DEFAULT_CACHE_NAME + "_third"));
+
+        execute("--cache", "affinity", "--ideal", "--group_name", groupName);
+        //execute("--cache", "affinity", "--current", "--group_name", groupName);
+        //execute("--cache", "affinity", "--diff", "--group_name", groupName);
+        //assertEquals(EXIT_CODE_OK, execute("--cache", "affinity", "--ideal", "--group_name", groupName));
+
+
+        //final String out = testOut.toString();
+
+//        assertContains(log, out, "Reset LOST-partitions performed successfully. Cache group (name = 'ignite-sys-cache'");
+//
+//        assertContains(log, out, "Reset LOST-partitions performed successfully. Cache group (name = 'default'");
+    }
+
     /**
      * @param h Handler.
      * @param validateClo Validate clo.
