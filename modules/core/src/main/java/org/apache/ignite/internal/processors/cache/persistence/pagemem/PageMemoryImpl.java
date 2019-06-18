@@ -562,14 +562,28 @@ public class PageMemoryImpl implements PageMemoryEx {
                 OUTDATED_REL_PTR
             );
 
-            if (relPtr == OUTDATED_REL_PTR)
+            assert relPtr == OUTDATED_REL_PTR || relPtr == INVALID_REL_PTR : "Allocated page cannot be present in " +
+                "the loaded pages table [relPtr=" + U.hexLong(relPtr) + ", fullId=" + fullId + ']';
+
+            int state = 0;
+
+            if (relPtr == OUTDATED_REL_PTR) {
+                state++;
+
                 relPtr = refreshOutdatedPage(seg, grpId, pageId, false);
+            }
 
-            if (relPtr == INVALID_REL_PTR)
+            if (relPtr == INVALID_REL_PTR) {
+                state++;
+
                 relPtr = seg.borrowOrAllocateFreePage(pageId);
+            }
 
-            if (relPtr == INVALID_REL_PTR)
+            if (relPtr == INVALID_REL_PTR) {
+                state++;
+
                 relPtr = seg.removePageForReplacement(delayedWriter == null ? flushDirtyPage : delayedWriter);
+            }
 
             long absPtr = seg.absolute(relPtr);
 
@@ -583,7 +597,8 @@ public class PageMemoryImpl implements PageMemoryEx {
 
             assert !PageHeader.isAcquired(absPtr) :
                 "Pin counter must be 0 for a new page [relPtr=" + U.hexLong(relPtr) +
-                    ", absPtr=" + U.hexLong(absPtr) + ", pinCntr=" + GridUnsafe.getInt(absPtr + PAGE_PIN_CNT_OFFSET) + ']';
+                    ", absPtr=" + U.hexLong(absPtr) + ", pinCntr=" + GridUnsafe.getInt(absPtr + PAGE_PIN_CNT_OFFSET) +
+                    ", state=" + state + ']';
 
             setDirty(fullId, absPtr, true, true);
 

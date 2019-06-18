@@ -46,6 +46,7 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.TransactionConfiguration;
+import org.apache.ignite.failure.StopNodeOrHaltFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheProxy;
@@ -86,7 +87,8 @@ public abstract class CacheMvccSqlTxQueriesAbstractTest extends CacheMvccAbstrac
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         return super.getConfiguration(gridName)
-            .setTransactionConfiguration(new TransactionConfiguration().setDeadlockTimeout(0));
+            .setTransactionConfiguration(new TransactionConfiguration().setDeadlockTimeout(0))
+            .setFailureHandler(new StopNodeOrHaltFailureHandler(false, 0));
     }
 
     /**

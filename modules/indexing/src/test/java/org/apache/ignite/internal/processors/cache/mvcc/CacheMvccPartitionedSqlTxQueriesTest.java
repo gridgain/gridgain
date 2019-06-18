@@ -26,4 +26,9 @@ public class CacheMvccPartitionedSqlTxQueriesTest extends CacheMvccSqlTxQueriesA
     @Override protected CacheMode cacheMode() {
         return PARTITIONED;
     }
+
+    /** {@inheritDoc} */
+    @Override public void testAccountsTxDmlSql_WithRemoves_ClientServer_Backups1_Persistence() throws Exception {
+        super.testAccountsTxDmlSql_WithRemoves_ClientServer_Backups1_Persistence();
+    }
 }
