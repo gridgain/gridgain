@@ -1095,12 +1095,29 @@ class ServerImpl extends TcpDiscoveryImpl {
             Map<String, Object> attrs = new HashMap<>(locNode.attributes());
 
             attrs.put(IgniteNodeAttributes.ATTR_SECURITY_SUBJECT_V2, U.marshal(spi.marshaller(), subj));
+            attrs.put(IgniteNodeAttributes.ATTR_SECURITY_SUBJECT, marshalWithSecurityVersion(subj, 1));
 
             locNode.setAttributes(attrs);
 
         }
         catch (IgniteException | IgniteCheckedException e) {
             throw new IgniteSpiException("Failed to authenticate local node (will shutdown local node).", e);
+        }
+    }
+
+    /**
+     * @param obj Object.
+     * @param ver Security serialize version.
+     * @return Marshaled object.
+     */
+    private byte[] marshalWithSecurityVersion(Object obj, int ver) throws IgniteCheckedException {
+        try {
+            SecurityUtils.serializeVersion(ver);
+
+            return U.marshal(spi.marshaller(), obj);
+        }
+        finally {
+            SecurityUtils.restoreDefaultSerializeVersion();
         }
     }
 
@@ -4010,6 +4027,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                             Map<String, Object> attrs = new HashMap<>(node.getAttributes());
 
                             attrs.put(IgniteNodeAttributes.ATTR_SECURITY_SUBJECT_V2, U.marshal(spi.marshaller(), subj));
+                            attrs.put(IgniteNodeAttributes.ATTR_SECURITY_SUBJECT, marshalWithSecurityVersion(subj, 1));
 
                             node.setAttributes(attrs);
                         }

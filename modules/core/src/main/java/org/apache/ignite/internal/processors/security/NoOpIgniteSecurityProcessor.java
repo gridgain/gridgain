@@ -19,9 +19,11 @@ package org.apache.ignite.internal.processors.security;
 
 import java.util.Collection;
 import java.util.UUID;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.plugin.security.AuthenticationContext;
 import org.apache.ignite.plugin.security.SecurityCredentials;
 import org.apache.ignite.plugin.security.SecurityException;
@@ -40,11 +42,52 @@ public class NoOpIgniteSecurityProcessor extends GridProcessorAdapter implements
     /** No operation security context. */
     private final OperationSecurityContext opSecCtx = new OperationSecurityContext(this, null);
 
+    /** Processor delegate. */
+    private final GridSecurityProcessor processor;
+
     /**
      * @param ctx Grid kernal context.
      */
-    public NoOpIgniteSecurityProcessor(GridKernalContext ctx) {
+    public NoOpIgniteSecurityProcessor(GridKernalContext ctx, @Nullable GridSecurityProcessor processor) {
         super(ctx);
+        this.processor =processor;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onKernalStart(boolean active) throws IgniteCheckedException {
+        super.onKernalStart(active);
+
+        if(processor != null)
+            processor.onKernalStart(active);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onKernalStop(boolean cancel) {
+        super.onKernalStop(cancel);
+
+        if(processor != null)
+            processor.onKernalStop(cancel);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void start() throws IgniteCheckedException {
+        super.start();
+
+        if (processor != null) {
+            ctx.addNodeAttribute(ATTR_GRID_SEC_PROC_CLASS, processor.getClass().getName());
+
+            processor.start();
+        }
+        else
+            ctx.addNodeAttribute(ATTR_GRID_SEC_PROC_CLASS, getClass().getName());
+    }
+
+    /** {@inheritDoc} */
+    @Override public void stop(boolean cancel) throws IgniteCheckedException {
+        super.stop(cancel);
+
+        if(processor != null)
+            processor.stop(cancel);
     }
 
     /** {@inheritDoc} */
@@ -99,6 +142,9 @@ public class NoOpIgniteSecurityProcessor extends GridProcessorAdapter implements
 
     /** {@inheritDoc} */
     @Override public boolean enabled() {
+        if(processor != null)
+            return processor.enabled();
+
         return false;
     }
 
@@ -122,6 +168,18 @@ public class NoOpIgniteSecurityProcessor extends GridProcessorAdapter implements
     private IgniteNodeValidationResult validateSecProcClass(ClusterNode node){
         String rmtCls = node.attribute(ATTR_GRID_SEC_PROC_CLASS);
 
+        if(processor != null) {
+            String locCls = processor.getClass().getName();
+
+            if (!F.eq(locCls, rmtCls)) {
+                return new IgniteNodeValidationResult(node.id(),
+                    String.format(MSG_SEC_PROC_CLS_IS_INVALID, ctx.localNodeId(), node.id(), locCls, rmtCls),
+                    String.format(MSG_SEC_PROC_CLS_IS_INVALID, node.id(), ctx.localNodeId(), rmtCls, locCls));
+            }
+
+            return null;
+        }
+
         if (rmtCls != null) {
             ClusterNode locNode = ctx.discovery().localNode();
 
@@ -133,5 +191,10 @@ public class NoOpIgniteSecurityProcessor extends GridProcessorAdapter implements
         }
 
         return null;
+    }
+
+    /** */
+    public GridSecurityProcessor gridSecurityProcessor() {
+        return processor;
     }
 }

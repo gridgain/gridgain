@@ -100,13 +100,14 @@ public class SecurityUtils {
      * @return Node's security context.
      */
     public static SecurityContext nodeSecurityContext(Marshaller marsh, ClassLoader ldr, ClusterNode node) {
-        byte[] subjBytes = node.attribute(IgniteNodeAttributes.ATTR_SECURITY_SUBJECT_V2);
+        byte[] subjBytesV2 = node.attribute(IgniteNodeAttributes.ATTR_SECURITY_SUBJECT_V2);
+        byte[] subjBytes = node.attribute(IgniteNodeAttributes.ATTR_SECURITY_SUBJECT);
 
-        if (subjBytes == null)
+        if (subjBytes == null && subjBytesV2 == null)
             throw new SecurityException("Security context isn't certain.");
 
         try {
-            return U.unmarshal(marsh, subjBytes, ldr);
+            return U.unmarshal(marsh, subjBytesV2 != null ? subjBytesV2 : subjBytes , ldr);
         }
         catch (IgniteCheckedException e) {
             throw new SecurityException("Failed to get security context.", e);
