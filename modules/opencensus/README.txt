@@ -1,5 +1,5 @@
-Apache Ignite Opencensus Module
+GridGain Opencensus Module
 ---------------------------
 
-Apache Ignite provides an implementation of MetricExporterSpi
-that can export all Ignite internal metrics with opencensus-api.
+GridGain provides an implementation of MetricExporterSpi
+that can export all GridGain internal metrics with opencensus-api.
