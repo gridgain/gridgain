@@ -1177,7 +1177,7 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
                             @Override public boolean apply(UUID uuid, Event evt) {
                                 return true;
                             }
-                        }, null, EVT_JOB_STARTED).get(30000);
+                        }, null, EVT_JOB_STARTED).get(15000);
 
                         started.add(consumeId);
 
@@ -1221,7 +1221,7 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
                     try {
                         IgniteEvents evts = grid(idx).events();
 
-                        evts.stopRemoteListenAsync(consumeId).get(30000);
+                        evts.stopRemoteListenAsync(consumeId).get(15000);
 
                         stopped.add(consumeId);
                     }
@@ -1238,6 +1238,9 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
             @Override public Object call() throws Exception {
                 while (!stop.get()) {
                     startGrid("anotherGrid");
+
+                    Thread.sleep(500);
+
                     stopGrid("anotherGrid");
                 }
 
