@@ -180,7 +180,7 @@ public class NoOpIgniteSecurityProcessor extends GridProcessorAdapter implements
             return null;
         }
 
-        if (rmtCls != null) {
+        if (rmtCls != null && !rmtCls.equals(getClass().getName())) {
             ClusterNode locNode = ctx.discovery().localNode();
 
             return new IgniteNodeValidationResult(
