@@ -309,7 +309,7 @@ public class WebSocketsManager {
 
         Map<String, Object> res = new LinkedHashMap<>();
 
-        res.put("count", clusters.size());
+        res.put("count", agents.size());
         res.put("hasDemo", hasDemo);
         res.put("clusters", clusters);
 
