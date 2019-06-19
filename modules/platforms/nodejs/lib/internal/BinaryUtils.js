@@ -613,8 +613,9 @@ class BinaryUtils {
                 return this.strHashCode(object);
             case BinaryUtils.TYPE_CODE.UUID:
                 return this.uuidHashCode(object);
-            case BinaryUtils.TYPE_CODE.DATE:
             case BinaryUtils.TYPE_CODE.TIME:
+                return this.timeHashCode(object);
+            case BinaryUtils.TYPE_CODE.DATE:
             case BinaryUtils.TYPE_CODE.TIMESTAMP:
                 return this.datetimeHashCode(object);
             default:
@@ -664,10 +665,8 @@ class BinaryUtils {
     static longHashCode(long) {
         // This method calcuates hash code for the Long Ignite type
         // long must be a js 'number'
-        const twoTo32 = 4294967296;
-        const lsb = (long % twoTo32) | 0;
-        const msb = (long / twoTo32) | 0;
-        return lsb ^ msb;
+        const longObj = Long.fromNumber(long);
+        return longObj.getLowBits() ^ longObj.getHighBits();
     }
 
     static boolHashCode(bool) {
@@ -707,10 +706,19 @@ class BinaryUtils {
         return xor;
     }
 
-    static datetimeHashCode(ts) {
-        // This method calcuates hash code for the Timestamp Ignite type
-        // ts must be an instance of Date or Timestamp
-        return this.longHashCode(ts.getTime());
+    static timeHashCode(time) {
+        // This method calcuates hash code for the Time Ignite type
+        // time must be an instance of Date
+        const midnight = new Date(time);
+        midnight.setHours(0, 0, 0, 0);
+        const totalmsec = time.getTime() - midnight.getTime();
+        return BinaryUtils.longHashCode(totalmsec);
+    }
+
+    static datetimeHashCode(date) {
+        // This method calcuates hash code for the Timestamp and Date Ignite types
+        // date must be an instance of Date or Timestamp
+        return BinaryUtils.longHashCode(date.getTime());
     }
 }
 

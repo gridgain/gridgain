@@ -381,7 +381,7 @@ class CacheClient {
             async (payload) => {
                 result = payload.readBoolean();
             },
-            await this._createAffinityHint(key));
+            this._createAffinityHint(key));
         return result;
     }
 
@@ -564,6 +564,28 @@ class CacheClient {
     /**
      * @ignore
      */
+    async _localPeek(socket, key, peekModes = []) {
+        ArgumentChecker.notNull(key, 'key');
+        let value = null;
+        await socket.sendRequest(
+            BinaryUtils.OPERATION.CACHE_LOCAL_PEEK,
+            async (payload) => {
+                this._writeCacheInfo(payload);
+                await this._communicator.writeObject(payload, key, this._getKeyType());
+                payload.writeInteger(peekModes.length);
+                for (let mode of peekModes) {
+                    payload.writeByte(mode);
+                }
+            },
+            async (payload) => {
+                value = await this._communicator.readObject(payload, this._getValueType());
+            });
+        return value;
+    }
+
+    /**
+     * @ignore
+     */
     static _calculateId(name) {
         return BinaryUtils.strHashCode(name);
     }
@@ -621,7 +643,7 @@ class CacheClient {
                 await this._writeKeyValue(payload, key, value);
             },
             payloadReader,
-            await this._createAffinityHint(key));
+            this._createAffinityHint(key));
     }
 
     /**
@@ -662,7 +684,7 @@ class CacheClient {
                 await this._communicator.writeObject(payload, key, this._getKeyType());
             },
             payloadReader,
-            await this._createAffinityHint(key));
+            this._createAffinityHint(key));
     }
 
     /**
@@ -722,7 +744,7 @@ class CacheClient {
     /**
      * @ignore
      */
-    async _createAffinityHint(key) {
+    _createAffinityHint(key) {
         const affinityHint = {};
         affinityHint.cacheId = this._cacheId;
         affinityHint.key = key;

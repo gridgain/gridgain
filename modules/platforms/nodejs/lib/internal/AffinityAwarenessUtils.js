@@ -60,7 +60,7 @@ class AffinityAwarenessCacheGroup {
             const cacheId = payload.readInteger();
 
             if (!applicable) {
-                caches[i] = {id: cacheId, cfg: new Map()};
+                caches[i] = [cacheId, new Map()];
                 continue;
             }
 

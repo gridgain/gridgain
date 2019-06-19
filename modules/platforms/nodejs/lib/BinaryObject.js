@@ -308,6 +308,13 @@ class BinaryObject {
     /**
      * @ignore
      */
+    _getTypeId() {
+        return this._typeBuilder.getTypeId();
+    }
+
+    /**
+     * @ignore
+     */
     async _write(communicator, buffer) {
         if (this._buffer && !this._modified) {
             buffer.writeBuffer(this._buffer.buffer, this._startPos, this._startPos + this._length);

@@ -94,9 +94,9 @@ class Router {
         }
         else {
             // If _affinityAwarenessActive flag is not set, we have exactly one connection
-            // but it can be either a legacy one or a modern one
-            // If affinityHint has not been passed we want to always use one socket (as long as it is alive)
-            // because some SQL requests (e.g., cursor-related) require to be sent to the same cluster node
+            // but it can be either a legacy one or a modern one (with node UUID)
+            // If affinityHint has not been passed, we want to always use one socket (as long as it is alive)
+            // because some requests (e.g., SQL cursor-related) require to be sent to the same cluster node
             await this._getAllConnections()[0].sendRequest(opCode, payloadWriter, payloadReader);
         }
     }
@@ -311,7 +311,7 @@ class Router {
                 this._removeConnection(connection);
 
                 if (this._getAllConnections().length == 0) {
-                    throw new Errors.LostConnectionError("Cluster is unavailable");
+                    throw new Errors.LostConnectionError('Cluster is unavailable');
                 }
             }
 
@@ -333,9 +333,9 @@ class Router {
 
         const cacheAffinityMap = this._distributionMap.get(cacheId);
 
-        const key = affinityHint.key;
-        const keyType = affinityHint.keyType ? affinityHint.keyType : BinaryUtils.calcObjectType(key);
-        const nodeId = await this._determineNodeId(cacheAffinityMap, key, keyType);
+        const nodeId = await this._determineNodeId(cacheAffinityMap,
+                                                   affinityHint.key,
+                                                   affinityHint.keyType);
 
         if (nodeId in this._connections) {
             Logger.logDebug('Node has been chosen by affinity');
@@ -355,21 +355,19 @@ class Router {
 
         const keyAffinityMap = cacheAffinityMap.keyConfig;
 
-        const convertedKey = await this._convertKey(key, keyType);
-        key = convertedKey.key;
-        const keyTypeCode = convertedKey.typeCode;
+        const affinityKeyInfo = await this._affinityKeyInfo(key, keyType);
 
-        let affinityKey = key;
-        let affinityKeyTypeCode = keyTypeCode;
+        let affinityKey = affinityKeyInfo.key;
+        let affinityKeyTypeCode = affinityKeyInfo.typeCode;
 
-        if (keyAffinityMap.has(keyTypeCode)) {
-            const affinityKeyId = keyAffinityMap.get(keyTypeCode);
+        if ('typeId' in affinityKeyInfo && keyAffinityMap.has(affinityKeyInfo.typeId)) {
+            const affinityKeyTypeId = keyAffinityMap.get(affinityKeyInfo.typeId);
 
-            if (key instanceof BinaryObject &&
-                key._fields.has(affinityKeyId)) {
-                const field = key._fields.get(affinityKeyId);
-                affinityKey = field.getValue();
-                affinityKeyTypeCode = field.typeCode();
+            if (affinityKey instanceof BinaryObject &&
+                affinityKey._fields.has(affinityKeyTypeId)) {
+                const field = affinityKey._fields.get(affinityKeyTypeId);
+                affinityKey = await field.getValue();
+                affinityKeyTypeCode = field.typeCode;
             }
         }
 
@@ -383,15 +381,21 @@ class Router {
         return nodeId;
     }
 
-    async _convertKey(key, keyType) {
-        let typeCode = BinaryUtils.getTypeCode(keyType);
+    async _affinityKeyInfo(key, keyType) {
+        let typeCode = BinaryUtils.getTypeCode(keyType ? keyType : BinaryUtils.calcObjectType(key));
 
-        if (keyType instanceof ObjectType.ComplexObjectType) {
-            key = await BinaryObject.fromObject(key, keyType);
-            typeCode = BinaryUtils.TYPE_CODE.BINARY_OBJECT;
+        if (typeCode == BinaryUtils.TYPE_CODE.BINARY_OBJECT) {
+            return {'key': key, 'typeCode': typeCode, 'typeId': key._getTypeId()};
         }
 
-        return {"key": key, "typeCode": typeCode};
+        if (typeCode == BinaryUtils.TYPE_CODE.COMPLEX_OBJECT) {
+            const binObj = await BinaryObject.fromObject(key, keyType);
+            typeCode = BinaryUtils.TYPE_CODE.BINARY_OBJECT;
+
+            return {'key': binObj, 'typeCode': typeCode, 'typeId': binObj._getTypeId()};
+        }
+
+        return {'key': key, 'typeCode': typeCode};
     }
 
     async _onAffinityTopologyChange(newVersion) {
