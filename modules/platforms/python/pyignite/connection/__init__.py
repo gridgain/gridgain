@@ -163,15 +163,10 @@ class Connection:
     def get_protocol_version(self):
         return self.client.protocol_version
 
-    @select_version
     def _fail(self):
-        """ set client to failed state (v1.3). """
+        """ set client to failed state. """
         self._failed = True
         self._in_use.release()
-
-    def _fail_120(self):
-        """ set client to failed state (v1.2). """
-        self._failed = True
 
     @select_version
     def read_response(self) -> Union[dict, OrderedDict]:
@@ -239,25 +234,26 @@ class Connection:
         :param port: Ignite server node's port number.
         """
 
-        # we may not know the version yet
-        if (
-            self.client.protocol_version and
-            self.client.protocol_version >= (1, 3, 0)
-        ):
-            if not self._in_use.acquire(timeout=self.timeout or 1):
-                raise ConnectionError('Connection is in use.')
+        # go non-blocking for faster reconnect
+        if not self._in_use.acquire(blocking=False):
+            raise ConnectionError('Connection is in use.')
 
         # choose highest version first
         if self.client.protocol_version is None:
             self.client.protocol_version = max(PROTOCOLS)
 
         try:
-            return self._connect_version(host, port)
+            result = self._connect_version(host, port)
         except HandshakeError as e:
             if e.expected_version in PROTOCOLS:
                 self.client.protocol_version = e.expected_version
-                return self._connect_version(host, port)
-            raise e
+                result = self._connect_version(host, port)
+            else:
+                raise e
+
+        # connection is ready for end user
+        self._failed = False
+        return result
 
     def _connect_version(
         self, host: str = None, port: int = None,
@@ -276,11 +272,7 @@ class Connection:
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._socket.settimeout(self.timeout)
         self._socket = self._wrap(self.socket)
-        try:
-            self._socket.connect((host, port))
-        except connection_errors:
-            self._fail()
-            raise
+        self._socket.connect((host, port))
 
         protocol_version = self.client.protocol_version
 
@@ -292,7 +284,9 @@ class Connection:
         self.send(hs_request)
         hs_response = self.read_response()
         if hs_response['op_code'] == 0:
-            self.close()
+            # disconnect but keep in use
+            self.close(release=False)
+
             error_text = 'Handshake error: {}'.format(hs_response['message'])
             # if handshake fails for any reason other than protocol mismatch
             # (i.e. authentication error), server version is 0.0.0
@@ -350,13 +344,16 @@ class Connection:
         if not self.failed:
             return
 
-        # return connection to initial state
-        self.close()
+        # return connection to initial state regardles of use lock
+        self.close(release=False)
+        try:
+            self._in_use.release()
+        except RuntimeError:
+            pass
 
-        # connect
+        # connect and silence the connection errors
         try:
             self.connect(self.host, self.port)
-            self._failed = False
         except connection_errors:
             pass
 
@@ -463,12 +460,15 @@ class Connection:
 
         return b''.join(chunks)
 
-    def close(self):
+    def close(self, release=True):
         """
         Try to mark socket closed, then unlink it. This is recommended but
         not required, since sockets are automatically closed when
         garbage-collected.
         """
+        if release:
+            self._in_use.release()
+
         if self._socket:
             try:
                 self._socket.shutdown(socket.SHUT_RDWR)
