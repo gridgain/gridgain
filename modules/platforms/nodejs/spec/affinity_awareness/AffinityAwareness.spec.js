@@ -194,8 +194,6 @@ describe('affinity awareness feature test suite >', () => {
         const affHint = cache._createAffinityHint(key);
         const bestSocket = await igniteClient._router._chooseConnection(affHint);
 
-        // console.log("endpoint chosen = " + bestSocket.endpoint);
-
         for (const socket of igniteClient._router._getAllConnections()) {
             let localPeekVal = await cache._localPeek(socket, key);
             if (socket == bestSocket) {
