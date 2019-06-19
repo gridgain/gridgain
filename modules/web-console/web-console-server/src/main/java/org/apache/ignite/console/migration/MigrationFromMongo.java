@@ -345,64 +345,51 @@ public class MigrationFromMongo {
         ConfigurationKey accKey = new ConfigurationKey(accId, false);
 
         try (MongoCursor<Document> cursor = clusters.find(Filters.eq("space", space.getObjectId("_id"))).iterator()) {
-            while (cursor.hasNext()) {
-                Document clusterMongo = cursor.next();
-
-                ObjectId mongoClusterId = clusterMongo.getObjectId("_id");
-
-                log.info(off(2, "Migrating cluster: [_id=" + mongoClusterId + ", name=" + clusterMongo.getString("name") + "]"));
-
-                Map<ObjectId, UUID> cacheIds = new HashMap<>();
-
-                List<ObjectId> cachesMongo = asListOfObjectIds(clusterMongo, "caches");
-
-                if (!F.isEmpty(cachesMongo))
-                    cachesMongo.forEach(oid -> cacheIds.put(oid, UUID.randomUUID()));
-
-                clusterMongo.put("caches", asStrings(cacheIds.values()));
-
-                Map<ObjectId, UUID> modelIds = new HashMap<>();
-
-                List<ObjectId> modelsMongo = asListOfObjectIds(clusterMongo, "models");
-
-                if (!F.isEmpty(modelsMongo))
-                    modelsMongo.forEach(oid -> modelIds.put(oid, UUID.randomUUID()));
-
-                clusterMongo.remove("space");
-                clusterMongo.remove("igfss");
-
-                try (Transaction tx = txMgr.txStart()) {
-                    UUID clusterId = UUID.randomUUID();
-
-                    clusterMongo.put("id", clusterId.toString());
-                    clusterMongo.put("models", asStrings(modelIds.values()));
-
-                    migrateConfigurationEx(clusterMongo, accId, clusterId);
-
-                    JsonObject cfg = new JsonObject()
-                        .add("cluster", fromJson(mongoToJson(clusterMongo)));
-
-                    migrateCaches(cfg, cacheIds, modelIds);
-
-                    migrateModels(cfg, modelIds, cacheIds);
-
-                    cfgsRepo.saveAdvancedCluster(accKey, cfg);
-
-                    tx.commit();
-                }
-            }
+            while (cursor.hasNext())
+                migrateCluster(accKey, UUID.randomUUID(), cursor.next());
         }
     }
 
     /**
-     * Extension point for migration of extended configuration.
-     *
-     * @param clusterMongo Document with cluster in MongoDB.
-     * @param accId Account ID.
+     * @param accKey Account key.
      * @param clusterId Cluster ID.
+     * @param clusterMongo Mongo document with cluster.
      */
-    protected void migrateConfigurationEx(Document clusterMongo, UUID accId, UUID clusterId) {
-        // No-op.
+    protected void migrateCluster(ConfigurationKey accKey, UUID clusterId, Document clusterMongo) {
+        ObjectId mongoClusterId = clusterMongo.getObjectId("_id");
+
+        log.info(off(2, "Migrating cluster: [_id=" + mongoClusterId + ", name=" + clusterMongo.getString("name") + "]"));
+
+        Map<ObjectId, UUID> cacheIds = new HashMap<>();
+
+        List<ObjectId> cachesMongo = asListOfObjectIds(clusterMongo, "caches");
+
+        if (!F.isEmpty(cachesMongo))
+            cachesMongo.forEach(oid -> cacheIds.put(oid, UUID.randomUUID()));
+
+        clusterMongo.put("caches", asStrings(cacheIds.values()));
+
+        Map<ObjectId, UUID> modelIds = new HashMap<>();
+
+        List<ObjectId> modelsMongo = asListOfObjectIds(clusterMongo, "models");
+
+        if (!F.isEmpty(modelsMongo))
+            modelsMongo.forEach(oid -> modelIds.put(oid, UUID.randomUUID()));
+
+        clusterMongo.remove("space");
+        clusterMongo.remove("igfss");
+
+        clusterMongo.put("id", clusterId.toString());
+        clusterMongo.put("models", asStrings(modelIds.values()));
+
+        JsonObject cfg = new JsonObject()
+            .add("cluster", fromJson(mongoToJson(clusterMongo)));
+
+        migrateCaches(cfg, cacheIds, modelIds);
+
+        migrateModels(cfg, modelIds, cacheIds);
+
+        cfgsRepo.saveAdvancedCluster(accKey, cfg);
     }
 
     /**
