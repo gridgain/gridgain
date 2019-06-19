@@ -188,7 +188,7 @@ public class MigrationFromMongo {
         MongoCollection<Document> accountsCollection = mongoDb.getCollection("accounts");
         MongoCollection<Document> spacesCollection = mongoDb.getCollection("spaces");
 
-        log.info("Accounts to migrate: " + accountsCollection.countDocuments());
+        log.info("Accounts to migrate: {}", accountsCollection.countDocuments());
 
         try (MongoCursor<Document> cursor = accountsCollection.find().iterator()) {
             while (cursor.hasNext()) {
@@ -250,7 +250,7 @@ public class MigrationFromMongo {
 
         long cnt = notebooksCollection.countDocuments(Filters.eq("space", spaceId));
 
-        log.info("Migrating notebooks: " + cnt);
+        log.info("Migrating notebooks: {}", cnt);
 
         try (MongoCursor<Document> cursor = notebooksCollection.find(Filters.eq("space", spaceId)).iterator()) {
             while (cursor.hasNext()) {
@@ -339,7 +339,7 @@ public class MigrationFromMongo {
 
         long cnt = clusters.countDocuments(Filters.eq("space", space.getObjectId("_id")));
 
-        log.info("Migrating configurations: " + cnt);
+        log.info("Migrating configurations: {}", cnt);
 
         ConfigurationKey accKey = new ConfigurationKey(accId, false);
 
@@ -400,7 +400,7 @@ public class MigrationFromMongo {
         Map<ObjectId, UUID> cacheIds,
         Map<ObjectId, UUID> modelIds
     ) {
-        log.info("Migrating cluster caches: " + cacheIds.size());
+        log.info("Migrating cluster caches: {}", cacheIds.size());
 
         MongoCollection<Document> cachesCollection = mongoDb.getCollection("caches");
 
@@ -440,7 +440,7 @@ public class MigrationFromMongo {
         Map<ObjectId, UUID> modelIds,
         Map<ObjectId, UUID> cacheIds
     ) {
-        log.info("Migrating cluster models: " + modelIds.size());
+        log.info("Migrating cluster models: {}", modelIds.size());
 
         MongoCollection<Document> modelsCollection = mongoDb.getCollection("domainmodels");
 
@@ -480,7 +480,7 @@ public class MigrationFromMongo {
 
         long cnt = activitiesCollection.countDocuments(Filters.eq("owner", space.getObjectId("owner")));
 
-        log.info("Migrating activities: " + cnt);
+        log.info("Migrating activities: {}", cnt);
 
         try (MongoCursor<Document> cursor = activitiesCollection.find(Filters.eq("owner", space.getObjectId("owner"))).iterator()) {
             while (cursor.hasNext()) {
