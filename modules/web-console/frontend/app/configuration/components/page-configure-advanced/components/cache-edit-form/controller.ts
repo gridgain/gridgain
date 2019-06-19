@@ -27,11 +27,6 @@ import FormUtilsFactory from 'app/services/FormUtils.service';
 export default class CacheEditFormController {
     modelsMenu: Menu<string>;
 
-    igfssMenu: Menu<string>;
-
-    /** IGFS IDs to validate against. */
-    igfsIDs: string[];
-
     onSave: ng.ICompiledExpression;
 
     static $inject = ['IgniteConfirm', 'IgniteVersion', '$scope', 'Caches', 'IgniteFormUtils'];
@@ -95,7 +90,7 @@ export default class CacheEditFormController {
 
     $onChanges(changes) {
         if (
-            'cache' in changes && get(this.clonedCache, '_id') !== get(this.cache, '_id')
+            'cache' in changes && get(this.clonedCache, 'id') !== get(this.cache, 'id')
         ) {
             this.clonedCache = cloneDeep(changes.cache.currentValue);
             if (this.$scope.ui && this.$scope.ui.inputForm) {
@@ -104,11 +99,7 @@ export default class CacheEditFormController {
             }
         }
         if ('models' in changes)
-            this.modelsMenu = (changes.models.currentValue || []).map((m) => ({value: m._id, label: m.valueType}));
-        if ('igfss' in changes) {
-            this.igfssMenu = (changes.igfss.currentValue || []).map((i) => ({value: i._id, label: i.name}));
-            this.igfsIDs = (changes.igfss.currentValue || []).map((i) => i._id);
-        }
+            this.modelsMenu = (changes.models.currentValue || []).map((m) => ({value: m.id, label: m.valueType}));
     }
 
     getValuesToCompare() {
