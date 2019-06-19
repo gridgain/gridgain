@@ -346,17 +346,15 @@ public abstract class GridDhtTxAbstractEnlistFuture<T> extends GridCacheFutureAd
             tx.markQueryEnlisted();
 
             this.it = it;
+
+            continueLoop(false);
         }
         catch (Throwable e) {
             onDone(e);
 
             if (e instanceof Error)
                 throw (Error)e;
-
-            return;
         }
-
-        continueLoop(false);
     }
 
     /**
