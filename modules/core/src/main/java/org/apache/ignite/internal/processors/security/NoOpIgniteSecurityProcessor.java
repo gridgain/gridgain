@@ -150,13 +150,17 @@ public class NoOpIgniteSecurityProcessor extends GridProcessorAdapter implements
 
     /** {@inheritDoc} */
     @Override public @Nullable IgniteNodeValidationResult validateNode(ClusterNode node) {
-        return validateSecProcClass(node);
+        IgniteNodeValidationResult res = validateSecProcClass(node);
+
+        return res != null || processor == null ? res : processor.validateNode(node);
     }
 
     /** {@inheritDoc} */
     @Override public @Nullable IgniteNodeValidationResult validateNode(ClusterNode node,
         DiscoveryDataBag.JoiningNodeDiscoveryData discoData) {
-        return validateSecProcClass(node);
+        IgniteNodeValidationResult res = validateSecProcClass(node);
+
+        return res != null || processor == null ? res : processor.validateNode(node, discoData);
     }
 
     /**
