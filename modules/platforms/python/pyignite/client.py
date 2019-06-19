@@ -85,7 +85,10 @@ class Client:
     affinity_version: Tuple = None
     protocol_version = None
 
-    def __init__(self, compact_footer: bool = None, **kwargs):
+    def __init__(
+        self, compact_footer: bool = None, affinity_aware: bool = False,
+        **kwargs
+    ):
         """
         Initialize client.
 
@@ -94,14 +97,25 @@ class Client:
          Default is to use the same approach the server is using (None).
          Apache Ignite binary protocol documentation on this topic:
          https://apacheignite.readme.io/docs/binary-client-protocol-data-format#section-schema
+        :param affinity_aware: (optional) try to calculate the exact data
+         placement from the key before to issue the key operation to the
+         server node:
+         https://cwiki.apache.org/confluence/display/IGNITE/IEP-23%3A+Best+Effort+Affinity+for+thin+clients
+         The feature is in experimental status, so the parameter is `False`
+         by default. This will be changed later.
         """
         self._compact_footer = compact_footer
         self._connection_args = kwargs
         self._current_node = 0
+        self._affinity_aware = affinity_aware
         self.affinity_version = (0, 0)
 
     def get_protocol_version(self):
         return self.protocol_version
+
+    @property
+    def affinity_aware(self):
+        return self._affinity_aware
 
     @select_version
     def _add_node(
