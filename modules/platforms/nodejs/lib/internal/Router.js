@@ -23,13 +23,12 @@ const ClientSocket = require('./ClientSocket');
 const AffinityAwarenessUtils = require('./AffinityAwarenessUtils');
 const BinaryUtils = require('./BinaryUtils');
 const BinaryObject = require('../BinaryObject');
-const ObjectType = require('../ObjectType');
 const ArgumentChecker = require('./ArgumentChecker');
 const Logger = require('./Logger');
 
 // Number of tries to get cache partitions info
 const GET_CACHE_PARTITIONS_RETRIES = 3;
-// Delay between tries to get cache partitions info
+// Delay (in milliseconds) between tries to get cache partitions info
 const GET_CACHE_PARTITIONS_DELAY = 100;
 
 class Router {

@@ -80,16 +80,16 @@ class ProtocolVersion {
 const PROTOCOL_VERSION_1_0_0 = new ProtocolVersion(1, 0, 0);
 const PROTOCOL_VERSION_1_1_0 = new ProtocolVersion(1, 1, 0);
 const PROTOCOL_VERSION_1_2_0 = new ProtocolVersion(1, 2, 0);
-const PROTOCOL_VERSION_1_3_0 = new ProtocolVersion(1, 3, 0);
+const PROTOCOL_VERSION_1_4_0 = new ProtocolVersion(1, 4, 0);
 
 const SUPPORTED_VERSIONS = [
     // PROTOCOL_VERSION_1_0_0, // Support for QueryField precision/scale fields breaks 1.0.0 compatibility
     PROTOCOL_VERSION_1_1_0,
     PROTOCOL_VERSION_1_2_0,
-    PROTOCOL_VERSION_1_3_0
+    PROTOCOL_VERSION_1_4_0
 ];
 
-const CURRENT_VERSION = PROTOCOL_VERSION_1_3_0;
+const CURRENT_VERSION = PROTOCOL_VERSION_1_4_0;
 
 const STATE = Object.freeze({
     INITIAL : 0,
@@ -303,7 +303,7 @@ class ClientSocket {
             }
         }
         else {
-            if (this._protocolVersion.compareTo(PROTOCOL_VERSION_1_3_0) >= 0) {
+            if (this._protocolVersion.compareTo(PROTOCOL_VERSION_1_4_0) >= 0) {
                 this._nodeUuid = await this._communicator.readObject(buffer, BinaryUtils.TYPE_CODE.UUID);
             }
 
@@ -316,7 +316,7 @@ class ClientSocket {
     async _finalizeResponse(buffer, request) {
         let statusCode, isSuccess;
 
-        if (this._protocolVersion.compareTo(PROTOCOL_VERSION_1_3_0) < 0) {
+        if (this._protocolVersion.compareTo(PROTOCOL_VERSION_1_4_0) < 0) {
             // Check status code
             statusCode = buffer.readInteger();
             isSuccess = statusCode === REQUEST_SUCCESS_STATUS_CODE;

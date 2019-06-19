@@ -27,8 +27,8 @@ const BinaryTypeStorage = require('./BinaryTypeStorage');
 
 class BinaryCommunicator {
 
-    constructor(socket) {
-        this._socket = socket;
+    constructor(router) {
+        this._router = router;
         this._typeStorage = new BinaryTypeStorage(this);
     }
 
@@ -52,7 +52,7 @@ class BinaryCommunicator {
     }
 
     async send(opCode, payloadWriter, payloadReader = null, affinityHint = null) {
-        await this._socket.send(opCode, payloadWriter, payloadReader, affinityHint);
+        await this._router.send(opCode, payloadWriter, payloadReader, affinityHint);
     }
 
     get typeStorage() {
