@@ -70,10 +70,10 @@ export class DialogAdminCreateUser {
                 this.IgniteMessages.showInfo(`User ${this.data.email} created`);
                 this.close({});
             })
-            .catch((data) => {
+            .catch((err) => {
                 this.loading.finish('createUser');
-                this.IgniteMessages.showError(null, data);
-                this.setServerError(data.message);
+                this.IgniteMessages.showError(null, err);
+                this.setServerError(err.message);
             });
     }
 }
