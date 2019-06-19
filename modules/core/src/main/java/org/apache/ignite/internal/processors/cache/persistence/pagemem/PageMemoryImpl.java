@@ -554,16 +554,20 @@ public class PageMemoryImpl implements PageMemoryEx {
             changeTracker != null && trackingIO.trackingPageFor(pageId, realPageSize(grpId)) == pageId;
 
         try {
+            int pGen = seg.partGeneration(grpId, partId);
+
             long relPtr = seg.loadedPages.get(
                 grpId,
                 PageIdUtils.effectivePageId(pageId),
-                seg.partGeneration(grpId, partId),
+                pGen,
                 INVALID_REL_PTR,
                 OUTDATED_REL_PTR
             );
 
             assert relPtr == OUTDATED_REL_PTR || relPtr == INVALID_REL_PTR : "Allocated page cannot be present in " +
-                "the loaded pages table [relPtr=" + U.hexLong(relPtr) + ", fullId=" + fullId + ']';
+                "the loaded pages table [relPtr=" + U.hexLong(relPtr) + ", fullId=" + fullId +
+                ", table=" + ((RobinHoodBackwardShiftHashMap)seg.loadedPages).dump() +
+                ", partGen=" + pGen + ']';
 
             int state = 0;
 
@@ -2588,6 +2592,8 @@ public class PageMemoryImpl implements PageMemoryEx {
             }
             else {
                 partGenerationMap.put(grpPart, gen + 1);
+
+                U.debug(log, "<><> Incremented partition generation [grpId=" + grpId + ", partId=" + partId + ", gen=" + (gen + 1));
 
                 return gen + 1;
             }
