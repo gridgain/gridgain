@@ -66,7 +66,7 @@ export default class AuthService {
     /**
      * Performs the REST API call.
      */
-    private _auth(action: AuthActions, userInfo: AuthOptions, loginAfterwards: boolean = true) {
+    private _auth(action: AuthActions, userInfo: AuthOptions) {
         return this.$http.post('/api/v1/' + action, userInfo)
             .then(() => {
                 if (action === 'password/forgot')
@@ -74,12 +74,9 @@ export default class AuthService {
 
                 return this.User.read()
                     .then((user) => {
-                        if (loginAfterwards) {
-                            this.User.current$.next(user);
-                            this.$state.go('default-state');
-                            this.gettingStarted.tryShow();
-                        } else
-                            this.User.created$.next(user);
+                        this.User.current$.next(user);
+                        this.$state.go('default-state');
+                        this.gettingStarted.tryShow();
                     });
             });
     }
