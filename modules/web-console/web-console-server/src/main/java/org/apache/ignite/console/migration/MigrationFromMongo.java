@@ -57,7 +57,6 @@ import static org.apache.ignite.console.migration.MigrateUtils.getDocument;
 import static org.apache.ignite.console.migration.MigrateUtils.getInteger;
 import static org.apache.ignite.console.migration.MigrateUtils.mongoIdsToNewIds;
 import static org.apache.ignite.console.migration.MigrateUtils.mongoToJson;
-import static org.apache.ignite.console.migration.MigrateUtils.off;
 import static org.apache.ignite.console.utils.Utils.fromJson;
 
 /**
@@ -189,7 +188,7 @@ public class MigrationFromMongo {
         MongoCollection<Document> accountsCollection = mongoDb.getCollection("accounts");
         MongoCollection<Document> spacesCollection = mongoDb.getCollection("spaces");
 
-        log.info(off(1, "Accounts to migrate: " + accountsCollection.countDocuments()));
+        log.info("Accounts to migrate: " + accountsCollection.countDocuments());
 
         try (MongoCursor<Document> cursor = accountsCollection.find().iterator()) {
             while (cursor.hasNext()) {
@@ -211,7 +210,7 @@ public class MigrationFromMongo {
                     continue;
                 }
 
-                log.info(off(2, "Migrating account [_id=" + mongoAccId + ", email=" + email + "]"));
+                log.info("Migrating account [_id={}, email={}]", mongoAccId, email);
 
                 try (Transaction tx = txMgr.txStart()) {
                     Account acc = createAccount(accMongo);
@@ -251,13 +250,13 @@ public class MigrationFromMongo {
 
         long cnt = notebooksCollection.countDocuments(Filters.eq("space", spaceId));
 
-        log.info(off(2, "Migrating notebooks: " + cnt));
+        log.info("Migrating notebooks: " + cnt);
 
         try (MongoCursor<Document> cursor = notebooksCollection.find(Filters.eq("space", spaceId)).iterator()) {
             while (cursor.hasNext()) {
                 Document notebookMongo = cursor.next();
 
-                log.info(off(3, "Migrating notebook: [_id=" + notebookMongo.getObjectId("_id") + ", name=" + notebookMongo.getString("name") + "]"));
+                log.info("Migrating notebook: [_id={}, name={}]", notebookMongo.getObjectId("_id"), notebookMongo.getString("name"));
 
                 Notebook notebook = new Notebook();
                 notebook.setId(UUID.randomUUID());
@@ -340,7 +339,7 @@ public class MigrationFromMongo {
 
         long cnt = clusters.countDocuments(Filters.eq("space", space.getObjectId("_id")));
 
-        log.info(off(2, "Migrating configurations: " + cnt));
+        log.info("Migrating configurations: " + cnt);
 
         ConfigurationKey accKey = new ConfigurationKey(accId, false);
 
@@ -356,9 +355,8 @@ public class MigrationFromMongo {
      * @param clusterMongo Mongo document with cluster.
      */
     protected void migrateCluster(ConfigurationKey accKey, UUID clusterId, Document clusterMongo) {
-        ObjectId mongoClusterId = clusterMongo.getObjectId("_id");
-
-        log.info(off(2, "Migrating cluster: [_id=" + mongoClusterId + ", name=" + clusterMongo.getString("name") + "]"));
+        log.info("Migrating cluster: [_id={}, name={}]",
+            clusterMongo.getObjectId("_id"), clusterMongo.getString("name"));
 
         Map<ObjectId, UUID> cacheIds = new HashMap<>();
 
@@ -402,7 +400,7 @@ public class MigrationFromMongo {
         Map<ObjectId, UUID> cacheIds,
         Map<ObjectId, UUID> modelIds
     ) {
-        log.info(off(3, "Migrating cluster caches: " + cacheIds.size()));
+        log.info("Migrating cluster caches: " + cacheIds.size());
 
         MongoCollection<Document> cachesCollection = mongoDb.getCollection("caches");
 
@@ -415,7 +413,7 @@ public class MigrationFromMongo {
 
                     String cacheName = cacheMongo.getString("name");
 
-                    log.info(off(4, "Migrating cache: [_id=" + mongoId + ", name=" + cacheName + "]"));
+                    log.info("Migrating cache: [_id={}, name={}]", mongoId, cacheName);
 
                     cacheMongo.remove("clusters");
 
@@ -442,7 +440,7 @@ public class MigrationFromMongo {
         Map<ObjectId, UUID> modelIds,
         Map<ObjectId, UUID> cacheIds
     ) {
-        log.info(off(3, "Migrating cluster models: " + modelIds.size()));
+        log.info("Migrating cluster models: " + modelIds.size());
 
         MongoCollection<Document> modelsCollection = mongoDb.getCollection("domainmodels");
 
@@ -453,9 +451,10 @@ public class MigrationFromMongo {
                 while(cursor.hasNext()) {
                     Document modelMongo = cursor.next();
 
-                    log.info(off(4, "Migrating model: [_id=" + mongoId +
-                        ", keyType=" + modelMongo.getString("keyType") +
-                        ", valueType=" + modelMongo.getString("valueType") + "]"));
+                    log.info("Migrating model: [_id={}, keyType={}, valueType={}]",
+                        mongoId,
+                        modelMongo.getString("keyType"),
+                        modelMongo.getString("valueType"));
 
                     modelMongo.remove("clusters");
 
@@ -481,7 +480,7 @@ public class MigrationFromMongo {
 
         long cnt = activitiesCollection.countDocuments(Filters.eq("owner", space.getObjectId("owner")));
 
-        log.info(off(2, "Migrating activities: " + cnt));
+        log.info("Migrating activities: " + cnt);
 
         try (MongoCursor<Document> cursor = activitiesCollection.find(Filters.eq("owner", space.getObjectId("owner"))).iterator()) {
             while (cursor.hasNext()) {
@@ -494,10 +493,8 @@ public class MigrationFromMongo {
 
                 Date date = activityMongo.getDate("date");
 
-                log.info(off(3, "Migrating activity: [_id=" + activityMongo.getObjectId("_id") +
-                    ", action=" + action +
-                    ", date=" + date +
-                    "]"));
+                log.info("Migrating activity: [_id={}, action={}, date={}]",
+                    activityMongo.getObjectId("_id"), action, date);
 
                 Number amount = (Number)activityMongo.get("amount");
 
