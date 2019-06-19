@@ -48,6 +48,7 @@ import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -1253,10 +1254,7 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
                 }
             }, 1, "job-runner");
 
-            starterFut.get();
-            stopperFut.get();
-            nodeRestarterFut.get();
-            jobRunnerFut.get();
+            GridTestUtils.waitForAllFutures(starterFut, stopperFut, nodeRestarterFut, jobRunnerFut);
 
             IgniteBiTuple<Integer, UUID> t;
 
