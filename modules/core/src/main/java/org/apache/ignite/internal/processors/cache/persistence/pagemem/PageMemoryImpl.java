@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -522,6 +524,16 @@ public class PageMemoryImpl implements PageMemoryEx {
         return isDirty(page);
     }
 
+    private static String stack(Exception e) {
+        StringWriter sw = new StringWriter();
+
+        try (PrintWriter pw = new PrintWriter(sw)) {
+            e.printStackTrace(pw);
+        }
+
+        return sw.toString();
+    }
+
     /** {@inheritDoc} */
     @Override public long allocatePage(int grpId, int partId, byte flags) throws IgniteCheckedException {
         assert flags == PageIdAllocator.FLAG_DATA && partId <= PageIdAllocator.MAX_PARTITION_ID ||
@@ -567,7 +579,7 @@ public class PageMemoryImpl implements PageMemoryEx {
             assert relPtr == OUTDATED_REL_PTR || relPtr == INVALID_REL_PTR : "Allocated page cannot be present in " +
                 "the loaded pages table [relPtr=" + U.hexLong(relPtr) + ", fullId=" + fullId +
                 ", table=" + ((RobinHoodBackwardShiftHashMap)seg.loadedPages).dump() +
-                ", partGen=" + pGen + ']';
+                ", partGen=" + pGen + ", allocationStack=" + stack(seg.allocationStack.get(fullId)) + ']';
 
             int state = 0;
 
@@ -631,6 +643,8 @@ public class PageMemoryImpl implements PageMemoryEx {
                     }
                 }
             }
+
+            seg.allocationStack.put(fullId, new Exception("Allocated: " + fullId));
 
             seg.loadedPages.put(grpId, PageIdUtils.effectivePageId(pageId), relPtr, seg.partGeneration(grpId, partId));
         }
@@ -2068,6 +2082,9 @@ public class PageMemoryImpl implements PageMemoryEx {
 
         /** */
         private volatile Collection<FullPageId> segCheckpointPages;
+
+        /** */
+        private Map<FullPageId, Exception> allocationStack = new HashMap<>();
 
         /** */
         private final int maxDirtyPages;
