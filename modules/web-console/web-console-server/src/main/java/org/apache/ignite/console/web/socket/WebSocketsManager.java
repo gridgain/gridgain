@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.dto.Announcement;
@@ -286,8 +287,12 @@ public class WebSocketsManager {
     private void sendAgentStats(WebSocketSession ws, UUID accId) {
         Map<String, TopologySnapshot> tops = new HashMap<>();
 
+        AtomicInteger cnt = new AtomicInteger(0);
+
         agents.forEach((wsAgent, desc) -> {
             if (desc.isActiveAccount(accId)) {
+                cnt.incrementAndGet();
+
                 for (String clusterId : desc.clusterIds) {
                     if (!tops.containsKey(clusterId)) {
                         TopologySnapshot top = clusters.get(clusterId);
@@ -309,7 +314,7 @@ public class WebSocketsManager {
 
         Map<String, Object> res = new LinkedHashMap<>();
 
-        res.put("count", agents.size());
+        res.put("count", cnt.get());
         res.put("hasDemo", hasDemo);
         res.put("clusters", clusters);
 
