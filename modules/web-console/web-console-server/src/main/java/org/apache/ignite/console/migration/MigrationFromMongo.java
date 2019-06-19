@@ -371,22 +371,22 @@ public class MigrationFromMongo {
                 clusterMongo.remove("space");
                 clusterMongo.remove("igfss");
 
-                UUID clusterId = UUID.randomUUID();
-
-                clusterMongo.put("id", clusterId.toString());
-                clusterMongo.put("models", asStrings(modelIds.values()));
-
-                JsonObject cfg = new JsonObject()
-                    .add("cluster", fromJson(mongoToJson(clusterMongo)));
-
-                migrateCaches(cfg, cacheIds, modelIds);
-
-                migrateModels(cfg, modelIds, cacheIds);
-
                 try (Transaction tx = txMgr.txStart()) {
-                    cfgsRepo.saveAdvancedCluster(accKey, cfg);
+                    UUID clusterId = UUID.randomUUID();
 
-                    migrateConfigurationEx(mongoClusterId, accId, clusterId);
+                    clusterMongo.put("id", clusterId.toString());
+                    clusterMongo.put("models", asStrings(modelIds.values()));
+
+                    migrateConfigurationEx(clusterMongo, accId, clusterId);
+
+                    JsonObject cfg = new JsonObject()
+                        .add("cluster", fromJson(mongoToJson(clusterMongo)));
+
+                    migrateCaches(cfg, cacheIds, modelIds);
+
+                    migrateModels(cfg, modelIds, cacheIds);
+
+                    cfgsRepo.saveAdvancedCluster(accKey, cfg);
 
                     tx.commit();
                 }
@@ -397,11 +397,11 @@ public class MigrationFromMongo {
     /**
      * Extension point for migration of extended configuration.
      *
-     * @param mongoClusterId Cluster ID in MongoDB.
+     * @param clusterMongo Document with cluster in MongoDB.
      * @param accId Account ID.
      * @param clusterId Cluster ID.
      */
-    protected void migrateConfigurationEx(ObjectId mongoClusterId, UUID accId, UUID clusterId) {
+    protected void migrateConfigurationEx(Document clusterMongo, UUID accId, UUID clusterId) {
         // No-op.
     }
 
