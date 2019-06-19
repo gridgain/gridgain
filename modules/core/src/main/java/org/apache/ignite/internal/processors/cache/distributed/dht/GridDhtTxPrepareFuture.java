@@ -1001,11 +1001,20 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
      * @param res Response.
      * @return {@code True} if {@code done} flag was changed as a result of this call.
      */
-    private boolean onComplete(@Nullable GridNearTxPrepareResponse res) {
-        if (!tx.onePhaseCommit() && ((last || tx.isSystemInvalidate()) && !(tx.near() && tx.local())))
-            tx.state(PREPARED);
+    private boolean onComplete(GridNearTxPrepareResponse res) {
+        if (!tx.onePhaseCommit() && ((last || tx.isSystemInvalidate()) && !(tx.near() && tx.local()))) {
+            try {
+                tx.state(PREPARED);
+            }
+            catch (Exception e) {
+                if (res.error() == null)
+                    res.error(e);
+                else
+                    res.error().addSuppressed(e);
+            }
+        }
 
-        if (super.onDone(res, res == null ? err : null)) {
+        if (super.onDone(res, null)) {
             // Don't forget to clean up.
             cctx.mvcc().removeVersionedFuture(this);
 
