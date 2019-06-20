@@ -134,8 +134,8 @@ public class RollingUpgradeCommand implements Command<RollingUpgradeArguments> {
         CommandLogger.log("Initial version: " + status.getInitialVersion());
         CommandLogger.log("Update version: " + status.getUpdateVersion());
 
-        if (status.isStrictVersionCheck())
-            CommandLogger.log("Strict mode is enabled.");
+        if (status.isForcedModeEnabled())
+            CommandLogger.log("Forced mode is enabled.");
     }
 
     /**
