@@ -14,12 +14,24 @@
  * limitations under the License.
  */
 
-import template from './template.pug';
-import controller from './controller';
-import './style.scss';
+:host {
+    display: flex;
+    flex-direction: column;
+    flex: 1 0 auto;
 
-/** @type {ng.IComponentOptions} */
-export default {
-    controller,
-    template
-};
+    form footer {
+        padding: 15px 0;
+        text-align: right;
+        display: flex;
+        align-items: center;
+
+        .btn-ignite {
+            margin-left: auto;
+        }
+    }
+
+    .page-signup__has-account-message {
+        text-align: center;
+        margin: 20px 0;
+    } 
+}

@@ -24,12 +24,8 @@ import {default as CountriesFactory, Country} from 'app/services/Countries.servi
 import {default as UserFactory, User} from 'app/modules/user/User.service';
 import {Confirm} from 'app/services/Confirm.service';
 import {
-    FORM_FIELD_OPTIONS, FormFieldRequiredMarkerStyles, FormFieldErrorStyles
+    FORM_FIELD_OPTIONS, FormFieldRequiredMarkerStyles, FormFieldErrorStyles, passwordMatch
 } from '../form-field';
-
-const passwordMatch = (newPassword: string) => (confirmPassword: FormControl) => newPassword === confirmPassword.value
-    ? null
-    : {passwordMatch: true};
 
 const disableFormGroup = (fg: FormGroup) => {fg.disable(); return fg;};
 

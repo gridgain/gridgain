@@ -19,7 +19,7 @@ import MessagesFactory from '../../services/Messages.service';
 import {service as GettingsStartedFactory} from '../../modules/getting-started/GettingStarted.provider';
 import UserServiceFactory from './User.service';
 
-type SignupUserInfo = {
+export type SignupUserInfo = {
     email: string,
     password: string,
     firstName: string,

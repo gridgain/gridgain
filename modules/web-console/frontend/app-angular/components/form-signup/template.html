@@ -1,0 +1,43 @@
+<form class="form-grid" [formGroup]="form" id="user" scrollToFirstInvalid>
+    <form-field class="span-2">
+        <label for="email">Email</label>
+        <input type="email" formControlName="email" id="email" autocomplete="email" placeholder="Input email" autofocus>
+    </form-field>
+
+    <form-field class="span-1">
+        <label for="password">Password</label>
+        <password-visibility-toggle-button-angular formFieldOverlay [passwordEl]='passwordEl'></password-visibility-toggle-button-angular>
+        <input #passwordEl type="password" formControlName="password" id="password" placeholder="Input password" autocomplete="new-password">
+    </form-field>
+    <form-field class="span-1">
+        <label for="confirm">Confirm</label>
+        <password-visibility-toggle-button-angular formFieldOverlay [passwordEl]='confirmPasswordEl'></password-visibility-toggle-button-angular>
+        <input #confirmPasswordEl type="password" formControlName="confirm" id="confirm" placeholder="Confirm password" autocomplete="off">
+    </form-field>
+
+    <form-field class="span-1">
+        <label for="firstName">First name</label>
+        <input type="text" formControlName="firstName" id="firstName" placeholder="Input first name" autocomplete="given-name">
+    </form-field>
+    <form-field class="span-1">
+        <label for="lastName">Last name</label>
+        <input type="text" formControlName="lastName" id="lastName" placeholder="Input last name" autocomplete="family-name">
+    </form-field>
+
+    <form-field class="span-1">
+        <label for="phone">Phone</label>
+        <input type="tel" formControlName="phone" id="phone" placeholder="Input phone (ex. +15417543010)" autocomplete="tel">
+    </form-field>
+    <form-field class="span-1">
+        <label for="country">Country/Region</label>
+        <select formControlName="country" id="country" autocomplete="country">
+            <option value="" disabled selected>Choose your country</option>
+            <option *ngFor="let country of countries" [value]="country.value">{{country.label}}</option>
+        </select>
+    </form-field>
+
+    <form-field class="span-2">
+        <label for="company">Company</label>
+        <input type="text" formControlName="company" id="company" placeholder="Input company name" autocomplete="organization">
+    </form-field>
+</form>

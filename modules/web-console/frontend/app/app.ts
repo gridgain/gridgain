@@ -140,7 +140,6 @@ import pagePasswordReset from './components/page-password-reset';
 import pageSignup from './components/page-signup';
 import pageSignin from './components/page-signin';
 import pageForgotPassword from './components/page-forgot-password';
-import formSignup from './components/form-signup';
 import sidebar from './components/web-console-sidebar';
 import permanentNotifications from './components/permanent-notifications';
 import signupConfirmation from './components/page-signup-confirmation';
@@ -243,7 +242,6 @@ export default angular
         statusOutput.name,
         progressLine.name,
         formField.name,
-        formSignup.name,
         timedRedirection.name,
         sidebar.name,
         permanentNotifications.name,

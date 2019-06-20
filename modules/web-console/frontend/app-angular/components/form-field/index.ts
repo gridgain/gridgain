@@ -21,6 +21,7 @@ import {Autofocus} from './autofocus.directive';
 import {FormFieldTooltip} from './tooltip.component';
 import {PasswordVisibilityToggleButton} from './passwordVisibilityToggleButton.component';
 import {ScrollToFirstInvalid} from './scrollToFirstInvalid.directive';
+import {FormControl} from '@angular/forms';
 
 export {
     FormFieldHint,
@@ -34,3 +35,7 @@ export {
 
 export * from './errorStyles.provider';
 export * from './validationMessages.provider';
+
+export const passwordMatch = (newPassword: string) => (confirmPassword: FormControl) => newPassword === confirmPassword.value
+    ? null
+    : {passwordMatch: true};

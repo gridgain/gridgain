@@ -15,14 +15,14 @@
  */
 
 import angular from 'angular';
-import component from './component';
 import {registerState} from './run';
+import {downgradeComponent} from '@angular/upgrade/static';
+import {PageSignupComponent} from '../../../app-angular/components/page-signup/component';
 
 export default angular
     .module('ignite-console.page-signup', [
         'ui.router',
-        'ignite-console.user',
-        'ignite-console.form-signup'
+        'ignite-console.user'
     ])
-    .component('pageSignup', component)
+    .directive('pageSignup', downgradeComponent({component: PageSignupComponent}))
     .run(registerState);

@@ -48,9 +48,14 @@ import {ReactiveFormsModule} from '@angular/forms';
 
 import {upgradedComponents} from './upgrade';
 
+import {FormSignupComponent} from './components/form-signup/component';
+import {PageSignupComponent} from './components/page-signup/component';
+
 export const declarations = [
     ServiceBootstrapComponent,
     PageProfile,
+    FormSignupComponent,
+    PageSignupComponent,
     IgniteIcon,
     PanelCollapsible,
     CopyToClipboardButton,
@@ -67,7 +72,9 @@ export const declarations = [
 
 export const entryComponents = [
     ServiceBootstrapComponent,
-    PageProfile
+    PageProfile,
+    FormSignupComponent,
+    PageSignupComponent
 ];
 
 export const upgradeService = (token: string) => ({
@@ -81,7 +88,9 @@ export const providers = [
     'Confirm',
     'IgniteCountries',
     'User',
-    'IgniteIcons',
+    'Auth',
+    'IgniteMessages',
+    'IgniteIcon',
     'IgniteCopyToClipboard'
 ].map(upgradeService);
 
