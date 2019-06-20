@@ -138,7 +138,7 @@ class Client:
             self._nodes[node_uuid] = conn
         return node_uuid
 
-    def _add_node_120(
+    def _add_node_130(
         self, host: str = None, port: int = None, conn: Connection = None,
         *args, **kwargs,
     ):
@@ -151,6 +151,8 @@ class Client:
             conn.port = port
 
         self._nodes.append(conn)
+
+    _add_node_120 = _add_node_130
 
     def connect(self, *args):
         """
@@ -197,13 +199,15 @@ class Client:
             conn.close()
         self._nodes.clear()
 
-    def close_120(self):
+    def close_130(self):
         """
         Close all connections to the server and clean the connection pool.
         """
         for conn in self._nodes:
             conn.close()
         self._nodes.clear()
+
+    close_120 = close_130
 
     @property
     @select_version
@@ -217,7 +221,7 @@ class Client:
             # cannot choose from an empty sequence
             raise ReconnectError('Can not reconnect: out of nodes.') from None
 
-    def random_node_120(self):
+    def random_node_130(self):
         """ Return the next usable node. """
         node = self._nodes[self._current_node]
         if node.alive:
@@ -246,6 +250,8 @@ class Client:
 
         # no nodes left
         raise ReconnectError('Can not reconnect: out of nodes.')
+
+    random_node_120 = random_node_130
 
     @status_to_exception(BinaryTypeError)
     def get_binary_type(self, binary_type: Union[str, int]) -> dict:

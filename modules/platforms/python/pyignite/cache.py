@@ -305,8 +305,10 @@ class Cache:
 
         return conn
 
-    def get_best_node_120(self, *args, **kwargs):
+    def get_best_node_130(self, *args, **kwargs):
         return self.client.random_node
+
+    get_best_node_120 = get_best_node_130
 
     @status_to_exception(CacheError)
     def get(self, key, key_hint: object = None) -> Any:

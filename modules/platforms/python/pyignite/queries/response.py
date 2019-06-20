@@ -26,7 +26,7 @@ from .op_codes import *
 
 
 @attr.s
-class Response130:
+class Response140:
     following = attr.ib(type=list, factory=list)
     _response_header = None
 
@@ -104,7 +104,7 @@ class Response130:
 
 
 @attr.s
-class SQLResponse130(Response130):
+class SQLResponse140(Response140):
     """
     The response class of SQL functions is special in the way the row-column
     data is counted in it. Basically, Ignite thin client API is following a
@@ -239,7 +239,7 @@ class SQLResponse130(Response130):
 
 
 @attr.s
-class Response120:
+class Response130:
     following = attr.ib(type=list, factory=list)
     _response_header = None
 
@@ -303,7 +303,7 @@ class Response120:
 
 
 @attr.s
-class SQLResponse120(Response120):
+class SQLResponse130(Response130):
     """
     The response class of SQL functions is special in the way the row-column
     data is counted in it. Basically, Ignite thin client API is following a
@@ -422,3 +422,7 @@ class SQLResponse120(Response120):
                     )
                 result['data'].append(row)
             return result
+
+
+Response120 = Response130
+SQLResponse120 = SQLResponse130

@@ -198,7 +198,7 @@ class Connection:
         data.update(response_end.to_python(end))
         return data
 
-    def read_response_120(self):
+    def read_response_130(self):
         """
         Processes server's response to the handshake request (thin protocol
         version 1.2.0).
@@ -223,6 +223,8 @@ class Connection:
             end = end_class.from_buffer_copy(end_buffer)
             data.update(response_end.to_python(end))
         return data
+
+    read_response_120 = read_response_130
 
     def connect(
         self, host: str = None, port: int = None
@@ -332,11 +334,13 @@ class Connection:
                 kwargs={'seq_no': seq_no + 1},
             ).start()
 
-    def reconnect_120(self):
+    def reconnect_130(self):
         """
         Tries to reconnect synchronously.
         """
         self._reconnect()
+
+    reconnect_120 = reconnect_130
 
     def _reconnect(self):
         # do not reconnect if connection is already working
