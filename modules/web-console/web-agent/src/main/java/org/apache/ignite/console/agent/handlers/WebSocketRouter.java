@@ -196,7 +196,6 @@ public class WebSocketRouter implements AutoCloseable {
         }
     }
 
-
     /** {@inheritDoc} */
     @Override public void close() {
         log.info("Stopping Web Console Agent...");
