@@ -77,6 +77,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxFinishRequest;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLockResponse;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxFinishRequest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
@@ -2562,59 +2563,188 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
         assertContains(log, out, "Reset LOST-partitions performed successfully. Cache group (name = 'default'");
     }
 
-    //TODO: complete this
-    //TODO: docs
+    /**
+     * Tests --cache affinity command
+     *
+     * @throws Exception if failed
+     */
     @Test
-    public void testCacheAffinityViewer() throws Exception {
-        Thread.currentThread().setName("testThread");
-//        Ignite ignite = startGrids(4);
-//
-//        Collection<ClusterNode> nodes = ignite.cluster().nodes();
-//
-//        List<ClusterNode> nodes0 = new ArrayList<>(nodes);
-//
-//        ClusterNode node0 = nodes0.get(0);
-//        ClusterNode node1 = nodes0.get(1);
-//        ClusterNode node2 = nodes0.get(2);
-//        ClusterNode node3 = nodes0.get(3);
-//
-//        ignite.cluster().active(true);
-//
-//        String dir = U.defaultWorkDirectory() + "/diagnostic/";
+    public void testCacheAffinityView() throws Exception {
+        IgniteEx ignite0 = startGrids(2);
 
-        IgniteEx ignite = startGrids(10);
+        ignite0.cluster().active(true);
 
-        ignite.cluster().active(true);
+        TestRecordingCommunicationSpi spi0 = TestRecordingCommunicationSpi.spi(ignite0);
 
-        String groupName = "shared_grp";
-        ignite.createCache(new CacheConfiguration<>()
-            .setAffinity(new RendezvousAffinityFunction(false, 32))
-            .setGroupName(groupName)
-            .setBackups(2)
-            .setName(DEFAULT_CACHE_NAME));
+        spi0.blockMessages(GridDhtPartitionSupplyMessage.class,  getTestIgniteInstanceName(2));
 
-        ignite.createCache(new CacheConfiguration<>()
-            .setAffinity(new RendezvousAffinityFunction(false, 32))
-            .setGroupName(groupName)
-            .setBackups(2)
-            .setName(DEFAULT_CACHE_NAME + "_second"));
+        final String groupName = "av_group_name";
 
-        ignite.createCache(new CacheConfiguration<>()
-            .setAffinity(new RendezvousAffinityFunction(false, 64))
-            .setBackups(1)
-            .setName(DEFAULT_CACHE_NAME + "_third"));
+        ignite0.createCache(new CacheConfiguration<>()
+                                .setAffinity(new RendezvousAffinityFunction(false, 8))
+                                .setGroupName(groupName)
+                                .setBackups(0)
+                                .setName("av_cache_name"));
 
-        execute("--cache", "affinity", "--ideal", "--group_name", groupName);
-        //execute("--cache", "affinity", "--current", "--group_name", groupName);
-        //execute("--cache", "affinity", "--diff", "--group_name", groupName);
-        //assertEquals(EXIT_CODE_OK, execute("--cache", "affinity", "--ideal", "--group_name", groupName));
+        checkBalancedGridAffinity2Nodes(groupName);
+
+        startGrid(2);
+        ignite0.cluster().setBaselineTopology(ignite0.cluster().topologyVersion());
+        spi0.waitForBlocked();
+
+        checkNonBalancedGridAffinity(groupName);
+
+        spi0.stopBlock();
+        awaitPartitionMapExchange();
+
+        checkBalancedGridAffinity3Nodes(groupName);
+    }
+
+    /**
+     * Utility method for {@link GridCommandHandlerTest#testCacheAffinityView()}
+     */
+    private void checkBalancedGridAffinity2Nodes(String groupName) {
+        String expectedAffinityOuptut = "gridCommandHandlerTest0:\n" +
+                                        "  Partitions num: 5\n" +
+                                        "  Partitions ids:\n" +
+                                        "    0; 1; 4; 5; 6\n" +
+                                        "\n" +
+                                        "gridCommandHandlerTest1:\n" +
+                                        "  Partitions num: 3\n" +
+                                        "  Partitions ids:\n" +
+                                        "    2; 3; 7";
+
+        checkBalancedGridAffinity(expectedAffinityOuptut, groupName);
+    }
+
+    /**
+     * Utility method for {@link GridCommandHandlerTest#testCacheAffinityView()}
+     */
+    private void checkBalancedGridAffinity3Nodes(String groupName) {
+        String expectedAffinityOuptut = "gridCommandHandlerTest0:\n" +
+                                        "  Partitions num: 3\n" +
+                                        "  Partitions ids:\n" +
+                                        "    1; 4; 5\n" +
+                                        "\n" +
+                                        "gridCommandHandlerTest1:\n" +
+                                        "  Partitions num: 2\n" +
+                                        "  Partitions ids:\n" +
+                                        "    2; 7\n" +
+                                        "\n" +
+                                        "gridCommandHandlerTest2:\n" +
+                                        "  Partitions num: 3\n" +
+                                        "  Partitions ids:\n" +
+                                        "    0; 3; 6";
+
+        checkBalancedGridAffinity(expectedAffinityOuptut, groupName);
+    }
+
+    /**
+     * Utility method for {@link GridCommandHandlerTest#testCacheAffinityView()}
+     */
+    private void checkBalancedGridAffinity(String expAff, String groupName) {
+        injectTestSystemOut();
+
+        // Checking --current option.
+        assertEquals(EXIT_CODE_OK, execute("--cache", "affinity", "--current", "--group_name", groupName));
+
+        String output = testOut.toString();
+
+        assertTrue("Unexpected current affinity output on balanced grid:\n" + output, output.contains(expAff));
+
+        testOut.reset();
 
 
-        //final String out = testOut.toString();
+        // Checking --ideal option.
+        assertEquals(EXIT_CODE_OK, execute("--cache", "affinity", "--ideal", "--group_name", groupName));
 
-//        assertContains(log, out, "Reset LOST-partitions performed successfully. Cache group (name = 'ignite-sys-cache'");
-//
-//        assertContains(log, out, "Reset LOST-partitions performed successfully. Cache group (name = 'default'");
+        output = testOut.toString();
+
+        assertTrue("Unexpected ideal affinity output on balanced grid:\n" + output, output.contains(expAff));
+
+        testOut.reset();
+
+
+        // Checking --diff option.
+        String expectedDiffAffOut = "Primary partitions different to ideal assignment:\n" +
+                                    "  Not found.";
+
+        assertEquals(EXIT_CODE_OK, execute("--cache", "affinity", "--diff", "--group_name", groupName));
+
+        output = testOut.toString();
+
+        assertTrue("Unexpected diff output on balanced grid:\n" + output, output.contains(expectedDiffAffOut));
+
+        testOut.reset();
+    }
+
+    /**
+     * Utility method for {@link GridCommandHandlerTest#testCacheAffinityView()}
+     */
+    private void checkNonBalancedGridAffinity(String groupName) {
+        String expectedCurrentAffOut = "gridCommandHandlerTest0:\n" +
+                                       "  Partitions num: 5\n" +
+                                       "  Partitions ids:\n" +
+                                       "    0; 1; 4; 5; 6\n" +
+                                       "\n" +
+                                       "gridCommandHandlerTest1:\n" +
+                                       "  Partitions num: 3\n" +
+                                       "  Partitions ids:\n" +
+                                       "    2; 3; 7\n" +
+                                       "\n" +
+                                       "gridCommandHandlerTest2:\n" +
+                                       "  Partitions num: 3\n" +
+                                       "  Partitions ids:\n" +
+                                       "    0; 3; 6";
+
+        String expectedIdealAffOut = "gridCommandHandlerTest0:\n" +
+                                     "  Partitions num: 3\n" +
+                                     "  Partitions ids:\n" +
+                                     "    1; 4; 5\n" +
+                                     "\n" +
+                                     "gridCommandHandlerTest1:\n" +
+                                     "  Partitions num: 2\n" +
+                                     "  Partitions ids:\n" +
+                                     "    2; 7\n" +
+                                     "\n" +
+                                     "gridCommandHandlerTest2:\n" +
+                                     "  Partitions num: 3\n" +
+                                     "  Partitions ids:\n" +
+                                     "    0; 3; 6";
+
+        String expectedDiffAffOut = "Primary partitions different to ideal assignment:\n" +
+                                    "  0; 3; 6";
+
+        injectTestSystemOut();
+
+        // Checking --current option.
+        assertEquals(EXIT_CODE_OK, execute("--cache", "affinity", "--current", "--group_name", groupName));
+
+        String output = testOut.toString();
+
+        assertTrue("Unexpected current affinity output on non-balanced grid:\n" + output, output.contains(expectedCurrentAffOut));
+
+        testOut.reset();
+
+
+        // Checking --ideal option.
+        assertEquals(EXIT_CODE_OK, execute("--cache", "affinity", "--ideal", "--group_name", groupName));
+
+        output = testOut.toString();
+
+        assertTrue("Unexpected ideal affinity output on non-balanced grid:\n" + output, output.contains(expectedIdealAffOut));
+
+        testOut.reset();
+
+
+        // Checking --diff option.
+        assertEquals(EXIT_CODE_OK, execute("--cache", "affinity", "--diff", "--group_name", groupName));
+
+        output = testOut.toString();
+
+        assertTrue("Unexpected diff output on non-balanced grid:\n" + output, output.contains(expectedDiffAffOut));
+
+        testOut.reset();
     }
 
     /**

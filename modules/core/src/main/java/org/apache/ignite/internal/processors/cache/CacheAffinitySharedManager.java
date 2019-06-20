@@ -1461,6 +1461,14 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
     }
 
     /**
+     * @param grpId Cache group ID.
+     * @return {@code True} if cache group exists.
+     */
+    public boolean cacheGroupExists(Integer grpId) {
+        return grpHolders.get(grpId) != null;
+    }
+
+    /**
      * Applies affinity diff from the received full message.
      *
      * @param fut Current exchange future.

@@ -35,6 +35,7 @@ import org.jetbrains.annotations.Nullable;
  *    for proper deserialization.
  * 2. Child class name must be added to
  *    {@code incubator-ignite/modules/core/src/main/resources/META-INF/classnames.properties} file.
+ * 3. {@code serialVersionUID} must be explicitly set in child class.
  */
 public abstract class IgniteDataTransferObject implements Externalizable {
     /** */

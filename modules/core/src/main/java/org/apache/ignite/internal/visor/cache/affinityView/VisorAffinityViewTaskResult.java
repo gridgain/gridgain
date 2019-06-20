@@ -1,3 +1,20 @@
+/*
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
 package org.apache.ignite.internal.visor.cache.affinityView;
 
 import java.io.Externalizable;
@@ -13,7 +30,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 /**
  * Result object for {@link VisorAffinityViewTask}
  */
-public class AffinityViewerTaskResult extends IgniteDataTransferObject {
+public class VisorAffinityViewTaskResult extends IgniteDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;
     /** */
@@ -24,12 +41,12 @@ public class AffinityViewerTaskResult extends IgniteDataTransferObject {
     /**
      * Default constructor. Required for {@link Externalizable} support.
      */
-    public AffinityViewerTaskResult() {
+    public VisorAffinityViewTaskResult() {
         // No-op.
     }
 
     /** */
-    public AffinityViewerTaskResult(List<List<ClusterNode>> assignment,
+    public VisorAffinityViewTaskResult(List<List<ClusterNode>> assignment,
         Set<Integer> primariesDifferentToIdeal)
     {
         this.assignment = assignment;
@@ -48,7 +65,7 @@ public class AffinityViewerTaskResult extends IgniteDataTransferObject {
     @Override
     protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
         assignment = U.readList(in);
-        primariesDifferentToIdeal = U.readIntSet(in);
+        primariesDifferentToIdeal = U.readSet(in);
     }
 
     /**

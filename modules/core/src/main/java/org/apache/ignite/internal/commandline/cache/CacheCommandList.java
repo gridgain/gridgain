@@ -61,7 +61,12 @@ public enum CacheCommandList {
     /**
      * Find and remove garbage.
      */
-    FIND_AND_DELETE_GARBAGE("find_garbage", new FindAndDeleteGarbage());
+    FIND_AND_DELETE_GARBAGE("find_garbage", new FindAndDeleteGarbage()),
+
+    /**
+     * Prints affinity assignment for specifyed cache group.
+     */
+    AFFINITY_VIEW("affinity_view", new AffinityViewCommand());
 
 
     /** Enumerated values. */
