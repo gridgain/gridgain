@@ -19,6 +19,7 @@ const merge = require('webpack-merge');
 const path = require('path');
 
 const commonCfg = require('./webpack.common');
+const {devProdScss} = require('./styles');
 
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 
@@ -37,26 +38,17 @@ module.exports = merge(commonCfg, {
         rules: [
             {
                 test: /\.css$/,
+                exclude: /\.url/,
                 use: ['style-loader', 'css-loader']
             },
+            ...devProdScss(true),
             {
-                test: /\.scss$/,
-                use: [
-                    MiniCssExtractPlugin.loader, // style-loader does not work with styles in IgniteModules
-                    {
-                        loader: 'css-loader',
-                        options: {
-                            sourceMap: true
-                        }
-                    },
-                    {
-                        loader: 'sass-loader',
-                        options: {
-                            sourceMap: true,
-                            includePaths: [ path.join(__dirname, '../') ]
-                        }
-                    }
-                ]
+                test: /\.html$/,
+                use: 'file-loader'
+            },
+            {
+                test: /\.(ts)$/,
+                use: ['angular2-template-loader?keepUrl=true']
             }
         ]
     },
@@ -70,7 +62,7 @@ module.exports = merge(commonCfg, {
         contentBase: path.resolve('build'),
         inline: true,
         proxy: {
-            '/socket.io': {
+            '/browsers': {
                 target: backendUrl,
                 ws: true,
                 secure: false

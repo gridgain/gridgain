@@ -23,6 +23,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Predicate;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.apache.ignite.internal.commandline.baseline.BaselineArguments;
 import org.apache.ignite.internal.commandline.cache.CacheCommands;
 import org.apache.ignite.internal.commandline.cache.CacheSubcommands;
@@ -292,8 +294,8 @@ public class CommandHandlerParsingTest {
     @Test
     public void testParseAndValidateSSLArguments() {
         for (CommandList cmd : CommandList.values()) {
-            if (cmd == CommandList.CACHE || cmd == CommandList.WAL)
-                continue; // --cache subcommand requires its own specific arguments.
+            if (cmd == CommandList.CACHE || cmd == CommandList.WAL || cmd == CommandList.ROLLING_UPGRADE)
+                continue; // --cache, --wal and --rolling-upgrade commands requires its own specific arguments.
 
             try {
                 parseArgs(asList("--truststore"));
@@ -328,8 +330,8 @@ public class CommandHandlerParsingTest {
     @Test
     public void testParseAndValidateUserAndPassword() {
         for (CommandList cmd : CommandList.values()) {
-            if (cmd == CommandList.CACHE || cmd == CommandList.WAL)
-                continue; // --cache subcommand requires its own specific arguments.
+            if (cmd == CommandList.CACHE || cmd == CommandList.WAL || cmd == CommandList.ROLLING_UPGRADE)
+                continue; // --cache, --wal and --rolling-upgrade commands requires its own specific arguments.
 
             try {
                 parseArgs(asList("--user"));
@@ -471,8 +473,8 @@ public class CommandHandlerParsingTest {
     @Test
     public void testConnectionSettings() {
         for (CommandList cmd : CommandList.values()) {
-            if (cmd == CommandList.CACHE || cmd == CommandList.WAL)
-                continue; // --cache subcommand requires its own specific arguments.
+            if (cmd == CommandList.CACHE || cmd == CommandList.WAL || cmd == CommandList.ROLLING_UPGRADE)
+                continue; // --cache, --wal and --rolling-upgrade commands requires its own specific arguments.
 
             ConnectionAndSslParameters args = parseArgs(asList(cmd.text()));
 
@@ -653,7 +655,22 @@ public class CommandHandlerParsingTest {
      * @return Common parameters container object.
      */
     private ConnectionAndSslParameters parseArgs(List<String> args) {
-        return new CommonArgParser(new CommandLogger()).
+        return new CommonArgParser(setupTestLogger()).
             parseAndValidate(args.iterator());
+    }
+
+    /**
+     * @return logger for tests.
+     */
+    private Logger setupTestLogger() {
+        Logger result;
+
+        result = Logger.getLogger(getClass().getName());
+        result.setLevel(Level.INFO);
+        result.setUseParentHandlers(false);
+
+        result.addHandler(CommandHandler.setupStreamHandler());
+
+        return result;
     }
 }

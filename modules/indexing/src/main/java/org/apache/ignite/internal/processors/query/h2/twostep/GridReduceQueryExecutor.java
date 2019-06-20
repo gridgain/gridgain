@@ -60,6 +60,7 @@ import org.apache.ignite.internal.processors.query.h2.H2ConnectionWrapper;
 import org.apache.ignite.internal.processors.query.h2.H2FieldsIterator;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
+import org.apache.ignite.internal.processors.query.h2.QueryMemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.ReduceH2QueryInfo;
 import org.apache.ignite.internal.processors.query.h2.ThreadLocalObjectPool;
 import org.apache.ignite.internal.processors.query.h2.UpdateResult;
@@ -328,6 +329,7 @@ public class GridReduceQueryExecutor {
      * @param mvccTracker Query tracker.
      * @param dataPageScanEnabled If data page scan is enabled.
      * @param pageSize Page size.
+     * @param maxMem Query memory limit.
      * @return Rows iterator.
      */
     @SuppressWarnings({"BusyWait", "IfMayBeConditional"})
@@ -343,7 +345,8 @@ public class GridReduceQueryExecutor {
         boolean lazy,
         MvccQueryTracker mvccTracker,
         Boolean dataPageScanEnabled,
-        int pageSize
+        int pageSize,
+        long maxMem
     ) {
         // If explicit partitions are set, but there are no real tables, ignore.
         if (!qry.hasCacheIds() && parts != null)
@@ -385,6 +388,13 @@ public class GridReduceQueryExecutor {
         ReduceQueryRun lastRun = null;
 
         for (int attempt = 0;; attempt++) {
+            try {
+                cancel.checkCancelled();
+            }
+            catch (QueryCancelledException cancelEx) {
+                throw new CacheException("Failed to run reduce query locally. " + cancelEx.getMessage(),  cancelEx);
+            }
+
             if (attempt > 0 && retryTimeout > 0 && (U.currentTimeMillis() - startTime > retryTimeout)) {
                 UUID retryNodeId = lastRun.retryNodeId();
                 String retryCause = lastRun.retryCause();
@@ -561,7 +571,7 @@ public class GridReduceQueryExecutor {
 
                 boolean retry = false;
 
-                int flags = singlePartMode && !enforceJoinOrder ? 0 : GridH2QueryRequest.FLAG_ENFORCE_JOIN_ORDER;
+                int flags = enforceJoinOrder || qry.distributedJoins() ? GridH2QueryRequest.FLAG_ENFORCE_JOIN_ORDER : 0;
 
                 // Distributed joins flag is set if it is either reald
                 if (qry.distributedJoins())
@@ -589,7 +599,8 @@ public class GridReduceQueryExecutor {
                     .parameters(params)
                     .flags(flags)
                     .timeout(timeoutMillis)
-                    .schemaName(schemaName);
+                    .schemaName(schemaName)
+                    .maxMemory(maxMem);
 
                 if (mvccTracker != null)
                     req.mvccSnapshot(mvccTracker.snapshot());
@@ -644,18 +655,23 @@ public class GridReduceQueryExecutor {
                             null,
                             null,
                             null,
-                            null
-                        );
+                            null,
+                            maxMem < 0 ? null : new QueryMemoryTracker(maxMem),
+                            true);
 
                         H2Utils.setupConnection(r.connection(), qctx, false, enforceJoinOrder);
 
                         QueryContextRegistry qryCtxRegistry = h2.queryContextRegistry();
 
-                        qryCtxRegistry.setThreadLocal(qctx);
-
                         try {
-                            if (qry.explain())
-                                return explainPlan(r.connection(), qry, params);
+                            if (qry.explain()) {
+                                try {
+                                    return explainPlan(r.connection(), qry, params);
+                                }
+                                finally {
+                                    H2Utils.resetSession(r.connection());
+                                }
+                            }
 
                             GridCacheSqlQuery rdc = qry.reduceQuery();
 
@@ -683,7 +699,8 @@ public class GridReduceQueryExecutor {
                             mvccTracker = null; // To prevent callback inside finally block;
                         }
                         finally {
-                            qryCtxRegistry.clearThreadLocal();
+                            if (detachedConn != null)
+                                H2Utils.resetSession(detachedConn.object().connection());
                         }
                     }
                 }
@@ -1040,6 +1057,9 @@ public class GridReduceQueryExecutor {
         }
         catch (SQLException e) {
             throw new IgniteCheckedException(e);
+        }
+        finally {
+            U.closeQuiet(rs);
         }
     }
 

@@ -290,7 +290,7 @@ public class ScriptCommand extends ScriptBase {
                 }
                 if (TableType.TABLE == tableType) {
                     if (table.canGetRowCount()) {
-                        StringBuilder builder = new StringBuilder("-- ").append(table.getRowCountApproximation())
+                        StringBuilder builder = new StringBuilder("-- ").append(table.getRowCountApproximation(session))
                                 .append(" +/- SELECT COUNT(*) FROM ");
                         table.getSQL(builder, false);
                         add(builder.toString(), false);
@@ -383,7 +383,7 @@ public class ScriptCommand extends ScriptBase {
     }
 
     private int generateInsertValues(int count, Table table) throws IOException {
-        PlanItem plan = table.getBestPlanItem(session, null, null, -1, null, null);
+        PlanItem plan = table.getBestPlanItem(session, null, null, -1, null, null, false);
         Index index = plan.getIndex();
         Cursor cursor = index.find(session, null, null);
         Column[] columns = table.getColumns();

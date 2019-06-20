@@ -63,6 +63,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.NetworkInterface;
+import java.net.Socket;
 import java.net.SocketException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -1070,6 +1071,37 @@ public abstract class IgniteUtils {
      */
     public static long microTime() {
         return System.nanoTime() / 1000;
+    }
+
+    /**
+     * Convert milliseconds time interval to nanoseconds.
+     *
+     * @param millis Original time interval.
+     * @return Calculated time interval.
+     */
+    public static long millisToNanos(long millis) {
+        return TimeUnit.MILLISECONDS.toNanos(millis);
+    }
+
+    /**
+     * Convert nanoseconds time interval to milliseconds.
+     *
+     * @param nanos Original time interval.
+     * @return Calculated time interval.
+     */
+    public static long nanosToMillis(long nanos) {
+        return TimeUnit.NANOSECONDS.toMillis(nanos);
+    }
+
+    /**
+     * Returns number of milliseconds passed after the given nanos timestamp.
+     *
+     * @param nanos Nanos timestamp.
+     * @return Number of milliseconds passed after the given nanos timestamp.
+     * @see System#nanoTime()
+     */
+    public static long millisSinceNanos(long nanos) {
+        return nanosToMillis(System.nanoTime() - nanos);
     }
 
     /**
@@ -4269,6 +4301,32 @@ public abstract class IgniteUtils {
     }
 
     /**
+     * Quietly closes given {@link Socket} ignoring possible checked exception.
+     *
+     * @param sock Socket to close. If it's {@code null} - it's no-op.
+     */
+    public static void closeQuiet(@Nullable Socket sock) {
+        if (sock == null)
+            return;
+
+        try {
+            // Avoid java 12 bug see https://bugs.openjdk.java.net/browse/JDK-8219658
+            sock.shutdownOutput();
+            sock.shutdownInput();
+        }
+        catch (Exception ignored) {
+            // No-op.
+        }
+
+        try {
+            sock.close();
+        }
+        catch (Exception ignored) {
+            // No-op.
+        }
+    }
+
+    /**
      * Quietly releases file lock ignoring all possible exceptions.
      *
      * @param lock File lock. If it's {@code null} - it's no-op.
@@ -4711,9 +4769,16 @@ public abstract class IgniteUtils {
         assert name != null;
         assert itf != null;
 
-        DynamicMBean mbean = new IgniteStandardMXBean(impl, itf);
+        DynamicMBean mbean;
 
-        mbean.getMBeanInfo();
+        if (impl instanceof DynamicMBean) {
+            mbean = (DynamicMBean)impl;
+        }
+        else {
+            mbean = new IgniteStandardMXBean(impl, itf);
+
+            mbean.getMBeanInfo();
+        }
 
         return mbeanSrv.registerMBean(mbean, name).getObjectName();
     }
@@ -10772,11 +10837,6 @@ public abstract class IgniteUtils {
 
                 break;
 
-            case GridIoPolicy.IGFS_POOL:
-                parallelismLvl = cfg.getIgfsThreadPoolSize();
-
-                break;
-
             case GridIoPolicy.SERVICE_POOL:
                 parallelismLvl = cfg.getServiceThreadPoolSize();
 
@@ -11380,5 +11440,110 @@ public abstract class IgniteUtils {
      */
     public static boolean isFlagSet(int flags, int flag) {
         return (flags & flag) == flag;
+    }
+
+    /**
+     * Reads string-to-string map written by {@link #writeStringMap(DataOutput, Map)}.
+     *
+     * @param in Data input.
+     * @throws IOException If write failed.
+     * @return Read result.
+     */
+    public static Map<String, String> readStringMap(DataInput in) throws IOException {
+        int size = in.readInt();
+
+        if (size == -1)
+            return null;
+        else {
+            Map<String, String> map = U.newHashMap(size);
+
+            for (int i = 0; i < size; i++)
+                map.put(readUTF(in), readUTF(in));
+
+            return map;
+        }
+    }
+
+    /**
+     * Writes string-to-string map to given data output.
+     *
+     * @param out Data output.
+     * @param map Map.
+     * @throws IOException If write failed.
+     */
+    public static void writeStringMap(DataOutput out, @Nullable Map<String, String> map) throws IOException {
+        if (map != null) {
+            out.writeInt(map.size());
+
+            for (Map.Entry<String, String> e : map.entrySet()) {
+                writeUTF(out, e.getKey());
+                writeUTF(out, e.getValue());
+            }
+        }
+        else
+            out.writeInt(-1);
+    }
+
+    /** Maximum string length to be written at once. */
+    private static final int MAX_STR_LEN = 0xFFFF / 4;
+
+    /**
+     * Write UTF string which can be {@code null}.
+     *
+     * @param out Output stream.
+     * @param val Value.
+     * @throws IOException If failed.
+     */
+    public static void writeUTF(DataOutput out, @Nullable String val) throws IOException {
+        if (val == null)
+            out.writeInt(-1);
+        else {
+            out.writeInt(val.length());
+
+            if (val.length() <= MAX_STR_LEN)
+                out.writeUTF(val); // Optimized write in 1 chunk.
+            else {
+                int written = 0;
+
+                while (written < val.length()) {
+                    int partLen = Math.min(val.length() - written, MAX_STR_LEN);
+
+                    String part = val.substring(written, written + partLen);
+
+                    out.writeUTF(part);
+
+                    written += partLen;
+                }
+            }
+        }
+    }
+
+    /**
+     * Read UTF string which can be {@code null}.
+     *
+     * @param in Input stream.
+     * @return Value.
+     * @throws IOException If failed.
+     */
+    public static String readUTF(DataInput in) throws IOException {
+        int len = in.readInt(); // May be zero.
+
+        if (len < 0)
+            return null;
+        else {
+            if (len <= MAX_STR_LEN)
+                return in.readUTF();
+
+            StringBuilder sb = new StringBuilder(len);
+
+            do {
+                sb.append(in.readUTF());
+            }
+            while (sb.length() < len);
+
+            assert sb.length() == len;
+
+            return sb.toString();
+        }
     }
 }

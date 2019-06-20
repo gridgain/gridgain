@@ -66,6 +66,7 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPageI
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandler;
+import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryManager;
 import org.apache.ignite.internal.processors.cache.tree.CacheDataRowStore;
 import org.apache.ignite.internal.processors.cache.tree.CacheDataTree;
@@ -87,7 +88,7 @@ import org.apache.ignite.internal.processors.cache.tree.mvcc.search.MvccSnapshot
 import org.apache.ignite.internal.processors.cache.tree.mvcc.search.MvccTreeClosure;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.query.GridQueryRowCacheCleaner;
-import org.apache.ignite.internal.stat.IoStatisticsHolder;
+import org.apache.ignite.internal.metric.IoStatisticsHolder;
 import org.apache.ignite.internal.transactions.IgniteTxUnexpectedStateCheckedException;
 import org.apache.ignite.internal.util.GridAtomicLong;
 import org.apache.ignite.internal.util.GridCloseableIteratorAdapter;
@@ -208,17 +209,21 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         assert !cctx.group().persistenceEnabled();
 
         if (cctx.affinityNode() && cctx.ttl().eagerTtlEnabled() && pendingEntries == null) {
-            String name = "PendingEntries";
+            String pendingEntriesTreeName = cctx.name() + "##PendingEntries";
 
             long rootPage = allocateForTree();
 
+            PageLockListener lsnr = ctx.diagnostic().pageLockTracker().createPageLockTracker(pendingEntriesTreeName);
+
             pendingEntries = new PendingEntriesTree(
                 grp,
-                name,
+                pendingEntriesTreeName,
                 grp.dataRegion().pageMemory(),
                 rootPage,
                 grp.reuseList(),
-                true);
+                true,
+                lsnr
+            );
         }
     }
 
@@ -1228,23 +1233,26 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
      * @return Cache data store.
      * @throws IgniteCheckedException If failed.
      */
-    protected CacheDataStore createCacheDataStore0(int p)
-        throws IgniteCheckedException {
+    protected CacheDataStore createCacheDataStore0(int p) throws IgniteCheckedException {
         final long rootPage = allocateForTree();
 
         CacheDataRowStore rowStore = new CacheDataRowStore(grp, grp.freeList(), p);
 
-        String idxName = treeName(p);
+        String dataTreeName = grp.cacheOrGroupName() + "-" + treeName(p);
+
+        PageLockListener lsnr = ctx.diagnostic().pageLockTracker().createPageLockTracker(dataTreeName);
 
         CacheDataTree dataTree = new CacheDataTree(
             grp,
-            idxName,
+            dataTreeName,
             grp.reuseList(),
             rowStore,
             rootPage,
-            true);
+            true,
+            lsnr
+        );
 
-        return new CacheDataStoreImpl(p, idxName, rowStore, dataTree);
+        return new CacheDataStoreImpl(p, rowStore, dataTree);
     }
 
     /** {@inheritDoc} */
@@ -1387,9 +1395,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         /** */
         private final int partId;
 
-        /** Tree name. */
-        private String name;
-
         /** */
         private final CacheDataRowStore rowStore;
 
@@ -1416,18 +1421,15 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         /**
          * @param partId Partition number.
-         * @param name Name.
          * @param rowStore Row store.
          * @param dataTree Data tree.
          */
         public CacheDataStoreImpl(
             int partId,
-            String name,
             CacheDataRowStore rowStore,
             CacheDataTree dataTree
         ) {
             this.partId = partId;
-            this.name = name;
             this.rowStore = rowStore;
             this.dataTree = dataTree;
         }
@@ -1554,11 +1556,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         /** {@inheritDoc} */
         @Override public GridLongList finalizeUpdateCounters() {
             return pCntr.finalizeUpdateCounters();
-        }
-
-        /** {@inheritDoc} */
-        @Override public String name() {
-            return name;
         }
 
         /**
@@ -2523,8 +2520,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 if (newRow.link() != oldRow.link())
                     rowStore.removeRow(oldRow.link(), grp.statisticsHolderData());
             }
-
-            updateIgfsMetrics(cctx, key, (oldRow != null ? oldRow.value() : null), newRow.value());
         }
 
         /**
@@ -2594,8 +2589,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             if (oldRow != null)
                 rowStore.removeRow(oldRow.link(), grp.statisticsHolderData());
-
-            updateIgfsMetrics(cctx, key, (oldRow != null ? oldRow.value() : null), null);
         }
 
         /**
@@ -2910,57 +2903,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         /** {@inheritDoc} */
         @Override public void preload() throws IgniteCheckedException {
             // No-op.
-        }
-
-        /**
-         * @param cctx Cache context.
-         * @param key Key.
-         * @param oldVal Old value.
-         * @param newVal New value.
-         */
-        private void updateIgfsMetrics(
-            GridCacheContext cctx,
-            KeyCacheObject key,
-            CacheObject oldVal,
-            CacheObject newVal
-        ) {
-            GridCacheAdapter cache = cctx.cache();
-            if (cache == null)
-                return;
-
-            // In case we deal with IGFS cache, count updated data
-            if (cache.isIgfsDataCache() &&
-                !cctx.isNear() &&
-                ctx.kernalContext()
-                    .igfsHelper()
-                    .isIgfsBlockKey(key.value(cctx.cacheObjectContext(), false))) {
-                int oldSize = valueLength(cctx, oldVal);
-                int newSize = valueLength(cctx, newVal);
-
-                int delta = newSize - oldSize;
-
-                if (delta != 0)
-                    cache.onIgfsDataSizeChanged(delta);
-            }
-        }
-
-        /**
-         * Isolated method to get length of IGFS block.
-         *
-         * @param cctx Cache context.
-         * @param val Value.
-         * @return Length of value.
-         */
-        private int valueLength(GridCacheContext cctx, @Nullable CacheObject val) {
-            if (val == null)
-                return 0;
-
-            byte[] bytes = val.value(cctx.cacheObjectContext(), false);
-
-            if (bytes != null)
-                return bytes.length;
-            else
-                return 0;
         }
 
         /** */

@@ -70,6 +70,7 @@ import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.future.IgniteFinishedFutureImpl;
 import org.apache.ignite.internal.util.future.IgniteFutureImpl;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.C1;
@@ -97,6 +98,7 @@ import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType.STATE_PROC;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYSTEM_POOL;
+import static org.apache.ignite.internal.processors.cache.GridCacheUtils.extractDataStorage;
 
 /**
  *
@@ -191,16 +193,31 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
     /** {@inheritDoc} */
     @Override public @Nullable IgniteNodeValidationResult validateNode(ClusterNode node) {
+        if (node.attribute(IgniteNodeAttributes.ATTR_IGFS) != null) {
+            return new IgniteNodeValidationResult(
+                node.id(),
+                "Joining node with IGFS couldn't be allowed due to IGFS doesn't supported anymore"
+            );
+        }
+
         if (!isBaselineAutoAdjustEnabled() || baselineAutoAdjustTimeout() != 0)
             return null;
 
         Collection<ClusterNode> nodes = ctx.discovery().aliveServerNodes();
 
         //Any node allowed to join if cluster has at least one persist node.
-        if (nodes.stream().anyMatch(serNode -> CU.isPersistenceEnabled(extractDataStorage(serNode))))
+        if (nodes.stream().anyMatch(serNode -> CU.isPersistenceEnabled(extractDataStorage(
+            serNode,
+            ctx.marshallerContext().jdkMarshaller(),
+            U.resolveClassLoader(ctx.config()))
+        )))
             return null;
 
-        DataStorageConfiguration crdDsCfg = extractDataStorage(node);
+        DataStorageConfiguration crdDsCfg = extractDataStorage(
+            node,
+            ctx.marshallerContext().jdkMarshaller(),
+            U.resolveClassLoader(ctx.config())
+        );
 
         if (!CU.isPersistenceEnabled(crdDsCfg))
             return null;
@@ -210,27 +227,6 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             "Joining persistence node to in-memory cluster couldn't be allowed " +
             "due to baseline auto-adjust is enabled and timeout equal to 0"
         );
-    }
-
-    /**
-     * Extract and unmarshal data storage configuration from given node.
-     *
-     * @param node Source of data storage configuration.
-     * @return Data storage configuration for given node.
-     */
-    private DataStorageConfiguration extractDataStorage(ClusterNode node) {
-        Object dsCfgBytes = node.attribute(IgniteNodeAttributes.ATTR_DATA_STORAGE_CONFIG);
-
-        if (dsCfgBytes instanceof byte[]) {
-            try {
-                return new JdkMarshaller().unmarshal((byte[])dsCfgBytes, U.resolveClassLoader(ctx.config()));
-            }
-            catch (IgniteCheckedException e) {
-                U.error(log, "Failed to unmarshal remote data storage configuration [remoteNode=" + node + "]", e);
-            }
-        }
-
-        return null;
     }
 
     /**
@@ -796,6 +792,11 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
     /** {@inheritDoc} */
     @Override public void onGridDataReceived(DiscoveryDataBag.GridDiscoveryData data) {
+        Collection<ClusterNode> nodes = ctx.config().getDiscoverySpi().getRemoteNodes();
+
+        if (nodes != null && nodes.stream().anyMatch(it -> it.attribute(IgniteNodeAttributes.ATTR_IGFS) != null))
+            throw new IgniteException("Can not join to cluster with IGFS because it is not supported anymore");
+
         if (data.commonData() instanceof DiscoveryDataClusterState) {
             if (globalState != null && globalState.baselineTopology() != null)
                 //node with BaselineTopology is not allowed to join mixed cluster
@@ -1275,7 +1276,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
         checkLocalNodeInBaseline(globalState.baselineTopology());
 
-        ctx.closure().runLocalSafe(new Runnable() {
+        ctx.closure().runLocalSafe(new GridPlainRunnable() {
             @Override public void run() {
                 boolean client = ctx.clientNode();
 
@@ -1289,8 +1290,6 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                     }
 
                     ctx.dataStructures().onActivate(ctx);
-
-                    ctx.igfs().onActivate(ctx);
 
                     ctx.task().onActivate(ctx);
 
@@ -1518,7 +1517,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
      * @param discoCache Discovery cache from the discovery manager.
      * @param topVer Topology version.
      * @param minorTopVer Minor topology version.
-     * @return {@code true} if baseline was changed.
+     * @return {@code true} if baseline was changed and discovery cache recalculation is required.
      */
     public boolean autoAdjustInMemoryClusterState(
         UUID nodeId,
@@ -1531,7 +1530,13 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
         DiscoveryDataClusterState oldState = globalState;
 
-        boolean autoAdjustBaseline = CU.isInMemoryCluster(ctx.discovery().allNodes(), ctx.config())
+        boolean isInMemoryCluster = CU.isInMemoryCluster(
+            ctx.discovery().allNodes(),
+            ctx.marshallerContext().jdkMarshaller(),
+            U.resolveClassLoader(ctx.config())
+        );
+
+        boolean autoAdjustBaseline = isInMemoryCluster
             && oldState.active()
             && !oldState.transition()
             && cluster.isBaselineAutoAdjustEnabled()
@@ -1568,8 +1573,6 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                 onStateFinishMessage(finishMsg);
 
                 globalState.localBaselineAutoAdjustment(true);
-
-                ctx.discovery().updateTopologySnapshot();
 
                 return true;
             }

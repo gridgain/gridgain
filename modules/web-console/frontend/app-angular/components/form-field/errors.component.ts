@@ -20,48 +20,8 @@ import {VALIDATION_MESSAGES} from './validationMessages.provider';
 
 @Component({
     selector: 'form-field-errors',
-    template: `
-        <ng-template #validationMessage>
-            <ng-template *ngIf='extraErrorMessages[errorType]' [ngTemplateOutlet]='extraErrorMessages[errorType]'></ng-template>
-            <ng-container *ngIf='!extraErrorMessages[errorType] && defaultMessages[errorType]'>{{defaultMessages[errorType]}}</ng-container>
-            <ng-container *ngIf='!extraErrorMessages[errorType] && !defaultMessages[errorType]'>Value is invalid: {{errorType}}</ng-container>
-        </ng-template>
-        <div *ngIf='errorStyle === "inline"' class='inline'>
-            <ng-container *ngTemplateOutlet='validationMessage'></ng-container>
-        </div>
-        <div *ngIf='errorStyle === "icon"' class='icon'>
-            <popper-content #popper>
-                <ng-container *ngTemplateOutlet='validationMessage'></ng-container>
-            </popper-content>
-            <ignite-icon
-                name='attention'
-                [popper]='popper'
-                popperApplyClass='ignite-popper,ignite-popper__error'
-                popperTrigger='hover'
-                popperPlacement='top'
-                popperAppendTo='body'
-            ></ignite-icon>
-        </div>
-    `,
-    styles: [`
-        :host {
-            display: block;
-        }
-        .inline {
-            padding: 5px 10px 0;
-            color: #ee2b27;
-            font-size: 12px;
-            line-height: 14px;
-        }
-        .icon {
-            color: #ee2b27;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-    `]
+    templateUrl: './errors.template.html',
+    styleUrls: ['./errors.style.url.scss']
 })
 export class FormFieldErrors<T extends {[errorType: string]: string}> {
     @Input()

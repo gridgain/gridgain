@@ -698,7 +698,12 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                     else if (customMsg instanceof ChangeGlobalStateFinishMessage) {
                         ctx.state().onStateFinishMessage((ChangeGlobalStateFinishMessage)customMsg);
 
-                        updateTopologySnapshot();
+                        Snapshot snapshot = topSnap.get();
+
+                        // Topology version does not change, but need create DiscoCache with new state.
+                        DiscoCache discoCache = snapshot.discoCache.copy(snapshot.topVer, ctx.state().clusterState());
+
+                        topSnap.set(new Snapshot(snapshot.topVer, discoCache));
 
                         incMinorTopVer = false;
                     }
@@ -782,7 +787,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
                 if (locJoinEvt || !node.isClient() && !node.isDaemon()) {
                     if (type == EVT_NODE_LEFT || type == EVT_NODE_FAILED || type == EVT_NODE_JOINED) {
-                        boolean discoCacheUpdated = ctx.state().autoAdjustInMemoryClusterState(
+                        boolean discoCacheRecalculationRequired = ctx.state().autoAdjustInMemoryClusterState(
                             node.id(),
                             topSnapshot,
                             discoCache,
@@ -790,10 +795,17 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                             minorTopVer
                         );
 
-                        if (discoCacheUpdated) {
-                            discoCache = discoCache();
+                        if (discoCacheRecalculationRequired) {
+                            discoCache = createDiscoCache(
+                                nextTopVer,
+                                ctx.state().clusterState(),
+                                locNode,
+                                topSnapshot
+                            );
 
                             discoCacheHist.put(nextTopVer, discoCache);
+
+                            topSnap.set(new Snapshot(nextTopVer, discoCache));
                         }
                     }
                 }
@@ -1032,18 +1044,6 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
         if (log.isDebugEnabled())
             log.debug(startInfo());
-    }
-
-    /**
-     * Update {@link #topSnap} with the latest cluster state.
-     */
-    public void updateTopologySnapshot() {
-        Snapshot snapshot = topSnap.get();
-
-        // Topology version does not change, but need create DiscoCache with new state.
-        DiscoCache discoCache = snapshot.discoCache.copy(snapshot.topVer, ctx.state().clusterState());
-
-        topSnap.set(new Snapshot(snapshot.topVer, discoCache));
     }
 
     /**
@@ -2675,15 +2675,15 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
         /** {@inheritDoc} */
         @Override protected void body() throws InterruptedException {
-            long lastChk = 0;
+            long lastChkNanos = 0;
 
             while (!isCancelled()) {
                 Object req = queue.poll(2000, MILLISECONDS);
 
-                long now = U.currentTimeMillis();
+                long nowNanos = System.nanoTime();
 
                 // Check frequency if segment check has not been requested.
-                if (req == null && (segChkFreq == 0 || lastChk + segChkFreq >= now)) {
+                if (req == null && (segChkFreq == 0 || U.nanosToMillis(nowNanos - lastChkNanos) <= segChkFreq)) {
                     if (log.isDebugEnabled())
                         log.debug("Skipping segment check as it has not been requested and it is not time to check.");
 
@@ -2692,7 +2692,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
                 // We should always check segment if it has been explicitly
                 // requested (on any node failure or leave).
-                assert req != null || lastChk + segChkFreq < now;
+                assert req != null || U.nanosToMillis(nowNanos - lastChkNanos) > segChkFreq;
 
                 // Drain queue.
                 while (queue.poll() != null) {
@@ -2702,7 +2702,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                 if (lastSegChkRes.get()) {
                     boolean segValid = ctx.segmentation().isValidSegment();
 
-                    lastChk = now;
+                    lastChkNanos = nowNanos;
 
                     if (!segValid) {
                         ClusterNode node = getSpi().getLocalNode();
@@ -2889,28 +2889,28 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                 evt.topologySnapshot(topVer, U.<ClusterNode, ClusterNode>arrayList(topSnapshot, FILTER_NOT_DAEMON));
 
                 if (type == EVT_NODE_METRICS_UPDATED)
-                    evt.message("Metrics were updated: " + node);
+                    evt.messageTemplate("Metrics were updated: ");
 
                 else if (type == EVT_NODE_JOINED)
-                    evt.message("Node joined: " + node);
+                    evt.messageTemplate("Node joined: ");
 
                 else if (type == EVT_NODE_LEFT)
-                    evt.message("Node left: " + node);
+                    evt.messageTemplate("Node left: ");
 
                 else if (type == EVT_NODE_FAILED)
-                    evt.message("Node failed: " + node);
+                    evt.messageTemplate("Node failed: ");
 
                 else if (type == EVT_NODE_SEGMENTED)
-                    evt.message("Node segmented: " + node);
+                    evt.messageTemplate("Node segmented: ");
 
                 else if (type == EVT_CLIENT_NODE_DISCONNECTED)
-                    evt.message("Client node disconnected: " + node);
+                    evt.messageTemplate("Client node disconnected: ");
 
                 else if (type == EVT_CLIENT_NODE_RECONNECTED)
-                    evt.message("Client node reconnected: " + node);
+                    evt.messageTemplate("Client node reconnected: ");
 
                 else
-                    assert false;
+                    assert false : "Unexpected discovery message type: " + type;;
 
                 ctx.event().record(evt, discoCache);
             }

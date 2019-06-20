@@ -82,6 +82,7 @@ import org.apache.ignite.internal.transactions.IgniteTxTimeoutCheckedException;
 import org.apache.ignite.internal.util.GridBoundedConcurrentOrderedMap;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.lang.IgnitePair;
 import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.F;
@@ -323,6 +324,38 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         rollbackTransactionsForCache(cacheId, nearIdMap);
 
         rollbackTransactionsForCache(cacheId, idMap);
+    }
+
+    /**
+     * @param cachesToStop Caches to stop.
+     */
+    public void rollbackTransactionsForCaches(Set<Integer> cachesToStop) {
+        if (!cachesToStop.isEmpty()) {
+            IgniteTxManager tm = context().tm();
+
+            Collection<IgniteInternalTx> active = tm.activeTransactions();
+
+            GridCompoundFuture<IgniteInternalTx, IgniteInternalTx> compFut = new GridCompoundFuture<>();
+
+            for (IgniteInternalTx tx : active) {
+                for (IgniteTxEntry e : tx.allEntries()) {
+                    if (cachesToStop.contains(e.context().cacheId())) {
+                        compFut.add(tx.rollbackAsync());
+
+                        break;
+                    }
+                }
+            }
+
+            compFut.markInitialized();
+
+            try {
+                compFut.get();
+            }
+            catch (IgniteCheckedException e) {
+                U.error(log, "Error occured during tx rollback.", e);
+            }
+        }
     }
 
     /**
@@ -2718,7 +2751,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         /** {@inheritDoc} */
         @Override public void onTimeout() {
             // Should not block timeout thread.
-            cctx.kernalContext().closure().runLocalSafe(new Runnable() {
+            cctx.kernalContext().closure().runLocalSafe(new GridPlainRunnable() {
                 @Override public void run() {
                     onTimeout0();
                 }
