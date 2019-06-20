@@ -16,29 +16,30 @@
 
 version: '3'
 services:
-  backend:
+  testenv_backend:
     build:
       context: '../docker/console'
       dockerfile: 'backend/Dockerfile'
     ports:
       - 3001:3000
+    environment:
+      - SPRING_PROFILES_ACTIVE=true
 
-  frontend:
+  testenv_frontend:
     build:
       context: '../docker/console'
       dockerfile: 'frontend/Dockerfile'
     ports:
       - 9001:80
     depends_on:
-      - backend
+      - testenv_backend
 
   e2e:
     build: './testcafe'
     environment:
-      - DB_URL=mongodb://mongodb:27017/console-e2e
       - APP_URL=http://testenv:9001/
       - REPORTER=teamcity
       - QUARANTINE_MODE=true
     depends_on:
-      - backend
-      - frontend
+      - testenv_backend
+      - testenv_frontend

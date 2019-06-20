@@ -14,36 +14,27 @@
  * limitations under the License.
  */
 
-import Server from 'socket.io';
+import { Server } from 'ws';
 import {RequestHook} from 'testcafe';
-import PortPool from 'port-pool';
-
-const portPool = new PortPool(3000, 3100);
-const getPort = () => new Promise((resolve, reject) => {
-    portPool.getNext((port) => {
-        if (port === null) reject(new Error('No free ports available'));
-        resolve(port);
-    });
-});
+import getPort from 'get-port';
 
 export class WebSocketHook extends RequestHook {
     constructor() {
-        super(([/socket\.io/]));
+        super(([/browsers/]));
+
         this._port = getPort();
-        this._io = Server();
-        this._port.then((port) => this._io.listen(port));
     }
 
     async onRequest(e) {
-    	e.requestOptions.host = `localhost:${await this._port}`;
+        e.requestOptions.host = `localhost:${await this._port}`;
         e.requestOptions.hostname = 'localhost';
-    	e.requestOptions.port = await this._port;
+        e.requestOptions.port = await this._port;
     }
 
     async onResponse() {}
 
     destroy() {
-    	this._io.close();
+        this._io.close();
     }
 
     /**
@@ -51,23 +42,31 @@ export class WebSocketHook extends RequestHook {
      * @param {()=>void} listener
      */
     on(event, listener) {
-    	this._io.on(event, listener);
-    	return this;
+        this._io.on(event, listener);
+
+        return this;
     }
 
     /**
-     * @param {string} event
-     * @param {any} data
+     * @param {string} eventType
+     * @param {any} payload
      */
-    emit(event, data) {
-    	this._io.emit(event, data);
+    emit(eventType, payload) {
+        this._io.clients.forEach((ws) => {
+            ws.send(JSON.stringify({eventType, payload: JSON.stringify(payload)}));
+        });
     }
 
     /**
      * @param {Array<(hook: WebSocketHook) => any>} hooks
      */
     use(...hooks) {
-        hooks.forEach((hook) => hook(this));
+        this._port.then((port) => {
+            this._io = new Server({port});
+
+            hooks.forEach((hook) => hook(this));
+        });
+
         return this;
     }
 }

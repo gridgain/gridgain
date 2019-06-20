@@ -21,7 +21,7 @@ const { startTestcafe } = require('./testcafe-runner');
 const enableEnvironment = argv.env;
 
 // See all supported browsers at http://devexpress.github.io/testcafe/documentation/using-testcafe/common-concepts/browsers/browser-support.html#locally-installed-browsers
-const BROWSERS = ['chromium --no-sandbox']; // For example: ['chrome', 'firefox'];
+const BROWSERS = ['chromium:headless --no-sandbox']; // For example: ['chrome', 'firefox'];
 
 const FIXTURES_PATHS = glob.sync('./fixtures/**/*.js');
 

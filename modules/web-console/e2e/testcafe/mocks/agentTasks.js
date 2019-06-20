@@ -64,7 +64,7 @@ export const simeplFakeSQLQuery = (nid, response) => (ws) => {
 };
 
 export const FAKE_CLUSTERS = {
-    count: 2,
+    count: 1,
     hasDemo: true,
     clusters: [
         {
@@ -132,8 +132,6 @@ export const FAKE_CACHES = {
     groups: []
 };
 
-export const agentStat = (clusters) => (ws) => {
-    ws.on('connection', ((e) => {
-        ws.emit('agents:stat', clusters);
-    }));
+export const agentStat = (clusters) => (wss) => {
+    wss.on('connection', () => wss.emit('agent:status', clusters));
 };
