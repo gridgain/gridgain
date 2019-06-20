@@ -66,7 +66,7 @@ export class DialogAdminCreateUser {
         this.loading.start('createUser');
 
         this.AdminData.registerUser(this.data)
-            .then((wtf) => {
+            .then(() => {
                 this.User.created$.next(this.data);
                 this.IgniteMessages.showInfo(`User ${this.data.email} created`);
                 this.close({});
