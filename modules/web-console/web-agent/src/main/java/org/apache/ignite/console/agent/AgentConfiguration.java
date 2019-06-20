@@ -562,8 +562,7 @@ public class AgentConfiguration {
         if (driversFolder == null)
             driversFolder(cfg.driversFolder());
 
-        if (disableDemo == null)
-            disableDemo(cfg.disableDemo());
+        disableDemo(disableDemo || cfg.disableDemo());
 
         if (nodeKeyStore == null)
             nodeKeyStore(cfg.nodeKeyStore());
