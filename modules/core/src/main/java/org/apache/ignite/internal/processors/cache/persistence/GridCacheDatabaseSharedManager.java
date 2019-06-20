@@ -1463,9 +1463,14 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     @Override public void rebuildIndexesIfNeeded(GridDhtPartitionsExchangeFuture fut) {
         GridQueryProcessor qryProc = cctx.kernalContext().query();
 
-        AtomicInteger indexesCntr = new AtomicInteger(cctx.cacheContexts().size());
-
         AtomicBoolean rebuiltAlLeastOneIdx = new AtomicBoolean(false);
+
+        GridCompoundFuture compoundAllIdxsRebuilt = new GridCompoundFuture();
+
+        compoundAllIdxsRebuilt.listen(a -> {
+            if (rebuiltAlLeastOneIdx.get())
+                log().info("Indexes rebuilding completed for all caches.");
+        });
 
         if (qryProc.moduleEnabled()) {
             for (final GridCacheContext cacheCtx : (Collection<GridCacheContext>)cctx.cacheContexts()) {
@@ -1479,7 +1484,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                         log().info("Started indexes rebuilding for cache [name=" + cacheCtx.name()
                             + ", grpName=" + cacheCtx.group().name() + ']');
 
-                        assert usrFut != null : "Missing user future for cache: " + cacheCtx.name();
+                        compoundAllIdxsRebuilt.add(rebuildFut);
 
                         rebuildFut.listen(new CI1<IgniteInternalFuture>() {
                             @Override public void apply(IgniteInternalFuture fut) {
@@ -1503,8 +1508,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                                 }
 
                                 rebuiltAlLeastOneIdx.set(true);
-
-                                checkAndPrintRebuildAllIndexesMessage(indexesCntr, rebuiltAlLeastOneIdx.get());
                             }
                         });
                     }
@@ -1513,19 +1516,13 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                             idxRebuildFuts.remove(cacheId, usrFut);
 
                             usrFut.onDone();
-
-                            checkAndPrintRebuildAllIndexesMessage(indexesCntr, rebuiltAlLeastOneIdx.get());
                         }
                     }
                 }
             }
-        }
-    }
 
-    /** */
-    private void checkAndPrintRebuildAllIndexesMessage(AtomicInteger indexesCntr, boolean doPrint) {
-        if (indexesCntr.decrementAndGet() == 0 && doPrint)
-            log().info("Indexes rebuilding completed for all caches.");
+            compoundAllIdxsRebuilt.markInitialized();
+        }
     }
 
     /** {@inheritDoc} */
