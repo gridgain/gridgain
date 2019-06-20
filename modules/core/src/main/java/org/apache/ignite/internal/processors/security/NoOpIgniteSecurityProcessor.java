@@ -174,7 +174,7 @@ public class NoOpIgniteSecurityProcessor extends GridProcessorAdapter implements
         if(processor != null) {
             String locCls = processor.getClass().getName();
 
-            if (!F.eq(locCls, rmtCls)) {
+            if (!F.eq(locCls, rmtCls) && !F.eq(getClass().getName(), rmtCls)) {
                 return new IgniteNodeValidationResult(node.id(),
                     String.format(MSG_SEC_PROC_CLS_IS_INVALID, ctx.localNodeId(), node.id(), locCls, rmtCls),
                     String.format(MSG_SEC_PROC_CLS_IS_INVALID, node.id(), ctx.localNodeId(), rmtCls, locCls));
