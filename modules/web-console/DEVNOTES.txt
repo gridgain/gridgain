@@ -59,7 +59,7 @@ Install Docker (version >=17.05) using instructions from https://www.docker.com/
 2. Goto Web Console's module directory: `cd modules/web-console`
 3. Build docker image:
 
-"docker build . -t apacheignite/web-console-backend[:<version>] -f docker/compose/backend/Dockerfile"
+"docker build . -t gridgain/web-console-backend[:<version>] -f docker/compose/backend/Dockerfile"
 
 Prepared image can be listed in `docker images` command output.
 
@@ -72,7 +72,7 @@ Install Docker (version >=17.05) using instructions from https://www.docker.com/
 2. Goto Web Console's module directory: `cd modules/web-console`
 3. Build docker image:
 
-"docker build . -t apacheignite/web-console-frontend[:<version>] -f docker/compose/frontend/Dockerfile"
+"docker build . -t gridgain/web-console-frontend[:<version>] -f docker/compose/frontend/Dockerfile"
 
 Prepared image can be listed in `docker images` command output.
 
@@ -82,19 +82,17 @@ End-to-end tests
 E2E tests are performed with TestCafe framework - https://testcafe.devexpress.com
 
 To launch tests on your local machine you will need:
-1. Install and launch MongoDB.
-2. Optionally install Chromium (https://www.chromium.org/getting-involved/download-chromium or https://chromium.woolyss.com).
+1. Optionally install Chromium (https://www.chromium.org/getting-involved/download-chromium or https://chromium.woolyss.com).
    You may use any other browser, just set 'BROWSERS' constant in 'modules/web-console/e2e/testcafe/index.js'.
-3. In new terminal change directory to 'modules/web-console/e2e/testcafe' folder and execute: "npm install".
-4. To start test environment and tests execute: "npm run test".
+2. In new terminal change directory to 'modules/web-console/e2e/testcafe' folder and execute: "npm install".
+3. To start test environment and tests execute: "npm run test".
 
 During developing tests you may need to run some particular tests without running all suites.
 For this case you need to run environment and test separately.
 To perform it do the following:
-1. Ensure that MongoDB is up and running and all dependencies for backend and frontend are installed.
-2. Open directory "modules/web-console/e2e/testcafe" in terminal. Install dependencies for E2E testing with "npm install" command.
-3. Execute command "npm run env". This will start backend and frontend environment.
-4. Open another terminal window and run command "node index.js" in the same directory. This will run only tests without launching environment.
+1. Open directory "modules/web-console/e2e/testcafe" in terminal. Install dependencies for E2E testing with "npm install" command.
+2. Execute command "npm run env". This will start backend and frontend environment.
+3. Run command "node index.js" in the same directory. This will run only tests without launching environment.
 
 Please refer to TestCafe documentation at https://devexpress.github.io/testcafe/documentation/test-api/test-code-structure.html#skipping-tests
  upon how to specify which particular test should be run or skipped.

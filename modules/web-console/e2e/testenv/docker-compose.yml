@@ -13,31 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-FROM node:8-slim as frontend-build
 
-ENV NPM_CONFIG_LOGLEVEL error
+version: '3'
+services:
+  backend:
+    build:
+      context: '../../docker/console'
+      dockerfile: 'backend/Dockerfile'
+    ports:
+      - 3001:3000
+    environment:
+      - JVM_OPTS=-Dsecurity.enable-csrf=false
 
-WORKDIR /opt/web-console
-
-# Install node modules for frontend.
-COPY frontend/package*.json frontend/
-RUN (cd frontend && npm ci --no-optional)
-
-# Copy source.
-COPY frontend frontend
-
-RUN (cd frontend && npm run build)
-
-FROM nginx:1-alpine
-
-WORKDIR /data/www
-
-COPY --from=frontend-build /opt/web-console/frontend/build .
-
-COPY docker/compose/frontend/nginx/nginx.conf /etc/nginx/nginx.conf
-COPY docker/compose/frontend/nginx/web-console.conf /etc/nginx/web-console.conf
-
-VOLUME /etc/nginx
-VOLUME /data/www
-
-EXPOSE 80
+  frontend:
+    build:
+      context: '../../docker/console'
+      dockerfile: 'frontend/Dockerfile'
+    ports:
+      - 9001:80
+    depends_on:
+      - backend

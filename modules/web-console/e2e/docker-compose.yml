@@ -13,20 +13,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
 version: '3'
 services:
-  mongodb:
-    image: mongo:4.0
-    container_name: 'mongodb'
-
-  testenv:
+  backend:
     build:
-      context: '../'
-      dockerfile: './e2e/testenv/Dockerfile'
-    environment:
-      - mongodb_url=mongodb://mongodb:27017/console-e2e
+      context: '../docker/console'
+      dockerfile: 'backend/Dockerfile'
+    ports:
+      - 3001:3000
+
+  frontend:
+    build:
+      context: '../docker/console'
+      dockerfile: 'frontend/Dockerfile'
+    ports:
+      - 9001:80
     depends_on:
-      - mongodb
+      - backend
 
   e2e:
     build: './testcafe'
@@ -36,5 +40,5 @@ services:
       - REPORTER=teamcity
       - QUARANTINE_MODE=true
     depends_on:
-      - mongodb
-      - testenv
+      - backend
+      - frontend

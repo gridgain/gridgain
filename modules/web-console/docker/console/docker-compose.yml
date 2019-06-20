@@ -1,0 +1,33 @@
+#
+#  Copyright (C) GridGain Systems. All Rights Reserved.
+#  _________        _____ __________________        _____
+#  __  ____/___________(_)______  /__  ____/______ ____(_)_______
+#  _  / __  __  ___/__  / _  __  / _  / __  _  __ `/__  / __  __ \
+#  / /_/ /  _  /    _  /  / /_/ /  / /_/ /  / /_/ / _  /  _  / / /
+#  \____/   /_/     /_/   \_,__/   \____/   \__,_/  /_/   /_/ /_/
+#
+
+version: '3'
+services:
+  backend:
+    image: gridgain/dev-web-console-backend
+    ports:
+      - 3001:3000
+    # Restart on crash.
+    restart: always
+    environment:
+      # Mail settings
+      - SPRING_MAIL_HOST=
+      - SPRING_MAIL_PORT=
+      - SPRING_MAIL_USERNAME=
+      - SPRING_MAIL_PASSWORD=
+      - JVM_OPTS=
+
+  frontend:
+    image: gridgain/dev-web-console-frontend
+    links:
+      # Link backend container to proxy backend requests throught nginx container.
+      - backend:backend
+    ports:
+      # Proxy HTTP nginx port (HOST_PORT:DOCKER_PORT)
+      - 8090:80
