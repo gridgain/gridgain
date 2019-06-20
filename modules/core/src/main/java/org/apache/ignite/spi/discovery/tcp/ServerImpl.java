@@ -619,7 +619,7 @@ class ServerImpl extends TcpDiscoveryImpl {
         if (!res && node.clientRouterNodeId() == null && nodeAlive(nodeId)) {
             LT.warn(log, "Failed to ping node (status check will be initiated): " + nodeId);
 
-            msgWorker.addMessage(createTcpDiscoveryStatusCheckMessage(locNode, node.id()));
+            msgWorker.addMessage(createTcpDiscoveryStatusCheckMessage(locNode, locNode.id(), node.id(), node));
         }
 
         return res;
@@ -627,31 +627,45 @@ class ServerImpl extends TcpDiscoveryImpl {
 
     /** */
     private TcpDiscoveryStatusCheckMessage createTcpDiscoveryStatusCheckMessage(
-        TcpDiscoveryNode locNode,
-        UUID nodeId
+        TcpDiscoveryNode creatorNode,
+        UUID creatorNodeId,
+        UUID failedNodeId,
+        TcpDiscoveryNode targetNode
     ) {
         TcpDiscoveryStatusCheckMessage msg;
 
-        if (allNodesSupports(ring.allNodes(), TCP_DISCOVERY_MESSAGE_NODE_SERIALIZATION_OPTIMIZATION))
-            msg = new TcpDiscoveryStatusCheckMessage(locNode.id(), nodeId);
-        else
-            msg = new TcpDiscoveryStatusCheckMessage(locNode, nodeId);
+        if (allNodesSupports(ring.allNodes(), TCP_DISCOVERY_MESSAGE_NODE_SERIALIZATION_OPTIMIZATION)) {
+            boolean sameMacs = creatorNode != null && targetNode != null && U.sameMacs(creatorNode, targetNode);
 
-        //msg = new TcpDiscoveryStatusCheckMessage(locNode, nodeId);
+            msg = new TcpDiscoveryStatusCheckMessage(
+                creatorNode == null ? creatorNodeId : creatorNode.id(),
+                spi.getNodeAddresses(creatorNode, sameMacs),
+                failedNodeId
+            );
+        }
+        else
+            msg = new TcpDiscoveryStatusCheckMessage(creatorNode, failedNodeId);
 
         return msg;
     }
 
     /** */
-    private TcpDiscoveryDuplicateIdMessage createTcpDiscoveryDuplicateIdMessage(UUID creatorNodeId, TcpDiscoveryNode node) {
+    private TcpDiscoveryStatusCheckMessage createTcpDiscoveryStatusCheckMessage(
+        TcpDiscoveryStatusCheckMessage msg,
+        TcpDiscoveryNode targetNode
+    ) {
+        return createTcpDiscoveryStatusCheckMessage(msg.creatorNode(), msg.creatorNodeId(), msg.failedNodeId(), targetNode);
+    }
+
+    /** */
+    private TcpDiscoveryDuplicateIdMessage
+    createTcpDiscoveryDuplicateIdMessage(UUID creatorNodeId, TcpDiscoveryNode node) {
         TcpDiscoveryDuplicateIdMessage msg;
 
         if (allNodesSupports(ring.allNodes(), TCP_DISCOVERY_MESSAGE_NODE_SERIALIZATION_OPTIMIZATION))
             msg = new TcpDiscoveryDuplicateIdMessage(creatorNodeId, node.id());
         else
             msg = new TcpDiscoveryDuplicateIdMessage(creatorNodeId, node);
-
-        //msg = new TcpDiscoveryDuplicateIdMessage(creatorNodeId, node);
 
         return msg;
     }
@@ -4452,6 +4466,29 @@ class ServerImpl extends TcpDiscoveryImpl {
             }
         }
 
+        /** */
+        private void trySendMessageDirectlyToAddrs(Collection<InetSocketAddress> addrs, TcpDiscoveryAbstractMessage msg) {
+            IgniteSpiException ex = null;
+
+            for (InetSocketAddress addr : addrs) {
+                try {
+                    IgniteSpiOperationTimeoutHelper timeoutHelper = new IgniteSpiOperationTimeoutHelper(spi, true);
+
+                    sendMessageDirectly(msg, addr, timeoutHelper);
+
+                    ex = null;
+
+                    break;
+                }
+                catch (IgniteSpiException e) {
+                    ex = e;
+                }
+            }
+
+            if (ex != null)
+                throw ex;
+        }
+
         /**
          * Tries to send a message to all node's available addresses.
          *
@@ -4459,8 +4496,17 @@ class ServerImpl extends TcpDiscoveryImpl {
          * @param msg Message.
          * @throws IgniteSpiException Last failure if all attempts failed.
          */
-        private void trySendMessageDirectly(UUID nodeId, TcpDiscoveryAbstractMessage msg) {
-            trySendMessageDirectly(ring.node(nodeId), msg);
+        private void trySendMessageDirectly(UUID nodeId, Collection<InetSocketAddress> addrs, TcpDiscoveryAbstractMessage msg) {
+            TcpDiscoveryNode node = ring.node(nodeId);
+
+            if (node == null) {
+                if (addrs != null)
+                    trySendMessageDirectlyToAddrs(addrs, msg);
+                else
+                    throw new IgniteSpiException("Router node for client does not exist: " + nodeId);
+            }
+            else
+                trySendMessageDirectly(node, msg);
         }
 
         /**
@@ -4472,12 +4518,6 @@ class ServerImpl extends TcpDiscoveryImpl {
          */
         private void trySendMessageDirectly(TcpDiscoveryNode node, TcpDiscoveryAbstractMessage msg)
             throws IgniteSpiException {
-            /*if (node == null) {
-                log.debug("Trying to send message to node that is not in topology. Skipping.");
-
-                return;
-            }*/
-
             if (node.clientRouterNodeId() != null) {
                 TcpDiscoveryNode routerNode = ring.node(node.clientRouterNodeId());
 
@@ -5468,7 +5508,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                                 TcpDiscoveryStatusCheckMessage msg0 = msg;
 
                                 if (F.contains(msg.failedNodes(), msg.creatorNodeId())) {
-                                    msg0 = new TcpDiscoveryStatusCheckMessage(msg);
+                                    msg0 = createTcpDiscoveryStatusCheckMessage(msg, msg.creatorNode());
 
                                     msg0.failedNodes(null);
 
@@ -5479,7 +5519,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                                 }
 
                                 try {
-                                    trySendMessageDirectly(msg0.creatorNodeId(), msg0);
+                                    trySendMessageDirectly(msg0.creatorNodeId(), msg0.creatorNodeAddrs(), msg0);
 
                                     if (log.isDebugEnabled())
                                         log.debug("Responded to status check message " +
@@ -6080,7 +6120,7 @@ class ServerImpl extends TcpDiscoveryImpl {
             if (elapsed > 0)
                 return;
 
-            msgWorker.addMessage(createTcpDiscoveryStatusCheckMessage(locNode, null));
+            msgWorker.addMessage(createTcpDiscoveryStatusCheckMessage(locNode, locNode.id(), null, null));
 
             lastTimeStatusMsgSentNanos = System.nanoTime();
         }
