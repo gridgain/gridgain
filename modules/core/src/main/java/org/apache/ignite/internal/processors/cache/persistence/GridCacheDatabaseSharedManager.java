@@ -2891,7 +2891,10 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                                 int partId = cacheState.partitionByIndex(i);
                                 byte state = cacheState.stateByIndex(i);
 
-                                partitionRecoveryStates.put(new GroupPartitionId(entry.getKey(), partId), (int)state);
+                                // Ignore undefined state.
+                                if (state >= 0)
+                                    partitionRecoveryStates.put(
+                                        new GroupPartitionId(entry.getKey(), partId), (int)state);
                             }
                         }
 
