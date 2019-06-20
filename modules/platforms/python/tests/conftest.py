@@ -24,7 +24,7 @@ from pyignite.constants import *
 from pyignite.api import cache_create, cache_get_names, cache_destroy
 
 
-class UseSSLParser(argparse.Action):
+class BoolParser(argparse.Action):
 
     def __call__(self, parser, namespace, values, option_string=None):
         values = True if values is None else bool(strtobool(values))
@@ -66,12 +66,13 @@ class SSLVersionParser(argparse.Action):
 
 @pytest.fixture(scope='module')
 def client(
-    ignite_node, timeout, use_ssl, ssl_keyfile, ssl_certfile,
+    ignite_node, timeout, affinity_aware, use_ssl, ssl_keyfile, ssl_certfile,
     ssl_ca_certfile, ssl_cert_reqs, ssl_ciphers, ssl_version,
     username, password,
 ):
     client = Client(
         timeout=timeout,
+        affinity_aware=affinity_aware,
         use_ssl=use_ssl,
         ssl_keyfile=ssl_keyfile,
         ssl_certfile=ssl_certfile,
@@ -126,8 +127,15 @@ def pytest_addoption(parser):
         )
     )
     parser.addoption(
+        '--affinity-aware',
+        action=BoolParser,
+        nargs='?',
+        default=False,
+        help='Turn on the best effort affinity feature'
+    )
+    parser.addoption(
         '--use-ssl',
-        action=UseSSLParser,
+        action=BoolParser,
         nargs='?',
         default=False,
         help='Use SSL encryption'
@@ -203,6 +211,7 @@ def pytest_generate_tests(metafunc):
             port=IGNITE_DEFAULT_PORT,
         )],
         'timeout': None,
+        'affinity_aware': False,
         'use_ssl': False,
         'ssl_keyfile': None,
         'ssl_certfile': None,
