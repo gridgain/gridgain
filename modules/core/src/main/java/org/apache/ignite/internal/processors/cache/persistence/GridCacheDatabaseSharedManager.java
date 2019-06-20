@@ -1463,14 +1463,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     @Override public void rebuildIndexesIfNeeded(GridDhtPartitionsExchangeFuture fut) {
         GridQueryProcessor qryProc = cctx.kernalContext().query();
 
-        AtomicBoolean rebuiltAlLeastOneIdx = new AtomicBoolean(false);
-
-        GridCompoundFuture compoundAllIdxsRebuilt = new GridCompoundFuture();
-
-        compoundAllIdxsRebuilt.listen(a -> {
-            if (rebuiltAlLeastOneIdx.get())
-                log().info("Indexes rebuilding completed for all caches.");
-        });
+        GridCompoundFuture compoundAllIdxsRebuilt = null;
 
         if (qryProc.moduleEnabled()) {
             for (final GridCacheContext cacheCtx : (Collection<GridCacheContext>)cctx.cacheContexts()) {
@@ -1483,6 +1476,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                     if (rebuildFut != null) {
                         log().info("Started indexes rebuilding for cache [name=" + cacheCtx.name()
                             + ", grpName=" + cacheCtx.group().name() + ']');
+
+                        if (compoundAllIdxsRebuilt == null)
+                            compoundAllIdxsRebuilt = new GridCompoundFuture();
 
                         compoundAllIdxsRebuilt.add(rebuildFut);
 
@@ -1506,8 +1502,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                                                 + ", grpName=" + ccfg.getGroupName() + ']', err);
                                     }
                                 }
-
-                                rebuiltAlLeastOneIdx.set(true);
                             }
                         });
                     }
@@ -1521,7 +1515,11 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 }
             }
 
-            compoundAllIdxsRebuilt.markInitialized();
+            if (compoundAllIdxsRebuilt != null) {
+                compoundAllIdxsRebuilt.listen(a -> log().info("Indexes rebuilding completed for all caches."));
+
+                compoundAllIdxsRebuilt.markInitialized();
+            }
         }
     }
 
