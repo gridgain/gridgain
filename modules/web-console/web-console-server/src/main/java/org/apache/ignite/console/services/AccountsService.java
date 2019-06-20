@@ -19,8 +19,8 @@ package org.apache.ignite.console.services;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
-import org.apache.ignite.console.config.SignUpConfiguration;
 import org.apache.ignite.console.config.ActivationConfiguration;
+import org.apache.ignite.console.config.SignUpConfiguration;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.repositories.AccountsRepository;
 import org.apache.ignite.console.tx.TransactionManager;
@@ -29,6 +29,7 @@ import org.apache.ignite.console.web.model.SignUpRequest;
 import org.apache.ignite.console.web.security.MissingConfirmRegistrationException;
 import org.apache.ignite.console.web.socket.WebSocketsManager;
 import org.apache.ignite.internal.util.typedef.F;
+import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.core.userdetails.UserDetailsChecker;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -138,12 +139,12 @@ public class AccountsService implements UserDetailsService {
      */
     public void register(SignUpRequest params) {
         Account acc = txMgr.doInTransaction("Register account", () -> {
-            Account newAcc = create(params);
+            Account acc0 = create(params);
 
-            if (disableSignup && !newAcc.isAdmin())
-                throw new IllegalAccessError("Sign-up is not allowed. Ask your administrator to create account for you.");
+            if (disableSignup && !acc0.isAdmin())
+                throw new AuthenticationServiceException("Sign-up is not allowed. Ask your administrator to create account for you.");
 
-            return newAcc;
+            return acc0;
         });
 
         if (activationEnabled) {
