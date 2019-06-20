@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 import time
-from typing import Any, Dict, Iterable, Optional, Union
+from typing import Any, Dict, Iterable, Optional, Tuple, Union
 
 from .constants import *
 from .binary import GenericObjectMeta
@@ -133,7 +133,16 @@ class Cache:
             'version': (0, 0),
         }
 
-    def get_protocol_version(self):
+    def get_protocol_version(self) -> Optional[Tuple]:
+        """
+        Returns the tuple of major, minor, and revision numbers of the used
+        thin protocol version, or None, if no connection to the Ignite cluster
+        was not yet established.
+
+        This method is not a part of the public API. Unless you wish to
+        extend the `pyignite` capabilities (with additional testing, logging,
+        examining connections, et c.) you probably should not use it.
+        """
         return self.client.protocol_version
 
     @property
@@ -232,6 +241,10 @@ class Cache:
         """
         Returns the node from the list of the nodes, opened by client, that
         most probably contains the needed key-value pair. See IEP-23.
+
+        This method is not a part of the public API. Unless you wish to
+        extend the `pyignite` capabilities (with additional testing, logging,
+        examining connections, et c.) you probably should not use it.
 
         :param key: (optional) pythonic key,
         :param key_hint: (optional) Ignite data type, for which the given key

@@ -42,7 +42,7 @@ the local (class-wise) registry for Ignite Complex objects.
 
 from collections import defaultdict, OrderedDict
 import random
-from typing import Dict, Iterable, Tuple, Type, Union
+from typing import Dict, Iterable, Optional, Tuple, Type, Union
 
 from .api.binary import get_binary_type, put_binary_type
 from .api.cache_config import cache_get_names
@@ -110,7 +110,16 @@ class Client:
         self._affinity_aware = affinity_aware
         self.affinity_version = (0, 0)
 
-    def get_protocol_version(self):
+    def get_protocol_version(self) -> Optional[Tuple]:
+        """
+        Returns the tuple of major, minor, and revision numbers of the used
+        thin protocol version, or None, if no connection to the Ignite cluster
+        was not yet established.
+
+        This method is not a part of the public API. Unless you wish to
+        extend the `pyignite` capabilities (with additional testing, logging,
+        examining connections, et c.) you probably should not use it.
+        """
         return self.protocol_version
 
     @property
@@ -200,9 +209,6 @@ class Client:
         self._nodes.clear()
 
     def close_130(self):
-        """
-        Close all connections to the server and clean the connection pool.
-        """
         for conn in self._nodes:
             conn.close()
         self._nodes.clear()
@@ -212,7 +218,13 @@ class Client:
     @property
     @select_version
     def random_node(self) -> Connection:
-        """ Return random usable node. """
+        """
+        Returns random usable node.
+
+        This method is not a part of the public API. Unless you wish to
+        extend the `pyignite` capabilities (with additional testing, logging,
+        examining connections, et c.) you probably should not use it.
+        """
         try:
             return random.choice(
                 list(n for n in self._nodes.values() if n.alive)
@@ -222,7 +234,8 @@ class Client:
             raise ReconnectError('Can not reconnect: out of nodes.') from None
 
     def random_node_130(self):
-        """ Return the next usable node. """
+        # it actually returns the next usable node, but the name stands for
+        # the code unification reason
         node = self._nodes[self._current_node]
         if node.alive:
             return node

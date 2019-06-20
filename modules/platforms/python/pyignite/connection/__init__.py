@@ -161,6 +161,11 @@ class Connection:
     _wrap = wrap
 
     def get_protocol_version(self):
+        """
+        Returns the tuple of major, minor, and revision numbers of the used
+        thin protocol version, or None, if no connection to the Ignite cluster
+        was yet established.
+        """
         return self.client.protocol_version
 
     def _fail(self):
