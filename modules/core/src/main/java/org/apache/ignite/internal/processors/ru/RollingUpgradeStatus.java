@@ -22,7 +22,7 @@ import org.apache.ignite.lang.IgniteProductVersion;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Represetns a cluster-wide state of Rolling Upgrade process.
+ * Represents a cluster-wide state of Rolling Upgrade process.
  */
 public interface RollingUpgradeStatus extends Serializable {
     /**
