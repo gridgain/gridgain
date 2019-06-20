@@ -125,4 +125,12 @@ public class Utils {
             .build()
             .toString();
     }
+
+    /**
+     * @param email E-mail.
+     * @return Normalized e-mail.
+     */
+    public static String normalizeEmail(String email) {
+        return email.trim().toLowerCase();
+    }
 }

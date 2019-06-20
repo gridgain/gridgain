@@ -29,7 +29,6 @@ import org.apache.ignite.console.web.model.SignUpRequest;
 import org.apache.ignite.console.web.security.MissingConfirmRegistrationException;
 import org.apache.ignite.console.web.socket.WebSocketsManager;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.transactions.Transaction;
 import org.springframework.security.core.userdetails.UserDetailsChecker;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -138,22 +137,22 @@ public class AccountsService implements UserDetailsService {
      * @param params SignUp params.
      */
     public void register(SignUpRequest params) {
-        try (Transaction tx = txMgr.txStart()) {
-            Account acc = create(params);
+        Account acc = txMgr.doInTransaction("Register account", () -> {
+            Account newAcc = create(params);
 
-            if (disableSignup && !acc.isAdmin())
+            if (disableSignup && !newAcc.isAdmin())
                 throw new IllegalAccessError("Sign-up is not allowed. Ask your administrator to create account for you.");
 
-            tx.commit();
+            return newAcc;
+        });
 
-            if (activationEnabled) {
-                notificationSrv.sendEmail(ACTIVATION_LINK, acc);
+        if (activationEnabled) {
+            notificationSrv.sendEmail(ACTIVATION_LINK, acc);
 
-                throw new MissingConfirmRegistrationException("Confirm your email", acc.getEmail());
-            }
-
-            notificationSrv.sendEmail(WELCOME_LETTER, acc);
+            throw new MissingConfirmRegistrationException("Confirm your email", acc.getEmail());
         }
+
+        notificationSrv.sendEmail(WELCOME_LETTER, acc);
     }
 
     /**
@@ -181,17 +180,15 @@ public class AccountsService implements UserDetailsService {
      * @param adminFlag New value for admin flag.
      */
     public void toggle(UUID accId, boolean adminFlag) {
-        try (Transaction tx = txMgr.txStart()) {
+        txMgr.doInTransaction("Toggle account admin permissions", () -> {
             Account account = accountsRepo.getById(accId);
 
             if (account.isAdmin() != adminFlag) {
                 account.setAdmin(adminFlag);
 
                 accountsRepo.save(account);
-
-                tx.commit();
             }
-        }
+        });
     }
 
     /**
@@ -200,15 +197,13 @@ public class AccountsService implements UserDetailsService {
      * @param accId Account id.
      */
     public void activateAccount(UUID accId) {
-        try (Transaction tx = txMgr.txStart()) {
+        txMgr.doInTransaction("Activate account", () -> {
             Account acc = accountsRepo.getById(accId);
 
             acc.activate();
 
             accountsRepo.save(acc);
-
-            tx.commit();
-        }
+        });
     }
 
     /**
@@ -220,20 +215,18 @@ public class AccountsService implements UserDetailsService {
         if (!activationEnabled)
             throw new IllegalAccessError("Activation was not enabled!");
 
-        try (Transaction tx = txMgr.txStart()) {
-            Account acc = accountsRepo.getByEmail(email);
+        Account acc = txMgr.doInTransaction("Reset account activation token", () -> {
+            Account acc0 = accountsRepo.getByEmail(email);
 
-            if (MILLIS.between(acc.getActivationSentAt(), LocalDateTime.now()) >= activationSndTimeout)
+            if (MILLIS.between(acc0.getActivationSentAt(), LocalDateTime.now()) >= activationSndTimeout)
                 throw new IllegalAccessError("Too many activation attempts");
 
-            acc.resetActivationToken();
+            acc0.resetActivationToken();
 
-            accountsRepo.save(acc);
+            return accountsRepo.save(acc0);
+        });
 
-            tx.commit();
-
-            notificationSrv.sendEmail(ACTIVATION_LINK, acc);
-        }
+        notificationSrv.sendEmail(ACTIVATION_LINK, acc);
     }
 
     /**
@@ -243,46 +236,42 @@ public class AccountsService implements UserDetailsService {
      * @param changes Changes to apply to user.
      */
     public Account save(UUID accId, ChangeUserRequest changes) {
-        try (Transaction tx = txMgr.txStart()) {
-            Account acc = accountsRepo.getById(accId);
+        Account acc = txMgr.doInTransaction("Save account", () -> {
+            Account acc0 = accountsRepo.getById(accId);
 
-            String oldTok = acc.getToken();
-
-            acc.update(changes);
+            acc0.update(changes);
 
             String pwd = changes.getPassword();
 
             if (!F.isEmpty(pwd))
-                acc.setPassword(encoder.encode(pwd));
+                acc0.setPassword(encoder.encode(pwd));
 
-            accountsRepo.save(acc);
+            return accountsRepo.save(acc0);
+        });
 
-            tx.commit();
+        String oldTok = acc.getToken();
 
-            if (!oldTok.equals(acc.getToken()))
-                wsm.revokeToken(acc, oldTok);
+        if (!oldTok.equals(acc.getToken()))
+            wsm.revokeToken(acc, oldTok);
 
-            return acc;
-        }
+        return acc;
     }
 
     /**
      * @param email User email to send reset password link.
      */
     public void forgotPassword(String email) {
-        try (Transaction tx = txMgr.txStart()) {
-            Account acc = accountsRepo.getByEmail(email);
+        Account acc = txMgr.doInTransaction("Reset account password", () -> {
+            Account acc0 = accountsRepo.getByEmail(email);
 
-            userDetailsChecker.check(acc);
+            userDetailsChecker.check(acc0);
 
-            acc.setResetPasswordToken(UUID.randomUUID().toString());
+            acc0.setResetPasswordToken(UUID.randomUUID().toString());
 
-            accountsRepo.save(acc);
+            return accountsRepo.save(acc0);
+        });
 
-            tx.commit();
-
-            notificationSrv.sendEmail(PASSWORD_RESET, acc);
-        }
+        notificationSrv.sendEmail(PASSWORD_RESET, acc);
     }
 
     /**
@@ -291,7 +280,7 @@ public class AccountsService implements UserDetailsService {
      * @param newPwd New password.
      */
     public void resetPasswordByToken(String email, String resetPwdTok, String newPwd) {
-        try (Transaction tx = txMgr.txStart()) {
+        txMgr.doInTransaction("Set account password", () -> {
             Account acc = accountsRepo.getByEmail(email);
 
             if (!resetPwdTok.equals(acc.getResetPasswordToken()))
@@ -304,9 +293,7 @@ public class AccountsService implements UserDetailsService {
 
             accountsRepo.save(acc);
 
-            tx.commit();
-
             notificationSrv.sendEmail(PASSWORD_CHANGED, acc);
-        }
+        });
     }
 }

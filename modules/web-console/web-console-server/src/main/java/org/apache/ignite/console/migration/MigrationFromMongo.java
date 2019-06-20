@@ -42,7 +42,6 @@ import org.apache.ignite.console.tx.TransactionManager;
 import org.apache.ignite.console.web.model.ConfigurationKey;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.transactions.Transaction;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.slf4j.Logger;
@@ -124,15 +123,7 @@ public class MigrationFromMongo {
             return;
         }
 
-        boolean migrationNeeded;
-
-        try(Transaction tx = txMgr.txStart()) {
-            migrationNeeded = accRepo.ensureFirstUser();
-
-            tx.rollback();
-        }
-
-        if (!migrationNeeded) {
+        if (txMgr.doInTransaction("Check if migration needed", accRepo::hasUsers)) {
             log.warn("Database was already migrated. Consider to disable migration in application settings.");
 
             return;
@@ -212,16 +203,13 @@ public class MigrationFromMongo {
 
                 log.info("Migrating account [_id={}, email={}]", mongoAccId, email);
 
-                try (Transaction tx = txMgr.txStart()) {
+                txMgr.doInTransaction("Migrate account", () -> {
                     Account acc = createAccount(accMongo);
 
-                    accRepo.ensureFirstUser();
-                    accRepo.save(acc);
+                    accRepo.create(acc);
 
                     migrateAccountObjects(accMongo, space, acc.getId());
-
-                    tx.commit();
-                }
+                });
             }
         }
     }
