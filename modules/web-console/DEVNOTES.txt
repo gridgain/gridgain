@@ -72,8 +72,8 @@ Please refer to TestCafe documentation at https://devexpress.github.io/testcafe/
 
 To launch tests on your local machine using docker-compose you will need:
 1. Install docker and docker-compose.
-
-2. Open directory "modules/web-console/e2e" in terminal. Install dependencies for E2E testing with "npm install" command.
+2  Build Web Console All in One archive and copy it to `modules/web-console/docker/console`.
+ Look steps at `Web Console Docker Image Build Instructions` section.
 3. Execute in terminal: "docker-compose up --build --abort-on-container-exit" in directory "modules/web-console/e2e".
 4. If you need to cleanup docker container then execute "docker-compose down".
 
