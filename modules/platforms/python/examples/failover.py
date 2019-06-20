@@ -13,12 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import time
-
 from pyignite import Client
 from pyignite.datatypes.cache_config import CacheMode
 from pyignite.datatypes.prop_codes import *
-from pyignite.exceptions import CacheError, SocketError
+from pyignite.exceptions import SocketError
 
 
 nodes = [
@@ -51,33 +49,16 @@ while True:
         print('Error: {}'.format(e))
         print('Last value: {}'.format(test_value))
         print('Reconnecting')
-    except CacheError as e:
-        # not sure what is going on here
-        print('Error: {}'.format(e))
-        print('Cluster can not keep up with frequent requests, sleeping…')
-        time.sleep(1)
 
 # Connected
 # Error: Connection broken.
 # Last value: 2650
 # Reconnecting
-# Error: Cache does not exist [cacheId= -479252689]
-# Cluster can not keep up with frequent requests, sleeping…
 # Error: Connection broken.
 # Last value: 10204
 # Reconnecting
-# Error: Cache does not exist [cacheId= -479252689]
-# Cluster can not keep up with frequent requests, sleeping…
 # Error: Connection broken.
 # Last value: 18932
-# Reconnecting
-# Error: Cache does not exist [cacheId= -479252689]
-# Cluster can not keep up with frequent requests, sleeping…
-# Error: Connection broken.
-# Last value: 28253
-# Reconnecting
-# Error: Connection broken.
-# Last value: 32262
 # Reconnecting
 # Traceback (most recent call last):
 #   ...
