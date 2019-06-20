@@ -485,7 +485,7 @@ public class WebSocketsManager {
         /**
          * @param hasDemo Has demo flag.
          */
-        public void setHasDemo(Boolean hasDemo) {
+        public void setHasDemo(boolean hasDemo) {
             this.hasDemo = hasDemo;
         }
 
