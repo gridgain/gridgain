@@ -31,7 +31,7 @@ public class TcpDiscoveryDuplicateIdMessage extends TcpDiscoveryAbstractMessage 
     /** Node with duplicate ID. */
     private final TcpDiscoveryNode node;
 
-    /** ID of the node with uplicate ID. */
+    /** ID of the node with duplicate ID. */
     private final UUID nodeId;
 
     /**
