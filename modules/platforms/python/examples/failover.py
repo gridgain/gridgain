@@ -50,21 +50,35 @@ while True:
         # consistency or just continue − depends on the task)
         print('Error: {}'.format(e))
         print('Last value: {}'.format(test_value))
-        print('Reconnected')
+        print('Reconnecting')
     except CacheError as e:
         # not sure what is going on here
         print('Error: {}'.format(e))
         print('Cluster can not keep up with frequent requests, sleeping…')
         time.sleep(1)
 
-# Connected to 127.0.0.1:10800
-# Error: [Errno 104] Connection reset by peer
-# Last value: 6999
-# Reconnected to 127.0.0.1:10801
-# Error: Socket connection broken.
-# Last value: 12302
-# Reconnected to 127.0.0.1:10802
-# Error: [Errno 111] Client refused
+# Connected
+# Error: Connection broken.
+# Last value: 2650
+# Reconnecting
+# Error: Cache does not exist [cacheId= -479252689]
+# Cluster can not keep up with frequent requests, sleeping…
+# Error: Connection broken.
+# Last value: 10204
+# Reconnecting
+# Error: Cache does not exist [cacheId= -479252689]
+# Cluster can not keep up with frequent requests, sleeping…
+# Error: Connection broken.
+# Last value: 18932
+# Reconnecting
+# Error: Cache does not exist [cacheId= -479252689]
+# Cluster can not keep up with frequent requests, sleeping…
+# Error: Connection broken.
+# Last value: 28253
+# Reconnecting
+# Error: Connection broken.
+# Last value: 32262
+# Reconnecting
 # Traceback (most recent call last):
-#     ...
-# pyignite.exceptions.ReconnectError: Can not reconnect: out of nodes
+#   ...
+# pyignite.exceptions.ReconnectError: Can not reconnect: out of nodes.
