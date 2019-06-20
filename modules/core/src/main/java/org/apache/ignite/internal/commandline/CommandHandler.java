@@ -54,8 +54,8 @@ import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.IgniteVersionUtils.ACK_VER_STR;
 import static org.apache.ignite.internal.IgniteVersionUtils.COPYRIGHT;
-import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
 import static org.apache.ignite.internal.commandline.CommandLogger.DOUBLE_INDENT;
+import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
 import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_AUTO_CONFIRMATION;
 import static org.apache.ignite.internal.commandline.CommonArgParser.getCommonOptions;
@@ -231,48 +231,54 @@ public class CommandHandler {
                 return EXIT_CODE_OK;
             }
 
-            boolean tryConnectAgain = true;
-
             int tryConnectMaxCount = 3;
 
             boolean suppliedAuth = !F.isEmpty(args.userName()) && !F.isEmpty(args.password());
 
             GridClientConfiguration clientCfg = getClientConfiguration(args);
 
-            while (tryConnectAgain) {
-                tryConnectAgain = false;
+            logger.info("Command [" + commandName + "] started");
+            logger.info("Arguments: " + String.join(" ", rawArgs));
+            logger.info(DELIM);
 
+            boolean credentialsRequested = false;
+
+            while (true) {
                 try {
-                    logger.info("Command [" + commandName + "] started");
-                    logger.info("Arguments: " + String.join(" ", rawArgs));
-                    logger.info(DELIM);
                     lastOperationRes = command.execute(clientCfg, logger);
+
+                    break;
                 }
                 catch (Throwable e) {
-                    if (tryConnectMaxCount > 0 && isAuthError(e)) {
-                        logger.info(suppliedAuth ?
-                            "Authentication error, please try again." :
-                            "This cluster requires authentication.");
-
-                        String user = clientCfg.getSecurityCredentialsProvider() == null ?
-                            requestDataFromConsole("user: ") :
-                            (String)clientCfg.getSecurityCredentialsProvider().credentials().getLogin();
-
-                        clientCfg = getClientConfiguration(user, new String(requestPasswordFromConsole("password: ")),  args);
-
-                        tryConnectAgain = true;
-
-                        suppliedAuth = true;
-
-                        tryConnectMaxCount--;
-                    }
-                    else {
-                        if (tryConnectMaxCount == 0)
-                            throw new GridClientAuthenticationException("Authentication error, maximum number of " +
-                                "retries exceeded");
-
+                    if (!isAuthError(e))
                         throw e;
+
+                    if (suppliedAuth)
+                        throw new GridClientAuthenticationException("Wrong credentials.");
+
+                    if (tryConnectMaxCount == 0) {
+                        throw new GridClientAuthenticationException("Maximum number of " +
+                            "retries exceeded");
                     }
+
+                    logger.info(credentialsRequested ?
+                        "Authentication error, please try again." :
+                        "This cluster requires authentication.");
+
+                    if (credentialsRequested)
+                        tryConnectMaxCount--;
+
+                    String user = !F.isEmpty(args.userName())
+                        ? args.userName()
+                        : clientCfg.getSecurityCredentialsProvider() == null
+                            ? requestDataFromConsole("user: ")
+                            : (String)clientCfg.getSecurityCredentialsProvider().credentials().getLogin();
+
+                    String pwd = new String(requestPasswordFromConsole("password: "));
+
+                    clientCfg = getClientConfiguration(user, pwd,  args);
+
+                    credentialsRequested = true;
                 }
             }
 
@@ -471,7 +477,7 @@ public class CommandHandler {
      * @param e Exception to check.
      * @return {@code true} if specified exception is {@link GridClientAuthenticationException}.
      */
-    private static boolean isAuthError(Throwable e) {
+    public static boolean isAuthError(Throwable e) {
         return X.hasCause(e, GridClientAuthenticationException.class);
     }
 
