@@ -219,7 +219,7 @@ class Cache:
         """
         for _ in range(AFFINITY_RETRIES or 1):
             result = cache_get_node_partitions(conn, self._cache_id)
-            if result.status == 0:
+            if result.status == 0 and result.value['partition_mapping']:
                 break
             time.sleep(AFFINITY_DELAY)
 
@@ -258,7 +258,10 @@ class Cache:
                         return conn
 
                 # flatten it a bit
-                self.affinity.update(self.affinity['partition_mapping'][0])
+                try:
+                    self.affinity.update(self.affinity['partition_mapping'][0])
+                except IndexError:
+                    return conn
                 del self.affinity['partition_mapping']
 
                 # calculate the number of partitions
