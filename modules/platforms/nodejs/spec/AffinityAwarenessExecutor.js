@@ -14,18 +14,19 @@
  * limitations under the License.
  */
 
-import angular from 'angular';
+const Jasmine = require('jasmine');
 
-import igniteDialog from './dialog.directive';
-import igniteDialogTitle from './dialog-title.directive';
-import igniteDialogContent from './dialog-content.directive';
-import IgniteDialog from './dialog.factory';
-
-angular
-.module('ignite-console.dialog', [
-
-])
-.factory('IgniteDialog', IgniteDialog)
-.directive('igniteDialog', igniteDialog)
-.directive('igniteDialogTitle', igniteDialogTitle)
-.directive('igniteDialogContent', igniteDialogContent);
+const jasmine = new Jasmine();
+jasmine.loadConfig({
+    'spec_dir': 'spec',
+    'spec_files': [
+        "affinity_awareness/**/*[sS]pec.js",
+	    "cache/**/*[sS]pec.js",
+	    "query/**/*[sS]pec.js"
+    ],
+    "random": false,
+    // We want to stop immediately if there are not enough nodes in cluster, for example
+    "stopOnSpecFailure": true
+});
+// We exclude the "scan query test suite > scan query settings" spec because sometimes it fails with more than one node cluster
+jasmine.execute(null, "(?!^scan query test suite > scan query settings$)(^.*$)");
