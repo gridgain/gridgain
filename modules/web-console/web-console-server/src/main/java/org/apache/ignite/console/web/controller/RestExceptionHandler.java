@@ -62,7 +62,8 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
      */
     @ExceptionHandler(value = {UsernameNotFoundException.class})
     protected ResponseEntity<Object> handleUsernameNotFoundException(UsernameNotFoundException ex, WebRequest req) {
-        return handleExceptionInternal(ex, new ErrorResponse(NOT_FOUND, "Account with email does not exists: " + ex.getMessage()), null, NOT_FOUND, req);
+        return handleExceptionInternal(ex,
+            new ErrorResponse(NOT_FOUND, "Account with email does not exists: " + ex.getMessage()), null, NOT_FOUND, req);
     }
 
     /**
