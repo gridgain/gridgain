@@ -42,16 +42,13 @@ import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_REA
 @Service
 public class TransactionManager {
     /** */
-    private static final String ERR_CACHE_START = "Cannot start/stop cache within lock or transaction";
-
-    /** */
     private static final Logger log = LoggerFactory.getLogger(TransactionManager.class);
 
     /** */
     private final Ignite ignite;
 
     /** */
-    private final Map<String, Runnable> cachesStarters;
+    private final Map<String, Runnable> cachesStarters = new ConcurrentHashMap<>();
 
     /** Time to wait for server nodes to come back. */
     @Value("${ignite.client.node.reconnect.timeout:30000}")
@@ -63,8 +60,6 @@ public class TransactionManager {
     @Autowired
     protected TransactionManager(Ignite ignite) {
         this.ignite = ignite;
-
-        cachesStarters = new ConcurrentHashMap<>();
     }
 
     /**
@@ -155,7 +150,7 @@ public class TransactionManager {
             // TODO GG-19681: In future versions specific exception will be added.
             boolean recreate = e instanceof IgniteException &&
                 msg != null &&
-                msg.startsWith(ERR_CACHE_START);
+                msg.startsWith("Cannot start/stop cache within lock or transaction");
 
             if (recreate) {
                 try {
