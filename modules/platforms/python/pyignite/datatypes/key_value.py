@@ -18,7 +18,9 @@ from .primitive_arrays import ByteArray
 
 class PeekModes(ByteArray):
 
-    ALL = 0
-    NEAR = 1
-    PRIMARY = 2
-    BACKUP = 3
+    ALL = 1
+    NEAR = 2
+    PRIMARY = 4
+    BACKUP = 8
+    ONHEAP = 16
+    OFFHEAP = 32
