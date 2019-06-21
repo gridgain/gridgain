@@ -641,7 +641,7 @@ class ServerImpl extends TcpDiscoveryImpl {
     ) {
         TcpDiscoveryStatusCheckMessage msg;
 
-        if (allNodesSupports(ring.allNodes(), TCP_DISCOVERY_MESSAGE_NODE_SERIALIZATION_OPTIMIZATION)) {
+        if (allNodesSupport(TCP_DISCOVERY_MESSAGE_NODE_SERIALIZATION_OPTIMIZATION)) {
             boolean sameMacs = creatorNode != null && targetNode != null && U.sameMacs(creatorNode, targetNode);
 
             msg = new TcpDiscoveryStatusCheckMessage(
@@ -678,7 +678,7 @@ class ServerImpl extends TcpDiscoveryImpl {
     private TcpDiscoveryDuplicateIdMessage createTcpDiscoveryDuplicateIdMessage(UUID creatorNodeId, TcpDiscoveryNode node) {
         TcpDiscoveryDuplicateIdMessage msg;
 
-        if (allNodesSupports(ring.allNodes(), TCP_DISCOVERY_MESSAGE_NODE_SERIALIZATION_OPTIMIZATION))
+        if (allNodesSupport(TCP_DISCOVERY_MESSAGE_NODE_SERIALIZATION_OPTIMIZATION))
             msg = new TcpDiscoveryDuplicateIdMessage(creatorNodeId, node.id());
         else
             msg = new TcpDiscoveryDuplicateIdMessage(creatorNodeId, node);
