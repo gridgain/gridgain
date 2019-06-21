@@ -17,7 +17,7 @@
 package org.apache.ignite.internal.processors.cache;
 
 /**
- * Cache group metrics
+ * Cache group metrics.
  */
 public interface CacheGroupMetrics {
     /**

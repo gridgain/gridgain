@@ -46,49 +46,31 @@ import static org.apache.ignite.internal.processors.cache.persistence.file.FileP
  * Cache group JMX metrics test.
  */
 public class CacheGroupMetricsMBeanWithIndexTest extends CacheGroupMetricsMBeanTest {
-    /**
-     *
-     */
+    /** */
     private static final String GROUP_NAME = "group1";
 
-    /**
-     *
-     */
+    /** */
     private static final String CACHE_NAME = "cache1";
 
-    /**
-     *
-     */
+    /** */
     private static final String OBJECT_NAME = "MyObject";
 
-    /**
-     *
-     */
+    /** */
     private static final String TABLE = "\"" + CACHE_NAME + "\"." + OBJECT_NAME;
 
-    /**
-     *
-     */
+    /** */
     private static final String KEY_NAME = "id";
 
-    /**
-     *
-     */
+    /** */
     private static final String COLUMN1_NAME = "col1";
 
-    /**
-     *
-     */
+    /** */
     private static final String COLUMN2_NAME = "col2";
 
-    /**
-     *
-     */
+    /** */
     private static final String COLUMN3_NAME = "col3";
 
-    /**
-     *
-     */
+    /** */
     private static final String INDEX_NAME = "testindex001";
 
     /** {@inheritDoc} */
@@ -97,7 +79,6 @@ public class CacheGroupMetricsMBeanWithIndexTest extends CacheGroupMetricsMBeanT
 
         for (CacheConfiguration cacheCfg : cfg.getCacheConfiguration()) {
             if (GROUP_NAME.equals(cacheCfg.getGroupName()) && CACHE_NAME.equals(cacheCfg.getName())) {
-
                 QueryEntity qryEntity = new QueryEntity(Long.class.getCanonicalName(), OBJECT_NAME);
 
                 qryEntity.setKeyFieldName(KEY_NAME);
@@ -180,11 +161,13 @@ public class CacheGroupMetricsMBeanWithIndexTest extends CacheGroupMetricsMBeanT
 
         CacheGroupMetricsMXBean mxBean0Grp1 = mxBean(0, GROUP_NAME);
 
-        Assert.assertTrue("Timeout wait start rebuild index",
+        assertTrue(
+            "Timeout wait start rebuild index",
             GridTestUtils.waitForCondition(() -> mxBean0Grp1.getIndexBuildCountPartitionsLeft() > 0, 30_000)
         );
 
-        Assert.assertTrue("Timeout wait finished rebuild index",
+        assertTrue(
+            "Timeout wait finished rebuild index",
             GridTestUtils.waitForCondition(() -> mxBean0Grp1.getIndexBuildCountPartitionsLeft() == 0, 30_000)
         );
     }
@@ -229,14 +212,14 @@ public class CacheGroupMetricsMBeanWithIndexTest extends CacheGroupMetricsMBeanT
 
             List<List<?>> all = cache1.query(new SqlFieldsQuery(selectIdxSql)).getAll();
 
-            Assert.assertEquals("Index not found", 1, all.size());
+            assertEquals("Index not found", 1, all.size());
         });
 
-        Assert.assertTrue("Timeout wait start rebuild index",
+        assertTrue("Timeout wait start rebuild index",
             GridTestUtils.waitForCondition(() -> mxBean0Grp1.getIndexBuildCountPartitionsLeft() > 0, 30_000)
         );
 
-        Assert.assertTrue("Timeout wait finished rebuild index",
+        assertTrue("Timeout wait finished rebuild index",
             GridTestUtils.waitForCondition(() -> mxBean0Grp1.getIndexBuildCountPartitionsLeft() == 0, 30_000)
         );
     }

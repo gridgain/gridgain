@@ -19,7 +19,7 @@ package org.apache.ignite.internal.processors.cache;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Cache group metrics
+ * Cache group metrics.
  */
 public class CacheGroupMetricsImpl implements CacheGroupMetrics {
     /** Number of partitions need processed for finished indexes create or rebuilding. */
@@ -43,6 +43,7 @@ public class CacheGroupMetricsImpl implements CacheGroupMetrics {
 
     /**
      * Commit the complete index building for partition.
+     *
      * @return Decrement number of partitions need processed for finished indexes create or rebuilding.
      */
     public long decrementIndexBuildCountPartitionsLeft() {
