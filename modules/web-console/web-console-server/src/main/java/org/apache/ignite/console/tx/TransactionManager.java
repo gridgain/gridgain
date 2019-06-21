@@ -54,7 +54,7 @@ public class TransactionManager {
     private final Map<String, Runnable> cachesStarters;
 
     /** Time to wait for server nodes to come back. */
-    @Value("ignite.client.node.reconnect.timeout:30000")
+    @Value("${ignite.client.node.reconnect.timeout:30000}")
     private int reconnectTimeout = 30_000;
 
     /**
