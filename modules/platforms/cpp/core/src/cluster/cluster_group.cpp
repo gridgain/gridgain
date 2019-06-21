@@ -36,9 +36,44 @@ namespace ignite
             return ClusterGroup(impl.Get()->ForAttribute(name, val));
         }
 
+        ClusterGroup ClusterGroup::ForCacheNodes(std::string cacheName)
+        {
+            return ClusterGroup(impl.Get()->ForCacheNodes(cacheName));
+        }
+
+        ClusterGroup ClusterGroup::ForClientNodes(std::string cacheName)
+        {
+            return ClusterGroup(impl.Get()->ForClientNodes(cacheName));
+        }
+
+        ClusterGroup ClusterGroup::ForDaemons()
+        {
+            return ClusterGroup(impl.Get()->ForDaemons());
+        }
+
         ClusterGroup ClusterGroup::ForDataNodes(std::string cacheName)
         {
             return ClusterGroup(impl.Get()->ForDataNodes(cacheName));
+        }
+
+        ClusterGroup ClusterGroup::ForHost(ignite::cluster::ClusterNode node)
+        {
+            return ClusterGroup(impl.Get()->ForHost(node));
+        }
+
+        ClusterGroup ClusterGroup::ForOldest()
+        {
+            return ClusterGroup(impl.Get()->ForOldest());
+        }
+
+        ClusterGroup ClusterGroup::ForRandom()
+        {
+            return ClusterGroup(impl.Get()->ForRandom());
+        }
+
+        ClusterGroup ClusterGroup::ForRemotes()
+        {
+            return ClusterGroup(impl.Get()->ForRemotes());
         }
 
         ClusterGroup ClusterGroup::ForServers()

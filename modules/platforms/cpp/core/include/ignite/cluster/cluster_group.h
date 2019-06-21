@@ -57,12 +57,65 @@ namespace ignite
             ClusterGroup ForAttribute(std::string name, std::string val);
 
             /**
+             * Get cluster group for all nodes that have cache with specified name, either in client or server modes.
+             *
+             * @param cacheName Cache name.
+             * @return Cluster group over nodes that have the cache with the specified name running.
+             */
+            ClusterGroup ForCacheNodes(std::string cacheName);
+
+            /**
+             * Get cluster group for all client nodes that access cache with the specified name.
+             *
+             * @param cacheName Cache name.
+             * @return Cluster group over nodes that have the cache with the specified name running.
+             */
+            ClusterGroup ForClientNodes(std::string cacheName);
+
+            /**
+             * Get cluster group consisting from the daemon nodes.
+             *
+             * @return Cluster group consisting from the daemon nodes.
+             */
+            ClusterGroup ForDaemons();
+
+            /**
              * Get ClusterGroup for all data nodes that have the cache with the specified name running.
              *
              * @param cacheName Cache name.
              * @return Cluster group over nodes that have the cache with the specified name running.
              */
             ClusterGroup ForDataNodes(std::string cacheName);
+
+            /**
+             * Get cluster group consisting from the nodes in this cluster group residing on the same host as the given node.
+             *
+             * @param node Cluster node.
+             * @return Cluster group residing on the same host as the given node.
+             */
+            ClusterGroup ForHost(ignite::cluster::ClusterNode node);
+
+            /**
+             * Get cluster group with one oldest node from the current cluster group.
+             *
+             * @param nodes Cluster nodes.
+             * @return Cluster group with one oldest node from the current cluster group.
+             */
+            ClusterGroup ForOldest();
+
+            /**
+             * Get cluster group with one random node from the current cluster group.
+             *
+             * @return Cluster group with one random node from the current cluster group.
+             */
+            ClusterGroup ForRandom();
+
+            /**
+             * Get cluster group consisting from the nodes in this cluster group excluding the local node.
+             *
+             * @return Cluster group consisting from the nodes in this cluster group excluding the local node.
+             */
+            ClusterGroup ForRemotes();
 
             /**
              * Creates a cluster group of nodes started in server mode.

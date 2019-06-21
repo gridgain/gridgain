@@ -75,12 +75,65 @@ namespace ignite
                 SP_ClusterGroupImpl ForAttribute(std::string name, std::string val);
 
                 /**
+                 * Get cluster group for all nodes that have cache with specified name, either in client or server modes.
+                 *
+                 * @param cacheName Cache name.
+                 * @return Pointer to cluster group over nodes that have the cache with the specified name running.
+                 */
+                SP_ClusterGroupImpl ForCacheNodes(std::string cacheName);
+
+                /**
+                 * Get cluster group for all client nodes that access cache with the specified name.
+                 *
+                 * @param cacheName Cache name.
+                 * @return Pointer to cluster group over nodes that have the cache with the specified name running.
+                 */
+                SP_ClusterGroupImpl ForClientNodes(std::string cacheName);
+
+                /**
+                 *  Gets a cluster group consisting from the daemon nodes
+                 *
+                 * @return Pointer to cluster group over nodes started in daemon mode.
+                 */
+                SP_ClusterGroupImpl ForDaemons();
+
+                /**
                  * Get cluster group for all data nodes that have the cache with the specified name running.
                  *
                  * @param cacheName Cache name.
                  * @return Pointer to cluster group over nodes that have the cache with the specified name running.
                  */
                 SP_ClusterGroupImpl ForDataNodes(std::string cacheName);
+
+                /**
+                 * Get cluster group consisting from the nodes in this cluster group residing on the same host as the given node.
+                 *
+                 * @param node Cluster node.
+                 * @return Pointer to cluster group residing on the same host as the given node.
+                 */
+                SP_ClusterGroupImpl ForHost(ignite::cluster::ClusterNode node);
+
+                /**
+                 * Get cluster group with one oldest node from the current cluster group.
+                 *
+                 * @param nodes Cluster nodes.
+                 * @return Pointer to cluster group with one oldest node from the current cluster group.
+                 */
+                SP_ClusterGroupImpl ForOldest();
+
+                /**
+                 * Get cluster group with one random node from the current cluster group.
+                 *
+                 * @return Pointer to cluster group with one random node from the current cluster group.
+                 */
+                SP_ClusterGroupImpl ForRandom();
+
+                /**
+                 * Get cluster group consisting from the nodes in this cluster group excluding the local node.
+                 *
+                 * @return Pointer to cluster group consisting from the nodes in this cluster group excluding the local node.
+                 */
+                SP_ClusterGroupImpl ForRemotes();
 
                 /**
                  * Creates a cluster group of nodes started in server mode.
@@ -90,11 +143,25 @@ namespace ignite
                 SP_ClusterGroupImpl ForServers();
 
                 /**
+                 * Get cluster group with one youngest node in the current cluster group.
+                 *
+                 * @return Pointer to cluster group with one youngest node in the current cluster group.
+                 */
+                SP_ClusterGroupImpl ForYoungest();
+
+                /**
                  * Creates a cluster group of cpp nodes.
                  *
                  * @return Pointer to cluster group of cpp nodes.
                  */
                 SP_ClusterGroupImpl ForCpp();
+
+                /**
+                 * Gets the vector of nodes in this cluster group.
+                 *
+                 * @return All nodes in this cluster group.
+                 */
+                std::vector<ignite::cluster::ClusterNode> GetNodes();
 
                 /**
                  * Get compute instance over this cluster group.
@@ -109,13 +176,6 @@ namespace ignite
                  * @return Pointer to compute instance.
                  */
                 SP_ComputeImpl GetCompute(ignite::cluster::ClusterGroup grp);
-
-                /**
-                 * Gets the vector of nodes in this cluster group.
-                 *
-                 * @return All nodes in this cluster group.
-                 */
-                std::vector<ignite::cluster::ClusterNode> GetNodes();
 
                 /**
                  * Check if the Ignite grid is active.

@@ -45,9 +45,27 @@ namespace ignite
                 {
                     FOR_ATTRIBUTE = 2,
 
+                    FOR_CACHE = 3,
+
+                    FOR_CLIENT = 4,
+
                     FOR_DATA = 5,
 
+                    FOR_HOST = 6,
+
+                    FOR_NODE_IDS = 7,
+
                     NODES = 12,
+
+                    FOR_REMOTES = 17,
+
+                    FOR_DAEMONS = 18,
+
+                    FOR_RANDOM = 19,
+
+                    FOR_OLDEST = 20,
+
+                    FOR_YOUNGEST = 21,
 
                     FOR_SERVERS = 23,
 
@@ -86,9 +104,91 @@ namespace ignite
                 return SP_ClusterGroupImpl(new ClusterGroupImpl(GetEnvironmentPointer(), target));
             }
 
+            SP_ClusterGroupImpl ClusterGroupImpl::ForCacheNodes(std::string cacheName)
+            {
+                return ForCacheNodes(cacheName, Command::FOR_CACHE);
+            }
+
+            SP_ClusterGroupImpl ClusterGroupImpl::ForClientNodes(std::string cacheName)
+            {
+                return ForCacheNodes(cacheName, Command::FOR_CLIENT);
+            }
+
+            SP_ClusterGroupImpl ClusterGroupImpl::ForDaemons()
+            {
+                IgniteError err;
+
+                jobject res = InOpObject(Command::FOR_DAEMONS, err);
+
+                IgniteError::ThrowIfNeeded(err);
+
+                return FromTarget(res);
+            }
+
             SP_ClusterGroupImpl ClusterGroupImpl::ForDataNodes(std::string cacheName)
             {
                 return ForCacheNodes(cacheName, Command::FOR_DATA);
+            }
+
+            SP_ClusterGroupImpl ClusterGroupImpl::ForHost(ClusterNode node)
+            {
+                SharedPointer<interop::InteropMemory> mem = GetEnvironment().AllocateMemory();
+                interop::InteropOutputStream out(mem.Get());
+                binary::BinaryWriterImpl writer(&out, GetEnvironment().GetTypeManager());
+
+                writer.WriteGuid(node.GetId());
+
+                out.Synchronize();
+
+                IgniteError err;
+                jobject target = InStreamOutObject(Command::FOR_HOST, *mem.Get(), err);
+                IgniteError::ThrowIfNeeded(err);
+
+                return SP_ClusterGroupImpl(new ClusterGroupImpl(GetEnvironmentPointer(), target));
+            }
+
+            SP_ClusterGroupImpl ClusterGroupImpl::ForOldest()
+            {
+                IgniteError err;
+
+                jobject res = InOpObject(Command::FOR_OLDEST, err);
+
+                IgniteError::ThrowIfNeeded(err);
+
+                return FromTarget(res);
+            }
+
+            SP_ClusterGroupImpl ClusterGroupImpl::ForRandom()
+            {
+                IgniteError err;
+
+                jobject res = InOpObject(Command::FOR_RANDOM, err);
+
+                IgniteError::ThrowIfNeeded(err);
+
+                return FromTarget(res);
+            }
+
+            SP_ClusterGroupImpl ClusterGroupImpl::ForRemotes()
+            {
+                IgniteError err;
+
+                jobject res = InOpObject(Command::FOR_REMOTES, err);
+
+                IgniteError::ThrowIfNeeded(err);
+
+                return FromTarget(res);
+            }
+
+            SP_ClusterGroupImpl ClusterGroupImpl::ForYoungest()
+            {
+                IgniteError err;
+
+                jobject res = InOpObject(Command::FOR_YOUNGEST, err);
+
+                IgniteError::ThrowIfNeeded(err);
+
+                return FromTarget(res);
             }
 
             SP_ClusterGroupImpl ClusterGroupImpl::ForServers()
@@ -107,6 +207,11 @@ namespace ignite
                 return ForAttribute(attrPlatform, platform);
             }
 
+            std::vector<ClusterNode> ClusterGroupImpl::GetNodes()
+            {
+                return RefreshNodes();
+            }
+
             ClusterGroupImpl::SP_ComputeImpl ClusterGroupImpl::GetCompute()
             {
                 return computeImpl;
@@ -115,11 +220,6 @@ namespace ignite
             ClusterGroupImpl::SP_ComputeImpl ClusterGroupImpl::GetCompute(ClusterGroup grp)
             {
                 return grp.GetImpl().Get()->GetCompute();
-            }
-
-            std::vector<ClusterNode> ClusterGroupImpl::GetNodes()
-            {
-                return RefreshNodes();
             }
 
             bool ClusterGroupImpl::IsActive()
