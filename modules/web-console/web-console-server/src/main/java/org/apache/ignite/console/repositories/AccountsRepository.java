@@ -69,7 +69,7 @@ public class AccountsRepository {
      *
      * @param accId Account ID.
      * @return Account.
-     * @throws IllegalStateException If user not found.
+     * @throws UsernameNotFoundException If user not found.
      */
     public Account getById(UUID accId) throws IllegalStateException {
         return txMgr.doInTransaction("Find account by ID", () -> {
