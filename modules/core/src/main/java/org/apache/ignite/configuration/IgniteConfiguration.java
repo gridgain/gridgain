@@ -76,6 +76,7 @@ import org.apache.ignite.spi.failover.always.AlwaysFailoverSpi;
 import org.apache.ignite.spi.indexing.IndexingSpi;
 import org.apache.ignite.spi.loadbalancing.LoadBalancingSpi;
 import org.apache.ignite.spi.loadbalancing.roundrobin.RoundRobinLoadBalancingSpi;
+import org.apache.ignite.spi.metric.MetricExporterSpi;
 import org.apache.ignite.ssl.SslContextFactory;
 import org.jetbrains.annotations.Nullable;
 
@@ -392,6 +393,9 @@ public class IgniteConfiguration {
     /** Encryption SPI. */
     private EncryptionSpi encryptionSpi;
 
+    /** Metric exporter SPI. */
+    private MetricExporterSpi[] metricExporterSpi;
+
     /** Cache configurations. */
     private CacheConfiguration[] cacheCfg;
 
@@ -571,6 +575,7 @@ public class IgniteConfiguration {
         loadBalancingSpi = cfg.getLoadBalancingSpi();
         indexingSpi = cfg.getIndexingSpi();
         encryptionSpi = cfg.getEncryptionSpi();
+        metricExporterSpi = cfg.getMetricExporterSpi();
 
         commFailureRslvr = cfg.getCommunicationFailureResolver();
 
@@ -684,12 +689,8 @@ public class IgniteConfiguration {
     }
 
     /**
-     * Gets optional grid name. Returns {@code null} if non-default grid name was not
-     * provided.
-     * <p>The name only works locally and has no effect on topology</p>
+     * See {@link #getIgniteInstanceName()}.
      *
-     * @return Optional grid name. Can be {@code null}, which is default grid name, if
-     *      non-default grid name was not provided.
      * @deprecated Use {@link #getIgniteInstanceName()} instead.
      */
     @Deprecated
@@ -698,12 +699,11 @@ public class IgniteConfiguration {
     }
 
     /**
-     * Gets optional local instance name. Returns {@code null} if non-default local instance
-     * name was not provided.
-     * <p>The name only works locally and has no effect on topology</p>
+     * Gets optional node name. Returns {@code null} if it was not set.
      *
-     * @return Optional local instance name. Can be {@code null}, which is default local
-     * instance name, if non-default local instance name was not provided.
+     * <p>The name only works locally and has no effect outside JVM.</p>
+     *
+     * @return Optional node name. Can be {@code null}, which is default.
      */
     public String getIgniteInstanceName() {
         return igniteInstanceName;
@@ -750,11 +750,8 @@ public class IgniteConfiguration {
     }
 
     /**
-     * Sets grid name. Note that {@code null} is a default grid name.
+     * See {@link #setIgniteInstanceName}.
      *
-     * @param gridName Grid name to set. Can be {@code null}, which is default
-     *      grid name.
-     * @return {@code this} for chaining.
      * @deprecated Use {@link #setIgniteInstanceName(String)} instead.
      */
     @Deprecated
@@ -763,14 +760,17 @@ public class IgniteConfiguration {
     }
 
     /**
-     * Sets of local instance name. Note that {@code null} is a default local instance name.
+     * Sets node name. Note that {@code null} is a default node name.
      *
-     * @param instanceName Local instance name to set. Can be {@code null}. which is default
-     * local instance name.
+     * This name will be widely used in all string constants (thread-names, JMX beans).
+     * Also, it allows to get (check state, stop) node by name via {@link Ignition} methods.
+     *
+     *
+     * @param nodeName Node name to set. Can be {@code null}. which is default.
      * @return {@code this} for chaining.
      */
-    public IgniteConfiguration setIgniteInstanceName(String instanceName) {
-        this.igniteInstanceName = instanceName;
+    public IgniteConfiguration setIgniteInstanceName(String nodeName) {
+        this.igniteInstanceName = nodeName;
 
         return this;
     }
@@ -1158,7 +1158,7 @@ public class IgniteConfiguration {
     /**
      * Sets keep alive time of thread pool size that will be used to process utility cache messages.
      *
-     * @param keepAliveTime Keep alive time of executor service to use for utility cache messages.
+     * @param keepAliveTime Keep alive time in milliseconds of executor service to use for utility cache messages.
      * @see IgniteConfiguration#getUtilityCacheThreadPoolSize()
      * @see IgniteConfiguration#getUtilityCacheKeepAliveTime()
      * @return {@code this} for chaining.
@@ -2285,6 +2285,28 @@ public class IgniteConfiguration {
      */
     public EncryptionSpi getEncryptionSpi() {
         return encryptionSpi;
+    }
+
+    /**
+     * Sets fully configured instances of {@link MetricExporterSpi}.
+     *
+     * @param metricExporterSpi Fully configured instances of {@link MetricExporterSpi}.
+     * @see IgniteConfiguration#getMetricExporterSpi()
+     * @return {@code this} for chaining.
+     */
+    public IgniteConfiguration setMetricExporterSpi(MetricExporterSpi... metricExporterSpi) {
+        this.metricExporterSpi = metricExporterSpi;
+
+        return this;
+    }
+
+    /**
+     * Gets fully configured monitoring SPI implementations.
+     *
+     * @return Metric exporter SPI implementations.
+     */
+    public MetricExporterSpi[] getMetricExporterSpi() {
+        return metricExporterSpi;
     }
 
     /**

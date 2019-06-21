@@ -101,6 +101,7 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.datastreamer.DataStreamerEntry;
 import org.apache.ignite.internal.processors.datastreamer.DataStreamerImpl;
 import org.apache.ignite.internal.processors.dr.IgniteDrDataStreamerCacheUpdater;
+import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.platform.cache.PlatformCacheEntryFilter;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.transactions.IgniteTxHeuristicCheckedException;
@@ -145,6 +146,7 @@ import org.apache.ignite.resources.LoggerResource;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CACHE_KEY_VALIDATION_DISABLED;
@@ -321,7 +323,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         log = ctx.logger(getClass());
         txLockMsgLog = ctx.shared().txLockMessageLogger();
 
-        metrics = new CacheMetricsImpl(ctx);
+        metrics = new CacheMetricsImpl(ctx, isNear() ? "near" : null);
 
         locMxBean = new CacheLocalMetricsMXBeanImpl(this);
         clusterMxBean = new CacheClusterMetricsMXBeanImpl(this);
@@ -618,6 +620,12 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         // Nulling thread local reference to ensure values will be eventually GCed
         // no matter what references these futures are holding.
         lastFut = null;
+
+        MetricRegistry mreg = ctx.kernalContext().metric().registry();
+
+        mreg.withPrefix(metrics.metricsPrefix())
+            .getMetrics()
+            .forEach(m -> mreg.remove(m.name()));
     }
 
     /**
@@ -5965,7 +5973,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         }
 
         /** {@inheritDoc} */
-        @Nullable @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
+        @NotNull @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
             @Nullable Object arg) throws IgniteException {
             Map<ComputeJob, ClusterNode> jobs = new HashMap();
 
@@ -6031,7 +6039,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         }
 
         /** {@inheritDoc} */
-        @Nullable @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
+        @NotNull @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
             @Nullable Object arg) throws IgniteException {
             Map<ComputeJob, ClusterNode> jobs = new HashMap();
 
@@ -6107,7 +6115,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         }
 
         /** {@inheritDoc} */
-        @Nullable @Override public Map<? extends ComputeJob, ClusterNode> map(
+        @NotNull @Override public Map<? extends ComputeJob, ClusterNode> map(
             List<ClusterNode> subgrid,
             @Nullable Object arg
         ) throws IgniteException {
@@ -6184,7 +6192,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         }
 
         /** {@inheritDoc} */
-        @Nullable @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
+        @NotNull @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
             @Nullable Object arg) throws IgniteException {
             Map<ComputeJob, ClusterNode> jobs = new HashMap<>();
 
