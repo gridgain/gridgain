@@ -76,7 +76,7 @@ public class AccountsRepository {
             Account account = accountsTbl.load(accId);
 
             if (account == null)
-                throw new IllegalStateException("Account not found with ID: " + accId);
+                throw new UsernameNotFoundException("Account not found with ID: " + accId);
 
             return account;
         });
