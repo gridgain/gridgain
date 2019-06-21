@@ -399,15 +399,7 @@ public class GridDhtTxLocal extends GridDhtTxLocalAdapter implements GridCacheMa
                     addEntry(req.messageId(), e);
             }
 
-            userPrepare(pessimistic() ? Collections.emptyList() : serializable() ? F.concat(false, req.writes(), req.reads()) : req.writes());
-
-            // Make sure to add future before calling prepare on it.
-            cctx.mvcc().addFuture(fut);
-
-            if (isSystemInvalidate())
-                fut.complete();
-            else
-                fut.prepare(req);
+            fut.prepare(req);
         }
         catch (IgniteTxTimeoutCheckedException | IgniteTxRollbackCheckedException | IgniteTxOptimisticCheckedException e) {
             fut.onError(e);

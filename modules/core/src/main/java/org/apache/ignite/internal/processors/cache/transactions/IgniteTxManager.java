@@ -45,6 +45,7 @@ import org.apache.ignite.internal.pagemem.wal.record.MvccTxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.TxRecord;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheObjectsReleaseFuture;
+import org.apache.ignite.internal.processors.cache.EntryLockCallback;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryRemovedException;
@@ -58,12 +59,10 @@ import org.apache.ignite.internal.processors.cache.GridDeferredAckMessageSender;
 import org.apache.ignite.internal.processors.cache.distributed.GridCacheMappedVersion;
 import org.apache.ignite.internal.processors.cache.distributed.GridCacheTxFinishSync;
 import org.apache.ignite.internal.processors.cache.distributed.GridCacheTxRecoveryFuture;
-import org.apache.ignite.internal.processors.cache.distributed.GridDistributedLockCancelledException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxLocal;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxOnePhaseCommitAckRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxRemote;
 import org.apache.ignite.internal.processors.cache.distributed.dht.colocated.GridDhtColocatedLockFuture;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtInvalidPartitionException;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLockFuture;
@@ -80,7 +79,6 @@ import org.apache.ignite.internal.transactions.IgniteTxTimeoutCheckedException;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridPlainRunnable;
-import org.apache.ignite.internal.util.lang.IgnitePair;
 import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
@@ -110,7 +108,6 @@ import static org.apache.ignite.internal.GridTopic.TOPIC_CACHE_COORDINATOR;
 import static org.apache.ignite.internal.GridTopic.TOPIC_TX;
 import static org.apache.ignite.internal.IgniteKernal.DFLT_LONG_OPERATIONS_DUMP_TIMEOUT;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYSTEM_POOL;
-import static org.apache.ignite.internal.processors.cache.GridCacheOperation.READ;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isNearEnabled;
 import static org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx.FinalizationStatus.RECOVERY_FINISH;
 import static org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx.FinalizationStatus.USER_FINISH;
@@ -240,7 +237,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     @Override protected void start0() throws IgniteCheckedException {
         txFinishSync = new GridCacheTxFinishSync<>(cctx);
 
-        txHnd = new IgniteTxHandler(cctx);
+        txHnd = new IgniteTxHandler(cctx, this);
 
         deferredAckMsgSnd = new GridDeferredAckMessageSender<GridCacheVersion>(cctx.time(), cctx.kernalContext().closure()) {
             @Override public int getTimeout() {
@@ -943,7 +940,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * @param entries Entries to lock or {@code null} if use default {@link IgniteInternalTx#optimisticLockEntries()}.
      * @throws IgniteCheckedException If preparation failed.
      */
-    public void prepareTx(IgniteInternalTx tx, Collection<IgniteTxEntry> entries) throws IgniteCheckedException {
+    public boolean prepareTx(IgniteInternalTx tx, Collection<IgniteTxEntry> entries, EntryLockCallback cb) throws IgniteCheckedException {
         if (tx.state() == MARKED_ROLLBACK) {
             if (tx.remainingTime() == -1)
                 throw new IgniteTxTimeoutCheckedException("Transaction timed out: " + this);
@@ -959,16 +956,12 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         }
 
         if (tx.pessimistic() && tx.local())
-            return; // Nothing else to do in pessimistic mode.
+            return true; // Nothing else to do in pessimistic mode.
 
         // Optimistic.
         assert tx.optimistic() || !tx.local();
 
-        if (!lockMultiple(tx, entries)) {
-            tx.setRollbackOnly();
-
-            throw new IgniteTxOptimisticCheckedException("Failed to prepare transaction (lock conflict): " + tx);
-        }
+        return lockMultiple(tx, entries, cb);
     }
 
     /**
@@ -1499,28 +1492,28 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * @return {@code True} if transaction was notified, {@code false} otherwise.
      */
     public boolean onOwnerChanged(GridCacheEntryEx entry, GridCacheMvccCandidate owner) {
-        // We only care about acquired locks.
-        if (owner != null) {
-            IgniteTxAdapter tx = entry.isNear() ? nearTx(owner.version()) : tx(owner.version());
-
-            if (tx != null) {
-                if (!tx.local()) {
-                    if (log.isDebugEnabled())
-                        log.debug("Found transaction for owner changed event [owner=" + owner + ", entry=" + entry +
-                            ", tx=" + tx + ']');
-
-                    tx.onOwnerChanged(entry, owner);
+//        // We only care about acquired locks.
+//        if (owner != null) {
+//            IgniteTxAdapter tx = entry.isNear() ? nearTx(owner.version()) : tx(owner.version());
+//
+//            if (tx != null) {
+//                if (!tx.local()) {
+//                    if (log.isDebugEnabled())
+//                        log.debug("Found transaction for owner changed event [owner=" + owner + ", entry=" + entry +
+//                            ", tx=" + tx + ']');
+//
+//                    tx.onOwnerChanged(entry, owner);
 
                     return true;
-                }
-                else if (log.isDebugEnabled())
-                    log.debug("Ignoring local transaction for owner change event: " + tx);
-            }
-            else if (log.isDebugEnabled())
-                log.debug("Transaction not found for owner changed event [owner=" + owner + ", entry=" + entry + ']');
-        }
-
-        return false;
+//                }
+//                else if (log.isDebugEnabled())
+//                    log.debug("Ignoring local transaction for owner change event: " + tx);
+//            }
+//            else if (log.isDebugEnabled())
+//                log.debug("Transaction not found for owner changed event [owner=" + owner + ", entry=" + entry + ']');
+//        }
+//
+//        return false;
     }
 
     /**
@@ -1579,119 +1572,25 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         this.finishSyncDisabled = finishSyncDisabled;
     }
 
-    /**
-     * @param tx Transaction.
-     * @param entries Entries to lock.
-     * @return {@code True} if all keys were locked.
-     * @throws IgniteCheckedException If lock has been cancelled.
-     */
-    private boolean lockMultiple(IgniteInternalTx tx, Iterable<IgniteTxEntry> entries)
-        throws IgniteCheckedException {
-        assert tx.optimistic() || !tx.local();
+    private boolean lockMultiple(IgniteInternalTx tx, Iterable<IgniteTxEntry> entries, EntryLockCallback cb) {
+        boolean res = true;
 
-        long remainingTime = tx.remainingTime();
-
-        // For serializable transactions, failure to acquire lock means
-        // that there is a serializable conflict. For all other isolation levels,
-        // we wait for the lock.
-        long timeout = remainingTime < 0 ? 0 : remainingTime;
-
-        GridCacheVersion serOrder = (tx.serializable() && tx.optimistic()) ? tx.nearXidVersion() : null;
-
-        for (IgniteTxEntry txEntry : entries) {
-            // Check if this entry was prepared before.
-            if (!txEntry.markPrepared() || txEntry.explicitVersion() != null)
-                continue;
-
-            GridCacheContext cacheCtx = txEntry.context();
-
-            while (true) {
-                cctx.database().checkpointReadLock();
+        for (IgniteTxEntry entry : entries) {
+            for (;;) {
+                GridCacheEntryEx cached = entry.cached();
 
                 try {
-                    GridCacheEntryEx entry = txEntry.cached();
-
-                    assert entry != null : txEntry;
-                    assert !entry.detached() : "Expected non-detached entry for near transaction " +
-                        "[locNodeId=" + cctx.localNodeId() + ", entry=" + entry + ']';
-
-                    GridCacheVersion serReadVer = txEntry.entryReadVersion();
-
-                    assert serReadVer == null || (tx.optimistic() && tx.serializable()) : txEntry;
-
-                    boolean read = serOrder != null && txEntry.op() == READ;
-
-                    if (!entry.tmLock(tx, timeout, serOrder, serReadVer, read)) {
-                        // Unlock locks locked so far.
-                        for (IgniteTxEntry txEntry2 : entries) {
-                            if (txEntry2 == txEntry)
-                                break;
-
-                            txUnlock(tx, txEntry2);
-                        }
-
-                        return false;
-                    }
+                    res &= cached.lock(tx.xidVersion(), cb);
 
                     break;
                 }
                 catch (GridCacheEntryRemovedException ignored) {
-                    if (log.isDebugEnabled())
-                        log.debug("Got removed entry in TM lockMultiple(..) method (will retry): " + txEntry);
-
-                    try {
-                        // Renew cache entry.
-                        txEntry.cached(cacheCtx.cache().entryEx(txEntry.key(), tx.topologyVersion()));
-                    }
-                    catch (GridDhtInvalidPartitionException e) {
-                        assert tx.dht() : "Received invalid partition for non DHT transaction [tx=" +
-                            tx + ", invalidPart=" + e.partition() + ']';
-
-                        // If partition is invalid, we ignore this entry.
-                        tx.addInvalidPartition(cacheCtx, e.partition());
-
-                        break;
-                    }
-                }
-                catch (GridDistributedLockCancelledException ignore) {
-                    tx.setRollbackOnly();
-
-                    throw new IgniteCheckedException("Entry lock has been cancelled for transaction: " + tx);
-                }
-                finally {
-                    cctx.database().checkpointReadUnlock();
+                    entry.cached(entry.context().cache().entryEx(entry.key(), tx.topologyVersion()));
                 }
             }
         }
 
-        return true;
-    }
-
-    /**
-     * @param tx Transaction.
-     * @param txEntry Entry to unlock.
-     */
-    private void txUnlock(IgniteInternalTx tx, IgniteTxEntry txEntry) {
-        while (true) {
-            try {
-                GridCacheEntryEx entry = txEntry.cached();
-
-                assert entry != null;
-
-                if (entry.detached())
-                    break;
-
-                entry.txUnlock(tx);
-
-                break;
-            }
-            catch (GridCacheEntryRemovedException ignored) {
-                if (log.isDebugEnabled())
-                    log.debug("Got removed entry in TM txUnlock(..) method (will retry): " + txEntry);
-
-                txEntry.cached(txEntry.context().cache().entryEx(txEntry.key(), tx.topologyVersion()));
-            }
-        }
+        return res;
     }
 
     /**
@@ -1699,8 +1598,14 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * @param entries Entries to unlock.
      */
     private void unlockMultiple(IgniteInternalTx tx, Iterable<IgniteTxEntry> entries) {
-        for (IgniteTxEntry txEntry : entries)
-            txUnlock(tx, txEntry);
+        for (IgniteTxEntry entry : entries) {
+            GridCacheEntryEx cached = entry.cached();
+
+            try {
+                cached.unlock(tx.xidVersion());
+            }
+            catch (GridCacheEntryRemovedException ignored) {}
+        }
     }
 
     /**
@@ -1715,20 +1620,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      */
     private IgniteInternalTx txContext() {
         return threadCtx.get();
-    }
-
-    /**
-     * Gets version of transaction in tx context or {@code null}
-     * if tx context is empty.
-     * <p>
-     * This is a convenience method provided mostly for debugging.
-     *
-     * @return Transaction version from transaction context.
-     */
-    @Nullable public GridCacheVersion txContextVersion() {
-        IgniteInternalTx tx = txContext();
-
-        return tx == null ? null : tx.xidVersion();
     }
 
     /**
@@ -2659,6 +2550,60 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             this.nearVer = nearVer;
         }
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     /**
      * Commit listener. Checks if commit succeeded and rollbacks if case of error.

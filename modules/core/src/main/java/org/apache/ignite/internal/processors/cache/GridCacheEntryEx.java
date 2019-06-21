@@ -26,7 +26,6 @@ import javax.cache.processor.EntryProcessorResult;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.eviction.EvictableEntry;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
-import org.apache.ignite.internal.processors.cache.distributed.GridDistributedLockCancelledException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxLocalAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridDhtAtomicAbstractUpdateFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
@@ -631,33 +630,13 @@ public interface GridCacheEntryEx {
      */
     public boolean clear(GridCacheVersion ver, boolean readers) throws IgniteCheckedException;
 
-    /**
-     * This locks is called by transaction manager during prepare step
-     * for optimistic transactions.
-     *
-     * @param tx Cache transaction.
-     * @param timeout Timeout for lock acquisition.
-     * @param serOrder Version for serializable transactions ordering.
-     * @param serReadVer Optional read entry version for optimistic serializable transaction.
-     * @param read Read lock flag.
-     * @return {@code True} if lock was acquired, {@code false} otherwise.
-     * @throws GridCacheEntryRemovedException If this entry is obsolete.
-     * @throws GridDistributedLockCancelledException If lock has been cancelled.
-     */
-    public boolean tmLock(IgniteInternalTx tx,
-        long timeout,
-        @Nullable GridCacheVersion serOrder,
-        @Nullable GridCacheVersion serReadVer,
-        boolean read
-    ) throws GridCacheEntryRemovedException, GridDistributedLockCancelledException;
+    public default boolean lock(GridCacheVersion lockVer, EntryLockCallback cb) throws GridCacheEntryRemovedException {
+        return true;
+    }
 
-    /**
-     * Unlocks acquired lock.
-     *
-     * @param tx Cache transaction.
-     * @throws GridCacheEntryRemovedException If this entry has been removed from cache.
-     */
-    public abstract void txUnlock(IgniteInternalTx tx) throws GridCacheEntryRemovedException;
+    public default void unlock(GridCacheVersion lockVer) throws GridCacheEntryRemovedException {
+        // No-op.
+    }
 
     /**
      * @param ver Removes lock.

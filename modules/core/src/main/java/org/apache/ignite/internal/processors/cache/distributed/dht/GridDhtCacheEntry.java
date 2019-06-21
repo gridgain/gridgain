@@ -290,51 +290,6 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean tmLock(IgniteInternalTx tx,
-        long timeout,
-        @Nullable GridCacheVersion serOrder,
-        GridCacheVersion serReadVer,
-        boolean read
-    ) throws GridCacheEntryRemovedException, GridDistributedLockCancelledException {
-        if (tx.local()) {
-            GridDhtTxLocalAdapter dhtTx = (GridDhtTxLocalAdapter)tx;
-
-            // Null is returned if timeout is negative and there is other lock owner.
-            return addDhtLocal(
-                dhtTx.nearNodeId(),
-                dhtTx.nearXidVersion(),
-                tx.topologyVersion(),
-                tx.threadId(),
-                tx.xidVersion(),
-                serOrder,
-                timeout,
-                /*reenter*/false,
-                /*tx*/true,
-                tx.implicitSingle(),
-                read) != null;
-        }
-
-        try {
-            addRemote(
-                tx.nodeId(),
-                tx.otherNodeId(),
-                tx.threadId(),
-                tx.xidVersion(),
-                /*tx*/true,
-                tx.implicit(),
-                null);
-
-            return true;
-        }
-        catch (GridDistributedLockCancelledException ignored) {
-            if (log.isDebugEnabled())
-                log.debug("Attempted to enter tx lock for cancelled ID (will ignore): " + tx);
-
-            return false;
-        }
-    }
-
-    /** {@inheritDoc} */
     @Override public GridCacheMvccCandidate removeLock() {
         GridCacheMvccCandidate ret = super.removeLock();
 

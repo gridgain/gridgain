@@ -22,6 +22,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.CacheEvent;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
+import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.LT;
@@ -111,7 +112,7 @@ public class GridCacheEventManager extends GridCacheManagerAdapter {
     public void addEvent(int part,
         KeyCacheObject key,
         @Nullable IgniteInternalTx tx,
-        @Nullable GridCacheMvccCandidate owner,
+        @Nullable GridCacheVersion owner,
         int type,
         @Nullable CacheObject newVal,
         boolean hasNewVal,
@@ -179,7 +180,7 @@ public class GridCacheEventManager extends GridCacheManagerAdapter {
         KeyCacheObject key,
         UUID nodeId,
         @Nullable IgniteInternalTx tx,
-        GridCacheMvccCandidate owner,
+        GridCacheVersion owner,
         int type,
         CacheObject newVal,
         boolean hasNewVal,
@@ -195,7 +196,7 @@ public class GridCacheEventManager extends GridCacheManagerAdapter {
             nodeId,
             tx,
             null,
-            owner == null ? null : owner.version(),
+            owner,
             type,
             newVal,
             hasNewVal,

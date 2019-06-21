@@ -180,7 +180,7 @@ public class GridNearPessimisticTxPrepareFuture extends GridNearTxPrepareFutureA
         }
 
         try {
-            tx.userPrepare(Collections.<IgniteTxEntry>emptyList());
+            tx.userPrepare(Collections.emptyList(), e -> {});
 
             cctx.mvcc().addFuture(this);
 

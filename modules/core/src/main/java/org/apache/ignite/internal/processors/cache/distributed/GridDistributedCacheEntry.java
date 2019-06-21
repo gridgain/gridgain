@@ -24,13 +24,13 @@ import java.util.UUID;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheLockCandidates;
 import org.apache.ignite.internal.processors.cache.CacheObject;
+import org.apache.ignite.internal.processors.cache.EntryLockCallback;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryRemovedException;
 import org.apache.ignite.internal.processors.cache.GridCacheMapEntry;
 import org.apache.ignite.internal.processors.cache.GridCacheMvcc;
 import org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
-import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -465,180 +465,6 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
     }
 
     /**
-     *
-     * @param ver Version of candidate to acquire lock for.
-     * @return Owner.
-     * @throws GridCacheEntryRemovedException If entry is removed.
-     */
-    @Nullable public CacheLockCandidates readyLock(GridCacheVersion ver)
-        throws GridCacheEntryRemovedException {
-        CacheLockCandidates prev = null;
-        CacheLockCandidates owner = null;
-
-        CacheObject val;
-
-        lockEntry();
-
-        try {
-            checkObsolete();
-
-            GridCacheMvcc mvcc = mvccExtras();
-
-            if (mvcc != null) {
-                prev = mvcc.allOwners();
-
-                boolean emptyBefore = mvcc.isEmpty();
-
-                owner = mvcc.readyLocal(ver);
-
-                assert owner == null || owner.candidate(0).owner() : "Owner flag not set for owner: " + owner;
-
-                boolean emptyAfter = mvcc.isEmpty();
-
-                checkCallbacks(emptyBefore, emptyAfter);
-
-                if (emptyAfter)
-                    mvccExtras(null);
-            }
-
-            val = this.val;
-        }
-        finally {
-            unlockEntry();
-        }
-
-        // This call must be made outside of synchronization.
-        checkOwnerChanged(prev, owner, val);
-
-        return owner;
-    }
-
-    /**
-     * Notifies mvcc that near local lock is ready to be acquired.
-     *
-     * @param ver Lock version.
-     * @param mapped Mapped dht lock version.
-     * @param committed Committed versions.
-     * @param rolledBack Rolled back versions.
-     * @param pending Pending locks on dht node with version less then mapped.
-     *
-     * @throws GridCacheEntryRemovedException If entry is removed.
-     */
-    public void readyNearLock(GridCacheVersion ver, GridCacheVersion mapped,
-        Collection<GridCacheVersion> committed,
-        Collection<GridCacheVersion> rolledBack,
-        Collection<GridCacheVersion> pending) throws GridCacheEntryRemovedException
-    {
-        CacheLockCandidates prev = null;
-        CacheLockCandidates owner = null;
-
-        CacheObject val;
-
-        lockEntry();
-
-        try {
-            checkObsolete();
-
-            GridCacheMvcc mvcc = mvccExtras();
-
-            if (mvcc != null) {
-                prev = mvcc.allOwners();
-
-                boolean emptyBefore = mvcc.isEmpty();
-
-                owner = mvcc.readyNearLocal(ver, mapped, committed, rolledBack, pending);
-
-                assert owner == null || owner.candidate(0).owner() : "Owner flag is not set for owner: " + owner;
-
-                boolean emptyAfter = mvcc.isEmpty();
-
-                checkCallbacks(emptyBefore, emptyAfter);
-
-                if (emptyAfter)
-                    mvccExtras(null);
-            }
-
-            val = this.val;
-        }
-        finally {
-            unlockEntry();
-        }
-
-        // This call must be made outside of synchronization.
-        checkOwnerChanged(prev, owner, val);
-    }
-
-    /**
-     *
-     * @param lockVer Done version.
-     * @param baseVer Base version.
-     * @param pendingVers Pending versions that are less than lock version.
-     * @param committedVers Completed versions for reordering.
-     * @param rolledbackVers Rolled back versions for reordering.
-     * @param sysInvalidate Flag indicating if this entry is done from invalidated transaction (in case of tx
-     *      salvage). In this case all locks before salvaged lock will marked as used and corresponding
-     *      transactions will be invalidated.
-     * @throws GridCacheEntryRemovedException If entry has been removed.
-     */
-    public void doneRemote(
-        GridCacheVersion lockVer,
-        GridCacheVersion baseVer,
-        @Nullable Collection<GridCacheVersion> pendingVers,
-        Collection<GridCacheVersion> committedVers,
-        Collection<GridCacheVersion> rolledbackVers,
-        boolean sysInvalidate) throws GridCacheEntryRemovedException {
-        CacheLockCandidates prev = null;
-        CacheLockCandidates owner = null;
-
-        CacheObject val;
-
-        lockEntry();
-
-        try {
-            checkObsolete();
-
-            GridCacheMvcc mvcc = mvccExtras();
-
-            if (mvcc != null) {
-                prev = mvcc.allOwners();
-
-                boolean emptyBefore = mvcc.isEmpty();
-
-                // Order completed versions.
-                if (!F.isEmpty(committedVers) || !F.isEmpty(rolledbackVers)) {
-                    mvcc.orderCompleted(lockVer, committedVers, rolledbackVers);
-
-                    if (!baseVer.equals(lockVer))
-                        mvcc.orderCompleted(baseVer, committedVers, rolledbackVers);
-                }
-
-                if (sysInvalidate && baseVer != null)
-                    mvcc.salvageRemote(baseVer, isNear());
-
-                owner = mvcc.doneRemote(lockVer,
-                    maskNull(pendingVers),
-                    maskNull(committedVers),
-                    maskNull(rolledbackVers));
-
-                boolean emptyAfter = mvcc.isEmpty();
-
-                checkCallbacks(emptyBefore, emptyAfter);
-
-                if (emptyAfter)
-                    mvccExtras(null);
-            }
-
-            val = this.val;
-        }
-        finally {
-            unlockEntry();
-        }
-
-        // This call must be made outside of synchronization.
-        checkOwnerChanged(prev, owner, val);
-    }
-
-    /**
      * Rechecks if lock should be reassigned.
      */
     public void recheck() {
@@ -677,44 +503,58 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
         checkOwnerChanged(prev, owner, val);
     }
 
-    /** {@inheritDoc} */
-    @Override public boolean tmLock(IgniteInternalTx tx,
-        long timeout,
-        @Nullable GridCacheVersion serOrder,
-        GridCacheVersion serReadVer,
-        boolean read
-    ) throws GridCacheEntryRemovedException, GridDistributedLockCancelledException {
-        if (tx.local())
-            // Null is returned if timeout is negative and there is other lock owner.
-            return addLocal(
-                tx.threadId(),
-                tx.xidVersion(),
-                tx.topologyVersion(),
-                timeout,
-                /*reenter*/false,
-                /*tx*/true,
-                tx.implicitSingle(),
-                read) != null;
+    @Override public boolean lock(GridCacheVersion lockVer, EntryLockCallback cb) throws GridCacheEntryRemovedException {
+        boolean res;
+
+        lockEntry();
 
         try {
-            addRemote(
-                tx.nodeId(),
-                tx.otherNodeId(),
-                tx.threadId(),
-                tx.xidVersion(),
-                /*tx*/true,
-                tx.implicitSingle(),
-                null
-            );
+            checkObsolete();
 
-            return true;
-        }
-        catch (GridDistributedLockCancelledException ignored) {
-            if (log.isDebugEnabled())
-                log.debug("Attempted to enter tx lock for cancelled ID (will ignore): " + tx);
+            GridCacheMvcc mvcc = mvccExtras();
 
-            return false;
+            if (mvcc == null) {
+                mvcc = new GridCacheMvcc(cctx);
+
+                mvccExtras(mvcc);
+            }
+
+            res = mvcc.lock(lockVer, cb);
         }
+        finally {
+            unlockEntry();
+        }
+
+        if (res)
+            cb.onLock(this);
+
+        return res;
+    }
+
+    @Override public void unlock(GridCacheVersion lockVer) throws GridCacheEntryRemovedException {
+        EntryLockCallback cb;
+
+        lockEntry();
+
+        try {
+            checkObsolete();
+
+            GridCacheMvcc mvcc = mvccExtras();
+
+            if (mvcc == null) {
+                mvcc = new GridCacheMvcc(cctx);
+
+                mvccExtras(mvcc);
+            }
+
+            cb = mvcc.unlock(lockVer);
+        }
+        finally {
+            unlockEntry();
+        }
+
+        if (cb != null)
+            cb.onLock(this);
     }
 
     /**

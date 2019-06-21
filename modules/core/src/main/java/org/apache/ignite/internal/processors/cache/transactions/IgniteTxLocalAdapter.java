@@ -42,6 +42,7 @@ import org.apache.ignite.internal.processors.cache.CacheEntryPredicate;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.CacheInvokeEntry;
 import org.apache.ignite.internal.processors.cache.CacheObject;
+import org.apache.ignite.internal.processors.cache.EntryLockCallback;
 import org.apache.ignite.internal.processors.cache.EntryProcessorResourceInjectorProxy;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
@@ -403,7 +404,7 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
      * @param entries Entries to lock or {@code null} if use default {@link IgniteInternalTx#optimisticLockEntries()}.
      * @throws IgniteCheckedException If prepare step failed.
      */
-    public void userPrepare(Collection<IgniteTxEntry> entries) throws IgniteCheckedException {
+    public boolean userPrepare(Collection<IgniteTxEntry> entries, EntryLockCallback cb) throws IgniteCheckedException {
         if (state() != PREPARING) {
             if (remainingTime() == -1)
                 throw new IgniteTxTimeoutCheckedException("Transaction timed out: " + this);
@@ -419,9 +420,11 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
         checkValid();
 
         try {
-            cctx.tm().prepareTx(this, entries);
+            boolean res = cctx.tm().prepareTx(this, entries, cb);
 
             calculatePartitionUpdateCounters();
+
+            return res;
         }
         catch (IgniteCheckedException e) {
             throw e;
@@ -557,8 +560,6 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
             batchStoreCommit(writeEntries());
 
             WALPointer ptr = null;
-
-            IgniteCheckedException err = null;
 
             cctx.database().checkpointReadLock();
 
@@ -889,8 +890,7 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
 
                 }
 
-                // Apply cache sizes only for primary nodes. Update counters were applied on prepare state.
-                applyTxSizes();
+                applyCounters();
 
                 cctx.mvccCaching().onTxFinished(this, true);
 
@@ -909,18 +909,11 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
                     return;
                 }
 
-                err = heuristicException(ex);
+                IgniteCheckedException err = heuristicException(ex);
 
                 COMMIT_ERR_UPD.compareAndSet(this, null, err);
 
                 state(UNKNOWN);
-
-                try {
-                    uncommit();
-                }
-                catch (Throwable e) {
-                    err.addSuppressed(e);
-                }
 
                 throw err;
             }

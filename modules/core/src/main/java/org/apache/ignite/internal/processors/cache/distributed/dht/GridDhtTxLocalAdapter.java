@@ -516,7 +516,7 @@ public abstract class GridDhtTxLocalAdapter extends IgniteTxLocalAdapter {
                     log.debug("Added entry to transaction: " + existing);
             }
 
-            return addReader(msgId, dhtCache.entryExx(existing.key()), existing, topologyVersion());
+            return addReader(msgId, (GridDhtCacheEntry)existing.cached(), existing, topologyVersion());
         }
         catch (GridDhtInvalidPartitionException ex) {
             throw new IgniteCheckedException(ex);

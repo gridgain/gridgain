@@ -18,20 +18,18 @@ package org.apache.ignite.internal.processors.cache.distributed.dht;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.processor.EntryProcessor;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteInterruptedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.failure.FailureContext;
@@ -41,20 +39,19 @@ import org.apache.ignite.internal.IgniteDiagnosticPrepareContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.processors.cache.CacheInvokeEntry;
-import org.apache.ignite.internal.processors.cache.CacheLockCandidates;
 import org.apache.ignite.internal.processors.cache.CacheObject;
+import org.apache.ignite.internal.processors.cache.EntryLockCallback;
 import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
 import org.apache.ignite.internal.processors.cache.GridCacheCompoundFuture;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryRemovedException;
-import org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate;
+import org.apache.ignite.internal.processors.cache.GridCacheFuture;
+import org.apache.ignite.internal.processors.cache.GridCacheMapEntry;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.GridCacheReturn;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
-import org.apache.ignite.internal.processors.cache.GridCacheVersionedFuture;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
-import org.apache.ignite.internal.processors.cache.distributed.GridDistributedCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedTxMapping;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareRequest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareResponse;
@@ -94,7 +91,7 @@ import static org.apache.ignite.transactions.TransactionState.PREPARED;
  *
  */
 public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<IgniteInternalTx, GridNearTxPrepareResponse>
-    implements GridCacheVersionedFuture<GridNearTxPrepareResponse>, IgniteDiagnosticAware {
+    implements GridCacheFuture<GridNearTxPrepareResponse>, IgniteDiagnosticAware, EntryLockCallback {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -117,10 +114,6 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
                 return null;
             }
         };
-
-    /** Replied flag updater. */
-    private static final AtomicIntegerFieldUpdater<GridDhtTxPrepareFuture> REPLIED_UPD =
-        AtomicIntegerFieldUpdater.newUpdater(GridDhtTxPrepareFuture.class, "replied");
 
     /** Mapped flag updater. */
     private static final AtomicIntegerFieldUpdater<GridDhtTxPrepareFuture> MAPPED_UPD =
@@ -151,17 +144,11 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
     /** Error. */
     private volatile Throwable err;
 
-    /** Replied flag. */
-    private volatile int replied;
-
     /** All replies flag. */
     private volatile int mapped;
 
     /** Prepare request. */
     private GridNearTxPrepareRequest req;
-
-    /** Trackable flag. */
-    private boolean trackable = true;
 
     /** Near mini future id. */
     private int nearMiniId;
@@ -183,17 +170,13 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
 
     /** Keys that should be locked. */
     @GridToStringInclude
-    private final Set<IgniteTxKey> lockKeys = new HashSet<>();
+    private final AtomicInteger lockCntr = new AtomicInteger();
 
     /** Locks ready flag. */
     private volatile boolean locksReady;
 
     /** Timeout object. */
     private final PrepareTimeoutObject timeoutObj;
-
-    /** */
-    private CountDownLatch timeoutAddedLatch;
-
     /**
      * @param cctx Context.
      * @param tx Transaction.
@@ -236,10 +219,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
         assert dhtMap != null;
         assert nearMap != null;
 
-        timeoutObj = timeout > 0 ? new PrepareTimeoutObject(timeout) : null;
-
-        if (tx.onePhaseCommit())
-            timeoutAddedLatch = new CountDownLatch(1);
+        timeoutObj = timeout > 0 && !tx.onePhaseCommit() ? new PrepareTimeoutObject(timeout) : null;
     }
 
     /** {@inheritDoc} */
@@ -259,52 +239,11 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
         return nearMiniId;
     }
 
-    /** {@inheritDoc} */
-    @Override public GridCacheVersion version() {
-        return tx.xidVersion();
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean onOwnerChanged(GridCacheEntryEx entry, GridCacheMvccCandidate owner) {
-        if (log.isDebugEnabled())
-            log.debug("Transaction future received owner changed callback: " + entry);
-
-        boolean rmv;
-
-        synchronized (this) {
-            rmv = lockKeys.remove(entry.txKey());
-        }
-
-        return rmv && mapIfLocked();
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean trackable() {
-        return trackable;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void markNotTrackable() {
-        trackable = false;
-    }
-
     /**
      * @return Transaction.
      */
     public GridDhtTxLocalAdapter tx() {
         return tx;
-    }
-
-    /**
-     * @return {@code True} if all locks are owned.
-     */
-    private boolean checkLocks() {
-        if (!locksReady)
-            return false;
-
-        synchronized (this) {
-            return lockKeys.isEmpty();
-        }
     }
 
     /** {@inheritDoc} */
@@ -593,92 +532,13 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
 
     /**
      * Marks all locks as ready for local transaction.
+     * @param locksCount Locks count.
      */
     private void readyLocks() {
-        // Ready all locks.
-        if (log.isDebugEnabled())
-            log.debug("Marking all local candidates as ready: " + this);
-
-        readyLocks(req.writes());
-
-        if (tx.serializable() && tx.optimistic())
-            readyLocks(req.reads());
-
         locksReady = true;
-    }
 
-    /**
-     * @param checkEntries Entries.
-     */
-    private void readyLocks(Iterable<IgniteTxEntry> checkEntries) {
-        for (IgniteTxEntry txEntry : checkEntries) {
-            GridCacheContext cacheCtx = txEntry.context();
-
-            if (cacheCtx.isLocal())
-                continue;
-
-            GridDistributedCacheEntry entry = (GridDistributedCacheEntry)txEntry.cached();
-
-            if (entry == null) {
-                entry = (GridDistributedCacheEntry)cacheCtx.cache().entryEx(txEntry.key(), tx.topologyVersion());
-
-                txEntry.cached(entry);
-            }
-
-            if (tx.optimistic() && txEntry.explicitVersion() == null) {
-                synchronized (this) {
-                    lockKeys.add(txEntry.txKey());
-                }
-            }
-
-            while (true) {
-                try {
-                    assert txEntry.explicitVersion() == null || entry.lockedBy(txEntry.explicitVersion());
-
-                    CacheLockCandidates owners = entry.readyLock(tx.xidVersion());
-
-                    if (log.isDebugEnabled())
-                        log.debug("Current lock owners for entry [owner=" + owners + ", entry=" + entry + ']');
-
-                    break; // While.
-                }
-                // Possible if entry cached within transaction is obsolete.
-                catch (GridCacheEntryRemovedException ignored) {
-                    if (log.isDebugEnabled())
-                        log.debug("Got removed entry in future onAllReplies method (will retry): " + txEntry);
-
-                    entry = (GridDistributedCacheEntry)cacheCtx.cache().entryEx(txEntry.key(), tx.topologyVersion());
-
-                    txEntry.cached(entry);
-                }
-            }
-        }
-    }
-
-    /**
-     * Checks if all ready locks are acquired and sends requests to remote nodes in this case.
-     *
-     * @return {@code True} if all locks are acquired, {@code false} otherwise.
-     */
-    private boolean mapIfLocked() {
-        if (checkLocks()) {
-            if (!MAPPED_UPD.compareAndSet(this, 0, 1))
-                return false;
-
-            if (timeoutObj != null && tx.onePhaseCommit()) {
-                U.awaitQuiet(timeoutAddedLatch);
-
-                // Disable timeouts after all locks are acquired for one-phase commit or partition desync will occur.
-                if (!cctx.time().removeTimeoutObject(timeoutObj))
-                    return true; // Should not proceed with prepare if tx is already timed out.
-            }
-
+        if (lockCntr.get() == 0 && MAPPED_UPD.compareAndSet(this, 0, 1))
             prepare0();
-
-            return true;
-        }
-
-        return false;
     }
 
     /** {@inheritDoc} */
@@ -692,97 +552,42 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
         if (tx.optimistic())
             tx.clearPrepareFuture(this);
 
+        Throwable prepErr = this.err;
+
+        // Must create prepare response before transaction is committed to grab correct return value.
+        final GridNearTxPrepareResponse res = createPrepareResponse(prepErr);
+
         // Do not commit one-phase commit transaction if originating node has near cache enabled.
         if (tx.commitOnPrepare()) {
             assert last;
 
-            Throwable prepErr = this.err;
+            if (onComplete(res)) {
+                if (tx.markFinalizing(IgniteInternalTx.FinalizationStatus.USER_FINISH)) {
+                    sendPrepareResponse(res);
 
-            // Must create prepare response before transaction is committed to grab correct return value.
-            final GridNearTxPrepareResponse res = createPrepareResponse(prepErr);
-
-            onComplete(res);
-
-            if (tx.markFinalizing(IgniteInternalTx.FinalizationStatus.USER_FINISH)) {
-//                CIX1<IgniteInternalFuture<IgniteInternalTx>> resClo =
-//                    new CIX1<IgniteInternalFuture<IgniteInternalTx>>() {
-//                        @Override public void applyx(IgniteInternalFuture<IgniteInternalTx> fut) {
-//                            if (res.error() == null && fut.error() != null)
-//                                res.error(fut.error());
-//
-                            if (REPLIED_UPD.compareAndSet(GridDhtTxPrepareFuture.this, 0, 1))
-                                sendPrepareResponse(res);
-//                        }
-//                    };
-
-                try {
-                    if (prepErr == null) {
-//                        try {
-                        tx.commitAsync()/*.listen(resClo)*/;
-//                        }
-//                        catch (Throwable e) {
-//                            res.error(e);
-//
-//                            tx.systemInvalidate(true);
-//
-//                            try {
-//                                tx.rollbackAsync().listen(resClo);
-//                            }
-//                            catch (Throwable e1) {
-//                                e.addSuppressed(e1);
-//                            }
-//
-//                            throw e;
-//                        }
+                    try {
+                        if (prepErr == null)
+                            tx.commitAsync();
+                        else if (!cctx.kernalContext().isStopping())
+                            tx.rollbackAsync();
                     }
-                    else if (!cctx.kernalContext().isStopping()) {
-//                        try {
-                        tx.rollbackAsync()/*.listen(resClo)*/;
-//                        }
-//                        catch (Throwable e) {
-//                            if (err != null)
-//                                err.addSuppressed(e);
-//
-//                            throw err;
-//                        }
+                    catch (Throwable e) {
+                        tx.logTxFinishErrorSafe(log, true, e);
+
+                        cctx.kernalContext().failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
                     }
                 }
-                catch (Throwable e) {
-                    tx.logTxFinishErrorSafe(log, true, e);
-
-                    cctx.kernalContext().failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
-                }
-            }
-
-            return true;
-        }
-        else {
-            if (REPLIED_UPD.compareAndSet(this, 0, 1)) {
-                GridNearTxPrepareResponse res = createPrepareResponse(this.err);
-
-                // Will call super.onDone().
-                onComplete(res);
-
-                sendPrepareResponse(res);
 
                 return true;
             }
-            else {
-                // Other thread is completing future. Wait for it to complete.
-                try {
-                    if (err != null)
-                        get();
-                }
-                catch (IgniteInterruptedException e) {
-                    onError(new IgniteCheckedException("Got interrupted while waiting for replies to be sent.", e));
-                }
-                catch (IgniteCheckedException ignored) {
-                    // No-op, get() was just synchronization.
-                }
-
-                return false;
-            }
         }
+        else if (onComplete(res)) {
+            sendPrepareResponse(res);
+
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -951,7 +756,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
 
         if (super.onDone(res, res == null ? err : null)) {
             // Don't forget to clean up.
-            cctx.mvcc().removeVersionedFuture(this);
+            cctx.tm().txHandler().unregister(this);
 
             if (timeoutObj != null)
                 cctx.time().removeTimeoutObject(timeoutObj);
@@ -989,11 +794,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
 
         this.req = req;
 
-        ClusterNode node = cctx.discovery().node(tx.nearNodeId());
-
-        boolean validateCache = needCacheValidation(node);
-
-        if (validateCache) {
+        if (needCacheValidation(cctx.discovery().node(tx.nearNodeId()))) {
             GridDhtTopologyFuture topFut = cctx.exchange().lastFinishedFuture();
 
             if (topFut != null && !isEmpty(req.writes())) {
@@ -1007,19 +808,31 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
             }
         }
 
-        readyLocks();
+        Collection<IgniteTxEntry> entries = tx.pessimistic() ? Collections.emptyList() : tx.serializable() ? F.concat(false, req.writes(), req.reads()) : req.writes();
 
-        // Start timeout tracking after 'readyLocks' to avoid race with timeout processing.
-        if (timeoutObj != null) {
-            cctx.time().addTimeoutObject(timeoutObj);
+        try {
+            boolean allLocked = tx.userPrepare(F.view(entries, this::preparedMarker), this);
 
-            // Fix race with add/remove timeout object if locks are mapped from another
-            // thread before timeout object is enqueued.
-            if (tx.onePhaseCommit())
-                timeoutAddedLatch.countDown();
+            if (timeoutObj != null)
+                cctx.time().addTimeoutObject(timeoutObj);
+
+            if (allLocked)
+                prepare0();
+            else
+                readyLocks();
         }
+        catch (IgniteCheckedException e) {
+            onError(e);
+        }
+    }
 
-        mapIfLocked();
+    private boolean preparedMarker(IgniteTxEntry e) {
+        if (!e.markPrepared())
+            return false;
+
+        lockCntr.incrementAndGet();
+
+        return true;
     }
 
     /**
@@ -1029,13 +842,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
      * @return {@code True} if cache should be validated, {@code false} - otherwise.
      */
     private boolean needCacheValidation(ClusterNode node) {
-        if (node == null) {
-            // The originating (aka near) node has left the topology
-            // and therefore the cache validation doesn't make sense.
-            return false;
-        }
-
-        return Boolean.TRUE.equals(node.attribute(ATTR_VALIDATE_CACHE_REQUESTS));
+        return node != null && Boolean.TRUE.equals(node.attribute(ATTR_VALIDATE_CACHE_REQUESTS));
     }
 
 
@@ -1215,6 +1022,8 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
 
         if (mvccSnapshot != null)
             mvccSnapshot = mvccSnapshot.withoutActiveTransactions();
+
+        cctx.tm().txHandler().register(this); // register itself as a response listener
 
         // Create mini futures.
         for (GridDistributedTxMapping dhtMapping : tx.dhtMap().values()) {
@@ -1506,6 +1315,11 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
             "super", super.toString());
     }
 
+    @Override public void onLock(GridCacheMapEntry ignored) {
+        if (lockCntr.decrementAndGet() == 0 && locksReady && MAPPED_UPD.compareAndSet(this, 0, 1))
+            prepare0();
+    }
+
     /**
      * Mini-future for get operations. Mini-futures are only waiting on a single
      * node as opposed to multiple nodes.
@@ -1639,11 +1453,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
 
         /** {@inheritDoc} */
         @Override public void onTimeout() {
-            synchronized (GridDhtTxPrepareFuture.this) {
-                clear();
-
-                lockKeys.clear();
-            }
+            clear();
 
             onError(tx.timeoutException());
         }

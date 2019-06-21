@@ -462,17 +462,17 @@ public class GridNearOptimisticSerializableTxPrepareFuture extends GridNearOptim
             return err;
         }
 
-        // Must lock near entries separately.
-        if (m.hasNearCacheEntries()) {
-            try {
-                cctx.tm().prepareTx(tx, m.nearCacheEntries());
-            }
-            catch (IgniteCheckedException e) {
-                fut.onResult(e);
-
-                return e;
-            }
-        }
+//        // Must lock near entries separately.
+//        if (m.hasNearCacheEntries()) {
+//            try {
+//                cctx.tm().prepareTx(tx, m.nearCacheEntries());
+//            }
+//            catch (IgniteCheckedException e) {
+//                fut.onResult(e);
+//
+//                return e;
+//            }
+//        }
 
         if (primary.isLocal()) {
             if (locNearEntriesFut != null) {

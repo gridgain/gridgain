@@ -50,10 +50,8 @@ import org.apache.ignite.internal.processors.cache.GridCacheReturn;
 import org.apache.ignite.internal.processors.cache.GridCacheVersionedFuture;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedCacheEntry;
-import org.apache.ignite.internal.processors.cache.distributed.GridDistributedLockCancelledException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtEmbeddedFuture;
-import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtFinishedFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtLockFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopologyFuture;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLockMapping;
@@ -1391,38 +1389,21 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
                 skipStore,
                 keepBinary);
 
-            // Add before mapping.
-            if (!cctx.mvcc().addFuture(fut))
-                throw new IllegalStateException("Duplicate future ID: " + fut);
-
-            boolean timedout = false;
-
-            for (KeyCacheObject key : keys) {
-                if (timedout)
-                    break;
-
+            parent: for (KeyCacheObject key : keys) {
                 while (true) {
                     GridDhtCacheEntry entry = cctx.colocated().entryExx(key, topVer);
 
                     try {
-                        fut.addEntry(key == null ? null : entry);
+                        fut.addEntry(entry);
 
                         if (fut.isDone())
-                            timedout = true;
+                            break parent;
 
                         break;
                     }
                     catch (GridCacheEntryRemovedException ignore) {
                         if (log.isDebugEnabled())
                             log.debug("Got removed entry when adding lock (will retry): " + entry);
-                    }
-                    catch (GridDistributedLockCancelledException e) {
-                        if (log.isDebugEnabled())
-                            log.debug("Failed to add entry [err=" + e + ", entry=" + entry + ']');
-
-                        fut.onError(e);
-
-                        return new GridDhtFinishedFuture<>(e);
                     }
                 }
             }

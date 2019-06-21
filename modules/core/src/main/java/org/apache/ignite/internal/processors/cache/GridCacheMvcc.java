@@ -449,6 +449,9 @@ public final class GridCacheMvcc {
      * @return {@code True} if lock is empty.
      */
     public boolean isEmpty(GridCacheVersion... exclude) {
+        if (!isCyclicBufferEmpty(exclude))
+            return false;
+
         if (locs == null && rmts == null)
             return true;
 
@@ -1488,6 +1491,9 @@ public final class GridCacheMvcc {
      * @return {@code True} if lock is owned by the specified version.
      */
     boolean isOwnedBy(GridCacheVersion ver) {
+        if (isOwner(ver))
+            return true;
+
         CacheLockCandidates owners = allOwners();
 
         return owners != null && owners.hasCandidate(ver);
@@ -1497,4 +1503,153 @@ public final class GridCacheMvcc {
     @Override public String toString() { // Synchronize to ensure one-thread at a time.
         return S.toString(GridCacheMvcc.class, this);
     }
+
+    /** */
+    private Object[] buff = new Object[4];
+
+    /** */
+    private int head = 0;
+    /** */
+    private int tail = 0;
+    /** */
+    private int mask = 3;
+
+    private boolean isCyclicBufferEmpty(GridCacheVersion... excluded) {
+        if (head == tail)
+            return true;
+
+        for (int i = 0, cur = head, size = tail - head; i < size; i++, cur++) {
+            Object o = buff[maskIndex(cur)];
+
+            if (o.getClass() == LockCandidate.class && ((LockCandidate)o).callback == BROKEN_MARKER)
+                continue;
+
+            GridCacheVersion ver = o.getClass() == LockCandidate.class ? ((LockCandidate)o).ver : (GridCacheVersion)o;
+
+            if (F.isEmpty(excluded) || !U.containsObjectArray(excluded, ver))
+                return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * @param ver Lock version.
+     * @param callback Owner changed callback.
+     * @return {@code True} if owner changed by this call.
+     */
+    public boolean lock(GridCacheVersion ver, EntryLockCallback callback) {
+        boolean res = head == tail;
+
+        if (!res && maskIndex(tail) == maskIndex(head))
+            grow();
+
+        Object item = res ? ver : new LockCandidate(ver, callback);
+
+        buff[maskIndex(tail++)] = item;
+
+        return res;
+    }
+
+    /**
+     * @param ver Owner version.
+     * @return Callback to call if owner changed.
+     */
+    public EntryLockCallback unlock(GridCacheVersion ver) {
+        boolean ownerChanged = false;
+
+        for (int i = 0, cur = head, size = tail - head; i < size; i++, cur++) {
+            Object obj = buff[maskIndex(cur)];
+
+            if (i == 0) {
+                if (hasVersion(obj, ver)) {
+                    assert head == cur;
+
+                    buff[maskIndex(head++)] = null;
+                    ownerChanged = true;
+                }
+
+                continue;
+            }
+
+            LockCandidate candidate = (LockCandidate)obj;
+
+            if (ownerChanged) {
+                if (candidate.callback == BROKEN_MARKER) {
+                    assert head == cur;
+
+                    buff[maskIndex(head++)] = null;
+                }
+                else
+                    return candidate.callback;
+            }
+            else if (candidate.ver.equals(ver)){
+                candidate.callback = BROKEN_MARKER;
+
+                return null;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param ver Checking version.
+     * @return {@code True} if checking version is owner.
+     */
+    public boolean isOwner(GridCacheVersion ver) {
+        return head != tail && hasVersion(buff[maskIndex(head)], ver);
+    }
+
+    /**
+     * @param ver Checking version.
+     * @return {@code True} if checking version is owner.
+     */
+    public GridCacheVersion getOwner() {
+        if (head == tail)
+            return null;
+
+        Object obj = buff[maskIndex(head)];
+
+        return obj.getClass() == LockCandidate.class ? ((LockCandidate)obj).ver : (GridCacheVersion)obj;
+    }
+
+    private int maskIndex(long index) {
+        return (int)(index & mask);
+    }
+
+    private void grow() {
+        Object[] buff0 = new Object[buff.length << 1];
+
+        int size = tail - head;
+
+        for (int i = 0, cur = head; i < size; i++, cur++) {
+            buff0[i] = buff[maskIndex(cur)];
+        }
+
+        head = 0;
+        tail = size;
+        mask = buff0.length - 1;
+        buff = buff0;
+    }
+
+    private boolean hasVersion(Object o, GridCacheVersion ver) {
+        return o.getClass() == GridCacheVersion.class ? o.equals(ver) : ((LockCandidate)o).ver.equals(ver);
+    }
+
+    /** */
+    private static final class LockCandidate {
+        /** */
+        private final GridCacheVersion ver;
+        /** */
+        private EntryLockCallback callback;
+
+        private LockCandidate(GridCacheVersion ver, EntryLockCallback callback) {
+            this.ver = ver;
+            this.callback = callback;
+        }
+    }
+
+    /** */
+    private static final EntryLockCallback BROKEN_MARKER = e -> {};
 }

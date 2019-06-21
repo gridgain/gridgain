@@ -545,17 +545,17 @@ public class GridNearOptimisticTxPrepareFuture extends GridNearOptimisticTxPrepa
                         req.addDhtVersion(txEntry.txKey(), null);
                 }
 
-                // Must lock near entries separately.
-                if (m.hasNearCacheEntries()) {
-                    try {
-                        cctx.tm().prepareTx(tx, m.nearCacheEntries());
-                    }
-                    catch (IgniteCheckedException e) {
-                        onError(e, false);
-
-                        return;
-                    }
-                }
+//                // Must lock near entries separately.
+//                if (m.hasNearCacheEntries()) {
+//                    try {
+//                        cctx.tm().prepareTx(tx, m.nearCacheEntries());
+//                    }
+//                    catch (IgniteCheckedException e) {
+//                        onError(e, false);
+//
+//                        return;
+//                    }
+//                }
 
                 final MiniFuture fut = new MiniFuture(this, m, ++miniId, mappings);
 

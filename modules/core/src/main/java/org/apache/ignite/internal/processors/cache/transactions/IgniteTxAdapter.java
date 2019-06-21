@@ -497,30 +497,6 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
         return storeEnabled() && txState().storeWriteThrough(cctx);
     }
 
-    /**
-     * Uncommits transaction by invalidating all of its entries. Courtesy to minimize inconsistency.
-     */
-    protected void uncommit() {
-        for (IgniteTxEntry e : writeMap().values()) {
-            try {
-                GridCacheEntryEx entry = e.cached();
-
-                if (e.op() != NOOP)
-                    entry.invalidate(xidVer);
-            }
-            catch (Throwable t) {
-                U.error(log, "Failed to invalidate transaction entries while reverting a commit.", t);
-
-                if (t instanceof Error)
-                    throw (Error)t;
-
-                break;
-            }
-        }
-
-        cctx.tm().uncommitTx(this);
-    }
-
     /** {@inheritDoc} */
     @Override public UUID otherNodeId() {
         return null;
@@ -853,32 +829,36 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
 
     /** {@inheritDoc} */
     @Override public boolean ownsLock(GridCacheEntryEx entry) throws GridCacheEntryRemovedException {
-        GridCacheContext<?, ?> cacheCtx = entry.context();
+//        GridCacheContext<?, ?> cacheCtx = entry.context();
 
-        IgniteTxEntry txEntry = entry(entry.txKey());
+//        IgniteTxEntry txEntry = entry(entry.txKey());
 
-        GridCacheVersion explicit = txEntry == null ? null : txEntry.explicitVersion();
+//        GridCacheVersion explicit = txEntry == null ? null : txEntry.explicitVersion();
 
-        return local() && !cacheCtx.isDht() ?
-            entry.lockedByThread(threadId()) || (explicit != null && entry.lockedBy(explicit)) :
-            // If candidate is not there, then lock was explicit.
-            // Otherwise, check if entry is owned by version.
-            !entry.hasLockCandidate(xidVersion()) || entry.lockedBy(xidVersion());
+        return entry.lockedBy(xidVersion());
+
+//        return local() && !cacheCtx.isDht() ?
+//            entry.lockedByThread(threadId()) || (explicit != null && entry.lockedBy(explicit)) :
+//            // If candidate is not there, then lock was explicit.
+//            // Otherwise, check if entry is owned by version.
+//            !entry.hasLockCandidate(xidVersion()) || entry.lockedBy(xidVersion());
     }
 
     /** {@inheritDoc} */
     @Override public boolean ownsLockUnsafe(GridCacheEntryEx entry) {
-        GridCacheContext cacheCtx = entry.context();
-
-        IgniteTxEntry txEntry = entry(entry.txKey());
-
-        GridCacheVersion explicit = txEntry == null ? null : txEntry.explicitVersion();
-
-        return local() && !cacheCtx.isDht() ?
-            entry.lockedByThreadUnsafe(threadId()) || (explicit != null && entry.lockedByUnsafe(explicit)) :
-            // If candidate is not there, then lock was explicit.
-            // Otherwise, check if entry is owned by version.
-            !entry.hasLockCandidateUnsafe(xidVersion()) || entry.lockedByUnsafe(xidVersion());
+//        GridCacheContext cacheCtx = entry.context();
+//
+//        IgniteTxEntry txEntry = entry(entry.txKey());
+//
+//        GridCacheVersion explicit = txEntry == null ? null : txEntry.explicitVersion();
+//
+        return entry.lockedByUnsafe(xidVersion());
+//
+//        return local() && !cacheCtx.isDht() ?
+//            entry.lockedByThreadUnsafe(threadId()) || (explicit != null && entry.lockedByUnsafe(explicit)) :
+//            // If candidate is not there, then lock was explicit.
+//            // Otherwise, check if entry is owned by version.
+//            !entry.hasLockCandidateUnsafe(xidVersion()) || entry.lockedByUnsafe(xidVersion());
     }
 
     /** {@inheritDoc} */
@@ -1186,8 +1166,6 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
                     log.debug("Changed transaction state [prev=" + prev + ", new=" + this.state + ", tx=" + this + ']');
 
                 recordStateChangedEvent(state);
-
-                notifyAll();
             }
             else {
                 if (log.isDebugEnabled())
@@ -1206,6 +1184,9 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
                     ptr = cctx.tm().logTxRecord(this);
                 }
             }
+
+            if (valid && notify)
+                notifyAll();
         }
 
         if (valid) {
@@ -1990,12 +1971,13 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
 
     /**
      * Makes cache sizes changes accumulated during transaction visible outside of transaction.
+     * @return Tx counters or {@code null} if absent.
      */
-    protected void applyTxSizes() {
+    protected TxCounters applyCounters() {
         TxCounters txCntrs = txCounters(false);
 
         if (txCntrs == null)
-            return;
+            return null;
 
         Map<Integer, ? extends Map<Integer, AtomicLong>> sizeDeltas = txCntrs.sizeDeltas();
 
@@ -2048,6 +2030,8 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
                 }
             }
         }
+
+        return txCntrs;
     }
 
     /** {@inheritDoc} */

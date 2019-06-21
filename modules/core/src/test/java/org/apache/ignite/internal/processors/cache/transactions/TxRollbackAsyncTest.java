@@ -26,16 +26,20 @@ import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicIntegerArray;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.LongAdder;
+import java.util.stream.IntStream;
 import javax.cache.CacheException;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteTransactions;
@@ -141,7 +145,7 @@ public class TxRollbackAsyncTest extends GridCommonAbstractTest {
                 ccfg.setNearConfiguration(new NearCacheConfiguration());
 
             ccfg.setAtomicityMode(TRANSACTIONAL);
-            ccfg.setBackups(2);
+            ccfg.setBackups(1);
             ccfg.setWriteSynchronizationMode(FULL_SYNC);
             ccfg.setOnheapCacheEnabled(false);
 
@@ -216,6 +220,23 @@ public class TxRollbackAsyncTest extends GridCommonAbstractTest {
 
             ignite.cache(CACHE_NAME).clear();
         }
+    }
+
+    @Test
+    public void testSimple() throws Exception {
+        Ignite client = startClient();
+
+        IgniteCache<Object, Object> cache = client.cache(CACHE_NAME);
+
+        CompletableFuture f = CompletableFuture.allOf(IntStream.range(0, 100).mapToObj(i1 -> CompletableFuture.runAsync(() -> {
+            try (Transaction tx = client.transactions().txStart(PESSIMISTIC, REPEATABLE_READ)) {
+                cache.put(i1%5, ThreadLocalRandom.current().nextInt());
+
+                tx.commit();
+            }
+        })).toArray(CompletableFuture[]::new));
+
+        f.get();
     }
 
     /**

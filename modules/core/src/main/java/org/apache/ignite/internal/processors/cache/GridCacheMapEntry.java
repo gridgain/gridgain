@@ -788,7 +788,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     partition(),
                     key,
                     tx,
-                    mvcc != null ? mvcc.anyOwner() : null,
+                    mvcc != null ? mvcc.getOwner() : null,
                     EVT_CACHE_OBJECT_READ,
                     ret,
                     ret != null,
@@ -911,7 +911,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         partition(),
                         key,
                         tx,
-                        mvcc != null ? mvcc.anyOwner() : null,
+                        mvcc != null ? mvcc.getOwner() : null,
                         EVT_CACHE_OBJECT_READ,
                         ret,
                         ret != null,
@@ -4983,11 +4983,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
      */
     private int extrasSize() {
         return extras != null ? extras.size() : 0;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void txUnlock(IgniteInternalTx tx) throws GridCacheEntryRemovedException {
-        removeLock(tx.xidVersion());
     }
 
     /** {@inheritDoc} */

@@ -24,7 +24,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheMapEntry;
 import org.apache.ignite.internal.processors.cache.GridCacheMvcc;
 import org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
-import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.jetbrains.annotations.Nullable;
@@ -166,34 +165,6 @@ public class GridLocalCacheEntry extends GridCacheMapEntry {
         }
 
         checkOwnerChanged(prev, owner, val);
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean tmLock(IgniteInternalTx tx,
-        long timeout,
-        @Nullable GridCacheVersion serOrder,
-        GridCacheVersion serReadVer,
-        boolean read)
-        throws GridCacheEntryRemovedException {
-        GridCacheMvccCandidate cand = addLocal(
-            tx.threadId(),
-            tx.xidVersion(),
-            serOrder,
-            serReadVer,
-            timeout,
-            /*reenter*/false,
-            /*tx*/true,
-            tx.implicitSingle(),
-            read
-        );
-
-        if (cand != null) {
-            readyLocal(cand);
-
-            return true;
-        }
-
-        return false;
     }
 
     /**

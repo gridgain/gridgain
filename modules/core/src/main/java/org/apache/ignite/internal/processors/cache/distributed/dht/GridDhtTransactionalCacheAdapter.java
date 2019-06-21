@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors.cache.distributed.dht;
 
 import java.io.Externalizable;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -474,19 +473,15 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
             skipStore,
             keepBinary);
 
-        if (fut.isDone()) // Possible in case of cancellation or timeout or rollback.
-            return fut;
-
         for (KeyCacheObject key : keys) {
+            if (fut.isDone())
+                return fut;
+
             while (true) {
                 GridDhtCacheEntry entry = entryExx(key, tx.topologyVersion());
 
                 try {
                     fut.addEntry(entry);
-
-                    // Possible in case of cancellation or time out or rollback.
-                    if (fut.isDone())
-                        return fut;
 
                     break;
                 }
@@ -494,20 +489,10 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                     if (log.isDebugEnabled())
                         log.debug("Got removed entry when adding lock (will retry): " + entry);
                 }
-                catch (GridDistributedLockCancelledException e) {
-                    if (log.isDebugEnabled())
-                        log.debug("Failed to add entry [err=" + e + ", entry=" + entry + ']');
-
-                    return new GridDhtFinishedFuture<>(e);
-                }
             }
         }
 
-        if (!fut.isDone()) {
-            ctx.mvcc().addFuture(fut);
-
-            fut.init();
-        }
+        fut.init();
 
         return fut;
     }
@@ -647,16 +632,8 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                     top.readUnlock();
             }
 
-            final List<GridCacheEntryEx> entries = new ArrayList<>(cnt);
-
-            boolean timedOut = false;
-
-            for (KeyCacheObject key : keys) {
-                if (timedOut)
-                    break;
-
-                GridDhtCacheEntry entry;
-                IgniteTxEntry txEntry = null;
+            parent: for (KeyCacheObject key : keys) {
+                GridDhtCacheEntry entry; IgniteTxEntry txEntry = null;
 
                 if (tx != null)
                     entry = (GridDhtCacheEntry)(txEntry = tx.entry(cacheCtx.txKey(key))).cached();
@@ -669,13 +646,8 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                         // Entry cannot become obsolete after this method succeeded.
                         fut.addEntry(entry);
 
-                        if (fut.isDone()) {
-                            timedOut = true;
-
-                            break;
-                        }
-
-                        entries.add(entry);
+                        if (fut.isDone())
+                            break parent;
 
                         break;
                     }
@@ -688,26 +660,14 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                         if (txEntry != null)
                             txEntry.cached(entry);
                     }
-                    catch (GridDistributedLockCancelledException e) {
-                        if (log.isDebugEnabled())
-                            log.debug("Got lock request for cancelled lock (will ignore): " +
-                                entry);
-
-                        fut.onError(e);
-
-                        return new GridDhtFinishedFuture<>(e);
-                    }
                 }
             }
 
-            if (!fut.isDone()) {
-                ctx.mvcc().addFuture(fut);
-
-                fut.init();
-            }
+            fut.init();
 
             GridDhtTxLocal tx0 = tx;
             GridCacheVersion ver = fut.version();
+            List<GridCacheEntryEx> entries = (List)fut.entries();
 
             return fut.chain(new IgniteClosure<IgniteInternalFuture<Boolean>, GridNearLockResponse>() {
                 @Override public GridNearLockResponse apply(IgniteInternalFuture<Boolean> future) {

@@ -76,7 +76,6 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.query.EnlistOperation;
 import org.apache.ignite.internal.processors.query.UpdateSourceIterator;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
-import org.apache.ignite.internal.transactions.IgniteTxOptimisticCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxRollbackCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxTimeoutCheckedException;
 import org.apache.ignite.internal.util.GridLeanMap;
@@ -3675,6 +3674,8 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
             // Future must be created before any exception can be thrown.
             if (optimistic()) {
+                assert false;
+
                 fut = serializable() ?
                     new GridNearOptimisticSerializableTxPrepareFuture(cctx, this) :
                     new GridNearOptimisticTxPrepareFuture(cctx, this);
@@ -4007,29 +4008,11 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
             this,
             timeout,
             0,
-            Collections.<IgniteTxKey, GridCacheVersion>emptyMap(),
+            Collections.emptyMap(),
             req.last(),
             needReturnValue() && implicit());
 
-        try {
-            userPrepare((serializable() && optimistic()) ? F.concat(false, req.writes(), req.reads()) : req.writes());
-
-            // Make sure to add future before calling prepare on it.
-            cctx.mvcc().addFuture(fut);
-
-            if (isSystemInvalidate())
-                fut.complete();
-            else
-                fut.prepare(req);
-        }
-        catch (IgniteTxTimeoutCheckedException | IgniteTxOptimisticCheckedException e) {
-            fut.onError(e);
-        }
-        catch (IgniteCheckedException e) {
-            setRollbackOnly();
-
-            fut.onError(new IgniteTxRollbackCheckedException("Failed to prepare transaction: " + this, e));
-        }
+        fut.prepare(req);
 
         return chainOnePhasePrepare(fut);
     }

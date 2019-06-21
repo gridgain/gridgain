@@ -625,21 +625,6 @@ public class GridCacheTestEntryEx extends GridMetadataAwareAdapter implements Gr
     }
 
     /** @inheritDoc */
-    @Override public boolean tmLock(IgniteInternalTx tx,
-        long timeout,
-        @Nullable GridCacheVersion serOrder,
-        GridCacheVersion serReadVer,
-        boolean read) {
-        assert false;
-        return false;
-    }
-
-    /** @inheritDoc */
-    @Override public void txUnlock(IgniteInternalTx tx) {
-        assert false;
-    }
-
-    /** @inheritDoc */
     @Override public boolean removeLock(GridCacheVersion ver) {
         GridCacheMvccCandidate doomed = mvcc.candidate(ver);
 

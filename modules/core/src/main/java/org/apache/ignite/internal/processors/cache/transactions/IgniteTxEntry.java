@@ -472,7 +472,7 @@ public class IgniteTxEntry implements GridPeerDeployAware, Message {
      *
      * @return True if entry was marked prepared by this call.
      */
-    boolean markPrepared() {
+    public boolean markPrepared() {
         return PREPARED_UPD.compareAndSet(this, 0, 1);
     }
 
