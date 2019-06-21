@@ -60,7 +60,7 @@ public class AccountsRepository {
                 .addUniqueIndex(a -> normalizeEmail(a.getUsername()),
                     (acc) -> "Account with email '" + acc.getUsername() + "' already registered")
                 .addUniqueIndex(Account::getToken,
-                    (acc) -> "Account with token '" + acc.getToken() + "' already registered")
+                    (acc) -> "Account with token '" + acc.getToken() + "' already exists")
         );
     }
 
