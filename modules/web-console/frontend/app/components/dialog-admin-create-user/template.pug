@@ -25,12 +25,10 @@
             button.close(type='button' aria-label='Close' ng-click='$ctrl.close()')
                 svg(ignite-icon="cross")
         .modal-body
-            form-signup(
-                outer-form='$ctrl.form'
-                ng-model='$ctrl.data'
-                server-error='$ctrl.serverError'
+            create-user(
+                (close)="$ctrl.close()"
             )
         .modal-footer
             div
                 button.btn-ignite.btn-ignite--link-success(ng-click='$ctrl.close()') Cancel
-                button.btn-ignite.btn-ignite--success(ng-click='$ctrl.createUser()') Create user
+                button.btn-ignite.btn-ignite--success(type="submit" form="createUser") Create user

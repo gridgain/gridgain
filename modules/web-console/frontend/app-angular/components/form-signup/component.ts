@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import { Component, Input, Inject, OnInit, OnChanges, OnDestroy, Output, EventEmitter } from '@angular/core';
-import { FormGroup, FormBuilder, Validators } from '@angular/forms';
+import {Component, Input, Inject, OnInit, OnChanges, OnDestroy} from '@angular/core';
+import {FormGroup, FormBuilder, Validators} from '@angular/forms';
 import CountriesService from 'app/services/Countries.service';
-import { FORM_FIELD_OPTIONS, FormFieldRequiredMarkerStyles, FormFieldErrorStyles, passwordMatch } from '../form-field';
-import { tap, takeUntil } from 'rxjs/operators';
-import { Subject } from 'rxjs';
+import {FORM_FIELD_OPTIONS, FormFieldRequiredMarkerStyles, FormFieldErrorStyles, passwordMatch} from '../form-field';
+import {tap, takeUntil} from 'rxjs/operators';
+import {Subject} from 'rxjs';
 
 @Component({
     selector: 'form-signup',

@@ -15,19 +15,14 @@
  */
 
 import {Component, Inject} from '@angular/core';
-import {FormGroup, FormBuilder, Validators, FormControl} from '@angular/forms';
-import AuthService, { SignupUserInfo } from 'app/modules/user/Auth.service';
-import MessagesFactory from '../../../app/services/Messages.service';
+import {FormGroup, FormBuilder, Validators} from '@angular/forms';
+import AuthService, {SignupUserInfo} from 'app/modules/user/Auth.service';
+import MessagesFactory from 'app/services/Messages.service';
 import {pipe, get, eq} from 'lodash/fp';
+import {customRequireValidator} from '../../common/validators';
 
 const EMAIL_NOT_CONFIRMED_ERROR_CODE = 10104;
 const isEmailConfirmationError = pipe(get('data.errorCode'), eq(EMAIL_NOT_CONFIRMED_ERROR_CODE));
-
-const customRequireValidator = function(control: FormControl) {
-    const isWhitespace = (control.value || '').trim().length === 0;
-    const isValid = !isWhitespace;
-    return isValid ? null : {required: true};
-};
 
 @Component({
     selector: 'page-signup',

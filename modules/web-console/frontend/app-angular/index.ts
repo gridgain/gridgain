@@ -50,12 +50,14 @@ import {upgradedComponents} from './upgrade';
 
 import {FormSignupComponent} from './components/form-signup/component';
 import {PageSignupComponent} from './components/page-signup/component';
+import {CreateUserComponent} from './components/dialog-admin-create-user/component';
 
 export const declarations = [
     ServiceBootstrapComponent,
     PageProfile,
     FormSignupComponent,
     PageSignupComponent,
+    CreateUserComponent,
     IgniteIcon,
     PanelCollapsible,
     CopyToClipboardButton,
@@ -74,7 +76,8 @@ export const entryComponents = [
     ServiceBootstrapComponent,
     PageProfile,
     FormSignupComponent,
-    PageSignupComponent
+    PageSignupComponent,
+    CreateUserComponent
 ];
 
 export const upgradeService = (token: string) => ({
@@ -84,12 +87,15 @@ export const upgradeService = (token: string) => ({
 });
 
 export const providers = [
+    '$rootScope',
     'IgniteLegacyUtils',
+    'IgniteAdminData',
     'Confirm',
     'IgniteCountries',
     'User',
     'Auth',
     'IgniteMessages',
+    'IgniteLoading',
     'IgniteIcon',
     'IgniteCopyToClipboard'
 ].map(upgradeService);

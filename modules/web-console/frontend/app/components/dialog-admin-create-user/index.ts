@@ -16,7 +16,10 @@
 
 import component from './component';
 import {registerState} from './state';
+import {downgradeComponent} from '@angular/upgrade/static';
+import {CreateUserComponent} from '../../../app-angular/components/dialog-admin-create-user/component';
 
 export default angular.module('ignite-console.dialog-admin-create-user', [])
     .run(registerState)
+    .directive('createUser', downgradeComponent({component: CreateUserComponent}))
     .component('dialogAdminCreateUser', component);

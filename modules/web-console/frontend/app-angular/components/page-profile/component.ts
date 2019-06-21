@@ -19,7 +19,7 @@ import uuidv4 from 'uuid/v4';
 import {merge} from 'rxjs';
 import {tap, filter} from 'rxjs/operators';
 import {Component, Inject, OnInit, OnDestroy} from '@angular/core';
-import {FormGroup, FormControl, Validators, FormBuilder} from '@angular/forms';
+import {FormGroup, Validators, FormBuilder} from '@angular/forms';
 import {default as CountriesFactory, Country} from 'app/services/Countries.service';
 import {default as UserFactory, User} from 'app/modules/user/User.service';
 import {Confirm} from 'app/services/Confirm.service';
