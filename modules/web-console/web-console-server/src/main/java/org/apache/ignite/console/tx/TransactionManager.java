@@ -152,6 +152,7 @@ public class TransactionManager {
         catch (Throwable e) {
             String msg = e.getMessage();
 
+            // TODO GG-19681: In future versions specific exception will be added.
             boolean recreate = e instanceof IgniteException &&
                 msg != null &&
                 msg.startsWith(ERR_CACHE_START);
