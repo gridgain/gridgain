@@ -23,7 +23,7 @@ services:
     ports:
       - 3001:3000
     environment:
-      - SPRING_PROFILES_ACTIVE=true
+      - SPRING_PROFILES_ACTIVE=test
 
   testenv_frontend:
     build:
