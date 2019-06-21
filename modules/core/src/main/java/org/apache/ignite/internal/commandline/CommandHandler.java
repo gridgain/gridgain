@@ -305,10 +305,10 @@ public class CommandHandler {
             }
 
             if (X.hasCause(e, VisorIllegalStateException.class)) {
-                VisorIllegalStateException iae = X.cause(e, VisorIllegalStateException.class);
+                VisorIllegalStateException vise = X.cause(e, VisorIllegalStateException.class);
 
-                logger.severe(CommandLogger.errorMessage(iae));
-                logger.info("Command [" + commandName + "] finished with code: " + EXIT_CODE_INVALID_ARGUMENTS);
+                logger.severe(CommandLogger.errorMessage(vise));
+                logger.info("Command [" + commandName + "] finished with code: " + EXIT_CODE_ILLEGAL_SATE_ERROR);
 
                 return EXIT_CODE_ILLEGAL_SATE_ERROR;
             }
