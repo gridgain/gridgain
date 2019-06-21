@@ -14,13 +14,10 @@
  * limitations under the License.
  */
 
+const ClientFunction = require('testcafe').ClientFunction;
 const request = require('request-promise-native');
 const { spawn } = require('child_process');
 const url = require('url');
-
-const argv = require('minimist')(process.argv.slice(2));
-const start = argv._.includes('start');
-const stop = argv._.includes('stop');
 
 const testUser = {
     password: 'a',
@@ -97,50 +94,6 @@ const exec = (command, onResolveString, cwd, env) => {
     });
 };
 
-const startEnv = (webConsoleRootDirectoryPath = '../../') => {
-    return Promise.resolve();
-
-    return new Promise(async(resolve) => {
-        const BACKEND_PORT = 3001;
-        const command = `${process.platform === 'win32' ? 'npm.cmd' : 'npm'} start`;
-
-        let port = 9001;
-
-        if (process.env.APP_URL)
-            port = parseInt(url.parse(process.env.APP_URL).port, 10) || 80;
-
-        const backendInstanceLaunch = exec(command, 'Start listening', `${webConsoleRootDirectoryPath}backend`, {server_port: BACKEND_PORT, mongodb_url: mongoUrl});
-        const frontendInstanceLaunch = exec(command, 'Compiled successfully', `${webConsoleRootDirectoryPath}frontend`, {BACKEND_URL: `http://localhost:${BACKEND_PORT}`, PORT: port});
-
-        console.log('Building backend in progress...');
-        await backendInstanceLaunch;
-        console.log('Building backend done!');
-
-        console.log('Building frontend in progress...');
-        await frontendInstanceLaunch;
-        console.log('Building frontend done!');
-
-        resolve();
-    });
-};
-
-if (start) {
-    startEnv();
-
-    process.on('SIGINT', async() => {
-        await dropTestDB();
-
-        process.exit(0);
-    });
-}
-
-if (stop) {
-    dropTestDB();
-
-    console.log('Cleaning done...');
-}
-
-
 /**
  * @param {string} targetUrl
  * @param {string?} host
@@ -150,4 +103,9 @@ const resolveUrl = (targetUrl, host = 'http://localhost:9001') => {
     return url.resolve(process.env.APP_URL || host, targetUrl);
 };
 
-module.exports = { startEnv, insertTestUser, dropTestDB, resolveUrl };
+const enableDemoMode = ClientFunction(() => {
+    window.sessionStorage.IgniteDemoMode = 'true';
+    window.location.reload();
+});
+
+module.exports = { insertTestUser, dropTestDB, resolveUrl, enableDemoMode };
