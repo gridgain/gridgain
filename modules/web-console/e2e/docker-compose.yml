@@ -16,7 +16,7 @@
 
 version: '3'
 services:
-  testenv_backend:
+  backend:
     build:
       context: '../docker/console'
       dockerfile: 'backend/Dockerfile'
@@ -25,7 +25,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=test
 
-  testenv_frontend:
+  frontend:
     build:
       context: '../docker/console'
       dockerfile: 'frontend/Dockerfile'
@@ -41,5 +41,5 @@ services:
       - REPORTER=teamcity
       - QUARANTINE_MODE=true
     depends_on:
-      - testenv_backend
-      - testenv_frontend
+      - backend
+      - frontend
