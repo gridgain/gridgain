@@ -28,7 +28,19 @@
         <property name="localHost" value="127.0.0.1"/>
         <property name="connectorConfiguration"><null/></property>
 
-        <!-- Explicitly configure TCP discovery SPI to provide list of initial nodes. -->
+        <property name="includeEventTypes">
+            <util:constant static-field="org.apache.ignite.events.EventType.EVTS_CACHE"/>
+        </property>
+      
+        <property name="cacheConfiguration">
+            <list>
+                <bean class="org.apache.ignite.configuration.CacheConfiguration">
+                    <property name="name" value="CacheName2"/>
+                </bean>
+            </list>
+        </property>
+
+      <!-- Explicitly configure TCP discovery SPI to provide list of initial nodes. -->
         <property name="discoverySpi">
             <bean class="org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi">
                 <property name="ipFinder">
@@ -53,5 +65,12 @@
 
         <!-- Enable client mode for this node. -->
         <property name="clientMode" value="true"/>
+    </bean>
+
+    <bean id="cache-template" abstract="true" class="org.apache.ignite.configuration.CacheConfiguration">
+        <property name="rebalanceMode" value="SYNC"/>
+        <property name="writeSynchronizationMode" value="FULL_SYNC"/>
+        <property name="backups" value="1"/>
+        <property name="eagerTtl" value="true"/>
     </bean>
 </beans>
