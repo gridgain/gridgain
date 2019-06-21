@@ -16,7 +16,10 @@
 
 package org.apache.ignite.console.web.security;
 
+import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.CacheMode;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.springframework.session.ExpiringSession;
 import org.springframework.session.MapSession;
 import org.springframework.session.Session;
@@ -26,25 +29,30 @@ import org.springframework.session.SessionRepository;
  * A {@link SessionRepository} backed by a Apache Ignite and that uses a {@link MapSession}.
  */
 public class IgniteSessionRepository implements SessionRepository<ExpiringSession> {
-    /**
-     * If non-null, this value is used to override {@link ExpiringSession#setMaxInactiveIntervalInSeconds(int)}.
-     */
+    /** */
+    private final Ignite ignite;
+
+    /** If non-null, this value is used to override {@link ExpiringSession#setMaxInactiveIntervalInSeconds(int)}. */
     private Integer dfltMaxInactiveInterval;
 
-    /** Session cache. */
-    private IgniteCache<String, MapSession> cache;
+    /** Session cache configuration. */
+    private final CacheConfiguration<String, MapSession> cfg;
 
     /**
-     * @param cache Session cache.
+     * @param ignite Ignite.
      */
-    public IgniteSessionRepository(IgniteCache<String, MapSession> cache) {
-        this.cache = cache;
+    public IgniteSessionRepository(Ignite ignite) {
+       this.ignite = ignite;
+
+        cfg = new CacheConfiguration<String, MapSession>()
+            .setName("wc_sessions")
+            .setCacheMode(CacheMode.REPLICATED);
     }
 
     /**
      * If non-null, this value is used to override {@link ExpiringSession#setMaxInactiveIntervalInSeconds(int)}.
      *
-     * @param dfltMaxInactiveInterval the number of seconds that the {@link Session} should be kept alive between client
+     * @param dfltMaxInactiveInterval Number of seconds that the {@link Session} should be kept alive between client
      * requests.
      */
     public IgniteSessionRepository setDefaultMaxInactiveInterval(int dfltMaxInactiveInterval) {
@@ -63,14 +71,21 @@ public class IgniteSessionRepository implements SessionRepository<ExpiringSessio
         return ses;
     }
 
+    /**
+     * @return Cache with sessions.
+     */
+    private IgniteCache<String, MapSession> cache() {
+        return ignite.getOrCreateCache(cfg);
+    }
+
     /** {@inheritDoc} */
     @Override public void save(ExpiringSession ses) {
-        cache.put(ses.getId(), new MapSession(ses));
+        ignite.getOrCreateCache(cfg).put(ses.getId(), new MapSession(ses));
     }
 
     /** {@inheritDoc} */
     @Override public ExpiringSession getSession(String id) {
-        ExpiringSession ses = this.cache.get(id);
+        ExpiringSession ses = cache().get(id);
 
         if (ses == null)
             return null;
@@ -86,6 +101,6 @@ public class IgniteSessionRepository implements SessionRepository<ExpiringSessio
 
     /** {@inheritDoc} */
     @Override public void delete(String id) {
-        cache.remove(id);
+        cache().remove(id);
     }
 }
