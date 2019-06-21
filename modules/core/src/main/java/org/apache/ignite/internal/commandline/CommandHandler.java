@@ -268,11 +268,7 @@ public class CommandHandler {
                     if (credentialsRequested)
                         tryConnectMaxCount--;
 
-                    String user = !F.isEmpty(args.userName())
-                        ? args.userName()
-                        : clientCfg.getSecurityCredentialsProvider() == null
-                            ? requestDataFromConsole("user: ")
-                            : (String)clientCfg.getSecurityCredentialsProvider().credentials().getLogin();
+                    String user = retrieveUserName(args, clientCfg);
 
                     String pwd = new String(requestPasswordFromConsole("password: "));
 
@@ -327,6 +323,30 @@ public class CommandHandler {
                   .filter(handler -> handler instanceof FileHandler)
                   .forEach(Handler::close);
         }
+    }
+
+    /**
+     * Does one of three things:
+     * <ul>
+     *     <li>returns user name from connection parameters if it is there;</li>
+     *     <li>returns user name from client configuration if it is there;</li>
+     *     <li>requests user input and returns entered name.</li>
+     * </ul>
+     *
+     * @param args Connection parameters.
+     * @param clientCfg Client configuration.
+     * @throws IgniteCheckedException If security credetials cannot be provided from client configuration.
+     */
+    private String retrieveUserName(
+        ConnectionAndSslParameters args,
+        GridClientConfiguration clientCfg
+    ) throws IgniteCheckedException {
+        if (!F.isEmpty(args.userName()))
+            return args.userName();
+        else if (clientCfg.getSecurityCredentialsProvider() == null)
+            return requestDataFromConsole("user: ");
+        else
+            return (String)clientCfg.getSecurityCredentialsProvider().credentials().getLogin();
     }
 
     /**
