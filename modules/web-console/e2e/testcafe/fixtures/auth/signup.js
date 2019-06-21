@@ -41,7 +41,7 @@ test('Local validation', async(t) => {
     });
     await t
         .expect(page.email.getError('email').exists).ok()
-        .expect(page.passwordConfirm.getError('mismatch').exists).ok()
+        .expect(page.passwordConfirm.getError('passwordMatch').exists).ok()
         .expect(page.firstName.getError('required').exists).ok();
 });
 test('Server validation', async(t) => {

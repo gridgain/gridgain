@@ -2,7 +2,7 @@
     <global-progress-line [isLoading]='isLoading'></global-progress-line>
     <h3 class="public-page__title">Don't Have An Account?</h3>
     <form [formGroup]="form" (ngSubmit)="signup()" scrollToFirstInvalid>
-        <form-signup [form]="form"></form-signup>
+        <form-signup [form]="form" [serverError]="serverError"></form-signup>
         <footer class="full-width form-footer">
             <button type="submit" class="btn-ignite btn-ignite--primary">Sign Up</button>
         </footer>

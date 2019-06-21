@@ -2,6 +2,9 @@
     <form-field class="span-2">
         <label for="email">Email</label>
         <input type="email" formControlName="email" id="email" autocomplete="email" placeholder="Input email" autofocus>
+        <form-field-error *ngIf="serverError" error="server">
+            {{serverError}}
+        </form-field-error>
     </form-field>
 
     <form-field class="span-1">

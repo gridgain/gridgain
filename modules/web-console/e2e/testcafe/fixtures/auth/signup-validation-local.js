@@ -32,7 +32,7 @@ test('Most fields have validation', async(t) => {
 
     await t
         .expect(page.email.getError('email').exists).ok()
-        .expect(page.passwordConfirm.getError('mismatch').exists).ok()
+        .expect(page.passwordConfirm.getError('passwordMatch').exists).ok()
         .expect(page.firstName.getError('required').exists).ok()
         .expect(page.lastName.getError('required').exists).ok()
         .expect(page.company.getError('required').exists).ok();

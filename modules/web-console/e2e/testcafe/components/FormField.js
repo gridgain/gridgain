@@ -80,6 +80,11 @@ export class AngularFormField extends FormField {
             .click(this.control)
             .click(this.control.find('option').withText(label));
     }
+
+    getError(errorType) {
+        // return this._selector.find(`.form-field__error`)
+        return this._selector.find(`[ng-reflect-error-type="${errorType}"]`);
+    }
 }
 
 /**

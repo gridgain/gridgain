@@ -14,14 +14,20 @@
  * limitations under the License.
  */
 
-import { Component, OnInit, Inject } from '@angular/core';
-import { FormGroup, FormBuilder, Validators } from '@angular/forms';
+import {Component, Inject} from '@angular/core';
+import {FormGroup, FormBuilder, Validators, FormControl} from '@angular/forms';
 import AuthService, { SignupUserInfo } from 'app/modules/user/Auth.service';
 import MessagesFactory from '../../../app/services/Messages.service';
 import {pipe, get, eq} from 'lodash/fp';
 
 const EMAIL_NOT_CONFIRMED_ERROR_CODE = 10104;
 const isEmailConfirmationError = pipe(get('data.errorCode'), eq(EMAIL_NOT_CONFIRMED_ERROR_CODE));
+
+const customRequireValidator = function(control: FormControl) {
+    const isWhitespace = (control.value || '').trim().length === 0;
+    const isValid = !isWhitespace;
+    return isValid ? null : {required: true};
+};
 
 @Component({
     selector: 'page-signup',
@@ -49,13 +55,13 @@ export class PageSignupComponent {
     ) {
         this.form = fb.group({
             email: ['', [Validators.required, Validators.email]],
-            password: ['', Validators.required],
-            confirm: ['', Validators.required],
-            firstName: ['', Validators.required],
-            lastName: ['', Validators.required],
+            password: ['', customRequireValidator],
+            confirm: ['', customRequireValidator],
+            firstName: ['', customRequireValidator],
+            lastName: ['', customRequireValidator],
             phone: [''],
-            country: ['', Validators.required],
-            company: ['', Validators.required]
+            country: ['', customRequireValidator],
+            company: ['', customRequireValidator]
         });
     }
 
@@ -65,12 +71,12 @@ export class PageSignupComponent {
 
     getData(): SignupUserInfo {
         return {
-            email: this.form.get('email').value,
-            password: this.form.get('password').value,
-            firstName: this.form.get('firstName').value,
-            lastName: this.form.get('lastName').value,
-            company: this.form.get('company').value,
-            country: this.form.get('country').value
+            email: this.form.get('email').value.trim(),
+            password: this.form.get('password').value.trim(),
+            firstName: this.form.get('firstName').value.trim(),
+            lastName: this.form.get('lastName').value.trim(),
+            company: this.form.get('company').value.trim(),
+            country: this.form.get('country').value.trim()
         };
     }
 
@@ -94,7 +100,7 @@ export class PageSignupComponent {
 
                 this.IgniteMessages.showError(null, err.data);
 
-                this.setServerError(get(err, 'data.message', err.data));
+                this.setServerError(err.data && err.data.message);
             })
             .finally(() => this.isLoading = false);
     }

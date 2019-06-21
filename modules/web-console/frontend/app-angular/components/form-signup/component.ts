@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { Component, Input, Inject, OnInit, OnChanges, OnDestroy } from '@angular/core';
-import { FormGroup, FormBuilder, Validators, FormControl } from '@angular/forms';
+import { Component, Input, Inject, OnInit, OnChanges, OnDestroy, Output, EventEmitter } from '@angular/core';
+import { FormGroup, FormBuilder, Validators } from '@angular/forms';
 import CountriesService from 'app/services/Countries.service';
 import { FORM_FIELD_OPTIONS, FormFieldRequiredMarkerStyles, FormFieldErrorStyles, passwordMatch } from '../form-field';
 import { tap, takeUntil } from 'rxjs/operators';
@@ -54,18 +54,21 @@ export class FormSignupComponent implements OnInit, OnChanges, OnDestroy {
         private Countries: ReturnType<typeof CountriesService>
     ) {
         this.countries = Countries.getAll();
+        this.serverValidator = this.serverValidator.bind(this);
     }
 
     ngOnChanges(changes: any) {
-        if (changes.serverError && this.form)
+        if (changes.serverError && this.form) {
+            this.form.get('email').setValidators([Validators.required, Validators.email, this.serverValidator]);
             this.form.get('email').updateValueAndValidity();
+        }
     }
 
     ngOnInit() {
         this.form.get('password').valueChanges.pipe(
             takeUntil(this.onDestroy$),
             tap((newPassword: string) => {
-                this.form.get('confirm').setValidators([Validators.required, passwordMatch(newPassword)]);
+                this.form.get('confirm').setValidators([passwordMatch(newPassword), Validators.required]);
                 this.form.get('confirm').updateValueAndValidity();
             })
         ).subscribe();
@@ -74,5 +77,9 @@ export class FormSignupComponent implements OnInit, OnChanges, OnDestroy {
     ngOnDestroy() {
         this.onDestroy$.next();
         this.onDestroy$.complete();
+    }
+
+    serverValidator() {
+        return this.serverError ? {server: true} : null;
     }
 }
