@@ -210,7 +210,7 @@ export default class ConfigEffects {
                     catchError((error) => of({
                         type: `${a.type}_ERR`,
                         error: {
-                            message: `Failed to load clusters: ${error.data}`
+                            message: `Failed to load clusters:  ${error.data.message}`
                         },
                         action: a
                     }))

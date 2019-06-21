@@ -107,7 +107,7 @@ public class TransactionManager {
     /**
      * Recreate all caches by executing all registered starters.
      */
-    public void recreateCaches() {
+    synchronized public void recreateCaches() {
         cachesStarters.forEach((name, starter) -> {
             log.info("Creating caches for: {}", name);
 

@@ -16,6 +16,8 @@
 
 package org.apache.ignite.console.web.controller;
 
+import javax.cache.CacheException;
+import org.apache.ignite.IgniteClientDisconnectedException;
 import org.apache.ignite.console.web.model.ErrorResponse;
 import org.apache.ignite.console.web.model.ErrorWithEmailResponse;
 import org.apache.ignite.console.web.security.MissingConfirmRegistrationException;
@@ -29,6 +31,7 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 import static org.apache.ignite.console.common.Utils.errorMessage;
 import static org.springframework.http.HttpStatus.FORBIDDEN;
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
+import static org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE;
 
 /**
  * REST exceptions handler.
@@ -64,7 +67,31 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     /**
-     * Handles all exception.
+     * Handles cache exceptions.
+     *
+     * @param ex Service exception.
+     * @param req Web request.
+     * @return {@link ErrorResponse} instance with error code and message.
+     */
+    @ExceptionHandler(value = {CacheException.class})
+    protected ResponseEntity<Object> handleClientDisconnected(CacheException ex, WebRequest req) {
+        return handleExceptionInternal(ex, new ErrorResponse(SERVICE_UNAVAILABLE, "Database error"), null, SERVICE_UNAVAILABLE, req);
+    }
+
+    /**
+     * Handles client disconnected exceptions.
+     *
+     * @param ex Service exception.
+     * @param req Web request.
+     * @return {@link ErrorResponse} instance with error code and message.
+     */
+    @ExceptionHandler(value = {IgniteClientDisconnectedException.class})
+    protected ResponseEntity<Object> handleClientDisconnected(IgniteClientDisconnectedException ex, WebRequest req) {
+        return handleExceptionInternal(ex, new ErrorResponse(SERVICE_UNAVAILABLE, "Database not available"), null, SERVICE_UNAVAILABLE, req);
+    }
+
+    /**
+     * Handles all other exceptions.
      *
      * @param ex Service exception.
      * @param req Web request.

@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.console.db.Table;
@@ -118,14 +119,18 @@ public class AccountsRepository {
      * @return Saved account.
      * @throws IgniteException if failed to save account.
      */
+    @SuppressWarnings("unchecked")
     public Account create(Account account) throws AuthenticationServiceException {
         return txMgr.doInTransaction("Create account", () -> {
             boolean firstUser = !hasUsers();
 
             account.setAdmin(firstUser);
 
-            if (firstUser)
-                accountsTbl.cache().put(FIRST_USER_MARKER_KEY, null);
+            if (firstUser) {
+                IgniteCache cache = accountsTbl.cache();
+
+                cache.put(FIRST_USER_MARKER_KEY, FIRST_USER_MARKER_KEY);
+            }
 
             return save(account);
         });
