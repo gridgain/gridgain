@@ -55,6 +55,9 @@ const COLLOCATED_QUERY_SINCE = [['2.3.5', '2.4.0'], ['2.4.6', '2.5.0'], ['2.5.1-
 const COLLECT_BY_CACHE_GROUPS_SINCE = '2.7.0';
 const QUERY_PING_SINCE = [['2.5.6', '2.6.0'], '2.7.4'];
 
+const EVENT_REST = 'node:rest';
+const EVENT_VISOR = 'node:visor';
+
 /**
  * Query execution result.
  * @typedef {{responseNodeId: String, queryId: String, columns: String[], rows: {Object[][]}, hasMore: Boolean, duration: Number}} VisorQueryResult
@@ -475,7 +478,7 @@ export default class AgentManager {
 
                         const data = await this.pool.postMessage({payload: res.data, useBigIntJson});
 
-                        return data.result ? data.result : data;
+                        return event === EVENT_REST ? data : data.result;
 
                     case SuccessStatus.STATUS_FAILED:
                         if (res.error.startsWith('Failed to handle request - unknown session token (maybe expired session)')) {
@@ -540,7 +543,7 @@ export default class AgentManager {
      * @returns {Promise}
      */
     topology(attr = false, mtr = false, caches = false) {
-        return this._executeOnCluster('node:rest', {cmd: 'top', attr, mtr, caches});
+        return this._executeOnCluster(EVENT_REST, {cmd: 'top', attr, mtr, caches});
     }
 
     collectCacheNames(nid: string) {
@@ -574,7 +577,7 @@ export default class AgentManager {
      * @returns {Promise}
      */
     metadata() {
-        return this._executeOnCluster('node:rest', {cmd: 'metadata'})
+        return this._executeOnCluster(EVENT_REST, {cmd: 'metadata'})
             .then((caches) => {
                 let types = [];
 
@@ -677,7 +680,7 @@ export default class AgentManager {
 
         nids = _.isArray(nids) ? nids.join(';') : maskNull(nids);
 
-        return this._executeOnCluster('node:visor', {taskId, nids, args});
+        return this._executeOnCluster(EVENT_VISOR, {taskId, nids, args});
     }
 
     /**
