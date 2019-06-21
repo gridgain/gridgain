@@ -7,7 +7,7 @@ Web Console Docker Image Build Instructions
 =====================================
 Install Docker (version >=17.05) using instructions from https://www.docker.com/community-edition.
 
-1. To build Web Console All in One archive from sources run following command in Ignite project root folder:
+1. To build Web Console All in One archive from sources run the following command in Ignite project root folder:
     mvn clean package \
         -Plgpl,web-console,release \
         -pl :ignite-web-console -am \
@@ -26,8 +26,6 @@ Install Docker (version >=17.05) using instructions from https://www.docker.com/
 
     docker build . -f backend/Dockerfile -t gridgain/web-console-backend[:<version>]
 
-    Prepared image will be available in local docker registry (can be seen issuing `docker images` command)
-
 5. Build frontend docker image
 
     docker build . -f frontend/Dockerfile -t gridgain/web-console-frontend[:<version>]
@@ -36,5 +34,5 @@ Install Docker (version >=17.05) using instructions from https://www.docker.com/
 
     rm -rf ignite-web-console-*
 
-Prepared image can be listed with `docker images` command.
+Ready image will be available in local docker registry (can be seen by calling the `docker images` command)
     

@@ -1,6 +1,6 @@
 Web Console Build Instructions
 =====================================
-1. To build Web Console All in One archive from sources run following command in Ignite project root folder:
+1. To build Web Console All in One archive from sources run the following command in Ignite project root folder:
     mvn clean package \
         -Plgpl,web-console,release \
         -pl :ignite-web-console -am \
@@ -11,7 +11,7 @@ Web Console Docker Image Build Instructions
 =====================================
 Install Docker (version >=17.05) using instructions from https://www.docker.com/community-edition.
 
-1. To build Web Console All in One archive from sources run following command in Ignite project root folder:
+1. To build Web Console All in One archive from sources run the following command in Ignite project root folder:
     mvn clean package \
         -Plgpl,web-console,release \
         -pl :ignite-web-console -am \
@@ -30,8 +30,6 @@ Install Docker (version >=17.05) using instructions from https://www.docker.com/
 
     docker build . -f backend/Dockerfile -t gridgain/web-console-backend[:<version>]
 
-    Prepared image will be available in local docker registry (can be seen issuing `docker images` command)
-
 5. Build frontend docker image
 
     docker build . -f frontend/Dockerfile -t gridgain/web-console-frontend[:<version>]
@@ -40,7 +38,7 @@ Install Docker (version >=17.05) using instructions from https://www.docker.com/
 
     rm -rf ignite-web-console-*
 
-Prepared image can be listed with `docker images` command.
+Ready image will be available in local docker registry (can be seen by calling the `docker images` command)
 
 
 Web Console Run In Development Mode
@@ -48,8 +46,8 @@ Web Console Run In Development Mode
 1. Install Node.js (version >=8.0.0) using installer from https://nodejs.org/en/download/current for your OS.
 2. Launch backend module `modules/web-console/web-console-server` from your IDE https://docs.spring.io/spring-boot/docs/current/reference/html/using-boot-running-your-application.html#using-boot-running-from-an-ide
 3. In new terminal change directory to 'modules/web-console/frontend'.
-  If needed run "npm install --no-optional" (if dependencies changed) and start webpack in development mode "npm start".
-4. In browser open: http://localhost:9000
+  If needed run "npm install" (if dependencies changed) and start webpack in development mode "npm start".
+4. Open in browser: http://localhost:9000
 
 End-to-end tests
 ================
@@ -61,7 +59,7 @@ For this case you need to run environment and test separately.
 To perform it do the following:
 1. Optionally install Chromium (https://www.chromium.org/getting-involved/download-chromium or https://chromium.woolyss.com).
    You may use any other browser, just set 'BROWSERS' constant in 'modules/web-console/e2e/testcafe/index.js'.
-2. Start backend environment. NOTE: Need pass parameter thought environment variable SPRING_PROFILES_ACTIVE=test to disable CSRF protection and enable additional endpoints.
+2. Start backend environment. NOTE: To disable CSRF protection and enable additional endpoints you'll need to set environment variable SPRING_PROFILES_ACTIVE to test.
 3. Start frontend environment which should proxy REST request to backend.
 4. In terminal change directory to 'modules/web-console/e2e/testcafe' folder and execute: "npm install".
 5. Setup environment variable APP_URL which should point to frontend URL (Default: http://localhost:9001)
@@ -72,8 +70,8 @@ Please refer to TestCafe documentation at https://devexpress.github.io/testcafe/
 
 To launch tests on your local machine using docker-compose you will need:
 1. Install docker and docker-compose.
-2  Build Web Console All in One archive and copy it to `modules/web-console/docker/console`.
- Look steps at `Web Console Docker Image Build Instructions` section.
+2  Build Web Console archive and prepare it for build docker images.
+ Refer to `Web Console Docker Image Build Instructions` section for instructions and execute steps 1-3.
 3. Execute in terminal: "docker-compose up --build --abort-on-container-exit" in directory "modules/web-console/e2e".
 4. If you need to cleanup docker container then execute "docker-compose down".
 

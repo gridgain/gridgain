@@ -23,7 +23,7 @@ COPY . .
 
 ENV NPM_CONFIG_LOGLEVEL error
 
-RUN npm ci --no-optional --production && \
+RUN npm install --production && \
  npm cache verify --force && \
  rm -rf /tmp/*
 
