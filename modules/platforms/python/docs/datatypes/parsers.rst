@@ -91,7 +91,7 @@ with your data, in to some API function as a *type conversion hint*.
 +-----------+--------------------+-------------------------------+-----------------------------------------------------------------+
 |*Arrays of primitives*                                                                                                            |
 +-----------+--------------------+-------------------------------+-----------------------------------------------------------------+
-|0x0c       |`Byte array`_       |iterable/list                  |:class:`~pyignite.datatypes.primitive_arrays.ByteArrayObject`    |
+|0x0c       |`Byte array`_       |iterable/bytearray             |:class:`~pyignite.datatypes.primitive_arrays.ByteArrayObject`    |
 +-----------+--------------------+-------------------------------+-----------------------------------------------------------------+
 |0x0d       |`Short array`_      |iterable/list                  |:class:`~pyignite.datatypes.primitive_arrays.ShortArrayObject`   |
 +-----------+--------------------+-------------------------------+-----------------------------------------------------------------+
