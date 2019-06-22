@@ -195,6 +195,68 @@ BOOST_AUTO_TEST_CASE(IgniteForHost)
     BOOST_REQUIRE(group2.GetNodes().size() == 4);
 }
 
+BOOST_AUTO_TEST_CASE(IgniteForNode)
+{
+    IgniteCluster cluster = server1.GetCluster();
+
+    BOOST_REQUIRE(cluster.IsActive());
+
+    ClusterGroup group1 = cluster.AsClusterGroup();
+    ClusterGroup group2 = cluster.AsClusterGroup().ForNode(group1.GetNodes().front());
+
+    BOOST_REQUIRE(group1.GetNodes().size() == 4);
+    BOOST_REQUIRE(group2.GetNodes().size() == 1);
+}
+
+BOOST_AUTO_TEST_CASE(IgniteForNodeId)
+{
+    IgniteCluster cluster = server1.GetCluster();
+
+    BOOST_REQUIRE(cluster.IsActive());
+
+    ClusterGroup group1 = cluster.AsClusterGroup();
+    ClusterGroup group2 = cluster.AsClusterGroup().ForNodeId(group1.GetNodes().front().GetId());
+    ClusterGroup group3 = cluster.AsClusterGroup().ForNodeId(Guid(100, 500));
+
+    BOOST_REQUIRE(group1.GetNodes().size() == 4);
+    BOOST_REQUIRE(group2.GetNodes().size() == 1);
+    BOOST_REQUIRE(group3.GetNodes().size() == 0);
+}
+
+BOOST_AUTO_TEST_CASE(IgniteForNodeIds)
+{
+    IgniteCluster cluster = server1.GetCluster();
+
+    BOOST_REQUIRE(cluster.IsActive());
+
+    ClusterGroup group1 = cluster.AsClusterGroup();
+
+    std::vector<ClusterNode> nodes = group1.GetNodes();
+    std::vector<Guid> ids;
+    ids.push_back(nodes.at(0).GetId());
+    ids.push_back(nodes.at(1).GetId());
+
+    ClusterGroup group2 = cluster.AsClusterGroup().ForNodeIds(ids);
+
+    BOOST_REQUIRE(group1.GetNodes().size() == 4);
+    BOOST_REQUIRE(group2.GetNodes().size() == 2);
+}
+
+BOOST_AUTO_TEST_CASE(IgniteForNodes)
+{
+    IgniteCluster cluster = server1.GetCluster();
+
+    BOOST_REQUIRE(cluster.IsActive());
+
+    ClusterGroup group1 = cluster.AsClusterGroup();
+    ClusterGroup group2 = cluster.AsClusterGroup().ForServers();
+    ClusterGroup group3 = cluster.AsClusterGroup().ForNodes(group2.GetNodes());
+
+    BOOST_REQUIRE(group1.GetNodes().size() == 4);
+    BOOST_REQUIRE(group2.GetNodes().size() == 3);
+    BOOST_REQUIRE(group3.GetNodes().size() == 3);
+}
+
 BOOST_AUTO_TEST_CASE(IgniteForOldest)
 {
     IgniteCluster cluster = server1.GetCluster();
@@ -239,6 +301,17 @@ BOOST_AUTO_TEST_CASE(IgniteForServers)
     BOOST_REQUIRE(group.GetNodes().size() == 3);
 }
 
+BOOST_AUTO_TEST_CASE(IgniteForYoungest)
+{
+    IgniteCluster cluster = server1.GetCluster();
+
+    BOOST_REQUIRE(cluster.IsActive());
+
+    ClusterGroup group = cluster.AsClusterGroup().ForYoungest();
+
+    BOOST_REQUIRE(group.GetNodes().size() == 1);
+}
+
 BOOST_AUTO_TEST_CASE(IgniteForCpp)
 {
     IgniteCluster cluster = server1.GetCluster();
@@ -248,6 +321,22 @@ BOOST_AUTO_TEST_CASE(IgniteForCpp)
     ClusterGroup group = cluster.AsClusterGroup().ForCpp();
 
     BOOST_REQUIRE(group.GetNodes().size() == 4);
+}
+
+BOOST_AUTO_TEST_CASE(IgniteGetNode)
+{
+    IgniteCluster cluster = server1.GetCluster();
+
+    BOOST_REQUIRE(cluster.IsActive());
+
+    ClusterGroup group = cluster.AsClusterGroup();
+
+    ClusterNode node1 = group.GetNode();
+    ClusterNode node2 = group.GetNodes().at(0);
+    ClusterNode node3 = group.GetNode(node1.GetId());
+
+    BOOST_REQUIRE(node1.GetId() == node2.GetId());
+    BOOST_REQUIRE(node2.GetId() == node3.GetId());
 }
 
 BOOST_AUTO_TEST_CASE(IgniteGetNodes)

@@ -114,6 +114,38 @@ namespace ignite
                 SP_ClusterGroupImpl ForHost(ignite::cluster::ClusterNode node);
 
                 /**
+                 * Get cluster group for the given node.
+                 *
+                 * @param node Cluster node.
+                 * @return Pointer to cluster group for the given node.
+                 */
+                SP_ClusterGroupImpl ForNode(ignite::cluster::ClusterNode node);
+
+                /**
+                 * Get cluster group for a node with the specified ID.
+                 *
+                 * @param id Cluster node ID.
+                 * @return Pointer to cluster group for a node with the specified ID.
+                 */
+                SP_ClusterGroupImpl ForNodeId(Guid id);
+
+                /**
+                 * Get cluster group over nodes with specified node IDs.
+                 *
+                 * @param ids Cluster node IDs.
+                 * @return Pointer to cluster group over nodes with specified node IDs.
+                 */
+                SP_ClusterGroupImpl ForNodeIds(std::vector<Guid> ids);
+
+                /**
+                 * Get cluster group over a given set of nodes.
+                 *
+                 * @param nodes Cluster nodes.
+                 * @return Pointer to cluster group over a given set of nodes.
+                 */
+                SP_ClusterGroupImpl ForNodes(std::vector<ignite::cluster::ClusterNode> nodes);
+
+                /**
                  * Get cluster group with one oldest node from the current cluster group.
                  *
                  * @param nodes Cluster nodes.
@@ -155,6 +187,25 @@ namespace ignite
                  * @return Pointer to cluster group of cpp nodes.
                  */
                 SP_ClusterGroupImpl ForCpp();
+
+                /**
+                 * Get first node from the list of nodes in this cluster group.
+                 *
+                 * @return Cluster node in this cluster group.
+                 *
+                 * @throw IgniteError if there are no nodes in the cluster group.
+                 */
+                ignite::cluster::ClusterNode GetNode();
+
+                /**
+                 * Get node for given ID from this cluster group.
+                 *
+                 * @param nid Cluster node ID.
+                 * @return Cluster node in this cluster group.
+                 *
+                 * @throw IgniteError if there is no node with specified ID.
+                 */
+                ignite::cluster::ClusterNode GetNode(Guid nid);
 
                 /**
                  * Gets the vector of nodes in this cluster group.
