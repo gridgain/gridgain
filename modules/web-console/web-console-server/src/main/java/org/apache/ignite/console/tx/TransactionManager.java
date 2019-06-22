@@ -20,9 +20,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteClientDisconnectedException;
-import org.apache.ignite.IgniteException;
-import org.apache.ignite.IgniteTransactions;
 import org.apache.ignite.console.db.NestedTransaction;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
@@ -30,9 +27,10 @@ import org.apache.ignite.transactions.TransactionIsolation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import static org.apache.ignite.console.web.errors.Errors.checkDatabaseNotAvailable;
+import static org.apache.ignite.console.web.errors.Errors.isDatabaseNotAvailable;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
 
@@ -50,16 +48,19 @@ public class TransactionManager {
     /** */
     private final Map<String, Runnable> cachesStarters = new ConcurrentHashMap<>();
 
-    /** Time to wait for server nodes to come back. */
-    @Value("${ignite.client.node.reconnect.timeout:30000}")
-    private int reconnectTimeout = 30_000;
-
     /**
      * @param ignite Ignite.
      */
     @Autowired
     protected TransactionManager(Ignite ignite) {
         this.ignite = ignite;
+    }
+
+    /**
+     * @return Current transaction.
+     */
+    private Transaction tx() {
+        return ignite.transactions().tx();
     }
 
     /**
@@ -70,14 +71,12 @@ public class TransactionManager {
      * @return New transaction.
      */
     private Transaction txStart(TransactionConcurrency concurrency, TransactionIsolation isolation) {
-        IgniteTransactions txs = ignite.transactions();
-
-        Transaction curTx = txs.tx();
+        Transaction curTx = tx();
 
         if (curTx instanceof NestedTransaction)
             return curTx;
 
-        return curTx == null ? txs.txStart(concurrency, isolation) : new NestedTransaction(curTx);
+        return curTx == null ? ignite.transactions().txStart(concurrency, isolation) : new NestedTransaction(curTx);
     }
 
     /**
@@ -104,7 +103,8 @@ public class TransactionManager {
      */
     synchronized public void recreateCaches() {
         cachesStarters.forEach((name, starter) -> {
-            log.info("Creating caches for: {}", name);
+            if (log.isDebugEnabled())
+                log.debug("Creating caches for: {}", name);
 
             starter.run();
         });
@@ -132,6 +132,9 @@ public class TransactionManager {
      * @return Action result.
      */
     public <T> T doInTransaction(String name, Supplier<T> action) {
+        if (log.isDebugEnabled())
+            log.debug("Executing action: {}", name);
+
         // For server nodes no need to recreate caches.
         if (!ignite.configuration().isClientMode())
             return doInTransaction0(action);
@@ -145,28 +148,18 @@ public class TransactionManager {
             return doInTransaction0(action);
         }
         catch (Throwable e) {
-            String msg = e.getMessage();
-
-            // TODO GG-19681: In future versions specific exception will be added.
-            boolean recreate = e instanceof IgniteException &&
-                msg != null &&
-                msg.startsWith("Cannot start/stop cache within lock or transaction");
-
-            if (recreate) {
+            if (isDatabaseNotAvailable(e)) {
                 try {
-                    // Try to create caches, but client node may be disconnected.
                     recreateCaches();
                 }
-                catch (IgniteClientDisconnectedException cde) {
-                    // Await for reconnect.
-                    cde.reconnectFuture().get(reconnectTimeout);
-
-                    // Try to create caches after reconnect.
-                    recreateCaches();
+                catch (RuntimeException re) {
+                    throw checkDatabaseNotAvailable(re);
                 }
 
-                // Throw error
-                throw new IllegalStateException("Failed to execute action: " + name);
+                if (tx() instanceof NestedTransaction)
+                    throw new IllegalStateException("Database connection was lost during transaction");
+
+                return doInTransaction0(action);
             }
 
             throw e;
@@ -193,10 +186,7 @@ public class TransactionManager {
      * @throws IllegalStateException If active transaction was not found.
      */
     public void checkInTransaction() {
-        IgniteTransactions txs = ignite.transactions();
-
-        if (txs.tx() == null)
+        if (tx() == null)
             throw new IllegalStateException("No active transaction was found");
     }
-
 }

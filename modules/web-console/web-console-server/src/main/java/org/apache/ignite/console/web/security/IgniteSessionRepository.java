@@ -18,12 +18,15 @@ package org.apache.ignite.console.web.security;
 
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteClientDisconnectedException;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.springframework.session.ExpiringSession;
 import org.springframework.session.MapSession;
 import org.springframework.session.Session;
 import org.springframework.session.SessionRepository;
+
+import static org.apache.ignite.console.web.errors.Errors.checkDatabaseNotAvailable;
 
 /**
  * A {@link SessionRepository} backed by a Apache Ignite and that uses a {@link MapSession}.
@@ -75,32 +78,47 @@ public class IgniteSessionRepository implements SessionRepository<ExpiringSessio
      * @return Cache with sessions.
      */
     private IgniteCache<String, MapSession> cache() {
-        return ignite.getOrCreateCache(cfg);
+            return ignite.getOrCreateCache(cfg);
     }
 
     /** {@inheritDoc} */
     @Override public void save(ExpiringSession ses) {
-        ignite.getOrCreateCache(cfg).put(ses.getId(), new MapSession(ses));
+        try {
+            cache().put(ses.getId(), new MapSession(ses));
+        }
+        catch (IgniteClientDisconnectedException e) {
+            throw checkDatabaseNotAvailable(e);
+        }
     }
 
     /** {@inheritDoc} */
     @Override public ExpiringSession getSession(String id) {
-        ExpiringSession ses = cache().get(id);
+        try {
+            ExpiringSession ses = cache().get(id);
 
-        if (ses == null)
-            return null;
+            if (ses == null)
+                return null;
 
-        if (ses.isExpired()) {
-            delete(ses.getId());
+            if (ses.isExpired()) {
+                delete(ses.getId());
 
-            return null;
+                return null;
+            }
+
+            return ses;
         }
-
-        return ses;
+        catch (RuntimeException e) {
+            throw checkDatabaseNotAvailable(e);
+        }
     }
 
     /** {@inheritDoc} */
     @Override public void delete(String id) {
-        cache().remove(id);
+        try {
+            cache().remove(id);
+        }
+        catch (RuntimeException e) {
+            throw checkDatabaseNotAvailable(e);
+        }
     }
 }

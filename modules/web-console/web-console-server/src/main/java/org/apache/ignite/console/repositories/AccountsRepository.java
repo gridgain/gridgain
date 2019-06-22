@@ -33,6 +33,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Repository;
 
 import static org.apache.ignite.console.common.Utils.normalizeEmail;
+import static org.apache.ignite.console.web.errors.Errors.isDatabaseNotAvailable;
 
 /**
  * Repository to work with accounts.
@@ -73,12 +74,20 @@ public class AccountsRepository {
      */
     public Account getById(UUID accId) throws IllegalStateException {
         return txMgr.doInTransaction("Find account by ID", () -> {
-            Account account = accountsTbl.load(accId);
+            try {
+                Account account = accountsTbl.load(accId);
 
-            if (account == null)
-                throw new UsernameNotFoundException("Account not found with ID: " + accId);
+                if (account == null)
+                    throw new UsernameNotFoundException(accId.toString());
 
-            return account;
+                return account;
+            }
+            catch (IgniteException e) {
+                if (isDatabaseNotAvailable(e))
+                    throw e;
+
+                throw new UsernameNotFoundException(accId.toString(), e);
+            }
         });
     }
 
@@ -100,6 +109,9 @@ public class AccountsRepository {
                 return account;
             }
             catch (IgniteException e) {
+                if (isDatabaseNotAvailable(e))
+                    throw e;
+
                 throw new UsernameNotFoundException(email, e);
             }
         });
