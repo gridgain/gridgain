@@ -2646,7 +2646,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
         injectTestSystemOut();
 
         // Checking --current option.
-        assertEquals(EXIT_CODE_OK, execute("--cache", "affinity", "--current", "--group_name", groupName));
+        assertEquals(EXIT_CODE_OK, execute("--cache", "affinity", "--current", "--group-name", groupName));
 
         String output = testOut.toString();
 
@@ -2656,7 +2656,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
 
         // Checking --ideal option.
-        assertEquals(EXIT_CODE_OK, execute("--cache", "affinity", "--ideal", "--group_name", groupName));
+        assertEquals(EXIT_CODE_OK, execute("--cache", "affinity", "--ideal", "--group-name", groupName));
 
         output = testOut.toString();
 
@@ -2669,7 +2669,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
         String expectedDiffAffOut = "Primary partitions different to ideal assignment:\n" +
                                     "  Not found.";
 
-        assertEquals(EXIT_CODE_OK, execute("--cache", "affinity", "--diff", "--group_name", groupName));
+        assertEquals(EXIT_CODE_OK, execute("--cache", "affinity", "--diff", "--group-name", groupName));
 
         output = testOut.toString();
 
@@ -2718,7 +2718,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
         injectTestSystemOut();
 
         // Checking --current option.
-        assertEquals(EXIT_CODE_OK, execute("--cache", "affinity", "--current", "--group_name", groupName));
+        assertEquals(EXIT_CODE_OK, execute("--cache", "affinity", "--current", "--group-name", groupName));
 
         String output = testOut.toString();
 
@@ -2728,7 +2728,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
 
         // Checking --ideal option.
-        assertEquals(EXIT_CODE_OK, execute("--cache", "affinity", "--ideal", "--group_name", groupName));
+        assertEquals(EXIT_CODE_OK, execute("--cache", "affinity", "--ideal", "--group-name", groupName));
 
         output = testOut.toString();
 
@@ -2738,7 +2738,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
 
         // Checking --diff option.
-        assertEquals(EXIT_CODE_OK, execute("--cache", "affinity", "--diff", "--group_name", groupName));
+        assertEquals(EXIT_CODE_OK, execute("--cache", "affinity", "--diff", "--group-name", groupName));
 
         output = testOut.toString();
 
