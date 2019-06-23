@@ -161,6 +161,22 @@ namespace ignite
                 return ForNodeIds(ids);
             }
 
+            struct WriteGuid
+            {
+                WriteGuid(binary::BinaryWriterImpl& writer) :
+                    writer(writer)
+                {
+                    // No-op.
+                }
+
+                void operator()(Guid id)
+                {
+                    writer.WriteGuid(id);
+                }
+
+                binary::BinaryWriterImpl& writer;
+            };
+
             SP_ClusterGroupImpl ClusterGroupImpl::ForNodeIds(std::vector<Guid> ids)
             {
                 SharedPointer<interop::InteropMemory> mem = GetEnvironment().AllocateMemory();
@@ -168,22 +184,6 @@ namespace ignite
                 binary::BinaryWriterImpl writer(&out, GetEnvironment().GetTypeManager());
 
                 writer.WriteInt32(static_cast<int>(ids.size()));
-
-                struct WriteGuid
-                {
-                    WriteGuid(binary::BinaryWriterImpl& writer) :
-                        writer(writer)
-                    {
-                        // No-op.
-                    }
-
-                    void operator()(Guid id)
-                    {
-                        writer.WriteGuid(id);
-                    }
-
-                    binary::BinaryWriterImpl& writer;
-                };
 
                 std::for_each(ids.begin(), ids.end(), WriteGuid(writer));
 
@@ -196,17 +196,17 @@ namespace ignite
                 return SP_ClusterGroupImpl(new ClusterGroupImpl(GetEnvironmentPointer(), target));
             }
 
+            struct GetGuid
+            {
+                Guid operator()(ClusterNode& node)
+                {
+                    return node.GetId();
+                }
+            };
+
             SP_ClusterGroupImpl ClusterGroupImpl::ForNodes(std::vector<ClusterNode> nodes)
             {
                 std::vector<Guid> ids;
-
-                struct GetGuid
-                {
-                    Guid operator()(ClusterNode& node)
-                    {
-                        return node.GetId();
-                    }
-                };
 
                 std::transform(nodes.begin(), nodes.end(), std::back_inserter(ids), GetGuid());
 
@@ -283,24 +283,24 @@ namespace ignite
                 throw IgniteError(IgniteError::IGNITE_ERR_ILLEGAL_ARGUMENT, msg);
             }
 
+            struct FindGuid
+            {
+                FindGuid(Guid id)
+                    : id(id)
+                {
+                    // No-op.
+                }
+
+                bool operator()(ClusterNode& node)
+                {
+                    return node.GetId() == id;
+                }
+
+                Guid id;
+            };
+
             ClusterNode ClusterGroupImpl::GetNode(Guid nid)
             {
-                struct FindGuid
-                {
-                    FindGuid(Guid id)
-                        : id(id)
-                    {
-                        // No-op.
-                    }
-
-                    bool operator()(ClusterNode& node)
-                    {
-                        return node.GetId() == id;
-                    }
-
-                    Guid id;
-                };
-
                 std::vector<ClusterNode> nodes = GetNodes();
                 std::vector<ClusterNode>::iterator it = find_if(nodes.begin(), nodes.end(), FindGuid(nid));
                 if (it != nodes.end())
