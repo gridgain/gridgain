@@ -17,42 +17,68 @@
 package org.apache.ignite.internal;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import org.apache.ignite.internal.processors.ru.RollingUpgradeProcessor;
+import org.apache.ignite.internal.processors.ru.RollingUpgradeUtil;
+import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.mxbean.RollingUpgradeMXBean;
 
 /**
  *
  */
 public class RollingUpgradeMXBeanImpl implements RollingUpgradeMXBean {
+    /** */
+    public static final String NOT_AVAILABLE_VAL = "N/A";
+
+    /** Kernal context. */
+    private final GridKernalContext ctx;
+
     /** Rolling upgrade processor. */
     private final RollingUpgradeProcessor rollingUpgradeProcessor;
 
     /**
-     * @param ctx Context.
+     * @param ctx Kernal context.
      */
     public RollingUpgradeMXBeanImpl(GridKernalContextImpl ctx) {
+        this.ctx = ctx;
         rollingUpgradeProcessor = ctx.rollingUpgrade();
     }
 
     /** {@inheritDoc} */
     @Override public boolean isEnabled() {
-        return rollingUpgradeProcessor.getStatus().isEnabled();
+        return rollingUpgradeProcessor.getStatus().enabled();
     }
 
     /** {@inheritDoc} */
     @Override public String getInitialVersion() {
-        return String.valueOf(rollingUpgradeProcessor.getStatus().getInitialVersion());
+        return Optional
+            .ofNullable(rollingUpgradeProcessor.getStatus().initialVersion())
+            .map(IgniteProductVersion::toString)
+            .orElse(NOT_AVAILABLE_VAL);
+    }
+
+    /** {@inheritDoc} */
+    @Override public List<String> getInitialNodes() {
+        return RollingUpgradeUtil.initialNodes(ctx, rollingUpgradeProcessor.getStatus());
     }
 
     /** {@inheritDoc} */
     @Override public String getUpdateVersion() {
-        return String.valueOf(rollingUpgradeProcessor.getStatus().getUpdateVersion());
+        return Optional
+            .ofNullable(rollingUpgradeProcessor.getStatus().updateVersion())
+            .map(IgniteProductVersion::toString)
+            .orElse(NOT_AVAILABLE_VAL);
+    }
+
+    /** {@inheritDoc} */
+    @Override public List<String> getUpdatedNodes() {
+        return RollingUpgradeUtil.updatedNodes(ctx, rollingUpgradeProcessor.getStatus());
     }
 
     /** {@inheritDoc} */
     @Override public List<String> getSupportedFeatures() {
-        return rollingUpgradeProcessor.getStatus().getSupportedFeatures().stream()
+        return rollingUpgradeProcessor.getStatus().supportedFeatures().stream()
             .map(IgniteFeatures::name)
             .collect(Collectors.toList());
     }
@@ -61,5 +87,4 @@ public class RollingUpgradeMXBeanImpl implements RollingUpgradeMXBean {
     @Override public void changeMode(boolean enable) {
         rollingUpgradeProcessor.setMode(enable);
     }
-
 }

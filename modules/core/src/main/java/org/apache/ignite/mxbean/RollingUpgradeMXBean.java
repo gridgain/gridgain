@@ -24,22 +24,59 @@ import org.apache.ignite.internal.processors.ru.RollingUpgradeProcessor;
  */
 @MXBeanDescription("MBean that provides access to rolling upgrade.")
 public interface RollingUpgradeMXBean {
+    /**
+     * Returns {@code true} if Rolling Upgrade is enabled and is in progress.
+     *
+     * @return {@code true} if Rolling Upgrade is enabled and is in progress.
+     */
     @MXBeanDescription("State of rolling upgrade (enabled/disabled).")
     boolean isEnabled();
 
-    /** */
+    /**
+     * Returns the version that is used as starting point for Rolling Upgrade.
+     *
+     * @return String representation of initial version.
+     */
     @MXBeanDescription("The initial cluster version.")
     String getInitialVersion();
 
-    /** */
+    /**
+     * Returns a list of alive nodes in the cluster that are not updated yet.
+     *
+     * @return List of nodes that are not updated.
+     */
+    @MXBeanDescription("List of alive nodes in the cluster that are not updated yet.")
+    List<String> getInitialNodes();
+
+    /**
+     * Returns target cluster version.
+     *
+     * @return String representation of target cluster version.
+     */
     @MXBeanDescription("The target cluster version.")
     String getUpdateVersion();
 
-    /** */
+    /**
+     * Returns a list of alive nodes in the cluster that are updated.
+     *
+     * @return List of alive nodes in the cluster that are updated.
+     */
+    @MXBeanDescription("List of alive nodes in the cluster that are updated.")
+    List<String> getUpdatedNodes();
+
+    /**
+     * Returns a list of features that is supported by the cluster.
+     *
+     * @return Feature set that is supported by the cluster.
+     */
     @MXBeanDescription("Feature set that is supported by nodes.")
     List<String> getSupportedFeatures();
 
-    /** */
+    /**
+     * Allows to enable or disable rolling upgrade mode.
+     *
+     * @param enable {@code true} if rolling upgrade mode should be enabled.
+     */
     @MXBeanDescription("Set rolling upgrade mode value.")
     @MXBeanParametersNames("enable")
     @MXBeanParametersDescriptions("Rolling upgrade mode.")
