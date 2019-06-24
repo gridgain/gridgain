@@ -15,7 +15,7 @@
  */
 
 const Util = require('util');
-const IgniteClient = require('apache-ignite-client');
+const IgniteClient = require('gridgain-client');
 const ObjectType = IgniteClient.ObjectType;
 const IgniteClientConfiguration = IgniteClient.IgniteClientConfiguration;
 const CacheConfiguration = IgniteClient.CacheConfiguration;

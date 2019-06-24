@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-const IgniteClient = require('apache-ignite-client');
+const IgniteClient = require('gridgain-client');
 const IgniteClientConfiguration = IgniteClient.IgniteClientConfiguration;
 
 const ENDPOINT1 = 'localhost:10800';
