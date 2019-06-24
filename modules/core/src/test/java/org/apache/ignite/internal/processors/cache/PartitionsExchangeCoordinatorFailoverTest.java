@@ -486,17 +486,6 @@ public class PartitionsExchangeCoordinatorFailoverTest extends GridCommonAbstrac
             }
         }
 
-        U.sleep(10000);
-
-        for (int it = 0; it < 10000; it++) {
-            try (Transaction tx = ignite.transactions().withTracing().txStart()) {
-                for (int k = it; k < it + 3; k++)
-                    ignite.cache(CACHE_NAME).put(k, k);
-
-                tx.commit();
-            }
-        }
-
         U.sleep(2000);
 
         stopGrid(2);
