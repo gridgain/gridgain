@@ -54,6 +54,9 @@ const COLLOCATED_QUERY_SINCE = [['2.3.5', '2.4.0'], ['2.4.6', '2.5.0'], ['2.5.1-
 const COLLECT_BY_CACHE_GROUPS_SINCE = '2.7.0';
 const QUERY_PING_SINCE = [['2.5.6', '2.6.0'], '2.7.4'];
 
+const EVENT_REST = 'node:rest';
+const EVENT_VISOR = 'node:visor';
+
 /**
  * Query execution result.
  * @typedef {{responseNodeId: String, queryId: String, columns: String[], rows: {Object[][]}, hasMore: Boolean, duration: Number}} VisorQueryResult
@@ -458,7 +461,7 @@ export default class AgentManager {
      * @returns {ng.IPromise}
      * @private
      */
-    _executeOnActiveCluster(cluster, credentials, event, params) {
+    _restOnActiveCluster(cluster, credentials, event, params) {
         return this._sendToAgent(event, {clusterId: cluster.id, params: _.merge({}, credentials, params)})
             .then(async(res) => {
                 const {status = SuccessStatus.STATUS_SUCCESS} = res;
@@ -474,13 +477,13 @@ export default class AgentManager {
 
                         const data = await this.pool.postMessage({payload: res.data, useBigIntJson});
 
-                        return data.result ? data.result : data;
+                        return data;
 
                     case SuccessStatus.STATUS_FAILED:
                         if (res.error.startsWith('Failed to handle request - unknown session token (maybe expired session)')) {
                             this.clustersSecrets.get(cluster.id).resetSessionToken();
 
-                            return this._executeOnCluster(event, params);
+                            return this._restOnCluster(event, params);
                         }
 
                         throw new Error(res.error);
@@ -506,6 +509,17 @@ export default class AgentManager {
      * @private
      */
     _executeOnCluster(event, params) {
+        return this._restOnCluster(event, params)
+            .then((res) => res.result);
+    }
+
+    /**
+     * @param {String} event
+     * @param {Object} params
+     * @returns {Promise}
+     * @private
+     */
+    _restOnCluster(event, params) {
         return this.connectionSbj.pipe(first()).toPromise()
             .then(({cluster}) => {
                 if (_.isNil(cluster))
@@ -529,7 +543,7 @@ export default class AgentManager {
 
                 return {cluster, credentials: {}};
             })
-            .then(({cluster, credentials}) => this._executeOnActiveCluster(cluster, credentials, event, params));
+            .then(({cluster, credentials}) => this._restOnActiveCluster(cluster, credentials, event, params));
     }
 
     /**
@@ -539,7 +553,7 @@ export default class AgentManager {
      * @returns {Promise}
      */
     topology(attr = false, mtr = false, caches = false) {
-        return this._executeOnCluster('node:rest', {cmd: 'top', attr, mtr, caches});
+        return this._restOnCluster(EVENT_REST, {cmd: 'top', attr, mtr, caches});
     }
 
     collectCacheNames(nid: string) {
@@ -573,7 +587,7 @@ export default class AgentManager {
      * @returns {Promise}
      */
     metadata() {
-        return this._executeOnCluster('node:rest', {cmd: 'metadata'})
+        return this._restOnCluster(EVENT_REST, {cmd: 'metadata'})
             .then((caches) => {
                 let types = [];
 
@@ -676,7 +690,7 @@ export default class AgentManager {
 
         nids = _.isArray(nids) ? nids.join(';') : maskNull(nids);
 
-        return this._executeOnCluster('node:visor', {taskId, nids, args});
+        return this._executeOnCluster(EVENT_VISOR, {taskId, nids, args});
     }
 
     /**
