@@ -16,10 +16,11 @@
 
 package org.apache.ignite.console.services;
 
-import java.util.List;
-import java.util.UUID;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.dto.Announcement;
+import org.apache.ignite.console.event.EventPublisher;
+import org.apache.ignite.console.event.user.UserCreateByAdminEvent;
+import org.apache.ignite.console.event.user.UserDeleteEvent;
 import org.apache.ignite.console.json.JsonArray;
 import org.apache.ignite.console.json.JsonObject;
 import org.apache.ignite.console.repositories.AnnouncementRepository;
@@ -31,8 +32,9 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
-import static org.apache.ignite.console.notification.NotificationDescriptor.ACCOUNT_DELETED;
-import static org.apache.ignite.console.notification.NotificationDescriptor.ADMIN_WELCOME_LETTER;
+import java.util.List;
+import java.util.UUID;
+
 
 /**
  * Service to handle administrator actions.
@@ -55,7 +57,7 @@ public class AdminService {
     private final ActivitiesService activitiesSrv;
 
     /** */
-    private final NotificationService notificationSrv;
+    protected EventPublisher eventPublisher;
 
     /** */
     private final AnnouncementRepository annRepo;
@@ -69,7 +71,7 @@ public class AdminService {
      * @param cfgsSrv Service to work with configurations.
      * @param notebooksSrv Service to work with notebooks.
      * @param activitiesSrv Service to work with activities.
-     * @param notificationSrv Service to send notifications.
+     * @param eventPublisher Service to publish events.
      * @param annRepo Repository to work with announcement.
      * @param wsm Web sockets manager.
      */
@@ -79,7 +81,7 @@ public class AdminService {
         ConfigurationsService cfgsSrv,
         NotebooksService notebooksSrv,
         ActivitiesService activitiesSrv,
-        NotificationService notificationSrv,
+        EventPublisher eventPublisher,
         AnnouncementRepository annRepo,
         WebSocketsManager wsm
     ) {
@@ -88,7 +90,7 @@ public class AdminService {
         this.cfgsSrv = cfgsSrv;
         this.notebooksSrv = notebooksSrv;
         this.activitiesSrv = activitiesSrv;
-        this.notificationSrv = notificationSrv;
+        this.eventPublisher = eventPublisher;
         this.annRepo = annRepo;
         this.wsm = wsm;
     }
@@ -139,7 +141,7 @@ public class AdminService {
 
             tx.commit();
 
-            notificationSrv.sendEmail(ACCOUNT_DELETED, acc);
+            eventPublisher.publish(new UserDeleteEvent(acc));
         }
     }
 
@@ -164,7 +166,7 @@ public class AdminService {
     public void registerUser(SignUpRequest params) {
         Account acc = accountsSrv.create(params);
 
-        notificationSrv.sendEmail(ADMIN_WELCOME_LETTER, acc);
+        eventPublisher.publish(new UserCreateByAdminEvent(acc));
     }
 
     /** */
