@@ -1583,6 +1583,9 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             int newLen = dataRow.size();
 
+            if (dataRow.cacheId() == CU.UNDEFINED_CACHE_ID && sizeWithCacheId)
+                newLen += 4;
+
             return oldLen == newLen;
         }
 
