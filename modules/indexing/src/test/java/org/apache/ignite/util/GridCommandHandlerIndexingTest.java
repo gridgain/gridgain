@@ -77,6 +77,8 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerAbstractTe
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "validate_indexes", CACHE_NAME));
 
+        assertEquals(EXIT_CODE_OK, execute("--cache", "validate_indexes"));
+
         assertContains(log, testOut.toString(), "no issues found");
     }
 
