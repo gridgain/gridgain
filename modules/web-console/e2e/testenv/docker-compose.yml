@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-version: '3'
+version: '2.4'
 services:
   backend:
     build:
@@ -24,6 +24,11 @@ services:
       - 3001:3000
     environment:
       - SPRING_PROFILES_ACTIVE=test
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/swagger-ui.html"]
+      interval: 5s # interval health check
+      timeout: 2s # timeout for check
+      retries: 10 # maximum retries
 
   frontend:
     build:
@@ -32,4 +37,5 @@ services:
     ports:
       - 9001:80
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy

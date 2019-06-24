@@ -91,13 +91,13 @@ To launch tests on your local machine you will need:
 2. To start test environment and tests execute: "npm run test".
 
 Web Console backend settings
-====================
+==========================================
 You can use properties files, YAML files, environment variables to externalize configuration.
 
 Properties are considered in the following order:
 1. Java System properties (System.getProperties()).
 2. OS environment variables.
-3. Properties in /config subdirectory of the work directory or in work directory (application.properties and YAML variants).
+3. application.properties and YAML variants in /config subdirectory of the current work directory or in current work directory.
    YAML format description can be found here https://docs.spring.io/spring-boot/docs/current/reference/html/boot-features-external-config.html#boot-features-external-config-yaml
 
 Various properties can be specified inside your application.properties file, inside your application.yml file, or Java System properties.
