@@ -32,7 +32,7 @@ services:
     ports:
       - 9001:80
     depends_on:
-      - testenv_backend
+      - backend
 
   e2e:
     build: './testcafe'
