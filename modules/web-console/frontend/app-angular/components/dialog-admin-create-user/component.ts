@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import {Component, Inject, Output, EventEmitter} from '@angular/core';
+import {Component, Inject, Output, EventEmitter, OnInit} from '@angular/core';
 import {FormBuilder, FormGroup, Validators} from '@angular/forms';
 import IgniteAdminData from '../../../app/core/admin/Admin.data';
 import MessagesFactory from '../../../app/services/Messages.service';
@@ -30,7 +30,7 @@ import {SignupUserInfo} from 'app/modules/user/Auth.service';
         </form>
     `
 })
-export class CreateUserComponent {
+export class CreateUserComponent implements OnInit {
 
     static parameters = [
         [new Inject('$rootScope')],
@@ -49,13 +49,15 @@ export class CreateUserComponent {
     isLoading = false;
 
     constructor(
-        private $root: ng.IRootScopeService,
-        private AdminData: IgniteAdminData,
-        private IgniteMessages: ReturnType<typeof MessagesFactory>,
-        private loading: ReturnType<typeof LoadingServiceFactory>,
-        private fb: FormBuilder
-    ) {
-        this.form = fb.group({
+        protected $root: ng.IRootScopeService,
+        protected AdminData: IgniteAdminData,
+        protected IgniteMessages: ReturnType<typeof MessagesFactory>,
+        protected loading: ReturnType<typeof LoadingServiceFactory>,
+        protected fb: FormBuilder
+    ) {}
+
+    ngOnInit() {
+        this.form = this.fb.group({
             email: ['', [Validators.required, Validators.email]],
             password: ['', customRequireValidator],
             confirm: ['', customRequireValidator],
