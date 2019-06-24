@@ -25,7 +25,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=test
 
-  testenv_frontend:
+  frontend:
     build:
       context: '../../docker/console'
       dockerfile: 'frontend/Dockerfile'
