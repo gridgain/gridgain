@@ -140,6 +140,10 @@ Other `pytest` parameters:
 ``--timeout`` − timeout (in seconds) for each socket operation, including
 `connect`. Accepts integer or float value. Default is None (blocking mode),
 
+``--affinity-aware`` − experimental; off by default; turns on the affinity
+awareness: a way for the thin client to calculate a data placement for the
+given key.
+
 ``--username`` and ``--password`` − credentials to authenticate to GridGain
 cluster. Used in conjunction with `authenticationEnabled` property in cluster
 configuration.
@@ -171,21 +175,12 @@ To recompile this documentation, do this from your virtualenv_ environment:
 $ cd gridgain/modules/platforms/python
 $ pip install -r requirements/docs.txt
 $ cd docs
-$ make html
-
-Then open `gridgain/modules/platforms/python/docs/generated/html/index.html`_
-in your browser.
-
-If you feel that old version is stuck, do
-
-::
-
-$ cd gridgain/modules/platforms/python/docs
 $ make clean
 $ sphinx-apidoc -feM -o source/ ../ ../setup.py
 $ make html
 
-And that should be it.
+Then open `gridgain/modules/platforms/python/docs/generated/html/index.html`_
+in your browser.
 
 Licensing
 ---------

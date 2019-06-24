@@ -39,8 +39,8 @@ $ pip install -r requirements/<your task>.txt
 You may also want to consult the `setuptools` manual about using `setup.py`.
 
 ## Documentation
-[The package documentation](https://apache-ignite-binary-protocol-client.readthedocs.io)
-is available at *RTD* for your convenience.
+[The package documentation](https://pygridgain.readthedocs.io) is available
+at *RTD* for your convenience.
 
 If you want to build the documentation from source, do the developer
 installation as described above, then run the following commands:
@@ -58,7 +58,7 @@ in your browser.
 Some examples of using pygridgain are provided in
 `gridgain/modules/platforms/python/examples` folder. They are extensively
 commented in the
-“[Examples of usage](https://apache-ignite-binary-protocol-client.readthedocs.io/en/latest/examples.html)”
+“[Examples of usage](https://pygridgain.readthedocs.io/en/latest/examples.html)”
 section of the documentation.
 
 This code implies that it is run in the environment with `pygridgain` package
@@ -73,4 +73,4 @@ $ python setup.py pytest
 
 *NB!* All tests require GridGain node running on localhost:10800.
 If you need to change the connection parameters, see the documentation on
-[testing](https://apache-ignite-binary-protocol-client.readthedocs.io/en/latest/readme.html#testing).
+[testing](https://pygridgain.readthedocs.io/en/latest/readme.html#testing).
