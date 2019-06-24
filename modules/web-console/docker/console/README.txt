@@ -34,5 +34,5 @@ Install Docker (version >=17.05) using instructions from https://www.docker.com/
 
     rm -rf ignite-web-console-*
 
-Ready image will be available in local docker registry (can be seen by calling the `docker images` command)
+The image will be available in local docker registry (can be seen by calling the `docker images` command)
     

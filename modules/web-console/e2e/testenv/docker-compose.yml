@@ -16,7 +16,7 @@
 
 version: '3'
 services:
-  testenv_backend:
+  backend:
     build:
       context: '../../docker/console'
       dockerfile: 'backend/Dockerfile'
@@ -32,4 +32,4 @@ services:
     ports:
       - 9001:80
     depends_on:
-      - testenv_backend
+      - backend

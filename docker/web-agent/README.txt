@@ -31,4 +31,4 @@ Build image
 
         rm -rf ignite-web-console-agent*
 
-Ready image will be available in local docker registry (can be seen by calling the `docker images` command)
+The image will be available in local docker registry (can be seen by calling the `docker images` command)
