@@ -2411,8 +2411,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             log.info("Finished applying memory changes [changesApplied=" + applied +
                 ", time=" + (U.currentTimeMillis() - start) + " ms]");
 
-            assert applied.get() > 0;
-
             finalizeCheckpointOnRecovery(status.cpStartTs, status.cpStartId, status.startPtr, exec);
         }
 
@@ -2893,9 +2891,10 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                                 byte state = cacheState.stateByIndex(i);
 
                                 // Ignore undefined state.
-                                if (state >= 0)
-                                    partitionRecoveryStates.put(
-                                        new GroupPartitionId(entry.getKey(), partId), (int)state);
+                                if (state != -1) {
+                                    partitionRecoveryStates.put(new GroupPartitionId(entry.getKey(), partId),
+                                        (int)state);
+                                }
                             }
                         }
 
