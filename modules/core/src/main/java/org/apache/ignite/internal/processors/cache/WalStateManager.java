@@ -460,10 +460,10 @@ public class WalStateManager extends GridCacheSharedManagerAdapter {
         }
 
         for (Integer grpId : grpsToEnableWal)
-            cctx.cache().cacheGroup(grpId).localWalEnabled(true);
+            cctx.cache().cacheGroup(grpId).localWalEnabled(true, true);
 
         for (Integer grpId : grpsToDisableWal)
-            cctx.cache().cacheGroup(grpId).localWalEnabled(false);
+            cctx.cache().cacheGroup(grpId).localWalEnabled(false, true);
     }
 
     /**
@@ -491,7 +491,7 @@ public class WalStateManager extends GridCacheSharedManagerAdapter {
                     assert grp != null;
 
                     if (!grp.localWalEnabled())
-                        grp.localWalEnabled(true);
+                        grp.localWalEnabled(true, false);
                 }
 
                 tmpDisabledWal = null;
@@ -505,6 +505,8 @@ public class WalStateManager extends GridCacheSharedManagerAdapter {
                 @Override public void applyx(IgniteInternalFuture future) {
                     for (Integer grpId0 : session0.disabledGrps) {
                         CacheGroupContext grp = cctx.cache().cacheGroup(grpId0);
+
+                        grp.persistLocalWalState(true);
 
                         if (grp != null)
                             grp.topology().ownMoving(topVer);
