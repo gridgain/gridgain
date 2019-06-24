@@ -99,7 +99,7 @@ setuptools.setup(
         'Intended Audience :: Developers',
         'Topic :: Database :: Front-Ends',
         'Topic :: Software Development :: Libraries :: Python Modules',
-        'License :: GridGain Community Edition License',
+        'License :: Free for non-commercial use',
         'Operating System :: OS Independent',
     ],
 )
