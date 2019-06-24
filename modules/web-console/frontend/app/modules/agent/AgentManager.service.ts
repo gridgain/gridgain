@@ -462,7 +462,7 @@ export default class AgentManager {
      * @returns {ng.IPromise}
      * @private
      */
-    _executeOnActiveCluster(cluster, credentials, event, params) {
+    _restOnActiveCluster(cluster, credentials, event, params) {
         return this._sendToAgent(event, {clusterId: cluster.id, params: _.merge({}, credentials, params)})
             .then(async(res) => {
                 const {status = SuccessStatus.STATUS_SUCCESS} = res;
@@ -478,13 +478,13 @@ export default class AgentManager {
 
                         const data = await this.pool.postMessage({payload: res.data, useBigIntJson});
 
-                        return event === EVENT_REST ? data : data.result;
+                        return data;
 
                     case SuccessStatus.STATUS_FAILED:
                         if (res.error.startsWith('Failed to handle request - unknown session token (maybe expired session)')) {
                             this.clustersSecrets.get(cluster.id).resetSessionToken();
 
-                            return this._executeOnCluster(event, params);
+                            return this._restOnCluster(event, params);
                         }
 
                         throw new Error(res.error);
@@ -510,6 +510,17 @@ export default class AgentManager {
      * @private
      */
     _executeOnCluster(event, params) {
+        return this._restOnCluster(event, params)
+            .then((res) => res.result);
+    }
+
+    /**
+     * @param {String} event
+     * @param {Object} params
+     * @returns {Promise}
+     * @private
+     */
+    _restOnCluster(event, params) {
         return this.connectionSbj.pipe(first()).toPromise()
             .then(({cluster}) => {
                 if (_.isNil(cluster))
@@ -533,7 +544,7 @@ export default class AgentManager {
 
                 return {cluster, credentials: {}};
             })
-            .then(({cluster, credentials}) => this._executeOnActiveCluster(cluster, credentials, event, params));
+            .then(({cluster, credentials}) => this._restOnActiveCluster(cluster, credentials, event, params));
     }
 
     /**
@@ -543,7 +554,7 @@ export default class AgentManager {
      * @returns {Promise}
      */
     topology(attr = false, mtr = false, caches = false) {
-        return this._executeOnCluster(EVENT_REST, {cmd: 'top', attr, mtr, caches});
+        return this._restOnCluster(EVENT_REST, {cmd: 'top', attr, mtr, caches});
     }
 
     collectCacheNames(nid: string) {
@@ -577,7 +588,7 @@ export default class AgentManager {
      * @returns {Promise}
      */
     metadata() {
-        return this._executeOnCluster(EVENT_REST, {cmd: 'metadata'})
+        return this._restOnCluster(EVENT_REST, {cmd: 'metadata'})
             .then((caches) => {
                 let types = [];
 
