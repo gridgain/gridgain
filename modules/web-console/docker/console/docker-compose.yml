@@ -19,7 +19,7 @@ services:
   backend:
     build:
       dockerfile: 'backend/Dockerfile'
-    image: gridgain/dev-web-console-backend
+    image: gridgain/web-console-backend
     ports:
       - 3000:3000
     # Restart on crash.
@@ -40,7 +40,7 @@ services:
   frontend:
     build:
       dockerfile: 'frontend/Dockerfile'
-    image: gridgain/dev-web-console-frontend
+    image: gridgain/web-console-frontend
     depends_on:
       backend:
         condition: service_healthy
