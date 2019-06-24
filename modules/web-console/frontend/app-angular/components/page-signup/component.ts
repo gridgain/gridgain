@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import {Component, Inject} from '@angular/core';
+import {Component, Inject, OnInit} from '@angular/core';
 import {FormGroup, FormBuilder, Validators} from '@angular/forms';
 import AuthService, {SignupUserInfo} from 'app/modules/user/Auth.service';
 import MessagesFactory from 'app/services/Messages.service';
@@ -29,7 +29,7 @@ const isEmailConfirmationError = pipe(get('data.errorCode'), eq(EMAIL_NOT_CONFIR
     templateUrl: 'template.html',
     styleUrls: ['./style.url.scss']
 })
-export class PageSignupComponent {
+export class PageSignupComponent implements OnInit {
 
     static parameters = [
         [new Inject('Auth')],
@@ -44,11 +44,13 @@ export class PageSignupComponent {
     isLoading = false;
 
     constructor(
-        private authService: AuthService,
-        private IgniteMessages: ReturnType<typeof MessagesFactory>,
-        private fb: FormBuilder
-    ) {
-        this.form = fb.group({
+        protected authService: AuthService,
+        protected IgniteMessages: ReturnType<typeof MessagesFactory>,
+        protected fb: FormBuilder
+    ) {}
+
+    ngOnInit() {
+        this.form = this.fb.group({
             email: ['', [Validators.required, Validators.email]],
             password: ['', customRequireValidator],
             confirm: ['', customRequireValidator],

@@ -50,8 +50,8 @@ export class FormSignupComponent implements OnInit, OnChanges, OnDestroy {
     onDestroy$: Subject<any> = new Subject();
 
     constructor(
-        private fb: FormBuilder,
-        private Countries: ReturnType<typeof CountriesService>
+        protected fb: FormBuilder,
+        protected Countries: ReturnType<typeof CountriesService>
     ) {
         this.countries = Countries.getAll();
         this.serverValidator = this.serverValidator.bind(this);
