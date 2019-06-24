@@ -1583,9 +1583,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             int newLen = dataRow.size();
 
-            if (dataRow.cacheId() == CU.UNDEFINED_CACHE_ID && sizeWithCacheId)
-                newLen += 4;
-
             return oldLen == newLen;
         }
 
@@ -1652,7 +1649,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             GridCacheVersion ver,
             long expireTime,
             @Nullable CacheDataRow oldRow) throws IgniteCheckedException {
-            int cacheId = grp.storeCacheIdInDataPage() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
+            int cacheId = grp.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
 
             DataRow dataRow = makeDataRow(key, val, ver, expireTime, cacheId);
 
@@ -1736,7 +1733,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                     assert cctx.shared().database().checkpointLockIsHeldByThread();
 
-                    if (!grp.storeCacheIdInDataPage() && updateRow.cacheId() != CU.UNDEFINED_CACHE_ID) {
+                    if (!grp.sharedGroup() && updateRow.cacheId() != CU.UNDEFINED_CACHE_ID) {
                         updateRow.cacheId(CU.UNDEFINED_CACHE_ID);
 
                         rowStore.addRow(updateRow, grp.statisticsHolderData());
@@ -1811,7 +1808,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     assert info.newMvccTxState() == TxState.NA || info.newMvccCoordinatorVersion() > MVCC_CRD_COUNTER_NA;
                     assert MvccUtils.mvccVersionIsValid(info.mvccCoordinatorVersion(), info.mvccCounter(), info.mvccOperationCounter());
 
-                    if (!grp.storeCacheIdInDataPage() && cacheId != CU.UNDEFINED_CACHE_ID)
+                    if (!grp.sharedGroup() && cacheId != CU.UNDEFINED_CACHE_ID)
                         row.cacheId(CU.UNDEFINED_CACHE_ID);
 
                     rowStore.addRow(row, grp.statisticsHolderData());
@@ -1999,7 +1996,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 else if (oldRow != null)
                     rowStore.updateDataRow(oldRow.link(), mvccUpdateMarker, updateRow, grp.statisticsHolderData());
 
-                if (!grp.storeCacheIdInDataPage() && updateRow.cacheId() != CU.UNDEFINED_CACHE_ID) {
+                if (!grp.sharedGroup() && updateRow.cacheId() != CU.UNDEFINED_CACHE_ID) {
                     updateRow.cacheId(CU.UNDEFINED_CACHE_ID);
 
                     rowStore.addRow(updateRow, grp.statisticsHolderData());
@@ -2366,7 +2363,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
 
             try {
-                int cacheId = grp.storeCacheIdInDataPage() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
+                int cacheId = grp.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
 
                 assert oldRow == null || oldRow.cacheId() == cacheId : oldRow;
 
@@ -2470,7 +2467,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 }
 
                 if (val != null) {
-                    if (!grp.storeCacheIdInDataPage() && updateRow.cacheId() != CU.UNDEFINED_CACHE_ID) {
+                    if (!grp.sharedGroup() && updateRow.cacheId() != CU.UNDEFINED_CACHE_ID) {
                         updateRow.cacheId(CU.UNDEFINED_CACHE_ID);
 
                         rowStore.addRow(updateRow, grp.statisticsHolderData());
@@ -3015,7 +3012,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                     int cacheId = cacheId();
 
-                    if (!grp.storeCacheIdInDataPage() && cacheId != CU.UNDEFINED_CACHE_ID)
+                    if (!grp.sharedGroup() && cacheId != CU.UNDEFINED_CACHE_ID)
                         cacheId(CU.UNDEFINED_CACHE_ID);
 
                     rowStore().addRow(this, grp.statisticsHolderData());

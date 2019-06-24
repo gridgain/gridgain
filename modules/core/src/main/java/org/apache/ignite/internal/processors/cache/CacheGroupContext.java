@@ -782,7 +782,7 @@ public class CacheGroupContext {
      * @return {@code True} if group can contain multiple caches.
      */
     public boolean sharedGroup() {
-        return ccfg.getGroupName() != null;
+        return ccfg.getGroupName() != null || storeCacheIdInDataPage();
     }
 
     /**

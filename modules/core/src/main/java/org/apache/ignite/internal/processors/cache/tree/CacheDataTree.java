@@ -446,7 +446,7 @@ public class CacheDataTree extends BPlusTree<CacheSearchRow, CacheDataRow> {
                     if (grp.mvccEnabled())
                         addr += MVCC_INFO_SIZE; // Skip MVCC info.
 
-                    if (grp.storeCacheIdInDataPage())
+                    if (grp.sharedGroup())
                         addr += 4; // Skip cache id.
 
                     final int len = PageUtils.getInt(addr, 0);
