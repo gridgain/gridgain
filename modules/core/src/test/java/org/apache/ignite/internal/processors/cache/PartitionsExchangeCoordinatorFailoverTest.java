@@ -120,7 +120,7 @@ public class PartitionsExchangeCoordinatorFailoverTest extends GridCommonAbstrac
 
     /** {@inheritDoc} */
     @Override protected long getTestTimeout() {
-        return 60 * 1000L;
+        return 100500 * 1000L;
     }
 
     /**
@@ -467,7 +467,7 @@ public class PartitionsExchangeCoordinatorFailoverTest extends GridCommonAbstrac
         awaitPartitionMapExchange();
     }
 
-    @Test(timeout = 100500000L)
+    @Test
     public void testSimple() throws Exception {
         newCaches = false;
 
