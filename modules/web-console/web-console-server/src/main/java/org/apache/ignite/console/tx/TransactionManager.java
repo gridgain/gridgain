@@ -17,10 +17,13 @@
 package org.apache.ignite.console.tx;
 
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Supplier;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.console.db.NestedTransaction;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
@@ -29,8 +32,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import static org.apache.ignite.console.web.errors.Errors.convertToDatabaseNotAvailableException;
 import static org.apache.ignite.console.web.errors.Errors.checkDatabaseNotAvailable;
-import static org.apache.ignite.console.web.errors.Errors.isDatabaseNotAvailable;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
 
@@ -111,55 +114,60 @@ public class TransactionManager {
     }
 
     /**
-     * @param action Action to execute.
+     * @param act Action to execute.
      * @return Action result.
      */
-    private <T> T doInTransaction0(Supplier<T> action) {
+    private <T> T doInTransaction0(Callable<T> act) {
         try (Transaction tx = txStart()) {
-            T res = action.get();
+            T res = act.call();
 
             tx.commit();
 
             return res;
+        }
+        catch (Exception e) {
+            if (e instanceof IgniteException)
+                throw (IgniteException)e;
+
+            if (e instanceof IgniteCheckedException)
+                throw U.convertException((IgniteCheckedException)e);
+
+            throw new IgniteException(e);
         }
     }
 
     /**
      * Execute action in transaction.
      *
-     * @param name Action name.
-     * @param action Action to execute.
+     * @param act Action to execute.
      * @return Action result.
      */
-    public <T> T doInTransaction(String name, Supplier<T> action) {
-        if (log.isDebugEnabled())
-            log.debug("Executing action: {}", name);
-
+    public <T> T doInTransaction(Callable<T> act) {
         // For server nodes no need to recreate caches.
         if (!ignite.configuration().isClientMode())
-            return doInTransaction0(action);
+            return doInTransaction0(act);
 
         // For client nodes:
         //  1. Try to execute action in transaction.
         //  2. If failed, try to recreate caches.
-        //  3. If failed with IgniteClientDisconnectedException - await on reconnect future.
-        //  4. If all options failed, throw IgniteClientDisconnectedException that will be converted to 503 error.
+        //  3. If current transaction was nested then throw IllegalStateException.
+        //  4. If caches recreated successfully then try to execute action in transaction.
         try {
-            return doInTransaction0(action);
+            return doInTransaction0(act);
         }
         catch (Throwable e) {
-            if (isDatabaseNotAvailable(e)) {
+            if (checkDatabaseNotAvailable(e)) {
                 try {
                     recreateCaches();
                 }
-                catch (RuntimeException re) {
-                    throw checkDatabaseNotAvailable(re);
+                catch (IgniteException re) {
+                    throw convertToDatabaseNotAvailableException(re);
                 }
 
                 if (tx() instanceof NestedTransaction)
                     throw new IllegalStateException("Database connection was lost during transaction");
 
-                return doInTransaction0(action);
+                return doInTransaction0(act);
             }
 
             throw e;
@@ -169,12 +177,11 @@ public class TransactionManager {
     /**
      * Execute action in transaction.
      *
-     * @param name Action name.
-     * @param action Action to execute.
+     * @param act Action to execute.
      */
-    public void doInTransaction(String name, Runnable action) {
-        doInTransaction(name, () -> {
-            action.run();
+    public void doInTransaction(Runnable act) {
+        doInTransaction(() -> {
+            act.run();
 
             return null;
         });

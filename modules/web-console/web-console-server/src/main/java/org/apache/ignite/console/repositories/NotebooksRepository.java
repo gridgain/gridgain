@@ -59,7 +59,7 @@ public class NotebooksRepository {
      * @return List of notebooks for specified account.
      */
     public Collection<Notebook> list(UUID accId) {
-        return txMgr.doInTransaction("Load notebooks", () -> {
+        return txMgr.doInTransaction(() -> {
             Set<UUID> notebooksIds = notebooksIdx.load(accId);
 
             return notebooksTbl.loadAll(notebooksIds);
@@ -73,7 +73,7 @@ public class NotebooksRepository {
      * @param notebook Notebook to save.
      */
     public void save(UUID accId, Notebook notebook) {
-        txMgr.doInTransaction("Save notebook", () -> {
+        txMgr.doInTransaction(() -> {
             notebooksIdx.validateBeforeSave(accId, notebook.getId(), notebooksTbl);
 
             notebooksTbl.save(notebook);
@@ -89,7 +89,7 @@ public class NotebooksRepository {
      * @param notebookId Notebook ID to delete.
      */
     public void delete(UUID accId, UUID notebookId) {
-        txMgr.doInTransaction("Delete notebook", () -> {
+        txMgr.doInTransaction(() -> {
             notebooksIdx.validate(accId, notebookId);
 
             Notebook notebook = notebooksTbl.load(notebookId);
@@ -108,7 +108,7 @@ public class NotebooksRepository {
      * @param accId Account ID.
      */
     public void deleteAll(UUID accId) {
-        txMgr.doInTransaction("Delete notebooks", () -> {
+        txMgr.doInTransaction(() -> {
             Set<UUID> notebooksIds = notebooksIdx.delete(accId);
 
             notebooksTbl.deleteAll(notebooksIds);

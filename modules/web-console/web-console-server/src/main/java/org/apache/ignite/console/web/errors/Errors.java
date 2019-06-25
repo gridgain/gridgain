@@ -34,7 +34,7 @@ public class Errors {
      * @param e Exception to check.
      * @return {@code true} if database not available.
      */
-    public static boolean isDatabaseNotAvailable(Throwable e) {
+    public static boolean checkDatabaseNotAvailable(Throwable e) {
         if (e instanceof IgniteClientDisconnectedException)
             return true;
 
@@ -53,7 +53,7 @@ public class Errors {
      * @param e Exception to check.
      * @return Exception to throw.
      */
-    public static RuntimeException checkDatabaseNotAvailable(RuntimeException e) {
-        return isDatabaseNotAvailable(e) ? new DatabaseNotAvailableException() : e;
+    public static RuntimeException convertToDatabaseNotAvailableException(RuntimeException e) {
+        return checkDatabaseNotAvailable(e) ? new DatabaseNotAvailableException() : e;
     }
 }

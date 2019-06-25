@@ -33,7 +33,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Repository;
 
 import static org.apache.ignite.console.common.Utils.normalizeEmail;
-import static org.apache.ignite.console.web.errors.Errors.isDatabaseNotAvailable;
+import static org.apache.ignite.console.web.errors.Errors.checkDatabaseNotAvailable;
 
 /**
  * Repository to work with accounts.
@@ -73,7 +73,7 @@ public class AccountsRepository {
      * @throws UsernameNotFoundException If user not found.
      */
     public Account getById(UUID accId) throws IllegalStateException {
-        return txMgr.doInTransaction("Find account by ID", () -> {
+        return txMgr.doInTransaction(() -> {
             try {
                 Account account = accountsTbl.load(accId);
 
@@ -83,7 +83,7 @@ public class AccountsRepository {
                 return account;
             }
             catch (IgniteException e) {
-                if (isDatabaseNotAvailable(e))
+                if (checkDatabaseNotAvailable(e))
                     throw e;
 
                 throw new UsernameNotFoundException(accId.toString(), e);
@@ -99,7 +99,7 @@ public class AccountsRepository {
      * @throws UsernameNotFoundException If user not found.
      */
     public Account getByEmail(String email) throws UsernameNotFoundException {
-        return txMgr.doInTransaction("Find account by e-mail", () -> {
+        return txMgr.doInTransaction(() -> {
             try {
                 Account account = accountsTbl.getByIndex(email);
 
@@ -109,7 +109,7 @@ public class AccountsRepository {
                 return account;
             }
             catch (IgniteException e) {
-                if (isDatabaseNotAvailable(e))
+                if (checkDatabaseNotAvailable(e))
                     throw e;
 
                 throw new UsernameNotFoundException(email, e);
@@ -133,7 +133,7 @@ public class AccountsRepository {
      */
     @SuppressWarnings("unchecked")
     public Account create(Account account) throws AuthenticationServiceException {
-        return txMgr.doInTransaction("Create account", () -> {
+        return txMgr.doInTransaction(() -> {
             boolean firstUser = !hasUsers();
 
             account.setAdmin(firstUser);
@@ -154,7 +154,7 @@ public class AccountsRepository {
      * @param account Account to save.
      */
     public Account save(Account account) {
-        return txMgr.doInTransaction("Save account", () -> accountsTbl.save(account));
+        return txMgr.doInTransaction(() -> accountsTbl.save(account));
     }
 
     /**
@@ -164,7 +164,7 @@ public class AccountsRepository {
      * @return Deleted account.
      */
     public Account delete(UUID accId) {
-        return txMgr.doInTransaction("Delete account", () -> {
+        return txMgr.doInTransaction(() -> {
             Account acc = accountsTbl.delete(accId);
 
             if (acc == null)
@@ -192,6 +192,6 @@ public class AccountsRepository {
      * @return Valid tokens.
      */
     public Collection<Account> getAllByTokens(Set<String> tokens) {
-        return txMgr.doInTransaction("Find accounts by tokens", () -> accountsTbl.loadAllByIndex(tokens));
+        return txMgr.doInTransaction(() -> accountsTbl.loadAllByIndex(tokens));
     }
 }

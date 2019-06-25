@@ -18,7 +18,7 @@ package org.apache.ignite.console.web.security;
 
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteClientDisconnectedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.springframework.session.ExpiringSession;
@@ -26,7 +26,7 @@ import org.springframework.session.MapSession;
 import org.springframework.session.Session;
 import org.springframework.session.SessionRepository;
 
-import static org.apache.ignite.console.web.errors.Errors.checkDatabaseNotAvailable;
+import static org.apache.ignite.console.web.errors.Errors.convertToDatabaseNotAvailableException;
 
 /**
  * A {@link SessionRepository} backed by a Apache Ignite and that uses a {@link MapSession}.
@@ -68,8 +68,8 @@ public class IgniteSessionRepository implements SessionRepository<ExpiringSessio
     @Override public ExpiringSession createSession() {
         ExpiringSession ses = new MapSession();
 
-        if (this.dfltMaxInactiveInterval != null)
-            ses.setMaxInactiveIntervalInSeconds(this.dfltMaxInactiveInterval);
+        if (dfltMaxInactiveInterval != null)
+            ses.setMaxInactiveIntervalInSeconds(dfltMaxInactiveInterval);
 
         return ses;
     }
@@ -86,8 +86,8 @@ public class IgniteSessionRepository implements SessionRepository<ExpiringSessio
         try {
             cache().put(ses.getId(), new MapSession(ses));
         }
-        catch (IgniteClientDisconnectedException e) {
-            throw checkDatabaseNotAvailable(e);
+        catch (IgniteException e) {
+            throw convertToDatabaseNotAvailableException(e);
         }
     }
 
@@ -107,8 +107,8 @@ public class IgniteSessionRepository implements SessionRepository<ExpiringSessio
 
             return ses;
         }
-        catch (RuntimeException e) {
-            throw checkDatabaseNotAvailable(e);
+        catch (IgniteException e) {
+            throw convertToDatabaseNotAvailableException(e);
         }
     }
 
@@ -117,8 +117,8 @@ public class IgniteSessionRepository implements SessionRepository<ExpiringSessio
         try {
             cache().remove(id);
         }
-        catch (RuntimeException e) {
-            throw checkDatabaseNotAvailable(e);
+        catch (IgniteException e) {
+            throw convertToDatabaseNotAvailableException(e);
         }
     }
 }

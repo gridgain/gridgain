@@ -98,7 +98,7 @@ public class ConfigurationsRepository {
      * @return Configuration in JSON format.
      */
     public JsonObject loadConfiguration(ConfigurationKey key, UUID clusterId) {
-        return txMgr.doInTransaction("Load cluster configuration", () -> {
+        return txMgr.doInTransaction(() -> {
             Cluster cluster = clustersTbl.load(clusterId);
 
             if (cluster == null)
@@ -139,7 +139,7 @@ public class ConfigurationsRepository {
      * @return List of user clusters.
      */
     public JsonArray loadClusters(ConfigurationKey key) {
-        return txMgr.doInTransaction("Load clusters", () -> {
+        return txMgr.doInTransaction(() -> {
             Set<UUID> clusterIds = clustersIdx.load(key);
 
             Collection<Cluster> clusters = clustersTbl.loadAll(clusterIds);
@@ -158,7 +158,7 @@ public class ConfigurationsRepository {
      * @return Cluster.
      */
     public Cluster loadCluster(ConfigurationKey key, UUID clusterId) {
-        return txMgr.doInTransaction("Load cluster", () -> {
+        return txMgr.doInTransaction(() -> {
             Cluster cluster = clustersTbl.load(clusterId);
 
             if (cluster == null)
@@ -176,7 +176,7 @@ public class ConfigurationsRepository {
      * @return Cache.
      */
     public Cache loadCache(ConfigurationKey key, UUID cacheId) {
-        return txMgr.doInTransaction("Load cache", () -> {
+        return txMgr.doInTransaction(() -> {
             Cache cache = cachesTbl.load(cacheId);
 
             if (cache == null)
@@ -194,7 +194,7 @@ public class ConfigurationsRepository {
      * @return Model.
      */
     public Model loadModel(ConfigurationKey key, UUID mdlId) {
-        return txMgr.doInTransaction("Load domain model", () -> {
+        return txMgr.doInTransaction(() -> {
             Model mdl = modelsTbl.load(mdlId);
 
             if (mdl == null)
@@ -212,7 +212,7 @@ public class ConfigurationsRepository {
      * @return Collection of cluster caches.
      */
     public Collection<Cache> loadCaches(ConfigurationKey key, UUID clusterId) {
-        return txMgr.doInTransaction("Load caches", () -> {
+        return txMgr.doInTransaction(() -> {
             clustersIdx.validate(key, clusterId);
 
             Set<UUID> cachesIds = cachesIdx.load(clusterId);
@@ -229,7 +229,7 @@ public class ConfigurationsRepository {
      * @return Collection of cluster models.
      */
     public Collection<Model> loadModels(ConfigurationKey key, UUID clusterId) {
-        return txMgr.doInTransaction("Load domain models", () -> {
+        return txMgr.doInTransaction(() -> {
             clustersIdx.validate(key, clusterId);
 
             Set<UUID> modelsIds = modelsIdx.load(clusterId);
@@ -378,7 +378,7 @@ public class ConfigurationsRepository {
      * @param json Configuration in JSON format.
      */
     public void saveAdvancedCluster(ConfigurationKey key, JsonObject json) {
-        txMgr.doInTransaction("Save advanced cluster", () -> {
+        txMgr.doInTransaction(() -> {
             Cluster cluster = saveCluster(key, json);
 
             saveCaches(key, cluster, json, false);
@@ -393,7 +393,7 @@ public class ConfigurationsRepository {
      * @param json Configuration in JSON format.
      */
     public void saveBasicCluster(ConfigurationKey key, JsonObject json) {
-        txMgr.doInTransaction("Save basic cluster", () -> {
+        txMgr.doInTransaction(() -> {
             Cluster cluster = saveCluster(key, json);
 
             saveCaches(key, cluster, json, true);
@@ -434,7 +434,7 @@ public class ConfigurationsRepository {
      * @param clusterIds Cluster IDs to delete.
      */
     public void deleteClusters(ConfigurationKey key, TreeSet<UUID> clusterIds) {
-        txMgr.doInTransaction("Delete clusters", () -> {
+        txMgr.doInTransaction(() -> {
             clustersIdx.validateAll(key, clusterIds);
 
             clusterIds.forEach(clusterId -> deleteAllClusterObjects(key, clusterId));
@@ -450,7 +450,7 @@ public class ConfigurationsRepository {
      * @param key Configuration key.
      */
     public void deleteByAccountId(ConfigurationKey key) {
-        txMgr.doInTransaction("Delete configurations", () -> {
+        txMgr.doInTransaction(() -> {
             Set<UUID> clusterIds = clustersIdx.delete(key);
 
             clusterIds.forEach(clusterId -> deleteAllClusterObjects(key, clusterId));

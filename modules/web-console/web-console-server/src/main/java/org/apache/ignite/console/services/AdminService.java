@@ -131,7 +131,7 @@ public class AdminService {
      * @param accId Account ID.
      */
     public void delete(UUID accId) {
-        Account acc = txMgr.doInTransaction("Delete account", () -> {
+        Account acc = txMgr.doInTransaction(() -> {
             cfgsSrv.deleteByAccountId(accId);
 
             notebooksSrv.deleteByAccountId(accId);

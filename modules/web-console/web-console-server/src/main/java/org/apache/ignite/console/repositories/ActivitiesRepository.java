@@ -71,7 +71,7 @@ public class ActivitiesRepository {
      * @param act Activity action.
      */
     public void save(UUID accId, String grp, String act) {
-        txMgr.doInTransaction("Save activity", () -> {
+        txMgr.doInTransaction(() -> {
             // Activity period is the current year and month.
             long date = LocalDate.now().atStartOfDay(UTC).withDayOfMonth(1).toInstant().toEpochMilli();
 
@@ -103,7 +103,7 @@ public class ActivitiesRepository {
      * @param endDate End date.
      */
     public Collection<Activity> activitiesForPeriod(UUID accId, long startDate, long endDate) {
-        return txMgr.doInTransaction("Load activities", () -> {
+        return txMgr.doInTransaction(() -> {
             ZonedDateTime dtStart = Instant.ofEpochMilli(startDate).atZone(UTC);
             ZonedDateTime dtEnd = Instant.ofEpochMilli(endDate).atZone(UTC);
 
@@ -139,7 +139,7 @@ public class ActivitiesRepository {
      * @param activity Activity to save.
      */
     public void save(ActivityKey activityKey, Activity activity) {
-        txMgr.doInTransaction("Save activity", () -> {
+        txMgr.doInTransaction(() -> {
             Set<UUID> ids = activitiesIdx.load(activityKey);
 
             activitiesTbl.save(activity);

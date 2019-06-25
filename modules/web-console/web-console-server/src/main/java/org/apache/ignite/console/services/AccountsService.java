@@ -138,7 +138,7 @@ public class AccountsService implements UserDetailsService {
      * @param params SignUp params.
      */
     public void register(SignUpRequest params) {
-        Account acc = txMgr.doInTransaction("Register account", () -> {
+        Account acc = txMgr.doInTransaction(() -> {
             Account acc0 = create(params);
 
             if (disableSignup && !acc0.isAdmin())
@@ -181,7 +181,7 @@ public class AccountsService implements UserDetailsService {
      * @param adminFlag New value for admin flag.
      */
     public void toggle(UUID accId, boolean adminFlag) {
-        txMgr.doInTransaction("Toggle account admin permissions", () -> {
+        txMgr.doInTransaction(() -> {
             Account account = accountsRepo.getById(accId);
 
             if (account.isAdmin() != adminFlag) {
@@ -198,7 +198,7 @@ public class AccountsService implements UserDetailsService {
      * @param accId Account id.
      */
     public void activateAccount(UUID accId) {
-        txMgr.doInTransaction("Activate account", () -> {
+        txMgr.doInTransaction(() -> {
             Account acc = accountsRepo.getById(accId);
 
             acc.activate();
@@ -216,7 +216,7 @@ public class AccountsService implements UserDetailsService {
         if (!activationEnabled)
             throw new IllegalAccessError("Activation was not enabled!");
 
-        Account acc = txMgr.doInTransaction("Reset account activation token", () -> {
+        Account acc = txMgr.doInTransaction(() -> {
             Account acc0 = accountsRepo.getByEmail(email);
 
             if (MILLIS.between(acc0.getActivationSentAt(), LocalDateTime.now()) >= activationSndTimeout)
@@ -237,7 +237,7 @@ public class AccountsService implements UserDetailsService {
      * @param changes Changes to apply to user.
      */
     public Account save(UUID accId, ChangeUserRequest changes) {
-        Account acc = txMgr.doInTransaction("Save account", () -> {
+        Account acc = txMgr.doInTransaction(() -> {
             Account acc0 = accountsRepo.getById(accId);
 
             acc0.update(changes);
@@ -262,7 +262,7 @@ public class AccountsService implements UserDetailsService {
      * @param email User email to send reset password link.
      */
     public void forgotPassword(String email) {
-        Account acc = txMgr.doInTransaction("Reset account password", () -> {
+        Account acc = txMgr.doInTransaction(() -> {
             Account acc0 = accountsRepo.getByEmail(email);
 
             userDetailsChecker.check(acc0);
@@ -281,7 +281,7 @@ public class AccountsService implements UserDetailsService {
      * @param newPwd New password.
      */
     public void resetPasswordByToken(String email, String resetPwdTok, String newPwd) {
-        txMgr.doInTransaction("Set account password", () -> {
+        txMgr.doInTransaction(() -> {
             Account acc = accountsRepo.getByEmail(email);
 
             if (!resetPwdTok.equals(acc.getResetPasswordToken()))

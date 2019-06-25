@@ -51,7 +51,7 @@ public class AnnouncementRepository {
      * @return Announcement.
      */
     public Announcement load() {
-        return txMgr.doInTransaction("Load announcement", () -> {
+        return txMgr.doInTransaction(() -> {
             Announcement ann = announcementTbl.load(ID);
 
             if (ann == null) {
@@ -70,7 +70,7 @@ public class AnnouncementRepository {
      * @param ann Announcement.
      */
     public void save(Announcement ann) {
-        txMgr.doInTransaction("Save announcement", () -> {
+        txMgr.doInTransaction(() -> {
             ann.setId(ID);
 
             announcementTbl.save(ann);
