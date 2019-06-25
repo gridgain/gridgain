@@ -528,7 +528,6 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
             }
 
             Collection<KeyCacheObject> keys = req.keys();
-            int cnt = keys.size();
 
             GridDhtLockFuture fut;
 
