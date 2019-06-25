@@ -506,16 +506,15 @@ public class WalStateManager extends GridCacheSharedManagerAdapter {
             cpFut.finishFuture().listen(new IgniteInClosureX<IgniteInternalFuture>() {
                 @Override public void applyx(IgniteInternalFuture future) {
                     for (Integer grpId0 : session0.disabledGrps) {
-                        CacheGroupContext grp = cctx.cache().cacheGroup(grpId0);
-
                         if (!X.hasCause(future.error(), NodeStoppingException.class))
-                            grp.persistLocalWalState(true);
+                            cctx.database().walEnabled(grpId0, true, true);
+
+                        CacheGroupContext grp = cctx.cache().cacheGroup(grpId0);
 
                         if (grp != null)
                             grp.topology().ownMoving(topVer);
                         else if (log.isDebugEnabled())
                             log.debug("Cache group was destroyed before checkpoint finished, [grpId=" + grpId0 + ']');
-
                     }
 
                     if (log.isDebugEnabled())

@@ -1267,7 +1267,7 @@ public class CacheGroupContext {
     /**
      * @param enabled Enabled flag..
      */
-    public void persistLocalWalState(boolean enabled) {
+    private void persistLocalWalState(boolean enabled) {
         shared().database().walEnabled(grpId, enabled, true);
     }
 
