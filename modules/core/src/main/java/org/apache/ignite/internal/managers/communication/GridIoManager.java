@@ -58,6 +58,7 @@ import org.apache.ignite.internal.GridTopic;
 import org.apache.ignite.internal.IgniteClientDisconnectedCheckedException;
 import org.apache.ignite.internal.IgniteComponentType;
 import org.apache.ignite.internal.IgniteDeploymentCheckedException;
+import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.direct.DirectMessageReader;
@@ -1675,7 +1676,9 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         boolean ordered,
         long timeout,
         boolean skipOnTimeout) {
-        if (ctx.security().enabled()) {
+        boolean securityMsgSupported = IgniteFeatures.allNodesSupports(ctx, ctx.discovery().aliveServerNodes(), IgniteFeatures.IGNITE_SECURITY_PROCESSOR);
+
+        if (ctx.security().enabled() && securityMsgSupported) {
             UUID secSubjId = null;
 
             UUID curSecSubjId = ctx.security().securityContext().subject().id();
@@ -3189,12 +3192,9 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
     /**
      * @return Security subject id.
      */
-    private UUID secSubjId(GridIoMessage msg){
-        if(ctx.security().enabled()) {
-            assert msg instanceof GridIoSecurityAwareMessage;
-
-            return ((GridIoSecurityAwareMessage) msg).secSubjId();
-        }
+    private UUID secSubjId(GridIoMessage msg) {
+        if (ctx.security().enabled() && msg instanceof GridIoSecurityAwareMessage)
+            return ((GridIoSecurityAwareMessage)msg).secSubjId();
 
         return null;
     }
