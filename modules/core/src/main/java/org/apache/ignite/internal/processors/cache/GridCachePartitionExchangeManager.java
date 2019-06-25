@@ -2169,7 +2169,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                     nearNodeId.toString()
                 );
 
-                if (allNodesSupports(nearNode.nodes(), TRANSACTION_OWNER_THREAD_DUMP_PROVIDING)) {
+                if (allNodesSupports(cctx.kernalContext(), nearNode.nodes(), TRANSACTION_OWNER_THREAD_DUMP_PROVIDING)) {
                     IgniteCompute compute = ignite.compute(ignite.cluster().forNodeId(nearNodeId));
 
                     try {
@@ -3046,11 +3046,14 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                     if (isCancelled())
                         Thread.currentThread().interrupt();
 
-                    updateHeartbeat();
+                    blockingSectionBegin();
 
-                    task = futQ.poll(timeout, MILLISECONDS);
-
-                    updateHeartbeat();
+                    try {
+                        task = futQ.poll(timeout, MILLISECONDS);
+                    }
+                    finally {
+                        blockingSectionEnd();
+                    }
 
                     if (task == null)
                         continue; // Main while loop.
