@@ -43,12 +43,13 @@ export default {
     'base.configuration.edit.advanced.caches.cache': 'Advanced cluster cache edit',
     'base.configuration.edit.advanced.models': 'Advanced cluster models',
     'base.configuration.edit.advanced.models.model': 'Advanced cluster model edit',
-    'base.configuration.edit.advanced.igfs': 'Advanced cluster IGFSs',
-    'base.configuration.edit.advanced.igfs.igfs': 'Advanced cluster IGFS edit',
     'base.settings.admin': 'Admin panel',
     'base.settings.profile': 'User profile',
     'base.sql.notebook': 'Query notebook',
     'base.sql.tabs.notebooks-list': 'Query notebooks',
+    'base.sql.tabs.queries-history': 'Queries history',
+    'base.sql.tabs.running-queries': 'Running queries',
+    'base.monitoring.rolling-updates': 'Rolling Update',
 
     // app/components/page-signin/template.pug
     'app.components.page-signin.m1': 'Sign In',

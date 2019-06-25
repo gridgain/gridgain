@@ -46,7 +46,7 @@ import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabase
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.tree.SearchRow;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
-import org.apache.ignite.internal.stat.IoStatisticsHolderNoOp;
+import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
 import org.apache.ignite.internal.util.lang.GridIterator;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -76,6 +76,20 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerAbstractTe
         injectTestSystemOut();
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "validate_indexes", CACHE_NAME));
+
+        assertContains(log, testOut.toString(), "no issues found");
+    }
+
+    /**
+     * Test verifies that validate_indexes command finishes successfully when no cache names are specified.
+     */
+    @Test
+    public void testValidateIndexesNoErrorEmptyCacheNameArg() throws Exception {
+        prepareGridForTest();
+
+        injectTestSystemOut();
+
+        assertEquals(EXIT_CODE_OK, execute("--cache", "validate_indexes"));
 
         assertContains(log, testOut.toString(), "no issues found");
     }

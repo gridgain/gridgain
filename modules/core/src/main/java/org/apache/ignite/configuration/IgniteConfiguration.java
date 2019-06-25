@@ -76,6 +76,7 @@ import org.apache.ignite.spi.failover.always.AlwaysFailoverSpi;
 import org.apache.ignite.spi.indexing.IndexingSpi;
 import org.apache.ignite.spi.loadbalancing.LoadBalancingSpi;
 import org.apache.ignite.spi.loadbalancing.roundrobin.RoundRobinLoadBalancingSpi;
+import org.apache.ignite.spi.metric.MetricExporterSpi;
 import org.apache.ignite.ssl.SslContextFactory;
 import org.jetbrains.annotations.Nullable;
 
@@ -269,9 +270,6 @@ public class IgniteConfiguration {
     /** Management pool size. */
     private int mgmtPoolSize = DFLT_MGMT_THREAD_CNT;
 
-    /** IGFS pool size. */
-    private int igfsPoolSize = AVAILABLE_PROC_CNT;
-
     /** Data stream pool size. */
     private int dataStreamerPoolSize = DFLT_DATA_STREAMER_POOL_SIZE;
 
@@ -395,6 +393,9 @@ public class IgniteConfiguration {
     /** Encryption SPI. */
     private EncryptionSpi encryptionSpi;
 
+    /** Metric exporter SPI. */
+    private MetricExporterSpi[] metricExporterSpi;
+
     /** Cache configurations. */
     private CacheConfiguration[] cacheCfg;
 
@@ -462,14 +463,8 @@ public class IgniteConfiguration {
     /** Local event listeners. */
     private Map<IgnitePredicate<? extends Event>, int[]> lsnrs;
 
-    /** IGFS configuration. */
-    private FileSystemConfiguration[] igfsCfg;
-
     /** Service configuration. */
     private ServiceConfiguration[] svcCfgs;
-
-    /** Hadoop configuration. */
-    private HadoopConfiguration hadoopCfg;
 
     /** Client access configuration. */
     private ConnectorConfiguration connectorCfg = new ConnectorConfiguration();
@@ -580,6 +575,7 @@ public class IgniteConfiguration {
         loadBalancingSpi = cfg.getLoadBalancingSpi();
         indexingSpi = cfg.getIndexingSpi();
         encryptionSpi = cfg.getEncryptionSpi();
+        metricExporterSpi = cfg.getMetricExporterSpi();
 
         commFailureRslvr = cfg.getCommunicationFailureResolver();
 
@@ -612,9 +608,6 @@ public class IgniteConfiguration {
         discoStartupDelay = cfg.getDiscoveryStartupDelay();
         execCfgs = cfg.getExecutorConfiguration();
         failureDetectionTimeout = cfg.getFailureDetectionTimeout();
-        hadoopCfg = cfg.getHadoopConfiguration();
-        igfsCfg = cfg.getFileSystemConfiguration();
-        igfsPoolSize = cfg.getIgfsThreadPoolSize();
         failureHnd = cfg.getFailureHandler();
         igniteHome = cfg.getIgniteHome();
         igniteInstanceName = cfg.getIgniteInstanceName();
@@ -696,12 +689,8 @@ public class IgniteConfiguration {
     }
 
     /**
-     * Gets optional grid name. Returns {@code null} if non-default grid name was not
-     * provided.
-     * <p>The name only works locally and has no effect on topology</p>
+     * See {@link #getIgniteInstanceName()}.
      *
-     * @return Optional grid name. Can be {@code null}, which is default grid name, if
-     *      non-default grid name was not provided.
      * @deprecated Use {@link #getIgniteInstanceName()} instead.
      */
     @Deprecated
@@ -710,12 +699,11 @@ public class IgniteConfiguration {
     }
 
     /**
-     * Gets optional local instance name. Returns {@code null} if non-default local instance
-     * name was not provided.
-     * <p>The name only works locally and has no effect on topology</p>
+     * Gets optional node name. Returns {@code null} if it was not set.
      *
-     * @return Optional local instance name. Can be {@code null}, which is default local
-     * instance name, if non-default local instance name was not provided.
+     * <p>The name only works locally and has no effect outside JVM.</p>
+     *
+     * @return Optional node name. Can be {@code null}, which is default.
      */
     public String getIgniteInstanceName() {
         return igniteInstanceName;
@@ -762,11 +750,8 @@ public class IgniteConfiguration {
     }
 
     /**
-     * Sets grid name. Note that {@code null} is a default grid name.
+     * See {@link #setIgniteInstanceName}.
      *
-     * @param gridName Grid name to set. Can be {@code null}, which is default
-     *      grid name.
-     * @return {@code this} for chaining.
      * @deprecated Use {@link #setIgniteInstanceName(String)} instead.
      */
     @Deprecated
@@ -775,14 +760,17 @@ public class IgniteConfiguration {
     }
 
     /**
-     * Sets of local instance name. Note that {@code null} is a default local instance name.
+     * Sets node name. Note that {@code null} is a default node name.
      *
-     * @param instanceName Local instance name to set. Can be {@code null}. which is default
-     * local instance name.
+     * This name will be widely used in all string constants (thread-names, JMX beans).
+     * Also, it allows to get (check state, stop) node by name via {@link Ignition} methods.
+     *
+     *
+     * @param nodeName Node name to set. Can be {@code null}. which is default.
      * @return {@code this} for chaining.
      */
-    public IgniteConfiguration setIgniteInstanceName(String instanceName) {
-        this.igniteInstanceName = instanceName;
+    public IgniteConfiguration setIgniteInstanceName(String nodeName) {
+        this.igniteInstanceName = nodeName;
 
         return this;
     }
@@ -981,17 +969,6 @@ public class IgniteConfiguration {
     }
 
     /**
-     * Size of thread pool that is in charge of processing outgoing IGFS messages.
-     * <p>
-     * If not provided, executor service will have size equals number of processors available in system.
-     *
-     * @return Thread pool size to be used for IGFS outgoing message sending.
-     */
-    public int getIgfsThreadPoolSize() {
-        return igfsPoolSize;
-    }
-
-    /**
      * Size of thread pool that is in charge of processing data stream messages.
      * <p>
      * If not provided, executor service will have size {@link #DFLT_DATA_STREAMER_POOL_SIZE}.
@@ -1139,19 +1116,6 @@ public class IgniteConfiguration {
     }
 
     /**
-     * Set thread pool size that will be used to process outgoing IGFS messages.
-     *
-     * @param poolSize Executor service to use for outgoing IGFS messages.
-     * @see IgniteConfiguration#getIgfsThreadPoolSize()
-     * @return {@code this} for chaining.
-     */
-    public IgniteConfiguration setIgfsThreadPoolSize(int poolSize) {
-        igfsPoolSize = poolSize;
-
-        return this;
-    }
-
-    /**
      * Set thread pool size that will be used to process data stream messages.
      *
      * @param poolSize Executor service to use for data stream messages.
@@ -1194,7 +1158,7 @@ public class IgniteConfiguration {
     /**
      * Sets keep alive time of thread pool size that will be used to process utility cache messages.
      *
-     * @param keepAliveTime Keep alive time of executor service to use for utility cache messages.
+     * @param keepAliveTime Keep alive time in milliseconds of executor service to use for utility cache messages.
      * @see IgniteConfiguration#getUtilityCacheThreadPoolSize()
      * @see IgniteConfiguration#getUtilityCacheKeepAliveTime()
      * @return {@code this} for chaining.
@@ -2324,6 +2288,28 @@ public class IgniteConfiguration {
     }
 
     /**
+     * Sets fully configured instances of {@link MetricExporterSpi}.
+     *
+     * @param metricExporterSpi Fully configured instances of {@link MetricExporterSpi}.
+     * @see IgniteConfiguration#getMetricExporterSpi()
+     * @return {@code this} for chaining.
+     */
+    public IgniteConfiguration setMetricExporterSpi(MetricExporterSpi... metricExporterSpi) {
+        this.metricExporterSpi = metricExporterSpi;
+
+        return this;
+    }
+
+    /**
+     * Gets fully configured monitoring SPI implementations.
+     *
+     * @return Metric exporter SPI implementations.
+     */
+    public MetricExporterSpi[] getMetricExporterSpi() {
+        return metricExporterSpi;
+    }
+
+    /**
      * Gets address resolver for addresses mapping determination.
      *
      * @return Address resolver.
@@ -2817,48 +2803,6 @@ public class IgniteConfiguration {
      */
     public IgniteConfiguration setMetricsLogFrequency(long metricsLogFreq) {
         this.metricsLogFreq = metricsLogFreq;
-
-        return this;
-    }
-
-    /**
-     * Gets IGFS (Ignite In-Memory File System) configurations.
-     *
-     * @return IGFS configurations.
-     */
-    public FileSystemConfiguration[] getFileSystemConfiguration() {
-        return igfsCfg;
-    }
-
-    /**
-     * Sets IGFS (Ignite In-Memory File System) configurations.
-     *
-     * @param igfsCfg IGFS configurations.
-     * @return {@code this} for chaining.
-     */
-    public IgniteConfiguration setFileSystemConfiguration(FileSystemConfiguration... igfsCfg) {
-        this.igfsCfg = igfsCfg;
-
-        return this;
-    }
-
-    /**
-     * Gets hadoop configuration.
-     *
-     * @return Hadoop configuration.
-     */
-    public HadoopConfiguration getHadoopConfiguration() {
-        return hadoopCfg;
-    }
-
-    /**
-     * Sets hadoop configuration.
-     *
-     * @param hadoopCfg Hadoop configuration.
-     * @return {@code this} for chaining.
-     */
-    public IgniteConfiguration setHadoopConfiguration(HadoopConfiguration hadoopCfg) {
-        this.hadoopCfg = hadoopCfg;
 
         return this;
     }

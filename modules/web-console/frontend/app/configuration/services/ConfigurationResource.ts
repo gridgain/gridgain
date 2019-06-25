@@ -16,32 +16,20 @@
 
 import _ from 'lodash';
 
-ConfigurationResourceService.$inject = ['$http'];
-
-export default function ConfigurationResourceService($http: ng.IHttpService) {
+export default function ConfigurationResourceService() {
     return {
-        read() {
-            return $http.get('/api/v1/configuration/list')
-                .then(({data}) => data)
-                .catch(({data}) => Promise.reject(data));
-        },
         populate(data) {
-            const {spaces, clusters, caches, igfss, domains} = _.cloneDeep(data);
+            const {spaces, clusters, caches, domains} = _.cloneDeep(data);
 
             _.forEach(clusters, (cluster) => {
-                cluster.caches = _.filter(caches, ({_id}) => _.includes(cluster.caches, _id));
+                cluster.caches = _.filter(caches, ({id}) => _.includes(cluster.caches, id));
 
                 _.forEach(cluster.caches, (cache) => {
-                    cache.domains = _.filter(domains, ({_id}) => _.includes(cache.domains, _id));
-
-                    if (_.get(cache, 'nodeFilter.kind') === 'IGFS')
-                        cache.nodeFilter.IGFS.instance = _.find(igfss, {_id: cache.nodeFilter.IGFS.igfs});
+                    cache.domains = _.filter(domains, ({id}) => _.includes(cache.domains, id));
                 });
-
-                cluster.igfss = _.filter(igfss, ({_id}) => _.includes(cluster.igfss, _id));
             });
 
-            return Promise.resolve({spaces, clusters, caches, igfss, domains});
+            return Promise.resolve({spaces, clusters, caches, domains});
         }
     };
 }

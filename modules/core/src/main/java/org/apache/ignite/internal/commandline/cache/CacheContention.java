@@ -41,10 +41,10 @@ import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.CONT
  */
 public class CacheContention implements Command<CacheContention.Arguments> {
     /** {@inheritDoc} */
-    @Override public void printUsage() {
+    @Override public void printUsage(Logger logger) {
         String description = "Show the keys that are point of contention for multiple transactions.";
 
-        usageCache(CONTENTION, description, null, "minQueueSize",
+        usageCache(logger, CONTENTION, description, null, "minQueueSize",
             OP_NODE_ID, optional("maxPrint"));
     }
 
@@ -116,7 +116,7 @@ public class CacheContention implements Command<CacheContention.Arguments> {
         CommandLogger.printErrors(res.exceptions(), "Contention check failed on nodes:", logger);
 
         for (ContentionInfo info : res.getInfos())
-            info.print();
+            info.print(logger);
 
         return res;
     }
