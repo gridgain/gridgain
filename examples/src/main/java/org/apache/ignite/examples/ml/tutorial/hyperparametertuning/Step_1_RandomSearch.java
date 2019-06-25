@@ -68,7 +68,7 @@ import org.apache.ignite.ml.tree.DecisionTreeNode;
  * <p>
  * All scenarios are described there: https://sebastianraschka.com/faq/docs/evaluate-a-model.html</p>
  */
-public class Step_8_CV_with_Param_Grid_Random_Serach_and_metrics {
+public class Step_1_RandomSearch {
     /** Run example. */
     public static void main(String[] args) {
         System.out.println();
@@ -107,8 +107,10 @@ public class Step_8_CV_with_Param_Grid_Random_Serach_and_metrics {
                         imputingPreprocessor
                     );
 
-                Preprocessor<Integer, Vector> normalizationPreprocessor = new NormalizationTrainer<Integer, Vector>()
-                    .withP(1)
+                NormalizationTrainer<Integer, Vector> normalizationTrainer = new NormalizationTrainer<Integer, Vector>()
+                    .withP(1);
+
+                Preprocessor<Integer, Vector> normalizationPreprocessor = normalizationTrainer
                     .fit(
                         ignite,
                         dataCache,
@@ -127,6 +129,7 @@ public class Step_8_CV_with_Param_Grid_Random_Serach_and_metrics {
                     .withMaxTries(10)
                     .withSatisfactoryFitness(0.76)
                     .withSeed(12L)
+                    .addHyperParam("p", normalizationTrainer::withP, new Double[]{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0})
                     .addHyperParam("maxDeep", trainerCV::withMaxDeep, new Double[]{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0})
                     .addHyperParam("minImpurityDecrease", trainerCV::withMinImpurityDecrease, new Double[]{0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0});
 
