@@ -296,9 +296,13 @@ BOOST_AUTO_TEST_CASE(IgniteForServers)
 
     BOOST_REQUIRE(cluster.IsActive());
 
-    ClusterGroup group = cluster.AsClusterGroup().ForServers();
+    ClusterGroup group1 = cluster.AsClusterGroup().ForServers();
+    ClusterGroup group2 = cluster.AsClusterGroup().ForServers().ForAttribute("TestAttribute", "Value0");
+    ClusterGroup group3 = cluster.AsClusterGroup().ForServers().ForAttribute("TestAttribute", "Value1");
 
-    BOOST_REQUIRE(group.GetNodes().size() == 3);
+    BOOST_REQUIRE(group1.GetNodes().size() == 3);
+    BOOST_REQUIRE(group2.GetNodes().size() == 1);
+    BOOST_REQUIRE(group3.GetNodes().size() == 2);
 }
 
 BOOST_AUTO_TEST_CASE(IgniteForYoungest)
