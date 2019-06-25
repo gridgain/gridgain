@@ -147,6 +147,7 @@ public class Step_3_Parallel_Random_Search {
                         .withParallelismStrategyTypeDependency(ParallelismStrategy.ON_DEFAULT_POOL)
                         .withLoggingFactoryDependency(ConsoleLogger.Factory.LOW))
                     .withTrainer(trainerCV)
+                    .isRunningOnPipeline(false)
                     .withMetric(metrics)
                     .withFilter(split.getTrainFilter())
                     .withIgnite(ignite)

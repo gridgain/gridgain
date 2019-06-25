@@ -145,6 +145,7 @@ public class Step_2_Parallel_BrutForce_Search {
                         .withParallelismStrategyTypeDependency(ParallelismStrategy.ON_DEFAULT_POOL)
                         .withLoggingFactoryDependency(ConsoleLogger.Factory.LOW))
                     .withTrainer(trainerCV)
+                    .isRunningOnPipeline(false)
                     .withMetric(metrics)
                     .withFilter(split.getTrainFilter())
                     .withIgnite(ignite)
