@@ -12,6 +12,8 @@ Install Docker (version >=17.05) using instructions from https://www.docker.com/
         -Plgpl,web-console,release \
         -pl :ignite-web-console -am \
         -DskipTests -DskipClientDocs -Dmaven.javadoc.skip=true
+        
+    Assembled archive can be found here:  `modules/web-console/target/ignite-web-console-*.zip`.
 
 2. Go to Web Console Docker module directory and copy Web Console All in One archive:
 
