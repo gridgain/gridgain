@@ -275,6 +275,8 @@ public class GridRestProcessor extends GridProcessorAdapter {
 
                     try(OperationSecurityContext s = ctx.security().withContext(secCtx0)) {
                         authorize(req);
+
+                        return handle(req, true);
                     }
                 }
                 catch (SecurityException e) {
@@ -317,6 +319,11 @@ public class GridRestProcessor extends GridProcessorAdapter {
             }
         }
 
+        return handle(req, authenticationEnabled);
+    }
+
+    /** */
+    public IgniteInternalFuture<GridRestResponse> handle(final GridRestRequest req, boolean securityIsActive) {
         interceptRequest(req);
 
         GridRestCommandHandler hnd = handlers.get(req.command());
@@ -375,7 +382,7 @@ public class GridRestProcessor extends GridProcessorAdapter {
 
                 assert res != null;
 
-                if ((authenticationEnabled || securityEnabled) && !failed)
+                if (securityIsActive && !failed)
                     res.sessionTokenBytes(req.sessionToken());
 
                 interceptResponse(res, req);
