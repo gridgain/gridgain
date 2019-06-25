@@ -86,7 +86,7 @@ public class IgniteSessionRepository implements SessionRepository<ExpiringSessio
         try {
             cache().put(ses.getId(), new MapSession(ses));
         }
-        catch (IgniteException e) {
+        catch (RuntimeException e) {
             throw convertToDatabaseNotAvailableException(e);
         }
     }
@@ -107,7 +107,7 @@ public class IgniteSessionRepository implements SessionRepository<ExpiringSessio
 
             return ses;
         }
-        catch (IgniteException e) {
+        catch (RuntimeException e) {
             throw convertToDatabaseNotAvailableException(e);
         }
     }
@@ -117,7 +117,7 @@ public class IgniteSessionRepository implements SessionRepository<ExpiringSessio
         try {
             cache().remove(id);
         }
-        catch (IgniteException e) {
+        catch (RuntimeException e) {
             throw convertToDatabaseNotAvailableException(e);
         }
     }

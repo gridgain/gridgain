@@ -155,7 +155,7 @@ public class TransactionManager {
         try {
             return doInTransaction0(act);
         }
-        catch (Throwable e) {
+        catch (IgniteException e) {
             if (checkDatabaseNotAvailable(e)) {
                 try {
                     recreateCaches();
