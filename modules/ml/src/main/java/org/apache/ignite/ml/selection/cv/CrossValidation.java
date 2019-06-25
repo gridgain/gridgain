@@ -203,13 +203,16 @@ public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
         Map<String, Double> paramMap = injectAndGetParametersFromPipeline(paramGrid, paramSet);
 
         double[] locScores = scoreByFolds();
+
         return new TaskResult(paramMap, locScores);
     }
 
     public double[] scoreByFolds() {
         double[] locScores;
+
         if (isRunningOnPipeline) locScores = isRunningOnIgnite ? scorePipelineOnIgnite() : scorePipelineLocally();
         else locScores = isRunningOnIgnite ? scoreOnIgnite() : scoreLocally();
+
         return locScores;
     }
 

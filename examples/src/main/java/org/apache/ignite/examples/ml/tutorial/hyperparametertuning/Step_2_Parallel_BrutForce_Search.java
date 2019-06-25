@@ -154,7 +154,7 @@ public class Step_2_Parallel_BrutForce_Search {
                     .withAmountOfFolds(3)
                     .withParamGrid(paramGrid);
 
-                CrossValidationResult crossValidationRes = scoreCalculator.score();
+                CrossValidationResult crossValidationRes = scoreCalculator.tuneHyperParamterers();
 
                 System.out.println("Train with maxDeep: " + crossValidationRes.getBest("maxDeep")
                     + " and minImpurityDecrease: " + crossValidationRes.getBest("minImpurityDecrease"));
