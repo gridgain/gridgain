@@ -660,7 +660,13 @@ class ServerImpl extends TcpDiscoveryImpl {
         return msg;
     }
 
-    /** */
+    /**
+     * Creates new instance of {@link TcpDiscoveryDuplicateIdMessage}.
+     *
+     * @param msg Message.
+     * @param targetNode Target node.
+     * @return new instance of {@link TcpDiscoveryDuplicateIdMessage}.
+     */
     private TcpDiscoveryStatusCheckMessage createTcpDiscoveryStatusCheckMessage(
         TcpDiscoveryStatusCheckMessage msg,
         TcpDiscoveryNode targetNode
