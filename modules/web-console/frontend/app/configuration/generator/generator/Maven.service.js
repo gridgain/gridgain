@@ -44,8 +44,8 @@ export default class IgniteMavenGenerator {
         sb.append(`<!-- ${comment} -->`);
     }
 
-    addDependency(deps, groupId, artifactId, version, jar, link) {
-        deps.push({groupId, artifactId, version, jar, link});
+    addDependency(deps, groupId, artifactId, version, jar, link, exclude) {
+        deps.push({groupId, artifactId, version, jar, link, exclude});
     }
 
     _extractVersion(igniteVer, version) {
@@ -58,8 +58,8 @@ export default class IgniteMavenGenerator {
         if (_.isNil(deps))
             return;
 
-        _.forEach(_.castArray(deps), ({groupId, artifactId, version, jar, link}) => {
-            this.addDependency(acc, groupId || artifactGrp, artifactId, storedVer || this._extractVersion(igniteVer, version) || dfltVer, jar, link);
+        _.forEach(_.castArray(deps), ({groupId, artifactId, version, jar, link, exclude}) => {
+            this.addDependency(acc, groupId || artifactGrp, artifactId, storedVer || this._extractVersion(igniteVer, version) || dfltVer, jar, link, exclude);
         });
     }
 
@@ -100,6 +100,17 @@ export default class IgniteMavenGenerator {
 
             if (dep.link)
                 this.addComment(sb, `You may download JDBC driver from: ${dep.link}`);
+
+            if (dep.exclude) {
+                sb.startBlock('<exclusions>');
+                _.forEach(dep.exclude, (e) => {
+                    sb.startBlock('<exclusion>');
+                    this.addProperty(sb, 'groupId', e.groupId);
+                    this.addProperty(sb, 'artifactId', e.artifactId);
+                    sb.endBlock('</exclusion>');
+                });
+                sb.endBlock('</exclusions>');
+            }
 
             sb.endBlock('</dependency>');
         });
@@ -210,10 +221,6 @@ export default class IgniteMavenGenerator {
             else if (spi.kind === 'JDBC')
                 this.storeFactoryDependency(artifactGrp, storeDeps, spi.JDBC, igniteVer);
         });
-
-        if (_.get(cluster, 'hadoopConfiguration.mapReducePlanner.kind') === 'Weighted' ||
-            _.find(cluster.igfss, (igfs) => igfs.secondaryFileSystemEnabled))
-            this.addDependency(deps, artifactGrp, 'ignite-hadoop', igniteVer);
 
         if (_.find(caches, blobStoreFactory))
             this.addDependency(deps, artifactGrp, 'ignite-hibernate', igniteVer);

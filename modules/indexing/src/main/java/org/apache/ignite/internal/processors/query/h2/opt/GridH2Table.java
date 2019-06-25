@@ -68,7 +68,6 @@ import org.h2.table.IndexColumn;
 import org.h2.table.Table;
 import org.h2.table.TableBase;
 import org.h2.table.TableType;
-import org.h2.value.DataType;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
@@ -1098,8 +1097,8 @@ public class GridH2Table extends TableBase {
     }
 
     /** {@inheritDoc} */
-    @Override public long getRowCountApproximation() {
-        if (!localQuery())
+    @Override public long getRowCountApproximation(Session ses) {
+        if (!localQuery(H2Utils.context(ses)))
             return 10_000; // Fallback to the previous behaviour.
 
         refreshStatsIfNeeded();
@@ -1108,11 +1107,11 @@ public class GridH2Table extends TableBase {
     }
 
     /**
+     * @param qctx Context.
+     *
      * @return {@code True} if the current query is a local query.
      */
-    private boolean localQuery() {
-        QueryContext qctx = rowDescriptor().indexing().queryContextRegistry().getThreadLocal();
-
+    private boolean localQuery(QueryContext qctx) {
         assert qctx != null;
 
         return qctx.local();
@@ -1277,7 +1276,7 @@ public class GridH2Table extends TableBase {
                 }
 
                 try {
-                    Column c = new Column(col.name(), DataType.getTypeFromClass(Class.forName(col.typeName())));
+                    Column c = new Column(col.name(), H2Utils.getTypeFromClass(Class.forName(col.typeName())));
 
                     c.setNullable(col.isNullable());
 

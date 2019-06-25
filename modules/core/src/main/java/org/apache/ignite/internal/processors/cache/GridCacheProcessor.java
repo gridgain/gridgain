@@ -16,6 +16,10 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import javax.cache.configuration.FactoryBuilder;
+import javax.cache.expiry.EternalExpiryPolicy;
+import javax.cache.expiry.ExpiryPolicy;
+import javax.management.MBeanServer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -37,10 +41,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.cache.configuration.FactoryBuilder;
-import javax.cache.expiry.EternalExpiryPolicy;
-import javax.cache.expiry.ExpiryPolicy;
-import javax.management.MBeanServer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteCompute;
 import org.apache.ignite.IgniteException;
@@ -61,7 +61,6 @@ import org.apache.ignite.configuration.DataPageEvictionMode;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.DeploymentMode;
-import org.apache.ignite.configuration.FileSystemConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.MemoryConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
@@ -69,7 +68,6 @@ import org.apache.ignite.configuration.TransactionConfiguration;
 import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteClientDisconnectedCheckedException;
-import org.apache.ignite.internal.IgniteComponentType;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
@@ -154,6 +152,7 @@ import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridPlainClosure;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.lang.IgniteOutClosureX;
 import org.apache.ignite.internal.util.lang.IgniteThrowableFunction;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
@@ -345,7 +344,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         CU.initializeConfigDefaults(log, cfg, cacheObjCtx);
 
         ctx.coordinators().preProcessCacheConfiguration(cfg);
-        ctx.igfsHelper().preProcessCacheConfiguration(cfg);
     }
 
     /**
@@ -528,8 +526,12 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             throw new IgniteCheckedException("Cannot have more than " + CacheConfiguration.MAX_PARTITIONS_COUNT +
                 " partitions [cacheName=" + cc.getName() + ", partitions=" + cc.getAffinity().partitions() + ']');
 
-        if (cc.getRebalanceMode() != CacheRebalanceMode.NONE)
+        if (cc.getRebalanceMode() != CacheRebalanceMode.NONE) {
             assertParameter(cc.getRebalanceBatchSize() > 0, "rebalanceBatchSize > 0");
+            assertParameter(cc.getRebalanceTimeout() >= 0, "rebalanceTimeout >= 0");
+            assertParameter(cc.getRebalanceThrottle() >= 0, "rebalanceThrottle >= 0");
+            assertParameter(cc.getRebalanceBatchesPrefetchCount() > 0, "rebalanceBatchesPrefetchCount > 0");
+        }
 
         if (cc.getCacheMode() == PARTITIONED || cc.getCacheMode() == REPLICATED) {
             if (cc.getAtomicityMode() == ATOMIC && cc.getWriteSynchronizationMode() == FULL_ASYNC)
@@ -644,7 +646,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             }
         }
 
-        ctx.igfsHelper().validateCacheConfiguration(cc);
         ctx.coordinators().validateCacheConfiguration(cc);
 
         if (cc.getAtomicityMode() == ATOMIC)
@@ -871,8 +872,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                     "(it is recommended that you change deployment mode and restart): " + depMode);
         }
 
-        initializeInternalCacheNames();
-
         Collection<CacheStoreSessionListener> sessionListeners =
             CU.startStoreSessionListeners(ctx, ctx.config().getCacheStoreSessionListenerFactories());
 
@@ -1069,24 +1068,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     }
 
     /**
-     * Initialize internal cache names
-     */
-    private void initializeInternalCacheNames() {
-        FileSystemConfiguration[] igfsCfgs = ctx.grid().configuration().getFileSystemConfiguration();
-
-        if (igfsCfgs != null) {
-            for (FileSystemConfiguration igfsCfg : igfsCfgs) {
-                internalCaches.add(igfsCfg.getMetaCacheConfiguration().getName());
-                internalCaches.add(igfsCfg.getDataCacheConfiguration().getName());
-            }
-        }
-
-        if (IgniteComponentType.HADOOP.inClassPath())
-            internalCaches.add(CU.SYS_CACHE_HADOOP_MR);
-    }
-
-    /**
-     * @param node Remote node to check.
      * @return Data storage configuration
      */
     private DataStorageConfiguration extractDataStorage(ClusterNode rmtNode) {
@@ -1196,7 +1177,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     private void checkConsistency() throws IgniteCheckedException {
         Collection<ClusterNode> rmtNodes = ctx.discovery().remoteNodes();
 
-        boolean changeablePoolSize = IgniteFeatures.allNodesSupports(rmtNodes, IgniteFeatures.DIFFERENT_REBALANCE_POOL_SIZE);
+        boolean changeablePoolSize =
+            IgniteFeatures.allNodesSupports(ctx, rmtNodes, IgniteFeatures.DIFFERENT_REBALANCE_POOL_SIZE);
 
         for (ClusterNode n : rmtNodes) {
             if (Boolean.TRUE.equals(n.attribute(ATTR_CONSISTENCY_CHECK_SKIPPED)))
@@ -3386,8 +3368,10 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @throws IgniteCheckedException If failed.
      */
     @SuppressWarnings("unchecked")
-    private GridCacheSharedContext createSharedContext(GridKernalContext kernalCtx,
-        Collection<CacheStoreSessionListener> storeSesLsnrs) throws IgniteCheckedException {
+    private GridCacheSharedContext createSharedContext(
+        GridKernalContext kernalCtx,
+        Collection<CacheStoreSessionListener> storeSesLsnrs
+    ) throws IgniteCheckedException {
         IgniteTxManager tm = new IgniteTxManager();
         GridCacheMvccManager mvccMgr = new GridCacheMvccManager();
         GridCacheVersionManager verMgr = new GridCacheVersionManager();
@@ -3438,6 +3422,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         DeadlockDetectionManager deadlockDetectionMgr = new DeadlockDetectionManager();
 
+        CacheDiagnosticManager diagnosticMgr = new CacheDiagnosticManager();
+
         return new GridCacheSharedContext(
             kernalCtx,
             tm,
@@ -3457,7 +3443,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             jta,
             storeSesLsnrs,
             mvccCachingMgr,
-            deadlockDetectionMgr
+            deadlockDetectionMgr,
+            diagnosticMgr
         );
     }
 
@@ -5945,7 +5932,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         ClusterGroup grp = ctx.grid()
             .cluster()
             .forServers()
-            .forPredicate(node -> IgniteFeatures.nodeSupports(node, TRANSACTION_OWNER_THREAD_DUMP_PROVIDING));
+            .forPredicate(node -> IgniteFeatures.nodeSupports(ctx, node, TRANSACTION_OWNER_THREAD_DUMP_PROVIDING));
 
         IgniteCompute compute = ctx.grid().compute(grp);
 
@@ -6248,7 +6235,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         /** {@inheritDoc} */
         @Override public void onTimeout() {
-            ctx.closure().runLocalSafe(new Runnable() {
+            ctx.closure().runLocalSafe(new GridPlainRunnable() {
                 @Override public void run() {
                     try {
                         for (CacheGroupContext grp : sharedCtx.cache().cacheGroups()) {

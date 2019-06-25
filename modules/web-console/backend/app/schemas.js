@@ -177,12 +177,9 @@ module.exports.factory = function() {
         affinityMapper: String,
 
         nodeFilter: {
-            kind: {type: String, enum: ['Default', 'Exclude', 'IGFS', 'OnNodes', 'Custom']},
+            kind: {type: String, enum: ['Default', 'Exclude', 'OnNodes', 'Custom']},
             Exclude: {
                 nodeId: String
-            },
-            IGFS: {
-                igfs: {type: ObjectId, ref: 'Igfs'}
             },
             Custom: {
                 className: String
@@ -382,102 +379,6 @@ module.exports.factory = function() {
     });
 
     Cache.index({name: 1, space: 1, clusters: 1}, {unique: true});
-
-    const Igfs = new Schema({
-        space: {type: ObjectId, ref: 'Space', index: true, required: true},
-        name: {type: String},
-        clusters: [{type: ObjectId, ref: 'Cluster'}],
-        affinnityGroupSize: Number,
-        blockSize: Number,
-        streamBufferSize: Number,
-        dataCacheName: String,
-        metaCacheName: String,
-        defaultMode: {type: String, enum: ['PRIMARY', 'PROXY', 'DUAL_SYNC', 'DUAL_ASYNC']},
-        dualModeMaxPendingPutsSize: Number,
-        dualModePutExecutorService: String,
-        dualModePutExecutorServiceShutdown: Boolean,
-        fragmentizerConcurrentFiles: Number,
-        fragmentizerEnabled: Boolean,
-        fragmentizerThrottlingBlockLength: Number,
-        fragmentizerThrottlingDelay: Number,
-        ipcEndpointConfiguration: {
-            type: {type: String, enum: ['SHMEM', 'TCP']},
-            host: String,
-            port: Number,
-            memorySize: Number,
-            tokenDirectoryPath: String,
-            threadCount: Number
-        },
-        ipcEndpointEnabled: Boolean,
-        maxSpaceSize: Number,
-        maximumTaskRangeLength: Number,
-        managementPort: Number,
-        pathModes: [{path: String, mode: {type: String, enum: ['PRIMARY', 'PROXY', 'DUAL_SYNC', 'DUAL_ASYNC']}}],
-        perNodeBatchSize: Number,
-        perNodeParallelBatchCount: Number,
-        prefetchBlocks: Number,
-        sequentialReadsBeforePrefetch: Number,
-        trashPurgeTimeout: Number,
-        secondaryFileSystemEnabled: Boolean,
-        secondaryFileSystem: {
-            userName: String,
-            kind: {type: String, enum: ['Caching', 'Kerberos', 'Custom'], default: 'Caching'},
-            uri: String,
-            cfgPath: String,
-            cfgPaths: [String],
-            userNameMapper: {
-                kind: {type: String, enum: ['Chained', 'Basic', 'Kerberos', 'Custom']},
-                Chained: {
-                    mappers: [{
-                        kind: {type: String, enum: ['Basic', 'Kerberos', 'Custom']},
-                        Basic: {
-                            defaultUserName: String,
-                            useDefaultUserName: Boolean,
-                            mappings: [{
-                                name: String,
-                                value: String
-                            }]
-                        },
-                        Kerberos: {
-                            instance: String,
-                            realm: String
-                        },
-                        Custom: {
-                            className: String,
-                        }
-                    }]
-                },
-                Basic: {
-                    defaultUserName: String,
-                    useDefaultUserName: Boolean,
-                    mappings: [{
-                        name: String,
-                        value: String
-                    }]
-                },
-                Kerberos: {
-                    instance: String,
-                    realm: String
-                },
-                Custom: {
-                    className: String,
-                }
-            },
-            Kerberos: {
-                keyTab: String,
-                keyTabPrincipal: String,
-                reloginInterval: Number
-            },
-            Custom: {
-                className: String
-            }
-        },
-        colocateMetadata: Boolean,
-        relaxedConsistency: Boolean,
-        updateFileLengthOnFlush: Boolean
-    });
-
-    Igfs.index({name: 1, space: 1, clusters: 1}, {unique: true});
 
 
     // Define Cluster schema.
@@ -697,8 +598,6 @@ module.exports.factory = function() {
         clockSyncFrequency: Number,
         deploymentMode: {type: String, enum: ['PRIVATE', 'ISOLATED', 'SHARED', 'CONTINUOUS']},
         discoveryStartupDelay: Number,
-        igfsThreadPoolSize: Number,
-        igfss: [{type: ObjectId, ref: 'Igfs'}],
         includeEventTypes: [String],
         eventStorage: {
             kind: {type: String, enum: ['Memory', 'Custom']},
@@ -821,6 +720,10 @@ module.exports.factory = function() {
             protocols: [String]
         },
         rebalanceThreadPoolSize: Number,
+        rebalanceBatchSize: Number,
+        rebalanceBatchesPrefetchCount: Number,
+        rebalanceTimeout: Number,
+        rebalanceThrottle: Number,
         odbc: {
             odbcEnabled: Boolean,
             endpointAddress: String,
@@ -1003,7 +906,8 @@ module.exports.factory = function() {
             sslEnabled: Boolean,
             useIgniteSslContextFactory: {type: Boolean, default: true},
             sslClientAuth: Boolean,
-            sslContextFactory: String
+            sslContextFactory: String,
+            handshakeTimeout: Number
         },
         loadBalancingSpi: [{
             kind: {type: String, enum: ['RoundRobin', 'Adaptive', 'WeightedRandom', 'Custom']},
@@ -1055,37 +959,15 @@ module.exports.factory = function() {
             }
         },
         warmupClosure: String,
-        hadoopConfiguration: {
-            mapReducePlanner: {
-                kind: {type: String, enum: ['Weighted', 'Custom']},
-                Weighted: {
-                    localMapperWeight: Number,
-                    remoteMapperWeight: Number,
-                    localReducerWeight: Number,
-                    remoteReducerWeight: Number,
-                    preferLocalReducerThresholdWeight: Number
-                },
-                Custom: {
-                    className: String
-                }
-            },
-            finishedJobInfoTtl: Number,
-            maxParallelTasks: Number,
-            maxTaskQueueSize: Number,
-            nativeLibraryNames: [String]
-        },
         serviceConfigurations: [{
             name: String,
             service: String,
             maxPerNodeCount: Number,
             totalCount: Number,
             nodeFilter: {
-                kind: {type: String, enum: ['Default', 'Exclude', 'IGFS', 'OnNodes', 'Custom']},
+                kind: {type: String, enum: ['Default', 'Exclude', 'OnNodes', 'Custom']},
                 Exclude: {
                     nodeId: String
-                },
-                IGFS: {
-                    igfs: {type: ObjectId, ref: 'Igfs'}
                 },
                 Custom: {
                     className: String
@@ -1131,7 +1013,8 @@ module.exports.factory = function() {
                 metricsSubIntervalCount: Number,
                 metricsRateTimeInterval: Number,
                 persistenceEnabled: Boolean,
-                checkpointPageBufferSize: Number
+                checkpointPageBufferSize: Number,
+                lazyMemoryAllocation: {type: Boolean, default: true}
             },
             dataRegionConfigurations: [{
                 name: String,
@@ -1145,7 +1028,8 @@ module.exports.factory = function() {
                 metricsSubIntervalCount: Number,
                 metricsRateTimeInterval: Number,
                 persistenceEnabled: Boolean,
-                checkpointPageBufferSize: Number
+                checkpointPageBufferSize: Number,
+                lazyMemoryAllocation: {type: Boolean, default: true}
             }],
             storagePath: String,
             metricsEnabled: Boolean,
@@ -1173,7 +1057,9 @@ module.exports.factory = function() {
             walCompactionEnabled: Boolean,
             checkpointReadLockTimeout: Number,
             maxWalArchiveSize: Number,
-            walCompactionLevel: Number
+            walCompactionLevel: Number,
+            walPageCompression: {type: String, enum: ['DISABLED', 'SKIP_GARBAGE', 'ZSTD', 'LZ4', 'SNAPPY']},
+            walPageCompressionLevel: Number
         },
         memoryConfiguration: {
             systemCacheInitialSize: Number,
@@ -1329,7 +1215,6 @@ module.exports.factory = function() {
         Account,
         DomainModel,
         Cache,
-        Igfs,
         Cluster,
         Notebook,
         Activities,

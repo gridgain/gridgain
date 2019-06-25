@@ -81,14 +81,15 @@ import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLock
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxFinishRequest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.dumpprocessors.ToFileDumpProcessor;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
 import org.apache.ignite.internal.processors.cache.transactions.TransactionProxyImpl;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.datastructures.GridCacheInternalKeyImpl;
+import org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
-import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
@@ -109,15 +110,19 @@ import org.apache.ignite.transactions.TransactionTimeoutException;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
+import static java.io.File.separatorChar;
 import static java.util.Arrays.asList;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
+import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_ILLEGAL_SATE_ERROR;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_INVALID_ARGUMENTS;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_UNEXPECTED_ERROR;
 import static org.apache.ignite.internal.commandline.OutputFormat.MULTI_LINE;
 import static org.apache.ignite.internal.commandline.OutputFormat.SINGLE_LINE;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.HELP;
+import static org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor.DEFAULT_TARGET_FOLDER;
+import static org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult.Status.FAIL;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
@@ -129,6 +134,46 @@ import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED
  * Command line handler test.
  */
 public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
+    /** */
+    private File defaultDiagnosticDir;
+    /** */
+    private File customDiagnosticDir;
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
+        initDiagnosticDir();
+
+        cleanDiagnosticDir();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        super.afterTest();
+
+        cleanDiagnosticDir();
+    }
+
+    /**
+     * @throws IgniteCheckedException If failed.
+     */
+    private void initDiagnosticDir() throws IgniteCheckedException {
+        defaultDiagnosticDir = new File(U.defaultWorkDirectory()
+            + separatorChar + DEFAULT_TARGET_FOLDER + separatorChar);
+
+        customDiagnosticDir = new File(U.defaultWorkDirectory()
+            + separatorChar + "diagnostic_test_dir" + separatorChar);
+    }
+
+    /**
+     * Clean diagnostic directories.
+     */
+    private void cleanDiagnosticDir() {
+        U.delete(defaultDiagnosticDir);
+        U.delete(customDiagnosticDir);
+    }
+
     /** {@inheritDoc} */
     @Override public String getTestIgniteInstanceName() {
         return "gridCommandHandlerTest";
@@ -318,18 +363,18 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
      * @return Local node consistent ID.
      */
     private String consistentIds(Ignite... ignites) {
-        String res = "";
+        StringBuilder res = new StringBuilder();
 
         for (Ignite ignite : ignites) {
             String consistentId = ignite.cluster().localNode().consistentId().toString();
 
-            if (!F.isEmpty(res))
-                res += ", ";
+            if (res.length() != 0)
+                res.append(", ");
 
-            res += consistentId;
+            res.append(consistentId);
         }
 
-        return res;
+        return res.toString();
     }
 
     /**
@@ -344,6 +389,10 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
         assertFalse(ignite.cluster().active());
 
         ignite.cluster().active(true);
+
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "add"));
+
+        assertEquals(EXIT_CODE_ILLEGAL_SATE_ERROR, execute("--baseline", "add", "non-existent-id"));
 
         Ignite other = startGrid(2);
 
@@ -499,6 +548,34 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
         System.out.println(testOut.toString());
 
         log.info("================================================");
+    }
+
+    /**
+     * Test that if baseline auto_adjustment is enable, control.sh can not change a state manual.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void shouldReturnErrorCodeForManualSetInBaselineAutoAdjustmentEnable() throws Exception {
+        Ignite ignite = startGrid();
+
+        ignite.cluster().active(true);
+
+        IgniteCluster cl = ignite.cluster();
+
+        long timeout = cl.baselineAutoAdjustTimeout();
+
+        assertEquals(EXIT_CODE_OK, execute(
+            "--baseline",
+            "auto_adjust",
+            "enable",
+            "timeout",
+            Long.toString(timeout + 1)
+        ));
+
+        assertTrue(cl.isBaselineAutoAdjustEnabled());
+
+        assertEquals(EXIT_CODE_ILLEGAL_SATE_ERROR, execute("--baseline", "version", "1"));
     }
 
     /**
@@ -1146,10 +1223,17 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
                 getTestIgniteInstanceName(2) + "," +
                 getTestIgniteInstanceName(3);
 
-        assertEquals(EXIT_CODE_UNEXPECTED_ERROR, execute("--baseline", "add", consistentIDs));
+        assertEquals(EXIT_CODE_ILLEGAL_SATE_ERROR, execute("--baseline", "add", consistentIDs));
 
-        assertTrue(testOut.toString(), testOut.toString().contains("Node not found for consistent ID:"));
-        assertFalse(testOut.toString(), testOut.toString().contains(getTestIgniteInstanceName() + "1"));
+        String testOutStr = testOut.toString();
+
+        // Ignite instase 1 can be logged only in arguments list.
+        boolean isInstanse1Found = Arrays.stream(testOutStr.split("\n"))
+                                        .filter(s -> s.contains("Arguments:"))
+                                        .noneMatch(s -> s.contains(getTestIgniteInstanceName() + "1"));
+
+        assertTrue(testOutStr, testOutStr.contains("Node not found for consistent ID:"));
+        assertFalse(testOutStr, isInstanse1Found);
     }
 
     /**
@@ -1173,6 +1257,11 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
                         assertTrue(cmd + " " + arg, output.contains(arg.toString()));
 
             }
+            else {
+                assertContains(log, output, CommandHandler.UTILITY_NAME);
+
+                assertNotContains(log, output, "control.sh");
+            }
         }
     }
 
@@ -1185,7 +1274,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
         for (CacheSubcommands cmd : CacheSubcommands.values()) {
             Class<? extends Enum<? extends CommandArg>> args = cmd.getCommandArgs();
 
-            if(args != null)
+            if (args != null)
                 for (Enum<? extends CommandArg> arg : args.getEnumConstants())
                     assertTrue(arg.toString(), p.matcher(arg.toString()).matches());
         }
@@ -1203,6 +1292,11 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         for (CommandList cmd : CommandList.values())
             assertContains(log, testOutStr, cmd.toString());
+
+        assertContains(log, testOutStr, "Control utility script");
+        assertContains(log, testOutStr, CommandHandler.UTILITY_NAME);
+
+        assertNotContains(log, testOutStr, "Control.sh");
     }
 
     /**
@@ -1443,7 +1537,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
         testCacheIdleVerifyMultipleCacheFilterOptionsCommon(
             true,
             "idle_verify check has finished, found",
-            "idle_verify task was executed with the following args: --cache-filter SYSTEM --exclude-caches wrong.* ",
+            "idle_verify task was executed with the following args: caches=[], excluded=[wrong.*], cacheFilter=[SYSTEM]",
             "--cache", "idle_verify", "--dump", "--cache-filter", "SYSTEM", "--exclude-caches", "wrong.*"
         );
         testCacheIdleVerifyMultipleCacheFilterOptionsCommon(
@@ -1478,7 +1572,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
         );
         testCacheIdleVerifyMultipleCacheFilterOptionsCommon(
             true,
-            "There are no caches matching given filter options.",
+            "There are no caches matching given filter options",
             null,
             "--cache", "idle_verify", "--exclude-caches", ".*"
         );
@@ -1499,6 +1593,12 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
             "idle_verify check has finished, no conflicts have been found.",
             null,
             "--cache", "idle_verify", "--dump", "--cache-filter", "PERSISTENT"
+        );
+        testCacheIdleVerifyMultipleCacheFilterOptionsCommon(
+            true,
+            "There are no caches matching given filter options.",
+            null,
+            "--cache", "idle_verify", "--cache-filter", "NOT_PERSISTENT"
         );
     }
 
@@ -1644,14 +1744,33 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         injectTestSystemOut();
 
-        corruptingAndCheckDefaultCache(ignite, "USER");
+        corruptingAndCheckDefaultCache(ignite, "USER", true);
+    }
+
+    /**
+     * Tests that idle verify print partitions info while launched without dump option.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCacheIdleVerifyForCorruptedData() throws Exception {
+        IgniteEx ignite = startGrids(3);
+
+        ignite.cluster().active(true);
+
+        createCacheAndPreload(ignite, 100);
+
+        injectTestSystemOut();
+
+        corruptingAndCheckDefaultCache(ignite, "USER", false);
     }
 
     /**
      * @param ignite Ignite.
      * @param cacheFilter cacheFilter.
+     * @param dump Whether idle_verify should be launched with dump option or not.
      */
-    private void corruptingAndCheckDefaultCache(IgniteEx ignite, String cacheFilter) throws IOException {
+    private void corruptingAndCheckDefaultCache(IgniteEx ignite, String cacheFilter, boolean dump) throws IOException {
         injectTestSystemOut();
 
         GridCacheContext<Object, Object> cacheCtx = ignite.cachex(DEFAULT_CACHE_NAME).context();
@@ -1660,19 +1779,28 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         corruptDataEntry(cacheCtx, cacheCtx.config().getAffinity().partitions() / 2, false, true);
 
-        assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify", "--dump", "--cache-filter", cacheFilter));
+        String resReport = null;
 
-        Matcher fileNameMatcher = dumpFileNameMatcher();
+        if (dump) {
+            assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify", "--dump", "--cache-filter", cacheFilter));
 
-        if (fileNameMatcher.find()) {
-            String dumpWithConflicts = new String(Files.readAllBytes(Paths.get(fileNameMatcher.group(1))));
+            Matcher fileNameMatcher = dumpFileNameMatcher();
 
-            log.info(dumpWithConflicts);
+            if (fileNameMatcher.find()) {
+                resReport = new String(Files.readAllBytes(Paths.get(fileNameMatcher.group(1))));
 
-            assertContains(log, dumpWithConflicts, "found 2 conflict partitions: [counterConflicts=1, hashConflicts=1]");
+                log.info(resReport);
+            }
+            else
+                fail("Should be found dump with conflicts");
         }
-        else
-            fail("Should be found dump with conflicts");
+        else {
+            assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify", "--cache-filter", cacheFilter));
+
+            resReport = testOut.toString();
+        }
+
+        assertContains(log, resReport, "found 2 conflict partitions: [counterConflicts=1, hashConflicts=1]");
     }
 
     /**
@@ -1834,6 +1962,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         awaitPartitionMapExchange();
 
+        forceCheckpoint();
+
         injectTestSystemOut();
 
         assertEquals(EXIT_CODE_OK, execute(args));
@@ -1951,7 +2081,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         createCacheAndPreload(ignite, 100);
 
-        corruptingAndCheckDefaultCache(ignite, "PERSISTENT");
+        corruptingAndCheckDefaultCache(ignite, "PERSISTENT", true);
     }
 
     /**
@@ -2039,7 +2169,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
         if (fileNameMatcher.find()) {
             String dumpWithConflicts = new String(Files.readAllBytes(Paths.get(fileNameMatcher.group(1))));
 
-            assertContains(log, dumpWithConflicts, "There are no caches matching given filter options.");
+            assertContains(log, dumpWithConflicts, "There are no caches matching given filter options");
         }
         else
             fail("Should be found dump with conflicts");
@@ -2432,20 +2562,21 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         out = testOut.toString();
 
-        // Find last row
-        int lastRowIndex = out.lastIndexOf('\n');
+        List<String> outLines = Arrays.stream(out.split("\n"))
+                                .map(String::trim)
+                                .collect(Collectors.toList());
 
-        assertTrue(lastRowIndex > 0);
+        int firstIndex = outLines.indexOf("[next group: id=1544803905, name=default]");
+        int lastIndex  = outLines.lastIndexOf("[next group: id=1544803905, name=default]");
 
-        // Last row is empty, but the previous line contains data
-        lastRowIndex = out.lastIndexOf('\n', lastRowIndex - 1);
+        String dataLine = outLines.get(firstIndex + 1);
+        String userArrtDataLine = outLines.get(lastIndex + 1);
 
-        assertTrue(lastRowIndex > 0);
+        long commaNum = dataLine.chars().filter(i -> i == ',').count();
+        long userArrtCommaNum = userArrtDataLine.chars().filter(i -> i == ',').count();
 
-        String lastRow = out.substring(lastRowIndex);
-
-        // Since 3 user attributes have been added, the total number of columns in response should be 12 (separators 11)
-        assertEquals(11, lastRow.split(",").length);
+        // Check that number of columns increased by 3
+        assertEquals(3, userArrtCommaNum - commaNum);
     }
 
     /**
@@ -2572,9 +2703,181 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
     }
 
     /**
-     * Starts several long transactions in order to test --tx command.
-     * Transactions will last until unlock latch is released: first transaction will wait for unlock latch directly,
-     * some others will wait for key lock acquisition.
+     * Tests enabling/disabling rolling upgrade.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testRollingUpgrade() throws Exception {
+        Ignite ignite = startGrid(0);
+
+        CommandHandler hnd = new CommandHandler();
+
+        // Apache Ignite does not support rolling upgrade from out of the box.
+        assertEquals(EXIT_CODE_OK, execute(hnd, "--rolling-upgrade", "on"));
+
+        RollingUpgradeModeChangeResult res = hnd.getLastOperationResult();
+
+        assertTrue("Enabling rolling upgrade should fail [res=" + res + ']', FAIL == res.status());
+        assertTrue(
+            "The cause of the failure should be UnsupportedOperationException [cause=" + res.cause() + ']',
+            X.hasCause(res.cause(), UnsupportedOperationException.class));
+
+        assertEquals(EXIT_CODE_OK, execute(hnd, "--rolling-upgrade", "off"));
+
+        res = hnd.getLastOperationResult();
+
+        assertTrue("Disabling rolling upgrade should fail [res=" + res + ']', FAIL == res.status());
+        assertTrue(
+            "The cause of the failure should be UnsupportedOperationException [cause=" + res.cause() + ']',
+            X.hasCause(res.cause(), UnsupportedOperationException.class));
+    }
+
+    /**
+     * Tests execution of '--rolling-upgrade state' command.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testRollingUpgradeStatus() throws Exception {
+        Ignite ignite = startGrid(0);
+
+        injectTestSystemOut();
+
+        assertEquals(EXIT_CODE_OK, execute("--rolling-upgrade", "status"));
+
+        String out = testOut.toString();
+
+        assertContains(log, out, "Rolling upgrade is disabled");
+    }
+
+    /**
+     * Test execution of --diagnostic command.
+     *
+     * @throws Exception if failed.
+     */
+    @Test
+    public void testDiagnosticPageLocksTracker() throws Exception {
+        Ignite ignite = startGrids(4);
+
+        Collection<ClusterNode> nodes = ignite.cluster().nodes();
+
+        List<ClusterNode> nodes0 = new ArrayList<>(nodes);
+
+        ClusterNode node0 = nodes0.get(0);
+        ClusterNode node1 = nodes0.get(1);
+        ClusterNode node2 = nodes0.get(2);
+        ClusterNode node3 = nodes0.get(3);
+
+        ignite.cluster().active(true);
+
+        assertEquals(
+            EXIT_CODE_OK,
+            execute("--diagnostic")
+        );
+
+        assertEquals(
+            EXIT_CODE_OK,
+            execute("--diagnostic", "help")
+        );
+
+        // Dump locks only on connected node to default path.
+        assertEquals(
+            EXIT_CODE_OK,
+            execute("--diagnostic", "pageLocks", "dump")
+        );
+
+        // Check file dump in default path.
+        checkNumberFiles(defaultDiagnosticDir, 1);
+
+        assertEquals(
+            EXIT_CODE_OK,
+            execute("--diagnostic", "pageLocks", "dump_log")
+        );
+
+        // Dump locks only on connected node to specific path.
+        assertEquals(
+            EXIT_CODE_OK,
+            execute("--diagnostic", "pageLocks", "dump", "--path", customDiagnosticDir.getAbsolutePath())
+        );
+
+        // Check file dump in specific path.
+        checkNumberFiles(customDiagnosticDir, 1);
+
+        // Dump locks only all nodes.
+        assertEquals(
+            EXIT_CODE_OK,
+            execute("--diagnostic", "pageLocks", "dump", "--all")
+        );
+
+        // Current cluster 4 nodes -> 4 files + 1 from previous operation.
+        checkNumberFiles(defaultDiagnosticDir, 5);
+
+        assertEquals(
+            EXIT_CODE_OK,
+            execute("--diagnostic", "pageLocks", "dump_log", "--all")
+        );
+
+        assertEquals(
+            EXIT_CODE_OK,
+            execute("--diagnostic", "pageLocks", "dump",
+                "--path", customDiagnosticDir.getAbsolutePath(), "--all")
+        );
+
+        // Current cluster 4 nodes -> 4 files + 1 from previous operation.
+        checkNumberFiles(customDiagnosticDir, 5);
+
+        // Dump locks only 2 nodes use nodeIds as arg.
+        assertEquals(
+            EXIT_CODE_OK,
+            execute("--diagnostic", "pageLocks", "dump",
+                "--nodes", node0.id().toString() + "," + node2.id().toString())
+        );
+
+        // Dump locks only for 2 nodes -> 2 files + 5 from previous operation.
+        checkNumberFiles(defaultDiagnosticDir, 7);
+
+        // Dump locks only for 2 nodes use constIds as arg.
+        assertEquals(
+            EXIT_CODE_OK,
+            execute("--diagnostic", "pageLocks", "dump",
+                "--nodes", node0.consistentId().toString() + "," + node2.consistentId().toString())
+        );
+
+        assertEquals(
+            EXIT_CODE_OK,
+            execute("--diagnostic", "pageLocks", "dump_log",
+                "--nodes", node1.id().toString() + "," + node3.id().toString())
+        );
+
+        assertEquals(
+            EXIT_CODE_OK,
+            execute(
+                "--diagnostic", "pageLocks", "dump",
+                "--path", customDiagnosticDir.getAbsolutePath(),
+                "--nodes", node1.consistentId().toString() + "," + node3.consistentId().toString())
+        );
+
+        // Dump locks only for 2 nodes -> 2 files + 5 from previous operation.
+        checkNumberFiles(customDiagnosticDir, 7);
+    }
+
+    /**
+     * @param dir Directory.
+     * @param numberFiles Number of files.
+     */
+    private void checkNumberFiles(File dir, int numberFiles) {
+        File[] files = dir.listFiles((d, name) -> name.startsWith(ToFileDumpProcessor.PREFIX_NAME));
+
+        assertEquals(numberFiles, files.length);
+
+        for (int i = 0; i < files.length; i++)
+            assertTrue(files[i].length() > 0);
+    }
+
+    /**
+     * Starts several long transactions in order to test --tx command. Transactions will last until unlock latch is
+     * released: first transaction will wait for unlock latch directly, some others will wait for key lock acquisition.
      *
      * @param lockLatch Lock latch. Will be released inside body of the first transaction.
      * @param unlockLatch Unlock latch. Should be released externally. First transaction won't be finished until unlock

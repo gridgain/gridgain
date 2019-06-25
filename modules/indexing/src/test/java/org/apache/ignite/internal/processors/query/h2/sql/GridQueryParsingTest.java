@@ -47,7 +47,6 @@ import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
-import org.apache.ignite.internal.processors.query.h2.opt.QueryContextRegistry;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -1041,47 +1040,14 @@ public class GridQueryParsingTest extends AbstractIndexingCommonTest {
     private <T extends Prepared> T parse(String sql) throws Exception {
         Session ses = (Session)connection().getSession();
 
-        setQueryContext();
+        ses.setQueryContext(QueryContext.parseContext(null, true));
 
         try {
             return (T)ses.prepare(sql);
         }
         finally {
-            clearQueryContext();
+            ses.setQueryContext(null);
         }
-    }
-
-    /**
-     * Sets thread local query context.
-     */
-    private void setQueryContext() {
-        QueryContextRegistry qryCtxRegistry = indexing().queryContextRegistry();
-
-        QueryContext qctx = new QueryContext(
-            0,
-            null,
-            null,
-            null,
-            null,
-            null,
-            true
-        );
-
-        qryCtxRegistry.setThreadLocal(qctx);
-    }
-
-    /**
-     * Clears thread local query context.
-     */
-    private void clearQueryContext() {
-        indexing().queryContextRegistry().clearThreadLocal();
-    }
-
-    /**
-     * @return H2 indexing manager.
-     */
-    private IgniteH2Indexing indexing() {
-        return (IgniteH2Indexing)((IgniteEx)ignite).context().query().getIndexing();
     }
 
     /**
