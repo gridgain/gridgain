@@ -42,7 +42,7 @@ export default function factory($alert, errorParser) {
 
         const title = err ? errorMessage(message, err) : errorMessage(null, message);
 
-        msgModal = $alert({type, title, duration});
+        msgModal = $alert({type, title, duration: duration + ((title.match(/<li>/g) || []).length * 3)});
 
         msgModal.$scope.icon = `icon-${type}`;
     };

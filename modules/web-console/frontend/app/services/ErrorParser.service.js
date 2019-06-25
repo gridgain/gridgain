@@ -17,6 +17,8 @@
 import isEmpty from 'lodash/isEmpty';
 import {nonEmpty} from 'app/utils/lodashMixins';
 
+const causeStr = 'Caused by: ';
+
 export default class {
     static $inject = ['JavaTypes'];
 
@@ -58,7 +60,23 @@ export default class {
                     }
                 }
 
-                return prefix + (lastIdx >= 0 ? msg.substring(lastIdx + 5, msgEndIdx > 0 ? msgEndIdx : traceIndex) : msg);
+                const causes = [];
+                let causeIdx = err.message.indexOf(causeStr);
+
+                while (causeIdx >= 0) {
+                    // find next ": " in cause message to skip exception class name.
+                    const msgStart = err.message.indexOf(': ', causeIdx + causeStr.length) + 2;
+                    const causeEndLine = err.message.indexOf('\n', msgStart);
+                    const msgEnd = err.message.indexOf('[', msgStart);
+                    const cause = err.message.substring(msgStart, msgEnd >= 0 && msgEnd < causeEndLine ? msgEnd : causeEndLine);
+
+                    causes.unshift(cause);
+
+                    causeIdx = err.message.indexOf(causeStr, causeIdx + causeStr.length);
+                }
+
+                return prefix + (lastIdx >= 0 ? msg.substring(lastIdx + 5, msgEndIdx > 0 ? msgEndIdx : traceIndex) : msg)
+                    + (causes.length > 0 ? '<ul><li>' + causes.join('</li><li>') + '</li></ul>See node logs for more details.' : '');
             }
 
             if (nonEmpty(err.className)) {
