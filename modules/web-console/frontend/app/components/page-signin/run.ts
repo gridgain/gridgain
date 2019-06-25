@@ -56,11 +56,6 @@ export function registerState($uiRouter: UIRouter) {
         },
         tfMetaTags: {
             title: 'Sign In'
-        },
-        resolve: {
-            activationToken() {
-                return $uiRouter.stateService.transition.params<PageSigninStateParams>().activationToken;
-            }
         }
     };
 
