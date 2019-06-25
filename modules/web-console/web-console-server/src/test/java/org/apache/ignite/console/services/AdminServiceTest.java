@@ -3,9 +3,8 @@ package org.apache.ignite.console.services;
 
 import org.apache.ignite.console.TestConfiguration;
 import org.apache.ignite.console.dto.Account;
+import org.apache.ignite.console.event.Event;
 import org.apache.ignite.console.event.EventPublisher;
-import org.apache.ignite.console.event.user.UserCreateByAdminEvent;
-import org.apache.ignite.console.event.user.UserDeleteEvent;
 import org.apache.ignite.console.repositories.ConfigurationsRepository;
 import org.apache.ignite.console.repositories.NotebooksRepository;
 import org.apache.ignite.console.web.model.SignUpRequest;
@@ -20,6 +19,8 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.UUID;
 
+import static org.apache.ignite.console.event.Event.Type.ACCOUNT_CREATE_BY_ADMIN;
+import static org.apache.ignite.console.event.Event.Type.ACCOUNT_DELETE;
 import static org.mockito.Mockito.*;
 
 /**
@@ -49,7 +50,7 @@ public class AdminServiceTest {
     private AccountsService accountsSrvc;
 
     /**
-     * Should publish {@link org.apache.ignite.console.event.user.UserDeleteEvent}
+     * Should publish event with ACCOUNT_DELETE type
      */
     @Test
     public void shouldPublishUserDeleteEvent() {
@@ -64,14 +65,14 @@ public class AdminServiceTest {
         UUID accId = UUID.randomUUID();
         adminSrvc.delete(accId);
 
-        ArgumentCaptor<UserDeleteEvent> captor = ArgumentCaptor.forClass(UserDeleteEvent.class);
+        ArgumentCaptor<Event> captor = ArgumentCaptor.forClass(Event.class);
         verify(evtPublisher, times(1)).publish(captor.capture());
 
-        Assert.assertEquals(accId, captor.getValue().getUser().getId());
+        Assert.assertEquals(ACCOUNT_DELETE, captor.getValue().getType());
     }
 
     /**
-     * Should publish {@link org.apache.ignite.console.event.user.UserCreateByAdminEvent}
+     * Should publish event with ACCOUNT_CREATE_BY_ADMIN type
      */
     @Test
     public void shouldPublishUserCreateByAdminEvent() {
@@ -91,9 +92,9 @@ public class AdminServiceTest {
 
         adminSrvc.registerUser(req);
 
-        ArgumentCaptor<UserCreateByAdminEvent> captor = ArgumentCaptor.forClass(UserCreateByAdminEvent.class);
+        ArgumentCaptor<Event> captor = ArgumentCaptor.forClass(Event.class);
         verify(evtPublisher, times(1)).publish(captor.capture());
 
-        Assert.assertEquals("mail@mail", captor.getValue().getUser().getEmail());
+        Assert.assertEquals(ACCOUNT_CREATE_BY_ADMIN, captor.getValue().getType());
     }
 }

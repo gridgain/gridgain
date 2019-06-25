@@ -16,11 +16,14 @@
 
 package org.apache.ignite.console.listener;
 
-import org.apache.ignite.console.event.user.*;
+import org.apache.ignite.console.dto.Account;
+import org.apache.ignite.console.event.Event;
 import org.apache.ignite.console.notification.NotificationDescriptor;
 import org.apache.ignite.console.services.NotificationService;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+
+import static org.apache.ignite.console.event.Event.Type.*;
 
 /** */
 @Component
@@ -39,47 +42,53 @@ public class NotificationEventListener {
      * @param evt Event.
      */
     @EventListener
-    public void onUserCreateByAdminEvent(UserCreateByAdminEvent evt) {
-        notificationSrv.sendEmail(NotificationDescriptor.ADMIN_WELCOME_LETTER, evt.getUser());
+    public void onUserCreateByAdminEvent(Event<Account> evt) {
+        if (evt.getType() == ACCOUNT_CREATE_BY_ADMIN)
+            notificationSrv.sendEmail(NotificationDescriptor.ADMIN_WELCOME_LETTER, evt.getPayload());
     }
 
     /**
      * @param evt Event.
      */
     @EventListener
-    public void onUserCreateEvent(UserCreateEvent evt) {
-        notificationSrv.sendEmail(NotificationDescriptor.WELCOME_LETTER, evt.getUser());
+    public void onUserCreateEvent(Event<Account> evt) {
+        if (evt.getType() == ACCOUNT_CREATE)
+            notificationSrv.sendEmail(NotificationDescriptor.WELCOME_LETTER, evt.getPayload());
     }
 
     /**
      * @param evt Event.
      */
     @EventListener
-    public void onUserDeleteEvent(UserDeleteEvent evt) {
-        notificationSrv.sendEmail(NotificationDescriptor.ACCOUNT_DELETED, evt.getUser());
+    public void onUserDeleteEvent(Event<Account> evt) {
+        if (evt.getType() == ACCOUNT_DELETE)
+            notificationSrv.sendEmail(NotificationDescriptor.ACCOUNT_DELETED, evt.getPayload());
     }
 
     /**
      * @param evt Event.
      */
     @EventListener
-    public void onPasswordResetEvent(PasswordResetEvent evt) {
-        notificationSrv.sendEmail(NotificationDescriptor.PASSWORD_RESET, evt.getUser());
+    public void onPasswordResetEvent(Event<Account> evt) {
+        if (evt.getType() == PASSWORD_RESET)
+            notificationSrv.sendEmail(NotificationDescriptor.PASSWORD_RESET, evt.getPayload());
     }
 
     /**
      * @param evt Event.
      */
     @EventListener
-    public void onPasswordChangedEvent(PasswordChangedEvent evt) {
-        notificationSrv.sendEmail(NotificationDescriptor.PASSWORD_CHANGED, evt.getUser());
+    public void onPasswordChangedEvent(Event<Account> evt) {
+        if (evt.getType() == PASSWORD_CHANGED)
+            notificationSrv.sendEmail(NotificationDescriptor.PASSWORD_CHANGED, evt.getPayload());
     }
 
     /**
      * @param evt Event.
      */
     @EventListener
-    public void onResetActivationTokenEvent(ResetActivationTokenEvent evt) {
-        notificationSrv.sendEmail(NotificationDescriptor.ACTIVATION_LINK, evt.getUser());
+    public void onResetActivationTokenEvent(Event<Account> evt) {
+        if (evt.getType() == RESET_ACTIVATION_TOKEN)
+            notificationSrv.sendEmail(NotificationDescriptor.ACTIVATION_LINK, evt.getPayload());
     }
 }

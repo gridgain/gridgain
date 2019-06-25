@@ -1,8 +1,8 @@
 package org.apache.ignite.console.services;
 
 import org.apache.ignite.console.TestConfiguration;
+import org.apache.ignite.console.event.Event;
 import org.apache.ignite.console.event.EventPublisher;
-import org.apache.ignite.console.event.user.ActivityUpdateEvent;
 import org.apache.ignite.console.repositories.ActivitiesRepository;
 import org.junit.Assert;
 import org.junit.Test;
@@ -15,6 +15,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.UUID;
 
+import static org.apache.ignite.console.event.Event.Type.ACTIVITY_UPDATE;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -37,16 +38,17 @@ public class ActivitiesServiceTest {
     private ActivitiesRepository activitiesRepo;
 
     /**
-     * Should publish {@link org.apache.ignite.console.event.user.ActivityUpdateEvent}
+     * Should publish event with ACTIVITY_UPDATE type
      */
     @Test
     public void shouldPublishActivityUpdateEvent() {
         UUID accId = UUID.randomUUID();
         activitiesSrvc.save(accId, "grp", "act");
 
-        ArgumentCaptor<ActivityUpdateEvent> captor = ArgumentCaptor.forClass(ActivityUpdateEvent.class);
+        ArgumentCaptor<Event> captor = ArgumentCaptor.forClass(Event.class);
         verify(evtPublisher, times(1)).publish(captor.capture());
 
-        Assert.assertEquals(accId, captor.getValue().getAccId());
+        Assert.assertEquals(ACTIVITY_UPDATE, captor.getValue().getType());
+        Assert.assertEquals(accId, captor.getValue().getPayload());
     }
 }

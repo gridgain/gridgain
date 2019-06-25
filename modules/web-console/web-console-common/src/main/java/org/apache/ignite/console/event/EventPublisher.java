@@ -18,26 +18,12 @@ package org.apache.ignite.console.event;
 
 import org.springframework.context.ApplicationEvent;
 
-import java.util.concurrent.CompletableFuture;
-
-/** */
-public abstract class CallableEvent<T> extends ApplicationEvent {
-    /** */
-    private CompletableFuture<T> fut;
-
+/**
+ * Interface for generic event publisher
+ */
+public interface EventPublisher {
     /**
-     * @param fut Future.
+     * @param evt Event.
      */
-    public CallableEvent(CompletableFuture<T> fut) {
-        super(new Object());
-        this.fut = fut;
-    }
-
-
-    /**
-     * @return Future with result.
-     */
-    public CompletableFuture<T> fut() {
-        return fut;
-    }
+    public void publish(ApplicationEvent evt);
 }

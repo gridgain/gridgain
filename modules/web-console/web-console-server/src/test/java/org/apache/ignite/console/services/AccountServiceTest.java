@@ -20,8 +20,9 @@ import org.apache.ignite.console.TestConfiguration;
 import org.apache.ignite.console.config.ActivationConfiguration;
 import org.apache.ignite.console.config.SignUpConfiguration;
 import org.apache.ignite.console.dto.Account;
+import org.apache.ignite.console.event.Event;
+import org.apache.ignite.console.event.Event.Type;
 import org.apache.ignite.console.event.EventPublisher;
-import org.apache.ignite.console.event.user.*;
 import org.apache.ignite.console.repositories.AccountsRepository;
 import org.apache.ignite.console.tx.TransactionManager;
 import org.apache.ignite.console.web.model.ChangeUserRequest;
@@ -43,6 +44,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.UUID;
 
+import static org.apache.ignite.console.event.Event.Type.*;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 
@@ -103,7 +105,7 @@ public class AccountServiceTest {
     }
 
     /**
-     * Should publish {@link org.apache.ignite.console.event.user.ResetActivationTokenEvent}
+     * Should publish event with RESET_ACTIVATION_TOKEN type
      */
     @Test
     public void shouldPublishResetActivationTokenEventWhileRegister() {
@@ -120,15 +122,11 @@ public class AccountServiceTest {
             // No-op
         }
 
-        ArgumentCaptor<ResetActivationTokenEvent> captor = ArgumentCaptor.forClass(ResetActivationTokenEvent.class);
-        verify(evtPublisher, times(1)).publish(captor.capture());
-
-        Assert.assertEquals("user@user", captor.getValue().getUser().getEmail());
-        Assert.assertNotEquals(null, captor.getValue().getUser().getId());
+        assertEventType(RESET_ACTIVATION_TOKEN);
     }
 
     /**
-     * Should publish {@link org.apache.ignite.console.event.user.ResetActivationTokenEvent}
+     * Should publish event with RESET_ACTIVATION_TOKEN type
      */
     @Test
     public void shouldPublishResetActivationTokenEvent() {
@@ -144,17 +142,14 @@ public class AccountServiceTest {
 
         srvc.resetActivationToken("mail@mail");
 
-        ArgumentCaptor<ResetActivationTokenEvent> captor = ArgumentCaptor.forClass(ResetActivationTokenEvent.class);
-        verify(evtPublisher, times(1)).publish(captor.capture());
-
-        Assert.assertEquals("mail@mail", captor.getValue().getUser().getEmail());
+        assertEventType(RESET_ACTIVATION_TOKEN);
     }
 
     /**
-     * Should publish {@link org.apache.ignite.console.event.user.UserCreateEvent}
+     * Should publish event with ACCOUNT_CREATE type
      */
     @Test
-    public void shouldPublishUserCreateEvent() {
+    public void shouldPublishAccountCreateEvent() {
         AccountsService srvc = mockAccountsService(true, false);
 
         SignUpRequest userReq = new SignUpRequest();
@@ -164,18 +159,14 @@ public class AccountServiceTest {
 
         srvc.register(userReq);
 
-        ArgumentCaptor<UserCreateEvent> captor = ArgumentCaptor.forClass(UserCreateEvent.class);
-        verify(evtPublisher, times(1)).publish(captor.capture());
-
-        Assert.assertEquals("user@user", captor.getValue().getUser().getEmail());
-        Assert.assertNotEquals(null, captor.getValue().getUser().getId());
+        assertEventType(ACCOUNT_CREATE);
     }
 
     /**
-     * Should publish {@link org.apache.ignite.console.event.user.UserUpdateEvent}
+     * Should publish
      */
     @Test
-    public void shouldPublishUserUpdateEvent() {
+    public void shouldPublishAccountUpdateEvent() {
         AccountsService srvc = mockAccountsService(true, false);
 
         when(accountsRepo.getById(any(UUID.class)))
@@ -193,14 +184,11 @@ public class AccountServiceTest {
 
         srvc.save(UUID.randomUUID(), changes);
 
-        ArgumentCaptor<UserUpdateEvent> captor = ArgumentCaptor.forClass(UserUpdateEvent.class);
-        verify(evtPublisher, times(1)).publish(captor.capture());
-
-        Assert.assertEquals("new@mail", captor.getValue().getUser().getEmail());
+        assertEventType(ACCOUNT_UPDATE);
     }
 
     /**
-     * Should publish {@link org.apache.ignite.console.event.user.PasswordResetEvent}
+     * Should publish event with PASSWORD_RESET type
      */
     @Test
     public void shouldPublishPasswordResetEvent() {
@@ -216,14 +204,11 @@ public class AccountServiceTest {
 
         srvc.forgotPassword("mail@mail");
 
-        ArgumentCaptor<PasswordResetEvent> captor = ArgumentCaptor.forClass(PasswordResetEvent.class);
-        verify(evtPublisher, times(1)).publish(captor.capture());
-
-        Assert.assertEquals("mail@mail", captor.getValue().getUser().getEmail());
+        assertEventType(PASSWORD_RESET);
     }
 
     /**
-     * Should publish {@link org.apache.ignite.console.event.user.PasswordChangedEvent}
+     * Should publish event with PASSWORD_CHANGED type
      */
     @Test
     public void shouldPublishPasswordChangedEvent() {
@@ -240,10 +225,7 @@ public class AccountServiceTest {
 
         srvc.resetPasswordByToken("new_mail@mail", "token", "2");
 
-        ArgumentCaptor<PasswordChangedEvent> captor = ArgumentCaptor.forClass(PasswordChangedEvent.class);
-        verify(evtPublisher, times(1)).publish(captor.capture());
-
-        Assert.assertEquals("new_mail@mail", captor.getValue().getUser().getEmail());
+        assertEventType(PASSWORD_CHANGED);
     }
 
     /**
@@ -267,5 +249,15 @@ public class AccountServiceTest {
                 txMgr,
                 evtPublisher
         );
+    }
+
+    /**
+     * @param evtType Event type.
+     */
+    private void assertEventType(Type evtType) {
+        ArgumentCaptor<Event> captor = ArgumentCaptor.forClass(Event.class);
+        verify(evtPublisher, times(1)).publish(captor.capture());
+
+        Assert.assertEquals(evtType, captor.getValue().getType());
     }
 }

@@ -18,9 +18,8 @@ package org.apache.ignite.console.services;
 
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.dto.Announcement;
+import org.apache.ignite.console.event.Event;
 import org.apache.ignite.console.event.EventPublisher;
-import org.apache.ignite.console.event.user.UserCreateByAdminEvent;
-import org.apache.ignite.console.event.user.UserDeleteEvent;
 import org.apache.ignite.console.json.JsonArray;
 import org.apache.ignite.console.json.JsonObject;
 import org.apache.ignite.console.repositories.AnnouncementRepository;
@@ -34,6 +33,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.UUID;
+
+import static org.apache.ignite.console.event.Event.Type.ACCOUNT_CREATE_BY_ADMIN;
+import static org.apache.ignite.console.event.Event.Type.ACCOUNT_DELETE;
 
 
 /**
@@ -141,7 +143,7 @@ public class AdminService {
 
             tx.commit();
 
-            eventPublisher.publish(new UserDeleteEvent(acc));
+            eventPublisher.publish(new Event<>(ACCOUNT_DELETE, acc));
         }
     }
 
@@ -166,7 +168,7 @@ public class AdminService {
     public void registerUser(SignUpRequest params) {
         Account acc = accountsSrv.create(params);
 
-        eventPublisher.publish(new UserCreateByAdminEvent(acc));
+        eventPublisher.publish(new Event<>(ACCOUNT_CREATE_BY_ADMIN, acc));
     }
 
     /** */

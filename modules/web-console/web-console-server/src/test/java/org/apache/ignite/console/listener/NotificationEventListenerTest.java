@@ -18,8 +18,8 @@ package org.apache.ignite.console.listener;
 
 import org.apache.ignite.console.TestConfiguration;
 import org.apache.ignite.console.dto.Account;
+import org.apache.ignite.console.event.Event;
 import org.apache.ignite.console.event.EventPublisher;
-import org.apache.ignite.console.event.user.*;
 import org.apache.ignite.console.notification.NotificationDescriptor;
 import org.apache.ignite.console.services.NotificationService;
 import org.junit.Test;
@@ -29,6 +29,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import static org.apache.ignite.console.event.Event.Type.*;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -36,11 +37,11 @@ import static org.mockito.Mockito.verify;
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = {TestConfiguration.class})
 public class NotificationEventListenerTest {
-    /** */
+    /** Publisher. */
     @Autowired
     private EventPublisher publisher;
 
-    /** */
+    /** Notification Server. */
     @MockBean
     private NotificationService notificationSrv;
 
@@ -50,9 +51,8 @@ public class NotificationEventListenerTest {
     @Test
     public void testOnUserCreateEvent() throws InterruptedException {
         Account acc = new Account();
-        UserEvent evt = new UserCreateEvent(acc);
 
-        publisher.publish(evt);
+        publisher.publish(new Event<>(ACCOUNT_CREATE, acc));
         Thread.sleep(1);
 
         verify(notificationSrv, times(1)).sendEmail(NotificationDescriptor.WELCOME_LETTER, acc);
@@ -64,9 +64,8 @@ public class NotificationEventListenerTest {
     @Test
     public void testOnUserCreateByAdminEvent() throws InterruptedException {
         Account acc = new Account();
-        UserEvent evt = new UserCreateByAdminEvent(acc);
 
-        publisher.publish(evt);
+        publisher.publish(new Event<>(ACCOUNT_CREATE_BY_ADMIN, acc));
         Thread.sleep(1);
 
         verify(notificationSrv, times(1)).sendEmail(NotificationDescriptor.ADMIN_WELCOME_LETTER, acc);
@@ -78,12 +77,11 @@ public class NotificationEventListenerTest {
     @Test
     public void testOnUserDeleteEvent() throws InterruptedException {
         Account acc = new Account();
-        UserEvent evt = new UserDeleteEvent(acc);
 
-        publisher.publish(evt);
+        publisher.publish(new Event<>(ACCOUNT_DELETE, acc));
         Thread.sleep(1);
 
-        verify(notificationSrv, times(1)).sendEmail(NotificationDescriptor.ACCOUNT_DELETED, evt.getUser());
+        verify(notificationSrv, times(1)).sendEmail(NotificationDescriptor.ACCOUNT_DELETED, acc);
     }
 
     /**
@@ -92,12 +90,11 @@ public class NotificationEventListenerTest {
     @Test
     public void testOnPasswordResetEvent() throws InterruptedException {
         Account acc = new Account();
-        UserEvent evt = new PasswordResetEvent(acc);
 
-        publisher.publish(evt);
+        publisher.publish(new Event<>(PASSWORD_RESET, acc));
         Thread.sleep(1);
 
-        verify(notificationSrv, times(1)).sendEmail(NotificationDescriptor.PASSWORD_RESET, evt.getUser());
+        verify(notificationSrv, times(1)).sendEmail(NotificationDescriptor.PASSWORD_RESET, acc);
     }
 
     /**
@@ -106,12 +103,11 @@ public class NotificationEventListenerTest {
     @Test
     public void testOnPasswordChangedEvent() throws InterruptedException {
         Account acc = new Account();
-        UserEvent evt = new PasswordChangedEvent(acc);
 
-        publisher.publish(evt);
+        publisher.publish(new Event<>(PASSWORD_CHANGED, acc));
         Thread.sleep(1);
 
-        verify(notificationSrv, times(1)).sendEmail(NotificationDescriptor.PASSWORD_CHANGED, evt.getUser());
+        verify(notificationSrv, times(1)).sendEmail(NotificationDescriptor.PASSWORD_CHANGED, acc);
     }
 
     /**
@@ -120,11 +116,10 @@ public class NotificationEventListenerTest {
     @Test
     public void testOnResetActivationTokenEvent() throws InterruptedException {
         Account acc = new Account();
-        UserEvent evt = new ResetActivationTokenEvent(acc);
 
-        publisher.publish(evt);
+        publisher.publish(new Event<>(RESET_ACTIVATION_TOKEN, acc));
         Thread.sleep(1);
 
-        verify(notificationSrv, times(1)).sendEmail(NotificationDescriptor.ACTIVATION_LINK, evt.getUser());
+        verify(notificationSrv, times(1)).sendEmail(NotificationDescriptor.ACTIVATION_LINK, acc);
     }
 }

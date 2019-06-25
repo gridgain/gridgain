@@ -19,8 +19,8 @@ package org.apache.ignite.console.services;
 import org.apache.ignite.console.config.ActivationConfiguration;
 import org.apache.ignite.console.config.SignUpConfiguration;
 import org.apache.ignite.console.dto.Account;
+import org.apache.ignite.console.event.Event;
 import org.apache.ignite.console.event.EventPublisher;
-import org.apache.ignite.console.event.user.*;
 import org.apache.ignite.console.repositories.AccountsRepository;
 import org.apache.ignite.console.tx.TransactionManager;
 import org.apache.ignite.console.web.model.ChangeUserRequest;
@@ -41,6 +41,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static java.time.temporal.ChronoUnit.MILLIS;
+import static org.apache.ignite.console.event.Event.Type.*;
 
 /**
  * Service to handle accounts.
@@ -147,11 +148,11 @@ public class AccountsService implements UserDetailsService {
             tx.commit();
 
             if (activationEnabled) {
-                eventPublisher.publish(new ResetActivationTokenEvent(acc));
+                eventPublisher.publish(new Event<>(RESET_ACTIVATION_TOKEN, acc));
 
                 throw new MissingConfirmRegistrationException("Confirm your email", acc.getEmail());
             }
-            eventPublisher.publish(new UserCreateEvent(acc));
+            eventPublisher.publish(new Event<>(ACCOUNT_CREATE, acc));
         }
     }
 
@@ -231,7 +232,7 @@ public class AccountsService implements UserDetailsService {
 
             tx.commit();
 
-            eventPublisher.publish(new ResetActivationTokenEvent(acc));
+            eventPublisher.publish(new Event<>(RESET_ACTIVATION_TOKEN, acc));
         }
     }
 
@@ -261,7 +262,7 @@ public class AccountsService implements UserDetailsService {
             if (!oldTok.equals(acc.getToken()))
                 wsm.revokeToken(acc, oldTok);
 
-            eventPublisher.publish(new UserUpdateEvent(acc));
+            eventPublisher.publish(new Event<>(ACCOUNT_UPDATE, acc));
 
             return acc;
         }
@@ -282,7 +283,7 @@ public class AccountsService implements UserDetailsService {
 
             tx.commit();
 
-            eventPublisher.publish(new PasswordResetEvent(acc));
+            eventPublisher.publish(new Event<>(PASSWORD_RESET, acc));
         }
     }
 
@@ -307,7 +308,7 @@ public class AccountsService implements UserDetailsService {
 
             tx.commit();
 
-            eventPublisher.publish(new PasswordChangedEvent(acc));
+            eventPublisher.publish(new Event<>(PASSWORD_CHANGED, acc));
         }
     }
 }
