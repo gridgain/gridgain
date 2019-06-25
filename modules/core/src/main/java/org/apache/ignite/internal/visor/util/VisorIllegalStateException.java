@@ -14,18 +14,23 @@
  * limitations under the License.
  */
 
-import angular from 'angular';
+package org.apache.ignite.internal.visor.util;
 
-import igniteDialog from './dialog.directive';
-import igniteDialogTitle from './dialog-title.directive';
-import igniteDialogContent from './dialog-content.directive';
-import IgniteDialog from './dialog.factory';
+import org.apache.ignite.IgniteException;
 
-angular
-.module('ignite-console.dialog', [
+/**
+ * Exception to throw from Visor tasks in case of Illegal state or argument.
+ */
+public class VisorIllegalStateException extends IgniteException {
+    /** */
+    private static final long serialVersionUID = 0L;
 
-])
-.factory('IgniteDialog', IgniteDialog)
-.directive('igniteDialog', igniteDialog)
-.directive('igniteDialogTitle', igniteDialogTitle)
-.directive('igniteDialogContent', igniteDialogContent);
+    /**
+     * Creates exception with given error message.
+     *
+     * @param msg Error message.
+     */
+    public VisorIllegalStateException(String msg) {
+        super(msg);
+    }
+}

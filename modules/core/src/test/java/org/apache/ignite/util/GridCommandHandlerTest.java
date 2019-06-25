@@ -114,6 +114,7 @@ import static java.io.File.separatorChar;
 import static java.util.Arrays.asList;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
+import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_ILLEGAL_SATE_ERROR;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_INVALID_ARGUMENTS;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_UNEXPECTED_ERROR;
@@ -391,7 +392,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "add"));
 
-        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "add", "non-existent-id"));
+        assertEquals(EXIT_CODE_ILLEGAL_SATE_ERROR, execute("--baseline", "add", "non-existent-id"));
 
         Ignite other = startGrid(2);
 
@@ -547,6 +548,34 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
         System.out.println(testOut.toString());
 
         log.info("================================================");
+    }
+
+    /**
+     * Test that if baseline auto_adjustment is enable, control.sh can not change a state manual.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void shouldReturnErrorCodeForManualSetInBaselineAutoAdjustmentEnable() throws Exception {
+        Ignite ignite = startGrid();
+
+        ignite.cluster().active(true);
+
+        IgniteCluster cl = ignite.cluster();
+
+        long timeout = cl.baselineAutoAdjustTimeout();
+
+        assertEquals(EXIT_CODE_OK, execute(
+            "--baseline",
+            "auto_adjust",
+            "enable",
+            "timeout",
+            Long.toString(timeout + 1)
+        ));
+
+        assertTrue(cl.isBaselineAutoAdjustEnabled());
+
+        assertEquals(EXIT_CODE_ILLEGAL_SATE_ERROR, execute("--baseline", "version", "1"));
     }
 
     /**
@@ -1194,7 +1223,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
                 getTestIgniteInstanceName(2) + "," +
                 getTestIgniteInstanceName(3);
 
-        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "add", consistentIDs));
+        assertEquals(EXIT_CODE_ILLEGAL_SATE_ERROR, execute("--baseline", "add", consistentIDs));
 
         String testOutStr = testOut.toString();
 
@@ -1228,6 +1257,11 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
                         assertTrue(cmd + " " + arg, output.contains(arg.toString()));
 
             }
+            else {
+                assertContains(log, output, CommandHandler.UTILITY_NAME);
+
+                assertNotContains(log, output, "control.sh");
+            }
         }
     }
 
@@ -1258,6 +1292,11 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         for (CommandList cmd : CommandList.values())
             assertContains(log, testOutStr, cmd.toString());
+
+        assertContains(log, testOutStr, "Control utility script");
+        assertContains(log, testOutStr, CommandHandler.UTILITY_NAME);
+
+        assertNotContains(log, testOutStr, "Control.sh");
     }
 
     /**
