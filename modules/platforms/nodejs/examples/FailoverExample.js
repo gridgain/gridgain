@@ -32,7 +32,7 @@ async function connectClient() {
     try {
         const igniteClientConfiguration = new IgniteClientConfiguration(
             ENDPOINT1, ENDPOINT2, ENDPOINT3);
-        // connect to Ignite a node
+        // connect to a GridGain node
         await igniteClient.connect(igniteClientConfiguration);
     }
     catch (err) {
