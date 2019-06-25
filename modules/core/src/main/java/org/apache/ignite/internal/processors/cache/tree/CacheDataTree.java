@@ -396,7 +396,7 @@ public class CacheDataTree extends BPlusTree<CacheSearchRow, CacheDataRow> {
         long link = rowIo.getLink(pageAddr, idx);
         int hash = rowIo.getHash(pageAddr, idx);
 
-        int cacheId = grp.sharedGroup() ? rowIo.getCacheId(pageAddr, idx) : CU.UNDEFINED_CACHE_ID;
+        int cacheId = grp.storeCacheIdInDataPage() ? rowIo.getCacheId(pageAddr, idx) : CU.UNDEFINED_CACHE_ID;
 
         CacheDataRowAdapter.RowData x = asRowData(flags);
 
