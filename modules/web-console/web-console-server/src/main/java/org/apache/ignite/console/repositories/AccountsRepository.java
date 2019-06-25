@@ -32,7 +32,6 @@ import org.springframework.security.authentication.AuthenticationServiceExceptio
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Repository;
 
-import static org.apache.ignite.console.common.Utils.normalizeEmail;
 import static org.apache.ignite.console.web.errors.Errors.checkDatabaseNotAvailable;
 
 /**
@@ -58,7 +57,7 @@ public class AccountsRepository {
 
         txMgr.registerStarter("accounts", () ->
             accountsTbl = new Table<Account>(ignite, "wc_accounts")
-                .addUniqueIndex(a -> normalizeEmail(a.getUsername()),
+                .addUniqueIndex(a -> a.getUsername().trim().toLowerCase(),
                     (acc) -> "Account with email '" + acc.getUsername() + "' already registered")
                 .addUniqueIndex(Account::getToken,
                     (acc) -> "Account with token '" + acc.getToken() + "' already exists")
