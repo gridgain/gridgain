@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-import {component} from './component';
 import {state} from './state';
+import {downgradeComponent} from '@angular/upgrade/static';
+import {PageSignupConfirmationComponent} from '../../../app-angular/components/page-signup-confirmation/component';
 
 export default angular.module('ignite-console.page-signup-confirmation', [])
     .run(state)
-    .component('pageSignupConfirmation', component);
+    .directive('pageSignupConfirmation', downgradeComponent({component: PageSignupConfirmationComponent}));

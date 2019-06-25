@@ -47,6 +47,7 @@ import {ScrollToFirstInvalid} from './components/form-field/scrollToFirstInvalid
 import {ReactiveFormsModule} from '@angular/forms';
 
 import {upgradedComponents} from './upgrade';
+import {PageSignupConfirmationComponent} from './components/page-signup-confirmation/component';
 
 export const declarations = [
     ServiceBootstrapComponent,
@@ -62,12 +63,14 @@ export const declarations = [
     FormFieldTooltip,
     PasswordVisibilityToggleButton,
     ScrollToFirstInvalid,
+    PageSignupConfirmationComponent,
     ...upgradedComponents
 ];
 
 export const entryComponents = [
     ServiceBootstrapComponent,
-    PageProfile
+    PageProfile,
+    PageSignupConfirmationComponent
 ];
 
 export const upgradeService = (token: string) => ({
@@ -82,7 +85,9 @@ export const providers = [
     'IgniteCountries',
     'User',
     'IgniteIcons',
-    'IgniteCopyToClipboard'
+    'IgniteCopyToClipboard',
+    'Auth',
+    'IgniteMessages'
 ].map(upgradeService);
 
 import {states} from './states';

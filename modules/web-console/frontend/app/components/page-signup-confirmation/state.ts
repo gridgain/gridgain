@@ -37,11 +37,6 @@ export function state(router: UIRouter) {
         unsaved: true,
         tfMetaTags: {
             title: 'Sign Up Confirmation'
-        },
-        resolve: {
-            email() {
-                return router.stateService.transition.params<PageSignupConfirmationStateParams>().email;
-            }
         }
     } as IIgniteNg1StateDeclaration);
 }
