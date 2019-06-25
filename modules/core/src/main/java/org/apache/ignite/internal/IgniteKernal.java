@@ -1392,7 +1392,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
         U.quietAndInfo(log, "To start Console Management & Monitoring run ignitevisorcmd.{sh|bat}");
 
-        if (!Boolean.parseBoolean(System.getProperty(IgniteSystemProperties.IGNITE_QUIET, "true")))
+        if (!IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_QUIET, true))
             ackClassPathContent();
 
         ackStart(rtBean);
