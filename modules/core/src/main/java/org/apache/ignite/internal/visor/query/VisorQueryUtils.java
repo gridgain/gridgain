@@ -43,6 +43,8 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.query.QueryCursorEx;
 import org.apache.ignite.internal.processors.query.GridQueryCancel;
 import org.apache.ignite.internal.processors.query.GridQueryFieldMetadata;
+import org.apache.ignite.internal.processors.security.OperationSecurityContext;
+import org.apache.ignite.internal.processors.security.SecurityContext;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.F;
@@ -360,8 +362,11 @@ public class VisorQueryUtils {
         final VisorQueryTaskArg arg,
         final GridQueryCancel cancel
     ) {
+        SecurityContext initCtx = ignite.context().security().securityContext();
+
         ignite.context().closure().runLocalSafe(() -> {
-            try {
+            try(OperationSecurityContext ctx = ignite.context().security().withContext(initCtx)) {
+
                 SqlFieldsQuery qry = new SqlFieldsQuery(arg.getQueryText());
 
                 qry.setPageSize(arg.getPageSize());
