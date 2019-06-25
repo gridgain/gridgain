@@ -167,8 +167,11 @@ public class IgniteRebalanceScheduleResendPartitionsTest extends GridCommonAbstr
             if (msg.exchangeId() != null)
                 latch.countDown();
 
-            if (prevMessageComparator.prevEquals(msg))
+            if (prevMessageComparator.prevEquals(msg)) {
+                System.out.println("prev=" + prevMessageComparator.prev + " , curr=" + msg);
+
                 cnt.incrementAndGet();
+            }
         });
 
         ig3.cluster().setBaselineTopology(ig3.context().discovery().topologyVersion());
