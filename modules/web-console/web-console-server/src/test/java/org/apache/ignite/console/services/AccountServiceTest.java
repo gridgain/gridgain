@@ -163,7 +163,7 @@ public class AccountServiceTest {
     }
 
     /**
-     * Should publish
+     * Should publish event with ACCOUNT_UPDATE type
      */
     @Test
     public void shouldPublishAccountUpdateEvent() {
