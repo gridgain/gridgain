@@ -18,6 +18,7 @@ package org.apache.ignite.ml.selection.cv;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +26,7 @@ import java.util.Random;
 import java.util.function.BiFunction;
 import java.util.function.DoubleConsumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.lang.IgniteBiPredicate;
@@ -32,6 +34,10 @@ import org.apache.ignite.ml.IgniteModel;
 import org.apache.ignite.ml.dataset.DatasetBuilder;
 import org.apache.ignite.ml.dataset.impl.cache.CacheBasedDatasetBuilder;
 import org.apache.ignite.ml.dataset.impl.local.LocalDatasetBuilder;
+import org.apache.ignite.ml.environment.LearningEnvironment;
+import org.apache.ignite.ml.environment.LearningEnvironmentBuilder;
+import org.apache.ignite.ml.environment.parallelism.Promise;
+import org.apache.ignite.ml.math.functions.IgniteSupplier;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.pipeline.Pipeline;
 import org.apache.ignite.ml.pipeline.PipelineMdl;
@@ -63,6 +69,13 @@ import org.jetbrains.annotations.NotNull;
  * @param <V> Type of a value in {@code upstream} data.
  */
 public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
+    /** Learning environment builder. */
+    private LearningEnvironmentBuilder envBuilder = LearningEnvironmentBuilder.defaultBuilder();
+
+    /** Learning Environment. */
+    private LearningEnvironment environment = envBuilder.buildForTrainer();
+
+
     private DatasetTrainer<M, L> trainer;
 
     private Metric<L> metric;
@@ -105,24 +118,34 @@ public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
     private CrossValidationResult scoreRandomSearchHyperparameterOptimiztion() {
         List<Double[]> paramSets = new ParameterSetGenerator(paramGrid.getParamValuesByParamIdx()).generate();
 
+        List<Double[]> paramSetsCp = new ArrayList<>(paramSets);
+        Collections.shuffle(paramSetsCp, new Random(paramGrid.getSeed()));
+
         CrossValidationResult cvRes = new CrossValidationResult();
 
-        Random rnd = new Random(paramGrid.getSeed());
+        List<Double[]> rndParamSets = paramSetsCp.subList(0, paramGrid.getMaxTries());
 
-        List<Double[]> paramSetsCp = new ArrayList<>(paramSets);
+        List<IgniteSupplier<TaskResult>> tasks = rndParamSets.stream()
+            .map(paramSet -> (IgniteSupplier<TaskResult>)(()->calculateScoresForFixedParamSet(paramSet)))
+            .collect(Collectors.toList());
 
-        int maxTries = 0;
-        while (cvRes.getBestAvgScore() <= paramGrid.getSatisfactoryFitness() && maxTries < paramGrid.getMaxTries() && !paramSetsCp.isEmpty()) {
-            int idx = rnd.nextInt(paramSetsCp.size());
-            Double[] paramSet = paramSetsCp.get(idx);
+        List<TaskResult> taskResults = environment.parallelismStrategy().submit(tasks).stream()
+            .map(Promise::unsafeGet)
+            .collect(Collectors.toList());
 
-            updateCrossValidationResultForTheGivenParamSet(cvRes, paramSet);
+        taskResults.forEach(tr -> {
+            cvRes.addScores(tr.locScores, tr.paramMap);
 
-            paramSetsCp.remove(idx);
-            maxTries++;
-        }
+            final double locAvgScore = Arrays.stream(tr.locScores).average().orElse(Double.MIN_VALUE);
+
+            if (locAvgScore > cvRes.getBestAvgScore()) {
+                cvRes.setBestScore(tr.locScores);
+                cvRes.setBestHyperParams(tr.paramMap);
+            }
+
+        });
+
         return cvRes;
-
     }
 
 
@@ -131,12 +154,48 @@ public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
 
         CrossValidationResult cvRes = new CrossValidationResult();
 
-        paramSets.forEach(paramSet -> updateCrossValidationResultForTheGivenParamSet(cvRes, paramSet));
+        List<IgniteSupplier<TaskResult>> tasks = paramSets.stream()
+            .map(paramSet -> (IgniteSupplier<TaskResult>)(()->calculateScoresForFixedParamSet(paramSet)))
+            .collect(Collectors.toList());
+
+        List<TaskResult> taskResults = environment.parallelismStrategy().submit(tasks).stream()
+            .map(Promise::unsafeGet)
+            .collect(Collectors.toList());
+
+        taskResults.forEach(tr -> {
+            cvRes.addScores(tr.locScores, tr.paramMap);
+
+            final double locAvgScore = Arrays.stream(tr.locScores).average().orElse(Double.MIN_VALUE);
+
+            if (locAvgScore > cvRes.getBestAvgScore()) {
+                cvRes.setBestScore(tr.locScores);
+                cvRes.setBestHyperParams(tr.paramMap);
+            }
+
+        });
 
         return cvRes;
     }
 
-    private void updateCrossValidationResultForTheGivenParamSet(CrossValidationResult cvRes, Double[] paramSet) {
+    private class TaskResult {
+        private Map<String, Double> paramMap;
+        private double[] locScores;
+
+        public TaskResult(Map<String, Double> paramMap, double[] locScores) {
+            this.paramMap = paramMap;
+            this.locScores = locScores;
+        }
+
+        public void setParamMap(Map<String, Double> paramMap) {
+            this.paramMap = paramMap;
+        }
+
+        public void setLocScores(double[] locScores) {
+            this.locScores = locScores;
+        }
+    }
+
+    private TaskResult calculateScoresForFixedParamSet(Double[] paramSet) {
         Map<String, Double> paramMap = injectAndGetParametersFromPipeline(paramGrid, paramSet);
 
         double[] locScores;
@@ -146,15 +205,7 @@ public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
         } else
             locScores = score(trainer, metric, upstreamMap, filter, parts, preprocessor, amountOfFolds);
 
-
-        cvRes.addScores(locScores, paramMap);
-
-        final double locAvgScore = Arrays.stream(locScores).average().orElse(Double.MIN_VALUE);
-
-        if (locAvgScore > cvRes.getBestAvgScore()) {
-            cvRes.setBestScore(locScores);
-            cvRes.setBestHyperParams(paramMap);
-        }
+        return new TaskResult(paramMap, locScores);
     }
 
     @NotNull private Map<String, Double> injectAndGetParametersFromPipeline(ParamGrid paramGrid, Double[] paramSet) {
@@ -528,6 +579,19 @@ public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
 
     public CrossValidation<M, L, K, V>  withAmountOfParts(int parts) {
         this.parts = parts;
+        return this;
+    }
+
+    /**
+     * Changes learning Environment.
+     *
+     * @param envBuilder Learning environment builder.
+     */
+    // TODO: IGNITE-10441 Think about more elegant ways to perform fluent API.
+    public CrossValidation<M,L,K,V> withEnvironmentBuilder(LearningEnvironmentBuilder envBuilder) {
+        this.envBuilder = envBuilder;
+        environment = envBuilder.buildForTrainer();
+
         return this;
     }
 }

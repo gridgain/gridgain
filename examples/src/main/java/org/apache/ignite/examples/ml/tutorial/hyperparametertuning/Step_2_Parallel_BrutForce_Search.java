@@ -24,6 +24,9 @@ import org.apache.ignite.Ignition;
 import org.apache.ignite.examples.ml.tutorial.TitanicUtils;
 import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
 import org.apache.ignite.ml.dataset.feature.extractor.impl.DummyVectorizer;
+import org.apache.ignite.ml.environment.LearningEnvironmentBuilder;
+import org.apache.ignite.ml.environment.logging.ConsoleLogger;
+import org.apache.ignite.ml.environment.parallelism.ParallelismStrategy;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.preprocessing.Preprocessor;
 import org.apache.ignite.ml.preprocessing.encoding.EncoderTrainer;
@@ -68,7 +71,7 @@ import org.apache.ignite.ml.tree.DecisionTreeNode;
  * <p>
  * All scenarios are described there: https://sebastianraschka.com/faq/docs/evaluate-a-model.html</p>
  */
-public class Step_8_CV_with_Param_Grid_Random_Serach_and_metrics {
+public class Step_2_Parallel_BrutForce_Search {
     /** Run example. */
     public static void main(String[] args) {
         System.out.println();
@@ -107,8 +110,11 @@ public class Step_8_CV_with_Param_Grid_Random_Serach_and_metrics {
                         imputingPreprocessor
                     );
 
-                Preprocessor<Integer, Vector> normalizationPreprocessor = new NormalizationTrainer<Integer, Vector>()
-                    .withP(1)
+
+                NormalizationTrainer<Integer, Vector> normalizationTrainer = new NormalizationTrainer<Integer, Vector>()
+                    .withP(1);
+
+                Preprocessor<Integer, Vector> normalizationPreprocessor = normalizationTrainer
                     .fit(
                         ignite,
                         dataCache,
@@ -123,10 +129,8 @@ public class Step_8_CV_with_Param_Grid_Random_Serach_and_metrics {
                     = new CrossValidation<>();
 
                 ParamGrid paramGrid = new ParamGrid()
-                    .withParameterSearchStrategy(HyperParameterSearchingStrategy.RANDOM_SEARCH)
-                    .withMaxTries(10)
-                    .withSatisfactoryFitness(0.76)
-                    .withSeed(12L)
+                    .withParameterSearchStrategy(HyperParameterSearchingStrategy.BRUT_FORCE)
+                   // .addHyperParam("p", normalizationTrainer::withP, new Double[]{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0})
                     .addHyperParam("maxDeep", trainerCV::withMaxDeep, new Double[]{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0})
                     .addHyperParam("minImpurityDecrease", trainerCV::withMinImpurityDecrease, new Double[]{0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0});
 
@@ -137,6 +141,9 @@ public class Step_8_CV_with_Param_Grid_Random_Serach_and_metrics {
                     .withMetric(BinaryClassificationMetricValues::accuracy);
 
                 scoreCalculator
+                    .withEnvironmentBuilder(LearningEnvironmentBuilder.defaultBuilder()
+                        .withParallelismStrategyTypeDependency(ParallelismStrategy.ON_DEFAULT_POOL)
+                        .withLoggingFactoryDependency(ConsoleLogger.Factory.LOW))
                     .withTrainer(trainerCV)
                     .withMetric(metrics)
                     .withFilter(split.getTrainFilter())
