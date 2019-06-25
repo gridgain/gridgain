@@ -21,9 +21,9 @@ import bigIntJSON from 'json-bigint';
 onmessage = function(e) {
     const data = e.data;
 
-    const res = data.useBigIntJson
-        ? bigIntJSON({storeAsString: true}).parse(data.payload)
-        : JSON.parse(data.payload);
+    const res = JSON.parse(data.replace(/:([0-9]{15,}),/g, ':"$1",'));
+
+    console.log(res.payload);
 
     postMessage(res);
 };
