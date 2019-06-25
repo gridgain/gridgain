@@ -29,6 +29,7 @@ import java.util.concurrent.ConcurrentMap;
 import javax.cache.Cache;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.binary.BinaryType;
@@ -365,7 +366,11 @@ public class VisorQueryUtils {
         SecurityContext initCtx = ignite.context().security().securityContext();
 
         ignite.context().closure().runLocalSafe(() -> {
+            IgniteLogger log = ignite.log();
+
             try(OperationSecurityContext ctx = ignite.context().security().withContext(initCtx)) {
+                if (log.isDebugEnabled())
+                    log.debug("Operation started with subject: " + ignite.context().security().securityContext().subject());
 
                 SqlFieldsQuery qry = new SqlFieldsQuery(arg.getQueryText());
 
@@ -432,6 +437,8 @@ public class VisorQueryUtils {
                 }
             }
             catch (Throwable e) {
+                log.warning("Fail to execute query.", e);
+
                 holder.setError(e);
             }
         }, MANAGEMENT_POOL);
