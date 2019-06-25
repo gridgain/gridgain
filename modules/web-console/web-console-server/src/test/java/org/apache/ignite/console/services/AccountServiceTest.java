@@ -123,8 +123,8 @@ public class AccountServiceTest {
         ArgumentCaptor<ResetActivationTokenEvent> captor = ArgumentCaptor.forClass(ResetActivationTokenEvent.class);
         verify(evtPublisher, times(1)).publish(captor.capture());
 
-        Assert.assertEquals("user@user", captor.getValue().user().getEmail());
-        Assert.assertNotEquals(null, captor.getValue().user().getId());
+        Assert.assertEquals("user@user", captor.getValue().getUser().getEmail());
+        Assert.assertNotEquals(null, captor.getValue().getUser().getId());
     }
 
     /**
@@ -147,7 +147,7 @@ public class AccountServiceTest {
         ArgumentCaptor<ResetActivationTokenEvent> captor = ArgumentCaptor.forClass(ResetActivationTokenEvent.class);
         verify(evtPublisher, times(1)).publish(captor.capture());
 
-        Assert.assertEquals("mail@mail", captor.getValue().user().getEmail());
+        Assert.assertEquals("mail@mail", captor.getValue().getUser().getEmail());
     }
 
     /**
@@ -167,8 +167,8 @@ public class AccountServiceTest {
         ArgumentCaptor<UserCreateEvent> captor = ArgumentCaptor.forClass(UserCreateEvent.class);
         verify(evtPublisher, times(1)).publish(captor.capture());
 
-        Assert.assertEquals("user@user", captor.getValue().user().getEmail());
-        Assert.assertNotEquals(null, captor.getValue().user().getId());
+        Assert.assertEquals("user@user", captor.getValue().getUser().getEmail());
+        Assert.assertNotEquals(null, captor.getValue().getUser().getId());
     }
 
     /**
@@ -196,7 +196,7 @@ public class AccountServiceTest {
         ArgumentCaptor<UserUpdateEvent> captor = ArgumentCaptor.forClass(UserUpdateEvent.class);
         verify(evtPublisher, times(1)).publish(captor.capture());
 
-        Assert.assertEquals("new@mail", captor.getValue().user().getEmail());
+        Assert.assertEquals("new@mail", captor.getValue().getUser().getEmail());
     }
 
     /**
@@ -219,7 +219,7 @@ public class AccountServiceTest {
         ArgumentCaptor<PasswordResetEvent> captor = ArgumentCaptor.forClass(PasswordResetEvent.class);
         verify(evtPublisher, times(1)).publish(captor.capture());
 
-        Assert.assertEquals("mail@mail", captor.getValue().user().getEmail());
+        Assert.assertEquals("mail@mail", captor.getValue().getUser().getEmail());
     }
 
     /**
@@ -243,7 +243,7 @@ public class AccountServiceTest {
         ArgumentCaptor<PasswordChangedEvent> captor = ArgumentCaptor.forClass(PasswordChangedEvent.class);
         verify(evtPublisher, times(1)).publish(captor.capture());
 
-        Assert.assertEquals("new_mail@mail", captor.getValue().user().getEmail());
+        Assert.assertEquals("new_mail@mail", captor.getValue().getUser().getEmail());
     }
 
     /**

@@ -40,7 +40,7 @@ public class NotificationEventListener {
      */
     @EventListener
     public void onUserCreateByAdminEvent(UserCreateByAdminEvent evt) {
-        notificationSrv.sendEmail(NotificationDescriptor.ADMIN_WELCOME_LETTER, evt.user());
+        notificationSrv.sendEmail(NotificationDescriptor.ADMIN_WELCOME_LETTER, evt.getUser());
     }
 
     /**
@@ -48,7 +48,7 @@ public class NotificationEventListener {
      */
     @EventListener
     public void onUserCreateEvent(UserCreateEvent evt) {
-        notificationSrv.sendEmail(NotificationDescriptor.WELCOME_LETTER, evt.user());
+        notificationSrv.sendEmail(NotificationDescriptor.WELCOME_LETTER, evt.getUser());
     }
 
     /**
@@ -56,7 +56,7 @@ public class NotificationEventListener {
      */
     @EventListener
     public void onUserDeleteEvent(UserDeleteEvent evt) {
-        notificationSrv.sendEmail(NotificationDescriptor.ACCOUNT_DELETED, evt.user());
+        notificationSrv.sendEmail(NotificationDescriptor.ACCOUNT_DELETED, evt.getUser());
     }
 
     /**
@@ -64,7 +64,7 @@ public class NotificationEventListener {
      */
     @EventListener
     public void onPasswordResetEvent(PasswordResetEvent evt) {
-        notificationSrv.sendEmail(NotificationDescriptor.PASSWORD_RESET, evt.user());
+        notificationSrv.sendEmail(NotificationDescriptor.PASSWORD_RESET, evt.getUser());
     }
 
     /**
@@ -72,7 +72,7 @@ public class NotificationEventListener {
      */
     @EventListener
     public void onPasswordChangedEvent(PasswordChangedEvent evt) {
-        notificationSrv.sendEmail(NotificationDescriptor.PASSWORD_CHANGED, evt.user());
+        notificationSrv.sendEmail(NotificationDescriptor.PASSWORD_CHANGED, evt.getUser());
     }
 
     /**
@@ -80,6 +80,6 @@ public class NotificationEventListener {
      */
     @EventListener
     public void onResetActivationTokenEvent(ResetActivationTokenEvent evt) {
-        notificationSrv.sendEmail(NotificationDescriptor.ACTIVATION_LINK, evt.user());
+        notificationSrv.sendEmail(NotificationDescriptor.ACTIVATION_LINK, evt.getUser());
     }
 }

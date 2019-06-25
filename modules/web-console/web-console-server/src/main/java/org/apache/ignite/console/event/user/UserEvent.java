@@ -36,7 +36,7 @@ public abstract class UserEvent extends ApplicationEvent {
     /**
      * @return User.
      */
-    public Account user() {
+    public Account getUser() {
         return user;
     }
 }

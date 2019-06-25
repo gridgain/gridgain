@@ -67,7 +67,7 @@ public class AdminServiceTest {
         ArgumentCaptor<UserDeleteEvent> captor = ArgumentCaptor.forClass(UserDeleteEvent.class);
         verify(evtPublisher, times(1)).publish(captor.capture());
 
-        Assert.assertEquals(accId, captor.getValue().user().getId());
+        Assert.assertEquals(accId, captor.getValue().getUser().getId());
     }
 
     /**
@@ -94,6 +94,6 @@ public class AdminServiceTest {
         ArgumentCaptor<UserCreateByAdminEvent> captor = ArgumentCaptor.forClass(UserCreateByAdminEvent.class);
         verify(evtPublisher, times(1)).publish(captor.capture());
 
-        Assert.assertEquals("mail@mail", captor.getValue().user().getEmail());
+        Assert.assertEquals("mail@mail", captor.getValue().getUser().getEmail());
     }
 }

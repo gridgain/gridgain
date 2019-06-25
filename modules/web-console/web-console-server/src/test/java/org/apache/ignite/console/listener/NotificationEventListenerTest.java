@@ -83,7 +83,7 @@ public class NotificationEventListenerTest {
         publisher.publish(evt);
         Thread.sleep(1);
 
-        verify(notificationSrv, times(1)).sendEmail(NotificationDescriptor.ACCOUNT_DELETED, evt.user());
+        verify(notificationSrv, times(1)).sendEmail(NotificationDescriptor.ACCOUNT_DELETED, evt.getUser());
     }
 
     /**
@@ -97,7 +97,7 @@ public class NotificationEventListenerTest {
         publisher.publish(evt);
         Thread.sleep(1);
 
-        verify(notificationSrv, times(1)).sendEmail(NotificationDescriptor.PASSWORD_RESET, evt.user());
+        verify(notificationSrv, times(1)).sendEmail(NotificationDescriptor.PASSWORD_RESET, evt.getUser());
     }
 
     /**
@@ -111,7 +111,7 @@ public class NotificationEventListenerTest {
         publisher.publish(evt);
         Thread.sleep(1);
 
-        verify(notificationSrv, times(1)).sendEmail(NotificationDescriptor.PASSWORD_CHANGED, evt.user());
+        verify(notificationSrv, times(1)).sendEmail(NotificationDescriptor.PASSWORD_CHANGED, evt.getUser());
     }
 
     /**
@@ -125,6 +125,6 @@ public class NotificationEventListenerTest {
         publisher.publish(evt);
         Thread.sleep(1);
 
-        verify(notificationSrv, times(1)).sendEmail(NotificationDescriptor.ACTIVATION_LINK, evt.user());
+        verify(notificationSrv, times(1)).sendEmail(NotificationDescriptor.ACTIVATION_LINK, evt.getUser());
     }
 }

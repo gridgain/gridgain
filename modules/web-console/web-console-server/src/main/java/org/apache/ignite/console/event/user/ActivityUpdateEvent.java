@@ -49,21 +49,21 @@ public class ActivityUpdateEvent extends ApplicationEvent {
     /**
      * @return Acc id.
      */
-    public UUID accId() {
+    public UUID getAccId() {
         return accId;
     }
 
     /**
      * @return Group.
      */
-    public String group() {
+    public String getGrp() {
         return grp;
     }
 
     /**
      * @return Action.
      */
-    public String action() {
+    public String getAct() {
         return act;
     }
 }

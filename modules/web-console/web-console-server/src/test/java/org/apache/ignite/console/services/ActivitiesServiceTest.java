@@ -47,6 +47,6 @@ public class ActivitiesServiceTest {
         ArgumentCaptor<ActivityUpdateEvent> captor = ArgumentCaptor.forClass(ActivityUpdateEvent.class);
         verify(evtPublisher, times(1)).publish(captor.capture());
 
-        Assert.assertEquals(accId, captor.getValue().accId());
+        Assert.assertEquals(accId, captor.getValue().getAccId());
     }
 }
