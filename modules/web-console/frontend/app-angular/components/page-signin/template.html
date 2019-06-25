@@ -1,0 +1,42 @@
+<!--
+ Copyright 2019 GridGain Systems, Inc. and Contributors.
+ 
+ Licensed under the GridGain Community Edition License (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+ 
+     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ 
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<div class="public-page">
+    <global-progress-line [isLoading]='isLoading'></global-progress-line>
+    <h3 class="public-page__title">Sign In</h3>
+    <p *ngIf="activationToken">Please sign in to confirm your registration</p>
+    <form [formGroup]="form" (ngSubmit)="signin()" scrollToFirstInvalid>
+        <form-field>
+            <label for="email">Email</label>
+            <input type="email" formControlName="email" id="email" autocomplete="email" placeholder="Input email" autofocus>
+            <form-field-error error="server">
+                {{serverError}}
+            </form-field-error>
+        </form-field>
+        <form-field>
+            <label for="password">Password</label>
+            <password-visibility-toggle-button-angular formFieldOverlay [passwordEl]='passwordEl'></password-visibility-toggle-button-angular>
+            <input #passwordEl type="password" formControlName="password" id="password" placeholder="Input password" autocomplete="new-password">
+        </form-field>
+        <footer class="form-footer">
+            <a href="forgot-password">Forgot password?</a>
+            <button type="submit" [disabled]="isLoading" class="btn-ignite btn-ignite--primary">{{activationToken ? 'Activate' : 'Sign In'}}</button>
+        </footer>
+    </form>
+    <footer class="page-signin__no-account-message">
+        Don't have an account? <a href="signup">Get started</a>
+    </footer>
+</div>
