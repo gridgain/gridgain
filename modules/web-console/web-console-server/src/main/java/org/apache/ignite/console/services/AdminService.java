@@ -26,7 +26,6 @@ import org.apache.ignite.console.repositories.AnnouncementRepository;
 import org.apache.ignite.console.tx.TransactionManager;
 import org.apache.ignite.console.web.model.SignUpRequest;
 import org.apache.ignite.console.web.socket.WebSocketsManager;
-import org.apache.ignite.transactions.Transaction;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
@@ -136,15 +135,15 @@ public class AdminService {
      * @param accId Account ID.
      */
     public void delete(UUID accId) {
-        try (Transaction tx = txMgr.txStart()) {
+        Account acc = txMgr.doInTransaction(() -> {
             cfgsSrv.deleteByAccountId(accId);
+
             notebooksSrv.deleteByAccountId(accId);
-            Account acc = accountsSrv.delete(accId);
 
-            tx.commit();
+            return accountsSrv.delete(accId);
+        });
 
-            eventPublisher.publish(new Event<>(ACCOUNT_DELETE, acc));
-        }
+        eventPublisher.publish(new Event<>(ACCOUNT_DELETE, acc));
     }
 
     /**
