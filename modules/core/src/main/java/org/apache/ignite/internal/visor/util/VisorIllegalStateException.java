@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,18 +14,23 @@
  * limitations under the License.
  */
 
-import {DemoService} from 'app/modules/demo/Demo.module';
+package org.apache.ignite.internal.visor.util;
+
+import org.apache.ignite.IgniteException;
 
 /**
- * Use this directive along with ng-ref when you can't inject Demo into scope
+ * Exception to throw from Visor tasks in case of Illegal state or argument.
  */
-export function directive(): ng.IDirective {
-    return {
-        controller: class DemoStatus {
-            static $inject = ['Demo'];
-            constructor(private Demo: DemoService) {}
-            get enabled() {return this.Demo.enabled;}
-        },
-        restrict: 'A'
-    };
+public class VisorIllegalStateException extends IgniteException {
+    /** */
+    private static final long serialVersionUID = 0L;
+
+    /**
+     * Creates exception with given error message.
+     *
+     * @param msg Error message.
+     */
+    public VisorIllegalStateException(String msg) {
+        super(msg);
+    }
 }
