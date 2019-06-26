@@ -60,7 +60,7 @@ public class AccountsService implements UserDetailsService {
     protected WebSocketsManager wsm;
 
     /** Event publisher. */
-    protected EventPublisher eventPublisher;
+    protected EventPublisher evtPublisher;
 
     /** Encoder. */
     protected PasswordEncoder encoder;
@@ -84,7 +84,7 @@ public class AccountsService implements UserDetailsService {
      * @param wsm Websocket manager.
      * @param accountsRepo Accounts repository.
      * @param txMgr Transactions manager.
-     * @param eventPublisher Event publisher.
+     * @param evtPublisher Event publisher.
      */
     public AccountsService(
         SignUpConfiguration signUpCfg,
@@ -93,7 +93,7 @@ public class AccountsService implements UserDetailsService {
         WebSocketsManager wsm,
         AccountsRepository accountsRepo,
         TransactionManager txMgr,
-        EventPublisher eventPublisher
+        EventPublisher evtPublisher
     ) {
         disableSignup = !signUpCfg.isEnabled();
         userDetailsChecker = activationCfg.getChecker();
@@ -104,7 +104,7 @@ public class AccountsService implements UserDetailsService {
         this.wsm = wsm;
         this.accountsRepo = accountsRepo;
         this.txMgr = txMgr;
-        this.eventPublisher = eventPublisher;
+        this.evtPublisher = evtPublisher;
     }
 
     /** {@inheritDoc} */
@@ -151,12 +151,12 @@ public class AccountsService implements UserDetailsService {
         });
 
         if (activationEnabled) {
-            eventPublisher.publish(new Event<>(RESET_ACTIVATION_TOKEN, acc));
+            evtPublisher.publish(new Event<>(RESET_ACTIVATION_TOKEN, acc));
 
             throw new MissingConfirmRegistrationException("Confirm your email", acc.getEmail());
         }
 
-        eventPublisher.publish(new Event<>(ACCOUNT_CREATE, acc));
+        evtPublisher.publish(new Event<>(ACCOUNT_CREATE, acc));
     }
 
     /**
@@ -230,7 +230,7 @@ public class AccountsService implements UserDetailsService {
             return accountsRepo.save(acc0);
         });
 
-        eventPublisher.publish(new Event<>(RESET_ACTIVATION_TOKEN, acc));
+        evtPublisher.publish(new Event<>(RESET_ACTIVATION_TOKEN, acc));
     }
 
     /**
@@ -258,7 +258,7 @@ public class AccountsService implements UserDetailsService {
         if (!oldTok.equals(acc.getToken()))
             wsm.revokeToken(acc, oldTok);
 
-        eventPublisher.publish(new Event<>(ACCOUNT_UPDATE, acc));
+        evtPublisher.publish(new Event<>(ACCOUNT_UPDATE, acc));
 
         return acc;
     }
@@ -277,7 +277,7 @@ public class AccountsService implements UserDetailsService {
             return accountsRepo.save(acc0);
         });
 
-        eventPublisher.publish(new Event<>(PASSWORD_RESET, acc));
+        evtPublisher.publish(new Event<>(PASSWORD_RESET, acc));
     }
 
     /**
@@ -299,7 +299,7 @@ public class AccountsService implements UserDetailsService {
 
             accountsRepo.save(acc);
 
-            eventPublisher.publish(new Event<>(PASSWORD_CHANGED, acc));
+            evtPublisher.publish(new Event<>(PASSWORD_CHANGED, acc));
         });
     }
 }

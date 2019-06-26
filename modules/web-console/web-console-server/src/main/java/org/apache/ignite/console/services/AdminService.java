@@ -56,7 +56,7 @@ public class AdminService {
     private final ActivitiesService activitiesSrv;
 
     /** */
-    protected EventPublisher eventPublisher;
+    protected EventPublisher evtPublisher;
 
     /** */
     private final AnnouncementRepository annRepo;
@@ -70,7 +70,7 @@ public class AdminService {
      * @param cfgsSrv Service to work with configurations.
      * @param notebooksSrv Service to work with notebooks.
      * @param activitiesSrv Service to work with activities.
-     * @param eventPublisher Service to publish events.
+     * @param evtPublisher Service to publish events.
      * @param annRepo Repository to work with announcement.
      * @param wsm Web sockets manager.
      */
@@ -80,7 +80,7 @@ public class AdminService {
         ConfigurationsService cfgsSrv,
         NotebooksService notebooksSrv,
         ActivitiesService activitiesSrv,
-        EventPublisher eventPublisher,
+        EventPublisher evtPublisher,
         AnnouncementRepository annRepo,
         WebSocketsManager wsm
     ) {
@@ -89,7 +89,7 @@ public class AdminService {
         this.cfgsSrv = cfgsSrv;
         this.notebooksSrv = notebooksSrv;
         this.activitiesSrv = activitiesSrv;
-        this.eventPublisher = eventPublisher;
+        this.evtPublisher = evtPublisher;
         this.annRepo = annRepo;
         this.wsm = wsm;
     }
@@ -141,7 +141,7 @@ public class AdminService {
             return accountsSrv.delete(accId);
         });
 
-        eventPublisher.publish(new Event<>(ACCOUNT_DELETE, acc));
+        evtPublisher.publish(new Event<>(ACCOUNT_DELETE, acc));
     }
 
     /**
@@ -165,7 +165,7 @@ public class AdminService {
     public void registerUser(SignUpRequest params) {
         Account acc = accountsSrv.create(params);
 
-        eventPublisher.publish(new Event<>(ACCOUNT_CREATE_BY_ADMIN, acc));
+        evtPublisher.publish(new Event<>(ACCOUNT_CREATE_BY_ADMIN, acc));
     }
 
     /** */
