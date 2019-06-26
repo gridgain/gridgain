@@ -44,9 +44,16 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.UUID;
 
-import static org.apache.ignite.console.event.Event.Type.*;
+import static org.apache.ignite.console.event.Event.Type.ACCOUNT_CREATE;
+import static org.apache.ignite.console.event.Event.Type.ACCOUNT_UPDATE;
+import static org.apache.ignite.console.event.Event.Type.PASSWORD_CHANGED;
+import static org.apache.ignite.console.event.Event.Type.PASSWORD_RESET;
+import static org.apache.ignite.console.event.Event.Type.RESET_ACTIVATION_TOKEN;
 import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Account service test.
@@ -230,6 +237,7 @@ public class AccountServiceTest {
 
     /**
      * @param disableSignUp Disable sign up.
+     * @param enableActivation Enable activation.
      */
     private AccountsService mockAccountsService(boolean disableSignUp, boolean enableActivation) {
         ActivationConfiguration activationCfg = new ActivationConfiguration(new NoopMailService());

@@ -16,6 +16,8 @@
 
 package org.apache.ignite.console.services;
 
+import java.util.List;
+import java.util.UUID;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.dto.Announcement;
 import org.apache.ignite.console.event.Event;
@@ -30,12 +32,8 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.UUID;
-
 import static org.apache.ignite.console.event.Event.Type.ACCOUNT_CREATE_BY_ADMIN;
 import static org.apache.ignite.console.event.Event.Type.ACCOUNT_DELETE;
-
 
 /**
  * Service to handle administrator actions.

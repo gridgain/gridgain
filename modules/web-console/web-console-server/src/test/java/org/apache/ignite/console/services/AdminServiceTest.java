@@ -21,7 +21,10 @@ import java.util.UUID;
 
 import static org.apache.ignite.console.event.Event.Type.ACCOUNT_CREATE_BY_ADMIN;
 import static org.apache.ignite.console.event.Event.Type.ACCOUNT_DELETE;
-import static org.mockito.Mockito.*;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Admin service test.

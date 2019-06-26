@@ -16,14 +16,13 @@
 
 package org.apache.ignite.console.services;
 
+import java.util.Collection;
+import java.util.UUID;
 import org.apache.ignite.console.dto.Activity;
 import org.apache.ignite.console.event.Event;
 import org.apache.ignite.console.event.EventPublisher;
 import org.apache.ignite.console.repositories.ActivitiesRepository;
 import org.springframework.stereotype.Service;
-
-import java.util.Collection;
-import java.util.UUID;
 
 /**
  * Service to handle activities.

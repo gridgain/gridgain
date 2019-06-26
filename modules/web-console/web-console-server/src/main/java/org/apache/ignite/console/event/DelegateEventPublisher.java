@@ -5,7 +5,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
 /**
- *
+ * Delegate for ApplicationEventPublisher
  */
 @Component
 public class DelegateEventPublisher implements EventPublisher {

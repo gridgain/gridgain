@@ -16,6 +16,9 @@
 
 package org.apache.ignite.console.services;
 
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
 import org.apache.ignite.console.config.ActivationConfiguration;
 import org.apache.ignite.console.config.SignUpConfiguration;
 import org.apache.ignite.console.dto.Account;
@@ -35,31 +38,31 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.UUID;
-
 import static java.time.temporal.ChronoUnit.MILLIS;
-import static org.apache.ignite.console.event.Event.Type.*;
+import static org.apache.ignite.console.event.Event.Type.ACCOUNT_CREATE;
+import static org.apache.ignite.console.event.Event.Type.ACCOUNT_UPDATE;
+import static org.apache.ignite.console.event.Event.Type.PASSWORD_CHANGED;
+import static org.apache.ignite.console.event.Event.Type.PASSWORD_RESET;
+import static org.apache.ignite.console.event.Event.Type.RESET_ACTIVATION_TOKEN;
 
 /**
  * Service to handle accounts.
  */
 @Service
 public class AccountsService implements UserDetailsService {
-    /** */
+    /** Tx manager. */
     protected TransactionManager txMgr;
 
-    /** */
+    /** Accounts repository. */
     protected AccountsRepository accountsRepo;
 
-    /** */
+    /** Wsm. */
     protected WebSocketsManager wsm;
 
-    /** */
+    /** Event publisher. */
     protected EventPublisher eventPublisher;
 
-    /** */
+    /** Encoder. */
     protected PasswordEncoder encoder;
 
     /** User details getChecker. */

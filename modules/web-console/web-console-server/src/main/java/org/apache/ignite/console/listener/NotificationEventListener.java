@@ -23,9 +23,17 @@ import org.apache.ignite.console.services.NotificationService;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
-import static org.apache.ignite.console.event.Event.Type.*;
+import static org.apache.ignite.console.event.Event.Type.ACCOUNT_CREATE;
+import static org.apache.ignite.console.event.Event.Type.ACCOUNT_CREATE_BY_ADMIN;
+import static org.apache.ignite.console.event.Event.Type.ACCOUNT_DELETE;
+import static org.apache.ignite.console.event.Event.Type.PASSWORD_CHANGED;
+import static org.apache.ignite.console.event.Event.Type.PASSWORD_RESET;
+import static org.apache.ignite.console.event.Event.Type.RESET_ACTIVATION_TOKEN;
 
-/** */
+
+/**
+ * Notification event listener
+ */
 @Component
 public class NotificationEventListener {
     /** Notification server. */

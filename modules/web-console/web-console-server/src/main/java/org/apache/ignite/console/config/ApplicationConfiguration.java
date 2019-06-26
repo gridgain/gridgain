@@ -16,6 +16,7 @@
 
 package org.apache.ignite.console.config;
 
+import java.util.Map;
 import org.apache.ignite.console.web.security.PassportLocalPasswordEncoder;
 import org.apache.ignite.internal.util.typedef.F;
 import org.springframework.context.annotation.Bean;
@@ -27,8 +28,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.DelegatingPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-
-import java.util.Map;
 
 /**
  * Application configuration.
@@ -50,7 +49,6 @@ public class ApplicationConfiguration {
 
         return new DelegatingPasswordEncoder(encodingId, encoders);
     }
-
 
     /**
      * @return Application event multicaster.
