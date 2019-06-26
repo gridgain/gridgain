@@ -17,7 +17,7 @@
 import isEmpty from 'lodash/isEmpty';
 import {nonEmpty} from 'app/utils/lodashMixins';
 
-const causeStr = 'Caused by: ';
+const CAUSE_STR = 'Caused by: ';
 
 export default class {
     static $inject = ['JavaTypes'];
@@ -61,35 +61,38 @@ export default class {
                 }
 
                 const causes = [];
-                let causeIdx = err.message.indexOf(causeStr);
+                let causeIdx = err.message.indexOf(CAUSE_STR);
 
                 while (causeIdx >= 0) {
                     // find next ": " in cause message to skip exception class name.
-                    const msgStart = err.message.indexOf(': ', causeIdx + causeStr.length) + 2;
+                    const msgStart = err.message.indexOf(': ', causeIdx + CAUSE_STR.length) + 2;
                     const causeEndLine = err.message.indexOf('\n', msgStart);
                     const msgEnd = err.message.indexOf('[', msgStart);
                     const cause = err.message.substring(msgStart, msgEnd >= 0 && msgEnd < causeEndLine ? msgEnd : causeEndLine);
 
                     causes.unshift(cause);
 
-                    causeIdx = err.message.indexOf(causeStr, causeIdx + causeStr.length);
+                    causeIdx = err.message.indexOf(CAUSE_STR, causeIdx + CAUSE_STR.length);
                 }
 
-                return prefix + (lastIdx >= 0 ? msg.substring(lastIdx + 5, msgEndIdx > 0 ? msgEndIdx : traceIndex) : msg)
-                    + (causes.length > 0 ? '<ul><li>' + causes.join('</li><li>') + '</li></ul>See node logs for more details.' : '');
+                return new ErrorParseResult(
+                    prefix + (lastIdx >= 0 ? msg.substring(lastIdx + 5, msgEndIdx > 0 ? msgEndIdx : traceIndex) : msg)
+                        + (causes.length > 0 ? '<ul><li>' + causes.join('</li><li>') + '</li></ul>See node logs for more details.' : ''),
+                    causes.length
+                );
             }
 
             if (nonEmpty(err.className)) {
                 if (isEmpty(prefix))
                     prefix = 'Internal cluster error: ';
 
-                return prefix + err.className;
+                return new ErrorParseResult(prefix + err.className);
             }
 
-            return prefix + err;
+            return new ErrorParseResult(prefix + err);
         }
 
-        return prefix + 'Internal error.';
+        return new ErrorParseResult(prefix + 'Internal error.');
     }
 
     extractFullMessage(err) {
@@ -102,5 +105,21 @@ export default class {
             msg = msg.substring(0, traceIndex);
 
         return clsName + (msg);
+    }
+}
+
+/**
+ * Information about error parsing result.
+ */
+export class ErrorParseResult {
+    /** String with parsed error message. */
+    message: String;
+
+    /** Total number of found error causes. */
+    extraCauses: Number;
+
+    constructor(message: String, extraCauses = 0) {
+        this.message = message;
+        this.extraCauses = extraCauses;
     }
 }
