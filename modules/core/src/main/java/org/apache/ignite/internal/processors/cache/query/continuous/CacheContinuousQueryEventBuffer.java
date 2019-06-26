@@ -76,6 +76,16 @@ public class CacheContinuousQueryEventBuffer {
     }
 
     /**
+     * @param updateCntr Acknowledged counter.
+     */
+    void cleanupEntries(Long updateCntr) {
+        Batch batch = curBatch.get();
+
+        if (batch != null)
+            batch.cleanupEntries(updateCntr);
+    }
+
+    /**
      * @return Backup entries.
      */
     @Nullable Collection<CacheContinuousQueryEntry> flushOnExchange() {
@@ -323,6 +333,19 @@ public class CacheContinuousQueryEventBuffer {
         }
 
         /**
+         *
+         * @param updateCntr
+         */
+        synchronized void cleanupEntries(Long updateCntr) {
+            for (int i = 0; i < entries.length; i++) {
+                CacheContinuousQueryEntry e = entries[i];
+
+                if (e != null && e.updateCounter() <= updateCntr)
+                    entries[i] = null;
+            }
+        }
+
+        /**
          * @param res Current entries.
          * @return Entries to send as part of backup queue.
          */
@@ -451,8 +474,6 @@ public class CacheContinuousQueryEventBuffer {
                             }
                             else
                                 filtered++;
-
-                            entries[i] = null;
 
                             pos = i;
                         }
