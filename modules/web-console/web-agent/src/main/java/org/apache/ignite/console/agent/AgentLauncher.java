@@ -173,7 +173,7 @@ public class AgentLauncher {
         IOException ioCause = X.cause(e, IOException.class);
 
         if (ioCause != null && "404".equals(ioCause.getMessage())) {
-            log.error("You are using outdated version of Web agent. Please download last version of Web agent from Web console");
+            log.error("You are using outdated version of Web agent. Please download latest version of Web agent from Web console");
 
             System.exit(1);
         }
