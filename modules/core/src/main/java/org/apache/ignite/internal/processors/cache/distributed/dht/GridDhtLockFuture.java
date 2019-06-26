@@ -243,9 +243,11 @@ public final class GridDhtLockFuture extends GridCacheFutureAdapter<Boolean>
         if (entry == null)
             return;
 
+        boolean locked = entry.lock(lockVer, this);
+
         entries.add(entry);
 
-        if (!entry.lock(lockVer, this) && timeout < 0) {
+        if (!locked && timeout < 0) {
             if (log.isDebugEnabled())
                 log.debug("Failed to acquire lock with negative timeout: " + entry);
 

@@ -230,7 +230,7 @@ public class TxRollbackAsyncTest extends GridCommonAbstractTest {
 
         CompletableFuture f = CompletableFuture.allOf(IntStream.range(0, 100).mapToObj(i1 -> CompletableFuture.runAsync(() -> {
             try (Transaction tx = client.transactions().txStart(PESSIMISTIC, REPEATABLE_READ)) {
-                cache.put(i1%5, ThreadLocalRandom.current().nextInt());
+                cache.put(1, ThreadLocalRandom.current().nextInt());
 
                 tx.commit();
             }

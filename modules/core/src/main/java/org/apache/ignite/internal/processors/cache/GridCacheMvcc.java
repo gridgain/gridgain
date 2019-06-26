@@ -1501,17 +1501,21 @@ public final class GridCacheMvcc {
 
     /** {@inheritDoc} */
     @Override public String toString() { // Synchronize to ensure one-thread at a time.
-        return S.toString(GridCacheMvcc.class, this);
+        return S.toString(GridCacheMvcc.class, this, "buff", printBuffer());
     }
 
     /** */
+    @GridToStringExclude
     private Object[] buff = new Object[4];
 
     /** */
+    @GridToStringExclude
     private int head = 0;
     /** */
+    @GridToStringExclude
     private int tail = 0;
     /** */
+    @GridToStringExclude
     private int mask = 3;
 
     private boolean isCyclicBufferEmpty(GridCacheVersion... excluded) {
@@ -1637,6 +1641,23 @@ public final class GridCacheMvcc {
         return o.getClass() == GridCacheVersion.class ? o.equals(ver) : ((LockCandidate)o).ver.equals(ver);
     }
 
+    private String printBuffer() {
+        StringBuilder sb = new StringBuilder("[");
+
+        for (int i = 0, cur = head, size = tail - head; i < size; i++, cur++) {
+            Object item = buff[maskIndex(cur)];
+
+            if (item.getClass() != LockCandidate.class || ((LockCandidate)item).callback != BROKEN_MARKER) {
+                if (i != 0)
+                    sb.append(',').append(' ');
+
+                sb.append(item);
+            }
+        }
+
+        return sb.append(']').toString();
+    }
+
     /** */
     private static final class LockCandidate {
         /** */
@@ -1647,6 +1668,10 @@ public final class GridCacheMvcc {
         private LockCandidate(GridCacheVersion ver, EntryLockCallback callback) {
             this.ver = ver;
             this.callback = callback;
+        }
+
+        @Override public String toString() {
+            return ver.toString();
         }
     }
 
