@@ -53,9 +53,9 @@ public class ActivitiesService {
      * @param act Activity action.
      */
     public void save(UUID accId, String grp, String act) {
-        activitiesRepo.save(accId, grp, act);
+        Activity activity = activitiesRepo.save(accId, grp, act);
 
-        evtPublisher.publish(new Event<>(Event.Type.ACTIVITY_UPDATE, accId));
+        evtPublisher.publish(new Event<>(Event.Type.ACTIVITY_UPDATE, activity));
     }
 
     /**
