@@ -55,7 +55,7 @@ public class AccountsRepository {
         this.txMgr = txMgr;
 
         accountsTbl = new Table<Account>(ignite, "accounts")
-            .addUniqueIndex(a -> a.getUsername().trim().toLowerCase(), (acc) -> "Account with email '" + acc.getUsername() + "' already registered")
+            .addUniqueIndex(a -> a.getUsername().trim().toLowerCase(), (acc) -> "The email address you have entered is already registered: " + acc.getUsername())
             .addUniqueIndex(Account::getToken, (acc) -> "Account with token '" + acc.getToken() + "' already registered");
     }
 

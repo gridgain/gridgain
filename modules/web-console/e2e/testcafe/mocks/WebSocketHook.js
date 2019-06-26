@@ -17,6 +17,43 @@
 import { Server } from 'ws';
 import {RequestHook} from 'testcafe';
 import getPort from 'get-port';
+import uuidv4 from 'uuid/v4';
+
+export class WebSocket {
+    constructor(socket) {
+        this.socket = socket;
+    }
+
+    /**
+     * @param {string} eventType
+     * @param {(any)=>any} listener
+     */
+    on(eventType, listener) {
+        this.socket.on('message', (msg) => {
+            const e = JSON.parse(msg);
+
+            if (e.eventType === eventType) {
+                const res = listener(JSON.parse(e.payload));
+
+                if (res)
+                    this.emit(e.eventType, res, e.requestId);
+            }
+        });
+
+        return this;
+    }
+
+    /**
+     * @param {string} eventType
+     * @param {any} payload
+     * @param {string} requestId
+     */
+    emit(eventType, payload, requestId = uuidv4()) {
+        this.socket.send(JSON.stringify({requestId, eventType, payload: JSON.stringify(payload)}));
+
+        return this;
+    }
+}
 
 export class WebSocketHook extends RequestHook {
     constructor() {
@@ -38,33 +75,17 @@ export class WebSocketHook extends RequestHook {
     }
 
     /**
-     * @param {string} event
-     * @param {()=>void} listener
-     */
-    on(event, listener) {
-        this._io.on(event, listener);
-
-        return this;
-    }
-
-    /**
-     * @param {string} eventType
-     * @param {any} payload
-     */
-    emit(eventType, payload) {
-        this._io.clients.forEach((ws) => {
-            ws.send(JSON.stringify({eventType, payload: JSON.stringify(payload)}));
-        });
-    }
-
-    /**
-     * @param {Array<(hook: WebSocketHook) => any>} hooks
+     * @param {Array<(ws: WebSocket) => any>} hooks
      */
     use(...hooks) {
         this._port.then((port) => {
             this._io = new Server({port});
 
-            hooks.forEach((hook) => hook(this));
+            this._io.on('connection', (socket) => {
+                const ws = new WebSocket(socket);
+
+                hooks.forEach((hook) => hook(ws));
+            });
         });
 
         return this;

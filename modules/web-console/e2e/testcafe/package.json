@@ -5,7 +5,8 @@
   "private": true,
   "main": "index.js",
   "scripts": {
-    "test": "node index.js"
+    "test": "node index.js",
+    "test-debug": "node --inspect-brk index.js"
   },
   "license": "Apache-2.0",
   "keywords": [
@@ -31,6 +32,7 @@
     "testcafe": "1.1.4",
     "testcafe-angular-selectors": "0.3.0",
     "testcafe-reporter-teamcity": "1.0.9",
+    "uuid": "3.3.2",
     "ws": "^7.0.1"
   },
   "devDependencies": {

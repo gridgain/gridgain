@@ -14,52 +14,51 @@
  * limitations under the License.
  */
 
-export const taskResult = (data) => ({
-    data,
+export const taskResult = (result) => ({
+    data: JSON.stringify({result}),
     error: null,
     sessionToken: null,
-    zipped: false,
     status: 0
 });
 
 export const cacheNamesCollectorTask = (caches) => (ws) => {
-    ws.on('connection', (s) => {
-        s.on('node:visor', (e, ack) => {
-            if (e.params.taskId === 'cacheNamesCollectorTask')
-                ack(null, taskResult(caches));
-        });
+    ws.on('node:visor', (e) => {
+        if (e.params.taskId === 'cacheNamesCollectorTask')
+            return taskResult(caches);
     });
 };
 
 export const simeplFakeSQLQuery = (nid, response) => (ws) => {
-    ws.on('connection', (s) => {
-        s.on('node:visor', (e, ack) => {
-            switch (e.params.taskId) {
-                case 'cacheNodesTaskX2':
-                    return ack(null, taskResult([nid]));
+    ws.on('node:visor', (e) => {
+        switch (e.params.taskId) {
+            case 'cacheNodesTaskX2':
+                return taskResult([nid]);
 
-                case 'querySqlX2': {
-                    if (e.params.nids === nid) {
-                        return ack(null, taskResult({
-                            error: null,
-                            result: {
-                                columns: null,
-                                duration: 0,
-                                hasMore: false,
-                                queryId: 'query-1',
-                                responseNodeId: nid,
-                                rows: null
-                            }
-                        }));
-                    }
+            case 'querySqlX2': {
+                if (e.params.nids === nid) {
+                    return taskResult({
+                        error: null,
+                        result: {
+                            columns: null,
+                            duration: 0,
+                            hasMore: false,
+                            queryId: 'query-1',
+                            responseNodeId: nid,
+                            rows: null
+                        }
+                    });
                 }
 
-                case 'queryFetchFirstPage': {
-                    if (e.params.nids === nid)
-                        return ack(null, taskResult(response));
-                }
+                break;
             }
-        });
+
+            case 'queryFetchFirstPage': {
+                if (e.params.nids === nid)
+                    return taskResult(response);
+
+                break;
+            }
+        }
     });
 };
 
@@ -138,6 +137,6 @@ export const FAKE_CACHES = {
     groups: []
 };
 
-export const agentStat = (clusters) => (wss) => {
-    wss.on('connection', () => wss.emit('agent:status', clusters));
+export const agentStat = (clusters) => (ws) => {
+    ws.emit('agent:status', clusters);
 };
