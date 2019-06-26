@@ -25,13 +25,14 @@ const testUser = {
     firstName: 'John',
     lastName: 'Doe',
     company: 'TestCompany',
-    country: 'Canada'
+    country: 'Canada',
+    industry: 'Banking'
 };
 
 const insertTestUser = () => {
     return request({
-        method: 'POST',
-        uri: resolveUrl('/api/v1/signup'),
+        method: 'PUT',
+        uri: resolveUrl('/api/v1/test/admins'),
         body: testUser,
         json: true
     })

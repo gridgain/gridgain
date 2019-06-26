@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-const { dropTestDB, insertTestUser } = require('./environment/envtools');
+const { dropTestDB } = require('./environment/envtools');
 
 const createTestCafe = require('testcafe');
 
@@ -22,11 +22,8 @@ let testcafe = null;
 
 const startTestcafe = (config) => {
     return createTestCafe('localhost', 1337, 1338)
-        .then(async(tc) => {
+        .then((tc) => {
             try {
-                await dropTestDB();
-                await insertTestUser();
-
                 testcafe = tc;
 
                 const runner = testcafe.createRunner();
