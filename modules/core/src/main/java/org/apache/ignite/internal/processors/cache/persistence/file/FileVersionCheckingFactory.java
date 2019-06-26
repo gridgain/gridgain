@@ -119,7 +119,7 @@ public class FileVersionCheckingFactory implements FilePageStoreFactory {
      * @param ver Version.
      * @param allocatedTracker Metrics updater
      */
-    private FilePageStore createPageStore(
+    public FilePageStore createPageStore(
         byte type,
         IgniteOutClosure<Path> pathProvider,
         int ver,
