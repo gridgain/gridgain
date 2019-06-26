@@ -468,12 +468,7 @@ export default class AgentManager {
      */
     _restOnActiveCluster(cluster, credentials, event, params) {
         return this._sendToAgent(event, {clusterId: cluster.id, params: _.merge({}, credentials, params)})
-            .then(async(res) => {
-                const taskId = _.get(params, 'taskId', '');
-
-                const useBigIntJson = taskId.startsWith('query');
-                // const res = await this.pool.postMessage({payload, useBigIntJson});
-
+            .then((res) => {
                 const {status = SuccessStatus.STATUS_SUCCESS} = res;
 
                 switch (status) {
@@ -481,7 +476,7 @@ export default class AgentManager {
                         if (cluster.secured)
                             this.clustersSecrets.get(cluster.id).sessionToken = res.sessionToken;
 
-                        return res;
+                        return res.data;
 
                     case SuccessStatus.STATUS_FAILED:
                         if (res.error.startsWith('Failed to handle request - unknown session token (maybe expired session)')) {

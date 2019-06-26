@@ -16,11 +16,8 @@
 
 package org.apache.ignite.console.agent.rest;
 
-import com.fasterxml.jackson.annotation.JsonRawValue;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.console.json.JsonObject;
-import org.apache.ignite.console.json.RawContentDeserializer;
 import org.apache.ignite.logger.slf4j.Slf4jLogger;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.ContentResponse;
@@ -35,7 +32,6 @@ import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
 import static org.apache.ignite.console.utils.Utils.fromJson;
 import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_AUTH_FAILED;
 import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_FAILED;
-import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_SUCCESS;
 
 /**
  * API to execute REST requests to Ignite cluster.
@@ -72,15 +68,8 @@ public class RestExecutor implements AutoCloseable {
     private RestResult parseResponse(ContentResponse res) throws Exception {
         int code = res.getStatus();
 
-        if (code == HTTP_OK) {
-            RestResponseHolder holder = fromJson(res.getContent(), RestResponseHolder.class);
-
-            int status = holder.getSuccessStatus();
-
-            return status == STATUS_SUCCESS
-                ? RestResult.success(holder.getResponse(), holder.getSessionToken())
-                : RestResult.fail(status, holder.getError());
-        }
+        if (code == HTTP_OK)
+            return fromJson(res.getContent(), RestResult.class);
 
         if (code == HTTP_UNAUTHORIZED) {
             return RestResult.fail(STATUS_AUTH_FAILED, "Failed to authenticate in cluster. " +
@@ -114,80 +103,5 @@ public class RestExecutor implements AutoCloseable {
         ContentResponse res = req.send();
 
         return parseResponse(res);
-    }
-
-    /**
-     * REST response holder Java bean.
-     */
-    private static class RestResponseHolder {
-        /** Success flag */
-        private int successStatus;
-
-        /** Error. */
-        private String err;
-
-        /** Response. */
-        private String res;
-
-        /** Session token string representation. */
-        private String sesTok;
-
-        /**
-         * @return {@code True} if this request was successful.
-         */
-        public int getSuccessStatus() {
-            return successStatus;
-        }
-
-        /**
-         * @param successStatus Whether request was successful.
-         */
-        public void setSuccessStatus(int successStatus) {
-            this.successStatus = successStatus;
-        }
-
-        /**
-         * @return Error.
-         */
-        public String getError() {
-            return err;
-        }
-
-        /**
-         * @param err Error.
-         */
-        public void setError(String err) {
-            this.err = err;
-        }
-
-        /**
-         * @return Response object.
-         */
-        @JsonRawValue
-        public String getResponse() {
-            return res;
-        }
-
-        /**
-         * @param res Response object.
-         */
-        @JsonDeserialize(using = RawContentDeserializer.class)
-        public void setResponse(String res) {
-            this.res = res;
-        }
-
-        /**
-         * @return String representation of session token.
-         */
-        public String getSessionToken() {
-            return sesTok;
-        }
-
-        /**
-         * @param sesTok String representation of session token.
-         */
-        public void setSessionToken(String sesTok) {
-            this.sesTok = sesTok;
-        }
     }
 }
