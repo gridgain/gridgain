@@ -129,6 +129,8 @@ public class GridDhtPartitionsSingleMessage extends GridDhtPartitionsAbstractMes
         compressed(compress);
 
         this.client = client;
+
+        Thread.dumpStack();
     }
 
     /**
