@@ -177,6 +177,28 @@ public class DiskSpillingTest extends GridCommonAbstractTest {
                 "SELECT id, name, code, depId FROM person WHERE depId > 5 ");
     }
 
+    /** */
+    @Test
+    public void simpleSelectLimitOffset() {
+        checkSortOrder = true;
+
+        assertInMemoryAndOnDiskSameResults(false, "SELECT * FROM person ORDER BY name LIMIT 500 OFFSET 100");
+    }
+
+    /** */
+    @Test
+    public void simpleSelectOffset() {
+        checkSortOrder = true;
+
+        assertInMemoryAndOnDiskSameResults(false, "SELECT * FROM person ORDER BY name DESC OFFSET 300");
+    }
+
+    /** */
+    @Test
+    public void simpleSelectLimit() {
+        assertInMemoryAndOnDiskSameResults(false, "SELECT * FROM person LIMIT 700");
+    }
+
 
     public void assertInMemoryAndOnDiskSameResults(boolean lazy, String sql) {
         long startOnDisk = System.currentTimeMillis();

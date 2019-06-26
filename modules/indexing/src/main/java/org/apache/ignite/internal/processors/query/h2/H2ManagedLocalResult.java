@@ -449,7 +449,7 @@ public class H2ManagedLocalResult implements LocalResult {
     }
 
     private void trimExternal(int offset, int limit) {
-        ResultExternal temp = external; // TODO limit offset
+        ResultExternal temp = external;
         external = null;
         temp.reset();
         while (--offset >= 0) {
@@ -459,20 +459,16 @@ public class H2ManagedLocalResult implements LocalResult {
         while (--limit >= 0) {
             row = temp.next();
             rows.add(row);
-            // TODO
-//            if (rows.size() > maxMemoryRows) {
-//                addRowsToDisk();
-//            }
+            if (!onUpdate(null,null, row))
+                addRowsToDisk();
         }
         if (withTiesSortOrder != null && row != null) {
             Value[] expected = row;
             while ((row = temp.next()) != null && withTiesSortOrder.compare(expected, row) == 0) {
                 rows.add(row);
                 rowCount++;
-                // TODO
-//                if (rows.size() > maxMemoryRows) {
-//                    addRowsToDisk();
-//                }
+                if (!onUpdate(null,null, row))
+                    addRowsToDisk();
             }
         }
         if (external != null) {

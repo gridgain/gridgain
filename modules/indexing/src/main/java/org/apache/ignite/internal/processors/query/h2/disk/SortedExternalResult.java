@@ -345,7 +345,7 @@ public class SortedExternalResult extends AbstractExternalResult {
 
                 Value[] res = readRowFromFile();
 
-                if (res == null)
+                if (res == null) // TODO Remove from addrs
                     continue;
 
                 if (key.equals(getRowKey(res))) {
