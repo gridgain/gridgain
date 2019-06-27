@@ -210,7 +210,7 @@ public class PartitionTxUpdateCounterImpl implements PartitionUpdateCounter {
     @Override public void updateInitial(long start, long delta) {
         update(start, delta);
 
-        initCntr = get();
+        reserveCntr.set(initCntr = get());
     }
 
     /** */
