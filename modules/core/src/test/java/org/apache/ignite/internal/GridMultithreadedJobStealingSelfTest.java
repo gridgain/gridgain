@@ -44,6 +44,7 @@ import org.apache.ignite.spi.failover.jobstealing.JobStealingFailoverSpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonTest;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
@@ -238,7 +239,7 @@ public class GridMultithreadedJobStealingSelfTest extends GridCommonAbstractTest
         }
 
         /** {@inheritDoc} */
-        @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
+        @NotNull @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
             @Nullable Object arg) {
             assert subgrid.size() == 2 : "Invalid subgrid size: " + subgrid.size();
 

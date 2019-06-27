@@ -19,6 +19,7 @@ import MessagesFactory from '../../services/Messages.service';
 import FormUtilsFactoryFactory from '../../services/FormUtils.service';
 import LoadingServiceFactory from '../../modules/loading/loading.service';
 import {ISignupData} from '../form-signup';
+import {UserService} from 'app/modules/user/User.service';
 
 export class DialogAdminCreateUser {
     close: ng.ICompiledExpression;
@@ -36,10 +37,10 @@ export class DialogAdminCreateUser {
 
     serverError: string | null = null;
 
-    static $inject = ['$rootScope', 'IgniteAdminData', 'IgniteMessages', 'IgniteFormUtils', 'IgniteLoading'];
+    static $inject = ['User', 'IgniteAdminData', 'IgniteMessages', 'IgniteFormUtils', 'IgniteLoading'];
 
     constructor(
-        private $root: ng.IRootScopeService,
+        private User: UserService,
         private AdminData: IgniteAdminData,
         private IgniteMessages: ReturnType<typeof MessagesFactory>,
         private IgniteFormUtils: ReturnType<typeof FormUtilsFactoryFactory>,
@@ -66,14 +67,14 @@ export class DialogAdminCreateUser {
 
         this.AdminData.registerUser(this.data)
             .then(() => {
-                this.$root.$broadcast('userCreated');
+                this.User.created$.next(this.data);
                 this.IgniteMessages.showInfo(`User ${this.data.email} created`);
                 this.close({});
             })
-            .catch((res) => {
+            .catch((err) => {
                 this.loading.finish('createUser');
-                this.IgniteMessages.showError(null, res.data);
-                this.setServerError(res.data);
+                this.IgniteMessages.showError(null, err);
+                this.setServerError(err.message);
             });
     }
 }

@@ -154,9 +154,8 @@ import org.apache.ignite.internal.processors.cache.persistence.wal.crc.IgniteDat
 import org.apache.ignite.internal.processors.compress.CompressionProcessor;
 import org.apache.ignite.internal.processors.port.GridPortRecord;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
-import org.apache.ignite.internal.stat.IoStatisticsHolderNoOp;
+import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
-import org.apache.ignite.internal.util.GridCountDownCallback;
 import org.apache.ignite.internal.util.GridMultiCollectionWrapper;
 import org.apache.ignite.internal.util.GridReadOnlyArrayView;
 import org.apache.ignite.internal.util.IgniteUtils;
@@ -425,6 +424,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         lockWaitTime = persistenceCfg.getLockWaitTime();
 
         persStoreMetrics = new DataStorageMetricsImpl(
+            ctx.metric().registry(),
             persistenceCfg.isMetricsEnabled(),
             persistenceCfg.getMetricsRateTimeInterval(),
             persistenceCfg.getMetricsSubIntervalCount()
@@ -1462,13 +1462,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     @Override public void rebuildIndexesIfNeeded(GridDhtPartitionsExchangeFuture fut) {
         GridQueryProcessor qryProc = cctx.kernalContext().query();
 
-        if (qryProc.moduleEnabled()) {
-            GridCountDownCallback rebuildIndexesCompleteCntr = new GridCountDownCallback(
-                cctx.cacheContexts().size(),
-                () -> log().info("Indexes rebuilding completed for all caches."),
-                1  //need at least 1 index rebuilded to print message about rebuilding completion
-            );
+        GridCompoundFuture compoundAllIdxsRebuilt = null;
 
+        if (qryProc.moduleEnabled()) {
             for (final GridCacheContext cacheCtx : (Collection<GridCacheContext>)cctx.cacheContexts()) {
                 if (cacheCtx.startTopologyVersion().equals(fut.initialVersion())) {
                     final int cacheId = cacheCtx.cacheId();
@@ -1480,7 +1476,10 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                         log().info("Started indexes rebuilding for cache [name=" + cacheCtx.name()
                             + ", grpName=" + cacheCtx.group().name() + ']');
 
-                        assert usrFut != null : "Missing user future for cache: " + cacheCtx.name();
+                        if (compoundAllIdxsRebuilt == null)
+                            compoundAllIdxsRebuilt = new GridCompoundFuture();
+
+                        compoundAllIdxsRebuilt.add(rebuildFut);
 
                         rebuildFut.listen(new CI1<IgniteInternalFuture>() {
                             @Override public void apply(IgniteInternalFuture fut) {
@@ -1502,8 +1501,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                                                 + ", grpName=" + ccfg.getGroupName() + ']', err);
                                     }
                                 }
-
-                                rebuildIndexesCompleteCntr.countDown(true);
                             }
                         });
                     }
@@ -1512,11 +1509,15 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                             idxRebuildFuts.remove(cacheId, usrFut);
 
                             usrFut.onDone();
-
-                            rebuildIndexesCompleteCntr.countDown(false);
                         }
                     }
                 }
+            }
+
+            if (compoundAllIdxsRebuilt != null) {
+                compoundAllIdxsRebuilt.listen(a -> log().info("Indexes rebuilding completed for all caches."));
+
+                compoundAllIdxsRebuilt.markInitialized();
             }
         }
     }
@@ -3660,7 +3661,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         protected Checkpointer(@Nullable String gridName, String name, IgniteLogger log) {
             super(gridName, name, log, cctx.kernalContext().workersRegistry());
 
-            scheduledCp = new CheckpointProgress(U.currentTimeMillis() + checkpointFreq);
+            scheduledCp = new CheckpointProgress(checkpointFreq);
 
             tmpWriteBuf = ByteBuffer.allocateDirect(pageSize());
 
@@ -3703,7 +3704,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                         doCheckpoint();
                     else {
                         synchronized (this) {
-                            scheduledCp.nextCpTs = U.currentTimeMillis() + checkpointFreq;
+                            scheduledCp.nextCpNanos = System.nanoTime() + U.millisToNanos(checkpointFreq);
                         }
                     }
                 }
@@ -3738,9 +3739,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         private CheckpointProgressSnapshot wakeupForCheckpoint(long delayFromNow, String reason) {
             CheckpointProgress sched = scheduledCp;
 
-            long next = U.currentTimeMillis() + delayFromNow;
+            long nextNanos = System.nanoTime() + U.millisToNanos(delayFromNow);
 
-            if (sched.nextCpTs <= next)
+            if (sched.nextCpNanos <= nextNanos)
                 return new CheckpointProgressSnapshot(sched);
 
             CheckpointProgressSnapshot ret;
@@ -3748,10 +3749,10 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             synchronized (this) {
                 sched = scheduledCp;
 
-                if (sched.nextCpTs > next) {
+                if (sched.nextCpNanos - nextNanos > 0) {
                     sched.reason = reason;
 
-                    sched.nextCpTs = next;
+                    sched.nextCpNanos = nextNanos;
                 }
 
                 ret = new CheckpointProgressSnapshot(sched);
@@ -3769,7 +3770,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             GridFutureAdapter<Object> ret;
 
             synchronized (this) {
-                scheduledCp.nextCpTs = U.currentTimeMillis();
+                scheduledCp.nextCpNanos = System.nanoTime();
 
                 scheduledCp.reason = "snapshot";
 
@@ -4129,13 +4130,15 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
             try {
                 synchronized (this) {
-                    long remaining;
+                    long remaining = U.nanosToMillis(scheduledCp.nextCpNanos - System.nanoTime());
 
-                    while ((remaining = scheduledCp.nextCpTs - U.currentTimeMillis()) > 0 && !isCancelled()) {
+                    while (remaining > 0 && !isCancelled()) {
                         blockingSectionBegin();
 
                         try {
                             wait(remaining);
+
+                            remaining = U.nanosToMillis(scheduledCp.nextCpNanos - System.nanoTime());
                         }
                         finally {
                             blockingSectionEnd();
@@ -4461,7 +4464,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                     curr.reason = "timeout";
 
                 // It is important that we assign a new progress object before checkpoint mark in page memory.
-                scheduledCp = new CheckpointProgress(U.currentTimeMillis() + checkpointFreq);
+                scheduledCp = new CheckpointProgress(checkpointFreq);
 
                 curCpProgress = curr;
             }
@@ -5097,7 +5100,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
      */
     public static class CheckpointProgress {
         /** Scheduled time of checkpoint. */
-        private volatile long nextCpTs;
+        private volatile long nextCpNanos;
 
         /** Checkpoint begin phase future. */
         private GridFutureAdapter cpBeginFut = new GridFutureAdapter<>();
@@ -5128,10 +5131,10 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         private String reason;
 
         /**
-         * @param nextCpTs Next checkpoint timestamp.
+         * @param cpFreq Timeout until next checkpoint.
          */
-        private CheckpointProgress(long nextCpTs) {
-            this.nextCpTs = nextCpTs;
+        private CheckpointProgress(long cpFreq) {
+            this.nextCpNanos = System.nanoTime() + U.millisToNanos(cpFreq);
         }
 
         /** */

@@ -33,6 +33,8 @@ import {
     ADVANCED_SAVE_CACHE,
     ADVANCED_SAVE_CLUSTER,
     ADVANCED_SAVE_COMPLETE_CONFIGURATION,
+    ADVANCED_SAVE_COMPLETE_CONFIGURATION_OK,
+    ADVANCED_SAVE_COMPLETE_CONFIGURATION_ERR,
     ADVANCED_SAVE_MODEL,
     BASIC_SAVE,
     BASIC_SAVE_AND_DOWNLOAD,
@@ -112,7 +114,7 @@ export default class ConfigEffects {
                     catchError((error) => of({
                         type: 'LOAD_COMPLETE_CONFIGURATION_ERR',
                         error: {
-                            message: `Failed to load cluster configuration: ${error.data}.`
+                            message: `Failed to load cluster configuration: ${error.data.message}.`
                         },
                         action
                     })));
@@ -164,12 +166,12 @@ export default class ConfigEffects {
                         switchMap((res) => {
                             return of(
                                 {type: 'EDIT_CLUSTER', cluster: action.changedItems.cluster},
-                                {type: 'ADVANCED_SAVE_COMPLETE_CONFIGURATION_OK', changedItems: action.changedItems}
+                                {type: ADVANCED_SAVE_COMPLETE_CONFIGURATION_OK, changedItems: action.changedItems}
                             );
                         }),
                         catchError((res) => {
                             return of({
-                                type: 'ADVANCED_SAVE_COMPLETE_CONFIGURATION_ERR',
+                                type: ADVANCED_SAVE_COMPLETE_CONFIGURATION_ERR,
                                 changedItems: action.changedItems,
                                 action,
                                 error: {
@@ -208,7 +210,7 @@ export default class ConfigEffects {
                     catchError((error) => of({
                         type: `${a.type}_ERR`,
                         error: {
-                            message: `Failed to load clusters: ${error.data}`
+                            message: `Failed to load clusters:  ${error.data.message}`
                         },
                         action: a
                     }))
@@ -251,7 +253,7 @@ export default class ConfigEffects {
                             catchError((error) => of({
                                 type: 'LOAD_AND_EDIT_CLUSTER_ERR',
                                 error: {
-                                    message: `Failed to load cluster: ${error.data}.`
+                                    message: `Failed to load cluster: ${error.data.message}.`
                                 }
                             }))
                         );
@@ -280,7 +282,7 @@ export default class ConfigEffects {
                     catchError((error) => of({
                         type: `${a.type}_ERR`,
                         error: {
-                            message: `Failed to load cache: ${error.data}.`
+                            message: `Failed to load cache: ${error.data.message}.`
                         }
                     }))
                 );
@@ -315,7 +317,7 @@ export default class ConfigEffects {
                     catchError((error) => of({
                         type: `${a.type}_ERR`,
                         error: {
-                            message: `Failed to load caches: ${error.data}.`
+                            message: `Failed to load caches: ${error.data.message}.`
                         },
                         action: a
                     }))
@@ -343,7 +345,7 @@ export default class ConfigEffects {
                     catchError((error) => of({
                         type: `${a.type}_ERR`,
                         error: {
-                            message: `Failed to load domain model: ${error.data}.`
+                            message: `Failed to load domain model: ${error.data.message}.`
                         }
                     }))
                 );
@@ -381,7 +383,7 @@ export default class ConfigEffects {
                     catchError((error) => of({
                         type: `${a.type}_ERR`,
                         error: {
-                            message: `Failed to load domain models: ${error.data}.`
+                            message: `Failed to load domain models: ${error.data.message}.`
                         },
                         action: a
                     }))

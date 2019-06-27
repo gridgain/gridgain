@@ -25,23 +25,23 @@ const ArgumentChecker = require('./internal/ArgumentChecker');
 const Logger = require('./internal/Logger');
 
 /**
- * State of Ignite client.
+ * State of GridGain client.
  *
  * @typedef IgniteClient.STATE
  * @enum
  * @readonly
- * @property DISCONNECTED The client is not connected to any Ignite node,
- *     operations with the Ignite server are not allowed.
+ * @property DISCONNECTED The client is not connected to any GridGain node,
+ *     operations with the GridGain server are not allowed.
  *     This is initial state after a client instance creation.
  *     If connect() method is called, the client moves to CONNECTING state.
- * @property CONNECTING The client tries to connect to an Ignite node,
- *     operations with the Ignite server are not allowed.
+ * @property CONNECTING The client tries to connect to a GridGain node,
+ *     operations with the GridGain server are not allowed.
  *     If disconnect() method is called, the client moves to DISCONNECTED state.
- *     If not possible to connect to any Ignite node, the client moves to DISCONNECTED state.
- *     If connection to an Ignite node is successful, the client moves to CONNECTED state.
- * @property CONNECTED The client is connected to an Ignite node,
- *     all operations with the Ignite server are allowed.
- *     If connection with the Ignite node is lost, the client moves to CONNECTING state.
+ *     If not possible to connect to any GridGain node, the client moves to DISCONNECTED state.
+ *     If connection to a GridGain node is successful, the client moves to CONNECTED state.
+ * @property CONNECTED The client is connected to a GridGain node,
+ *     all operations with the GridGain server are allowed.
+ *     If connection with the GridGain node is lost, the client moves to CONNECTING state.
  *     If disconnect() method is called, the client moves to DISCONNECTED state.
  */
 const STATE = Object.freeze({
@@ -51,7 +51,7 @@ const STATE = Object.freeze({
 });
 
 /**
- * Class representing Ignite client.
+ * Class representing GridGain client.
  *
  */
 class IgniteClient {
@@ -65,9 +65,9 @@ class IgniteClient {
      * @return {IgniteClient} - new IgniteClient instance.
      */
     constructor(onStateChanged = null) {
-        const ClientFailoverSocket = require('./internal/ClientFailoverSocket');
-        this._socket = new ClientFailoverSocket(onStateChanged);
-        this._communicator = new BinaryCommunicator(this._socket);
+        const Router = require('./internal/Router');
+        this._router = new Router(onStateChanged);
+        this._communicator = new BinaryCommunicator(this._router);
     }
 
     static get STATE() {
@@ -97,7 +97,7 @@ class IgniteClient {
     async connect(config) {
         ArgumentChecker.notEmpty(config, 'config');
         ArgumentChecker.hasType(config, 'config', false, IgniteClientConfiguration);
-        await this._socket.connect(config);
+        await this._router.connect(this._communicator, config);
     }
 
     /**
@@ -107,9 +107,7 @@ class IgniteClient {
      * Does nothing if the client already disconnected.
      */
     disconnect() {
-        if (this._socket) {
-            this._socket.disconnect();
-        }
+        this._router.disconnect();
     }
 
     /**
@@ -137,6 +135,7 @@ class IgniteClient {
             async (payload) => {
                 await this._writeCacheNameOrConfig(payload, name, cacheConfig);
             });
+
         return this._getCache(name, cacheConfig);
     }
 
@@ -196,10 +195,13 @@ class IgniteClient {
      */
     async destroyCache(name) {
         ArgumentChecker.notEmpty(name, 'name');
+
+        const cacheId = CacheClient._calculateId(name);
+
         await this._communicator.send(
             BinaryUtils.OPERATION.CACHE_DESTROY,
             async (payload) => {
-                payload.writeInteger(CacheClient._calculateId(name));
+                payload.writeInteger(cacheId);
             });
     }
 

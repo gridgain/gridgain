@@ -18,8 +18,8 @@ import decimal
 import pytest
 import uuid
 
-from pyignite.api.key_value import cache_get, cache_put
-from pyignite.datatypes import *
+from pygridgain.api.key_value import cache_get, cache_put
+from pygridgain.datatypes import *
 
 
 @pytest.mark.parametrize(
@@ -126,10 +126,12 @@ from pyignite.datatypes import *
 )
 def test_put_get_data(client, cache, value, value_hint):
 
-    result = cache_put(client, cache, 'my_key', value, value_hint=value_hint)
+    conn = client.random_node
+
+    result = cache_put(conn, cache, 'my_key', value, value_hint=value_hint)
     assert result.status == 0
 
-    result = cache_get(client, cache, 'my_key')
+    result = cache_get(conn, cache, 'my_key')
     assert result.status == 0
     assert result.value == value
 
