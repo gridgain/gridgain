@@ -105,7 +105,7 @@ const resolveUrl = (targetUrl, host = 'http://localhost:9001') => {
 };
 
 const enableDemoMode = ClientFunction(() => {
-    window.sessionStorage.IgniteDemoMode = 'true';
+    window.sessionStorage.demoMode = 'true';
     window.location.reload();
 });
 

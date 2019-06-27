@@ -1,4 +1,3 @@
-<?php
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
@@ -15,20 +14,21 @@
  * limitations under the License.
  */
 
-namespace Apache\Ignite\Exception;
+package org.apache.ignite.console.web.errors;
+
+import org.eclipse.jetty.http.BadMessageException;
+
+import static org.apache.ignite.console.web.errors.Errors.ERR_DB_NOT_AVAILABLE;
+import static org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE;
 
 /**
- * GridGain client general exception.
+ * Special exception to handle database errors.
  */
-class ClientException extends \Exception
-{
+public class DatabaseNotAvailableException extends BadMessageException {
     /**
-     * Constructs a ClientException with the specified detail message.
-     * 
-     * @param string $message the detail message.
+     * Default constructor.
      */
-    public function __construct(string $message)
-    {
-        parent::__construct($message);
+    public DatabaseNotAvailableException() {
+        super(SERVICE_UNAVAILABLE.value(), ERR_DB_NOT_AVAILABLE);
     }
 }
