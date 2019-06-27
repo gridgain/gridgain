@@ -1592,7 +1592,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             if (!busyLock.enterBusy())
                 throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
 
-            int cacheId = grp.storeCacheIdInDataPage() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
+            int cacheId = grp.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
 
             try {
                 invoke0(cctx, new SearchRow(cacheId, key), c);
@@ -1665,9 +1665,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             }
 
             assert dataRow.link() != 0 : dataRow;
-
-            if (grp.storeCacheIdInDataPage() && dataRow.cacheId() == CU.UNDEFINED_CACHE_ID)
-                dataRow.cacheId(cctx.cacheId());
 
             return dataRow;
         }
@@ -2533,7 +2530,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         {
             long expireTime = newRow.expireTime();
 
-            int cacheId = grp.storeCacheIdInDataPage() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
+            int cacheId = grp.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
 
             if (oldRow != null) {
                 assert oldRow.link() != 0 : oldRow;
@@ -2556,7 +2553,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
 
             try {
-                int cacheId = grp.storeCacheIdInDataPage() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
+                int cacheId = grp.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
 
                 assert cctx.shared().database().checkpointLockIsHeldByThread();
 
@@ -2598,7 +2595,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
          */
         private void clearPendingEntries(GridCacheContext cctx, CacheDataRow oldRow)
             throws IgniteCheckedException {
-            int cacheId = grp.storeCacheIdInDataPage() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
+            int cacheId = grp.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
 
             assert oldRow.link() != 0 : oldRow;
             assert cacheId == CU.UNDEFINED_CACHE_ID || oldRow.cacheId() == cacheId :
@@ -2612,7 +2609,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         @Override public CacheDataRow find(GridCacheContext cctx, KeyCacheObject key) throws IgniteCheckedException {
             key.valueBytes(cctx.cacheObjectContext());
 
-            int cacheId = grp.storeCacheIdInDataPage() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
+            int cacheId = grp.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
 
             CacheDataRow row;
 
