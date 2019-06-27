@@ -48,9 +48,9 @@ Supports .NET 4+ and .NET Core 2.0+.
 More info: https://docs.gridgain.com/
         </description>
         <copyright>Copyright 2019</copyright>
-        <tags>Apache Ignite In-Memory Distributed Computing SQL NoSQL LINQ Grid Map Reduce Cache linqpad-samples</tags>
+        <tags>GridGain Ignite In-Memory Distributed Computing SQL NoSQL LINQ Grid Map Reduce Cache linqpad-samples</tags>
         <dependencies>
-            <dependency id="Apache.Ignite" version="[$version$]" />
+            <dependency id="GridGain.Ignite" version="[$version$]" />
             <dependency id="Remotion.Linq" version="[2.0.1]" />
         </dependencies>    
     </metadata>
