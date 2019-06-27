@@ -1694,7 +1694,8 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
             if (!locNodeId.equals(curSecSubjId))
                 secSubjId = curSecSubjId;
 
-            byte[] secSubject = U.marshal(marsh, secCtx);
+            //Network optimization
+            byte[] secSubject = secSubjId != null && ctx.discovery().node(secSubjId) == null ? U.marshal(marsh, secCtx) : null;
 
             return new GridIoSecurityAwareMessage(secSubjId, secSubject, plc, topic, topicOrd, msg, ordered, timeout, skipOnTimeout);
         }
