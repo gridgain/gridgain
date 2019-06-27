@@ -38,6 +38,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.processor.EntryProcessor;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -127,7 +128,9 @@ import static org.apache.ignite.transactions.TransactionState.SUSPENDED;
  * Managed transaction adapter.
  */
 public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implements IgniteInternalTx, Externalizable {
-    /** */
+    /**
+     *
+     */
     private static final long serialVersionUID = 0L;
 
     /** Static logger to avoid re-creation. */
@@ -137,7 +140,9 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
     private static final AtomicReferenceFieldUpdater<IgniteTxAdapter, FinalizationStatus> FINALIZING_UPD =
         AtomicReferenceFieldUpdater.newUpdater(IgniteTxAdapter.class, FinalizationStatus.class, "finalizing");
 
-    /** */
+    /**
+     *
+     */
     private static final AtomicReferenceFieldUpdater<IgniteTxAdapter, TxCounters> TX_COUNTERS_UPD =
         AtomicReferenceFieldUpdater.newUpdater(IgniteTxAdapter.class, TxCounters.class, "txCounters");
 
@@ -184,8 +189,8 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
     protected boolean needRetVal;
 
     /**
-     * End version (a.k.a. <tt>'tnc'</tt> or <tt>'transaction number counter'</tt>)
-     * assigned to this transaction at the end of write phase.
+     * End version (a.k.a. <tt>'tnc'</tt> or <tt>'transaction number counter'</tt>) assigned to this transaction at the
+     * end of write phase.
      */
     @GridToStringInclude
     protected GridCacheVersion endVer;
@@ -217,7 +222,9 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
     /** IO policy. */
     private byte plc;
 
-    /** */
+    /**
+     *
+     */
     protected boolean onePhaseCommit;
 
     /** Commit version. */
@@ -229,14 +236,15 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
     /** Done marker. */
     protected volatile boolean isDone;
 
-    /** */
+    /**
+     *
+     */
     @GridToStringInclude
     private Map<Integer, Set<Integer>> invalidParts;
 
     /**
-     * Transaction state. Note that state is not protected, as we want to
-     * always use {@link #state()} and {@link #state(TransactionState)}
-     * methods.
+     * Transaction state. Note that state is not protected, as we want to always use {@link #state()} and {@link
+     * #state(TransactionState)} methods.
      */
     @GridToStringInclude
     private volatile TransactionState state = ACTIVE;
@@ -244,10 +252,14 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
     /** Timed out flag. */
     private volatile boolean timedOut;
 
-    /** */
+    /**
+     *
+     */
     protected int txSize;
 
-    /** */
+    /**
+     *
+     */
     @GridToStringExclude
     private volatile GridFutureAdapter<IgniteInternalTx> finFut;
 
@@ -255,7 +267,9 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
     @GridToStringInclude
     protected volatile AffinityTopologyVersion topVer = AffinityTopologyVersion.NONE;
 
-    /** */
+    /**
+     *
+     */
     protected Map<UUID, Collection<UUID>> txNodes;
 
     /** Subject ID initiated this transaction. */
@@ -284,7 +298,9 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
     @GridToStringExclude
     private volatile IgniteInternalFuture rollbackFut;
 
-    /** */
+    /**
+     *
+     */
     @SuppressWarnings("unused")
     @GridToStringExclude
     private volatile TxCounters txCounters;
@@ -807,18 +823,16 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
     public void logTxFinishErrorSafe(@Nullable IgniteLogger log, boolean commit, Throwable e) {
         assert e != null : "Exception is expected";
 
-        final String fmt = "Failed completing the transaction: [commit=%s, tx=%s, plc=%s]";
+        final String fmt = "Failed completing the transaction: [commit=%s, tx=%s]";
 
         try {
             // First try printing a full transaction. This is error prone.
-            U.error(log, String.format(fmt, commit, this,
-                cctx.gridConfig().getFailureHandler().getClass().getSimpleName()), e);
+            U.error(log, String.format(fmt, commit, this), e);
         }
         catch (Throwable e0) {
             e.addSuppressed(e0);
 
-            U.error(log, String.format(fmt, commit, CU.txString(this),
-                cctx.gridConfig().getFailureHandler().getClass().getSimpleName()), e);
+            U.error(log, String.format(fmt, commit, CU.txString(this)), e);
         }
     }
 
@@ -1113,10 +1127,8 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
     }
 
     /**
-     *
      * @param state State to set.
      * @param timedOut Timeout flag.
-     *
      * @return {@code True} if state changed.
      */
     protected final boolean state(TransactionState state, boolean timedOut) {
@@ -1181,7 +1193,7 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
                 }
 
                 case MARKED_ROLLBACK: {
-                    valid = prev == ACTIVE  || prev == PREPARING || prev == PREPARED || prev == SUSPENDED;
+                    valid = prev == ACTIVE || prev == PREPARING || prev == PREPARED || prev == SUSPENDED;
 
                     break;
                 }
@@ -1256,7 +1268,9 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
         return valid;
     }
 
-    /** */
+    /**
+     *
+     */
     private byte toMvccState(TransactionState state) {
         switch (state) {
             case PREPARED:
@@ -1270,8 +1284,10 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
         }
     }
 
-    /** */
-    private void recordStateChangedEvent(TransactionState state){
+    /**
+     *
+     */
+    private void recordStateChangedEvent(TransactionState state) {
         if (!near() || !local()) // Covers only GridNearTxLocal's state changes.
             return;
 
@@ -1305,7 +1321,7 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
     /**
      * @param type Event type.
      */
-    protected void recordStateChangedEvent(int type){
+    protected void recordStateChangedEvent(int type) {
         assert near() && local();
 
         GridEventStorageManager evtMgr = cctx.gridEvents();
@@ -1400,7 +1416,8 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
      * @param commit Commit flag.
      * @throws IgniteCheckedException In case of error.
      */
-    protected void sessionEnd(final Collection<CacheStoreManager> stores, boolean commit) throws IgniteCheckedException {
+    protected void sessionEnd(final Collection<CacheStoreManager> stores,
+        boolean commit) throws IgniteCheckedException {
         Iterator<CacheStoreManager> it = stores.iterator();
 
         Set<CacheStore> visited = new GridSetWrapper<>(new IdentityHashMap<CacheStore, Object>());
@@ -1413,9 +1430,8 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
     }
 
     /**
-     * Performs batch database operations. This commit must be called
-     * before cache update. This way if there is a DB failure,
-     * cache transaction can still be rolled back.
+     * Performs batch database operations. This commit must be called before cache update. This way if there is a DB
+     * failure, cache transaction can still be rolled back.
      *
      * @param writeEntries Transaction write set.
      * @throws IgniteCheckedException If batch update failed.
@@ -1877,7 +1893,7 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
 
         // Try to take either entry-recorded primary node ID,
         // or transaction node ID from near-local transactions.
-        UUID nodeId = e.nodeId() == null ? local() ? this.nodeId :  null : e.nodeId();
+        UUID nodeId = e.nodeId() == null ? local() ? this.nodeId : null : e.nodeId();
 
         if (nodeId != null && nodeId.equals(cctx.localNodeId()))
             return true;
@@ -1999,8 +2015,8 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
      *
      * @param cacheCtx Cache context to add.
      * @param recovery Recovery flag. See {@link CacheOperationContext#setRecovery(boolean)}.
-     * @throws IgniteCheckedException If caches already enlisted in this transaction are not compatible with given
-     *      cache (e.g. they have different stores).
+     * @throws IgniteCheckedException If caches already enlisted in this transaction are not compatible with given cache
+     * (e.g. they have different stores).
      */
     public abstract void addActiveCache(GridCacheContext cacheCtx, boolean recovery) throws IgniteCheckedException;
 
@@ -2648,11 +2664,15 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
      *
      */
     private static class TxFinishFuture extends GridFutureAdapter<IgniteInternalTx> {
-        /** */
+        /**
+         *
+         */
         @GridToStringInclude
         private IgniteTxAdapter tx;
 
-        /** */
+        /**
+         *
+         */
         private volatile long completionTime;
 
         /**
