@@ -51,14 +51,14 @@ public class UserResponse extends User {
      * Full constructor.
      *
      * @param acc Account DTO.
-     * @param becameUsed Switch user used flag.
+     * @param becomeUsed Switch user used flag.
      */
-    public UserResponse(Account acc, boolean becameUsed) {
+    public UserResponse(Account acc, boolean becomeUsed) {
         super(acc);
 
         this.tok = acc.getToken();
         this.admin = acc.isAdmin();
-        this.becomeUsed = becameUsed;
+        this.becomeUsed = becomeUsed;
     }
 
     /**

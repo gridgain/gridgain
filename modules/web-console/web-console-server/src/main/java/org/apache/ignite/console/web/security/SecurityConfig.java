@@ -85,7 +85,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     /** Exit user url. */
     private static final String EXIT_USER_URL = "/api/v1/logout/impersonate";
 
-
     /** Public routes. */
     private static final String[] PUBLIC_ROUTES = new String[] {
         AGENTS_PATH,
