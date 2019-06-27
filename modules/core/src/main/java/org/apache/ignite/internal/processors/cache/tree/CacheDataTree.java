@@ -311,9 +311,9 @@ public class CacheDataTree extends BPlusTree<CacheSearchRow, CacheDataRow> {
      */
     private static IOVersions<? extends AbstractDataInnerIO> innerIO(CacheGroupContext grp) {
         if (grp.mvccEnabled())
-            return grp.storeCacheIdInDataPage() ? MvccCacheIdAwareDataInnerIO.VERSIONS : MvccDataInnerIO.VERSIONS;
+            return grp.sharedGroup() ? MvccCacheIdAwareDataInnerIO.VERSIONS : MvccDataInnerIO.VERSIONS;
 
-        return grp.storeCacheIdInDataPage() ? CacheIdAwareDataInnerIO.VERSIONS : DataInnerIO.VERSIONS;
+        return grp.sharedGroup() ? CacheIdAwareDataInnerIO.VERSIONS : DataInnerIO.VERSIONS;
     }
 
     /**
@@ -322,9 +322,9 @@ public class CacheDataTree extends BPlusTree<CacheSearchRow, CacheDataRow> {
      */
     private static IOVersions<? extends AbstractDataLeafIO> leafIO(CacheGroupContext grp) {
         if (grp.mvccEnabled())
-            return grp.storeCacheIdInDataPage() ? MvccCacheIdAwareDataLeafIO.VERSIONS : MvccDataLeafIO.VERSIONS;
+            return grp.sharedGroup() ? MvccCacheIdAwareDataLeafIO.VERSIONS : MvccDataLeafIO.VERSIONS;
 
-        return grp.storeCacheIdInDataPage() ? CacheIdAwareDataLeafIO.VERSIONS : DataLeafIO.VERSIONS;
+        return grp.sharedGroup() ? CacheIdAwareDataLeafIO.VERSIONS : DataLeafIO.VERSIONS;
     }
 
     /**
@@ -396,7 +396,7 @@ public class CacheDataTree extends BPlusTree<CacheSearchRow, CacheDataRow> {
         long link = rowIo.getLink(pageAddr, idx);
         int hash = rowIo.getHash(pageAddr, idx);
 
-        int cacheId = grp.storeCacheIdInDataPage() ? rowIo.getCacheId(pageAddr, idx) : CU.UNDEFINED_CACHE_ID;
+        int cacheId = grp.sharedGroup() ? rowIo.getCacheId(pageAddr, idx) : CU.UNDEFINED_CACHE_ID;
 
         CacheDataRowAdapter.RowData x = asRowData(flags);
 
