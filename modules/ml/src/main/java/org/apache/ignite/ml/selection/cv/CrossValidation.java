@@ -41,6 +41,7 @@ import org.apache.ignite.ml.environment.parallelism.Promise;
 import org.apache.ignite.ml.math.functions.IgniteSupplier;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.math.primitives.vector.VectorUtils;
+import org.apache.ignite.ml.math.primitives.vector.impl.DenseVector;
 import org.apache.ignite.ml.pipeline.Pipeline;
 import org.apache.ignite.ml.pipeline.PipelineMdl;
 import org.apache.ignite.ml.preprocessing.Preprocessor;
@@ -72,8 +73,12 @@ import org.jetbrains.annotations.NotNull;
  * @param <V> Type of a value in {@code upstream} data.
  */
 public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
-    public static final int INITIAL_SIZE_OF_POPULATION = 100;
-    public static final int SIZE_OF_POPULATION = 20;
+    public static final int SIZE_OF_POPULATION = 100;
+    public static final int AMOUNT_OF_PARENTS = 10;
+    public static final int SIZE_OF_ELITE = 2;
+    private static final int AMOUNT_OF_GENERATION = 10;
+    private static final boolean ELITISM = true;
+    private static final double UNIFORM_RATE = 0.5;
     /** Learning environment builder. */
     private LearningEnvironmentBuilder envBuilder = LearningEnvironmentBuilder.defaultBuilder();
 
@@ -130,50 +135,122 @@ public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
         List<Double[]> paramSetsCp = new ArrayList<>(paramSets);
         Collections.shuffle(paramSetsCp, new Random(paramGrid.getSeed()));
 
-        List<Double[]> rndParamSets = paramSetsCp.subList(0, INITIAL_SIZE_OF_POPULATION);
+        List<Double[]> rndParamSets = paramSetsCp.subList(0, SIZE_OF_POPULATION);
 
-        Map<Integer, Vector> population = new HashMap<>();
-        for (int i = 0; i < INITIAL_SIZE_OF_POPULATION; i++)
+        Map<Integer, Vector> population = new HashMap<>(); // move to array or arraylist
+        for (int i = 0; i < SIZE_OF_POPULATION; i++)
             population.put(i, VectorUtils.of(rndParamSets.get(i)));
 
         // calculate fitness
-        TreeMap<Double, Integer> populationFitness = new TreeMap<>();
-        population.forEach((k, v) -> {
+        TreeMap<Double, Integer> populationFitness = new TreeMap<>(); // bad idea if repeat double values
+        HashMap<Integer, Double> fitnessByKey = new HashMap<>();
+
+        for (Map.Entry<Integer, Vector> entry : population.entrySet()) {
+            Integer k = entry.getKey();
+            Vector v = entry.getValue();
+
             Double[] arr = new Double[v.size()];
             for (int i = 0; i < v.size(); i++)
                 arr[i] = v.get(i);
             TaskResult res = calculateScoresForFixedParamSet(arr);
 
-            populationFitness.put(Arrays.stream(res.locScores).average().getAsDouble(), k);
-        });
+            final double fitness = Arrays.stream(res.locScores).average().getAsDouble();
+            populationFitness.put(fitness, k);
+            fitnessByKey.put(k, fitness);
+        }
 
 
         // while NOT terminateCondition met
         int i = 0;
-        Map<Integer, Vector> selectedPopulation = null;
-        while(i < paramGrid.getMaxTries()) {
+        Map<Integer, Vector> selectedParents;
+        while (i < AMOUNT_OF_GENERATION) {
             // selection
             List<Integer> selectedKeys = populationFitness.descendingMap().entrySet().stream()
-                .limit(SIZE_OF_POPULATION)
+                .limit(AMOUNT_OF_PARENTS)
             .collect(ArrayList::new, (arr, e) -> arr.add(e.getValue()), ArrayList::addAll);
 
-            selectedPopulation = population.entrySet().stream()
-                .filter(selectedKeys::contains)
+            selectedParents = population.entrySet().stream()
+                .filter(e -> selectedKeys.contains(e.getKey()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
+            // create new population without elitism
+            Map<Integer, Vector> newPopulation = new HashMap<>();
+            TreeMap<Double, Integer> newPopulationFitness = new TreeMap<>();
+            HashMap<Integer, Double> newFitnessByKey = new HashMap<>();
+
+            int elitismOff = 0;
+
+            if (ELITISM) {
+                final Object[] fitnesses = populationFitness.descendingMap().values().toArray();
+                for (int j = 0; j < SIZE_OF_ELITE; j++) {
+                    Integer idxByFitness = (Integer) fitnesses[j];
+                    newPopulation.put(j, population.get(idxByFitness));
+                    newPopulationFitness.put(fitnessByKey.get(idxByFitness), idxByFitness);
+                    newFitnessByKey.put(idxByFitness, fitnessByKey.get(idxByFitness));
+                }
+                elitismOff = SIZE_OF_ELITE;
+            }
+
+
             // crossover
+            for (int j = elitismOff; j < SIZE_OF_POPULATION; j++) {
+                Vector indiv1 = tournamentSelection(selectedParents);
+                Vector indiv2 = tournamentSelection(selectedParents);
+                Vector newIndiv = crossover(indiv1, indiv2);
+                newPopulation.put(j, newIndiv);
+            }
 
             // mutation
-
+            for (int j = elitismOff; j < SIZE_OF_POPULATION; j++)
+                mutate(newPopulation.get(j));
 
             // calculate Fitness
+            for (int j = elitismOff; j < SIZE_OF_POPULATION; j++) {
+                final Vector vector = newPopulation.get(j);
+                Double[] arr = new Double[vector.size()];
+                for (int k = 0; k < vector.size(); k++)
+                    arr[k] = vector.get(k);
 
+                TaskResult res = calculateScoresForFixedParamSet(arr);
+                final double fitness = Arrays.stream(res.locScores).average().getAsDouble();
+                newPopulationFitness.put(fitness, j);
+                newFitnessByKey.put(j, fitness);
+            }
+
+            population = newPopulation;
+            populationFitness = newPopulationFitness;
+            fitnessByKey = newFitnessByKey;
 
             i++;
         }
 
         CrossValidationResult cvRes = new CrossValidationResult();
-        return null;
+        return cvRes;
+    }
+
+    // fake mutate
+    private void mutate(Vector vector) {
+
+    }
+
+    private Vector crossover(Vector firstParent, Vector secondParent) {
+        if (firstParent.size() != secondParent.size())
+            throw new RuntimeException("Different length of hyper-parameter vectors!");
+        Vector child = new DenseVector(firstParent.size());
+        for (int i = 0; i < firstParent.size(); i++) {
+            if (Math.random() < UNIFORM_RATE)
+                child.set(i, firstParent.get(i));
+            else
+                child.set(i, secondParent.get(i));
+        }
+        return child;
+    }
+
+    // fake tournament
+    private Vector tournamentSelection(Map<Integer, Vector> selectedParents) {
+        Random rnd = new Random(); // TODO: need to seed
+        int idx = rnd.nextInt(selectedParents.size());
+        return (Vector) selectedParents.values().toArray()[idx];
     }
 
     // TODO: https://en.wikipedia.org/wiki/Random_search

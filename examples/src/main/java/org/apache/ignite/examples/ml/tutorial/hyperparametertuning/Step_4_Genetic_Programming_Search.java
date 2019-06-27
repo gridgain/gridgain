@@ -68,7 +68,7 @@ import org.apache.ignite.ml.tree.DecisionTreeNode;
  * <p>
  * All scenarios are described there: https://sebastianraschka.com/faq/docs/evaluate-a-model.html</p>
  */
-public class Step_4_GradientSearch {
+public class Step_4_Genetic_Programming_Search {
     /** Run example. */
     public static void main(String[] args) {
         System.out.println();
@@ -125,7 +125,7 @@ public class Step_4_GradientSearch {
                     = new CrossValidation<>();
 
                 ParamGrid paramGrid = new ParamGrid()
-                    .withParameterSearchStrategy(HyperParameterSearchingStrategy.GRADIENT_SEARCH)
+                    .withParameterSearchStrategy(HyperParameterSearchingStrategy.EVOLUTION_ALGORITHM)
                     .withMaxTries(10)
                     .withSeed(12L)
                     .addHyperParam("p", normalizationTrainer::withP, new Double[]{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0})
