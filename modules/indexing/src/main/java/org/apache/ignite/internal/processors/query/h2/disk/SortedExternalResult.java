@@ -20,7 +20,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -30,7 +29,6 @@ import java.util.TreeMap;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
-import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.h2.engine.Session;
@@ -71,7 +69,7 @@ public class SortedExternalResult extends AbstractExternalResult {
      * Hash index for fast lookup of the distinct rows.
      * RowKey hashcode -> list of row addressed with the same hashcode.
      */
-    private HashMap<Integer, GridLongList> hashIndex;// TODO replace with a disk-based map
+    private ExternalResultHashIndex hashIndex;
 
     /**
      * Result queue.
@@ -84,13 +82,14 @@ public class SortedExternalResult extends AbstractExternalResult {
     private Comparator<Value> cmp;
 
     /**
-     *
+     * @param ses Session.
      * @param ctx Kernal context.
      * @param distinct Distinct flag.
      * @param distinctIndexes {@code DISTINCT ON(...)} expressions.
      * @param visibleColCnt Visible columns count.
      * @param sort Sort order.
      * @param memTracker MemoryTracker.
+     * @param initSize Initial size;
      */
     public SortedExternalResult(GridKernalContext ctx,
         Session ses,
@@ -98,7 +97,8 @@ public class SortedExternalResult extends AbstractExternalResult {
         int[] distinctIndexes,
         int visibleColCnt,
         SortOrder sort,
-        H2MemoryTracker memTracker) {
+        H2MemoryTracker memTracker,
+        long initSize) {
         super(ctx, memTracker);
 
         this.distinct = distinct;
@@ -108,7 +108,7 @@ public class SortedExternalResult extends AbstractExternalResult {
         this.cmp = ses.getDatabase().getCompareMode();
 
         if (isAnyDistinct())
-            hashIndex = new HashMap<>();
+            hashIndex = new ExternalResultHashIndex(file, this, initSize);
     }
 
     /** {@inheritDoc} */
@@ -190,24 +190,12 @@ public class SortedExternalResult extends AbstractExternalResult {
         }
 
         // Check on-disk
-        GridLongList addrs = hashIndex.get(distKey.hashCode());
+        Long addr = hashIndex.get(distKey);
 
-        if (addrs != null) {
-            for (int i = 0; i < addrs.size(); i++) {
-                setFilePosition(addrs.get(i));
+        if (addr == null)
+            return null;
 
-                Value[] res = readRowFromFile();
-
-                if (res == null)
-                    continue;
-
-                if (distKey.equals(getRowKey(res))) {
-                    previous = res;
-
-                    break;
-                }
-            }
-        }
+        previous = readRowFromFile(addr);
 
         return previous;
     }
@@ -260,7 +248,6 @@ public class SortedExternalResult extends AbstractExternalResult {
 
         long initFilePos = lastWrittenPos;
 
-        setFilePosition(initFilePos);
 
         for (Value[] row : rows) {
             if(isAnyDistinct()) {
@@ -271,6 +258,8 @@ public class SortedExternalResult extends AbstractExternalResult {
 
             addRowToBuffer(row, buff);
         }
+
+        setFilePosition(initFilePos);
 
         long written = writeBufferToFile(buff);
 
@@ -288,9 +277,7 @@ public class SortedExternalResult extends AbstractExternalResult {
     private void addRowToHashIndex(Value[] row, long rowPosInFile) {
         ValueRow distKey = getRowKey(row);
 
-        GridLongList addrs = hashIndex.computeIfAbsent(distKey.hashCode(), k -> new GridLongList());
-
-        addrs.add(rowPosInFile);
+        hashIndex.put(distKey, rowPosInFile);
     }
 
     /** {@inheritDoc} */
@@ -321,6 +308,7 @@ public class SortedExternalResult extends AbstractExternalResult {
     /** {@inheritDoc} */
     @Override public void close() {
         U.closeQuiet(fileCh);
+        U.closeQuiet(hashIndex);
     }
 
     /** {@inheritDoc} */
@@ -335,28 +323,19 @@ public class SortedExternalResult extends AbstractExternalResult {
         }
 
         // Check on-disk
-        GridLongList addrs = hashIndex.get(key.hashCode());
+        Long addr = hashIndex.remove(key);
 
-        if (addrs != null) {
-            for (int i = 0; i < addrs.size(); i++) {
-                long addr = addrs.get(i);
+        if (addr == null)
+            return size;
 
-                setFilePosition(addr);
+        Value[] res = readRowFromFile(addr);
 
-                Value[] res = readRowFromFile();
+        if (res == null)
+            return size;
 
-                if (res == null) // TODO Remove from addrs
-                    continue;
+        markRowRemoved(addr);
 
-                if (key.equals(getRowKey(res))) {
-                    markRowRemoved(addr);
-
-                    return size--;
-                }
-            }
-        }
-
-        return size; // Nothing was removed.
+        return size--;
     }
 
     /** {@inheritDoc} */
@@ -383,7 +362,7 @@ public class SortedExternalResult extends AbstractExternalResult {
      * @param row Row.
      * @return Distinct key.
      */
-    private ValueRow getRowKey(Value[] row) {
+    public ValueRow getRowKey(Value[] row) {
         if (distinctIndexes != null) {
             int cnt = distinctIndexes.length;
 
@@ -430,9 +409,7 @@ public class SortedExternalResult extends AbstractExternalResult {
          */
         boolean next() {
             while (curPos < end) {
-                setFilePosition(curPos);
-
-                curRow = readRowFromFile(); // TODO read multiple rows and cache it if possible.
+                curRow = readRowFromFile(curPos); // TODO read multiple rows and cache it if possible.
 
                 curPos = currentFilePosition();
 

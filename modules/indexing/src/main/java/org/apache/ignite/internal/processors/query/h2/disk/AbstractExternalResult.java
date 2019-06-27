@@ -89,7 +89,20 @@ public abstract class AbstractExternalResult implements ResultExternal {
     }
 
     /**
+     * Reads full row from file starting from the given position.
+     * @param addr Given position.
+     *
+     * @return Row.
+     */
+    protected Value[] readRowFromFile(long addr) {
+        setFilePosition(addr);
+
+        return readRowFromFile();
+    }
+
+    /**
      * Reads full row from file starting from the current position.
+     *
      * @return Row.
      */
     protected Value[] readRowFromFile() {
@@ -139,7 +152,8 @@ public abstract class AbstractExternalResult implements ResultExternal {
                 int bytesRead = fileCh.read(rowBytes);
 
                 if (bytesRead <= 0)
-                    throw new IOException("Can not read data from file: " + file.getAbsolutePath());
+                    throw new IOException("Can not read data from file: " + file.getAbsolutePath() +
+                        ", curPos=" + fileCh.position() + ", rowLen=" + rowLen + "]");
             }
 
             rowBytes.flip();

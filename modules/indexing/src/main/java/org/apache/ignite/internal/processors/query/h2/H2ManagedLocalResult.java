@@ -318,8 +318,8 @@ public class H2ManagedLocalResult implements LocalResult {
         assert ctx != null;
 
         external = distinct || distinctIndexes != null || sort != null ?
-            new SortedExternalResult(ctx, session, distinct, distinctIndexes, visibleColumnCount, sort, memTracker) :
-            new PlainExternalResult(ctx, memTracker);
+            new SortedExternalResult(ctx, session, distinct, distinctIndexes, visibleColumnCount, sort, memTracker,
+                rowCount) : new PlainExternalResult(ctx, memTracker);
     }
 
     /** {@inheritDoc} */
