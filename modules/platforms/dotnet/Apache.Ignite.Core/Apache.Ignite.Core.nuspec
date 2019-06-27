@@ -42,7 +42,7 @@ Creating NuGet package:
 GridGain Ignite is a memory-centric distributed database, caching, and processing platform for transactional, analytical, and streaming workloads, delivering in-memory speeds at petabyte scale.
 Supports .NET 4+ and .NET Core 2.0+.
             
-More info: https://apacheignite-net.readme.io/
+More info: https://docs.gridgain.com/
         </description>
         <copyright>Copyright 2019</copyright>
         <tags>GridGain Ignite In-Memory Distributed Computing SQL NoSQL Grid Map Reduce Cache linqpad-samples</tags>
