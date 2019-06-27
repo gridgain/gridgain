@@ -52,6 +52,9 @@ import org.apache.ignite.lang.IgniteUuid;
 
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC;
+import static org.apache.ignite.internal.processors.cache.GridCacheOperation.CREATE;
+import static org.apache.ignite.internal.processors.cache.GridCacheOperation.DELETE;
+import static org.apache.ignite.internal.processors.cache.GridCacheOperation.UPDATE;
 import static org.apache.ignite.transactions.TransactionState.COMMITTING;
 
 /**
@@ -444,7 +447,7 @@ public final class GridDhtTxFinishFuture<K, V> extends GridCacheCompoundIdentity
                 updCntrs = new ArrayList<>(dhtMapping.entries().size());
 
                 for (IgniteTxEntry e : dhtMapping.entries()) {
-                    assert e.updateCounter() != 0 : e; // Counters must be assigned to entries already.
+                    assert e.op() != CREATE && e.op() != UPDATE && e.op() != DELETE || e.updateCounter() != 0 : e;
 
                     updCntrs.add(e.updateCounter());
                 }

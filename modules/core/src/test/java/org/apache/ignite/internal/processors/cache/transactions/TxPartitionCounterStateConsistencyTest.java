@@ -22,7 +22,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Random;
+import java.util.TreeMap;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.LongAdder;
+import java.util.stream.IntStream;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -41,6 +45,8 @@ import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.processors.cache.CacheEntryInfoCollection;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
+import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
@@ -363,6 +369,119 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         awaitPartitionMapExchange();
 
         assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+    }
+
+    /** */
+    @Test
+    public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_SameAffinityPME_1() throws Exception {
+        doTestPartitionConsistencyDuringRebalanceAndConcurrentUpdates_SameAffinityPME(false);
+    }
+
+    /** */
+    @Test
+    public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_SameAffinityPME_2() throws Exception {
+        doTestPartitionConsistencyDuringRebalanceAndConcurrentUpdates_SameAffinityPME(true);
+    }
+
+    /**
+     * Tests tx load concurrently with PME not changing tx topology.
+     * @param delayPME {@code True} to delay full messages on PME.
+     */
+    private void doTestPartitionConsistencyDuringRebalanceAndConcurrentUpdates_SameAffinityPME(boolean delayPME) throws Exception {
+        backups = 2;
+
+        Ignite crd = startGridsMultiThreaded(SERVER_NODES);
+
+        crd.cluster().active(true);
+
+        Ignite client = startGrid("client");
+
+        IgniteCache<Object, Object> cache = client.cache(DEFAULT_CACHE_NAME);
+
+        if (delayPME) {
+            for (Ignite ignite : G.allGrids()) {
+                TestRecordingCommunicationSpi spi = TestRecordingCommunicationSpi.spi(ignite);
+
+                spi.blockMessages((node, message) -> message instanceof GridDhtPartitionsFullMessage);
+            }
+        }
+
+        int threads = 8;
+
+        int keys = 200;
+        int batch = 10;
+
+        CyclicBarrier sync = new CyclicBarrier(threads + 1);
+
+        AtomicBoolean done = new AtomicBoolean();
+
+        Random r = new Random();
+
+        LongAdder puts = new LongAdder();
+        LongAdder restarts = new LongAdder();
+
+        IgniteInternalFuture sndFut = delayPME ? GridTestUtils.runAsync(() -> {
+            while (!done.get()) {
+                doSleep(1000);
+
+                for (int i = 0; i < SERVER_NODES; i++)
+                    TestRecordingCommunicationSpi.spi(grid(i)).stopBlock(true, null, false, true);
+            }
+        }) : new GridFinishedFuture<>();
+
+        IgniteInternalFuture<?> fut = multithreadedAsync(() -> {
+            U.awaitQuiet(sync);
+
+            while(!done.get()) {
+                int batch0 = 1 + r.nextInt(batch - 1);
+                int start = r.nextInt(keys - batch0);
+
+                try(Transaction tx = client.transactions().txStart()) {
+                    Map<Integer, Integer> map = new TreeMap<Integer, Integer>();
+
+                    IntStream.range(start, start + batch0).forEach(value -> map.put(value, value));
+
+                    cache.putAll(map);
+
+                    tx.commit();
+
+                    puts.add(batch0);
+                }
+            }
+        }, threads, "load-thread");
+
+        IgniteInternalFuture fut2 = GridTestUtils.runAsync(() -> {
+            U.awaitQuiet(sync);
+            while(!done.get()) {
+                try {
+                    if (r.nextBoolean()) {
+                        IgniteEx node = startGrid(SERVER_NODES); // Non-BLT join.
+
+                        stopGrid(node.name());
+                    }
+                    else {
+                        IgniteCache cache1 = client.createCache(cacheConfiguration(DEFAULT_CACHE_NAME + "2"));
+
+                        cache1.destroy();
+                    }
+
+                    restarts.increment();
+                }
+                catch (Exception e) {
+                    fail();
+                }
+            }
+        });
+
+        doSleep(60_000);
+
+        done.set(true);
+
+        fut.get();
+        fut2.get();
+        sndFut.get();
+
+        log.info("TX: puts=" + puts.sum() + ", restarts=" + restarts.sum() + ", size=" + cache.size());
     }
 
     /**
