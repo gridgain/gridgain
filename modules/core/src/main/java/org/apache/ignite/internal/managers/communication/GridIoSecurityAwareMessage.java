@@ -35,6 +35,9 @@ public class GridIoSecurityAwareMessage extends GridIoMessage {
     /** Security subject id that will be used during message processing on an remote node. */
     private UUID secSubjId;
 
+    /** Security context transmitting from node initiator of action. */
+    private byte[] secCtx;
+
     /**
      * No-op constructor to support {@link Externalizable} interface.
      * This constructor is not meant to be used for other purposes.
@@ -55,6 +58,7 @@ public class GridIoSecurityAwareMessage extends GridIoMessage {
      */
     public GridIoSecurityAwareMessage(
         UUID secSubjId,
+        byte[] secSubject,
         byte plc,
         Object topic,
         int topicOrd,
@@ -65,6 +69,7 @@ public class GridIoSecurityAwareMessage extends GridIoMessage {
         super(plc, topic, topicOrd, msg, ordered, timeout, skipOnTimeout);
 
         this.secSubjId = secSubjId;
+        this.secCtx = secSubject;
     }
 
     /**
@@ -72,6 +77,13 @@ public class GridIoSecurityAwareMessage extends GridIoMessage {
      */
     UUID secSubjId() {
         return secSubjId;
+    }
+
+    /**
+     * @return Security context
+     */
+    public byte[] getSecCtx() {
+        return secCtx;
     }
 
     /** {@inheritDoc} */
@@ -104,7 +116,11 @@ public class GridIoSecurityAwareMessage extends GridIoMessage {
                     return false;
 
                 writer.incrementState();
+            case 8:
+                if (!writer.writeByteArray("secCtx", secCtx))
+                    return false;
 
+                writer.incrementState();
         }
 
         return true;
@@ -128,7 +144,13 @@ public class GridIoSecurityAwareMessage extends GridIoMessage {
                     return false;
 
                 reader.incrementState();
+            case 8:
+                secCtx = reader.readByteArray("secCtx");
 
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
         }
 
         return reader.afterMessageRead(GridIoSecurityAwareMessage.class);
