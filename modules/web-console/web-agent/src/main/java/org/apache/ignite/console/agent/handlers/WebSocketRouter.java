@@ -177,6 +177,7 @@ public class WebSocketRouter implements AutoCloseable {
 
         httpClient.start();
 
+        Runtime.getRuntime().addShutdownHook(new Thread(closeLatch::countDown));
         connect();
     }
 
@@ -195,7 +196,6 @@ public class WebSocketRouter implements AutoCloseable {
             watcher.stopWatchTask();
         }
     }
-
 
     /** {@inheritDoc} */
     @Override public void close() {
@@ -253,7 +253,7 @@ public class WebSocketRouter implements AutoCloseable {
             }
             catch (Exception e) {
                 if (reconnectCnt == 0)
-                    log.error("Failed to establish websocket connection with server: " + cfg.serverUri());
+                    log.error("Failed to establish websocket connection with server: " + cfg.serverUri(), e);
 
                 if (reconnectCnt < 10)
                     reconnectCnt++;
@@ -282,7 +282,7 @@ public class WebSocketRouter implements AutoCloseable {
      */
     @OnWebSocketConnect
     public void onConnect(Session ses) {
-        log.info("Connected to server: " + ses.getRemoteAddress());
+        log.info("Connecting to server: " + ses.getRemoteAddress());
 
         try {
             AgentHandshakeRequest req = new AgentHandshakeRequest(CURRENT_VER, cfg.tokens());
