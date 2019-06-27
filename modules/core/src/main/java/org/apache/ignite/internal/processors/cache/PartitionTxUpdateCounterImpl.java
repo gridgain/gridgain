@@ -117,12 +117,9 @@ public class PartitionTxUpdateCounterImpl implements PartitionUpdateCounter {
     /** {@inheritDoc} */
     @Override public synchronized void update(long val) throws IgniteCheckedException {
         // Reserved update counter is updated only on exchange.
-        long v0 = Math.max(get(), val);
+        long cur = get();
 
-        if (v0 > reserveCntr.get())
-            reserveCntr.set(v0); // Adjust counter on new primary.
-
-        if (val != v0) // Proceed if new value is greater than old.
+        if (val < cur) // Outdated counter (txs are possible before current topology future is finished).
             return;
 
         // Absolute counter should be not less than last applied update.
@@ -130,6 +127,9 @@ public class PartitionTxUpdateCounterImpl implements PartitionUpdateCounter {
         // Best behavior is to stop node by failure handler in such a case.
         if (val < highestAppliedCounter())
             throw new IgniteCheckedException("Failed to update the counter [newVal=" + val + ", curState=" + this + ']');
+
+        if (reserveCntr.get() < val)
+            reserveCntr.set(val); // Adjust counter on new primary.
 
         cntr.set(val);
     }
@@ -255,11 +255,13 @@ public class PartitionTxUpdateCounterImpl implements PartitionUpdateCounter {
             item = poll();
         }
 
+        reserveCntr.set(get());
+
         return gaps;
     }
 
     /** {@inheritDoc} */
-    @Override public synchronized long reserve(long delta) {
+    @Override public long reserve(long delta) {
         long cntr = get();
 
         long reserved = reserveCntr.getAndAdd(delta);
