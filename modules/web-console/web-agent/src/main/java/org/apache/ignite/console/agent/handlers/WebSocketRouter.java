@@ -178,6 +178,7 @@ public class WebSocketRouter implements AutoCloseable {
 
         httpClient.start();
 
+        Runtime.getRuntime().addShutdownHook(new Thread(closeLatch::countDown));
         connect();
     }
 
@@ -196,7 +197,6 @@ public class WebSocketRouter implements AutoCloseable {
             watcher.stopWatchTask();
         }
     }
-
 
     /** {@inheritDoc} */
     @Override public void close() {
