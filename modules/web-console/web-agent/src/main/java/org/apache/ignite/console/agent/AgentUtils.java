@@ -308,9 +308,6 @@ public class AgentUtils {
      * @return List with trimmed values.
      */
     public static List<String> trim(List<String> lst) {
-        if (!F.isEmpty(lst))
-            return lst.stream().map(String::trim).collect(toList());
-
-        return lst;
+        return F.isEmpty(lst) ? lst : lst.stream().map(String::trim).collect(toList());
     }
 }
