@@ -31,9 +31,11 @@ import org.apache.ignite.console.dto.Activity;
 import org.apache.ignite.console.dto.ActivityKey;
 import org.apache.ignite.console.tx.TransactionManager;
 import org.apache.ignite.internal.util.typedef.F;
+import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.stereotype.Repository;
 
 import static java.time.ZoneOffset.UTC;
+import static org.apache.ignite.console.errors.Errors.ERR_DATA_ACCESS_VIOLATION;
 
 /**
  * Repository to work with activities.
@@ -52,14 +54,19 @@ public class ActivitiesRepository {
     /**
      * @param ignite Ignite.
      * @param txMgr Transactions manager.
+     * @param messages Messages accessor.
      */
-    public ActivitiesRepository(Ignite ignite, TransactionManager txMgr) {
+    public ActivitiesRepository(Ignite ignite, TransactionManager txMgr, MessageSourceAccessor messages) {
         this.txMgr = txMgr;
 
         txMgr.registerStarter("activities", () -> {
             activitiesTbl = new Table<>(ignite, "wc_activities");
 
-            activitiesIdx = new OneToManyIndex<>(ignite, "wc_account_activities_idx");
+            activitiesIdx = new OneToManyIndex<>(
+                    ignite,
+                    "wc_account_activities_idx",
+                    (key) -> messages.getMessage(ERR_DATA_ACCESS_VIOLATION)
+            );
         });
     }
 

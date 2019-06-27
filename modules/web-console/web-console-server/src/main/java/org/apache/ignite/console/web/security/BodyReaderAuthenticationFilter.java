@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.ignite.console.web.model.SignInRequest;
+import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -28,6 +29,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.web.authentication.preauth.PreAuthenticatedCredentialsNotFoundException;
 
 import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
+import static org.apache.ignite.console.errors.Errors.ERR_PARSE_SIGNIN_REQ_FAILED;
 
 /**
  * Custom filter for retrieve credentials from body and authenticate user. Default implementation use path parameters.
@@ -35,6 +37,15 @@ import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKN
 public class BodyReaderAuthenticationFilter extends UsernamePasswordAuthenticationFilter {
     /** */
     protected ObjectMapper objMapper = new ObjectMapper().configure(FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+    protected final MessageSourceAccessor messages;
+
+    /**
+     * @param messages Messages.
+     */
+    public BodyReaderAuthenticationFilter(MessageSourceAccessor messages) {
+        this.messages = messages;
+    }
 
     /** {@inheritDoc} */
     @Override public Authentication attemptAuthentication(HttpServletRequest req,
@@ -53,7 +64,7 @@ public class BodyReaderAuthenticationFilter extends UsernamePasswordAuthenticati
             return getAuthenticationManager().authenticate(tok);
         }
         catch (IOException e) {
-            throw new PreAuthenticatedCredentialsNotFoundException("Failed to parse signin request", e);
+            throw new PreAuthenticatedCredentialsNotFoundException(messages.getMessage(ERR_PARSE_SIGNIN_REQ_FAILED), e);
         }
     }
 }

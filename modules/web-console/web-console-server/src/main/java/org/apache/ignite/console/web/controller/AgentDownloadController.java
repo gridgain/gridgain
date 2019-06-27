@@ -29,6 +29,7 @@ import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 import org.apache.commons.compress.archivers.zip.ZipFile;
 import org.apache.ignite.console.dto.Account;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -39,6 +40,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import static org.apache.ignite.console.common.Utils.currentRequestOrigin;
+import static org.apache.ignite.console.errors.Errors.ERR_AGENT_DIST_NOT_FOUND;
 import static org.apache.ignite.internal.util.io.GridFilenameUtils.removeExtension;
 import static org.springframework.http.HttpHeaders.CACHE_CONTROL;
 import static org.springframework.http.HttpHeaders.CONTENT_DISPOSITION;
@@ -53,6 +55,9 @@ public class AgentDownloadController {
     /** Buffer size of 30Mb to handle Web Agent ZIP file manipulations. */
     private static final int BUFFER_SZ = 30 * 1024 * 1024;
 
+    /** Messages accessor. */
+    private final MessageSourceAccessor messages;
+
     /** */
     @Value("${agent.folder.name:agent_dists}")
     private String agentFolderName;
@@ -60,6 +65,13 @@ public class AgentDownloadController {
     /** */
     @Value("${agent.file.regexp:ignite-web-console-agent.*\\.zip}")
     private String agentFileRegExp;
+
+    /**
+     * @param messages Messages accessor.
+     */
+    public AgentDownloadController(MessageSourceAccessor messages) {
+        this.messages = messages;
+    }
 
     /**
      * @param user User.
@@ -76,7 +88,7 @@ public class AgentDownloadController {
         Path latestAgentPath = Files.list(agentFolder)
             .filter(f -> !Files.isDirectory(f) && ptrn.matcher(f.getFileName().toString()).matches())
             .max(Comparator.comparingLong(f -> f.toFile().lastModified()))
-            .orElseThrow(() -> new FileNotFoundException("Web Console Agent distributive not found on server"));
+            .orElseThrow(() -> new FileNotFoundException(messages.getMessage(ERR_AGENT_DIST_NOT_FOUND)));
 
         ZipFile zip = new ZipFile(latestAgentPath.toFile());
 

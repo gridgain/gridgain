@@ -24,7 +24,10 @@ import org.apache.ignite.console.db.OneToManyIndex;
 import org.apache.ignite.console.db.Table;
 import org.apache.ignite.console.dto.Notebook;
 import org.apache.ignite.console.tx.TransactionManager;
+import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.stereotype.Repository;
+
+import static org.apache.ignite.console.errors.Errors.ERR_DATA_ACCESS_VIOLATION;
 
 /**
  * Repository to work with notebooks.
@@ -43,14 +46,19 @@ public class NotebooksRepository {
     /**
      * @param ignite Ignite.
      * @param txMgr Transactions manager.
+     * @param messages Messages accessor.
      */
-    public NotebooksRepository(Ignite ignite, TransactionManager txMgr) {
+    public NotebooksRepository(Ignite ignite, TransactionManager txMgr, MessageSourceAccessor messages) {
         this.txMgr = txMgr;
 
         txMgr.registerStarter("notebooks", () -> {
             notebooksTbl = new Table<>(ignite, "wc_notebooks");
 
-            notebooksIdx = new OneToManyIndex<>(ignite, "wc_account_notebooks_idx");
+            notebooksIdx = new OneToManyIndex<>(
+                    ignite,
+                    "wc_account_notebooks_idx",
+                    (key) -> messages.getMessage(ERR_DATA_ACCESS_VIOLATION)
+            );
         });
     }
 

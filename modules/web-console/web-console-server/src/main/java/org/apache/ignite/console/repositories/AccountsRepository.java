@@ -28,11 +28,15 @@ import org.apache.ignite.console.db.Table;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.tx.TransactionManager;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Repository;
 
-import static org.apache.ignite.console.web.errors.Errors.checkDatabaseNotAvailable;
+import static org.apache.ignite.console.errors.Errors.ERR_ACCOUNT_NOT_FOUND_BY_ID;
+import static org.apache.ignite.console.errors.Errors.ERR_ACCOUNT_WITH_EMAIL_EXISTS;
+import static org.apache.ignite.console.errors.Errors.ERR_ACCOUNT_WITH_TOKEN_EXISTS;
+import static org.apache.ignite.console.errors.Errors.checkDatabaseNotAvailable;
 
 /**
  * Repository to work with accounts.
@@ -45,22 +49,27 @@ public class AccountsRepository {
     /** */
     private final TransactionManager txMgr;
 
+    /** Messages accessor. */
+    private MessageSourceAccessor messages;
+
     /** Accounts collection. */
     private Table<Account> accountsTbl;
 
     /**
      * @param ignite Ignite.
      * @param txMgr Transactions manager.
+     * @param messages Messages accessor.
      */
-    public AccountsRepository(Ignite ignite, TransactionManager txMgr) {
+    public AccountsRepository(Ignite ignite, TransactionManager txMgr, MessageSourceAccessor messages) {
         this.txMgr = txMgr;
+        this.messages = messages;
 
         txMgr.registerStarter("accounts", () ->
             accountsTbl = new Table<Account>(ignite, "wc_accounts")
                 .addUniqueIndex(a -> a.getUsername().trim().toLowerCase(),
-                    (acc) -> "Account with email '" + acc.getUsername() + "' already registered")
+                    (acc) -> this.messages.getMessage(ERR_ACCOUNT_WITH_EMAIL_EXISTS, new Object[]{acc.getUsername()}))
                 .addUniqueIndex(Account::getToken,
-                    (acc) -> "Account with token '" + acc.getToken() + "' already exists")
+                    (acc) -> this.messages.getMessage(ERR_ACCOUNT_WITH_TOKEN_EXISTS, new Object[]{acc.getToken()}))
         );
     }
 
@@ -167,7 +176,7 @@ public class AccountsRepository {
             Account acc = accountsTbl.delete(accId);
 
             if (acc == null)
-                throw new IllegalStateException("Account not found for ID: " + accId);
+                throw new IllegalStateException(messages.getMessage(ERR_ACCOUNT_NOT_FOUND_BY_ID, new Object[]{accId}));
 
             return acc;
         });

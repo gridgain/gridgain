@@ -18,6 +18,8 @@ package org.apache.ignite.console.web.security;
 
 import org.apache.ignite.console.config.ApplicationConfiguration;
 import org.junit.Test;
+import org.springframework.context.support.MessageSourceAccessor;
+import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import static org.junit.Assert.assertTrue;
@@ -27,7 +29,7 @@ import static org.junit.Assert.assertTrue;
  */
 public class PasswordEncoderTest {
     /** Password encoder. */
-    private PasswordEncoder encoder = new ApplicationConfiguration().passwordEncoder();
+    private PasswordEncoder encoder = new ApplicationConfiguration().passwordEncoder(new MessageSourceAccessor(new ReloadableResourceBundleMessageSource()));
 
     /** Check matches for migrated passwords. */
     @Test

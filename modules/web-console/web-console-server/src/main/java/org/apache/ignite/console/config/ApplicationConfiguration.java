@@ -21,6 +21,7 @@ import org.apache.ignite.console.web.security.PassportLocalPasswordEncoder;
 import org.apache.ignite.internal.util.typedef.F;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.DelegatingPasswordEncoder;
@@ -33,15 +34,17 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 @EnableScheduling
 public class ApplicationConfiguration {
     /**
+     * @param messages Messages accessor.
+     *
      * @return Service for encoding user passwords.
      */
     @Bean
-    public PasswordEncoder passwordEncoder() {
+    public PasswordEncoder passwordEncoder(MessageSourceAccessor messages) {
         String encodingId = "bcrypt";
 
         Map<String, PasswordEncoder> encoders = F.asMap(
             encodingId, new BCryptPasswordEncoder(),
-            "pbkdf2", new PassportLocalPasswordEncoder()
+            "pbkdf2", new PassportLocalPasswordEncoder(messages)
         );
 
         return new DelegatingPasswordEncoder(encodingId, encoders);

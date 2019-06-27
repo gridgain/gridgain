@@ -20,9 +20,11 @@ import java.util.UUID;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.console.json.JsonObject;
+import org.springframework.context.support.MessageSourceAccessor;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
+import static org.apache.ignite.console.errors.Errors.ERR_CACHE_ID_NOT_FOUND;
 import static org.apache.ignite.console.utils.Utils.toJson;
 
 /**
@@ -43,13 +45,14 @@ public class Cache extends DataObject {
 
     /**
      * @param json JSON data.
+     * @param messages Messages accessor.
      * @return New instance of cache DTO.
      */
-    public static Cache fromJson(JsonObject json) {
+    public static Cache fromJson(JsonObject json, MessageSourceAccessor messages) {
         UUID id = json.getUuid("id");
 
         if (id == null)
-            throw new IllegalStateException("Cache ID not found");
+            throw new IllegalStateException(messages.getMessage(ERR_CACHE_ID_NOT_FOUND));
 
         return new Cache(
             id,

@@ -19,8 +19,10 @@ package org.apache.ignite.console.dto;
 import java.util.UUID;
 import org.apache.ignite.console.json.JsonObject;
 import org.apache.ignite.internal.util.typedef.F;
+import org.springframework.context.support.MessageSourceAccessor;
 
 import static java.lang.Boolean.FALSE;
+import static org.apache.ignite.console.errors.Errors.ERR_MODEL_ID_NOT_FOUND;
 import static org.apache.ignite.console.utils.Utils.toJson;
 
 /**
@@ -38,13 +40,14 @@ public class Model extends DataObject {
 
     /**
      * @param json JSON data.
+     * @param messages Messages accessor.
      * @return New instance of model DTO.
      */
-    public static Model fromJson(JsonObject json) {
+    public static Model fromJson(JsonObject json, MessageSourceAccessor messages) {
         UUID id = json.getUuid("id");
 
         if (id == null)
-            throw new IllegalStateException("Model ID not found");
+            throw new IllegalStateException(messages.getMessage(ERR_MODEL_ID_NOT_FOUND));
 
         boolean generatePojo = FALSE.equals(json.getBoolean("generatePojo"));
         boolean missingDb = F.isEmpty(json.getString("databaseSchema")) && F.isEmpty(json.getString("databaseTable"));

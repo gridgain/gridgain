@@ -35,6 +35,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.jsr166.ConcurrentLinkedHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.CloseStatus;
@@ -46,6 +47,8 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
+import static org.apache.ignite.console.errors.Errors.ERR_AGENT_NOT_FOUND_BY_ACC_ID;
+import static org.apache.ignite.console.errors.Errors.ERR_AGENT_NOT_FOUND_BY_ACC_ID_AND_CLUSTER_ID;
 import static org.apache.ignite.console.utils.Utils.toJson;
 import static org.apache.ignite.console.websocket.WebSocketEvents.ADMIN_ANNOUNCEMENT;
 import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_REVOKE_TOKEN;
@@ -81,10 +84,15 @@ public class WebSocketsManager {
     /** */
     private volatile Announcement lastAnn;
 
+    /** Messages accessor. */
+    private MessageSourceAccessor messages;
+
     /**
      * Default constructor.
      */
-    public WebSocketsManager() {
+    public WebSocketsManager(MessageSourceAccessor messages) {
+        this.messages = messages;
+
         agents = new ConcurrentLinkedHashMap<>();
         browsers = new ConcurrentHashMap<>();
         clusters = new ConcurrentHashMap<>();
@@ -164,7 +172,7 @@ public class WebSocketsManager {
             .filter(e -> e.getValue().isActiveAccount(accId))
             .findFirst()
             .map(Map.Entry::getKey)
-            .orElseThrow(() -> new IllegalStateException("Failed to find agent for account: " + accId));
+            .orElseThrow(() -> new IllegalStateException(messages.getMessage(ERR_AGENT_NOT_FOUND_BY_ACC_ID, new Object[]{accId})));
 
         if (log.isDebugEnabled())
             log.debug("Found agent session [accountId=" + accId + ", session=" + wsAgent + ", event=" + evt + "]");
@@ -189,7 +197,7 @@ public class WebSocketsManager {
             .filter(e -> e.getValue().getClusterIds().contains(clusterId))
             .findFirst()
             .map(Map.Entry::getKey)
-            .orElseThrow(() -> new IllegalStateException("Failed to find agent for cluster [accountId=" + accId+", clusterId=" + clusterId + " ]"));
+            .orElseThrow(() -> new IllegalStateException(messages.getMessage(ERR_AGENT_NOT_FOUND_BY_ACC_ID_AND_CLUSTER_ID, new Object[]{accId, clusterId})));
 
         if (log.isDebugEnabled())
             log.debug("Found agent session [accountId=" + accId + ", session=" + wsAgent + ", event=" + evt + "]");

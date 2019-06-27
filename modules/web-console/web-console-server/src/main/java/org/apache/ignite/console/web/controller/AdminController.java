@@ -27,6 +27,7 @@ import org.apache.ignite.console.services.AdminService;
 import org.apache.ignite.console.web.model.PeriodFilterRequest;
 import org.apache.ignite.console.web.model.SignUpRequest;
 import org.apache.ignite.console.web.model.ToggleRequest;
+import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -38,6 +39,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import springfox.documentation.annotations.ApiIgnore;
 
+import static org.apache.ignite.console.errors.Errors.ERR_PROHIBITED_REVOKE_ADMIN_RIGHTS;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 /**
@@ -49,11 +51,16 @@ public class AdminController {
     /** */
     private final AdminService adminSrv;
 
+    /** Messages accessor */
+    private final MessageSourceAccessor messages;
+
     /**
      * @param adminSrv Admin service.
+     * @param messages Messages accessor.
      */
-    public AdminController(AdminService adminSrv) {
+    public AdminController(AdminService adminSrv, MessageSourceAccessor messages) {
         this.adminSrv = adminSrv;
+        this.messages = messages;
     }
 
     /**
@@ -80,7 +87,7 @@ public class AdminController {
         boolean admin = params.isAdmin();
 
         if (acc.getId().equals(accId) && !admin)
-            throw new IllegalStateException("Self revoke of administrator rights is prohibited");
+            throw new IllegalStateException(messages.getMessage(ERR_PROHIBITED_REVOKE_ADMIN_RIGHTS));
 
         adminSrv.toggle(accId, admin);
 

@@ -27,7 +27,7 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import static org.apache.ignite.console.common.Utils.errorMessage;
-import static org.apache.ignite.console.web.errors.Errors.ERR_EMAIL_NOT_CONFIRMED;
+import static org.apache.ignite.console.errors.Errors.ERR_EMAIL_NOT_CONFIRMED;
 import static org.springframework.http.HttpStatus.FORBIDDEN;
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 

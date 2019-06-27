@@ -39,8 +39,6 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -51,7 +49,7 @@ import static org.mockito.Mockito.when;
 @SpringBootTest
 public class MailServiceTest {
     /** Message source. */
-    @Mock
+    @Autowired
     private MessageSourceAccessor accessor;
 
     /** JavaMail sender. */
@@ -72,9 +70,6 @@ public class MailServiceTest {
     /** */
     @Before
     public void setup() {
-        when(accessor.getMessage(anyString(), isNull(Object[].class), anyString()))
-            .thenAnswer(invocation -> invocation.getArguments()[2]);
-
         when(mailSnd.createMimeMessage())
             .thenReturn(new MimeMessage(Session.getDefaultInstance(new Properties())));
 
@@ -86,11 +81,11 @@ public class MailServiceTest {
     public void shouldSendEmail() throws MessagingException, IOException {
         INotificationDescriptor desc = new INotificationDescriptor() {
             @Override public String subjectCode() {
-                return "subject";
+                return "notifications.simple.subject";
             }
 
             @Override public String messageCode() {
-                return "text";
+                return "notifications.simple.body";
             }
         };
 
@@ -117,11 +112,11 @@ public class MailServiceTest {
     public void shouldSendEmailWithExpressionInSubject() throws MessagingException, IOException {
         INotificationDescriptor desc = new INotificationDescriptor() {
             @Override public String subjectCode() {
-                return "Hello ${recipient.firstName} ${recipient.lastName}! subject";
+                return "notifications.spel.subject";
             }
 
             @Override public String messageCode() {
-                return "text";
+                return "notifications.spel.body";
             }
         };
 

@@ -30,11 +30,15 @@ import org.apache.ignite.console.websocket.WebSocketEvent;
 import org.apache.ignite.internal.util.typedef.F;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketSession;
 
 import static java.util.stream.Collectors.toList;
+import static org.apache.ignite.console.errors.Errors.ERR_FAILED_AUTH_WITH_TOKENS;
+import static org.apache.ignite.console.errors.Errors.ERR_TOKENS_NO_SPECIFIED_IN_AGENT_HANDSHAKE_REQ;
+import static org.apache.ignite.console.errors.Errors.ERR_AGENT_UNSUPPORT_VERSION;
 import static org.apache.ignite.console.utils.Utils.fromJson;
 import static org.apache.ignite.console.websocket.AgentHandshakeRequest.SUPPORTED_VERS;
 import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_HANDSHAKE;
@@ -54,13 +58,17 @@ public class AgentsHandler extends AbstractHandler {
     /** */
     private WebSocketsManager wsm;
 
+    /** Messages accessor. */
+    private MessageSourceAccessor messages;
+
     /**
      * @param accRepo Repository to work with accounts.
      * @param wsm Web sockets manager.
      */
-    public AgentsHandler(AccountsRepository accRepo, WebSocketsManager wsm) {
+    public AgentsHandler(AccountsRepository accRepo, WebSocketsManager wsm, MessageSourceAccessor messages) {
         this.accRepo = accRepo;
         this.wsm = wsm;
+        this.messages = messages;
     }
 
     /**
@@ -68,10 +76,10 @@ public class AgentsHandler extends AbstractHandler {
      */
     private void validateAgentHandshake(AgentHandshakeRequest req) {
         if (F.isEmpty(req.getTokens()))
-            throw new IllegalArgumentException("Tokens not specified in agent handshake request");
+            throw new IllegalArgumentException(messages.getMessage(ERR_TOKENS_NO_SPECIFIED_IN_AGENT_HANDSHAKE_REQ));
 
         if (!SUPPORTED_VERS.contains(req.getVersion()))
-            throw new IllegalArgumentException("Unsupported version of the agent: " + req.getVersion());
+            throw new IllegalArgumentException(messages.getMessage(ERR_AGENT_UNSUPPORT_VERSION, new Object[] {req.getVersion()}));
     }
 
     /**
@@ -81,7 +89,7 @@ public class AgentsHandler extends AbstractHandler {
         Collection<Account> accounts = accRepo.getAllByTokens(tokens);
 
         if (accounts.isEmpty())
-            throw new IllegalArgumentException("Failed to authenticate with token(s): " + tokens);
+            throw new IllegalArgumentException(messages.getMessage(ERR_FAILED_AUTH_WITH_TOKENS, tokens.toArray()));
 
         return accounts;
     }

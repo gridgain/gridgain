@@ -25,6 +25,7 @@ import org.apache.ignite.console.services.AccountsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
@@ -89,6 +90,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     /** */
     private final PasswordEncoder encoder;
 
+    /** Messages accessor. */
+    private final MessageSourceAccessor messages;
+
     /** */
     private UserDetailsChecker userDetailsChecker;
 
@@ -107,7 +111,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     public SecurityConfig(
         ActivationConfiguration activationCfg,
         PasswordEncoder encoder,
-        AccountsService accountsSrv
+        AccountsService accountsSrv,
+        MessageSourceAccessor messages
     ) {
         userDetailsChecker = activationCfg.getChecker();
         activationEnabled = activationCfg.isEnabled();
@@ -115,6 +120,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
         this.encoder = encoder;
         this.accountsSrv = accountsSrv;
+        this.messages = messages;
     }
 
     /** {@inheritDoc} */
@@ -184,7 +190,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
      */
     @Bean
     public SessionRepository<ExpiringSession> sessionRepository(@Autowired Ignite ignite) {
-        return new IgniteSessionRepository(ignite)
+        return new IgniteSessionRepository(ignite, messages)
             .setDefaultMaxInactiveInterval(MAX_INACTIVE_INTERVAL_SECONDS);
     }
 
@@ -192,7 +198,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
      * Custom filter for retrieve credentials.
      */
     private BodyReaderAuthenticationFilter authenticationFilter() throws Exception {
-        BodyReaderAuthenticationFilter authenticationFilter = new BodyReaderAuthenticationFilter();
+        BodyReaderAuthenticationFilter authenticationFilter = new BodyReaderAuthenticationFilter(messages);
 
         authenticationFilter.setAuthenticationManager(authenticationManagerBean());
         authenticationFilter.setRequiresAuthenticationRequestMatcher(new AntPathRequestMatcher(SIGN_IN_ROUTE, "POST"));

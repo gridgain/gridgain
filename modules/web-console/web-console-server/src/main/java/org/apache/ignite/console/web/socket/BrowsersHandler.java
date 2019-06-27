@@ -34,11 +34,17 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketSession;
 
+import static org.apache.ignite.console.errors.Errors.ERR_ACCOUNT_CANT_BE_FOUND_IN_WS_SESSION;
+import static org.apache.ignite.console.errors.Errors.ERR_MISSING_CLUSTER_ID_PARAM;
+import static org.apache.ignite.console.errors.Errors.ERR_NOT_SPECIFIED_TASK_ID;
+import static org.apache.ignite.console.errors.Errors.ERR_UNKNOWN_EVT;
+import static org.apache.ignite.console.errors.Errors.ERR_UNKNOWN_TASK;
 import static org.apache.ignite.console.utils.Utils.fromJson;
 import static org.apache.ignite.console.websocket.WebSocketEvents.NODE_REST;
 import static org.apache.ignite.console.websocket.WebSocketEvents.NODE_VISOR;
@@ -63,11 +69,15 @@ public class BrowsersHandler extends AbstractHandler {
     /** */
     private final WebSocketsManager wsm;
 
+    /** Messages accessor. */
+    private MessageSourceAccessor messages;
+
     /**
      * @param wsm Web sockets manager.
      */
-    public BrowsersHandler(WebSocketsManager wsm) {
+    public BrowsersHandler(WebSocketsManager wsm, MessageSourceAccessor messages) {
         this.wsm = wsm;
+        this.messages = messages;
 
         registerVisorTasks();
     }
@@ -90,7 +100,7 @@ public class BrowsersHandler extends AbstractHandler {
                 return (Account)tp;
         }
 
-        throw new IllegalStateException("Account can't be found [session=" + ws + "]");
+        throw new IllegalStateException(messages.getMessage(ERR_ACCOUNT_CANT_BE_FOUND_IN_WS_SESSION, new Object[] {ws}));
     }
 
     /** {@inheritDoc} */
@@ -122,7 +132,7 @@ public class BrowsersHandler extends AbstractHandler {
                     String clusterId = payload.getString("clusterId");
 
                     if (F.isEmpty(clusterId))
-                        throw new IllegalStateException("Missing cluster id parameter.");
+                        throw new IllegalStateException(messages.getMessage(ERR_MISSING_CLUSTER_ID_PARAM));
 
                     WebSocketEvent reqEvt = evt.getEventType().equals(NODE_REST) ?
                         evt : evt.withPayload(prepareNodeVisorParams(payload));
@@ -132,7 +142,7 @@ public class BrowsersHandler extends AbstractHandler {
                     break;
 
                 default:
-                    throw new IllegalStateException("Unknown event: " + evt);
+                    throw new IllegalStateException(messages.getMessage(ERR_UNKNOWN_EVT, new Object[]{evt}));
             }
         }
         catch (IllegalStateException e) {
@@ -246,14 +256,14 @@ public class BrowsersHandler extends AbstractHandler {
         String taskId = params.getString("taskId");
 
         if (F.isEmpty(taskId))
-            throw new IllegalStateException("Task ID not specified [evt=" + payload + "]");
+            throw new IllegalStateException(messages.getMessage(ERR_NOT_SPECIFIED_TASK_ID, new Object[]{payload}));
 
         String nids = params.getString("nids");
 
         VisorTaskDescriptor desc = visorTasks.get(taskId);
 
         if (desc == null)
-            throw new IllegalStateException("Unknown task  [taskId=" + taskId + ", evt=" + payload + "]");
+            throw new IllegalStateException(messages.getMessage(ERR_UNKNOWN_TASK, new Object[]{taskId, payload}));
 
         JsonObject exeParams =  new JsonObject()
             .add("cmd", "exe")

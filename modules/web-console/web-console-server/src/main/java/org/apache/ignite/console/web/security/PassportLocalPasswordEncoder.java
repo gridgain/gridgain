@@ -20,11 +20,14 @@ import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
+
+import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.security.crypto.codec.Hex;
 import org.springframework.security.crypto.keygen.BytesKeyGenerator;
 import org.springframework.security.crypto.keygen.KeyGenerators;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import static org.apache.ignite.console.errors.Errors.ERR_COULD_NOT_CREATE_HASH;
 import static org.springframework.security.crypto.util.EncodingUtils.concatenate;
 import static org.springframework.security.crypto.util.EncodingUtils.subArray;
 
@@ -45,15 +48,18 @@ public class PassportLocalPasswordEncoder implements PasswordEncoder {
 
     /** Hash width. */
     private final int hashWidth;
-    
+
+    /** Messages accessor. */
+    private final MessageSourceAccessor messages;
+
     /** Iterations. */
     private final int iterations;
 
     /**
      * Constructs a standard password encoder with a secret value which is also included in the password hash.
      */
-    public PassportLocalPasswordEncoder() {
-        this(DEFAULT_ITERATIONS, DEFAULT_HASH_WIDTH);
+    public PassportLocalPasswordEncoder(MessageSourceAccessor messages) {
+        this(DEFAULT_ITERATIONS, DEFAULT_HASH_WIDTH, messages);
     }
 
     /**
@@ -62,9 +68,10 @@ public class PassportLocalPasswordEncoder implements PasswordEncoder {
      * @param iterations Number of iterations.
      * @param hashWidth Size of the hash.
      */
-    public PassportLocalPasswordEncoder(int iterations, int hashWidth) {
+    public PassportLocalPasswordEncoder(int iterations, int hashWidth, MessageSourceAccessor messages) {
         this.iterations = iterations;
         this.hashWidth = hashWidth;
+        this.messages = messages;
     }
 
     /** {@inheritDoc} */
@@ -129,7 +136,7 @@ public class PassportLocalPasswordEncoder implements PasswordEncoder {
             return concatenate(salt, skf.generateSecret(spec).getEncoded());
         }
         catch (GeneralSecurityException e) {
-            throw new IllegalStateException("Could not create hash", e);
+            throw new IllegalStateException(messages.getMessage(ERR_COULD_NOT_CREATE_HASH), e);
         }
     }
 }

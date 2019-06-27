@@ -19,7 +19,12 @@ package org.apache.ignite.console.dto;
 import java.util.UUID;
 import org.apache.ignite.console.json.JsonObject;
 import org.apache.ignite.internal.util.typedef.F;
+import org.springframework.context.support.MessageSourceAccessor;
 
+import static org.apache.ignite.console.errors.Errors.ERR_CLUSTER_DISCOVERY_KIND_NOT_FOUND;
+import static org.apache.ignite.console.errors.Errors.ERR_CLUSTER_DISCOVERY_NOT_FOUND;
+import static org.apache.ignite.console.errors.Errors.ERR_CLUSTER_ID_NOT_FOUND;
+import static org.apache.ignite.console.errors.Errors.ERR_CLUSTER_NAME_IS_EMPTY;
 import static org.apache.ignite.console.utils.Utils.toJson;
 
 /**
@@ -34,28 +39,29 @@ public class Cluster extends DataObject {
 
     /**
      * @param json JSON data.
+     * @param messages Messages accessor.
      * @return New instance of cluster DTO.
      */
-    public static Cluster fromJson(JsonObject json) {
+    public static Cluster fromJson(JsonObject json, MessageSourceAccessor messages) {
         UUID id = json.getUuid("id");
 
         if (id == null)
-            throw new IllegalStateException("Cluster ID not found");
+            throw new IllegalStateException(messages.getMessage(ERR_CLUSTER_ID_NOT_FOUND));
 
         String name = json.getString("name");
 
         if (F.isEmpty(name))
-            throw new IllegalStateException("Cluster name is empty");
+            throw new IllegalStateException(messages.getMessage(ERR_CLUSTER_NAME_IS_EMPTY));
 
         JsonObject discovery = json.getJsonObject("discovery");
 
         if (discovery == null)
-            throw new IllegalStateException("Cluster discovery not found");
+            throw new IllegalStateException(messages.getMessage(ERR_CLUSTER_DISCOVERY_NOT_FOUND));
 
         String discoveryKind = discovery.getString("kind");
 
         if (F.isEmpty(discoveryKind))
-            throw new IllegalStateException("Cluster discovery kind not found");
+            throw new IllegalStateException(messages.getMessage(ERR_CLUSTER_DISCOVERY_KIND_NOT_FOUND));
 
         return new Cluster(
             id,

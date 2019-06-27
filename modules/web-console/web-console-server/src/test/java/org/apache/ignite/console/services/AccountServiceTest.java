@@ -16,6 +16,7 @@
 
 package org.apache.ignite.console.services;
 
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.console.TestConfiguration;
 import org.apache.ignite.console.config.SignUpConfiguration;
 import org.apache.ignite.console.config.ActivationConfiguration;
@@ -31,6 +32,8 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.support.MessageSourceAccessor;
+import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.test.context.junit4.SpringRunner;
 
@@ -50,6 +53,10 @@ public class AccountServiceTest {
     /** Tx manager. */
     @Autowired
     private TransactionManager txMgr;
+
+    /** Messages. */
+    @Autowired
+    private MessageSourceAccessor messages;
 
     /** Account service. */
     private AccountsService srvc;
@@ -75,10 +82,11 @@ public class AccountServiceTest {
             new SignUpConfiguration().setEnabled(false),
             new ActivationConfiguration(new NoopMailService()),
             NoOpPasswordEncoder.getInstance(),
-            new WebSocketsManager(),
+            new WebSocketsManager(messages),
             accountsRepo,
             txMgr,
-            new NotificationService(new NoopMailService())
+            new NotificationService(new NoopMailService()),
+            messages
         );
 
         SignUpRequest adminReq = new SignUpRequest();
@@ -97,6 +105,6 @@ public class AccountServiceTest {
             srvc.register(userReq);
 
             return null;
-        }, IllegalAccessError.class, null);
+        }, IgniteException.class, "Sign-up is not allowed. Ask your administrator to create account for you.");
     }
 }

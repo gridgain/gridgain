@@ -29,6 +29,7 @@ import org.apache.ignite.console.web.model.SignUpRequest;
 import org.apache.ignite.console.web.security.MissingConfirmRegistrationException;
 import org.apache.ignite.console.web.socket.WebSocketsManager;
 import org.apache.ignite.internal.util.typedef.F;
+import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.core.userdetails.UserDetailsChecker;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -37,6 +38,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import static java.time.temporal.ChronoUnit.MILLIS;
+import static org.apache.ignite.console.errors.Errors.ERR_ACCOUNT_NOT_FOUND_BY_TOKEN;
+import static org.apache.ignite.console.errors.Errors.ERR_ACTIVATION_NOT_ENABLED;
+import static org.apache.ignite.console.errors.Errors.ERR_CONFIRM_EMAIL;
+import static org.apache.ignite.console.errors.Errors.ERR_SIGN_UP_NOT_ALLOWED;
+import static org.apache.ignite.console.errors.Errors.ERR_TOO_MANY_ACTIVATION_ATTEMPTS;
 import static org.apache.ignite.console.notification.NotificationDescriptor.ACTIVATION_LINK;
 import static org.apache.ignite.console.notification.NotificationDescriptor.PASSWORD_CHANGED;
 import static org.apache.ignite.console.notification.NotificationDescriptor.PASSWORD_RESET;
@@ -65,6 +71,9 @@ public class AccountsService implements UserDetailsService {
     /** User details getChecker. */
     protected UserDetailsChecker userDetailsChecker;
 
+    /** Messages acessor. */
+    protected MessageSourceAccessor messages;
+
     /** Flag if sign up disabled and new accounts can be created only by administrator. */
     private boolean disableSignup;
 
@@ -82,6 +91,7 @@ public class AccountsService implements UserDetailsService {
      * @param accountsRepo Accounts repository.
      * @param txMgr Transactions manager.
      * @param notificationSrv Notification service.
+     * @param messages Messages accessor.
      */
     public AccountsService(
         SignUpConfiguration signUpCfg,
@@ -90,7 +100,8 @@ public class AccountsService implements UserDetailsService {
         WebSocketsManager wsm,
         AccountsRepository accountsRepo,
         TransactionManager txMgr,
-        NotificationService notificationSrv
+        NotificationService notificationSrv,
+        MessageSourceAccessor messages
     ) {
         disableSignup = !signUpCfg.isEnabled();
         userDetailsChecker = activationCfg.getChecker();
@@ -102,6 +113,7 @@ public class AccountsService implements UserDetailsService {
         this.accountsRepo = accountsRepo;
         this.txMgr = txMgr;
         this.notificationSrv = notificationSrv;
+        this.messages = messages;
     }
 
     /** {@inheritDoc} */
@@ -142,7 +154,7 @@ public class AccountsService implements UserDetailsService {
             Account acc0 = create(params);
 
             if (disableSignup && !acc0.isAdmin())
-                throw new AuthenticationServiceException("Sign-up is not allowed. Ask your administrator to create account for you.");
+                throw new AuthenticationServiceException(messages.getMessage(ERR_SIGN_UP_NOT_ALLOWED));
 
             return acc0;
         });
@@ -150,7 +162,8 @@ public class AccountsService implements UserDetailsService {
         if (activationEnabled) {
             notificationSrv.sendEmail(ACTIVATION_LINK, acc);
 
-            throw new MissingConfirmRegistrationException("Confirm your email", acc.getEmail());
+            // TODO: check second parameter
+            throw new MissingConfirmRegistrationException(messages.getMessage(ERR_CONFIRM_EMAIL), acc.getEmail());
         }
 
         notificationSrv.sendEmail(WELCOME_LETTER, acc);
@@ -214,13 +227,13 @@ public class AccountsService implements UserDetailsService {
      */
     public void resetActivationToken(String email) {
         if (!activationEnabled)
-            throw new IllegalAccessError("Activation was not enabled!");
+            throw new IllegalAccessError(messages.getMessage(ERR_ACTIVATION_NOT_ENABLED));
 
         Account acc = txMgr.doInTransaction(() -> {
             Account acc0 = accountsRepo.getByEmail(email);
 
             if (MILLIS.between(acc0.getActivationSentAt(), LocalDateTime.now()) >= activationSndTimeout)
-                throw new IllegalAccessError("Too many activation attempts");
+                throw new IllegalAccessError(messages.getMessage(ERR_TOO_MANY_ACTIVATION_ATTEMPTS));
 
             acc0.resetActivationToken();
 
@@ -285,7 +298,7 @@ public class AccountsService implements UserDetailsService {
             Account acc = accountsRepo.getByEmail(email);
 
             if (!resetPwdTok.equals(acc.getResetPasswordToken()))
-                throw new IllegalStateException("Failed to find account with this token! Please check link from email.");
+                throw new IllegalStateException(messages.getMessage(ERR_ACCOUNT_NOT_FOUND_BY_TOKEN));
 
             userDetailsChecker.check(acc);
 
