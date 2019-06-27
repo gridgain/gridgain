@@ -29,7 +29,7 @@ export default class {
         this.JavaTypes = JavaTypes;
     }
 
-    extractMessage(err, prefix) {
+    parse(err, prefix) {
         prefix = prefix || '';
 
         if (err) {
@@ -76,9 +76,8 @@ export default class {
                 }
 
                 return new ErrorParseResult(
-                    prefix + (lastIdx >= 0 ? msg.substring(lastIdx + 5, msgEndIdx > 0 ? msgEndIdx : traceIndex) : msg)
-                        + (causes.length > 0 ? '<ul><li>' + causes.join('</li><li>') + '</li></ul>See node logs for more details.' : ''),
-                    causes.length
+                    prefix + (lastIdx >= 0 ? msg.substring(lastIdx + 5, msgEndIdx > 0 ? msgEndIdx : traceIndex) : msg),
+                    causes
                 );
             }
 
@@ -115,11 +114,16 @@ export class ErrorParseResult {
     /** String with parsed error message. */
     message: String;
 
-    /** Total number of found error causes. */
-    extraCauses: Number;
+    /** Reverse list of error causes. */
+    causes: String[];
 
-    constructor(message: String, extraCauses = 0) {
+    /**
+     * Constructor
+     * @param {String} message String with parsed error message.
+     * @param {Array.<String>} causes Reverse list of error causes.
+     */
+    constructor(message: String, causes = []) {
         this.message = message;
-        this.extraCauses = extraCauses;
+        this.causes = causes;
     }
 }

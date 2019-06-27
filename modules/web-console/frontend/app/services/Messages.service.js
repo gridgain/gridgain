@@ -26,7 +26,7 @@ export default function factory($alert, errorParser) {
     let msgModal;
 
     const errorMessage = (prefix, err) => {
-        return errorParser.extractMessage(err, prefix);
+        return errorParser.parse(err, prefix);
     };
 
     const hideAlert = () => {
@@ -40,9 +40,11 @@ export default function factory($alert, errorParser) {
     const _showMessage = (message, err, type, duration) => {
         hideAlert();
 
-        const errMsg = err ? errorMessage(message, err) : errorMessage(null, message);
+        const parsedErr = err ? errorMessage(message, err) : errorMessage(null, message);
+        const causes = parsedErr.causes;
+        const title = parsedErr.message + (causes.length ? '<ul><li>' + causes.join('</li><li>') + '</li></ul>See node logs for more details.' : '');
 
-        msgModal = $alert({type, title: errMsg.message, duration: duration + errMsg.extraCauses * 3});
+        msgModal = $alert({type, title, duration: duration + parsedErr.causes.length * 3});
 
         msgModal.$scope.icon = `icon-${type}`;
     };
