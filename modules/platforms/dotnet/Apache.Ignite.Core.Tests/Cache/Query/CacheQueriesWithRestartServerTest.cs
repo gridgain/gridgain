@@ -68,7 +68,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Query
 
             var evt = new ManualResetEventSlim(false);
 
-            ignite.ClientReconnected += (sender, args) => evt.Set();
+            _client.ClientReconnected += (sender, args) => evt.Set();
 
             _server = StartGrid(0);
 
@@ -98,19 +98,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Query
                 ClientMode = client,
                 IgniteInstanceName = client ? "client-" + i : "grid-" + i
             });
-        }
-
-        /// <summary>
-        /// Waits for reconnect.
-        /// </summary>
-        private static void WaitForReconnect(IIgnite ignite, int timeout)
-        {
-            var evt = new ManualResetEventSlim(false);
-
-            ignite.ClientReconnected += (sender, args) => evt.Set();
-
-            var restarted = evt.Wait(timeout);
-            Assert.IsTrue(restarted);
         }
 
         /// <summary>
