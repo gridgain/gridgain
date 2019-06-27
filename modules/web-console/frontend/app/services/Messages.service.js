@@ -25,10 +25,6 @@ export default function factory($alert, errorParser) {
     // Common instance of alert modal.
     let msgModal;
 
-    const errorMessage = (prefix, err) => {
-        return errorParser.parse(err, prefix);
-    };
-
     const hideAlert = () => {
         if (msgModal) {
             msgModal.hide();
@@ -40,11 +36,11 @@ export default function factory($alert, errorParser) {
     const _showMessage = (message, err, type, duration) => {
         hideAlert();
 
-        const parsedErr = err ? errorMessage(message, err) : errorMessage(null, message);
+        const parsedErr = err ? errorParser.parse(err, message) : errorParser.parse(message, null);
         const causes = parsedErr.causes;
         const title = parsedErr.message + (causes.length ? '<ul><li>' + causes.join('</li><li>') + '</li></ul>See node logs for more details.' : '');
 
-        msgModal = $alert({type, title, duration: duration + parsedErr.causes.length * 3});
+        msgModal = $alert({type, title, duration: duration + causes.length * 3});
 
         msgModal.$scope.icon = `icon-${type}`;
     };
