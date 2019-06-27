@@ -74,7 +74,7 @@ import org.jetbrains.annotations.NotNull;
  */
 public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
     public static final int SIZE_OF_POPULATION = 100;
-    public static final int AMOUNT_OF_PARENTS = 10;
+    public static final int AMOUNT_OF_PARENTS = 20;
     public static final int SIZE_OF_ELITE = 2;
     private static final int AMOUNT_OF_GENERATION = 10;
     private static final boolean ELITISM = true;
@@ -128,6 +128,7 @@ public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
     }
 
     // https://www.baeldung.com/java-genetic-algorithm
+    // https://github.com/eugenp/tutorials/blob/master/algorithms-genetic/src/main/java/com/baeldung/algorithms/ga/binary/SimpleGeneticAlgorithm.java
     private CrossValidationResult scoreEvolutionAlgorithmSearchHyperparameterOptimization() {
         List<Double[]> paramSets = new ParameterSetGenerator(paramGrid.getParamValuesByParamIdx()).generate();
 
