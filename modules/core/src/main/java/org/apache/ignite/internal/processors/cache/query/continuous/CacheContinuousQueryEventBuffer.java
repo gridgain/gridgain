@@ -333,10 +333,12 @@ public class CacheContinuousQueryEventBuffer {
         }
 
         /**
-         *
-         * @param updateCntr
+         * @param updateCntr Acknowledged counter.
          */
         synchronized void cleanupEntries(Long updateCntr) {
+            if (entries == null)
+                return;
+
             for (int i = 0; i < entries.length; i++) {
                 CacheContinuousQueryEntry e = entries[i];
 
