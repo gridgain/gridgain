@@ -28,7 +28,6 @@ const testcafeRunnerConfig = {
     fixturesPathsArray: FIXTURES_PATHS
 };
 
-// TODO GG-19456 Muted tests before they fixed in order to not hang on TC.
-// startTestcafe(testcafeRunnerConfig).then(() => {
-//     process.exit(0);
-// });
+startTestcafe(testcafeRunnerConfig).then(() => {
+    process.exit(0);
+});
