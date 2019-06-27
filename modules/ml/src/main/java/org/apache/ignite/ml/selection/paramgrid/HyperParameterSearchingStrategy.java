@@ -21,5 +21,7 @@ public enum HyperParameterSearchingStrategy {
 
     GRADIENT_SEARCH,
 
-    RANDOM_SEARCH
+    RANDOM_SEARCH,
+
+    EVOLUTION_ALGORITHM
 }

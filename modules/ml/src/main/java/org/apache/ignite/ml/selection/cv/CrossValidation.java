@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.TreeMap;
 import java.util.function.BiFunction;
 import java.util.function.DoubleConsumer;
 import java.util.function.Function;
@@ -39,6 +40,7 @@ import org.apache.ignite.ml.environment.LearningEnvironmentBuilder;
 import org.apache.ignite.ml.environment.parallelism.Promise;
 import org.apache.ignite.ml.math.functions.IgniteSupplier;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
+import org.apache.ignite.ml.math.primitives.vector.VectorUtils;
 import org.apache.ignite.ml.pipeline.Pipeline;
 import org.apache.ignite.ml.pipeline.PipelineMdl;
 import org.apache.ignite.ml.preprocessing.Preprocessor;
@@ -52,6 +54,7 @@ import org.apache.ignite.ml.selection.split.mapper.SHA256UniformMapper;
 import org.apache.ignite.ml.selection.split.mapper.UniformMapper;
 import org.apache.ignite.ml.trainers.DatasetTrainer;
 import org.jetbrains.annotations.NotNull;
+
 
 /**
  * Cross validation score calculator. Cross validation is an approach that allows to avoid overfitting that is made the
@@ -69,12 +72,13 @@ import org.jetbrains.annotations.NotNull;
  * @param <V> Type of a value in {@code upstream} data.
  */
 public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
+    public static final int INITIAL_SIZE_OF_POPULATION = 100;
+    public static final int SIZE_OF_POPULATION = 20;
     /** Learning environment builder. */
     private LearningEnvironmentBuilder envBuilder = LearningEnvironmentBuilder.defaultBuilder();
 
     /** Learning Environment. */
     private LearningEnvironment environment = envBuilder.buildForTrainer();
-
 
     private DatasetTrainer<M, L> trainer;
 
@@ -102,7 +106,6 @@ public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
 
     private boolean isRunningOnPipeline = true;
 
-
     private UniformMapper<K, V> mapper = new SHA256UniformMapper<>();
 
     public CrossValidationResult tuneHyperParamterers() {
@@ -111,12 +114,67 @@ public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
                 return scoreBrutForceHyperparameterOptimiztion();
             case RANDOM_SEARCH:
                 return scoreRandomSearchHyperparameterOptimiztion();
+            case EVOLUTION_ALGORITHM:
+                return scoreEvolutionAlgorithmSearchHyperparameterOptimization();
             default:
                 throw new UnsupportedOperationException("This strategy "
                     + paramGrid.getParameterSearchStrategy().name() + " is unsupported");
         }
     }
 
+    // https://www.baeldung.com/java-genetic-algorithm
+    private CrossValidationResult scoreEvolutionAlgorithmSearchHyperparameterOptimization() {
+        List<Double[]> paramSets = new ParameterSetGenerator(paramGrid.getParamValuesByParamIdx()).generate();
+
+        // initialization
+        List<Double[]> paramSetsCp = new ArrayList<>(paramSets);
+        Collections.shuffle(paramSetsCp, new Random(paramGrid.getSeed()));
+
+        List<Double[]> rndParamSets = paramSetsCp.subList(0, INITIAL_SIZE_OF_POPULATION);
+
+        Map<Integer, Vector> population = new HashMap<>();
+        for (int i = 0; i < INITIAL_SIZE_OF_POPULATION; i++)
+            population.put(i, VectorUtils.of(rndParamSets.get(i)));
+
+        // calculate fitness
+        TreeMap<Double, Integer> populationFitness = new TreeMap<>();
+        population.forEach((k, v) -> {
+            Double[] arr = new Double[v.size()];
+            for (int i = 0; i < v.size(); i++)
+                arr[i] = v.get(i);
+            TaskResult res = calculateScoresForFixedParamSet(arr);
+
+            populationFitness.put(Arrays.stream(res.locScores).average().getAsDouble(), k);
+        });
+
+
+        // while NOT terminateCondition met
+        int i = 0;
+        Map<Integer, Vector> selectedPopulation = null;
+        while(i < paramGrid.getMaxTries()) {
+            // selection
+            List<Integer> selectedKeys = populationFitness.descendingMap().entrySet().stream()
+                .limit(SIZE_OF_POPULATION)
+            .collect(ArrayList::new, (arr, e) -> arr.add(e.getValue()), ArrayList::addAll);
+
+            selectedPopulation = population.entrySet().stream()
+                .filter(selectedKeys::contains)
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+            // crossover
+
+            // mutation
+
+
+            // calculate Fitness
+
+
+            i++;
+        }
+
+        CrossValidationResult cvRes = new CrossValidationResult();
+        return null;
+    }
 
     // TODO: https://en.wikipedia.org/wiki/Random_search
     private CrossValidationResult scoreRandomSearchHyperparameterOptimiztion() {
@@ -142,11 +200,10 @@ public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
 
             final double locAvgScore = Arrays.stream(tr.locScores).average().orElse(Double.MIN_VALUE);
 
-            if (locAvgScore > cvRes.getBestAvgScore()) {
+            if (locAvgScore >= cvRes.getBestAvgScore()) {
                 cvRes.setBestScore(tr.locScores);
                 cvRes.setBestHyperParams(tr.paramMap);
             }
-
         });
 
         return cvRes;
