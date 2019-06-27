@@ -40,7 +40,7 @@ export default function factory($alert, errorParser) {
         const causes = parsedErr.causes;
         const title = parsedErr.message + (causes.length ? '<ul><li>' + causes.join('</li><li>') + '</li></ul>See node logs for more details.' : '');
 
-        msgModal = $alert({type, title, duration: duration + causes.length * 3});
+        msgModal = $alert({type, title, duration: duration + causes.length * 5});
 
         msgModal.$scope.icon = `icon-${type}`;
     };

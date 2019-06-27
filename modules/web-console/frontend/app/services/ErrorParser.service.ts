@@ -18,6 +18,7 @@ import isEmpty from 'lodash/isEmpty';
 import {nonEmpty} from 'app/utils/lodashMixins';
 
 const CAUSE_STR = 'Caused by: ';
+const ERR_START_STR = ' err=';
 
 export default class {
     static $inject = ['JavaTypes'];
@@ -44,7 +45,7 @@ export default class {
                 if (traceIndex > 0)
                     msg = msg.substring(0, traceIndex);
 
-                const lastIdx = msg.lastIndexOf(' err=');
+                const lastIdx = msg.lastIndexOf(ERR_START_STR);
                 let msgEndIdx = msg.indexOf(']', lastIdx);
 
                 if (lastIdx > 0 && msgEndIdx > 0) {
@@ -61,10 +62,11 @@ export default class {
                 }
 
                 const causes = [];
+
                 let causeIdx = err.message.indexOf(CAUSE_STR);
 
                 while (causeIdx >= 0) {
-                    // find next ": " in cause message to skip exception class name.
+                    // Find next ": " in cause message to skip exception class name.
                     const msgStart = err.message.indexOf(': ', causeIdx + CAUSE_STR.length) + 2;
                     const causeEndLine = err.message.indexOf('\n', msgStart);
                     const msgEnd = err.message.indexOf('[', msgStart);
@@ -76,7 +78,9 @@ export default class {
                 }
 
                 return new ErrorParseResult(
-                    prefix + (lastIdx >= 0 ? msg.substring(lastIdx + 5, msgEndIdx > 0 ? msgEndIdx : traceIndex) : msg),
+                    prefix + (lastIdx >= 0
+                        ? msg.substring(lastIdx + ERR_START_STR.length, msgEndIdx > 0 ? msgEndIdx : traceIndex)
+                        : msg),
                     causes
                 );
             }
@@ -108,19 +112,18 @@ export default class {
 }
 
 /**
- * Information about error parsing result.
+ * Information with error parsing result.
  */
 export class ErrorParseResult {
     /** String with parsed error message. */
     message: String;
 
-    /** Reverse list of error causes. */
+    /** List of error causes in reverse order. */
     causes: String[];
 
     /**
-     * Constructor
      * @param {String} message String with parsed error message.
-     * @param {Array.<String>} causes Reverse list of error causes.
+     * @param {Array.<String>} causes List of error causes in reverse order.
      */
     constructor(message: String, causes = []) {
         this.message = message;
