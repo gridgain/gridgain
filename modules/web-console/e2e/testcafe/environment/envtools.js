@@ -100,7 +100,7 @@ const exec = (command, onResolveString, cwd, env) => {
  * @param {string?} host
  * @returns {string}
  */
-const resolveUrl = (targetUrl, host = 'http://localhost:9001') => {
+const resolveUrl = (targetUrl, host = 'http://localhost:9091') => {
     return url.resolve(process.env.APP_URL || host, targetUrl);
 };
 
