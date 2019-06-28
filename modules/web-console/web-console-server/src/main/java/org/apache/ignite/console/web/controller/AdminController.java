@@ -22,7 +22,6 @@ import javax.validation.Valid;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.dto.Announcement;
 import org.apache.ignite.console.json.JsonArray;
-import org.apache.ignite.console.json.JsonObject;
 import org.apache.ignite.console.services.AdminService;
 import org.apache.ignite.console.web.model.PeriodFilterRequest;
 import org.apache.ignite.console.web.model.SignUpRequest;
@@ -105,17 +104,6 @@ public class AdminController {
     @DeleteMapping(path = "/users/{accountId}")
     public ResponseEntity<Void> delete(@PathVariable("accountId") UUID accId) {
         adminSrv.delete(accId);
-
-        return ResponseEntity.ok().build();
-    }
-
-    /**
-     * @param params Parameters.
-     */
-    @ApiIgnore
-    @PostMapping(path = "/become", consumes = APPLICATION_JSON_VALUE)
-    public ResponseEntity<Void> become(@RequestBody JsonObject params) {
-        adminSrv.become(params.getUuid("id"));
 
         return ResponseEntity.ok().build();
     }
