@@ -119,6 +119,10 @@ public class PartitionTxUpdateCounterImpl implements PartitionUpdateCounter {
         // Reserved update counter is updated only on exchange.
         long cur = get();
 
+        // Special case: single node in topology.
+        if (val == 0)
+            reserveCntr.set(cur);
+
         if (val < cur) // Outdated counter (txs are possible before current topology future is finished).
             return;
 
@@ -132,6 +136,11 @@ public class PartitionTxUpdateCounterImpl implements PartitionUpdateCounter {
             reserveCntr.set(val); // Adjust counter on new primary.
 
         cntr.set(val);
+
+        // If some holes are present at this point, thar means some update were missed on recovery and will be restored
+        // during rebalance. All gaps are safe to "forget".
+        if (!queue.isEmpty())
+            queue.clear();
     }
 
     /** {@inheritDoc} */
@@ -261,7 +270,7 @@ public class PartitionTxUpdateCounterImpl implements PartitionUpdateCounter {
     }
 
     /** {@inheritDoc} */
-    @Override public long reserve(long delta) {
+    @Override public synchronized long reserve(long delta) {
         long cntr = get();
 
         long reserved = reserveCntr.getAndAdd(delta);
