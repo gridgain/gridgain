@@ -16,7 +16,6 @@
 
 package org.apache.ignite.console.web.controller;
 
-import java.util.Collections;
 import org.apache.ignite.console.web.model.ErrorResponse;
 import org.apache.ignite.console.web.model.ErrorWithEmailResponse;
 import org.apache.ignite.console.web.security.MissingConfirmRegistrationException;
