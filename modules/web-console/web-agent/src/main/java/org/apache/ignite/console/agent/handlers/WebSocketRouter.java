@@ -38,10 +38,12 @@ import org.apache.ignite.console.websocket.AgentHandshakeRequest;
 import org.apache.ignite.console.websocket.AgentHandshakeResponse;
 import org.apache.ignite.console.websocket.WebSocketEvent;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.logger.slf4j.Slf4jLogger;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.websocket.api.Session;
+import org.eclipse.jetty.websocket.api.UpgradeException;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketClose;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketConnect;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketError;
@@ -72,6 +74,7 @@ import static org.apache.ignite.console.websocket.WebSocketEvents.NODE_VISOR;
 import static org.apache.ignite.console.websocket.WebSocketEvents.SCHEMA_IMPORT_DRIVERS;
 import static org.apache.ignite.console.websocket.WebSocketEvents.SCHEMA_IMPORT_METADATA;
 import static org.apache.ignite.console.websocket.WebSocketEvents.SCHEMA_IMPORT_SCHEMAS;
+import static org.eclipse.jetty.websocket.api.StatusCode.SERVER_ERROR;
 
 /**
  * Router that listen for web socket and redirect messages to event bus.
@@ -177,6 +180,8 @@ public class WebSocketRouter implements AutoCloseable {
      * Stop websocket client.
      */
     private void stopClient() {
+        LT.clear();
+
         watcher.stop();
 
         if (client != null) {
@@ -208,6 +213,9 @@ public class WebSocketRouter implements AutoCloseable {
 
             if (!isRunning())
                 return;
+
+            if (reconnectCnt == -1)
+                log.info("Connecting to server: " + cfg.serverUri());
 
             if (reconnectCnt < 10)
                 reconnectCnt++;
@@ -263,8 +271,6 @@ public class WebSocketRouter implements AutoCloseable {
      */
     @OnWebSocketConnect
     public void onConnect(Session ses) {
-        log.info("Connecting to server: " + ses.getRemoteAddress());
-
         try {
             AgentHandshakeRequest req = new AgentHandshakeRequest(CURRENT_VER, cfg.tokens());
 
@@ -433,8 +439,7 @@ public class WebSocketRouter implements AutoCloseable {
      */
     @OnWebSocketError
     public void onError(Throwable e) {
-        // Reconnect only in case of ConnectException.
-        if (e instanceof ConnectException) {
+        if (e instanceof ConnectException || e instanceof UpgradeException) {
             if (reconnectCnt <= 0)
                 log.error("Failed to establish websocket connection with server: " + cfg.serverUri());
 
@@ -448,7 +453,8 @@ public class WebSocketRouter implements AutoCloseable {
      */
     @OnWebSocketClose
     public void onClose(int statusCode, String reason) {
-        log.info("Connection closed [code=" + statusCode + ", reason=" + reason + "]");
+        if (statusCode != SERVER_ERROR)
+        log.info("Websocket connection closed with code: " + statusCode);
 
         connect();
     }
