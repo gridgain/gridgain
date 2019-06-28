@@ -29,7 +29,7 @@ const Logger = require('./Logger');
 // Number of tries to get cache partitions info
 const GET_CACHE_PARTITIONS_RETRIES = 3;
 // Delay (in milliseconds) between tries to get cache partitions info
-const GET_CACHE_PARTITIONS_DELAY = 100;
+const GET_CACHE_PARTITIONS_DELAY = 1000;
 
 class Router {
 
