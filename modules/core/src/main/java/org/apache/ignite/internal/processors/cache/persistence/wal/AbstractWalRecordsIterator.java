@@ -61,6 +61,11 @@ public abstract class AbstractWalRecordsIterator
     protected IgniteBiTuple<WALPointer, WALRecord> curRec;
 
     /**
+     * The exception which can be thrown during reading next record. It holds until the next calling of next record.
+     */
+    private IgniteCheckedException curException;
+
+    /**
      * Current WAL segment absolute index. <br> Determined as lowest number of file at start, is changed during advance
      * segment
      */
@@ -121,9 +126,18 @@ public abstract class AbstractWalRecordsIterator
 
     /** {@inheritDoc} */
     @Override protected IgniteBiTuple<WALPointer, WALRecord> onNext() throws IgniteCheckedException {
+        if (curException != null)
+            throw curException;
+
         IgniteBiTuple<WALPointer, WALRecord> ret = curRec;
 
-        advance();
+        try {
+            advance();
+        }
+        catch (IgniteCheckedException e) {
+            curException = e;
+            curRec = null;
+        }
 
         return ret;
     }
@@ -300,6 +314,8 @@ public abstract class AbstractWalRecordsIterator
     ) {
         if (log.isInfoEnabled())
             log.info("Stopping WAL iteration due to an exception: " + e.getMessage() + ", ptr=" + ptr);
+
+        log.error("Stopping WAL iteration due to an exception",e );
 
         return new IgniteCheckedException(e);
     }
