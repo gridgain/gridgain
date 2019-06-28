@@ -2318,18 +2318,6 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
         if (mvcc != null) {
             boolean first = true;
 
-            for (GridCacheExplicitLockSpan lockSpan : mvcc.activeExplicitLocks()) {
-                if (first) {
-                    U.warn(diagnosticLog, "Pending explicit locks:");
-
-                    first = false;
-                }
-
-                U.warn(diagnosticLog, ">>> " + lockSpan);
-            }
-
-            first = true;
-
             for (GridCacheFuture<?> fut : mvcc.activeFutures()) {
                 if (first) {
                     U.warn(diagnosticLog, "Pending cache futures:");

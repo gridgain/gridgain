@@ -48,7 +48,6 @@ import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxKey;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.GridBoundedConcurrentLinkedHashSet;
-import org.apache.ignite.internal.util.GridConcurrentFactory;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
@@ -90,9 +89,6 @@ public class GridCacheMvccManager extends GridCacheSharedManagerAdapter {
 
     /** Pending locks per thread. */
     private final ThreadLocal<Deque<GridCacheMvccCandidate>> pending = new ThreadLocal<>();
-
-    /** Pending near local locks and topology version per thread. */
-    private ConcurrentMap<Long, GridCacheExplicitLockSpan> pendingExplicit;
 
     /** Set of removed lock versions. */
     private GridBoundedConcurrentLinkedHashSet<GridCacheVersion> rmvLocks =
@@ -259,8 +255,6 @@ public class GridCacheMvccManager extends GridCacheSharedManagerAdapter {
             if (log.isDebugEnabled())
                 log.debug("Processing node left [nodeId=" + discoEvt.eventNode().id() + "]");
 
-            removeExplicitNodeLocks(discoEvt.eventNode().id());
-
             for (GridCacheFuture<?> fut : activeFutures())
                 fut.onNodeLeft(discoEvt.eventNode().id());
 
@@ -272,8 +266,6 @@ public class GridCacheMvccManager extends GridCacheSharedManagerAdapter {
     /** {@inheritDoc} */
     @Override protected void start0() throws IgniteCheckedException {
         exchLog = cctx.logger(getClass().getName() + ".exchange");
-
-        pendingExplicit = GridConcurrentFactory.newMap();
 
         cctx.gridEvents().addLocalEventListener(discoLsnr, EVT_NODE_FAILED, EVT_NODE_LEFT);
     }
@@ -288,13 +280,6 @@ public class GridCacheMvccManager extends GridCacheSharedManagerAdapter {
      */
     public GridCacheLockCallback callback() {
         return cb;
-    }
-
-    /**
-     * @return Collection of pending explicit locks.
-     */
-    public Collection<GridCacheExplicitLockSpan> activeExplicitLocks() {
-        return pendingExplicit.values();
     }
 
     /**
@@ -348,29 +333,6 @@ public class GridCacheMvccManager extends GridCacheSharedManagerAdapter {
         GridFutureAdapter<?> wrapper = new GridFutureAdapter();
         f.listen(future -> wrapper.onDone());
         return wrapper;
-    }
-
-    /**
-     * @param leftNodeId Left node ID.
-     */
-    public void removeExplicitNodeLocks(UUID leftNodeId) {
-        cctx.kernalContext().closure().runLocalSafe(
-            new GridPlainRunnable() {
-                @Override public void run() {
-                    for (GridDistributedCacheEntry entry : locked()) {
-                        try {
-                            entry.removeExplicitNodeLocks(leftNodeId);
-
-                            entry.touch();
-                        }
-                        catch (GridCacheEntryRemovedException ignore) {
-                            if (log.isDebugEnabled())
-                                log.debug("Attempted to remove node locks from removed entry in cache lock manager " +
-                                    "disco callback (will ignore): " + entry);
-                        }
-                    }
-                }
-            }, true);
     }
 
     /**
@@ -896,168 +858,6 @@ public class GridCacheMvccManager extends GridCacheSharedManagerAdapter {
         pending.set(null);
     }
 
-    /**
-     * Adds candidate to the list of near local candidates.
-     *
-     * @param threadId Thread ID.
-     * @param cand Candidate to add.
-     * @param topVer Topology version.
-     */
-    public void addExplicitLock(long threadId, GridCacheMvccCandidate cand, AffinityTopologyVersion topVer) {
-        while (true) {
-            GridCacheExplicitLockSpan span = pendingExplicit.get(cand.threadId());
-
-            if (span == null) {
-                span = new GridCacheExplicitLockSpan(topVer, cand);
-
-                GridCacheExplicitLockSpan old = pendingExplicit.putIfAbsent(threadId, span);
-
-                if (old == null)
-                    break;
-                else
-                    span = old;
-            }
-
-            // Either span was not empty, or concurrent put did not succeed.
-            if (span.addCandidate(topVer, cand))
-                break;
-            else
-                pendingExplicit.remove(threadId, span);
-        }
-    }
-
-    /**
-     * Removes candidate from the list of near local candidates.
-     *
-     * @param cand Candidate to remove.
-     */
-    public void removeExplicitLock(GridCacheMvccCandidate cand) {
-        GridCacheExplicitLockSpan span = pendingExplicit.get(cand.threadId());
-
-        if (span == null)
-            return;
-
-        if (span.removeCandidate(cand))
-            pendingExplicit.remove(cand.threadId(), span);
-    }
-
-    /**
-     * Checks if given key is locked by thread with given id or any thread.
-     *
-     * @param key Key to check.
-     * @param threadId Thread id. If -1, all threads will be checked.
-     * @return {@code True} if locked by any or given thread (depending on {@code threadId} value).
-     */
-    public boolean isLockedByThread(IgniteTxKey key, long threadId) {
-        if (threadId < 0) {
-            for (GridCacheExplicitLockSpan span : pendingExplicit.values()) {
-                GridCacheMvccCandidate cand = span.candidate(key, null);
-
-                if (cand != null && cand.owner())
-                    return true;
-            }
-        }
-        else {
-            GridCacheExplicitLockSpan span = pendingExplicit.get(threadId);
-
-            if (span != null) {
-                GridCacheMvccCandidate cand = span.candidate(key, null);
-
-                return cand != null && cand.owner();
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Marks candidates for given thread and given key as owned.
-     *
-     * @param key Key.
-     * @param threadId Thread id.
-     */
-    public void markExplicitOwner(IgniteTxKey key, long threadId) {
-        assert threadId > 0;
-
-        GridCacheExplicitLockSpan span = pendingExplicit.get(threadId);
-
-        if (span != null)
-            span.markOwned(key);
-    }
-
-    /**
-     * Removes explicit lock for given thread id, key and optional version.
-     *
-     * @param threadId Thread id.
-     * @param key Key.
-     * @param ver Optional version.
-     * @return Candidate.
-     */
-    public GridCacheMvccCandidate removeExplicitLock(long threadId,
-        IgniteTxKey key,
-        @Nullable GridCacheVersion ver)
-    {
-        assert threadId > 0;
-
-        GridCacheExplicitLockSpan span = pendingExplicit.get(threadId);
-
-        if (span == null)
-            return null;
-
-        GridCacheMvccCandidate cand = span.removeCandidate(key, ver);
-
-        if (cand != null && span.isEmpty())
-            pendingExplicit.remove(cand.threadId(), span);
-
-        return cand;
-    }
-
-    /**
-     * Gets last added explicit lock candidate by thread id and key.
-     *
-     * @param threadId Thread id.
-     * @param key Key to look up.
-     * @return Last added explicit lock candidate for given thread id and key or {@code null} if
-     *      no such candidate.
-     */
-    @Nullable public GridCacheMvccCandidate explicitLock(long threadId, IgniteTxKey key) {
-        if (threadId < 0)
-            return explicitLock(key, null);
-        else {
-            GridCacheExplicitLockSpan span = pendingExplicit.get(threadId);
-
-            return span == null ? null : span.candidate(key, null);
-        }
-    }
-
-    /**
-     * Gets explicit lock candidate added by any thread by given key and lock version.
-     *
-     * @param key Key.
-     * @param ver Version.
-     * @return Lock candidate that satisfies given criteria or {@code null} if no such candidate.
-     */
-    @Nullable public GridCacheMvccCandidate explicitLock(IgniteTxKey key, @Nullable GridCacheVersion ver) {
-        for (GridCacheExplicitLockSpan span : pendingExplicit.values()) {
-            GridCacheMvccCandidate cand = span.candidate(key, ver);
-
-            if (cand != null)
-                return cand;
-        }
-
-        return null;
-    }
-
-    /**
-     * @param threadId Thread ID.
-     * @return Topology snapshot for last acquired and not released lock.
-     */
-    @Nullable public AffinityTopologyVersion lastExplicitLockTopologyVersion(long threadId) {
-        GridCacheExplicitLockSpan span = pendingExplicit.get(threadId);
-
-        return span != null ? span.topologyVersion() : null;
-    }
-
     /** {@inheritDoc} */
     @Override public void printMemoryStats() {
         X.println(">>> ");
@@ -1093,28 +893,6 @@ public class GridCacheMvccManager extends GridCacheSharedManagerAdapter {
         }
 
         return cands;
-    }
-
-    /**
-     * Creates a future that will wait for all explicit locks acquired on given topology
-     * version to be released.
-     *
-     * @param topVer Topology version to wait for.
-     * @return Explicit locks release future.
-     */
-    public IgniteInternalFuture<?> finishExplicitLocks(AffinityTopologyVersion topVer) {
-        GridCompoundFuture<Object, Object> res = new CacheObjectsReleaseFuture<>("ExplicitLock", topVer);
-
-        for (GridCacheExplicitLockSpan span : pendingExplicit.values()) {
-            AffinityTopologyVersion snapshot = span.topologyVersion();
-
-            if (snapshot != null && snapshot.compareTo(topVer) < 0)
-                res.add(span.releaseFuture());
-        }
-
-        res.markInitialized();
-
-        return res;
     }
 
     /**

@@ -84,7 +84,6 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.GridCacheDhtP
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridCacheDhtPreloadSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridCacheDhtPreloadStartStopSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridCacheDhtPreloadUnloadSelfTest;
-import org.apache.ignite.internal.processors.cache.distributed.dht.GridCachePartitionedNearDisabledLockSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridCachePartitionedSupplyEventsSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridCachePartitionedTopologyChangeSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridCachePartitionedUnloadEventsSelfTest;
@@ -112,11 +111,8 @@ import org.apache.ignite.internal.processors.cache.distributed.near.GridCachePar
 import org.apache.ignite.internal.processors.cache.distributed.near.GridCachePartitionedBasicStoreMultiNodeSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridCachePartitionedBasicStoreSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridCachePartitionedEventSelfTest;
-import org.apache.ignite.internal.processors.cache.distributed.near.GridCachePartitionedExplicitLockNodeFailureSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridCachePartitionedGetAndTransformStoreSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridCachePartitionedLoadCacheSelfTest;
-import org.apache.ignite.internal.processors.cache.distributed.near.GridCachePartitionedLockSelfTest;
-import org.apache.ignite.internal.processors.cache.distributed.near.GridCachePartitionedMultiNodeLockSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridCachePartitionedMultiNodeSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridCachePartitionedMultiThreadedPutGetSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridCachePartitionedNearDisabledBasicStoreMultiNodeSelfTest;
@@ -140,8 +136,6 @@ import org.apache.ignite.internal.processors.cache.local.GridCacheLocalEvictionE
 import org.apache.ignite.internal.processors.cache.local.GridCacheLocalGetAndTransformStoreSelfTest;
 import org.apache.ignite.internal.processors.cache.local.GridCacheLocalIsolatedNodesSelfTest;
 import org.apache.ignite.internal.processors.cache.local.GridCacheLocalLoadAllSelfTest;
-import org.apache.ignite.internal.processors.cache.local.GridCacheLocalLockSelfTest;
-import org.apache.ignite.internal.processors.cache.local.GridCacheLocalMultithreadedSelfTest;
 import org.apache.ignite.internal.processors.cache.local.GridCacheLocalTxMultiThreadedSelfTest;
 import org.apache.ignite.internal.processors.cache.local.GridCacheLocalTxSingleThreadedSelfTest;
 import org.apache.ignite.internal.processors.cache.local.GridCacheLocalTxTimeoutSelfTest;
@@ -179,8 +173,6 @@ public class IgniteCacheTestSuite2 {
         GridTestUtils.addTestIfNeeded(suite, GridCacheLocalGetAndTransformStoreSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCacheLocalAtomicGetAndTransformStoreSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCacheLocalLoadAllSelfTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, GridCacheLocalLockSelfTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, GridCacheLocalMultithreadedSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCacheLocalTxSingleThreadedSelfTest.class, ignoredTests);
         //GridTestUtils.addTestIfNeeded(suite, GridCacheLocalTxReadTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCacheLocalTxTimeoutSelfTest.class, ignoredTests);
@@ -210,13 +202,9 @@ public class IgniteCacheTestSuite2 {
         GridTestUtils.addTestIfNeeded(suite, GridCachePartitionedBasicStoreMultiNodeSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCachePartitionedNearDisabledBasicStoreMultiNodeSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, CacheConcurrentReadThroughTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, GridCachePartitionedLockSelfTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, GridCachePartitionedNearDisabledLockSelfTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, GridCachePartitionedMultiNodeLockSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCachePartitionedMultiNodeSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCachePartitionedMultiThreadedPutGetSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCachePartitionedNodeFailureSelfTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, GridCachePartitionedExplicitLockNodeFailureSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, CacheLockReleaseNodeLeaveTest.class, ignoredTests);
         //GridTestUtils.addTestIfNeeded(suite, GridCachePartitionedEntryLockSelfTest.class, ignoredTests);
         //GridTestUtils.addTestIfNeeded(suite, GridCachePartitionedNestedTxTest.class, ignoredTests);

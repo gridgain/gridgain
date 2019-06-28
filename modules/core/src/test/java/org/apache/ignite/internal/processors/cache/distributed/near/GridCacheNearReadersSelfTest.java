@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -48,7 +47,6 @@ import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
-import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheRebalanceMode.NONE;
@@ -534,104 +532,5 @@ public class GridCacheNearReadersSelfTest extends GridCommonAbstractTest {
         assertNull(near(0).peekEx(key1));
         assertNull(near(1).peekEx(key1));
         assertNull(near(2).peekEx(key1));
-
-        for (int i = 0; i < grids; i++) {
-            assert !jcache(i).isLocalLocked(key1, false);
-            assert !jcache(i).isLocalLocked(key2, false);
-
-            assert jcache(i).localSize() == 0;
-        }
-    }
-
-    /** @throws Exception If failed. */
-    @Test
-    public void testExplicitLockReaders() throws Exception {
-        if (atomicityMode() == ATOMIC)
-            return;
-
-        grids = 3;
-        aff.reset(grids, 1);
-
-        startGrids();
-
-        int key1 = 3;
-        String val1 = Integer.toString(key1);
-
-        assertEquals(grid(0).localNode(), F.first(aff.nodes(aff.partition(key1), grid(0).cluster().nodes())));
-
-        int key2 = 1;
-        String val2 = Integer.toString(key2);
-
-        assertEquals(grid(1).localNode(), F.first(aff.nodes(aff.partition(key2), grid(1).cluster().nodes())));
-
-        IgniteCache<Integer, String> cache = jcache(0);
-
-        Lock lock1 = cache.lock(key1);
-
-        lock1.lock();
-
-        try {
-            // Nested lock.
-            Lock lock2 = cache.lock(key2);
-
-            lock2.lock();
-
-            try {
-                assertNull(cache.getAndPut(key1, val1));
-
-                assertEquals(val1, dhtPeek(0, key1));
-                assertEquals(val1, dhtPeek(1, key1));
-                assertNull(dhtPeek(2, key1));
-
-                // Since near entry holds the lock, it should
-                // contain correct value.
-                assertEquals(val1, near(0).peekEx(key1).wrap().getValue());
-
-                assertNull(near(1).peekEx(key1));
-                assertNull(near(2).peekEx(key1));
-
-                cache.put(key2, val2);
-
-                assertNull(dhtPeek(0, key2));
-                assertEquals(val2, dhtPeek(1, key2));
-                assertEquals(val2, dhtPeek(2, key2));
-
-                assertEquals(val2, near(0).peekEx(key2).wrap().getValue());
-                assertNull(near(1).peekEx(key2));
-                assertNull(near(2).peekEx(key2));
-
-                String val22 = val2 + "2";
-
-                cache.put(key2, val22);
-
-                assertNull(dhtPeek(0, key2));
-                assertEquals(val22, dhtPeek(1, key2));
-                assertEquals(val22, dhtPeek(2, key2));
-
-                assertEquals(val22, near(0).peekEx(key2).wrap().getValue());
-                assertNull(near(1).peekEx(key2));
-                assertNull(near(2).peekEx(key2));
-
-                cache.remove(key2);
-
-                assertNull(dhtPeek(0, key2));
-                assertNull(dhtPeek(1, key2));
-                assertNull(dhtPeek(2, key2));
-
-                assertNull(dht(0).peekEx(key2));
-                assertNotNull(dht(1).peekEx(key2));
-                assertNotNull(dht(2).peekEx(key2));
-
-                assertNotNull(near(0).peekEx(key2));
-                assertNull(near(1).peekEx(key2));
-                assertNull(near(2).peekEx(key2));
-            }
-            finally {
-                lock2.unlock();
-            }
-        }
-        finally {
-            lock1.unlock();
-        }
     }
 }

@@ -75,27 +75,11 @@ class VisorCacheResetCommandSpec extends VisorRuntimeBaseSpec(2) {
         it("should show correct result for default cache") {
             Ignition.ignite("node-1").cache[Int, Int](null).putAll(Map(1 -> 1, 2 -> 2, 3 -> 3))
 
-            val lock = Ignition.ignite("node-1").cache[Int, Int]("default").lock(1)
-
-            lock.lock()
-
-            VisorCacheResetCommand().reset(Nil, None)
-
-            lock.unlock()
-
             VisorCacheResetCommand().reset(Nil, None)
         }
 
         it("should show correct result for named cache") {
             Ignition.ignite("node-1").cache[Int, Int]("cache").putAll(Map(1 -> 1, 2 -> 2, 3 -> 3))
-
-            val lock = Ignition.ignite("node-1").cache[Int, Int]("cache").lock(1)
-
-            lock.lock()
-
-            visor.cache("-reset -c=cache")
-
-            lock.unlock()
 
             visor.cache("-reset -c=cache")
         }

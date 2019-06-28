@@ -20,8 +20,6 @@ import com.google.common.collect.ImmutableSet;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.Callable;
-import java.util.concurrent.TimeUnit;
-import javax.cache.CacheException;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridCachePartitionedFullApiSelfTest;
@@ -49,39 +47,16 @@ public class GridCacheAtomicFullApiSelfTest extends GridCachePartitionedFullApiS
         return false;
     }
 
-    /** {@inheritDoc} */
-    @Override protected boolean lockingEnabled() {
-        return false;
-    }
-
     /**
-     * @throws Exception If failed.
+     *
      */
     @Test
-    public void testLock() throws Exception {
-        GridTestUtils.assertThrows(log, new Callable<Object>() {
-            @Override public Object call() throws Exception {
-                return jcache().lock("1").tryLock(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
-            }
-        }, CacheException.class, "Locks are not supported");
-
-        GridTestUtils.assertThrows(log, new Callable<Object>() {
-            @Override public Object call() throws Exception {
-                return jcache().lockAll(Collections.singleton("1")).tryLock(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
-            }
-        }, CacheException.class, "Locks are not supported");
-    }
-
-    /**
-     * @throws Exception In case of error.
-     */
-    @Test
-    @Override public void testGetAll() throws Exception {
+    @Override public void testGetAll() {
         jcache().put("key1", 1);
         jcache().put("key2", 2);
 
         GridTestUtils.assertThrows(log, new Callable<Void>() {
-            @Override public Void call() throws Exception {
+            @Override public Void call() {
                 jcache().getAll(null).isEmpty();
 
                 return null;

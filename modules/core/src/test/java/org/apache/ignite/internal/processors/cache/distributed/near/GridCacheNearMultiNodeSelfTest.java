@@ -26,7 +26,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -41,7 +40,6 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteKernal;
-import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.GridCacheModuloAffinityFunction;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheAdapter;
@@ -620,18 +618,6 @@ public class GridCacheNearMultiNodeSelfTest extends GridCommonAbstractTest {
         assertEquals(val, localPeek(dht1, key));
     }
 
-    /** @throws Exception If failed. */
-    @Test
-    public void testSingleLockLocalAffinity() throws Exception {
-        checkSingleLock(2);
-    }
-
-    /** @throws Exception If failed. */
-    @Test
-    public void testSingleLockRemoteAffinity() throws Exception {
-        checkSingleLock(1);
-    }
-
     /**
      * @param idx Grid index.
      * @param key Key.
@@ -647,163 +633,6 @@ public class GridCacheNearMultiNodeSelfTest extends GridCommonAbstractTest {
      */
     private int hash(Object o) {
         return System.identityHashCode(o);
-    }
-
-    /**
-     * @param key Key.
-     * @throws Exception If failed.
-     */
-    private void checkSingleLock(int key) throws Exception {
-        if (!transactional())
-            return;
-
-        IgniteCache<Integer, String> cache = jcache(0);
-
-        String val = Integer.toString(key);
-
-        Collection<ClusterNode> affNodes = grid(0).affinity(DEFAULT_CACHE_NAME).mapKeyToPrimaryAndBackups(key);
-
-        info("Affinity for key [nodeId=" + U.nodeIds(affNodes) + ", key=" + key + ']');
-
-        assertEquals(2, affNodes.size());
-
-        ClusterNode primary = F.first(affNodes);
-
-        assertNotNull(primary);
-
-        info("Primary local: " + primary.isLocal());
-
-        Lock lock = cache.lock(key);
-
-        lock.lock();
-
-        try {
-            AffinityTopologyVersion topVer = grid(0).context().discovery().topologyVersionEx();
-
-            GridNearCacheEntry nearEntry1 = nearEntry(0, key);
-
-            info("Peeked entry after lock [hash=" + hash(nearEntry1) + ", nearEntry=" + nearEntry1 + ']');
-
-            assertNotNull(nearEntry1);
-            assertTrue("Invalid near entry: " + nearEntry1, nearEntry1.valid(topVer));
-
-            assertTrue(cache.isLocalLocked(key, false));
-            assertTrue(cache.isLocalLocked(key, true));
-
-            cache.put(key, val);
-
-            GridNearCacheEntry nearEntry2 = nearEntry(0, key);
-
-            info("Peeked entry after put [hash=" + hash(nearEntry1) + ", nearEntry=" + nearEntry2 + ']');
-
-            assert nearEntry1 == nearEntry2;
-
-            assertNotNull(nearEntry2);
-            assertTrue("Invalid near entry [hash=" + nearEntry2, nearEntry2.valid(topVer));
-
-            assertEquals(val, cache.localPeek(key));
-            assertEquals(val, dhtPeek(0, key));
-            assertEquals(val, dhtPeek(1, key));
-
-            GridNearCacheEntry nearEntry3 = nearEntry(0, key);
-
-            info("Peeked entry after peeks [hash=" + hash(nearEntry1) + ", nearEntry=" + nearEntry3 + ']');
-
-            assert nearEntry2 == nearEntry3;
-
-            assertNotNull(nearEntry3);
-            assertTrue("Invalid near entry: " + nearEntry3, nearEntry3.valid(topVer));
-
-            assertNotNull(near(0).peekEx(key));
-            assertNull(near(1).peekEx(key));
-
-            assertEquals(val, cache.get(key));
-            assertEquals(val, cache.getAndRemove(key));
-
-            assertNull(cache.localPeek(key));
-            assertNull(localPeek(dht(primaryGrid(key)), key));
-
-            assertTrue(cache.isLocalLocked(key, false));
-            assertTrue(cache.isLocalLocked(key, true));
-        }
-        finally {
-            lock.unlock();
-        }
-
-        assertNull(near(0).peekEx(key));
-        assertNull(near(1).peekEx(key));
-
-        assertFalse(near(0).isLockedNearOnly(key));
-        assertFalse(cache.isLocalLocked(key, true));
-    }
-
-    /** @throws Throwable If failed. */
-    @Test
-    public void testSingleLockReentryLocalAffinity() throws Throwable {
-        checkSingleLockReentry(2);
-    }
-
-    /** @throws Throwable If failed. */
-    @Test
-    public void testSingleLockReentryRemoteAffinity() throws Throwable {
-        checkSingleLockReentry(1);
-    }
-
-    /**
-     * @param key Key.
-     * @throws Exception If failed.
-     */
-    private void checkSingleLockReentry(int key) throws Throwable {
-        if (!transactional())
-            return;
-
-        IgniteCache<Integer, String> near = jcache(0);
-
-        String val = Integer.toString(key);
-
-        Lock lock = near.lock(key);
-
-        lock.lock();
-
-        try {
-            near.put(key, val);
-
-            assertEquals(val, near.localPeek(key));
-            assertEquals(val, localPeek(dht(primaryGrid(key)), key));
-
-            assertTrue(near.isLocalLocked(key, false));
-            assertTrue(near.isLocalLocked(key, true));
-
-            lock.lock(); // Reentry.
-
-            try {
-                assertEquals(val, near.get(key));
-                assertEquals(val, near.getAndRemove(key));
-
-                assertNull(near.localPeek(key));
-                assertNull(localPeek(dht(primaryGrid(key)), key));
-
-                assertTrue(near.isLocalLocked(key, false));
-                assertTrue(near.isLocalLocked(key, true));
-            }
-            finally {
-                lock.unlock();
-            }
-
-            assertTrue(near.isLocalLocked(key, false));
-            assertTrue(near.isLocalLocked(key, true));
-        }
-        catch (Throwable t) {
-            error("Test failed.", t);
-
-            throw t;
-        }
-        finally {
-            lock.unlock();
-        }
-
-        assertFalse(near(0).isLockedNearOnly(key));
-        assertFalse(near.isLocalLocked(key, true));
     }
 
     /** @throws Exception If failed. */

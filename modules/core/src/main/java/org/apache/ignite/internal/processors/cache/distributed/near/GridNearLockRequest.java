@@ -102,7 +102,6 @@ public class GridNearLockRequest extends GridDistributedLockRequest {
      * @param threadId Thread ID.
      * @param futId Future ID.
      * @param lockVer Cache version.
-     * @param isInTx {@code True} if implicit transaction lock.
      * @param isRead Indicates whether implicit lock is for read or write operation.
      * @param retVal Return value flag.
      * @param isolation Transaction isolation.
@@ -127,7 +126,6 @@ public class GridNearLockRequest extends GridDistributedLockRequest {
         long threadId,
         IgniteUuid futId,
         GridCacheVersion lockVer,
-        boolean isInTx,
         boolean isRead,
         boolean retVal,
         TransactionIsolation isolation,
@@ -154,7 +152,6 @@ public class GridNearLockRequest extends GridDistributedLockRequest {
             threadId,
             futId,
             lockVer,
-            isInTx,
             isRead,
             isolation,
             isInvalidate,

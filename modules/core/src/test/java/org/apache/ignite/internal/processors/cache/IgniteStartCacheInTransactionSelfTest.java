@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors.cache;
 
 import java.util.concurrent.Callable;
-import java.util.concurrent.locks.Lock;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
@@ -26,7 +25,6 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.junit.Test;
@@ -240,34 +238,5 @@ public class IgniteStartCacheInTransactionSelfTest extends GridCommonAbstractTes
 
             tx.commit();
         }
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testLockCache() throws Exception {
-        if (atomicityMode() != TRANSACTIONAL)
-            return;
-
-        MvccFeatureChecker.skipIfNotSupported(MvccFeatureChecker.Feature.ENTRY_LOCK);
-
-        final Ignite ignite = grid(0);
-
-        final String key = "key";
-
-        Lock lock = ignite.cache(DEFAULT_CACHE_NAME).lock(key);
-
-        lock.lock();
-
-        GridTestUtils.assertThrows(log, new Callable<Object>() {
-            @Override public Object call() throws Exception {
-                ignite.createCache("NEW_CACHE");
-
-                return null;
-            }
-        }, IgniteException.class, EXPECTED_MSG);
-
-        lock.unlock();
     }
 }

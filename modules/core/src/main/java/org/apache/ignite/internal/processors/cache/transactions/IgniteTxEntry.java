@@ -147,10 +147,6 @@ public class IgniteTxEntry implements GridPeerDeployAware, Message {
     /** Conflict version. */
     private GridCacheVersion conflictVer;
 
-    /** Explicit lock version if there is one. */
-    @GridToStringInclude
-    private GridCacheVersion explicitVer;
-
     /** DHT version. */
     @GridDirectTransient
     private volatile GridCacheVersion dhtVer;
@@ -365,7 +361,6 @@ public class IgniteTxEntry implements GridPeerDeployAware, Message {
         cp.entryProcessorsCol = entryProcessorsCol;
         cp.ttl = ttl;
         cp.conflictExpireTime = conflictExpireTime;
-        cp.explicitVer = explicitVer;
         cp.conflictVer = conflictVer;
         cp.expiryPlc = expiryPlc;
         cp.flags = flags;
@@ -820,20 +815,6 @@ public class IgniteTxEntry implements GridPeerDeployAware, Message {
     }
 
     /**
-     * @param explicitVer Explicit version.
-     */
-    public void explicitVersion(GridCacheVersion explicitVer) {
-        this.explicitVer = explicitVer;
-    }
-
-    /**
-     * @return Explicit version.
-     */
-    public GridCacheVersion explicitVersion() {
-        return explicitVer;
-    }
-
-    /**
      * @return Conflict version.
      */
     @Nullable public GridCacheVersion conflictVersion() {
@@ -1065,12 +1046,6 @@ public class IgniteTxEntry implements GridPeerDeployAware, Message {
 
                 writer.incrementState();
 
-            case 4:
-                if (!writer.writeMessage("explicitVer", explicitVer))
-                    return false;
-
-                writer.incrementState();
-
             case 5:
                 if (!writer.writeObjectArray("filters",
                     !F.isEmptyOrNulls(filters) ? filters : null, MessageCollectionItemType.MSG))
@@ -1159,14 +1134,6 @@ public class IgniteTxEntry implements GridPeerDeployAware, Message {
 
             case 3:
                 expiryPlcBytes = reader.readByteArray("expiryPlcBytes");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 4:
-                explicitVer = reader.readMessage("explicitVer");
 
                 if (!reader.isLastRead())
                     return false;

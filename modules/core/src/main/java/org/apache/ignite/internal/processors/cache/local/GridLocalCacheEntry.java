@@ -112,7 +112,6 @@ public class GridLocalCacheEntry extends GridCacheMapEntry {
                 timeout,
                 serOrder,
                 reenter,
-                tx,
                 implicitSingle,
                 /*dht-local*/false,
                 read

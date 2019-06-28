@@ -16,24 +16,14 @@
 
 package org.apache.ignite.internal.processors.cache;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.Map;
 import java.util.concurrent.Callable;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.junit.Test;
 
-import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
-import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED;
 import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
 
 /**
@@ -45,15 +35,6 @@ public class GridCacheNestedTxAbstractTest extends GridCommonAbstractTest {
 
     /** Grid count. */
     private static final int GRID_CNT = 3;
-
-    /** Number of threads. */
-    private static final int THREAD_CNT = 10;
-
-    /**  */
-    private static final int RETRIES = 10;
-
-    /** */
-    private static final AtomicInteger globalCntr = new AtomicInteger();
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
@@ -82,14 +63,12 @@ public class GridCacheNestedTxAbstractTest extends GridCommonAbstractTest {
 
     /**
      * JUnit.
-     *
-     * @throws Exception If failed.
      */
     @Test
-    public void testTwoTx() throws Exception {
+    public void testTwoTx() {
         final IgniteCache<String, Integer> c = grid(0).cache(DEFAULT_CACHE_NAME);
 
-        GridKernalContext ctx = ((IgniteKernal)grid(0)).context();
+        GridKernalContext ctx = grid(0).context();
 
         c.put(CNTR_KEY, 0);
 
@@ -98,10 +77,10 @@ public class GridCacheNestedTxAbstractTest extends GridCommonAbstractTest {
                 c.get(CNTR_KEY);
 
                 ctx.closure().callLocalSafe((new Callable<Boolean>() {
-                    @Override public Boolean call() throws Exception {
-                        assertFalse(((GridCacheAdapter)c).context().tm().inUserTx());
+                    @Override public Boolean call() {
+                        assertFalse(((IgniteInternalCache)c).context().tm().inUserTx());
 
-                        assertNull(((GridCacheAdapter)c).context().tm().userTx());
+                        assertNull(((IgniteInternalCache)c).context().tm().userTx());
 
                         return true;
                     }
@@ -110,158 +89,5 @@ public class GridCacheNestedTxAbstractTest extends GridCommonAbstractTest {
                 tx.commit();
             }
         }
-    }
-
-    /**
-     * JUnit.
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testLockAndTx() throws Exception {
-        final IgniteCache<String, Integer> c = grid(0).cache(DEFAULT_CACHE_NAME);
-
-        Collection<Thread> threads = new LinkedList<>();
-
-        c.put(CNTR_KEY, 0);
-
-        for (int i = 0; i < THREAD_CNT; i++) {
-            info("*** Init tx thread: " + i);
-
-            threads.add(new Thread(new Runnable() {
-                @Override public void run() {
-                    Transaction tx = grid(0).transactions().txStart(PESSIMISTIC, REPEATABLE_READ);
-
-                    try {
-                        int cntr = c.get(CNTR_KEY);
-
-                        info("*** Cntr in tx thread: " + cntr);
-
-                        c.put(CNTR_KEY, ++cntr);
-
-                        tx.commit();
-                    }
-                    catch (IgniteException e) {
-                        error("Failed tx thread", e);
-                    }
-                }
-            }));
-        }
-
-        for (int i = 0; i < THREAD_CNT; i++) {
-            info("*** Init lock thread: " + i);
-
-            threads.add(new Thread(new Runnable() {
-                @Override public void run() {
-
-                    Lock lock = c.lock(CNTR_KEY);
-
-                    try {
-                        lock.lock();
-
-                        int cntr = c.get(CNTR_KEY);
-
-                        info("*** Cntr in lock thread: " + cntr);
-
-                        c.put(CNTR_KEY, --cntr);
-                    }
-                    catch (Exception e) {
-                        error("Failed lock thread", e);
-                    }
-                    finally {
-                        lock.unlock();
-                    }
-                }
-            }));
-        }
-
-        for (Thread t : threads)
-            t.start();
-
-        for (Thread t : threads)
-            t.join();
-
-        int cntr = c.get(CNTR_KEY);
-
-        assertEquals(0, cntr);
-
-        for (int i = 0; i < THREAD_CNT; i++)
-            assertNull(c.get(Integer.toString(i)));
-    }
-
-    /**
-     * JUnit.
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testLockAndTx1() throws Exception {
-        final IgniteCache<String, Integer> c = grid(0).cache(DEFAULT_CACHE_NAME);
-
-        final IgniteCache<Integer, Integer> c1 = grid(0).cache(DEFAULT_CACHE_NAME);
-
-        Collection<Thread> threads = new LinkedList<>();
-
-        c.put(CNTR_KEY, 0);
-
-        for (int i = 0; i < THREAD_CNT; i++) {
-            info("*** Init lock thread: " + i);
-
-            threads.add(new Thread(new Runnable() {
-                @Override public void run() {
-
-                    Lock lock = c.lock(CNTR_KEY);
-
-                    try {
-                        lock.lock();
-
-                        int cntr = c.get(CNTR_KEY);
-
-                        info("*** Cntr in lock thread: " + cntr);
-
-                        Transaction tx = grid(0).transactions().txStart(OPTIMISTIC, READ_COMMITTED);
-
-                        try {
-
-                            Map<Integer, Integer> data = new HashMap<>();
-
-                            for (int i = 0; i < RETRIES; i++) {
-                                int val = globalCntr.getAndIncrement();
-
-                                data.put(val, val);
-                            }
-
-                            c1.putAll(data);
-
-                            tx.commit();
-                        }
-                        catch (IgniteException e) {
-                            error("Failed tx thread", e);
-                        }
-
-                        c.put(CNTR_KEY, ++cntr);
-                    }
-                    catch (Exception e) {
-                        error("Failed lock thread", e);
-                    }
-                    finally {
-                        lock.unlock();
-                    }
-                }
-            }));
-        }
-
-        for (Thread t : threads)
-            t.start();
-
-        for (Thread t : threads)
-            t.join();
-
-        int cntr = c.get(CNTR_KEY);
-
-        assertEquals(THREAD_CNT, cntr);
-
-        for (int i = 0; i < globalCntr.get(); i++)
-            assertNotNull(c1.get(i));
     }
 }

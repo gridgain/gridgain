@@ -52,6 +52,7 @@ public class IgniteModelStorageProvider implements ModelStorageProvider {
 
     /** {@inheritDoc} */
     @Override public Lock lock(String path) {
-        return cache.lock(path);
+        // TODO GG-19461. Need to replace lock with transactions.
+        return null;
     }
 }

@@ -1491,58 +1491,7 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
 
         txEntry.filtersSet(filtersSet);
 
-        while (true) {
-            try {
-                updateExplicitVersion(txEntry, entry);
-
-                return txEntry;
-            }
-            catch (GridCacheEntryRemovedException ignore) {
-                if (log.isDebugEnabled())
-                    log.debug("Got removed entry in transaction newEntry method (will retry): " + entry);
-
-                entry = entryEx(entry.context(), txEntry.txKey(), topologyVersion());
-
-                txEntry.cached(entry);
-            }
-        }
-    }
-
-    /**
-     * Updates explicit version for tx entry based on current entry lock owner.
-     *
-     * @param txEntry Tx entry to update.
-     * @param entry Entry.
-     * @throws GridCacheEntryRemovedException If entry was concurrently removed.
-     */
-    protected void updateExplicitVersion(IgniteTxEntry txEntry, GridCacheEntryEx entry)
-        throws GridCacheEntryRemovedException {
-        if (!entry.context().isDht()) {
-            // All put operations must wait for async locks to complete,
-            // so it is safe to get acquired locks.
-            GridCacheMvccCandidate explicitCand = entry.localOwner();
-
-            if (explicitCand == null)
-                explicitCand = cctx.mvcc().explicitLock(threadId(), entry.txKey());
-
-            if (explicitCand != null) {
-                GridCacheVersion explicitVer = explicitCand.version();
-
-                boolean locCand = false;
-
-                if (explicitCand.nearLocal() || explicitCand.local())
-                    locCand = cctx.localNodeId().equals(explicitCand.nodeId());
-                else if (explicitCand.dhtLocal())
-                    locCand = cctx.localNodeId().equals(explicitCand.otherNodeId());
-
-                if (!explicitVer.equals(xidVer) && explicitCand.threadId() == threadId && !explicitCand.tx() && locCand) {
-                    txEntry.explicitVersion(explicitVer);
-
-                    if (explicitVer.isLess(minVer))
-                        minVer = explicitVer;
-                }
-            }
-        }
+        return txEntry;
     }
 
     /**

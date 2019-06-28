@@ -36,7 +36,6 @@ import org.apache.ignite.cache.CacheMetrics;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.cache.affinity.Affinity;
-import org.apache.ignite.cache.affinity.AffinityKeyMapped;
 import org.apache.ignite.cache.store.CacheStore;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -101,11 +100,6 @@ import org.jetbrains.annotations.Nullable;
  *  global cache memory.
  * </li>
  * <li>
- *  Various {@code 'lock(..)'}, {@code 'unlock(..)'}, and {@code 'isLocked(..)'} methods to acquire, release,
- *  and check on distributed locks on a single or multiple keys in cache. All locking methods
- *  are not transactional and will not enlist keys into ongoing transaction, if any.
- * </li>
- * <li>
  *  Various {@code 'clear(..)'} methods to clear elements from cache, and optionally from
  *  swap storage. All {@code 'clear(..)'} methods are not transactional and will not enlist cleared
  *  keys into ongoing transaction, if any.
@@ -144,26 +138,6 @@ import org.jetbrains.annotations.Nullable;
  * be transaction-aware, i.e. check in-transaction entries first, but will not affect the current
  * state of transaction. See {@link Transaction} documentation for more information
  * about transactions.
- * <h1 class="header">Group Locking</h1>
- * <i>Group Locking</i> is a feature where instead of acquiring individual locks, Ignite will lock
- * multiple keys with one lock to save on locking overhead. There are 2 types of <i>Group Locking</i>:
- * <i>affinity-based</i>, and <i>partitioned-based</i>.
- * <p>
- * With {@code affinity-based-group-locking} the keys are grouped by <i>affinity-key</i>. This means that
- * only keys with identical affinity-key (see {@link AffinityKeyMapped}) can participate in the
- * transaction, and only one lock on the <i>affinity-key</i> will be acquired for the whole transaction.
- * {@code Affinity-group-locked} transactions are started via
- * <code>txStartAffinity(Object, TransactionConcurrency, TransactionIsolation, long, int)</code> method.
- * <p>
- * With {@code partition-based-group-locking} the keys are grouped by partition ID. This means that
- * only keys belonging to identical partition (see {@link Affinity#partition(Object)}) can participate in the
- * transaction, and only one lock on the whole partition will be acquired for the whole transaction.
- * {@code Partition-group-locked} transactions are started via
- * <code>txStartPartition(int, TransactionConcurrency, TransactionIsolation, long, int)</code> method.
- * <p>
- * <i>Group locking</i> should always be used for transactions whenever possible. If your requirements fit either
- * <i>affinity-based</i> or <i>partition-based</i> scenarios outlined above then <i>group-locking</i>
- * can significantly improve performance of your application, often by an order of magnitude.
  * <h1 class="header">Null Keys or Values</h1>
  * Neither {@code null} keys or values are allowed to be stored in cache. If a {@code null} value
  * happens to be in cache (e.g. after invalidation or remove), then cache will treat this case
@@ -1217,138 +1191,6 @@ public interface IgniteInternalCache<K, V> extends Iterable<Cache.Entry<K, V>> {
      * @return Remove future.
      */
     public IgniteInternalFuture<?> removeAllAsync();
-
-    /**
-     * Synchronously acquires lock on a cached object with given
-     * key only if the passed in filter (if any) passes. This method
-     * together with filter check will be executed as one atomic operation.
-     * <h2 class="header">Transactions</h2>
-     * Locks are not transactional and should not be used from within transactions. If you do
-     * need explicit locking within transaction, then you should use
-     * {@link TransactionConcurrency#PESSIMISTIC} concurrency control for transaction
-     * which will acquire explicit locks for relevant cache operations.
-     *
-     * @param key Key to lock.
-     * @param timeout Timeout in milliseconds to wait for lock to be acquired
-     *      ({@code '0'} for no expiration), {@code -1} for immediate failure if
-     *      lock cannot be acquired immediately).
-     * @return {@code True} if all filters passed and lock was acquired,
-     *      {@code false} otherwise.
-     * @throws IgniteCheckedException If lock acquisition resulted in error.
-     */
-    public boolean lock(K key, long timeout)
-        throws IgniteCheckedException;
-
-    /**
-     * Asynchronously acquires lock on a cached object with given
-     * key only if the passed in filter (if any) passes. This method
-     * together with filter check will be executed as one atomic operation.
-     * <h2 class="header">Transactions</h2>
-     * Locks are not transactional and should not be used from within transactions. If you do
-     * need explicit locking within transaction, then you should use
-     * {@link TransactionConcurrency#PESSIMISTIC} concurrency control for transaction
-     * which will acquire explicit locks for relevant cache operations.
-     *
-     * @param key Key to lock.
-     * @param timeout Timeout in milliseconds to wait for lock to be acquired
-     *      ({@code '0'} for no expiration, {@code -1} for immediate failure if
-     *      lock cannot be acquired immediately).
-     * @return Future for the lock operation. The future will return {@code true}
-     *      whenever all filters pass and locks are acquired before timeout is expired,
-     *      {@code false} otherwise.
-     */
-    public IgniteInternalFuture<Boolean> lockAsync(K key, long timeout);
-
-    /**
-     * All or nothing synchronous lock for passed in keys. This method
-     * together with filter check will be executed as one atomic operation.
-     * If at least one filter validation failed, no locks will be acquired.
-     * <h2 class="header">Transactions</h2>
-     * Locks are not transactional and should not be used from within transactions. If you do
-     * need explicit locking within transaction, then you should use
-     * {@link TransactionConcurrency#PESSIMISTIC} concurrency control for transaction
-     * which will acquire explicit locks for relevant cache operations.
-     *
-     * @param keys Keys to lock.
-     * @param timeout Timeout in milliseconds to wait for lock to be acquired
-     *      ({@code '0'} for no expiration).
-     * @return {@code True} if all filters passed and locks were acquired before
-     *      timeout has expired, {@code false} otherwise.
-     * @throws IgniteCheckedException If lock acquisition resulted in error.
-     */
-    public boolean lockAll(@Nullable Collection<? extends K> keys, long timeout) throws IgniteCheckedException;
-
-    /**
-     * All or nothing synchronous lock for passed in keys. This method
-     * together with filter check will be executed as one atomic operation.
-     * If at least one filter validation failed, no locks will be acquired.
-     * <h2 class="header">Transactions</h2>
-     * Locks are not transactional and should not be used from within transactions. If you do
-     * need explicit locking within transaction, then you should use
-     * {@link TransactionConcurrency#PESSIMISTIC} concurrency control for transaction
-     * which will acquire explicit locks for relevant cache operations.
-     *
-     * @param keys Keys to lock.
-     * @param timeout Timeout in milliseconds to wait for lock to be acquired
-     *      ({@code '0'} for no expiration).
-     * @return Future for the collection of locks. The future will return
-     *      {@code true} if all filters passed and locks were acquired before
-     *      timeout has expired, {@code false} otherwise.
-     */
-    public IgniteInternalFuture<Boolean> lockAllAsync(@Nullable Collection<? extends K> keys, long timeout);
-
-    /**
-     * Unlocks given key only if current thread owns the lock. If optional filter
-     * will not pass, then unlock will not happen. If the key being unlocked was
-     * never locked by current thread, then this method will do nothing.
-     * <h2 class="header">Transactions</h2>
-     * Locks are not transactional and should not be used from within transactions. If you do
-     * need explicit locking within transaction, then you should use
-     * {@link TransactionConcurrency#PESSIMISTIC} concurrency control for transaction
-     * which will acquire explicit locks for relevant cache operations.
-     *
-     * @param key Key to unlock.
-     * @throws IgniteCheckedException If unlock execution resulted in error.
-     */
-    public void unlock(K key) throws IgniteCheckedException;
-
-    /**
-     * Unlocks given keys only if current thread owns the locks. Only the keys
-     * that have been locked by calling thread and pass through the filter (if any)
-     * will be unlocked. If none of the key locks is owned by current thread, then
-     * this method will do nothing.
-     * <h2 class="header">Transactions</h2>
-     * Locks are not transactional and should not be used from within transactions. If you do
-     * need explicit locking within transaction, then you should use
-     * {@link TransactionConcurrency#PESSIMISTIC} concurrency control for transaction
-     * which will acquire explicit locks for relevant cache operations.
-     *
-     * @param keys Keys to unlock.
-     * @throws IgniteCheckedException If unlock execution resulted in error.
-     */
-    public void unlockAll(@Nullable Collection<? extends K> keys) throws IgniteCheckedException;
-
-    /**
-     * Checks if any node owns a lock for this key.
-     * <p>
-     * This is a local in-VM operation and does not involve any network trips
-     * or access to persistent storage in any way.
-     *
-     * @param key Key to check.
-     * @return {@code True} if lock is owned by some node.
-     */
-    public boolean isLocked(K key);
-
-    /**
-     * Checks if current thread owns a lock on this key.
-     * <p>
-     * This is a local in-VM operation and does not involve any network trips
-     * or access to persistent storage in any way.
-     *
-     * @param key Key to check.
-     * @return {@code True} if key is locked by current thread.
-     */
-    public boolean isLockedByThread(K key);
 
     /**
      * Gets the number of all entries cached on this node. This method will return the count of

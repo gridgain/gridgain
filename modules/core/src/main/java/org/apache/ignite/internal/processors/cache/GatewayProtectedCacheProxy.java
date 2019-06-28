@@ -337,35 +337,6 @@ public class GatewayProtectedCacheProxy<K, V> extends AsyncSupportAdapter<Ignite
     }
 
     /** {@inheritDoc} */
-    @Override public Lock lock(K key) {
-        CacheOperationGate opGate = onEnter();
-
-        try {
-            return delegate.lock(key);
-        }
-        finally {
-            onLeave(opGate);
-        }
-    }
-
-    /** {@inheritDoc} */
-    @Override public Lock lockAll(Collection<? extends K> keys) {
-        return delegate.lockAll(keys);
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean isLocalLocked(K key, boolean byCurrThread) {
-        CacheOperationGate opGate = onEnter();
-
-        try {
-            return delegate.isLocalLocked(key, byCurrThread);
-        }
-        finally {
-            onLeave(opGate);
-        }
-    }
-
-    /** {@inheritDoc} */
     @Override public <R> QueryCursor<R> query(Query<R> qry) {
         CacheOperationGate opGate = onEnter();
 

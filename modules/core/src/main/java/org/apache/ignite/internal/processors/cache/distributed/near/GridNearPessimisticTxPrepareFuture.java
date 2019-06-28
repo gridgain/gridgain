@@ -217,7 +217,6 @@ public class GridNearPessimisticTxPrepareFuture extends GridNearTxPrepareFutureA
             tx.onePhaseCommit(),
             tx.needReturnValue() && tx.implicit(),
             tx.implicitSingle(),
-            m.explicitLock(),
             tx.subjectId(),
             tx.taskNameHash(),
             false,

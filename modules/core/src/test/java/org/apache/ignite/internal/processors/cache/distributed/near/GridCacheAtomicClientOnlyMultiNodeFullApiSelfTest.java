@@ -65,11 +65,6 @@ public class GridCacheAtomicClientOnlyMultiNodeFullApiSelfTest extends GridCache
     }
 
     /** {@inheritDoc} */
-    @Override protected boolean lockingEnabled() {
-        return false;
-    }
-
-    /** {@inheritDoc} */
     @Override protected boolean txEnabled() {
         return false;
     }

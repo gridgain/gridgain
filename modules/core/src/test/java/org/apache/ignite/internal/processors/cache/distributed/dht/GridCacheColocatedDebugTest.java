@@ -22,12 +22,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.Lock;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.store.CacheStore;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -352,86 +349,6 @@ public class GridCacheColocatedDebugTest extends GridCommonAbstractTest {
                     }
                 }
             }
-        }
-        finally {
-            stopAllGrids();
-        }
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testLockLockedLocal() throws Exception {
-        checkLockLocked(true);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testLockLockedRemote() throws Exception {
-        checkLockLocked(false);
-    }
-
-    /**
-     *
-     * @param loc Flag indicating local or remote key should be checked.
-     * @throws Exception If failed.
-     */
-    private void checkLockLocked(boolean loc) throws Exception {
-        storeEnabled = false;
-
-        startGridsMultiThreaded(3);
-
-        try {
-            final Ignite g0 = grid(0);
-            Ignite g1 = grid(1);
-
-            final Integer key = forPrimary(loc ? g0 : g1);
-
-            final CountDownLatch lockLatch = new CountDownLatch(1);
-            final CountDownLatch unlockLatch = new CountDownLatch(1);
-
-            final Lock lock = g0.cache(DEFAULT_CACHE_NAME).lock(key);
-
-            IgniteInternalFuture<?> unlockFut = multithreadedAsync(new Runnable() {
-                @Override public void run() {
-                    try {
-                        lock.lock();
-
-                        try {
-                            lockLatch.countDown();
-
-                            U.await(unlockLatch);
-                        }
-                        finally {
-                            lock.unlock();
-                        }
-                    }
-                    catch (IgniteCheckedException e) {
-                        fail("Unexpected exception: " + e);
-                    }
-
-                }
-            }, 1);
-
-            U.await(lockLatch);
-
-            assert g0.cache(DEFAULT_CACHE_NAME).isLocalLocked(key, false);
-            assert !g0.cache(DEFAULT_CACHE_NAME).isLocalLocked(key, true) : "Key can not be locked by current thread.";
-
-            assert !lock.tryLock();
-
-            assert g0.cache(DEFAULT_CACHE_NAME).isLocalLocked(key, false);
-            assert !g0.cache(DEFAULT_CACHE_NAME).isLocalLocked(key, true) : "Key can not be locked by current thread.";
-
-            unlockLatch.countDown();
-            unlockFut.get();
-
-            assert lock.tryLock();
-
-            lock.unlock();
         }
         finally {
             stopAllGrids();
@@ -898,78 +815,6 @@ public class GridCacheColocatedDebugTest extends GridCommonAbstractTest {
 
                 assertEquals(map0, res);
             }
-        }
-        finally {
-            stopAllGrids();
-        }
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testExplicitLocks() throws Exception {
-        storeEnabled = false;
-
-        startGrid();
-
-        try {
-            IgniteCache<Object, Object> cache = jcache();
-
-            Lock lock = cache.lock(1);
-
-            lock.lock();
-
-            assertNull(cache.getAndPut(1, "key1"));
-            assertEquals("key1", cache.getAndPut(1, "key2"));
-            assertEquals("key2", cache.get(1));
-
-            lock.unlock();
-        }
-        finally {
-            stopAllGrids();
-        }
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testExplicitLocksDistributed() throws Exception {
-        storeEnabled = false;
-
-        startGridsMultiThreaded(3);
-
-        Ignite g0 = grid(0);
-        Ignite g1 = grid(1);
-        Ignite g2 = grid(2);
-
-        try {
-            Integer k0 = forPrimary(g0);
-            Integer k1 = forPrimary(g1);
-            Integer k2 = forPrimary(g2);
-
-            IgniteCache<Object, Object> cache = jcache(0);
-
-            Lock lock0 = cache.lock(k0);
-            Lock lock1 = cache.lock(k1);
-            Lock lock2 = cache.lock(k2);
-
-            lock0.lock();
-            lock1.lock();
-            lock2.lock();
-
-            cache.put(k0, "val0");
-
-            cache.putAll(F.asMap(k1, "val1", k2, "val2"));
-
-            assertEquals("val0", cache.get(k0));
-            assertEquals("val1", cache.get(k1));
-            assertEquals("val2", cache.get(k2));
-
-            lock0.unlock();
-            lock1.unlock();
-            lock2.unlock();
         }
         finally {
             stopAllGrids();

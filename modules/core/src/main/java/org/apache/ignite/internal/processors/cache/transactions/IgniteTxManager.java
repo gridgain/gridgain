@@ -767,17 +767,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     }
 
     /**
-     *
-     * @param ver Alternate version.
-     * @param tx Transaction.
-     */
-    public void addAlternateVersion(GridCacheVersion ver, IgniteInternalTx tx) {
-        if (idMap.putIfAbsent(ver, tx) == null)
-            if (log.isDebugEnabled())
-                log.debug("Registered alternate transaction version [ver=" + ver + ", tx=" + tx + ']');
-    }
-
-    /**
      * @return Local transaction.
      */
     @Nullable public IgniteTxLocalAdapter localTx() {
@@ -1760,7 +1749,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
         for (IgniteTxEntry txEntry1 : entries) {
             // Check if this entry was prepared before.
-            if (!txEntry1.markPrepared() || txEntry1.explicitVersion() != null)
+            if (!txEntry1.markPrepared())
                 continue;
 
             GridCacheContext cacheCtx = txEntry1.context();
@@ -2350,25 +2339,23 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                         boolean owner = false;
 
                         for (GridCacheMvccCandidate loc : locs) {
-                            if (!owner && loc.owner() && loc.tx())
+                            if (!owner && loc.owner())
                                 owner = true;
 
                             if (!owner) // Skip all candidates in case when no tx that owns lock.
                                 break;
 
-                            if (loc.tx()) {
-                                UUID nearNodeId = loc.otherNodeId();
+                            UUID nearNodeId = loc.otherNodeId();
 
-                                GridCacheVersion txId = loc.otherVersion();
+                            GridCacheVersion txId = loc.otherVersion();
 
-                                TxLock txLock = new TxLock(
-                                    txId == null ? loc.version() : txId,
-                                    nearNodeId == null ? loc.nodeId() : nearNodeId,
-                                    loc.threadId(),
-                                    loc.owner() ? TxLock.OWNERSHIP_OWNER : TxLock.OWNERSHIP_CANDIDATE);
+                            TxLock txLock = new TxLock(
+                                txId == null ? loc.version() : txId,
+                                nearNodeId == null ? loc.nodeId() : nearNodeId,
+                                loc.threadId(),
+                                loc.owner() ? TxLock.OWNERSHIP_OWNER : TxLock.OWNERSHIP_CANDIDATE);
 
-                                res.addTxLock(txKey, txLock);
-                            }
+                            res.addTxLock(txKey, txLock);
                         }
                     }
                     // Special case for optimal sequence of nodes processing.

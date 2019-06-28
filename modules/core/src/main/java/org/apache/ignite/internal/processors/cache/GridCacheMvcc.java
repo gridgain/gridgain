@@ -574,7 +574,6 @@ public final class GridCacheMvcc {
      * @param ver Lock version.
      * @param timeout Lock acquisition timeout.
      * @param reenter Reentry flag ({@code true} if reentry is allowed).
-     * @param tx Transaction flag.
      * @param implicitSingle Implicit transaction flag.
      * @param read Read lock flag.
      * @return New lock candidate if lock was added, or current owner if lock was reentered,
@@ -586,7 +585,6 @@ public final class GridCacheMvcc {
         GridCacheVersion ver,
         long timeout,
         boolean reenter,
-        boolean tx,
         boolean implicitSingle,
         boolean read) {
         return addLocal(
@@ -598,7 +596,6 @@ public final class GridCacheMvcc {
             timeout,
             /*serializable order*/null,
             reenter,
-            tx,
             implicitSingle,
             /*dht-local*/false,
             /*read*/read
@@ -614,7 +611,6 @@ public final class GridCacheMvcc {
      * @param timeout Lock acquisition timeout.
      * @param serOrder Version for serializable transactions ordering.
      * @param reenter Reentry flag ({@code true} if reentry is allowed).
-     * @param tx Transaction flag.
      * @param implicitSingle Implicit flag.
      * @param dhtLoc DHT local flag.
      * @param read Read lock flag.
@@ -630,13 +626,12 @@ public final class GridCacheMvcc {
         long timeout,
         @Nullable GridCacheVersion serOrder,
         boolean reenter,
-        boolean tx,
         boolean implicitSingle,
         boolean dhtLoc,
         boolean read) {
         if (log.isDebugEnabled())
             log.debug("Adding local candidate [mvcc=" + this + ", parent=" + parent + ", threadId=" + threadId +
-                ", ver=" + ver + ", timeout=" + timeout + ", reenter=" + reenter + ", tx=" + tx + "]");
+                ", ver=" + ver + ", timeout=" + timeout + ", reenter=" + reenter + "]");
 
         // Don't check reenter for DHT candidates.
         if (!dhtLoc && !reenter) {
@@ -670,7 +665,6 @@ public final class GridCacheMvcc {
             ver,
             /*local*/true,
             /*reenter*/false,
-            tx,
             implicitSingle,
             /*near-local*/false,
             dhtLoc,
@@ -699,7 +693,6 @@ public final class GridCacheMvcc {
      * @param otherNodeId Other node ID.
      * @param threadId Thread ID.
      * @param ver Lock version.
-     * @param tx Transaction flag.
      * @param implicitSingle Implicit flag.
      * @param nearLoc Near local flag.
      * @return Add remote candidate.
@@ -710,7 +703,6 @@ public final class GridCacheMvcc {
         @Nullable UUID otherNodeId,
         long threadId,
         GridCacheVersion ver,
-        boolean tx,
         boolean implicitSingle,
         boolean nearLoc) {
         GridCacheMvccCandidate cand = new GridCacheMvccCandidate(
@@ -722,7 +714,6 @@ public final class GridCacheMvcc {
             ver,
             /*local*/false,
             /*reentry*/false,
-            tx,
             implicitSingle,
             nearLoc,
             false,
@@ -743,7 +734,6 @@ public final class GridCacheMvcc {
      * @param otherNodeId Other node ID.
      * @param threadId Thread ID.
      * @param ver Lock version.
-     * @param tx Transaction flag.
      * @param implicitSingle Implicit flag.
      * @param read Read lock flag.
      * @return Add remote candidate.
@@ -753,7 +743,6 @@ public final class GridCacheMvcc {
         @Nullable UUID otherNodeId,
         long threadId,
         GridCacheVersion ver,
-        boolean tx,
         boolean implicitSingle,
         boolean read) {
         GridCacheMvccCandidate cand = new GridCacheMvccCandidate(parent,
@@ -764,7 +753,6 @@ public final class GridCacheMvcc {
             ver,
             /*local*/true,
             /*reentry*/false,
-            tx,
             implicitSingle,
             /*near loc*/true,
             /*dht loc*/false,
@@ -1234,50 +1222,6 @@ public final class GridCacheMvcc {
      */
     public void remove(GridCacheVersion ver) {
         remove0(ver, false);
-    }
-
-    /**
-     * Removes all candidates for node.
-     *
-     * @param nodeId Node ID.
-     * @return Current owner.
-     */
-    @Nullable public CacheLockCandidates removeExplicitNodeCandidates(UUID nodeId) {
-        if (rmts != null) {
-            for (Iterator<GridCacheMvccCandidate> it = rmts.iterator(); it.hasNext(); ) {
-                GridCacheMvccCandidate cand = it.next();
-
-                if (!cand.tx() && (nodeId.equals(cand.nodeId()) || nodeId.equals(cand.otherNodeId()))) {
-                    cand.setUsed(); // Mark as used to be consistent.
-                    cand.setRemoved();
-
-                    it.remove();
-                }
-            }
-
-            if (rmts.isEmpty())
-                rmts = null;
-        }
-
-        if (locs != null) {
-            for (Iterator<GridCacheMvccCandidate> it = locs.iterator(); it.hasNext(); ) {
-                GridCacheMvccCandidate cand = it.next();
-
-                if (!cand.tx() && nodeId.equals(cand.otherNodeId()) && cand.dhtLocal()) {
-                    cand.setUsed(); // Mark as used to be consistent.
-                    cand.setRemoved();
-
-                    it.remove();
-                }
-            }
-
-            if (locs.isEmpty())
-                locs = null;
-        }
-
-        reassign();
-
-        return allOwners();
     }
 
     /**

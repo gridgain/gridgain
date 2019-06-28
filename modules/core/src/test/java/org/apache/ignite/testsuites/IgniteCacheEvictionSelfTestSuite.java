@@ -29,7 +29,6 @@ import org.apache.ignite.internal.processors.cache.eviction.GridCacheEmptyEntrie
 import org.apache.ignite.internal.processors.cache.eviction.GridCacheEmptyEntriesPartitionedSelfTest;
 import org.apache.ignite.internal.processors.cache.eviction.GridCacheEvictableEntryEqualsSelfTest;
 import org.apache.ignite.internal.processors.cache.eviction.GridCacheEvictionFilterSelfTest;
-import org.apache.ignite.internal.processors.cache.eviction.GridCacheEvictionLockUnlockSelfTest;
 import org.apache.ignite.internal.processors.cache.eviction.GridCacheEvictionTouchSelfTest;
 import org.apache.ignite.internal.processors.cache.eviction.fifo.FifoEvictionPolicyFactorySelfTest;
 import org.apache.ignite.internal.processors.cache.eviction.fifo.FifoEvictionPolicySelfTest;
@@ -77,7 +76,6 @@ public class IgniteCacheEvictionSelfTestSuite {
         GridTestUtils.addTestIfNeeded(suite, GridCacheConcurrentEvictionsSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCacheConcurrentEvictionConsistencySelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCacheEvictionTouchSelfTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, GridCacheEvictionLockUnlockSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCachePreloadingEvictionsSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCacheEmptyEntriesPartitionedSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCacheEmptyEntriesLocalSelfTest.class, ignoredTests);

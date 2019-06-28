@@ -516,7 +516,6 @@ public class IgniteTxHandler {
                     req.implicitSingle(),
                     req.implicitSingle(),
                     req.system(),
-                    req.explicitLock(),
                     req.policy(),
                     req.concurrency(),
                     req.isolation(),
@@ -551,9 +550,6 @@ public class IgniteTxHandler {
 
         if (tx != null) {
             req.txState(tx.txState());
-
-            if (req.explicitLock())
-                tx.explicitLock(true);
 
             tx.transactionNodes(req.transactionNodes());
 
@@ -1000,7 +996,7 @@ public class IgniteTxHandler {
             return null;
         }
 
-        if (tx == null && !req.explicitLock()) {
+        if (tx == null) {
             assert locTx == null : "DHT local tx should never be lost for near local tx: " + locTx;
 
             U.warn(txFinishMsgLog, "Received finish request for completed transaction (the message may be too late) [" +

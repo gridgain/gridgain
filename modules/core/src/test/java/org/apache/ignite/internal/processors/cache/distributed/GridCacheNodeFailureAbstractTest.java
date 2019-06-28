@@ -19,7 +19,6 @@ package org.apache.ignite.internal.processors.cache.distributed;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.locks.Lock;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -113,8 +112,6 @@ public abstract class GridCacheNodeFailureAbstractTest extends GridCommonAbstrac
 
                 IGNITEs.set(i, startGrid(i));
             }
-
-            assert !jcache(i).isLocalLocked(KEY, false) : "Entry is locked for grid [idx=" + i + ']';
         }
     }
 
@@ -187,24 +184,6 @@ public abstract class GridCacheNodeFailureAbstractTest extends GridCommonAbstrac
             f.get();
 
             U.sleep(getInteger(IGNITE_TX_SALVAGE_TIMEOUT, 3000));
-
-            IgniteCache<Integer, String> checkCache = jcache(checkIdx);
-
-            boolean locked = false;
-            Lock lock = checkCache.lock(KEY);
-
-            for (int i = 0; !locked && i < 3; i++) {
-                locked = lock.tryLock();
-
-                if (!locked)
-                    U.sleep(500);
-                else
-                    break;
-            }
-
-            assert locked : "Failed to lock key on cache [idx=" + checkIdx + ", key=" + KEY + ']';
-
-            lock.unlock();
         }
         catch (IgniteTxOptimisticCheckedException e) {
             U.warn(log, "Optimistic transaction failure (will rollback) [msg=" + e.getMessage() + ", tx=" + tx + ']');
@@ -222,70 +201,5 @@ public abstract class GridCacheNodeFailureAbstractTest extends GridCommonAbstrac
 
             throw e;
         }
-    }
-
-    /**
-     * @throws Exception If check failed.
-     *
-     * Note: test was disabled for REPPLICATED cache case because IGNITE-601.
-     * This comment should be removed if test passed stably.
-     */
-    @Test
-    public void testLock() throws Exception {
-        int idx = 0;
-
-        info("Grid will be stopped: " + idx);
-
-        info("Nodes for key [id=" + grid(idx).affinity(DEFAULT_CACHE_NAME).mapKeyToPrimaryAndBackups(KEY) +
-            ", key=" + KEY + ']');
-
-        IgniteCache<Integer, String> cache = jcache(idx);
-
-        cache.put(KEY, VALUE);
-
-        Lock lock = cache.lock(KEY);
-
-        assert lock.tryLock();
-
-        int checkIdx = 1;
-
-        info("Check grid index: " + checkIdx);
-
-        IgniteCache<Integer, String> checkCache = jcache(checkIdx);
-
-        assert !checkCache.lock(KEY).tryLock();
-
-        IgniteFuture<?> f = waitForLocalEvent(grid(checkIdx).events(), new P1<Event>() {
-            @Override public boolean apply(Event e) {
-                info("Received grid event: " + e);
-
-                return true;
-            }
-        }, EVT_NODE_LEFT, EVT_NODE_FAILED);
-
-        stopGrid(idx);
-
-        f.get();
-
-        boolean locked = false;
-        Lock checkLock = checkCache.lock(KEY);
-
-        for (int i = 0; !locked && i < 3; i++) {
-            locked = checkLock.tryLock();
-
-            if (!locked) {
-                info("Still not locked...");
-
-                U.sleep(1500);
-            }
-            else
-                break;
-        }
-
-        assert locked : "Failed to lock";
-
-        checkLock.unlock();
-
-        assert !checkCache.isLocalLocked(KEY, false);
     }
 }

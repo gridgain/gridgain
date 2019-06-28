@@ -249,7 +249,6 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
             implicit,
             implicitSingle,
             sys,
-            false,
             plc,
             concurrency,
             isolation,
@@ -3290,25 +3289,6 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
             c.apply(key, null, IgniteTxEntry.SER_READ_EMPTY_ENTRY_VER);
     }
 
-    /** {@inheritDoc} */
-    @Override protected void updateExplicitVersion(IgniteTxEntry txEntry, GridCacheEntryEx entry)
-        throws GridCacheEntryRemovedException {
-        if (entry.detached()) {
-            GridCacheMvccCandidate cand = cctx.mvcc().explicitLock(threadId(), entry.txKey());
-
-            if (cand != null && !xidVersion().equals(cand.version())) {
-                GridCacheVersion candVer = cand.version();
-
-                txEntry.explicitVersion(candVer);
-
-                if (candVer.compareTo(minVer) < 0)
-                    minVer = candVer;
-            }
-        }
-        else
-            super.updateExplicitVersion(txEntry, entry);
-    }
-
     /**
      * @return DHT map.
      */
@@ -3439,6 +3419,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
     /**
      * Adds key mapping to dht mapping.
      *
+     * TODO GG-19461 Remove this method?
      * @param key Key to add.
      * @param node Node this key mapped to.
      */
@@ -3530,12 +3511,8 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
                 GridDistributedTxMapping m = mappings.get(primary.id());
 
-                if (m == null) {
+                if (m == null)
                     mappings.put(m = new GridDistributedTxMapping(primary));
-
-                    if (map.explicitLock())
-                        m.markExplicitLock();
-                }
 
                 for (IgniteTxEntry entry : map.entries())
                     m.add(entry);
@@ -3558,28 +3535,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
         mappings.put(m);
 
-        if (map.explicitLock())
-            m.markExplicitLock();
-
         m.add(entry);
-    }
-
-    /**
-     * @param nodeId Node ID to mark with explicit lock.
-     * @return {@code True} if mapping was found.
-     */
-    public boolean markExplicit(UUID nodeId) {
-        explicitLock = true;
-
-        GridDistributedTxMapping m = mappings.get(nodeId);
-
-        if (m != null) {
-            m.markExplicitLock();
-
-            return true;
-        }
-
-        return false;
     }
 
     /** {@inheritDoc} */
@@ -3635,16 +3591,11 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
             GridDistributedCacheEntry entry = (GridDistributedCacheEntry)txEntry.cached();
 
             try {
-                // Handle explicit locks.
-                GridCacheVersion explicit = txEntry.explicitVersion();
-
-                if (explicit == null) {
-                    entry.readyNearLock(xidVer,
-                        dhtVer,
-                        committedVers,
-                        rolledbackVers,
-                        pendingVers);
-                }
+                entry.readyNearLock(xidVer,
+                    dhtVer,
+                    committedVers,
+                    rolledbackVers,
+                    pendingVers);
 
                 break;
             }
@@ -3782,8 +3733,6 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
         else
             // Prepare was called explicitly.
             return fut;
-
-        mapExplicitLocks();
 
         fut.prepare();
 

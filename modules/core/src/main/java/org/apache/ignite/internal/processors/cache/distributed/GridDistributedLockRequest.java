@@ -68,9 +68,6 @@ public class GridDistributedLockRequest extends GridDistributedBaseMessage {
     /** Max wait timeout. */
     private long timeout;
 
-    /** Indicates whether lock is obtained within a scope of transaction. */
-    private boolean isInTx;
-
     /** Invalidate flag for transactions. */
     private boolean isInvalidate;
 
@@ -112,7 +109,6 @@ public class GridDistributedLockRequest extends GridDistributedBaseMessage {
      * @param threadId Thread ID.
      * @param futId Future ID.
      * @param lockVer Cache version.
-     * @param isInTx {@code True} if implicit transaction lock.
      * @param isRead Indicates whether implicit lock is for read or write operation.
      * @param isolation Transaction isolation.
      * @param isInvalidate Invalidation flag.
@@ -129,7 +125,6 @@ public class GridDistributedLockRequest extends GridDistributedBaseMessage {
         long threadId,
         IgniteUuid futId,
         GridCacheVersion lockVer,
-        boolean isInTx,
         boolean isRead,
         TransactionIsolation isolation,
         boolean isInvalidate,
@@ -144,14 +139,13 @@ public class GridDistributedLockRequest extends GridDistributedBaseMessage {
 
         assert keyCnt > 0;
         assert futId != null;
-        assert !isInTx || isolation != null;
+        assert isolation != null;
 
         this.cacheId = cacheId;
         this.nodeId = nodeId;
         this.nearXidVer = nearXidVer;
         this.threadId = threadId;
         this.futId = futId;
-        this.isInTx = isInTx;
         this.isRead = isRead;
         this.isolation = isolation;
         this.isInvalidate = isInvalidate;
@@ -192,13 +186,6 @@ public class GridDistributedLockRequest extends GridDistributedBaseMessage {
      */
     public IgniteUuid futureId() {
         return futId;
-    }
-
-    /**
-     * @return {@code True} if implicit transaction lock.
-     */
-    public boolean inTx() {
-        return isInTx;
     }
 
     /**
@@ -377,12 +364,6 @@ public class GridDistributedLockRequest extends GridDistributedBaseMessage {
 
                 writer.incrementState();
 
-            case 10:
-                if (!writer.writeBoolean("isInTx", isInTx))
-                    return false;
-
-                writer.incrementState();
-
             case 11:
                 if (!writer.writeBoolean("isInvalidate", isInvalidate))
                     return false;
@@ -469,14 +450,6 @@ public class GridDistributedLockRequest extends GridDistributedBaseMessage {
 
             case 9:
                 futId = reader.readIgniteUuid("futId");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
-            case 10:
-                isInTx = reader.readBoolean("isInTx");
 
                 if (!reader.isLastRead())
                     return false;

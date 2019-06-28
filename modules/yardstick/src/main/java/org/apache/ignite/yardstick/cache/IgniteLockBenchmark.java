@@ -17,15 +17,21 @@
 package org.apache.ignite.yardstick.cache;
 
 import java.util.Map;
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteLock;
 import org.yardstickframework.BenchmarkConfiguration;
 
 /**
  * Ignite benchmark that performs Ignite.reentrantLock operations.
  */
-public class IgniteLockBenchmark extends IgniteCacheLockBenchmark {
+public class IgniteLockBenchmark extends IgniteCacheAbstractBenchmark<String, Integer> {
     /** Reentrant lock. */
     private IgniteLock lock;
+
+    /** {@inheritDoc} */
+    @Override protected IgniteCache<String, Integer> cache() {
+        return ignite().cache("tx");
+    }
 
     /** {@inheritDoc} */
     @Override public boolean test(Map<Object, Object> map) throws Exception {

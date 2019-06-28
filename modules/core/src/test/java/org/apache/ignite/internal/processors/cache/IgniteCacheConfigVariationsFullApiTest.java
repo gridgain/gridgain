@@ -372,32 +372,6 @@ public class IgniteCacheConfigVariationsFullApiTest extends IgniteCacheConfigVar
      * @throws Exception If failed.
      */
     @Test
-    public void testRemoveInExplicitLocks() throws Exception {
-        if (lockingEnabled()) {
-            IgniteCache<String, Integer> cache = jcache();
-
-            cache.put("a", 1);
-
-            Lock lock = cache.lockAll(ImmutableSet.of("a", "b", "c", "d"));
-
-            lock.lock();
-
-            try {
-                cache.remove("a");
-
-                // Make sure single-key operation did not remove lock.
-                cache.putAll(F.asMap("b", 2, "c", 3, "d", 4));
-            }
-            finally {
-                lock.unlock();
-            }
-        }
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
     public void testRemoveAllSkipStore() throws Exception {
         if (!storeEnabled())
             return;
@@ -3833,30 +3807,9 @@ public class IgniteCacheConfigVariationsFullApiTest extends IgniteCacheConfigVar
 
         String first = F.first(keys);
 
-        if (lockingEnabled()) {
-            Lock lock = cache.lock(first);
+        cache.clear();
 
-            lock.lock();
-
-            try {
-                cache.clear();
-
-                GridCacheContext<String, Integer> cctx = context(0);
-
-                GridCacheEntryEx entry = cctx.isNear() ? cctx.near().dht().peekEx(first) :
-                    cctx.cache().peekEx(first);
-
-                assertNotNull(entry);
-            }
-            finally {
-                lock.unlock();
-            }
-        }
-        else {
-            cache.clear();
-
-            cache.put(first, vals.get(first));
-        }
+        cache.put(first, vals.get(first));
 
         cache.clear();
 
@@ -3878,14 +3831,6 @@ public class IgniteCacheConfigVariationsFullApiTest extends IgniteCacheConfigVar
         cache.localEvict(Sets.union(ImmutableSet.of("key1", "key2"), keys));
 
         assert cache.localSize(ONHEAP) == 0;
-
-// TODO: GG-11148 check if test for promote makes sense.
-//        cache.clear();
-//
-//        cache.localPromote(ImmutableSet.of("key2", "key1"));
-//
-//        assert cache.localPeek("key1", ONHEAP) == null;
-//        assert cache.localPeek("key2", ONHEAP) == null;
     }
 
     /**
@@ -3988,123 +3933,6 @@ public class IgniteCacheConfigVariationsFullApiTest extends IgniteCacheConfigVar
 
         for (int i = 0; i < gridCount(); i++)
             assert jcache(i).localSize() == 0;
-    }
-
-    /**
-     * @throws Exception In case of error.
-     */
-    @SuppressWarnings("BusyWait")
-    @Test
-    public void testLockUnlock() throws Exception {
-        if (lockingEnabled()) {
-            final CountDownLatch lockCnt = new CountDownLatch(1);
-            final CountDownLatch unlockCnt = new CountDownLatch(1);
-
-            grid(0).events().localListen(new IgnitePredicate<Event>() {
-                @Override public boolean apply(Event evt) {
-                    switch (evt.type()) {
-                        case EVT_CACHE_OBJECT_LOCKED:
-                            lockCnt.countDown();
-
-                            break;
-                        case EVT_CACHE_OBJECT_UNLOCKED:
-                            unlockCnt.countDown();
-
-                            break;
-                    }
-
-                    return true;
-                }
-            }, EVT_CACHE_OBJECT_LOCKED, EVT_CACHE_OBJECT_UNLOCKED);
-
-            IgniteCache<String, Integer> cache = jcache();
-
-            String key = primaryKeysForCache(1).get(0);
-
-            cache.put(key, 1);
-
-            assert !cache.isLocalLocked(key, false);
-
-            Lock lock = cache.lock(key);
-
-            lock.lock();
-
-            try {
-                lockCnt.await();
-
-                assert cache.isLocalLocked(key, false);
-            }
-            finally {
-                lock.unlock();
-            }
-
-            unlockCnt.await();
-
-            for (int i = 0; i < 100; i++)
-                if (cache.isLocalLocked(key, false))
-                    Thread.sleep(10);
-                else
-                    break;
-
-            assert !cache.isLocalLocked(key, false);
-        }
-    }
-
-    /**
-     * @throws Exception In case of error.
-     */
-    @SuppressWarnings("BusyWait")
-    @Test
-    public void testLockUnlockAll() throws Exception {
-        if (lockingEnabled()) {
-            IgniteCache<String, Integer> cache = jcache();
-
-            cache.put("key1", 1);
-            cache.put("key2", 2);
-
-            assert !cache.isLocalLocked("key1", false);
-            assert !cache.isLocalLocked("key2", false);
-
-            Lock lock1_2 = cache.lockAll(ImmutableSet.of("key1", "key2"));
-
-            lock1_2.lock();
-
-            try {
-                assert cache.isLocalLocked("key1", false);
-                assert cache.isLocalLocked("key2", false);
-            }
-            finally {
-                lock1_2.unlock();
-            }
-
-            for (int i = 0; i < 100; i++)
-                if (cache.isLocalLocked("key1", false) || cache.isLocalLocked("key2", false))
-                    Thread.sleep(10);
-                else
-                    break;
-
-            assert !cache.isLocalLocked("key1", false);
-            assert !cache.isLocalLocked("key2", false);
-
-            lock1_2.lock();
-
-            try {
-                assert cache.isLocalLocked("key1", false);
-                assert cache.isLocalLocked("key2", false);
-            }
-            finally {
-                lock1_2.unlock();
-            }
-
-            for (int i = 0; i < 100; i++)
-                if (cache.isLocalLocked("key1", false) || cache.isLocalLocked("key2", false))
-                    Thread.sleep(10);
-                else
-                    break;
-
-            assert !cache.isLocalLocked("key1", false);
-            assert !cache.isLocalLocked("key2", false);
-        }
     }
 
     /**
@@ -6143,44 +5971,6 @@ public class IgniteCacheConfigVariationsFullApiTest extends IgniteCacheConfigVar
                 return null;
             }
         }, EntryProcessorException.class, null);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testLockInsideTransaction() throws Exception {
-        if (txEnabled()) {
-            GridTestUtils.assertThrows(
-                log,
-                new Callable<Object>() {
-                    @Override public Object call() throws Exception {
-                        try (Transaction tx = ignite(0).transactions().txStart()) {
-                            jcache(0).lock("key").lock();
-                        }
-
-                        return null;
-                    }
-                },
-                CacheException.class,
-                "Explicit lock can't be acquired within a transaction."
-            );
-
-            GridTestUtils.assertThrows(
-                log,
-                new Callable<Object>() {
-                    @Override public Object call() throws Exception {
-                        try (Transaction tx = ignite(0).transactions().txStart()) {
-                            jcache(0).lockAll(Arrays.asList("key1", "key2")).lock();
-                        }
-
-                        return null;
-                    }
-                },
-                CacheException.class,
-                "Explicit lock can't be acquired within a transaction."
-            );
-        }
     }
 
     /**

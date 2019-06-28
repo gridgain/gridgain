@@ -321,45 +321,6 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
     public IgniteFuture<V> getAndPutIfAbsentAsync(K key, V val) throws CacheException, TransactionException;
 
     /**
-     * Creates a {@link Lock} instance associated with passed key.
-     * This method does not acquire lock immediately, you have to call appropriate method on returned instance.
-     * Returned lock does not support {@link Lock#newCondition()} method,
-     * other methods defined in {@link Lock} are supported.
-     *
-     * @param key Key for lock.
-     * @return New lock instance associated with passed key.
-     * @see Lock#lock()
-     * @see Lock#tryLock(long, TimeUnit)
-     */
-    public Lock lock(K key);
-
-    /**
-     * Creates a {@link Lock} instance associated with passed keys.
-     * This method does not acquire lock immediately, you have to call appropriate method on returned instance.
-     * Returned lock does not support {@link Lock#newCondition()} method,
-     * other methods defined in {@link Lock} are supported.
-     *
-     * @param keys Keys for lock.
-     * @return New lock instance associated with passed key.
-     * @see Lock#lock()
-     * @see Lock#tryLock(long, TimeUnit)
-     */
-    public Lock lockAll(Collection<? extends K> keys);
-
-    /**
-     * Checks if specified key is locked.
-     * <p>
-     * This is a local in-VM operation and does not involve any network trips
-     * or access to persistent storage in any way.
-     *
-     * @param key Key to check.
-     * @param byCurrThread If {@code true} method will check that current thread owns a lock on this key, other vise
-     *     will check that any thread on any node owns a lock on this key.
-     * @return {@code True} if lock is owned by some node.
-     */
-    public boolean isLocalLocked(K key, boolean byCurrThread);
-
-    /**
      * Queries cache. Accepts any subclass of {@link Query} interface.
      * See also {@link #query(SqlFieldsQuery)}.
      *

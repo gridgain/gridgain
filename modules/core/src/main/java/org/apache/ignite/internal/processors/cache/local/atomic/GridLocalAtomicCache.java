@@ -107,13 +107,8 @@ public class GridLocalAtomicCache<K, V> extends GridLocalCache<K, V> {
     }
 
     /** {@inheritDoc} */
-    @Override protected void checkJta() throws IgniteCheckedException {
+    @Override protected void checkJta() {
         // No-op.
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean isLocal() {
-        return true;
     }
 
     /** {@inheritDoc} */
@@ -1540,19 +1535,6 @@ public class GridLocalAtomicCache<K, V> extends GridLocalCache<K, V> {
         long accessTtl) {
         return new GridFinishedFuture<>(new UnsupportedOperationException("Locks are not supported for " +
             "CacheAtomicityMode.ATOMIC mode (use CacheAtomicityMode.TRANSACTIONAL instead)"));
-    }
-
-    /** {@inheritDoc} */
-    @Override public IgniteInternalFuture<Boolean> lockAllAsync(@Nullable Collection<? extends K> keys,
-        long timeout) {
-        return new GridFinishedFuture<>(new UnsupportedOperationException("Locks are not supported for " +
-            "CacheAtomicityMode.ATOMIC mode (use CacheAtomicityMode.TRANSACTIONAL instead)"));
-    }
-
-    /** {@inheritDoc} */
-    @Override public void unlockAll(@Nullable Collection<? extends K> keys) throws IgniteCheckedException {
-        throw new UnsupportedOperationException("Locks are not supported for " +
-            "CacheAtomicityMode.ATOMIC mode (use CacheAtomicityMode.TRANSACTIONAL instead)");
     }
 
     /**

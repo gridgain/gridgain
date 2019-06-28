@@ -37,11 +37,6 @@ public class GridCacheAtomicMultiNodeP2PDisabledFullApiSelfTest
     }
 
     /** {@inheritDoc} */
-    @Override protected boolean lockingEnabled() {
-        return false;
-    }
-
-    /** {@inheritDoc} */
     @Override protected boolean txEnabled() {
         return false;
     }

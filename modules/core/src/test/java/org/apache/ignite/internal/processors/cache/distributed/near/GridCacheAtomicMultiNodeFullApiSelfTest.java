@@ -48,11 +48,6 @@ public class GridCacheAtomicMultiNodeFullApiSelfTest extends GridCachePartitione
     }
 
     /** {@inheritDoc} */
-    @Override protected boolean lockingEnabled() {
-        return false;
-    }
-
-    /** {@inheritDoc} */
     @Override protected boolean txEnabled() {
         return false;
     }

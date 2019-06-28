@@ -158,7 +158,6 @@ public class GridCacheTestEntryEx extends GridMetadataAwareAdapter implements Gr
      * @param ver Lock version.
      * @param timeout Lock acquisition timeout.
      * @param reenter Reentry flag ({@code true} if reentry is allowed).
-     * @param tx Transaction flag.
      * @return New lock candidate if lock was added, or current owner if lock was reentered,
      *      or <tt>null</tt> if lock was owned by another thread and timeout is negative.
      */
@@ -166,15 +165,13 @@ public class GridCacheTestEntryEx extends GridMetadataAwareAdapter implements Gr
         long threadId,
         GridCacheVersion ver,
         long timeout,
-        boolean reenter,
-        boolean tx) {
+        boolean reenter) {
         return mvcc.addLocal(
             this,
             threadId,
             ver,
             timeout,
             reenter,
-            tx,
             false,
             false
         );
@@ -186,12 +183,10 @@ public class GridCacheTestEntryEx extends GridMetadataAwareAdapter implements Gr
      * @param nodeId Node ID.
      * @param threadId Thread ID.
      * @param ver Lock version.
-     * @param tx Transaction flag.
      * @return Remote candidate.
      */
-    GridCacheMvccCandidate addRemote(UUID nodeId, long threadId, GridCacheVersion ver,
-                                     boolean tx) {
-        return mvcc.addRemote(this, nodeId, null, threadId, ver, tx, true, false);
+    GridCacheMvccCandidate addRemote(UUID nodeId, long threadId, GridCacheVersion ver) {
+        return mvcc.addRemote(this, nodeId, null, threadId, ver, true, false);
     }
 
     /**
@@ -200,12 +195,10 @@ public class GridCacheTestEntryEx extends GridMetadataAwareAdapter implements Gr
      * @param nodeId Node ID.
      * @param threadId Thread ID.
      * @param ver Lock version.
-     * @param tx Transaction flag.
      * @return Remote candidate.
      */
-    GridCacheMvccCandidate addNearLocal(UUID nodeId, long threadId, GridCacheVersion ver,
-        boolean tx) {
-        return mvcc.addNearLocal(this, nodeId, null, threadId, ver, tx, true, false);
+    GridCacheMvccCandidate addNearLocal(UUID nodeId, long threadId, GridCacheVersion ver) {
+        return mvcc.addNearLocal(this, nodeId, null, threadId, ver, true, false);
     }
 
     /**

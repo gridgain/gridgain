@@ -532,7 +532,6 @@ public class GridNearOptimisticTxPrepareFuture extends GridNearOptimisticTxPrepa
                     tx.onePhaseCommit(),
                     tx.needReturnValue() && tx.implicit(),
                     tx.implicitSingle(),
-                    m.explicitLock(),
                     tx.subjectId(),
                     tx.taskNameHash(),
                     m.clientFirst(),
@@ -674,7 +673,7 @@ public class GridNearOptimisticTxPrepareFuture extends GridNearOptimisticTxPrepa
             entry.cached(cacheCtx.local().entryEx(entry.key(), topVer));
 
         if (cacheCtx.isNear() || cacheCtx.isLocal()) {
-            if (entry.explicitVersion() == null && !remap) {
+            if (!remap) {
                 if (keyLockFut == null) {
                     keyLockFut = new KeyLockFuture();
 
@@ -695,12 +694,6 @@ public class GridNearOptimisticTxPrepareFuture extends GridNearOptimisticTxPrepa
         }
 
         cur.add(entry);
-
-        if (entry.explicitVersion() != null) {
-            tx.markExplicit(primary.id());
-
-            cur.markExplicitLock();
-        }
 
         entry.nodeId(primary.id());
 

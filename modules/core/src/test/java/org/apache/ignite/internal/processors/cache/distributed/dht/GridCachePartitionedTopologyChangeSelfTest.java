@@ -25,7 +25,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.locks.Lock;
 import javax.cache.CacheException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
@@ -136,100 +135,6 @@ public class GridCachePartitionedTopologyChangeSelfTest extends GridCommonAbstra
     @Test
     public void testBackupTxNodeLeft() throws Exception {
         checkTxNodeLeft(PARTITION_BACKUP);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testExplicitLocks() throws Exception {
-        try {
-            startGridsMultiThreaded(2);
-
-            IgniteKernal[] nodes = new IgniteKernal[] {(IgniteKernal)grid(0), (IgniteKernal)grid(1)};
-
-            Collection<IgniteInternalFuture> futs = new ArrayList<>();
-
-            final CountDownLatch startLatch = new CountDownLatch(1);
-
-            for (final IgniteKernal node : nodes) {
-                List<Integer> parts = partitions(node, PARTITION_PRIMARY);
-
-                Map<Integer, Integer> keyMap = keysFor(node, parts);
-
-                for (final Integer key : keyMap.values()) {
-                    futs.add(multithreadedAsync(new Runnable() {
-                        @Override public void run() {
-                            try {
-                                Lock lock = node.cache(DEFAULT_CACHE_NAME).lock(key);
-
-                                lock.lock();
-
-                                try {
-
-                                    info(">>> Acquired explicit lock for key: " + key);
-
-                                    startLatch.await();
-
-                                    info(">>> Acquiring explicit lock for key: " + key * 10);
-
-                                    Lock lock10 = node.cache(DEFAULT_CACHE_NAME).lock(key * 10);
-
-                                    lock10.lock();
-
-                                    try {
-                                        info(">>> Releasing locks [key1=" + key + ", key2=" + key * 10 + ']');
-                                    }
-                                    finally {
-                                        lock10.unlock();
-                                    }
-                                }
-                                finally {
-                                    lock.unlock();
-                                }
-                            }
-                            catch (CacheException e) {
-                                info(">>> Failed to perform lock [key=" + key + ", e=" + e + ']');
-                            }
-                            catch (InterruptedException ignored) {
-                                info(">>> Interrupted while waiting for start latch.");
-
-                                Thread.currentThread().interrupt();
-                            }
-                        }
-                    }, 1));
-                }
-            }
-
-            IgniteInternalFuture<?> startFut = multithreadedAsync(new Runnable() {
-                @Override public void run() {
-                    try {
-                        startGrid(2);
-
-                        info(">>> Started grid2.");
-                    }
-                    catch (Exception e) {
-                        info(">>> Failed to start grid: " + e);
-                    }
-                }
-            }, 1);
-
-            U.sleep(5000);
-
-            assertFalse(startFut.isDone());
-
-            info(">>> Waiting for all locks to be released.");
-
-            startLatch.countDown();
-
-            for (IgniteInternalFuture fut : futs)
-                fut.get(1000);
-
-            startFut.get();
-        }
-        finally {
-            stopAllGrids();
-        }
     }
 
     /**

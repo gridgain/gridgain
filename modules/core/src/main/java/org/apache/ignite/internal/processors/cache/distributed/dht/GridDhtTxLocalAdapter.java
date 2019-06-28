@@ -45,7 +45,6 @@ import org.apache.ignite.internal.processors.cache.transactions.IgniteTxLocalAda
 import org.apache.ignite.internal.processors.cache.transactions.TxCounters;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.F0;
-import org.apache.ignite.internal.util.GridLeanMap;
 import org.apache.ignite.internal.util.GridLeanSet;
 import org.apache.ignite.internal.util.future.GridEmbeddedFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
@@ -94,9 +93,6 @@ public abstract class GridDhtTxLocalAdapter extends IgniteTxLocalAdapter {
     /** Mapped flag. */
     protected volatile boolean mapped;
 
-    /** */
-    protected boolean explicitLock;
-
     /** Versions of pending locks for entries of this tx. */
     private Collection<GridCacheVersion> pendingVers;
 
@@ -134,7 +130,6 @@ public abstract class GridDhtTxLocalAdapter extends IgniteTxLocalAdapter {
         boolean implicit,
         boolean implicitSingle,
         boolean sys,
-        boolean explicitLock,
         byte plc,
         TransactionConcurrency concurrency,
         TransactionIsolation isolation,
@@ -165,8 +160,6 @@ public abstract class GridDhtTxLocalAdapter extends IgniteTxLocalAdapter {
         );
 
         assert cctx != null;
-
-        this.explicitLock = explicitLock;
 
         threadId = Thread.currentThread().getId();
     }
@@ -200,20 +193,6 @@ public abstract class GridDhtTxLocalAdapter extends IgniteTxLocalAdapter {
      */
     boolean nearOnOriginatingNode() {
         return nearOnOriginatingNode;
-    }
-
-    /**
-     * @return {@code True} if explicit lock transaction.
-     */
-    public boolean explicitLock() {
-        return explicitLock;
-    }
-
-    /**
-     * @param explicitLock Explicit lock flag.
-     */
-    public void explicitLock(boolean explicitLock) {
-        this.explicitLock = explicitLock;
     }
 
     /**
@@ -272,81 +251,9 @@ public abstract class GridDhtTxLocalAdapter extends IgniteTxLocalAdapter {
     }
 
     /**
-     * Map explicit locks.
-     */
-    protected void mapExplicitLocks() {
-        if (!mapped) {
-            // Explicit locks may participate in implicit transactions only.
-            if (!implicit()) {
-                mapped = true;
-
-                return;
-            }
-
-            Map<ClusterNode, List<GridDhtCacheEntry>> dhtEntryMap = null;
-            Map<ClusterNode, List<GridDhtCacheEntry>> nearEntryMap = null;
-
-            for (IgniteTxEntry e : allEntries()) {
-                assert e.cached() != null;
-
-                GridCacheContext cacheCtx = e.cached().context();
-
-                if (cacheCtx.isNear())
-                    continue;
-
-                if (e.cached().obsolete()) {
-                    GridCacheEntryEx cached = cacheCtx.cache().entryEx(e.key(), topologyVersion());
-
-                    e.cached(cached);
-                }
-
-                if (e.cached().detached() || e.cached().isLocal())
-                    continue;
-
-                while (true) {
-                    try {
-                        // Map explicit locks.
-                        if (e.explicitVersion() != null && !e.explicitVersion().equals(xidVer)) {
-                            if (dhtEntryMap == null)
-                                dhtEntryMap = new GridLeanMap<>();
-
-                            if (nearEntryMap == null)
-                                nearEntryMap = new GridLeanMap<>();
-
-                            cacheCtx.dhtMap(
-                                (GridDhtCacheEntry)e.cached(),
-                                e.explicitVersion(),
-                                log,
-                                dhtEntryMap,
-                                nearEntryMap);
-                        }
-
-                        break;
-                    }
-                    catch (GridCacheEntryRemovedException ignore) {
-                        GridCacheEntryEx cached = cacheCtx.cache().entryEx(e.key(), topologyVersion());
-
-                        e.cached(cached);
-                    }
-                }
-            }
-
-            if (!F.isEmpty(dhtEntryMap))
-                addDhtNodeEntryMapping(dhtEntryMap);
-
-            if (!F.isEmpty(nearEntryMap))
-                addNearNodeEntryMapping(nearEntryMap);
-
-            mapped = true;
-        }
-    }
-
-    /**
      * @return DHT map.
      */
     Map<UUID, GridDistributedTxMapping> dhtMap() {
-        mapExplicitLocks();
-
         return dhtMap;
     }
 
@@ -354,8 +261,6 @@ public abstract class GridDhtTxLocalAdapter extends IgniteTxLocalAdapter {
      * @return Near map.
      */
     Map<UUID, GridDistributedTxMapping> nearMap() {
-        mapExplicitLocks();
-
         return nearMap;
     }
 
@@ -507,17 +412,6 @@ public abstract class GridDhtTxLocalAdapter extends IgniteTxLocalAdapter {
                 GridDhtCacheEntry cached = dhtCache.entryExx(existing.key(), topologyVersion());
 
                 existing.cached(cached);
-
-                GridCacheVersion explicit = existing.explicitVersion();
-
-                if (explicit != null) {
-                    GridCacheVersion dhtVer = cctx.mvcc().mappedVersion(explicit);
-
-                    if (dhtVer == null)
-                        throw new IgniteCheckedException("Failed to find dht mapping for explicit entry version: " + existing);
-
-                    existing.explicitVersion(dhtVer);
-                }
 
                 txState.addEntry(existing);
 
@@ -938,7 +832,7 @@ public abstract class GridDhtTxLocalAdapter extends IgniteTxLocalAdapter {
     /** {@inheritDoc} */
     @Override public String toString() {
         return GridToStringBuilder.toString(GridDhtTxLocalAdapter.class, this, "nearNodes", nearMap.keySet(),
-            "dhtNodes", dhtMap.keySet(), "explicitLock", explicitLock, "super", super.toString());
+            "dhtNodes", dhtMap.keySet(), "super", super.toString());
     }
 
     /**

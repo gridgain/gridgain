@@ -46,7 +46,6 @@ import static org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate
 import static org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate.Mask.REENTRY;
 import static org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate.Mask.REMOVED;
 import static org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate.Mask.SINGLE_IMPLICIT;
-import static org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate.Mask.TX;
 import static org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate.Mask.USED;
 
 /**
@@ -136,7 +135,6 @@ public class GridCacheMvccCandidate implements Externalizable,
      * @param ver Cache version.
      * @param loc {@code True} if the lock is local.
      * @param reentry {@code True} if candidate is for reentry.
-     * @param tx Transaction flag.
      * @param singleImplicit Single-key-implicit-transaction flag.
      * @param nearLoc Near-local flag.
      * @param dhtLoc DHT local flag.
@@ -152,7 +150,6 @@ public class GridCacheMvccCandidate implements Externalizable,
         GridCacheVersion ver,
         boolean loc,
         boolean reentry,
-        boolean tx,
         boolean singleImplicit,
         boolean nearLoc,
         boolean dhtLoc,
@@ -173,7 +170,6 @@ public class GridCacheMvccCandidate implements Externalizable,
 
         mask(LOCAL, loc);
         mask(REENTRY, reentry);
-        mask(TX, tx);
         mask(SINGLE_IMPLICIT, singleImplicit);
         mask(NEAR_LOCAL, nearLoc);
         mask(DHT_LOCAL, dhtLoc);
@@ -235,7 +231,6 @@ public class GridCacheMvccCandidate implements Externalizable,
             ver,
             local(),
             /*reentry*/true,
-            tx(),
             singleImplicit(),
             nearLocal(),
             dhtLocal(),
@@ -403,13 +398,6 @@ public class GridCacheMvccCandidate implements Externalizable,
      */
     public boolean local() {
         return LOCAL.get(flags());
-    }
-
-    /**
-     * @return {@code True} if transaction flag is set.
-     */
-    public boolean tx() {
-        return TX.get(flags());
     }
 
     /**
@@ -618,7 +606,6 @@ public class GridCacheMvccCandidate implements Externalizable,
 
         mask(OWNER, OWNER.get(flags));
         mask(USED, USED.get(flags));
-        mask(TX, TX.get(flags));
     }
 
     /** {@inheritDoc} */
@@ -686,9 +673,6 @@ public class GridCacheMvccCandidate implements Externalizable,
 
         /** */
         USED(0x10),
-
-        /** */
-        TX(0x40),
 
         /** */
         SINGLE_IMPLICIT(0x80),

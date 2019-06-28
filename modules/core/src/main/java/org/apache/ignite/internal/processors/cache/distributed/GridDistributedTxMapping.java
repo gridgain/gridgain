@@ -54,9 +54,6 @@ public class GridDistributedTxMapping {
     @GridToStringInclude
     private final Collection<IgniteTxEntry> entries;
 
-    /** Explicit lock flag. */
-    private boolean explicitLock;
-
     /** Query update flag. */
     private boolean queryUpdate;
 
@@ -158,20 +155,6 @@ public class GridDistributedTxMapping {
      */
     public void markQueryUpdate() {
         queryUpdate = true;
-    }
-
-    /**
-     * @return {@code True} if lock is explicit.
-     */
-    public boolean explicitLock() {
-        return explicitLock;
-    }
-
-    /**
-     * Sets explicit flag to {@code true}.
-     */
-    public void markExplicitLock() {
-        explicitLock = true;
     }
 
     /**

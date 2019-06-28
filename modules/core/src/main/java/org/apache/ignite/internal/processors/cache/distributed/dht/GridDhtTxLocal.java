@@ -135,7 +135,6 @@ public class GridDhtTxLocal extends GridDhtTxLocalAdapter implements GridCacheMa
         boolean implicit,
         boolean implicitSingle,
         boolean sys,
-        boolean explicitLock,
         byte plc,
         TransactionConcurrency concurrency,
         TransactionIsolation isolation,
@@ -156,7 +155,6 @@ public class GridDhtTxLocal extends GridDhtTxLocalAdapter implements GridCacheMa
             implicit,
             implicitSingle,
             sys,
-            explicitLock,
             plc,
             concurrency,
             isolation,
@@ -296,13 +294,6 @@ public class GridDhtTxLocal extends GridDhtTxLocalAdapter implements GridCacheMa
         }
 
         return null;
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void updateExplicitVersion(IgniteTxEntry txEntry, GridCacheEntryEx entry)
-        throws GridCacheEntryRemovedException {
-        // DHT local transactions don't have explicit locks.
-        // No-op.
     }
 
     /** {@inheritDoc} */

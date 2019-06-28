@@ -513,7 +513,7 @@ public final class GridLocalLockFuture<K, V> extends GridCacheFutureAdapter<Bool
 
                         GridCacheMvccCandidate cand = mvcc.get(0);
 
-                        if (cand.owner() && cand.tx() && !cand.version().equals(tx.xidVersion()))
+                        if (cand.owner() && !cand.version().equals(tx.xidVersion()))
                             keys.add(e.txKey());
                     }
 

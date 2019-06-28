@@ -426,13 +426,6 @@ public abstract class IgniteCacheConfigVariationsAbstractTest extends IgniteConf
     }
 
     /**
-     * @return {@code True} if locking is enabled.
-     */
-    protected boolean lockingEnabled() {
-        return txEnabled();
-    }
-
-    /**
      * @return Default cache instance.
      */
     @Override protected <K, V> IgniteCache<K, V> jcache() {

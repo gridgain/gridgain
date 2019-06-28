@@ -24,7 +24,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
-import java.util.concurrent.locks.Lock;
 import java.util.function.Consumer;
 import javax.cache.Cache;
 import org.apache.ignite.Ignite;
@@ -42,6 +41,9 @@ import org.apache.ignite.tensorflow.cluster.util.TensorFlowChiefRunner;
 import org.apache.ignite.tensorflow.cluster.util.TensorFlowClusterResolver;
 import org.apache.ignite.tensorflow.cluster.util.TensorFlowUserScriptRunner;
 import org.apache.ignite.tensorflow.core.util.CustomizableThreadFactory;
+import org.apache.ignite.transactions.Transaction;
+import org.apache.ignite.transactions.TransactionConcurrency;
+import org.apache.ignite.transactions.TransactionIsolation;
 
 /**
  * TensorFlow cluster manager that allows to start, maintain and stop TensorFlow cluster.
@@ -103,10 +105,7 @@ public class TensorFlowClusterManager {
      */
     public TensorFlowCluster createCluster(UUID clusterId, TensorFlowJobArchive jobArchive,
         Consumer<String> userScriptOut, Consumer<String> userScriptErr) {
-        Lock clusterMgrCacheLock = cache.lock(clusterId);
-        clusterMgrCacheLock.lock();
-
-        try {
+        try (Transaction tx = cache.unwrap(Ignite.class).transactions().txStart(TransactionConcurrency.PESSIMISTIC, TransactionIsolation.REPEATABLE_READ)) {
             TensorFlowCluster cluster = cache.get(clusterId);
 
             if (cluster != null)
@@ -116,10 +115,9 @@ public class TensorFlowClusterManager {
             cluster = startCluster(clusterId, clusterSpec, jobArchive, userScriptOut, userScriptErr);
             cache.put(clusterId, cluster);
 
+            tx.commit();
+
             return cluster;
-        }
-        finally {
-            clusterMgrCacheLock.unlock();
         }
     }
 
@@ -129,10 +127,7 @@ public class TensorFlowClusterManager {
      * @param clusterId TensorFlow cluster identifier.
      */
     public void stopClusterIfExists(UUID clusterId) {
-        Lock clusterMgrCacheLock = cache.lock(clusterId);
-        clusterMgrCacheLock.lock();
-
-        try {
+        try (Transaction tx = cache.unwrap(Ignite.class).transactions().txStart(TransactionConcurrency.PESSIMISTIC, TransactionIsolation.REPEATABLE_READ)) {
             TensorFlowCluster cluster = cache.get(clusterId);
 
             if (cluster != null) {
@@ -142,9 +137,8 @@ public class TensorFlowClusterManager {
                 clusterRslvr.releasePorts(cluster.getSpec());
                 cache.remove(clusterId);
             }
-        }
-        finally {
-            clusterMgrCacheLock.unlock();
+
+            tx.commit();
         }
     }
 

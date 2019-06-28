@@ -653,7 +653,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
                 txEntry.cached(entry);
             }
 
-            if (tx.optimistic() && txEntry.explicitVersion() == null) {
+            if (tx.optimistic()) {
                 synchronized (this) {
                     lockKeys.add(txEntry.txKey());
                 }
@@ -661,8 +661,6 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
 
             while (true) {
                 try {
-                    assert txEntry.explicitVersion() == null || entry.lockedBy(txEntry.explicitVersion());
-
                     CacheLockCandidates owners = entry.readyLock(tx.xidVersion());
 
                     if (log.isDebugEnabled())
@@ -1435,15 +1433,13 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
             if (!F.isEmpty(nearWrites)) {
                 for (IgniteTxEntry entry : nearWrites) {
                     try {
-                        if (entry.explicitVersion() == null) {
-                            GridCacheMvccCandidate added = entry.cached().candidate(version());
+                        GridCacheMvccCandidate added = entry.cached().candidate(version());
 
-                            assert added != null : "Missing candidate for cache entry:" + entry;
-                            assert added.dhtLocal();
+                        assert added != null : "Missing candidate for cache entry:" + entry;
+                        assert added.dhtLocal();
 
-                            if (added.ownerVersion() != null)
-                                req.owned(entry.txKey(), added.ownerVersion());
-                        }
+                        if (added.ownerVersion() != null)
+                            req.owned(entry.txKey(), added.ownerVersion());
 
                         break;
                     }
@@ -1510,17 +1506,15 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
                 for (IgniteTxEntry entry : nearMapping.entries()) {
                     if (CU.writes().apply(entry)) {
                         try {
-                            if (entry.explicitVersion() == null) {
-                                GridCacheMvccCandidate added = entry.cached().candidate(version());
+                            GridCacheMvccCandidate added = entry.cached().candidate(version());
 
-                                assert added != null : "Null candidate for non-group-lock entry " +
-                                    "[added=" + added + ", entry=" + entry + ']';
-                                assert added.dhtLocal() : "Got non-dht-local candidate for prepare future" +
-                                    "[added=" + added + ", entry=" + entry + ']';
+                            assert added != null : "Null candidate for non-group-lock entry " +
+                                "[added=" + added + ", entry=" + entry + ']';
+                            assert added.dhtLocal() : "Got non-dht-local candidate for prepare future" +
+                                "[added=" + added + ", entry=" + entry + ']';
 
-                                if (added != null && added.ownerVersion() != null)
-                                    req.owned(entry.txKey(), added.ownerVersion());
-                            }
+                            if (added != null && added.ownerVersion() != null)
+                                req.owned(entry.txKey(), added.ownerVersion());
 
                             break;
                         } catch (GridCacheEntryRemovedException ignore) {

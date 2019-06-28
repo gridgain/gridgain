@@ -868,12 +868,8 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
     @Override public boolean ownsLock(GridCacheEntryEx entry) throws GridCacheEntryRemovedException {
         GridCacheContext<?, ?> cacheCtx = entry.context();
 
-        IgniteTxEntry txEntry = entry(entry.txKey());
-
-        GridCacheVersion explicit = txEntry == null ? null : txEntry.explicitVersion();
-
         return local() && !cacheCtx.isDht() ?
-            entry.lockedByThread(threadId()) || (explicit != null && entry.lockedBy(explicit)) :
+            entry.lockedByThread(threadId()) :
             // If candidate is not there, then lock was explicit.
             // Otherwise, check if entry is owned by version.
             !entry.hasLockCandidate(xidVersion()) || entry.lockedBy(xidVersion());
@@ -885,10 +881,8 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
 
         IgniteTxEntry txEntry = entry(entry.txKey());
 
-        GridCacheVersion explicit = txEntry == null ? null : txEntry.explicitVersion();
-
         return local() && !cacheCtx.isDht() ?
-            entry.lockedByThreadUnsafe(threadId()) || (explicit != null && entry.lockedByUnsafe(explicit)) :
+            entry.lockedByThreadUnsafe(threadId()) :
             // If candidate is not there, then lock was explicit.
             // Otherwise, check if entry is owned by version.
             !entry.hasLockCandidateUnsafe(xidVersion()) || entry.lockedByUnsafe(xidVersion());

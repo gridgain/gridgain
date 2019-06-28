@@ -32,7 +32,6 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.Lock;
 import javax.cache.Cache;
 import javax.cache.CacheException;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
@@ -75,7 +74,6 @@ import org.apache.ignite.internal.AsyncSupportAdapter;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
-import org.apache.ignite.internal.processors.cache.mvcc.MvccUtils;
 import org.apache.ignite.internal.processors.cache.query.CacheQuery;
 import org.apache.ignite.internal.processors.cache.query.CacheQueryFuture;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryType;
@@ -448,29 +446,6 @@ public class IgniteCacheProxyImpl<K, V> extends AsyncSupportAdapter<IgniteCache<
         IgniteInternalCache<K, V> delegate = getDelegateSafe();
 
         return createFuture(delegate.getAndPutIfAbsentAsync(key, val));
-    }
-
-    /** {@inheritDoc} */
-    @Override public Lock lock(K key) throws CacheException {
-        return lockAll(Collections.singleton(key));
-    }
-
-    /** {@inheritDoc} */
-    @Override public Lock lockAll(final Collection<? extends K> keys) {
-        IgniteInternalCache<K, V> delegate = getDelegateSafe();
-        GridCacheContext<K, V> ctx = getContextSafe();
-
-        //TODO: IGNITE-9324: add explicit locks support.
-        MvccUtils.verifyMvccOperationSupport(ctx, "Lock");
-
-        return new CacheLockImpl<>(ctx.gate(), delegate, ctx.operationContextPerCall(), keys);
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean isLocalLocked(K key, boolean byCurrThread) {
-        IgniteInternalCache<K, V> delegate = getDelegateSafe();
-
-        return byCurrThread ? delegate.isLockedByThread(key) : delegate.isLocked(key);
     }
 
     /**

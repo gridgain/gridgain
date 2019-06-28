@@ -78,6 +78,7 @@ import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.transactions.TransactionDeadlockException;
 import org.apache.ignite.transactions.TransactionIsolation;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
@@ -193,7 +194,7 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
     public GridDhtColocatedLockFuture(
         GridCacheContext<?, ?> cctx,
         Collection<KeyCacheObject> keys,
-        @Nullable GridNearTxLocal tx,
+        @NotNull GridNearTxLocal tx,
         boolean read,
         boolean retval,
         long timeout,
@@ -206,6 +207,7 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
     ) {
         super(CU.boolReducer());
 
+        assert tx != null;
         assert keys != null;
 
         this.cctx = cctx;
@@ -271,13 +273,6 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
     }
 
     /**
-     * @return {@code True} if transaction is not {@code null}.
-     */
-    private boolean inTx() {
-        return tx != null;
-    }
-
-    /**
      * @return {@code True} if implicit-single-tx flag is set.
      */
     private boolean implicitSingleTx() {
@@ -312,71 +307,33 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
      * @return Non-reentry candidate if lock should be acquired on remote node,
      *      reentry candidate if locks has been already acquired and {@code null} if explicit locks is held and
      *      implicit transaction accesses locked entry.
-     * @throws IgniteCheckedException If failed to add entry due to external locking.
      */
-    @Nullable private GridCacheMvccCandidate addEntry(GridDistributedCacheEntry entry) throws IgniteCheckedException {
+    @Nullable private GridCacheMvccCandidate createCandidate(GridDistributedCacheEntry entry) {
         IgniteTxKey txKey = entry.txKey();
 
-        GridCacheMvccCandidate cand = cctx.mvcc().explicitLock(threadId, txKey);
+        IgniteTxEntry txEntry = tx.entry(txKey);
 
-        if (inTx()) {
-            if (cand != null) {
-                if (!tx.implicit())
-                    throw new IgniteCheckedException("Cannot access key within transaction if lock is " +
-                        "externally held [key=" + entry.key() + ", entry=" + entry + ']');
-                else
-                    return null;
-            }
-            else {
-                IgniteTxEntry txEntry = tx.entry(txKey);
+        assert txEntry != null;
 
-                assert txEntry != null;
+        // TODO GG-19461 this looks redundant.
+        txEntry.cached(entry);
 
-                txEntry.cached(entry);
+        // Check transaction entries (corresponding tx entries must be enlisted in transaction).
+        GridCacheMvccCandidate cand = new GridCacheMvccCandidate(entry,
+            cctx.localNodeId(),
+            null,
+            null,
+            threadId,
+            lockVer,
+            true,
+            txEntry.locked(),
+            tx.implicitSingle(),
+            false,
+            false,
+            null,
+            false);
 
-                // Check transaction entries (corresponding tx entries must be enlisted in transaction).
-                cand = new GridCacheMvccCandidate(entry,
-                    cctx.localNodeId(),
-                    null,
-                    null,
-                    threadId,
-                    lockVer,
-                    true,
-                    txEntry.locked(),
-                    inTx(),
-                    inTx() && tx.implicitSingle(),
-                    false,
-                    false,
-                    null,
-                    false);
-
-                cand.topologyVersion(topVer);
-            }
-        }
-        else {
-            if (cand == null) {
-                cand = new GridCacheMvccCandidate(entry,
-                    cctx.localNodeId(),
-                    null,
-                    null,
-                    threadId,
-                    lockVer,
-                    true,
-                    false,
-                    inTx(),
-                    inTx() && tx.implicitSingle(),
-                    false,
-                    false,
-                    null,
-                    false);
-
-                cand.topologyVersion(topVer);
-            }
-            else
-                cand = cand.reenter();
-
-            cctx.mvcc().addExplicitLock(threadId, cand, topVer);
-        }
+        cand.topologyVersion(topVer);
 
         return cand;
     }
@@ -467,7 +424,6 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
 
         if (done && msgLog.isDebugEnabled()) {
             msgLog.debug("Collocated lock fut, response for finished future [txId=" + lockVer +
-                ", inTx=" + inTx() +
                 ", node=" + nodeId + ']');
         }
     }
@@ -489,7 +445,7 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
 
         //  This warning can be triggered by deadlock detection code which clears pending futures.
         U.warn(msgLog, "Collocated lock fut, failed to find mini future [txId=" + lockVer +
-            ", tx=" + (inTx() ? CU.txString(tx) : "N/A") +
+            ", tx=" + CU.txString(tx) +
             ", node=" + nodeId +
             ", res=" + res +
             ", fut=" + this + ']');
@@ -572,22 +528,20 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
      * Cancellation has special meaning for lock futures. It's called then lock must be released on rollback.
      */
     @Override public boolean cancel() {
-        if (inTx()) {
-            onError(tx.rollbackException());
+        onError(tx.rollbackException());
 
-            /** Should wait until {@link mappings} are ready before continuing with async rollback
-             * or some primary nodes might not receive tx finish messages because of race.
-             * If prepare phase has not started waiting is not necessary.
-             */
-            synchronized (this) {
-                while (!mappingsReady)
-                    try {
-                        wait();
-                    }
-                    catch (InterruptedException e) {
-                        // Ignore interrupts.
-                    }
-            }
+        /** Should wait until {@link mappings} are ready before continuing with async rollback
+         * or some primary nodes might not receive tx finish messages because of race.
+         * If prepare phase has not started waiting is not necessary.
+         */
+        synchronized (this) {
+            while (!mappingsReady)
+                try {
+                    wait();
+                }
+                catch (InterruptedException e) {
+                    // Ignore interrupts.
+                }
         }
 
         return onComplete(false, true);
@@ -599,7 +553,7 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
             log.debug("Received onDone(..) callback [success=" + success + ", err=" + err + ", fut=" + this + ']');
 
         // Local GridDhtLockFuture
-        if (inTx() && this.err instanceof IgniteTxTimeoutCheckedException && cctx.tm().deadlockDetectionEnabled())
+        if (this.err instanceof IgniteTxTimeoutCheckedException && cctx.tm().deadlockDetectionEnabled())
             return false;
 
         if (isDone())
@@ -727,7 +681,6 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
         return S.toString(GridDhtColocatedLockFuture.class, this,
             "topVer", topVer,
             "innerFuts", futs,
-            "inTx", inTx(),
             "super", super.toString());
     }
 
@@ -759,16 +712,16 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
         }
 
         // Obtain the topology version to use.
-        AffinityTopologyVersion topVer = cctx.mvcc().lastExplicitLockTopologyVersion(threadId);
+        AffinityTopologyVersion topVer = null;
 
         // If there is another system transaction in progress, use it's topology version to prevent deadlock.
-        if (topVer == null && tx != null && tx.system())
+        if (tx.system())
             topVer = cctx.tm().lockedTopologyVersion(Thread.currentThread().getId(), tx);
 
-        if (topVer != null && tx != null)
+        if (topVer != null)
             tx.topologyVersion(topVer);
 
-        if (topVer == null && tx != null)
+        if (topVer == null)
             topVer = tx.topologyVersionSnapshot();
 
         if (topVer != null) {
@@ -1026,8 +979,6 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
                         }
                     }
 
-                    boolean explicit;
-
                     while (true) {
                         try {
                             if (entry == null)
@@ -1044,7 +995,7 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
 
                             assert loc ^ entry.detached() : "Invalid entry [loc=" + loc + ", entry=" + entry + ']';
 
-                            GridCacheMvccCandidate cand = addEntry(entry);
+                            GridCacheMvccCandidate cand = createCandidate(entry);
 
                             // Will either return value from dht cache or null if this is a miss.
                             IgniteBiTuple<GridCacheVersion, CacheObject> val = entry.detached() ? null :
@@ -1079,17 +1030,16 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
                                         threadId,
                                         futId,
                                         lockVer,
-                                        inTx(),
                                         read,
                                         retval,
                                         isolation(),
                                         isInvalidate(),
                                         timeout,
                                         mappedKeys.size(),
-                                        inTx() ? tx.size() : mappedKeys.size(),
-                                        inTx() && tx.syncMode() == FULL_SYNC,
-                                        inTx() ? tx.subjectId() : null,
-                                        inTx() ? tx.taskNameHash() : 0,
+                                        tx.size(),
+                                        tx.syncMode() == FULL_SYNC,
+                                        tx.subjectId(),
+                                        tx.taskNameHash(),
                                         read ? createTtl : -1L,
                                         read ? accessTtl : -1L,
                                         skipStore,
@@ -1097,7 +1047,7 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
                                         clientFirst,
                                         false,
                                         cctx.deploymentEnabled(),
-                                        inTx() ? tx.label() : null);
+                                        tx.label());
 
                                     mapping.request(req);
                                 }
@@ -1114,11 +1064,6 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
                                     cctx);
                             }
 
-                            explicit = inTx() && cand == null;
-
-                            if (explicit)
-                                tx.addKeyMapping(txKey, mapping.node());
-
                             break;
                         }
                         catch (GridCacheEntryRemovedException ignored) {
@@ -1127,13 +1072,6 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
 
                             entry = null;
                         }
-                    }
-
-                    // Mark mapping explicit lock flag.
-                    if (explicit) {
-                        boolean marked = tx != null && tx.markExplicit(node.id());
-
-                        assert tx == null || marked;
                     }
                 }
 
@@ -1228,8 +1166,7 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
 
             IgniteInternalFuture<?> txSync = null;
 
-            if (inTx())
-                txSync = cctx.tm().awaitFinishAckAsync(node.id(), tx.threadId());
+            txSync = cctx.tm().awaitFinishAckAsync(node.id(), tx.threadId());
 
             if (txSync == null || txSync.isDone()) {
                 try {
@@ -1237,7 +1174,6 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
 
                     if (msgLog.isDebugEnabled()) {
                         msgLog.debug("Collocated lock fut, sent request [txId=" + lockVer +
-                            ", inTx=" + inTx() +
                             ", node=" + node.id() + ']');
                     }
                 }
@@ -1255,7 +1191,6 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
 
                             if (msgLog.isDebugEnabled()) {
                                 msgLog.debug("Collocated lock fut, sent request [txId=" + lockVer +
-                                    ", inTx=" + inTx() +
                                     ", node=" + node.id() + ']');
                             }
                         }
@@ -1267,7 +1202,6 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
                         catch (IgniteCheckedException e) {
                             if (msgLog.isDebugEnabled()) {
                                 msgLog.debug("Collocated lock fut, failed to send request [txId=" + lockVer +
-                                    ", inTx=" + inTx() +
                                     ", node=" + node.id() +
                                     ", err=" + e + ']');
                             }
@@ -1331,14 +1265,8 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
                         log.debug("Acquired lock for local DHT mapping [locId=" + cctx.nodeId() +
                             ", mappedKeys=" + keys + ", fut=" + GridDhtColocatedLockFuture.this + ']');
 
-                    if (inTx()) {
-                        for (KeyCacheObject key : keys)
-                            tx.entry(cctx.txKey(key)).markLocked();
-                    }
-                    else {
-                        for (KeyCacheObject key : keys)
-                            cctx.mvcc().markExplicitOwner(cctx.txKey(key), threadId);
-                    }
+                    for (KeyCacheObject key : keys)
+                        tx.entry(cctx.txKey(key)).markLocked();
 
                     try {
                         // Proceed and add new future (if any) before completing embedded future.
@@ -1371,29 +1299,20 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
         // Assign keys to primary nodes.
         Collection<KeyCacheObject> distributedKeys = new ArrayList<>(keys.size());
 
-        boolean explicit = false;
-
         for (KeyCacheObject key : keys) {
-            if (!cctx.affinity().primaryByKey(cctx.localNode(), key, topVer)) {
-                // Remove explicit locks added so far.
-                for (KeyCacheObject k : keys)
-                    cctx.mvcc().removeExplicitLock(threadId, cctx.txKey(k), lockVer);
-
+            if (!cctx.affinity().primaryByKey(cctx.localNode(), key, topVer))
                 return false;
-            }
 
-            explicit |= addLocalKey(key, topVer, distributedKeys);
+            // TODO GG-19461 this all looks redundant.
+            addLocalKey(key, topVer, distributedKeys);
 
             if (isDone())
                 return true;
         }
 
-        if (tx != null) {
-            if (explicit)
-                tx.markExplicit(cctx.localNodeId());
-
+        if (tx != null)
+            // TODO GG-19461 why this is needed?
             tx.colocatedLocallyMapped(true);
-        }
 
         if (!distributedKeys.isEmpty()) {
             if (tx != null) {
@@ -1413,10 +1332,9 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
      * @param key Key to add.
      * @param topVer Topology version.
      * @param distributedKeys Collection of keys needs to be locked.
-     * @return {@code True} if transaction accesses key that was explicitly locked before.
      * @throws IgniteCheckedException If lock is externally held and transaction is explicit.
      */
-    private boolean addLocalKey(
+    private void addLocalKey(
         KeyCacheObject key,
         AffinityTopologyVersion topVer,
         Collection<KeyCacheObject> distributedKeys
@@ -1425,21 +1343,21 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
 
         assert !entry.detached();
 
+        // TODO GG-19461 remove/create ticket for filter.
         if (!cctx.isAll(entry, filter)) {
             if (log.isDebugEnabled())
                 log.debug("Entry being locked did not pass filter (will not lock): " + entry);
 
             onComplete(false, false);
 
-            return false;
+            return;
         }
 
-        GridCacheMvccCandidate cand = addEntry(entry);
+        GridCacheMvccCandidate cand = createCandidate(entry);
 
-        if (cand != null && !cand.reentry())
-            distributedKeys.add(key);
+        assert cand != null;
 
-        return inTx() && cand == null;
+        distributedKeys.add(key);
     }
 
     /**
@@ -1526,53 +1444,46 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
             if (log.isDebugEnabled())
                 log.debug("Timed out waiting for lock response: " + this);
 
-            if (inTx()) {
-                if (cctx.tm().deadlockDetectionEnabled()) {
-                    synchronized (GridDhtColocatedLockFuture.this) {
-                        requestedKeys = requestedKeys0();
+            if (cctx.tm().deadlockDetectionEnabled()) {
+                synchronized (GridDhtColocatedLockFuture.this) {
+                    requestedKeys = requestedKeys0();
 
-                        clear(); // Stop response processing.
-                    }
+                    clear(); // Stop response processing.
+                }
 
-                    Set<IgniteTxKey> keys = new HashSet<>();
+                Set<IgniteTxKey> keys = new HashSet<>();
 
-                    for (IgniteTxEntry txEntry : tx.allEntries()) {
-                        if (!txEntry.locked())
-                            keys.add(txEntry.txKey());
-                    }
+                for (IgniteTxEntry txEntry : tx.allEntries()) {
+                    if (!txEntry.locked())
+                        keys.add(txEntry.txKey());
+                }
 
-                    IgniteInternalFuture<TxDeadlock> fut = cctx.tm().detectDeadlock(tx, keys);
+                IgniteInternalFuture<TxDeadlock> fut = cctx.tm().detectDeadlock(tx, keys);
 
-                    fut.listen(new IgniteInClosure<IgniteInternalFuture<TxDeadlock>>() {
-                        @Override public void apply(IgniteInternalFuture<TxDeadlock> fut) {
-                            try {
-                                TxDeadlock deadlock = fut.get();
+                fut.listen(new IgniteInClosure<IgniteInternalFuture<TxDeadlock>>() {
+                    @Override public void apply(IgniteInternalFuture<TxDeadlock> fut) {
+                        try {
+                            TxDeadlock deadlock = fut.get();
 
-                                err = new IgniteTxTimeoutCheckedException("Failed to acquire lock within provided " +
-                                    "timeout for transaction [timeout=" + tx.timeout() + ", tx=" + CU.txString(tx) + ']',
-                                    deadlock != null ? new TransactionDeadlockException(deadlock.toString(cctx.shared())) :
-                                        null);
-                            }
-                            catch (IgniteCheckedException e) {
-                                err = e;
-
-                                U.warn(log, "Failed to detect deadlock.", e);
-                            }
-
-                            synchronized (LockTimeoutObject.this) {
-                                onComplete(false, true);
-                            }
+                            err = new IgniteTxTimeoutCheckedException("Failed to acquire lock within provided " +
+                                "timeout for transaction [timeout=" + tx.timeout() + ", tx=" + CU.txString(tx) + ']',
+                                deadlock != null ? new TransactionDeadlockException(deadlock.toString(cctx.shared())) :
+                                    null);
                         }
-                    });
-                }
-                else
-                    err = tx.timeoutException();
+                        catch (IgniteCheckedException e) {
+                            err = e;
+
+                            U.warn(log, "Failed to detect deadlock.", e);
+                        }
+
+                        synchronized (LockTimeoutObject.this) {
+                            onComplete(false, true);
+                        }
+                    }
+                });
             }
-            else {
-                synchronized (this) {
-                    onComplete(false, true);
-                }
-            }
+            else
+                err = tx.timeoutException();
         }
 
         /** {@inheritDoc} */
@@ -1645,7 +1556,6 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
         void onResult(ClusterTopologyCheckedException e) {
             if (msgLog.isDebugEnabled()) {
                 msgLog.debug("Collocated lock fut, mini future node left [txId=" + lockVer +
-                    ", inTx=" + inTx() +
                     ", nodeId=" + node.id() + ']');
             }
 
@@ -1682,7 +1592,7 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
             }
 
             if (res.error() != null) {
-                if (inTx() && res.error() instanceof IgniteTxTimeoutCheckedException &&
+                if (res.error() instanceof IgniteTxTimeoutCheckedException &&
                     cctx.tm().deadlockDetectionEnabled())
                     return;
 
@@ -1734,33 +1644,29 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
                         }
                     }
 
-                    if (inTx()) {
-                        IgniteTxEntry txEntry = tx.entry(cctx.txKey(k));
+                    IgniteTxEntry txEntry = tx.entry(cctx.txKey(k));
 
-                        // In colocated cache we must receive responses only for detached entries.
-                        assert txEntry.cached().detached() : txEntry;
+                    // In colocated cache we must receive responses only for detached entries.
+                    assert txEntry.cached().detached() : txEntry;
 
-                        txEntry.markLocked();
+                    txEntry.markLocked();
 
-                        GridDhtDetachedCacheEntry entry = (GridDhtDetachedCacheEntry)txEntry.cached();
+                    GridDhtDetachedCacheEntry entry = (GridDhtDetachedCacheEntry)txEntry.cached();
 
-                        if (res.dhtVersion(i) == null) {
-                            onDone(new IgniteCheckedException("Failed to receive DHT version from remote node " +
-                                "(will fail the lock): " + res));
+                    if (res.dhtVersion(i) == null) {
+                        onDone(new IgniteCheckedException("Failed to receive DHT version from remote node " +
+                            "(will fail the lock): " + res));
 
-                            return;
-                        }
-
-                        // Set value to detached entry.
-                        entry.resetFromPrimary(newVal, dhtVer);
-
-                        tx.hasRemoteLocks(true);
-
-                        if (log.isDebugEnabled())
-                            log.debug("Processed response for entry [res=" + res + ", entry=" + entry + ']');
+                        return;
                     }
-                    else
-                        cctx.mvcc().markExplicitOwner(cctx.txKey(k), threadId);
+
+                    // Set value to detached entry.
+                    entry.resetFromPrimary(newVal, dhtVer);
+
+                    tx.hasRemoteLocks(true);
+
+                    if (log.isDebugEnabled())
+                        log.debug("Processed response for entry [res=" + res + ", entry=" + entry + ']');
 
                     if (retval && cctx.events().isRecordable(EVT_CACHE_OBJECT_READ)) {
                         cctx.events().addEvent(cctx.affinity().partition(k),
@@ -1797,9 +1703,6 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
          */
         private void remap() {
             undoLocks(false, false);
-
-            for (KeyCacheObject key : GridDhtColocatedLockFuture.this.keys)
-                cctx.mvcc().removeExplicitLock(threadId, cctx.txKey(key), lockVer);
 
             mapOnTopology(true, new Runnable() {
                 @Override public void run() {

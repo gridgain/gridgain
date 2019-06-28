@@ -552,7 +552,6 @@ public class GridNearOptimisticSerializableTxPrepareFuture extends GridNearOptim
             tx.onePhaseCommit(),
             tx.needReturnValue() && tx.implicit(),
             tx.implicitSingle(),
-            m.explicitLock(),
             tx.subjectId(),
             tx.taskNameHash(),
             m.clientFirst(),
@@ -645,15 +644,13 @@ public class GridNearOptimisticSerializableTxPrepareFuture extends GridNearOptim
             entry.cached(cacheCtx.local().entryEx(entry.key(), topVer));
 
         if (!remap && (cacheCtx.isNear() || cacheCtx.isLocal())) {
-            if (entry.explicitVersion() == null) {
-                if (keyLockFut == null) {
-                    keyLockFut = new KeyLockFuture();
+            if (keyLockFut == null) {
+                keyLockFut = new KeyLockFuture();
 
-                    add((IgniteInternalFuture)keyLockFut);
-                }
-
-                keyLockFut.addLockKey(entry.txKey());
+                add((IgniteInternalFuture)keyLockFut);
             }
+
+            keyLockFut.addLockKey(entry.txKey());
         }
 
         GridDistributedTxMapping cur = curMapping.get(primary.id());
@@ -676,12 +673,6 @@ public class GridNearOptimisticSerializableTxPrepareFuture extends GridNearOptim
         }
 
         cur.add(entry);
-
-        if (entry.explicitVersion() != null) {
-            tx.markExplicit(primary.id());
-
-            cur.markExplicitLock();
-        }
 
         entry.nodeId(primary.id());
 

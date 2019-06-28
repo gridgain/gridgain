@@ -22,10 +22,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.expiry.TouchedExpiryPolicy;
@@ -37,7 +35,6 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
-import org.apache.ignite.events.Event;
 import org.apache.ignite.internal.processors.cache.GatewayProtectedCacheProxy;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryRemovedException;
@@ -46,14 +43,11 @@ import org.apache.ignite.internal.util.lang.IgnitePair;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.P1;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.transactions.Transaction;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
-import static org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_LOCKED;
-import static org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_UNLOCKED;
 
 /**
  *
@@ -468,22 +462,6 @@ public class GridCacheNearOnlyMultiNodeFullApiSelfTest extends GridCachePartitio
 
         for (String key : keys)
             assertEquals(vals.get(key), nearCache.localPeek(key, CachePeekMode.ONHEAP));
-
-        String first = F.first(keys);
-
-        Lock lock = nearCache.lock(first);
-
-        lock.lock();
-
-        try {
-            nearCache.clear();
-
-            assertEquals(vals.get(first), nearCache.localPeek(first, CachePeekMode.ONHEAP));
-            assertEquals(vals.get(first), primary.localPeek(first, CachePeekMode.ONHEAP));
-        }
-        finally {
-            lock.unlock();
-        }
     }
 
     /** {@inheritDoc} */
@@ -550,69 +528,6 @@ public class GridCacheNearOnlyMultiNodeFullApiSelfTest extends GridCachePartitio
             assertEquals("Unexpected size [node=" + ignite(i).name() + ", nearIdx=" + nearIdx + ']',
                 0,
                 jcache(i).localSize());
-        }
-    }
-
-    /** {@inheritDoc} */
-    @SuppressWarnings("BusyWait")
-    @Test
-    @Override public void testLockUnlock() throws Exception {
-        if (lockingEnabled()) {
-            final CountDownLatch lockCnt = new CountDownLatch(1);
-            final CountDownLatch unlockCnt = new CountDownLatch(1);
-
-            grid(0).events().localListen(new IgnitePredicate<Event>() {
-                @Override public boolean apply(Event evt) {
-                    switch (evt.type()) {
-                        case EVT_CACHE_OBJECT_LOCKED:
-                            lockCnt.countDown();
-
-                            break;
-                        case EVT_CACHE_OBJECT_UNLOCKED:
-                            unlockCnt.countDown();
-
-                            break;
-                    }
-
-                    return true;
-                }
-            }, EVT_CACHE_OBJECT_LOCKED, EVT_CACHE_OBJECT_UNLOCKED);
-
-            IgniteCache<String, Integer> nearCache = jcache();
-            IgniteCache<String, Integer> cache = fullCache();
-
-            String key = primaryKeysForCache(cache, 1).get(0);
-
-            nearCache.put(key, 1);
-
-            assert !nearCache.isLocalLocked(key, false);
-            assert !cache.isLocalLocked(key, false);
-
-            Lock lock = nearCache.lock(key);
-
-            lock.lock();
-
-            try {
-                lockCnt.await();
-
-                assert nearCache.isLocalLocked(key, false);
-                assert cache.isLocalLocked(key, false);
-            }
-            finally {
-                lock.unlock();
-            }
-
-            unlockCnt.await();
-
-            for (int i = 0; i < 100; i++) {
-                if (cache.isLocalLocked(key, false))
-                    Thread.sleep(10);
-                else
-                    break;
-            }
-
-            assert !nearCache.isLocalLocked(key, false);
-            assert !cache.isLocalLocked(key, false);
         }
     }
 }

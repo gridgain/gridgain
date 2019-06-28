@@ -116,9 +116,6 @@ public final class GridNearTxFinishFuture<K, V> extends GridCacheCompoundIdentit
 
         futId = IgniteUuid.randomUuid();
 
-        if (tx.explicitLock())
-            tx.syncMode(FULL_SYNC);
-
         if (log == null) {
             msgLog = cctx.txFinishMessageLogger();
             log = U.logger(cctx.kernalContext(), logRef, GridNearTxFinishFuture.class);
@@ -736,7 +733,7 @@ public final class GridNearTxFinishFuture<K, V> extends GridCacheCompoundIdentit
 
         CacheWriteSynchronizationMode syncMode = tx.syncMode();
 
-        if (m.explicitLock() || m.queryUpdate())
+        if (m.queryUpdate())
             syncMode = FULL_SYNC;
 
         GridNearTxFinishRequest req = new GridNearTxFinishRequest(
@@ -748,7 +745,6 @@ public final class GridNearTxFinishFuture<K, V> extends GridCacheCompoundIdentit
             tx.system(),
             tx.ioPolicy(),
             syncMode,
-            m.explicitLock(),
             tx.storeEnabled(),
             tx.topologyVersion(),
             null,

@@ -327,13 +327,6 @@ public abstract class GridCacheAbstractSelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     * @return {@code True} if locking is enabled.
-     */
-    protected boolean lockingEnabled() {
-        return true;
-    }
-
-    /**
      * @return {@code True} if on-heap cache is enabled.
      */
     protected boolean onheapCacheEnabled() {

@@ -29,10 +29,4 @@ public class GridCacheReplicatedNearOnlyMultiNodeFullApiSelfTest extends GridCac
     @Override protected CacheMode cacheMode() {
         return REPLICATED;
     }
-
-    // TODO: remove when IGNITE-601 is fixed.
-    /** {@inheritDoc} */
-    @Override protected boolean lockingEnabled() {
-        return false;
-    }
 }

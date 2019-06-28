@@ -489,7 +489,6 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
         AffinityTopologyVersion topVer,
         long timeout,
         boolean reenter,
-        boolean tx,
         boolean implicitSingle,
         boolean read) throws GridCacheEntryRemovedException {
         return addNearLocal(
@@ -499,7 +498,6 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
             topVer,
             timeout,
             reenter,
-            tx,
             implicitSingle,
             read
         );
@@ -514,7 +512,6 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
      * @param topVer Topology version.
      * @param timeout Timeout to acquire lock.
      * @param reenter Reentry flag.
-     * @param tx Transaction flag.
      * @param implicitSingle Implicit flag.
      * @param read Read lock flag.
      * @return New candidate.
@@ -526,8 +523,7 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
         GridCacheVersion ver,
         AffinityTopologyVersion topVer,
         long timeout,
-        boolean reenter,
-        boolean tx,
+        boolean reenter, // TODO remove? GG-19461
         boolean implicitSingle,
         boolean read)
         throws GridCacheEntryRemovedException {
@@ -572,7 +568,6 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
                 dhtNodeId,
                 threadId,
                 ver,
-                tx,
                 implicitSingle,
                 read);
 
@@ -694,8 +689,6 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
         if (log.isDebugEnabled())
             log.debug("Released local candidate from entry [owner=" + owner + ", prev=" + prev +
                 ", entry=" + this + ']');
-
-        cctx.mvcc().removeExplicitLock(cand);
 
         checkThreadChain(cand);
 

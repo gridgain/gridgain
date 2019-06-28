@@ -21,7 +21,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.locks.Lock;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CachePeekMode;
@@ -34,12 +33,9 @@ import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.ignite.events.EventType.EVTS_CACHE;
-import static org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_LOCKED;
 import static org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_PUT;
-import static org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_UNLOCKED;
 
 /**
  * Multi-node cache test.
@@ -208,61 +204,8 @@ public abstract class GridCacheMultiNodeAbstractTest extends GridCommonAbstractT
             }
         }
 
-        assert !cache1.isLocalLocked(1, false);
-        assert !cache1.isLocalLocked(2, false);
-        assert !cache1.isLocalLocked(3, false);
-
         for (Ignite ignite : ignites)
             ignite.events().stopLocalListen(lsnr);
-    }
-
-    /**
-     * @throws Exception If test failed.
-     */
-    @Test
-    public void testLockUnlock() throws Exception {
-        MvccFeatureChecker.skipIfNotSupported(MvccFeatureChecker.Feature.ENTRY_LOCK);
-
-        CacheEventListener lockLsnr1 = new CacheEventListener(ignite1, new CountDownLatch(1), EVT_CACHE_OBJECT_LOCKED);
-
-        addListener(ignite1, lockLsnr1, EVT_CACHE_OBJECT_LOCKED);
-
-        CacheEventListener unlockLsnr = new CacheEventListener(new CountDownLatch(3), EVT_CACHE_OBJECT_UNLOCKED);
-
-        addListener(ignite1, unlockLsnr, EVT_CACHE_OBJECT_UNLOCKED);
-        addListener(ignite2, unlockLsnr, EVT_CACHE_OBJECT_UNLOCKED);
-        addListener(ignite3, unlockLsnr, EVT_CACHE_OBJECT_UNLOCKED);
-
-        Lock lock = cache1.lock(1);
-
-        assert lock.tryLock(10000, MILLISECONDS);
-
-        try {
-            assert cache1.isLocalLocked(1, false);
-            assert cache2.isLocalLocked(1, false);
-            assert cache3.isLocalLocked(1, false);
-
-            assert cache1.isLocalLocked(1, true);
-            assert !cache2.isLocalLocked(1, true);
-            assert !cache3.isLocalLocked(1, true);
-
-            info("Acquired lock for cache1.");
-        }
-        finally {
-            lock.unlock();
-        }
-
-        Thread.sleep(50);
-
-        unlockLsnr.latch.await(10, SECONDS);
-
-        assert !cache1.isLocalLocked(1, false);
-        assert !cache2.isLocalLocked(2, false);
-        assert !cache3.isLocalLocked(3, false);
-
-        assert !cache1.isLocalLocked(1, true);
-        assert !cache2.isLocalLocked(1, true);
-        assert !cache3.isLocalLocked(1, true);
     }
 
     /**
@@ -320,7 +263,7 @@ public abstract class GridCacheMultiNodeAbstractTest extends GridCommonAbstractT
      * @throws Exception If test failed.
      */
     @Test
-    public void testGlobalClearAll() throws Exception {
+    public void testGlobalClearAll() {
         cache1.put(1, "val1");
         cache2.put(2, "val2");
         cache3.put(3, "val3");

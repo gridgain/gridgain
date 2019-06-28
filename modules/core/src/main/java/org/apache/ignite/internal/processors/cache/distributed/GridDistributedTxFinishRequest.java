@@ -57,9 +57,6 @@ public class GridDistributedTxFinishRequest extends GridDistributedBaseMessage i
     protected static final int SYS_INVALIDATE_FLAG_MASK = 0x08;
 
     /** */
-    protected static final int EXPLICIT_LOCK_FLAG_MASK = 0x10;
-
-    /** */
     protected static final int STORE_ENABLED_FLAG_MASK = 0x20;
 
     /** Topology version. */

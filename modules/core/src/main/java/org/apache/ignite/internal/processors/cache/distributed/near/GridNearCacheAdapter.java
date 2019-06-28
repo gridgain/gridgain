@@ -178,33 +178,6 @@ public abstract class GridNearCacheAdapter<K, V> extends GridDistributedCacheAda
         return (GridNearCacheEntry)peekEx(key);
     }
 
-    /** {@inheritDoc} */
-    @Override public boolean isLocked(K key) {
-        return super.isLocked(key) || dht().isLocked(key);
-    }
-
-    /**
-     * @param key Key.
-     * @return If near entry is locked.
-     */
-    public boolean isLockedNearOnly(K key) {
-        return super.isLocked(key);
-    }
-
-    /**
-     * @param keys Keys.
-     * @return If near entries for given keys are locked.
-     */
-    public boolean isAllLockedNearOnly(Iterable<? extends K> keys) {
-        A.notNull(keys, "keys");
-
-        for (K key : keys)
-            if (!isLockedNearOnly(key))
-                return false;
-
-        return true;
-    }
-
     /**
      * @param tx Transaction.
      * @param keys Keys to load.

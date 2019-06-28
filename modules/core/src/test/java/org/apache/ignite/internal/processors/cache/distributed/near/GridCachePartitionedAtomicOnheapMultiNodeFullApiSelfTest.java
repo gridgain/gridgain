@@ -25,11 +25,6 @@ public class GridCachePartitionedAtomicOnheapMultiNodeFullApiSelfTest extends Gr
     }
 
     /** {@inheritDoc} */
-    @Override protected boolean lockingEnabled() {
-        return false;
-    }
-
-    /** {@inheritDoc} */
     @Override protected boolean txShouldBeUsed() {
         return false;
     }

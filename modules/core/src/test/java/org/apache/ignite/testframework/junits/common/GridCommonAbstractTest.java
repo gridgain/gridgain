@@ -74,7 +74,6 @@ import org.apache.ignite.internal.processors.cache.CacheGroupDescriptor;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
-import org.apache.ignite.internal.processors.cache.GridCacheExplicitLockSpan;
 import org.apache.ignite.internal.processors.cache.GridCacheFuture;
 import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
@@ -1055,11 +1054,6 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
 
         for (IgniteInternalTx tx : cctx.tm().activeTransactions())
             log.error(">>> " + tx);
-
-        log.error("Pending explicit locks:");
-
-        for (GridCacheExplicitLockSpan lockSpan : cctx.mvcc().activeExplicitLocks())
-            log.error(">>> " + lockSpan);
 
         log.error("Pending cache futures:");
 

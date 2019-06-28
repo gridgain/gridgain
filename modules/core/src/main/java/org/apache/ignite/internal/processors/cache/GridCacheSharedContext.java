@@ -930,7 +930,6 @@ public class GridCacheSharedContext<K, V> {
     public IgniteInternalFuture<?> partitionReleaseFuture(AffinityTopologyVersion topVer) {
         GridCompoundFuture f = new CacheObjectsReleaseFuture("Partition", topVer);
 
-        f.add(mvcc().finishExplicitLocks(topVer));
         f.add(mvcc().finishAtomicUpdates(topVer));
         f.add(mvcc().finishDataStreamerUpdates(topVer));
 
@@ -1011,12 +1010,7 @@ public class GridCacheSharedContext<K, V> {
     @Nullable public AffinityTopologyVersion lockedTopologyVersion(IgniteInternalTx ignore) {
         long threadId = Thread.currentThread().getId();
 
-        AffinityTopologyVersion topVer = txMgr.lockedTopologyVersion(threadId, ignore);
-
-        if (topVer == null)
-            topVer = mvccMgr.lastExplicitLockTopologyVersion(threadId);
-
-        return topVer;
+        return txMgr.lockedTopologyVersion(threadId, ignore);
     }
 
     /**

@@ -87,8 +87,8 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
         GridCacheVersion ver1 = version(1);
         GridCacheVersion ver2 = version(2);
 
-        GridCacheMvccCandidate c1 = entry.addRemote(node1, 1, ver1, true);
-        GridCacheMvccCandidate c2 = entry.addNearLocal(node1, 1, ver2, true);
+        GridCacheMvccCandidate c1 = entry.addRemote(node1, 1, ver1);
+        GridCacheMvccCandidate c2 = entry.addNearLocal(node1, 1, ver2);
 
         Collection<GridCacheMvccCandidate> rmtCands = entry.remoteMvccSnapshot();
         Collection<GridCacheMvccCandidate> nearLocCands = entry.localCandidates();
@@ -122,8 +122,8 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
         GridCacheVersion ver1 = version(1);
         GridCacheVersion ver2 = version(2);
 
-        GridCacheMvccCandidate c1 = entry.addNearLocal(node1, 1, ver1, true);
-        GridCacheMvccCandidate c2 = entry.addRemote(node1, 1, ver2, true);
+        GridCacheMvccCandidate c1 = entry.addNearLocal(node1, 1, ver1);
+        GridCacheMvccCandidate c2 = entry.addRemote(node1, 1, ver2);
 
         Collection<GridCacheMvccCandidate> rmtCands = entry.remoteMvccSnapshot();
         Collection<GridCacheMvccCandidate> nearLocCands = entry.localCandidates();
@@ -156,8 +156,8 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
         GridCacheVersion ver1 = version(1);
         GridCacheVersion ver2 = version(2);
 
-        GridCacheMvccCandidate c1 = entry.addNearLocal(node1, 1, ver1, true);
-        GridCacheMvccCandidate c2 = entry.addRemote(node1, 1, ver2, true);
+        GridCacheMvccCandidate c1 = entry.addNearLocal(node1, 1, ver1);
+        GridCacheMvccCandidate c2 = entry.addRemote(node1, 1, ver2);
 
         Collection<GridCacheMvccCandidate> rmtCands = entry.remoteMvccSnapshot();
         Collection<GridCacheMvccCandidate> nearLocCands = entry.localCandidates();
@@ -190,8 +190,8 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
         GridCacheVersion ver1 = version(1);
         GridCacheVersion ver2 = version(2);
 
-        GridCacheMvccCandidate c1 = entry.addNearLocal(node1, 1, ver1, true);
-        GridCacheMvccCandidate c2 = entry.addNearLocal(node1, 1, ver2, true);
+        GridCacheMvccCandidate c1 = entry.addNearLocal(node1, 1, ver1);
+        GridCacheMvccCandidate c2 = entry.addNearLocal(node1, 1, ver2);
 
         entry.readyNearLocal(ver2, ver2,  empty(), empty(), empty());
 
@@ -221,8 +221,8 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
         GridCacheVersion ver1 = version(1);
         GridCacheVersion ver2 = version(2);
 
-        GridCacheMvccCandidate c1 = entry.addRemote(node1, 1, ver1, true);
-        GridCacheMvccCandidate c2 = entry.addNearLocal(node1, 1, ver2, true);
+        GridCacheMvccCandidate c1 = entry.addRemote(node1, 1, ver1);
+        GridCacheMvccCandidate c2 = entry.addNearLocal(node1, 1, ver2);
 
         Collection<GridCacheMvccCandidate> rmtCands = entry.remoteMvccSnapshot();
         Collection<GridCacheMvccCandidate> nearLocCands = entry.localCandidates();
@@ -248,10 +248,10 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     * @throws Exception If failed.
+     *
      */
     @Test
-    public void testAddPendingRemote0() throws Exception {
+    public void testAddPendingRemote0() {
         GridCacheAdapter<String, String> cache = grid.internalCache(DEFAULT_CACHE_NAME);
 
         GridCacheTestEntryEx entry = new GridCacheTestEntryEx(cache.context(), "1");
@@ -261,11 +261,11 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
         GridCacheVersion ver0 = version(0);
         GridCacheVersion ver1 = version(1);
 
-        entry.addNearLocal(node1, 1, ver1, true);
+        entry.addNearLocal(node1, 1, ver1);
 
         entry.readyNearLocal(ver1, ver1, empty(), empty(), Collections.singletonList(ver0));
 
-        entry.addRemote(node1, 1, ver0, true);
+        entry.addRemote(node1, 1, ver0);
 
         Collection<GridCacheMvccCandidate> rmtCands = entry.remoteMvccSnapshot();
         Collection<GridCacheMvccCandidate> nearLocCands = entry.localCandidates();
@@ -281,10 +281,10 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     * @throws Exception If failed.
+     *
      */
     @Test
-    public void testAddPendingRemote1() throws Exception {
+    public void testAddPendingRemote1() {
         GridCacheAdapter<String, String> cache = grid.internalCache(DEFAULT_CACHE_NAME);
 
         GridCacheTestEntryEx entry = new GridCacheTestEntryEx(cache.context(), "1");
@@ -296,13 +296,13 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
         GridCacheVersion ver2 = version(2);
         GridCacheVersion ver3 = version(3);
 
-        GridCacheMvccCandidate c3 = entry.addNearLocal(node1, 1, ver3, true);
+        GridCacheMvccCandidate c3 = entry.addNearLocal(node1, 1, ver3);
 
         entry.readyNearLocal(ver3, ver3, empty(), empty(), Arrays.asList(ver0, ver1, ver2));
 
-        GridCacheMvccCandidate c2 = entry.addRemote(node1, 1, ver2, true);
-        GridCacheMvccCandidate c1 = entry.addRemote(node1, 1, ver1, true);
-        GridCacheMvccCandidate c0 = entry.addRemote(node1, 1, ver0, true);
+        GridCacheMvccCandidate c2 = entry.addRemote(node1, 1, ver2);
+        GridCacheMvccCandidate c1 = entry.addRemote(node1, 1, ver1);
+        GridCacheMvccCandidate c0 = entry.addRemote(node1, 1, ver0);
 
         Collection<GridCacheMvccCandidate> rmtCands = entry.remoteMvccSnapshot();
 
@@ -325,10 +325,10 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     * @throws Exception If failed.
+     *
      */
     @Test
-    public void testAddPendingRemote2() throws Exception {
+    public void testAddPendingRemote2() {
         GridCacheAdapter<String, String> cache = grid.internalCache(DEFAULT_CACHE_NAME);
 
         GridCacheTestEntryEx entry = new GridCacheTestEntryEx(cache.context(), "1");
@@ -340,13 +340,13 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
         GridCacheVersion ver2 = version(2);
         GridCacheVersion ver3 = version(3);
 
-        GridCacheMvccCandidate c3 = entry.addNearLocal(node1, 1, ver3, true);
-        entry.addNearLocal(node1, 1, ver2, true);
+        GridCacheMvccCandidate c3 = entry.addNearLocal(node1, 1, ver3);
+        entry.addNearLocal(node1, 1, ver2);
 
         entry.readyNearLocal(ver3, ver3, empty(), empty(), Arrays.asList(ver0, ver1, ver2));
 
-        GridCacheMvccCandidate c1 = entry.addRemote(node1, 1, ver1, true);
-        GridCacheMvccCandidate c0 = entry.addRemote(node1, 1, ver0, true);
+        GridCacheMvccCandidate c1 = entry.addRemote(node1, 1, ver1);
+        GridCacheMvccCandidate c0 = entry.addRemote(node1, 1, ver0);
 
         Collection<GridCacheMvccCandidate> rmtCands = entry.remoteMvccSnapshot();
 
@@ -387,12 +387,12 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
         GridCacheVersion ver5 = version(5);
         GridCacheVersion ver6 = version(6);
 
-        entry.addRemote(node1, 1, ver1, true);
-        entry.addRemote(node1, 1, ver2, true);
-        GridCacheMvccCandidate c3 = entry.addNearLocal(node1, 1, ver3, true);
-        GridCacheMvccCandidate c4 = entry.addRemote(node1, 1, ver4, true);
-        entry.addRemote(node1, 1, ver5, true);
-        entry.addRemote(node1, 1, ver6, true);
+        entry.addRemote(node1, 1, ver1);
+        entry.addRemote(node1, 1, ver2);
+        GridCacheMvccCandidate c3 = entry.addNearLocal(node1, 1, ver3);
+        GridCacheMvccCandidate c4 = entry.addRemote(node1, 1, ver4);
+        entry.addRemote(node1, 1, ver5);
+        entry.addRemote(node1, 1, ver6);
 
         Collection<GridCacheMvccCandidate> rmtCands = entry.remoteMvccSnapshot();
 
@@ -444,9 +444,9 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
         GridCacheVersion ver2 = version(20);
         GridCacheVersion ver3 = version(30);
 
-        entry.addRemote(node1, 1, ver1, true);
-        entry.addNearLocal(node1, 1, nearVer2, true);
-        entry.addRemote(node1, 1, ver3, true);
+        entry.addRemote(node1, 1, ver1);
+        entry.addNearLocal(node1, 1, nearVer2);
+        entry.addRemote(node1, 1, ver3);
 
         Collection<GridCacheMvccCandidate> rmtCands = entry.remoteMvccSnapshot();
         Collection<GridCacheMvccCandidate> nearLocCands = entry.localCandidates();
@@ -483,9 +483,9 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
         GridCacheVersion ver2 = version(20);
         GridCacheVersion ver3 = version(30);
 
-        entry.addRemote(node1, 1, ver1, true);
-        entry.addNearLocal(node1, 1, nearVer2, true);
-        entry.addRemote(node1, 1, ver3, true);
+        entry.addRemote(node1, 1, ver1);
+        entry.addNearLocal(node1, 1, nearVer2);
+        entry.addRemote(node1, 1, ver3);
 
         Collection<GridCacheMvccCandidate> rmtCands = entry.remoteMvccSnapshot();
         Collection<GridCacheMvccCandidate> nearLocCands = entry.localCandidates();
@@ -529,9 +529,9 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
         GridCacheVersion ver2 = version(20);
         GridCacheVersion ver3 = version(30);
 
-        entry.addRemote(node1, 1, ver1, true);
-        entry.addNearLocal(node1, 1, nearVer2, true);
-        entry.addRemote(node1, 1, ver3, true);
+        entry.addRemote(node1, 1, ver1);
+        entry.addNearLocal(node1, 1, nearVer2);
+        entry.addRemote(node1, 1, ver3);
 
         Collection<GridCacheMvccCandidate> rmtCands = entry.remoteMvccSnapshot();
         Collection<GridCacheMvccCandidate> nearLocCands = entry.localCandidates();
@@ -575,9 +575,9 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
         GridCacheVersion ver2 = version(20);
         GridCacheVersion ver3 = version(30);
 
-        entry.addRemote(node1, 1, ver1, true);
-        entry.addNearLocal(node1, 1, nearVer2, true);
-        entry.addRemote(node1, 1, ver3, true);
+        entry.addRemote(node1, 1, ver1);
+        entry.addNearLocal(node1, 1, nearVer2);
+        entry.addRemote(node1, 1, ver3);
 
         Collection<GridCacheMvccCandidate> rmtCands = entry.remoteMvccSnapshot();
         Collection<GridCacheMvccCandidate> nearLocCands = entry.localCandidates();
@@ -600,10 +600,10 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     * @throws Exception If failed.
+     *
      */
     @Test
-    public void testSerializableReadLocksAdd() throws Exception {
+    public void testSerializableReadLocksAdd() {
         GridCacheAdapter<String, String> cache = grid.internalCache(DEFAULT_CACHE_NAME);
 
         GridCacheVersion serOrder1 = new GridCacheVersion(0, 10, 1);
@@ -678,10 +678,10 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     * @throws Exception If failed.
+     *
      */
     @Test
-    public void testSerializableReadLocksAssign() throws Exception {
+    public void testSerializableReadLocksAssign() {
         GridCacheAdapter<String, String> cache = grid.internalCache(DEFAULT_CACHE_NAME);
 
         GridCacheVersion serOrder1 = new GridCacheVersion(0, 10, 1);
@@ -810,7 +810,6 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
             0,
             serOrder,
             false,
-            true,
             false,
             true,
             read
@@ -818,10 +817,10 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     * @throws Exception If failed.
+     *
      */
     @Test
-    public void testSerializableLocks() throws Exception {
+    public void testSerializableLocks() {
         checkSerializableAdd(false);
 
         checkSerializableAdd(true);
@@ -830,9 +829,9 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     * @throws Exception If failed.
+     *
      */
-    private void checkNonSerializableConflict() throws Exception {
+    private void checkNonSerializableConflict() {
         GridCacheAdapter<String, String> cache = grid.internalCache(DEFAULT_CACHE_NAME);
 
         UUID nodeId = UUID.randomUUID();
@@ -849,7 +848,6 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
             0,
             null,
             false,
-            true,
             false,
             true,
             false
@@ -865,7 +863,6 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
             0,
             new GridCacheVersion(0, 0, 1),
             false,
-            true,
             false,
             true,
             false
@@ -876,9 +873,8 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
 
     /**
      * @param incVer If {@code true} lock version is incremented.
-     * @throws Exception If failed.
      */
-    private void checkSerializableAdd(boolean incVer) throws Exception {
+    private void checkSerializableAdd(boolean incVer) {
         GridCacheAdapter<String, String> cache = grid.internalCache(DEFAULT_CACHE_NAME);
 
         UUID nodeId = UUID.randomUUID();
@@ -905,7 +901,6 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
             0,
             serOrder1,
             false,
-            true,
             false,
             true,
             false
@@ -921,7 +916,6 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
             0,
             serOrder2,
             false,
-            true,
             false,
             true,
             false
@@ -937,7 +931,6 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
             0,
             serOrder3,
             false,
-            true,
             false,
             true,
             false
@@ -953,7 +946,6 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
             0,
             serOrder4,
             false,
-            true,
             false,
             true,
             false

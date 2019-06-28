@@ -110,7 +110,6 @@ public class GridDhtLockRequest extends GridDistributedLockRequest {
      * @param miniId Mini future ID.
      * @param lockVer Cache version.
      * @param topVer Topology version.
-     * @param isInTx {@code True} if implicit transaction lock.
      * @param isRead Indicates whether implicit lock is for read or write operation.
      * @param isolation Transaction isolation.
      * @param isInvalidate Invalidation flag.
@@ -136,7 +135,6 @@ public class GridDhtLockRequest extends GridDistributedLockRequest {
         IgniteUuid miniId,
         GridCacheVersion lockVer,
         @NotNull AffinityTopologyVersion topVer,
-        boolean isInTx,
         boolean isRead,
         TransactionIsolation isolation,
         boolean isInvalidate,
@@ -159,7 +157,6 @@ public class GridDhtLockRequest extends GridDistributedLockRequest {
             threadId,
             futId,
             lockVer,
-            isInTx,
             isRead,
             isolation,
             isInvalidate,

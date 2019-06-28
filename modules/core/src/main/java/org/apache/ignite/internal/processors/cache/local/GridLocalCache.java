@@ -153,13 +153,6 @@ public class GridLocalCache<K, V> extends GridCacheAdapter<K, V> {
         return lockAllAsync(keys, timeout, tx, CU.empty0());
     }
 
-    /** {@inheritDoc} */
-    @Override public IgniteInternalFuture<Boolean> lockAllAsync(Collection<? extends K> keys, long timeout) {
-        IgniteTxLocalEx tx = ctx.tm().localTx();
-
-        return lockAllAsync(ctx.cacheKeysView(keys), timeout, tx, CU.empty0());
-    }
-
     /**
      * @param keys Keys.
      * @param timeout Timeout.
@@ -192,21 +185,6 @@ public class GridLocalCache<K, V> extends GridCacheAdapter<K, V> {
             fut.onError(e);
 
             return fut;
-        }
-    }
-
-    /** {@inheritDoc} */
-    @Override public void unlockAll(
-        Collection<? extends K> keys
-    ) throws IgniteCheckedException {
-        for (K key : keys) {
-            GridLocalCacheEntry entry = peekExx(ctx.toCacheKeyObject(key));
-
-            if (entry != null && ctx.isAll(entry, CU.empty0())) {
-                entry.releaseLocal();
-
-                entry.touch();
-            }
         }
     }
 

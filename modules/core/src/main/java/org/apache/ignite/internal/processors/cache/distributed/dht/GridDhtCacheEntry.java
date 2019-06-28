@@ -192,7 +192,6 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
      * @param serOrder Version for serializable transactions ordering.
      * @param timeout Timeout to acquire lock.
      * @param reenter Reentry flag.
-     * @param tx Tx flag.
      * @param implicitSingle Implicit flag.
      * @param read Read lock flag.
      * @return New candidate.
@@ -208,7 +207,6 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
         @Nullable GridCacheVersion serOrder,
         long timeout,
         boolean reenter,
-        boolean tx,
         boolean implicitSingle,
         boolean read)
         throws GridCacheEntryRemovedException, GridDistributedLockCancelledException {
@@ -250,7 +248,6 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
                 timeout,
                 serOrder,
                 reenter,
-                tx,
                 implicitSingle,
                 /*dht-local*/true,
                 read
@@ -309,7 +306,6 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
                 serOrder,
                 timeout,
                 /*reenter*/false,
-                /*tx*/true,
                 tx.implicitSingle(),
                 read) != null;
         }
@@ -320,7 +316,6 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
                 tx.otherNodeId(),
                 tx.threadId(),
                 tx.xidVersion(),
-                /*tx*/true,
                 tx.implicit(),
                 null);
 

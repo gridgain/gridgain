@@ -20,9 +20,7 @@ import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.locks.Lock;
 import javax.cache.Cache;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.query.SqlQuery;
@@ -63,39 +61,6 @@ public class GridCacheOffheapIndexEntryEvictTest extends GridCommonAbstractTest 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         startGrids(1);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testQueryWhenLocked() throws Exception {
-        IgniteCache<Integer, TestValue> cache = grid(0).cache(DEFAULT_CACHE_NAME);
-
-        List<Lock> locks = new ArrayList<>();
-
-        final int ENTRIES = 1000;
-
-        try {
-            for (int i = 0; i < ENTRIES; i++) {
-                cache.put(i, new TestValue(i));
-
-                Lock lock = cache.lock(i);
-
-                lock.lock(); // Lock entry so that it should not be evicted.
-
-                locks.add(lock);
-
-                for (int j = 0; j < 3; j++)
-                    assertNotNull(cache.get(i));
-            }
-
-            checkQuery(cache, "_key >= 100", ENTRIES - 100);
-        }
-        finally {
-            for (Lock lock : locks)
-                lock.unlock();
-        }
     }
 
     /**

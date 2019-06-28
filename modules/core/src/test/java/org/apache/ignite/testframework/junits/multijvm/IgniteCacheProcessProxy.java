@@ -22,7 +22,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.locks.Lock;
 import javax.cache.CacheException;
 import javax.cache.CacheManager;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
@@ -170,21 +169,6 @@ public class IgniteCacheProcessProxy<K, V> implements IgniteCache<K, V> {
     /** {@inheritDoc} */
     @Override public IgniteFuture<V> getAndPutIfAbsentAsync(K key, V val) throws CacheException {
         return compute.callAsync(new GetAndPutIfAbsentTask<>(cacheName, isAsync, key, val));
-    }
-
-    /** {@inheritDoc} */
-    @Override public Lock lock(K key) {
-        throw new UnsupportedOperationException("Method should be supported.");
-    }
-
-    /** {@inheritDoc} */
-    @Override public Lock lockAll(Collection<? extends K> keys) {
-        throw new UnsupportedOperationException("Method should be supported.");
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean isLocalLocked(K key, boolean byCurrThread) {
-        return compute.call(new IsLocalLockedTask<>(cacheName, isAsync, key, byCurrThread));
     }
 
     /** {@inheritDoc} */
@@ -783,34 +767,6 @@ public class IgniteCacheProcessProxy<K, V> implements IgniteCache<K, V> {
         /** {@inheritDoc} */
         @Override public V call() throws Exception {
             return cache().getAndPutIfAbsent(key, val);
-        }
-    }
-
-    /**
-     *
-     */
-    private static class IsLocalLockedTask<K> extends CacheTaskAdapter<K, Void, Boolean> {
-        /** Key. */
-        private final K key;
-
-        /** By current thread. */
-        private final boolean byCurrThread;
-
-        /**
-         * @param cacheName Cache name.
-         * @param async Async.
-         * @param key Key.
-         * @param byCurrThread By current thread.
-         */
-        public IsLocalLockedTask(String cacheName, boolean async, K key, boolean byCurrThread) {
-            super(cacheName, async, null);
-            this.key = key;
-            this.byCurrThread = byCurrThread;
-        }
-
-        /** {@inheritDoc} */
-        @Override public Boolean call() throws Exception {
-            return cache().isLocalLocked(key, byCurrThread);
         }
     }
 

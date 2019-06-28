@@ -122,7 +122,7 @@ public class PlatformCache extends PlatformAbstractTarget {
     public static final int OP_INVOKE_ALL = 13;
 
     /** */
-    public static final int OP_IS_LOCAL_LOCKED = 14;
+    public static final int OP_RESERVED_2 = 14;
 
     /** */
     public static final int OP_LOAD_CACHE = 15;
@@ -140,10 +140,10 @@ public class PlatformCache extends PlatformAbstractTarget {
     public static final int OP_LOCAL_CLEAR_ALL = 21;
 
     /** */
-    public static final int OP_LOCK = 22;
+    public static final int OP_RESERVED_3 = 22;
 
     /** */
-    public static final int OP_LOCK_ALL = 23;
+    public static final int OP_RESERVED_4 = 23;
 
     /** */
     public static final int OP_LOCAL_METRICS = 24;
@@ -502,9 +502,6 @@ public class PlatformCache extends PlatformAbstractTarget {
                 case OP_REMOVE_OBJ:
                     return cache.remove(reader.readObjectDetached()) ? TRUE : FALSE;
 
-                case OP_IS_LOCAL_LOCKED:
-                    return cache.isLocalLocked(reader.readObjectDetached(), reader.readBoolean()) ? TRUE : FALSE;
-
                 case OP_LOAD_ALL: {
                     boolean replaceExisting = reader.readBoolean();
                     Set<Object> keys = PlatformUtils.readSet(reader);
@@ -760,26 +757,6 @@ public class PlatformCache extends PlatformAbstractTarget {
                     return writeResult(mem, results, new PlatformWriterClosure<Map>() {
                         @Override public void write(BinaryRawWriterEx writer, Map val) {
                             writeInvokeAllResult(writer, val);
-                        }
-                    });
-                }
-
-                case OP_LOCK: {
-                    long id = registerLock(cache.lock(reader.readObjectDetached()));
-
-                    return writeResult(mem, id, new PlatformWriterClosure<Long>() {
-                        @Override public void write(BinaryRawWriterEx writer, Long val) {
-                            writer.writeLong(val);
-                        }
-                    });
-                }
-
-                case OP_LOCK_ALL: {
-                    long id = registerLock(cache.lockAll(PlatformUtils.readCollection(reader)));
-
-                    return writeResult(mem, id, new PlatformWriterClosure<Long>() {
-                        @Override public void write(BinaryRawWriterEx writer, Long val) {
-                            writer.writeLong(val);
                         }
                     });
                 }
