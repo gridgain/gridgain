@@ -16,33 +16,31 @@
 
 package org.apache.ignite.console.event;
 
-import org.springframework.context.ApplicationEvent;
-
 /**
- * Generic application event with payload
+ * Event type
  */
-public class Event<T> extends ApplicationEvent {
-    /** Type. */
-    private Type type;
+public enum Type {
+    /** */
+    ACCOUNT_CREATE,
 
-    /**
-     * @param type Type.
-     * @param payload Payload.
-     */
-    public Event(Type type, T payload) {
-        super(payload);
+    /** */
+    ACCOUNT_CREATE_BY_ADMIN,
 
-        this.type = type;
-    }
+    /** */
+    ACCOUNT_UPDATE,
 
-    /**
-     * @return Type.
-     */
-    public Type getType() {
-        return type;
-    }
+    /** */
+    ACCOUNT_DELETE,
 
-    @Override public T getSource() {
-        return (T) super.getSource();
-    }
+    /** */
+    PASSWORD_RESET,
+
+    /** */
+    PASSWORD_CHANGED,
+
+    /** */
+    RESET_ACTIVATION_TOKEN,
+
+    /** */
+    ACTIVITY_UPDATE
 }

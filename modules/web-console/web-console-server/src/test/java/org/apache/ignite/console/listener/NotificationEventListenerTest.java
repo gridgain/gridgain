@@ -29,12 +29,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import static org.apache.ignite.console.event.Event.Type.ACCOUNT_CREATE;
-import static org.apache.ignite.console.event.Event.Type.ACCOUNT_CREATE_BY_ADMIN;
-import static org.apache.ignite.console.event.Event.Type.ACCOUNT_DELETE;
-import static org.apache.ignite.console.event.Event.Type.PASSWORD_CHANGED;
-import static org.apache.ignite.console.event.Event.Type.PASSWORD_RESET;
-import static org.apache.ignite.console.event.Event.Type.RESET_ACTIVATION_TOKEN;
+import static org.apache.ignite.console.event.Type.ACCOUNT_CREATE;
+import static org.apache.ignite.console.event.Type.ACCOUNT_CREATE_BY_ADMIN;
+import static org.apache.ignite.console.event.Type.ACCOUNT_DELETE;
+import static org.apache.ignite.console.event.Type.PASSWORD_CHANGED;
+import static org.apache.ignite.console.event.Type.PASSWORD_RESET;
+import static org.apache.ignite.console.event.Type.RESET_ACTIVATION_TOKEN;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 

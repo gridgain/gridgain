@@ -21,7 +21,7 @@ import org.apache.ignite.console.config.ActivationConfiguration;
 import org.apache.ignite.console.config.SignUpConfiguration;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.event.Event;
-import org.apache.ignite.console.event.Event.Type;
+import org.apache.ignite.console.event.Type;
 import org.apache.ignite.console.event.EventPublisher;
 import org.apache.ignite.console.repositories.AccountsRepository;
 import org.apache.ignite.console.tx.TransactionManager;
@@ -44,11 +44,11 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.UUID;
 
-import static org.apache.ignite.console.event.Event.Type.ACCOUNT_CREATE;
-import static org.apache.ignite.console.event.Event.Type.ACCOUNT_UPDATE;
-import static org.apache.ignite.console.event.Event.Type.PASSWORD_CHANGED;
-import static org.apache.ignite.console.event.Event.Type.PASSWORD_RESET;
-import static org.apache.ignite.console.event.Event.Type.RESET_ACTIVATION_TOKEN;
+import static org.apache.ignite.console.event.Type.ACCOUNT_CREATE;
+import static org.apache.ignite.console.event.Type.ACCOUNT_UPDATE;
+import static org.apache.ignite.console.event.Type.PASSWORD_CHANGED;
+import static org.apache.ignite.console.event.Type.PASSWORD_RESET;
+import static org.apache.ignite.console.event.Type.RESET_ACTIVATION_TOKEN;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.times;
@@ -85,6 +85,9 @@ public class AccountServiceTest {
 
                 return acc;
             });
+
+        when(accountsRepo.save(any(Account.class)))
+            .thenAnswer(invocation -> invocation.getArgumentAt(0, Account.class));
     }
 
     /** Test sign up logic. */
@@ -188,6 +191,7 @@ public class AccountServiceTest {
 
         ChangeUserRequest changes = new ChangeUserRequest();
         changes.setEmail("new@mail");
+        changes.setToken("token");
 
         srvc.save(UUID.randomUUID(), changes);
 

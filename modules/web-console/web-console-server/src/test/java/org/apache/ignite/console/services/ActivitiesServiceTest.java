@@ -16,7 +16,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.UUID;
 
-import static org.apache.ignite.console.event.Event.Type.ACTIVITY_UPDATE;
+import static org.apache.ignite.console.event.Type.ACTIVITY_UPDATE;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.times;
@@ -55,6 +55,6 @@ public class ActivitiesServiceTest {
         verify(evtPublisher, times(1)).publish(captor.capture());
 
         Assert.assertEquals(ACTIVITY_UPDATE, captor.getValue().getType());
-        Assert.assertTrue(captor.getValue().getPayload() instanceof Activity);
+        Assert.assertTrue(captor.getValue().getSource() instanceof Activity);
     }
 }
