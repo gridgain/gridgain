@@ -37,7 +37,9 @@ services:
         condition: service_healthy
 
   e2e:
-    build: './testcafe'
+    build:
+      context: '../../../../'
+      dockerfile: 'ggprivate/modules/web-console/e2e/testcafe/Dockerfile'
     environment:
       - APP_URL=http://frontend
       - REPORTER=teamcity
