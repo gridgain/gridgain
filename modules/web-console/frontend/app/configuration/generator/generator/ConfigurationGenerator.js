@@ -2191,6 +2191,7 @@ export default class IgniteConfigurationGenerator {
             return acc;
         }, []);
 
+        bean.varArgProperty('types', 'types', types, 'org.apache.ignite.cache.store.jdbc.JdbcType');
     }
 
     // Generate cache store group.
