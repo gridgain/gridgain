@@ -22,6 +22,8 @@ import java.util.UUID;
 import org.apache.ignite.console.config.ActivationConfiguration;
 import org.apache.ignite.console.config.SignUpConfiguration;
 import org.apache.ignite.console.dto.Account;
+import org.apache.ignite.console.event.Event;
+import org.apache.ignite.console.event.EventPublisher;
 import org.apache.ignite.console.repositories.AccountsRepository;
 import org.apache.ignite.console.tx.TransactionManager;
 import org.apache.ignite.console.web.model.ChangeUserRequest;
@@ -43,29 +45,30 @@ import static org.apache.ignite.console.errors.Errors.ERR_ACTIVATION_NOT_ENABLED
 import static org.apache.ignite.console.errors.Errors.ERR_CONFIRM_EMAIL;
 import static org.apache.ignite.console.errors.Errors.ERR_SIGN_UP_NOT_ALLOWED;
 import static org.apache.ignite.console.errors.Errors.ERR_TOO_MANY_ACTIVATION_ATTEMPTS;
-import static org.apache.ignite.console.notification.NotificationDescriptor.ACTIVATION_LINK;
-import static org.apache.ignite.console.notification.NotificationDescriptor.PASSWORD_CHANGED;
-import static org.apache.ignite.console.notification.NotificationDescriptor.PASSWORD_RESET;
-import static org.apache.ignite.console.notification.NotificationDescriptor.WELCOME_LETTER;
+import static org.apache.ignite.console.event.Event.Type.ACCOUNT_CREATE;
+import static org.apache.ignite.console.event.Event.Type.ACCOUNT_UPDATE;
+import static org.apache.ignite.console.event.Event.Type.PASSWORD_CHANGED;
+import static org.apache.ignite.console.event.Event.Type.PASSWORD_RESET;
+import static org.apache.ignite.console.event.Event.Type.RESET_ACTIVATION_TOKEN;
 
 /**
  * Service to handle accounts.
  */
 @Service
 public class AccountsService implements UserDetailsService {
-    /** */
+    /** Tx manager. */
     protected TransactionManager txMgr;
 
-    /** */
+    /** Accounts repository. */
     protected AccountsRepository accountsRepo;
 
-    /** */
+    /** Wsm. */
     protected WebSocketsManager wsm;
 
-    /** */
-    protected NotificationService notificationSrv;
+    /** Event publisher. */
+    protected EventPublisher evtPublisher;
 
-    /** */
+    /** Encoder. */
     protected PasswordEncoder encoder;
 
     /** User details getChecker. */
@@ -90,7 +93,7 @@ public class AccountsService implements UserDetailsService {
      * @param wsm Websocket manager.
      * @param accountsRepo Accounts repository.
      * @param txMgr Transactions manager.
-     * @param notificationSrv Notification service.
+     * @param evtPublisher Event publisher.
      * @param messages Messages accessor.
      */
     public AccountsService(
@@ -100,7 +103,7 @@ public class AccountsService implements UserDetailsService {
         WebSocketsManager wsm,
         AccountsRepository accountsRepo,
         TransactionManager txMgr,
-        NotificationService notificationSrv,
+        EventPublisher evtPublisher,
         MessageSourceAccessor messages
     ) {
         disableSignup = !signUpCfg.isEnabled();
@@ -112,7 +115,7 @@ public class AccountsService implements UserDetailsService {
         this.wsm = wsm;
         this.accountsRepo = accountsRepo;
         this.txMgr = txMgr;
-        this.notificationSrv = notificationSrv;
+        this.evtPublisher = evtPublisher;
         this.messages = messages;
     }
 
@@ -160,13 +163,13 @@ public class AccountsService implements UserDetailsService {
         });
 
         if (activationEnabled) {
-            notificationSrv.sendEmail(ACTIVATION_LINK, acc);
+            evtPublisher.publish(new Event<>(RESET_ACTIVATION_TOKEN, acc));
 
             // TODO: check second parameter
             throw new MissingConfirmRegistrationException(messages.getMessage(ERR_CONFIRM_EMAIL), acc.getEmail());
         }
 
-        notificationSrv.sendEmail(WELCOME_LETTER, acc);
+        evtPublisher.publish(new Event<>(ACCOUNT_CREATE, acc));
     }
 
     /**
@@ -240,7 +243,7 @@ public class AccountsService implements UserDetailsService {
             return accountsRepo.save(acc0);
         });
 
-        notificationSrv.sendEmail(ACTIVATION_LINK, acc);
+        evtPublisher.publish(new Event<>(RESET_ACTIVATION_TOKEN, acc));
     }
 
     /**
@@ -268,6 +271,8 @@ public class AccountsService implements UserDetailsService {
         if (!oldTok.equals(acc.getToken()))
             wsm.revokeToken(acc, oldTok);
 
+        evtPublisher.publish(new Event<>(ACCOUNT_UPDATE, acc));
+
         return acc;
     }
 
@@ -285,7 +290,7 @@ public class AccountsService implements UserDetailsService {
             return accountsRepo.save(acc0);
         });
 
-        notificationSrv.sendEmail(PASSWORD_RESET, acc);
+        evtPublisher.publish(new Event<>(PASSWORD_RESET, acc));
     }
 
     /**
@@ -307,7 +312,7 @@ public class AccountsService implements UserDetailsService {
 
             accountsRepo.save(acc);
 
-            notificationSrv.sendEmail(PASSWORD_CHANGED, acc);
+            evtPublisher.publish(new Event<>(PASSWORD_CHANGED, acc));
         });
     }
 }

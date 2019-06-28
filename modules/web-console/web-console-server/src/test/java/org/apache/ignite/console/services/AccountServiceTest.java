@@ -18,26 +18,42 @@ package org.apache.ignite.console.services;
 
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.console.TestConfiguration;
-import org.apache.ignite.console.config.SignUpConfiguration;
 import org.apache.ignite.console.config.ActivationConfiguration;
+import org.apache.ignite.console.config.SignUpConfiguration;
 import org.apache.ignite.console.dto.Account;
+import org.apache.ignite.console.event.Event;
+import org.apache.ignite.console.event.Event.Type;
+import org.apache.ignite.console.event.EventPublisher;
 import org.apache.ignite.console.repositories.AccountsRepository;
 import org.apache.ignite.console.tx.TransactionManager;
+import org.apache.ignite.console.web.model.ChangeUserRequest;
 import org.apache.ignite.console.web.model.SignUpRequest;
+import org.apache.ignite.console.web.security.MissingConfirmRegistrationException;
 import org.apache.ignite.console.web.socket.WebSocketsManager;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.support.MessageSourceAccessor;
-import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import java.util.UUID;
+
+import static org.apache.ignite.console.event.Event.Type.ACCOUNT_CREATE;
+import static org.apache.ignite.console.event.Event.Type.ACCOUNT_UPDATE;
+import static org.apache.ignite.console.event.Event.Type.PASSWORD_CHANGED;
+import static org.apache.ignite.console.event.Event.Type.PASSWORD_RESET;
+import static org.apache.ignite.console.event.Event.Type.RESET_ACTIVATION_TOKEN;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -50,16 +66,17 @@ public class AccountServiceTest {
     @Mock
     private AccountsRepository accountsRepo;
 
+    /** Event publisher. */
+    @Mock
+    private EventPublisher evtPublisher;
+
     /** Tx manager. */
     @Autowired
     private TransactionManager txMgr;
 
-    /** Messages. */
+    /** Messages accessor. */
     @Autowired
     private MessageSourceAccessor messages;
-
-    /** Account service. */
-    private AccountsService srvc;
 
     /** */
     @Before
@@ -73,21 +90,14 @@ public class AccountServiceTest {
 
                 return acc;
             });
+        when(accountsRepo.save(any(Account.class)))
+                .thenAnswer(invocation -> invocation.getArgumentAt(0, Account.class));
     }
 
     /** Test sign up logic. */
     @Test
     public void disableSignUp() {
-        srvc = new AccountsService(
-            new SignUpConfiguration().setEnabled(false),
-            new ActivationConfiguration(new NoopMailService()),
-            NoOpPasswordEncoder.getInstance(),
-            new WebSocketsManager(messages),
-            accountsRepo,
-            txMgr,
-            new NotificationService(new NoopMailService()),
-            messages
-        );
+        AccountsService srvc = mockAccountsService(false, false);
 
         SignUpRequest adminReq = new SignUpRequest();
 
@@ -106,5 +116,165 @@ public class AccountServiceTest {
 
             return null;
         }, IgniteException.class, "Sign-up is not allowed. Ask your administrator to create account for you.");
+    }
+
+    /**
+     * Should publish event with RESET_ACTIVATION_TOKEN type
+     */
+    @Test
+    public void shouldPublishResetActivationTokenEventWhileRegister() {
+        AccountsService srvc = mockAccountsService(true, true);
+
+        SignUpRequest userReq = new SignUpRequest();
+
+        userReq.setEmail("user@user");
+        userReq.setPassword("1");
+
+        try {
+            srvc.register(userReq);
+        } catch (MissingConfirmRegistrationException exception) {
+            // No-op
+        }
+
+        assertEventType(RESET_ACTIVATION_TOKEN);
+    }
+
+    /**
+     * Should publish event with RESET_ACTIVATION_TOKEN type
+     */
+    @Test
+    public void shouldPublishResetActivationTokenEvent() {
+        AccountsService srvc = mockAccountsService(true, true);
+        when(accountsRepo.getByEmail(anyString()))
+                .thenAnswer(invocation -> {
+                    Account acc = new Account();
+                    acc.setEmail(invocation.getArgumentAt(0, String.class));
+                    acc.resetActivationToken();
+
+                    return acc;
+                });
+
+        srvc.resetActivationToken("mail@mail");
+
+        assertEventType(RESET_ACTIVATION_TOKEN);
+    }
+
+    /**
+     * Should publish event with ACCOUNT_CREATE type
+     */
+    @Test
+    public void shouldPublishAccountCreateEvent() {
+        AccountsService srvc = mockAccountsService(true, false);
+
+        SignUpRequest userReq = new SignUpRequest();
+
+        userReq.setEmail("user@user");
+        userReq.setPassword("1");
+
+        srvc.register(userReq);
+
+        assertEventType(ACCOUNT_CREATE);
+    }
+
+    /**
+     * Should publish event with ACCOUNT_UPDATE type
+     */
+    @Test
+    public void shouldPublishAccountUpdateEvent() {
+        AccountsService srvc = mockAccountsService(true, false);
+
+        when(accountsRepo.getById(any(UUID.class)))
+            .thenAnswer(invocation -> {
+                Account acc = new Account();
+                acc.setEmail("fake@mail");
+                acc.setId(invocation.getArgumentAt(0, UUID.class));
+                acc.setToken("token");
+
+                return acc;
+            });
+
+        ChangeUserRequest changes = new ChangeUserRequest();
+        changes.setEmail("new@mail");
+        changes.setToken("token");
+
+        srvc.save(UUID.randomUUID(), changes);
+
+        assertEventType(ACCOUNT_UPDATE);
+    }
+
+    /**
+     * Should publish event with PASSWORD_RESET type
+     */
+    @Test
+    public void shouldPublishPasswordResetEvent() {
+        AccountsService srvc = mockAccountsService(true, false);
+
+        when(accountsRepo.getByEmail(anyString()))
+            .thenAnswer(invocation -> {
+                Account acc = new Account();
+                acc.setEmail(invocation.getArgumentAt(0, String.class));
+
+                return acc;
+            });
+
+        srvc.forgotPassword("mail@mail");
+
+        assertEventType(PASSWORD_RESET);
+    }
+
+    /**
+     * Should publish event with PASSWORD_CHANGED type
+     */
+    @Test
+    public void shouldPublishPasswordChangedEvent() {
+        AccountsService srvc = mockAccountsService(true, false);
+
+        when(accountsRepo.getByEmail(anyString()))
+                .thenAnswer(invocation -> {
+                    Account acc = new Account();
+                    acc.setEmail(invocation.getArgumentAt(0, String.class));
+                    acc.setResetPasswordToken("token");
+
+                    return acc;
+                });
+
+        srvc.resetPasswordByToken("new_mail@mail", "token", "2");
+
+        assertEventType(PASSWORD_CHANGED);
+    }
+
+    /**
+     * @param disableSignUp Disable sign up.
+     * @param enableActivation Enable activation.
+     */
+    private AccountsService mockAccountsService(boolean disableSignUp, boolean enableActivation) {
+        ActivationConfiguration activationCfg = new ActivationConfiguration(new NoopMailService());
+        try {
+            activationCfg.afterPropertiesSet();
+        } catch (Exception e) {
+            // No-op
+        }
+        activationCfg.setEnabled(enableActivation);
+
+        return new AccountsService(
+                new SignUpConfiguration().setEnabled(disableSignUp),
+                activationCfg,
+                NoOpPasswordEncoder.getInstance(),
+                new WebSocketsManager(messages),
+                accountsRepo,
+                txMgr,
+                evtPublisher,
+                messages
+        );
+    }
+
+    /**
+     * @param evtType Event type.
+     */
+    private void assertEventType(Type evtType) {
+        ArgumentCaptor<Event> captor = ArgumentCaptor.forClass(Event.class);
+        verify(evtPublisher, times(1)).publish(captor.capture());
+
+        Assert.assertEquals(evtType, captor.getValue().getType());
     }
 }
