@@ -453,7 +453,7 @@ public class WebSocketRouter implements AutoCloseable {
     @OnWebSocketClose
     public void onClose(int statusCode, String reason) {
         if (statusCode != SERVER_ERROR)
-        log.info("Websocket connection closed with code: " + statusCode);
+            log.info("Websocket connection closed with code: " + statusCode);
 
         connect();
     }
