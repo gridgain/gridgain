@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.dto.Announcement;
 import org.apache.ignite.console.messages.WebConsoleMessageSource;
@@ -207,15 +206,12 @@ public class WebSocketsManager {
     }
 
     /**
-     * @param wsAgent Session.
-     * @param oldTop Old topology.
+     * @param desc Agent descriptor.
      * @param newTop New topology.
+     * @return Old topology.
      */
-    protected void updateTopology(WebSocketSession wsAgent, TopologySnapshot oldTop, TopologySnapshot newTop) {
-        AgentDescriptor desc = agents.get(wsAgent);
-
-        if (newTop.changed(oldTop))
-            updateClusterInBrowsers(desc.accIds);
+    protected TopologySnapshot updateTopology(AgentDescriptor desc, TopologySnapshot newTop) {
+        return clusters.put(newTop.getId(), newTop);
     }
 
     /**
@@ -226,6 +222,8 @@ public class WebSocketsManager {
         AgentDescriptor desc = agents.get(wsAgent);
 
         Set<TopologySnapshot> oldTops = desc.getClusterIds().stream().map(clusters::get).collect(toSet());
+
+        boolean clustersChanged = oldTops.size() != tops.size();
 
         for (TopologySnapshot newTop : tops) {
             String clusterId = newTop.getId();
@@ -251,13 +249,16 @@ public class WebSocketsManager {
             if (F.isEmpty(newTop.getName()))
                 newTop.setName("Cluster " + newTop.getId().substring(0, 8).toUpperCase());
 
-            TopologySnapshot oldTop = clusters.put(newTop.getId(), newTop);
+            TopologySnapshot oldTop = updateTopology(desc, newTop);
 
-            updateTopology(wsAgent, oldTop, newTop);
+            clustersChanged = clustersChanged || newTop.changed(oldTop);
         }
 
-        desc.setClusterIds(tops.stream().map(TopologySnapshot::getId).collect(Collectors.toSet()));
+        desc.setClusterIds(tops.stream().map(TopologySnapshot::getId).collect(toSet()));
         desc.setHasDemo(tops.stream().anyMatch(TopologySnapshot::isDemo));
+
+        if (clustersChanged)
+            updateClusterInBrowsers(desc.accIds);
     }
 
     /**

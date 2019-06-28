@@ -24,6 +24,8 @@ import org.apache.ignite.console.event.EventPublisher;
 import org.apache.ignite.console.repositories.ActivitiesRepository;
 import org.springframework.stereotype.Service;
 
+import static org.apache.ignite.console.event.Type.ACTIVITY_UPDATE;
+
 /**
  * Service to handle activities.
  */
@@ -55,7 +57,7 @@ public class ActivitiesService {
     public void save(UUID accId, String grp, String act) {
         Activity activity = activitiesRepo.save(accId, grp, act);
 
-        evtPublisher.publish(new Event<>(Event.Type.ACTIVITY_UPDATE, activity));
+        evtPublisher.publish(new Event<>(ACTIVITY_UPDATE, activity));
     }
 
     /**

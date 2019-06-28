@@ -46,11 +46,11 @@ import static org.apache.ignite.console.errors.Errors.ERR_ACTIVATION_NOT_ENABLED
 import static org.apache.ignite.console.errors.Errors.ERR_CONFIRM_EMAIL;
 import static org.apache.ignite.console.errors.Errors.ERR_SIGN_UP_NOT_ALLOWED;
 import static org.apache.ignite.console.errors.Errors.ERR_TOO_MANY_ACTIVATION_ATTEMPTS;
-import static org.apache.ignite.console.event.Event.Type.ACCOUNT_CREATE;
-import static org.apache.ignite.console.event.Event.Type.ACCOUNT_UPDATE;
-import static org.apache.ignite.console.event.Event.Type.PASSWORD_CHANGED;
-import static org.apache.ignite.console.event.Event.Type.PASSWORD_RESET;
-import static org.apache.ignite.console.event.Event.Type.RESET_ACTIVATION_TOKEN;
+import static org.apache.ignite.console.event.Type.ACCOUNT_CREATE;
+import static org.apache.ignite.console.event.Type.ACCOUNT_UPDATE;
+import static org.apache.ignite.console.event.Type.PASSWORD_CHANGED;
+import static org.apache.ignite.console.event.Type.PASSWORD_RESET;
+import static org.apache.ignite.console.event.Type.RESET_ACTIVATION_TOKEN;
 
 /**
  * Service to handle accounts.
@@ -163,7 +163,6 @@ public class AccountsService implements UserDetailsService {
         if (activationEnabled) {
             evtPublisher.publish(new Event<>(RESET_ACTIVATION_TOKEN, acc));
 
-            // TODO: check second parameter
             throw new MissingConfirmRegistrationException(messages.getMessage(ERR_CONFIRM_EMAIL), acc.getEmail());
         }
 
@@ -238,7 +237,9 @@ public class AccountsService implements UserDetailsService {
 
             acc0.resetActivationToken();
 
-            return accountsRepo.save(acc0);
+            accountsRepo.save(acc0);
+
+            return acc0;
         });
 
         evtPublisher.publish(new Event<>(RESET_ACTIVATION_TOKEN, acc));
@@ -261,7 +262,9 @@ public class AccountsService implements UserDetailsService {
             if (!F.isEmpty(pwd))
                 acc0.setPassword(encoder.encode(pwd));
 
-            return accountsRepo.save(acc0);
+            accountsRepo.save(acc0);
+
+            return acc0;
         });
 
         String oldTok = acc.getToken();
@@ -285,7 +288,9 @@ public class AccountsService implements UserDetailsService {
 
             acc0.setResetPasswordToken(UUID.randomUUID().toString());
 
-            return accountsRepo.save(acc0);
+            accountsRepo.save(acc0);
+
+            return acc0;
         });
 
         evtPublisher.publish(new Event<>(PASSWORD_RESET, acc));

@@ -32,8 +32,8 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
-import static org.apache.ignite.console.event.Event.Type.ACCOUNT_CREATE_BY_ADMIN;
-import static org.apache.ignite.console.event.Event.Type.ACCOUNT_DELETE;
+import static org.apache.ignite.console.event.Type.ACCOUNT_CREATE_BY_ADMIN;
+import static org.apache.ignite.console.event.Type.ACCOUNT_DELETE;
 
 /**
  * Service to handle administrator actions.
@@ -153,19 +153,14 @@ public class AdminService {
     }
 
     /**
-     * @param accId Account ID.
-     */
-    public void become(UUID accId) {
-        throw new UnsupportedOperationException("Not implemented yet!");
-    }
-
-    /**
      * @param params SignUp params.
      */
-    public void registerUser(SignUpRequest params) {
+    public Account registerUser(SignUpRequest params) {
         Account acc = accountsSrv.create(params);
 
         evtPublisher.publish(new Event<>(ACCOUNT_CREATE_BY_ADMIN, acc));
+
+        return acc;
     }
 
     /** */
