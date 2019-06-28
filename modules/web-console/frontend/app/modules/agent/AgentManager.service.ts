@@ -296,10 +296,12 @@ export default class AgentManager {
                 this.connectionSbj.next(conn);
 
                 break;
+
             case 'admin:announcement':
                 this.UserNotifications.announcement = payload;
 
                 break;
+
             default:
                 this.wsSubject.next({
                     requestId,

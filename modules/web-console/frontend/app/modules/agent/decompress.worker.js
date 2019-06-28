@@ -14,12 +14,14 @@
  * limitations under the License.
  */
 
+import bigIntJSON from 'json-bigint';
+
 /** This worker parse to JSON from string. */
 // eslint-disable-next-line no-undef
 onmessage = function(e) {
     const data = e.data;
 
-    const res = JSON.parse(data.replace(/:([0-9]{15,}),/g, ':"$1",'));
+    const res = bigIntJSON({storeAsString: true}).parse(data);
 
     postMessage(res);
 };
