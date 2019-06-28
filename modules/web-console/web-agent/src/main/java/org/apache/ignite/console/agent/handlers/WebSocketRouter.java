@@ -38,7 +38,6 @@ import org.apache.ignite.console.websocket.AgentHandshakeRequest;
 import org.apache.ignite.console.websocket.AgentHandshakeResponse;
 import org.apache.ignite.console.websocket.WebSocketEvent;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.logger.slf4j.Slf4jLogger;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
@@ -73,7 +72,6 @@ import static org.apache.ignite.console.websocket.WebSocketEvents.NODE_VISOR;
 import static org.apache.ignite.console.websocket.WebSocketEvents.SCHEMA_IMPORT_DRIVERS;
 import static org.apache.ignite.console.websocket.WebSocketEvents.SCHEMA_IMPORT_METADATA;
 import static org.apache.ignite.console.websocket.WebSocketEvents.SCHEMA_IMPORT_SCHEMAS;
-import static org.eclipse.jetty.websocket.api.StatusCode.SERVER_ERROR;
 
 /**
  * Router that listen for web socket and redirect messages to event bus.
@@ -450,10 +448,8 @@ public class WebSocketRouter implements AutoCloseable {
      */
     @OnWebSocketClose
     public void onClose(int statusCode, String reason) {
-        if (statusCode != SERVER_ERROR) {
-            log.info("Connection closed [code=" + statusCode + ", reason=" + reason + "]");
+        log.info("Connection closed [code=" + statusCode + ", reason=" + reason + "]");
 
-            connect();
-        }
+        connect();
     }
 }
