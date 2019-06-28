@@ -23,8 +23,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.console.agent.AgentConfiguration;
@@ -98,9 +101,6 @@ public class WebSocketRouter implements AutoCloseable {
     /** Agent configuration. */
     private final AgentConfiguration cfg;
 
-    /** Http client. */
-    private final HttpClient httpClient;
-
     /** Websocket Client. */
     private WebSocketClient client;
 
@@ -117,7 +117,7 @@ public class WebSocketRouter implements AutoCloseable {
     private final ClustersWatcher watcher;
 
     /** Reconnect count. */
-    private int reconnectCnt;
+    private int reconnectCnt = -1;
 
     /** Active tokens after handshake. */
     private List<String> validTokens;
@@ -127,11 +127,6 @@ public class WebSocketRouter implements AutoCloseable {
      */
     public WebSocketRouter(AgentConfiguration cfg) {
         this.cfg = cfg;
-
-        httpClient = new HttpClient(createServerSslFactory(cfg));
-
-        // TODO GG-18379 Investigate how to establish native websocket connection with proxy.
-        configureProxy(httpClient, cfg.serverUri());
 
         dbHnd = new DatabaseHandler(cfg);
         clusterHnd = new ClusterHandler(cfg);
@@ -171,29 +166,29 @@ public class WebSocketRouter implements AutoCloseable {
     /**
      * Start websocket client.
      */
-    public void start() throws Exception {
+    public void start() {
         log.info("Starting Web Console Agent...");
         log.info("Connecting to server: " + cfg.serverUri());
 
-        httpClient.start();
-
         Runtime.getRuntime().addShutdownHook(new Thread(closeLatch::countDown));
+        
         connect();
     }
 
     /**
      * Stop websocket client.
      */
-    private void stop() {
+    private void stopClient() {
+        watcher.stop();
+
         if (client != null) {
             try {
                 client.stop();
+                client.destroy();
             }
             catch (Exception ignored) {
                 // No-op.
             }
-
-            watcher.stopWatchTask();
         }
     }
 
@@ -201,63 +196,51 @@ public class WebSocketRouter implements AutoCloseable {
     @Override public void close() {
         log.info("Stopping Web Console Agent...");
 
-        try {
-            watcher.close();
-        }
-        catch (Throwable e) {
-            log.error("Failed to stop cluster watcher", e);
-        }
+        stopClient();
 
-        try {
-            client.stop();
-        }
-        catch (Throwable e) {
-            log.error("Failed to close websocket", e);
-        }
-
-        try {
-            httpClient.stop();
-        }
-        catch (Throwable e) {
-            log.error("Failed to close http client", e);
-        }
+        watcher.close();
     }
 
     /**
      * Connect to backend.
      */
     private void connect() {
-        while (true) {
+        try {
+            stopClient();
+
             if (!isRunning())
-                break;
+                return;
 
-            stop();
+            if (reconnectCnt < 10)
+                reconnectCnt++;
 
-            try {
-                Thread.sleep(reconnectCnt * 1000);
+            Thread.sleep(reconnectCnt * 1000);
 
-                if (!isRunning())
-                    break;
+            if (!isRunning())
+                return;
 
-                client = new WebSocketClient(httpClient);
+            HttpClient httpClient = new HttpClient(createServerSslFactory(cfg));
 
-                client.start();
-                client.connect(this, URI.create(cfg.serverUri()).resolve(AGENTS_PATH)).get(10L, TimeUnit.SECONDS);
+            // TODO GG-18379 Investigate how to establish native websocket connection with proxy.
+            configureProxy(httpClient, cfg.serverUri());
 
-                reconnectCnt = 0;
+            client = new WebSocketClient(httpClient);
 
-                break;
-            }
-            catch (InterruptedException e) {
-                closeLatch.countDown();
-            }
-            catch (Exception e) {
-                if (reconnectCnt == 0)
-                    log.error("Failed to establish websocket connection with server: " + cfg.serverUri(), e);
+            httpClient.start();
+            client.start();
+            client.connect(this, URI.create(cfg.serverUri()).resolve(AGENTS_PATH)).get(10L, TimeUnit.SECONDS);
 
-                if (reconnectCnt < 10)
-                    reconnectCnt++;
-            }
+            reconnectCnt = -1;
+        }
+        catch (InterruptedException e) {
+            closeLatch.countDown();
+        }
+        catch (TimeoutException | ExecutionException | CancellationException ignored) {
+            // No-op.
+        }
+        catch (Exception e) {
+            if (reconnectCnt == 0)
+                log.error("Failed to establish websocket connection with server: " + cfg.serverUri(), e);
         }
     }
 
@@ -307,7 +290,7 @@ public class WebSocketRouter implements AutoCloseable {
 
             if (!F.isEmpty(missedTokens)) {
                 log.warning("Failed to validate token(s): " + secured(missedTokens) + "." +
-                    " Please reload agent archive or check settings.");
+                    " Please reload agent archive or check settings");
             }
 
             if (F.isEmpty(validTokens)) {
@@ -316,10 +299,10 @@ public class WebSocketRouter implements AutoCloseable {
                 closeLatch.countDown();
             }
 
-            log.info("Successful handshake with server.");
+            log.info("Successfully completes handshake with server");
         }
         else {
-            log.error(res.getError() + " Please reload agent or check settings.");
+            log.error(res.getError() + " Please reload agent or check settings");
 
             closeLatch.countDown();
         }
@@ -454,7 +437,8 @@ public class WebSocketRouter implements AutoCloseable {
     public void onError(Throwable e) {
         // Reconnect only in case of ConnectException.
         if (e instanceof ConnectException) {
-            LT.error(log, e.getCause(), "Connection to the server was lost");
+            if (reconnectCnt <= 0)
+                log.error("Failed to establish websocket connection with server: " + cfg.serverUri());
 
             connect();
         }
@@ -466,9 +450,10 @@ public class WebSocketRouter implements AutoCloseable {
      */
     @OnWebSocketClose
     public void onClose(int statusCode, String reason) {
-        if (statusCode != SERVER_ERROR)
+        if (statusCode != SERVER_ERROR) {
             log.info("Connection closed [code=" + statusCode + ", reason=" + reason + "]");
 
-        connect();
+            connect();
+        }
     }
 }
