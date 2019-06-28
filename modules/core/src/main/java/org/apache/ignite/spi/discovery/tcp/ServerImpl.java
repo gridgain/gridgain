@@ -4329,7 +4329,6 @@ class ServerImpl extends TcpDiscoveryImpl {
                 final Boolean locSrvcProcMode = locSrvcProcModeAttr != null ? locSrvcProcModeAttr : false;
 
                 final Boolean rmtSrvcProcModeAttr = node.attribute(ATTR_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED);
-                // Null if old version is joining.
                 final boolean rmtSrvcProcMode = rmtSrvcProcModeAttr != null ? rmtSrvcProcModeAttr : false;
 
                 if (!F.eq(locSrvcProcMode, rmtSrvcProcMode)) {
