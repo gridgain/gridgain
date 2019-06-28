@@ -169,7 +169,6 @@ public class WebSocketRouter implements AutoCloseable {
      */
     public void start() {
         log.info("Starting Web Console Agent...");
-        log.info("Connecting to server: " + cfg.serverUri());
 
         Runtime.getRuntime().addShutdownHook(new Thread(closeLatch::countDown));
         
