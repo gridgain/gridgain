@@ -444,7 +444,7 @@ class GridDeploymentLocalStore extends GridDeploymentStoreAdapter {
 
             evt.message(msg);
             evt.node(ctx.discovery().localNode());
-            evt.type(isTask(cls) ? EVT_CLASS_DEPLOY_FAILED : EVT_TASK_DEPLOY_FAILED);
+            evt.type(isTask ? EVT_CLASS_DEPLOY_FAILED : EVT_TASK_DEPLOY_FAILED);
             evt.alias(taskName);
 
             ctx.event().record(evt);

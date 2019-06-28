@@ -276,6 +276,30 @@ public class GridDeploymentPerVersionStore extends GridDeploymentStoreAdapter {
         }
     }
 
+    /**
+     * @param meta Deployment meatdata.
+     * @return Grid deployment instance if it was finded in cache, {@code null} otherwise.
+     */
+    public GridDeployment searchDeploymentFromCahec(GridDeploymentMetadata meta) {
+        synchronized (mux) {
+            if (isDeadClassLoader(meta))
+                return null;
+
+            List<SharedDeployment> deps = cache.get(meta.userVersion());
+
+            if (deps != null) {
+                assert !deps.isEmpty();
+
+                for (SharedDeployment d : deps) {
+                    if (d.hasParticipant(meta.senderNodeId(), meta.classLoaderId()))
+                        return d;
+                }
+            }
+        }
+
+        return null;
+    }
+
     /** {@inheritDoc} */
     @Override @Nullable public GridDeployment getDeployment(GridDeploymentMetadata meta) {
         assert meta != null;

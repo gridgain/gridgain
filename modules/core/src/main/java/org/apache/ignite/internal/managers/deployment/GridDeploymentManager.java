@@ -457,6 +457,11 @@ public class GridDeploymentManager extends GridManagerAdapter<DeploymentSpi> {
                 }
             }
 
+            GridDeployment dep = ((GridDeploymentPerVersionStore)verStore).searchDeploymentFromCahec(meta);
+
+                if (dep != null)
+                    return dep;
+
             if (reuse) {
                 GridDeployment locDep = locStore.getDeployment(meta);
 
