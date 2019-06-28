@@ -1428,7 +1428,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
                 tx.storeWriteThrough(),
                 retVal,
                 mvccSnapshot,
-                IgniteFeatures.nodeSupports(n, IgniteFeatures.TX_TRACKING_UPDATE_COUNTER) ?
+                IgniteFeatures.nodeSupports(cctx.kernalContext(), n, IgniteFeatures.TX_TRACKING_UPDATE_COUNTER) ?
                     cctx.tm().txHandler().filterUpdateCountersForBackupNode(tx, n) : null);
 
             req.queryUpdate(dhtMapping.queryUpdate());

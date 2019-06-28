@@ -95,7 +95,7 @@ public class PartitionCountersNeighborcastFuture extends GridCacheCompoundIdenti
             assert n != null : "Failed to find a node within locked tx topology [tx=" + CU.txString(tx) +
                 ", nodeId=" + peer + ']';
 
-            if (!IgniteFeatures.nodeSupports(n, IgniteFeatures.TX_TRACKING_UPDATE_COUNTER))
+            if (!IgniteFeatures.nodeSupports(cctx.kernalContext(), n, IgniteFeatures.TX_TRACKING_UPDATE_COUNTER))
                 continue; // Skip old version node.
 
             MiniFuture miniFut = new MiniFuture(peer);

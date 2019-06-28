@@ -5114,8 +5114,11 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     }
 
     /**
+     * Checks if a partition switched to moving state due to outdated counter (for historical rebalance).
+     *
      * @param grp Group.
      * @param part Partition.
+     * @return {@code True} if partition is historical.
      */
     public boolean isHistoryPartition(CacheGroupContext grp, int part) {
         if (!grp.persistenceEnabled())
@@ -5132,6 +5135,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     }
 
     /**
+     * Marks a partition for historical rebalance.
+     *
      * @param grp Group.
      * @param part Partition.
      */

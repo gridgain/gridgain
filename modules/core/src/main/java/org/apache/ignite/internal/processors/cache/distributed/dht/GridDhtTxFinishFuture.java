@@ -359,7 +359,7 @@ public final class GridDhtTxFinishFuture<K, V> extends GridCacheCompoundIdentity
                 false,
                 false,
                 tx.mvccSnapshot(),
-                IgniteFeatures.nodeSupports(n, IgniteFeatures.TX_TRACKING_UPDATE_COUNTER) ?
+                IgniteFeatures.nodeSupports(cctx.kernalContext(), n, IgniteFeatures.TX_TRACKING_UPDATE_COUNTER) ?
                 cctx.tm().txHandler().filterUpdateCountersForBackupNode(tx, n) : null);
 
             try {
@@ -443,7 +443,7 @@ public final class GridDhtTxFinishFuture<K, V> extends GridCacheCompoundIdentity
 
             Collection<Long> updCntrs = null;
 
-            if (!IgniteFeatures.nodeSupports(n, IgniteFeatures.TX_TRACKING_UPDATE_COUNTER)) {
+            if (!IgniteFeatures.nodeSupports(cctx.kernalContext(), n, IgniteFeatures.TX_TRACKING_UPDATE_COUNTER)) {
                 updCntrs = new ArrayList<>(dhtMapping.entries().size());
 
                 for (IgniteTxEntry e : dhtMapping.entries()) {

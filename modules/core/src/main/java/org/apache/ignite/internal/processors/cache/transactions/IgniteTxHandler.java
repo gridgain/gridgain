@@ -2273,6 +2273,10 @@ public class IgniteTxHandler {
     }
 
     /**
+     * Applies partition counter updates for transactions.
+     * <p>
+     * Called after entries are written to WAL on commit or during rollback to close gaps in update counter sequence.
+     *
      * @param counters Counters.
      */
     public void applyPartitionsUpdatesCounters(Iterable<PartitionUpdateCountersMessage> counters)
@@ -2282,9 +2286,12 @@ public class IgniteTxHandler {
 
     /**
      * Applies partition counter updates for transactions.
+     * <p>
+     * Called after entries are written to WAL on commit or during rollback to close gaps in update counter sequence.
      *
      * @param counters Counter values to be updated.
-     * @param rollback {@code True} if applied from rollbacks.
+     * @param rollback {@code True} if applied during rollbacks.
+     * @param rollbackOnPrimary {@code True} if rollback happens on primary node. Passed to CQ engine.
      */
     public void applyPartitionsUpdatesCounters(Iterable<PartitionUpdateCountersMessage> counters,
         boolean rollback,

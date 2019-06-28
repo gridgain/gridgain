@@ -1176,13 +1176,15 @@ public class WalRecoveryTxLogicalRecordsTest extends GridCommonAbstractTest {
     }
 
     /**
-     * @param cctx
-     * @param key
-     * @param cacheId
-     * @param partId
-     * @param op
-     * @param cntr
-     * @param val
+     * Constructs new data entry.
+     *
+     * @param cctx Context.
+     * @param key Key.
+     * @param cacheId Cache id.
+     * @param partId Partition id.
+     * @param op Operation type.
+     * @param cntr Counter.
+     * @param val Value.
      * @return Data entry.
      */
     private DataEntry entryOp(GridCacheSharedContext cctx, int key, int cacheId, int partId, GridCacheOperation op,
