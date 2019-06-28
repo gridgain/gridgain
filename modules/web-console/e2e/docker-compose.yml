@@ -20,8 +20,6 @@ services:
     build:
       context: '../docker/console'
       dockerfile: 'backend/Dockerfile'
-    ports:
-      - 3001:3000
     environment:
       - SPRING_PROFILES_ACTIVE=test
     healthcheck:
@@ -34,8 +32,6 @@ services:
     build:
       context: '../docker/console'
       dockerfile: 'frontend/Dockerfile'
-    ports:
-      - 9091:80
     depends_on:
       backend:
         condition: service_healthy
