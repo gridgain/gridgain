@@ -403,6 +403,9 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
         if (delayPME) {
             for (Ignite ignite : G.allGrids()) {
+                if (ignite.configuration().isClientMode())
+                    continue;
+
                 TestRecordingCommunicationSpi spi = TestRecordingCommunicationSpi.spi(ignite);
 
                 spi.blockMessages((node, message) -> message instanceof GridDhtPartitionsFullMessage);
@@ -460,6 +463,8 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
                     if (r.nextBoolean()) {
                         IgniteEx node = startGrid(SERVER_NODES); // Non-BLT join.
 
+                        assertNotNull(node.cache(DEFAULT_CACHE_NAME));
+
                         stopGrid(node.name());
                     }
                     else {
@@ -471,7 +476,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
                     restarts.increment();
                 }
                 catch (Exception e) {
-                    fail();
+                    fail(X.getFullStackTrace(e));
                 }
             }
         });
@@ -480,9 +485,14 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
         done.set(true);
 
+        sndFut.get();
+        if (delayPME) {
+            for (int i = 0; i < SERVER_NODES; i++)
+                TestRecordingCommunicationSpi.spi(grid(i)).stopBlock(true, null, false, true);
+        }
+
         fut.get();
         fut2.get();
-        sndFut.get();
 
         log.info("TX: puts=" + puts.sum() + ", restarts=" + restarts.sum() + ", size=" + cache.size());
     }
