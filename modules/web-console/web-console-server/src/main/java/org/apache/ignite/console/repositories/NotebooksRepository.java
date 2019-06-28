@@ -23,6 +23,7 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.console.db.OneToManyIndex;
 import org.apache.ignite.console.db.Table;
 import org.apache.ignite.console.dto.Notebook;
+import org.apache.ignite.console.messages.WebConsoleMessageSource;
 import org.apache.ignite.console.tx.TransactionManager;
 import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.stereotype.Repository;
@@ -46,12 +47,13 @@ public class NotebooksRepository {
     /**
      * @param ignite Ignite.
      * @param txMgr Transactions manager.
-     * @param messages Messages accessor.
      */
-    public NotebooksRepository(Ignite ignite, TransactionManager txMgr, MessageSourceAccessor messages) {
+    public NotebooksRepository(Ignite ignite, TransactionManager txMgr) {
         this.txMgr = txMgr;
 
         txMgr.registerStarter("notebooks", () -> {
+            MessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
+
             notebooksTbl = new Table<>(ignite, "wc_notebooks");
 
             notebooksIdx = new OneToManyIndex<>(

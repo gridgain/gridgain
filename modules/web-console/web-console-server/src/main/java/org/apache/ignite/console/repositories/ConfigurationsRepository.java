@@ -30,10 +30,11 @@ import org.apache.ignite.console.dto.DataObject;
 import org.apache.ignite.console.dto.Model;
 import org.apache.ignite.console.json.JsonArray;
 import org.apache.ignite.console.json.JsonObject;
+import org.apache.ignite.console.messages.WebConsoleMessageSource;
+import org.apache.ignite.console.messages.WebConsoleMessageSourceAccessor;
 import org.apache.ignite.console.tx.TransactionManager;
 import org.apache.ignite.console.web.model.ConfigurationKey;
 import org.apache.ignite.internal.util.typedef.F;
-import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.stereotype.Repository;
 
 import static java.util.stream.Collectors.toMap;
@@ -57,7 +58,7 @@ public class ConfigurationsRepository {
     protected final TransactionManager txMgr;
 
     /** Messages accessor. */
-    private MessageSourceAccessor messages;
+    private final WebConsoleMessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
 
     /** */
     private Table<Cluster> clustersTbl;
@@ -83,11 +84,9 @@ public class ConfigurationsRepository {
     /**
      * @param ignite Ignite.
      * @param txMgr Transactions manager.
-     * @param messages Messages accessor.
      */
-    public ConfigurationsRepository(Ignite ignite, TransactionManager txMgr, MessageSourceAccessor messages) {
+    public ConfigurationsRepository(Ignite ignite, TransactionManager txMgr) {
         this.txMgr = txMgr;
-        this.messages = messages;
 
         txMgr.registerStarter("configurations", () -> {
             clustersTbl = new Table<>(ignite, "wc_account_clusters");
@@ -97,23 +96,23 @@ public class ConfigurationsRepository {
             cachesIdx = new OneToManyIndex<>(
                     ignite,
                     "wc_cluster_caches_idx",
-                    (key) -> this.messages.getMessage(ERR_DATA_ACCESS_VIOLATION)
+                    (key) -> messages.getMessage(ERR_DATA_ACCESS_VIOLATION)
             );
             modelsIdx = new OneToManyIndex<>(
                     ignite,
                     "wc_cluster_models_idx",
-                    (key) -> this.messages.getMessage(ERR_DATA_ACCESS_VIOLATION)
+                    (key) -> messages.getMessage(ERR_DATA_ACCESS_VIOLATION)
             );
 
             clustersIdx = new OneToManyIndex<>(
                     ignite,
                     "wc_account_clusters_idx",
-                    (key) -> this.messages.getMessage(ERR_DATA_ACCESS_VIOLATION)
+                    (key) -> messages.getMessage(ERR_DATA_ACCESS_VIOLATION)
             );
             cfgIdx = new OneToManyIndex<>(
                     ignite,
                     "wc_account_configs_idx",
-                    (key) -> this.messages.getMessage(ERR_DATA_ACCESS_VIOLATION)
+                    (key) -> messages.getMessage(ERR_DATA_ACCESS_VIOLATION)
             );
         });
     }
@@ -128,7 +127,7 @@ public class ConfigurationsRepository {
             Cluster cluster = clustersTbl.load(clusterId);
 
             if (cluster == null)
-                throw new IllegalStateException(messages.getMessage(ERR_CLUSTER_NOT_FOUND_BY_ID, new Object[]{clusterId}));
+                throw new IllegalStateException(messages.getMessageWithArgs(ERR_CLUSTER_NOT_FOUND_BY_ID, clusterId));
 
             clustersIdx.validate(key, clusterId);
 
@@ -188,7 +187,7 @@ public class ConfigurationsRepository {
             Cluster cluster = clustersTbl.load(clusterId);
 
             if (cluster == null)
-                throw new IllegalStateException(messages.getMessage(ERR_CLUSTER_NOT_FOUND_BY_ID, new Object[]{clusterId}));
+                throw new IllegalStateException(messages.getMessageWithArgs(ERR_CLUSTER_NOT_FOUND_BY_ID, clusterId));
 
             clustersIdx.validate(key, clusterId);
 
@@ -206,7 +205,7 @@ public class ConfigurationsRepository {
             Cache cache = cachesTbl.load(cacheId);
 
             if (cache == null)
-                throw new IllegalStateException(messages.getMessage(ERR_CACHE_NOT_FOUND_BY_ID, new Object[]{cacheId}));
+                throw new IllegalStateException(messages.getMessageWithArgs(ERR_CACHE_NOT_FOUND_BY_ID, cacheId));
 
             cfgIdx.validate(key, cacheId);
 
@@ -224,7 +223,7 @@ public class ConfigurationsRepository {
             Model mdl = modelsTbl.load(mdlId);
 
             if (mdl == null)
-                throw new IllegalStateException(messages.getMessage(ERR_MODEL_NOT_FOUND_BY_ID, new Object[]{mdlId}));
+                throw new IllegalStateException(messages.getMessageWithArgs(ERR_MODEL_NOT_FOUND_BY_ID, mdlId));
 
             cfgIdx.validate(key, mdlId);
 
@@ -307,7 +306,7 @@ public class ConfigurationsRepository {
     private Cluster saveCluster(ConfigurationKey key, JsonObject changedItems) {
         JsonObject jsonCluster = changedItems.getJsonObject("cluster");
 
-        Cluster newCluster = Cluster.fromJson(jsonCluster, messages);
+        Cluster newCluster = Cluster.fromJson(jsonCluster);
 
         UUID clusterId = newCluster.getId();
 
@@ -342,7 +341,7 @@ public class ConfigurationsRepository {
 
         Map<UUID, Cache> caches = jsonCaches
             .stream()
-            .map(item -> Cache.fromJson(asJson(item), messages))
+            .map(item -> Cache.fromJson(asJson(item)))
             .collect(toMap(Cache::getId, c -> c));
 
         Set<UUID> cacheIds = caches.keySet();
@@ -383,7 +382,7 @@ public class ConfigurationsRepository {
 
         Map<UUID, Model> mdls = jsonModels
             .stream()
-            .map(item -> Model.fromJson(asJson(item), messages))
+            .map(item -> Model.fromJson(asJson(item)))
             .collect(toMap(Model::getId, m -> m));
 
         Set<UUID> mdlIds = mdls.keySet();

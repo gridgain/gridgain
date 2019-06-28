@@ -27,6 +27,8 @@ import java.util.stream.Stream;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.json.JsonArray;
 import org.apache.ignite.console.json.JsonObject;
+import org.apache.ignite.console.messages.WebConsoleMessageSource;
+import org.apache.ignite.console.messages.WebConsoleMessageSourceAccessor;
 import org.apache.ignite.console.web.AbstractHandler;
 import org.apache.ignite.console.web.model.VisorTaskDescriptor;
 import org.apache.ignite.console.websocket.WebSocketEvent;
@@ -34,7 +36,6 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.CloseStatus;
@@ -70,14 +71,13 @@ public class BrowsersHandler extends AbstractHandler {
     private final WebSocketsManager wsm;
 
     /** Messages accessor. */
-    private MessageSourceAccessor messages;
+    private WebConsoleMessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
 
     /**
      * @param wsm Web sockets manager.
      */
-    public BrowsersHandler(WebSocketsManager wsm, MessageSourceAccessor messages) {
+    public BrowsersHandler(WebSocketsManager wsm) {
         this.wsm = wsm;
-        this.messages = messages;
 
         registerVisorTasks();
     }
@@ -100,7 +100,7 @@ public class BrowsersHandler extends AbstractHandler {
                 return (Account)tp;
         }
 
-        throw new IllegalStateException(messages.getMessage(ERR_ACCOUNT_CANT_BE_FOUND_IN_WS_SESSION, new Object[] {ws}));
+        throw new IllegalStateException(messages.getMessageWithArgs(ERR_ACCOUNT_CANT_BE_FOUND_IN_WS_SESSION, ws));
     }
 
     /** {@inheritDoc} */
@@ -142,7 +142,7 @@ public class BrowsersHandler extends AbstractHandler {
                     break;
 
                 default:
-                    throw new IllegalStateException(messages.getMessage(ERR_UNKNOWN_EVT, new Object[]{evt}));
+                    throw new IllegalStateException(messages.getMessageWithArgs(ERR_UNKNOWN_EVT, evt));
             }
         }
         catch (IllegalStateException e) {
@@ -256,14 +256,14 @@ public class BrowsersHandler extends AbstractHandler {
         String taskId = params.getString("taskId");
 
         if (F.isEmpty(taskId))
-            throw new IllegalStateException(messages.getMessage(ERR_NOT_SPECIFIED_TASK_ID, new Object[]{payload}));
+            throw new IllegalStateException(messages.getMessageWithArgs(ERR_NOT_SPECIFIED_TASK_ID, payload));
 
         String nids = params.getString("nids");
 
         VisorTaskDescriptor desc = visorTasks.get(taskId);
 
         if (desc == null)
-            throw new IllegalStateException(messages.getMessage(ERR_UNKNOWN_TASK, new Object[]{taskId, payload}));
+            throw new IllegalStateException(messages.getMessageWithArgs(ERR_UNKNOWN_TASK, taskId, payload));
 
         JsonObject exeParams =  new JsonObject()
             .add("cmd", "exe")

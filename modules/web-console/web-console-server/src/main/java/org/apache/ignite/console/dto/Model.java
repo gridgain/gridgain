@@ -18,6 +18,7 @@ package org.apache.ignite.console.dto;
 
 import java.util.UUID;
 import org.apache.ignite.console.json.JsonObject;
+import org.apache.ignite.console.messages.WebConsoleMessageSource;
 import org.apache.ignite.internal.util.typedef.F;
 import org.springframework.context.support.MessageSourceAccessor;
 
@@ -40,11 +41,11 @@ public class Model extends DataObject {
 
     /**
      * @param json JSON data.
-     * @param messages Messages accessor.
      * @return New instance of model DTO.
      */
-    public static Model fromJson(JsonObject json, MessageSourceAccessor messages) {
+    public static Model fromJson(JsonObject json) {
         UUID id = json.getUuid("id");
+        MessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
 
         if (id == null)
             throw new IllegalStateException(messages.getMessage(ERR_MODEL_ID_NOT_FOUND));

@@ -74,10 +74,6 @@ public class AccountServiceTest {
     @Autowired
     private TransactionManager txMgr;
 
-    /** Messages accessor. */
-    @Autowired
-    private MessageSourceAccessor messages;
-
     /** */
     @Before
     public void setup() {
@@ -260,11 +256,10 @@ public class AccountServiceTest {
                 new SignUpConfiguration().setEnabled(disableSignUp),
                 activationCfg,
                 NoOpPasswordEncoder.getInstance(),
-                new WebSocketsManager(messages),
+                new WebSocketsManager(),
                 accountsRepo,
                 txMgr,
-                evtPublisher,
-                messages
+                evtPublisher
         );
     }
 

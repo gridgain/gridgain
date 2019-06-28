@@ -29,6 +29,7 @@ import org.apache.ignite.console.db.OneToManyIndex;
 import org.apache.ignite.console.db.Table;
 import org.apache.ignite.console.dto.Activity;
 import org.apache.ignite.console.dto.ActivityKey;
+import org.apache.ignite.console.messages.WebConsoleMessageSource;
 import org.apache.ignite.console.tx.TransactionManager;
 import org.apache.ignite.internal.util.typedef.F;
 import org.springframework.context.support.MessageSourceAccessor;
@@ -54,12 +55,13 @@ public class ActivitiesRepository {
     /**
      * @param ignite Ignite.
      * @param txMgr Transactions manager.
-     * @param messages Messages accessor.
      */
-    public ActivitiesRepository(Ignite ignite, TransactionManager txMgr, MessageSourceAccessor messages) {
+    public ActivitiesRepository(Ignite ignite, TransactionManager txMgr) {
         this.txMgr = txMgr;
 
         txMgr.registerStarter("activities", () -> {
+            MessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
+
             activitiesTbl = new Table<>(ignite, "wc_activities");
 
             activitiesIdx = new OneToManyIndex<>(

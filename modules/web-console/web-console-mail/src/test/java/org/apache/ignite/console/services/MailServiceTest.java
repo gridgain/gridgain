@@ -23,6 +23,7 @@ import javax.mail.Session;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 import org.apache.ignite.console.config.MailPropertiesEx;
+import org.apache.ignite.console.messages.WebConsoleMessageSource;
 import org.apache.ignite.console.notification.INotificationDescriptor;
 import org.apache.ignite.console.notification.IRecipient;
 import org.apache.ignite.console.notification.Notification;
@@ -34,7 +35,6 @@ import org.mockito.Captor;
 import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.context.junit4.SpringRunner;
 
@@ -48,10 +48,6 @@ import static org.mockito.Mockito.when;
 @RunWith(SpringRunner.class)
 @SpringBootTest
 public class MailServiceTest {
-    /** Message source. */
-    @Autowired
-    private MessageSourceAccessor accessor;
-
     /** JavaMail sender. */
     @Mock
     private JavaMailSender mailSnd;
@@ -73,7 +69,7 @@ public class MailServiceTest {
         when(mailSnd.createMimeMessage())
             .thenReturn(new MimeMessage(Session.getDefaultInstance(new Properties())));
 
-        srvc = new MailService(accessor, mailSnd, props);
+        srvc = new MailService(WebConsoleMessageSource.getAccessor(), mailSnd, props);
     }
 
     /** Test send e-mail. */

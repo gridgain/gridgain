@@ -26,9 +26,10 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.console.db.Table;
 import org.apache.ignite.console.dto.Account;
+import org.apache.ignite.console.messages.WebConsoleMessageSource;
+import org.apache.ignite.console.messages.WebConsoleMessageSourceAccessor;
 import org.apache.ignite.console.tx.TransactionManager;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Repository;
@@ -50,7 +51,7 @@ public class AccountsRepository {
     private final TransactionManager txMgr;
 
     /** Messages accessor. */
-    private MessageSourceAccessor messages;
+    private final WebConsoleMessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
 
     /** Accounts collection. */
     private Table<Account> accountsTbl;
@@ -58,18 +59,16 @@ public class AccountsRepository {
     /**
      * @param ignite Ignite.
      * @param txMgr Transactions manager.
-     * @param messages Messages accessor.
      */
-    public AccountsRepository(Ignite ignite, TransactionManager txMgr, MessageSourceAccessor messages) {
+    public AccountsRepository(Ignite ignite, TransactionManager txMgr) {
         this.txMgr = txMgr;
-        this.messages = messages;
 
         txMgr.registerStarter("accounts", () ->
             accountsTbl = new Table<Account>(ignite, "wc_accounts")
                 .addUniqueIndex(a -> a.getUsername().trim().toLowerCase(),
-                    (acc) -> this.messages.getMessage(ERR_ACCOUNT_WITH_EMAIL_EXISTS, new Object[]{acc.getUsername()}))
+                    (acc) -> messages.getMessageWithArgs(ERR_ACCOUNT_WITH_EMAIL_EXISTS, acc.getUsername()))
                 .addUniqueIndex(Account::getToken,
-                    (acc) -> this.messages.getMessage(ERR_ACCOUNT_WITH_TOKEN_EXISTS, new Object[]{acc.getToken()}))
+                    (acc) -> messages.getMessageWithArgs(ERR_ACCOUNT_WITH_TOKEN_EXISTS, acc.getToken()))
         );
     }
 
@@ -176,7 +175,7 @@ public class AccountsRepository {
             Account acc = accountsTbl.delete(accId);
 
             if (acc == null)
-                throw new IllegalStateException(messages.getMessage(ERR_ACCOUNT_NOT_FOUND_BY_ID, new Object[]{accId}));
+                throw new IllegalStateException(messages.getMessageWithArgs(ERR_ACCOUNT_NOT_FOUND_BY_ID, accId));
 
             return acc;
         });

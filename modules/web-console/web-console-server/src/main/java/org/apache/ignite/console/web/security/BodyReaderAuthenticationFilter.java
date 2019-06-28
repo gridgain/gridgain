@@ -20,6 +20,7 @@ import java.io.IOException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.apache.ignite.console.messages.WebConsoleMessageSource;
 import org.apache.ignite.console.web.model.SignInRequest;
 import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -38,14 +39,8 @@ public class BodyReaderAuthenticationFilter extends UsernamePasswordAuthenticati
     /** */
     protected ObjectMapper objMapper = new ObjectMapper().configure(FAIL_ON_UNKNOWN_PROPERTIES, false);
 
-    protected final MessageSourceAccessor messages;
-
-    /**
-     * @param messages Messages.
-     */
-    public BodyReaderAuthenticationFilter(MessageSourceAccessor messages) {
-        this.messages = messages;
-    }
+    /** Messages accessor. */
+    protected final MessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
 
     /** {@inheritDoc} */
     @Override public Authentication attemptAuthentication(HttpServletRequest req,

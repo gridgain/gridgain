@@ -23,6 +23,7 @@ import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.dto.Announcement;
 import org.apache.ignite.console.json.JsonArray;
 import org.apache.ignite.console.json.JsonObject;
+import org.apache.ignite.console.messages.WebConsoleMessageSource;
 import org.apache.ignite.console.services.AdminService;
 import org.apache.ignite.console.web.model.PeriodFilterRequest;
 import org.apache.ignite.console.web.model.SignUpRequest;
@@ -52,15 +53,13 @@ public class AdminController {
     private final AdminService adminSrv;
 
     /** Messages accessor */
-    private final MessageSourceAccessor messages;
+    private final MessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
 
     /**
      * @param adminSrv Admin service.
-     * @param messages Messages accessor.
      */
-    public AdminController(AdminService adminSrv, MessageSourceAccessor messages) {
+    public AdminController(AdminService adminSrv) {
         this.adminSrv = adminSrv;
-        this.messages = messages;
     }
 
     /**

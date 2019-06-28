@@ -28,6 +28,7 @@ import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 import org.apache.commons.compress.archivers.zip.ZipFile;
 import org.apache.ignite.console.dto.Account;
+import org.apache.ignite.console.messages.WebConsoleMessageSource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.core.io.ByteArrayResource;
@@ -56,7 +57,7 @@ public class AgentDownloadController {
     private static final int BUFFER_SZ = 30 * 1024 * 1024;
 
     /** Messages accessor. */
-    private final MessageSourceAccessor messages;
+    private final MessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
 
     /** */
     @Value("${agent.folder.name:agent_dists}")
@@ -65,13 +66,6 @@ public class AgentDownloadController {
     /** */
     @Value("${agent.file.regexp:ignite-web-console-agent.*\\.zip}")
     private String agentFileRegExp;
-
-    /**
-     * @param messages Messages accessor.
-     */
-    public AgentDownloadController(MessageSourceAccessor messages) {
-        this.messages = messages;
-    }
 
     /**
      * @param user User.

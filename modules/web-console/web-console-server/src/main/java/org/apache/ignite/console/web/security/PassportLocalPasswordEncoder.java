@@ -21,6 +21,7 @@ import java.security.GeneralSecurityException;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 
+import org.apache.ignite.console.messages.WebConsoleMessageSource;
 import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.security.crypto.codec.Hex;
 import org.springframework.security.crypto.keygen.BytesKeyGenerator;
@@ -50,7 +51,7 @@ public class PassportLocalPasswordEncoder implements PasswordEncoder {
     private final int hashWidth;
 
     /** Messages accessor. */
-    private final MessageSourceAccessor messages;
+    private final MessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
 
     /** Iterations. */
     private final int iterations;
@@ -58,8 +59,8 @@ public class PassportLocalPasswordEncoder implements PasswordEncoder {
     /**
      * Constructs a standard password encoder with a secret value which is also included in the password hash.
      */
-    public PassportLocalPasswordEncoder(MessageSourceAccessor messages) {
-        this(DEFAULT_ITERATIONS, DEFAULT_HASH_WIDTH, messages);
+    public PassportLocalPasswordEncoder() {
+        this(DEFAULT_ITERATIONS, DEFAULT_HASH_WIDTH);
     }
 
     /**
@@ -68,10 +69,9 @@ public class PassportLocalPasswordEncoder implements PasswordEncoder {
      * @param iterations Number of iterations.
      * @param hashWidth Size of the hash.
      */
-    public PassportLocalPasswordEncoder(int iterations, int hashWidth, MessageSourceAccessor messages) {
+    public PassportLocalPasswordEncoder(int iterations, int hashWidth) {
         this.iterations = iterations;
         this.hashWidth = hashWidth;
-        this.messages = messages;
     }
 
     /** {@inheritDoc} */

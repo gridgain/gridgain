@@ -29,13 +29,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.dto.Announcement;
+import org.apache.ignite.console.messages.WebConsoleMessageSource;
+import org.apache.ignite.console.messages.WebConsoleMessageSourceAccessor;
 import org.apache.ignite.console.websocket.TopologySnapshot;
 import org.apache.ignite.console.websocket.WebSocketEvent;
 import org.apache.ignite.internal.util.typedef.F;
 import org.jsr166.ConcurrentLinkedHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.CloseStatus;
@@ -85,14 +86,12 @@ public class WebSocketsManager {
     private volatile Announcement lastAnn;
 
     /** Messages accessor. */
-    private MessageSourceAccessor messages;
+    private WebConsoleMessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
 
     /**
      * Default constructor.
      */
-    public WebSocketsManager(MessageSourceAccessor messages) {
-        this.messages = messages;
-
+    public WebSocketsManager() {
         agents = new ConcurrentLinkedHashMap<>();
         browsers = new ConcurrentHashMap<>();
         clusters = new ConcurrentHashMap<>();
@@ -172,7 +171,7 @@ public class WebSocketsManager {
             .filter(e -> e.getValue().isActiveAccount(accId))
             .findFirst()
             .map(Map.Entry::getKey)
-            .orElseThrow(() -> new IllegalStateException(messages.getMessage(ERR_AGENT_NOT_FOUND_BY_ACC_ID, new Object[]{accId})));
+            .orElseThrow(() -> new IllegalStateException(messages.getMessageWithArgs(ERR_AGENT_NOT_FOUND_BY_ACC_ID, accId)));
 
         if (log.isDebugEnabled())
             log.debug("Found agent session [accountId=" + accId + ", session=" + wsAgent + ", event=" + evt + "]");
@@ -197,7 +196,7 @@ public class WebSocketsManager {
             .filter(e -> e.getValue().getClusterIds().contains(clusterId))
             .findFirst()
             .map(Map.Entry::getKey)
-            .orElseThrow(() -> new IllegalStateException(messages.getMessage(ERR_AGENT_NOT_FOUND_BY_ACC_ID_AND_CLUSTER_ID, new Object[]{accId, clusterId})));
+            .orElseThrow(() -> new IllegalStateException(messages.getMessageWithArgs(ERR_AGENT_NOT_FOUND_BY_ACC_ID_AND_CLUSTER_ID, accId, clusterId)));
 
         if (log.isDebugEnabled())
             log.debug("Found agent session [accountId=" + accId + ", session=" + wsAgent + ", event=" + evt + "]");

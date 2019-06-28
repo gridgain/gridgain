@@ -24,6 +24,7 @@ import org.apache.ignite.console.config.SignUpConfiguration;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.event.Event;
 import org.apache.ignite.console.event.EventPublisher;
+import org.apache.ignite.console.messages.WebConsoleMessageSource;
 import org.apache.ignite.console.repositories.AccountsRepository;
 import org.apache.ignite.console.tx.TransactionManager;
 import org.apache.ignite.console.web.model.ChangeUserRequest;
@@ -75,7 +76,7 @@ public class AccountsService implements UserDetailsService {
     protected UserDetailsChecker userDetailsChecker;
 
     /** Messages acessor. */
-    protected MessageSourceAccessor messages;
+    protected final MessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
 
     /** Flag if sign up disabled and new accounts can be created only by administrator. */
     private boolean disableSignup;
@@ -94,7 +95,6 @@ public class AccountsService implements UserDetailsService {
      * @param accountsRepo Accounts repository.
      * @param txMgr Transactions manager.
      * @param evtPublisher Event publisher.
-     * @param messages Messages accessor.
      */
     public AccountsService(
         SignUpConfiguration signUpCfg,
@@ -103,8 +103,7 @@ public class AccountsService implements UserDetailsService {
         WebSocketsManager wsm,
         AccountsRepository accountsRepo,
         TransactionManager txMgr,
-        EventPublisher evtPublisher,
-        MessageSourceAccessor messages
+        EventPublisher evtPublisher
     ) {
         disableSignup = !signUpCfg.isEnabled();
         userDetailsChecker = activationCfg.getChecker();
@@ -116,7 +115,6 @@ public class AccountsService implements UserDetailsService {
         this.accountsRepo = accountsRepo;
         this.txMgr = txMgr;
         this.evtPublisher = evtPublisher;
-        this.messages = messages;
     }
 
     /** {@inheritDoc} */

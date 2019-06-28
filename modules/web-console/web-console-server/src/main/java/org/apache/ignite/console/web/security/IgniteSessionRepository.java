@@ -20,6 +20,7 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.console.messages.WebConsoleMessageSource;
 import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.session.ExpiringSession;
 import org.springframework.session.MapSession;
@@ -37,7 +38,7 @@ public class IgniteSessionRepository implements SessionRepository<ExpiringSessio
     private final Ignite ignite;
 
     /** Messages accessor. */
-    private final MessageSourceAccessor messages;
+    private final MessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
 
     /** If non-null, this value is used to override {@link ExpiringSession#setMaxInactiveIntervalInSeconds(int)}. */
     private Integer dfltMaxInactiveInterval;
@@ -47,11 +48,9 @@ public class IgniteSessionRepository implements SessionRepository<ExpiringSessio
 
     /**
      * @param ignite Ignite.
-     * @param messages Messages accessor.
      */
-    public IgniteSessionRepository(Ignite ignite, MessageSourceAccessor messages) {
+    public IgniteSessionRepository(Ignite ignite) {
        this.ignite = ignite;
-       this.messages = messages;
 
         cfg = new CacheConfiguration<String, MapSession>()
             .setName("wc_sessions")

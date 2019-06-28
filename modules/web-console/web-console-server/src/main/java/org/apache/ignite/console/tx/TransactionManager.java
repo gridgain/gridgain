@@ -23,6 +23,7 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.console.db.NestedTransaction;
+import org.apache.ignite.console.messages.WebConsoleMessageSource;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
@@ -53,19 +54,17 @@ public class TransactionManager {
     private final Ignite ignite;
 
     /** Messages accessor */
-    private final MessageSourceAccessor messages;
+    private final MessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
 
     /** */
     private final Map<String, Runnable> cachesStarters = new ConcurrentHashMap<>();
 
     /**
      * @param ignite Ignite.
-     * @param messages Messages accessor
      */
     @Autowired
-    protected TransactionManager(Ignite ignite, MessageSourceAccessor messages) {
+    protected TransactionManager(Ignite ignite) {
         this.ignite = ignite;
-        this.messages = messages;
     }
 
     /**
