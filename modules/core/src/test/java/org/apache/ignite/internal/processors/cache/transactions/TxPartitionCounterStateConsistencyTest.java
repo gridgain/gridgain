@@ -49,7 +49,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLockRequest;
-import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
@@ -79,14 +78,12 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
     /**
      * Test if same updates order on all owners after txs are finished.
-     *
-     * @throws Exception If failed.
      */
     @Test
     public void testSingleThreadedUpdateOrder() throws Exception {
         backups = 2;
 
-        Ignite crd = startGridsMultiThreaded(SERVER_NODES);
+        startGridsMultiThreaded(SERVER_NODES);
 
         IgniteEx client = startGrid("client");
 
@@ -301,8 +298,6 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
     /**
      * Tests reproduces the problem: in-place update in tree during rebalance in partition was not handled as update
      * causing missed WAL record which has to be processed on recovery.
-     *
-     * @throws Exception
      */
     @Test
     public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_CheckpointDuringRebalance() throws Exception {
@@ -367,7 +362,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
         stopGrid(true, backupName);
 
-        backup = startGrid(backupName);
+        startGrid(backupName);
 
         awaitPartitionMapExchange();
 
@@ -376,21 +371,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
     /** */
     @Test
-    public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_SameAffinityPME_1() throws Exception {
-        doTestPartitionConsistencyDuringRebalanceAndConcurrentUpdates_SameAffinityPME(false);
-    }
-
-    /** */
-    @Test
-    public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_SameAffinityPME_2() throws Exception {
-        doTestPartitionConsistencyDuringRebalanceAndConcurrentUpdates_SameAffinityPME(true);
-    }
-
-    /**
-     * Tests tx load concurrently with PME not changing tx topology.
-     * @param delayPME {@code True} to delay full messages on PME.
-     */
-    private void doTestPartitionConsistencyDuringRebalanceAndConcurrentUpdates_SameAffinityPME(boolean delayPME) throws Exception {
+    public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_SameAffinityPME() throws Exception {
         backups = 2;
 
         Ignite crd = startGridsMultiThreaded(SERVER_NODES);
@@ -400,17 +381,6 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         Ignite client = startGrid("client");
 
         IgniteCache<Object, Object> cache = client.cache(DEFAULT_CACHE_NAME);
-
-        if (delayPME) {
-            for (Ignite ignite : G.allGrids()) {
-                if (ignite.configuration().isClientMode())
-                    continue;
-
-                TestRecordingCommunicationSpi spi = TestRecordingCommunicationSpi.spi(ignite);
-
-                spi.blockMessages((node, message) -> message instanceof GridDhtPartitionsFullMessage);
-            }
-        }
 
         int threads = 8;
 
@@ -426,15 +396,6 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         LongAdder puts = new LongAdder();
         LongAdder restarts = new LongAdder();
 
-        IgniteInternalFuture sndFut = delayPME ? GridTestUtils.runAsync(() -> {
-            while (!done.get()) {
-                doSleep(1000);
-
-                for (int i = 0; i < SERVER_NODES; i++)
-                    TestRecordingCommunicationSpi.spi(grid(i)).stopBlock(true, null, false, true);
-            }
-        }) : new GridFinishedFuture<>();
-
         IgniteInternalFuture<?> fut = multithreadedAsync(() -> {
             U.awaitQuiet(sync);
 
@@ -443,7 +404,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
                 int start = r.nextInt(keys - batch0);
 
                 try(Transaction tx = client.transactions().txStart()) {
-                    Map<Integer, Integer> map = new TreeMap<Integer, Integer>();
+                    Map<Integer, Integer> map = new TreeMap<>();
 
                     IntStream.range(start, start + batch0).forEach(value -> map.put(value, value));
 
@@ -458,12 +419,11 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
         IgniteInternalFuture fut2 = GridTestUtils.runAsync(() -> {
             U.awaitQuiet(sync);
+
             while(!done.get()) {
                 try {
                     if (r.nextBoolean()) {
                         IgniteEx node = startGrid(SERVER_NODES); // Non-BLT join.
-
-                        assertNotNull(node.cache(DEFAULT_CACHE_NAME));
 
                         stopGrid(node.name());
                     }
@@ -484,12 +444,6 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         doSleep(60_000);
 
         done.set(true);
-
-        sndFut.get();
-        if (delayPME) {
-            for (int i = 0; i < SERVER_NODES; i++)
-                TestRecordingCommunicationSpi.spi(grid(i)).stopBlock(true, null, false, true);
-        }
 
         fut.get();
         fut2.get();
@@ -538,7 +492,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
                 U.awaitQuiet(l);
 
                 try {
-                    IgniteEx ex = startGrid(SERVER_NODES);
+                    startGrid(SERVER_NODES);
                 }
                 catch (Exception e) {
                     fail(X.getFullStackTrace(e));
@@ -549,11 +503,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         TestRecordingCommunicationSpi cliSpi = TestRecordingCommunicationSpi.spi(client);
         cliSpi.blockMessages((node, message) -> {
             // Block second lock map req.
-            if (message instanceof GridNearLockRequest) {
-                GridNearLockRequest req = (GridNearLockRequest)message;
-
-                return node.order() == crd.cluster().localNode().order();
-            }
+            if (message instanceof GridNearLockRequest) return node.order() == crd.cluster().localNode().order();
 
             return false;
         });

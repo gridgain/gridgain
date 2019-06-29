@@ -145,7 +145,7 @@ public abstract class TxPartitionCounterStateAbstractTest extends GridCommonAbst
     /**
      * @param name Name.
      */
-    protected CacheConfiguration cacheConfiguration(String name) {
+    protected CacheConfiguration<?, ?> cacheConfiguration(String name) {
         CacheConfiguration ccfg = new CacheConfiguration(name);
 
         ccfg.setAtomicityMode(TRANSACTIONAL);
