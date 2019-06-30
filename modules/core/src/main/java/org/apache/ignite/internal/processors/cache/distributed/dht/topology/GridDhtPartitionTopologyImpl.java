@@ -795,7 +795,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                                     // NOTE: avoid calling clearAsync for partition twice per topology version.
                                     // TODO FIXME clearing is not always needed see IGNITE-11799
                                     if (grp.persistenceEnabled() && !exchFut.isHistoryPartition(grp, locPart.id()) &&
-                                        !locPart.isClearing() && !locPart.isEmpty() && !grp.mvccEnabled())
+                                        !locPart.isClearing() && !locPart.isEmpty())
                                         locPart.clearAsync();
                                 }
                                 else

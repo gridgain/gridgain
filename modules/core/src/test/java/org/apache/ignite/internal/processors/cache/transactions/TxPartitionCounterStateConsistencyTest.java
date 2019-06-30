@@ -422,16 +422,9 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
             while(!done.get()) {
                 try {
-                    if (r.nextBoolean()) {
-                        IgniteEx node = startGrid(SERVER_NODES); // Non-BLT join.
+                    IgniteCache cache1 = client.createCache(cacheConfiguration(DEFAULT_CACHE_NAME + "2"));
 
-                        stopGrid(node.name());
-                    }
-                    else {
-                        IgniteCache cache1 = client.createCache(cacheConfiguration(DEFAULT_CACHE_NAME + "2"));
-
-                        cache1.destroy();
-                    }
+                    cache1.destroy();
 
                     restarts.increment();
                 }
