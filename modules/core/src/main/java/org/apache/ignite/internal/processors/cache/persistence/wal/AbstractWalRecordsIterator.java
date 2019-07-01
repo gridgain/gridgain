@@ -136,7 +136,6 @@ public abstract class AbstractWalRecordsIterator
         }
         catch (IgniteCheckedException e) {
             curException = e;
-            curRec = null;
         }
 
         return ret;
