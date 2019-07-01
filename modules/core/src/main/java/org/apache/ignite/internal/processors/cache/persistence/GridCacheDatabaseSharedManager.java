@@ -2073,6 +2073,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 dumpPartitionsInfo(cctx, log);
             }
 
+            cctx.wal().flush(null, true);
+
             // We must return null for NULL_PTR record, because FileWriteAheadLogManager.resumeLogging
             // can't write header without that condition.
             WALPointer lastReadPointer = logicalState.lastReadRecordPointer();

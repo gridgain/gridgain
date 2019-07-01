@@ -493,7 +493,7 @@ public class WalStateManager extends GridCacheSharedManagerAdapter {
                     assert grp != null;
 
                     if (!grp.localWalEnabled())
-                        grp.localWalEnabled(true, true);
+                        grp.localWalEnabled(true, false);
                 }
 
                 tmpDisabledWal = null;
