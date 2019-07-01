@@ -54,7 +54,7 @@
                             <excludeArtifactIds>
                                 fastutil,h2,ignite-shmem,annotations,arpack_combined_all,
                                 cache-api,commons-math3,commons-rng-client-api,commons-rng-core,
-                                commons-rng-simple,core,ignite-ml
+                                commons-rng-simple,core,ignite-ml,spring-context
                             </excludeArtifactIds>
                         </configuration>
                     </execution>
