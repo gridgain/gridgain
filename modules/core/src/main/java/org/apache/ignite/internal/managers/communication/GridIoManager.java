@@ -1088,7 +1088,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                     processRegularMessage0(msg, nodeId);
                 }
                 catch (Throwable e) {
-                    log.error("An error occurred processing the message.", e);
+                    log.error("An error occurred processing the message [msg=" + msg + ", nodeId=" + nodeId + "].", e);
 
                     throw e;
                 } finally {
