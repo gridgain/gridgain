@@ -16,7 +16,6 @@
 
 package org.apache.ignite.console.services;
 
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.console.TestConfiguration;
 import org.apache.ignite.console.config.ActivationConfiguration;
 import org.apache.ignite.console.config.SignUpConfiguration;
@@ -39,6 +38,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.test.context.junit4.SpringRunner;
 
@@ -111,7 +111,63 @@ public class AccountServiceTest {
             srvc.register(userReq);
 
             return null;
-        }, IgniteException.class, "Sign-up is not allowed. Ask your administrator to create account for you.");
+        }, AuthenticationServiceException.class, "Sign-up is not allowed. Ask your administrator to create account for you.");
+    }
+
+
+    /**
+     * Should throw activation not enabled exception
+     */
+    @Test
+    public void shouldThrowTooManyActivationAttempts() {
+        AccountsService srvc = mockAccountsService(true, true, 0);
+        when(accountsRepo.getByEmail(anyString()))
+                .thenAnswer(invocation -> {
+                    Account acc = new Account();
+                    acc.setEmail(invocation.getArgumentAt(0, String.class));
+                    acc.resetActivationToken();
+
+                    return acc;
+                });
+
+        GridTestUtils.assertThrows(null, () -> {
+            srvc.resetActivationToken("mail@mail");
+            return null;
+        }, IllegalAccessError.class, "Too many activation attempts");
+    }
+
+    /**
+     * Should throw activation not enabled exception
+     */
+    @Test
+    public void shouldThrowActivationNotEnabledException() {
+        AccountsService srvc = mockAccountsService(true, false);
+
+        GridTestUtils.assertThrows(null, () -> {
+            srvc.resetActivationToken("mail@mail");
+            return null;
+        }, IllegalAccessError.class, "Activation was not enabled!");
+    }
+
+    /**
+     * Should throw activation not enabled exception
+     */
+    @Test
+    public void shouldThrowAccountNotFoundByTokenException() {
+        AccountsService srvc = mockAccountsService(true, false);
+        when(accountsRepo.getByEmail(anyString()))
+            .thenAnswer(invocation -> {
+                Account acc = new Account();
+                acc.setEmail(invocation.getArgumentAt(0, String.class));
+                acc.setResetPasswordToken("token");
+
+                return acc;
+            });
+
+        GridTestUtils.assertThrows(null, () -> {
+            srvc.resetPasswordByToken("mail@mail", "aa", "pwds");
+            return null;
+        }, IllegalStateException.class, "Failed to find account with this token! Please check link from email.");
     }
 
     /**
@@ -129,7 +185,7 @@ public class AccountServiceTest {
         try {
             srvc.register(userReq);
         } catch (MissingConfirmRegistrationException exception) {
-            // No-op
+            Assert.assertEquals("Confirm your email", exception.getMessage());
         }
 
         assertEventType(RESET_ACTIVATION_TOKEN);
@@ -226,13 +282,13 @@ public class AccountServiceTest {
         AccountsService srvc = mockAccountsService(true, false);
 
         when(accountsRepo.getByEmail(anyString()))
-                .thenAnswer(invocation -> {
-                    Account acc = new Account();
-                    acc.setEmail(invocation.getArgumentAt(0, String.class));
-                    acc.setResetPasswordToken("token");
+            .thenAnswer(invocation -> {
+                Account acc = new Account();
+                acc.setEmail(invocation.getArgumentAt(0, String.class));
+                acc.setResetPasswordToken("token");
 
-                    return acc;
-                });
+                return acc;
+            });
 
         srvc.resetPasswordByToken("new_mail@mail", "token", "2");
 
@@ -244,7 +300,16 @@ public class AccountServiceTest {
      * @param enableActivation Enable activation.
      */
     private AccountsService mockAccountsService(boolean disableSignUp, boolean enableActivation) {
-        ActivationConfiguration activationCfg = new ActivationConfiguration(new NoopMailService());
+        return mockAccountsService(disableSignUp, enableActivation, 1000);
+    }
+
+    /**
+     * @param disableSignUp Disable sign up.
+     * @param enableActivation Enable activation.
+     * @param sendTimeout Send timeout.
+     */
+    private AccountsService mockAccountsService(boolean disableSignUp, boolean enableActivation, long sendTimeout) {
+        ActivationConfiguration activationCfg = new ActivationConfiguration(new NoopMailService()).setSendTimeout(sendTimeout);
         try {
             activationCfg.afterPropertiesSet();
         } catch (Exception e) {

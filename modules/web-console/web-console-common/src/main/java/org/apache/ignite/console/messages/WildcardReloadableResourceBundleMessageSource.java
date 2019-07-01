@@ -41,7 +41,7 @@ public class WildcardReloadableResourceBundleMessageSource extends ReloadableRes
     /**
      * Constant to define the classes string in the URI
      */
-    private static final String CLASSES ="/classes/";
+    private static final String CLASSES ="classes/";
 
     /**
      * constant to define the class path string
@@ -107,9 +107,9 @@ public class WildcardReloadableResourceBundleMessageSource extends ReloadableRes
             if (rsrc instanceof ClassPathResource)
                 baseName = StringUtils.substringBefore(uri, PROPERTIESSUFFIX);
             else if (rsrc instanceof UrlResource)
-                baseName = CLASSPATH + StringUtils.substringBetween(uri, ".jar!/",PROPERTIESSUFFIX);
+                baseName = CLASSPATH + StringUtils.substringBetween(uri, ".jar!/", PROPERTIESSUFFIX);
             else
-                baseName = CLASSPATH + StringUtils.substringBetween(uri, CLASSES,PROPERTIESSUFFIX);
+                baseName = CLASSPATH + StringUtils.substringBetween(uri, CLASSES, PROPERTIESSUFFIX);
 
             return baseName;
         } catch (IOException e) {
