@@ -62,7 +62,6 @@ import org.jetbrains.annotations.Nullable;
  * <li>{@link IgniteQueue} - distributed blocking queue.</li>
  * <li>{@link IgniteSet} - distributed concurrent set.</li>
  * <li>{@link IgniteScheduler} - functionality for scheduling jobs using UNIX Cron syntax.</li>
- * <li>{@link IgniteFileSystem} - functionality for distributed Hadoop-compliant in-memory file system and map-reduce.</li>
  * </ul>
  */
 public interface Ignite extends AutoCloseable {
@@ -357,27 +356,34 @@ public interface Ignite extends AutoCloseable {
         throws CacheException;
 
     /**
-     * Stops dynamically started cache.
+     * Stops cache and clean up its data.
+     * <p>
+     * If a cache with the specified name does not exist in the grid, the operation has no effect.
      *
-     * @param cacheName Cache name to stop.
+     * @param cacheName Cache name to destroy.
      * @throws CacheException If error occurs.
      */
     public void destroyCache(String cacheName) throws CacheException;
 
     /**
-     * Stops dynamically started caches.
+     * Stops caches and clean up their data.
+     * <p>
+     * If the specified collection contains {@code null} or an empty value,
+     * this method will throw {@link IllegalArgumentException} and the caches will not be stopped.
+     * <p>
+     * If a cache with the specified name does not exist in the grid, the specified value will be skipped.
      *
-     * @param cacheNames Collection of cache names to stop.
+     * @param cacheNames Collection of cache names to destroy.
      * @throws CacheException If error occurs.
      */
     public void destroyCaches(Collection<String> cacheNames) throws CacheException;
 
     /**
-     * Gets an instance of {@link IgniteCache} API. {@code IgniteCache} is a fully-compatible
-     * implementation of {@code JCache (JSR 107)} specification.
+     * Gets an instance of {@link IgniteCache} API for the given name if one is configured or {@code null} otherwise.
+     * {@code IgniteCache} is a fully-compatible implementation of {@code JCache (JSR 107)} specification.
      *
      * @param name Cache name.
-     * @return Instance of the cache for the specified name.
+     * @return Instance of the cache for the specified name or {@code null} if one does not exist.
      * @throws CacheException If error occurs.
      */
     public <K, V> IgniteCache<K, V> cache(String name) throws CacheException;
@@ -406,27 +412,6 @@ public interface Ignite extends AutoCloseable {
      * @throws IllegalStateException If node is stopping.
      */
     public <K, V> IgniteDataStreamer<K, V> dataStreamer(String cacheName) throws IllegalStateException;
-
-    /**
-     * Gets an instance of IGFS (Ignite In-Memory File System). If one is not
-     * configured then {@link IllegalArgumentException} will be thrown.
-     * <p>
-     * IGFS is fully compliant with Hadoop {@code FileSystem} APIs and can
-     * be plugged into Hadoop installations. For more information refer to
-     * documentation on Hadoop integration shipped with Ignite.
-     *
-     * @param name IGFS name.
-     * @return IGFS instance.
-     * @throws IllegalArgumentException If IGFS with such name is not configured.
-     */
-    public IgniteFileSystem fileSystem(String name) throws IllegalArgumentException;
-
-    /**
-     * Gets all instances of IGFS (Ignite In-Memory File System).
-     *
-     * @return Collection of IGFS instances.
-     */
-    public Collection<IgniteFileSystem> fileSystems();
 
     /**
      * Will get an atomic sequence from cache and create one if it has not been created yet and {@code create} flag

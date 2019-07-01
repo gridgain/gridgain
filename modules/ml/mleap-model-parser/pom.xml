@@ -31,7 +31,7 @@
     </parent>
 
     <artifactId>ignite-ml-mleap-model-parser</artifactId>
-    <version>8.8.0-SNAPSHOT</version>
+    <version>9.0.0-SNAPSHOT</version>
     <url>http://ignite.apache.org</url>
 
     <build>
@@ -50,8 +50,10 @@
                             <excludeArtifactIds>
                                 fastutil,h2,ignite-shmem,annotations,arpack_combined_all,
                                 cache-api,commons-math3,commons-rng-client-api,commons-rng-core,
-                                commons-rng-simple,core,ignite-ml,spring-context
+                                commons-rng-simple,core,ignite-ml,ignite-h2,ignite-core,SparseBitSet,jts-core,
+                                spring-context
                             </excludeArtifactIds>
+                            <excludeGroupIds>com.github.fommil.netlib</excludeGroupIds>
                         </configuration>
                     </execution>
                 </executions>

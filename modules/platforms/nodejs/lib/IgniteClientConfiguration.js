@@ -22,10 +22,10 @@ const Errors = require('./Errors');
 const ArgumentChecker = require('./internal/ArgumentChecker');
 
 /**
- * Class representing Ignite client configuration.
+ * Class representing GridGain client configuration.
  *
  * The configuration includes:
- *   - (mandatory) Ignite node endpoint(s)
+ *   - (mandatory) GridGain node endpoint(s)
  *   - (optional) user credentials for authentication
  *   - (optional) TLS enabling
  *   - (optional) connection options
@@ -33,12 +33,13 @@ const ArgumentChecker = require('./internal/ArgumentChecker');
 class IgniteClientConfiguration {
 
     /**
-     * Creates an instance of Ignite client configuration
+     * Creates an instance of GridGain client configuration
      * with the provided mandatory settings and default optional settings.
      *
      * By default, the client does not use authentication and secure connection.
+     * The Affinity Awareness feature is disabled by default.
      *
-     * @param {...string} endpoints - Ignite node endpoint(s).
+     * @param {...string} endpoints - GridGain node endpoint(s).
      *  The client randomly connects/reconnects to one of the specified node.
      *
      * @return {IgniteClientConfiguration} - new client configuration instance.
@@ -52,6 +53,7 @@ class IgniteClientConfiguration {
         this._password = null;
         this._useTLS = false;
         this._options = null;
+        this._affinityAwareness = false
     }
 
 
@@ -98,12 +100,14 @@ class IgniteClientConfiguration {
      * @param {object} [connectionOptions=null] - connection options.
      *   - For non-secure connection options defined here {@link https://nodejs.org/api/net.html#net_net_createconnection_options_connectlistener}
      *   - For secure connection options defined here {@link https://nodejs.org/api/tls.html#tls_tls_connect_options_callback}
+     * @param {boolean} [affinityAwareness=false] - if true, the Affinity Awareness feature will be enabled. Otherwise, disabled.
      *
      * @return {IgniteClientConfiguration} - the same instance of the IgniteClientConfiguration.
      */
-    setConnectionOptions(useTLS, connectionOptions = null) {
+    setConnectionOptions(useTLS, connectionOptions = null, affinityAwareness = false) {
         this._useTLS = useTLS;
         this._options = connectionOptions;
+        this._affinityAwareness = affinityAwareness;
         return this;
     }
 }

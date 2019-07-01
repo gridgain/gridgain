@@ -43,6 +43,8 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.IgniteNodeAttributes;
+import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.cluster.ClusterGroupAdapter;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.cluster.DistributedBaselineConfiguration;
@@ -69,6 +71,7 @@ import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.future.IgniteFinishedFutureImpl;
 import org.apache.ignite.internal.util.future.IgniteFutureImpl;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.C1;
@@ -191,6 +194,13 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
     /** {@inheritDoc} */
     @Override public @Nullable IgniteNodeValidationResult validateNode(ClusterNode node) {
+        if (node.attribute(IgniteNodeAttributes.ATTR_IGFS) != null) {
+            return new IgniteNodeValidationResult(
+                node.id(),
+                "Joining node with IGFS couldn't be allowed due to IGFS doesn't supported anymore"
+            );
+        }
+
         if (!isBaselineAutoAdjustEnabled() || baselineAutoAdjustTimeout() != 0)
             return null;
 
@@ -392,7 +402,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         GridChangeGlobalStateFuture fut = this.stateChangeFut.get();
 
         if (fut != null)
-            fut.onDone(new IgniteCheckedException("Failed to wait for cluster state change, node is stopping."));
+            fut.onDone(new NodeStoppingException("Failed to wait for cluster state change, node is stopping."));
 
         super.onKernalStop(cancel);
     }
@@ -783,6 +793,11 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
     /** {@inheritDoc} */
     @Override public void onGridDataReceived(DiscoveryDataBag.GridDiscoveryData data) {
+        Collection<ClusterNode> nodes = ctx.config().getDiscoverySpi().getRemoteNodes();
+
+        if (nodes != null && nodes.stream().anyMatch(it -> it.attribute(IgniteNodeAttributes.ATTR_IGFS) != null))
+            throw new IgniteException("Can not join to cluster with IGFS because it is not supported anymore");
+
         if (data.commonData() instanceof DiscoveryDataClusterState) {
             if (globalState != null && globalState.baselineTopology() != null)
                 //node with BaselineTopology is not allowed to join mixed cluster
@@ -1262,7 +1277,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
         checkLocalNodeInBaseline(globalState.baselineTopology());
 
-        ctx.closure().runLocalSafe(new Runnable() {
+        ctx.closure().runLocalSafe(new GridPlainRunnable() {
             @Override public void run() {
                 boolean client = ctx.clientNode();
 
@@ -1276,8 +1291,6 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                     }
 
                     ctx.dataStructures().onActivate(ctx);
-
-                    ctx.igfs().onActivate(ctx);
 
                     ctx.task().onActivate(ctx);
 

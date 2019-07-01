@@ -16,6 +16,10 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import javax.cache.configuration.FactoryBuilder;
+import javax.cache.expiry.EternalExpiryPolicy;
+import javax.cache.expiry.ExpiryPolicy;
+import javax.management.MBeanServer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -37,10 +41,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.cache.configuration.FactoryBuilder;
-import javax.cache.expiry.EternalExpiryPolicy;
-import javax.cache.expiry.ExpiryPolicy;
-import javax.management.MBeanServer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteCompute;
 import org.apache.ignite.IgniteException;
@@ -61,7 +61,6 @@ import org.apache.ignite.configuration.DataPageEvictionMode;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.DeploymentMode;
-import org.apache.ignite.configuration.FileSystemConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.MemoryConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
@@ -69,7 +68,6 @@ import org.apache.ignite.configuration.TransactionConfiguration;
 import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteClientDisconnectedCheckedException;
-import org.apache.ignite.internal.IgniteComponentType;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
@@ -118,7 +116,6 @@ import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetaS
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadOnlyMetastorage;
 import org.apache.ignite.internal.processors.cache.persistence.partstate.GroupPartitionId;
-import org.apache.ignite.internal.processors.cache.persistence.partstate.PartitionRecoverState;
 import org.apache.ignite.internal.processors.cache.persistence.snapshot.IgniteCacheSnapshotManager;
 import org.apache.ignite.internal.processors.cache.persistence.snapshot.SnapshotDiscoveryMessage;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
@@ -144,6 +141,7 @@ import org.apache.ignite.internal.processors.query.schema.SchemaExchangeWorkerTa
 import org.apache.ignite.internal.processors.query.schema.SchemaNodeLeaveExchangeWorkerTask;
 import org.apache.ignite.internal.processors.query.schema.message.SchemaAbstractDiscoveryMessage;
 import org.apache.ignite.internal.processors.query.schema.message.SchemaProposeDiscoveryMessage;
+import org.apache.ignite.internal.processors.security.OperationSecurityContext;
 import org.apache.ignite.internal.processors.security.SecurityContext;
 import org.apache.ignite.internal.processors.service.GridServiceProcessor;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
@@ -154,6 +152,7 @@ import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridPlainClosure;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.lang.IgniteOutClosureX;
 import org.apache.ignite.internal.util.lang.IgniteThrowableFunction;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
@@ -214,6 +213,7 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_TX_CONFIG;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isDefaultDataRegionPersistent;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isNearEnabled;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isPersistentCache;
+import static org.apache.ignite.internal.processors.security.SecurityUtils.nodeSecurityContext;
 import static org.apache.ignite.internal.util.IgniteUtils.doInParallel;
 
 /**
@@ -233,6 +233,10 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     /** Invalid region configuration message. */
     private static final String INVALID_REGION_CONFIGURATION_MESSAGE = "Failed to join node " +
         "(Incompatible data region configuration [region=%s, locNodeId=%s, isPersistenceEnabled=%s, rmtNodeId=%s, isPersistenceEnabled=%s])";
+
+    /** Template of message of failed node join because encryption settings are different for the same cache. */
+    private static final String ENCRYPT_MISMATCH_MESSAGE = "Failed to join node to the cluster " +
+        "(encryption settings are different for cache '%s' : local=%s, remote=%s.)";
 
     /** */
     private final boolean startClientCaches =
@@ -345,7 +349,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         CU.initializeConfigDefaults(log, cfg, cacheObjCtx);
 
         ctx.coordinators().preProcessCacheConfiguration(cfg);
-        ctx.igfsHelper().preProcessCacheConfiguration(cfg);
     }
 
     /**
@@ -648,7 +651,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             }
         }
 
-        ctx.igfsHelper().validateCacheConfiguration(cc);
         ctx.coordinators().validateCacheConfiguration(cc);
 
         if (cc.getAtomicityMode() == ATOMIC)
@@ -875,8 +877,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                     "(it is recommended that you change deployment mode and restart): " + depMode);
         }
 
-        initializeInternalCacheNames();
-
         Collection<CacheStoreSessionListener> sessionListeners =
             CU.startStoreSessionListeners(ctx, ctx.config().getCacheStoreSessionListenerFactories());
 
@@ -1073,24 +1073,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     }
 
     /**
-     * Initialize internal cache names
-     */
-    private void initializeInternalCacheNames() {
-        FileSystemConfiguration[] igfsCfgs = ctx.grid().configuration().getFileSystemConfiguration();
-
-        if (igfsCfgs != null) {
-            for (FileSystemConfiguration igfsCfg : igfsCfgs) {
-                internalCaches.add(igfsCfg.getMetaCacheConfiguration().getName());
-                internalCaches.add(igfsCfg.getDataCacheConfiguration().getName());
-            }
-        }
-
-        if (IgniteComponentType.HADOOP.inClassPath())
-            internalCaches.add(CU.SYS_CACHE_HADOOP_MR);
-    }
-
-    /**
-     * @param node Remote node to check.
      * @return Data storage configuration
      */
     private DataStorageConfiguration extractDataStorage(ClusterNode rmtNode) {
@@ -1200,7 +1182,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     private void checkConsistency() throws IgniteCheckedException {
         Collection<ClusterNode> rmtNodes = ctx.discovery().remoteNodes();
 
-        boolean changeablePoolSize = IgniteFeatures.allNodesSupports(rmtNodes, IgniteFeatures.DIFFERENT_REBALANCE_POOL_SIZE);
+        boolean changeablePoolSize =
+            IgniteFeatures.allNodesSupports(ctx, rmtNodes, IgniteFeatures.DIFFERENT_REBALANCE_POOL_SIZE);
 
         for (ClusterNode n : rmtNodes) {
             if (Boolean.TRUE.equals(n.attribute(ATTR_CONSISTENCY_CHECK_SKIPPED)))
@@ -3498,7 +3481,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     }
 
     /** {@inheritDoc} */
-    @Nullable @Override public IgniteNodeValidationResult validateNode(
+    @Override public @Nullable IgniteNodeValidationResult validateNode(
         ClusterNode node, JoiningNodeDiscoveryData discoData
     ) {
         if(!cachesInfo.isMergeConfigSupports(node))
@@ -3509,56 +3492,75 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
             boolean isGridActive = ctx.state().clusterState().active();
 
-            StringBuilder errorMessage = new StringBuilder();
+            StringBuilder errorMsg = new StringBuilder();
 
             if (!node.isClient()) {
                 validateRmtRegions(node).forEach(error -> {
-                    if (errorMessage.length() > 0)
-                        errorMessage.append("\n");
+                    if (errorMsg.length() > 0)
+                        errorMsg.append("\n");
 
-                    errorMessage.append(error);
+                    errorMsg.append(error);
                 });
             }
 
-            for (CacheJoinNodeDiscoveryData.CacheInfo cacheInfo : nodeData.caches().values()) {
+            SecurityContext secCtx = null;
+
+            if (ctx.security().enabled()) {
                 try {
-                    byte[] secCtxBytes = node.attribute(IgniteNodeAttributes.ATTR_SECURITY_SUBJECT_V2);
-
-                    if (secCtxBytes != null) {
-                        SecurityContext secCtx = U.unmarshal(marsh, secCtxBytes, U.resolveClassLoader(ctx.config()));
-
-                        if (secCtx != null && cacheInfo.cacheType() == CacheType.USER)
-                            authorizeCacheCreate(cacheInfo.cacheData().config(), secCtx);
-                    }
+                    secCtx = nodeSecurityContext(marsh, U.resolveClassLoader(ctx.config()), node);
                 }
-                catch (SecurityException | IgniteCheckedException ex) {
-                    if (errorMessage.length() > 0)
-                        errorMessage.append("\n");
-
-                    errorMessage.append(ex.getMessage());
-                }
-
-                DynamicCacheDescriptor localDesc = cacheDescriptor(cacheInfo.cacheData().config().getName());
-
-                if (localDesc == null)
-                    continue;
-
-                QuerySchemaPatch schemaPatch = localDesc.makeSchemaPatch(cacheInfo.cacheData().queryEntities());
-
-                if (schemaPatch.hasConflicts() || (isGridActive && !schemaPatch.isEmpty())) {
-                    if (errorMessage.length() > 0)
-                        errorMessage.append("\n");
-
-                    if (schemaPatch.hasConflicts())
-                        errorMessage.append(String.format(MERGE_OF_CONFIG_CONFLICTS_MESSAGE,
-                            localDesc.cacheName(), schemaPatch.getConflictsMessage()));
-                    else
-                        errorMessage.append(String.format(MERGE_OF_CONFIG_REQUIRED_MESSAGE, localDesc.cacheName()));
+                catch (SecurityException se) {
+                    errorMsg.append(se.getMessage());
                 }
             }
 
-            if (errorMessage.length() > 0) {
-                String msg = errorMessage.toString();
+            for (CacheJoinNodeDiscoveryData.CacheInfo cacheInfo : nodeData.caches().values()) {
+                if (secCtx != null && cacheInfo.cacheType() == CacheType.USER) {
+                    try (OperationSecurityContext s = ctx.security().withContext(secCtx)) {
+                        authorizeCacheCreate(cacheInfo.cacheData().config());
+                    }
+                    catch (SecurityException ex) {
+                        if (errorMsg.length() > 0)
+                            errorMsg.append("\n");
+
+                        errorMsg.append(ex.getMessage());
+                    }
+                }
+
+                DynamicCacheDescriptor locDesc = cacheDescriptor(cacheInfo.cacheData().config().getName());
+
+                if (locDesc == null)
+                    continue;
+
+                QuerySchemaPatch schemaPatch = locDesc.makeSchemaPatch(cacheInfo.cacheData().queryEntities());
+
+                if (schemaPatch.hasConflicts() || (isGridActive && !schemaPatch.isEmpty())) {
+                    if (errorMsg.length() > 0)
+                        errorMsg.append("\n");
+
+                    if (schemaPatch.hasConflicts())
+                        errorMsg.append(String.format(MERGE_OF_CONFIG_CONFLICTS_MESSAGE,
+                            locDesc.cacheName(), schemaPatch.getConflictsMessage()));
+                    else
+                        errorMsg.append(String.format(MERGE_OF_CONFIG_REQUIRED_MESSAGE, locDesc.cacheName()));
+                }
+
+                // This check must be done on join, otherwise group encryption key will be
+                // written to metastore regardless of validation check and could trigger WAL write failures.
+                boolean locEnc = locDesc.cacheConfiguration().isEncryptionEnabled();
+                boolean rmtEnc = cacheInfo.cacheData().config().isEncryptionEnabled();
+
+                if (locEnc != rmtEnc) {
+                    if (errorMsg.length() > 0)
+                        errorMsg.append("\n");
+
+                    // Message will be printed on remote node, so need to swap local and remote.
+                    errorMsg.append(String.format(ENCRYPT_MISMATCH_MESSAGE, locDesc.cacheName(), rmtEnc, locEnc));
+                }
+            }
+
+            if (errorMsg.length() > 0) {
+                String msg = errorMsg.toString();
 
                 return new IgniteNodeValidationResult(node.id(), msg, msg);
             }
@@ -4578,28 +4580,28 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * Authorize creating cache.
      *
      * @param cfg Cache configuration.
-     * @param secCtx Optional security context.
      */
-    private void authorizeCacheCreate(CacheConfiguration cfg, SecurityContext secCtx) {
-        ctx.security().authorize(null, SecurityPermission.CACHE_CREATE, secCtx);
+    private void authorizeCacheCreate(CacheConfiguration cfg) {
+        if(cfg != null) {
+            ctx.security().authorize(cfg.getName(), SecurityPermission.CACHE_CREATE);
 
-        if (cfg != null && cfg.isOnheapCacheEnabled() &&
-            IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_DISABLE_ONHEAP_CACHE))
-            throw new SecurityException("Authorization failed for enabling on-heap cache.");
+            if (cfg.isOnheapCacheEnabled() &&
+                IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_DISABLE_ONHEAP_CACHE))
+                throw new SecurityException("Authorization failed for enabling on-heap cache.");
+        }
     }
 
     /**
-     * Authorize dynamic cache management for this node.
+     * Authorize dynamic cache management.
      *
      * @param req start/stop cache request.
      */
     private void authorizeCacheChange(DynamicCacheChangeRequest req) {
-        // Null security context means authorize this node.
         if (req.cacheType() == null || req.cacheType() == CacheType.USER) {
             if (req.stop())
-                ctx.security().authorize(null, SecurityPermission.CACHE_DESTROY, null);
+                ctx.security().authorize(req.cacheName(), SecurityPermission.CACHE_DESTROY);
             else
-                authorizeCacheCreate(req.startCacheConfiguration(), null);
+                authorizeCacheCreate(req.startCacheConfiguration());
         }
     }
 
@@ -5954,7 +5956,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         ClusterGroup grp = ctx.grid()
             .cluster()
             .forServers()
-            .forPredicate(node -> IgniteFeatures.nodeSupports(node, TRANSACTION_OWNER_THREAD_DUMP_PROVIDING));
+            .forPredicate(node -> IgniteFeatures.nodeSupports(ctx, node, TRANSACTION_OWNER_THREAD_DUMP_PROVIDING));
 
         IgniteCompute compute = ctx.grid().compute(grp);
 
@@ -6065,7 +6067,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
          */
         private void restorePartitionStates(
             Collection<CacheGroupContext> forGroups,
-            Map<GroupPartitionId, PartitionRecoverState> partitionStates
+            Map<GroupPartitionId, Integer> partitionStates
         ) throws IgniteCheckedException {
             long startRestorePart = U.currentTimeMillis();
 
@@ -6257,7 +6259,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         /** {@inheritDoc} */
         @Override public void onTimeout() {
-            ctx.closure().runLocalSafe(new Runnable() {
+            ctx.closure().runLocalSafe(new GridPlainRunnable() {
                 @Override public void run() {
                     try {
                         for (CacheGroupContext grp : sharedCtx.cache().cacheGroups()) {

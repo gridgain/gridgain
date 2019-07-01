@@ -28,8 +28,8 @@ import static org.apache.ignite.internal.commandline.CommandList.STATE;
  */
 public class StateCommand implements Command<Void> {
     /** {@inheritDoc} */
-    @Override public void printUsage() {
-        Command.usage("Print current cluster state:", STATE);
+    @Override public void printUsage(Logger logger) {
+        Command.usage(logger, "Print current cluster state:", STATE);
     }
 
     /**
@@ -45,7 +45,8 @@ public class StateCommand implements Command<Void> {
             logger.info("Cluster is " + (state.active() ? "active" : "inactive"));
         }
         catch (Throwable e) {
-            logger.severe("Failed to get cluster state.");
+            if (!CommandHandler.isAuthError(e))
+                logger.severe("Failed to get cluster state.");
 
             throw e;
         }

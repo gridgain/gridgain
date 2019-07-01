@@ -1,7 +1,7 @@
 {
-  "name": "apache-ignite-client",
-  "version": "1.0.1",
-  "description": "NodeJS Client for Apache Ignite",
+  "name": "gridgain-client",
+  "version": "1.1.0",
+  "description": "NodeJS Client for Gridgain Community Edition",
   "main": "index.js",
   "files": [
     "/examples",
@@ -10,15 +10,15 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/apache/ignite/tree/master/modules/platforms/nodejs"
+    "url": "https://github.com/gridgain/gridgain/tree/master/modules/platforms/nodejs"
   },
   "keywords": [
-    "apache",
-    "ignite",
+    "gridgain",
+    "community",
     "client"
   ],
   "author": "",
-  "license": "Apache-2.0",
+  "license": "GridGain Community",
   "engines": {
     "node": ">=8.0.0"
   },
@@ -29,7 +29,8 @@
   "scripts": {
     "test": "jasmine",
     "test:examples": "node ./spec/ExamplesExecutor.js Examples",
-    "test:auth_example": "node ./spec/ExamplesExecutor.js AuthExample"
+    "test:auth_example": "node ./spec/ExamplesExecutor.js AuthExample",
+    "test:affinity_awareness": "APACHE_IGNITE_CLIENT_AFFINITY_AWARENESS=true node ./spec/AffinityAwarenessExecutor.js"
   },
   "devDependencies": {
     "jasmine": "latest",

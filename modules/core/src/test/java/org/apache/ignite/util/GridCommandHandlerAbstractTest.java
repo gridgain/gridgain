@@ -65,7 +65,10 @@ public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
     /** System out. */
     protected PrintStream sysOut;
 
-    /** Test out - can be injected via {@link #injectTestSystemOut()} instead of System.out and analyzed in test. */
+    /**
+     * Test out - can be injected via {@link #injectTestSystemOut()} instead of System.out and analyzed in test.
+     * Will be as well passed as a handler output for an anonymous logger in the test.
+     */
     protected ByteArrayOutputStream testOut;
 
     /** Atomic configuration. */
@@ -103,13 +106,23 @@ public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
 
         sysOut = System.out;
 
-        testOut = new ByteArrayOutputStream(40 * 1024 * 1024);
+        testOut = new ByteArrayOutputStream(16 * 1024);
 
         checkpointFreq = DataStorageConfiguration.DFLT_CHECKPOINT_FREQ;
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
+        log.info("Test output for " + currentTestMethod());
+        log.info("----------------------------------------");
+
+        if (testOut != null)
+            System.out.println(testOut.toString());
+
+        testOut = null;
+
+        System.setOut(sysOut);
+
         stopAllGrids();
 
         cleanPersistenceDir();
@@ -121,12 +134,18 @@ public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
         }
 
         System.clearProperty(IGNITE_ENABLE_EXPERIMENTAL_COMMAND);
+    }
 
-        System.setOut(sysOut);
+    /**
+     * @return Logger.
+     */
+    private Logger createTestLogger() {
+        Logger log = CommandHandler.initLogger(null);
 
-        log.info("----------------------------------------");
-        if (testOut != null)
-            System.out.println(testOut.toString());
+        // Adding logging to console.
+        log.addHandler(CommandHandler.setupStreamHandler());
+
+        return log;
     }
 
     /** */
@@ -178,7 +197,7 @@ public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
      * @return Result of execution
      */
     protected int execute(List<String> args) {
-        return execute(new CommandHandler(), args);
+        return execute(new CommandHandler(createTestLogger()), args);
     }
 
     /**

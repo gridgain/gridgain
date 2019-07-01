@@ -36,14 +36,6 @@
         <lgpl.folder>src/main/java</lgpl.folder>
     </properties>
 
-    <repositories>
-        <!-- Following repository is required only for Nightly releases -->
-        <repository>
-            <id>MyGet Nightly</id>
-            <url>https://www.myget.org/F/apache-ignite-nightly/maven</url>
-        </repository>
-    </repositories>
-
     <groupId>org.gridgain</groupId>
     <artifactId>ignite-examples</artifactId>
     <version>to_be_replaced_by_ignite_version</version>
@@ -126,24 +118,6 @@
             <artifactId>pmml-model</artifactId>
             <version>1.4.7</version>
         </dependency>
-
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-core</artifactId>
-            <version>2.7.3</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-            <version>2.7.3</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-annotations</artifactId>
-            <version>2.7.3</version>
-        </dependency>
     </dependencies>
 
     <profiles>
@@ -164,6 +138,12 @@
                 <dependency>
                     <groupId>org.gridgain</groupId>
                     <artifactId>ignite-spark</artifactId>
+                    <version>to_be_replaced_by_ignite_version</version>
+                </dependency>
+
+                <dependency>
+                    <groupId>org.gridgain</groupId>
+                    <artifactId>ignite-ml-mleap-model-parser</artifactId>
                     <version>to_be_replaced_by_ignite_version</version>
                 </dependency>
             </dependencies>

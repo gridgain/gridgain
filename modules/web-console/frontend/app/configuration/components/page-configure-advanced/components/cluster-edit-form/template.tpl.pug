@@ -42,7 +42,6 @@ form(id='cluster' name='ui.inputForm' novalidate)
 
         include ./templates/events
         include ./templates/failover
-        include ./templates/hadoop
         include ./templates/load-balancing
         include ./templates/logger
         include ./templates/marshaller
@@ -61,6 +60,9 @@ form(id='cluster' name='ui.inputForm' novalidate)
 
         //- Since ignite 2.1, deprecated in ignite 2.3
         include ./templates/persistence
+
+        //- Since ignite 2.5
+        include ./templates/rebalance
 
         //- Deprecated in ignite 2.3
         include ./templates/sql-connector

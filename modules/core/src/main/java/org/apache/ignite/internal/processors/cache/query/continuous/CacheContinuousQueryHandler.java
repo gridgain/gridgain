@@ -53,8 +53,8 @@ import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
 import org.apache.ignite.internal.processors.cache.GridCacheAffinityManager;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheDeploymentManager;
-import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridDhtAtomicAbstractUpdateFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
+import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridDhtAtomicAbstractUpdateFuture;
 import org.apache.ignite.internal.processors.cache.query.CacheQueryType;
 import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryManager.JCacheQueryLocalListener;
 import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryManager.JCacheQueryRemoteFilter;
@@ -62,6 +62,7 @@ import org.apache.ignite.internal.processors.continuous.GridContinuousBatch;
 import org.apache.ignite.internal.processors.continuous.GridContinuousHandler;
 import org.apache.ignite.internal.processors.continuous.GridContinuousQueryBatch;
 import org.apache.ignite.internal.processors.platform.cache.query.PlatformContinuousQueryFilter;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
@@ -1105,13 +1106,14 @@ public class CacheContinuousQueryHandler<K, V> implements GridContinuousHandler 
 
         if (buf == null) {
             buf = new CacheContinuousQueryEventBuffer(part) {
-                @Override protected long currentPartitionCounter() {
+                @Override protected long currentPartitionCounter(boolean backup) {
                     GridDhtLocalPartition locPart = cctx.topology().localPartition(part, null, false);
 
                     if (locPart == null)
                         return -1L;
 
-                    return locPart.updateCounter();
+                    // Use HWM for primary, LWM for backup.
+                    return backup ? locPart.updateCounter() : locPart.reservedCounter();
                 }
             };
 
@@ -1175,7 +1177,7 @@ public class CacheContinuousQueryHandler<K, V> implements GridContinuousHandler 
         final UUID routineId,
         final GridKernalContext ctx) {
         if (t != null) {
-            ctx.closure().runLocalSafe(new Runnable() {
+            ctx.closure().runLocalSafe(new GridPlainRunnable() {
                 @Override public void run() {
                     GridCacheContext<K, V> cctx = cacheContext(ctx);
 

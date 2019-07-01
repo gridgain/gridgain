@@ -48,11 +48,11 @@ import static org.apache.ignite.internal.commandline.cache.argument.Distribution
  */
 public class CacheDistribution implements Command<CacheDistribution.Arguments> {
     /** {@inheritDoc} */
-    @Override public void printUsage() {
+    @Override public void printUsage(Logger logger) {
         String CACHES = "cacheName1,...,cacheNameN";
         String description = "Prints the information about partition distribution.";
 
-        usageCache(DISTRIBUTION, description, null,
+        usageCache(logger, DISTRIBUTION, description, null,
             or(NODE_ID, CommandHandler.NULL), optional(CACHES), optional(USER_ATTRIBUTES, "attrName1,...,attrNameN"));
     }
 
@@ -122,7 +122,7 @@ public class CacheDistribution implements Command<CacheDistribution.Arguments> {
 
         CommandLogger.printErrors(res.exceptions(), "Cache distrubution task failed on nodes:", logger);
 
-        res.print(System.out);
+        res.print(System.out::println);
 
         return res;
     }

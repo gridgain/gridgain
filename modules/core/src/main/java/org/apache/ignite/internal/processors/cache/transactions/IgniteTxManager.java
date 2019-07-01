@@ -82,6 +82,7 @@ import org.apache.ignite.internal.transactions.IgniteTxTimeoutCheckedException;
 import org.apache.ignite.internal.util.GridBoundedConcurrentOrderedMap;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.lang.IgnitePair;
 import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.F;
@@ -2165,8 +2166,8 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
         if (commit)
             tx.commitAsync().listen(new CommitListener(tx));
-        else if (tx.mvccSnapshot() != null && !tx.local())
-            // remote (backup) mvcc transaction sends partition counters to other backup transaction
+        else if (!tx.local())
+            // remote (backup) transaction sends partition counters to other backup transaction on recovery rollback
             // in order to keep counters consistent
             neighborcastPartitionCountersAndRollback(tx);
         else
@@ -2750,7 +2751,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         /** {@inheritDoc} */
         @Override public void onTimeout() {
             // Should not block timeout thread.
-            cctx.kernalContext().closure().runLocalSafe(new Runnable() {
+            cctx.kernalContext().closure().runLocalSafe(new GridPlainRunnable() {
                 @Override public void run() {
                     onTimeout0();
                 }
