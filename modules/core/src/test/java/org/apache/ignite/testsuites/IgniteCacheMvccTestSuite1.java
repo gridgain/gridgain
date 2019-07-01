@@ -63,12 +63,9 @@ import org.apache.ignite.internal.processors.cache.GridCacheStopSelfTest;
 import org.apache.ignite.internal.processors.cache.GridCacheTcpClientDiscoveryMultiThreadedTest;
 import org.apache.ignite.internal.processors.cache.GridDataStorageConfigurationConsistencySelfTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheAtomicInvokeTest;
-import org.apache.ignite.internal.processors.cache.IgniteCacheAtomicLocalInvokeTest;
-import org.apache.ignite.internal.processors.cache.IgniteCacheAtomicLocalWithStoreInvokeTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheAtomicNearEnabledInvokeTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheAtomicStopBusySelfTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheAtomicWithStoreInvokeTest;
-import org.apache.ignite.internal.processors.cache.IgniteCacheEntryListenerAtomicLocalTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheEntryListenerAtomicReplicatedTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheEntryListenerAtomicTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheEntryProcessorCallTest;
@@ -105,7 +102,6 @@ import org.apache.ignite.internal.processors.cache.distributed.IgniteCacheMessag
 import org.apache.ignite.internal.processors.cache.distributed.IgniteCacheMessageWriteTimeoutTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridCacheAtomicNearCacheSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridCachePartitionsStateValidatorSelfTest;
-import org.apache.ignite.internal.processors.cache.expiry.IgniteCacheAtomicLocalExpiryPolicyTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.CacheEntryProcessorExternalizableFailedTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.CacheEntryProcessorNonSerializableTest;
 import org.apache.ignite.testframework.junits.DynamicSuite;
@@ -143,13 +139,9 @@ public class IgniteCacheMvccTestSuite1 {
         // Atomic caches.
         ignoredTests.add(IgniteCacheEntryListenerAtomicTest.class);
         ignoredTests.add(IgniteCacheEntryListenerAtomicReplicatedTest.class);
-        ignoredTests.add(IgniteCacheEntryListenerAtomicLocalTest.class);
-        ignoredTests.add(IgniteCacheAtomicLocalExpiryPolicyTest.class);
         ignoredTests.add(IgniteCacheAtomicInvokeTest.class);
         ignoredTests.add(IgniteCacheAtomicNearEnabledInvokeTest.class);
         ignoredTests.add(IgniteCacheAtomicWithStoreInvokeTest.class);
-        ignoredTests.add(IgniteCacheAtomicLocalInvokeTest.class);
-        ignoredTests.add(IgniteCacheAtomicLocalWithStoreInvokeTest.class);
         ignoredTests.add(GridCachePartitionedLocalStoreSelfTest.class);
         ignoredTests.add(GridCacheReplicatedLocalStoreSelfTest.class);
         ignoredTests.add(CacheStoreReadFromBackupTest.class);

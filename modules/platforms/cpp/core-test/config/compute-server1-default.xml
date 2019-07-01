@@ -18,12 +18,8 @@
 
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-       xmlns:util="http://www.springframework.org/schema/util"
-       xsi:schemaLocation="
-        http://www.springframework.org/schema/beans
-        http://www.springframework.org/schema/beans/spring-beans.xsd
-        http://www.springframework.org/schema/util
-        http://www.springframework.org/schema/util/spring-util.xsd">
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd">
     <bean id="grid.cfg" class="org.apache.ignite.configuration.IgniteConfiguration">
         <property name="localHost" value="127.0.0.1"/>
         <property name="connectorConfiguration"><null/></property>
@@ -31,18 +27,6 @@
         <!-- Cache configuragtion. -->
         <property name="cacheConfiguration">
             <list>
-                <bean parent="cache-template">
-                    <property name="name" value="local"/>
-                    <property name="cacheMode" value="LOCAL"/>
-                    <property name="atomicityMode" value="TRANSACTIONAL"/>
-                </bean>
-
-                <bean parent="cache-template">
-                    <property name="name" value="local_atomic"/>
-                    <property name="cacheMode" value="LOCAL"/>
-                    <property name="atomicityMode" value="ATOMIC"/>
-                </bean>
-
                 <bean parent="cache-template">
                     <property name="name" value="partitioned"/>
                     <property name="cacheMode" value="PARTITIONED"/>

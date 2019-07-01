@@ -190,25 +190,6 @@ public class IgniteCacheTestSuite2 {
      */
     public static List<Class<?>> suite(Collection<Class> ignoredTests) {
         List<Class<?>> suite = new ArrayList<>();
-
-        // Local cache.
-        GridTestUtils.addTestIfNeeded(suite, GridCacheLocalBasicApiSelfTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, GridCacheLocalBasicStoreSelfTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, GridCacheLocalBasicStoreMultithreadedSelfTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, GridCacheLocalAtomicBasicStoreSelfTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, GridCacheLocalGetAndTransformStoreSelfTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, GridCacheLocalAtomicGetAndTransformStoreSelfTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, GridCacheLocalLoadAllSelfTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, GridCacheLocalLockSelfTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, GridCacheLocalMultithreadedSelfTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, GridCacheLocalTxSingleThreadedSelfTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, GridCacheLocalTxReadTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, GridCacheLocalTxTimeoutSelfTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, GridCacheLocalEventSelfTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, GridCacheLocalEvictionEventSelfTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, GridCacheLocalTxMultiThreadedSelfTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, GridCacheLocalIsolatedNodesSelfTest.class, ignoredTests);
-
         GridTestUtils.addTestIfNeeded(suite, GridCacheTransformEventSelfTest.class, ignoredTests);
 
         // Partitioned cache.

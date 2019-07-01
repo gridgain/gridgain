@@ -21,7 +21,6 @@ import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -200,9 +199,7 @@ public class CacheContinuousQueryManager extends GridCacheManagerAdapter {
      * @return {@code True} if should notify continuous query manager.
      */
     public boolean notifyContinuousQueries(@Nullable IgniteInternalTx tx) {
-        return cctx.isLocal() ||
-            cctx.isReplicated() ||
-            (!cctx.isNear() && !(tx != null && tx.onePhaseCommit() && !tx.local()));
+        return cctx.isReplicated() || (!cctx.isNear() && !(tx != null && tx.onePhaseCommit() && !tx.local()));
     }
 
     /**
@@ -734,17 +731,14 @@ public class CacheContinuousQueryManager extends GridCacheManagerAdapter {
 
         final CacheContinuousQueryHandler hnd = clsr.apply();
 
-        boolean locOnly = cctx.isLocal() || loc;
-
         hnd.taskNameHash(taskNameHash);
         hnd.skipPrimaryCheck(skipPrimaryCheck);
         hnd.notifyExisting(notifyExisting);
         hnd.internal(internal);
         hnd.keepBinary(keepBinary);
-        hnd.localOnly(locOnly);
+        hnd.localOnly(loc);
 
-        IgnitePredicate<ClusterNode> pred = (loc || cctx.config().getCacheMode() == CacheMode.LOCAL) ?
-            F.nodeForNodeId(cctx.localNodeId()) : cctx.group().nodeFilter();
+        IgnitePredicate<ClusterNode> pred = loc ? F.nodeForNodeId(cctx.localNodeId()) : cctx.group().nodeFilter();
 
         assert pred != null : cctx.config();
 
@@ -753,13 +747,13 @@ public class CacheContinuousQueryManager extends GridCacheManagerAdapter {
         try {
             id = cctx.kernalContext().continuous().startRoutine(
                 hnd,
-                locOnly,
+                loc,
                 bufSize,
                 timeInterval,
                 autoUnsubscribe,
                 pred).get();
 
-            if (hnd.isQuery() && cctx.userCache() && !locOnly && !onStart)
+            if (hnd.isQuery() && cctx.userCache() && !loc && !onStart)
                 hnd.waitTopologyFuture(cctx.kernalContext());
         }
         catch (NodeStoppingException e) {
@@ -946,7 +940,7 @@ public class CacheContinuousQueryManager extends GridCacheManagerAdapter {
                     lsnr.onRegister();
 
                     if (lsnrCnt.get() == 1) {
-                        if (cctx.group().sharedGroup() && !cctx.isLocal())
+                        if (cctx.group().sharedGroup())
                             cctx.group().addCacheWithContinuousQuery(cctx);
                     }
                 }
@@ -981,7 +975,7 @@ public class CacheContinuousQueryManager extends GridCacheManagerAdapter {
                 if ((lsnr = lsnrs.remove(id)) != null) {
                     int cnt = lsnrCnt.decrementAndGet();
 
-                    if (cctx.group().sharedGroup() && cnt == 0 && !cctx.isLocal())
+                    if (cctx.group().sharedGroup() && cnt == 0)
                         cctx.group().removeCacheWithContinuousQuery(cctx);
                 }
             }
@@ -1074,15 +1068,6 @@ public class CacheContinuousQueryManager extends GridCacheManagerAdapter {
                             JCacheQueryRemoteFilter jCacheFilter;
 
                             CacheEntryEventFilter filter = null;
-
-                            if (rmtFilterFactory != null) {
-                                filter = rmtFilterFactory.create();
-
-                                if (!(filter instanceof Serializable))
-                                    throw new IgniteException("Topology has nodes of the old versions. " +
-                                        "In this case EntryEventFilter must implement java.io.Serializable " +
-                                        "interface. Filter: " + filter);
-                            }
 
                             jCacheFilter = new JCacheQueryRemoteFilter(filter, types0);
 

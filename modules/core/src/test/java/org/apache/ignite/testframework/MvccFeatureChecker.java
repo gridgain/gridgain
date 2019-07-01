@@ -18,7 +18,6 @@ package org.apache.ignite.testframework;
 
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteSystemProperties;
-import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
@@ -40,7 +39,6 @@ public class MvccFeatureChecker {
     public enum Feature {
         CACHE_STORE,
         NEAR_CACHE,
-        LOCAL_CACHE,
         ENTRY_LOCK,
         CACHE_EVENTS,
         EVICTION,
@@ -110,17 +108,6 @@ public class MvccFeatureChecker {
                 iso == TransactionIsolation.REPEATABLE_READ;
     }
 
-
-    /**
-     * Check if Cache mode is supported.
-     *
-     * @param mode Cache mode.
-     * @return {@code True} if feature is supported, {@code False} otherwise.
-     */
-    public static boolean isSupported(CacheMode mode) {
-        return mode != CacheMode.LOCAL || isSupported(Feature.LOCAL_CACHE);
-    }
-
     /**
      * Checks if given exception was caused by MVCC write conflict.
      *
@@ -145,9 +132,6 @@ public class MvccFeatureChecker {
         switch (feature) {
             case NEAR_CACHE:
                 return "https://issues.apache.org/jira/browse/IGNITE-7187";
-
-            case LOCAL_CACHE:
-                return "https://issues.apache.org/jira/browse/IGNITE-9530";
 
             case CACHE_STORE:
                 return "https://issues.apache.org/jira/browse/IGNITE-8582";

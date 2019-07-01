@@ -29,7 +29,6 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
-import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 
 /**
@@ -42,7 +41,6 @@ public class GridCacheConcurrentMapSelfTest extends GridCommonAbstractTest {
 
         CacheConfiguration cc = defaultCacheConfiguration();
 
-        cc.setCacheMode(LOCAL);
         cc.setWriteSynchronizationMode(FULL_SYNC);
 
         cfg.setCacheConfiguration(cc);

@@ -72,7 +72,7 @@ public class TransformMapView2<K, V, V1> extends GridSerializableMap<K, V1> {
             @NotNull
             @Override public Iterator<Entry<K, V1>> iterator() {
                 return new Iterator<Entry<K, V1>>() {
-                    private Iterator<Entry<K, V>> it = GridFunc.iterator0(map.entrySet(), true, entryPred);
+                    private Iterator<Entry<K, V>> it = GridFunc.iterator(map.entrySet(), true, entryPred);
 
                     @Override public boolean hasNext() {
                         return it.hasNext();

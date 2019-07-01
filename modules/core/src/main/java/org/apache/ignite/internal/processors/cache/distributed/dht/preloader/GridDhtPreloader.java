@@ -24,29 +24,28 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteInternalFuture;
-import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.processors.affinity.AffinityAssignment;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryInfo;
-import org.apache.ignite.internal.processors.cache.GridCachePreloaderAdapter;
+import org.apache.ignite.internal.processors.cache.GridCachePreloader;
+import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtFuture;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridNearAtomicAbstractUpdateRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.txdr.TransactionalDrProcessor;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.lang.GridTuple3;
-import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.jetbrains.annotations.Nullable;
@@ -62,10 +61,17 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
 /**
  * DHT cache preloader.
  */
-public class GridDhtPreloader extends GridCachePreloaderAdapter {
+public class GridDhtPreloader implements GridCachePreloader {
     /** Default preload resend timeout. */
     public static final long DFLT_PRELOAD_RESEND_TIMEOUT = 1500;
-
+    /** */
+    protected final CacheGroupContext grp;
+    /** */
+    protected final GridCacheSharedContext ctx;
+    /** Logger. */
+    protected final IgniteLogger log;
+    /** Preload predicate. */
+    protected IgnitePredicate<GridCacheEntryInfo> preloadPred;
     /** */
     private GridDhtPartitionTopology top;
 
@@ -96,8 +102,15 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
     /**
      * @param grp Cache group.
      */
+    @SuppressWarnings("unchecked")
     public GridDhtPreloader(CacheGroupContext grp) {
-        super(grp);
+        assert grp != null;
+
+        this.grp = grp;
+
+        ctx = grp.shared();
+
+        log = ctx.logger(GridDhtPreloader.class);
 
         top = grp.topology();
 
@@ -117,7 +130,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
 
     /** {@inheritDoc} */
     @Override public void preloadPredicate(IgnitePredicate<GridCacheEntryInfo> preloadPred) {
-        super.preloadPredicate(preloadPred);
+        this.preloadPred = preloadPred;
 
         assert supplier != null && demander != null : "preloadPredicate may be called only after start()";
 
@@ -147,13 +160,6 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
         finally {
             busyLock.writeLock().unlock();
         }
-    }
-
-    /**
-     * @return Node stop exception.
-     */
-    private IgniteCheckedException stopError() {
-        return new NodeStoppingException("Operation has been cancelled (cache or node is stopping).");
     }
 
     /** {@inheritDoc} */
@@ -274,7 +280,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
                     assert part != null : "Partition was not created [grp=" + grp.name() + ", topVer=" + topVer + ", p=" + p + ']';
                 }
 
-                assert part.state() == MOVING : "Partition has invalid state for rebalance " + aff.topologyVersion() + " " + part;
+                assert F.nonNull(part).state() == MOVING : "Partition has invalid state for rebalance " + aff.topologyVersion() + " " + part;
 
                 ClusterNode histSupplier = null;
 
@@ -435,6 +441,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
     /**
      * @return {@code true} if entered to busy state.
      */
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     private boolean enterBusy() {
         if (!busyLock.readLock().tryLock())
             return false;
@@ -493,8 +500,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
         if (grp.rebalanceEnabled()) {
             IgniteInternalFuture<Boolean> rebalanceFut = rebalanceFuture();
 
-            if (rebalanceFut.isDone() && Boolean.TRUE.equals(rebalanceFut.result()))
-                return false;
+            return !rebalanceFut.isDone() || !Boolean.TRUE.equals(rebalanceFut.result());
         }
 
         return true;
@@ -542,29 +548,16 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
             fut.init();
         else {
             if (topReadyFut == null)
-                startFut.listen(new CI1<IgniteInternalFuture<?>>() {
-                    @Override public void apply(IgniteInternalFuture<?> syncFut) {
-                        ctx.kernalContext().closure().runLocalSafe(
-                            new GridPlainRunnable() {
-                                @Override public void run() {
-                                    fut.init();
-                                }
-                            });
-                    }
-                });
+                startFut.listen(f -> ctx.kernalContext().closure().runLocalSafe(fut::init));
             else {
                 GridCompoundFuture<Object, Object> compound = new GridCompoundFuture<>();
+
+                compound.listen(f -> fut.init());
 
                 compound.add((IgniteInternalFuture<Object>)startFut);
                 compound.add((IgniteInternalFuture<Object>)topReadyFut);
 
                 compound.markInitialized();
-
-                compound.listen(new CI1<IgniteInternalFuture<?>>() {
-                    @Override public void apply(IgniteInternalFuture<?> syncFut) {
-                        fut.init();
-                    }
-                });
             }
         }
 
@@ -612,8 +605,8 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
 
             final GridDhtPreloader preloader = this;
 
-            ctx.kernalContext().closure().runLocalSafe(() -> msgToProc.forEach(
-                    m -> preloader.handleSupplyMessage(m.get1(), m.get2(), m.get3())
+            ctx.kernalContext().closure().runLocalSafe((GridPlainRunnable)() -> msgToProc.forEach(
+                    m -> preloader.handleSupplyMessage(F.nonNull(m.get1()), m.get2(), m.get3())
             ), GridIoPolicy.SYSTEM_POOL);
 
             paused = false;
@@ -626,5 +619,30 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
     /** {@inheritDoc} */
     @Override public void dumpDebugInfo() {
         // No-op
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgnitePredicate<GridCacheEntryInfo> preloadPredicate() {
+        return preloadPred;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long timeout() {
+        return grp.shared().gridConfig().getRebalanceTimeout();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long batchesPrefetchCount() {
+        return grp.shared().gridConfig().getRebalanceBatchesPrefetchCount();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long throttle() {
+        return grp.shared().gridConfig().getRebalanceThrottle();
+    }
+
+    /** {@inheritDoc} */
+    @Override public int batchSize() {
+        return grp.shared().gridConfig().getRebalanceBatchSize();
     }
 }

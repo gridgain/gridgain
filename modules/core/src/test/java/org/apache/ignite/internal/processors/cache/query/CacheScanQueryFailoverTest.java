@@ -33,7 +33,6 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
-import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 
 /**
@@ -99,19 +98,7 @@ public class CacheScanQueryFailoverTest extends GridCommonAbstractTest {
         queryCachesWithFailedPredicates(srv, cfg);
 
         assertEquals(client.cluster().nodes().size(), 5);
-    };
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testScanQueryOverLocalCacheWithFailedClosures() throws Exception {
-        Ignite srv = startGrids(4);
-
-        queryCachesWithFailedPredicates(srv, new CacheConfiguration(LOCAL_CACHE_NAME).setCacheMode(LOCAL));
-
-        assertEquals(srv.cluster().nodes().size(), 4);
-    };
+    }
 
     /**
      * @param ignite Ignite instance.

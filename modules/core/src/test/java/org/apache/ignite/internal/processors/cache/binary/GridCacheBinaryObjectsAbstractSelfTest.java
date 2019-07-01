@@ -1208,12 +1208,10 @@ public abstract class GridCacheBinaryObjectsAbstractSelfTest extends GridCommonA
 
         checkTransform(primaryKey(c));
 
-        if (cacheMode() != CacheMode.LOCAL) {
-            checkTransform(backupKey(c));
+        checkTransform(backupKey(c));
 
-            if (nearConfiguration() != null)
-                checkTransform(nearKey(c));
-        }
+        if (nearConfiguration() != null)
+            checkTransform(nearKey(c));
     }
 
     /**

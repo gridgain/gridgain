@@ -70,7 +70,7 @@ public class PredicateSetView<K, V> extends GridSerializableMap<K, V> {
             @NotNull @Override public Iterator<Entry<K, V>> iterator() {
                 return new Iterator<Entry<K, V>>() {
 
-                    private Iterator<K> it = GridFunc.iterator0(set, true, entryPred);
+                    private Iterator<K> it = GridFunc.iterator(set, true, entryPred);
 
                     @Override public boolean hasNext() {
                         return it.hasNext();

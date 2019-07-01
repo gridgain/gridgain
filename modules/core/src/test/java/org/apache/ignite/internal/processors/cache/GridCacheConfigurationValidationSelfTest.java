@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.util.Collection;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -24,9 +25,8 @@ import org.apache.ignite.internal.processors.datastructures.DataStructuresProces
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
-import java.util.Collection;
-
-import static org.apache.ignite.cache.CacheMode.*;
+import static org.apache.ignite.cache.CacheMode.PARTITIONED;
+import static org.apache.ignite.cache.CacheMode.REPLICATED;
 import static org.apache.ignite.cache.CacheRebalanceMode.ASYNC;
 import static org.apache.ignite.cache.CacheRebalanceMode.SYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
@@ -101,11 +101,6 @@ public class GridCacheConfigurationValidationSelfTest extends GridCommonAbstract
         namedCacheCfg.setWriteSynchronizationMode(FULL_SYNC);
         namedCacheCfg.setAffinity(new RendezvousAffinityFunction());
 
-        // Local cache configuration.
-        CacheConfiguration localCacheCfg = defaultCacheConfiguration();
-
-        localCacheCfg.setCacheMode(LOCAL);
-
         // Modify cache config according to test parameters.
         if (igniteInstanceName.contains(WRONG_PRELOAD_MODE_IGNITE_INSTANCE_NAME))
             dfltCacheCfg.setRebalanceMode(SYNC);
@@ -125,7 +120,7 @@ public class GridCacheConfigurationValidationSelfTest extends GridCommonAbstract
             if (client)
                 cfg.setClientMode(true);
             else
-                cfg.setCacheConfiguration(dfltCacheCfg, namedCacheCfg, localCacheCfg);
+                cfg.setCacheConfiguration(dfltCacheCfg, namedCacheCfg);
         }
 
         if (igniteInstanceName.contains(RESERVED_FOR_DATASTRUCTURES_CACHE_NAME_IGNITE_INSTANCE_NAME))

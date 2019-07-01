@@ -228,11 +228,6 @@ public class GridCacheDeploymentManager<K, V> extends GridCacheSharedManagerAdap
                 }
             });
         }
-
-        // Unwind immediately for local and replicate caches.
-        // We go through preloader for proper synchronization.
-        if (ctx.isLocal())
-            ctx.preloader().unwindUndeploys();
     }
 
     /**

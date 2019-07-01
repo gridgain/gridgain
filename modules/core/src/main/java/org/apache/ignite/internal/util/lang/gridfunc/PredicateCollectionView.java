@@ -57,7 +57,7 @@ public class PredicateCollectionView<T> extends GridSerializableCollection<T> {
 
     /** {@inheritDoc} */
     @NotNull @Override public Iterator<T> iterator() {
-        return F.iterator0(col, false, preds);
+        return F.iterator(col, false, preds);
     }
 
     /** {@inheritDoc} */

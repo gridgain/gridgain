@@ -36,9 +36,7 @@ import org.apache.ignite.internal.processors.cache.IgniteCacheGroupsSqlTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheStarvationOnRebalanceTest;
 import org.apache.ignite.internal.processors.cache.IgniteClientReconnectQueriesTest;
 import org.apache.ignite.internal.processors.cache.persistence.RebuildIndexLogMessageTest;
-import org.apache.ignite.internal.processors.cache.ttl.CacheTtlAtomicLocalSelfTest;
 import org.apache.ignite.internal.processors.cache.ttl.CacheTtlAtomicPartitionedSelfTest;
-import org.apache.ignite.internal.processors.cache.ttl.CacheTtlTransactionalLocalSelfTest;
 import org.apache.ignite.internal.processors.cache.ttl.CacheTtlTransactionalPartitionedSelfTest;
 import org.apache.ignite.internal.processors.client.IgniteDataStreamerTest;
 import org.apache.ignite.internal.processors.query.h2.database.InlineIndexHelperTest;
@@ -55,9 +53,7 @@ import org.junit.runners.Suite;
     GridIndexingWithNoopSwapSelfTest.class,
     GridCacheOffHeapSelfTest.class,
 
-    CacheTtlTransactionalLocalSelfTest.class,
     CacheTtlTransactionalPartitionedSelfTest.class,
-    CacheTtlAtomicLocalSelfTest.class,
     CacheTtlAtomicPartitionedSelfTest.class,
 
     GridCacheOffheapIndexGetSelfTest.class,

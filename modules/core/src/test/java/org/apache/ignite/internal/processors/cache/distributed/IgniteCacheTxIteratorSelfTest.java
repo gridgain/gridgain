@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.distributed;
 
+import javax.cache.Cache;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -33,8 +34,6 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
-
-import javax.cache.Cache;
 import org.junit.Test;
 
 /**
@@ -134,8 +133,7 @@ public class IgniteCacheTxIteratorSelfTest extends GridCommonAbstractTest {
         boolean useEvicPlc
     ) throws Exception {
         if (atomMode == CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT) {
-            if (!MvccFeatureChecker.isSupported(mode) ||
-                (nearEnabled && !MvccFeatureChecker.isSupported(Feature.NEAR_CACHE)) ||
+            if ((nearEnabled && !MvccFeatureChecker.isSupported(Feature.NEAR_CACHE)) ||
                 (useEvicPlc && !MvccFeatureChecker.isSupported(Feature.EVICTION)))
                 return; // Nothing to do. Mode is not supported.
         }

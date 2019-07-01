@@ -22,8 +22,6 @@ import org.apache.ignite.internal.processors.cache.BinaryMetadataConcurrentUpdat
 import org.apache.ignite.internal.processors.cache.BinarySerializationQuerySelfTest;
 import org.apache.ignite.internal.processors.cache.BinarySerializationQueryWithReflectiveSerializerSelfTest;
 import org.apache.ignite.internal.processors.cache.CacheIteratorScanQueryTest;
-import org.apache.ignite.internal.processors.cache.CacheLocalQueryDetailMetricsSelfTest;
-import org.apache.ignite.internal.processors.cache.CacheLocalQueryMetricsSelfTest;
 import org.apache.ignite.internal.processors.cache.CacheOffheapBatchIndexingMultiTypeTest;
 import org.apache.ignite.internal.processors.cache.CacheOffheapBatchIndexingSingleTypeTest;
 import org.apache.ignite.internal.processors.cache.CachePartitionedQueryDetailMetricsDistributedSelfTest;
@@ -160,10 +158,6 @@ import org.apache.ignite.internal.processors.cache.index.OptimizedMarshallerInde
 import org.apache.ignite.internal.processors.cache.index.QueryEntityValidationSelfTest;
 import org.apache.ignite.internal.processors.cache.index.SchemaExchangeSelfTest;
 import org.apache.ignite.internal.processors.cache.index.SqlTransactionCommandsWithMvccDisabledSelfTest;
-import org.apache.ignite.internal.processors.cache.local.IgniteCacheLocalAtomicQuerySelfTest;
-import org.apache.ignite.internal.processors.cache.local.IgniteCacheLocalFieldsQuerySelfTest;
-import org.apache.ignite.internal.processors.cache.local.IgniteCacheLocalQueryCancelOrTimeoutSelfTest;
-import org.apache.ignite.internal.processors.cache.local.IgniteCacheLocalQuerySelfTest;
 import org.apache.ignite.internal.processors.cache.metric.SqlViewExporterSpiTest;
 import org.apache.ignite.internal.processors.cache.query.CacheDataPageScanQueryTest;
 import org.apache.ignite.internal.processors.cache.query.CacheScanQueryFailoverTest;
@@ -325,8 +319,6 @@ import org.junit.runners.Suite;
     IgniteSqlSchemaIndexingTest.class,
     GridCacheQueryIndexDisabledSelfTest.class,
     IgniteCacheQueryLoadSelfTest.class,
-    IgniteCacheLocalQuerySelfTest.class,
-    IgniteCacheLocalAtomicQuerySelfTest.class,
     IgniteCacheReplicatedQuerySelfTest.class,
     IgniteCacheReplicatedQueryP2PDisabledSelfTest.class,
     IgniteCacheReplicatedQueryEvtsDisabledSelfTest.class,
@@ -423,7 +415,6 @@ import org.junit.runners.Suite;
 
     // Fields queries.
     SqlFieldsQuerySelfTest.class,
-    IgniteCacheLocalFieldsQuerySelfTest.class,
     IgniteCacheReplicatedFieldsQuerySelfTest.class,
     IgniteCacheReplicatedFieldsQueryROSelfTest.class,
     IgniteCacheReplicatedFieldsQueryP2PEnabledSelfTest.class,
@@ -447,14 +438,12 @@ import org.junit.runners.Suite;
     H2CompareBigQueryDistributedJoinsTest.class,
 
     // Cache query metrics.
-    CacheLocalQueryMetricsSelfTest.class,
     CachePartitionedQueryMetricsDistributedSelfTest.class,
     CachePartitionedQueryMetricsLocalSelfTest.class,
     CacheReplicatedQueryMetricsDistributedSelfTest.class,
     CacheReplicatedQueryMetricsLocalSelfTest.class,
 
     // Cache query metrics.
-    CacheLocalQueryDetailMetricsSelfTest.class,
     CachePartitionedQueryDetailMetricsDistributedSelfTest.class,
     CachePartitionedQueryDetailMetricsLocalSelfTest.class,
     CacheReplicatedQueryDetailMetricsDistributedSelfTest.class,
@@ -466,7 +455,6 @@ import org.junit.runners.Suite;
 
     // Cancellation.
     IgniteCacheDistributedQueryCancelSelfTest.class,
-    IgniteCacheLocalQueryCancelOrTimeoutSelfTest.class,
 
     // Distributed joins.
     H2CompareBigQueryDistributedJoinsTest.class,

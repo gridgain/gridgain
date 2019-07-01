@@ -47,7 +47,7 @@ public class CacheTopologyCommandHandlerTest extends GridCommonAbstractTest {
 
         // Cache config.
         CacheConfiguration ccfg = new CacheConfiguration("cache*")
-            .setCacheMode(CacheMode.LOCAL)
+            .setCacheMode(CacheMode.PARTITIONED)
             .setAtomicityMode(CacheAtomicityMode.ATOMIC);
 
         ConnectorConfiguration clnCfg = new ConnectorConfiguration()

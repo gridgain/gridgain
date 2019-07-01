@@ -65,8 +65,8 @@ import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridReservable;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.jobmetrics.GridJobMetricsSnapshot;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.LongMetricImpl;
@@ -1715,7 +1715,7 @@ public class GridJobProcessor extends GridProcessorAdapter {
                     if (!cctx.started()) // Cache not started.
                         return reserved;
 
-                    if (cctx.isLocal() || !cctx.rebalanceEnabled())
+                    if (!cctx.rebalanceEnabled())
                         continue;
 
                     boolean checkPartMapping = false;

@@ -51,6 +51,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_AFFINITY_HISTORY_SIZE;
@@ -115,9 +116,6 @@ public class GridAffinityAssignmentCache {
     /** */
     private final GridKernalContext ctx;
 
-    /** */
-    private final boolean locCache;
-
     /** Node stop flag. */
     private volatile IgniteCheckedException stopErr;
 
@@ -129,22 +127,19 @@ public class GridAffinityAssignmentCache {
 
     /**
      * Constructs affinity cached calculations.
-     *
-     * @param ctx Kernal context.
+     *  @param ctx Kernal context.
      * @param cacheOrGrpName Cache or cache group name.
      * @param grpId Group ID.
      * @param aff Affinity function.
      * @param nodeFilter Node filter.
      * @param backups Number of backups.
-     * @param locCache Local cache flag.
      */
     public GridAffinityAssignmentCache(GridKernalContext ctx,
         String cacheOrGrpName,
         int grpId,
         AffinityFunction aff,
         IgnitePredicate<ClusterNode> nodeFilter,
-        int backups,
-        boolean locCache
+        int backups
     ) {
         assert ctx != null;
         assert aff != null;
@@ -157,7 +152,6 @@ public class GridAffinityAssignmentCache {
         this.cacheOrGrpName = cacheOrGrpName;
         this.grpId = grpId;
         this.backups = backups;
-        this.locCache = locCache;
 
         log = ctx.log(GridAffinityAssignmentCache.class);
 
@@ -295,7 +289,7 @@ public class GridAffinityAssignmentCache {
     public IdealAffinityAssignment calculate(
         AffinityTopologyVersion topVer,
         @Nullable ExchangeDiscoveryEvents events,
-        @Nullable DiscoCache discoCache
+        @NotNull DiscoCache discoCache
     ) {
         if (log.isDebugEnabled())
             log.debug("Calculating ideal affinity [topVer=" + topVer + ", locNodeId=" + ctx.localNodeId() +
@@ -308,28 +302,15 @@ public class GridAffinityAssignmentCache {
             return prevAssignment;
 
         // Resolve nodes snapshot for specified topology version.
-        List<ClusterNode> sorted;
+        List<ClusterNode> sorted = new ArrayList<>(discoCache.cacheGroupAffinityNodes(groupId()));
 
-        if (!locCache) {
-            sorted = new ArrayList<>(discoCache.cacheGroupAffinityNodes(groupId()));
+        sorted.sort(NodeOrderComparator.getInstance());
 
-            Collections.sort(sorted, NodeOrderComparator.getInstance());
-        }
-        else
-            sorted = Collections.singletonList(ctx.discovery().localNode());
+        BaselineTopology blt = discoCache.state().baselineTopology();
 
-        boolean hasBaseline = false;
-        boolean changedBaseline = false;
+        boolean hasBaseline = blt != null;
 
-        BaselineTopology blt = null;
-
-        if (discoCache != null) {
-            blt = discoCache.state().baselineTopology();
-
-            hasBaseline = blt != null;
-
-            changedBaseline = !hasBaseline ? baselineTopology != null : !blt.equals(baselineTopology);
-        }
+        boolean changedBaseline = !hasBaseline ? baselineTopology != null : !blt.equals(baselineTopology);
 
         IdealAffinityAssignment assignment;
 
@@ -403,8 +384,6 @@ public class GridAffinityAssignmentCache {
             }
         }
 
-        assert assignment != null;
-
         idealAssignment = assignment;
 
         if (ctx.cache().cacheMode(cacheOrGrpName) == PARTITIONED && !ctx.clientNode())
@@ -419,9 +398,6 @@ public class GridAffinityAssignmentCache {
             baselineTopology = null;
             baselineAssignment = null;
         }
-
-        if (locCache)
-            initialize(topVer, assignment.assignment());
 
         return assignment;
     }
@@ -484,7 +460,7 @@ public class GridAffinityAssignmentCache {
                 }
             }
 
-            result.add(p, currentMapping != null ? currentMapping : Collections.<ClusterNode>emptyList());
+            result.add(p, currentMapping != null ? currentMapping : Collections.emptyList());
         }
 
         return result;

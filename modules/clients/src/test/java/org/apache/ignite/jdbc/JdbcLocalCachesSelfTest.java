@@ -28,7 +28,6 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteJdbcDriver.PROP_NODE_ID;
-import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 
 /**
@@ -48,7 +47,6 @@ public class JdbcLocalCachesSelfTest extends GridCommonAbstractTest {
         CacheConfiguration cache = defaultCacheConfiguration();
 
         cache.setName(CACHE_NAME);
-        cache.setCacheMode(LOCAL);
         cache.setWriteSynchronizationMode(FULL_SYNC);
         cache.setIndexedTypes(
             String.class, Integer.class

@@ -61,6 +61,7 @@ public class ReducePartitionMapper {
      * Constructor.
      *
      * @param ctx Kernal context.
+     * @param log Logger.
      */
     public ReducePartitionMapper(GridKernalContext ctx, IgniteLogger log) {
         this.ctx = ctx;
@@ -156,9 +157,7 @@ public class ReducePartitionMapper {
      * @return {@code True} If cache has partitions in {@link GridDhtPartitionState#MOVING} state.
      */
     private static boolean hasMovingPartitions(GridCacheContext<?, ?> cctx) {
-        assert cctx != null;
-
-        return !cctx.isLocal() && cctx.topology().hasMovingPartitions();
+        return F.nonNull(cctx).topology().hasMovingPartitions();
     }
 
     /**
@@ -199,9 +198,6 @@ public class ReducePartitionMapper {
             GridCacheContext<?,?> extraCctx = cacheContext(cacheIds.get(i));
 
             String extraCacheName = extraCctx.name();
-
-            if (extraCctx.isLocal())
-                continue; // No consistency guaranties for local caches.
 
             if (isReplicatedOnly && !extraCctx.isReplicated())
                 throw new CacheException("Queries running on replicated cache should not contain JOINs " +
@@ -318,7 +314,7 @@ public class ReducePartitionMapper {
             for (Integer cacheId : cacheIds) {
                 GridCacheContext<?, ?> extraCctx = cacheContext(cacheId);
 
-                if (extraCctx.isReplicated() || extraCctx.isLocal())
+                if (extraCctx.isReplicated())
                     continue;
 
                 int parts = extraCctx.affinity().partitions();
@@ -343,7 +339,7 @@ public class ReducePartitionMapper {
 
                     continue;
                 }
-                else if (!F.isEmpty(dataNodes(cctx.groupId(), NONE))) {
+                else if (!F.isEmpty(dataNodes(cctx.groupId()))) {
                     logRetry("Failed to calculate nodes for SQL query (partition has no owners, but corresponding " +
                         "cache group has data nodes) [qryId=" + qryId + ", cacheIds=" + cacheIds +
                         ", cacheName=" + cctx.name() + ", cacheId=" + cctx.cacheId() + ", part=" + p +
@@ -368,7 +364,7 @@ public class ReducePartitionMapper {
                 if (cctx == extraCctx)
                     continue;
 
-                if (extraCctx.isReplicated() || extraCctx.isLocal())
+                if (extraCctx.isReplicated())
                     continue;
 
                 for (int p = 0, parts = extraCctx.affinity().partitions(); p < parts; p++) {
@@ -378,7 +374,7 @@ public class ReducePartitionMapper {
                         continue; // Skip unmapped partitions.
 
                     if (F.isEmpty(owners)) {
-                        if (!F.isEmpty(dataNodes(extraCctx.groupId(), NONE))) {
+                        if (!F.isEmpty(dataNodes(extraCctx.groupId()))) {
                             logRetry("Failed to calculate nodes for SQL query (partition has no owners, but " +
                                 "corresponding cache group has data nodes) [qryId=" + qryId +
                                 ", cacheIds=" + cacheIds + ", cacheName=" + extraCctx.name() +
@@ -499,9 +495,6 @@ public class ReducePartitionMapper {
         for (;i < cacheIds.size(); i++) {
             GridCacheContext<?, ?> extraCctx = cacheContext(cacheIds.get(i));
 
-            if (extraCctx.isLocal())
-                continue;
-
             if (!extraCctx.isReplicated())
                 throw new CacheException("Queries running on replicated cache should not contain JOINs " +
                     "with tables in partitioned caches [replicatedCache=" + cctx.name() + ", " +
@@ -538,7 +531,7 @@ public class ReducePartitionMapper {
 
         String cacheName = cctx.name();
 
-        Set<ClusterNode> dataNodes = new HashSet<>(dataNodes(cctx.groupId(), NONE));
+        Set<ClusterNode> dataNodes = new HashSet<>(dataNodes(cctx.groupId()));
 
         if (dataNodes.isEmpty())
             throw new CacheServerNotFoundException("Failed to find data nodes for cache: " + cacheName);
@@ -571,11 +564,10 @@ public class ReducePartitionMapper {
 
     /**
      * @param grpId Cache group ID.
-     * @param topVer Topology version.
      * @return Collection of data nodes.
      */
-    private Collection<ClusterNode> dataNodes(int grpId, AffinityTopologyVersion topVer) {
-        Collection<ClusterNode> res = ctx.discovery().cacheGroupAffinityNodes(grpId, topVer);
+    private Collection<ClusterNode> dataNodes(int grpId) {
+        Collection<ClusterNode> res = ctx.discovery().cacheGroupAffinityNodes(grpId, NONE);
 
         return res != null ? res : Collections.emptySet();
     }
@@ -616,17 +608,11 @@ public class ReducePartitionMapper {
      * @return The first partitioned cache context.
      */
     public GridCacheContext<?,?> findFirstPartitioned(List<Integer> cacheIds) {
-        for (int i = 0; i < cacheIds.size(); i++) {
-            GridCacheContext<?, ?> cctx = cacheContext(cacheIds.get(i));
-
-            if (i == 0 && cctx.isLocal())
-                throw new CacheException("Cache is LOCAL: " + cctx.name());
-
-            if (!cctx.isReplicated() && !cctx.isLocal())
-                return cctx;
-        }
-
-        throw new IllegalStateException("Failed to find partitioned cache.");
+        return cacheIds.stream()
+            .map(this::cacheContext)
+            .filter(GridCacheContext::isPartitioned)
+            .findFirst()
+            .orElseThrow(() -> new IllegalStateException("Failed to find partitioned cache."));
     }
 
     /**

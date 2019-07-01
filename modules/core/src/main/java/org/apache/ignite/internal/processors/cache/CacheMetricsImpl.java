@@ -33,6 +33,7 @@ import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.cacheMetricsRegistryName;
 
@@ -1043,9 +1044,6 @@ public class CacheMetricsImpl implements CacheMetrics {
      * @return Valid ot not.
      */
     private boolean isValidForOperation(boolean read) {
-        if (cctx.isLocal())
-            return true;
-
         try {
             GridDhtTopologyFuture fut = cctx.shared().exchange().lastFinishedFuture();
 
@@ -1109,45 +1107,36 @@ public class CacheMetricsImpl implements CacheMetrics {
                 sizeLong = cache.localSizeLong(null);
             }
 
-            if (cctx.isLocal()) {
-                if (cache != null) {
-                    offHeapPrimaryEntriesCnt = offHeapEntriesCnt;
+            AffinityTopologyVersion topVer = cctx.affinity().affinityTopologyVersion();
 
-                    heapEntriesCnt = cache.sizeLong();
-                }
-            }
-            else {
-                AffinityTopologyVersion topVer = cctx.affinity().affinityTopologyVersion();
+            Set<Integer> primaries = cctx.affinity().primaryPartitions(cctx.localNodeId(), topVer);
+            Set<Integer> backups = cctx.affinity().backupPartitions(cctx.localNodeId(), topVer);
 
-                Set<Integer> primaries = cctx.affinity().primaryPartitions(cctx.localNodeId(), topVer);
-                Set<Integer> backups = cctx.affinity().backupPartitions(cctx.localNodeId(), topVer);
+            if (cctx.isNear() && cache != null)
+                heapEntriesCnt = cache.nearSize();
 
-                if (cctx.isNear() && cache != null)
-                    heapEntriesCnt = cache.nearSize();
+            for (GridDhtLocalPartition part : cctx.topology().currentLocalPartitions()) {
+                // Partitions count.
+                GridDhtPartitionState partState = part.state();
 
-                for (GridDhtLocalPartition part : cctx.topology().currentLocalPartitions()) {
-                    // Partitions count.
-                    GridDhtPartitionState partState = part.state();
+                if (partState == GridDhtPartitionState.OWNING)
+                    owningPartCnt++;
 
-                    if (partState == GridDhtPartitionState.OWNING)
-                        owningPartCnt++;
+                if (partState == GridDhtPartitionState.MOVING)
+                    movingPartCnt++;
 
-                    if (partState == GridDhtPartitionState.MOVING)
-                        movingPartCnt++;
+                // Offheap entries count
+                if (cache == null)
+                    continue;
 
-                    // Offheap entries count
-                    if (cache == null)
-                        continue;
+                long cacheSize = part.dataStore().cacheSize(cctx.cacheId());
 
-                    long cacheSize = part.dataStore().cacheSize(cctx.cacheId());
+                if (primaries.contains(part.id()))
+                    offHeapPrimaryEntriesCnt += cacheSize;
+                else if (backups.contains(part.id()))
+                    offHeapBackupEntriesCnt += cacheSize;
 
-                    if (primaries.contains(part.id()))
-                        offHeapPrimaryEntriesCnt += cacheSize;
-                    else if (backups.contains(part.id()))
-                        offHeapBackupEntriesCnt += cacheSize;
-
-                    heapEntriesCnt += part.publicSize(cctx.cacheId());
-                }
+                heapEntriesCnt += part.publicSize(cctx.cacheId());
             }
         }
         catch (Exception e) {

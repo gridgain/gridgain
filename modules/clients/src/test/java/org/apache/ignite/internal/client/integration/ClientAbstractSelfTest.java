@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal.client.integration;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -34,8 +36,6 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.cache.Cache;
 import javax.cache.configuration.Factory;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.store.CacheStore;
 import org.apache.ignite.cache.store.CacheStoreAdapter;
@@ -71,7 +71,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_JETTY_PORT;
-import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
@@ -261,8 +260,7 @@ public abstract class ClientAbstractSelfTest extends GridCommonAbstractTest {
     private  static CacheConfiguration cacheConfiguration(@NotNull final String cacheName) throws Exception {
         CacheConfiguration cfg = defaultCacheConfiguration();
 
-        cfg.setCacheMode(DEFAULT_CACHE_NAME.equals(cacheName) || CACHE_NAME.equals(cacheName) ? LOCAL : "replicated".equals(cacheName) ?
-            REPLICATED : PARTITIONED);
+        cfg.setCacheMode("replicated".equals(cacheName) ? REPLICATED : PARTITIONED);
         cfg.setName(cacheName);
         cfg.setWriteSynchronizationMode(FULL_SYNC);
 

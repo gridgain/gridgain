@@ -52,6 +52,7 @@ import org.apache.ignite.internal.processors.cache.persistence.GridCacheOffheapM
 import org.apache.ignite.internal.processors.cache.persistence.freelist.FreeList;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 import org.apache.ignite.internal.processors.cache.query.continuous.CounterSkipContext;
+import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.util.StripedCompositeReadWriteLock;
@@ -61,7 +62,6 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgniteBiInClosure;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.mxbean.CacheGroupMetricsMXBean;
@@ -69,7 +69,7 @@ import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
-import static org.apache.ignite.cache.CacheMode.LOCAL;
+import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
 import static org.apache.ignite.cache.CacheRebalanceMode.NONE;
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_PART_MISSED;
@@ -708,17 +708,17 @@ public class CacheGroupContext {
     }
 
     /**
-     * @return {@code True} if cache is local.
-     */
-    public boolean isLocal() {
-        return ccfg.getCacheMode() == LOCAL;
-    }
-
-    /**
-     * @return {@code True} if cache is local.
+     * @return {@code True} if cache is replicated.
      */
     public boolean isReplicated() {
         return ccfg.getCacheMode() == REPLICATED;
+    }
+
+    /**
+     * @return {@code True} if cache is partitioned.
+     */
+    public boolean isPartitioned() {
+        return ccfg.getCacheMode() == PARTITIONED;
     }
 
     /**
@@ -887,18 +887,10 @@ public class CacheGroupContext {
     private void initializeIO() throws IgniteCheckedException {
         assert !recoveryMode.get() : "Couldn't initialize I/O handlers, recovery mode is on for group " + this;
 
-        if (ccfg.getCacheMode() != LOCAL) {
-            if (!ctx.kernalContext().clientNode()) {
-                ctx.io().addCacheGroupHandler(groupId(), GridDhtAffinityAssignmentRequest.class,
-                    (IgniteBiInClosure<UUID, GridDhtAffinityAssignmentRequest>) this::processAffinityAssignmentRequest);
-            }
+            if (!ctx.kernalContext().clientNode())
+                ctx.io().addCacheGroupHandler(groupId(), GridDhtAffinityAssignmentRequest.class, this::processAffinityAssignmentRequest);
 
-            preldr = new GridDhtPreloader(this);
-
-            preldr.start();
-        }
-        else
-            preldr = new GridCachePreloaderAdapter(this);
+        (preldr = new GridDhtPreloader(this)).start();
     }
 
     /**
@@ -953,7 +945,6 @@ public class CacheGroupContext {
     public void addCacheWithContinuousQuery(GridCacheContext cctx) {
         assert sharedGroup() : cacheOrGroupName();
         assert cctx.group() == this : cctx.name();
-        assert !cctx.isLocal() : cctx.name();
 
         List<GridCacheContext> contQryCaches = this.contQryCaches;
 
@@ -971,7 +962,6 @@ public class CacheGroupContext {
     public void removeCacheWithContinuousQuery(GridCacheContext cctx) {
         assert sharedGroup() : cacheOrGroupName();
         assert cctx.group() == this : cctx.name();
-        assert !cctx.isLocal() : cctx.name();
         assert listenerLock.isWriteLockedByCurrentThread();
 
         List<GridCacheContext> contQryCaches = this.contQryCaches;
@@ -1010,9 +1000,6 @@ public class CacheGroupContext {
         AffinityTopologyVersion topVer,
         boolean primary) {
         assert sharedGroup();
-
-        if (isLocal())
-            return;
 
         List<GridCacheContext> contQryCaches;
 
@@ -1081,12 +1068,10 @@ public class CacheGroupContext {
                 grpId,
                 ccfg.getAffinity(),
                 ccfg.getNodeFilter(),
-                ccfg.getBackups(),
-                ccfg.getCacheMode() == LOCAL
+                ccfg.getBackups()
             );
 
-        if (ccfg.getCacheMode() != LOCAL)
-            top = new GridDhtPartitionTopologyImpl(ctx, this);
+        top = new GridDhtPartitionTopologyImpl(ctx, this);
 
         try {
             offheapMgr = persistenceEnabled

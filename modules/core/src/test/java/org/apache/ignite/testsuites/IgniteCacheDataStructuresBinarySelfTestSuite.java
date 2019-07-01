@@ -17,8 +17,6 @@
 package org.apache.ignite.testsuites;
 
 import org.apache.ignite.internal.processors.cache.datastructures.GridCacheQueueApiSelfAbstractTest;
-import org.apache.ignite.internal.processors.cache.datastructures.local.GridCacheLocalAtomicQueueApiSelfTest;
-import org.apache.ignite.internal.processors.cache.datastructures.local.GridCacheLocalQueueApiSelfTest;
 import org.apache.ignite.internal.processors.cache.datastructures.partitioned.GridCachePartitionedAtomicQueueApiSelfTest;
 import org.apache.ignite.internal.processors.cache.datastructures.partitioned.GridCachePartitionedQueueApiSelfTest;
 import org.apache.ignite.internal.processors.cache.datastructures.partitioned.IgnitePartitionedQueueNoBackupsTest;
@@ -32,8 +30,6 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-    GridCacheLocalQueueApiSelfTest.class,
-    GridCacheLocalAtomicQueueApiSelfTest.class,
     GridCacheReplicatedQueueApiSelfTest.class,
     GridCachePartitionedQueueApiSelfTest.class,
     GridCachePartitionedAtomicQueueApiSelfTest.class,

@@ -53,7 +53,6 @@ import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
-import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 
 /**
@@ -93,9 +92,6 @@ public abstract class IgniteSemaphoreAbstractSelfTest extends IgniteAtomicsAbstr
      */
     @Test
     public void testFailover() throws Exception {
-        if (atomicsCacheMode() == LOCAL)
-            return;
-
         checkFailover(true);
         checkFailover(false);
     }

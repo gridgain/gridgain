@@ -66,13 +66,6 @@ public class DataStreamProcessorMvccSelfTest extends DataStreamProcessorSelfTest
     }
 
     /** {@inheritDoc} */
-    @Ignore("https://issues.apache.org/jira/browse/IGNITE-9530")
-    @Test
-    @Override public void testLocal() throws Exception {
-        super.testLocal();
-    }
-
-    /** {@inheritDoc} */
     @Test
     @Override public void testTryFlush() throws Exception {
         super.testTryFlush();

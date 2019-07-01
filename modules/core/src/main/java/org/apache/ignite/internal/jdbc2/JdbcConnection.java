@@ -143,7 +143,7 @@ public class JdbcConnection implements Connection {
     private UUID nodeId;
 
     /** Local query flag. */
-    private boolean locQry;
+    private boolean locQry; // TODO GG-20433
 
     /** Collocated query flag. */
     private boolean collocatedQry;

@@ -33,7 +33,6 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
-import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
 import static org.apache.ignite.events.EventType.EVT_JOB_MAPPED;
@@ -102,12 +101,6 @@ public class GridCacheGetStoreErrorSelfTest extends GridCommonAbstractTest {
     @Test
     public void testGetErrorReplicated() throws Exception {
         checkGetError(false, REPLICATED);
-    }
-
-    /** @throws Exception If failed. */
-    @Test
-    public void testGetErrorLocal() throws Exception {
-        checkGetError(false, LOCAL);
     }
 
     /**

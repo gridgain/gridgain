@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -46,8 +48,6 @@ import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.EntryProcessorResult;
 import javax.cache.processor.MutableEntry;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -110,9 +110,7 @@ import org.junit.Test;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
-import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
-import static org.apache.ignite.cache.CacheMode.REPLICATED;
 import static org.apache.ignite.cache.CachePeekMode.ALL;
 import static org.apache.ignite.cache.CachePeekMode.ONHEAP;
 import static org.apache.ignite.cache.CachePeekMode.PRIMARY;
@@ -2703,7 +2701,7 @@ public abstract class GridCacheAbstractFullApiSelfTest extends GridCacheAbstract
      */
     @Test
     public void testDeletedEntriesFlag() throws Exception {
-        if (cacheMode() != LOCAL && cacheMode() != REPLICATED) {
+        if (cacheMode() == PARTITIONED) {
             final int cnt = 3;
 
             IgniteCache<String, Integer> cache = jcache();
@@ -3817,7 +3815,7 @@ public abstract class GridCacheAbstractFullApiSelfTest extends GridCacheAbstract
         if (!isMultiJvmObject(fullCache)) {
             GridCacheAdapter internalCache = internalCache(fullCache);
 
-            if (internalCache.isLocal())
+            if (false)
                 return;
         }
 

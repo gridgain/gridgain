@@ -334,7 +334,7 @@ public abstract class GridCacheConcurrentMapImpl implements GridCacheConcurrentM
 
         return new AbstractSet<GridCacheMapEntry>() {
             @Override public Iterator<GridCacheMapEntry> iterator() {
-                return F.iterator0(hld.map.values(), true, p);
+                return F.iterator(hld.map.values(), true, p);
             }
 
             @Override public int size() {

@@ -360,10 +360,7 @@ public class IgniteCacheProxyImpl<K, V> implements IgniteCacheProxy<K, V> {
         GridCacheContext<K, V> ctx = getContextSafe();
 
         try {
-            if (ctx.cache().isLocal())
-                ctx.cache().localLoadCache(p, args);
-            else
-                ctx.cache().globalLoadCache(p, args);
+            ctx.cache().globalLoadCache(p, args);
         }
         catch (IgniteCheckedException | IgniteException e) {
             throw cacheException(e);
@@ -376,7 +373,8 @@ public class IgniteCacheProxyImpl<K, V> implements IgniteCacheProxy<K, V> {
         GridCacheContext<K, V> ctx = getContextSafe();
 
         try {
-            if (ctx.cache().isLocal())
+            ctx.cache();
+            if (false)
                 return (IgniteFuture<Void>)createFuture(ctx.cache().localLoadCacheAsync(p, args));
 
             return (IgniteFuture<Void>)createFuture(ctx.cache().globalLoadCacheAsync(p, args));
@@ -593,7 +591,7 @@ public class IgniteCacheProxyImpl<K, V> implements IgniteCacheProxy<K, V> {
     private ClusterGroup projection(boolean loc) {
         GridCacheContext<K, V> ctx = getContextSafe();
 
-        if (loc || ctx.isLocal() || ctx.isReplicatedAffinityNode())
+        if (loc || ctx.isReplicatedAffinityNode())
             return ctx.kernalContext().grid().cluster().forLocal();
 
         if (ctx.isReplicated())
@@ -2129,14 +2127,18 @@ public class IgniteCacheProxyImpl<K, V> implements IgniteCacheProxy<K, V> {
             this.restartFut.compareAndSet(restartFut, null);
 
             this.ctx = ctx;
-            oldContext = null;
             this.delegate = delegate;
+
+            oldContext = null;
 
             restartFut.onDone();
         }
 
-        assert delegate == null || cacheName.equals(delegate.name()) && cacheName.equals(ctx.name()) :
-                "ctx.name=" + ctx.name() + ", delegate.name=" + delegate.name() + ", cacheName=" + cacheName;
+        assert (delegate == null && ctx == null) ||
+            ctx != null && delegate != null && cacheName.equals(delegate.name()) && cacheName.equals(ctx.name()) :
+                "ctx.name=" + (ctx != null ? ctx.name() : "null") + ", " +
+                "delegate.name=" + (delegate != null ? delegate.name() : "null") + ", " +
+                "cacheName=" + cacheName;
     }
 
     /**

@@ -51,9 +51,6 @@ public class GridAffinityProcessorMemoryLeakTest extends GridCommonAbstractTest 
         cacheCfg.setName(CACHE_NAME);
 
         cacheCfg.setStoreKeepBinary(true);
-
-        cacheCfg.setCacheMode(CacheMode.LOCAL);
-
         cfg.setCacheConfiguration(cacheCfg);
 
         return cfg;
@@ -92,7 +89,7 @@ public class GridAffinityProcessorMemoryLeakTest extends GridCommonAbstractTest 
 
         do {
             try {
-                cache = createLocalCache(ignite, cnt);
+                cache = createCache(ignite, cnt);
 
                 cache.put("Key" + cnt, "Value" + cnt);
 
@@ -125,18 +122,13 @@ public class GridAffinityProcessorMemoryLeakTest extends GridCommonAbstractTest 
      * @param id unique id for local cache.
      * @return local cache instance.
      */
-    private static IgniteCache<String, String> createLocalCache(Ignite ignite, long id) {
-        final String cacheName = "localCache" + id;
+    private static IgniteCache<String, String> createCache(Ignite ignite, long id) {
+        final String cacheName = "cache" + id;
 
         final CacheConfiguration<String, String> cCfg = new CacheConfiguration<>();
 
         cCfg.setName(cacheName);
-
-        cCfg.setCacheMode(CacheMode.LOCAL);
-
         cCfg.setGroupName("some group");
-
-        ignite.destroyCache(cacheName); // Local cache is not really local - reference can be kept by other nodes if restart during the load happens.
 
         return ignite.createCache(cCfg).withKeepBinary();
     }

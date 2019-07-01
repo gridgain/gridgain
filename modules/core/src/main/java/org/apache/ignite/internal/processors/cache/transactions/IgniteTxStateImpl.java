@@ -23,7 +23,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-
 import org.apache.ignite.IgniteCacheRestartingException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -286,57 +285,26 @@ public class IgniteTxStateImpl extends IgniteTxLocalStateAdapter {
         if (activeCacheIds.isEmpty())
             return cctx.exchange().lastTopologyFuture();
 
-        GridCacheContext<?, ?> nonLocCtx = null;
+        GridCacheContext<?, ?> cacheCtx = cctx.cacheContext(F.nonNull(firstCacheId()));
 
-        for (int i = 0; i < activeCacheIds.size(); i++) {
-            int cacheId = activeCacheIds.get(i);
+        cacheCtx.topology().readLock();
 
-            GridCacheContext<?, ?> cacheCtx = cctx.cacheContext(cacheId);
-
-            if (!cacheCtx.isLocal()) {
-                nonLocCtx = cacheCtx;
-
-                break;
-            }
-        }
-
-        if (nonLocCtx == null)
-            return cctx.exchange().lastTopologyFuture();
-
-        nonLocCtx.topology().readLock();
-
-        if (nonLocCtx.topology().stopping()) {
+        if (cacheCtx.topology().stopping()) {
             fut.onDone(
-                cctx.cache().isCacheRestarting(nonLocCtx.name())?
-                    new IgniteCacheRestartingException(nonLocCtx.name()):
-                    new CacheStoppedException(nonLocCtx.name()));
+                cctx.cache().isCacheRestarting(cacheCtx.name())?
+                    new IgniteCacheRestartingException(cacheCtx.name()):
+                    new CacheStoppedException(cacheCtx.name()));
 
             return null;
         }
 
-        return nonLocCtx.topology().topologyVersionFuture();
+        return cacheCtx.topology().topologyVersionFuture();
     }
 
     /** {@inheritDoc} */
     @Override public void topologyReadUnlock(GridCacheSharedContext cctx) {
-        if (!activeCacheIds.isEmpty()) {
-            GridCacheContext<?, ?> nonLocCtx = null;
-
-            for (int i = 0; i < activeCacheIds.size(); i++) {
-                int cacheId = activeCacheIds.get(i);
-
-                GridCacheContext<?, ?> cacheCtx = cctx.cacheContext(cacheId);
-
-                if (!cacheCtx.isLocal()) {
-                    nonLocCtx = cacheCtx;
-
-                    break;
-                }
-            }
-
-            if (nonLocCtx != null)
-                nonLocCtx.topology().readUnlock();
-        }
+        if (!activeCacheIds.isEmpty())
+            cctx.cacheContext(F.nonNull(firstCacheId())).topology().readUnlock();
     }
 
     /** {@inheritDoc} */

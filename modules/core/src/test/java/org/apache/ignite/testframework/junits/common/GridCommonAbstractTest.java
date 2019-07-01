@@ -90,7 +90,6 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheAdapter;
-import org.apache.ignite.internal.processors.cache.local.GridLocalCache;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
@@ -127,7 +126,6 @@ import org.jetbrains.annotations.Nullable;
 import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
-import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheRebalanceMode.NONE;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isNearEnabled;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
@@ -308,13 +306,6 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
             res.add(entry.getKey());
 
         return res;
-    }
-
-    /**
-     * @return Cache.
-     */
-    protected <K, V> GridLocalCache<K, V> local() {
-        return (GridLocalCache<K, V>)((IgniteKernal)grid()).<K, V>internalCache(DEFAULT_CACHE_NAME);
     }
 
     /**
@@ -667,8 +658,7 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
                 if (cfg == null)
                     continue;
 
-                if (cfg.getCacheMode() != LOCAL &&
-                    cfg.getRebalanceMode() != NONE &&
+                if (cfg.getRebalanceMode() != NONE &&
                     g.cluster().nodes().size() > 1) {
                     AffinityFunction aff = cfg.getAffinity();
 

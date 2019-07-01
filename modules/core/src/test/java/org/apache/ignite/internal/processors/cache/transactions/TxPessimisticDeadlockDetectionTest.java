@@ -32,9 +32,9 @@ import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
@@ -49,7 +49,6 @@ import org.apache.ignite.transactions.TransactionDeadlockException;
 import org.apache.ignite.transactions.TransactionTimeoutException;
 import org.junit.Test;
 
-import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
 import static org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion.NONE;
@@ -149,29 +148,6 @@ public class TxPessimisticDeadlockDetectionTest extends AbstractDeadlockDetectio
     }
 
     /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testDeadlocksLocal() throws Exception {
-        for (CacheWriteSynchronizationMode syncMode : CacheWriteSynchronizationMode.values()) {
-            IgniteCache cache = null;
-
-            try {
-                cache = createCache(LOCAL, syncMode, false);
-
-                awaitPartitionMapExchange();
-
-                doTestDeadlock(2, true, true, false, ORDINAL_START_KEY);
-                doTestDeadlock(2, true, true, false, CUSTOM_START_KEY);
-            }
-            finally {
-                if (cache != null)
-                    cache.destroy();
-            }
-        }
-    }
-
-    /**
      * @param cacheMode Cache mode.
      * @param syncMode Write sync mode.
      * @param near Near.
@@ -191,9 +167,6 @@ public class TxPessimisticDeadlockDetectionTest extends AbstractDeadlockDetectio
         ccfg.setBackups(1);
         ccfg.setNearConfiguration(near ? new NearCacheConfiguration() : null);
         ccfg.setWriteSynchronizationMode(syncMode);
-
-        if (cacheMode == LOCAL)
-            ccfg.setDataRegionName("dfltPlc");
 
         IgniteCache cache = ignite(0).createCache(ccfg);
 

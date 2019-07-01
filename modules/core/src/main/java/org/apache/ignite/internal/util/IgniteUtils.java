@@ -226,6 +226,7 @@ import org.apache.ignite.internal.util.ipc.shmem.IpcSharedMemoryNativeLoader;
 import org.apache.ignite.internal.util.lang.GridClosureException;
 import org.apache.ignite.internal.util.lang.GridPeerDeployAware;
 import org.apache.ignite.internal.util.lang.GridTuple;
+import org.apache.ignite.internal.util.lang.IgniteThrowableConsumer;
 import org.apache.ignite.internal.util.lang.IgniteThrowableFunction;
 import org.apache.ignite.internal.util.typedef.C1;
 import org.apache.ignite.internal.util.typedef.CI1;
@@ -10930,12 +10931,48 @@ public abstract class IgniteUtils {
      * @param <T> Type of data.
      * @throws IgniteCheckedException if parallel execution was failed.
      */
+    public static <T> void doInParallel(
+        ExecutorService executorSvc,
+        Collection<T> srcDatas,
+        IgniteThrowableConsumer<T> operation
+    ) throws IgniteCheckedException, IgniteInterruptedCheckedException {
+        doInParallel(srcDatas.size(), executorSvc, srcDatas, toFunction(operation));
+    }
+
+    /**
+     * Execute operation on data in parallel.
+     *
+     * @param executorSvc Service for parallel execution.
+     * @param srcDatas List of data for parallelization.
+     * @param operation Logic for execution of on each item of data.
+     * @param <T> Type of data.
+     * @throws IgniteCheckedException if parallel execution was failed.
+     */
     public static <T, R> Collection<R> doInParallel(
         ExecutorService executorSvc,
         Collection<T> srcDatas,
         IgniteThrowableFunction<T, R> operation
     ) throws IgniteCheckedException, IgniteInterruptedCheckedException {
         return doInParallel(srcDatas.size(), executorSvc, srcDatas, operation);
+    }
+
+    /**
+     * Execute operation on data in parallel.
+     *
+     * @param parallelismLvl Number of threads on which it should be executed.
+     * @param executorSvc Service for parallel execution.
+     * @param srcDatas List of data for parallelization.
+     * @param operation Logic for execution of on each item of data.
+     * @param <T> Type of data.
+     * @throws IgniteCheckedException if parallel execution was failed.
+     */
+    public static <T> void doInParallel(
+        int parallelismLvl,
+        ExecutorService executorSvc,
+        Collection<T> srcDatas,
+        IgniteThrowableConsumer<T> operation
+    ) throws IgniteCheckedException, IgniteInterruptedCheckedException {
+        doInParallel(parallelismLvl, executorSvc, srcDatas, toFunction(operation), false);
     }
 
     /**
@@ -10966,6 +11003,25 @@ public abstract class IgniteUtils {
      * @param srcDatas List of data for parallelization.
      * @param operation Logic for execution of on each item of data.
      * @param <T> Type of data.
+     * @throws IgniteCheckedException if parallel execution was failed.
+     */
+    public static <T> void doInParallelUninterruptibly(
+        int parallelismLvl,
+        ExecutorService executorSvc,
+        Collection<T> srcDatas,
+        IgniteThrowableConsumer<T> operation
+    ) throws IgniteCheckedException, IgniteInterruptedCheckedException {
+        doInParallel(parallelismLvl, executorSvc, srcDatas, toFunction(operation), true);
+    }
+
+    /**
+     * Execute operation on data in parallel uninterruptibly.
+     *
+     * @param parallelismLvl Number of threads on which it should be executed.
+     * @param executorSvc Service for parallel execution.
+     * @param srcDatas List of data for parallelization.
+     * @param operation Logic for execution of on each item of data.
+     * @param <T> Type of data.
      * @param <R> Type of return value.
      * @throws IgniteCheckedException if parallel execution was failed.
      */
@@ -10976,6 +11032,15 @@ public abstract class IgniteUtils {
         IgniteThrowableFunction<T, R> operation
     ) throws IgniteCheckedException, IgniteInterruptedCheckedException {
         return doInParallel(parallelismLvl, executorSvc, srcDatas, operation, true);
+    }
+
+    /** */
+    private static <T> IgniteThrowableFunction<T, Void> toFunction(IgniteThrowableConsumer<T> operation) {
+        return t -> {
+            operation.accept(t);
+
+            return null;
+        };
     }
 
     /**

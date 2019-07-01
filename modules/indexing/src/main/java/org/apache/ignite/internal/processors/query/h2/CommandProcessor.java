@@ -36,7 +36,6 @@ import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
-import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.QueryIndexType;
@@ -510,8 +509,6 @@ public class CommandProcessor {
 
                 assert tbl.rowDescriptor() != null;
 
-                ensureDdlSupported(tbl);
-
                 QueryIndex newIdx = new QueryIndex();
 
                 newIdx.setName(cmd0.indexName());
@@ -544,7 +541,6 @@ public class CommandProcessor {
                 GridH2Table tbl = schemaMgr.dataTableForIndex(cmd0.schemaName(), cmd0.indexName());
 
                 if (tbl != null) {
-                    ensureDdlSupported(tbl);
 
                     fut = ctx.query().dynamicIndexDrop(tbl.cacheName(), cmd0.schemaName(), cmd0.indexName(),
                         cmd0.ifExists());
@@ -645,8 +641,6 @@ public class CommandProcessor {
 
                 assert tbl.rowDescriptor() != null;
 
-                ensureDdlSupported(tbl);
-
                 QueryIndex newIdx = new QueryIndex();
 
                 newIdx.setName(cmd.index().getName());
@@ -680,7 +674,6 @@ public class CommandProcessor {
                 GridH2Table tbl = schemaMgr.dataTableForIndex(cmd.schemaName(), cmd.indexName());
 
                 if (tbl != null) {
-                    ensureDdlSupported(tbl);
 
                     fut = ctx.query().dynamicIndexDrop(tbl.cacheName(), cmd.schemaName(), cmd.indexName(),
                         cmd.ifExists());
@@ -896,18 +889,6 @@ public class CommandProcessor {
     private static void isDdlOnSchemaSupported(String schemaName) {
         if (F.eq(QueryUtils.SCHEMA_SYS, schemaName))
             throw new IgniteSQLException("DDL statements are not supported on " + schemaName + " schema",
-                IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
-    }
-
-    /**
-     * Check if table supports DDL statement.
-     *
-     * @param tbl Table.
-     * @throws IgniteSQLException If failed.
-     */
-    private static void ensureDdlSupported(GridH2Table tbl) throws IgniteSQLException {
-        if (tbl.cacheInfo().config().getCacheMode() == CacheMode.LOCAL)
-            throw new IgniteSQLException("DDL statements are not supported on LOCAL caches",
                 IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
     }
 

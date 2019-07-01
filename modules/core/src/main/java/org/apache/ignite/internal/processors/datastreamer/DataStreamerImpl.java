@@ -52,7 +52,6 @@ import org.apache.ignite.IgniteDataStreamerTimeoutException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteInterruptedException;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterTopologyException;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -371,9 +370,6 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
 
         if (cache == null) { // Possible, cache is not configured on node.
             assert ccfg != null;
-
-            if (ccfg.getCacheMode() == CacheMode.LOCAL)
-                throw new CacheException("Impossible to load Local cache configured remotely.");
 
             ctx.grid().getOrCreateCache(ccfg);
         }
@@ -845,14 +841,11 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
 
             AffinityTopologyVersion topVer;
 
-            if (!cctx.isLocal())
-                topVer = ctx.cache().context().exchange().lastTopologyFuture().get();
-            else
-                topVer = ctx.cache().context().exchange().readyAffinityVersion();
+            topVer = ctx.cache().context().exchange().lastTopologyFuture().get();
 
             List<List<ClusterNode>> assignments = cctx.affinity().assignments(topVer);
 
-            if (!allowOverwrite() && !cctx.isLocal()) { // Cases where cctx required.
+            if (!allowOverwrite()) { // Cases where cctx required.
                 gate = cctx.gate();
 
                 gate.enter();
@@ -1096,9 +1089,7 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
         List<ClusterNode> res = null;
 
         if (!allowOverwrite())
-            res = cctx.isLocal() ?
-                aff.mapKeyToPrimaryAndBackups(cacheName, key, topVer) :
-                cctx.topology().nodes(cctx.affinity().partition(key), topVer);
+            res = cctx.topology().nodes(cctx.affinity().partition(key), topVer);
         else {
             ClusterNode node = aff.mapKeyToNode(cacheName, key, topVer);
 
@@ -1766,7 +1757,7 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
             try {
                 GridCacheContext cctx = ctx.cache().internalCache(cacheName).context();
 
-                final boolean lockTop = !cctx.isLocal() && !allowOverwrite();
+                final boolean lockTop = !allowOverwrite();
 
                 GridDhtTopologyFuture topWaitFut = null;
 
@@ -2226,32 +2217,30 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
                     try {
                         e.getKey().finishUnmarshal(cctx.cacheObjectContext(), cctx.deploy().globalLoader());
 
-                        if (!cctx.isLocal()) {
-                            int p = cctx.affinity().partition(e.getKey());
+                        int p = cctx.affinity().partition(e.getKey());
 
-                            if (ignoredParts.contains(p))
+                        if (ignoredParts.contains(p))
+                            continue;
+
+                        if (!reservedParts.contains(p)) {
+                            GridDhtLocalPartition part = cctx.topology().localPartition(p, topVer, true);
+
+                            if (!part.reserve()) {
+                                ignoredParts.add(p);
+
                                 continue;
+                            }
+                            else {
+                                // We must not allow to read from RENTING partitions.
+                                if (part.state() == GridDhtPartitionState.RENTING) {
+                                    part.release();
 
-                            if (!reservedParts.contains(p)) {
-                                GridDhtLocalPartition part = cctx.topology().localPartition(p, topVer, true);
-
-                                if (!part.reserve()) {
                                     ignoredParts.add(p);
 
                                     continue;
                                 }
-                                else {
-                                    // We must not allow to read from RENTING partitions.
-                                    if (part.state() == GridDhtPartitionState.RENTING) {
-                                        part.release();
 
-                                        ignoredParts.add(p);
-
-                                        continue;
-                                    }
-
-                                    reservedParts.add(p);
-                                }
+                                reservedParts.add(p);
                             }
                         }
 
@@ -2268,12 +2257,10 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
                             expiryTime = CU.toExpireTime(ttl);
                         }
 
-                        if (topFut != null) {
-                            Throwable err = topFut.validateCache(cctx, false, false, entry.key(), null);
+                        Throwable err = topFut.validateCache(cctx, false, false, entry.key(), null);
 
-                            if (err != null)
-                                throw new IgniteCheckedException(err);
-                        }
+                        if (err != null)
+                            throw new IgniteCheckedException(err);
 
                         boolean primary = cctx.affinity().primaryByKey(cctx.localNode(), entry.key(), topVer);
 

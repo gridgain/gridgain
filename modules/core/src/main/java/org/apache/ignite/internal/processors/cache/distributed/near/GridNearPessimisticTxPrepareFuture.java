@@ -180,7 +180,7 @@ public class GridNearPessimisticTxPrepareFuture extends GridNearTxPrepareFutureA
         }
 
         try {
-            tx.userPrepare(Collections.<IgniteTxEntry>emptyList());
+            tx.userPrepare(Collections.emptyList());
 
             cctx.mvcc().addFuture(this);
 
@@ -308,13 +308,9 @@ public class GridNearPessimisticTxPrepareFuture extends GridNearTxPrepareFutureA
 
                 List<ClusterNode> nodes;
 
-                if (!cacheCtx.isLocal()) {
-                    GridDhtPartitionTopology top = cacheCtx.topology();
+                GridDhtPartitionTopology top = cacheCtx.topology();
 
-                    nodes = top.nodes(cacheCtx.affinity().partition(txEntry.key()), topVer);
-                }
-                else
-                    nodes = cacheCtx.affinity().nodesByKey(txEntry.key(), topVer);
+                nodes = top.nodes(cacheCtx.affinity().partition(txEntry.key()), topVer);
 
                 if (F.isEmpty(nodes)) {
                     onDone(new ClusterTopologyServerNotFoundException("Failed to map keys to nodes (partition " +

@@ -44,9 +44,9 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
+import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.query.GridCacheSqlIndexMetadata;
 import org.apache.ignite.internal.processors.cache.query.GridCacheSqlMetadata;
-import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.datastructures.GridCacheAtomicLongValue;
 import org.apache.ignite.internal.processors.datastructures.GridCacheInternalKeyImpl;
 import org.apache.ignite.internal.processors.query.GridQueryFieldMetadata;
@@ -821,11 +821,7 @@ public abstract class IgniteCacheAbstractFieldsQuerySelfTest extends GridCommonA
         Collection<List<?>> res = qry.getAll();
 
         assert res != null;
-
-        if (cacheMode() == CacheMode.LOCAL)
-            assert res.size() == 20000;
-        else
-            assert res.size() <= 20000;
+        assert res.size() <= 20000;
 
         for (List<?> row : res) {
             assert (Integer)row.get(0) >= 100;

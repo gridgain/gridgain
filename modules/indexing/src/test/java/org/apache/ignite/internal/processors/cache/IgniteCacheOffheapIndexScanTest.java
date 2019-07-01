@@ -28,8 +28,6 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
-import static org.apache.ignite.cache.CacheMode.LOCAL;
-
 /**
  * Based scanCount with offheap index issue.
  */
@@ -43,7 +41,6 @@ public class IgniteCacheOffheapIndexScanTest extends GridCommonAbstractTest {
 
         CacheConfiguration<?,?> cacheCfg = new CacheConfiguration<>(DEFAULT_CACHE_NAME);
 
-        cacheCfg.setCacheMode(LOCAL);
         cacheCfg.setIndexedTypes(
             Integer.class, Person.class
         );
@@ -55,9 +52,7 @@ public class IgniteCacheOffheapIndexScanTest extends GridCommonAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
-        startGridsMultiThreaded(1, false);
-
-        cache = grid(0).cache(DEFAULT_CACHE_NAME);
+        cache = startGrid().cache(DEFAULT_CACHE_NAME);
     }
 
     /** {@inheritDoc} */

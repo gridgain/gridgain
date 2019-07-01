@@ -73,7 +73,6 @@ import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCach
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTransactionalCache;
 import org.apache.ignite.internal.processors.cache.dr.GridCacheDrManager;
 import org.apache.ignite.internal.processors.cache.jta.CacheJtaManagerAdapter;
-import org.apache.ignite.internal.processors.cache.local.GridLocalCache;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryManager;
 import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryManager;
@@ -629,13 +628,6 @@ public class GridCacheContext<K, V> implements Externalizable {
     }
 
     /**
-     * @return Local cache.
-     */
-    public GridLocalCache<K, V> local() {
-        return (GridLocalCache<K, V>)cache;
-    }
-
-    /**
      * @return {@code True} if cache is DHT.
      */
     public boolean isDht() {
@@ -661,13 +653,6 @@ public class GridCacheContext<K, V> implements Externalizable {
      */
     public boolean isNear() {
         return cache != null && cache.isNear();
-    }
-
-    /**
-     * @return {@code True} if cache is local.
-     */
-    public boolean isLocal() {
-        return cache != null && cache.isLocal();
     }
 
     /**

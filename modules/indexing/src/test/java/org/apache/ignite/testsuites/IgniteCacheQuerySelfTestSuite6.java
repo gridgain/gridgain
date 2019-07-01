@@ -29,7 +29,6 @@ import org.apache.ignite.internal.processors.cache.query.continuous.CacheKeepBin
 import org.apache.ignite.internal.processors.cache.query.continuous.CacheKeepBinaryIterationStoreEnabledTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.CacheKeepBinaryIterationTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.ContinuousQueryMarshallerTest;
-import org.apache.ignite.internal.processors.cache.query.continuous.GridCacheContinuousQueryLocalAtomicSelfTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.GridCacheContinuousQueryMultiNodesFilteringTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.GridCacheContinuousQueryPartitionAtomicOneNodeTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.GridCacheContinuousQueryPartitionedOnlySelfTest;
@@ -48,7 +47,6 @@ import org.junit.runners.Suite;
 @Suite.SuiteClasses({
     GridCacheContinuousQueryPartitionAtomicOneNodeTest.class,
     CacheContinuousWithTransformerPartitionedSelfTest.class,
-    GridCacheContinuousQueryLocalAtomicSelfTest.class,
     GridCacheContinuousQueryReplicatedAtomicOneNodeTest.class,
     ContinuousQueryMarshallerTest.class,
     GridCacheContinuousQueryReplicatedAtomicSelfTest.class,

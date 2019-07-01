@@ -56,7 +56,7 @@ public class GridCacheIterator<K, V, T> implements GridSerializableIterator<T> {
     ) {
         this.cctx = cctx;
 
-        it = F.iterator0(c, false, filter);
+        it = F.iterator(c, false, filter);
 
         this.trans = trans;
     }

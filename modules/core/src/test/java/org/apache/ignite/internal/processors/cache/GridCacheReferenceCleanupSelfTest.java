@@ -33,7 +33,6 @@ import org.apache.ignite.internal.util.typedef.CA;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.junit.Test;
@@ -99,21 +98,6 @@ public class GridCacheReferenceCleanupSelfTest extends GridCommonAbstractTest {
 
     /** @throws Exception If failed. */
     @Test
-    public void testAtomicLongLocal() throws Exception {
-        MvccFeatureChecker.skipIfNotSupported(MvccFeatureChecker.Feature.LOCAL_CACHE);
-
-        mode = CacheMode.LOCAL;
-
-        try {
-            checkReferenceCleanup(atomicLongCallable());
-        }
-        finally {
-            stopAllGrids();
-        }
-    }
-
-    /** @throws Exception If failed. */
-    @Test
     public void testOneAsyncOpPartitioned() throws Exception {
         mode = CacheMode.PARTITIONED;
 
@@ -133,21 +117,6 @@ public class GridCacheReferenceCleanupSelfTest extends GridCommonAbstractTest {
         mode = CacheMode.REPLICATED;
 
         startGrids(2);
-
-        try {
-            checkReferenceCleanup(oneAsyncOpCallable());
-        }
-        finally {
-            stopAllGrids();
-        }
-    }
-
-    /** @throws Exception If failed. */
-    @Test
-    public void testOneAsyncOpLocal() throws Exception {
-        MvccFeatureChecker.skipIfNotSupported(MvccFeatureChecker.Feature.LOCAL_CACHE);
-
-        mode = CacheMode.LOCAL;
 
         try {
             checkReferenceCleanup(oneAsyncOpCallable());
@@ -187,20 +156,7 @@ public class GridCacheReferenceCleanupSelfTest extends GridCommonAbstractTest {
         }
     }
 
-    /** @throws Exception If failed. */
-    @Test
-    public void testSeveralAsyncOpsLocal() throws Exception {
-        MvccFeatureChecker.skipIfNotSupported(MvccFeatureChecker.Feature.LOCAL_CACHE);
 
-        mode = CacheMode.LOCAL;
-
-        try {
-            checkReferenceCleanup(severalAsyncOpsCallable());
-        }
-        finally {
-            stopAllGrids();
-        }
-    }
 
     /** @throws Exception If failed. */
     @Test
@@ -234,21 +190,6 @@ public class GridCacheReferenceCleanupSelfTest extends GridCommonAbstractTest {
 
     /** @throws Exception If failed. */
     @Test
-    public void testSyncOpAsyncCommitLocal() throws Exception {
-        MvccFeatureChecker.skipIfNotSupported(MvccFeatureChecker.Feature.LOCAL_CACHE);
-
-        mode = CacheMode.LOCAL;
-
-        try {
-            checkReferenceCleanup(syncOpAsyncCommitCallable());
-        }
-        finally {
-            stopAllGrids();
-        }
-    }
-
-    /** @throws Exception If failed. */
-    @Test
     public void testAsyncOpsAsyncCommitPartitioned() throws Exception {
         mode = CacheMode.PARTITIONED;
 
@@ -268,21 +209,6 @@ public class GridCacheReferenceCleanupSelfTest extends GridCommonAbstractTest {
         mode = CacheMode.REPLICATED;
 
         startGrids(2);
-
-        try {
-            checkReferenceCleanup(asyncOpsAsyncCommitCallable());
-        }
-        finally {
-            stopAllGrids();
-        }
-    }
-
-    /** @throws Exception If failed. */
-    @Test
-    public void testAsyncOpsAsyncCommitLocal() throws Exception {
-        MvccFeatureChecker.skipIfNotSupported(MvccFeatureChecker.Feature.LOCAL_CACHE);
-
-        mode = CacheMode.LOCAL;
 
         try {
             checkReferenceCleanup(asyncOpsAsyncCommitCallable());

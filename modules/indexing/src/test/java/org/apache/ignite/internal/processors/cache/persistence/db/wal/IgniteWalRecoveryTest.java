@@ -62,6 +62,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
+import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
 import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.pagemem.wal.WALIterator;
@@ -88,7 +89,6 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.Compactab
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.TrackingPageIO;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
-import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
 import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.lang.IgniteInClosureX;
 import org.apache.ignite.internal.util.typedef.F;
@@ -188,11 +188,7 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
         ccfg.setNodeFilter(new RemoteNodeFilter());
         ccfg.setIndexedTypes(Integer.class, IndexedObject.class);
 
-        CacheConfiguration<Integer, IndexedObject> locCcfg = new CacheConfiguration<>(LOC_CACHE_NAME);
-        locCcfg.setCacheMode(CacheMode.LOCAL);
-        locCcfg.setIndexedTypes(Integer.class, IndexedObject.class);
-
-        cfg.setCacheConfiguration(ccfg, locCcfg);
+        cfg.setCacheConfiguration(ccfg);
 
         DataStorageConfiguration dbCfg = new DataStorageConfiguration();
 

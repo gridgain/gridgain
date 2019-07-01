@@ -16,14 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache;
 
-import javax.cache.Cache;
-import javax.cache.CacheException;
-import javax.cache.configuration.Factory;
-import javax.cache.expiry.Duration;
-import javax.cache.expiry.ExpiryPolicy;
-import javax.cache.integration.CacheLoader;
-import javax.cache.integration.CacheWriter;
-import javax.cache.integration.CacheWriterException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -40,6 +32,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.LongAdder;
+import javax.cache.Cache;
+import javax.cache.CacheException;
+import javax.cache.configuration.Factory;
+import javax.cache.expiry.Duration;
+import javax.cache.expiry.ExpiryPolicy;
+import javax.cache.integration.CacheLoader;
+import javax.cache.integration.CacheWriter;
+import javax.cache.integration.CacheWriterException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -109,7 +109,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SKIP_CONFIGURATION_CONSISTENCY_CHECK;
-import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
 import static org.apache.ignite.cache.CacheRebalanceMode.ASYNC;
@@ -483,9 +482,6 @@ public class GridCacheUtils {
      */
     @SuppressWarnings("SimplifiableIfStatement")
     public static boolean isNearEnabled(CacheConfiguration cfg) {
-        if (cfg.getCacheMode() == LOCAL)
-            return false;
-
         return cfg.getNearConfiguration() != null;
     }
 
@@ -1612,14 +1608,6 @@ public class GridCacheUtils {
             else
                 cfg.setAffinity(new GridCacheProcessor.LocalAffinityFunction());
         }
-        else {
-            if (cfg.getCacheMode() == LOCAL && !(cfg.getAffinity() instanceof GridCacheProcessor.LocalAffinityFunction)) {
-                cfg.setAffinity(new GridCacheProcessor.LocalAffinityFunction());
-
-                U.warn(log, "AffinityFunction configuration parameter will be ignored for local cache" +
-                    " [cacheName=" + U.maskName(cfg.getName()) + ']');
-            }
-        }
 
         if (cfg.getCacheMode() == REPLICATED)
             cfg.setBackups(Integer.MAX_VALUE);
@@ -1910,7 +1898,7 @@ public class GridCacheUtils {
             if (cctx == null)
                 throw new CacheException("Failed to find cache.");
 
-            if (!cctx.isLocal() && !cctx.isReplicated())
+            if (!cctx.isReplicated())
                 return cctx;
         }
 
@@ -1929,7 +1917,7 @@ public class GridCacheUtils {
             if (cctx == null)
                 throw new CacheException("Failed to find cache.");
 
-            if (!cctx.isLocal() && !cctx.isReplicated())
+            if (!cctx.isReplicated())
                 return cctx;
         }
 

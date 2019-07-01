@@ -1459,7 +1459,7 @@ public class GridServiceProcessor extends ServiceProcessorAdapter implements Ign
         try {
             IgniteInternalCache<Object, Object> cache = serviceCache();
 
-            GridCacheQueryManager qryMgr = cache.context().queries();
+            GridCacheQueryManager<Object, Object> qryMgr = cache.context().queries();
 
             CacheQuery<Map.Entry<Object, Object>> qry = qryMgr.createScanQuery(p, null, false, null);
 

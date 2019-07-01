@@ -31,9 +31,9 @@
         <property name="cacheConfiguration">
             <list>
                 <bean class="org.apache.ignite.configuration.CacheConfiguration">
-                    <property name="name" value="local"/>
+                    <property name="name" value="partitioned"/>
 
-                    <property name="cacheMode" value="LOCAL"/>
+                    <property name="cacheMode" value="PARTITIONED"/>
 
                     <property name="swapEnabled" value="false"/>
 

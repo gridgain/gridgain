@@ -1056,11 +1056,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
     /** {@inheritDoc} */
     @Override public Iterable<GridDhtLocalPartition> currentLocalPartitions() {
-        return new Iterable<GridDhtLocalPartition>() {
-            @Override public Iterator<GridDhtLocalPartition> iterator() {
-                return new CurrentPartitionsIterator();
-            }
-        };
+        return CurrentPartitionsIterator::new;
     }
 
     /** {@inheritDoc} */
@@ -3121,11 +3117,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             advance();
 
             return retVal;
-        }
-
-        /** {@inheritDoc} */
-        @Override public void remove() {
-            throw new UnsupportedOperationException("remove");
         }
     }
 

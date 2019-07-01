@@ -110,6 +110,7 @@ import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteReducer;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -1352,10 +1353,10 @@ public class GridFunc {
      * @param <T> Type of the collection elements.
      * @return Iterator from given collection and optional filtering predicate.
      */
-    @SuppressWarnings({"unchecked"})
-    public static <T> GridIterator<T> iterator0(Iterable<? extends T> c, boolean readOnly,
+    @SafeVarargs
+    public static <T> GridIterator<T> iterator(Iterable<? extends T> c, boolean readOnly,
         IgnitePredicate<? super T>... p) {
-        return F.iterator(c, IDENTITY, readOnly, p);
+        return iterator(c, IDENTITY, readOnly, p);
     }
 
     /**
@@ -1374,6 +1375,7 @@ public class GridFunc {
      * @param <T2> Type of returned elements.
      * @return Iterator from given collection and optional filtering predicate.
      */
+    @SafeVarargs
     public static <T1, T2> GridIterator<T2> iterator(final Iterable<? extends T1> c,
         final IgniteClosure<? super T1, T2> trans, final boolean readOnly,
         @Nullable final IgnitePredicate<? super T1>... p) {
@@ -3350,5 +3352,27 @@ public class GridFunc {
                 return dfltVal;
             }
         };
+    }
+
+    /**
+     * Convenient method to assert that used object is not null.
+     * @param obj Object.
+     * @param <T> Object type.
+     * @return Passed object.
+     */
+    @NotNull public static <T> T nonNull(T obj) {
+        assert obj != null;
+
+        return obj;
+    }
+
+    /**
+     * Convenient method to cast object to needed type.
+     * @param obj Object.
+     * @param <T> Object type.
+     * @return Passed object.
+     */
+    public static <T> T cast(Object obj) {
+        return (T)obj;
     }
 }

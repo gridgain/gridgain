@@ -101,6 +101,7 @@ import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.lang.IgniteInClosure2X;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -310,20 +311,18 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                 // localPartition will not acquire writeLock here because create=false.
                 GridDhtLocalPartition part = null;
 
-                if (!grp.isLocal()) {
-                    if (beforeDestroy)
-                        state = GridDhtPartitionState.EVICTED;
-                    else {
-                        part = getPartition(store);
+                if (beforeDestroy)
+                    state = GridDhtPartitionState.EVICTED;
+                else {
+                    part = getPartition(store);
 
-                        if (part != null && part.state() != GridDhtPartitionState.EVICTED)
-                            state = part.state();
-                    }
-
-                    // Do not save meta for evicted partitions on next checkpoints.
-                    if (state == null)
-                        return;
+                    if (part != null && part.state() != GridDhtPartitionState.EVICTED)
+                        state = part.state();
                 }
+
+                // Do not save meta for evicted partitions on next checkpoints.
+                if (state == null)
+                    return;
 
                 int grpId = grp.groupId();
                 long partMetaId = pageMem.partitionMetaPageId(grpId, store.partId());
@@ -384,14 +383,11 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         if (changed)
                             partStore.saveMetadata();
 
-                        changed |= io.setUpdateCounter(partMetaPageAddr, updCntr);
+                        changed  = io.setUpdateCounter(partMetaPageAddr, updCntr);
                         changed |= io.setGlobalRemoveId(partMetaPageAddr, rmvId);
                         changed |= io.setSize(partMetaPageAddr, size);
 
-                        if (state != null)
-                            changed |= io.setPartitionState(partMetaPageAddr, (byte)state.ordinal());
-                        else
-                            assert grp.isLocal() : grp.cacheOrGroupName();
+                        changed |= io.setPartitionState(partMetaPageAddr, (byte)state.ordinal());
 
                         long cntrsPageId;
 
@@ -420,13 +416,11 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         int pageCnt;
 
                         if (needSnapshot) {
-                            pageCnt = this.ctx.pageStore().pages(grpId, store.partId());
+                            pageCnt = F.nonNull(this.ctx.pageStore()).pages(grpId, store.partId());
 
                             io.setCandidatePageCount(partMetaPageAddr, size == 0 ? 0 : pageCnt);
 
                             if (state == OWNING) {
-                                assert part != null;
-
                                 if (!addPartition(
                                     part,
                                     ctx.partitionStatMap(),
@@ -434,7 +428,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                                     io,
                                     grpId,
                                     store.partId(),
-                                    this.ctx.pageStore().pages(grpId, store.partId()),
+                                    pageCnt,
                                     store.fullSize()
                                 ))
                                     U.warn(log, "Partition was concurrently evicted grpId=" + grpId +
@@ -462,7 +456,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                                 rmvId,
                                 (int)size, // TODO: Partition size may be long
                                 cntrsPageId,
-                                state == null ? -1 : (byte)state.ordinal(),
+                                (byte)state.ordinal(),
                                 pageCnt,
                                 link
                             ));
@@ -484,7 +478,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
     /** {@inheritDoc} */
     @Override public long restorePartitionStates(Map<GroupPartitionId, Integer> partitionRecoveryStates) throws IgniteCheckedException {
-        if (grp.isLocal() || !grp.affinityNode() || !grp.dataRegion().config().isPersistenceEnabled())
+        if (!grp.affinityNode() || !grp.dataRegion().config().isPersistenceEnabled())
             return 0;
 
         if (partitionStatesRestored)
@@ -639,8 +633,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
      * @return corresponding to store local partition
      */
     private GridDhtLocalPartition getPartition(CacheDataStore store) {
-        return grp.topology().localPartition(store.partId(),
-            AffinityTopologyVersion.NONE, false, true);
+        return grp.topology().localPartition(store.partId(), AffinityTopologyVersion.NONE, false, true);
     }
 
     /**
@@ -1069,12 +1062,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
     /** {@inheritDoc} */
     @Override public void preloadPartition(int part) throws IgniteCheckedException {
-        if (grp.isLocal()) {
-            dataStore(part).preload();
-
-            return;
-        }
-
         GridDhtLocalPartition locPart = grp.topology().localPartition(part, AffinityTopologyVersion.NONE, false, false);
 
         assert locPart != null && locPart.reservations() > 0;

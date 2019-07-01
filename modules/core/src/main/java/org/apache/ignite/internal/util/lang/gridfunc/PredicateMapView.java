@@ -62,7 +62,7 @@ public class PredicateMapView<K, V> extends GridSerializableMap<K, V> {
         return new GridSerializableSet<Entry<K, V>>() {
             @NotNull
             @Override public Iterator<Entry<K, V>> iterator() {
-                return GridFunc.iterator0(map.entrySet(), false, entryPred);
+                return GridFunc.iterator(map.entrySet(), false, entryPred);
             }
 
             @Override public int size() {

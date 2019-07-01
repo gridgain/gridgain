@@ -40,9 +40,6 @@ import org.jetbrains.annotations.Nullable;
  */
 public class GridCacheAffinityManager extends GridCacheManagerAdapter {
     /** */
-    private static final AffinityTopologyVersion LOC_CACHE_TOP_VER = new AffinityTopologyVersion(1);
-
-    /** */
     private static final String FAILED_TO_FIND_CACHE_ERR_MSG = "Failed to find cache (cache was not started " +
         "yet or cache was already stopped): ";
 
@@ -61,13 +58,6 @@ public class GridCacheAffinityManager extends GridCacheManagerAdapter {
         affMapper = cctx.config().getAffinityMapper();
 
         aff = cctx.group().affinity();
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void onKernalStart0() throws IgniteCheckedException {
-        if (cctx.isLocal())
-            // No discovery event needed for local affinity.
-            aff.calculate(LOC_CACHE_TOP_VER, null, null);
     }
 
     /** {@inheritDoc} */
@@ -94,8 +84,6 @@ public class GridCacheAffinityManager extends GridCacheManagerAdapter {
      * @return Affinity ready future.
      */
     public IgniteInternalFuture<AffinityTopologyVersion> affinityReadyFuture(AffinityTopologyVersion topVer) {
-        assert !cctx.isLocal();
-
         IgniteInternalFuture<AffinityTopologyVersion> fut = aff.readyFuture(topVer);
 
         return fut != null ? fut : new GridFinishedFuture<>(aff.lastVersion());
@@ -109,8 +97,6 @@ public class GridCacheAffinityManager extends GridCacheManagerAdapter {
      * @return Affinity ready future or {@code null}.
      */
     @Nullable public IgniteInternalFuture<AffinityTopologyVersion> affinityReadyFuturex(AffinityTopologyVersion topVer) {
-        assert !cctx.isLocal();
-
         return aff.readyFuture(topVer);
     }
 
@@ -119,9 +105,6 @@ public class GridCacheAffinityManager extends GridCacheManagerAdapter {
      * @return Affinity assignments.
      */
     public List<List<ClusterNode>> assignments(AffinityTopologyVersion topVer) {
-        if (cctx.isLocal())
-            topVer = LOC_CACHE_TOP_VER;
-
         GridAffinityAssignmentCache aff0 = aff;
 
         if (aff0 == null)
@@ -134,8 +117,6 @@ public class GridCacheAffinityManager extends GridCacheManagerAdapter {
      * @return Assignment.
      */
     public List<List<ClusterNode>> idealAssignment() {
-        assert !cctx.isLocal();
-
         return aff.idealAssignmentRaw();
     }
 
@@ -215,9 +196,6 @@ public class GridCacheAffinityManager extends GridCacheManagerAdapter {
      * @return Affinity nodes.
      */
     public List<ClusterNode> nodesByPartition(int part, AffinityTopologyVersion topVer) {
-        if (cctx.isLocal())
-            topVer = LOC_CACHE_TOP_VER;
-
         GridAffinityAssignmentCache aff0 = aff;
 
         if (aff0 == null)
@@ -243,9 +221,6 @@ public class GridCacheAffinityManager extends GridCacheManagerAdapter {
      * @return Affinity assignment.
      */
     public AffinityAssignment assignment(AffinityTopologyVersion topVer, AffinityTopologyVersion lastAffChangedTopVer) {
-        if (cctx.isLocal())
-            topVer = lastAffChangedTopVer = LOC_CACHE_TOP_VER;
-
         GridAffinityAssignmentCache aff0 = aff;
 
         if (aff0 == null)
@@ -375,9 +350,6 @@ public class GridCacheAffinityManager extends GridCacheManagerAdapter {
      * @return Partitions for which given node is primary.
      */
     public Set<Integer> primaryPartitions(UUID nodeId, AffinityTopologyVersion topVer) {
-        if (cctx.isLocal())
-            topVer = LOC_CACHE_TOP_VER;
-
         GridAffinityAssignmentCache aff0 = aff;
 
         if (aff0 == null)
@@ -392,9 +364,6 @@ public class GridCacheAffinityManager extends GridCacheManagerAdapter {
      * @return Partitions for which given node is backup.
      */
     public Set<Integer> backupPartitions(UUID nodeId, AffinityTopologyVersion topVer) {
-        if (cctx.isLocal())
-            topVer = LOC_CACHE_TOP_VER;
-
         GridAffinityAssignmentCache aff0 = aff;
 
         if (aff0 == null)
@@ -422,8 +391,6 @@ public class GridCacheAffinityManager extends GridCacheManagerAdapter {
      * @return {@code True} if primary changed or required affinity version not found in history.
      */
     public boolean primaryChanged(int part, AffinityTopologyVersion startVer, AffinityTopologyVersion endVer) {
-        assert !cctx.isLocal() : cctx.name();
-
         GridAffinityAssignmentCache aff0 = aff;
 
         if (aff0 == null)

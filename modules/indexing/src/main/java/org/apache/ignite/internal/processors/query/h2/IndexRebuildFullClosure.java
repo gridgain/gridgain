@@ -26,7 +26,7 @@ import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisito
  */
 public class IndexRebuildFullClosure implements SchemaIndexCacheVisitorClosure {
     /** */
-    private final GridCacheQueryManager qryMgr;
+    private final GridCacheQueryManager<Object, Object> qryMgr;
 
     /** MVCC status flag. */
     private final boolean mvccEnabled;
@@ -35,7 +35,7 @@ public class IndexRebuildFullClosure implements SchemaIndexCacheVisitorClosure {
      * @param qryMgr Query manager.
      * @param mvccEnabled MVCC status flag.
      */
-    public IndexRebuildFullClosure(GridCacheQueryManager qryMgr, boolean mvccEnabled) {
+    public IndexRebuildFullClosure(GridCacheQueryManager<Object, Object> qryMgr, boolean mvccEnabled) {
         this.qryMgr = qryMgr;
         this.mvccEnabled = mvccEnabled;
     }

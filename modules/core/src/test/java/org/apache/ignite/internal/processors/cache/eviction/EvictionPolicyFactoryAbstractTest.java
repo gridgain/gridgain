@@ -46,7 +46,6 @@ import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
-import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_ASYNC;
@@ -496,7 +495,7 @@ public abstract class EvictionPolicyFactoryAbstractTest<T extends EvictionPolicy
      * @throws Exception If failed.
      */
     protected void doTestPut(int max) throws Exception {
-        mode = LOCAL;
+        mode = PARTITIONED;
         syncCommit = true;
 
         policyFactory = createPolicyFactory();

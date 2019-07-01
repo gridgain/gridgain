@@ -25,7 +25,6 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.junit.Test;
 
-import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
 
@@ -50,12 +49,7 @@ public class GridCacheSlowTxWarnTest extends GridCommonAbstractTest {
         cc2.setName("replicated");
         cc2.setCacheMode(REPLICATED);
 
-        CacheConfiguration cc3 = defaultCacheConfiguration();
-
-        cc3.setName("local");
-        cc3.setCacheMode(LOCAL);
-
-        c.setCacheConfiguration(cc1, cc2, cc3);
+        c.setCacheConfiguration(cc1, cc2);
 
         return c;
     }
@@ -72,19 +66,16 @@ public class GridCacheSlowTxWarnTest extends GridCommonAbstractTest {
 
             checkCache(g, "partitioned", true, false);
             checkCache(g, "replicated", true, false);
-            checkCache(g, "local", true, false);
 
             info(">>> Slow tx timeout is set, long-live tx simulated.");
 
             checkCache(g, "partitioned", true, true);
             checkCache(g, "replicated", true, true);
-            checkCache(g, "local", true, true);
 
             info(">>> Slow tx timeout is set, no long-live txs.");
 
             checkCache(g, "partitioned", false, true);
             checkCache(g, "replicated", false, true);
-            checkCache(g, "local", false, true);
         }
         finally {
             stopAllGrids();

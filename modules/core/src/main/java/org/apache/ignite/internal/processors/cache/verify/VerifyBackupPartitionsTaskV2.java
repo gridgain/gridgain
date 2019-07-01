@@ -47,8 +47,8 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
-import org.apache.ignite.internal.processors.cache.GridCacheUtils;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.GridCacheUtils;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
@@ -70,7 +70,6 @@ import org.apache.ignite.resources.LoggerResource;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_DATA;
 
 /**
@@ -468,7 +467,7 @@ public class VerifyBackupPartitionsTaskV2 extends ComputeTaskAdapter<VisorIdleVe
             for (GridCacheContext cacheCtx : grp.caches()) {
                 DynamicCacheDescriptor desc = ignite.context().cache().cacheDescriptor(cacheCtx.name());
 
-                if (desc.cacheConfiguration().getCacheMode() != LOCAL && isCacheMatchFilter(desc))
+                if (isCacheMatchFilter(desc))
                     return true;
             }
 

@@ -17,14 +17,12 @@
 package org.apache.ignite.internal.processors.cache;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import javax.cache.Cache;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -37,13 +35,13 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteKernal;
-import org.apache.ignite.internal.util.GridEmptyCloseableIterator;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.util.GridEmptyCloseableIterator;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.spi.IgniteSpiCloseableIterator;
+import org.junit.Ignore;
 import org.junit.Test;
 
-import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
 import static org.apache.ignite.cache.CachePeekMode.ALL;
@@ -108,46 +106,20 @@ public abstract class IgniteCachePeekModesAbstractTest extends IgniteCacheAbstra
      */
     @Test
     public void testLocalPeek() throws Exception {
-        if (cacheMode() == LOCAL) {
-            checkAffinityLocalCache();
+        checkAffinityPeek(0);
 
-            checkStorage(0);
-        }
-        else {
-            checkAffinityPeek(0);
-
-            checkAffinityPeek(1);
-
-            checkStorage(0);
-
-            checkStorage(1);
-        }
+        checkAffinityPeek(1);
     }
 
     /**
      * @throws Exception If failed.
      */
-    private void checkAffinityLocalCache() throws Exception {
-        IgniteCache<Integer, String> cache0 = jcache(0);
+    @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-11148")
+    public void testLocalPeekStorage() throws Exception {
+        checkStorage(0);
 
-        final String val = "1";
-
-        for (int i = 0; i < HEAP_ENTRIES; i++)
-            cache0.put(i, val);
-
-        try {
-            for (int i = 0; i < HEAP_ENTRIES; i++) {
-                assertEquals(val, cache0.localPeek(i));
-                assertEquals(val, cache0.localPeek(i, ALL));
-                assertEquals(val, cache0.localPeek(i, PRIMARY));
-                assertEquals(val, cache0.localPeek(i, BACKUP));
-                assertEquals(val, cache0.localPeek(i, NEAR));
-            }
-        }
-        finally {
-            for (int i = 0; i < HEAP_ENTRIES; i++)
-                cache0.remove(i);
-        }
+        checkStorage(1);
     }
 
     /**
@@ -231,9 +203,6 @@ public abstract class IgniteCachePeekModesAbstractTest extends IgniteCacheAbstra
      * @throws Exception If failed.
      */
     private void checkStorage(int nodeIdx) throws Exception {
-        if (true) // TODO GG-11148.
-            return;
-
         IgniteCache<Integer, String> cache0 = jcache(nodeIdx);
 
         List<Integer> keys = primaryKeys(cache0, 100, 10_000);
@@ -313,14 +282,8 @@ public abstract class IgniteCachePeekModesAbstractTest extends IgniteCacheAbstra
                 assertEquals(val, cache0.localPeek(key, PRIMARY, ONHEAP));
                 assertEquals(val, cache0.localPeek(key, PRIMARY, ONHEAP, OFFHEAP));
 
-                if (cacheMode() == LOCAL) {
-                    assertEquals(val, cache0.localPeek(key, BACKUP));
-                    assertEquals(val, cache0.localPeek(key, NEAR));
-                }
-                else {
-                    assertNull(cache0.localPeek(key, BACKUP));
-                    assertNull(cache0.localPeek(key, NEAR));
-                }
+                assertNull(cache0.localPeek(key, BACKUP));
+                assertNull(cache0.localPeek(key, NEAR));
 
                 assertNull(cache0.localPeek(key, ONHEAP));
                 assertNull(cache0.localPeek(key, OFFHEAP));
@@ -332,14 +295,8 @@ public abstract class IgniteCachePeekModesAbstractTest extends IgniteCacheAbstra
                 assertEquals(val, cache0.localPeek(key, ONHEAP, OFFHEAP));
                 assertEquals(val, cache0.localPeek(key, PRIMARY, OFFHEAP));
 
-                if (cacheMode() == LOCAL) {
-                    assertEquals(val, cache0.localPeek(key, OFFHEAP, BACKUP));
-                    assertEquals(val, cache0.localPeek(key, OFFHEAP, NEAR));
-                }
-                else {
-                    assertNull(cache0.localPeek(key, OFFHEAP, BACKUP));
-                    assertNull(cache0.localPeek(key, OFFHEAP, NEAR));
-                }
+                assertNull(cache0.localPeek(key, OFFHEAP, BACKUP));
+                assertNull(cache0.localPeek(key, OFFHEAP, NEAR));
 
                 assertNull(cache0.localPeek(key, ONHEAP));
                 assertNull(cache0.localPeek(key));
@@ -351,14 +308,8 @@ public abstract class IgniteCachePeekModesAbstractTest extends IgniteCacheAbstra
                 assertEquals(val, cache0.localPeek(key, OFFHEAP, ONHEAP));
                 assertEquals(val, cache0.localPeek(key, PRIMARY, ONHEAP));
 
-                if (cacheMode() == LOCAL) {
-                    assertEquals(val, cache0.localPeek(key, ONHEAP, BACKUP));
-                    assertEquals(val, cache0.localPeek(key, ONHEAP, NEAR));
-                }
-                else {
-                    assertNull(cache0.localPeek(key, ONHEAP, BACKUP));
-                    assertNull(cache0.localPeek(key, ONHEAP, NEAR));
-                }
+                assertNull(cache0.localPeek(key, ONHEAP, BACKUP));
+                assertNull(cache0.localPeek(key, ONHEAP, NEAR));
 
                 assertNull(cache0.localPeek(key));
                 assertNull(cache0.localPeek(key, OFFHEAP));
@@ -373,109 +324,25 @@ public abstract class IgniteCachePeekModesAbstractTest extends IgniteCacheAbstra
      * @throws Exception If failed.
      */
     @Test
-    public void testSize() throws Exception {
+    public void testSizeAffinityFilter() throws Exception {
         checkEmpty();
 
-        if (cacheMode() == LOCAL) {
-            IgniteCache<Integer, String> cache0 = jcache(0);
+        checkSizeAffinityFilter(0);
 
-            for (int i = 0; i < HEAP_ENTRIES; i++) {
-                cache0.put(i, String.valueOf(i));
+        checkSizeAffinityFilter(1);
+    }
 
-                final int size = i + 1;
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-11148")
+    public void testSizeStorageFilter() throws Exception {
+        checkEmpty();
 
-                assertEquals(size, cache0.localSize());
-                assertEquals(size, cache0.localSize(PRIMARY));
-                assertEquals(size, cache0.localSize(BACKUP));
-                assertEquals(size, cache0.localSize(NEAR));
-                assertEquals(size, cache0.localSize(ALL));
+        checkSizeStorageFilter(0);
 
-                assertEquals(size, cache0.size());
-                assertEquals(size, cache0.size(PRIMARY));
-                assertEquals(size, cache0.size(BACKUP));
-                assertEquals(size, cache0.size(NEAR));
-                assertEquals(size, cache0.size(ALL));
-
-                assertEquals(size, (int) cache0.sizeAsync().get());
-
-                assertEquals(size, (int) cache0.sizeAsync(PRIMARY).get());
-            }
-
-            for (int i = 0; i < HEAP_ENTRIES; i++) {
-                cache0.remove(i, String.valueOf(i));
-
-                final int size = HEAP_ENTRIES - i - 1;
-
-                assertEquals(size, cache0.localSize());
-                assertEquals(size, cache0.localSize(PRIMARY));
-                assertEquals(size, cache0.localSize(BACKUP));
-                assertEquals(size, cache0.localSize(NEAR));
-                assertEquals(size, cache0.localSize(ALL));
-
-                assertEquals(size, cache0.size());
-                assertEquals(size, cache0.size(PRIMARY));
-                assertEquals(size, cache0.size(BACKUP));
-                assertEquals(size, cache0.size(NEAR));
-                assertEquals(size, cache0.size(ALL));
-
-                assertEquals(size, (int) cache0.sizeAsync().get());
-            }
-
-            checkEmpty();
-
-            if (true) // TODO GG-11148.
-                return;
-
-            Set<Integer> keys = new HashSet<>();
-
-            for (int i = 0; i < 200; i++) {
-                cache0.put(i, "test_val");
-
-                keys.add(i);
-            }
-
-            try {
-                int totalKeys = 200;
-
-                T2<Integer, Integer> swapKeys = swapKeysCount(0);
-
-                T2<Integer, Integer> offheapKeys = offheapKeysCount(0);
-
-                int totalSwap = swapKeys.get1() + swapKeys.get2();
-                int totalOffheap = offheapKeys.get1() + offheapKeys.get2();
-
-                log.info("Keys [total=" + totalKeys + ", offheap=" + offheapKeys + ", swap=" + swapKeys + ']');
-
-                assertTrue(totalSwap + totalOffheap < totalKeys);
-
-                assertEquals(totalKeys, cache0.localSize());
-                assertEquals(totalKeys, cache0.localSize(ALL));
-
-                assertEquals(totalOffheap, cache0.localSize(OFFHEAP));
-                assertEquals(totalKeys - (totalSwap + totalOffheap), cache0.localSize(ONHEAP));
-
-                assertEquals(totalOffheap, cache0.size(OFFHEAP));
-                assertEquals(totalKeys - (totalSwap + totalOffheap), cache0.size(ONHEAP));
-
-                assertEquals(totalOffheap, cache0.localSize(OFFHEAP, PRIMARY));
-                assertEquals(totalKeys - (totalSwap + totalOffheap), cache0.localSize(ONHEAP, PRIMARY));
-
-                assertEquals(totalOffheap, cache0.localSize(OFFHEAP, BACKUP));
-                assertEquals(totalKeys - (totalSwap + totalOffheap), cache0.localSize(ONHEAP, BACKUP));
-            }
-            finally {
-                cache0.removeAll(keys);
-            }
-        }
-        else {
-            checkSizeAffinityFilter(0);
-
-            checkSizeAffinityFilter(1);
-
-            checkSizeStorageFilter(0);
-
-            checkSizeStorageFilter(1);
-        }
+        checkSizeStorageFilter(1);
     }
 
     /**
@@ -483,9 +350,6 @@ public abstract class IgniteCachePeekModesAbstractTest extends IgniteCacheAbstra
      */
     @Test
     public void testLocalPartitionSize() throws Exception {
-        if (cacheMode() != LOCAL)
-            return;
-
         awaitPartitionMapExchange();
         checkEmpty();
         int part = 0;
@@ -538,13 +402,8 @@ public abstract class IgniteCachePeekModesAbstractTest extends IgniteCacheAbstra
      * @throws InterruptedException If failed.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-11148")
     public void testLocalPartitionSizeFlags() throws InterruptedException {
-        if (true) // TODO GG-11148.
-            return;
-
-        if (cacheMode() != LOCAL)
-            return;
-
         awaitPartitionMapExchange();
         checkEmpty();
         int part = 0;
@@ -600,13 +459,8 @@ public abstract class IgniteCachePeekModesAbstractTest extends IgniteCacheAbstra
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-11148")
     public void testNonLocalPartitionSize() throws Exception {
-        if (true) // TODO GG-11148.
-            return;
-
-        if (cacheMode() == LOCAL)
-            return;
-
         awaitPartitionMapExchange(true, true, null);
 
         checkEmpty();
@@ -1047,9 +901,6 @@ public abstract class IgniteCachePeekModesAbstractTest extends IgniteCacheAbstra
      * @throws Exception If failed.
      */
     private void checkSizeStorageFilter(int nodeIdx) throws Exception {
-        if (true) // TODO GG-11148.
-            return;
-
         IgniteCache<Integer, String> cache0 = jcache(nodeIdx);
 
         List<Integer> primaryKeys = primaryKeys(cache0, 100, 10_000);
@@ -1120,9 +971,7 @@ public abstract class IgniteCachePeekModesAbstractTest extends IgniteCacheAbstra
 
             int backups;
 
-            if (cacheMode() == LOCAL)
-                backups = 0;
-            else if (cacheMode() == PARTITIONED)
+            if (cacheMode() == PARTITIONED)
                 backups = 1;
             else // REPLICATED.
                 backups = gridCount() - 1;
@@ -1219,9 +1068,7 @@ public abstract class IgniteCachePeekModesAbstractTest extends IgniteCacheAbstra
 
             int backups;
 
-            if (cacheMode() == LOCAL)
-                backups = 0;
-            else if (cacheMode() == PARTITIONED)
+            if (cacheMode() == PARTITIONED)
                 backups = 1;
             else // REPLICATED.
                 backups = gridCount() - 1;
@@ -1280,292 +1127,5 @@ public abstract class IgniteCachePeekModesAbstractTest extends IgniteCacheAbstra
         }
 
         assertEquals(exp, size);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testLocalEntries() throws Exception {
-        if (cacheMode() == LOCAL) {
-            IgniteCache<Integer, String> cache0 = jcache(0);
-
-            Set<Integer> keys = new HashSet<>();
-
-            try {
-                for (int i = 0; i < HEAP_ENTRIES; i++) {
-                    cache0.put(i, String.valueOf(i));
-
-                    keys.add(i);
-                }
-
-                checkLocalEntries(cache0.localEntries(), keys);
-                checkLocalEntries(cache0.localEntries(ALL), keys);
-                checkLocalEntries(cache0.localEntries(NEAR), keys);
-                checkLocalEntries(cache0.localEntries(PRIMARY), keys);
-                checkLocalEntries(cache0.localEntries(BACKUP), keys);
-            }
-            finally {
-                cache0.removeAll(keys);
-            }
-
-            checkLocalEntries(cache0.localEntries());
-
-            if (true) // TODO GG-11148.
-                return;
-
-            final String val = "test-val-";
-
-            keys = new HashSet<>();
-
-            for (int i = 0; i < 200; i++) {
-                cache0.put(i, val + i);
-
-                keys.add(i);
-            }
-
-            try {
-                int totalKeys = 200;
-
-                T2<List<Integer>, List<Integer>> swapKeys = swapKeys(0);
-
-                T2<List<Integer>, List<Integer>> offheapKeys = offheapKeys(0);
-
-                List<Integer> swap = new ArrayList<>();
-
-                swap.addAll(swapKeys.get1());
-                swap.addAll(swapKeys.get2());
-
-                assertFalse(swap.isEmpty());
-
-                List<Integer> offheap = new ArrayList<>();
-
-                offheap.addAll(offheapKeys.get1());
-                offheap.addAll(offheapKeys.get2());
-
-                assertFalse(offheap.isEmpty());
-
-                log.info("Keys [total=" + totalKeys +
-                    ", offheap=" + offheap.size() +
-                    ", swap=" + swap.size() + ']');
-
-                assertTrue(swap.size() + offheap.size() < totalKeys);
-
-                List<Integer> heap = new ArrayList<>(keys);
-
-                heap.removeAll(swap);
-                heap.removeAll(offheap);
-
-                assertFalse(heap.isEmpty());
-
-                checkLocalEntries(cache0.localEntries(), val, keys);
-                checkLocalEntries(cache0.localEntries(ALL), val, keys);
-
-                checkLocalEntries(cache0.localEntries(OFFHEAP), val, offheap);
-                checkLocalEntries(cache0.localEntries(ONHEAP), val, heap);
-
-                checkLocalEntries(cache0.localEntries(OFFHEAP, PRIMARY), val, offheap);
-                checkLocalEntries(cache0.localEntries(ONHEAP, PRIMARY), val, heap);
-
-                checkLocalEntries(cache0.localEntries(OFFHEAP, BACKUP), val, offheap);
-                checkLocalEntries(cache0.localEntries(ONHEAP, BACKUP), val, heap);
-
-                checkLocalEntries(cache0.localEntries(OFFHEAP, NEAR), val, offheap);
-                checkLocalEntries(cache0.localEntries(ONHEAP, NEAR), val, heap);
-            }
-            finally {
-                cache0.removeAll(keys);
-            }
-        }
-        else {
-            checkLocalEntriesAffinityFilter(0);
-
-            checkLocalEntriesAffinityFilter(1);
-
-            checkLocalEntriesStorageFilter(0);
-
-            checkLocalEntriesStorageFilter(1);
-        }
-    }
-
-    /**
-     * @param nodeIdx Node index.
-     * @throws Exception If failed.
-     */
-    private void checkLocalEntriesStorageFilter(int nodeIdx) throws Exception {
-        if (true) // TODO GG-11148.
-            return;
-
-        IgniteCache<Integer, String> cache0 = jcache(nodeIdx);
-
-        List<Integer> primaryKeys = primaryKeys(cache0, 100, 10_000);
-        List<Integer> backupKeys = backupKeys(cache0, 100, 10_000);
-
-        try {
-            final String val = "test_value-";
-
-            for (int i = 0; i < 100; i++) {
-                cache0.put(primaryKeys.get(i), val + primaryKeys.get(i));
-                cache0.put(backupKeys.get(i), val + backupKeys.get(i));
-            }
-
-            int totalKeys = 200;
-
-            T2<List<Integer>, List<Integer>> swapKeys = swapKeys(nodeIdx);
-
-            assertTrue(!swapKeys.get1().isEmpty());
-            assertTrue(!swapKeys.get2().isEmpty());
-
-            T2<List<Integer>, List<Integer>> offheapKeys = offheapKeys(nodeIdx);
-
-            assertTrue(!offheapKeys.get1().isEmpty());
-            assertTrue(!offheapKeys.get2().isEmpty());
-
-            List<Integer> swap = new ArrayList<>();
-
-            swap.addAll(swapKeys.get1());
-            swap.addAll(swapKeys.get2());
-
-            assertFalse(swap.isEmpty());
-
-            List<Integer> offheap = new ArrayList<>();
-
-            offheap.addAll(offheapKeys.get1());
-            offheap.addAll(offheapKeys.get2());
-
-            assertFalse(offheap.isEmpty());
-
-            List<Integer> heap = new ArrayList<>();
-
-            heap.addAll(primaryKeys);
-            heap.addAll(backupKeys);
-
-            heap.removeAll(swap);
-            heap.removeAll(offheap);
-
-            log.info("Keys [total=" + totalKeys +
-                ", offheap=" + offheap.size() +
-                ", swap=" + swap.size() + ']');
-
-            assertFalse(heap.isEmpty());
-
-            checkLocalEntries(cache0.localEntries(), val, primaryKeys, backupKeys);
-            checkLocalEntries(cache0.localEntries(ALL), val, primaryKeys, backupKeys);
-            checkLocalEntries(cache0.localEntries(ONHEAP, OFFHEAP), val, primaryKeys, backupKeys);
-
-            checkLocalEntries(cache0.localEntries(), val, swap);
-            checkLocalEntries(cache0.localEntries(OFFHEAP), val, offheap);
-            checkLocalEntries(cache0.localEntries(ONHEAP), val, heap);
-
-            checkLocalEntries(cache0.localEntries(OFFHEAP), val, swap, offheap);
-            checkLocalEntries(cache0.localEntries(ONHEAP), val, swap, heap);
-
-            checkLocalEntries(cache0.localEntries(PRIMARY), val, swapKeys.get1());
-            checkLocalEntries(cache0.localEntries(BACKUP), val, swapKeys.get2());
-            checkLocalEntries(cache0.localEntries(OFFHEAP, PRIMARY), val, offheapKeys.get1());
-            checkLocalEntries(cache0.localEntries(OFFHEAP, BACKUP), val, offheapKeys.get2());
-
-            checkLocalEntries(cache0.localEntries(OFFHEAP, PRIMARY), val, swapKeys.get1(), offheapKeys.get1());
-            checkLocalEntries(cache0.localEntries(OFFHEAP, BACKUP), val, swapKeys.get2(), offheapKeys.get2());
-            checkLocalEntries(cache0.localEntries(OFFHEAP, PRIMARY, BACKUP), val, swap, offheap);
-        }
-        finally {
-            cache0.removeAll(new HashSet<>(primaryKeys));
-            cache0.removeAll(new HashSet<>(backupKeys));
-        }
-    }
-
-    /**
-     * @param nodeIdx Node index.
-     * @throws Exception If failed.
-     */
-    private void checkLocalEntriesAffinityFilter(int nodeIdx) throws Exception {
-        IgniteCache<Integer, String> cache0 = jcache(nodeIdx);
-
-        final int PUT_KEYS = 10;
-
-        List<Integer> primaryKeys = null;
-        List<Integer> backupKeys = null;
-        List<Integer> nearKeys = null;
-
-        try {
-            primaryKeys = primaryKeys(cache0, PUT_KEYS, 0);
-            backupKeys = backupKeys(cache0, PUT_KEYS, 0);
-
-            for (Integer key : primaryKeys)
-                cache0.put(key, String.valueOf(key));
-            for (Integer key : backupKeys)
-                cache0.put(key, String.valueOf(key));
-
-            nearKeys = cacheMode() == PARTITIONED ? nearKeys(cache0, PUT_KEYS, 0) : Collections.<Integer>emptyList();
-
-            for (Integer key : nearKeys)
-                cache0.put(key, String.valueOf(key));
-
-            log.info("Keys [near=" + nearKeys + ", primary=" + primaryKeys + ", backup=" + backupKeys + ']');
-
-            if (hasNearCache()) {
-                checkLocalEntries(cache0.localEntries(), nearKeys, primaryKeys, backupKeys);
-                checkLocalEntries(cache0.localEntries(ALL), nearKeys, primaryKeys, backupKeys);
-                checkLocalEntries(cache0.localEntries(NEAR), nearKeys);
-                checkLocalEntries(cache0.localEntries(PRIMARY, BACKUP, NEAR), nearKeys, primaryKeys, backupKeys);
-                checkLocalEntries(cache0.localEntries(NEAR, PRIMARY), nearKeys, primaryKeys);
-                checkLocalEntries(cache0.localEntries(NEAR, BACKUP), nearKeys, backupKeys);
-            }
-            else {
-                checkLocalEntries(cache0.localEntries(), primaryKeys, backupKeys);
-                checkLocalEntries(cache0.localEntries(ALL), primaryKeys, backupKeys);
-                checkLocalEntries(cache0.localEntries(NEAR));
-                checkLocalEntries(cache0.localEntries(NEAR, PRIMARY), primaryKeys);
-                checkLocalEntries(cache0.localEntries(NEAR, BACKUP), backupKeys);
-                checkLocalEntries(cache0.localEntries(PRIMARY, BACKUP, NEAR), primaryKeys, backupKeys);
-            }
-
-            checkLocalEntries(cache0.localEntries(PRIMARY), primaryKeys);
-            checkLocalEntries(cache0.localEntries(BACKUP), backupKeys);
-            checkLocalEntries(cache0.localEntries(PRIMARY, BACKUP), primaryKeys, backupKeys);
-        }
-        finally {
-            if (primaryKeys != null)
-                cache0.removeAll(new HashSet<>(primaryKeys));
-
-            if (backupKeys != null)
-                cache0.removeAll(new HashSet<>(backupKeys));
-
-            if (nearKeys != null)
-                cache0.removeAll(new HashSet<>(nearKeys));
-        }
-    }
-
-    /**
-     * @param entries Entries.
-     * @param exp Expected entries.
-     */
-    private void checkLocalEntries(Iterable<Cache.Entry<Integer, String>> entries, Collection<Integer>... exp) {
-        checkLocalEntries(entries, "", exp);
-    }
-
-    /**
-     * @param entries Entries.
-     * @param expVal Expected value.
-     * @param exp Expected keys.
-     */
-    private void checkLocalEntries(Iterable<Cache.Entry<Integer, String>> entries,
-        String expVal,
-        Collection<Integer>... exp) {
-        Set<Integer> allExp = new HashSet<>();
-
-        for (Collection<Integer> col : exp)
-            assertTrue(allExp.addAll(col));
-
-        for (Cache.Entry<Integer, String> e : entries) {
-            assertNotNull(e.getKey());
-            assertNotNull(e.getValue());
-            assertEquals(expVal + e.getKey(), e.getValue());
-
-            assertTrue("Unexpected entry: " + e, allExp.remove(e.getKey()));
-        }
-
-        assertTrue("Expected entries not found: " + allExp, allExp.isEmpty());
     }
 }

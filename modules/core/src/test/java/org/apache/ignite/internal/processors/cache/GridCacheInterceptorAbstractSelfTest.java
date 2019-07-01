@@ -23,6 +23,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.cache.Cache;
 import javax.cache.processor.EntryProcessor;
@@ -41,14 +42,11 @@ import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
 import org.jetbrains.annotations.Nullable;
-import java.util.concurrent.ConcurrentHashMap;
 import org.junit.Before;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
-import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
-import static org.apache.ignite.cache.CacheMode.REPLICATED;
 
 /**
  * Tests {@link CacheInterceptor}.
@@ -81,11 +79,6 @@ public abstract class GridCacheInterceptorAbstractSelfTest extends GridCacheAbst
 
         if (storeEnabled())
             MvccFeatureChecker.skipIfNotSupported(MvccFeatureChecker.Feature.CACHE_STORE);
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void beforeTest() throws Exception {
-        // No-op.
     }
 
     /** {@inheritDoc} */
@@ -156,8 +149,7 @@ public abstract class GridCacheInterceptorAbstractSelfTest extends GridCacheAbst
 
         afterTest();
 
-        if (cacheMode() != LOCAL)
-            testGet(backupKey(0), false);
+        testGet(backupKey(0), false);
     }
 
     /**
@@ -169,8 +161,7 @@ public abstract class GridCacheInterceptorAbstractSelfTest extends GridCacheAbst
 
         afterTest();
 
-        if (cacheMode() != LOCAL)
-            testGet(backupKey(0), true);
+        testGet(backupKey(0), true);
     }
 
     /**
@@ -433,41 +424,10 @@ public abstract class GridCacheInterceptorAbstractSelfTest extends GridCacheAbst
 
             afterTest();
 
-            if (cacheMode() != LOCAL) {
-                testCancelUpdate(backupKey(0), op);
+            testCancelUpdate(backupKey(0), op);
 
-                afterTest();
-            }
+            afterTest();
         }
-    }
-
-    /**
-     * @param op Operation type.
-     * @return {@code True} if this is atomic cache and update is first run on primary node.
-     */
-    private int expectedIgnoreInvokeCount(Operation op) {
-        int dataNodes = cacheMode() == REPLICATED ? gridCount() : 2;
-
-        if (atomicityMode() == TRANSACTIONAL)
-            return dataNodes + (storeEnabled() ? 1 : 0); // One call before store is updated.
-        else {
-            // If update goes through primary node and it is cancelled then backups aren't updated.
-            return op == Operation.TRANSFORM ? 1 : dataNodes;
-        }
-    }
-
-    /**
-     * @param op Operation type.
-     * @return {@code True} if this is atomic cache and update is first run on primary node.
-     */
-    private int expectedInvokeCount(Operation op) {
-        int dataNodes = cacheMode() == REPLICATED ? gridCount() : 2;
-
-        if (atomicityMode() == TRANSACTIONAL)
-            // Update + after update + one call before store is updated.
-            return dataNodes * 2 + (storeEnabled() ? 1 : 0);
-        else
-            return op == Operation.TRANSFORM ? 2 : dataNodes * 2;
     }
 
     /**
@@ -541,11 +501,9 @@ public abstract class GridCacheInterceptorAbstractSelfTest extends GridCacheAbst
 
             afterTest();
 
-            if (cacheMode() != LOCAL) {
-                testModifyUpdate(backupKey(0), op);
+            testModifyUpdate(backupKey(0), op);
 
-                afterTest();
-            }
+            afterTest();
         }
     }
 
@@ -617,11 +575,9 @@ public abstract class GridCacheInterceptorAbstractSelfTest extends GridCacheAbst
 
             afterTest();
 
-            if (cacheMode() != LOCAL) {
-                testCancelRemove(backupKey(0), op);
+            testCancelRemove(backupKey(0), op);
 
-                afterTest();
-            }
+            afterTest();
         }
     }
 
@@ -729,11 +685,9 @@ public abstract class GridCacheInterceptorAbstractSelfTest extends GridCacheAbst
 
             afterTest();
 
-            if (cacheMode() != LOCAL) {
                 testRemove(backupKey(0), op);
 
                 afterTest();
-            }
         }
     }
 
@@ -947,17 +901,10 @@ public abstract class GridCacheInterceptorAbstractSelfTest extends GridCacheAbst
         String key2;
         String key3;
 
-        if (cacheMode() == LOCAL) {
-            key1 = "1";
-            key2 = "2";
-            key3 = "3";
-        }
-        else {
             List<String> keys = primaryKeys(0, 2);
             key1 = keys.get(0); // Need two keys for the same node to test atomic cache batch store upadte.
             key2 = keys.get(1);
             key3 = backupKey(0);
-        }
 
         map.put(key1, 1);
         map.put(key2, 2);
@@ -1036,17 +983,10 @@ public abstract class GridCacheInterceptorAbstractSelfTest extends GridCacheAbst
         String key2;
         String key3;
 
-        if (cacheMode() == LOCAL) {
-            key1 = "1";
-            key2 = "2";
-            key3 = "3";
-        }
-        else {
-            List<String> keys = primaryKeys(0, 2);
+        List<String> keys = primaryKeys(0, 2);
             key1 = keys.get(0);
             key2 = keys.get(1);
             key3 = backupKey(0);
-        }
 
         map.put(key1, 1);
         map.put(key2, 2);

@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.cache.Cache;
@@ -48,12 +49,10 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import java.util.concurrent.ConcurrentHashMap;
 import org.junit.Test;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
-import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheRebalanceMode.ASYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 
@@ -238,9 +237,6 @@ public abstract class CacheContinuousQueryCounterAbstractTest extends GridCommon
      */
     @Test
     public void testTwoQueryListener() throws Exception {
-        if (cacheMode() == LOCAL)
-            return;
-
         final IgniteCache<Integer, Integer> cache = grid(0).cache(CACHE_NAME);
         final IgniteCache<Integer, Integer> cache1 = grid(1).cache(CACHE_NAME);
 

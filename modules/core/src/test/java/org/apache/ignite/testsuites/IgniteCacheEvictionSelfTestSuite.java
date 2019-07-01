@@ -23,9 +23,6 @@ import org.apache.ignite.internal.processors.cache.GridCachePreloadingEvictionsS
 import org.apache.ignite.internal.processors.cache.distributed.near.GridCacheAtomicNearEvictionSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridCacheNearEvictionSelfTest;
 import org.apache.ignite.internal.processors.cache.eviction.DhtAndNearEvictionTest;
-import org.apache.ignite.internal.processors.cache.eviction.GridCacheConcurrentEvictionConsistencySelfTest;
-import org.apache.ignite.internal.processors.cache.eviction.GridCacheConcurrentEvictionsSelfTest;
-import org.apache.ignite.internal.processors.cache.eviction.GridCacheEmptyEntriesLocalSelfTest;
 import org.apache.ignite.internal.processors.cache.eviction.GridCacheEmptyEntriesPartitionedSelfTest;
 import org.apache.ignite.internal.processors.cache.eviction.GridCacheEvictableEntryEqualsSelfTest;
 import org.apache.ignite.internal.processors.cache.eviction.GridCacheEvictionFilterSelfTest;
@@ -74,13 +71,10 @@ public class IgniteCacheEvictionSelfTestSuite {
         GridTestUtils.addTestIfNeeded(suite, GridCacheNearEvictionSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCacheAtomicNearEvictionSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCacheEvictionFilterSelfTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, GridCacheConcurrentEvictionsSelfTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, GridCacheConcurrentEvictionConsistencySelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCacheEvictionTouchSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCacheEvictionLockUnlockSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCachePreloadingEvictionsSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCacheEmptyEntriesPartitionedSelfTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, GridCacheEmptyEntriesLocalSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCacheEvictableEntryEqualsSelfTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, RandomLruPageEvictionMultinodeTest.class, ignoredTests);

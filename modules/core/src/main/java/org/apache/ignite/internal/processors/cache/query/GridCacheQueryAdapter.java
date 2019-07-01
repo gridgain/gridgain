@@ -61,7 +61,6 @@ import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgniteReducer;
@@ -69,7 +68,6 @@ import org.apache.ignite.plugin.security.SecurityPermission;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryType.SCAN;
 import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryType.SET;
 import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryType.SPI;
@@ -535,18 +533,16 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
 
         taskHash = cctx.kernalContext().job().currentTaskNameHash();
 
-        final GridCacheQueryBean bean = new GridCacheQueryBean(this, (IgniteReducer<Object, Object>)rmtReducer,
-            null, args);
+        final GridCacheQueryBean bean = new GridCacheQueryBean(this, F.cast(rmtReducer),null, args);
 
         final GridCacheQueryManager qryMgr = cctx.queries();
 
         boolean loc = nodes.size() == 1 && F.first(nodes).id().equals(cctx.localNodeId());
 
         if (type == SQL_FIELDS || type == SPI)
-            return (CacheQueryFuture<R>)(loc ? qryMgr.queryFieldsLocal(bean) :
-                qryMgr.queryFieldsDistributed(bean, nodes));
+            return F.cast(loc ? qryMgr.queryFieldsLocal(bean) : qryMgr.queryFieldsDistributed(bean, nodes));
         else
-            return (CacheQueryFuture<R>)(loc ? qryMgr.queryLocal(bean) : qryMgr.queryDistributed(bean, nodes));
+            return F.cast(loc ? qryMgr.queryLocal(bean) : qryMgr.queryDistributed(bean, nodes));
     }
 
     /** {@inheritDoc} */
@@ -610,7 +606,7 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
         if (loc)
             it = qryMgr.scanQueryLocal(this, true);
         else if (part != null)
-            it = new ScanQueryFallbackClosableIterator(part, this, qryMgr, cctx);
+            it = new ScanQueryFallbackClosableIterator(part, this, F.cast(qryMgr), cctx);
         else
             it = qryMgr.scanQueryDistributed(this, nodes);
 
@@ -636,17 +632,6 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
         Integer part = partition();
 
         switch (cacheMode) {
-            case LOCAL:
-                if (prj != null)
-                    U.warn(log, "Ignoring query projection because it's executed over LOCAL cache " +
-                        "(only local node will be queried): " + this);
-
-                if (type == SCAN && cctx.config().getCacheMode() == LOCAL &&
-                    part != null && part >= cctx.affinity().partitions())
-                    throw new IgniteCheckedException("Invalid partition number: " + part);
-
-                return Collections.singletonList(cctx.localNode());
-
             case REPLICATED:
                 if (prj != null || part != null)
                     return nodes(cctx, prj, part);
@@ -726,7 +711,7 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
         private final GridCacheQueryAdapter qry;
 
         /** Query manager. */
-        private final GridCacheQueryManager qryMgr;
+        private final GridCacheQueryManager<Object, Object> qryMgr;
 
         /** Cache context. */
         private final GridCacheContext cctx;
@@ -747,7 +732,7 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
          * @param cctx Cache context.
          */
         private ScanQueryFallbackClosableIterator(int part, GridCacheQueryAdapter qry,
-            GridCacheQueryManager qryMgr, GridCacheContext cctx) {
+            GridCacheQueryManager<Object, Object> qryMgr, GridCacheContext cctx) {
             this.qry = qry;
             this.qryMgr = qryMgr;
             this.cctx = cctx;

@@ -35,7 +35,6 @@ import org.apache.ignite.internal.processors.cache.binary.distributed.dht.GridCa
 import org.apache.ignite.internal.processors.cache.binary.distributed.dht.GridCacheAtomicPartitionedOnlyBinaryMultithreadedSelfTest;
 import org.apache.ignite.internal.processors.cache.binary.distributed.dht.GridCacheBinariesNearPartitionedByteArrayValuesSelfTest;
 import org.apache.ignite.internal.processors.cache.binary.distributed.dht.GridCacheBinariesPartitionedOnlyByteArrayValuesSelfTest;
-import org.apache.ignite.internal.processors.cache.expiry.IgniteCacheAtomicLocalExpiryPolicyTest;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.DynamicSuite;
 import org.junit.runner.RunWith;
@@ -59,7 +58,6 @@ public class IgniteBinaryCacheTestSuite {
     public static List<Class<?>> suite(Collection<Class> ignoredTests) {
         // Tests below have a special version for Binary Marshaller
         ignoredTests.add(GridCacheAffinityRoutingSelfTest.class);
-        ignoredTests.add(IgniteCacheAtomicLocalExpiryPolicyTest.class);
         ignoredTests.add(GridCacheEntryMemorySizeSelfTest.class);
 
         // Tests that are not ready to be used with BinaryMarshaller

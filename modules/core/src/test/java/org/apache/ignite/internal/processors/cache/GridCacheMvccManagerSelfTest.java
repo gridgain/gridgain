@@ -28,7 +28,6 @@ import org.apache.ignite.transactions.Transaction;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
-import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
 
@@ -57,14 +56,6 @@ public class GridCacheMvccManagerSelfTest extends GridCommonAbstractTest {
         cfg.setAtomicityMode(TRANSACTIONAL);
 
         return cfg;
-    }
-
-    /** @throws Exception If failed. */
-    @Test
-    public void testLocalCache() throws Exception {
-        mode = LOCAL;
-
-        testCandidates(1);
     }
 
     /** @throws Exception If failed. */

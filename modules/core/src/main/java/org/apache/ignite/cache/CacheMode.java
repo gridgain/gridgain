@@ -26,18 +26,6 @@ import org.jetbrains.annotations.Nullable;
  */
 public enum CacheMode {
     /**
-     * Specifies local-only cache behaviour. In this mode caches residing on
-     * different grid nodes will not know about each other.
-     * <p>
-     * Other than distribution, {@code local} caches still have all
-     * the caching features, such as eviction, expiration, swapping,
-     * querying, etc... This mode is very useful when caching read-only data
-     * or data that automatically expires at a certain interval and
-     * then automatically reloaded from persistence store.
-     */
-    LOCAL,
-
-    /**
      * Specifies fully replicated cache behavior. In this mode all the keys are distributed
      * to all participating nodes. User still has affinity control
      * over subset of nodes for any given key via {@link AffinityFunction}

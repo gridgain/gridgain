@@ -82,7 +82,6 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
-import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
 import static org.apache.ignite.cache.CacheRebalanceMode.ASYNC;
@@ -404,9 +403,6 @@ public abstract class GridCacheContinuousQueryAbstractSelfTest extends GridCommo
      */
     @Test
     public void testTwoQueryListener() throws Exception {
-        if (cacheMode() == LOCAL)
-            return;
-
         IgniteCache<Integer, Integer> cache = grid(0).cache(DEFAULT_CACHE_NAME);
         IgniteCache<Integer, Integer> cache1 = grid(1).cache(DEFAULT_CACHE_NAME);
 
@@ -485,9 +481,6 @@ public abstract class GridCacheContinuousQueryAbstractSelfTest extends GridCommo
      */
     @Test
     public void testRestartQuery() throws Exception {
-        if (cacheMode() == LOCAL)
-            return;
-
         IgniteCache<Integer, Integer> cache = grid(0).cache(DEFAULT_CACHE_NAME);
 
         final int parts = grid(0).affinity(DEFAULT_CACHE_NAME).partitions();

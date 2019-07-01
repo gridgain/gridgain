@@ -26,7 +26,6 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Test;
 
-import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 
 /**
@@ -90,7 +89,6 @@ public class RestMemcacheProtocolSelfTest extends GridCommonAbstractTest {
     private CacheConfiguration cacheConfiguration(@NotNull String cacheName) throws Exception {
         CacheConfiguration cfg = defaultCacheConfiguration();
 
-        cfg.setCacheMode(LOCAL);
         cfg.setName(cacheName);
         cfg.setWriteSynchronizationMode(FULL_SYNC);
         cfg.setStatisticsEnabled(true);

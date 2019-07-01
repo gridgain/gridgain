@@ -112,7 +112,7 @@ public class GridCacheQueryJdbcTask extends ComputeTaskAdapter<byte[], byte[]> {
                     boolean start = ignite.configuration().isClientMode();
 
                     IgniteCache<?, ?> cache0 =
-                            ((IgniteKernal)ignite).context().cache().getOrStartPublicCache(start, false);
+                            ((IgniteKernal)ignite).context().cache().getOrStartPublicCache(start);
 
                     if (cache0 != null)
                         node = mapToNode(subgrid, args, first, cache0.getName());
@@ -256,7 +256,7 @@ public class GridCacheQueryJdbcTask extends ComputeTaskAdapter<byte[], byte[]> {
                     try {
                         boolean start = ignite.configuration().isClientMode();
 
-                        cache = ((IgniteKernal)ignite).context().cache().getOrStartPublicCache(start, false);
+                        cache = ((IgniteKernal)ignite).context().cache().getOrStartPublicCache(start);
                     }
                     catch (IgniteCheckedException e) {
                         throw new IgniteException(e);

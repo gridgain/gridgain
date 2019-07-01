@@ -41,7 +41,6 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CachePeekMode.BACKUP;
 import static org.apache.ignite.cache.CachePeekMode.NEAR;
 import static org.apache.ignite.cache.CachePeekMode.OFFHEAP;
@@ -259,9 +258,6 @@ public abstract class CacheTtlAbstractSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testDefaultTimeToLivePreload() throws Exception {
-        if (cacheMode() == LOCAL)
-            return;
-
         IgniteCache<Integer, Integer> cache = jcache(0);
 
         Map<Integer, Integer> entries = new HashMap<>();

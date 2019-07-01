@@ -39,7 +39,6 @@ import org.apache.ignite.internal.processors.cache.distributed.GridDistributedTx
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxMapping;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry;
-import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.transactions.IgniteTxOptimisticCheckedException;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
@@ -92,42 +91,10 @@ public class GridNearOptimisticSerializableTxPrepareFuture extends GridNearOptim
         if (log.isDebugEnabled())
             log.debug("Transaction future received owner changed callback: " + entry);
 
-        if ((entry.context().isNear() || entry.context().isLocal()) && owner != null) {
+        if (entry.context().isNear() && owner != null) {
             IgniteTxEntry txEntry = tx.entry(entry.txKey());
 
             if (txEntry != null) {
-                if (entry.context().isLocal()) {
-                    GridCacheVersion serReadVer = txEntry.entryReadVersion();
-
-                    if (serReadVer != null) {
-                        GridCacheContext ctx = entry.context();
-
-                        while (true) {
-                            try {
-                                if (!entry.checkSerializableReadVersion(serReadVer)) {
-                                    Object key = entry.key().value(ctx.cacheObjectContext(), false);
-
-                                    IgniteTxOptimisticCheckedException err0 =
-                                        new IgniteTxOptimisticCheckedException(S.toString(
-                                            "Failed to prepare transaction, read/write conflict",
-                                            "key", key, true,
-                                            "cache", ctx.name(), false));
-
-                                    ERR_UPD.compareAndSet(this, null, err0);
-                                }
-
-                                break;
-                            }
-                            catch (GridCacheEntryRemovedException ignored) {
-                                entry = ctx.cache().entryEx(entry.key(), tx.topologyVersion());
-
-                                txEntry.cached(entry);
-                            }
-                        }
-
-                    }
-                }
-
                 if (keyLockFut != null)
                     keyLockFut.onKeyLocked(entry.txKey());
 
@@ -612,9 +579,7 @@ public class GridNearOptimisticSerializableTxPrepareFuture extends GridNearOptim
     ) {
         GridCacheContext cacheCtx = entry.context();
 
-        List<ClusterNode> nodes = cacheCtx.isLocal() ?
-            cacheCtx.affinity().nodesByKey(entry.key(), topVer) :
-            cacheCtx.topology().nodes(cacheCtx.affinity().partition(entry.key()), topVer);
+        List<ClusterNode> nodes = cacheCtx.topology().nodes(cacheCtx.affinity().partition(entry.key()), topVer);
 
         if (F.isEmpty(nodes)) {
             onDone(new ClusterTopologyServerNotFoundException("Failed to map keys to nodes " +
@@ -639,21 +604,17 @@ public class GridNearOptimisticSerializableTxPrepareFuture extends GridNearOptim
         // Must re-initialize cached entry while holding topology lock.
         if (cacheCtx.isNear())
             entry.cached(cacheCtx.nearTx().entryExx(entry.key(), topVer));
-        else if (!cacheCtx.isLocal())
-            entry.cached(cacheCtx.colocated().entryExx(entry.key(), topVer, true));
         else
-            entry.cached(cacheCtx.local().entryEx(entry.key(), topVer));
+            entry.cached(cacheCtx.colocated().entryExx(entry.key(), topVer, true));
 
-        if (!remap && (cacheCtx.isNear() || cacheCtx.isLocal())) {
-            if (entry.explicitVersion() == null) {
-                if (keyLockFut == null) {
-                    keyLockFut = new KeyLockFuture();
+        if (!remap && cacheCtx.isNear() && entry.explicitVersion() == null) {
+            if (keyLockFut == null) {
+                keyLockFut = new KeyLockFuture();
 
-                    add((IgniteInternalFuture)keyLockFut);
-                }
-
-                keyLockFut.addLockKey(entry.txKey());
+                add((IgniteInternalFuture)keyLockFut);
             }
+
+            keyLockFut.addLockKey(entry.txKey());
         }
 
         GridDistributedTxMapping cur = curMapping.get(primary.id());

@@ -28,7 +28,6 @@ import org.junit.Test;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
-import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
 
@@ -46,9 +45,6 @@ public class CacheDeferredDeleteSanitySelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testDeferredDelete() throws Exception {
-        testDeferredDelete(LOCAL, ATOMIC, false, false);
-        testDeferredDelete(LOCAL, TRANSACTIONAL, false, false);
-
         testDeferredDelete(PARTITIONED, ATOMIC, false, true);
         testDeferredDelete(PARTITIONED, TRANSACTIONAL, false, true);
 
@@ -56,9 +52,6 @@ public class CacheDeferredDeleteSanitySelfTest extends GridCommonAbstractTest {
         testDeferredDelete(REPLICATED, TRANSACTIONAL, false, true);
 
         // Near
-        testDeferredDelete(LOCAL, ATOMIC, true, false);
-        testDeferredDelete(LOCAL, TRANSACTIONAL, true, false);
-
         testDeferredDelete(PARTITIONED, ATOMIC, true, true);
         testDeferredDelete(PARTITIONED, TRANSACTIONAL, true, false);
 
@@ -83,16 +76,6 @@ public class CacheDeferredDeleteSanitySelfTest extends GridCommonAbstractTest {
     public void testDeferredDeleteMvccNear() throws Exception {
         testDeferredDelete(PARTITIONED, TRANSACTIONAL_SNAPSHOT, true, false);
         testDeferredDelete(REPLICATED, TRANSACTIONAL_SNAPSHOT, true, true);
-    }
-
-    /**
-     * @throws Exception If fails.
-     */
-    @Ignore("https://issues.apache.org/jira/browse/IGNITE-9530")
-    @Test
-    public void testDeferredDeleteMvccLocal() throws Exception {
-        testDeferredDelete(LOCAL, TRANSACTIONAL_SNAPSHOT, false, false);
-        testDeferredDelete(LOCAL, TRANSACTIONAL_SNAPSHOT, true, false);
     }
 
     /**

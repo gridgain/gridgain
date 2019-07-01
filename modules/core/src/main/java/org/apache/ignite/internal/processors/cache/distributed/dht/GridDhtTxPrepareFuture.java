@@ -508,8 +508,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
                 }
 
                 // Send old value in case if rebalancing is not finished.
-                final boolean sndOldVal = !cacheCtx.isLocal() &&
-                    !cacheCtx.topology().rebalanceFinished(tx.topologyVersion());
+                final boolean sndOldVal = !cacheCtx.topology().rebalanceFinished(tx.topologyVersion());
 
                 if (sndOldVal) {
                     if (oldVal == null && !readOld) {
@@ -643,10 +642,6 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
     private void readyLocks(Iterable<IgniteTxEntry> checkEntries) {
         for (IgniteTxEntry txEntry : checkEntries) {
             GridCacheContext cacheCtx = txEntry.context();
-
-            if (cacheCtx.isLocal())
-                continue;
-
             GridDistributedCacheEntry entry = (GridDistributedCacheEntry)txEntry.cached();
 
             if (entry == null) {
@@ -840,7 +835,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
         if (!tx.nearNodeId().equals(cctx.localNodeId())) {
             Throwable err = this.err;
 
-            if (err != null && err instanceof IgniteFutureCancelledException) {
+            if (err instanceof IgniteFutureCancelledException) {
                 if (msgLog.isDebugEnabled()) {
                     msgLog.debug("DHT prepare fut, skip send response [txId=" + tx.nearXidVersion() +
                         ", dhtTxId=" + tx.xidVersion() +
