@@ -25,7 +25,7 @@ ENV CHROME_BIN /usr/bin/chromium-browser
 WORKDIR /opt/web-console/frontend
 
 COPY ./package*.json ./
-RUN npm install --no-optional
+RUN npm install
 
 COPY . .
 
