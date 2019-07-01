@@ -19,8 +19,8 @@ import {nonEmpty, nonNil} from 'app/utils/lodashMixins';
 
 import Sockette from 'sockette';
 
-import {BehaviorSubject, Subject} from 'rxjs';
-import {distinctUntilChanged, filter, first, map, pluck, take, tap} from 'rxjs/operators';
+import {BehaviorSubject, Subject, EMPTY} from 'rxjs';
+import {distinctUntilChanged, filter, first, map, pluck, tap, timeout, catchError} from 'rxjs/operators';
 
 import uuidv4 from 'uuid/v4';
 
@@ -153,6 +153,8 @@ export default class AgentManager {
 
     wsSubject = new Subject();
 
+    wsConnection = new BehaviorSubject(false);
+
     switchClusterListeners = new Set<() => Promise>();
 
     addClusterSwitchListener(func) {
@@ -242,10 +244,11 @@ export default class AgentManager {
 
         // Open websocket connection to backend.
         this.ws = new Sockette(uri, {
-            timeout: 5000, // Retry every 5 seconds
             onopen: (evt) => {
                 if (__dbg)
                     console.log('[WS] Connected to server: ', evt);
+
+                this.wsConnection.next(true);
             },
             onmessage: (msg) => {
                 if (__dbg)
@@ -260,6 +263,8 @@ export default class AgentManager {
             onreconnect: (evt) => {
                 if (__dbg)
                     console.log('[WS] Reconnecting...', evt);
+
+                this.wsConnection.next(false);
             },
             onclose: (evt) => {
                 if (__dbg)
@@ -276,6 +281,8 @@ export default class AgentManager {
                     eventType: 'disconnected',
                     payload: 'none'
                 });
+
+                this.wsConnection.next(false);
             },
             onerror: (evt) => {
                 if (__dbg)
@@ -410,7 +417,7 @@ export default class AgentManager {
         this.wsSubject
             .pipe(
                 filter((evt) => evt.requestId === requestId || evt.eventType === 'disconnected'),
-                take(1)
+                first()
             )
             .toPromise()
             .then((evt) => {
@@ -425,7 +432,19 @@ export default class AgentManager {
                     latch.resolve(evt.payload);
             });
 
-        this._sendWebSocketEvent(requestId, eventType, data);
+        this.wsConnection.pipe(
+            filter((isConnected) => isConnected),
+            first(),
+            // Await web socket connection to send request.
+            timeout(5000),
+            tap(() => this._sendWebSocketEvent(requestId, eventType, data)),
+            catchError(() => {
+                latch.reject({message: 'Connection to web server was lost'});
+
+                return EMPTY;
+            })
+        )
+        .subscribe(() => {});
 
         return latch.promise;
     }
