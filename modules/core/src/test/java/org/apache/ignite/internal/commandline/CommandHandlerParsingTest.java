@@ -25,6 +25,7 @@ import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import org.apache.ignite.internal.commandline.baseline.BaselineArguments;
 import org.apache.ignite.internal.commandline.cache.CacheCommands;
 import org.apache.ignite.internal.commandline.cache.CacheSubcommands;
@@ -103,12 +104,12 @@ public class CommandHandlerParsingTest {
             UUID nodeId = UUID.randomUUID();
 
             ConnectionAndSslParameters args = parseArgs(Arrays.asList(
-                    CACHE.text(),
-                    VALIDATE_INDEXES.text(),
-                    nodeId.toString(),
-                    CHECK_THROUGH.toString(),
-                    Integer.toString(expectedParam)
-                ));
+                CACHE.text(),
+                VALIDATE_INDEXES.text(),
+                nodeId.toString(),
+                CHECK_THROUGH.toString(),
+                Integer.toString(expectedParam)
+            ));
 
             assertTrue(args.command() instanceof CacheCommands);
 
@@ -194,7 +195,7 @@ public class CommandHandlerParsingTest {
         }
     }
 
-    private List<List<String>> generateArgumentList(String subcommand, T2<String, Boolean>...optional) {
+    private List<List<String>> generateArgumentList(String subcommand, T2<String, Boolean>... optional) {
         List<List<T2<String, Boolean>>> lists = generateAllCombinations(Arrays.asList(optional), (x) -> x.get2());
 
         ArrayList<List<String>> res = new ArrayList<>();
@@ -230,7 +231,6 @@ public class CommandHandlerParsingTest {
 
         return res;
     }
-
 
     private <T> void generateAllCombinations(List<T> res, List<T> source, Predicate<T> stopFunc, List<List<T>> acc) {
         acc.add(res);
@@ -269,23 +269,8 @@ public class CommandHandlerParsingTest {
     public void testExperimentalCommandIsDisabled() {
         System.clearProperty(IGNITE_ENABLE_EXPERIMENTAL_COMMAND);
 
-        try {
-            parseArgs(Arrays.asList(WAL.text(), WAL_PRINT));
-        }
-        catch (Throwable e) {
-            e.printStackTrace();
-
-            assertTrue(e instanceof IllegalArgumentException);
-        }
-
-        try {
-            parseArgs(Arrays.asList(WAL.text(), WAL_DELETE));
-        }
-        catch (Throwable e) {
-            e.printStackTrace();
-
-            assertTrue(e instanceof IllegalArgumentException);
-        }
+        GridTestUtils.assertThrows(null, () -> parseArgs(Arrays.asList(WAL.text(), WAL_PRINT)), IllegalArgumentException.class, null);
+        GridTestUtils.assertThrows(null, () -> parseArgs(Arrays.asList(WAL.text(), WAL_DELETE)), IllegalArgumentException.class, null);
     }
 
     /**
@@ -322,7 +307,6 @@ public class CommandHandlerParsingTest {
             assertEquals(cmd.command(), args.command());
         }
     }
-
 
     /**
      * Tests parsing and validation for user and password arguments.
@@ -442,7 +426,7 @@ public class CommandHandlerParsingTest {
                         BaselineArguments arg = ((BaselineCommand)args.command()).arg();
 
                         assertEquals(baselineAct, arg.getCmd().text());
-                        assertEquals(new HashSet<>(Arrays.asList("c_id1","c_id2")), new HashSet<>(arg.getConsistentIds()));
+                        assertEquals(new HashSet<>(Arrays.asList("c_id1", "c_id2")), new HashSet<>(arg.getConsistentIds()));
                     }
 
                     break;
@@ -467,8 +451,7 @@ public class CommandHandlerParsingTest {
     }
 
     /**
-     * Tests host and port arguments.
-     * Tests connection settings arguments.
+     * Tests host and port arguments. Tests connection settings arguments.
      */
     @Test
     public void testConnectionSettings() {
@@ -614,7 +597,9 @@ public class CommandHandlerParsingTest {
         assertEquals(Arrays.asList("1", "2", "3"), arg.getConsistentIds());
     }
 
-    /** */
+    /**
+     *
+     */
     @Test
     public void testValidateIndexesNotAllowedForSystemCache() {
         GridTestUtils.assertThrows(
@@ -625,7 +610,9 @@ public class CommandHandlerParsingTest {
         );
     }
 
-    /** */
+    /**
+     *
+     */
     @Test
     public void testIdleVerifyWithCheckCrcNotAllowedForSystemCache() {
         GridTestUtils.assertThrows(
