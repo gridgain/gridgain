@@ -41,12 +41,12 @@ public class WildcardReloadableResourceBundleMessageSource extends ReloadableRes
     /**
      * Constant to define the classes string in the URI
      */
-    private static final String CLASSES ="classes/";
+    private static final String CLASSES = "classes/";
 
     /**
      * constant to define the class path string
      */
-    private static final String CLASSPATH ="classpath:";
+    private static final String CLASSPATH = "classpath:";
 
     /**
      * Variable reference to PathMatching resource

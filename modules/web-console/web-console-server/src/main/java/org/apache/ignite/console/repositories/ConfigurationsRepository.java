@@ -98,6 +98,7 @@ public class ConfigurationsRepository {
                     "wc_cluster_caches_idx",
                     (key) -> messages.getMessage(ERR_DATA_ACCESS_VIOLATION)
             );
+
             modelsIdx = new OneToManyIndex<>(
                     ignite,
                     "wc_cluster_models_idx",
@@ -109,6 +110,7 @@ public class ConfigurationsRepository {
                     "wc_account_clusters_idx",
                     (key) -> messages.getMessage(ERR_DATA_ACCESS_VIOLATION)
             );
+
             cfgIdx = new OneToManyIndex<>(
                     ignite,
                     "wc_account_configs_idx",
