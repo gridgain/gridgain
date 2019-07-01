@@ -80,6 +80,7 @@ import ErrorParser from './services/ErrorParser.service';
 import ModelNormalizer from './services/ModelNormalizer.service';
 import {CSV} from './services/CSV';
 import {$exceptionHandler} from './services/exceptionHandler';
+import {removeLocal, setLocal} from './services/Storage.service';
 
 import {Store} from './services/store';
 import {UserService} from './modules/user/User.service';
@@ -342,18 +343,13 @@ export default angular
          */
         ($transitions) => {
             $transitions.onSuccess({ }, (trans) => {
-                try {
-                    const {name, unsaved} = trans.$to();
-                    const params = trans.params();
+                const {name, unsaved} = trans.$to();
+                const params = trans.params();
 
-                    if (unsaved)
-                        localStorage.removeItem('lastStateChangeSuccess');
-                    else
-                        localStorage.setItem('lastStateChangeSuccess', JSON.stringify({name, params}));
-                }
-                catch (ignored) {
-                    // No-op.
-                }
+                if (unsaved)
+                    removeLocal('lastStateChangeSuccess');
+                else
+                    setLocal('lastStateChangeSuccess', JSON.stringify({name, params}));
             });
         }
     ])

@@ -37,6 +37,7 @@ import ClusterLoginService from './components/cluster-login/service';
 import * as AgentTypes from 'app/types/Agent';
 import {TransitionService} from '@uirouter/angularjs';
 import VersionService from 'app/services/Version.service';
+import {getLocalUnsafe, removeLocal, setLocal} from 'app/services/Storage.service';
 import UserNotifications from 'app/components/user-notifications/service';
 import {DemoService} from 'app/modules/demo/Demo.module';
 
@@ -165,10 +166,10 @@ export default class AgentManager {
 
     static restoreActiveCluster() {
         try {
-            return JSON.parse(localStorage.cluster);
+            return JSON.parse(getLocalUnsafe('cluster'));
         }
         catch (ignored) {
-            localStorage.removeItem('cluster');
+            removeLocal('cluster');
 
             return null;
         }
@@ -314,12 +315,7 @@ export default class AgentManager {
     }
 
     saveToStorage(cluster = this.connectionSbj.getValue().cluster) {
-        try {
-            localStorage.cluster = JSON.stringify(cluster);
-        }
-        catch (ignored) {
-            // No-op.
-        }
+        setLocal('cluster', JSON.stringify(cluster));
     }
 
     updateCluster(newCluster) {

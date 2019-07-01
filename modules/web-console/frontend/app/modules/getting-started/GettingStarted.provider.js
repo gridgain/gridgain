@@ -28,6 +28,7 @@ import angular from 'angular';
 
 import PAGES from 'app/data/getting-started.json';
 import templateUrl from 'views/templates/getting-started.tpl.pug';
+import {getLocal, setLocal} from 'app/services/Storage.service';
 
 export function provider() {
     /**
@@ -103,25 +104,14 @@ export function service($root, $modal, igniteGettingStarted) {
     const dialog = $modal({ templateUrl, scope, show: false, backdrop: 'static'});
 
     scope.close = () => {
-        try {
-            localStorage.showGettingStarted = !scope.ui.dontShowGettingStarted;
-        }
-        catch (ignored) {
-            // No-op.
-        }
+        setLocal('showGettingStarted', !scope.ui.dontShowGettingStarted);
 
         dialog.hide();
     };
 
     return {
         tryShow: (force = false) => {
-            try {
-                scope.ui.dontShowGettingStarted = !(_.isNil(localStorage.showGettingStarted)
-                        || localStorage.showGettingStarted === 'true');
-            }
-            catch (ignored) {
-                // No-op.
-            }
+            scope.ui.dontShowGettingStarted = !(getLocal('showGettingStarted', 'false') === 'true');
 
             if (force || !scope.ui.dontShowGettingStarted) {
                 _page = 0;
