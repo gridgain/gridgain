@@ -151,19 +151,14 @@ public class AdminService {
     }
 
     /**
-     * @param accId Account ID.
-     */
-    public void become(UUID accId) {
-        throw new UnsupportedOperationException("Not implemented yet!");
-    }
-
-    /**
      * @param params SignUp params.
      */
-    public void registerUser(SignUpRequest params) {
+    public Account registerUser(SignUpRequest params) {
         Account acc = accountsSrv.create(params);
 
         notificationSrv.sendEmail(ADMIN_WELCOME_LETTER, acc);
+
+        return acc;
     }
 
     /** */
