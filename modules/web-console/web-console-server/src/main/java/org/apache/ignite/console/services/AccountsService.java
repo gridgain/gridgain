@@ -44,7 +44,7 @@ import static java.time.temporal.ChronoUnit.MILLIS;
 import static org.apache.ignite.console.errors.Errors.ERR_ACCOUNT_NOT_FOUND_BY_TOKEN;
 import static org.apache.ignite.console.errors.Errors.ERR_ACTIVATION_NOT_ENABLED;
 import static org.apache.ignite.console.errors.Errors.ERR_CONFIRM_EMAIL;
-import static org.apache.ignite.console.errors.Errors.ERR_SIGN_UP_NOT_ALLOWED;
+import static org.apache.ignite.console.errors.Errors.ERR_SIGNUP_NOT_ALLOWED;
 import static org.apache.ignite.console.errors.Errors.ERR_TOO_MANY_ACTIVATION_ATTEMPTS;
 import static org.apache.ignite.console.event.Type.ACCOUNT_CREATE;
 import static org.apache.ignite.console.event.Type.ACCOUNT_UPDATE;
@@ -155,7 +155,7 @@ public class AccountsService implements UserDetailsService {
             Account acc0 = create(params);
 
             if (disableSignup && !acc0.isAdmin())
-                throw new AuthenticationServiceException(messages.getMessage(ERR_SIGN_UP_NOT_ALLOWED));
+                throw new AuthenticationServiceException(messages.getMessage(ERR_SIGNUP_NOT_ALLOWED));
 
             return acc0;
         });

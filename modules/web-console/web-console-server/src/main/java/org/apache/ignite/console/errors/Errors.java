@@ -25,7 +25,7 @@ import org.apache.ignite.IgniteException;
  */
 public class Errors {
     /** */
-    public static final String ERR_SIGN_UP_NOT_ALLOWED = "err.sign-up-not-allowed";
+    public static final String ERR_SIGNUP_NOT_ALLOWED = "err.sign-up-not-allowed";
 
     /** */
     public static final String ERR_CONFIRM_EMAIL = "err.confirm-email";
