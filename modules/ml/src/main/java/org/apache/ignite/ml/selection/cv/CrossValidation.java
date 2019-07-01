@@ -72,7 +72,7 @@ import org.jetbrains.annotations.NotNull;
  * @param <V> Type of a value in {@code upstream} data.
  */
 public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
-    public static final int SIZE_OF_POPULATION = 100;
+    public static final int SIZE_OF_POPULATION = 50; // TODO: improve situation with strange paramters doubled here and in GA
     /** Learning environment builder. */
     private LearningEnvironmentBuilder envBuilder = LearningEnvironmentBuilder.defaultBuilder();
 

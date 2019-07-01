@@ -10,10 +10,10 @@ import java.util.stream.Stream;
 
 public class GeneticAlgorithm {
     /** Population size. */
-    private int populationSize = 20;
+    private int populationSize = 50;
 
     /** Amount of elite chromosomes. */
-    private int amountOfEliteChromosomes = 4;
+    private int amountOfEliteChromosomes = 2;
 
     /** Amount of generations. */
     private int amountOfGenerations = 10;
@@ -25,7 +25,7 @@ public class GeneticAlgorithm {
     private double uniformRate = 0.5;
 
     /** Seed. */
-    private long seed = 1234L;
+    private long seed = 123L;
 
     /** Crossingover probability. */
 
@@ -46,7 +46,7 @@ public class GeneticAlgorithm {
     /** Mutation operator. */
     private BiFunction<Integer, Double, Double> mutationOperator;
 
-    private CrossoverStrategy crossoverStrategy = CrossoverStrategy.ONE_POINT;
+    private CrossoverStrategy crossoverStrategy = CrossoverStrategy.UNIFORM;
 
     public GeneticAlgorithm() {}
 
