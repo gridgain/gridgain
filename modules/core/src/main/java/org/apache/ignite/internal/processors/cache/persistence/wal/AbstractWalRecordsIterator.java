@@ -314,8 +314,6 @@ public abstract class AbstractWalRecordsIterator
         if (log.isInfoEnabled())
             log.info("Stopping WAL iteration due to an exception: " + e.getMessage() + ", ptr=" + ptr);
 
-        log.error("Stopping WAL iteration due to an exception",e );
-
         return new IgniteCheckedException(e);
     }
 
