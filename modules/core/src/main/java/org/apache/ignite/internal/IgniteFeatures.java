@@ -162,8 +162,8 @@ public enum IgniteFeatures {
         final BitSet set = new BitSet();
 
         for (IgniteFeatures value : IgniteFeatures.values()) {
-
-            if(IGNITE_SECURITY_PROCESSOR.equals(value) && !getBoolean(IGNITE_SECURITY_PROCESSOR.name(), true))
+            // After rolling upgrade, our security has more strict validation. This may come as a surprise to customers.
+            if (IGNITE_SECURITY_PROCESSOR == value && !getBoolean(IGNITE_SECURITY_PROCESSOR.name(), true))
                 continue;
 
             final int featureId = value.getFeatureId();
