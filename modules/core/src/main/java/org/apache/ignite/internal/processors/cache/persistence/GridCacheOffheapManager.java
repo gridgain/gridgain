@@ -490,6 +490,8 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         for (int p = 0; p < grp.affinity().partitions(); p++) {
             Integer recoverState = partitionRecoveryStates.get(new GroupPartitionId(grp.groupId(), p));
 
+            long startTime = U.currentTimeMillis();
+
             if (ctx.pageStore().exists(grp.groupId(), p)) {
                 ctx.pageStore().ensure(grp.groupId(), p);
 
@@ -576,6 +578,10 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                     log.debug("Skipping partition on recovery (no page store OR wal state) " +
                         "[grp=" + grp.cacheOrGroupName() + ", p=" + p + "]");
             }
+            if (log.isDebugEnabled())
+                log.debug("It took " + (U.currentTimeMillis() - startTime) +
+                    " ms to restore partition state " +
+                    "[grp=" + grp.cacheOrGroupName() + ", p=" + p + "]");
         }
 
         partitionStatesRestored = true;
