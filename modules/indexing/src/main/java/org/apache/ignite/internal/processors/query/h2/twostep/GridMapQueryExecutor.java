@@ -51,6 +51,7 @@ import org.apache.ignite.internal.processors.query.h2.H2ConnectionWrapper;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.MapH2QueryInfo;
+import org.apache.ignite.internal.processors.query.h2.QueryMemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.UpdateResult;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RetryException;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
@@ -73,6 +74,7 @@ import org.h2.api.ErrorCode;
 import org.h2.jdbc.JdbcResultSet;
 import org.h2.jdbc.JdbcSQLException;
 import org.h2.value.Value;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.events.EventType.EVT_CACHE_QUERY_EXECUTED;
@@ -393,12 +395,8 @@ public class GridMapQueryExecutor {
 
                 qryResults.addResult(qryIdx, res);
 
-                ResultSet rs = null;
-
                 try {
                     res.lock();
-
-                    MapH2QueryInfo qryInfo = null;
 
                     // If we are not the target node for this replicated query, just ignore it.
                     if (qry.node() == null || (segmentId == 0 && qry.node().equals(ctx.localNodeId()))) {
@@ -416,9 +414,9 @@ public class GridMapQueryExecutor {
 
                         H2Utils.bindParameters(stmt, params0);
 
-                        qryInfo = new MapH2QueryInfo(stmt, qry.query(), node, reqId, segmentId);
+                        MapH2QueryInfo qryInfo = new MapH2QueryInfo(stmt, qry.query(), node, reqId, segmentId);
 
-                        rs = h2.executeSqlQueryWithTimer(
+                        ResultSet rs = h2.executeSqlQueryWithTimer(
                             stmt,
                             connWrp.connection(),
                             sql,
@@ -445,24 +443,29 @@ public class GridMapQueryExecutor {
                         }
 
                         assert rs instanceof JdbcResultSet : rs.getClass();
+
+                        if (qryResults.cancelled())
+                            throw new QueryCancelledException();
+
+                        res.openResult(rs);
+
+                        final GridQueryNextPageResponse msg = prepareNextPage(
+                            nodeRess,
+                            node,
+                            qryResults,
+                            qryIdx,
+                            segmentId,
+                            pageSize,
+                            dataPageScanEnabled
+                        );
+
+                        sendNextPage(node, msg);
                     }
+                    else {
+                        assert !qry.isPartitioned();
 
-                    res.openResult(rs);
-
-                    if (qryResults.cancelled())
-                        throw new QueryCancelledException();
-
-                    final GridQueryNextPageResponse msg = prepareNextPage(
-                        nodeRess,
-                        node,
-                        qryResults,
-                        qryIdx,
-                        segmentId,
-                        pageSize,
-                        dataPageScanEnabled
-                    );
-
-                    sendNextPage(node, msg);
+                        qryResults.closeResult(qryIdx);
+                    }
 
                     qryIdx++;
                 }
@@ -829,8 +832,6 @@ public class GridMapQueryExecutor {
             qr.closeResult(qry);
 
             if (qr.isAllClosed()) {
-                qr.close();
-
                 nodeRess.remove(qr.queryRequestId(), segmentId, qr);
 
                 // Clear context, release reservations
@@ -855,14 +856,14 @@ public class GridMapQueryExecutor {
      * @param node Node.
      * @param msg Message to send.
      */
-    private void sendNextPage(ClusterNode node, GridQueryNextPageResponse msg) {
+    private void sendNextPage(@NotNull ClusterNode node, @NotNull GridQueryNextPageResponse msg) {
+        assert msg != null;
+
         try {
-            if (msg != null) {
-                if (node.isLocal())
-                    h2.reduceQueryExecutor().onNextPage(node, msg);
-                else
-                    ctx.io().sendToGridTopic(node, GridTopic.TOPIC_QUERY, msg, QUERY_POOL);
-            }
+            if (node.isLocal())
+                h2.reduceQueryExecutor().onNextPage(node, msg);
+            else
+                ctx.io().sendToGridTopic(node, GridTopic.TOPIC_QUERY, msg, QUERY_POOL);
         }
         catch (IgniteCheckedException e) {
             U.error(log, "Failed to send message.", e);
