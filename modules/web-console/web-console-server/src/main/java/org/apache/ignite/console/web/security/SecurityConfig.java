@@ -20,13 +20,12 @@ import java.io.IOException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.ignite.Ignite;
-import org.apache.ignite.cache.CacheMode;
-import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.console.config.ActivationConfiguration;
 import org.apache.ignite.console.services.AccountsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
@@ -37,12 +36,13 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetailsChecker;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.access.intercept.FilterSecurityInterceptor;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
+import org.springframework.security.web.authentication.switchuser.SwitchUserFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.session.ExpiringSession;
-import org.springframework.session.MapSession;
 import org.springframework.session.Session;
 import org.springframework.session.SessionRepository;
 import org.springframework.session.config.annotation.web.http.EnableSpringHttpSession;
@@ -58,6 +58,7 @@ import static org.apache.ignite.console.websocket.WebSocketEvents.BROWSERS_PATH;
 @Configuration
 @EnableWebSecurity
 @EnableSpringHttpSession
+@Profile("!test")
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
     /** The number of seconds that the {@link Session} should be kept alive between client requests. */
     private static final int MAX_INACTIVE_INTERVAL_SECONDS = 60 * 60 * 24 * 30;
@@ -80,6 +81,12 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     /** Resend activation token. */
     private static final String ACTIVATION_RESEND = "/api/v1/activation/resend";
 
+    /** Switch user url. */
+    private static final String SWITCH_USER_URL = "/api/v1/admin/login/impersonate";
+
+    /** Exit user url. */
+    private static final String EXIT_USER_URL = "/api/v1/logout/impersonate";
+
     /** Public routes. */
     private static final String[] PUBLIC_ROUTES = new String[] {
         AGENTS_PATH,
@@ -89,6 +96,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     /** */
     private final AccountsService accountsSrv;
+    
     /** */
     private final PasswordEncoder encoder;
 
@@ -130,8 +138,10 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             .antMatchers(PUBLIC_ROUTES).anonymous()
             .antMatchers("/api/v1/admin/**").hasAuthority(ROLE_ADMIN)
             .antMatchers("/api/v1/**", BROWSERS_PATH).hasAuthority(ROLE_USER)
+            .antMatchers(EXIT_USER_URL).authenticated()
             .and()
             .addFilterAt(authenticationFilter(), UsernamePasswordAuthenticationFilter.class)
+            .addFilterAfter(switchUserFilter(), FilterSecurityInterceptor.class)
             .logout()
             .logoutUrl(LOGOUT_ROUTE)
             .deleteCookies("SESSION")
@@ -172,7 +182,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
      * @param res Response.
      * @param authentication Authentication.
      */
-    private void loginSuccessHandler(
+    private void successHandler(
         HttpServletRequest req,
         HttpServletResponse res,
         Authentication authentication
@@ -187,11 +197,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
      */
     @Bean
     public SessionRepository<ExpiringSession> sessionRepository(@Autowired Ignite ignite) {
-        CacheConfiguration<String, MapSession> cfg = new CacheConfiguration<String, MapSession>()
-            .setName("sessions")
-            .setCacheMode(CacheMode.REPLICATED);
-
-        return new IgniteSessionRepository(ignite.getOrCreateCache(cfg))
+        return new IgniteSessionRepository(ignite)
             .setDefaultMaxInactiveInterval(MAX_INACTIVE_INTERVAL_SECONDS);
     }
 
@@ -203,8 +209,23 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
         authenticationFilter.setAuthenticationManager(authenticationManagerBean());
         authenticationFilter.setRequiresAuthenticationRequestMatcher(new AntPathRequestMatcher(SIGN_IN_ROUTE, "POST"));
-        authenticationFilter.setAuthenticationSuccessHandler(this::loginSuccessHandler);
+        authenticationFilter.setAuthenticationSuccessHandler(this::successHandler);
 
         return authenticationFilter;
+    }
+
+    /**
+     * Switch User processing filter.
+     */
+    public SwitchUserFilter switchUserFilter() {
+        SwitchUserFilter filter = new SwitchUserFilter();
+
+        filter.setUserDetailsService(accountsSrv);
+        filter.setSuccessHandler(this::successHandler);
+        filter.setUsernameParameter("email");
+        filter.setSwitchUserUrl(SWITCH_USER_URL);
+        filter.setExitUserUrl(EXIT_USER_URL);
+
+        return filter;
     }
 }

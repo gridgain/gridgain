@@ -61,8 +61,11 @@ public enum IgniteFeatures {
     /** Distributed metastorage. */
     DISTRIBUTED_METASTORAGE(11),
 
+    /** Supports tracking update counter for transactions. */
+    TX_TRACKING_UPDATE_COUNTER(12),
+
     /** Support new security processor */
-    IGNITE_SECURITY_PROCESSOR(12);
+    IGNITE_SECURITY_PROCESSOR(13);
 
     /**
      * Unique feature identifier.

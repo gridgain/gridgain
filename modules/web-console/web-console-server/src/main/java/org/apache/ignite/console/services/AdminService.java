@@ -26,7 +26,6 @@ import org.apache.ignite.console.repositories.AnnouncementRepository;
 import org.apache.ignite.console.tx.TransactionManager;
 import org.apache.ignite.console.web.model.SignUpRequest;
 import org.apache.ignite.console.web.socket.WebSocketsManager;
-import org.apache.ignite.transactions.Transaction;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
@@ -132,15 +131,15 @@ public class AdminService {
      * @param accId Account ID.
      */
     public void delete(UUID accId) {
-        try (Transaction tx = txMgr.txStart()) {
+        Account acc = txMgr.doInTransaction(() -> {
             cfgsSrv.deleteByAccountId(accId);
+
             notebooksSrv.deleteByAccountId(accId);
-            Account acc = accountsSrv.delete(accId);
 
-            tx.commit();
+            return accountsSrv.delete(accId);
+        });
 
-            notificationSrv.sendEmail(ACCOUNT_DELETED, acc);
-        }
+        notificationSrv.sendEmail(ACCOUNT_DELETED, acc);
     }
 
     /**
@@ -152,19 +151,14 @@ public class AdminService {
     }
 
     /**
-     * @param accId Account ID.
-     */
-    public void become(UUID accId) {
-        throw new UnsupportedOperationException("Not implemented yet!");
-    }
-
-    /**
      * @param params SignUp params.
      */
-    public void registerUser(SignUpRequest params) {
+    public Account registerUser(SignUpRequest params) {
         Account acc = accountsSrv.create(params);
 
         notificationSrv.sendEmail(ADMIN_WELCOME_LETTER, acc);
+
+        return acc;
     }
 
     /** */
