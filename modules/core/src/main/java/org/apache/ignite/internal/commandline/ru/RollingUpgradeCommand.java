@@ -135,11 +135,7 @@ public class RollingUpgradeCommand implements Command<RollingUpgradeArguments> {
 
         log.info("Rolling upgrade is " + (status.enabled()? "enabled" : "disabled"));
         log.info("Initial version: " + status.initialVersion());
-        log.info("Update version: " + status.updateVersion());
-
-        log.info("Rolling upgrade is " + (status.enabled()? "enabled" : "disabled"));
-        log.info("Initial version: " + status.initialVersion());
-        log.info("Update version: " + status.updateVersion());
+        log.info("Target version: " + ((status.targetVersion() != null)? status.targetVersion(): "N/A"));
 
         if (status.forcedModeEnabled())
             log.info("Forced mode is enabled.");

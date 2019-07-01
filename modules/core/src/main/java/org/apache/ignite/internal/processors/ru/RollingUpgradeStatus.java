@@ -45,15 +45,15 @@ public interface RollingUpgradeStatus extends Serializable {
     public IgniteProductVersion initialVersion();
 
     /**
-     * Returns the resulting version.
+     * Returns the target version.
      * The returned value can be {@code null} if Rolling Upgrade is not in progress
-     * or resulting version is not determined yet.
+     * or target version is not determined yet.
      *
      * This method makes sense only for the case when the {@code forced} mode is disabled.
      *
-     * @return Resulting version.
+     * @return Target version.
      */
-    public @Nullable IgniteProductVersion updateVersion();
+    public @Nullable IgniteProductVersion targetVersion();
 
     /**
      * Returns a set of features that is supported by all nodes in the cluster.

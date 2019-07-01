@@ -94,7 +94,7 @@ public class IgniteRollingUpgradeStatus extends IgniteDataTransferObject impleme
     }
 
     /** {@inheritDoc} */
-    @Override public @Nullable IgniteProductVersion updateVersion() {
+    @Override public @Nullable IgniteProductVersion targetVersion() {
         return updateVer;
     }
 

@@ -48,7 +48,7 @@ public abstract class RollingUpgradeUtil {
      * @return List of alive nodes in the cluster that are updated.
      */
     public static List<String> updatedNodes(GridKernalContext ctx, RollingUpgradeStatus status) {
-        return nodes(ctx, status, status.updateVersion());
+        return nodes(ctx, status, status.targetVersion());
     }
 
     /**
