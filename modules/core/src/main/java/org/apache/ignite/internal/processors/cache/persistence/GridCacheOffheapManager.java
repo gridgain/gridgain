@@ -536,7 +536,8 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                                 if (log.isDebugEnabled())
                                     log.debug("Restored partition state (from WAL) " +
                                         "[grp=" + grp.cacheOrGroupName() + ", p=" + p + ", state=" + part.state() +
-                                        ", updCntr=" + part.initialUpdateCounter() + "]");
+                                        ", updCntr=" + part.initialUpdateCounter() +
+                                        ", size=" + part.fullSize() + "]");
                             }
                             else {
                                 int stateId = (int) io.getPartitionState(pageAddr);
@@ -546,7 +547,8 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                                 if (log.isDebugEnabled())
                                     log.debug("Restored partition state (from page memory) " +
                                         "[grp=" + grp.cacheOrGroupName() + ", p=" + p + ", state=" + part.state() +
-                                        ", updCntr=" + part.initialUpdateCounter() + ", stateId=" + stateId + "]");
+                                        ", updCntr=" + part.initialUpdateCounter() + ", stateId=" + stateId +
+                                        ", size=" + part.fullSize() + "]");
                             }
                         }
                         finally {
@@ -571,7 +573,8 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                 if (log.isDebugEnabled())
                     log.debug("Restored partition state (from WAL) " +
                         "[grp=" + grp.cacheOrGroupName() + ", p=" + p + ", state=" + part.state() +
-                        ", updCntr=" + part.initialUpdateCounter() + "]");
+                        ", updCntr=" + part.initialUpdateCounter() +
+                        ", size=" + part.fullSize() + "]");
             }
             else {
                 if (log.isDebugEnabled())
