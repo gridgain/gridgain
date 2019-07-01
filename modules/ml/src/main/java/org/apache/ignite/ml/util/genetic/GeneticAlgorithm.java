@@ -1,23 +1,59 @@
 package org.apache.ignite.ml.util.genetic;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
 
 public class GeneticAlgorithm {
+    /** Population size. */
     private int populationSize = 20;
+
+    /** Amount of elite chromosomes. */
     private int amountOfEliteChromosomes = 4;
+
+    /** Amount of generations. */
     private int amountOfGenerations = 10;
+
+    /** Elitism. */
     private boolean elitism = true;
+
+    /** Uniform rate. */
     private double uniformRate = 0.5;
+
+    /** Seed. */
+    private long seed = 1234L;
+
+    /** Crossingover probability. */
+
+    private double crossingoverProbability = 0.9;
+
+    /** Mutation probability. */
+    private double mutationProbability = 0.1;
+
+    /** Random generator. */
+    private Random rnd = new Random(seed);
+
+    /** Population. */
     private Population population;
+
+    /** Fitness function. */
     private Function<Chromosome, Double> fitnessFunction;
+
+    /** Mutation operator. */
+    private BiFunction<Integer, Double, Double> mutationOperator;
+
+    private CrossoverStrategy crossoverStrategy = CrossoverStrategy.ONE_POINT;
 
     public GeneticAlgorithm() {}
 
     public Population initializePopulation(List<Double[]> rndParamSets) {
+        // validate that population size should be even
+        // elite chromosome should be even too or we should handle odd case especially
+
         populationSize = rndParamSets.size();
         population = new Population(populationSize);
         for (int i = 0; i < populationSize; i++)
@@ -30,14 +66,14 @@ public class GeneticAlgorithm {
         if (population != null) {
             population.calculateFitnessForAll(fitnessFunction);
             int i = 0;
-            while (i < amountOfGenerations) {
+            while (stopCriteriaIsReached(i)) {
                 Population newPopulation = new Population(populationSize);
 
                 selectEliteChromosomes(newPopulation);
 
                 crossingover(newPopulation);
 
-                mutate();
+                mutate(newPopulation);
 
                 // update fitness for new population
                 for (int j = amountOfEliteChromosomes; j < populationSize; j++)
@@ -48,6 +84,10 @@ public class GeneticAlgorithm {
                 i++;
             }
         }
+    }
+
+    private boolean stopCriteriaIsReached(int iterationNumber) {
+        return iterationNumber < amountOfGenerations;
     }
 
     private int selectEliteChromosomes(Population newPopulation) {
@@ -63,31 +103,103 @@ public class GeneticAlgorithm {
 
 
     private void crossingover(Population newPopulation) {
-        for (int j = amountOfEliteChromosomes; j < populationSize; j++) {
+        // index in this cycle doesn't affect on parent selection
+        for (int j = amountOfEliteChromosomes; j < populationSize; j+=2) {
             Chromosome ch1 = tournamentSelection();
             Chromosome ch2 = tournamentSelection();
-            Chromosome newCh = crossover(ch1, ch2);
-            newPopulation.set(j, newCh);
+
+            if(rnd.nextDouble() < crossingoverProbability) {
+                List<Chromosome> twoChildren = crossover(ch1, ch2);
+                newPopulation.set(j, twoChildren.get(0));
+                newPopulation.set(j+1, twoChildren.get(1));
+            } else {
+                newPopulation.set(j, ch1);
+                newPopulation.set(j+1, ch2);
+            }
         }
     }
 
-    // fake mutate
-    private void mutate() {
-        //for (int j = amountOfEliteChromosomes; j < SIZE_OF_POPULATION; j++)
-            //mutateOne(newPopulation.get(j));
+
+    /**
+     * Applies mutation operator to each chromosome in population with mutation probability.
+     *
+     * @param newPopulation New population.
+     */
+    private void mutate(Population newPopulation) {
+        for (int j = amountOfEliteChromosomes; j < populationSize; j++) {
+            Chromosome possibleMutant = newPopulation.get(j);
+            for (int geneIdx = 0; geneIdx < possibleMutant.size(); geneIdx++) {
+                if(rnd.nextDouble() < mutationProbability) {
+                    Double gene = possibleMutant.getGene(geneIdx);
+                    Double newGeneValue = mutationOperator.apply(geneIdx, gene);
+                    possibleMutant.set(geneIdx, newGeneValue);
+                }
+            }
+        }
     }
 
-    private Chromosome crossover(Chromosome firstParent, Chromosome secondParent) {
+
+    private List<Chromosome> crossover(Chromosome firstParent, Chromosome secondParent) {
         if (firstParent.size() != secondParent.size())
             throw new RuntimeException("Different length of hyper-parameter vectors!");
-        Chromosome child = new Chromosome(firstParent.size());
-        for (int i = 0; i < firstParent.size(); i++) {
-            if (Math.random() < uniformRate)
-                child.set(i, firstParent.get(i));
-            else
-                child.set(i, secondParent.get(i));
+        switch (crossoverStrategy) {
+            case UNIFORM: return uniformStrategy(firstParent, secondParent);
+            case ONE_POINT: return onePointStrategy(firstParent, secondParent);
+            default:
+                throw new UnsupportedOperationException("This strategy "
+                    + crossoverStrategy.name() + " is not supported yet.");
+
         }
-        return child;
+
+    }
+
+    private List<Chromosome> onePointStrategy(Chromosome firstParent, Chromosome secondParent) {
+        int size = firstParent.size();
+
+        Chromosome child1 = new Chromosome(size);
+        Chromosome child2 = new Chromosome(size);
+        int locusPnt = rnd.nextInt(size);
+
+        for (int i = 0; i < locusPnt; i++) {
+            child1.set(i, firstParent.getGene(i));
+            child2.set(i, secondParent.getGene(i));
+        }
+
+
+        for (int i = locusPnt; i < size; i++) {
+            child1.set(i, secondParent.getGene(i));
+            child2.set(i, firstParent.getGene(i));
+        }
+
+        List<Chromosome> res = new ArrayList<>();
+        res.add(child1);
+        res.add(child2);
+
+        return res;
+    }
+
+    private List<Chromosome> uniformStrategy(Chromosome firstParent, Chromosome secondParent) {
+        int size = firstParent.size();
+
+        Chromosome child1 = new Chromosome(size);
+        Chromosome child2 = new Chromosome(size);
+
+        for (int i = 0; i < firstParent.size(); i++) {
+            if (rnd.nextDouble() < uniformRate) {
+                child1.set(i, firstParent.getGene(i));
+                child2.set(i, secondParent.getGene(i));
+            }
+            else {
+                child1.set(i, secondParent.getGene(i));
+                child2.set(i, firstParent.getGene(i));
+            }
+        }
+
+        List<Chromosome> res = new ArrayList<>();
+        res.add(child1);
+        res.add(child2);
+
+        return res;
     }
 
     // fake tournament
@@ -125,4 +237,11 @@ public class GeneticAlgorithm {
         this.uniformRate = uniformRate;
         return this;
     }
+
+    public GeneticAlgorithm setMutationOperator(
+        BiFunction<Integer, Double, Double> mutationOperator) {
+        this.mutationOperator = mutationOperator;
+        return this;
+    }
+
 }

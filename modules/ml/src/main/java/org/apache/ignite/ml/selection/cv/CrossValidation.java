@@ -117,7 +117,7 @@ public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
                 return scoreEvolutionAlgorithmSearchHyperparameterOptimization();
             default:
                 throw new UnsupportedOperationException("This strategy "
-                    + paramGrid.getParameterSearchStrategy().name() + " is unsupported");
+                    + paramGrid.getParameterSearchStrategy().name() + " is not supported yet.");
         }
     }
 
@@ -128,7 +128,7 @@ public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
 
         // initialization
         List<Double[]> paramSetsCp = new ArrayList<>(paramSets);
-        Collections.shuffle(paramSetsCp, new Random(paramGrid.getSeed()));
+        Collections.shuffle(paramSetsCp, new Random(paramGrid.getSeed())); // TODO: - unclear seed - extract CV seed
 
         List<Double[]> rndParamSets = paramSetsCp.subList(0, SIZE_OF_POPULATION);
 
@@ -137,8 +137,22 @@ public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
             return Arrays.stream(res.locScores).average().getAsDouble();
         };
 
+        Random rnd = new Random(paramGrid.getSeed()); // common seed for shared lambdas can produce the same value on each function call? or sequent?
+
+
+        BiFunction<Integer, Double, Double> mutator = (Integer geneIdx, Double geneValue) -> {
+            Double newGeneValue;
+
+            Double[] possibleGeneValues = paramGrid.getParamRawData().get(geneIdx);
+            newGeneValue = possibleGeneValues[rnd.nextInt(possibleGeneValues.length)];  // TODO: - unclear seed - extract CV seed
+
+            return newGeneValue;
+        };
+
+
         GeneticAlgorithm ga = new GeneticAlgorithm();
         ga.setFitnessFunction(fitnessFunction);
+        ga.setMutationOperator(mutator);
         ga.initializePopulation(rndParamSets);
         ga.run();
 

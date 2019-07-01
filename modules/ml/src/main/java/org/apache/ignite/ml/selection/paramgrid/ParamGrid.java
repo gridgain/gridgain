@@ -16,8 +16,10 @@
 
 package org.apache.ignite.ml.selection.paramgrid;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.DoubleConsumer;
 
@@ -143,5 +145,14 @@ public class ParamGrid {
     public ParamGrid withMaxTries(int maxTries) {
         this.maxTries = maxTries;
         return this;
+    }
+
+    /**
+     * Prepare data for hyper-parameter tuning.
+     */
+    public List<Double[]> getParamRawData () {
+        List<Double[]> res = new ArrayList<>();
+        paramValuesByParamIdx.forEach(res::add);
+        return res;
     }
 }

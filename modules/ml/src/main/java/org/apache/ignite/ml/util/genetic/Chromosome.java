@@ -30,12 +30,21 @@ public class Chromosome implements Comparable {
         return genes.length;
     }
 
-    public double get(int i) {
+    public double getGene(int i) {
         return genes[i];
     }
 
     public void set(int i, double v) {
         genes[i] = v;
+    }
+
+    /**
+     * Creates chromosome copy.
+     */
+    public Chromosome copy(){
+        Chromosome copy = new Chromosome(genes);
+        copy.fitness = fitness;
+        return copy;
     }
 
     @Override public int compareTo(@NotNull Object o) {
