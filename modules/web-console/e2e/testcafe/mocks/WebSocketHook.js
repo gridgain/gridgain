@@ -49,7 +49,7 @@ export class WebSocket {
      * @param {string} requestId
      */
     emit(eventType, payload, requestId = uuidv4()) {
-        this.socket.send({requestId, eventType, payload});
+        this.socket.send(JSON.stringify({requestId, eventType, payload}));
 
         return this;
     }
