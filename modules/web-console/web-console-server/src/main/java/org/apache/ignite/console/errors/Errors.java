@@ -36,7 +36,6 @@ public class Errors {
     /** */
     public static final String ERR_TOO_MANY_ACTIVATION_ATTEMPTS = "err.too-many-activation-attempts";
 
-
     /** */
     public static final String ERR_DB_LOST_CONNECTION_DURING_TX = "err.db-lost-connection-during-tx";
 
