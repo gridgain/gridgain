@@ -33,7 +33,7 @@ import org.apache.ignite.ml.math.functions.IgniteSupplier;
  */
 public class GeneticAlgorithm {
     /** Population size. */
-    private int populationSize = 50;
+    private int populationSize;
 
     /** Amount of elite chromosomes. */
     private int amountOfEliteChromosomes = 2;
@@ -82,7 +82,6 @@ public class GeneticAlgorithm {
     public Population initializePopulation(List<Double[]> rawDataForPopulationFormation) {
         // validate that population size should be even
         // elite chromosome should be even too or we should handle odd case especially
-
         populationSize = rawDataForPopulationFormation.size();
         population = new Population(populationSize);
         for (int i = 0; i < populationSize; i++)
@@ -360,38 +359,102 @@ public class GeneticAlgorithm {
         return res;
     }
 
-    public void setFitnessFunction(Function<Chromosome, Double> fitnessFunction) {
+    /**
+     * Sets the custom fitness function.
+     *
+     * @param fitnessFunction Fitness function.
+     */
+    public GeneticAlgorithm withFitnessFunction(Function<Chromosome, Double> fitnessFunction) {
         this.fitnessFunction = fitnessFunction;
+        return this;
     }
 
+    /**
+     * Returns the best chromosome's genes presented as double array.
+     */
     public double[] getTheBestSolution() {
         Double[] boxed = population.selectBestKChromosome(1)[0].toDoubleArray();
         return Stream.of(boxed).mapToDouble(Double::doubleValue).toArray();
     }
 
-    public GeneticAlgorithm setAmountOfEliteChromosomes(int amountOfEliteChromosomes) {
+    /**
+     * @param amountOfEliteChromosomes Amount of elite chromosomes.
+     */
+    public GeneticAlgorithm withAmountOfEliteChromosomes(int amountOfEliteChromosomes) {
         this.amountOfEliteChromosomes = amountOfEliteChromosomes;
         return this;
     }
 
-    public GeneticAlgorithm setAmountOfGenerations(int amountOfGenerations) {
+    /**
+     * @param amountOfGenerations Amount of generations.
+     */
+    public GeneticAlgorithm withAmountOfGenerations(int amountOfGenerations) {
         this.amountOfGenerations = amountOfGenerations;
         return this;
     }
 
-    public GeneticAlgorithm setElitism(boolean elitism) {
+    /**
+     * @param elitism Elitism.
+     */
+    public GeneticAlgorithm withElitism(boolean elitism) {
         this.elitism = elitism;
         return this;
     }
 
-    public GeneticAlgorithm setUniformRate(double uniformRate) {
+    /**
+     * @param uniformRate Uniform rate.
+     */
+    public GeneticAlgorithm withUniformRate(double uniformRate) {
         this.uniformRate = uniformRate;
         return this;
     }
 
-    public GeneticAlgorithm setMutationOperator(
+    /**
+     * @param mutationOperator Mutation operator.
+     */
+    public GeneticAlgorithm withMutationOperator(
         BiFunction<Integer, Double, Double> mutationOperator) {
         this.mutationOperator = mutationOperator;
+        return this;
+    }
+
+    /**
+     * @param populationSize Population size.
+     */
+    public GeneticAlgorithm withPopulationSize(int populationSize) {
+        this.populationSize = populationSize;
+        return this;
+    }
+
+    /**
+     * @param crossingoverProbability Crossingover probability.
+     */
+    public GeneticAlgorithm withCrossingoverProbability(double crossingoverProbability) {
+        this.crossingoverProbability = crossingoverProbability;
+        return this;
+    }
+
+    /**
+     * @param mutationProbability Mutation probability.
+     */
+    public GeneticAlgorithm withMutationProbability(double mutationProbability) {
+        this.mutationProbability = mutationProbability;
+        return this;
+    }
+
+    /**
+     * @param crossoverStgy Crossover strategy.
+     */
+    public GeneticAlgorithm withCrossoverStgy(CrossoverStrategy crossoverStgy) {
+        this.crossoverStgy = crossoverStgy;
+        return this;
+    }
+
+    /**
+     * @param selectionStgy Selection strategy.
+     */
+    public GeneticAlgorithm withSelectionStgy(SelectionStrategy selectionStgy) {
+        this.selectionStgy = selectionStgy;
         return this;
     }
 

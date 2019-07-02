@@ -40,7 +40,7 @@ public class ParamGrid {
     private int paramCntr;
 
     /** Parameter search strategy. */
-    private HyperParameterSearchingStrategy parameterSearchStrategy = HyperParameterSearchingStrategy.BRUT_FORCE;
+    private HyperParameterSearchingStrategy paramSearchStgy = HyperParameterSearchingStrategy.BRUT_FORCE;
 
     /** Satisfactory fitness to stop the hyperparameter search. */
     private double satisfactoryFitness = 0.5;
@@ -74,10 +74,10 @@ public class ParamGrid {
     /**
      * Set up the hyperparameter searching strategy.
      *
-     * @param parameterSearchStrategy Parameter search strategy.
+     * @param paramSearchStgy Parameter search strategy.
      */
-    public ParamGrid withParameterSearchStrategy(HyperParameterSearchingStrategy parameterSearchStrategy) {
-        this.parameterSearchStrategy = parameterSearchStrategy;
+    public ParamGrid withParameterSearchStrategy(HyperParameterSearchingStrategy paramSearchStgy) {
+        this.paramSearchStgy = paramSearchStgy;
         return this;
     }
 
@@ -85,7 +85,7 @@ public class ParamGrid {
      *
      */
     public HyperParameterSearchingStrategy getParameterSearchStrategy() {
-        return parameterSearchStrategy;
+        return paramSearchStgy;
     }
 
     /** */
