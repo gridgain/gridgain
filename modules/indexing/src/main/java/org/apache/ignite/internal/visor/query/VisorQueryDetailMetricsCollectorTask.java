@@ -28,6 +28,8 @@ import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryDetailMetricsAdapter;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryDetailMetricsKey;
+import org.apache.ignite.internal.processors.query.QueryHistoryMetrics;
+import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.visor.VisorJob;
@@ -35,6 +37,7 @@ import org.apache.ignite.internal.visor.VisorMultiNodeTask;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isSystemCache;
+import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryType.SQL_FIELDS;
 
 /**
  * Task to collect cache query metrics.
@@ -131,6 +134,17 @@ public class VisorQueryDetailMetricsCollectorTask extends VisorMultiNodeTask<Vis
 
                     aggregateMetrics(arg.getSince(), aggMetrics, cache.context().queries().detailMetrics());
                 }
+            }
+
+            Collection<QueryHistoryMetrics> metrics = ((IgniteH2Indexing)ignite.context().query().getIndexing())
+                .runningQueryManager().queryHistoryMetrics().values();
+
+            for (QueryHistoryMetrics m: metrics) {
+                GridCacheQueryDetailMetricsKey key = new GridCacheQueryDetailMetricsKey(SQL_FIELDS, m.query());
+
+                aggMetrics.put(key, new GridCacheQueryDetailMetricsAdapter(SQL_FIELDS, m.query(), null,
+                    (int)m.executions(), (int)(m.executions() - m.failures()), (int)m.failures(), m.minimumTime(),
+                    m.maximumTime(), 0L, m.lastStartTime(), key));
             }
 
             return new ArrayList<>(aggMetrics.values());
