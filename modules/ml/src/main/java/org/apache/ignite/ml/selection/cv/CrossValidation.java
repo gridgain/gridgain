@@ -159,12 +159,10 @@ public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
         ga.setMutationOperator(mutator);
         ga.initializePopulation(rndParamSets);
 
-        if(environment.parallelismStrategy().getParallelism() > 1) {
+        if(environment.parallelismStrategy().getParallelism() > 1)
             ga.runParallel(environment);
-        }
-        else {
+        else
             ga.run();
-        }
 
 
 

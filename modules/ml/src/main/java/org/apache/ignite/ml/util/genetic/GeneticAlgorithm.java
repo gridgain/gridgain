@@ -1,3 +1,19 @@
+/*
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.ignite.ml.util.genetic;
 
 import java.util.ArrayList;
@@ -12,6 +28,9 @@ import org.apache.ignite.ml.environment.LearningEnvironment;
 import org.apache.ignite.ml.environment.parallelism.Promise;
 import org.apache.ignite.ml.math.functions.IgniteSupplier;
 
+/**
+ * This class is an entry point to use Genetic Algorithm to solve optimization problem.
+ */
 public class GeneticAlgorithm {
     /** Population size. */
     private int populationSize = 50;
@@ -32,7 +51,6 @@ public class GeneticAlgorithm {
     private long seed = 123L;
 
     /** Crossingover probability. */
-
     private double crossingoverProbability = 0.9;
 
     /** Mutation probability. */
@@ -68,7 +86,7 @@ public class GeneticAlgorithm {
         populationSize = rawDataForPopulationFormation.size();
         population = new Population(populationSize);
         for (int i = 0; i < populationSize; i++)
-            population.set(i, new Chromosome(rawDataForPopulationFormation.get(i)));
+            population.setChromosome(i, new Chromosome(rawDataForPopulationFormation.get(i)));
 
         return population;
     }
@@ -105,7 +123,8 @@ public class GeneticAlgorithm {
 
     /**
      * The main method for genetic algorithm.
-     * @param environment
+     *
+     * @param environment The environment.
      */
     public void runParallel(LearningEnvironment environment) {
         if (population != null) {
@@ -127,7 +146,7 @@ public class GeneticAlgorithm {
                 for (int j = amountOfEliteChromosomes; j < populationSize; j++) {
                     int finalJ = j;
                     Population finalNewPopulation1 = newPopulation;
-                    IgniteSupplier<Pair<Integer, Double>> task = ()-> new Pair<>(finalJ, fitnessFunction.apply(finalNewPopulation1.get(finalJ)));
+                    IgniteSupplier<Pair<Integer, Double>> task = ()-> new Pair<>(finalJ, fitnessFunction.apply(finalNewPopulation1.getChromosome(finalJ)));
                     tasks.add(task);
                 }
 
@@ -186,7 +205,7 @@ public class GeneticAlgorithm {
             if(selectedChromosomeIdx == Integer.MIN_VALUE)
                 selectedChromosomeIdx = rnd.nextInt(population.size()); // or get last
 
-            parentPopulation.set(i, population.getChromosome(selectedChromosomeIdx));
+            parentPopulation.setChromosome(i, population.getChromosome(selectedChromosomeIdx));
         }
 
         return parentPopulation;
@@ -210,24 +229,30 @@ public class GeneticAlgorithm {
         if (elitism) {
             Chromosome[] elite = population.selectBestKChromosome(amountOfEliteChromosomes);
             for (int i = 0; i < elite.length; i++)
-                newPopulation.set(i, elite[i]);
+                newPopulation.setChromosome(i, elite[i]);
         }
         return newPopulation;
     }
 
+    /**
+     * Forms the new population based on parent population with crossingover operator.
+     *
+     * @param parents Parents.
+     * @param newPopulation New population.
+     */
     private Population crossingover(Population parents, Population newPopulation) {
         // because parent population is less than new population on amount of elite chromosome
         for (int j = 0; j < populationSize - amountOfEliteChromosomes; j+=2) {
-            Chromosome ch1 = parents.get(j);
-            Chromosome ch2 = parents.get(j + 1);
+            Chromosome ch1 = parents.getChromosome(j);
+            Chromosome ch2 = parents.getChromosome(j + 1);
 
             if(rnd.nextDouble() < crossingoverProbability) {
                 List<Chromosome> twoChildren = crossover(ch1, ch2);
-                newPopulation.set(amountOfEliteChromosomes + j, twoChildren.get(0));
-                newPopulation.set(amountOfEliteChromosomes + j + 1, twoChildren.get(1));
+                newPopulation.setChromosome(amountOfEliteChromosomes + j, twoChildren.get(0));
+                newPopulation.setChromosome(amountOfEliteChromosomes + j + 1, twoChildren.get(1));
             } else {
-                newPopulation.set(amountOfEliteChromosomes + j, ch1);
-                newPopulation.set(amountOfEliteChromosomes + j + 1, ch2);
+                newPopulation.setChromosome(amountOfEliteChromosomes + j, ch1);
+                newPopulation.setChromosome(amountOfEliteChromosomes + j + 1, ch2);
             }
         }
         return newPopulation;
@@ -241,12 +266,12 @@ public class GeneticAlgorithm {
      */
     private Population mutate(Population newPopulation) {
         for (int j = amountOfEliteChromosomes; j < populationSize; j++) {
-            Chromosome possibleMutant = newPopulation.get(j);
+            Chromosome possibleMutant = newPopulation.getChromosome(j);
             for (int geneIdx = 0; geneIdx < possibleMutant.size(); geneIdx++) {
                 if(rnd.nextDouble() < mutationProbability) {
                     Double gene = possibleMutant.getGene(geneIdx);
                     Double newGeneVal = mutationOperator.apply(geneIdx, gene);
-                    possibleMutant.set(geneIdx, newGeneVal);
+                    possibleMutant.setGene(geneIdx, newGeneVal);
                 }
             }
         }
@@ -254,6 +279,12 @@ public class GeneticAlgorithm {
     }
 
 
+    /**
+     * Produce the two child chromsome from two parent chromosome according crossover strategy.
+     *
+     * @param firstParent First parent.
+     * @param secondParent Second parent.
+     */
     private List<Chromosome> crossover(Chromosome firstParent, Chromosome secondParent) {
         if (firstParent.size() != secondParent.size())
             throw new RuntimeException("Different length of hyper-parameter vectors!");
@@ -268,6 +299,12 @@ public class GeneticAlgorithm {
 
     }
 
+    /**
+     * Produce the two child chromsome from two parent chromosome according one-point strategy.
+     *
+     * @param firstParent First parent.
+     * @param secondParent Second parent.
+     */
     private List<Chromosome> onePointStrategy(Chromosome firstParent, Chromosome secondParent) {
         int size = firstParent.size();
 
@@ -276,14 +313,14 @@ public class GeneticAlgorithm {
         int locusPnt = rnd.nextInt(size);
 
         for (int i = 0; i < locusPnt; i++) {
-            child1.set(i, firstParent.getGene(i));
-            child2.set(i, secondParent.getGene(i));
+            child1.setGene(i, firstParent.getGene(i));
+            child2.setGene(i, secondParent.getGene(i));
         }
 
 
         for (int i = locusPnt; i < size; i++) {
-            child1.set(i, secondParent.getGene(i));
-            child2.set(i, firstParent.getGene(i));
+            child1.setGene(i, secondParent.getGene(i));
+            child2.setGene(i, firstParent.getGene(i));
         }
 
         List<Chromosome> res = new ArrayList<>();
@@ -293,6 +330,12 @@ public class GeneticAlgorithm {
         return res;
     }
 
+    /**
+     * Produce the two child chromsome from two parent chromosome according uniform strategy.
+     *
+     * @param firstParent First parent.
+     * @param secondParent Second parent.
+     */
     private List<Chromosome> uniformStrategy(Chromosome firstParent, Chromosome secondParent) {
         int size = firstParent.size();
 
@@ -301,12 +344,12 @@ public class GeneticAlgorithm {
 
         for (int i = 0; i < firstParent.size(); i++) {
             if (rnd.nextDouble() < uniformRate) {
-                child1.set(i, firstParent.getGene(i));
-                child2.set(i, secondParent.getGene(i));
+                child1.setGene(i, firstParent.getGene(i));
+                child2.setGene(i, secondParent.getGene(i));
             }
             else {
-                child1.set(i, secondParent.getGene(i));
-                child2.set(i, firstParent.getGene(i));
+                child1.setGene(i, secondParent.getGene(i));
+                child2.setGene(i, firstParent.getGene(i));
             }
         }
 

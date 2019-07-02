@@ -1,19 +1,53 @@
+/*
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.ignite.ml.util.genetic;
 
 import java.util.Arrays;
 import java.util.function.Function;
 
+/**
+ * Represents a populations of chromosomes.
+ */
 public class Population {
+    /** Chromosomes. */
     private Chromosome[] chromosomes;
 
+    /**
+     * @param size Size.
+     */
     public Population(int size) {
-        this.chromosomes = new Chromosome[size];
+        chromosomes = new Chromosome[size];
     }
 
+    /**
+     * Returns an individual chromosome.
+     *
+     * @param idx Index of chromosome.
+     */
     public Chromosome getChromosome(int idx){
         return chromosomes[idx];
     }
 
+    /**
+     * Calculates fitness for chromosome found by index with custom fitness function.
+     *
+     * @param idx Index.
+     * @param fitnessFunction Fitness function.
+     */
     public double calculateFitnessForChromosome(int idx, Function<Chromosome, Double> fitnessFunction){
         double fitness = fitnessFunction.apply(chromosomes[idx]);
         chromosomes[idx].setFitness(fitness);
@@ -21,25 +55,50 @@ public class Population {
     }
 
 
+    /**
+     * Calculates fintness for all chromosomes with custom fitness function.
+     *
+     * @param fitnessFunction Fitness function.
+     */
     public void calculateFitnessForAll(Function<Chromosome, Double> fitnessFunction) {
         for (int i = 0; i < chromosomes.length; i++)
             calculateFitnessForChromosome(i, fitnessFunction);
     }
 
-    public void set(int idx, Chromosome chromosome) {
+    /**
+     * Sets the chromsome for given index.
+     *
+     * @param idx Index.
+     * @param chromosome Chromosome.
+     */
+    public void setChromosome(int idx, Chromosome chromosome) {
         chromosomes[idx] = chromosome;
     }
 
-    public Chromosome get(Integer idx) {
+
+    /**
+     * Returns the chromosome by given index.
+     *
+     * @param idx Index.
+     */
+    public Chromosome getChromosome(Integer idx) {
         return chromosomes[idx];
     }
 
+    /**
+     * Selects the top K chromosomes by fitness value.
+     *
+     * @param k The amount of top chromosome with highest value of the fitness.
+     */
     public Chromosome[] selectBestKChromosome(int k) {
         Chromosome[] cp = Arrays.copyOf(chromosomes, chromosomes.length);
         Arrays.sort(cp);
         return Arrays.copyOfRange(cp, cp.length - k, cp.length);
     }
 
+    /**
+     * Returns the total fitness value of population.
+     */
     public double getTotalFitness() {
         double totalFitness = 0.0;
 
@@ -49,6 +108,9 @@ public class Population {
         return totalFitness;
     }
 
+    /**
+     * Returns the average fitness of population.
+     */
     public double getAverageFitness() {
         double totalFitness = 0.0;
 
@@ -58,11 +120,22 @@ public class Population {
         return totalFitness/chromosomes.length;
     }
 
+
+    /**
+     * Returns the size of population.
+     */
     public int size() {
         return chromosomes.length;
     }
 
-    public void setFitness(Integer key, Double value) {
-        chromosomes[key].setFitness(value);
+
+    /**
+     * Sets the fitness value for chromosome with the given index.
+     *
+     * @param idx Index.
+     * @param fitness Fitness.
+     */
+    public void setFitness(Integer idx, Double fitness) {
+        chromosomes[idx].setFitness(fitness);
     }
 }
