@@ -75,11 +75,41 @@ public class GeneticAlgorithm {
 
     /**
      * The main method for genetic algorithm.
-     * @param environment
      */
-    public void run(LearningEnvironment environment) {
+    public void run() {
         if (population != null) {
             population.calculateFitnessForAll(fitnessFunction);
+            int i = 0;
+            while (stopCriteriaIsReached(i)) {
+                Population newPopulation = new Population(populationSize);
+
+                newPopulation = selectEliteChromosomes(newPopulation);
+
+                Population parents = selectionParents();
+
+                newPopulation = crossingover(parents, newPopulation);
+
+                newPopulation = mutate(newPopulation);
+
+                // update fitness for new population
+                for (int j = amountOfEliteChromosomes; j < populationSize; j++)
+                    newPopulation.calculateFitnessForChromosome(j, fitnessFunction);
+
+                population = newPopulation;
+
+                i++;
+            }
+        }
+    }
+
+
+    /**
+     * The main method for genetic algorithm.
+     * @param environment
+     */
+    public void runParallel(LearningEnvironment environment) {
+        if (population != null) {
+            population.calculateFitnessForAll(fitnessFunction); // TODO: parallelize this
             int i = 0;
             while (stopCriteriaIsReached(i)) {
                 Population newPopulation = new Population(populationSize);
@@ -107,9 +137,6 @@ public class GeneticAlgorithm {
 
                 Population finalNewPopulation = newPopulation;
                 taskResults.forEach(p -> finalNewPopulation.setFitness(p.getKey(), p.getValue()));
-
-                /*for (int j = amountOfEliteChromosomes; j < populationSize; j++)
-                    newPopulation.calculateFitnessForChromosome(j, fitnessFunction);*/
 
                 population = newPopulation;
 

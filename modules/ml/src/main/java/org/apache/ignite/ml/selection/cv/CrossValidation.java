@@ -158,7 +158,15 @@ public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
         ga.setFitnessFunction(fitnessFunction);
         ga.setMutationOperator(mutator);
         ga.initializePopulation(rndParamSets);
-        ga.run(environment);
+
+        if(environment.parallelismStrategy().getParallelism() > 1) {
+            ga.runParallel(environment);
+        }
+        else {
+            ga.run();
+        }
+
+
 
         CrossValidationResult cvRes = new CrossValidationResult();
         cvRes.setBestScore(ga.getTheBestSolution());
