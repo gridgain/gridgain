@@ -1241,6 +1241,7 @@
     <option name="IGNORE_UNCHECKED_CAST" value="true" />
     <option name="IGNORE_UNCHECKED_OVERRIDING" value="false" />
   </inspection_tool>
+  <inspection_tool class="UNUSED_IMPORT" enabled="true" level="ERROR" enabled_by_default="true" />
   <inspection_tool class="UNUSED_SYMBOL" enabled="false" level="WARNING" enabled_by_default="false">
     <option name="LOCAL_VARIABLE" value="true" />
     <option name="FIELD" value="true" />
