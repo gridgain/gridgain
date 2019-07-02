@@ -272,6 +272,9 @@ class ServerImpl extends TcpDiscoveryImpl {
     /** Last time received message from ring. */
     private volatile long lastRingMsgReceivedTime;
 
+    /** */
+    private volatile Boolean clusterSupportsTcpDiscoveryNodeSerializationOptimization = null;
+
     /** Map with proceeding ping requests. */
     private final ConcurrentMap<InetSocketAddress, GridPingFutureAdapter<IgniteBiTuple<UUID, Boolean>>> pingMap =
         new ConcurrentHashMap<>();
@@ -640,7 +643,7 @@ class ServerImpl extends TcpDiscoveryImpl {
     ) {
         TcpDiscoveryStatusCheckMessage msg;
 
-        if (allNodesSupport(TCP_DISCOVERY_MESSAGE_NODE_SERIALIZATION_OPTIMIZATION)) {
+        if (clusterSupportsTcpDiscoveryNodeSerializationOptimization()) {
             boolean sameMacs = creatorNode != null && targetNode != null && U.sameMacs(creatorNode, targetNode);
 
             msg = new TcpDiscoveryStatusCheckMessage(
@@ -683,12 +686,28 @@ class ServerImpl extends TcpDiscoveryImpl {
     private TcpDiscoveryDuplicateIdMessage createTcpDiscoveryDuplicateIdMessage(UUID creatorNodeId, TcpDiscoveryNode node) {
         TcpDiscoveryDuplicateIdMessage msg;
 
-        if (allNodesSupport(TCP_DISCOVERY_MESSAGE_NODE_SERIALIZATION_OPTIMIZATION))
+        if (clusterSupportsTcpDiscoveryNodeSerializationOptimization())
             msg = new TcpDiscoveryDuplicateIdMessage(creatorNodeId, node.id());
         else
             msg = new TcpDiscoveryDuplicateIdMessage(creatorNodeId, node);
 
         return msg;
+    }
+
+    /** */
+    private boolean clusterSupportsTcpDiscoveryNodeSerializationOptimization() {
+        Boolean res = clusterSupportsTcpDiscoveryNodeSerializationOptimization;
+
+        if (res == null) {
+            synchronized (this) {
+                res = clusterSupportsTcpDiscoveryNodeSerializationOptimization;
+
+                if (res == null)
+                    res = allNodesSupport(TCP_DISCOVERY_MESSAGE_NODE_SERIALIZATION_OPTIMIZATION);
+            }
+        }
+
+        return res;
     }
 
     /**
@@ -4925,6 +4944,9 @@ class ServerImpl extends TcpDiscoveryImpl {
             if (log.isDebugEnabled())
                 log.debug("Node to finish add: " + node);
 
+            //we will need to recalculate this value since the topology changed
+            clusterSupportsTcpDiscoveryNodeSerializationOptimization = null;
+
             boolean locNodeCoord = isLocalNodeCoordinator();
 
             UUID locNodeId = getLocalNodeId();
@@ -5152,6 +5174,9 @@ class ServerImpl extends TcpDiscoveryImpl {
                 return;
             }
 
+            //we will need to recalculate this value since the topology changed
+            clusterSupportsTcpDiscoveryNodeSerializationOptimization = null;
+
             boolean locNodeCoord = isLocalNodeCoordinator();
 
             if (locNodeCoord) {
@@ -5351,6 +5376,9 @@ class ServerImpl extends TcpDiscoveryImpl {
 
                 return;
             }
+
+            //we will need to recalculate this value since the topology changed
+            clusterSupportsTcpDiscoveryNodeSerializationOptimization = null;
 
             boolean locNodeCoord = isLocalNodeCoordinator();
 
