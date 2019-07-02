@@ -435,13 +435,13 @@ export default class AgentManager {
     }
 
     /**
-     * @param {{jdbcDriverJar: String, jdbcDriverClass: String, jdbcUrl: String, user: String, password: String, samples: Boolean, importSamples: Boolean}}
+     * @param {{jdbcDriverJar: String, jdbcDriverClass: String, jdbcUrl: String, user: String, password: String, importSamples: Boolean}}
      * @returns {ng.IPromise}
      */
-    schemas({jdbcDriverJar, jdbcDriverClass, jdbcUrl, user, password, samples, importSamples}) {
+    schemas({jdbcDriverJar, jdbcDriverClass, jdbcUrl, user, password, importSamples}) {
         const info = {user, password};
 
-        return this._sendToAgent('schemaImport:schemas', {jdbcDriverJar, jdbcDriverClass, jdbcUrl, info, importSamples: samples && importSamples});
+        return this._sendToAgent('schemaImport:schemas', {jdbcDriverJar, jdbcDriverClass, jdbcUrl, info, importSamples: importSamples});
     }
 
     /**

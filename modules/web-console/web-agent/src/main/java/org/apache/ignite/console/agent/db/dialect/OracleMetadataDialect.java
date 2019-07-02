@@ -149,15 +149,15 @@ public class OracleMetadataDialect extends DatabaseMetadataDialect {
     @Override public Collection<String> schemas(Connection conn, boolean importSamples) throws SQLException {
         Collection<String> schemas = new ArrayList<>();
 
-        ResultSet rs = conn.getMetaData().getSchemas();
+        ResultSet rs = getSchemas(conn);
 
         Set<String> sysSchemas = systemSchemas();
-        Set<String> sample = sampleSchemas();
+        Set<String> samples = sampleSchemas();
 
         while(rs.next()) {
             String schema = rs.getString(1);
 
-            if (!importSamples && sample.contains(schema))
+            if (!importSamples && samples.contains(schema))
                 continue;
 
             if (!sysSchemas.contains(schema) && !schema.startsWith("FLOWS_"))
