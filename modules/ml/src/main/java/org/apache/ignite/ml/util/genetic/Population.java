@@ -61,4 +61,8 @@ public class Population {
     public int size() {
         return chromosomes.length;
     }
+
+    public void setFitness(Integer key, Double value) {
+        chromosomes[key].setFitness(value);
+    }
 }

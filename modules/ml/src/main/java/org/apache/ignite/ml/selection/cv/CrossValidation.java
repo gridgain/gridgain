@@ -130,6 +130,14 @@ public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
 
         List<Double[]> rndParamSets = paramSetsCp.subList(0, SIZE_OF_POPULATION);
 
+        // fitness function for parallel calculation
+        /*Function<Chromosome, Double> fitnessFunction = (Chromosome chromosome) -> {
+            IgniteSupplier<TaskResult> task = ()->calculateScoresForFixedParamSet(chromosome.toDoubleArray());
+            TaskResult res = environment.parallelismStrategy().submit(task).unsafeGet();
+            return Arrays.stream(res.locScores).average().getAsDouble();
+        };*/
+
+        // TODO: analyze sequential code
         Function<Chromosome, Double> fitnessFunction = (Chromosome chromosome) -> {
             TaskResult res = calculateScoresForFixedParamSet(chromosome.toDoubleArray());
             return Arrays.stream(res.locScores).average().getAsDouble();
@@ -150,7 +158,7 @@ public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
         ga.setFitnessFunction(fitnessFunction);
         ga.setMutationOperator(mutator);
         ga.initializePopulation(rndParamSets);
-        ga.run();
+        ga.run(environment);
 
         CrossValidationResult cvRes = new CrossValidationResult();
         cvRes.setBestScore(ga.getTheBestSolution());

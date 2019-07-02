@@ -5,8 +5,12 @@ import java.util.List;
 import java.util.Random;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
+import org.apache.commons.math3.util.Pair;
+import org.apache.ignite.ml.environment.LearningEnvironment;
+import org.apache.ignite.ml.environment.parallelism.Promise;
+import org.apache.ignite.ml.math.functions.IgniteSupplier;
 
 public class GeneticAlgorithm {
     /** Population size. */
@@ -47,10 +51,10 @@ public class GeneticAlgorithm {
     private BiFunction<Integer, Double, Double> mutationOperator;
 
     /** Crossover strategy. */
-    private CrossoverStrategy crossoverStrategy = CrossoverStrategy.UNIFORM;
+    private CrossoverStrategy crossoverStgy = CrossoverStrategy.UNIFORM;
 
     /** Selection strategy. */
-    private SelectionStrategy selectionStrategy = SelectionStrategy.ROULETTE_WHEEL;
+    private SelectionStrategy selectionStgy = SelectionStrategy.ROULETTE_WHEEL;
 
     /**
      * Forms the initial population.
@@ -71,8 +75,9 @@ public class GeneticAlgorithm {
 
     /**
      * The main method for genetic algorithm.
+     * @param environment
      */
-    public void run() {
+    public void run(LearningEnvironment environment) {
         if (population != null) {
             population.calculateFitnessForAll(fitnessFunction);
             int i = 0;
@@ -88,8 +93,23 @@ public class GeneticAlgorithm {
                 newPopulation = mutate(newPopulation);
 
                 // update fitness for new population
-                for (int j = amountOfEliteChromosomes; j < populationSize; j++)
-                    newPopulation.calculateFitnessForChromosome(j, fitnessFunction);
+                List<IgniteSupplier<Pair<Integer, Double>>> tasks = new ArrayList<>();
+                for (int j = amountOfEliteChromosomes; j < populationSize; j++) {
+                    int finalJ = j;
+                    Population finalNewPopulation1 = newPopulation;
+                    IgniteSupplier<Pair<Integer, Double>> task = ()-> new Pair<>(finalJ, fitnessFunction.apply(finalNewPopulation1.get(finalJ)));
+                    tasks.add(task);
+                }
+
+                List<Pair<Integer, Double>> taskResults = environment.parallelismStrategy().submit(tasks).stream()
+                    .map(Promise::unsafeGet)
+                    .collect(Collectors.toList());
+
+                Population finalNewPopulation = newPopulation;
+                taskResults.forEach(p -> finalNewPopulation.setFitness(p.getKey(), p.getValue()));
+
+                /*for (int j = amountOfEliteChromosomes; j < populationSize; j++)
+                    newPopulation.calculateFitnessForChromosome(j, fitnessFunction);*/
 
                 population = newPopulation;
 
@@ -102,11 +122,11 @@ public class GeneticAlgorithm {
      * The common method of parent population building with different selection strategies.
      */
     private Population selectionParents() {
-        switch (selectionStrategy) {
+        switch (selectionStgy) {
             case ROULETTE_WHEEL: return selectParentsByRouletteWheel();
             default:
                 throw new UnsupportedOperationException("This strategy "
-                    + selectionStrategy.name() + " is not supported yet.");
+                    + selectionStgy.name() + " is not supported yet.");
         }
     }
 
@@ -210,12 +230,12 @@ public class GeneticAlgorithm {
     private List<Chromosome> crossover(Chromosome firstParent, Chromosome secondParent) {
         if (firstParent.size() != secondParent.size())
             throw new RuntimeException("Different length of hyper-parameter vectors!");
-        switch (crossoverStrategy) {
+        switch (crossoverStgy) {
             case UNIFORM: return uniformStrategy(firstParent, secondParent);
             case ONE_POINT: return onePointStrategy(firstParent, secondParent);
             default:
                 throw new UnsupportedOperationException("This strategy "
-                    + crossoverStrategy.name() + " is not supported yet.");
+                    + crossoverStgy.name() + " is not supported yet.");
 
         }
 
