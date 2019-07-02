@@ -1149,6 +1149,13 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_DIAGNOSTIC_WARN_LIMIT = "IGNITE_DIAGNOSTIC_WARN_LIMIT";
 
     /**
+     * Flag to enable triggering failure handler for node if unrecoverable partition inconsistency is
+     * discovered during partition update counters exchange.
+     */
+    public static final String IGNITE_FAIL_NODE_ON_UNRECOVERABLE_PARTITION_INCONSISTENCY =
+        "IGNITE_FAIL_NODE_ON_UNRECOVERABLE_PARTITION_INCONSISTENCY";
+
+    /**
      * Allow use composite _key, _val columns at the INSERT/UPDATE/MERGE statements.
      */
     public static final String IGNITE_SQL_ALLOW_KEY_VAL_UPDATES = "IGNITE_SQL_ALLOW_KEY_VAL_UPDATES";
@@ -1187,12 +1194,28 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_H2_LOCAL_RESULT_FACTORY = "IGNITE_H2_LOCAL_RESULT_FACTORY";
 
     /**
-     * Defines default memory limit for sql query.
+     * Defines default memory limit for every single sql query (query quota).
+     * Note: Negative value disables memory tracking (for both: query and global quotas) for query by default.
      *
      * Default: MaxHeapSize/AvailableCPUs.
      */
-    // TODO: GG-18629: Move to memory quotas configuration.
-    public static final String IGNITE_SQL_QUERY_MEMORY_LIMIT = "IGNITE_SQL_QUERY_MEMORY_LIMIT";
+    public static final String IGNITE_DEFAULT_SQL_QUERY_MEMORY_LIMIT = "IGNITE_DEFAULT_SQL_QUERY_MEMORY_LIMIT";
+
+    /**
+     * Defines memory pool size available for sql queries on node (global quota).
+     * Note: Negative value disables global memory quota for SQL, but it doesn't affects query quota.
+     *
+     * Default: 60% MaxHeapSize.
+     */
+
+    public static final String IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE = "IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE";
+
+    /**
+     * Defines default memory reservation block size.
+     *
+     * Default: 128K.
+     */
+    public static final String IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE = "IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE";
 
     /**
      * Page lock tracker type.
@@ -1348,7 +1371,7 @@ public final class IgniteSystemProperties {
     public static boolean getBoolean(String name, boolean dflt) {
         String val = getString(name);
 
-        return val == null ? dflt : Boolean.valueOf(val);
+        return val == null ? dflt : Boolean.parseBoolean(val);
     }
 
     /**

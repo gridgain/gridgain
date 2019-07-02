@@ -210,7 +210,16 @@ public abstract class WALRecord {
         MVCC_TX_RECORD (LOGICAL),
 
         /** Consistent cut record. */
-        CONSISTENT_CUT;
+        CONSISTENT_CUT,
+
+        /** Rollback tx record. */
+        ROLLBACK_TX_RECORD (LOGICAL),
+
+        /** */
+        PARTITION_META_PAGE_UPDATE_COUNTERS_V2 (PHYSICAL),
+
+        /** Init root meta page (with flags and created version)*/
+        BTREE_META_PAGE_INIT_ROOT_V3 (PHYSICAL);
 
         /**
          * When you're adding a new record don't forget to choose record purpose explicitly
