@@ -291,6 +291,8 @@ public abstract class IgniteTxPessimisticOriginatingNodeFailureAbstractSelfTest 
             }
         }
 
+        awaitPartitionMapExchange();
+
         for (Map.Entry<Integer, String> e : map.entrySet()) {
             long cntr0 = -1;
 
@@ -454,6 +456,8 @@ public abstract class IgniteTxPessimisticOriginatingNodeFailureAbstractSelfTest 
                 });
             }
         }
+
+        awaitPartitionMapExchange();
 
         for (Map.Entry<Integer, String> e : map.entrySet()) {
             long cntr0 = -1;

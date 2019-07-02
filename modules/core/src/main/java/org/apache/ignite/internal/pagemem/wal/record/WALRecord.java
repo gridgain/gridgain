@@ -207,7 +207,16 @@ public abstract class WALRecord {
         MVCC_DATA_RECORD (LOGICAL),
 
         /** Mvcc Tx state change record. */
-        MVCC_TX_RECORD (LOGICAL);
+        MVCC_TX_RECORD (LOGICAL),
+
+        /** Consistent cut record. */
+        CONSISTENT_CUT,
+
+        /** Rollback tx record. */
+        ROLLBACK_TX_RECORD (LOGICAL),
+
+        /** */
+        PARTITION_META_PAGE_UPDATE_COUNTERS_V2 (PHYSICAL);
 
         /**
          * When you're adding a new record don't forget to choose record purpose explicitly

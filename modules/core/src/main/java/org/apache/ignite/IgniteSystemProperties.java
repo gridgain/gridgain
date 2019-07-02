@@ -1105,6 +1105,13 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_DIAGNOSTIC_WARN_LIMIT = "IGNITE_DIAGNOSTIC_WARN_LIMIT";
 
     /**
+     * Flag to enable triggering failure handler for node if unrecoverable partition inconsistency is
+     * discovered during partition update counters exchange.
+     */
+    public static final String IGNITE_FAIL_NODE_ON_UNRECOVERABLE_PARTITION_INCONSISTENCY =
+        "IGNITE_FAIL_NODE_ON_UNRECOVERABLE_PARTITION_INCONSISTENCY";
+    
+    /**
      * Starting from this number of dirty pages in checkpoint, array will be sorted with
      * {@link Arrays#parallelSort(Comparable[])} in case of {@link CheckpointWriteOrder#SEQUENTIAL}.
      */

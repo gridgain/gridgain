@@ -18,6 +18,8 @@ package org.apache.ignite.testsuites;
 import java.util.HashSet;
 import junit.framework.TestSuite;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsContinuousRestartTest;
+import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsContinuousRestartTestWithExpiryPolicy;
 
 /**
  * Mvcc version of {@link IgnitePdsTestSuite3}.
@@ -33,7 +35,9 @@ public class IgnitePdsMvccTestSuite3 extends TestSuite {
 
         HashSet<Class> ignoredTests = new HashSet<>();
 
-        // No ignored tests yet.
+        // TODO https://issues.apache.org/jira/browse/IGNITE-11937
+        ignoredTests.add(IgnitePdsContinuousRestartTest.class);
+        ignoredTests.add(IgnitePdsContinuousRestartTestWithExpiryPolicy.class);
 
         suite.addTest(IgnitePdsTestSuite3.suite(ignoredTests));
 
