@@ -19,6 +19,7 @@ package org.apache.ignite.console.common;
 import java.util.Collection;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.apache.ignite.console.dto.DataObject;
 import org.apache.ignite.console.json.JsonArray;
@@ -124,5 +125,13 @@ public class Utils {
             .replacePath(null)
             .build()
             .toString();
+    }
+
+    /**
+     * @param p Predicate.
+     * @return Negated predicate.
+     */
+    public static <T> Predicate<T> not(Predicate<T> p) {
+        return p.negate();
     }
 }
