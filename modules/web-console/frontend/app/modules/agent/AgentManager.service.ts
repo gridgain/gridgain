@@ -441,7 +441,7 @@ export default class AgentManager {
     schemas({jdbcDriverJar, jdbcDriverClass, jdbcUrl, user, password, importSamples}) {
         const info = {user, password};
 
-        return this._sendToAgent('schemaImport:schemas', {jdbcDriverJar, jdbcDriverClass, jdbcUrl, info, importSamples: importSamples});
+        return this._sendToAgent('schemaImport:schemas', {jdbcDriverJar, jdbcDriverClass, jdbcUrl, info, importSamples});
     }
 
     /**
