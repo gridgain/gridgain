@@ -21,7 +21,7 @@ import org.apache.ignite.console.config.ActivationConfiguration;
 import org.apache.ignite.console.config.SignUpConfiguration;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.event.Event;
-import org.apache.ignite.console.event.Type;
+import org.apache.ignite.console.event.EventType;
 import org.apache.ignite.console.event.EventPublisher;
 import org.apache.ignite.console.repositories.AccountsRepository;
 import org.apache.ignite.console.tx.TransactionManager;
@@ -44,11 +44,11 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.UUID;
 
-import static org.apache.ignite.console.event.AccountType.ACCOUNT_CREATE;
-import static org.apache.ignite.console.event.AccountType.ACCOUNT_UPDATE;
-import static org.apache.ignite.console.event.AccountType.PASSWORD_CHANGED;
-import static org.apache.ignite.console.event.AccountType.PASSWORD_RESET;
-import static org.apache.ignite.console.event.AccountType.RESET_ACTIVATION_TOKEN;
+import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_CREATE;
+import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_UPDATE;
+import static org.apache.ignite.console.event.AccountEventType.PASSWORD_CHANGED;
+import static org.apache.ignite.console.event.AccountEventType.PASSWORD_RESET;
+import static org.apache.ignite.console.event.AccountEventType.RESET_ACTIVATION_TOKEN;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.times;
@@ -115,7 +115,7 @@ public class AccountServiceTest {
     }
 
     /**
-     * Should publish event with RESET_ACTIVATION_TOKEN type
+     * Should publish event with RESET_ACTIVATION_TOKEN type.
      */
     @Test
     public void shouldPublishResetActivationTokenEventWhileRegister() {
@@ -136,7 +136,7 @@ public class AccountServiceTest {
     }
 
     /**
-     * Should publish event with RESET_ACTIVATION_TOKEN type
+     * Should publish event with RESET_ACTIVATION_TOKEN type.
      */
     @Test
     public void shouldPublishResetActivationTokenEvent() {
@@ -156,7 +156,7 @@ public class AccountServiceTest {
     }
 
     /**
-     * Should publish event with ACCOUNT_CREATE type
+     * Should publish event with ACCOUNT_CREATE type.
      */
     @Test
     public void shouldPublishAccountCreateEvent() {
@@ -173,7 +173,7 @@ public class AccountServiceTest {
     }
 
     /**
-     * Should publish event with ACCOUNT_UPDATE type
+     * Should publish event with ACCOUNT_UPDATE type.
      */
     @Test
     public void shouldPublishAccountUpdateEvent() {
@@ -199,7 +199,7 @@ public class AccountServiceTest {
     }
 
     /**
-     * Should publish event with PASSWORD_RESET type
+     * Should publish event with PASSWORD_RESET type.
      */
     @Test
     public void shouldPublishPasswordResetEvent() {
@@ -219,7 +219,7 @@ public class AccountServiceTest {
     }
 
     /**
-     * Should publish event with PASSWORD_CHANGED type
+     * Should publish event with PASSWORD_CHANGED type.
      */
     @Test
     public void shouldPublishPasswordChangedEvent() {
@@ -266,7 +266,7 @@ public class AccountServiceTest {
     /**
      * @param evtType Event type.
      */
-    private void assertEventType(Type evtType) {
+    private void assertEventType(EventType evtType) {
         ArgumentCaptor<Event> captor = ArgumentCaptor.forClass(Event.class);
         verify(evtPublisher, times(1)).publish(captor.capture());
 

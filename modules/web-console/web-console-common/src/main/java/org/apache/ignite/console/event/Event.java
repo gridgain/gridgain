@@ -25,27 +25,27 @@ import org.springframework.core.ResolvableTypeProvider;
  */
 public class Event<T> extends ApplicationEvent implements ResolvableTypeProvider {
     /** Type. */
-    private Type type;
+    private EventType evtType;
 
     /** Source class. */
     private Class<T> srcCls;
 
     /**
-     * @param type Type.
+     * @param evtType Event type.
      * @param payload Payload.
      */
-    public Event(Type type, T payload) {
+    public Event(EventType evtType, T payload) {
         super(payload);
 
-        this.type = type;
+        this.evtType = evtType;
         srcCls = (Class<T>) payload.getClass();
     }
 
     /**
      * @return Type.
      */
-    public Type getType() {
-        return type;
+    public EventType getType() {
+        return evtType;
     }
 
     /** {@inheritDoc} */

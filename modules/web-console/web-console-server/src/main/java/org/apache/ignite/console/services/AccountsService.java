@@ -39,11 +39,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import static java.time.temporal.ChronoUnit.MILLIS;
-import static org.apache.ignite.console.event.AccountType.ACCOUNT_CREATE;
-import static org.apache.ignite.console.event.AccountType.ACCOUNT_UPDATE;
-import static org.apache.ignite.console.event.AccountType.PASSWORD_CHANGED;
-import static org.apache.ignite.console.event.AccountType.PASSWORD_RESET;
-import static org.apache.ignite.console.event.AccountType.RESET_ACTIVATION_TOKEN;
+import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_CREATE;
+import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_UPDATE;
+import static org.apache.ignite.console.event.AccountEventType.PASSWORD_CHANGED;
+import static org.apache.ignite.console.event.AccountEventType.PASSWORD_RESET;
+import static org.apache.ignite.console.event.AccountEventType.RESET_ACTIVATION_TOKEN;
 
 /**
  * Service to handle accounts.
@@ -62,7 +62,7 @@ public class AccountsService implements UserDetailsService {
     /** Event publisher. */
     protected EventPublisher evtPublisher;
 
-    /** Encoder. */
+    /** Password encoder. */
     protected PasswordEncoder encoder;
 
     /** User details getChecker. */

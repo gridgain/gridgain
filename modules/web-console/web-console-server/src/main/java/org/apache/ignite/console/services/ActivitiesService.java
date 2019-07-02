@@ -24,7 +24,7 @@ import org.apache.ignite.console.event.EventPublisher;
 import org.apache.ignite.console.repositories.ActivitiesRepository;
 import org.springframework.stereotype.Service;
 
-import static org.apache.ignite.console.event.ActivityType.ACTIVITY_UPDATE;
+import static org.apache.ignite.console.event.ActivityEventType.ACTIVITY_UPDATE;
 
 /**
  * Service to handle activities.

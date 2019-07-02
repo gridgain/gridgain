@@ -35,8 +35,8 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.UUID;
 
-import static org.apache.ignite.console.event.AccountType.ACCOUNT_CREATE_BY_ADMIN;
-import static org.apache.ignite.console.event.AccountType.ACCOUNT_DELETE;
+import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_CREATE_BY_ADMIN;
+import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_DELETE;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -69,7 +69,7 @@ public class AdminServiceTest {
     private AccountsService accountsSrvc;
 
     /**
-     * Should publish event with ACCOUNT_DELETE type
+     * Should publish event with ACCOUNT_DELETE type.
      */
     @Test
     public void shouldPublishUserDeleteEvent() {
@@ -91,7 +91,7 @@ public class AdminServiceTest {
     }
 
     /**
-     * Should publish event with ACCOUNT_CREATE_BY_ADMIN type
+     * Should publish event with ACCOUNT_CREATE_BY_ADMIN type.
      */
     @Test
     public void shouldPublishUserCreateByAdminEvent() {

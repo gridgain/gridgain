@@ -29,12 +29,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import static org.apache.ignite.console.event.AccountType.ACCOUNT_CREATE;
-import static org.apache.ignite.console.event.AccountType.ACCOUNT_CREATE_BY_ADMIN;
-import static org.apache.ignite.console.event.AccountType.ACCOUNT_DELETE;
-import static org.apache.ignite.console.event.AccountType.PASSWORD_CHANGED;
-import static org.apache.ignite.console.event.AccountType.PASSWORD_RESET;
-import static org.apache.ignite.console.event.AccountType.RESET_ACTIVATION_TOKEN;
+import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_CREATE;
+import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_CREATE_BY_ADMIN;
+import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_DELETE;
+import static org.apache.ignite.console.event.AccountEventType.PASSWORD_CHANGED;
+import static org.apache.ignite.console.event.AccountEventType.PASSWORD_RESET;
+import static org.apache.ignite.console.event.AccountEventType.RESET_ACTIVATION_TOKEN;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -53,7 +53,7 @@ public class NotificationEventListenerTest {
     private NotificationService notificationSrv;
 
     /**
-     * Test welcome letter sending
+     * Test welcome letter sending.
      */
     @Test
     public void testOnUserCreateEvent() {
@@ -65,7 +65,7 @@ public class NotificationEventListenerTest {
     }
 
     /**
-     * Test admin welcome letter sending
+     * Test admin welcome letter sending.
      */
     @Test
     public void testOnUserCreateByAdminEvent() {
@@ -77,7 +77,7 @@ public class NotificationEventListenerTest {
     }
 
     /**
-     * Test account delete letter sending
+     * Test account delete letter sending.
      */
     @Test
     public void testOnUserDeleteEvent() {
@@ -89,7 +89,7 @@ public class NotificationEventListenerTest {
     }
 
     /**
-     * Test password reset letter sending
+     * Test password reset letter sending.
      */
     @Test
     public void testOnPasswordResetEvent() {
@@ -101,7 +101,7 @@ public class NotificationEventListenerTest {
     }
 
     /**
-     * Test password changed letter sending
+     * Test password changed letter sending.
      */
     @Test
     public void testOnPasswordChangedEvent() {
@@ -113,7 +113,7 @@ public class NotificationEventListenerTest {
     }
 
     /**
-     * Test reset activation tokent letter sending
+     * Test reset activation tokent letter sending.
      */
     @Test
     public void testOnResetActivationTokenEvent() {

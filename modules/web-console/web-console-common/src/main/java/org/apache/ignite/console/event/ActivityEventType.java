@@ -19,7 +19,7 @@ package org.apache.ignite.console.event;
 /**
  * Activity types.
  */
-public enum ActivityType implements Type {
+public enum ActivityEventType implements EventType {
     /** */
     ACTIVITY_UPDATE
 }

@@ -18,7 +18,7 @@ package org.apache.ignite.console.listener;
 
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.event.Event;
-import org.apache.ignite.console.event.Type;
+import org.apache.ignite.console.event.EventType;
 import org.apache.ignite.console.notification.NotificationDescriptor;
 import org.apache.ignite.console.services.NotificationService;
 import org.springframework.context.event.EventListener;
@@ -27,16 +27,16 @@ import org.springframework.stereotype.Component;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.apache.ignite.console.event.AccountType.ACCOUNT_CREATE;
-import static org.apache.ignite.console.event.AccountType.ACCOUNT_CREATE_BY_ADMIN;
-import static org.apache.ignite.console.event.AccountType.ACCOUNT_DELETE;
-import static org.apache.ignite.console.event.AccountType.PASSWORD_CHANGED;
-import static org.apache.ignite.console.event.AccountType.PASSWORD_RESET;
-import static org.apache.ignite.console.event.AccountType.RESET_ACTIVATION_TOKEN;
+import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_CREATE;
+import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_CREATE_BY_ADMIN;
+import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_DELETE;
+import static org.apache.ignite.console.event.AccountEventType.PASSWORD_CHANGED;
+import static org.apache.ignite.console.event.AccountEventType.PASSWORD_RESET;
+import static org.apache.ignite.console.event.AccountEventType.RESET_ACTIVATION_TOKEN;
 
 
 /**
- * Notification event listener
+ * Notification event listener.
  */
 @Component
 public class NotificationEventListener {
@@ -44,7 +44,7 @@ public class NotificationEventListener {
     private NotificationService notificationSrv;
 
     /** Notification descriptor by event type. */
-    private final Map<Type, NotificationDescriptor> notificationDescByEvtType = new HashMap<>();
+    private final Map<EventType, NotificationDescriptor> notificationDescByEvtType = new HashMap<>();
 
     /**
      * @param notificationSrv Notification server.
