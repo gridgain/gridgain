@@ -1556,8 +1556,7 @@ export class NotebookCtrl {
                     }
 
                     return nids[_.random(0, nids.length - 1)];
-                })
-                .catch(Messages.showError);
+                });
         };
 
         const _executeRefresh = (paragraph) => {
@@ -1594,7 +1593,8 @@ export class NotebookCtrl {
                     );
                 }),
                 finalize(() => paragraph.showLoading(false))
-            ).toPromise();
+            ).toPromise()
+                .catch(Messages.showError);
         };
 
         const _tryStartRefresh = function(paragraph) {
