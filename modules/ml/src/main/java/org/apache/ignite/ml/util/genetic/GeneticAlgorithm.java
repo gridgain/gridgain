@@ -48,20 +48,33 @@ public class GeneticAlgorithm {
 
     private CrossoverStrategy crossoverStrategy = CrossoverStrategy.UNIFORM;
 
+    private SelectionStrategy selectionStrategy = SelectionStrategy.ROULETTE_WHEEL;
+
+    /**
+     * Default constructor.
+     */
     public GeneticAlgorithm() {}
 
-    public Population initializePopulation(List<Double[]> rndParamSets) {
+    /**
+     * Forms the initial population.
+     *
+     * @param rawDataForPopulationFormation Rnd parameter sets.
+     */
+    public Population initializePopulation(List<Double[]> rawDataForPopulationFormation) {
         // validate that population size should be even
         // elite chromosome should be even too or we should handle odd case especially
 
-        populationSize = rndParamSets.size();
+        populationSize = rawDataForPopulationFormation.size();
         population = new Population(populationSize);
         for (int i = 0; i < populationSize; i++)
-            population.set(i, new Chromosome(rndParamSets.get(i)));
+            population.set(i, new Chromosome(rawDataForPopulationFormation.get(i)));
 
         return population;
     }
 
+    /**
+     * The main method for genetic algorithm.
+     */
     public void run() {
         if (population != null) {
             population.calculateFitnessForAll(fitnessFunction);
@@ -69,11 +82,13 @@ public class GeneticAlgorithm {
             while (stopCriteriaIsReached(i)) {
                 Population newPopulation = new Population(populationSize);
 
-                selectEliteChromosomes(newPopulation);
+                newPopulation = selectEliteChromosomes(newPopulation);
 
-                crossingover(newPopulation);
+                Population parents = selectionParents();
 
-                mutate(newPopulation);
+                newPopulation = crossingover(parents, newPopulation);
+
+                newPopulation = mutate(newPopulation);
 
                 // update fitness for new population
                 for (int j = amountOfEliteChromosomes; j < populationSize; j++)
@@ -86,37 +101,89 @@ public class GeneticAlgorithm {
         }
     }
 
-    private boolean stopCriteriaIsReached(int iterationNumber) {
-        return iterationNumber < amountOfGenerations;
+    /**
+     * The common method of parent population building with different selection strategies.
+     */
+    private Population selectionParents() {
+        switch (selectionStrategy) {
+            case ROULETTE_WHEEL: return selectParentsByRouletteWheel();
+            default:
+                throw new UnsupportedOperationException("This strategy "
+                    + selectionStrategy.name() + " is not supported yet.");
+        }
     }
 
-    private int selectEliteChromosomes(Population newPopulation) {
-        int elitismOff = 0;
+    /**
+     * Form the parent population via wheel-roulette algorithm.
+     * For more information, please have a look http://www.edc.ncl.ac.uk/highlight/rhjanuary2007g02.php/.
+     */
+    private Population selectParentsByRouletteWheel() {
+        double totalFitness = population.getTotalFitness();
+        double[] sectors = new double[population.size()];
+
+        for (int i = 0; i < population.size(); i++)
+            sectors[i] = population.getChromosome(i).getFitness()/totalFitness;
+
+        Population parentPopulation = new Population(population.size());
+
+        for (int i = 0; i < parentPopulation.size(); i++) {
+            double rouletteVal = rnd.nextDouble();
+            double accumulatedSectorLen = 0.0;
+            int selectedChromosomeIdx = Integer.MIN_VALUE;
+            int sectorIdx = 0;
+
+            while (selectedChromosomeIdx == Integer.MIN_VALUE || sectorIdx < sectors.length) {
+                accumulatedSectorLen += sectors[sectorIdx];
+                if(rouletteVal < accumulatedSectorLen)
+                    selectedChromosomeIdx = sectorIdx;
+                sectorIdx++;
+            }
+
+            parentPopulation.set(i, population.getChromosome(selectedChromosomeIdx));
+        }
+
+        return parentPopulation;
+    }
+
+    /**
+     * Simple stop criteria condition based on max amount of generations.
+     *
+     * @param iterationNum Iteration number.
+     */
+    private boolean stopCriteriaIsReached(int iterationNum) {
+        return iterationNum < amountOfGenerations;
+    }
+
+    /**
+     * Selects and injects the best chromosomes to form the elite of new population.
+     *
+     * @param newPopulation New population.
+     */
+    private Population selectEliteChromosomes(Population newPopulation) {
         if (elitism) {
             Chromosome[] elite = population.selectBestKChromosome(amountOfEliteChromosomes);
-            elitismOff = amountOfEliteChromosomes;
             for (int i = 0; i < elite.length; i++)
                 newPopulation.set(i, elite[i]);
         }
-        return elitismOff;
+        return newPopulation;
     }
 
-
-    private void crossingover(Population newPopulation) {
-        // index in this cycle doesn't affect on parent selection
-        for (int j = amountOfEliteChromosomes; j < populationSize; j+=2) {
-            Chromosome ch1 = tournamentSelection();
-            Chromosome ch2 = tournamentSelection();
+    private Population crossingover(Population parents, Population newPopulation) {
+        // because parent population is less than new population on amount of elite chromosome
+        for (int j = 0; j < populationSize - amountOfEliteChromosomes; j+=2) {
+            Chromosome ch1 = parents.get(j);
+            Chromosome ch2 = parents.get(j + 1);
 
             if(rnd.nextDouble() < crossingoverProbability) {
                 List<Chromosome> twoChildren = crossover(ch1, ch2);
                 newPopulation.set(j, twoChildren.get(0));
-                newPopulation.set(j+1, twoChildren.get(1));
+                newPopulation.set(j + 1, twoChildren.get(1));
             } else {
                 newPopulation.set(j, ch1);
-                newPopulation.set(j+1, ch2);
+                newPopulation.set(j + 1, ch2);
             }
         }
+        return newPopulation;
     }
 
 
@@ -125,17 +192,18 @@ public class GeneticAlgorithm {
      *
      * @param newPopulation New population.
      */
-    private void mutate(Population newPopulation) {
+    private Population mutate(Population newPopulation) {
         for (int j = amountOfEliteChromosomes; j < populationSize; j++) {
             Chromosome possibleMutant = newPopulation.get(j);
             for (int geneIdx = 0; geneIdx < possibleMutant.size(); geneIdx++) {
                 if(rnd.nextDouble() < mutationProbability) {
                     Double gene = possibleMutant.getGene(geneIdx);
-                    Double newGeneValue = mutationOperator.apply(geneIdx, gene);
-                    possibleMutant.set(geneIdx, newGeneValue);
+                    Double newGeneVal = mutationOperator.apply(geneIdx, gene);
+                    possibleMutant.set(geneIdx, newGeneVal);
                 }
             }
         }
+        return newPopulation;
     }
 
 
@@ -200,13 +268,6 @@ public class GeneticAlgorithm {
         res.add(child2);
 
         return res;
-    }
-
-    // fake tournament
-    private Chromosome tournamentSelection() {
-        Random rnd = new Random(); // TODO: need to seed
-        int idx = rnd.nextInt(populationSize);
-        return population.get(idx);
     }
 
     public void setFitnessFunction(Function<Chromosome, Double> fitnessFunction) {

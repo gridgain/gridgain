@@ -39,4 +39,26 @@ public class Population {
         Arrays.sort(cp);
         return Arrays.copyOfRange(cp, cp.length - k, cp.length);
     }
+
+    public double getTotalFitness() {
+        double totalFitness = 0.0;
+
+        for (int i = 0; i < chromosomes.length; i++)
+            totalFitness+=chromosomes[i].getFitness();
+
+        return totalFitness;
+    }
+
+    public double getAverageFitness() {
+        double totalFitness = 0.0;
+
+        for (int i = 0; i < chromosomes.length; i++)
+            totalFitness+=chromosomes[i].getFitness();
+
+        return totalFitness/chromosomes.length;
+    }
+
+    public int size() {
+        return chromosomes.length;
+    }
 }
