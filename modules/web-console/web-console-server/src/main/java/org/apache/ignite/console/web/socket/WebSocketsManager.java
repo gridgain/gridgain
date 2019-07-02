@@ -47,7 +47,6 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.ignite.console.utils.Utils.toJson;
 import static org.apache.ignite.console.websocket.WebSocketEvents.ADMIN_ANNOUNCEMENT;
-import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_REVOKE_TOKEN;
 import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_STATUS;
 import static org.springframework.web.util.UriComponentsBuilder.fromUri;
 
@@ -341,20 +340,21 @@ public class WebSocketsManager {
     public void revokeToken(Account acc, String oldTok) {
         log.info("Revoke token [old: " + oldTok + ", new: " + acc.getToken() + "]");
 
-        agents.forEach((ws, desc) -> {
-            try {
-                if (desc.revokeAccount(acc.getId()))
-                    sendMessage(ws, new WebSocketEvent(AGENT_REVOKE_TOKEN, oldTok));
-
-                if (desc.canBeClose())
-                    ws.close();
-            }
-            catch (Throwable e) {
-                log.error("Failed to revoke token: " + oldTok);
-            }
-        });
-
-        updateClusterInBrowsers(Collections.singleton(acc.getId()));
+        // TODO GG-19573
+        //        agents.forEach((ws, desc) -> {
+        //            try {
+        //                if (desc.revokeAccount(acc.getId()))
+        //                    sendMessage(ws, new WebSocketEvent(AGENT_REVOKE_TOKEN, oldTok));
+        //
+        //                if (desc.canBeClose())
+        //                    ws.close();
+        //            }
+        //            catch (Throwable e) {
+        //                log.error("Failed to revoke token: " + oldTok);
+        //            }
+        //        });
+        //
+        //        updateClusterInBrowsers(Collections.singleton(acc.getId()));
     }
 
     /**
