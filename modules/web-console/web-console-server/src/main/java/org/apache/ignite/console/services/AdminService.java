@@ -32,8 +32,8 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
-import static org.apache.ignite.console.event.Type.ACCOUNT_CREATE_BY_ADMIN;
-import static org.apache.ignite.console.event.Type.ACCOUNT_DELETE;
+import static org.apache.ignite.console.event.AccountType.ACCOUNT_CREATE_BY_ADMIN;
+import static org.apache.ignite.console.event.AccountType.ACCOUNT_DELETE;
 
 /**
  * Service to handle administrator actions.

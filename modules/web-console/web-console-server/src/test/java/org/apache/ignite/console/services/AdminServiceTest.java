@@ -35,8 +35,8 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.UUID;
 
-import static org.apache.ignite.console.event.Type.ACCOUNT_CREATE_BY_ADMIN;
-import static org.apache.ignite.console.event.Type.ACCOUNT_DELETE;
+import static org.apache.ignite.console.event.AccountType.ACCOUNT_CREATE_BY_ADMIN;
+import static org.apache.ignite.console.event.AccountType.ACCOUNT_DELETE;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;

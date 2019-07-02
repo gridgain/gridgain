@@ -44,11 +44,11 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.UUID;
 
-import static org.apache.ignite.console.event.Type.ACCOUNT_CREATE;
-import static org.apache.ignite.console.event.Type.ACCOUNT_UPDATE;
-import static org.apache.ignite.console.event.Type.PASSWORD_CHANGED;
-import static org.apache.ignite.console.event.Type.PASSWORD_RESET;
-import static org.apache.ignite.console.event.Type.RESET_ACTIVATION_TOKEN;
+import static org.apache.ignite.console.event.AccountType.ACCOUNT_CREATE;
+import static org.apache.ignite.console.event.AccountType.ACCOUNT_UPDATE;
+import static org.apache.ignite.console.event.AccountType.PASSWORD_CHANGED;
+import static org.apache.ignite.console.event.AccountType.PASSWORD_RESET;
+import static org.apache.ignite.console.event.AccountType.RESET_ACTIVATION_TOKEN;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.times;
