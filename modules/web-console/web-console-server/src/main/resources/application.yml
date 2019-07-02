@@ -24,3 +24,5 @@
 #    key-store-type: JKS
 #    key-store: certificates/server.jks
 #    key-store-password: change_me
+
+spring.mvc.favicon.enabled: false
