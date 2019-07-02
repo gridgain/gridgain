@@ -25,7 +25,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -36,15 +35,10 @@ import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
-import org.apache.ignite.internal.pagemem.wal.WALIterator;
-import org.apache.ignite.internal.pagemem.wal.WALPointer;
-import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIODecorator;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.RandomAccessFileIOFactory;
-import org.apache.ignite.internal.processors.cache.persistence.wal.reader.IgniteWalIteratorFactory;
-import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -79,11 +73,7 @@ public class IgnitePdsRestartAfterRebalancingTest extends GridCommonAbstractTest
         CacheConfiguration ccfg = new CacheConfiguration();
 
         ccfg.setName(CACHE_NAME);
-//        ccfg.setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL);
         ccfg.setCacheMode(CacheMode.REPLICATED);
-//        ccfg.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
-//        ccfg.setAffinity(new RendezvousAffinityFunction(false, 128));
-//        ccfg.setBackups(1);
 
         cfg.setCacheConfiguration(ccfg);
 
@@ -101,7 +91,7 @@ public class IgnitePdsRestartAfterRebalancingTest extends GridCommonAbstractTest
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
 
-//        cleanPersistenceDir();
+        cleanPersistenceDir();
     }
 
     /**
@@ -154,19 +144,6 @@ public class IgnitePdsRestartAfterRebalancingTest extends GridCommonAbstractTest
         }
     }
 
-    public static void main(String[] args) throws IgniteCheckedException {
-//        File walArchiveDir = U.field(walMgr, "walArchiveDir");
-        File walDir = new File("/home/ibessonov/git/incubator-ignite/work/db/wal");
-
-        IgniteWalIteratorFactory iterFactory = new IgniteWalIteratorFactory();
-
-        WALIterator iter = iterFactory.iterator(walDir);
-
-        for (IgniteBiTuple<WALPointer, WALRecord> tuple : iter) {
-
-        }
-    }
-
     /** {@inheritDoc} */
     @Override protected FailureHandler getFailureHandler(String igniteInstanceName) {
         return new StopNodeFailureHandler();
@@ -213,17 +190,8 @@ public class IgnitePdsRestartAfterRebalancingTest extends GridCommonAbstractTest
                         }
 
                         private void maybeThrowException() throws IOException {
-                            if (failNextCheckpoint) {
-                                if (cpCnt.get() > 0)
-                                    throw new IOException("Checkpoint failed.");
-
-                                try {
-                                    Thread.sleep(10);
-                                }
-                                catch (InterruptedException e) {
-                                    Thread.currentThread().interrupt();
-                                }
-                            }
+                            if (failNextCheckpoint && cpCnt.get() > 0)
+                                throw new IOException("Checkpoint failed.");
                         }
                     };
                 }
