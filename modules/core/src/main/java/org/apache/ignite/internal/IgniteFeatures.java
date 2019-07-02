@@ -18,9 +18,11 @@ package org.apache.ignite.internal;
 
 import java.util.BitSet;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeWaitMessage;
 
+import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_FEATURES;
 
 /**
@@ -57,8 +59,13 @@ public enum IgniteFeatures {
     FIND_AND_DELETE_GARBAGE_COMMAND(8),
 
     /** Distributed metastorage. */
-    DISTRIBUTED_METASTORAGE(11);
-    ;
+    DISTRIBUTED_METASTORAGE(11),
+
+    /** Supports tracking update counter for transactions. */
+    TX_TRACKING_UPDATE_COUNTER(12),
+
+    /** Support new security processor */
+    IGNITE_SECURITY_PROCESSOR(13);
 
     /**
      * Unique feature identifier.
@@ -82,17 +89,20 @@ public enum IgniteFeatures {
     /**
      * Checks that feature supported by node.
      *
+     * @param ctx Kernal context.
      * @param clusterNode Cluster node to check.
      * @param feature Feature to check.
      * @return {@code True} if feature is declared to be supported by remote node.
      */
-    public static boolean nodeSupports(ClusterNode clusterNode, IgniteFeatures feature) {
-        final byte[] features = clusterNode.attribute(ATTR_IGNITE_FEATURES);
+    public static boolean nodeSupports(GridKernalContext ctx, ClusterNode clusterNode, IgniteFeatures feature) {
+        if (ctx != null) {
+            RollingUpgradeStatus status = ctx.rollingUpgrade().getStatus();
 
-        if (features == null)
-            return false;
+            if (status.isEnabled() && !status.isForcedModeEnabled())
+                return status.getSupportedFeatures().contains(feature);
+        }
 
-        return nodeSupports(features, feature);
+        return nodeSupports(clusterNode.attribute(ATTR_IGNITE_FEATURES), feature);
     }
 
     /**
@@ -103,6 +113,9 @@ public enum IgniteFeatures {
      * @return {@code True} if feature is declared to be supported by remote node.
      */
     public static boolean nodeSupports(byte[] featuresAttrBytes, IgniteFeatures feature) {
+        if (featuresAttrBytes == null)
+            return false;
+
         int featureId = feature.getFeatureId();
 
         // Same as "BitSet.valueOf(features).get(featureId)"
@@ -120,12 +133,20 @@ public enum IgniteFeatures {
     /**
      * Checks that feature supported by all nodes.
      *
+     * @param ctx Kernal context.
      * @param nodes cluster nodes to check their feature support.
      * @return if feature is declared to be supported by all nodes
      */
-    public static boolean allNodesSupports(Iterable<ClusterNode> nodes, IgniteFeatures feature) {
+    public static boolean allNodesSupports(GridKernalContext ctx, Iterable<ClusterNode> nodes, IgniteFeatures feature) {
+        if (ctx != null && nodes.iterator().hasNext()) {
+            RollingUpgradeStatus status = ctx.rollingUpgrade().getStatus();
+
+            if (status.isEnabled() && !status.isForcedModeEnabled())
+                return status.getSupportedFeatures().contains(feature);
+        }
+
         for (ClusterNode next : nodes) {
-            if (!nodeSupports(next, feature))
+            if (!nodeSupports(next.attribute(ATTR_IGNITE_FEATURES), feature))
                 return false;
         }
 
@@ -141,6 +162,10 @@ public enum IgniteFeatures {
         final BitSet set = new BitSet();
 
         for (IgniteFeatures value : IgniteFeatures.values()) {
+            // After rolling upgrade, our security has more strict validation. This may come as a surprise to customers.
+            if (IGNITE_SECURITY_PROCESSOR == value && !getBoolean(IGNITE_SECURITY_PROCESSOR.name(), true))
+                continue;
+
             final int featureId = value.getFeatureId();
 
             assert !set.get(featureId) : "Duplicate feature ID found for [" + value + "] having same ID ["

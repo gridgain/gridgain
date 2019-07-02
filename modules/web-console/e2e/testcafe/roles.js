@@ -18,7 +18,7 @@ import { Role, t } from 'testcafe';
 import { resolveUrl } from './environment/envtools';
 import {pageSignin as page} from './page-models/pageSignin';
 
-export const createRegularUser = (login = 'a@a', password = 'a') => {
+export const createRegularUser = (login = 'a@example.com', password = 'a') => {
     return Role(resolveUrl('/signin'), async() => {
         await t.eval(() => window.localStorage.clear());
 
