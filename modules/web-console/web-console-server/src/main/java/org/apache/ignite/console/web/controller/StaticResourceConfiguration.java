@@ -17,6 +17,7 @@
 package org.apache.ignite.console.web.controller;
 
 import java.util.Collections;
+import com.google.common.collect.Lists;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -93,7 +94,12 @@ public class StaticResourceConfiguration extends WebMvcConfigurerAdapter {
     protected ResourceHttpRequestHandler customFaviconRequestHandler() {
         ResourceHttpRequestHandler reqHnd = new ResourceHttpRequestHandler();
 
-        reqHnd.setLocations(Collections.singletonList(applicationCtx.getResource("file:frontend/favicon.ico")));
+        reqHnd.setLocations(
+            Lists.newArrayList(
+                applicationCtx.getResource("file:frontend/favicon.ico"),
+                applicationCtx.getResource("file:frontend/public/favicon.ico")
+            )
+        );
 
         return reqHnd;
     }
