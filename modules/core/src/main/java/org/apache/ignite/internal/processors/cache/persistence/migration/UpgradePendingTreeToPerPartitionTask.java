@@ -341,7 +341,7 @@ public class UpgradePendingTreeToPerPartitionTask implements IgniteCallable<Bool
             if (log.isDebugEnabled())
                 log.warning(msg, ex);
             else
-                log.warning(msg);
+                log.warning(msg, ex);
 
             return false;
         }
