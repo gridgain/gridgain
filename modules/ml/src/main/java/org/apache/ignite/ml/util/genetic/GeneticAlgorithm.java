@@ -46,14 +46,11 @@ public class GeneticAlgorithm {
     /** Mutation operator. */
     private BiFunction<Integer, Double, Double> mutationOperator;
 
+    /** Crossover strategy. */
     private CrossoverStrategy crossoverStrategy = CrossoverStrategy.UNIFORM;
 
+    /** Selection strategy. */
     private SelectionStrategy selectionStrategy = SelectionStrategy.ROULETTE_WHEEL;
-
-    /**
-     * Default constructor.
-     */
-    public GeneticAlgorithm() {}
 
     /**
      * Forms the initial population.
@@ -132,12 +129,15 @@ public class GeneticAlgorithm {
             int selectedChromosomeIdx = Integer.MIN_VALUE;
             int sectorIdx = 0;
 
-            while (selectedChromosomeIdx == Integer.MIN_VALUE || sectorIdx < sectors.length) {
+            while (selectedChromosomeIdx == Integer.MIN_VALUE && sectorIdx < sectors.length) {
                 accumulatedSectorLen += sectors[sectorIdx];
                 if(rouletteVal < accumulatedSectorLen)
                     selectedChromosomeIdx = sectorIdx;
                 sectorIdx++;
             }
+
+            if(selectedChromosomeIdx == Integer.MIN_VALUE)
+                selectedChromosomeIdx = rnd.nextInt(population.size()); // or get last
 
             parentPopulation.set(i, population.getChromosome(selectedChromosomeIdx));
         }
@@ -176,11 +176,11 @@ public class GeneticAlgorithm {
 
             if(rnd.nextDouble() < crossingoverProbability) {
                 List<Chromosome> twoChildren = crossover(ch1, ch2);
-                newPopulation.set(j, twoChildren.get(0));
-                newPopulation.set(j + 1, twoChildren.get(1));
+                newPopulation.set(amountOfEliteChromosomes + j, twoChildren.get(0));
+                newPopulation.set(amountOfEliteChromosomes + j + 1, twoChildren.get(1));
             } else {
-                newPopulation.set(j, ch1);
-                newPopulation.set(j + 1, ch2);
+                newPopulation.set(amountOfEliteChromosomes + j, ch1);
+                newPopulation.set(amountOfEliteChromosomes + j + 1, ch2);
             }
         }
         return newPopulation;

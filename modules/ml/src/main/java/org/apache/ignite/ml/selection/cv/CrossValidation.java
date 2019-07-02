@@ -121,8 +121,6 @@ public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
         }
     }
 
-    // https://www.baeldung.com/java-genetic-algorithm
-    // https://github.com/eugenp/tutorials/blob/master/algorithms-genetic/src/main/java/com/baeldung/algorithms/ga/binary/SimpleGeneticAlgorithm.java
     private CrossValidationResult scoreEvolutionAlgorithmSearchHyperparameterOptimization() {
         List<Double[]> paramSets = new ParameterSetGenerator(paramGrid.getParamValuesByParamIdx()).generate();
 
@@ -139,16 +137,14 @@ public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
 
         Random rnd = new Random(paramGrid.getSeed()); // common seed for shared lambdas can produce the same value on each function call? or sequent?
 
-
         BiFunction<Integer, Double, Double> mutator = (Integer geneIdx, Double geneValue) -> {
-            Double newGeneValue;
+            Double newGeneVal;
 
             Double[] possibleGeneValues = paramGrid.getParamRawData().get(geneIdx);
-            newGeneValue = possibleGeneValues[rnd.nextInt(possibleGeneValues.length)];  // TODO: - unclear seed - extract CV seed
+            newGeneVal = possibleGeneValues[rnd.nextInt(possibleGeneValues.length)];  // TODO: - unclear seed - extract CV seed
 
-            return newGeneValue;
+            return newGeneVal;
         };
-
 
         GeneticAlgorithm ga = new GeneticAlgorithm();
         ga.setFitnessFunction(fitnessFunction);
