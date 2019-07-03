@@ -202,6 +202,7 @@ namespace Apache.Ignite.Core.Configuration
             WalAutoArchiveAfterInactivity = DefaultWalAutoArchiveAfterInactivity;
             MaxWalArchiveSize = DefaultMaxWalArchiveSize;
             WalPageCompression = DefaultWalPageCompression;
+            ConcurrencyLevel = DefaultConcurrencyLevel;
         }
 
         /// <summary>
