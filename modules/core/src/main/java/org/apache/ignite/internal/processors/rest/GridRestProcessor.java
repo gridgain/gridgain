@@ -1000,7 +1000,7 @@ public class GridRestProcessor extends GridProcessorAdapter {
 
             startProtocol(proto);
         }
-        catch (ClassNotFoundException ignored) {
+        catch (ClassNotFoundException | NoClassDefFoundError ignored) {
             if (log.isDebugEnabled())
                 log.debug("Failed to initialize HTTP REST protocol (consider adding ignite-rest-http " +
                     "module to classpath).");
