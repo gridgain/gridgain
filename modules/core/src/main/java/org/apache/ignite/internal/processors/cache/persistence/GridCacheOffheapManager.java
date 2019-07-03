@@ -581,6 +581,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                     log.debug("Skipping partition on recovery (no page store OR wal state) " +
                         "[grp=" + grp.cacheOrGroupName() + ", p=" + p + "]");
             }
+
             if (log.isDebugEnabled())
                 log.debug("Finished restoring partition state " +
                     "[grp=" + grp.cacheOrGroupName() + ", p=" + p +
