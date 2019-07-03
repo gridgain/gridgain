@@ -475,7 +475,7 @@ namespace Apache.Ignite.Core.Configuration
         /// <summary>
         /// Gets or sets the size of a memory chunk reserved for system needs.
         /// </summary>
-        [DefaultValue(DefaultSystemRegionInitialSize)]
+        [DefaultValue(1)]
         public long SystemRegionInitialSize { get; set; }
 
         /// <summary>
