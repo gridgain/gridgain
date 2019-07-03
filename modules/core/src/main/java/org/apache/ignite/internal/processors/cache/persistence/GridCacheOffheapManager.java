@@ -584,7 +584,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             if (log.isDebugEnabled())
                 log.debug("Finished restoring partition state " +
                     "[grp=" + grp.cacheOrGroupName() + ", p=" + p +
-                    ", time=" + (U.currentTimeMillis() - startTime) + "ms]");
+                    ", time=" + (U.currentTimeMillis() - startTime) + " ms]");
         }
 
         partitionStatesRestored = true;
