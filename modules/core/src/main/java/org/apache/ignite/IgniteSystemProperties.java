@@ -1257,6 +1257,11 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_ENABLE_HASH_JOIN = "IGNITE_ENABLE_HASH_JOIN";
 
     /**
+     * Index rebuilding parallelism level.
+     */
+    public static final String INDEX_REBUILDING_PARALLELISM = "INDEX_REBUILDING_PARALLELISM";
+
+    /**
      * Enforces singleton.
      */
     private IgniteSystemProperties() {

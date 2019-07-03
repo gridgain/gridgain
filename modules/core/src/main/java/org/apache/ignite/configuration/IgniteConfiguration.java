@@ -240,10 +240,6 @@ public class IgniteConfiguration {
     /** Default SQL query history size. */
     public static final int DFLT_SQL_QUERY_HISTORY_SIZE = 1000;
 
-    /** Default degree of parallelism of indexes rebuilding operations. */
-    public static final int DEFAULT_INDEX_REBUILDING_PARALLELISM =
-        Math.min(4, Math.max(1, Runtime.getRuntime().availableProcessors() / 4));
-
     /** Optional local Ignite instance name. */
     private String igniteInstanceName;
 
@@ -291,9 +287,6 @@ public class IgniteConfiguration {
 
     /** SQL query history size. */
     private int sqlQryHistSize = DFLT_SQL_QUERY_HISTORY_SIZE;
-
-    /** Index rebuilding parallelism level. */
-    private int indexRebuildingParallelism = DEFAULT_INDEX_REBUILDING_PARALLELISM;
 
     /** Ignite installation folder. */
     private String igniteHome;
@@ -676,7 +669,6 @@ public class IgniteConfiguration {
         utilityCachePoolSize = cfg.getUtilityCacheThreadPoolSize();
         waitForSegOnStart = cfg.isWaitForSegmentOnStart();
         warmupClos = cfg.getWarmupClosure();
-        indexRebuildingParallelism = cfg.getIndexRebuildingParallelism();
     }
 
     /**
@@ -3300,27 +3292,6 @@ public class IgniteConfiguration {
      */
     public IgniteConfiguration setSqlSchemas(String... sqlSchemas) {
         this.sqlSchemas = sqlSchemas;
-
-        return this;
-    }
-
-    /**
-     * Gets parallelism level for index rebuilding operations.
-     *
-     * @return Parallelism level for index rebuilding operations.
-     */
-    public int getIndexRebuildingParallelism() {
-        return indexRebuildingParallelism;
-    }
-
-    /**
-     * Sets parallelism level for index rebuilding operations.
-     *
-     * @param indexRebuildingParallelism Parallelism level for index rebuilding operations.
-     * @return {@code this} for chaining.
-     */
-    public IgniteConfiguration setIndexRebuildingParallelism(int indexRebuildingParallelism) {
-        this.indexRebuildingParallelism = indexRebuildingParallelism;
 
         return this;
     }

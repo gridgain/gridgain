@@ -18,7 +18,7 @@ package org.apache.ignite.internal.processors.query.schema;
 
 import java.util.List;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
@@ -37,6 +37,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.thread.IgniteThread;
 
+import static org.apache.ignite.IgniteSystemProperties.INDEX_REBUILDING_PARALLELISM;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.EVICTED;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
@@ -46,6 +47,10 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
  * Traversor operating all primary and backup partitions of given cache.
  */
 public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
+    /** Default degree of parallelism. */
+    private static final int DFLT_PARALLELISM =
+        Math.min(4, Math.max(1, Runtime.getRuntime().availableProcessors() / 4));
+
     /** Count of rows, being processed within a single checkpoint lock. */
     private static final int BATCH_SIZE = 1000;
 
@@ -69,7 +74,7 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
      *  @param cctx Cache context.
      */
     public SchemaIndexCacheVisitorImpl(GridCacheContext cctx) {
-        this(cctx, null, null, cctx.grid().configuration().getIndexRebuildingParallelism());
+        this(cctx, null, null, IgniteSystemProperties.getInteger(INDEX_REBUILDING_PARALLELISM, 0));
     }
 
     /**
@@ -88,7 +93,7 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
         if (parallelism > 0)
             this.parallelism = Math.min(Runtime.getRuntime().availableProcessors(), parallelism);
         else
-            this.parallelism = IgniteConfiguration.DEFAULT_INDEX_REBUILDING_PARALLELISM;
+            this.parallelism = DFLT_PARALLELISM;
 
         if (cctx.isNear())
             cctx = ((GridNearCacheAdapter)cctx.cache()).dht().context();
