@@ -162,8 +162,6 @@ public class IgnitePdsRestartAfterRebalancingTest extends GridCommonAbstractTest
 
         /** {@inheritDoc} */
         @Override public FileIO create(File file, OpenOption... modes) throws IOException {
-//            System.out.println("<!> File created: " + file);
-
             FileIO delegate = new RandomAccessFileIOFactory().create(file, modes);
 
             if (file.getAbsolutePath().contains("IgnitePdsRestartAfterRebalancingTest1")) {
