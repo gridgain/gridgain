@@ -19,6 +19,7 @@ package org.apache.ignite.console.websocket;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
@@ -41,6 +42,12 @@ public class AgentHandshakeRequest {
     /** */
     private String ver;
 
+    /** Cluster id. */
+    private UUID clusterId;
+
+    /** Last seen. */
+    private long lastSeen;
+
     /** */
     @GridToStringInclude
     private Set<String> toks;
@@ -56,13 +63,19 @@ public class AgentHandshakeRequest {
      * Full constructor.
      *
      * @param ver Agent version.
+     * @param clusterId Cluster id.
+     * @param lastSeen Last seen timestamp.
      * @param toks Tokens.
      */
     public AgentHandshakeRequest(
-        String ver,
-        Collection<String> toks
+            String ver,
+            UUID clusterId,
+            long lastSeen,
+            Collection<String> toks
     ) {
         this.ver = ver;
+        this.clusterId = clusterId;
+        this.lastSeen = lastSeen;
         this.toks = new HashSet<>(toks);
     }
 
@@ -78,6 +91,34 @@ public class AgentHandshakeRequest {
      */
     public void setVersion(String ver) {
         this.ver = ver;
+    }
+
+    /**
+     * @return Cluster id.
+     */
+    public UUID getClusterId() {
+        return clusterId;
+    }
+
+    /**
+     * @param clusterId Cluster id.
+     */
+    public void setClusterId(UUID clusterId) {
+        this.clusterId = clusterId;
+    }
+
+    /**
+     * @return Last seen timestamp.
+     */
+    public long getLastSeen() {
+        return lastSeen;
+    }
+
+    /**
+     * @param lastSeen Last seen.
+     */
+    public void setLastSeen(long lastSeen) {
+        this.lastSeen = lastSeen;
     }
 
     /**

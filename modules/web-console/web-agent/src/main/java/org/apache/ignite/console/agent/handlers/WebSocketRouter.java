@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -271,7 +272,7 @@ public class WebSocketRouter implements AutoCloseable {
     @OnWebSocketConnect
     public void onConnect(Session ses) {
         try {
-            AgentHandshakeRequest req = new AgentHandshakeRequest(CURRENT_VER, cfg.tokens());
+            AgentHandshakeRequest req = new AgentHandshakeRequest(CURRENT_VER, UUID.randomUUID(), System.currentTimeMillis(), cfg.tokens());
 
             send(ses, new WebSocketEvent(AGENT_HANDSHAKE, req));
         }
