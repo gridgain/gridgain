@@ -283,15 +283,19 @@ public class CommandHandlerParsingTest {
     public void testExperimentalCommandIsDisabled() {
         System.clearProperty(IGNITE_ENABLE_EXPERIMENTAL_COMMAND);
 
-        GridTestUtils.assertThrows(null,
+        GridTestUtils.assertThrows(
+            null,
             () -> parseArgs(Arrays.asList(WAL.text(), WAL_PRINT)),
             IllegalArgumentException.class,
-            null);
+            null
+        );
 
-        GridTestUtils.assertThrows(null,
+        GridTestUtils.assertThrows(
+            null,
             () -> parseArgs(Arrays.asList(WAL.text(), WAL_DELETE)),
             IllegalArgumentException.class,
-            null);
+            null
+        );
     }
 
     /**
