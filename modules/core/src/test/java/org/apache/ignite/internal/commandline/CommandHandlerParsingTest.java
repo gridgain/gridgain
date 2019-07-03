@@ -37,9 +37,12 @@ import org.apache.ignite.internal.visor.tx.VisorTxProjection;
 import org.apache.ignite.internal.visor.tx.VisorTxSortOrder;
 import org.apache.ignite.internal.visor.tx.VisorTxTaskArg;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.junits.*;
-import org.junit.*;
-import org.junit.rules.*;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
+import org.apache.ignite.testframework.junits.SystemPropertiesRule;
+import org.junit.Test;
+import org.junit.Rule;
+import org.junit.ClassRule;
+import org.junit.rules.TestRule;
 
 import static java.util.Arrays.asList;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXPERIMENTAL_COMMAND;
