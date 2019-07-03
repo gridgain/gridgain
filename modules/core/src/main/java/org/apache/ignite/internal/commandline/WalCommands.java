@@ -65,6 +65,7 @@ public class WalCommands implements Command<T2<String, String>> {
      */
     private String walArgs;
 
+    /** {@inheritDoc} */
     @Override public void printUsage(Logger logger) {
         if (enableExperimental()) {
             Command.usage(logger, "Print absolute paths of unused archived wal segments on each node:", WAL,

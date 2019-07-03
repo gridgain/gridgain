@@ -37,9 +37,9 @@ import org.apache.ignite.internal.visor.tx.VisorTxProjection;
 import org.apache.ignite.internal.visor.tx.VisorTxSortOrder;
 import org.apache.ignite.internal.visor.tx.VisorTxTaskArg;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.junit.Test;
-import org.junit.After;
-import org.junit.Before;
+import org.apache.ignite.testframework.junits.*;
+import org.junit.*;
+import org.junit.rules.*;
 
 import static java.util.Arrays.asList;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXPERIMENTAL_COMMAND;
@@ -63,18 +63,13 @@ import static org.junit.Assert.fail;
 /**
  * Tests Command Handler parsing arguments.
  */
+@WithSystemProperty(key = IGNITE_ENABLE_EXPERIMENTAL_COMMAND, value = "true")
 public class CommandHandlerParsingTest {
     /** */
-    @Before
-    public void setUp() throws Exception {
-        System.setProperty(IGNITE_ENABLE_EXPERIMENTAL_COMMAND, Boolean.TRUE.toString());
-    }
+    @ClassRule public static final TestRule classRule = new SystemPropertiesRule();
 
     /** */
-    @After
-    public void tearDown() throws Exception {
-        System.clearProperty(IGNITE_ENABLE_EXPERIMENTAL_COMMAND);
-    }
+    @Rule public final TestRule methodRule = new SystemPropertiesRule();
 
     /**
      * validate_indexes command arguments parsing and validation
@@ -280,9 +275,8 @@ public class CommandHandlerParsingTest {
      * Test that experimental command (i.e. WAL command) is disabled by default.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_ENABLE_EXPERIMENTAL_COMMAND, value = "false")
     public void testExperimentalCommandIsDisabled() {
-        System.clearProperty(IGNITE_ENABLE_EXPERIMENTAL_COMMAND);
-
         GridTestUtils.assertThrows(
             null,
             () -> parseArgs(Arrays.asList(WAL.text(), WAL_PRINT)),
