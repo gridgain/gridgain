@@ -14,21 +14,32 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.query.oom;
-
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+package org.apache.ignite.internal.processors.security;
 
 /**
- * Test suite for queries produces OOME in some cases.
+ *
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-    //Query history.
-    QueryOOMWithoutQueryParallelismTest.class,
-    QueryOOMWithQueryParallelismTest.class,
-})
-@Deprecated //TODO: GG-18628: Drop these tests.
-public class IgniteQueryOOMTestSuite {
-}
+public class OperationSecurityContext implements AutoCloseable {
+    /** Ignite Security. */
+    private final IgniteSecurity proc;
 
+    /** Security context. */
+    private final SecurityContext secCtx;
+
+    /**
+     * @param proc Ignite Security.
+     * @param secCtx Security context.
+     */
+    OperationSecurityContext(IgniteSecurity proc, SecurityContext secCtx) {
+        assert proc != null;
+        assert secCtx != null || !proc.enabled();
+
+        this.proc = proc;
+        this.secCtx = secCtx;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void close() {
+        proc.withContext(secCtx);
+    }
+}
