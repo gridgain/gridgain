@@ -161,7 +161,7 @@ namespace Apache.Ignite.Core.Configuration
         /// <summary>
         /// The default concurrency level.
         /// </summary>
-        public const int DefaultConcurrencyLevel = 0;
+        public const int DefaultConcurrencyLevel = Environment.ProcessorCount;
 
         /// <summary>
         /// Default value for <see cref="MaxWalArchiveSize"/>.
