@@ -153,8 +153,6 @@ export default class AgentManager {
 
     wsSubject = new Subject();
 
-    wsConnection = new BehaviorSubject(false);
-
     switchClusterListeners = new Set<() => Promise>();
 
     addClusterSwitchListener(func) {
@@ -247,8 +245,6 @@ export default class AgentManager {
             onopen: (evt) => {
                 if (__dbg)
                     console.log('[WS] Connected to server: ', evt);
-
-                this.wsConnection.next(true);
             },
             onmessage: (msg) => {
                 if (__dbg)
@@ -263,8 +259,6 @@ export default class AgentManager {
             onreconnect: (evt) => {
                 if (__dbg)
                     console.log('[WS] Reconnecting...', evt);
-
-                this.wsConnection.next(false);
             },
             onclose: (evt) => {
                 if (__dbg)
@@ -281,8 +275,6 @@ export default class AgentManager {
                     eventType: 'disconnected',
                     payload: 'none'
                 });
-
-                this.wsConnection.next(false);
             },
             onerror: (evt) => {
                 if (__dbg)
@@ -432,19 +424,11 @@ export default class AgentManager {
                     latch.resolve(evt.payload);
             });
 
-        this.wsConnection.pipe(
-            filter((isConnected) => isConnected),
-            first(),
-            // Await web socket connection to send request.
-            timeout(5000),
-            tap(() => this._sendWebSocketEvent(requestId, eventType, data)),
-            catchError(() => {
-                latch.reject({message: 'Connection to web server was lost'});
-
-                return EMPTY;
-            })
-        )
-        .subscribe(() => {});
+        try {
+            this._sendWebSocketEvent(requestId, eventType, data);
+        } catch (ignored) {
+            latch.reject({message: 'Connection to web server was not established yet'});
+        }
 
         return latch.promise;
     }
