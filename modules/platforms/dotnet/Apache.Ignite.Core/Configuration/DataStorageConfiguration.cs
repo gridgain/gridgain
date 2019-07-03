@@ -475,6 +475,7 @@ namespace Apache.Ignite.Core.Configuration
         /// <summary>
         /// Gets or sets the size of a memory chunk reserved for system needs.
         /// </summary>
+        [DefaultValue(DefaultSystemRegionInitialSize)]
         public long SystemRegionInitialSize { get; set; }
 
         /// <summary>
@@ -492,7 +493,6 @@ namespace Apache.Ignite.Core.Configuration
         /// <summary>
         /// Gets or sets the number of concurrent segments in Ignite internal page mapping tables.
         /// </summary>
-        [DefaultValue(DefaultConcurrencyLevel)]
         public int ConcurrencyLevel { get; set; }
 
         /// <summary>
