@@ -301,44 +301,6 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
     }
 
     /**
-     * Adds entry to future.
-     *
-     * @param entry Entry to add.
-     * @return Non-reentry candidate if lock should be acquired on remote node,
-     *      reentry candidate if locks has been already acquired and {@code null} if explicit locks is held and
-     *      implicit transaction accesses locked entry.
-     */
-    @Nullable private GridCacheMvccCandidate createCandidate(GridDistributedCacheEntry entry) {
-        IgniteTxKey txKey = entry.txKey();
-
-        IgniteTxEntry txEntry = tx.entry(txKey);
-
-        assert txEntry != null;
-
-        // TODO GG-19461 this looks redundant.
-        txEntry.cached(entry);
-
-        // Check transaction entries (corresponding tx entries must be enlisted in transaction).
-        GridCacheMvccCandidate cand = new GridCacheMvccCandidate(entry,
-            cctx.localNodeId(),
-            null,
-            null,
-            threadId,
-            lockVer,
-            true,
-            txEntry.locked(),
-            tx.implicitSingle(),
-            false,
-            false,
-            null,
-            false);
-
-        cand.topologyVersion(topVer);
-
-        return cand;
-    }
-
-    /**
      * Undoes all locks.
      *
      * @param dist If {@code true}, then remove locks from remote nodes as well.
@@ -995,8 +957,6 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
 
                             assert loc ^ entry.detached() : "Invalid entry [loc=" + loc + ", entry=" + entry + ']';
 
-                            GridCacheMvccCandidate cand = createCandidate(entry);
-
                             // Will either return value from dht cache or null if this is a miss.
                             IgniteBiTuple<GridCacheVersion, CacheObject> val = entry.detached() ? null :
                                 ((GridDhtCacheEntry)entry).versionedValue(topVer);
@@ -1009,7 +969,7 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
                                 valMap.put(key, val);
                             }
 
-                            if (cand != null && !cand.reentry()) {
+                            if (!tx.entry(txKey).locked()) {
                                 if (req == null) {
                                     boolean clientFirst = false;
 
@@ -1353,11 +1313,8 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
             return;
         }
 
-        GridCacheMvccCandidate cand = createCandidate(entry);
-
-        assert cand != null;
-
-        distributedKeys.add(key);
+        if (!tx.entry(entry.txKey()).locked())
+            distributedKeys.add(key);
     }
 
     /**

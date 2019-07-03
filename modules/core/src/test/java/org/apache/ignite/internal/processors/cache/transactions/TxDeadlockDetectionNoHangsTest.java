@@ -177,7 +177,7 @@ public class TxDeadlockDetectionNoHangsTest extends GridCommonAbstractTest {
                 }
             }, 1, "restart-thread");
 
-            long stopTime = System.currentTimeMillis() + 2 * 60_000L;
+            long stopTime = System.currentTimeMillis() + GridTestUtils.SF.applyLB(2 * 60_000, 10_000);
 
             for (int i = 0; System.currentTimeMillis() < stopTime; i++) {
                 boolean detectionEnabled = grid(0).context().cache().context().tm().deadlockDetectionEnabled();
