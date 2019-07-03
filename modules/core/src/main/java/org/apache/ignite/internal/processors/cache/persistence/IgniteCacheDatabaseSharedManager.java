@@ -36,11 +36,14 @@ import org.apache.ignite.configuration.DataPageEvictionMode;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.failure.FailureContext;
+import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
 import org.apache.ignite.internal.mem.DirectMemoryProvider;
 import org.apache.ignite.internal.mem.DirectMemoryRegion;
+import org.apache.ignite.internal.mem.IgniteOutOfMemoryException;
 import org.apache.ignite.internal.mem.file.MappedFileMemoryProvider;
 import org.apache.ignite.internal.mem.unsafe.UnsafeMemoryProvider;
 import org.apache.ignite.internal.pagemem.PageMemory;
@@ -57,6 +60,7 @@ import org.apache.ignite.internal.processors.cache.persistence.evict.PageEvictio
 import org.apache.ignite.internal.processors.cache.persistence.evict.Random2LruPageEvictionTracker;
 import org.apache.ignite.internal.processors.cache.persistence.evict.RandomLruPageEvictionTracker;
 import org.apache.ignite.internal.processors.cache.persistence.filename.PdsFolderSettings;
+import org.apache.ignite.internal.processors.cache.persistence.freelist.AbstractFreeList;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.CacheFreeList;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.FreeList;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetaStorage;
@@ -980,6 +984,68 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
      */
     public void releaseHistoryForPreloading() {
         // No-op
+    }
+
+    /**
+     * Checks that the given {@code region} has enough space for putting a new entry.
+     *
+     * This method makes sense then and only then
+     * the data region is not persisted {@link DataRegionConfiguration#isPersistenceEnabled()}
+     * and page eviction is disabled {@link DataPageEvictionMode#DISABLED}.
+     *
+     * The non-persistent region should reserve a number of pages to support a free list {@link AbstractFreeList}.
+     * For example, removing a row from underlying store may require allocating a new data page
+     * in order to move a tracked page from one bucket to another which does not have a free space for a new stripe.
+     * See {@link AbstractFreeList#removeDataRowByLink}.
+     * Therefore, inserting a new row should be prevented in case of some threshold is exceeded.
+     *
+     * @param region Data region to be checked.
+     * @throws IgniteOutOfMemoryException In case of the given data region does not have enough free space
+     * for putting a new entry.
+     */
+    public void ensureFreeSpaceForInsert(DataRegion region)throws IgniteOutOfMemoryException {
+        if (region == null)
+            return;
+
+        DataRegionConfiguration regCfg = region.config();
+
+        if (regCfg.getPageEvictionMode() != DataPageEvictionMode.DISABLED || regCfg.isPersistenceEnabled())
+            return;
+
+        long memorySize = regCfg.getMaxSize();
+
+        PageMemory pageMem = region.pageMemory();
+
+        int sysPageSize = pageMem.systemPageSize();
+
+        CacheFreeList freeList = freeListMap.get(regCfg.getName());
+
+        long dirtyPages = (pageMem.loadedPages() - freeList.emptyDataPages());
+
+        // one page for a bucket.
+        int minimalEmptyPages = 256;
+
+        int linkSize = 8;
+
+        boolean oomThreshold = (memorySize / sysPageSize) <
+            (dirtyPages * ((double)linkSize / sysPageSize + 1) + minimalEmptyPages);
+
+        if (oomThreshold) {
+            IgniteOutOfMemoryException oom = new IgniteOutOfMemoryException("Out of memory in data region [" +
+                "name=" + regCfg.getName() +
+                ", initSize=" + U.readableSize(regCfg.getInitialSize(), false) +
+                ", maxSize=" + U.readableSize(regCfg.getMaxSize(), false) +
+                ", persistenceEnabled=" + regCfg.isPersistenceEnabled() + "] Try the following:" + U.nl() +
+                "  ^-- Increase maximum off-heap memory size (DataRegionConfiguration.maxSize)" + U.nl() +
+                "  ^-- Enable Ignite persistence (DataRegionConfiguration.persistenceEnabled)" + U.nl() +
+                "  ^-- Enable eviction or expiration policies"
+            );
+
+            if (cctx.kernalContext() != null)
+                cctx.kernalContext().failure().process(new FailureContext(FailureType.CRITICAL_ERROR, oom));
+
+            throw oom;
+        }
     }
 
     /**
