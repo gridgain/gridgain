@@ -72,7 +72,6 @@ import org.apache.ignite.internal.util.typedef.CI2;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgniteAsyncCallback;
 import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgniteOutClosure;
 import org.apache.ignite.lang.IgnitePredicate;
@@ -247,6 +246,7 @@ public class CacheContinuousQueryManager extends GridCacheManagerAdapter {
      * @param part Partition number.
      * @param cntr Update counter.
      * @param topVer Topology version.
+     * @param primary {@code True} if called on primary node.
      * @return Context.
      */
     @Nullable public CounterSkipContext skipUpdateCounter(@Nullable CounterSkipContext skipCtx,
@@ -839,7 +839,7 @@ public class CacheContinuousQueryManager extends GridCacheManagerAdapter {
                                     cctx.kernalContext().cache().jcache(cctx.name()),
                                     cctx, entry);
 
-                                if (hnd.getEventFilter() != null && !hnd.getEventFilter().evaluate(next))
+                                if (!hnd.filter(next))
                                     next = null;
                             }
                         }
@@ -954,9 +954,6 @@ public class CacheContinuousQueryManager extends GridCacheManagerAdapter {
             finally {
                 cctx.group().listenerLock().writeLock().unlock();
             }
-
-            if (added)
-                lsnr.onExecution();
         }
 
         return added ? GridContinuousHandler.RegisterStatus.REGISTERED
@@ -1211,13 +1208,6 @@ public class CacheContinuousQueryManager extends GridCacheManagerAdapter {
             return evts;
         }
 
-        /**
-         * @return {@code True} if listener should be executed in non-system thread.
-         */
-        protected boolean async() {
-            return U.hasAnnotation(impl, IgniteAsyncCallback.class);
-        }
-
         /** {@inheritDoc} */
         @Override public void close() throws IOException {
             if (impl instanceof Closeable)
@@ -1282,13 +1272,6 @@ public class CacheContinuousQueryManager extends GridCacheManagerAdapter {
         @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
             impl = (CacheEntryEventFilter)in.readObject();
             types = in.readByte();
-        }
-
-        /**
-         * @return {@code True} if filter should be executed in non-system thread.
-         */
-        protected boolean async() {
-            return U.hasAnnotation(impl, IgniteAsyncCallback.class);
         }
 
         /**
