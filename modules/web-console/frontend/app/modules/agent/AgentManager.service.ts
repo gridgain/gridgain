@@ -427,7 +427,7 @@ export default class AgentManager {
         try {
             this._sendWebSocketEvent(requestId, eventType, data);
         } catch (ignored) {
-            latch.reject({message: 'Connection to web server was not established yet'});
+            latch.reject({message: 'Failed to send request to web server'});
         }
 
         return latch.promise;
