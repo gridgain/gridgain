@@ -1623,10 +1623,11 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             if (oldRow.expireTime() != dataRow.expireTime())
                 return false;
 
-            // Use grp.sharedGroup() flag since it is possible cacheId is not yet set here.
-            boolean sizeWithCacheId = grp.sharedGroup();
-
             int oldLen = oldRow.size();
+
+            // Use grp.sharedGroup() flag since it is possible cacheId is not yet set here.
+            if (grp.sharedGroup())
+                oldLen -= 4;
 
             if (oldLen > updateValSizeThreshold)
                 return false;
