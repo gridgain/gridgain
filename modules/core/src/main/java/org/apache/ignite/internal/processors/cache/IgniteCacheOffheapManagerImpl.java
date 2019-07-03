@@ -1626,7 +1626,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             int oldLen = oldRow.size();
 
             // Use grp.sharedGroup() flag since it is possible cacheId is not yet set here.
-            if (grp.sharedGroup())
+            if (!grp.storeCacheIdInDataPage() && grp.sharedGroup() && oldRow.cacheId() != CU.UNDEFINED_CACHE_ID)
                 oldLen -= 4;
 
             if (oldLen > updateValSizeThreshold)
