@@ -406,13 +406,10 @@ export default class AgentManager {
         if (__dbg)
             console.log(`Sending request: ${eventType}, ${requestId}`);
 
-        this.wsSubject
-            .pipe(
-                filter((evt) => evt.requestId === requestId || evt.eventType === 'disconnected'),
-                first()
-            )
-            .toPromise()
-            .then((evt) => {
+        const reply$ = this.wsSubject.pipe(
+            filter((evt) => evt.requestId === requestId || evt.eventType === 'disconnected'),
+            first(),
+            tap((evt) => {
                 if (__dbg)
                     console.log('Received response: ', evt);
 
@@ -422,11 +419,14 @@ export default class AgentManager {
                     latch.reject({message: 'Connection to web server was lost'});
                 else
                     latch.resolve(evt.payload);
-            });
+            })
+        ).subscribe(() => {});
 
         try {
             this._sendWebSocketEvent(requestId, eventType, data);
         } catch (ignored) {
+            reply$.unsubscribe();
+
             latch.reject({message: 'Failed to send request to web server'});
         }
 
