@@ -166,9 +166,6 @@ import org.apache.ignite.internal.processors.resource.GridResourceProcessor;
 import org.apache.ignite.internal.processors.resource.GridSpringResourceContext;
 import org.apache.ignite.internal.processors.rest.GridRestProcessor;
 import org.apache.ignite.internal.processors.security.GridSecurityProcessor;
-import org.apache.ignite.internal.processors.security.IgniteSecurityProcessor;
-import org.apache.ignite.internal.processors.security.IgniteSecurity;
-import org.apache.ignite.internal.processors.security.NoOpIgniteSecurityProcessor;
 import org.apache.ignite.internal.processors.segmentation.GridSegmentationProcessor;
 import org.apache.ignite.internal.processors.service.GridServiceProcessor;
 import org.apache.ignite.internal.processors.service.IgniteServiceProcessor;
@@ -1081,7 +1078,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             startProcessor(new GridTimeoutProcessor(ctx));
 
             // Start security processors.
-            startProcessor(securityProcessor());
+            startProcessor(createComponent(GridSecurityProcessor.class, ctx));
 
             // Start SPI managers.
             // NOTE: that order matters as there are dependencies between managers.
@@ -1403,17 +1400,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         if (!isDaemon())
             ctx.discovery().ackTopology(ctx.discovery().localJoin().joinTopologyVersion().topologyVersion(),
                 EventType.EVT_NODE_JOINED, localNode());
-    }
-
-    /**
-     * @return GridProcessor that implements {@link IgniteSecurity}
-     */
-    private GridProcessor securityProcessor() throws IgniteCheckedException {
-        GridSecurityProcessor prc = createComponent(GridSecurityProcessor.class, ctx);
-
-        return prc != null && prc.enabled()
-            ? new IgniteSecurityProcessor(ctx, prc)
-            : new NoOpIgniteSecurityProcessor(ctx, prc);
     }
 
     /**
@@ -4160,9 +4146,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
         if (cls.equals(TransactionalDrProcessor.class))
             return (T)new NoOpTransactionalDrProcessor(ctx);
-
-        if(cls.equals(GridSecurityProcessor.class))
-            return null;
 
         Class<T> implCls = null;
 
