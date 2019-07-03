@@ -20,9 +20,7 @@ import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -38,6 +36,7 @@ public class MySQLMetadataDialect extends JdbcMetadataDialect {
         return new HashSet<>(Arrays.asList("information_schema", "mysql", "performance_schema", "sys"));
     }
 
+    /** {@inheritDoc} */
     @Override protected ResultSet getSchemas(Connection conn) throws SQLException {
         return conn.getMetaData().getCatalogs();
     }
