@@ -24,8 +24,9 @@ import org.apache.ignite.console.services.NotificationService;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_CREATE;
 import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_CREATE_BY_ADMIN;
@@ -33,6 +34,8 @@ import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_DELETE;
 import static org.apache.ignite.console.event.AccountEventType.PASSWORD_CHANGED;
 import static org.apache.ignite.console.event.AccountEventType.PASSWORD_RESET;
 import static org.apache.ignite.console.event.AccountEventType.RESET_ACTIVATION_TOKEN;
+import static org.apache.ignite.console.utils.Utils.entriesToMap;
+import static org.apache.ignite.console.utils.Utils.entry;
 
 
 /**
@@ -44,19 +47,20 @@ public class NotificationEventListener {
     private NotificationService notificationSrv;
 
     /** Notification descriptor by event type. */
-    private final Map<EventType, NotificationDescriptor> notificationDescByEvtType = new HashMap<>();
+    private final Map<EventType, NotificationDescriptor> notificationDescByEvtType = Collections.unmodifiableMap(Stream.of(
+            entry(ACCOUNT_CREATE_BY_ADMIN, NotificationDescriptor.ADMIN_WELCOME_LETTER),
+            entry(ACCOUNT_CREATE, NotificationDescriptor.WELCOME_LETTER),
+            entry(ACCOUNT_DELETE, NotificationDescriptor.ACCOUNT_DELETED),
+            entry(PASSWORD_RESET, NotificationDescriptor.PASSWORD_RESET),
+            entry(PASSWORD_CHANGED, NotificationDescriptor.PASSWORD_CHANGED),
+            entry(RESET_ACTIVATION_TOKEN, NotificationDescriptor.ACTIVATION_LINK)).
+            collect(entriesToMap()));
 
     /**
      * @param notificationSrv Notification server.
      */
     public NotificationEventListener(NotificationService notificationSrv) {
         this.notificationSrv = notificationSrv;
-        notificationDescByEvtType.put(ACCOUNT_CREATE_BY_ADMIN, NotificationDescriptor.ADMIN_WELCOME_LETTER);
-        notificationDescByEvtType.put(ACCOUNT_CREATE, NotificationDescriptor.WELCOME_LETTER);
-        notificationDescByEvtType.put(ACCOUNT_DELETE, NotificationDescriptor.ACCOUNT_DELETED);
-        notificationDescByEvtType.put(PASSWORD_RESET, NotificationDescriptor.PASSWORD_RESET);
-        notificationDescByEvtType.put(PASSWORD_CHANGED, NotificationDescriptor.PASSWORD_CHANGED);
-        notificationDescByEvtType.put(RESET_ACTIVATION_TOKEN, NotificationDescriptor.ACTIVATION_LINK);
     }
 
     /**

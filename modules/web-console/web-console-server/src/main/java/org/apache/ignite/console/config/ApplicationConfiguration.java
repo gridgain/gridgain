@@ -69,7 +69,7 @@ public class ApplicationConfiguration {
      */
     private Executor getThreadPoolTaskExecutor() {
         ThreadPoolTaskExecutor pool = new ThreadPoolTaskExecutor();
-        pool.setMaxPoolSize(Runtime.getRuntime().availableProcessors());
+        pool.setMaxPoolSize(Math.max(8, Runtime.getRuntime().availableProcessors()));
         pool.initialize();
 
         return pool;

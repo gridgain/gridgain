@@ -30,6 +30,9 @@ public class Event<T> extends ApplicationEvent implements ResolvableTypeProvider
     /** Source class. */
     private Class<T> srcCls;
 
+    /** Event type class. */
+    private Class<? extends EventType> evtTypeCls;
+
     /**
      * @param evtType Event type.
      * @param payload Payload.
@@ -39,6 +42,7 @@ public class Event<T> extends ApplicationEvent implements ResolvableTypeProvider
 
         this.evtType = evtType;
         srcCls = (Class<T>) payload.getClass();
+        evtTypeCls = evtType.getClass();
     }
 
     /**
