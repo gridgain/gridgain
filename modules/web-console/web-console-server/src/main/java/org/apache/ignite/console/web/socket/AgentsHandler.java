@@ -81,8 +81,9 @@ public class AgentsHandler extends AbstractHandler {
     private Collection<Account> loadAccounts(Set<String> tokens) {
         Collection<Account> accounts = accRepo.list(); // TODO GG-19573 getAllByTokens(tokens);
 
-//        if (accounts.isEmpty())
-//            throw new IllegalArgumentException("Failed to authenticate with token(s): " + tokens);
+        // TODO GG-19573 no tokens needed.
+        //        if (accounts.isEmpty())
+        //            throw new IllegalArgumentException("Failed to authenticate with token(s): " + tokens);
 
         return accounts;
     }

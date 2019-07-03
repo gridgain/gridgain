@@ -33,6 +33,9 @@ public interface WebSocketEvents {
     public static final String AGENT_HANDSHAKE = "agent:handshake";
 
     /** */
+    public static final String PULL_METRICS = "pull:metrics";
+
+    /** */
     public static final String AGENT_REVOKE_TOKEN = "agent:revoke:token";
 
     /** */

@@ -48,6 +48,7 @@ import static java.util.stream.Collectors.toSet;
 import static org.apache.ignite.console.utils.Utils.toJson;
 import static org.apache.ignite.console.websocket.WebSocketEvents.ADMIN_ANNOUNCEMENT;
 import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_STATUS;
+import static org.apache.ignite.console.websocket.WebSocketEvents.PULL_METRICS;
 import static org.springframework.web.util.UriComponentsBuilder.fromUri;
 
 /**
@@ -364,6 +365,30 @@ public class WebSocketsManager {
     public void pingClients() {
         agents.keySet().forEach(this::ping);
         browsers.keySet().forEach(this::ping);
+    }
+
+    /** */
+    @Scheduled(fixedRate = 5_000)
+    public void pullMetrics() {
+        log.info("Pull metrics...");
+
+        agents.keySet().forEach(ws -> {
+            try {
+                if (ws.isOpen())
+                    sendMessage(ws, new WebSocketEvent(PULL_METRICS, "dummy"));
+            }
+            catch (Throwable e) {
+                log.error("Failed to send PULL_METRICS request [session=" + ws + "]");
+
+                try {
+                    ws.close(CloseStatus.SESSION_NOT_RELIABLE);
+                }
+                catch (IOException ignored) {
+                    // No-op.
+                }
+            }
+
+        });
     }
 
     /**
