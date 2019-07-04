@@ -146,7 +146,7 @@ public class AgentUtils {
      * @param keyStorePwd Optional key store password.
      * @param trustAll Whether we should trust for self-signed certificate.
      * @param trustStore Path to trust store.
-     * @param trustStorePwd Optional trust store passwo5rd.
+     * @param trustStorePwd Optional trust store password.
      * @param ciphers Optional list of enabled cipher suites.
      * @return SSL context factory.
      */
@@ -169,7 +169,7 @@ public class AgentUtils {
 
         if (trustAll) {
             sslCtxFactory.setTrustAll(true);
-            // Available in Jetty >= 9.4.15.xxxx sslCtxFactory.setHostnameVerifier((hostname, session) -> true);
+            // Available in Jetty >= 9.4.15.x sslCtxFactory.setHostnameVerifier((hostname, session) -> true);
         }
         else if (!F.isEmpty(trustStore)) {
             sslCtxFactory.setTrustStorePath(trustStore);
@@ -253,7 +253,7 @@ public class AgentUtils {
 
                     Origin.Address addr = new Origin.Address(inetAddr.getHostName(), inetAddr.getPort());
 
-                    if (p.type().equals(SOCKS))
+                    if (p.type() == SOCKS)
                         return new Socks4Proxy(addr, secure);
 
                     return new HttpProxy(addr, secure);

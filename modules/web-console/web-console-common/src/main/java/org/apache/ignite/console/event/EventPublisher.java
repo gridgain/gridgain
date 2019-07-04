@@ -14,21 +14,16 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.query.oom;
+package org.apache.ignite.console.event;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+import org.springframework.context.ApplicationEvent;
 
 /**
- * Test suite for queries produces OOME in some cases.
+ * Interface for generic event publisher.
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-    //Query history.
-    QueryOOMWithoutQueryParallelismTest.class,
-    QueryOOMWithQueryParallelismTest.class,
-})
-@Deprecated //TODO: GG-18628: Drop these tests.
-public class IgniteQueryOOMTestSuite {
+public interface EventPublisher {
+    /**
+     * @param evt Event.
+     */
+    public void publish(ApplicationEvent evt);
 }
-

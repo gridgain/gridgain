@@ -14,15 +14,29 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.query.oom;
+package org.apache.ignite.console.event;
+
+import org.springframework.context.ApplicationEvent;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Component;
 
 /**
- * Tests for OOME on query.
+ * Delegate for {@link ApplicationEventPublisher}.
  */
-@Deprecated //TODO: GG-18628: Drop these tests.
-public class QueryOOMWithQueryParallelismTest extends AbstractQueryOOMTest {
+@Component
+public class DelegateEventPublisher implements EventPublisher {
+    /** Publisher. */
+    private final ApplicationEventPublisher publisher;
+
+    /**
+     * @param publisher Publisher.
+     */
+    public DelegateEventPublisher(ApplicationEventPublisher publisher) {
+        this.publisher = publisher;
+    }
+
     /** {@inheritDoc} */
-    @Override protected int queryParallelism() {
-        return 4;
+    @Override public void publish(ApplicationEvent evt) {
+        publisher.publishEvent(evt);
     }
 }

@@ -351,7 +351,7 @@ public class WebSocketRouter implements AutoCloseable {
             evt = fromJson(msg, WebSocketEvent.class);
 
             switch (evt.getEventType()) {
-                case AGENT_HANDSHAKE: {
+                case AGENT_HANDSHAKE:
                     AgentHandshakeResponse req0 = fromJson(evt.getPayload(), AgentHandshakeResponse.class);
 
                     processHandshakeResponse(req0);
@@ -359,8 +359,8 @@ public class WebSocketRouter implements AutoCloseable {
                     if (closeLatch.getCount() > 0)
                         watcher.startWatchTask(ses);
 
-                    return;
-                }
+                    break;
+
                 case AGENT_REVOKE_TOKEN:
                     processRevokeToken(evt.getPayload());
 
@@ -382,18 +382,18 @@ public class WebSocketRouter implements AutoCloseable {
                     break;
 
                 case NODE_REST:
-                case NODE_VISOR: {
+                case NODE_VISOR:
                     if (log.isDebugEnabled())
                         log.debug("Processing REST request: " + evt);
 
-                    RestRequest req0 = fromJson(evt.getPayload(), RestRequest.class);
+                    RestRequest reqRest = fromJson(evt.getPayload(), RestRequest.class);
 
-                    JsonObject params = req0.getParams();
+                    JsonObject params = reqRest.getParams();
 
                     RestResult res;
 
                     try {
-                        res = DEMO_CLUSTER_ID.equals(req0.getClusterId()) ?
+                        res = DEMO_CLUSTER_ID.equals(reqRest.getClusterId()) ?
                             demoClusterHnd.restCommand(params) : clusterHnd.restCommand(params);
                     }
                     catch (Throwable e) {
@@ -403,7 +403,7 @@ public class WebSocketRouter implements AutoCloseable {
                     send(ses, evt.withPayload(res));
 
                     break;
-                }
+
                 default:
                     log.warning("Unknown event: " + evt);
             }

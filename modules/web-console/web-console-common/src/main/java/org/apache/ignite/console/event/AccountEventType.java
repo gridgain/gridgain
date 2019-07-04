@@ -14,15 +14,30 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.query.oom;
+package org.apache.ignite.console.event;
 
 /**
- * Tests for OOME on query.
+ * Account types.
  */
-@Deprecated //TODO: GG-18628: Drop these tests.
-public class QueryOOMWithoutQueryParallelismTest extends AbstractQueryOOMTest {
-    /** {@inheritDoc} */
-    @Override protected int queryParallelism() {
-        return 1;
-    }
+public enum AccountEventType implements EventType {
+    /** */
+    ACCOUNT_CREATE,
+
+    /** */
+    ACCOUNT_CREATE_BY_ADMIN,
+
+    /** */
+    ACCOUNT_UPDATE,
+
+    /** */
+    ACCOUNT_DELETE,
+
+    /** */
+    PASSWORD_RESET,
+
+    /** */
+    PASSWORD_CHANGED,
+
+    /** */
+    RESET_ACTIVATION_TOKEN,
 }
