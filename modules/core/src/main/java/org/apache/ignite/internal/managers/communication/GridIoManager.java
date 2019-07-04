@@ -1692,7 +1692,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         boolean ordered,
         long timeout,
         boolean skipOnTimeout) throws IgniteCheckedException {
-        boolean securityMsgSupported = IgniteFeatures.allNodesSupports(ctx.discovery().aliveServerNodes(), IgniteFeatures.IGNITE_SECURITY_PROCESSOR);
+        boolean securityMsgSupported = IgniteFeatures.allNodesSupports(ctx.discovery().allNodes(), IgniteFeatures.IGNITE_SECURITY_PROCESSOR);
 
         if (ctx.security().enabled() && securityMsgSupported) {
             UUID secSubjId = null;
