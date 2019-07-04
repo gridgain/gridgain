@@ -16,7 +16,10 @@
 
 package org.apache.ignite.internal.visor.query;
 
+import java.util.Collection;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.internal.processors.query.QueryHistoryMetrics;
+import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.visor.VisorJob;
@@ -52,6 +55,8 @@ public class VisorQueryResetDetailMetricsTask extends VisorOneNodeTask<Void, Voi
 
         /** {@inheritDoc} */
         @Override protected Void run(Void arg) {
+            ((IgniteH2Indexing)ignite.context().query().getIndexing()).runningQueryManager().resetQueryHistoryMetrics();
+
             for (String cacheName : ignite.cacheNames()) {
                 IgniteCache cache = ignite.cache(cacheName);
 
