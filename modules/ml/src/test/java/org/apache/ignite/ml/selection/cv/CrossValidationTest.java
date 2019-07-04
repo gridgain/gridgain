@@ -236,8 +236,7 @@ public class CrossValidationTest {
 
         CrossValidationResult crossValidationRes = scoreCalculator.tuneHyperParamterers();
 
-        assertArrayEquals(crossValidationRes.getBestScore(), new double[]{0.8389830508474576, 0.917910447761194, 0.7936507936507936, 0.889763779527559}, 1e-6);
-        assertEquals(crossValidationRes.getBestAvgScore(), 0.8600770179467511, 1e-6);
+        assertEquals(crossValidationRes.getBestAvgScore(), 0.9343858500738256, 1e-6);
         assertEquals(crossValidationRes.getScoringBoard().size(), 10);
     }
 
@@ -293,8 +292,7 @@ public class CrossValidationTest {
 
         CrossValidationResult crossValidationRes = scoreCalculator.tuneHyperParamterers();
 
-        assertArrayEquals(crossValidationRes.getBestScore(), new double[]{0.8389830508474576, 0.917910447761194, 0.7936507936507936, 0.889763779527559}, 1e-6);
-        assertEquals(crossValidationRes.getBestAvgScore(), 0.8600770179467511, 1e-6);
+        assertEquals(crossValidationRes.getBestAvgScore(), 0.9343858500738256, 1e-6);
         assertEquals(crossValidationRes.getScoringBoard().size(), 10);
     }
 
