@@ -64,12 +64,6 @@ public class VisorQueryDetailMetrics extends VisorDataTransferObject {
     /** Sum of execution time of completions time. */
     private long lastStartTime;
 
-    /** Name of schema. */
-    private String schema;
-
-    /** Flag of local query. */
-    private Boolean local;
-
     /**
      * Default constructor
      */
@@ -173,25 +167,6 @@ public class VisorQueryDetailMetrics extends VisorDataTransferObject {
         return lastStartTime;
     }
 
-    /**
-     * @return Name of schema.
-     */
-    public String getSchema() {
-        return schema;
-    }
-
-    /**
-     * @return Flag of local query.
-     */
-    public Boolean getLocal() {
-        return local;
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte getProtocolVersion() {
-        return V2;
-    }
-
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         U.writeString(out, qryType);
@@ -205,8 +180,6 @@ public class VisorQueryDetailMetrics extends VisorDataTransferObject {
         out.writeDouble(avgTime);
         out.writeLong(totalTime);
         out.writeLong(lastStartTime);
-        U.writeString(out, schema);
-        out.writeObject(local);
     }
 
     /** {@inheritDoc} */
@@ -222,11 +195,6 @@ public class VisorQueryDetailMetrics extends VisorDataTransferObject {
         avgTime = in.readDouble();
         totalTime = in.readLong();
         lastStartTime = in.readLong();
-
-        if (protoVer > V1) {
-            schema = U.readString(in);
-            local = (Boolean)in.readObject();
-        }
     }
 
     /** {@inheritDoc} */

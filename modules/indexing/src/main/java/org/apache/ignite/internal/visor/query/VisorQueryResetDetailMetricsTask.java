@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.visor.query;
 
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.internal.processors.query.GridQueryIndexing;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -53,7 +54,19 @@ public class VisorQueryResetDetailMetricsTask extends VisorOneNodeTask<Void, Voi
 
         /** {@inheritDoc} */
         @Override protected Void run(Void arg) {
-            ((IgniteH2Indexing)ignite.context().query().getIndexing()).runningQueryManager().resetQueryHistoryMetrics();
+            GridQueryIndexing indexing = ignite.context().query().getIndexing();
+
+            if (indexing instanceof IgniteH2Indexing)
+                ((IgniteH2Indexing)indexing).runningQueryManager().resetQueryHistoryMetrics();
+
+            for (String cacheName : ignite.cacheNames()) {
+                IgniteCache cache = ignite.cache(cacheName);
+
+                if (cache == null)
+                    throw new IllegalStateException("Failed to find cache for name: " + cacheName);
+
+                cache.resetQueryDetailMetrics();
+            }
 
             return null;
         }
