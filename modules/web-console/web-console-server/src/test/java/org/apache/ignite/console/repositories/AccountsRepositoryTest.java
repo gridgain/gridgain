@@ -46,7 +46,7 @@ public class AccountsRepositoryTest {
         GridTestUtils.assertThrows(null, () -> {
             accountsRepo.delete(accId);
             return null;
-        }, IgniteException.class, "Account not found for ID: " + accId);
+        }, IllegalStateException.class, "Account not found for ID: " + accId);
     }
 
     /**
@@ -72,7 +72,7 @@ public class AccountsRepositoryTest {
             accountsRepo.save(acc);
 
             return null;
-        }, IgniteException.class, "Account with email " + acc.getUsername() + " already registered");
+        }, IgniteException.class, "The email address you have entered is already registered: " + acc.getUsername());
     }
 
     /**
