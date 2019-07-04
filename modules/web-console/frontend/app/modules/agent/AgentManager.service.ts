@@ -19,8 +19,8 @@ import {nonEmpty, nonNil} from 'app/utils/lodashMixins';
 
 import Sockette from 'sockette';
 
-import {BehaviorSubject, Subject} from 'rxjs';
-import {distinctUntilChanged, filter, first, map, pluck, take, tap} from 'rxjs/operators';
+import {BehaviorSubject, Subject, EMPTY} from 'rxjs';
+import {distinctUntilChanged, filter, first, map, pluck, tap, timeout, catchError} from 'rxjs/operators';
 
 import uuidv4 from 'uuid/v4';
 
@@ -242,7 +242,6 @@ export default class AgentManager {
 
         // Open websocket connection to backend.
         this.ws = new Sockette(uri, {
-            timeout: 5000, // Retry every 5 seconds
             onopen: (evt) => {
                 if (__dbg)
                     console.log('[WS] Connected to server: ', evt);
@@ -407,13 +406,10 @@ export default class AgentManager {
         if (__dbg)
             console.log(`Sending request: ${eventType}, ${requestId}`);
 
-        this.wsSubject
-            .pipe(
-                filter((evt) => evt.requestId === requestId || evt.eventType === 'disconnected'),
-                take(1)
-            )
-            .toPromise()
-            .then((evt) => {
+        const reply$ = this.wsSubject.pipe(
+            filter((evt) => evt.requestId === requestId || evt.eventType === 'disconnected'),
+            first(),
+            tap((evt) => {
                 if (__dbg)
                     console.log('Received response: ', evt);
 
@@ -423,9 +419,16 @@ export default class AgentManager {
                     latch.reject({message: 'Connection to web server was lost'});
                 else
                     latch.resolve(evt.payload);
-            });
+            })
+        ).subscribe(() => {});
 
-        this._sendWebSocketEvent(requestId, eventType, data);
+        try {
+            this._sendWebSocketEvent(requestId, eventType, data);
+        } catch (ignored) {
+            reply$.unsubscribe();
+
+            latch.reject({message: 'Failed to send request to web server'});
+        }
 
         return latch.promise;
     }
