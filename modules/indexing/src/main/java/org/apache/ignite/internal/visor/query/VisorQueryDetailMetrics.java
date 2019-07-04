@@ -187,6 +187,7 @@ public class VisorQueryDetailMetrics extends VisorDataTransferObject {
         return local;
     }
 
+    /** {@inheritDoc} */
     @Override public byte getProtocolVersion() {
         return V2;
     }
