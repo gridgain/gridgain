@@ -116,7 +116,7 @@ public class AccountServiceTest {
 
 
     /**
-     * Should throw activation not enabled exception
+     * Should throw activation not enabled exception.
      */
     @Test
     public void shouldThrowTooManyActivationAttempts() {
@@ -137,7 +137,7 @@ public class AccountServiceTest {
     }
 
     /**
-     * Should throw activation not enabled exception
+     * Should throw activation not enabled exception.
      */
     @Test
     public void shouldThrowActivationNotEnabledException() {
@@ -150,7 +150,7 @@ public class AccountServiceTest {
     }
 
     /**
-     * Should throw activation not enabled exception
+     * Should throw activation not enabled exception.
      */
     @Test
     public void shouldThrowAccountNotFoundByTokenException() {
