@@ -17,9 +17,9 @@
 package org.apache.ignite.console.event;
 
 /**
- * Event type
+ * Account types.
  */
-public enum Type {
+public enum AccountEventType implements EventType {
     /** */
     ACCOUNT_CREATE,
 
@@ -40,7 +40,4 @@ public enum Type {
 
     /** */
     RESET_ACTIVATION_TOKEN,
-
-    /** */
-    ACTIVITY_UPDATE
 }

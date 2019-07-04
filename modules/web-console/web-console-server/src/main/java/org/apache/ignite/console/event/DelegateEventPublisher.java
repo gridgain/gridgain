@@ -21,7 +21,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
 /**
- * Delegate for ApplicationEventPublisher
+ * Delegate for {@link ApplicationEventPublisher}.
  */
 @Component
 public class DelegateEventPublisher implements EventPublisher {

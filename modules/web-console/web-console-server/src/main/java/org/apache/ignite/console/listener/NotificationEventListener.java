@@ -18,26 +18,43 @@ package org.apache.ignite.console.listener;
 
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.event.Event;
+import org.apache.ignite.console.event.EventType;
 import org.apache.ignite.console.notification.NotificationDescriptor;
 import org.apache.ignite.console.services.NotificationService;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
-import static org.apache.ignite.console.event.Type.ACCOUNT_CREATE;
-import static org.apache.ignite.console.event.Type.ACCOUNT_CREATE_BY_ADMIN;
-import static org.apache.ignite.console.event.Type.ACCOUNT_DELETE;
-import static org.apache.ignite.console.event.Type.PASSWORD_CHANGED;
-import static org.apache.ignite.console.event.Type.PASSWORD_RESET;
-import static org.apache.ignite.console.event.Type.RESET_ACTIVATION_TOKEN;
+import java.util.Collections;
+import java.util.Map;
+import java.util.stream.Stream;
+
+import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_CREATE;
+import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_CREATE_BY_ADMIN;
+import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_DELETE;
+import static org.apache.ignite.console.event.AccountEventType.PASSWORD_CHANGED;
+import static org.apache.ignite.console.event.AccountEventType.PASSWORD_RESET;
+import static org.apache.ignite.console.event.AccountEventType.RESET_ACTIVATION_TOKEN;
+import static org.apache.ignite.console.utils.Utils.entriesToMap;
+import static org.apache.ignite.console.utils.Utils.entry;
 
 
 /**
- * Notification event listener
+ * Notification event listener.
  */
 @Component
 public class NotificationEventListener {
     /** Notification server. */
     private NotificationService notificationSrv;
+
+    /** Notification descriptor by event type. */
+    private final Map<EventType, NotificationDescriptor> notificationDescByEvtType = Collections.unmodifiableMap(Stream.of(
+            entry(ACCOUNT_CREATE_BY_ADMIN, NotificationDescriptor.ADMIN_WELCOME_LETTER),
+            entry(ACCOUNT_CREATE, NotificationDescriptor.WELCOME_LETTER),
+            entry(ACCOUNT_DELETE, NotificationDescriptor.ACCOUNT_DELETED),
+            entry(PASSWORD_RESET, NotificationDescriptor.PASSWORD_RESET),
+            entry(PASSWORD_CHANGED, NotificationDescriptor.PASSWORD_CHANGED),
+            entry(RESET_ACTIVATION_TOKEN, NotificationDescriptor.ACTIVATION_LINK)).
+            collect(entriesToMap()));
 
     /**
      * @param notificationSrv Notification server.
@@ -51,17 +68,8 @@ public class NotificationEventListener {
      */
     @EventListener
     public void onUserCreateByAdminEvent(Event<Account> evt) {
-        if (evt.getType() == ACCOUNT_CREATE_BY_ADMIN)
-            notificationSrv.sendEmail(NotificationDescriptor.ADMIN_WELCOME_LETTER, evt.getSource());
-        else if (evt.getType() == ACCOUNT_CREATE)
-            notificationSrv.sendEmail(NotificationDescriptor.WELCOME_LETTER, evt.getSource());
-        else if (evt.getType() == ACCOUNT_DELETE)
-            notificationSrv.sendEmail(NotificationDescriptor.ACCOUNT_DELETED, evt.getSource());
-        else if (evt.getType() == PASSWORD_RESET)
-            notificationSrv.sendEmail(NotificationDescriptor.PASSWORD_RESET, evt.getSource());
-        else if (evt.getType() == PASSWORD_CHANGED)
-            notificationSrv.sendEmail(NotificationDescriptor.PASSWORD_CHANGED, evt.getSource());
-        else if (evt.getType() == RESET_ACTIVATION_TOKEN)
-            notificationSrv.sendEmail(NotificationDescriptor.ACTIVATION_LINK, evt.getSource());
+        NotificationDescriptor desc = notificationDescByEvtType.get(evt.getType());
+        if (desc != null)
+            notificationSrv.sendEmail(desc, evt.getSource());
     }
 }

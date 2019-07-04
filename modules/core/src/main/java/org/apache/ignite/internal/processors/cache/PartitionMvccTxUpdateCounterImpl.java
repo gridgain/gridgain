@@ -14,15 +14,19 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.query.oom;
+package org.apache.ignite.internal.processors.cache;
 
 /**
- * Tests for OOME on query.
+ * Update counter implementation for MVCC mode.
  */
-@Deprecated //TODO: GG-18628: Drop these tests.
-public class QueryOOMWithoutQueryParallelismTest extends AbstractQueryOOMTest {
+public class PartitionMvccTxUpdateCounterImpl extends PartitionTxUpdateCounterImpl {
     /** {@inheritDoc} */
-    @Override protected int queryParallelism() {
-        return 1;
+    @Override public long reserve(long delta) {
+        return next(delta);
+    }
+
+    /** {@inheritDoc} */
+    @Override public long reserved() {
+        return get();
     }
 }

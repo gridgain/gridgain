@@ -46,11 +46,11 @@ import static org.apache.ignite.console.errors.Errors.ERR_ACTIVATION_NOT_ENABLED
 import static org.apache.ignite.console.errors.Errors.ERR_CONFIRM_EMAIL;
 import static org.apache.ignite.console.errors.Errors.ERR_SIGNUP_NOT_ALLOWED;
 import static org.apache.ignite.console.errors.Errors.ERR_TOO_MANY_ACTIVATION_ATTEMPTS;
-import static org.apache.ignite.console.event.Type.ACCOUNT_CREATE;
-import static org.apache.ignite.console.event.Type.ACCOUNT_UPDATE;
-import static org.apache.ignite.console.event.Type.PASSWORD_CHANGED;
-import static org.apache.ignite.console.event.Type.PASSWORD_RESET;
-import static org.apache.ignite.console.event.Type.RESET_ACTIVATION_TOKEN;
+import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_CREATE;
+import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_UPDATE;
+import static org.apache.ignite.console.event.AccountEventType.PASSWORD_CHANGED;
+import static org.apache.ignite.console.event.AccountEventType.PASSWORD_RESET;
+import static org.apache.ignite.console.event.AccountEventType.RESET_ACTIVATION_TOKEN;
 
 /**
  * Service to handle accounts.
@@ -63,13 +63,13 @@ public class AccountsService implements UserDetailsService {
     /** Accounts repository. */
     protected AccountsRepository accountsRepo;
 
-    /** Wsm. */
+    /** Web socket manager. */
     protected WebSocketsManager wsm;
 
     /** Event publisher. */
     protected EventPublisher evtPublisher;
 
-    /** Encoder. */
+    /** Password encoder. */
     protected PasswordEncoder encoder;
 
     /** User details getChecker. */

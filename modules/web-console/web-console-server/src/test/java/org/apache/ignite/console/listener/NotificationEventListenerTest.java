@@ -29,12 +29,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import static org.apache.ignite.console.event.Type.ACCOUNT_CREATE;
-import static org.apache.ignite.console.event.Type.ACCOUNT_CREATE_BY_ADMIN;
-import static org.apache.ignite.console.event.Type.ACCOUNT_DELETE;
-import static org.apache.ignite.console.event.Type.PASSWORD_CHANGED;
-import static org.apache.ignite.console.event.Type.PASSWORD_RESET;
-import static org.apache.ignite.console.event.Type.RESET_ACTIVATION_TOKEN;
+import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_CREATE;
+import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_CREATE_BY_ADMIN;
+import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_DELETE;
+import static org.apache.ignite.console.event.AccountEventType.PASSWORD_CHANGED;
+import static org.apache.ignite.console.event.AccountEventType.PASSWORD_RESET;
+import static org.apache.ignite.console.event.AccountEventType.RESET_ACTIVATION_TOKEN;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -53,79 +53,73 @@ public class NotificationEventListenerTest {
     private NotificationService notificationSrv;
 
     /**
-     * Test welcome letter sending
+     * Test welcome letter sending.
      */
     @Test
-    public void testOnUserCreateEvent() throws InterruptedException {
+    public void testOnUserCreateEvent() {
         Account acc = new Account();
 
         publisher.publish(new Event<>(ACCOUNT_CREATE, acc));
-        Thread.sleep(1);
 
         verify(notificationSrv, times(1)).sendEmail(NotificationDescriptor.WELCOME_LETTER, acc);
     }
 
     /**
-     * Test admin welcome letter sending
+     * Test admin welcome letter sending.
      */
     @Test
-    public void testOnUserCreateByAdminEvent() throws InterruptedException {
+    public void testOnUserCreateByAdminEvent() {
         Account acc = new Account();
 
         publisher.publish(new Event<>(ACCOUNT_CREATE_BY_ADMIN, acc));
-        Thread.sleep(1);
 
         verify(notificationSrv, times(1)).sendEmail(NotificationDescriptor.ADMIN_WELCOME_LETTER, acc);
     }
 
     /**
-     * Test account delete letter sending
+     * Test account delete letter sending.
      */
     @Test
-    public void testOnUserDeleteEvent() throws InterruptedException {
+    public void testOnUserDeleteEvent() {
         Account acc = new Account();
 
         publisher.publish(new Event<>(ACCOUNT_DELETE, acc));
-        Thread.sleep(1);
 
         verify(notificationSrv, times(1)).sendEmail(NotificationDescriptor.ACCOUNT_DELETED, acc);
     }
 
     /**
-     * Test password reset letter sending
+     * Test password reset letter sending.
      */
     @Test
-    public void testOnPasswordResetEvent() throws InterruptedException {
+    public void testOnPasswordResetEvent() {
         Account acc = new Account();
 
         publisher.publish(new Event<>(PASSWORD_RESET, acc));
-        Thread.sleep(1);
 
         verify(notificationSrv, times(1)).sendEmail(NotificationDescriptor.PASSWORD_RESET, acc);
     }
 
     /**
-     * Test password changed letter sending
+     * Test password changed letter sending.
      */
     @Test
-    public void testOnPasswordChangedEvent() throws InterruptedException {
+    public void testOnPasswordChangedEvent() {
         Account acc = new Account();
 
         publisher.publish(new Event<>(PASSWORD_CHANGED, acc));
-        Thread.sleep(1);
 
         verify(notificationSrv, times(1)).sendEmail(NotificationDescriptor.PASSWORD_CHANGED, acc);
     }
 
     /**
-     * Test reset activation tokent letter sending
+     * Test reset activation tokent letter sending.
      */
     @Test
-    public void testOnResetActivationTokenEvent() throws InterruptedException {
+    public void testOnResetActivationTokenEvent() {
         Account acc = new Account();
 
         publisher.publish(new Event<>(RESET_ACTIVATION_TOKEN, acc));
-        Thread.sleep(1);
 
         verify(notificationSrv, times(1)).sendEmail(NotificationDescriptor.ACTIVATION_LINK, acc);
     }

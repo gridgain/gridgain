@@ -76,7 +76,7 @@ public class PassportLocalPasswordEncoder implements PasswordEncoder {
 
     /** {@inheritDoc} */
     @Override public String encode(CharSequence rawPwd) {
-        byte[] salt = this.saltGenerator.generateKey();
+        byte[] salt = saltGenerator.generateKey();
         byte[] encoded = encode(rawPwd, salt);
         return encode(encoded);
     }
@@ -91,7 +91,7 @@ public class PassportLocalPasswordEncoder implements PasswordEncoder {
     /** {@inheritDoc} */
     @Override public boolean matches(CharSequence rawPwd, String encodedPwd) {
         byte[] digested = decode(encodedPwd);
-        byte[] salt = subArray(digested, 0, this.saltGenerator.getKeyLength());
+        byte[] salt = subArray(digested, 0, saltGenerator.getKeyLength());
         
         return matches(digested, encode(rawPwd, salt));
     }
@@ -127,8 +127,8 @@ public class PassportLocalPasswordEncoder implements PasswordEncoder {
             PBEKeySpec spec = new PBEKeySpec(
                 rawPwd.toString().toCharArray(),
                 encode(salt).getBytes(StandardCharsets.UTF_8),
-                this.iterations,
-                this.hashWidth
+                iterations,
+                hashWidth
             );
 
             SecretKeyFactory skf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
