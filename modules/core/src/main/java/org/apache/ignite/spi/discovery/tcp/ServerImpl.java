@@ -4866,6 +4866,9 @@ class ServerImpl extends TcpDiscoveryImpl {
 
                                 // Make all preceding nodes and local node visible.
                                 n.visible(true);
+
+                                clusterSupportsTcpDiscoveryNodeSerializationOptimization &=
+                                    nodeSupports(gridKernalContext(), n, TCP_DISCOVERY_MESSAGE_NODE_SERIALIZATION_OPTIMIZATION);
                             }
 
                             joiningNodes.clear();
