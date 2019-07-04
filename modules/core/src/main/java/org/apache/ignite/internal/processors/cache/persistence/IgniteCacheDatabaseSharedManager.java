@@ -261,7 +261,6 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
                 freeListName,
                 memMetrics,
                 memPlc,
-                null,
                 persistenceEnabled ? cctx.wal() : null,
                 0L,
                 true,
@@ -995,9 +994,9 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
      *
      * The non-persistent region should reserve a number of pages to support a free list {@link AbstractFreeList}.
      * For example, removing a row from underlying store may require allocating a new data page
-     * in order to move a tracked page from one bucket to another which does not have a free space for a new stripe.
+     * in order to move a tracked page from one bucket to another one which does not have a free space for a new stripe.
      * See {@link AbstractFreeList#removeDataRowByLink}.
-     * Therefore, inserting a new row should be prevented in case of some threshold is exceeded.
+     * Therefore, inserting a new entry should be prevented in case of some threshold is exceeded.
      *
      * @param region Data region to be checked.
      * @throws IgniteOutOfMemoryException In case of the given data region does not have enough free space
@@ -1022,13 +1021,8 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
 
         long dirtyPages = (pageMem.loadedPages() - freeList.emptyDataPages());
 
-        // one page for a bucket.
-        int minimalEmptyPages = 256;
-
-        int linkSize = 8;
-
         boolean oomThreshold = (memorySize / sysPageSize) <
-            (dirtyPages * ((double)linkSize / sysPageSize + 1) + minimalEmptyPages);
+            (dirtyPages * (8.0 /*link size*/ / sysPageSize + 1) + 256 /*one page per bucket*/);
 
         if (oomThreshold) {
             IgniteOutOfMemoryException oom = new IgniteOutOfMemoryException("Out of memory in data region [" +
