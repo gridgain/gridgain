@@ -182,6 +182,7 @@ import org.apache.ignite.internal.suggestions.GridPerformanceSuggestions;
 import org.apache.ignite.internal.suggestions.JvmConfigurationSuggestions;
 import org.apache.ignite.internal.suggestions.OsConfigurationSuggestions;
 import org.apache.ignite.internal.util.StripedExecutor;
+import org.apache.ignite.internal.util.TimeBag;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
@@ -896,7 +897,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         @Nullable final Map<String, ? extends ExecutorService> customExecSvcs,
         GridAbsClosure errHnd,
         WorkersRegistry workerRegistry,
-        Thread.UncaughtExceptionHandler hnd
+        Thread.UncaughtExceptionHandler hnd,
+        TimeBag startTimer
     )
         throws IgniteCheckedException {
         gw.compareAndSet(null, new GridKernalGatewayImpl(cfg.getIgniteInstanceName()));
@@ -1114,7 +1116,13 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 startProcessor(createComponent(DiscoveryNodeValidationProcessor.class, ctx));
                 startProcessor(new GridAffinityProcessor(ctx));
                 startProcessor(createComponent(GridSegmentationProcessor.class, ctx));
+
+                startTimer.finishGlobalStage("Managers starting");
+
                 startProcessor(createComponent(IgniteCacheObjectProcessor.class, ctx));
+
+                startTimer.finishGlobalStage("Binary metadata configuring");
+
                 startProcessor(createComponent(IGridClusterStateProcessor.class, ctx));
                 startProcessor(new IgniteAuthenticationProcessor(ctx));
                 startProcessor(new GridCacheProcessor(ctx));
@@ -1137,6 +1145,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 // Start transactional data replication processor.
                 startProcessor(createComponent(TransactionalDrProcessor.class, ctx));
 
+                startTimer.finishGlobalStage("Processors starting");
+
                 // Start plugins.
                 for (PluginProvider provider : ctx.plugins().allProviders()) {
                     ctx.add(new GridPluginComponent(provider));
@@ -1148,6 +1158,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 if (ctx.config().getPlatformConfiguration() != null)
                     startProcessor(new PlatformPluginProcessor(ctx));
 
+                startTimer.finishGlobalStage("Plugins starting");
+
                 ctx.cluster().initDiagnosticListeners();
 
                 fillNodeAttributes(clusterProc.updateNotifierEnabled());
@@ -1156,7 +1168,11 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
                 ((DistributedMetaStorageImpl)ctx.distributedMetastorage()).inMemoryReadyForRead();
 
+                startTimer.finishGlobalStage("Metastore init");
+
                 ctx.cache().context().database().startMemoryRestore(ctx);
+
+                startTimer.finishGlobalStage("Memory restoring");
 
                 ctx.recoveryMode(false);
             }
@@ -1181,6 +1197,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             finally {
                 gw.writeUnlock();
             }
+
+            startTimer.finishGlobalStage("Discovery joining");
 
             // Check whether UTF-8 is the default character encoding.
             checkFileEncoding();
@@ -1221,6 +1239,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             }
             else
                 active = joinData.active();
+
+            startTimer.finishGlobalStage("Transition awaiting");
 
             boolean recon = false;
 
@@ -1403,6 +1423,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         if (!isDaemon())
             ctx.discovery().ackTopology(ctx.discovery().localJoin().joinTopologyVersion().topologyVersion(),
                 EventType.EVT_NODE_JOINED, localNode());
+
+        startTimer.finishGlobalStage("Exchange and etc. execution");
     }
 
     /**
