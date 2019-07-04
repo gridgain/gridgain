@@ -47,7 +47,7 @@ import static org.mockito.Mockito.when;
  */
 @TestConfiguration
 @Import(Application.class)
-public class MockTestConfiguration {
+public class MockConfiguration {
     /**
      * @return Application event multicaster.
      */

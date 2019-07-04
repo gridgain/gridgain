@@ -16,7 +16,7 @@
 
 package org.apache.ignite.console.services;
 
-import org.apache.ignite.console.MockTestConfiguration;
+import org.apache.ignite.console.MockConfiguration;
 import org.apache.ignite.console.config.ActivationConfiguration;
 import org.apache.ignite.console.config.SignUpConfiguration;
 import org.apache.ignite.console.dto.Account;
@@ -59,7 +59,7 @@ import static org.mockito.Mockito.when;
  * Account service test.
  */
 @RunWith(SpringRunner.class)
-@SpringBootTest(classes = {MockTestConfiguration.class})
+@SpringBootTest(classes = {MockConfiguration.class})
 public class AccountServiceTest {
     /** Account repository. */
     @Mock
