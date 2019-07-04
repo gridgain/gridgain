@@ -2073,15 +2073,18 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 dumpPartitionsInfo(cctx, log);
             }
 
-            cctx.wal().flush(null, true);
+            try {
+                cctx.wal().flush(null, true);
+            }
+            finally {
+                // We must return null for NULL_PTR record, because FileWriteAheadLogManager.resumeLogging
+                // can't write header without that condition.
+                WALPointer lastReadPointer = logicalState.lastReadRecordPointer();
 
-            // We must return null for NULL_PTR record, because FileWriteAheadLogManager.resumeLogging
-            // can't write header without that condition.
-            WALPointer lastReadPointer = logicalState.lastReadRecordPointer();
+                walTail = tailPointer(lastReadPointer.equals(CheckpointStatus.NULL_PTR) ? null : lastReadPointer);
 
-            walTail = tailPointer(lastReadPointer.equals(CheckpointStatus.NULL_PTR) ? null : lastReadPointer);
-
-            cctx.wal().onDeActivate(kctx);
+                cctx.wal().onDeActivate(kctx);
+            }
         }
         catch (IgniteCheckedException e) {
             releaseFileLock();
