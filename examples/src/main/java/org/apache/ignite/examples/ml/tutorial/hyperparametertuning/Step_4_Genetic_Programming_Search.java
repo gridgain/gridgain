@@ -133,13 +133,12 @@ public class Step_4_Genetic_Programming_Search {
                     .withMetric(BinaryClassificationMetricValues::accuracy);
 
                 scoreCalculator
+                    .withIgnite(ignite)
+                    .withUpstreamCache(dataCache)
                     .withTrainer(trainerCV)
                     .withMetric(metrics)
                     .withFilter(split.getTrainFilter())
-                    .withIgnite(ignite)
                     .isRunningOnPipeline(false)
-                    .withUpstreamCache(dataCache)
-                    .withAmountOfParts(1)
                     .withPreprocessor(normalizationPreprocessor)
                     .withAmountOfFolds(3)
                     .withParamGrid(paramGrid);

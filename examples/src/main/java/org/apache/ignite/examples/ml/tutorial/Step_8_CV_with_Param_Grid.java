@@ -123,12 +123,11 @@ public class Step_8_CV_with_Param_Grid {
                     .addHyperParam("minImpurityDecrease", trainerCV::withMinImpurityDecrease, new Double[]{0.0, 0.25, 0.5});
 
                 scoreCalculator
+                    .withIgnite(ignite)
+                    .withUpstreamCache(dataCache)
                     .withTrainer(trainerCV)
                     .withMetric(new Accuracy<>())
                     .withFilter(split.getTrainFilter())
-                    .withIgnite(ignite)
-                    .withUpstreamCache(dataCache)
-                    .withAmountOfParts(1)
                     .withPreprocessor(normalizationPreprocessor)
                     .withAmountOfFolds(3)
                     .withParamGrid(paramGrid);

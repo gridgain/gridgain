@@ -102,12 +102,11 @@ public class Step_8_CV_with_Param_Grid_and_metrics_and_pipeline {
                     .withMetric(BinaryClassificationMetricValues::accuracy);
 
                 scoreCalculator
+                    .withIgnite(ignite)
+                    .withUpstreamCache(dataCache)
                     .withPipeline(pipeline)
                     .withMetric(metrics)
                     .withFilter(split.getTrainFilter())
-                    .withIgnite(ignite)
-                    .withUpstreamCache(dataCache)
-                    .withAmountOfParts(1)
                     .withPreprocessor(vectorizer)
                     .withAmountOfFolds(3)
                     .withParamGrid(paramGrid);

@@ -142,6 +142,8 @@ public class Step_3_Parallel_Random_Search {
                     .withMetric(BinaryClassificationMetricValues::accuracy);
 
                 scoreCalculator
+                    .withIgnite(ignite)
+                    .withUpstreamCache(dataCache)
                     .withEnvironmentBuilder(LearningEnvironmentBuilder.defaultBuilder()
                         .withParallelismStrategyTypeDependency(ParallelismStrategy.ON_DEFAULT_POOL)
                         .withLoggingFactoryDependency(ConsoleLogger.Factory.LOW))
@@ -149,9 +151,6 @@ public class Step_3_Parallel_Random_Search {
                     .isRunningOnPipeline(false)
                     .withMetric(metrics)
                     .withFilter(split.getTrainFilter())
-                    .withIgnite(ignite)
-                    .withUpstreamCache(dataCache)
-                    .withAmountOfParts(1)
                     .withPreprocessor(normalizationPreprocessor)
                     .withAmountOfFolds(3)
                     .withParamGrid(paramGrid);

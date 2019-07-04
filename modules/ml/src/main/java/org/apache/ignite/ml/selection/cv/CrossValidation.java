@@ -39,12 +39,12 @@ import org.apache.ignite.ml.selection.scoring.cursor.CacheBasedLabelPairCursor;
  * @param <K> Type of a key in {@code upstream} data.
  * @param <V> Type of a value in {@code upstream} data.
  */
-public abstract class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> extends AbstractCrossValidation<M, L, K, V> {
+public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> extends AbstractCrossValidation<M, L, K, V> {
     /** Ignite. */
-    protected Ignite ignite;
+    private Ignite ignite;
 
     /** Upstream cache. */
-    protected IgniteCache<K, V> upstreamCache;
+    private IgniteCache<K, V> upstreamCache;
 
     /**
      * Calculates score by folds.
@@ -97,5 +97,21 @@ public abstract class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V>
                 mdl
             )
         );
+    }
+
+    /**
+     * @param ignite Ignite.
+     */
+    public CrossValidation<M, L, K, V> withIgnite(Ignite ignite) {
+        this.ignite = ignite;
+        return this;
+    }
+
+    /**
+     * @param upstreamCache Upstream cache.
+     */
+    public CrossValidation<M, L, K, V> withUpstreamCache(IgniteCache<K, V> upstreamCache) {
+        this.upstreamCache = upstreamCache;
+        return this;
     }
 }

@@ -75,14 +75,15 @@ public class CrossValidationExample {
                 DecisionTreeClassificationTrainer trainer = new DecisionTreeClassificationTrainer(4, 0);
 
                 LabeledDummyVectorizer<Integer, Double> vectorizer = new LabeledDummyVectorizer<>();
+
                 CrossValidation<DecisionTreeNode, Double, Integer, LabeledVector<Double>> scoreCalculator
                     = new CrossValidation<>();
 
                 double[] accuracyScores = scoreCalculator
-                    .withTrainer(trainer)
-                    .withMetric(new Accuracy<>())
                     .withIgnite(ignite)
                     .withUpstreamCache(trainingSet)
+                    .withTrainer(trainer)
+                    .withMetric(new Accuracy<>())
                     .withPreprocessor(vectorizer)
                     .withAmountOfFolds(4)
                     .isRunningOnPipeline(false)

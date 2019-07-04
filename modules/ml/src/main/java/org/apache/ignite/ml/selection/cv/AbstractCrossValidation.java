@@ -27,13 +27,9 @@ import java.util.function.BiFunction;
 import java.util.function.DoubleConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCache;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.ml.IgniteModel;
 import org.apache.ignite.ml.dataset.DatasetBuilder;
-import org.apache.ignite.ml.dataset.impl.cache.CacheBasedDatasetBuilder;
-import org.apache.ignite.ml.dataset.impl.local.LocalDatasetBuilder;
 import org.apache.ignite.ml.environment.LearningEnvironment;
 import org.apache.ignite.ml.environment.LearningEnvironmentBuilder;
 import org.apache.ignite.ml.environment.parallelism.Promise;
@@ -48,9 +44,7 @@ import org.apache.ignite.ml.selection.paramgrid.HyperParameterTuningStrategy;
 import org.apache.ignite.ml.selection.paramgrid.ParamGrid;
 import org.apache.ignite.ml.selection.paramgrid.ParameterSetGenerator;
 import org.apache.ignite.ml.selection.paramgrid.RandomStrategy;
-import org.apache.ignite.ml.selection.scoring.cursor.CacheBasedLabelPairCursor;
 import org.apache.ignite.ml.selection.scoring.cursor.LabelPairCursor;
-import org.apache.ignite.ml.selection.scoring.cursor.LocalLabelPairCursor;
 import org.apache.ignite.ml.selection.scoring.metric.Metric;
 import org.apache.ignite.ml.selection.split.mapper.SHA256UniformMapper;
 import org.apache.ignite.ml.selection.split.mapper.UniformMapper;
@@ -90,15 +84,6 @@ public abstract class AbstractCrossValidation<M extends IgniteModel<Vector, L>, 
     /** Metric. */
     protected Metric<L> metric;
 
-    /** Ignite. */
-    protected Ignite ignite;
-
-    /** Upstream cache. */
-    protected IgniteCache<K, V> upstreamCache;
-
-    /** Upstream map. */
-    protected Map<K, V> upstreamMap;
-
     /** Preprocessor. */
     protected Preprocessor<K, V> preprocessor;
 
@@ -113,9 +98,6 @@ public abstract class AbstractCrossValidation<M extends IgniteModel<Vector, L>, 
 
     /** Parameter grid. */
     protected ParamGrid paramGrid;
-
-    /** Execution on Ignite or locally, otherwise. */
-    protected boolean isRunningOnIgnite = true;
 
     /** Execution over the pipeline or the chain of preprocessors and separate trainer, otherwise. */
     protected boolean isRunningOnPipeline = true;
@@ -315,58 +297,7 @@ public abstract class AbstractCrossValidation<M extends IgniteModel<Vector, L>, 
     /**
      * Calculates score by folds.
      */
-    public double[] scoreByFolds() {
-        double[] locScores;
-
-        if (isRunningOnPipeline)
-            locScores = isRunningOnIgnite ? scorePipelineOnIgnite() : scorePipelineLocally();
-        else
-            locScores = isRunningOnIgnite ? scoreOnIgnite() : scoreLocally();
-
-        return locScores;
-    }
-
-    /**
-     * Calculate score on pipeline based on local data (upstream map).
-     *
-     * @return Array of scores of the estimator for each run of the cross validation.
-     */
-    private double[] scorePipelineLocally() {
-        return scorePipeline(
-            predicate -> new LocalDatasetBuilder<>(
-                upstreamMap,
-                (k, v) -> filter.apply(k, v) && predicate.apply(k, v),
-                parts
-            ),
-            (predicate, mdl) -> new LocalLabelPairCursor<>(
-                upstreamMap,
-                (k, v) -> filter.apply(k, v) && !predicate.apply(k, v),
-                preprocessor,
-                mdl
-            )
-        );
-    }
-
-    /**
-     * Calculate score on pipeline based on Ignite data (upstream cache).
-     *
-     * @return Array of scores of the estimator for each run of the cross validation.
-     */
-    private double[] scorePipelineOnIgnite() {
-        return scorePipeline(
-            predicate -> new CacheBasedDatasetBuilder<>(
-                ignite,
-                upstreamCache,
-                (k, v) -> filter.apply(k, v) && predicate.apply(k, v)
-            ),
-            (predicate, mdl) -> new CacheBasedLabelPairCursor<>(
-                upstreamCache,
-                (k, v) -> filter.apply(k, v) && !predicate.apply(k, v),
-                ((PipelineMdl<K, V>) mdl).getPreprocessor(),
-                mdl
-            )
-        );
-    }
+    public abstract double[] scoreByFolds();
 
     /**
      * Forms the parameter map from parameter grid and parameter set.
@@ -387,48 +318,6 @@ public abstract class AbstractCrossValidation<M extends IgniteModel<Vector, L>, 
 
         }
         return paramMap;
-    }
-
-    /**
-     * Computes cross-validated metrics.
-     *
-     * @return Array of scores of the estimator for each run of the cross validation.
-     */
-    private double[] scoreOnIgnite() {
-        return score(
-            predicate -> new CacheBasedDatasetBuilder<>(
-                ignite,
-                upstreamCache,
-                (k, v) -> filter.apply(k, v) && predicate.apply(k, v)
-            ),
-            (predicate, mdl) -> new CacheBasedLabelPairCursor<>(
-                upstreamCache,
-                (k, v) -> filter.apply(k, v) && !predicate.apply(k, v),
-                preprocessor,
-                mdl
-            )
-        );
-    }
-
-    /**
-     * Computes cross-validated metrics.
-     *
-     * @return Array of scores of the estimator for each run of the cross validation.
-     */
-    private double[] scoreLocally() {
-        return score(
-            predicate -> new LocalDatasetBuilder<>(
-                upstreamMap,
-                (k, v) -> filter.apply(k, v) && predicate.apply(k, v),
-                parts
-            ),
-            (predicate, mdl) -> new LocalLabelPairCursor<>(
-                upstreamMap,
-                (k, v) -> filter.apply(k, v) && !predicate.apply(k, v),
-                preprocessor,
-                mdl
-            )
-        );
     }
 
     /**
@@ -515,21 +404,6 @@ public abstract class AbstractCrossValidation<M extends IgniteModel<Vector, L>, 
         return this;
     }
 
-    /**
-     * @param ignite Ignite.
-     */
-    public AbstractCrossValidation<M, L, K, V> withIgnite(Ignite ignite) {
-        this.ignite = ignite;
-        return this;
-    }
-
-    /**
-     * @param upstreamCache Upstream cache.
-     */
-    public AbstractCrossValidation<M, L, K, V> withUpstreamCache(IgniteCache<K, V> upstreamCache) {
-        this.upstreamCache = upstreamCache;
-        return this;
-    }
 
     /**
      * @param preprocessor Preprocessor.
@@ -564,34 +438,10 @@ public abstract class AbstractCrossValidation<M extends IgniteModel<Vector, L>, 
     }
 
     /**
-     * @param runningOnIgnite Running on ignite.
-     */
-    public AbstractCrossValidation<M, L, K, V> isRunningOnIgnite(boolean runningOnIgnite) {
-        isRunningOnIgnite = runningOnIgnite;
-        return this;
-    }
-
-    /**
      * @param runningOnPipeline Running on pipeline.
      */
     public AbstractCrossValidation<M, L, K, V> isRunningOnPipeline(boolean runningOnPipeline) {
         isRunningOnPipeline = runningOnPipeline;
-        return this;
-    }
-
-    /**
-     * @param upstreamMap Upstream map.
-     */
-    public AbstractCrossValidation<M, L, K, V> withUpstreamMap(Map<K, V> upstreamMap) {
-        this.upstreamMap = upstreamMap;
-        return this;
-    }
-
-    /**
-     * @param parts Parts.
-     */
-    public AbstractCrossValidation<M, L, K, V> withAmountOfParts(int parts) {
-        this.parts = parts;
         return this;
     }
 

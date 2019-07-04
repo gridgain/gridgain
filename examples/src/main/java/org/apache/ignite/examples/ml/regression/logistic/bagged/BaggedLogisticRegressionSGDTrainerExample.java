@@ -93,10 +93,10 @@ public class BaggedLogisticRegressionSGDTrainerExample {
                     .labeled(Vectorizer.LabelCoordinate.FIRST);
 
                 double[] score = new CrossValidation<BaggedModel, Double, Integer, Vector>()
-                    .withTrainer(baggedTrainer)
-                    .withMetric(new Accuracy<>())
                     .withIgnite(ignite)
                     .withUpstreamCache(dataCache)
+                    .withTrainer(baggedTrainer)
+                    .withMetric(new Accuracy<>())
                     .withPreprocessor(vectorizer)
                     .withAmountOfFolds(3)
                     .isRunningOnPipeline(false)

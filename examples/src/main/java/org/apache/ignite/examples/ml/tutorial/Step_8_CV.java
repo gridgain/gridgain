@@ -127,10 +127,10 @@ public class Step_8_CV {
                             = new CrossValidation<>();
 
                         double[] scores = scoreCalculator
-                            .withTrainer(trainer)
-                            .withMetric(new Accuracy<>())
                             .withIgnite(ignite)
                             .withUpstreamCache(dataCache)
+                            .withTrainer(trainer)
+                            .withMetric(new Accuracy<>())
                             .withFilter(split.getTrainFilter())
                             .withPreprocessor(normalizationPreprocessor)
                             .withAmountOfFolds(3)

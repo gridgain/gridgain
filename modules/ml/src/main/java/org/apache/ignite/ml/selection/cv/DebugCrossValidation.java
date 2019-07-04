@@ -96,4 +96,20 @@ public class DebugCrossValidation<M extends IgniteModel<Vector, L>, L, K, V> ext
             )
         );
     }
+
+    /**
+     * @param upstreamMap Upstream map.
+     */
+    public DebugCrossValidation<M, L, K, V> withUpstreamMap(Map<K, V> upstreamMap) {
+        this.upstreamMap = upstreamMap;
+        return this;
+    }
+
+    /**
+     * @param parts Parts.
+     */
+    public DebugCrossValidation<M, L, K, V> withAmountOfParts(int parts) {
+        this.parts = parts;
+        return this;
+    }
 }

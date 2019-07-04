@@ -52,22 +52,21 @@ public class CrossValidationTest {
 
         DecisionTreeClassificationTrainer trainer = new DecisionTreeClassificationTrainer(1, 0);
 
-        CrossValidation<DecisionTreeNode, Double, Integer, double[]> scoreCalculator =
-            new CrossValidation<>();
+        DebugCrossValidation<DecisionTreeNode, Double, Integer, double[]> scoreCalculator =
+            new DebugCrossValidation<>();
 
         Vectorizer<Integer, double[], Integer, Double> vectorizer = new DoubleArrayVectorizer<Integer>().labeled(Vectorizer.LabelCoordinate.FIRST);
 
         int folds = 4;
 
         scoreCalculator
-            .withTrainer(trainer)
-            .withMetric(new Accuracy<>())
             .withUpstreamMap(data)
             .withAmountOfParts(1)
+            .withTrainer(trainer)
+            .withMetric(new Accuracy<>())
             .withPreprocessor(vectorizer)
             .withAmountOfFolds(folds)
-            .isRunningOnPipeline(false)
-            .isRunningOnIgnite(false);
+            .isRunningOnPipeline(false);
 
         verifyScores(folds, scoreCalculator.scoreByFolds());
     }
@@ -84,8 +83,8 @@ public class CrossValidationTest {
 
         DecisionTreeClassificationTrainer trainer = new DecisionTreeClassificationTrainer(1, 0);
 
-        CrossValidation<DecisionTreeNode, Double, Integer, double[]> scoreCalculator =
-            new CrossValidation<>();
+        DebugCrossValidation<DecisionTreeNode, Double, Integer, double[]> scoreCalculator =
+            new DebugCrossValidation<>();
 
         int folds = 4;
 
@@ -93,14 +92,13 @@ public class CrossValidationTest {
             .withMetric(BinaryClassificationMetricValues::accuracy);
 
         scoreCalculator
-            .withTrainer(trainer)
-            .withMetric(metrics)
             .withUpstreamMap(data)
             .withAmountOfParts(1)
+            .withTrainer(trainer)
+            .withMetric(metrics)
             .withPreprocessor(vectorizer)
             .withAmountOfFolds(folds)
-            .isRunningOnPipeline(false)
-            .isRunningOnIgnite(false);
+            .isRunningOnPipeline(false);
 
         verifyScores(folds, scoreCalculator.scoreByFolds());
     }
@@ -123,8 +121,8 @@ public class CrossValidationTest {
 
         Vectorizer<Integer, double[], Integer, Double> vectorizer = new DoubleArrayVectorizer<Integer>().labeled(Vectorizer.LabelCoordinate.FIRST);
 
-        CrossValidation<LogisticRegressionModel, Double, Integer, double[]> scoreCalculator =
-            new CrossValidation<>();
+        DebugCrossValidation<LogisticRegressionModel, Double, Integer, double[]> scoreCalculator =
+            new DebugCrossValidation<>();
 
         int folds = 4;
 
@@ -132,14 +130,13 @@ public class CrossValidationTest {
             .withMetric(BinaryClassificationMetricValues::accuracy);
 
         scoreCalculator
-            .withTrainer(trainer)
-            .withMetric(metrics)
             .withUpstreamMap(data)
             .withAmountOfParts(1)
+            .withTrainer(trainer)
+            .withMetric(metrics)
             .withPreprocessor(vectorizer)
             .withAmountOfFolds(folds)
-            .isRunningOnPipeline(false)
-            .isRunningOnIgnite(false);
+            .isRunningOnPipeline(false);
 
         double[] scores = scoreCalculator.scoreByFolds();
 
@@ -175,16 +172,15 @@ public class CrossValidationTest {
             .addHyperParam("locIterations", trainer::withLocIterations, new Double[]{10.0, 100.0, 1000.0, 10000.0})
             .addHyperParam("batchSize", trainer::withBatchSize, new Double[]{1.0, 2.0, 4.0, 8.0, 16.0});
 
-        CrossValidation<LogisticRegressionModel, Double, Integer, double[]> scoreCalculator =
-            new CrossValidation<LogisticRegressionModel, Double, Integer, double[]>()
-                .withTrainer(trainer)
-                .withMetric(metrics)
+        DebugCrossValidation<LogisticRegressionModel, Double, Integer, double[]> scoreCalculator =
+            (DebugCrossValidation<LogisticRegressionModel, Double, Integer, double[]>) new DebugCrossValidation<LogisticRegressionModel, Double, Integer, double[]>()
                 .withUpstreamMap(data)
                 .withAmountOfParts(1)
+                .withTrainer(trainer)
+                .withMetric(metrics)
                 .withPreprocessor(vectorizer)
                 .withAmountOfFolds(4)
                 .isRunningOnPipeline(false)
-                .isRunningOnIgnite(false)
                 .withParamGrid(paramGrid);
 
         CrossValidationResult crossValidationRes = scoreCalculator.tuneHyperParamterers();
@@ -227,16 +223,15 @@ public class CrossValidationTest {
             .addHyperParam("locIterations", trainer::withLocIterations, new Double[]{10.0, 100.0, 1000.0, 10000.0})
             .addHyperParam("batchSize", trainer::withBatchSize, new Double[]{1.0, 2.0, 4.0, 8.0, 16.0});
 
-        CrossValidation<LogisticRegressionModel, Double, Integer, double[]> scoreCalculator =
-            new CrossValidation<LogisticRegressionModel, Double, Integer, double[]>()
-                .withTrainer(trainer)
-                .withMetric(metrics)
+        DebugCrossValidation<LogisticRegressionModel, Double, Integer, double[]> scoreCalculator =
+            (DebugCrossValidation<LogisticRegressionModel, Double, Integer, double[]>) new DebugCrossValidation<LogisticRegressionModel, Double, Integer, double[]>()
                 .withUpstreamMap(data)
                 .withAmountOfParts(1)
+                .withTrainer(trainer)
+                .withMetric(metrics)
                 .withPreprocessor(vectorizer)
                 .withAmountOfFolds(4)
                 .isRunningOnPipeline(false)
-                .isRunningOnIgnite(false)
                 .withParamGrid(paramGrid);
 
         CrossValidationResult crossValidationRes = scoreCalculator.tuneHyperParamterers();
@@ -285,16 +280,15 @@ public class CrossValidationTest {
             .addVectorizer(vectorizer)
             .addTrainer(trainer);
 
-        CrossValidation<LogisticRegressionModel, Double, Integer, double[]> scoreCalculator =
-            new CrossValidation<LogisticRegressionModel, Double, Integer, double[]>()
-                .withPipeline(pipeline)
-                .withMetric(metrics)
+        DebugCrossValidation<LogisticRegressionModel, Double, Integer, double[]> scoreCalculator =
+            (DebugCrossValidation<LogisticRegressionModel, Double, Integer, double[]>) new DebugCrossValidation<LogisticRegressionModel, Double, Integer, double[]>()
                 .withUpstreamMap(data)
                 .withAmountOfParts(1)
+                .withPipeline(pipeline)
+                .withMetric(metrics)
                 .withPreprocessor(vectorizer)
                 .withAmountOfFolds(4)
                 .isRunningOnPipeline(true)
-                .isRunningOnIgnite(false)
                 .withParamGrid(paramGrid);
 
         CrossValidationResult crossValidationRes = scoreCalculator.tuneHyperParamterers();
@@ -316,20 +310,20 @@ public class CrossValidationTest {
 
         DecisionTreeClassificationTrainer trainer = new DecisionTreeClassificationTrainer(1, 0);
 
-        CrossValidation<DecisionTreeNode, Double, Integer, double[]> scoreCalculator =
-            new CrossValidation<>();
+        DebugCrossValidation<DecisionTreeNode, Double, Integer, double[]> scoreCalculator =
+            new DebugCrossValidation<>();
 
         int folds = 4;
 
         scoreCalculator
-            .withTrainer(trainer)
-            .withMetric(new Accuracy<>())
             .withUpstreamMap(data)
             .withAmountOfParts(1)
+            .withTrainer(trainer)
+            .withMetric(new Accuracy<>())
+
             .withPreprocessor(vectorizer)
             .withAmountOfFolds(folds)
-            .isRunningOnPipeline(false)
-            .isRunningOnIgnite(false);
+            .isRunningOnPipeline(false);
 
 
         double[] scores = scoreCalculator.scoreByFolds();
