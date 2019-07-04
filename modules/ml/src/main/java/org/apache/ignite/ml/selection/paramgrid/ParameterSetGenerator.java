@@ -76,7 +76,6 @@ public class ParameterSetGenerator {
 
         if (dimensionNum == sizeOfParamVector){
             Double[] paramSet = Arrays.copyOf(nextPnt, sizeOfParamVector);
-            System.out.println(Arrays.toString(paramSet));
             params.add(paramSet);
             return;
         }
