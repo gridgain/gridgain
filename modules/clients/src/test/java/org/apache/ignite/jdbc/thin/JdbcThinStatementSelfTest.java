@@ -932,8 +932,17 @@ public class JdbcThinStatementSelfTest extends JdbcThinAbstractSelfTest {
         stmt.addBatch("");
         stmt.clearBatch();
 
-        // Just verify that no exception have been thrown.
-        stmt.executeBatch();
+        GridTestUtils.assertThrows(log,
+            new Callable<Object>() {
+                @Override public Object call() throws Exception {
+                    stmt.executeBatch();
+
+                    return null;
+                }
+            },
+            SQLException.class,
+            "Batch is empty"
+        );
     }
 
     /**
