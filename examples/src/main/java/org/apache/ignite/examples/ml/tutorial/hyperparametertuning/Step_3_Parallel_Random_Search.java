@@ -36,8 +36,8 @@ import org.apache.ignite.ml.preprocessing.minmaxscaling.MinMaxScalerTrainer;
 import org.apache.ignite.ml.preprocessing.normalization.NormalizationTrainer;
 import org.apache.ignite.ml.selection.cv.CrossValidation;
 import org.apache.ignite.ml.selection.cv.CrossValidationResult;
-import org.apache.ignite.ml.selection.paramgrid.HyperParameterSearchingStrategy;
 import org.apache.ignite.ml.selection.paramgrid.ParamGrid;
+import org.apache.ignite.ml.selection.paramgrid.RandomStrategy;
 import org.apache.ignite.ml.selection.scoring.evaluator.Evaluator;
 import org.apache.ignite.ml.selection.scoring.metric.classification.Accuracy;
 import org.apache.ignite.ml.selection.scoring.metric.classification.BinaryClassificationMetricValues;
@@ -74,9 +74,6 @@ import org.apache.ignite.ml.tree.DecisionTreeNode;
 public class Step_3_Parallel_Random_Search {
     /** Run example. */
     public static void main(String[] args) {
-        System.out.println();
-        System.out.println(">>> Tutorial step 8 (cross-validation with param grid) example started.");
-
         try (Ignite ignite = Ignition.start("examples/config/example-ignite.xml")) {
             try {
                 IgniteCache<Integer, Vector> dataCache = TitanicUtils.readPassengers(ignite);
@@ -91,7 +88,7 @@ public class Step_3_Parallel_Random_Search {
                 Preprocessor<Integer, Vector> strEncoderPreprocessor = new EncoderTrainer<Integer, Vector>()
                     .withEncoderType(EncoderType.STRING_ENCODER)
                     .withEncodedFeature(1)
-                    .withEncodedFeature(6) // <--- Changed index here.
+                    .withEncodedFeature(6)
                     .fit(ignite,
                         dataCache,
                         vectorizer
@@ -129,9 +126,11 @@ public class Step_3_Parallel_Random_Search {
                     = new CrossValidation<>();
 
                 ParamGrid paramGrid = new ParamGrid()
-                    .withParameterSearchStrategy(HyperParameterSearchingStrategy.RANDOM_SEARCH)
-                    .withMaxTries(10)
-                    .withSeed(12L)
+                    .withParameterSearchStrategy(
+                        new RandomStrategy()
+                            .withMaxTries(10)
+                            .withSeed(12L)
+                    )
                     .addHyperParam("p", normalizationTrainer::withP, new Double[]{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0})
                     .addHyperParam("maxDeep", trainerCV::withMaxDeep, new Double[]{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0})
                     .addHyperParam("minImpurityDecrease", trainerCV::withMinImpurityDecrease, new Double[]{0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0});
@@ -197,8 +196,7 @@ public class Step_3_Parallel_Random_Search {
                 System.out.println("\n>>> Test Error " + (1 - accuracy));
 
                 System.out.println(">>> Tutorial step 8 (cross-validation with param grid) example started.");
-            }
-            catch (FileNotFoundException e) {
+            } catch (FileNotFoundException e) {
                 e.printStackTrace();
             }
         }

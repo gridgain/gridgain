@@ -32,6 +32,9 @@ import org.apache.ignite.ml.math.functions.IgniteSupplier;
  * This class is an entry point to use Genetic Algorithm to solve optimization problem.
  */
 public class GeneticAlgorithm {
+    /** Uniform rate. */
+    private static final double UNIFORM_RATE = 0.5;
+
     /** Population size. */
     private int populationSize;
 
@@ -40,12 +43,6 @@ public class GeneticAlgorithm {
 
     /** Amount of generations. */
     private int amountOfGenerations = 10;
-
-    /** Elitism. */
-    private boolean elitism = true;
-
-    /** Uniform rate. */
-    private double uniformRate = 0.5;
 
     /** Seed. */
     private long seed = 123L;
@@ -75,11 +72,18 @@ public class GeneticAlgorithm {
     private SelectionStrategy selectionStgy = SelectionStrategy.ROULETTE_WHEEL;
 
     /**
+     * @param paramSet The list of sets of parameter's values.
+     */
+    public GeneticAlgorithm(List<Double[]> paramSet) {
+        initializePopulation(paramSet);
+    }
+
+    /**
      * Forms the initial population.
      *
      * @param rawDataForPopulationFormation Rnd parameter sets.
      */
-    public Population initializePopulation(List<Double[]> rawDataForPopulationFormation) {
+    private Population initializePopulation(List<Double[]> rawDataForPopulationFormation) {
         // validate that population size should be even
         // elite chromosome should be even too or we should handle odd case especially
         populationSize = rawDataForPopulationFormation.size();
@@ -225,6 +229,8 @@ public class GeneticAlgorithm {
      * @param newPopulation New population.
      */
     private Population selectEliteChromosomes(Population newPopulation) {
+        boolean elitism = amountOfEliteChromosomes > 0;
+
         if (elitism) {
             Chromosome[] elite = population.selectBestKChromosome(amountOfEliteChromosomes);
             for (int i = 0; i < elite.length; i++)
@@ -342,7 +348,7 @@ public class GeneticAlgorithm {
         Chromosome child2 = new Chromosome(size);
 
         for (int i = 0; i < firstParent.size(); i++) {
-            if (rnd.nextDouble() < uniformRate) {
+            if (rnd.nextDouble() < UNIFORM_RATE) {
                 child1.setGene(i, firstParent.getGene(i));
                 child2.setGene(i, secondParent.getGene(i));
             }
@@ -392,23 +398,6 @@ public class GeneticAlgorithm {
         this.amountOfGenerations = amountOfGenerations;
         return this;
     }
-
-    /**
-     * @param elitism Elitism.
-     */
-    public GeneticAlgorithm withElitism(boolean elitism) {
-        this.elitism = elitism;
-        return this;
-    }
-
-    /**
-     * @param uniformRate Uniform rate.
-     */
-    public GeneticAlgorithm withUniformRate(double uniformRate) {
-        this.uniformRate = uniformRate;
-        return this;
-    }
-
     /**
      * @param mutationOperator Mutation operator.
      */
@@ -457,5 +446,4 @@ public class GeneticAlgorithm {
         this.selectionStgy = selectionStgy;
         return this;
     }
-
 }

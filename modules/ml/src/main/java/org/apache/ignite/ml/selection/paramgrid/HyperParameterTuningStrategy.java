@@ -16,12 +16,7 @@
 
 package org.apache.ignite.ml.selection.paramgrid;
 
-public enum HyperParameterSearchingStrategy {
-    BRUT_FORCE,
-
-    GRADIENT_SEARCH,
-
-    RANDOM_SEARCH,
-
-    EVOLUTION_ALGORITHM
+public abstract class HyperParameterTuningStrategy {
+    public abstract String getName();
 }
+

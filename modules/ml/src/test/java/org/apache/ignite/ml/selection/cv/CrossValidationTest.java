@@ -26,8 +26,8 @@ import org.apache.ignite.ml.optimization.updatecalculators.SimpleGDUpdateCalcula
 import org.apache.ignite.ml.pipeline.Pipeline;
 import org.apache.ignite.ml.regressions.logistic.LogisticRegressionModel;
 import org.apache.ignite.ml.regressions.logistic.LogisticRegressionSGDTrainer;
-import org.apache.ignite.ml.selection.paramgrid.HyperParameterSearchingStrategy;
 import org.apache.ignite.ml.selection.paramgrid.ParamGrid;
+import org.apache.ignite.ml.selection.paramgrid.RandomStrategy;
 import org.apache.ignite.ml.selection.scoring.metric.classification.Accuracy;
 import org.apache.ignite.ml.selection.scoring.metric.classification.BinaryClassificationMetricValues;
 import org.apache.ignite.ml.selection.scoring.metric.classification.BinaryClassificationMetrics;
@@ -217,10 +217,12 @@ public class CrossValidationTest {
             .withMetric(BinaryClassificationMetricValues::accuracy);
 
         ParamGrid paramGrid = new ParamGrid()
-            .withParameterSearchStrategy(HyperParameterSearchingStrategy.RANDOM_SEARCH)
-            .withSeed(1234L)
-            .withSatisfactoryFitness(0.9)
-            .withMaxTries(10)
+            .withParameterSearchStrategy(
+                new RandomStrategy()
+                    .withMaxTries(10)
+                    .withSeed(1234L)
+                    .withSatisfactoryFitness(0.9)
+            )
             .addHyperParam("maxIterations", trainer::withMaxIterations, new Double[]{10.0, 100.0, 1000.0, 10000.0})
             .addHyperParam("locIterations", trainer::withLocIterations, new Double[]{10.0, 100.0, 1000.0, 10000.0})
             .addHyperParam("batchSize", trainer::withBatchSize, new Double[]{1.0, 2.0, 4.0, 8.0, 16.0});
@@ -268,10 +270,12 @@ public class CrossValidationTest {
             .withMetric(BinaryClassificationMetricValues::accuracy);
 
         ParamGrid paramGrid = new ParamGrid()
-            .withParameterSearchStrategy(HyperParameterSearchingStrategy.RANDOM_SEARCH)
-            .withSeed(1234L)
-            .withSatisfactoryFitness(0.9)
-            .withMaxTries(10)
+            .withParameterSearchStrategy(
+                new RandomStrategy()
+                    .withMaxTries(10)
+                    .withSeed(1234L)
+                    .withSatisfactoryFitness(0.9)
+            )
             .addHyperParam("maxIterations", trainer::withMaxIterations, new Double[]{10.0, 100.0, 1000.0, 10000.0})
             .addHyperParam("locIterations", trainer::withLocIterations, new Double[]{10.0, 100.0, 1000.0, 10000.0})
             .addHyperParam("batchSize", trainer::withBatchSize, new Double[]{1.0, 2.0, 4.0, 8.0, 16.0});

@@ -42,8 +42,12 @@ import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.pipeline.Pipeline;
 import org.apache.ignite.ml.pipeline.PipelineMdl;
 import org.apache.ignite.ml.preprocessing.Preprocessor;
+import org.apache.ignite.ml.selection.paramgrid.BrutForceStrategy;
+import org.apache.ignite.ml.selection.paramgrid.EvolutionOptimizationStrategy;
+import org.apache.ignite.ml.selection.paramgrid.HyperParameterTuningStrategy;
 import org.apache.ignite.ml.selection.paramgrid.ParamGrid;
 import org.apache.ignite.ml.selection.paramgrid.ParameterSetGenerator;
+import org.apache.ignite.ml.selection.paramgrid.RandomStrategy;
 import org.apache.ignite.ml.selection.scoring.cursor.CacheBasedLabelPairCursor;
 import org.apache.ignite.ml.selection.scoring.cursor.LabelPairCursor;
 import org.apache.ignite.ml.selection.scoring.cursor.LocalLabelPairCursor;
@@ -53,7 +57,6 @@ import org.apache.ignite.ml.selection.split.mapper.UniformMapper;
 import org.apache.ignite.ml.trainers.DatasetTrainer;
 import org.apache.ignite.ml.util.genetic.Chromosome;
 import org.apache.ignite.ml.util.genetic.GeneticAlgorithm;
-import org.apache.ignite.ml.util.genetic.SelectionStrategy;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -124,65 +127,57 @@ public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
      * Finds the best set of hyperparameters based on parameter search strategy.
      */
     public CrossValidationResult tuneHyperParamterers() {
-        switch (paramGrid.getParameterSearchStrategy()) {
-            case BRUT_FORCE:
-                return scoreBrutForceHyperparameterOptimiztion();
-            case RANDOM_SEARCH:
-                return scoreRandomSearchHyperparameterOptimiztion();
-            case EVOLUTION_ALGORITHM:
-                return scoreEvolutionAlgorithmSearchHyperparameterOptimization();
-            default:
-                throw new UnsupportedOperationException("This strategy "
-                    + paramGrid.getParameterSearchStrategy().name() + " is not supported yet.");
-        }
+        HyperParameterTuningStrategy hyperParamTuningStgy = paramGrid.getHyperParameterTuningStrategy();
+
+        if (hyperParamTuningStgy instanceof BrutForceStrategy) return scoreBrutForceHyperparameterOptimiztion();
+        if (hyperParamTuningStgy instanceof RandomStrategy) return scoreRandomSearchHyperparameterOptimiztion();
+        if (hyperParamTuningStgy instanceof EvolutionOptimizationStrategy)
+            return scoreEvolutionAlgorithmSearchHyperparameterOptimization();
+        else throw new UnsupportedOperationException("This strategy "
+            + paramGrid.getHyperParameterTuningStrategy().getName() + " is not supported yet.");
     }
 
     /**
      * Finds the best set of hyperparameters based on Genetic Programming approach.
      */
     private CrossValidationResult scoreEvolutionAlgorithmSearchHyperparameterOptimization() {
+        EvolutionOptimizationStrategy stgy = (EvolutionOptimizationStrategy) paramGrid.getHyperParameterTuningStrategy();
+
         List<Double[]> paramSets = new ParameterSetGenerator(paramGrid.getParamValuesByParamIdx()).generate();
 
         // initialization
         List<Double[]> paramSetsCp = new ArrayList<>(paramSets);
-        Collections.shuffle(paramSetsCp, new Random(paramGrid.getSeed())); // TODO: - unclear seed - extract CV seed
+        Collections.shuffle(paramSetsCp, new Random(stgy.getSeed()));
 
         int sizeOfPopulation = 20;
         List<Double[]> rndParamSets = paramSetsCp.subList(0, sizeOfPopulation);
 
-        // fitness function for parallel calculation
-        /*Function<Chromosome, Double> fitnessFunction = (Chromosome chromosome) -> {
-            IgniteSupplier<TaskResult> task = ()->calculateScoresForFixedParamSet(chromosome.toDoubleArray());
-            TaskResult res = environment.parallelismStrategy().submit(task).unsafeGet();
-            return Arrays.stream(res.locScores).average().getAsDouble();
-        };*/
-
-        // TODO: analyze sequential code
         Function<Chromosome, Double> fitnessFunction = (Chromosome chromosome) -> {
             TaskResult res = calculateScoresForFixedParamSet(chromosome.toDoubleArray());
             return Arrays.stream(res.locScores).average().getAsDouble();
         };
 
-        Random rnd = new Random(paramGrid.getSeed()); // common seed for shared lambdas can produce the same value on each function call? or sequent?
+        Random rnd = new Random(stgy.getSeed()); //TODO: common seed for shared lambdas can produce the same value on each function call? or sequent?
 
         BiFunction<Integer, Double, Double> mutator = (Integer geneIdx, Double geneValue) -> {
             Double newGeneVal;
 
             Double[] possibleGeneValues = paramGrid.getParamRawData().get(geneIdx);
-            newGeneVal = possibleGeneValues[rnd.nextInt(possibleGeneValues.length)];  // TODO: - unclear seed - extract CV seed
+            newGeneVal = possibleGeneValues[rnd.nextInt(possibleGeneValues.length)];
 
             return newGeneVal;
         };
 
-        GeneticAlgorithm ga = new GeneticAlgorithm();
+        GeneticAlgorithm ga = new GeneticAlgorithm(rndParamSets);
         ga.withFitnessFunction(fitnessFunction)
             .withMutationOperator(mutator)
-            .withAmountOfGenerations(20) // TODO: get from config
-            .withPopulationSize(sizeOfPopulation) // TODO: get from config
-            .withSelectionStgy(SelectionStrategy.ROULETTE_WHEEL) // TODO: get from config
-            .withMutationProbability(0.05); // TODO: get from config
-        ga.initializePopulation(rndParamSets);
-
+            .withAmountOfEliteChromosomes(stgy.getAmountOfEliteChromosomes())
+            .withCrossingoverProbability(stgy.getCrossingoverProbability())
+            .withCrossoverStgy(stgy.getCrossoverStgy())
+            .withAmountOfGenerations(stgy.getAmountOfGenerations())
+            .withPopulationSize(stgy.getPopulationSize())
+            .withSelectionStgy(stgy.getSelectionStgy())
+            .withMutationProbability(stgy.getMutationProbability());
         if (environment.parallelismStrategy().getParallelism() > 1)
             ga.runParallel(environment);
         else
@@ -197,14 +192,16 @@ public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
      * Finds the best set of hyperparameters based on Random Serach.
      */
     private CrossValidationResult scoreRandomSearchHyperparameterOptimiztion() {
+        RandomStrategy stgy = (RandomStrategy) paramGrid.getHyperParameterTuningStrategy();
+
         List<Double[]> paramSets = new ParameterSetGenerator(paramGrid.getParamValuesByParamIdx()).generate();
 
         List<Double[]> paramSetsCp = new ArrayList<>(paramSets);
-        Collections.shuffle(paramSetsCp, new Random(paramGrid.getSeed()));
+        Collections.shuffle(paramSetsCp, new Random(stgy.getSeed()));
 
         CrossValidationResult cvRes = new CrossValidationResult();
 
-        List<Double[]> rndParamSets = paramSetsCp.subList(0, paramGrid.getMaxTries());
+        List<Double[]> rndParamSets = paramSetsCp.subList(0, stgy.getMaxTries());
 
         List<IgniteSupplier<TaskResult>> tasks = rndParamSets.stream()
             .map(paramSet -> (IgniteSupplier<TaskResult>)(() -> calculateScoresForFixedParamSet(paramSet)))
@@ -618,5 +615,4 @@ public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
         this.mapper = mapper;
         return this;
     }
-
 }
