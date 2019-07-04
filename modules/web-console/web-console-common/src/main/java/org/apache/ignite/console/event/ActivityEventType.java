@@ -14,22 +14,12 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.testsuites;
-
-import org.apache.ignite.internal.processors.cache.StartCachesInParallelTest;
-import org.apache.ignite.internal.processors.cache.index.IoStatisticsBasicIndexSelfTest;
-import org.apache.ignite.util.GridCommandHandlerIndexingTest;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+package org.apache.ignite.console.event;
 
 /**
- * Cache tests using indexing.
+ * Activity types.
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-    GridCommandHandlerIndexingTest.class,
-    StartCachesInParallelTest.class,
-    IoStatisticsBasicIndexSelfTest.class
-})
-public class IgniteCacheWithIndexingAndPersistenceTestSuite {
+public enum ActivityEventType implements EventType {
+    /** */
+    ACTIVITY_UPDATE
 }
