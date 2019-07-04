@@ -107,7 +107,7 @@ public class IgnitePdsTestSuite2 {
 //        GridTestUtils.addTestIfNeeded(suite, IgnitePureJavaCrcCompatibility.class, ignoredTests);
 //        GridTestUtils.addTestIfNeeded(suite, IgniteWithoutArchiverWalIteratorInvalidCrcTest.class, ignoredTests);
 //
-//        addRealPageStoreTests(suite, ignoredTests);
+        addRealPageStoreTests(suite, ignoredTests);
 //
 //        addRealPageStoreTestsNotForDirectIo(suite, ignoredTests);
 //
