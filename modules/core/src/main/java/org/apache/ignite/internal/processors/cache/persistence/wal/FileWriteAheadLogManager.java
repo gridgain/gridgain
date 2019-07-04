@@ -1770,6 +1770,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             synchronized (this) {
                 isCancelled = true;
 
+                runner().interrupt();
+
                 notifyAll();
             }
 
