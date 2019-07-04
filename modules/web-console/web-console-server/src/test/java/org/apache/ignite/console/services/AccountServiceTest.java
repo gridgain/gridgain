@@ -17,8 +17,8 @@
 package org.apache.ignite.console.services;
 
 import org.apache.ignite.console.TestConfiguration;
-import org.apache.ignite.console.config.SignUpConfiguration;
 import org.apache.ignite.console.config.ActivationConfiguration;
+import org.apache.ignite.console.config.SignUpConfiguration;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.repositories.AccountsRepository;
 import org.apache.ignite.console.tx.TransactionManager;

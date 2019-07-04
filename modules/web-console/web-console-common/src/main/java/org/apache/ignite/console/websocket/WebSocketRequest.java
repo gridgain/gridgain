@@ -18,13 +18,11 @@ package org.apache.ignite.console.websocket;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 import com.fasterxml.jackson.annotation.JsonRawValue;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import org.apache.ignite.console.json.RawContentDeserializer;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
-import static org.apache.ignite.console.utils.Utils.toJson;
 import static org.apache.ignite.console.websocket.WebSocketEvents.ERROR;
 
 /**
