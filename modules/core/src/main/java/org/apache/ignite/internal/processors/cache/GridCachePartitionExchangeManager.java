@@ -1238,12 +1238,19 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                     (lastFut.isDone() ? lastFut.topologyVersion() : lastFut.initialVersion())
                     : AffinityTopologyVersion.NONE;
 
+            if (rmtTopVer == null) {
+                log.info("<%> lastFut=" + lastFut);
+
+                return;
+            }
+
             Collection<ClusterNode> rmts = cctx.discovery().remoteAliveNodesWithCaches(rmtTopVer);
 
             if (log.isDebugEnabled())
                 log.debug("Refreshing partitions from oldest node: " + cctx.localNodeId());
 
-            sendAllPartitions(rmts, rmtTopVer, grps);
+            if (rmts != null && !rmts.isEmpty())
+                sendAllPartitions(rmts, rmtTopVer, grps);
         }
         else {
             if (log.isDebugEnabled())
