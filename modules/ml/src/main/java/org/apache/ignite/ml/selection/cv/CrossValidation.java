@@ -133,8 +133,8 @@ public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
         if (hyperParamTuningStgy instanceof RandomStrategy) return scoreRandomSearchHyperparameterOptimiztion();
         if (hyperParamTuningStgy instanceof EvolutionOptimizationStrategy)
             return scoreEvolutionAlgorithmSearchHyperparameterOptimization();
-        else throw new UnsupportedOperationException("This strategy "
-            + paramGrid.getHyperParameterTuningStrategy().getName() + " is not supported yet.");
+        else throw new UnsupportedOperationException("This strategy is not supported yet [strategy="
+            + paramGrid.getHyperParameterTuningStrategy().getName() + "]");
     }
 
     /**
@@ -152,9 +152,21 @@ public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
         int sizeOfPopulation = 20;
         List<Double[]> rndParamSets = paramSetsCp.subList(0, sizeOfPopulation);
 
+        CrossValidationResult cvRes = new CrossValidationResult();
+
         Function<Chromosome, Double> fitnessFunction = (Chromosome chromosome) -> {
-            TaskResult res = calculateScoresForFixedParamSet(chromosome.toDoubleArray());
-            return Arrays.stream(res.locScores).average().getAsDouble();
+            TaskResult tr = calculateScoresForFixedParamSet(chromosome.toDoubleArray());
+
+            cvRes.addScores(tr.locScores, tr.paramMap);
+
+            final double locAvgScore = Arrays.stream(tr.locScores).average().orElse(Double.MIN_VALUE);
+
+            if (locAvgScore >= cvRes.getBestAvgScore()) {
+                cvRes.setBestScore(tr.locScores);
+                cvRes.setBestHyperParams(tr.paramMap);
+            }
+
+            return locAvgScore;
         };
 
         Random rnd = new Random(stgy.getSeed()); //TODO: common seed for shared lambdas can produce the same value on each function call? or sequent?
@@ -175,16 +187,14 @@ public class CrossValidation<M extends IgniteModel<Vector, L>, L, K, V> {
             .withCrossingoverProbability(stgy.getCrossingoverProbability())
             .withCrossoverStgy(stgy.getCrossoverStgy())
             .withAmountOfGenerations(stgy.getAmountOfGenerations())
-            .withPopulationSize(stgy.getPopulationSize())
             .withSelectionStgy(stgy.getSelectionStgy())
             .withMutationProbability(stgy.getMutationProbability());
+
         if (environment.parallelismStrategy().getParallelism() > 1)
             ga.runParallel(environment);
         else
             ga.run();
-
-        CrossValidationResult cvRes = new CrossValidationResult();
-        cvRes.setBestScore(ga.getTheBestSolution());
+        
         return cvRes;
     }
 

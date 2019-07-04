@@ -283,7 +283,6 @@ public class GeneticAlgorithm {
         return newPopulation;
     }
 
-
     /**
      * Produce the two child chromsome from two parent chromosome according crossover strategy.
      *

@@ -20,12 +20,10 @@ package org.apache.ignite.ml.selection.paramgrid;
 import org.apache.ignite.ml.util.genetic.CrossoverStrategy;
 import org.apache.ignite.ml.util.genetic.SelectionStrategy;
 
+/** Represents the Genetic algorithms usage for finding the best set of hyper-parameters. */
 public class EvolutionOptimizationStrategy extends HyperParameterTuningStrategy {
     /** Seed. */
     private long seed = 1234L;
-
-    /** Population size. */
-    private int populationSize;
 
     /** Amount of elite chromosomes. */
     private int amountOfEliteChromosomes = 2;
@@ -51,13 +49,6 @@ public class EvolutionOptimizationStrategy extends HyperParameterTuningStrategy 
      */
     public long getSeed() {
         return seed;
-    }
-
-    /**
-     *
-     */
-    public int getPopulationSize() {
-        return populationSize;
     }
 
     /**
@@ -109,14 +100,6 @@ public class EvolutionOptimizationStrategy extends HyperParameterTuningStrategy 
      */
     public EvolutionOptimizationStrategy withSeed(long seed) {
         this.seed = seed;
-        return this;
-    }
-
-    /**
-     * @param populationSize Population size.
-     */
-    public EvolutionOptimizationStrategy withPopulationSize(int populationSize) {
-        this.populationSize = populationSize;
         return this;
     }
 
