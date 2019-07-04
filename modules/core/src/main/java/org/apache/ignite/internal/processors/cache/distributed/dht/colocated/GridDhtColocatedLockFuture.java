@@ -1313,7 +1313,12 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
             return;
         }
 
-        if (!tx.entry(entry.txKey()).locked())
+        IgniteTxEntry txEntry = tx.entry(entry.txKey());
+
+        // This is important, otherwise a class cast exception will happen later in GridDhtTxPrepareFuture#map().
+        txEntry.cached(entry);
+
+        if (!txEntry.locked())
             distributedKeys.add(key);
     }
 

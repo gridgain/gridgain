@@ -267,7 +267,7 @@ public class IgniteCacheIncrementTxTest extends GridCommonAbstractTest {
             }
         }
         catch (Exception e) {
-            log.info("Tx failed: " + e);
+            log.error("Tx failed: " + e, e);
         }
     }
 
