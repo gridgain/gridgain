@@ -24,8 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Lock;
 import javax.cache.Cache;
 import javax.cache.CacheException;
 import javax.cache.configuration.Configuration;
@@ -79,7 +77,6 @@ import org.jetbrains.annotations.Nullable;
  * <ul>
  * <li>Ability to perform basic atomic Map-like operations available on {@code JCache} API.</li>
  * <li>Ability to bulk load cache via {@link #loadCache(IgniteBiPredicate, Object...)} method.
- * <li>Distributed lock functionality via {@link #lock(Object)} methods.</li>
  * <li>Ability to query cache using Predicate, SQL, and Text queries via {@link #query(Query)} method.</li>
  * <li>Ability to collect cache and query metrics.</li>
  * <li>Ability to force partition rebalancing via {@link #rebalance()} methopd
