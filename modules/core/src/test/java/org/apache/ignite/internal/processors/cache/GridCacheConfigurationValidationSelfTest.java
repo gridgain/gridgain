@@ -194,7 +194,7 @@ public class GridCacheConfigurationValidationSelfTest extends GridCommonAbstract
 
             Collection<String> names = grid(0).cacheNames();
 
-            assertEquals(3, names.size());
+            assertEquals(2, names.size());
 
             for (String name : names)
                 assertTrue(name.equals(CACHE_NAME_WITH_SPECIAL_CHARACTERS_PARTITIONED)
@@ -207,7 +207,7 @@ public class GridCacheConfigurationValidationSelfTest extends GridCommonAbstract
 
             names = client.cacheNames();
 
-            assertEquals(3, names.size());
+            assertEquals(2, names.size());
         }
         finally {
             stopAllGrids();

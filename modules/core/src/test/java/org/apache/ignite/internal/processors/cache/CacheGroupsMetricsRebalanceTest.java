@@ -29,7 +29,6 @@ import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CacheRebalanceMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.events.CacheRebalancingEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.IgniteEx;
@@ -42,6 +41,7 @@ import org.apache.ignite.internal.visor.node.VisorNodeDataCollectorTaskArg;
 import org.apache.ignite.internal.visor.node.VisorNodeDataCollectorTaskResult;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -240,9 +240,8 @@ public class CacheGroupsMetricsRebalanceTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_REBALANCE_STATISTICS_TIME_INTERVAL, value = "500")
     public void testRebalanceEstimateFinishTime() throws Exception {
-        System.setProperty(IGNITE_REBALANCE_STATISTICS_TIME_INTERVAL, String.valueOf(10_000));
-
         Ignite ig1 = startGrid(1);
 
         final int KEYS = 1_000_000;
@@ -252,23 +251,7 @@ public class CacheGroupsMetricsRebalanceTest extends GridCommonAbstractTest {
                 st.addData(i, CACHE1 + "-" + i);
         }
 
-        final CountDownLatch finishRebalanceLatch = new CountDownLatch(1);
-
         final Ignite ig2 = startGrid(2);
-
-        ig2.events().localListen(new IgnitePredicate<Event>() {
-            @Override public boolean apply(Event evt) {
-                CacheRebalancingEvent rebEvt = (CacheRebalancingEvent)evt;
-
-                if (rebEvt.cacheName().equals(CACHE1)) {
-                    log.info("CountDown rebalance stop latch: " + rebEvt.cacheName());
-
-                    finishRebalanceLatch.countDown();
-                }
-
-                return false;
-            }
-        }, EventType.EVT_CACHE_REBALANCE_STOPPED);
 
         boolean rebalancingStartTimeGot = waitForCondition(new PA() {
             @Override public boolean apply() {
@@ -303,7 +286,7 @@ public class CacheGroupsMetricsRebalanceTest extends GridCommonAbstractTest {
 
                     long keyLeft = m.getKeysToRebalanceLeft();
 
-                    if (keyLeft > 0 && keyLeft < keysLine) {
+                    if (keyLeft < keysLine) {
                         latch.countDown();
 
                         break;
@@ -312,7 +295,7 @@ public class CacheGroupsMetricsRebalanceTest extends GridCommonAbstractTest {
                     log.info("Keys left: " + m.getKeysToRebalanceLeft());
 
                     try {
-                        Thread.sleep(1_000);
+                        Thread.sleep(300);
                     }
                     catch (InterruptedException e) {
                         log.warning("Interrupt thread", e);
@@ -359,8 +342,6 @@ public class CacheGroupsMetricsRebalanceTest extends GridCommonAbstractTest {
                 ", Time to rebalance=" + (finishTime - startTime) +
                 ", startTime=" + startTime + ", finishTime=" + finishTime + ']'
         );
-
-        System.clearProperty(IGNITE_REBALANCE_STATISTICS_TIME_INTERVAL);
 
         currTime = U.currentTimeMillis();
 

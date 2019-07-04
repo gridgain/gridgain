@@ -199,8 +199,6 @@ public class IgniteCacheMvccTestSuite2 {
         ignoredTests.add(GridCacheColocatedDebugTest.class);
         ignoredTests.add(GridCacheDhtEvictionNearReadersSelfTest.class);
         ignoredTests.add(GridCacheDhtPreloadMessageCountTest.class);
-        ignoredTests.add(GridCacheLocalBasicStoreMultithreadedSelfTest.class);
-        ignoredTests.add(GridCacheLocalTxReadTest.class);
         ignoredTests.add(NearCacheMultithreadedUpdateTest.class);
         ignoredTests.add(GridCachePartitionedEvictionSelfTest.class);
         ignoredTests.add(GridCachePartitionedNearDisabledMetricsSelfTest.class);

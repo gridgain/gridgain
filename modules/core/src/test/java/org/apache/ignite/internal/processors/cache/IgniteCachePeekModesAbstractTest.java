@@ -346,59 +346,6 @@ public abstract class IgniteCachePeekModesAbstractTest extends IgniteCacheAbstra
     }
 
     /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testLocalPartitionSize() throws Exception {
-        awaitPartitionMapExchange();
-        checkEmpty();
-        int part = 0;
-        IgniteCache<Integer, String> cache0 = jcache(0);
-
-        for (int i = 0; i < HEAP_ENTRIES; i++) {
-            cache0.put(i, String.valueOf(i));
-
-            final long size = i + 1;
-
-            assertEquals(size, cache0.localSize());
-            assertEquals(size, cache0.localSizeLong(part, PRIMARY));
-            assertEquals(size, cache0.localSizeLong(part, BACKUP));
-            assertEquals(size, cache0.localSizeLong(part, NEAR));
-            assertEquals(size, cache0.localSizeLong(part, ALL));
-
-            assertEquals(size, cache0.size());
-            assertEquals(size, cache0.sizeLong(part, PRIMARY));
-            assertEquals(size, cache0.sizeLong(part, BACKUP));
-            assertEquals(size, cache0.sizeLong(part, NEAR));
-            assertEquals(size, cache0.sizeLong(part, ALL));
-
-            assertEquals(size, (long) cache0.sizeAsync().get());
-
-            assertEquals(size, (long) cache0.sizeLongAsync(part, PRIMARY).get());
-        }
-
-        for (int i = 0; i < HEAP_ENTRIES; i++) {
-            cache0.remove(i, String.valueOf(i));
-
-            final int size = HEAP_ENTRIES - i - 1;
-
-            assertEquals(size, cache0.localSize());
-            assertEquals(size, cache0.localSizeLong(part, PRIMARY));
-            assertEquals(size, cache0.localSizeLong(part, BACKUP));
-            assertEquals(size, cache0.localSizeLong(part, NEAR));
-            assertEquals(size, cache0.localSizeLong(part, ALL));
-
-            assertEquals(size, cache0.size());
-            assertEquals(size, cache0.sizeLong(part, PRIMARY));
-            assertEquals(size, cache0.sizeLong(part, BACKUP));
-            assertEquals(size, cache0.sizeLong(part, NEAR));
-            assertEquals(size, cache0.sizeLong(part, ALL));
-
-            assertEquals(size, (long) cache0.sizeAsync().get());
-        }
-    }
-
-    /**
      * @throws InterruptedException If failed.
      */
     @Test

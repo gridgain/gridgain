@@ -2498,8 +2498,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             if (oldRow == null)
                 incrementSize(cctx.cacheId());
 
-            KeyCacheObject key = newRow.key();
-
             GridCacheQueryManager<Object, Object> qryMgr = cctx.queries();
 
             if (qryMgr.enabled())

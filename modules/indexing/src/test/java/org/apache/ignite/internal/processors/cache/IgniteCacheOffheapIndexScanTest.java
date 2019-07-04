@@ -83,7 +83,7 @@ public class IgniteCacheOffheapIndexScanTest extends GridCommonAbstractTest {
 
         for (int i = 0; i < 150; i++) {
             String plan = (String)cache.query(new SqlFieldsQuery(
-                "explain analyze select count(*) from Person where salary = 50")).getAll().get(0).get(0);
+                "explain analyze select count(*) from Person where salary = 50").setLocal(true)).getAll().get(0).get(0);
 
             assertTrue(plan, plan.contains("scanCount: 11 "));
 
