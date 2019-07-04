@@ -68,6 +68,7 @@ import org.apache.ignite.cache.CacheMetrics;
 import org.apache.ignite.cluster.ClusterMetrics;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.failure.FailureContext;
+import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
@@ -164,6 +165,7 @@ import static org.apache.ignite.events.EventType.EVT_NODE_SEGMENTED;
 import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
 import static org.apache.ignite.failure.FailureType.SYSTEM_WORKER_TERMINATION;
 import static org.apache.ignite.internal.IgniteFeatures.TCP_DISCOVERY_MESSAGE_NODE_SERIALIZATION_OPTIMIZATION;
+import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_LATE_AFFINITY_ASSIGNMENT;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MARSHALLER;
@@ -274,7 +276,7 @@ class ServerImpl extends TcpDiscoveryImpl {
     private volatile long lastRingMsgReceivedTime;
 
     /** */
-    private volatile Boolean clusterSupportsTcpDiscoveryNodeSerializationOptimization = null;
+    private volatile boolean clusterSupportsTcpDiscoveryNodeSerializationOptimization;
 
     /** Map with proceeding ping requests. */
     private final ConcurrentMap<InetSocketAddress, GridPingFutureAdapter<IgniteBiTuple<UUID, Boolean>>> pingMap =
@@ -294,6 +296,12 @@ class ServerImpl extends TcpDiscoveryImpl {
      */
     ServerImpl(TcpDiscoverySpi adapter) {
         super(adapter);
+
+        clusterSupportsTcpDiscoveryNodeSerializationOptimization = nodeSupports(
+            gridKernalContext(),
+            adapter.locNode,
+            TCP_DISCOVERY_MESSAGE_NODE_SERIALIZATION_OPTIMIZATION
+        );
     }
 
     /** {@inheritDoc} */
@@ -338,13 +346,15 @@ class ServerImpl extends TcpDiscoveryImpl {
         return upcast(ring.visibleRemoteNodes());
     }
 
+    /** */
+    private GridKernalContext gridKernalContext() {
+        return (spi.ignite() instanceof IgniteEx)? ((IgniteEx)spi.ignite()).context(): null;
+    }
+
     /** {@inheritDoc} */
     @Override public boolean allNodesSupport(IgniteFeatures feature) {
         // It is ok to see visible node without order here because attributes are available when node is created.
-        return IgniteFeatures.allNodesSupports(
-            (spi.ignite() instanceof IgniteEx)? ((IgniteEx)spi.ignite()).context(): null,
-            upcast(ring.allNodes()),
-            feature);
+        return IgniteFeatures.allNodesSupports(gridKernalContext(), upcast(ring.allNodes()), feature);
     }
 
     /** {@inheritDoc} */
@@ -644,7 +654,7 @@ class ServerImpl extends TcpDiscoveryImpl {
     ) {
         TcpDiscoveryStatusCheckMessage msg;
 
-        if (clusterSupportsTcpDiscoveryNodeSerializationOptimization()) {
+        if (clusterSupportsTcpDiscoveryNodeSerializationOptimization) {
             boolean sameMacs = creatorNode != null && targetNode != null && U.sameMacs(creatorNode, targetNode);
 
             msg = new TcpDiscoveryStatusCheckMessage(
@@ -687,28 +697,12 @@ class ServerImpl extends TcpDiscoveryImpl {
     private TcpDiscoveryDuplicateIdMessage createTcpDiscoveryDuplicateIdMessage(UUID creatorNodeId, TcpDiscoveryNode node) {
         TcpDiscoveryDuplicateIdMessage msg;
 
-        if (clusterSupportsTcpDiscoveryNodeSerializationOptimization())
+        if (clusterSupportsTcpDiscoveryNodeSerializationOptimization)
             msg = new TcpDiscoveryDuplicateIdMessage(creatorNodeId, node.id());
         else
             msg = new TcpDiscoveryDuplicateIdMessage(creatorNodeId, node);
 
         return msg;
-    }
-
-    /** */
-    private boolean clusterSupportsTcpDiscoveryNodeSerializationOptimization() {
-        Boolean res = clusterSupportsTcpDiscoveryNodeSerializationOptimization;
-
-        if (res == null) {
-            synchronized (this) {
-                res = clusterSupportsTcpDiscoveryNodeSerializationOptimization;
-
-                if (res == null)
-                    res = allNodesSupport(TCP_DISCOVERY_MESSAGE_NODE_SERIALIZATION_OPTIMIZATION);
-            }
-        }
-
-        return res;
     }
 
     /**
@@ -4524,9 +4518,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                     if (node != null)
                         node.lastSuccessfulAddress(addr);
 
-                    ex = null;
-
-                    break;
+                    return;
                 }
                 catch (IgniteSpiException e) {
                     ex = e;
@@ -4955,7 +4947,8 @@ class ServerImpl extends TcpDiscoveryImpl {
                 log.debug("Node to finish add: " + node);
 
             //we will need to recalculate this value since the topology changed
-            clusterSupportsTcpDiscoveryNodeSerializationOptimization = null;
+            clusterSupportsTcpDiscoveryNodeSerializationOptimization &=
+                nodeSupports(gridKernalContext(), node, TCP_DISCOVERY_MESSAGE_NODE_SERIALIZATION_OPTIMIZATION);
 
             boolean locNodeCoord = isLocalNodeCoordinator();
 
@@ -5185,7 +5178,8 @@ class ServerImpl extends TcpDiscoveryImpl {
             }
 
             //we will need to recalculate this value since the topology changed
-            clusterSupportsTcpDiscoveryNodeSerializationOptimization = null;
+            clusterSupportsTcpDiscoveryNodeSerializationOptimization =
+                allNodesSupport(TCP_DISCOVERY_MESSAGE_NODE_SERIALIZATION_OPTIMIZATION);
 
             boolean locNodeCoord = isLocalNodeCoordinator();
 
@@ -5388,7 +5382,8 @@ class ServerImpl extends TcpDiscoveryImpl {
             }
 
             //we will need to recalculate this value since the topology changed
-            clusterSupportsTcpDiscoveryNodeSerializationOptimization = null;
+            clusterSupportsTcpDiscoveryNodeSerializationOptimization =
+                allNodesSupport(TCP_DISCOVERY_MESSAGE_NODE_SERIALIZATION_OPTIMIZATION);
 
             boolean locNodeCoord = isLocalNodeCoordinator();
 
