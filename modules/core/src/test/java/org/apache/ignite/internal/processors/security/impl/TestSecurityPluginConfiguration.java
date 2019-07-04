@@ -14,15 +14,20 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.query.oom;
+package org.apache.ignite.internal.processors.security.impl;
+
+import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.processors.security.GridSecurityProcessor;
+import org.apache.ignite.plugin.PluginConfiguration;
 
 /**
- * Tests for OOME on query.
+ * Grid security configuration for tests.
  */
-@Deprecated //TODO: GG-18628: Drop these tests.
-public class QueryOOMWithoutQueryParallelismTest extends AbstractQueryOOMTest {
-    /** {@inheritDoc} */
-    @Override protected int queryParallelism() {
-        return 1;
-    }
+@FunctionalInterface
+public interface TestSecurityPluginConfiguration extends PluginConfiguration {
+    /**
+     * @param ctx GridKernalContext.
+     * @return GridSecurityProcessor.
+     */
+    public GridSecurityProcessor build(GridKernalContext ctx);
 }

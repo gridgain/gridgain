@@ -45,7 +45,7 @@ public class DemoComputeLoadService implements Service {
     }
 
     /** {@inheritDoc} */
-    @Override public void init(ServiceContext ctx) throws Exception {
+    @Override public void init(ServiceContext ctx) {
         computePool = AgentDemoUtils.newScheduledThreadPool(2, "demo-compute-load-tasks");
     }
 
