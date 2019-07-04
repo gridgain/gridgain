@@ -30,26 +30,26 @@ import java.util.List;
 import java.util.stream.Stream;
 
 /**
- * Message source which support wildcards in basenames
+ * Message source which support wildcards in basenames.
  */
 public class WildcardReloadableResourceBundleMessageSource extends ReloadableResourceBundleMessageSource {
     /**
-     * Constant to define the properties file extension
+     * Constant to define the properties file extension.
      */
     private static final String PROPERTIESSUFFIX = ".properties";
 
     /**
-     * Constant to define the classes string in the URI
+     * Constant to define the classes string in the URI.
      */
     private static final String CLASSES = "classes/";
 
     /**
-     * constant to define the class path string
+     * Constant to define the class path string.
      */
     private static final String CLASSPATH = "classpath:";
 
     /**
-     * Variable reference to PathMatching resource
+     * Variable reference to PathMatching resource.
      */
     private ResourcePatternResolver ptrnRslvr = new PathMatchingResourcePatternResolver();
 

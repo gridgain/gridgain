@@ -51,7 +51,7 @@ public class AdminController {
     /** */
     private final AdminService adminSrv;
 
-    /** Messages accessor */
+    /** Messages accessor. */
     private final MessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
 
     /**

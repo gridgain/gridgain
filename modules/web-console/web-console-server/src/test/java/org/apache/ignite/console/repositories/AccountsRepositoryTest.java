@@ -38,7 +38,7 @@ public class AccountsRepositoryTest {
     private AccountsRepository accountsRepo;
 
     /**
-     * Should throw account not found
+     * Should throw account not found.
      */
     @Test
     public void testAccountNotFoundExceptionDuringDelete() {
@@ -50,7 +50,7 @@ public class AccountsRepositoryTest {
     }
 
     /**
-     * Should throw account already registered exception
+     * Should throw account already registered exception.
      */
     @Test
     public void testAccountExistByEmailDuringSave() {
@@ -76,7 +76,7 @@ public class AccountsRepositoryTest {
     }
 
     /**
-     * Should throw account already exists exception
+     * Should throw account already exists exception.
      */
     @Test
     public void testAccountExistByTokenDuringSave() {

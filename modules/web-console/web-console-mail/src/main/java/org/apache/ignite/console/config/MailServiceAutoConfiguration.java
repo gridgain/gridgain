@@ -18,7 +18,6 @@ package org.apache.ignite.console.config;
 
 import javax.activation.MimeType;
 import javax.mail.internet.MimeMessage;
-
 import org.apache.ignite.console.messages.WebConsoleMessageSource;
 import org.apache.ignite.console.services.IMailService;
 import org.apache.ignite.console.services.MailService;

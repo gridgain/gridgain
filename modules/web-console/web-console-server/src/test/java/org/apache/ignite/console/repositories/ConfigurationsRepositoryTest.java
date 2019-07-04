@@ -37,7 +37,7 @@ public class ConfigurationsRepositoryTest {
     private ConfigurationsRepository configurationsRepo;
 
     /**
-     * Should throw cluster not found exception
+     * Should throw cluster not found exception.
      */
     @Test
     public void testClusterNotFoundExceptionDuringLoadingConfiguration() {
@@ -51,7 +51,7 @@ public class ConfigurationsRepositoryTest {
     }
 
     /**
-     * Should throw cluster not found exception
+     * Should throw cluster not found exception.
      */
     @Test
     public void testClusterNotFoundExceptionDuringLoadCluster() {
@@ -65,7 +65,7 @@ public class ConfigurationsRepositoryTest {
     }
 
     /**
-     * Should throw cache not found exception
+     * Should throw cache not found exception.
      */
     @Test
     public void testCacheNotFoundExceptionDuringLoadCache() {
@@ -79,7 +79,7 @@ public class ConfigurationsRepositoryTest {
     }
 
     /**
-     * Should throw cache not found exception
+     * Should throw cache not found exception.
      */
     @Test
     public void testModelNotFoundExceptionDuringLoadCache() {

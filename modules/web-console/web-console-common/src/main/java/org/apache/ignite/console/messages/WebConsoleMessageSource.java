@@ -19,7 +19,7 @@ package org.apache.ignite.console.messages;
 import java.util.Locale;
 
 /**
- * Web console message source
+ * Web console message source.
  */
 public class WebConsoleMessageSource extends WildcardReloadableResourceBundleMessageSource {
     /** Message source. */

@@ -53,7 +53,7 @@ public class TransactionManager {
     /** */
     private final Ignite ignite;
 
-    /** Messages accessor */
+    /** Messages accessor. */
     private final MessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
 
     /** */

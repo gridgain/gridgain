@@ -22,7 +22,7 @@ import org.springframework.context.support.MessageSourceAccessor;
 import java.util.Locale;
 
 /**
- * Wrapper on MessageSourceAccessor for adding varargs method
+ * Wrapper on MessageSourceAccessor for adding varargs method.
  */
 public class WebConsoleMessageSourceAccessor extends MessageSourceAccessor {
     /**
