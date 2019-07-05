@@ -21,8 +21,10 @@ import java.util.Collection;
 import java.util.Set;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.ignite.console.dto.Account;
+import org.apache.ignite.console.dto.ClusterInfo;
 import org.apache.ignite.console.metrics.MetricsDto;
 import org.apache.ignite.console.repositories.AccountsRepository;
+import org.apache.ignite.console.repositories.ClusterInfoRepository;
 import org.apache.ignite.console.web.AbstractHandler;
 import org.apache.ignite.console.websocket.AgentHandshakeRequest;
 import org.apache.ignite.console.websocket.AgentHandshakeResponse;
@@ -52,15 +54,20 @@ public class AgentsHandler extends AbstractHandler {
     /** */
     private AccountsRepository accRepo;
 
+    /** Cluster repository. */
+    private ClusterInfoRepository clusterRepo;
+
     /** */
     private WebSocketsManager wsm;
 
     /**
      * @param accRepo Repository to work with accounts.
+     * @param clusterRepo Repository to work with clusters.
      * @param wsm Web sockets manager.
      */
-    public AgentsHandler(AccountsRepository accRepo, WebSocketsManager wsm) {
+    public AgentsHandler(AccountsRepository accRepo, ClusterInfoRepository clusterRepo, WebSocketsManager wsm) {
         this.accRepo = accRepo;
+        this.clusterRepo = clusterRepo;
         this.wsm = wsm;
     }
 
@@ -97,6 +104,8 @@ public class AgentsHandler extends AbstractHandler {
                     AgentHandshakeRequest req = fromJson(evt.getPayload(), AgentHandshakeRequest.class);
 
                     validateAgentHandshake(req);
+
+                    clusterRepo.save(new ClusterInfo(req.getClusterId(), req.getLastSeen()));
 
                     Collection<Account> accounts = loadAccounts(req.getTokens());
 
