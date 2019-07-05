@@ -17,7 +17,8 @@
 package org.apache.ignite.internal.commandline;
 
 import org.apache.ignite.internal.client.GridClientConfiguration;
-import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.tostring.GridToStringExclude;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  * Container with common parsed and validated arguments.
@@ -33,6 +34,7 @@ public class ConnectionAndSslParameters {
     private String user;
 
     /** Password. */
+    @GridToStringExclude
     private String pwd;
 
     /** Force option is used for auto confirmation. */
@@ -60,6 +62,7 @@ public class ConnectionAndSslParameters {
     private String sslKeyStoreType;
 
     /** Keystore Password. */
+    @GridToStringExclude
     private char[] sslKeyStorePassword;
 
     /** Truststore. */
@@ -69,6 +72,7 @@ public class ConnectionAndSslParameters {
     private String sslTrustStoreType;
 
     /** Truststore Password. */
+    @GridToStringExclude
     private char[] sslTrustStorePassword;
 
     /** High-level command. */
@@ -262,26 +266,10 @@ public class ConnectionAndSslParameters {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return "ConnectionAndSslParameters{" +
-            "host='" + host + '\'' +
-            ", port='" + port + '\'' +
-            ", user='" + user + '\'' +
-            (F.isEmpty(pwd) ? "" : ", pwd=********" ) +
-            ", autoConfirmation=" + autoConfirmation +
-            ", pingTimeout=" + pingTimeout +
-            ", pingInterval=" + pingInterval +
-            ", sslProtocol='" + sslProtocol + '\'' +
-            ", sslCipherSuites='" + sslCipherSuites + '\'' +
-            ", sslKeyAlgorithm='" + sslKeyAlgorithm + '\'' +
-            ", sslKeyStorePath='" + sslKeyStorePath + '\'' +
-            ", sslKeyStoreType='" + sslKeyStoreType + '\'' +
-            (sslKeyStorePassword == null || sslKeyStorePassword.length == 0 ?
-                "" : ", sslKeyStorePassword=********" ) +
-            ", sslTrustStorePath='" + sslTrustStorePath + '\'' +
-            ", sslTrustStoreType='" + sslTrustStoreType + '\'' +
-            (sslTrustStorePassword == null || sslTrustStorePassword.length == 0 ?
-                "" : ", sslTrustStorePassword=********" ) +
-            ", command=" + command.name() +
-            '}';
+        return S.toString(ConnectionAndSslParameters.class, this,
+            "password", pwd == null ? null : "*****",
+            "sslKeyStorePassword", sslKeyStorePassword == null ? null: "*****",
+            "sslTrustStorePassword", sslTrustStorePassword == null? null: "*****"
+            );
     }
 }

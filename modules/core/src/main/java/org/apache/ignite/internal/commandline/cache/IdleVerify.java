@@ -42,6 +42,7 @@ import org.apache.ignite.internal.processors.cache.verify.PartitionHashRecord;
 import org.apache.ignite.internal.processors.cache.verify.PartitionKey;
 import org.apache.ignite.internal.processors.cache.verify.VerifyBackupPartitionsTaskV2;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.visor.verify.CacheFilterEnum;
 import org.apache.ignite.internal.visor.verify.VisorIdleVerifyDumpTask;
@@ -178,14 +179,7 @@ public class IdleVerify implements Command<IdleVerify.Arguments> {
 
         /** {@inheritDoc} */
         @Override public String toString() {
-            return "Arguments{" +
-                "caches=" + caches +
-                ", excludeCaches=" + excludeCaches +
-                ", dump=" + dump +
-                ", skipZeros=" + skipZeros +
-                ", idleCheckCrc=" + idleCheckCrc +
-                ", cacheFilterEnum=" + cacheFilterEnum +
-                '}';
+            return S.toString(Arguments.class, this);
         }
     }
 

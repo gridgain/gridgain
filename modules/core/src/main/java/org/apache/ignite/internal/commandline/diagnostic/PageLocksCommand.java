@@ -31,6 +31,7 @@ import org.apache.ignite.internal.commandline.CommandLogger;
 import org.apache.ignite.internal.commandline.TaskExecutor;
 import org.apache.ignite.internal.commandline.argument.CommandArg;
 import org.apache.ignite.internal.commandline.argument.CommandArgUtils;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.visor.diagnostic.Operation;
 import org.apache.ignite.internal.visor.diagnostic.VisorPageLocksResult;
 import org.apache.ignite.internal.visor.diagnostic.VisorPageLocksTask;
@@ -207,12 +208,7 @@ public class PageLocksCommand implements Command<PageLocksCommand.Arguments> {
 
         /** {@inheritDoc} */
         @Override public String toString() {
-            return "Arguments{" +
-                "operation=" + operation +
-                ", filePath='" + filePath + '\'' +
-                ", allNodes=" + allNodes +
-                ", nodeIds=" + nodeIds +
-                '}';
+            return S.toString(Arguments.class, this);
         }
     }
 

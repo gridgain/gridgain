@@ -32,6 +32,7 @@ import org.apache.ignite.internal.commandline.cache.argument.DistributionCommand
 import org.apache.ignite.internal.commandline.cache.distribution.CacheDistributionTask;
 import org.apache.ignite.internal.commandline.cache.distribution.CacheDistributionTaskArg;
 import org.apache.ignite.internal.commandline.cache.distribution.CacheDistributionTaskResult;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 import static org.apache.ignite.internal.commandline.CommandHandler.NULL;
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
@@ -101,11 +102,7 @@ public class CacheDistribution implements Command<CacheDistribution.Arguments> {
 
         /** {@inheritDoc} */
         @Override public String toString() {
-            return "Arguments{" +
-                "caches=" + caches +
-                ", nodeId=" + nodeId +
-                ", userAttributes=" + userAttributes +
-                '}';
+            return S.toString(Arguments.class, this);
         }
     }
 

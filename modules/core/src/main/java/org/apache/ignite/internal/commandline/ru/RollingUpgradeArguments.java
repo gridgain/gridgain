@@ -15,6 +15,8 @@
  */
 package org.apache.ignite.internal.commandline.ru;
 
+import org.apache.ignite.internal.util.typedef.internal.S;
+
 /**
  * This class contains all possible arguments after parsing rolling-upgrade command input.
  */
@@ -51,10 +53,7 @@ public class RollingUpgradeArguments {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return "RollingUpgradeArguments{" +
-            "subcommand=" + subcommand +
-            ", forcedMode=" + forcedMode +
-            '}';
+        return S.toString(RollingUpgradeArguments.class, this);
     }
 
     /** */

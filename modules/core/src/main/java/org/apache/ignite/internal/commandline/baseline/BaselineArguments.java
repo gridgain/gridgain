@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.commandline.baseline;
 
 import java.util.List;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  * This class contains all possible arguments after parsing baseline command input.
@@ -90,13 +91,7 @@ public class BaselineArguments {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return "BaselineArguments{" +
-            "cmd=" + cmd +
-            ", enableAutoAdjust=" + enableAutoAdjust +
-            ", softBaselineTimeout=" + softBaselineTimeout +
-            ", topVer=" + topVer +
-            ", consistentIds=" + consistentIds +
-            '}';
+        return S.toString(BaselineArguments.class, this);
     }
 
     /**
