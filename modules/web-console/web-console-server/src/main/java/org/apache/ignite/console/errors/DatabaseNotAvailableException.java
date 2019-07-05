@@ -18,7 +18,6 @@ package org.apache.ignite.console.errors;
 
 import org.eclipse.jetty.http.BadMessageException;
 
-import static org.apache.ignite.console.errors.Errors.ERR_DB_NOT_AVAILABLE;
 import static org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE;
 
 /**

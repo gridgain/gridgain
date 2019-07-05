@@ -30,7 +30,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.web.authentication.preauth.PreAuthenticatedCredentialsNotFoundException;
 
 import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
-import static org.apache.ignite.console.errors.Errors.ERR_PARSE_SIGNIN_REQ_FAILED;
 
 /**
  * Custom filter for retrieve credentials from body and authenticate user. Default implementation use path parameters.
@@ -59,7 +58,7 @@ public class BodyReaderAuthenticationFilter extends UsernamePasswordAuthenticati
             return getAuthenticationManager().authenticate(tok);
         }
         catch (IOException e) {
-            throw new PreAuthenticatedCredentialsNotFoundException(messages.getMessage(ERR_PARSE_SIGNIN_REQ_FAILED), e);
+            throw new PreAuthenticatedCredentialsNotFoundException(messages.getMessage("err.parse-signin-req-failed"), e);
         }
     }
 }

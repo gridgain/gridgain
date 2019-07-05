@@ -37,9 +37,6 @@ import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketSession;
 
 import static java.util.stream.Collectors.toList;
-import static org.apache.ignite.console.errors.Errors.ERR_FAILED_AUTH_WITH_TOKENS;
-import static org.apache.ignite.console.errors.Errors.ERR_TOKENS_NO_SPECIFIED_IN_AGENT_HANDSHAKE_REQ;
-import static org.apache.ignite.console.errors.Errors.ERR_AGENT_UNSUPPORT_VERSION;
 import static org.apache.ignite.console.utils.Utils.fromJson;
 import static org.apache.ignite.console.websocket.AgentHandshakeRequest.SUPPORTED_VERS;
 import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_HANDSHAKE;
@@ -76,10 +73,10 @@ public class AgentsHandler extends AbstractHandler {
      */
     private void validateAgentHandshake(AgentHandshakeRequest req) {
         if (F.isEmpty(req.getTokens()))
-            throw new IllegalArgumentException(messages.getMessage(ERR_TOKENS_NO_SPECIFIED_IN_AGENT_HANDSHAKE_REQ));
+            throw new IllegalArgumentException(messages.getMessage("err.tokens-no-specified-in-agent-handshake-req"));
 
         if (!SUPPORTED_VERS.contains(req.getVersion()))
-            throw new IllegalArgumentException(messages.getMessageWithArgs(ERR_AGENT_UNSUPPORT_VERSION, req.getVersion()));
+            throw new IllegalArgumentException(messages.getMessageWithArgs("err.agent-unsupport-version", req.getVersion()));
     }
 
     /**
@@ -89,7 +86,7 @@ public class AgentsHandler extends AbstractHandler {
         Collection<Account> accounts = accRepo.getAllByTokens(tokens);
 
         if (accounts.isEmpty())
-            throw new IllegalArgumentException(messages.getMessageWithArgs(ERR_FAILED_AUTH_WITH_TOKENS, tokens));
+            throw new IllegalArgumentException(messages.getMessageWithArgs("err.failed-auth-with-tokens", tokens));
 
         return accounts;
     }

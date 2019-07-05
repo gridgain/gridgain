@@ -23,7 +23,6 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.springframework.context.support.MessageSourceAccessor;
 
 import static java.lang.Boolean.FALSE;
-import static org.apache.ignite.console.errors.Errors.ERR_MODEL_ID_NOT_FOUND;
 import static org.apache.ignite.console.utils.Utils.toJson;
 
 /**
@@ -48,7 +47,7 @@ public class Model extends DataObject {
         MessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
 
         if (id == null)
-            throw new IllegalStateException(messages.getMessage(ERR_MODEL_ID_NOT_FOUND));
+            throw new IllegalStateException(messages.getMessage("err.model-id-not-found"));
 
         boolean generatePojo = FALSE.equals(json.getBoolean("generatePojo"));
         boolean missingDb = F.isEmpty(json.getString("databaseSchema")) && F.isEmpty(json.getString("databaseTable"));

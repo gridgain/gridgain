@@ -41,10 +41,6 @@ import static java.util.stream.Collectors.toMap;
 import static org.apache.ignite.console.common.Utils.diff;
 import static org.apache.ignite.console.common.Utils.idsFromJson;
 import static org.apache.ignite.console.common.Utils.toJsonArray;
-import static org.apache.ignite.console.errors.Errors.ERR_CACHE_NOT_FOUND_BY_ID;
-import static org.apache.ignite.console.errors.Errors.ERR_CLUSTER_NOT_FOUND_BY_ID;
-import static org.apache.ignite.console.errors.Errors.ERR_DATA_ACCESS_VIOLATION;
-import static org.apache.ignite.console.errors.Errors.ERR_MODEL_NOT_FOUND_BY_ID;
 import static org.apache.ignite.console.utils.Utils.asJson;
 import static org.apache.ignite.console.utils.Utils.fromJson;
 import static org.apache.ignite.console.utils.Utils.toJson;
@@ -96,25 +92,25 @@ public class ConfigurationsRepository {
             cachesIdx = new OneToManyIndex<>(
                     ignite,
                     "wc_cluster_caches_idx",
-                    (key) -> messages.getMessage(ERR_DATA_ACCESS_VIOLATION)
+                    (key) -> messages.getMessage("err.data-access-violation")
             );
 
             modelsIdx = new OneToManyIndex<>(
                     ignite,
                     "wc_cluster_models_idx",
-                    (key) -> messages.getMessage(ERR_DATA_ACCESS_VIOLATION)
+                    (key) -> messages.getMessage("err.data-access-violation")
             );
 
             clustersIdx = new OneToManyIndex<>(
                     ignite,
                     "wc_account_clusters_idx",
-                    (key) -> messages.getMessage(ERR_DATA_ACCESS_VIOLATION)
+                    (key) -> messages.getMessage("err.data-access-violation")
             );
 
             cfgIdx = new OneToManyIndex<>(
                     ignite,
                     "wc_account_configs_idx",
-                    (key) -> messages.getMessage(ERR_DATA_ACCESS_VIOLATION)
+                    (key) -> messages.getMessage("err.data-access-violation")
             );
         });
     }
@@ -129,7 +125,7 @@ public class ConfigurationsRepository {
             Cluster cluster = clustersTbl.load(clusterId);
 
             if (cluster == null)
-                throw new IllegalStateException(messages.getMessageWithArgs(ERR_CLUSTER_NOT_FOUND_BY_ID, clusterId));
+                throw new IllegalStateException(messages.getMessageWithArgs("err.cluster-not-found-by-id", clusterId));
 
             clustersIdx.validate(key, clusterId);
 
@@ -189,7 +185,7 @@ public class ConfigurationsRepository {
             Cluster cluster = clustersTbl.load(clusterId);
 
             if (cluster == null)
-                throw new IllegalStateException(messages.getMessageWithArgs(ERR_CLUSTER_NOT_FOUND_BY_ID, clusterId));
+                throw new IllegalStateException(messages.getMessageWithArgs("err.cluster-not-found-by-id", clusterId));
 
             clustersIdx.validate(key, clusterId);
 
@@ -207,7 +203,7 @@ public class ConfigurationsRepository {
             Cache cache = cachesTbl.load(cacheId);
 
             if (cache == null)
-                throw new IllegalStateException(messages.getMessageWithArgs(ERR_CACHE_NOT_FOUND_BY_ID, cacheId));
+                throw new IllegalStateException(messages.getMessageWithArgs("err.cache-not-found-by-id", cacheId));
 
             cfgIdx.validate(key, cacheId);
 
@@ -225,7 +221,7 @@ public class ConfigurationsRepository {
             Model mdl = modelsTbl.load(mdlId);
 
             if (mdl == null)
-                throw new IllegalStateException(messages.getMessageWithArgs(ERR_MODEL_NOT_FOUND_BY_ID, mdlId));
+                throw new IllegalStateException(messages.getMessageWithArgs("err.model-not-found-by-id", mdlId));
 
             cfgIdx.validate(key, mdlId);
 

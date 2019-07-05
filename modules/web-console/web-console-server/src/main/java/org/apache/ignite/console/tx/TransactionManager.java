@@ -34,9 +34,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.stereotype.Service;
 
-import static org.apache.ignite.console.errors.Errors.ERR_ACTIVE_TX_NOT_FOUND;
-import static org.apache.ignite.console.errors.Errors.ERR_DB_LOST_CONNECTION_DURING_TX;
-import static org.apache.ignite.console.errors.Errors.ERR_DB_NOT_AVAILABLE;
 import static org.apache.ignite.console.errors.Errors.checkDatabaseNotAvailable;
 import static org.apache.ignite.console.errors.Errors.convertToDatabaseNotAvailableException;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
@@ -169,11 +166,11 @@ public class TransactionManager {
                     recreateCaches();
                 }
                 catch (IgniteException re) {
-                    throw convertToDatabaseNotAvailableException(re, messages.getMessage(ERR_DB_NOT_AVAILABLE));
+                    throw convertToDatabaseNotAvailableException(re, messages.getMessage("err.db-not-available"));
                 }
 
                 if (tx() instanceof NestedTransaction)
-                    throw new IllegalStateException(messages.getMessage(ERR_DB_LOST_CONNECTION_DURING_TX));
+                    throw new IllegalStateException(messages.getMessage("err.db-lost-connection-during-tx"));
 
                 return doInTransaction0(act);
             }
@@ -202,6 +199,6 @@ public class TransactionManager {
      */
     public void checkInTransaction() {
         if (tx() == null)
-            throw new IllegalStateException(messages.getMessage(ERR_ACTIVE_TX_NOT_FOUND));
+            throw new IllegalStateException(messages.getMessage("err.active-tx-not-found"));
     }
 }

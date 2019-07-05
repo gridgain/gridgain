@@ -39,7 +39,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import springfox.documentation.annotations.ApiIgnore;
 
-import static org.apache.ignite.console.errors.Errors.ERR_PROHIBITED_REVOKE_ADMIN_RIGHTS;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 /**
@@ -85,7 +84,7 @@ public class AdminController {
         boolean admin = params.isAdmin();
 
         if (acc.getId().equals(accId) && !admin)
-            throw new IllegalStateException(messages.getMessage(ERR_PROHIBITED_REVOKE_ADMIN_RIGHTS));
+            throw new IllegalStateException(messages.getMessage("err.prohibited-revoke-admin-rights"));
 
         adminSrv.toggle(accId, admin);
 

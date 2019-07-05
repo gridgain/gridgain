@@ -27,7 +27,6 @@ import org.springframework.session.MapSession;
 import org.springframework.session.Session;
 import org.springframework.session.SessionRepository;
 
-import static org.apache.ignite.console.errors.Errors.ERR_DB_NOT_AVAILABLE;
 import static org.apache.ignite.console.errors.Errors.convertToDatabaseNotAvailableException;
 
 /**
@@ -92,7 +91,7 @@ public class IgniteSessionRepository implements SessionRepository<ExpiringSessio
             cache().put(ses.getId(), new MapSession(ses));
         }
         catch (RuntimeException e) {
-            throw convertToDatabaseNotAvailableException(e, messages.getMessage(ERR_DB_NOT_AVAILABLE));
+            throw convertToDatabaseNotAvailableException(e, messages.getMessage("err.db-not-available"));
         }
     }
 
@@ -113,7 +112,7 @@ public class IgniteSessionRepository implements SessionRepository<ExpiringSessio
             return ses;
         }
         catch (RuntimeException e) {
-            throw convertToDatabaseNotAvailableException(e, messages.getMessage(ERR_DB_NOT_AVAILABLE));
+            throw convertToDatabaseNotAvailableException(e, messages.getMessage("err.db-not-available"));
         }
     }
 
@@ -123,7 +122,7 @@ public class IgniteSessionRepository implements SessionRepository<ExpiringSessio
             cache().remove(id);
         }
         catch (RuntimeException e) {
-            throw convertToDatabaseNotAvailableException(e, messages.getMessage(ERR_DB_NOT_AVAILABLE));
+            throw convertToDatabaseNotAvailableException(e, messages.getMessage("err.db-not-available"));
         }
     }
 }

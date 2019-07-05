@@ -42,11 +42,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import static java.time.temporal.ChronoUnit.MILLIS;
-import static org.apache.ignite.console.errors.Errors.ERR_ACCOUNT_NOT_FOUND_BY_TOKEN;
-import static org.apache.ignite.console.errors.Errors.ERR_ACTIVATION_NOT_ENABLED;
-import static org.apache.ignite.console.errors.Errors.ERR_CONFIRM_EMAIL;
-import static org.apache.ignite.console.errors.Errors.ERR_SIGNUP_NOT_ALLOWED;
-import static org.apache.ignite.console.errors.Errors.ERR_TOO_MANY_ACTIVATION_ATTEMPTS;
 import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_CREATE;
 import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_UPDATE;
 import static org.apache.ignite.console.event.AccountEventType.PASSWORD_CHANGED;
@@ -156,7 +151,7 @@ public class AccountsService implements UserDetailsService {
             Account acc0 = create(params);
 
             if (disableSignup && !acc0.isAdmin())
-                throw new AuthenticationServiceException(messages.getMessage(ERR_SIGNUP_NOT_ALLOWED));
+                throw new AuthenticationServiceException(messages.getMessage("err.sign-up-not-allowed"));
 
             return acc0;
         });
@@ -164,7 +159,7 @@ public class AccountsService implements UserDetailsService {
         if (activationEnabled) {
             evtPublisher.publish(new Event<>(RESET_ACTIVATION_TOKEN, acc));
 
-            throw new MissingConfirmRegistrationException(messages.getMessage(ERR_CONFIRM_EMAIL), acc.getEmail());
+            throw new MissingConfirmRegistrationException(messages.getMessage("err.confirm-email"), acc.getEmail());
         }
 
         evtPublisher.publish(new Event<>(ACCOUNT_CREATE, acc));
@@ -228,13 +223,13 @@ public class AccountsService implements UserDetailsService {
      */
     public void resetActivationToken(String email) {
         if (!activationEnabled)
-            throw new IllegalAccessError(messages.getMessage(ERR_ACTIVATION_NOT_ENABLED));
+            throw new IllegalAccessError(messages.getMessage("err.activation-not-enabled"));
 
         Account acc = txMgr.doInTransaction(() -> {
             Account acc0 = accountsRepo.getByEmail(email);
 
             if (MILLIS.between(acc0.getActivationSentAt(), LocalDateTime.now()) >= activationSndTimeout)
-                throw new IllegalAccessError(messages.getMessage(ERR_TOO_MANY_ACTIVATION_ATTEMPTS));
+                throw new IllegalAccessError(messages.getMessage("err.too-many-activation-attempts"));
 
             acc0.resetActivationToken();
 
@@ -308,7 +303,7 @@ public class AccountsService implements UserDetailsService {
             Account acc = accountsRepo.getByEmail(email);
 
             if (!resetPwdTok.equals(acc.getResetPasswordToken()))
-                throw new IllegalStateException(messages.getMessage(ERR_ACCOUNT_NOT_FOUND_BY_TOKEN));
+                throw new IllegalStateException(messages.getMessage("err.account-not-found-by-token"));
 
             userDetailsChecker.check(acc);
 

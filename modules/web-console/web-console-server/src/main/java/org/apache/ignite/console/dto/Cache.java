@@ -25,7 +25,6 @@ import org.springframework.context.support.MessageSourceAccessor;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
-import static org.apache.ignite.console.errors.Errors.ERR_CACHE_ID_NOT_FOUND;
 import static org.apache.ignite.console.utils.Utils.toJson;
 
 /**
@@ -53,7 +52,7 @@ public class Cache extends DataObject {
         MessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
 
         if (id == null)
-            throw new IllegalStateException(messages.getMessage(ERR_CACHE_ID_NOT_FOUND));
+            throw new IllegalStateException(messages.getMessage("err.cache-id-not-found"));
 
         return new Cache(
             id,

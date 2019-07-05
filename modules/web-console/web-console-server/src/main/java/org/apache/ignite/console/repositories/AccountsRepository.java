@@ -34,9 +34,6 @@ import org.springframework.security.authentication.AuthenticationServiceExceptio
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Repository;
 
-import static org.apache.ignite.console.errors.Errors.ERR_ACCOUNT_NOT_FOUND_BY_ID;
-import static org.apache.ignite.console.errors.Errors.ERR_ACCOUNT_WITH_EMAIL_EXISTS;
-import static org.apache.ignite.console.errors.Errors.ERR_ACCOUNT_WITH_TOKEN_EXISTS;
 import static org.apache.ignite.console.errors.Errors.checkDatabaseNotAvailable;
 
 /**
@@ -66,9 +63,9 @@ public class AccountsRepository {
         txMgr.registerStarter("accounts", () ->
             accountsTbl = new Table<Account>(ignite, "wc_accounts")
                 .addUniqueIndex(a -> a.getUsername().trim().toLowerCase(),
-                    (acc) -> messages.getMessageWithArgs(ERR_ACCOUNT_WITH_EMAIL_EXISTS, acc.getUsername()))
+                    (acc) -> messages.getMessageWithArgs("err.account-with-email-exists", acc.getUsername()))
                 .addUniqueIndex(Account::getToken,
-                    (acc) -> messages.getMessageWithArgs(ERR_ACCOUNT_WITH_TOKEN_EXISTS, acc.getToken()))
+                    (acc) -> messages.getMessageWithArgs("err.account-with-token-exists", acc.getToken()))
         );
     }
 
@@ -177,7 +174,7 @@ public class AccountsRepository {
             Account acc = accountsTbl.delete(accId);
 
             if (acc == null)
-                throw new IllegalStateException(messages.getMessageWithArgs(ERR_ACCOUNT_NOT_FOUND_BY_ID, accId));
+                throw new IllegalStateException(messages.getMessageWithArgs("err.account-not-found-by-id", accId));
 
             return acc;
         });

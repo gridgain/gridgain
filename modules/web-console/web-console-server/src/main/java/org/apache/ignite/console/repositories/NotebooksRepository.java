@@ -28,8 +28,6 @@ import org.apache.ignite.console.tx.TransactionManager;
 import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.stereotype.Repository;
 
-import static org.apache.ignite.console.errors.Errors.ERR_DATA_ACCESS_VIOLATION;
-
 /**
  * Repository to work with notebooks.
  */
@@ -59,7 +57,7 @@ public class NotebooksRepository {
             notebooksIdx = new OneToManyIndex<>(
                     ignite,
                     "wc_account_notebooks_idx",
-                    (key) -> messages.getMessage(ERR_DATA_ACCESS_VIOLATION)
+                    (key) -> messages.getMessage("err.data-access-violation")
             );
         });
     }

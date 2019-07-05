@@ -36,7 +36,6 @@ import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.stereotype.Repository;
 
 import static java.time.ZoneOffset.UTC;
-import static org.apache.ignite.console.errors.Errors.ERR_DATA_ACCESS_VIOLATION;
 
 /**
  * Repository to work with activities.
@@ -67,7 +66,7 @@ public class ActivitiesRepository {
             activitiesIdx = new OneToManyIndex<>(
                     ignite,
                     "wc_account_activities_idx",
-                    (key) -> messages.getMessage(ERR_DATA_ACCESS_VIOLATION)
+                    (key) -> messages.getMessage("err.data-access-violation")
             );
         });
     }

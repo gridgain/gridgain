@@ -42,11 +42,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketSession;
 
-import static org.apache.ignite.console.errors.Errors.ERR_ACCOUNT_CANT_BE_FOUND_IN_WS_SESSION;
-import static org.apache.ignite.console.errors.Errors.ERR_MISSING_CLUSTER_ID_PARAM;
-import static org.apache.ignite.console.errors.Errors.ERR_NOT_SPECIFIED_TASK_ID;
-import static org.apache.ignite.console.errors.Errors.ERR_UNKNOWN_EVT;
-import static org.apache.ignite.console.errors.Errors.ERR_UNKNOWN_TASK;
 import static org.apache.ignite.console.utils.Utils.fromJson;
 import static org.apache.ignite.console.websocket.WebSocketEvents.NODE_REST;
 import static org.apache.ignite.console.websocket.WebSocketEvents.NODE_VISOR;
@@ -101,7 +96,7 @@ public class BrowsersHandler extends AbstractHandler {
                 return (Account)tp;
         }
 
-        throw new IllegalStateException(messages.getMessageWithArgs(ERR_ACCOUNT_CANT_BE_FOUND_IN_WS_SESSION, ws));
+        throw new IllegalStateException(messages.getMessageWithArgs("err.account-cant-be-found-in-ws-session", ws));
     }
 
     /** {@inheritDoc} */
@@ -133,7 +128,7 @@ public class BrowsersHandler extends AbstractHandler {
                     String clusterId = payload.getString("clusterId");
 
                     if (F.isEmpty(clusterId))
-                        throw new IllegalStateException(messages.getMessage(ERR_MISSING_CLUSTER_ID_PARAM));
+                        throw new IllegalStateException(messages.getMessage("err.missing-cluster-id-param"));
 
                     WebSocketResponse reqEvt = evt.getEventType().equals(NODE_REST) ?
                         evt.response() : evt.withPayload(prepareNodeVisorParams(payload));
@@ -143,7 +138,7 @@ public class BrowsersHandler extends AbstractHandler {
                     break;
 
                 default:
-                    throw new IllegalStateException(messages.getMessageWithArgs(ERR_UNKNOWN_EVT, evt));
+                    throw new IllegalStateException(messages.getMessageWithArgs("err.unknown-evt", evt));
             }
         }
         catch (IllegalStateException e) {
@@ -257,14 +252,14 @@ public class BrowsersHandler extends AbstractHandler {
         String taskId = params.getString("taskId");
 
         if (F.isEmpty(taskId))
-            throw new IllegalStateException(messages.getMessageWithArgs(ERR_NOT_SPECIFIED_TASK_ID, payload));
+            throw new IllegalStateException(messages.getMessageWithArgs("err.not-specified-task-id", payload));
 
         String nids = params.getString("nids");
 
         VisorTaskDescriptor desc = visorTasks.get(taskId);
 
         if (desc == null)
-            throw new IllegalStateException(messages.getMessageWithArgs(ERR_UNKNOWN_TASK, taskId, payload));
+            throw new IllegalStateException(messages.getMessageWithArgs("err.unknown-task", taskId, payload));
 
         JsonObject exeParams =  new JsonObject()
             .add("cmd", "exe")

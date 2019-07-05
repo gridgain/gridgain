@@ -38,7 +38,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.ignite.console.common.Utils.currentRequestOrigin;
-import static org.apache.ignite.console.errors.Errors.ERR_AGENT_DIST_NOT_FOUND;
 import static org.apache.ignite.internal.util.io.GridFilenameUtils.removeExtension;
 import static org.springframework.http.HttpHeaders.CACHE_CONTROL;
 import static org.springframework.http.HttpHeaders.CONTENT_DISPOSITION;
@@ -78,7 +77,7 @@ public class AgentDownloadController {
         Path latestAgentPath = Files.list(agentFolder)
             .filter(f -> !Files.isDirectory(f) && ptrn.matcher(f.getFileName().toString()).matches())
             .max(Comparator.comparingLong(f -> f.toFile().lastModified()))
-            .orElseThrow(() -> new FileNotFoundException(messages.getMessage(ERR_AGENT_DIST_NOT_FOUND)));
+            .orElseThrow(() -> new FileNotFoundException(messages.getMessage("err.agent-dist-not-found")));
 
             try (ZipArchiveOutputStream zos = new ZipArchiveOutputStream(res.getOutputStream())) {
                 String latestAgentFileName = latestAgentPath.getFileName().toString();

@@ -48,8 +48,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
-import static org.apache.ignite.console.errors.Errors.ERR_AGENT_NOT_FOUND_BY_ACC_ID;
-import static org.apache.ignite.console.errors.Errors.ERR_AGENT_NOT_FOUND_BY_ACC_ID_AND_CLUSTER_ID;
 import static org.apache.ignite.console.utils.Utils.toJson;
 import static org.apache.ignite.console.websocket.WebSocketEvents.ADMIN_ANNOUNCEMENT;
 import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_REVOKE_TOKEN;
@@ -171,7 +169,7 @@ public class WebSocketsManager {
             .filter(e -> e.getValue().isActiveAccount(accId))
             .findFirst()
             .map(Map.Entry::getKey)
-            .orElseThrow(() -> new IllegalStateException(messages.getMessageWithArgs(ERR_AGENT_NOT_FOUND_BY_ACC_ID, accId)));
+            .orElseThrow(() -> new IllegalStateException(messages.getMessageWithArgs("err.agent-not-found-by-acc-id", accId)));
 
         if (log.isDebugEnabled())
             log.debug("Found agent session [accountId=" + accId + ", session=" + wsAgent + ", event=" + evt + "]");
@@ -196,7 +194,7 @@ public class WebSocketsManager {
             .filter(e -> e.getValue().getClusterIds().contains(clusterId))
             .findFirst()
             .map(Map.Entry::getKey)
-            .orElseThrow(() -> new IllegalStateException(messages.getMessageWithArgs(ERR_AGENT_NOT_FOUND_BY_ACC_ID_AND_CLUSTER_ID, accId, clusterId)));
+            .orElseThrow(() -> new IllegalStateException(messages.getMessageWithArgs("err.agent-not-found-by-acc-id-and-cluster-id", accId, clusterId)));
 
         if (log.isDebugEnabled())
             log.debug("Found agent session [accountId=" + accId + ", session=" + wsAgent + ", event=" + evt + "]");

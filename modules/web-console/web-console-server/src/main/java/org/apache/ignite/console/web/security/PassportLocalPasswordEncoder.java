@@ -28,7 +28,6 @@ import org.springframework.security.crypto.keygen.BytesKeyGenerator;
 import org.springframework.security.crypto.keygen.KeyGenerators;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import static org.apache.ignite.console.errors.Errors.ERR_COULD_NOT_CREATE_HASH;
 import static org.springframework.security.crypto.util.EncodingUtils.concatenate;
 import static org.springframework.security.crypto.util.EncodingUtils.subArray;
 
@@ -136,7 +135,7 @@ public class PassportLocalPasswordEncoder implements PasswordEncoder {
             return concatenate(salt, skf.generateSecret(spec).getEncoded());
         }
         catch (GeneralSecurityException e) {
-            throw new IllegalStateException(messages.getMessage(ERR_COULD_NOT_CREATE_HASH), e);
+            throw new IllegalStateException(messages.getMessage("err.could-not-create-hash"), e);
         }
     }
 }
