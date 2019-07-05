@@ -117,7 +117,7 @@ public class VisorBaselineTaskArg extends VisorDataTransferObject {
     /**
      * @return Baseline auto adjust enable flag.
      */
-    public boolean isAutoAdjustEnabled() {
+    public Boolean isAutoAdjustEnabled() {
         return autoAdjustEnabled;
     }
 

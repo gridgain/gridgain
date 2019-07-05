@@ -228,7 +228,8 @@ public class VisorBaselineTask extends VisorOneNodeTask<VisorBaselineTaskArg, Vi
          * @return New baseline.
          */
         private VisorBaselineTaskResult updateAutoAdjustmentSettings(VisorBaselineTaskArg settings) {
-            ignite.cluster().baselineAutoAdjustEnabled(settings.isAutoAdjustEnabled());
+            if (settings.isAutoAdjustEnabled() != null)
+                ignite.cluster().baselineAutoAdjustEnabled(settings.isAutoAdjustEnabled());
 
             if (settings.getAutoAdjustAwaitingTime() != null)
                 ignite.cluster().baselineAutoAdjustTimeout(settings.getAutoAdjustAwaitingTime());
