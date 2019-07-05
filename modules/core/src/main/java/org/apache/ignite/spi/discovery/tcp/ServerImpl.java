@@ -276,7 +276,8 @@ class ServerImpl extends TcpDiscoveryImpl {
     private volatile long lastRingMsgReceivedTime;
 
     /** */
-    private volatile boolean clusterSupportsTcpDiscoveryNodeSerializationOptimization;
+    private volatile boolean clusterSupportsTcpDiscoveryNodeSerializationOptimization =
+        true; //assume that local node supports this feature
 
     /** Map with proceeding ping requests. */
     private final ConcurrentMap<InetSocketAddress, GridPingFutureAdapter<IgniteBiTuple<UUID, Boolean>>> pingMap =
@@ -296,12 +297,6 @@ class ServerImpl extends TcpDiscoveryImpl {
      */
     ServerImpl(TcpDiscoverySpi adapter) {
         super(adapter);
-
-        clusterSupportsTcpDiscoveryNodeSerializationOptimization = nodeSupports(
-            gridKernalContext(),
-            adapter.getLocalNode(),
-            TCP_DISCOVERY_MESSAGE_NODE_SERIALIZATION_OPTIMIZATION
-        );
     }
 
     /** {@inheritDoc} */
@@ -631,7 +626,7 @@ class ServerImpl extends TcpDiscoveryImpl {
         if (!res && node.clientRouterNodeId() == null && nodeAlive(nodeId)) {
             LT.warn(log, "Failed to ping node (status check will be initiated): " + nodeId);
 
-            msgWorker.addMessage(createTcpDiscoveryStatusCheckMessage(locNode, locNode.id(), node.id(), locNode));
+            msgWorker.addMessage(createTcpDiscoveryStatusCheckMessage(locNode, locNode.id(), node.id()));
         }
 
         return res;
@@ -643,21 +638,21 @@ class ServerImpl extends TcpDiscoveryImpl {
      * @param creatorNode Creator node.
      * @param creatorNodeId Creator node id, is used when <code>creatorNode</code> is null.
      * @param failedNodeId Failed node id.
-     * @param targetNode Target node where message will be sent.
      * @return new instance of {@link TcpDiscoveryStatusCheckMessage}.
      */
     private TcpDiscoveryStatusCheckMessage createTcpDiscoveryStatusCheckMessage(
         @Nullable TcpDiscoveryNode creatorNode,
         @Nullable UUID creatorNodeId,
-        UUID failedNodeId,
-        @Nullable TcpDiscoveryNode targetNode
+        UUID failedNodeId
     ) {
         assert creatorNode != null || creatorNodeId != null;
 
         TcpDiscoveryStatusCheckMessage msg;
 
         if (clusterSupportsTcpDiscoveryNodeSerializationOptimization) {
-            boolean sameMacs = creatorNode != null && targetNode != null && U.sameMacs(creatorNode, targetNode);
+            TcpDiscoveryNode crd = resolveCoordinator();
+
+            boolean sameMacs = creatorNode != null && crd != null && U.sameMacs(creatorNode, crd);
 
             msg = new TcpDiscoveryStatusCheckMessage(
                 creatorNode == null ? creatorNodeId : creatorNode.id(),
@@ -679,14 +674,12 @@ class ServerImpl extends TcpDiscoveryImpl {
      * Creates new instance of {@link TcpDiscoveryDuplicateIdMessage}.
      *
      * @param msg Message.
-     * @param targetNode Target node.
      * @return new instance of {@link TcpDiscoveryDuplicateIdMessage}.
      */
     private TcpDiscoveryStatusCheckMessage createTcpDiscoveryStatusCheckMessage(
-        TcpDiscoveryStatusCheckMessage msg,
-        TcpDiscoveryNode targetNode
+        TcpDiscoveryStatusCheckMessage msg
     ) {
-        return createTcpDiscoveryStatusCheckMessage(msg.creatorNode(), msg.creatorNodeId(), msg.failedNodeId(), targetNode);
+        return createTcpDiscoveryStatusCheckMessage(msg.creatorNode(), msg.creatorNodeId(), msg.failedNodeId());
     }
 
     /**
@@ -5546,7 +5539,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                                 TcpDiscoveryStatusCheckMessage msg0 = msg;
 
                                 if (F.contains(msg.failedNodes(), msg.creatorNodeId())) {
-                                    msg0 = createTcpDiscoveryStatusCheckMessage(msg, msg.creatorNode());
+                                    msg0 = createTcpDiscoveryStatusCheckMessage(msg);
 
                                     msg0.failedNodes(null);
 
@@ -6158,7 +6151,7 @@ class ServerImpl extends TcpDiscoveryImpl {
             if (elapsed > 0)
                 return;
 
-            msgWorker.addMessage(createTcpDiscoveryStatusCheckMessage(locNode, null, null, locNode));
+            msgWorker.addMessage(createTcpDiscoveryStatusCheckMessage(locNode, null, null));
 
             lastTimeStatusMsgSentNanos = System.nanoTime();
         }

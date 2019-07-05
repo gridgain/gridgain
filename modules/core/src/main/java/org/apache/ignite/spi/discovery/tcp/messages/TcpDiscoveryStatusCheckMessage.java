@@ -63,15 +63,14 @@ public class TcpDiscoveryStatusCheckMessage extends TcpDiscoveryAbstractMessage 
         super(creatorNode.id());
 
         this.creatorNode = creatorNode;
-
         this.failedNodeId = failedNodeId;
-
         this.creatorNodeAddrs = null;
     }
 
     /**
      * Constructor.
      *
+     * @param creatorNodeAddrs Addresses of creator node, used to be able not to serialize node in message.
      * @param creatorNodeId Creator node ID.
      * @param failedNodeId Failed node id.
      */
@@ -79,9 +78,7 @@ public class TcpDiscoveryStatusCheckMessage extends TcpDiscoveryAbstractMessage 
         super(creatorNodeId);
 
         this.creatorNodeAddrs = creatorNodeAddrs;
-
         this.creatorNode = null;
-
         this.failedNodeId = failedNodeId;
     }
 

@@ -44,7 +44,6 @@ public class TcpDiscoveryDuplicateIdMessage extends TcpDiscoveryAbstractMessage 
         super(creatorNodeId);
 
         assert node != null;
-
         this.node = node;
 
         this.nodeId = null;
