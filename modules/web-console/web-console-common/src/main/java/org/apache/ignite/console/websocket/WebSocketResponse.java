@@ -55,10 +55,8 @@ public class WebSocketResponse implements WebSocketEvent<Object> {
         this.payload = payload;
     }
 
-    /**
-     * @return Request ID.
-     */
-    public String getRequestId() {
+    /** {@inheritDoc} */
+    @Override public String getRequestId() {
         return reqId;
     }
 

@@ -376,7 +376,7 @@ public class WebSocketsManager {
         agents.keySet().forEach(ws -> {
             try {
                 if (ws.isOpen())
-                    sendMessage(ws, new WebSocketEvent(PULL_METRICS, "dummy"));
+                    sendMessage(ws, new WebSocketResponse(PULL_METRICS, "dummy"));
             }
             catch (Throwable e) {
                 log.error("Failed to send PULL_METRICS request [session=" + ws + "]");
