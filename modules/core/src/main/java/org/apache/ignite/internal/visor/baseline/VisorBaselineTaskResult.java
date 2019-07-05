@@ -100,8 +100,8 @@ public class VisorBaselineTaskResult extends VisorDataTransferObject {
         long topVer,
         Collection<? extends BaselineNode> baseline,
         Collection<? extends BaselineNode> servers,
-        boolean autoAdjustEnabled,
-        long autoAdjustAwaitingTime,
+        Boolean autoAdjustEnabled,
+        Long autoAdjustAwaitingTime,
         long remainingTimeToBaselineAdjust,
         boolean baselineAdjustInProgress
     ) {
@@ -183,7 +183,7 @@ public class VisorBaselineTaskResult extends VisorDataTransferObject {
         U.writeMap(out, baseline);
         U.writeMap(out, servers);
         out.writeObject(autoAdjustEnabled);
-        out.writeLong(autoAdjustAwaitingTime);
+        out.writeObject(autoAdjustAwaitingTime);
         out.writeLong(remainingTimeToBaselineAdjust);
         out.writeBoolean(baselineAdjustInProgress);
     }
@@ -197,8 +197,8 @@ public class VisorBaselineTaskResult extends VisorDataTransferObject {
         servers = U.readTreeMap(in);
 
         if (protoVer > V1) {
-            autoAdjustEnabled = in.readBoolean();
-            autoAdjustAwaitingTime = in.readLong();
+            autoAdjustEnabled = (Boolean)in.readObject();
+            autoAdjustAwaitingTime = (Long)in.readObject();
             remainingTimeToBaselineAdjust = in.readLong();
             baselineAdjustInProgress = in.readBoolean();
         }

@@ -41,10 +41,10 @@ public class VisorBaselineTaskArg extends VisorDataTransferObject {
     private List<String> consistentIds;
 
     /** Baseline auto adjust enable flag. */
-    private boolean autoAdjustEnabled;
+    private Boolean autoAdjustEnabled;
 
     /** Awaiting time of baseline auto adjust after last topology event in ms. */
-    private long autoAdjustAwaitingTime;
+    private Long autoAdjustAwaitingTime;
 
     /**
      * Default constructor.
@@ -65,7 +65,7 @@ public class VisorBaselineTaskArg extends VisorDataTransferObject {
         long topVer,
         List<String> consistentIds
     ) {
-        this(op, topVer, consistentIds, false, 0);
+        this(op, topVer, consistentIds, null, null);
     }
 
     /**
@@ -78,8 +78,8 @@ public class VisorBaselineTaskArg extends VisorDataTransferObject {
         VisorBaselineOperation op,
         long topVer,
         List<String> consistentIds,
-        boolean autoAdjustEnabled,
-        long autoAdjustAwaitingTime
+        Boolean autoAdjustEnabled,
+        Long autoAdjustAwaitingTime
     ) {
         this.op = op;
         this.topVer = topVer;
@@ -124,7 +124,7 @@ public class VisorBaselineTaskArg extends VisorDataTransferObject {
     /**
      * @return Await time of baseline auto adjust after last topology event in ms.
      */
-    public long getAutoAdjustAwaitingTime() {
+    public Long getAutoAdjustAwaitingTime() {
         return autoAdjustAwaitingTime;
     }
 
@@ -133,8 +133,8 @@ public class VisorBaselineTaskArg extends VisorDataTransferObject {
         U.writeEnum(out, op);
         out.writeLong(topVer);
         U.writeCollection(out, consistentIds);
-        out.writeBoolean(autoAdjustEnabled);
-        out.writeLong(autoAdjustAwaitingTime);
+        out.writeObject(autoAdjustEnabled);
+        out.writeObject(autoAdjustAwaitingTime);
     }
 
     /** {@inheritDoc} */
@@ -144,8 +144,8 @@ public class VisorBaselineTaskArg extends VisorDataTransferObject {
         consistentIds = U.readList(in);
 
         if (protoVer > V1) {
-            autoAdjustEnabled = in.readBoolean();
-            autoAdjustAwaitingTime = in.readLong();
+            autoAdjustEnabled = (Boolean)in.readObject();
+            autoAdjustAwaitingTime = (Long)in.readObject();
         }
     }
 
