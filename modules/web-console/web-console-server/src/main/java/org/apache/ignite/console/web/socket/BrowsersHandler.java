@@ -31,7 +31,8 @@ import org.apache.ignite.console.messages.WebConsoleMessageSource;
 import org.apache.ignite.console.messages.WebConsoleMessageSourceAccessor;
 import org.apache.ignite.console.web.AbstractHandler;
 import org.apache.ignite.console.web.model.VisorTaskDescriptor;
-import org.apache.ignite.console.websocket.WebSocketEvent;
+import org.apache.ignite.console.websocket.WebSocketRequest;
+import org.apache.ignite.console.websocket.WebSocketResponse;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.slf4j.Logger;
@@ -115,13 +116,13 @@ public class BrowsersHandler extends AbstractHandler {
     }
 
     /** {@inheritDoc} */
-    @Override public void handleEvent(WebSocketSession ws, WebSocketEvent evt) {
+    @Override public void handleEvent(WebSocketSession ws, WebSocketRequest evt) {
         try {
             switch (evt.getEventType()) {
                 case SCHEMA_IMPORT_DRIVERS:
                 case SCHEMA_IMPORT_SCHEMAS:
                 case SCHEMA_IMPORT_METADATA:
-                    wsm.sendToFirstAgent(ws, evt);
+                    wsm.sendToFirstAgent(ws, evt.response());
 
                     break;
 
@@ -134,8 +135,8 @@ public class BrowsersHandler extends AbstractHandler {
                     if (F.isEmpty(clusterId))
                         throw new IllegalStateException(messages.getMessage(ERR_MISSING_CLUSTER_ID_PARAM));
 
-                    WebSocketEvent reqEvt = evt.getEventType().equals(NODE_REST) ?
-                        evt : evt.withPayload(prepareNodeVisorParams(payload));
+                    WebSocketResponse reqEvt = evt.getEventType().equals(NODE_REST) ?
+                        evt.response() : evt.withPayload(prepareNodeVisorParams(payload));
 
                     wsm.sendToNode(ws, clusterId, reqEvt);
 

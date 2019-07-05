@@ -37,8 +37,8 @@ import org.springframework.stereotype.Service;
 import static org.apache.ignite.console.errors.Errors.ERR_ACTIVE_TX_NOT_FOUND;
 import static org.apache.ignite.console.errors.Errors.ERR_DB_LOST_CONNECTION_DURING_TX;
 import static org.apache.ignite.console.errors.Errors.ERR_DB_NOT_AVAILABLE;
-import static org.apache.ignite.console.errors.Errors.convertToDatabaseNotAvailableException;
 import static org.apache.ignite.console.errors.Errors.checkDatabaseNotAvailable;
+import static org.apache.ignite.console.errors.Errors.convertToDatabaseNotAvailableException;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
 
