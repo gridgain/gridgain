@@ -45,12 +45,9 @@ import org.junit.Test;
 
 /**
  */
-public class IgnitePdsRestartAfterRebalancingTest extends GridCommonAbstractTest implements Serializable {
+public class IgnitePdsRestartAfterFailedToWriteMetaPageTest extends GridCommonAbstractTest implements Serializable {
     /** Serial version uid. */
     private static final long serialVersionUID = 0L;
-
-    /** */
-    protected static final String CACHE_NAME = "cache1";
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
@@ -72,7 +69,7 @@ public class IgnitePdsRestartAfterRebalancingTest extends GridCommonAbstractTest
 
         CacheConfiguration ccfg = new CacheConfiguration();
 
-        ccfg.setName(CACHE_NAME);
+        ccfg.setName(DEFAULT_CACHE_NAME);
         ccfg.setCacheMode(CacheMode.REPLICATED);
 
         cfg.setCacheConfiguration(ccfg);
@@ -108,7 +105,7 @@ public class IgnitePdsRestartAfterRebalancingTest extends GridCommonAbstractTest
         AtomicBoolean stop = new AtomicBoolean();
 
         IgniteInternalFuture<Long> fut = GridTestUtils.runMultiThreadedAsync(() -> {
-            IgniteCache<Integer, Integer> cache = grid.cache(CACHE_NAME);
+            IgniteCache<Integer, Integer> cache = grid.cache(DEFAULT_CACHE_NAME);
 
             ThreadLocalRandom rnd = ThreadLocalRandom.current();
 
