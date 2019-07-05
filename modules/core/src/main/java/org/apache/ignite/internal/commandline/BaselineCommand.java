@@ -151,15 +151,15 @@ public class BaselineCommand implements Command<BaselineArguments> {
             logger.info("Baseline auto adjustment " + (TRUE.equals(res.isAutoAdjustEnabled()) ? "enabled" : "disabled") +
                 ": softTimeout=" + res.getAutoAdjustAwaitingTime()
             );
-        }
 
-        if (res.isAutoAdjustEnabled()) {
-            if (res.isBaselineAdjustInProgress())
-                logger.info("Baseline auto-adjust is in progress");
-            else if (res.getRemainingTimeToBaselineAdjust() < 0)
-                logger.info("Baseline auto-adjust are not scheduled");
-            else
-                logger.info("Baseline auto-adjust will happen in '" + res.getRemainingTimeToBaselineAdjust() + "' ms");
+            if (res.isAutoAdjustEnabled()) {
+                if (res.isBaselineAdjustInProgress())
+                    logger.info("Baseline auto-adjust is in progress");
+                else if (res.getRemainingTimeToBaselineAdjust() < 0)
+                    logger.info("Baseline auto-adjust are not scheduled");
+                else
+                    logger.info("Baseline auto-adjust will happen in '" + res.getRemainingTimeToBaselineAdjust() + "' ms");
+            }
         }
 
         logger.info("");
