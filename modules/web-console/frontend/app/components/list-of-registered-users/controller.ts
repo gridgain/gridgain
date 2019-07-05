@@ -185,7 +185,7 @@ export default class IgniteListOfRegisteredUsersCtrl {
         $scope.$watch(() => this.params.endDate, filterDates);
     }
 
-    subscriber: Subscription
+    subscriber: Subscription;
 
     $onDestroy() {
         if (this.subscriber) this.subscriber.unsubscribe();
@@ -241,7 +241,7 @@ export default class IgniteListOfRegisteredUsersCtrl {
     becomeUser() {
         const user = this.gridApi.selection.legacyGetSelectedRows()[0];
 
-        this.AdminData.becomeUser(user.id)
+        this.AdminData.becomeUser(user.email)
             .then(() => this.User.load())
             .then(() => this.$state.go('default-state'))
             .then(() => this.NotebookData.load());

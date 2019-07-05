@@ -16,7 +16,6 @@
 
 import {UserService} from '../../modules/user/User.service';
 import {DemoService} from 'app/modules/demo/Demo.module';
-import {pluck} from 'rxjs/operators';
 import {default as AdminData} from 'app/core/admin/Admin.data';
 
 export default class PermanentNotifications {
@@ -30,7 +29,7 @@ export default class PermanentNotifications {
         private AdminData: AdminData
     ) {}
 
-    user$ = this.User.current$
+    user$ = this.User.current$;
 
     closeDemo() {
         this.$window.close();

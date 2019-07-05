@@ -31,7 +31,6 @@ import org.apache.ignite.console.dto.Activity;
 import org.apache.ignite.console.dto.ActivityKey;
 import org.apache.ignite.console.tx.TransactionManager;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.transactions.Transaction;
 import org.springframework.stereotype.Repository;
 
 import static java.time.ZoneOffset.UTC;
@@ -45,10 +44,10 @@ public class ActivitiesRepository {
     private final TransactionManager txMgr;
 
     /** */
-    private final Table<Activity> activitiesTbl;
+    private Table<Activity> activitiesTbl;
 
     /** */
-    private final OneToManyIndex<ActivityKey> activitiesIdx;
+    private OneToManyIndex<ActivityKey> activitiesIdx;
 
     /**
      * @param ignite Ignite.
@@ -57,9 +56,11 @@ public class ActivitiesRepository {
     public ActivitiesRepository(Ignite ignite, TransactionManager txMgr) {
         this.txMgr = txMgr;
 
-        activitiesTbl = new Table<>(ignite, "wc_activities");
+        txMgr.registerStarter("activities", () -> {
+            activitiesTbl = new Table<>(ignite, "wc_activities");
 
-        activitiesIdx = new OneToManyIndex<>(ignite, "wc_account_activities_idx");
+            activitiesIdx = new OneToManyIndex<>(ignite, "wc_account_activities_idx");
+        });
     }
 
     /**
@@ -68,9 +69,11 @@ public class ActivitiesRepository {
      * @param accId Account ID.
      * @param grp Activity group.
      * @param act Activity action.
+     *
+     * @return Activity.
      */
-    public void save(UUID accId, String grp, String act) {
-        try (Transaction tx = txMgr.txStart()) {
+    public Activity save(UUID accId, String grp, String act) {
+        return txMgr.doInTransaction(() -> {
             // Activity period is the current year and month.
             long date = LocalDate.now().atStartOfDay(UTC).withDayOfMonth(1).toInstant().toEpochMilli();
 
@@ -84,7 +87,7 @@ public class ActivitiesRepository {
                 .stream()
                 .filter(item -> item.getGroup().equals(grp) && item.getAction().equals(act))
                 .findFirst()
-                .orElse(new Activity(UUID.randomUUID(), grp, act, 0));
+                .orElse(new Activity(UUID.randomUUID(), accId, grp, act, 0));
 
             activity.increment(1);
 
@@ -94,8 +97,8 @@ public class ActivitiesRepository {
 
             activitiesIdx.addAll(activityKey, ids);
 
-            tx.commit();
-        }
+            return activity;
+        });
     }
 
     /**
@@ -104,7 +107,7 @@ public class ActivitiesRepository {
      * @param endDate End date.
      */
     public Collection<Activity> activitiesForPeriod(UUID accId, long startDate, long endDate) {
-        try (Transaction ignored = txMgr.txStart()) {
+        return txMgr.doInTransaction(() -> {
             ZonedDateTime dtStart = Instant.ofEpochMilli(startDate).atZone(UTC);
             ZonedDateTime dtEnd = Instant.ofEpochMilli(endDate).atZone(UTC);
 
@@ -132,7 +135,7 @@ public class ActivitiesRepository {
             }
 
             return totals.values();
-        }
+        });
     }
 
     /**
@@ -140,7 +143,7 @@ public class ActivitiesRepository {
      * @param activity Activity to save.
      */
     public void save(ActivityKey activityKey, Activity activity) {
-        try (Transaction tx = txMgr.txStart()) {
+        txMgr.doInTransaction(() -> {
             Set<UUID> ids = activitiesIdx.load(activityKey);
 
             activitiesTbl.save(activity);
@@ -148,8 +151,6 @@ public class ActivitiesRepository {
             ids.add(activity.getId());
 
             activitiesIdx.addAll(activityKey, ids);
-
-            tx.commit();
-        }
+        });
     }
 }

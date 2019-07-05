@@ -176,7 +176,6 @@ import org.h2.table.IndexColumn;
 import org.h2.util.JdbcUtils;
 import org.jetbrains.annotations.Nullable;
 
-import static java.lang.Boolean.FALSE;
 import static java.util.Collections.singletonList;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_MVCC_TX_SIZE_CACHING_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccCachingManager.TX_SIZE_THRESHOLD;
@@ -191,7 +190,6 @@ import static org.apache.ignite.internal.processors.query.h2.H2Utils.generateFie
 import static org.apache.ignite.internal.processors.query.h2.H2Utils.session;
 import static org.apache.ignite.internal.processors.query.h2.H2Utils.validateTypeDescriptor;
 import static org.apache.ignite.internal.processors.query.h2.H2Utils.zeroCursor;
-import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2QueryRequest.isDataPageScanEnabled;
 
 /**
  * Indexing implementation based on H2 database engine. In this implementation main query language is SQL,
@@ -262,6 +260,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
     /** Parser. */
     private QueryParser parser;
+
+    /** Memory manager */
+    private QueryMemoryManager memoryManager;
 
     /** */
     private final IgniteInClosure<? super IgniteInternalFuture<?>> logger = new IgniteInClosure<IgniteInternalFuture<?>>() {
@@ -528,7 +529,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 null,
                 mvccSnapshot,
                 null,
-                maxMem < 0 ? null : new QueryMemoryTracker(maxMem),
+                maxMem < 0 ? null : memoryManager.createQueryMemoryTracker(maxMem),
                 true
             );
 
@@ -765,6 +766,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             stmt = useStmtCache ? connMgr.prepareStatement(conn, sql) : connMgr.prepareStatementNoCache(conn, sql);
         }
         catch (SQLException e) {
+            H2Utils.resetSession(conn);
+
             throw new IgniteCheckedException("Failed to parse SQL query: " + sql, e);
         }
 
@@ -784,7 +787,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      * @throws IgniteCheckedException If failed.
      */
     private ResultSet executeSqlQuery(final Connection conn, final PreparedStatement stmt,
-        int timeoutMillis, @Nullable GridQueryCancel cancel) throws IgniteCheckedException {
+        int timeoutMillis, @Nullable GridQueryCancel cancel) throws IgniteCheckedException  {
         if (cancel != null)
             cancel.set(() -> cancelStatement(stmt));
 
@@ -803,7 +806,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             if (e.getErrorCode() == ErrorCode.STATEMENT_WAS_CANCELED)
                 throw new QueryCancelledException();
 
-            throw new IgniteCheckedException("Failed to execute SQL query. " + e.getMessage(), e);
+            if (e.getCause() instanceof IgniteSQLException)
+                throw (IgniteSQLException)e.getCause();
+
+            throw new IgniteSQLException(e);
         }
     }
 
@@ -851,7 +857,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      */
     public void enableDataPageScan(Boolean dataPageScanEnabled) {
         // Data page scan is enabled by default for SQL.
-        CacheDataTree.setDataPageScanEnabled(dataPageScanEnabled != FALSE);
+        // TODO https://ggsystems.atlassian.net/browse/GG-20800
+        CacheDataTree.setDataPageScanEnabled(false);
     }
 
     /**
@@ -940,7 +947,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         res.setReplicatedOnly(qry.isReplicatedOnly());
         res.setSchema(schemaName);
         res.setSql(sql);
-        res.setDataPageScanEnabled(qry.isDataPageScanEnabled());
 
         if (qry.getTimeout() > 0)
             res.setTimeout(qry.getTimeout(), TimeUnit.MILLISECONDS);
@@ -1387,7 +1393,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 try {
                     return new GridQueryCacheObjectsIterator(res.iterator(), objectContext(), keepBinary);
                 }
-                catch (IgniteCheckedException e) {
+                catch (IgniteCheckedException | IgniteSQLException e) {
                     throw new CacheException(e);
                 }
             };
@@ -1489,7 +1495,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             DynamicCacheDescriptor desc = ctx.cache().cacheDescriptor(cacheId);
 
             if (desc != null)
-                ctx.security().authorize(desc.cacheName(), SecurityPermission.CACHE_READ, null);
+                ctx.security().authorize(desc.cacheName(), SecurityPermission.CACHE_READ);
         }
     }
 
@@ -1517,7 +1523,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         fldsQry.setTimeout(timeout, TimeUnit.MILLISECONDS);
         fldsQry.setPageSize(pageSize);
         fldsQry.setLocal(true);
-        fldsQry.setDataPageScanEnabled(isDataPageScanEnabled(flags));
 
         boolean loc = true;
 
@@ -1557,8 +1562,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             .setEnforceJoinOrder(fldsQry.isEnforceJoinOrder())
             .setLocal(fldsQry.isLocal())
             .setPageSize(fldsQry.getPageSize())
-            .setTimeout(fldsQry.getTimeout(), TimeUnit.MILLISECONDS)
-            .setDataPageScanEnabled(fldsQry.isDataPageScanEnabled());
+            .setTimeout(fldsQry.getTimeout(), TimeUnit.MILLISECONDS);
 
         QueryCursorImpl<List<?>> cur;
 
@@ -1909,6 +1913,13 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         return runningQryMgr;
     }
 
+    /**
+     * @return Reduce query executor.
+     */
+    public QueryMemoryManager memoryManager() {
+        return memoryManager;
+    }
+
     /** {@inheritDoc} */
     @SuppressWarnings({"deprecation"})
     @Override public void start(GridKernalContext ctx, GridSpinBusyLock busyLock) throws IgniteCheckedException {
@@ -1938,6 +1949,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         nodeId = ctx.localNodeId();
         marshaller = ctx.config().getMarshaller();
+
+        memoryManager = new QueryMemoryManager(ctx, 0); //TODO: GG-18629: Get global_memory_quota value from configuration.
 
         mapQryExec = new GridMapQueryExecutor();
         rdcQryExec = new GridReduceQueryExecutor();
@@ -2162,6 +2175,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         connMgr.stop();
 
         cmdProc.stop();
+
+        memoryManager.close();
 
         if (log.isDebugEnabled())
             log.debug("Cache query index stopped.");
@@ -2679,8 +2694,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             .setEnforceJoinOrder(qryDesc.enforceJoinOrder())
             .setLocal(qryDesc.local())
             .setPageSize(qryParams.pageSize())
-            .setTimeout(qryParams.timeout(), TimeUnit.MILLISECONDS)
-            .setDataPageScanEnabled(qryParams.dataPageScanEnabled());
+            .setTimeout(qryParams.timeout(), TimeUnit.MILLISECONDS);
 
         Iterable<List<?>> cur;
 
@@ -2807,8 +2821,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                         .setEnforceJoinOrder(qryDesc.enforceJoinOrder())
                         .setLocal(qryDesc.local())
                         .setPageSize(qryParams.pageSize())
-                        .setTimeout((int)timeout, TimeUnit.MILLISECONDS)
-                        .setDataPageScanEnabled(qryParams.dataPageScanEnabled());
+                        .setTimeout((int)timeout, TimeUnit.MILLISECONDS);
 
                     FieldsQueryCursor<List<?>> cur = executeSelectForDml(
                         qryDesc.schemaName(),
@@ -2899,7 +2912,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
             U.error(log, "Error during update [localNodeId=" + ctx.localNodeId() + "]", ex);
 
-            throw new IgniteSQLException("Failed to run update. " + ex.getMessage(), ex);
+            throw new IgniteSQLException("Failed to run SQL update query. " + ex.getMessage(), ex);
         }
         finally {
             if (commit)

@@ -22,6 +22,8 @@ import java.util.UUID;
 import org.apache.ignite.console.config.ActivationConfiguration;
 import org.apache.ignite.console.config.SignUpConfiguration;
 import org.apache.ignite.console.dto.Account;
+import org.apache.ignite.console.event.Event;
+import org.apache.ignite.console.event.EventPublisher;
 import org.apache.ignite.console.repositories.AccountsRepository;
 import org.apache.ignite.console.tx.TransactionManager;
 import org.apache.ignite.console.web.model.ChangeUserRequest;
@@ -29,7 +31,7 @@ import org.apache.ignite.console.web.model.SignUpRequest;
 import org.apache.ignite.console.web.security.MissingConfirmRegistrationException;
 import org.apache.ignite.console.web.socket.WebSocketsManager;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.transactions.Transaction;
+import org.apache.ignite.internal.util.typedef.T2;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.core.userdetails.UserDetailsChecker;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -38,29 +40,30 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import static java.time.temporal.ChronoUnit.MILLIS;
-import static org.apache.ignite.console.notification.NotificationDescriptor.ACTIVATION_LINK;
-import static org.apache.ignite.console.notification.NotificationDescriptor.PASSWORD_CHANGED;
-import static org.apache.ignite.console.notification.NotificationDescriptor.PASSWORD_RESET;
-import static org.apache.ignite.console.notification.NotificationDescriptor.WELCOME_LETTER;
+import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_CREATE;
+import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_UPDATE;
+import static org.apache.ignite.console.event.AccountEventType.PASSWORD_CHANGED;
+import static org.apache.ignite.console.event.AccountEventType.PASSWORD_RESET;
+import static org.apache.ignite.console.event.AccountEventType.RESET_ACTIVATION_TOKEN;
 
 /**
  * Service to handle accounts.
  */
 @Service
 public class AccountsService implements UserDetailsService {
-    /** */
+    /** Tx manager. */
     protected TransactionManager txMgr;
 
-    /** */
+    /** Accounts repository. */
     protected AccountsRepository accountsRepo;
 
-    /** */
+    /** Web socket manager. */
     protected WebSocketsManager wsm;
 
-    /** */
-    protected NotificationService notificationSrv;
+    /** Event publisher. */
+    protected EventPublisher evtPublisher;
 
-    /** */
+    /** Password encoder. */
     protected PasswordEncoder encoder;
 
     /** User details getChecker. */
@@ -82,7 +85,7 @@ public class AccountsService implements UserDetailsService {
      * @param wsm Websocket manager.
      * @param accountsRepo Accounts repository.
      * @param txMgr Transactions manager.
-     * @param notificationSrv Notification service.
+     * @param evtPublisher Event publisher.
      */
     public AccountsService(
         SignUpConfiguration signUpCfg,
@@ -91,7 +94,7 @@ public class AccountsService implements UserDetailsService {
         WebSocketsManager wsm,
         AccountsRepository accountsRepo,
         TransactionManager txMgr,
-        NotificationService notificationSrv
+        EventPublisher evtPublisher
     ) {
         disableSignup = !signUpCfg.isEnabled();
         userDetailsChecker = activationCfg.getChecker();
@@ -102,7 +105,7 @@ public class AccountsService implements UserDetailsService {
         this.wsm = wsm;
         this.accountsRepo = accountsRepo;
         this.txMgr = txMgr;
-        this.notificationSrv = notificationSrv;
+        this.evtPublisher = evtPublisher;
     }
 
     /** {@inheritDoc} */
@@ -139,22 +142,22 @@ public class AccountsService implements UserDetailsService {
      * @param params SignUp params.
      */
     public void register(SignUpRequest params) {
-        try (Transaction tx = txMgr.txStart()) {
-            Account acc = create(params);
+        Account acc = txMgr.doInTransaction(() -> {
+            Account acc0 = create(params);
 
-            if (disableSignup && !acc.isAdmin())
+            if (disableSignup && !acc0.isAdmin())
                 throw new AuthenticationServiceException("Sign-up is not allowed. Ask your administrator to create account for you.");
 
-            tx.commit();
+            return acc0;
+        });
 
-            if (activationEnabled) {
-                notificationSrv.sendEmail(ACTIVATION_LINK, acc);
+        if (activationEnabled) {
+            evtPublisher.publish(new Event<>(RESET_ACTIVATION_TOKEN, acc));
 
-                throw new MissingConfirmRegistrationException("Confirm your email", acc.getEmail());
-            }
-
-            notificationSrv.sendEmail(WELCOME_LETTER, acc);
+            throw new MissingConfirmRegistrationException("Confirm your email", acc.getEmail());
         }
+
+        evtPublisher.publish(new Event<>(ACCOUNT_CREATE, acc));
     }
 
     /**
@@ -182,17 +185,15 @@ public class AccountsService implements UserDetailsService {
      * @param adminFlag New value for admin flag.
      */
     public void toggle(UUID accId, boolean adminFlag) {
-        try (Transaction tx = txMgr.txStart()) {
+        txMgr.doInTransaction(() -> {
             Account account = accountsRepo.getById(accId);
 
             if (account.isAdmin() != adminFlag) {
                 account.setAdmin(adminFlag);
 
                 accountsRepo.save(account);
-
-                tx.commit();
             }
-        }
+        });
     }
 
     /**
@@ -201,15 +202,13 @@ public class AccountsService implements UserDetailsService {
      * @param accId Account id.
      */
     public void activateAccount(UUID accId) {
-        try (Transaction tx = txMgr.txStart()) {
+        txMgr.doInTransaction(() -> {
             Account acc = accountsRepo.getById(accId);
 
             acc.activate();
 
             accountsRepo.save(acc);
-
-            tx.commit();
-        }
+        });
     }
 
     /**
@@ -221,20 +220,20 @@ public class AccountsService implements UserDetailsService {
         if (!activationEnabled)
             throw new IllegalAccessError("Activation was not enabled!");
 
-        try (Transaction tx = txMgr.txStart()) {
-            Account acc = accountsRepo.getByEmail(email);
+        Account acc = txMgr.doInTransaction(() -> {
+            Account acc0 = accountsRepo.getByEmail(email);
 
-            if (MILLIS.between(acc.getActivationSentAt(), LocalDateTime.now()) >= activationSndTimeout)
+            if (MILLIS.between(acc0.getActivationSentAt(), LocalDateTime.now()) >= activationSndTimeout)
                 throw new IllegalAccessError("Too many activation attempts");
 
-            acc.resetActivationToken();
+            acc0.resetActivationToken();
 
-            accountsRepo.save(acc);
+            accountsRepo.save(acc0);
 
-            tx.commit();
+            return acc0;
+        });
 
-            notificationSrv.sendEmail(ACTIVATION_LINK, acc);
-        }
+        evtPublisher.publish(new Event<>(RESET_ACTIVATION_TOKEN, acc));
     }
 
     /**
@@ -244,10 +243,8 @@ public class AccountsService implements UserDetailsService {
      * @param changes Changes to apply to user.
      */
     public Account save(UUID accId, ChangeUserRequest changes) {
-        try (Transaction tx = txMgr.txStart()) {
+        T2<Account, String> res = txMgr.doInTransaction(() -> {
             Account acc = accountsRepo.getById(accId);
-
-            String oldTok = acc.getToken();
 
             acc.update(changes);
 
@@ -256,34 +253,39 @@ public class AccountsService implements UserDetailsService {
             if (!F.isEmpty(pwd))
                 acc.setPassword(encoder.encode(pwd));
 
-            accountsRepo.save(acc);
+            Account oldAcc = accountsRepo.save(acc);
 
-            tx.commit();
+            return new T2<>(acc, oldAcc.getToken());
+        });
 
-            if (!oldTok.equals(acc.getToken()))
-                wsm.revokeToken(acc, oldTok);
+        Account acc = res.get1();
+        String oldTok = res.get2();
 
-            return acc;
-        }
+        if (!oldTok.equals(acc.getToken()))
+            wsm.revokeToken(acc, oldTok);
+
+        evtPublisher.publish(new Event<>(ACCOUNT_UPDATE, acc));
+
+        return acc;
     }
 
     /**
      * @param email User email to send reset password link.
      */
     public void forgotPassword(String email) {
-        try (Transaction tx = txMgr.txStart()) {
-            Account acc = accountsRepo.getByEmail(email);
+        Account acc = txMgr.doInTransaction(() -> {
+            Account acc0 = accountsRepo.getByEmail(email);
 
-            userDetailsChecker.check(acc);
+            userDetailsChecker.check(acc0);
 
-            acc.setResetPasswordToken(UUID.randomUUID().toString());
+            acc0.setResetPasswordToken(UUID.randomUUID().toString());
 
-            accountsRepo.save(acc);
+            accountsRepo.save(acc0);
 
-            tx.commit();
+            return acc0;
+        });
 
-            notificationSrv.sendEmail(PASSWORD_RESET, acc);
-        }
+        evtPublisher.publish(new Event<>(PASSWORD_RESET, acc));
     }
 
     /**
@@ -292,7 +294,7 @@ public class AccountsService implements UserDetailsService {
      * @param newPwd New password.
      */
     public void resetPasswordByToken(String email, String resetPwdTok, String newPwd) {
-        try (Transaction tx = txMgr.txStart()) {
+        txMgr.doInTransaction(() -> {
             Account acc = accountsRepo.getByEmail(email);
 
             if (!resetPwdTok.equals(acc.getResetPasswordToken()))
@@ -305,9 +307,7 @@ public class AccountsService implements UserDetailsService {
 
             accountsRepo.save(acc);
 
-            tx.commit();
-
-            notificationSrv.sendEmail(PASSWORD_CHANGED, acc);
-        }
+            evtPublisher.publish(new Event<>(PASSWORD_CHANGED, acc));
+        });
     }
 }
