@@ -299,7 +299,7 @@ class ServerImpl extends TcpDiscoveryImpl {
 
         clusterSupportsTcpDiscoveryNodeSerializationOptimization = nodeSupports(
             gridKernalContext(),
-            adapter.locNode,
+            adapter.getLocalNode(),
             TCP_DISCOVERY_MESSAGE_NODE_SERIALIZATION_OPTIMIZATION
         );
     }
@@ -348,7 +348,7 @@ class ServerImpl extends TcpDiscoveryImpl {
 
     /** */
     private GridKernalContext gridKernalContext() {
-        return (spi.ignite() instanceof IgniteEx)? ((IgniteEx)spi.ignite()).context(): null;
+        return (spi.ignite() instanceof IgniteEx) ? ((IgniteEx)spi.ignite()).context() : null;
     }
 
     /** {@inheritDoc} */
@@ -652,6 +652,8 @@ class ServerImpl extends TcpDiscoveryImpl {
         UUID failedNodeId,
         @Nullable TcpDiscoveryNode targetNode
     ) {
+        assert creatorNode != null || creatorNodeId != null;
+
         TcpDiscoveryStatusCheckMessage msg;
 
         if (clusterSupportsTcpDiscoveryNodeSerializationOptimization) {
@@ -4541,7 +4543,7 @@ class ServerImpl extends TcpDiscoveryImpl {
             TcpDiscoveryNode node = ring.node(nodeId);
 
             if (node == null) {
-                if (addrs != null)
+                if (!F.isEmpty(addrs))
                     trySendMessageDirectlyToAddrs(addrs, null, msg);
                 else
                     throw new IgniteSpiException("Node does not exist: " + nodeId);
@@ -5180,10 +5182,6 @@ class ServerImpl extends TcpDiscoveryImpl {
                 return;
             }
 
-            //we will need to recalculate this value since the topology changed
-            clusterSupportsTcpDiscoveryNodeSerializationOptimization =
-                allNodesSupport(TCP_DISCOVERY_MESSAGE_NODE_SERIALIZATION_OPTIMIZATION);
-
             boolean locNodeCoord = isLocalNodeCoordinator();
 
             if (locNodeCoord) {
@@ -5199,6 +5197,10 @@ class ServerImpl extends TcpDiscoveryImpl {
             }
 
             if (msg.verified() && !locNodeId.equals(leavingNodeId)) {
+                //we will need to recalculate this value since the topology changed
+                clusterSupportsTcpDiscoveryNodeSerializationOptimization =
+                    allNodesSupport(TCP_DISCOVERY_MESSAGE_NODE_SERIALIZATION_OPTIMIZATION);
+
                 TcpDiscoveryNode leftNode = ring.removeNode(leavingNodeId);
 
                 interruptPing(leavingNode);
@@ -5384,10 +5386,6 @@ class ServerImpl extends TcpDiscoveryImpl {
                 return;
             }
 
-            //we will need to recalculate this value since the topology changed
-            clusterSupportsTcpDiscoveryNodeSerializationOptimization =
-                allNodesSupport(TCP_DISCOVERY_MESSAGE_NODE_SERIALIZATION_OPTIMIZATION);
-
             boolean locNodeCoord = isLocalNodeCoordinator();
 
             UUID locNodeId = getLocalNodeId();
@@ -5410,6 +5408,10 @@ class ServerImpl extends TcpDiscoveryImpl {
             }
 
             if (msg.verified()) {
+                //we will need to recalculate this value since the topology changed
+                clusterSupportsTcpDiscoveryNodeSerializationOptimization =
+                    allNodesSupport(TCP_DISCOVERY_MESSAGE_NODE_SERIALIZATION_OPTIMIZATION);
+
                 failedNode = ring.removeNode(failedNodeId);
 
                 interruptPing(failedNode);
