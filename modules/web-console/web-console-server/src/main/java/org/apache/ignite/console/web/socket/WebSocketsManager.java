@@ -371,8 +371,6 @@ public class WebSocketsManager {
     /** */
     @Scheduled(fixedRate = 5_000)
     public void pullMetrics() {
-        log.info("Pull metrics...");
-
         agents.keySet().forEach(ws -> {
             try {
                 if (ws.isOpen())

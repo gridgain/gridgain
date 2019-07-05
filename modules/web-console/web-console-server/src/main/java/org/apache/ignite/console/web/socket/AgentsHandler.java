@@ -21,6 +21,7 @@ import java.util.Collection;
 import java.util.Set;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.ignite.console.dto.Account;
+import org.apache.ignite.console.metrics.MetricsDto;
 import org.apache.ignite.console.repositories.AccountsRepository;
 import org.apache.ignite.console.web.AbstractHandler;
 import org.apache.ignite.console.websocket.AgentHandshakeRequest;
@@ -138,7 +139,9 @@ public class AgentsHandler extends AbstractHandler {
                 break;
 
             case PULL_METRICS:
-                log.info("Received metrics: " + evt);
+                MetricsDto metrics = fromJson(evt.getPayload(), MetricsDto.class);
+
+                log.info("Received metrics [nid=" + metrics.getNodeId() + ", ts=" + metrics.getTimestamp() + "]");
 
                 break;
 
