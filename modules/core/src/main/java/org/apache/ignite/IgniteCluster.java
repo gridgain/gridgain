@@ -529,6 +529,24 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
     public boolean isWalEnabled(String cacheName);
 
     /**
+     *
+     * @return
+     */
+    public UUID id();
+
+    /**
+     *
+     * @return
+     */
+    public String tag();
+
+    /**
+     *
+     * @param tag
+     */
+    public void tag (String tag);
+
+    /**
      * @return Value of manual baseline control or auto adjusting baseline. {@code True} If cluster in auto-adjust.
      * {@code False} If cluster in manuale.
      */
