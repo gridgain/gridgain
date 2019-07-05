@@ -26,6 +26,8 @@ import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
@@ -124,6 +126,9 @@ public class WebSocketRouter implements AutoCloseable {
     /** Active tokens after handshake. */
     private List<String> validTokens;
 
+    /** Connector pool. */
+    private ExecutorService connectorPool = Executors.newSingleThreadExecutor(r -> new Thread(r, "Connect thread"));
+
     /**
      * @param cfg Configuration.
      */
@@ -207,7 +212,7 @@ public class WebSocketRouter implements AutoCloseable {
     /**
      * Connect to backend.
      */
-    private void connect() {
+    private void connect0() {
         try {
             stopClient();
 
@@ -251,6 +256,13 @@ public class WebSocketRouter implements AutoCloseable {
     }
 
     /**
+     * Connect to backend.
+     */
+    private void connect() {
+        connectorPool.submit(this::connect0);
+    }
+
+    /**
      * @throws InterruptedException If await failed.
      */
     public void awaitClose() throws InterruptedException {
@@ -271,13 +283,15 @@ public class WebSocketRouter implements AutoCloseable {
      */
     @OnWebSocketConnect
     public void onConnect(Session ses) {
-        try {
-            AgentHandshakeRequest req = new AgentHandshakeRequest(CURRENT_VER, cfg.tokens());
+        AgentHandshakeRequest req = new AgentHandshakeRequest(CURRENT_VER, cfg.tokens());
 
+        try {
             send(ses, new WebSocketResponse(AGENT_HANDSHAKE, req));
         }
         catch (Throwable e) {
             log.error("Failed to send handshake to server", e);
+
+            connect();
         }
     }
 
@@ -411,6 +425,8 @@ public class WebSocketRouter implements AutoCloseable {
             }
             catch (Exception ex) {
                 log.error("Failed to send response with error", e);
+
+                connect();
             }
         }
     }
