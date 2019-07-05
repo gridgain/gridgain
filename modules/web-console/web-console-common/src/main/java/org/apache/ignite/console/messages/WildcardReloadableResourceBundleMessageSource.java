@@ -36,7 +36,7 @@ public class WildcardReloadableResourceBundleMessageSource extends ReloadableRes
     /**
      * Constant to define the properties file extension.
      */
-    private static final String PROPERTIESSUFFIX = ".properties";
+    private static final String PROPERTIES_SUFFIX = ".properties";
 
     /**
      * Constant to define the classes string in the URI.
@@ -46,7 +46,7 @@ public class WildcardReloadableResourceBundleMessageSource extends ReloadableRes
     /**
      * Constant to define the class path string.
      */
-    private static final String CLASSPATH = "classpath:";
+    private static final String CLASS_PATH = "classpath:";
 
     /**
      * Variable reference to PathMatching resource.
@@ -101,15 +101,15 @@ public class WildcardReloadableResourceBundleMessageSource extends ReloadableRes
             String baseName = null;
             String uri = rsrc.getURI().toString();
 
-            if (!uri.endsWith(PROPERTIESSUFFIX))
+            if (!uri.endsWith(PROPERTIES_SUFFIX))
                 return baseName;
 
             if (rsrc instanceof ClassPathResource)
-                baseName = StringUtils.substringBefore(uri, PROPERTIESSUFFIX);
+                baseName = StringUtils.substringBefore(uri, PROPERTIES_SUFFIX);
             else if (rsrc instanceof UrlResource)
-                baseName = CLASSPATH + StringUtils.substringBetween(uri, ".jar!/", PROPERTIESSUFFIX);
+                baseName = CLASS_PATH + StringUtils.substringBetween(uri, ".jar!/", PROPERTIES_SUFFIX);
             else
-                baseName = CLASSPATH + StringUtils.substringBetween(uri, CLASSES, PROPERTIESSUFFIX);
+                baseName = CLASS_PATH + StringUtils.substringBetween(uri, CLASSES, PROPERTIES_SUFFIX);
 
             return baseName;
         } catch (IOException e) {

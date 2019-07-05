@@ -91,6 +91,4 @@ public class ConfigurationsRepositoryTest {
             return null;
         }, IllegalStateException.class, "Model not found for ID: " + mdlId);
     }
-
-    /** TODO: Add test on OneToManyIndex corruption */
 }

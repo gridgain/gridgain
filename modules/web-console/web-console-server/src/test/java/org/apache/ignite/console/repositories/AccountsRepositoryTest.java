@@ -102,5 +102,4 @@ public class AccountsRepositoryTest {
             return null;
         }, IgniteException.class, "Account with token " + acc.getToken() + " already exists");
     }
-
 }

@@ -114,7 +114,6 @@ public class AccountServiceTest {
         }, AuthenticationServiceException.class, "Sign-up is not allowed. Ask your administrator to create account for you.");
     }
 
-
     /**
      * Should throw activation not enabled exception.
      */
@@ -184,7 +183,8 @@ public class AccountServiceTest {
 
         try {
             srvc.register(userReq);
-        } catch (MissingConfirmRegistrationException exception) {
+        }
+        catch (MissingConfirmRegistrationException exception) {
             Assert.assertEquals("Confirm your email", exception.getMessage());
         }
 
@@ -312,7 +312,8 @@ public class AccountServiceTest {
         ActivationConfiguration activationCfg = new ActivationConfiguration(new NoopMailService()).setSendTimeout(sendTimeout);
         try {
             activationCfg.afterPropertiesSet();
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             // No-op
         }
         activationCfg.setEnabled(enableActivation);
