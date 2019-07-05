@@ -48,10 +48,7 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
  */
 public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
     /** Default degree of parallelism. */
-    private static final int DFLT_PARALLELISM = Math.min(
-        IgniteSystemProperties.getInteger(INDEX_REBUILDING_PARALLELISM, 4),
-        Math.max(1, Runtime.getRuntime().availableProcessors() / 4)
-    );
+    private static final int DFLT_PARALLELISM;
 
     /** Count of rows, being processed within a single checkpoint lock. */
     private static final int BATCH_SIZE = 1000;
@@ -70,6 +67,15 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
 
     /** Whether to stop the process. */
     private volatile boolean stop;
+
+    static {
+        int parallelism = IgniteSystemProperties.getInteger(INDEX_REBUILDING_PARALLELISM, 0);
+
+        if (parallelism > 0)
+            DFLT_PARALLELISM = Math.min(parallelism, Runtime.getRuntime().availableProcessors());
+        else
+            DFLT_PARALLELISM = Math.min(4, Math.max(1, Runtime.getRuntime().availableProcessors() / 4));
+    }
 
     /**
      * Constructor.
