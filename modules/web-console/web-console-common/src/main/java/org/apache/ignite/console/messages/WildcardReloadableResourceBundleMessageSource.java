@@ -76,7 +76,8 @@ public class WildcardReloadableResourceBundleMessageSource extends ReloadableRes
     private Resource[] getResources(String name) {
         try {
             return ptrnRslvr.getResources(name);
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
@@ -112,7 +113,8 @@ public class WildcardReloadableResourceBundleMessageSource extends ReloadableRes
                 baseName = CLASS_PATH + StringUtils.substringBetween(uri, CLASSES, PROPERTIES_SUFFIX);
 
             return baseName;
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
