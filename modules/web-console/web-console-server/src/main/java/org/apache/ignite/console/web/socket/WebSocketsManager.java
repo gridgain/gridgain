@@ -30,6 +30,7 @@ import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.dto.Announcement;
 import org.apache.ignite.console.websocket.TopologySnapshot;
 import org.apache.ignite.console.websocket.WebSocketEvent;
+import org.apache.ignite.console.websocket.WebSocketResponse;
 import org.apache.ignite.internal.util.typedef.F;
 import org.jsr166.ConcurrentLinkedHashMap;
 import org.slf4j.Logger;
@@ -48,6 +49,7 @@ import static java.util.stream.Collectors.toSet;
 import static org.apache.ignite.console.utils.Utils.toJson;
 import static org.apache.ignite.console.websocket.WebSocketEvents.ADMIN_ANNOUNCEMENT;
 import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_STATUS;
+import static org.apache.ignite.console.websocket.WebSocketEvents.PULL_METRICS;
 import static org.springframework.web.util.UriComponentsBuilder.fromUri;
 
 /**
@@ -155,7 +157,7 @@ public class WebSocketsManager {
      * @param ws Browser session.
      * @param evt Event to send.
      */
-    public void sendToFirstAgent(WebSocketSession ws, WebSocketEvent evt) throws IOException {
+    public void sendToFirstAgent(WebSocketSession ws, WebSocketResponse evt) throws IOException {
         UUID accId = browsers.get(ws);
 
         WebSocketSession wsAgent = agents.entrySet().stream()
@@ -179,7 +181,7 @@ public class WebSocketsManager {
      * @param clusterId Cluster id.
      * @param evt Event.
      */
-    public void sendToNode(WebSocketSession ws, String clusterId, WebSocketEvent evt) throws IOException {
+    public void sendToNode(WebSocketSession ws, String clusterId, WebSocketResponse evt) throws IOException {
         UUID accId = browsers.get(ws);
 
         WebSocketSession wsAgent = agents.entrySet().stream()
@@ -273,7 +275,7 @@ public class WebSocketsManager {
      * @param ann Announcement.
      */
     private void sendAnnouncement(Set<WebSocketSession> browsers, Announcement ann) {
-        WebSocketEvent evt = new WebSocketEvent(ADMIN_ANNOUNCEMENT, ann);
+        WebSocketResponse evt = new WebSocketResponse(ADMIN_ANNOUNCEMENT, ann);
 
         for (WebSocketSession ws : browsers) {
             try {
@@ -317,7 +319,7 @@ public class WebSocketsManager {
         res.put("clusters", tops);
 
         try {
-            sendMessage(ws, new WebSocketEvent(AGENT_STATUS, res));
+            sendMessage(ws, new WebSocketResponse(AGENT_STATUS, res));
         }
         catch (Throwable e) {
             log.error("Failed to update agent status [session=" + ws + ", token=" + accId + "]", e);
@@ -344,7 +346,7 @@ public class WebSocketsManager {
         //        agents.forEach((ws, desc) -> {
         //            try {
         //                if (desc.revokeAccount(acc.getId()))
-        //                    sendMessage(ws, new WebSocketEvent(AGENT_REVOKE_TOKEN, oldTok));
+        //                    sendMessage(ws, new WebSocketResponse(AGENT_REVOKE_TOKEN, oldTok));
         //
         //                if (desc.canBeClose())
         //                    ws.close();
@@ -364,6 +366,28 @@ public class WebSocketsManager {
     public void pingClients() {
         agents.keySet().forEach(this::ping);
         browsers.keySet().forEach(this::ping);
+    }
+
+    /** */
+    @Scheduled(fixedRate = 5_000)
+    public void pullMetrics() {
+        agents.keySet().forEach(ws -> {
+            try {
+                if (ws.isOpen())
+                    sendMessage(ws, new WebSocketResponse(PULL_METRICS, "dummy"));
+            }
+            catch (Throwable e) {
+                log.error("Failed to send PULL_METRICS request [session=" + ws + "]");
+
+                try {
+                    ws.close(CloseStatus.SESSION_NOT_RELIABLE);
+                }
+                catch (IOException ignored) {
+                    // No-op.
+                }
+            }
+
+        });
     }
 
     /**

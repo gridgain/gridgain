@@ -20,7 +20,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.IgniteInterruptedException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeJob;
 import org.apache.ignite.compute.ComputeJobAdapter;
@@ -40,8 +39,10 @@ public class DemoCancellableTask implements ComputeTask<Void, Void> {
     private static final long serialVersionUID = 0L;
 
     /** {@inheritDoc} */
-    @NotNull @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
-        @Nullable Void arg) throws IgniteException {
+    @NotNull @Override public Map<? extends ComputeJob, ClusterNode> map(
+        List<ClusterNode> subgrid,
+        @Nullable Void arg
+    ) throws IgniteException {
         HashMap<ComputeJob, ClusterNode> map = U.newHashMap(1);
 
         map.put(new DemoCancellableJob(), subgrid.get(0));
@@ -74,11 +75,8 @@ public class DemoCancellableTask implements ComputeTask<Void, Void> {
             try {
                 Thread.sleep(1000 + rnd.nextInt(60000));
             }
-            catch (InterruptedException e) {
-                // Restore interrupt status
+            catch (InterruptedException ignored) {
                 Thread.currentThread().interrupt();
-
-                throw new IgniteInterruptedException(e);
             }
 
             return null;

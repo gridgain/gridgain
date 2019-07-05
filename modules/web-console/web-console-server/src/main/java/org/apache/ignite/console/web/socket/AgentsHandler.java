@@ -22,13 +22,14 @@ import java.util.Set;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.dto.ClusterInfo;
+import org.apache.ignite.console.metrics.MetricsDto;
 import org.apache.ignite.console.repositories.AccountsRepository;
 import org.apache.ignite.console.repositories.ClusterInfoRepository;
 import org.apache.ignite.console.web.AbstractHandler;
 import org.apache.ignite.console.websocket.AgentHandshakeRequest;
 import org.apache.ignite.console.websocket.AgentHandshakeResponse;
 import org.apache.ignite.console.websocket.TopologySnapshot;
-import org.apache.ignite.console.websocket.WebSocketEvent;
+import org.apache.ignite.console.websocket.WebSocketRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -40,6 +41,7 @@ import static org.apache.ignite.console.utils.Utils.fromJson;
 import static org.apache.ignite.console.websocket.AgentHandshakeRequest.SUPPORTED_VERS;
 import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_HANDSHAKE;
 import static org.apache.ignite.console.websocket.WebSocketEvents.CLUSTER_TOPOLOGY;
+import static org.apache.ignite.console.websocket.WebSocketEvents.PULL_METRICS;
 
 /**
  * Agents web sockets handler.
@@ -87,14 +89,15 @@ public class AgentsHandler extends AbstractHandler {
     private Collection<Account> loadAccounts(Set<String> tokens) {
         Collection<Account> accounts = accRepo.list(); // TODO GG-19573 getAllByTokens(tokens);
 
-//        if (accounts.isEmpty())
-//            throw new IllegalArgumentException("Failed to authenticate with token(s): " + tokens);
+        // TODO GG-19573 no tokens needed.
+        //        if (accounts.isEmpty())
+        //            throw new IllegalArgumentException("Failed to authenticate with token(s): " + tokens);
 
         return accounts;
     }
 
     /** {@inheritDoc} */
-    @Override public void handleEvent(WebSocketSession ws, WebSocketEvent evt) throws IOException {
+    @Override public void handleEvent(WebSocketSession ws, WebSocketRequest evt) throws IOException {
         switch (evt.getEventType()) {
             case AGENT_HANDSHAKE:
                 try {
@@ -141,6 +144,13 @@ public class AgentsHandler extends AbstractHandler {
                 catch (Exception e) {
                     log.warn("Failed to process topology update: " + evt, e);
                 }
+
+                break;
+
+            case PULL_METRICS:
+                MetricsDto metrics = fromJson(evt.getPayload(), MetricsDto.class);
+
+                log.info("Received metrics [nid=" + metrics.getNodeId() + ", ts=" + metrics.getTimestamp() + "]");
 
                 break;
 

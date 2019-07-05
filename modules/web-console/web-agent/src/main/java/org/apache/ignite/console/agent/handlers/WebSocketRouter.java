@@ -27,6 +27,8 @@ import java.util.UUID;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
@@ -37,7 +39,8 @@ import org.apache.ignite.console.demo.AgentClusterDemo;
 import org.apache.ignite.console.json.JsonObject;
 import org.apache.ignite.console.websocket.AgentHandshakeRequest;
 import org.apache.ignite.console.websocket.AgentHandshakeResponse;
-import org.apache.ignite.console.websocket.WebSocketEvent;
+import org.apache.ignite.console.websocket.WebSocketRequest;
+import org.apache.ignite.console.websocket.WebSocketResponse;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.logger.slf4j.Slf4jLogger;
@@ -124,6 +127,9 @@ public class WebSocketRouter implements AutoCloseable {
     /** Active tokens after handshake. */
     private List<String> validTokens;
 
+    /** Connector pool. */
+    private ExecutorService connectorPool = Executors.newSingleThreadExecutor(r -> new Thread(r, "Connect thread"));
+
     /**
      * @param cfg Configuration.
      */
@@ -207,7 +213,7 @@ public class WebSocketRouter implements AutoCloseable {
     /**
      * Connect to backend.
      */
-    private void connect() {
+    private void connect0() {
         try {
             stopClient();
 
@@ -251,6 +257,13 @@ public class WebSocketRouter implements AutoCloseable {
     }
 
     /**
+     * Connect to backend.
+     */
+    private void connect() {
+        connectorPool.submit(this::connect0);
+    }
+
+    /**
      * @throws InterruptedException If await failed.
      */
     public void awaitClose() throws InterruptedException {
@@ -271,13 +284,15 @@ public class WebSocketRouter implements AutoCloseable {
      */
     @OnWebSocketConnect
     public void onConnect(Session ses) {
-        try {
-            AgentHandshakeRequest req = new AgentHandshakeRequest(CURRENT_VER, UUID.randomUUID(), System.currentTimeMillis(), cfg.tokens());
+        AgentHandshakeRequest req = new AgentHandshakeRequest(CURRENT_VER, UUID.randomUUID(), System.currentTimeMillis(), cfg.tokens());
 
-            send(ses, new WebSocketEvent(AGENT_HANDSHAKE, req));
+        try {
+            send(ses, new WebSocketResponse(AGENT_HANDSHAKE, req));
         }
         catch (Throwable e) {
             log.error("Failed to send handshake to server", e);
+
+            connect();
         }
     }
 
@@ -332,10 +347,10 @@ public class WebSocketRouter implements AutoCloseable {
      */
     @OnWebSocketMessage
     public void onMessage(Session ses, String msg) {
-        WebSocketEvent evt = null;
+        WebSocketRequest evt = null;
 
         try {
-            evt = fromJson(msg, WebSocketEvent.class);
+            evt = fromJson(msg, WebSocketRequest.class);
 
             switch (evt.getEventType()) {
                 case AGENT_HANDSHAKE:
@@ -349,7 +364,7 @@ public class WebSocketRouter implements AutoCloseable {
                     break;
 
                 case AGENT_REVOKE_TOKEN:
-                    processRevokeToken(evt.getPayload());
+                    processRevokeToken(fromJson(evt.getPayload(), String.class));
 
                     return;
 
@@ -411,6 +426,8 @@ public class WebSocketRouter implements AutoCloseable {
             }
             catch (Exception ex) {
                 log.error("Failed to send response with error", e);
+
+                connect();
             }
         }
     }
