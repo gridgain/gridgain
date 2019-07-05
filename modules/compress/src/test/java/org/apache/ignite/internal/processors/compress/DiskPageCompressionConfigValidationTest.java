@@ -28,6 +28,7 @@ import org.apache.ignite.spi.encryption.keystore.KeystoreEncryptionSpi;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static org.apache.ignite.configuration.DataStorageConfiguration.MAX_PAGE_SIZE;
 import static org.apache.ignite.configuration.WALMode.FSYNC;
 
 /**
@@ -64,7 +65,7 @@ public class DiskPageCompressionConfigValidationTest extends GridCommonAbstractT
                 new DataRegionConfiguration()
                     .setMaxSize(10L * 1024 * 1024)
                     .setPersistenceEnabled(true))
-            .setPageSize(4 * 1024)
+            .setPageSize(MAX_PAGE_SIZE)
             .setWalMode(FSYNC);
 
         cfg.setDataStorageConfiguration(dsCfg);
