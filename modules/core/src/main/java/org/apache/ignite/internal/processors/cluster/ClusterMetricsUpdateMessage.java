@@ -52,16 +52,14 @@ public class ClusterMetricsUpdateMessage implements Message {
     /**
      * @param nodeMetrics Node metrics.
      */
-    // TODO GG-19573 temporary made public for prototype.
-    public ClusterMetricsUpdateMessage(byte[] nodeMetrics) {
+    ClusterMetricsUpdateMessage(byte[] nodeMetrics) {
         this.nodeMetrics = nodeMetrics;
     }
 
     /**
      * @param allNodesMetrics All nodes metrcis.
      */
-    // TODO GG-19573 temporary made public for prototype.
-    public ClusterMetricsUpdateMessage(Map<UUID, byte[]> allNodesMetrics) {
+    ClusterMetricsUpdateMessage(Map<UUID, byte[]> allNodesMetrics) {
         this.allNodesMetrics = allNodesMetrics;
     }
 

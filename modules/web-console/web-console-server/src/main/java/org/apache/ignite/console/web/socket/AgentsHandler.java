@@ -27,7 +27,6 @@ import org.apache.ignite.console.websocket.AgentHandshakeRequest;
 import org.apache.ignite.console.websocket.AgentHandshakeResponse;
 import org.apache.ignite.console.websocket.TopologySnapshot;
 import org.apache.ignite.console.websocket.WebSocketEvent;
-import org.apache.ignite.internal.util.typedef.F;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -39,6 +38,7 @@ import static org.apache.ignite.console.utils.Utils.fromJson;
 import static org.apache.ignite.console.websocket.AgentHandshakeRequest.SUPPORTED_VERS;
 import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_HANDSHAKE;
 import static org.apache.ignite.console.websocket.WebSocketEvents.CLUSTER_TOPOLOGY;
+import static org.apache.ignite.console.websocket.WebSocketEvents.PULL_METRICS;
 
 /**
  * Agents web sockets handler.
@@ -134,6 +134,11 @@ public class AgentsHandler extends AbstractHandler {
                 catch (Exception e) {
                     log.warn("Failed to process topology update: " + evt, e);
                 }
+
+                break;
+
+            case PULL_METRICS:
+                log.info("Received metrics: " + evt);
 
                 break;
 
