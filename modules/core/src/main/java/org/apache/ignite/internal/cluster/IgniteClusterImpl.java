@@ -93,6 +93,9 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
     /** Minimal IgniteProductVersion supporting BaselineTopology */
     private static final IgniteProductVersion MIN_BLT_SUPPORTING_VER = IgniteProductVersion.fromString("2.4.0");
 
+    /** */
+    private volatile UUID clusterId;
+
     /**
      * Required by {@link Externalizable}.
      */
@@ -109,6 +112,13 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
         cfg = ctx.config();
 
         nodeLoc = new ClusterNodeLocalMapImpl(ctx);
+
+        if (!CU.isPersistenceEnabled(cfg))
+            clusterId = UUID.randomUUID();
+        else
+            //TODO we need to read it from distributed metastore but for now just generate it as well
+            clusterId = UUID.randomUUID();
+
     }
 
     /** {@inheritDoc} */
@@ -581,6 +591,22 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
         finally {
             unguard();
         }
+    }
+
+    @Override public UUID id() {
+        return clusterId;
+    }
+
+    public void id(UUID id) {
+        clusterId = id;
+    }
+
+    @Override public String tag() {
+        return null;
+    }
+
+    @Override public void tag(String tag) {
+
     }
 
     /** {@inheritDoc} */

@@ -54,6 +54,7 @@ import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.future.IgniteFinishedFutureImpl;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.CI1;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -83,6 +84,9 @@ import static org.apache.ignite.internal.IgniteVersionUtils.VER_STR;
 public class ClusterProcessor extends GridProcessorAdapter {
     /** */
     private static final String ATTR_UPDATE_NOTIFIER_STATUS = "UPDATE_NOTIFIER_STATUS";
+
+    /** */
+    private static final String CLUSTER_ID = "CLUSTER_ID";
 
     /** Periodic version check delay. */
     private static final long PERIODIC_VER_CHECK_DELAY = 1000 * 60 * 60; // Every hour.
@@ -297,21 +301,26 @@ public class ClusterProcessor extends GridProcessorAdapter {
 
     /** {@inheritDoc} */
     @Override public void collectJoiningNodeData(DiscoveryDataBag dataBag) {
-        dataBag.addJoiningNodeData(CLUSTER_PROC.ordinal(), getDiscoveryData());
+        dataBag.addJoiningNodeData(CLUSTER_PROC.ordinal(), getDiscoveryData(true));
     }
 
     /** {@inheritDoc} */
     @Override public void collectGridNodeData(DiscoveryDataBag dataBag) {
-        dataBag.addNodeSpecificData(CLUSTER_PROC.ordinal(), getDiscoveryData());
+        dataBag.addNodeSpecificData(CLUSTER_PROC.ordinal(), getDiscoveryData(false));
+
+        dataBag.addGridCommonData(CLUSTER_PROC.ordinal(), cluster.id());
     }
 
     /**
      * @return Discovery data.
      */
-    private Serializable getDiscoveryData() {
-        HashMap<String, Object> map = new HashMap<>();
+    private Serializable getDiscoveryData(boolean isJoiningNode) {
+        HashMap<String, Object> map = new HashMap<>(3);
 
         map.put(ATTR_UPDATE_NOTIFIER_STATUS, notifyEnabled.get());
+
+        if (isJoiningNode)
+            map.put(CLUSTER_ID, cluster.id());
 
         return map;
     }
@@ -326,6 +335,11 @@ public class ClusterProcessor extends GridProcessorAdapter {
             if (lstFlag != null)
                 notifyEnabled.set(lstFlag);
         }
+
+        Serializable clusterId = data.commonData();
+
+        if (clusterId != null)
+            cluster.id((UUID)clusterId);
     }
 
     /**
