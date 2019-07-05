@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.commandline.baseline;
 
 import java.util.List;
+import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
@@ -35,6 +36,7 @@ public class BaselineArguments {
     /** Requested topology version. */
     private long topVer = -1;
     /** List of consistent ids for operation. */
+    @GridToStringInclude
     List<String> consistentIds;
 
     /**
