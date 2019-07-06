@@ -21,7 +21,7 @@ as well as GridGain protocol handshaking.
 
 from collections import OrderedDict
 import socket
-from threading import Lock, Timer
+from threading import Lock
 from typing import Union
 
 from pygridgain.constants import *
@@ -30,7 +30,7 @@ from pygridgain.exceptions import (
 )
 from pygridgain.datatypes import Byte, Int, Short, String, UUIDObject
 from pygridgain.datatypes.internal import Struct
-from pygridgain.utils import select_version
+from pygridgain.utils import DaemonicTimer, select_version
 
 from .handshake import HandshakeRequest
 from .ssl import wrap
@@ -337,7 +337,7 @@ class Connection:
         self._reconnect()
 
         if self.failed:
-            Timer(
+            DaemonicTimer(
                 RECONNECT_BACKOFF_SEQUENCE[seq_no],
                 self.reconnect,
                 kwargs={'seq_no': seq_no + 1},
