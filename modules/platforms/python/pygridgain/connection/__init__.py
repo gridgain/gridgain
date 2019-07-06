@@ -62,6 +62,7 @@ class Connection:
     username = None
     password = None
     ssl_params = {}
+    uuid = None
 
     @staticmethod
     def _check_ssl_params(params):
@@ -260,6 +261,8 @@ class Connection:
                 raise e
 
         # connection is ready for end user
+        self.uuid = result.get('node_uuid', None)  # version-specific (1.4+)
+
         self._failed = False
         return result
 
@@ -477,7 +480,10 @@ class Connection:
         garbage-collected.
         """
         if release:
-            self._in_use.release()
+            try:
+                self._in_use.release()
+            except RuntimeError:
+                pass
 
         if self._socket:
             try:
