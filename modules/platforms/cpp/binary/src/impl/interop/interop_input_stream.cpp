@@ -203,6 +203,11 @@ namespace ignite
                 }
             }
 
+            inline void InteropInputStream::Shift(int32_t cnt)
+            {
+                pos += cnt;
+            }
+
             void InteropInputStream::Synchronize()
             {
                 data = mem->Data();
@@ -226,11 +231,6 @@ namespace ignite
                 memcpy(dest + off, data + pos, cnt);
 
                 Shift(cnt);
-            }
-
-            inline void InteropInputStream::Shift(int32_t cnt)
-            {
-                pos += cnt;
             }
         }
     }

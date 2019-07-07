@@ -29,8 +29,36 @@ using namespace ignite::impl::interop;
 using namespace ignite::impl::binary;
 using namespace ignite::binary;
 
+
 namespace ignite
 {
+    namespace binary
+    {
+        struct EmptyReader
+        {
+            EmptyReader(BinaryReaderImpl* r)
+            {
+                // No-op.
+            }
+        };
+
+        struct EmptyType {};
+
+        template<>
+        struct BinaryType<EmptyType> : BinaryTypeDefaultAll<EmptyType>
+        {
+            static void GetTypeName(std::string& dst)
+            {
+                dst = "Skip";
+            }
+
+            static void Read(EmptyReader& reader, EmptyType& dst)
+            {
+                // No-op.
+            }
+        };
+    }
+
     namespace impl
     {
         namespace binary
@@ -793,6 +821,271 @@ namespace ignite
                 positionGuard.Release();
 
                 return true;
+            }
+
+            void BinaryReaderImpl::Skip()
+            {
+                int8_t typeId = stream->ReadInt8();
+                if (typeId == IGNITE_TYPE_OPTM_MARSH)
+                {
+                    int32_t realLen = stream->ReadInt32();
+                    stream->Shift(realLen);
+
+                    return;
+                }
+                else if (typeId == IGNITE_TYPE_BYTE)
+                {
+                    stream->ReadInt8();
+
+                    return;
+                }
+                else if (typeId == IGNITE_TYPE_SHORT)
+                {
+                    stream->ReadInt16();
+
+                    return;
+                }
+                else if (typeId == IGNITE_TYPE_INT)
+                {
+                    stream->ReadInt32();
+
+                    return;
+                }
+                else if (typeId == IGNITE_TYPE_LONG)
+                {
+                    stream->ReadInt64();
+
+                    return;
+                }
+                else if (typeId == IGNITE_TYPE_FLOAT)
+                {
+                    stream->ReadFloat();
+
+                    return;
+                }
+                else if (typeId == IGNITE_TYPE_DOUBLE)
+                {
+                    stream->ReadDouble();
+
+                    return;
+                }
+                else if (typeId == IGNITE_TYPE_CHAR)
+                {
+                    stream->ReadUInt16();
+
+                    return;
+                }
+                else if (typeId == IGNITE_TYPE_BOOL)
+                {
+                    stream->ReadBool();
+
+                    return;
+                }
+                else if (typeId == IGNITE_TYPE_STRING)
+                {
+                    int32_t realLen = stream->ReadInt32();
+                    if (realLen > 0)
+                        stream->Shift(realLen);
+
+                    return;
+                }
+                else if (typeId == IGNITE_TYPE_UUID)
+                {
+                    stream->ReadInt64();
+                    stream->ReadInt64();
+
+                    return;
+                }
+                else if (typeId == IGNITE_TYPE_DATE)
+                {
+                    stream->ReadInt64();
+
+                    return;
+                }
+                else if (typeId == IGNITE_TYPE_ARRAY_BYTE)
+                {
+                    int32_t realLen = stream->ReadInt32();
+                    if (realLen > 0)
+                        stream->Shift(realLen);
+
+                    return;
+                }
+                else if (typeId == IGNITE_TYPE_ARRAY_SHORT)
+                {
+                    int32_t realLen = stream->ReadInt32();
+                    if (realLen > 0)
+                        stream->Shift(realLen * sizeof(int16_t)/sizeof(int8_t));
+
+                    return;
+                }
+                else if (typeId == IGNITE_TYPE_ARRAY_INT)
+                {
+                    int32_t realLen = stream->ReadInt32();
+                    if (realLen > 0)
+                        stream->Shift(realLen * sizeof(int32_t)/sizeof(int8_t));
+
+                    return;
+                }
+                else if (typeId == IGNITE_TYPE_ARRAY_LONG)
+                {
+                    int32_t realLen = stream->ReadInt32();
+                    if (realLen > 0)
+                        stream->Shift(realLen * sizeof(int64_t) / sizeof(int8_t));
+
+                    return;
+                }
+                else if (typeId == IGNITE_TYPE_ARRAY_FLOAT)
+                {
+                    int32_t realLen = stream->ReadInt32();
+                    if (realLen > 0)
+                        stream->Shift(realLen * sizeof(float) / sizeof(int8_t));
+
+                    return;
+                }
+                else if (typeId == IGNITE_TYPE_ARRAY_DOUBLE)
+                {
+                    int32_t realLen = stream->ReadInt32();
+                    if (realLen > 0)
+                        stream->Shift(realLen * sizeof(double) / sizeof(int8_t));
+
+                    return;
+                }
+                else if (typeId == IGNITE_TYPE_ARRAY_CHAR)
+                {
+                    int32_t realLen = stream->ReadInt32();
+                    if (realLen > 0)
+                        stream->Shift(realLen * sizeof(int16_t) / sizeof(int8_t));
+
+                    return;
+                }
+                else if (typeId == IGNITE_TYPE_ARRAY_BOOL)
+                {
+                    int32_t realLen = stream->ReadInt32();
+                    if (realLen > 0)
+                        stream->Shift(realLen);
+
+                    return;
+                }
+                else if (typeId == IGNITE_TYPE_ARRAY_STRING)
+                {
+                    int32_t cnt = stream->ReadInt32();
+                    for (int32_t i = 0; i < cnt; i++)
+                        Skip();
+
+                    return;
+                }
+                else if (typeId == IGNITE_TYPE_ARRAY_UUID)
+                {
+                    int32_t cnt = stream->ReadInt32();
+                    for (int32_t i = 0; i < cnt; i++)
+                        ReadGuid();
+
+                    return;
+                }
+                else if (typeId == IGNITE_TYPE_ARRAY_DATE)
+                {
+                    int32_t cnt = stream->ReadInt32();
+                    for (int32_t i = 0; i < cnt; i++)
+                        ReadDate();
+
+                    return;
+                }
+                else if (typeId == IGNITE_TYPE_ARRAY)
+                {
+                    int32_t cnt = stream->ReadInt32();
+                    for (int32_t i = 0; i < cnt; i++)
+                        Skip();
+
+                    return;
+                }
+                else if (typeId == IGNITE_TYPE_COLLECTION)
+                {
+                    int32_t cnt = stream->ReadInt32();
+                    int8_t colTypeId = stream->ReadInt8();
+
+                    for (int32_t i = 0; i < cnt; i++)
+                        Skip();
+
+                    return;
+                }
+                else if (typeId == IGNITE_TYPE_MAP)
+                {
+                    int32_t cnt = stream->ReadInt32();
+                    int8_t mapTypeId = stream->ReadInt8();
+
+                    for (int32_t i = 0; i < cnt; i++)
+                    {
+                        Skip();
+                        Skip();
+                    }
+
+                    return;
+                }
+                else if (typeId == IGNITE_TYPE_TIMESTAMP)
+                {
+                    stream->ReadInt64();
+                    stream->ReadInt32();
+
+                    return;
+                }
+                else if (typeId == IGNITE_TYPE_ARRAY_TIMESTAMP)
+                {
+                    int32_t cnt = stream->ReadInt32();
+                    for (int32_t i = 0; i < cnt; i++)
+                        Skip();
+
+                    return;
+                }
+                else if (typeId == IGNITE_TYPE_TIME)
+                {
+                    stream->ReadInt64();
+
+                    return;
+                }
+                else if (typeId == IGNITE_TYPE_ARRAY_TIME)
+                {
+                    int32_t cnt = stream->ReadInt32();
+                    for (int32_t i = 0; i < cnt; i++)
+                        Skip();
+
+                    return;
+                }
+                else if (typeId == IGNITE_HDR_FULL)
+                {
+                    // Get position back to IGNITE_HDR_FULL
+                    stream->Position(stream->Position() - 1);
+
+                    EmptyType val;
+                    ReadTopObject0<EmptyReader, EmptyType>(val);
+
+                    return;
+                }
+                else if (typeId == IGNITE_HDR_NULL)
+                {
+                    return;
+                }
+                else
+                {
+                    int32_t pos = stream->Position() - 1;
+
+                    switch (typeId)
+                    {
+                    case IGNITE_TYPE_MAP_ENTRY:
+                    case IGNITE_TYPE_BINARY:
+                    case IGNITE_TYPE_ENUM:
+                    case IGNITE_TYPE_ARRAY_ENUM:
+                    case IGNITE_TYPE_DECIMAL:
+                    case IGNITE_TYPE_ARRAY_DECIMAL:
+                    case IGNITE_TYPE_CLASS:
+                    case IGNITE_TYPE_PROXY:
+                    case IGNITE_TYPE_BINARY_ENUM:
+                        IGNITE_ERROR_FORMATTED_2(IgniteError::IGNITE_ERR_BINARY, "Invalid header", "position", pos,
+                            "unsupported type", static_cast<int>(typeId))
+                    default:
+                        IGNITE_ERROR_FORMATTED_2(IgniteError::IGNITE_ERR_BINARY, "Invalid header", "position", pos,
+                            "invalid type", static_cast<int>(typeId))
+                    }
+                }
             }
 
             void BinaryReaderImpl::SetRawMode()

@@ -203,6 +203,13 @@ namespace ignite
                 void Position(int32_t pos);
 
                 /**
+                 * Shift stream to the right.
+                 *
+                 * @param cnt Amount of bytes to shift the stream to.
+                 */
+                void Shift(int32_t cnt);
+
+                /**
                  * Synchronize data from underlying memory.
                  */
                 void Synchronize();
@@ -234,13 +241,6 @@ namespace ignite
                  * @param cnt Amount of data to copy.
                  */
                 void CopyAndShift(int8_t* dest, int32_t off, int32_t cnt);
-
-                /**
-                 * Shift stream to the right.
-                 *
-                 * @param cnt Amount of bytes to shift the stream to.
-                 */
-                void Shift(int32_t cnt);
             };
         }
     }    
