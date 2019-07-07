@@ -20,6 +20,7 @@
 #include <ignite/common/concurrent.h>
 #include <ignite/jni/java.h>
 #include <ignite/guid.h>
+#include "ignite/ignite_product_version.h"
 
 #include <ignite/impl/interop/interop_target.h>
 
@@ -44,9 +45,9 @@ namespace ignite
                 /**
                  * Constructor used to create new instance.
                  *
-                 * @param reader Binary reader.
+                 * @param mem Memory to read Cluster Node.
                  */
-                ClusterNodeImpl(binary::BinaryReaderImpl& reader);
+                ClusterNodeImpl(common::concurrent::SharedPointer<interop::InteropMemory> mem);
 
                 /**
                  * Destructor.
@@ -54,17 +55,179 @@ namespace ignite
                 ~ClusterNodeImpl();
 
                 /**
+                 * Get collection of addresses this node is known by.
+                 *
+                 * @return Collection of addresses this node is known by.
+                 */
+                std::vector<std::string> GetAddresses();
+
+                /**
+                 * Get a node attribute.
+                 *
+                 * @param name Node attribute name.
+                 * @return Node attribute.
+                 *
+                 * @throw IgniteError in case of attribute name does not exist
+                 * or if template type is not compatible with attribute.
+                 */
+                template<typename T>
+                T GetAttribute(std::string name)
+                {
+                    if (attrs.Get()->find(name) == attrs.Get()->end())
+                    {
+                        const char* msg = "The is no Cluster Node attribute with name requested";
+                        throw IgniteError(IgniteError::IGNITE_ERR_ILLEGAL_ARGUMENT, msg);
+                    }
+
+                    interop::InteropInputStream stream(mem.Get());
+                    stream.Position(attrs.Get()->find(name)->second);
+
+                    binary::BinaryReaderImpl reader(&stream);
+
+                    return reader.ReadObject<T>();
+                }
+
+                /**
+                 * Get collection of all Cluster Node attributes names.
+                 *
+                 * @return Node attributes names collection.
+                 */
+                std::vector<std::string> GetAttributes();
+
+                /**
+                 * Get Cluster Node consistent ID.
+                 *
+                 * @return Cluster Node consistent ID.
+                 */
+                template<typename T>
+                T GetConsistentId()
+                {
+                    interop::InteropInputStream stream(mem.Get());
+                    binary::BinaryReaderImpl reader(&stream);
+                    stream.Position(consistentIdOffset);
+
+                    return reader.ReadObject<T>();
+                }
+
+                /**
+                 * Get collection of host names this node is known by.
+                 *
+                 * @return Collection of host names this node is known by.
+                 */
+                std::vector<std::string> GetHostNames();
+
+                /**
                  * Gets globally unique ID.
                  *
-                 * @return Node Guid.
+                 * @return Cluster Node Guid.
                  */
                 Guid GetId();
+
+                /**
+                 * Check if cluster node started in client mode.
+                 *
+                 * @return True if in client mode and false otherwise.
+                 */
+                bool IsClient();
+
+                /**
+                 * Check whether or not this node is a daemon.
+                 *
+                 * @return True if is daemon and false otherwise.
+                 */
+                bool IsDaemon();
+
+                /**
+                 * Check whether or not this node is a local.
+                 *
+                 * @return True if is local and false otherwise.
+                 */
+                bool IsLocal();
+
+                /**
+                 * Node order within grid topology.
+                 *
+                 * @return Node order.
+                 */
+                long GetOrder();
+
+                /**
+                 * Get node version.
+                 *
+                 * @return Prodcut version.
+                 */
+                IgniteProductVersion GetVersion();
 
             private:
                 IGNITE_NO_COPY_ASSIGNMENT(ClusterNodeImpl);
 
+                /**
+                 * Read Cluster Node addresses.
+                 *
+                 * @param reader Binary Reader.
+                 */
+                void ReadAddresses(binary::BinaryReaderImpl& reader);
+
+                /**
+                 * Read Cluster Node attributes.
+                 *
+                 * @param reader Binary Reader.
+                 */
+                void ReadAttributes(binary::BinaryReaderImpl& reader);
+
+                /**
+                 * Read Cluster Node hosts.
+                 *
+                 * @param reader Binary Reader.
+                 */
+                void ReadHosts(binary::BinaryReaderImpl& reader);
+
+                /**
+                 * Read Cluster Node consistent ID.
+                 *
+                 * @param reader Binary Reader.
+                 */
+                void ReadConsistentId(binary::BinaryReaderImpl& reader);
+
+                /**
+                 * Read Cluster Node product version.
+                 *
+                 * @param reader Binary Reader.
+                 */
+                void ReadProductVersion(binary::BinaryReaderImpl& reader);
+
+                /** Cluster Node mem */
+                common::concurrent::SharedPointer<interop::InteropMemory> mem;
+
+                /** Addresses. */
+                int32_t addrsOffset;
+
+                /** Attributes. */
+                common::concurrent::SharedPointer<std::map<std::string, int32_t> > attrs;
+
+                /** Hosts. */
+                int32_t hostsOffset;
+
                 /** Node ID. */
                 Guid id;
+
+                /** Is node started in client mode. */
+                bool isClient;
+
+                /** Is node started in daemon mode. */
+                bool isDaemon;
+
+                /** Is node local. */
+                bool isLocal;
+
+                /** Order. */
+                long order;
+
+                /** Consistent ID */
+                int32_t consistentIdOffset;
+
+                /** Product version. */
+                common::concurrent::SharedPointer<IgniteProductVersion> ver;
             };
         }
     }

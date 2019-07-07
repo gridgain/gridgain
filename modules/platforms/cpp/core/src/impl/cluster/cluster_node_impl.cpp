@@ -17,7 +17,10 @@
 #include "ignite/impl/cluster/cluster_node_impl.h"
 
 using namespace ignite::jni::java;
+using namespace ignite::common::concurrent;
 using namespace ignite::impl::cluster;
+using namespace ignite::impl::interop;
+using namespace ignite::impl::binary;
 
 namespace ignite
 {
@@ -25,9 +28,26 @@ namespace ignite
     {
         namespace cluster
         {
-            ClusterNodeImpl::ClusterNodeImpl(binary::BinaryReaderImpl& reader)
+            ClusterNodeImpl::ClusterNodeImpl(SharedPointer<InteropMemory> mem) :
+                mem(mem), addrsOffset(0), attrs(new std::map<std::string, int32_t>), hostsOffset(0),
+                isClient(false), isDaemon(false), isLocal(false), consistentIdOffset(0)
             {
+                InteropInputStream stream(mem.Get());
+                BinaryReaderImpl reader(&stream);
+
                 id = reader.ReadGuid();
+
+                ReadAttributes(reader);
+                ReadAddresses(reader);
+                ReadHosts(reader);
+
+                order = static_cast<long>(reader.ReadInt64());
+                isLocal = reader.ReadBool();
+                isDaemon = reader.ReadBool();
+                isClient = reader.ReadBool();
+
+                ReadConsistentId(reader);
+                ReadProductVersion(reader);
             }
 
             ClusterNodeImpl::~ClusterNodeImpl()
@@ -35,9 +55,121 @@ namespace ignite
                 // No-op.
             }
 
+            std::vector<std::string> ClusterNodeImpl::GetAddresses()
+            {
+                InteropInputStream stream(mem.Get());
+                BinaryReaderImpl reader(&stream);
+                stream.Position(addrsOffset);
+
+                std::vector<std::string> ret;
+                std::back_insert_iterator<std::vector<std::string> > iter(ret);
+
+                reader.ReadCollection<std::string>(iter);
+
+                return ret;
+            }
+
+            std::vector<std::string> ClusterNodeImpl::GetAttributes()
+            {
+                std::vector<std::string> ret;
+
+                for (std::map<std::string, int32_t>::iterator it = attrs.Get()->begin();
+                    it != attrs.Get()->end(); ++it)
+                    ret.push_back(it->first);
+
+                return ret;
+            }
+
+            std::vector<std::string> ClusterNodeImpl::GetHostNames()
+            {
+                InteropInputStream stream(mem.Get());
+                BinaryReaderImpl reader(&stream);
+                stream.Position(hostsOffset);
+
+                std::vector<std::string> ret;
+                std::back_insert_iterator<std::vector<std::string> > iter(ret);
+
+                reader.ReadCollection<std::string>(iter);
+
+                return ret;
+            }
+
             Guid ClusterNodeImpl::GetId()
             {
                 return id;
+            }
+
+            bool ClusterNodeImpl::IsClient()
+            {
+                return isClient;
+            }
+
+            bool ClusterNodeImpl::IsDaemon()
+            {
+                return isDaemon;
+            }
+
+            bool ClusterNodeImpl::IsLocal()
+            {
+                return isLocal;
+            }
+
+            long ClusterNodeImpl::GetOrder()
+            {
+                return order;
+            }
+
+            IgniteProductVersion ClusterNodeImpl::GetVersion()
+            {
+                return *ver.Get();
+            }
+
+            void ClusterNodeImpl::ReadAddresses(BinaryReaderImpl& reader)
+            {
+                addrsOffset = reader.GetStream()->Position();
+                reader.Skip();
+            }
+
+            void ClusterNodeImpl::ReadAttributes(BinaryReaderImpl& reader)
+            {
+                int32_t cnt = reader.ReadInt32();
+                for (int32_t i = 0; i < cnt; i++)
+                {
+                    std::string name = reader.ReadObject<std::string>();
+                    int32_t pos = reader.GetStream()->Position();
+                    attrs.Get()->insert(std::pair<std::string, int32_t>(name, pos));
+                    reader.Skip();
+                }
+            }
+
+            void ClusterNodeImpl::ReadHosts(BinaryReaderImpl& reader)
+            {
+                hostsOffset = reader.GetStream()->Position();
+                reader.Skip();
+            }
+
+            void ClusterNodeImpl::ReadConsistentId(BinaryReaderImpl& reader)
+            {
+                consistentIdOffset = reader.GetStream()->Position();
+                reader.Skip();
+            }
+
+            void ClusterNodeImpl::ReadProductVersion(BinaryReaderImpl& reader)
+            {
+                int8_t major = reader.ReadInt8();
+                int8_t minor = reader.ReadInt8();
+                int8_t maintenance = reader.ReadInt8();
+
+                std::string stage;
+                reader.ReadString(stage);
+
+                int64_t releaseDate = reader.ReadInt64();
+
+                std::vector<int8_t> revHash(IgniteProductVersion::SHA1_LENGTH);
+                reader.ReadInt8Array(&revHash[0], IgniteProductVersion::SHA1_LENGTH);
+
+                ver = SharedPointer<IgniteProductVersion>(new IgniteProductVersion(major, minor,
+                    maintenance, stage, releaseDate, revHash));
             }
         }
     }

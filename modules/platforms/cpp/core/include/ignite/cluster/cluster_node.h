@@ -43,11 +43,93 @@ namespace ignite
             ClusterNode(common::concurrent::SharedPointer<ignite::impl::cluster::ClusterNodeImpl> impl);
 
             /**
+             * Get collection of addresses this node is known by.
+             *
+             * @return Collection of addresses this node is known by.
+             */
+            std::vector<std::string> GetAddresses();
+
+            /**
+             * Get a node attribute.
+             *
+             * @param name Node attribute name.
+             * @return Node attribute.
+             *
+             * @throw IgniteError in case of attribute name does not exist
+             * or if template type is not compatible with attribute.
+             */
+            template<typename T>
+            T GetAttribute(std::string name)
+            {
+                return impl.Get()->GetAttribute<T>(name);
+            }
+
+            /**
+             * Get collection of all Cluster Node attributes names.
+             *
+             * @return Node attributes names collection.
+             */
+            std::vector<std::string> GetAttributes();
+
+            /**
+             * Get Cluster Node consistent ID.
+             *
+             * @return Cluster Node consistent ID.
+             */
+            template<typename T>
+            T GetConsistentId()
+            {
+                return impl.Get()->GetConsistentId<T>();
+            }
+
+            /**
+             * Get collection of host names this node is known by.
+             *
+             * @return Collection of host names this node is known by.
+             */
+            std::vector<std::string> GetHostNames();
+
+            /**
              * Gets globally unique node ID. A new ID is generated every time a node restarts.
              *
              * @return Node Guid.
              */
             Guid GetId();
+
+            /**
+             * Check if cluster node started in client mode.
+             *
+             * @return True if in client mode and false otherwise.
+             */
+            bool IsClient();
+
+            /**
+             * Check whether or not this node is a daemon.
+             *
+             * @return True if is daemon and false otherwise.
+             */
+            bool IsDaemon();
+
+            /**
+             * Check whether or not this node is a local node.
+             *
+             * @return True if is local and false otherwise.
+             */
+            bool IsLocal();
+
+            /**
+             * Node order within grid topology.
+             *
+             * @return Node order.
+             */
+            long GetOrder();
+
+            /**
+             * Get node version.
+             *
+             * @return Prodcut version.
+             */
+            IgniteProductVersion GetVersion();
 
         private:
             common::concurrent::SharedPointer<ignite::impl::cluster::ClusterNodeImpl> impl;
