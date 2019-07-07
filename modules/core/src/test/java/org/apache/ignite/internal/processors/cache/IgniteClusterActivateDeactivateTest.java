@@ -321,7 +321,9 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
      * @param nodes Number of nodes.
      * @param caches Number of caches.
      */
-    final void checkCaches(int nodes, int caches) {
+    final void checkCaches(int nodes, int caches) throws InterruptedException {
+        awaitPartitionMapExchange();
+
         for (int i = 0; i < nodes; i++) {
             for (int c = 0; c < caches; c++) {
                 IgniteCache<Integer, Integer> cache = ignite(i).cache(CACHE_NAME_PREFIX + c);
@@ -681,9 +683,6 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
 
             startGrid(i);
         }
-
-        if (persistenceEnabled())
-            ignite(deactivateFrom).cluster().active(true);
 
         ignite(deactivateFrom).cluster().active(true); // Should be no-op.
 
@@ -1335,7 +1334,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @param nodes Expected nodes number.
      */
-    private void checkCaches1(int nodes) {
+    private void checkCaches1(int nodes) throws InterruptedException {
         checkCaches(nodes, 2);
     }
 
