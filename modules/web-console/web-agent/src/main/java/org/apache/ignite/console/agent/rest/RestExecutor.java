@@ -16,6 +16,7 @@
 
 package org.apache.ignite.console.agent.rest;
 
+import java.io.IOException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.console.json.JsonObject;
 import org.apache.ignite.logger.slf4j.Slf4jLogger;
@@ -48,6 +49,9 @@ public class RestExecutor implements AutoCloseable {
      */
     public RestExecutor(SslContextFactory sslCtxFactory) {
         httpClient = new HttpClient(sslCtxFactory);
+        
+        httpClient.setRequestBufferSize(512 * 1024);
+        httpClient.setRequestBufferSize(5 * 1024 * 1024);
     }
 
     /** {@inheritDoc} */
@@ -63,9 +67,9 @@ public class RestExecutor implements AutoCloseable {
     /**
      * @param res Response from cluster.
      * @return Result of REST request.
-     * @throws Exception If failed to parse REST result.
+     * @throws IOException If failed to parse REST result.
      */
-    private RestResult parseResponse(ContentResponse res) throws Exception {
+    private RestResult parseResponse(ContentResponse res) throws IOException {
         int code = res.getStatus();
 
         if (code == HTTP_OK)
@@ -87,9 +91,10 @@ public class RestExecutor implements AutoCloseable {
      * @param url Request URL.
      * @param params Request parameters.
      * @return Request result.
-     * @throws Throwable If failed to send request.
+     * @throws IOException If failed to parse REST result.
+     * @throws Exception If failed to send request.
      */
-    public RestResult sendRequest(String url, JsonObject params) throws Throwable {
+    public RestResult sendRequest(String url, JsonObject params) throws Exception {
         if (!httpClient.isRunning())
             httpClient.start();
 
