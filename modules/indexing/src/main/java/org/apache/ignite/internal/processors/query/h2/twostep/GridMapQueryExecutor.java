@@ -51,7 +51,6 @@ import org.apache.ignite.internal.processors.query.h2.H2ConnectionWrapper;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.MapH2QueryInfo;
-import org.apache.ignite.internal.processors.query.h2.QueryMemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.UpdateResult;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RetryException;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
@@ -352,7 +351,7 @@ public class GridMapQueryExecutor {
                 distributedJoinCtx,
                 mvccSnapshot,
                 reserved,
-                maxMem < 0 ? null : new QueryMemoryTracker(maxMem),
+                maxMem < 0 ? null : h2.memoryManager().createQueryMemoryTracker(maxMem),
                 true
             );
 
@@ -398,7 +397,7 @@ public class GridMapQueryExecutor {
                 try {
                     res.lock();
 
-                    // Ensure we are on the target node for this replicated query.
+                    // If we are not the target node for this replicated query, just ignore it.
                     if (qry.node() == null || (segmentId == 0 && qry.node().equals(ctx.localNodeId()))) {
                         String sql = qry.query();
                         Collection<Object> params0 = F.asList(qry.parameters(params));
@@ -602,7 +601,6 @@ public class GridMapQueryExecutor {
             fldsQry.setTimeout(req.timeout(), TimeUnit.MILLISECONDS);
             fldsQry.setPageSize(req.pageSize());
             fldsQry.setLocal(true);
-            fldsQry.setDataPageScanEnabled(req.isDataPageScanEnabled());
 
             boolean local = true;
 
@@ -672,7 +670,17 @@ public class GridMapQueryExecutor {
             GridQueryFailResponse msg = new GridQueryFailResponse(qryReqId, err);
 
             if (node.isLocal()) {
-                U.error(log, "Failed to run map query on local node.", err);
+                if (err instanceof QueryCancelledException) {
+                    String errMsg = "Failed to run cancelled map query on local node: [localNodeId="
+                        + node.id() + ", reqId=" + qryReqId + ']';
+
+                    if (log.isDebugEnabled())
+                        U.warn(log, errMsg, err);
+                    else
+                        log.info(errMsg);
+                }
+                else
+                    U.error(log, "Failed to run map query on local node.", err);
 
                 h2.reduceQueryExecutor().onFail(node, msg);
             }
