@@ -28,7 +28,7 @@ export * from './selectors/ui';
 
 export * from './actions/user';
 
-export * from './ofType';
+export {ofType} from './ofType';
 
 export type State = {
     ui: UIState,
