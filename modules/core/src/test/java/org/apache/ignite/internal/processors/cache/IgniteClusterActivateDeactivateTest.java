@@ -322,7 +322,16 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
      * @param caches Number of caches.
      */
     final void checkCaches(int nodes, int caches) throws InterruptedException {
-        awaitPartitionMapExchange();
+        checkCaches(nodes, caches, true);
+    }
+
+    /**
+     * @param nodes Number of nodes.
+     * @param caches Number of caches.
+     */
+    final void checkCaches(int nodes, int caches, boolean awaitExchnage) throws InterruptedException {
+        if (awaitExchnage)
+            awaitPartitionMapExchange();
 
         for (int i = 0; i < nodes; i++) {
             for (int c = 0; c < caches; c++) {
@@ -726,7 +735,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
                 checkCache(ignite(i), CACHE_NAME_PREFIX + c, true);
         }
 
-        checkCaches1(srvs + clients + 2);
+        checkCaches(srvs + clients + 2);
     }
 
     /**
@@ -766,11 +775,11 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
 
         checkCache(client, CU.UTILITY_CACHE_NAME, true);
 
-        checkCaches1(SRVS + CLIENTS);
+        checkCaches(SRVS + CLIENTS);
 
         IgniteClientReconnectAbstractTest.reconnectClientNode(log, client, srv, null);
 
-        checkCaches1(SRVS + CLIENTS);
+        checkCaches(SRVS + CLIENTS);
 
         this.client = false;
 
@@ -780,7 +789,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
 
         startGrid(SRVS + CLIENTS + 1);
 
-        checkCaches1(SRVS + CLIENTS + 2);
+        checkCaches(SRVS + CLIENTS + 2);
     }
 
     /**
@@ -810,7 +819,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
 
         checkCache(client, CU.UTILITY_CACHE_NAME, true);
 
-        checkCaches1(SRVS + CLIENTS);
+        checkCaches(SRVS + CLIENTS);
 
         this.client = false;
 
@@ -820,7 +829,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
 
         startGrid(SRVS + CLIENTS + 1);
 
-        checkCaches1(SRVS + CLIENTS);
+        checkCaches(SRVS + CLIENTS);
     }
 
     /**
@@ -860,7 +869,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
 
         checkCache(client, CU.UTILITY_CACHE_NAME, true);
 
-        checkCaches1(SRVS + CLIENTS);
+        checkCaches(SRVS + CLIENTS);
 
         // Wait for late affinity assignment to finish.
         awaitPartitionMapExchange();
@@ -910,7 +919,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
 
         assertTrue(client.cluster().active());
 
-        checkCaches1(SRVS + CLIENTS);
+        checkCaches(SRVS + CLIENTS);
 
         checkCache(client, CACHE_NAME_PREFIX + 0, true);
 
@@ -922,7 +931,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
 
         startGrid(SRVS + CLIENTS + 1);
 
-        checkCaches1(SRVS + CLIENTS + 2);
+        checkCaches(SRVS + CLIENTS + 2);
     }
 
     /**
@@ -999,7 +1008,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
 
         checkCache(client, CU.UTILITY_CACHE_NAME, true);
 
-        checkCaches1(SRVS + CLIENTS);
+        checkCaches(SRVS + CLIENTS);
 
         checkCache(client, CACHE_NAME_PREFIX + 0, true);
 
@@ -1011,7 +1020,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
 
         startGrid(SRVS + CLIENTS + 1);
 
-        checkCaches1(SRVS + CLIENTS + 2);
+        checkCaches(SRVS + CLIENTS + 2);
     }
 
     /**
@@ -1054,7 +1063,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
 
         ignite(0).cluster().active(true);
 
-        checkCaches1(SRVS + CLIENTS);
+        checkCaches(SRVS + CLIENTS);
 
         checkRecordedMessages(true);
 
@@ -1068,7 +1077,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
 
         checkRecordedMessages(true);
 
-        checkCaches1(SRVS + CLIENTS + 2);
+        checkCaches(SRVS + CLIENTS + 2);
     }
 
     /**
@@ -1127,7 +1136,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
             ignite(0).cluster().active(true);
         }
 
-        checkCaches1(9);
+        checkCaches(9);
     }
 
     /**
@@ -1197,7 +1206,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
             ignite(0).cluster().active(true);
         }
 
-        checkCaches1(10);
+        checkCaches(10);
     }
 
     /**
@@ -1266,7 +1275,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
         for (int i = 0; i < 4; i++)
             startGrid(i);
 
-        checkCaches1(6);
+        checkCaches(6);
     }
 
     /**
@@ -1334,8 +1343,8 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @param nodes Expected nodes number.
      */
-    private void checkCaches1(int nodes) throws InterruptedException {
-        checkCaches(nodes, 2);
+    private void checkCaches(int nodes) throws InterruptedException {
+        checkCaches(nodes, 2, false);
     }
 
     /**
