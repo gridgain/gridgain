@@ -1002,7 +1002,7 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
      * @throws IgniteOutOfMemoryException In case of the given data region does not have enough free space
      * for putting a new entry.
      */
-    public void ensureFreeSpaceForInsert(DataRegion region)throws IgniteOutOfMemoryException {
+    public void ensureFreeSpaceForInsert(DataRegion region) throws IgniteOutOfMemoryException {
         if (region == null)
             return;
 
@@ -1015,14 +1015,19 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
 
         PageMemory pageMem = region.pageMemory();
 
-        int sysPageSize = pageMem.systemPageSize();
-
         CacheFreeList freeList = freeListMap.get(regCfg.getName());
 
-        long dirtyPages = (pageMem.loadedPages() - freeList.emptyDataPages());
+        long nonEmptyPages = (pageMem.loadedPages() - freeList.emptyDataPages());
 
-        boolean oomThreshold = (memorySize / sysPageSize) <
-            (dirtyPages * (8.0 /*link size*/ / sysPageSize + 1) + 256 /*one page per bucket*/);
+        // The maximum number of pages that can be allocated (memorySize / systemPageSize)
+        // should be greater or equal to the current number of non-empty pages plus
+        // the number of pages that may be required in order to move all pages to a reuse bucket,
+        // that is equal to nonEmptyPages * 8 / pageSize, where 8 is the size of a link.
+        // Note that not the whole page can be used to storing links,
+        // see PagesListNodeIO and PagesListMetaIO#getCapacity(), so we pessimistically multiply the result on 1.5,
+        // in any way, the number of required pages is less than 1 percent.
+        boolean oomThreshold = (memorySize / pageMem.systemPageSize()) <
+            (nonEmptyPages * (8.0 / pageMem.pageSize() + 1) * 1.5 + 256 /*one page per bucket*/);
 
         if (oomThreshold) {
             IgniteOutOfMemoryException oom = new IgniteOutOfMemoryException("Out of memory in data region [" +
