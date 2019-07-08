@@ -27,9 +27,12 @@ import java.util.stream.Stream;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.json.JsonArray;
 import org.apache.ignite.console.json.JsonObject;
+import org.apache.ignite.console.messages.WebConsoleMessageSource;
+import org.apache.ignite.console.messages.WebConsoleMessageSourceAccessor;
 import org.apache.ignite.console.web.AbstractHandler;
 import org.apache.ignite.console.web.model.VisorTaskDescriptor;
-import org.apache.ignite.console.websocket.WebSocketEvent;
+import org.apache.ignite.console.websocket.WebSocketRequest;
+import org.apache.ignite.console.websocket.WebSocketResponse;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.slf4j.Logger;
@@ -63,6 +66,9 @@ public class BrowsersHandler extends AbstractHandler {
     /** */
     private final WebSocketsManager wsm;
 
+    /** Messages accessor. */
+    private WebConsoleMessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
+
     /**
      * @param wsm Web sockets manager.
      */
@@ -90,7 +96,7 @@ public class BrowsersHandler extends AbstractHandler {
                 return (Account)tp;
         }
 
-        throw new IllegalStateException("Account can't be found [session=" + ws + "]");
+        throw new IllegalStateException(messages.getMessageWithArgs("err.account-cant-be-found-in-ws-session", ws));
     }
 
     /** {@inheritDoc} */
@@ -105,13 +111,13 @@ public class BrowsersHandler extends AbstractHandler {
     }
 
     /** {@inheritDoc} */
-    @Override public void handleEvent(WebSocketSession ws, WebSocketEvent evt) {
+    @Override public void handleEvent(WebSocketSession ws, WebSocketRequest evt) {
         try {
             switch (evt.getEventType()) {
                 case SCHEMA_IMPORT_DRIVERS:
                 case SCHEMA_IMPORT_SCHEMAS:
                 case SCHEMA_IMPORT_METADATA:
-                    wsm.sendToFirstAgent(ws, evt);
+                    wsm.sendToFirstAgent(ws, evt.response());
 
                     break;
 
@@ -122,17 +128,17 @@ public class BrowsersHandler extends AbstractHandler {
                     String clusterId = payload.getString("clusterId");
 
                     if (F.isEmpty(clusterId))
-                        throw new IllegalStateException("Missing cluster id parameter.");
+                        throw new IllegalStateException(messages.getMessage("err.missing-cluster-id-param"));
 
-                    WebSocketEvent reqEvt = evt.getEventType().equals(NODE_REST) ?
-                        evt : evt.withPayload(prepareNodeVisorParams(payload));
+                    WebSocketResponse reqEvt = evt.getEventType().equals(NODE_REST) ?
+                        evt.response() : evt.withPayload(prepareNodeVisorParams(payload));
 
                     wsm.sendToNode(ws, clusterId, reqEvt);
 
                     break;
 
                 default:
-                    throw new IllegalStateException("Unknown event: " + evt);
+                    throw new IllegalStateException(messages.getMessageWithArgs("err.unknown-evt", evt));
             }
         }
         catch (IllegalStateException e) {
@@ -246,14 +252,14 @@ public class BrowsersHandler extends AbstractHandler {
         String taskId = params.getString("taskId");
 
         if (F.isEmpty(taskId))
-            throw new IllegalStateException("Task ID not specified [evt=" + payload + "]");
+            throw new IllegalStateException(messages.getMessageWithArgs("err.not-specified-task-id", payload));
 
         String nids = params.getString("nids");
 
         VisorTaskDescriptor desc = visorTasks.get(taskId);
 
         if (desc == null)
-            throw new IllegalStateException("Unknown task  [taskId=" + taskId + ", evt=" + payload + "]");
+            throw new IllegalStateException(messages.getMessageWithArgs("err.unknown-task", taskId, payload));
 
         JsonObject exeParams =  new JsonObject()
             .add("cmd", "exe")

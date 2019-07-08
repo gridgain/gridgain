@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.commandline;
 
 import java.io.File;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
@@ -208,12 +209,14 @@ public class CommandHandler {
      * @return Exit code.
      */
     public int execute(List<String> rawArgs) {
+        LocalDateTime startTime = LocalDateTime.now();
+
         Thread.currentThread().setName("session=" + ses);
 
         logger.info("Control utility [ver. " + ACK_VER_STR + "]");
         logger.info(COPYRIGHT);
         logger.info("User: " + System.getProperty("user.name"));
-        logger.info("Time: " + LocalDateTime.now());
+        logger.info("Time: " + startTime);
 
         String commandName = "";
 
@@ -242,7 +245,11 @@ public class CommandHandler {
             GridClientConfiguration clientCfg = getClientConfiguration(args);
 
             logger.info("Command [" + commandName + "] started");
-            logger.info("Arguments: " + String.join(" ", rawArgs));
+            logger.info("Common arguments: " + args.toString());
+
+            if (command.arg() != null)
+                logger.info("Command arguments: " + command.argumentString());
+
             logger.info(DELIM);
 
             boolean credentialsRequested = false;
@@ -300,6 +307,11 @@ public class CommandHandler {
             }
 
             if (isConnectionError(e)) {
+                IgniteCheckedException cause = X.cause(e, IgniteCheckedException.class);
+
+                if (cause != null && cause.getMessage() != null && cause.getMessage().contains("SSL"))
+                    e = cause;
+
                 logger.severe("Connection to cluster failed. " + CommandLogger.errorMessage(e));
                 logger.info("Command [" + commandName + "] finished with code: " + EXIT_CODE_CONNECTION_FAILED);
 
@@ -321,6 +333,13 @@ public class CommandHandler {
             return EXIT_CODE_UNEXPECTED_ERROR;
         }
         finally {
+            LocalDateTime endTime = LocalDateTime.now();
+
+            Duration diff = Duration.between(startTime, endTime);
+
+            logger.info("Control utility has completed execution at: " + endTime);
+            logger.info("Execution time: " + diff.toMillis() + " ms");
+
             Arrays.stream(logger.getHandlers())
                   .filter(handler -> handler instanceof FileHandler)
                   .forEach(Handler::close);

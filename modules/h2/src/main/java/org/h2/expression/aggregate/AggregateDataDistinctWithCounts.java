@@ -25,7 +25,7 @@ class AggregateDataDistinctWithCounts extends AggregateData  {
 
     private TreeMap<Value, LongDataCounter> values;
 
-    private long allocated;
+    private long memReserved;
 
     /**
      * Creates new instance of data for aggregate that needs distinct values
@@ -65,7 +65,7 @@ class AggregateDataDistinctWithCounts extends AggregateData  {
 
                 memTracker.reserved(size);
 
-                allocated += size;
+                memReserved += size;
             }
         }
         a.count++;
@@ -91,7 +91,7 @@ class AggregateDataDistinctWithCounts extends AggregateData  {
         if (values != null && (memTracker = ses.queryMemoryTracker()) != null) {
             values = null;
 
-            memTracker.released(allocated);
+            memTracker.released(memReserved);
         }
     }
 }

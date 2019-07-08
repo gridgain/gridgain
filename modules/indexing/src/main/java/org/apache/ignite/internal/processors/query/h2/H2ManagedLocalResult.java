@@ -64,8 +64,8 @@ public class H2ManagedLocalResult implements LocalResult {
     /** Query memory tracker. */
     private H2MemoryTracker memTracker;
 
-    /** Allocated memory. */
-    private long allocMem;
+    /** Reserved memory. */
+    private long memReserved;
 
     private GridKernalContext ctx;
 
@@ -112,7 +112,7 @@ public class H2ManagedLocalResult implements LocalResult {
 
         long memory = calculateMemoryDelta(distinctRowKey, oldRow, row);
 
-        allocMem += memory;
+        memReserved += memory;
 
         if (memory < 0) {
             memTracker.released(-memory);
@@ -194,6 +194,7 @@ public class H2ManagedLocalResult implements LocalResult {
             distinctRows.remove(array);
             rowCount = distinctRows.size();
         }
+        // Add new row.
         else {
             rowCount = external.removeRow(values);
         }
@@ -356,9 +357,9 @@ public class H2ManagedLocalResult implements LocalResult {
         }
 
         if (memTracker != null)
-            memTracker.released(allocMem);
+            memTracker.released(memReserved);
 
-        allocMem = 0;
+        memReserved = 0;
 
         rowCount = external.addRows(rows);
         rows.clear();
@@ -513,12 +514,17 @@ public class H2ManagedLocalResult implements LocalResult {
         return !closed;
     }
 
+    /** */
+    public long memoryReserved() {
+        return memReserved;
+    }
+
 
     /** {@inheritDoc} */
     @Override public void close() {
         if (!closed) {
             if (memTracker != null)
-                memTracker.released(allocMem);
+                memTracker.released(memReserved);
 
             if (external != null) {
                 external.close();
@@ -592,7 +598,7 @@ public class H2ManagedLocalResult implements LocalResult {
 
     /** */
     public long memoryAllocated() {
-        return allocMem;
+        return memReserved;
     }
 
     /**
@@ -600,5 +606,15 @@ public class H2ManagedLocalResult implements LocalResult {
      */
     public H2MemoryTracker memoryTracker() {
         return memTracker;
+    }
+
+
+    /** Close event handler. */
+    protected void onClose() {
+        // Allow results to be collected by GC before mark memory released.
+        distinctRows = null;
+        rows = null;
+
+        memTracker.released(memReserved);
     }
 }

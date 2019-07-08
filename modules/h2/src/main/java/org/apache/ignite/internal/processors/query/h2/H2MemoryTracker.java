@@ -38,7 +38,7 @@ public abstract class H2MemoryTracker implements AutoCloseable {
     /**
      * @return Reserved memory size.
      */
-    public abstract long reservedSize();
+    public abstract long memoryReserved();
 
     /**
      * @return Max memory limit.

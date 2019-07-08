@@ -38,7 +38,7 @@ class AggregateDataCollecting extends AggregateData implements Iterable<Value> {
 
     private Value shared;
 
-    private long allocated;
+    private long memReserved;
 
     /**
      * Creates new instance of data for collecting aggregates.
@@ -66,7 +66,7 @@ class AggregateDataCollecting extends AggregateData implements Iterable<Value> {
 
             memTracker.reserved(size);
 
-            allocated += size;
+            memReserved += size;
         }
     }
 
@@ -131,7 +131,7 @@ class AggregateDataCollecting extends AggregateData implements Iterable<Value> {
         if (values != null && (memTracker = ses.queryMemoryTracker()) != null) {
             values = null;
 
-            memTracker.released(allocated);
+            memTracker.released(memReserved);
         }
     }
 }

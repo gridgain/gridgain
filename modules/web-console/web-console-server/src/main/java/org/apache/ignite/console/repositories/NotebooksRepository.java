@@ -23,8 +23,9 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.console.db.OneToManyIndex;
 import org.apache.ignite.console.db.Table;
 import org.apache.ignite.console.dto.Notebook;
+import org.apache.ignite.console.messages.WebConsoleMessageSource;
 import org.apache.ignite.console.tx.TransactionManager;
-import org.apache.ignite.transactions.Transaction;
+import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -36,10 +37,10 @@ public class NotebooksRepository {
     private final TransactionManager txMgr;
 
     /** */
-    private final Table<Notebook> notebooksTbl;
+    private Table<Notebook> notebooksTbl;
 
     /** */
-    private final OneToManyIndex<UUID> notebooksIdx;
+    private OneToManyIndex<UUID> notebooksIdx;
 
     /**
      * @param ignite Ignite.
@@ -48,9 +49,17 @@ public class NotebooksRepository {
     public NotebooksRepository(Ignite ignite, TransactionManager txMgr) {
         this.txMgr = txMgr;
 
-        notebooksTbl = new Table<>(ignite, "wc_notebooks");
+        txMgr.registerStarter("notebooks", () -> {
+            MessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
 
-        notebooksIdx = new OneToManyIndex<>(ignite, "wc_account_notebooks_idx");
+            notebooksTbl = new Table<>(ignite, "wc_notebooks");
+
+            notebooksIdx = new OneToManyIndex<>(
+                    ignite,
+                    "wc_account_notebooks_idx",
+                    (key) -> messages.getMessage("err.data-access-violation")
+            );
+        });
     }
 
     /**
@@ -58,11 +67,11 @@ public class NotebooksRepository {
      * @return List of notebooks for specified account.
      */
     public Collection<Notebook> list(UUID accId) {
-        try (Transaction ignored = txMgr.txStart()) {
+        return txMgr.doInTransaction(() -> {
             Set<UUID> notebooksIds = notebooksIdx.load(accId);
 
             return notebooksTbl.loadAll(notebooksIds);
-        }
+        });
     }
 
     /**
@@ -72,15 +81,13 @@ public class NotebooksRepository {
      * @param notebook Notebook to save.
      */
     public void save(UUID accId, Notebook notebook) {
-        try (Transaction tx = txMgr.txStart()) {
+        txMgr.doInTransaction(() -> {
             notebooksIdx.validateBeforeSave(accId, notebook.getId(), notebooksTbl);
 
             notebooksTbl.save(notebook);
 
             notebooksIdx.add(accId, notebook.getId());
-
-            tx.commit();
-        }
+        });
     }
 
     /**
@@ -90,7 +97,7 @@ public class NotebooksRepository {
      * @param notebookId Notebook ID to delete.
      */
     public void delete(UUID accId, UUID notebookId) {
-        try (Transaction tx = txMgr.txStart()) {
+        txMgr.doInTransaction(() -> {
             notebooksIdx.validate(accId, notebookId);
 
             Notebook notebook = notebooksTbl.load(notebookId);
@@ -99,10 +106,8 @@ public class NotebooksRepository {
                 notebooksTbl.delete(notebookId);
 
                 notebooksIdx.remove(accId, notebookId);
-
-                tx.commit();
             }
-        }
+        });
     }
 
     /**
@@ -111,12 +116,10 @@ public class NotebooksRepository {
      * @param accId Account ID.
      */
     public void deleteAll(UUID accId) {
-        try(Transaction tx = txMgr.txStart()) {
+        txMgr.doInTransaction(() -> {
             Set<UUID> notebooksIds = notebooksIdx.delete(accId);
 
             notebooksTbl.deleteAll(notebooksIds);
-
-            tx.commit();
-        }
+        });
     }
 }

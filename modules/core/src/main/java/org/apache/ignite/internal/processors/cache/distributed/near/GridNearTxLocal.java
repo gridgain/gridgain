@@ -3831,13 +3831,24 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
             return chainFinishFuture(finishFut, true, true, false);
 
         if (!fastFinish) {
-            final IgniteInternalFuture<?> prepareFut = prepareNearTxLocal();
+            IgniteInternalFuture<?> prepareFut;
+            try {
+                prepareFut = prepareNearTxLocal();
+            }
+            catch (Throwable t) {
+                prepareFut = prepFut;
+
+                // Properly finish prepFut in case of unchecked error.
+                assert prepareFut != null; // Prep future must be set.
+
+                ((GridNearTxPrepareFutureAdapter)prepFut).onDone(t);
+            }
 
             prepareFut.listen(new CI1<IgniteInternalFuture<?>>() {
                 @Override public void apply(IgniteInternalFuture<?> f) {
                     try {
                         // Make sure that here are no exceptions.
-                        prepareFut.get();
+                        f.get();
 
                         fut.finish(true, true, false);
                     }
@@ -4522,7 +4533,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
      */
     public TransactionProxy proxy() {
         if (proxy == null)
-            proxy = new TransactionProxyImpl(this, cctx, false);
+            proxy = new TransactionProxyImpl(this, cctx);
 
         return proxy;
     }
@@ -4532,7 +4543,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
      */
     public TransactionProxy rollbackOnlyProxy() {
         if (rollbackOnlyProxy == null)
-            rollbackOnlyProxy = new TransactionProxyRollbackOnlyImpl<>(this, cctx, false);
+            rollbackOnlyProxy = new TransactionProxyRollbackOnlyImpl<>(this, cctx);
 
         return rollbackOnlyProxy;
     }

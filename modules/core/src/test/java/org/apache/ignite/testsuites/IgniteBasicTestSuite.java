@@ -61,6 +61,7 @@ import org.apache.ignite.internal.processors.cache.IgniteMarshallerCacheFSRestor
 import org.apache.ignite.internal.processors.cache.RebalanceWithDifferentThreadPoolSizeTest;
 import org.apache.ignite.internal.processors.cache.SetTxTimeoutOnPartitionMapExchangeTest;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteRejectConnectOnNodeStopTest;
+import org.apache.ignite.internal.processors.cache.query.continuous.DiscoveryDataDeserializationFailureHanderTest;
 import org.apache.ignite.internal.processors.cache.transactions.AtomicOperationsInTxTest;
 import org.apache.ignite.internal.processors.cache.transactions.TransactionIntegrityWithSystemWorkerDeathTest;
 import org.apache.ignite.internal.processors.closure.GridClosureProcessorRemoteTest;
@@ -81,6 +82,7 @@ import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorageT
 import org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageHistoryCacheTest;
 import org.apache.ignite.internal.processors.odbc.OdbcConfigurationValidationSelfTest;
 import org.apache.ignite.internal.processors.odbc.OdbcEscapeSequenceSelfTest;
+import org.apache.ignite.internal.processors.odbc.SqlListenerUtilsTest;
 import org.apache.ignite.internal.product.GridProductVersionSelfTest;
 import org.apache.ignite.internal.util.BitSetIntSetTest;
 import org.apache.ignite.internal.util.GridCleanerTest;
@@ -123,6 +125,8 @@ import org.junit.runners.Suite;
 
     IgnitePlatformsTestSuite.class,
 
+    SecurityTestSuite.class,
+
     GridSelfTest.class,
     ClusterGroupHostsSelfTest.class,
     IgniteMessagingWithClientTest.class,
@@ -163,11 +167,13 @@ import org.junit.runners.Suite;
     GridMBeansTest.class,
     TransactionsMXBeanImplTest.class,
     SetTxTimeoutOnPartitionMapExchangeTest.class,
+    DiscoveryDataDeserializationFailureHanderTest.class,
 
     IgniteExceptionInNioWorkerSelfTest.class,
     IgniteLocalNodeMapBeforeStartTest.class,
     OdbcConfigurationValidationSelfTest.class,
     OdbcEscapeSequenceSelfTest.class,
+    SqlListenerUtilsTest.class,
 
     DynamicProxySerializationMultiJvmSelfTest.class,
 

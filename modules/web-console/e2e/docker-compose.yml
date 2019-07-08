@@ -13,28 +13,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-version: '3'
-services:
-  mongodb:
-    image: mongo:4.0
-    container_name: 'mongodb'
 
-  testenv:
+version: '2.4'
+services:
+  backend:
     build:
-      context: '../'
-      dockerfile: './e2e/testenv/Dockerfile'
+      context: '../docker/console'
+      dockerfile: 'backend/Dockerfile'
     environment:
-      - mongodb_url=mongodb://mongodb:27017/console-e2e
+      - SPRING_PROFILES_ACTIVE=test
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/swagger-ui.html"]
+      interval: 5s # interval health check
+      timeout: 2s # timeout for check
+      retries: 10 # maximum retries
+
+  frontend:
+    build:
+      context: '../docker/console'
+      dockerfile: 'frontend/Dockerfile'
     depends_on:
-      - mongodb
+      backend:
+        condition: service_healthy
 
   e2e:
     build: './testcafe'
     environment:
-      - DB_URL=mongodb://mongodb:27017/console-e2e
-      - APP_URL=http://testenv:9001/
+      - APP_URL=http://frontend
       - REPORTER=teamcity
       - QUARANTINE_MODE=true
     depends_on:
-      - mongodb
-      - testenv
+      - frontend
