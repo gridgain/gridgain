@@ -53,7 +53,8 @@ public class ClusterInfoRepository {
         txMgr.registerStarter("clusters_info", () -> {
             clustersInfoTbl = new Table<>(ignite, "wc_clusters_info");
 
-            clustersInfoIdx = new OneToManyIndex<>(ignite, "wc_account_clusters_info_idx");
+            clustersInfoIdx = new OneToManyIndex<>(ignite, "wc_account_clusters_info_idx",
+                (key) -> "TODO: GG-19573");
         });
     }
 
