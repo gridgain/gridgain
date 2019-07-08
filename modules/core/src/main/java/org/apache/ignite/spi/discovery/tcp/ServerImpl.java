@@ -1750,6 +1750,7 @@ class ServerImpl extends TcpDiscoveryImpl {
             nodeAddedMsg.topology(null);
             nodeAddedMsg.topologyHistory(null);
             nodeAddedMsg.messages(null, null, null);
+            nodeAddedMsg.clearDiscoveryData();
         }
     }
 
@@ -3439,6 +3440,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                                             spi.getSocketTimeout()));
                                     }
                                     finally {
+                                        //TODO: if writeToSocket failed we clear nodeAddedMessage. Is this right?
                                         clearNodeAddedMessage(pendingMsg);
                                     }
 
@@ -4782,10 +4784,8 @@ class ServerImpl extends TcpDiscoveryImpl {
                                 msg.discardedCustomMessageId());
 
                             // Clear data to minimize message size.
-                            msg.messages(null, null, null);
-                            msg.topology(null);
-                            msg.topologyHistory(null);
-                            msg.clearDiscoveryData();
+                            //TODO: check if using method is valid
+                            clearNodeAddedMessage(msg);
                         }
                         else {
                             if (log.isDebugEnabled())
@@ -6592,6 +6592,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                         TcpDiscoveryAbstractMessage msg = U.unmarshal(spi.marshaller(), in,
                             U.resolveClassLoader(spi.ignite().configuration()));
 
+                        //TODO: sender is changed before logging?
                         msg.senderNodeId(nodeId);
 
                         DebugLogger debugLog = messageLogger(msg);

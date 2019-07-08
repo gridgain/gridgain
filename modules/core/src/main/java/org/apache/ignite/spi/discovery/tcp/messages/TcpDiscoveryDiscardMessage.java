@@ -24,6 +24,8 @@ import org.apache.ignite.lang.IgniteUuid;
  * Message sent by coordinator when some operation handling is over. All receiving
  * nodes should discard this and all preceding messages in local buffers.
  */
+//TODO: Why was in not here?
+@TcpDiscoveryEnsureDelivery
 public class TcpDiscoveryDiscardMessage extends TcpDiscoveryAbstractMessage {
     /** */
     private static final long serialVersionUID = 0L;
