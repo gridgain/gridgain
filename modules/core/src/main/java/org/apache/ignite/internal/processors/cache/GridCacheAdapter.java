@@ -652,6 +652,11 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         // Nulling thread local reference to ensure values will be eventually GCed
         // no matter what references these futures are holding.
         lastFut = null;
+
+        if (ctx.isNear())
+            ctx.kernalContext().metrics().unregister("cache." + ctx.name() + ".near");
+        else
+            ctx.kernalContext().metrics().unregister("cache." + ctx.name());
     }
 
     /**

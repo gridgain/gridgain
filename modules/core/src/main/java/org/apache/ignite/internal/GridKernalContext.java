@@ -32,6 +32,7 @@ import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.managers.failover.GridFailoverManager;
 import org.apache.ignite.internal.managers.indexing.GridIndexingManager;
 import org.apache.ignite.internal.managers.loadbalancer.GridLoadBalancerManager;
+import org.apache.ignite.internal.metrics.MetricProcessor;
 import org.apache.ignite.internal.processors.affinity.GridAffinityProcessor;
 import org.apache.ignite.internal.processors.authentication.IgniteAuthenticationProcessor;
 import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
@@ -436,6 +437,8 @@ public interface GridKernalContext extends Iterable<GridComponent> {
      * @return Transactional data replication processor.
      */
     public TransactionalDrProcessor txDr();
+
+    public MetricProcessor metrics();
 
     /**
      * Gets load balancing manager.

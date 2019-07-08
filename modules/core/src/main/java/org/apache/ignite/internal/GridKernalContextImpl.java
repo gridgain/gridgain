@@ -47,6 +47,7 @@ import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.managers.failover.GridFailoverManager;
 import org.apache.ignite.internal.managers.indexing.GridIndexingManager;
 import org.apache.ignite.internal.managers.loadbalancer.GridLoadBalancerManager;
+import org.apache.ignite.internal.metrics.MetricProcessor;
 import org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor;
 import org.apache.ignite.internal.processors.service.ServiceProcessorAdapter;
 import org.apache.ignite.internal.processors.affinity.GridAffinityProcessor;
@@ -203,7 +204,7 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
 
     /** */
     @GridToStringInclude
-    private GridJobMetricsProcessor metricsProc;
+    private GridJobMetricsProcessor jobMetricsProc;
 
     /** */
     @GridToStringInclude
@@ -324,6 +325,10 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     /** */
     @GridToStringExclude
     private TransactionalDrProcessor txDrProc;
+
+    /** */
+    @GridToStringExclude
+    private MetricProcessor metricsProc;
 
     /** Diagnostic processor. */
     @GridToStringInclude
@@ -621,7 +626,7 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
         else if (comp instanceof GridResourceProcessor)
             rsrcProc = (GridResourceProcessor)comp;
         else if (comp instanceof GridJobMetricsProcessor)
-            metricsProc = (GridJobMetricsProcessor)comp;
+            jobMetricsProc = (GridJobMetricsProcessor)comp;
         else if (comp instanceof GridCacheProcessor)
             cacheProc = (GridCacheProcessor)comp;
         else if (comp instanceof GridClusterStateProcessor)
@@ -684,6 +689,8 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
             compressProc = (CompressionProcessor)comp;
         else if (comp instanceof TransactionalDrProcessor)
             txDrProc = (TransactionalDrProcessor)comp;
+        else if (comp instanceof MetricProcessor)
+            metricsProc = (MetricProcessor)comp;
         else if (comp instanceof DiagnosticProcessor)
             diagnosticProcessor = (DiagnosticProcessor)comp;
         else if (!(comp instanceof DiscoveryNodeValidationProcessor
@@ -770,7 +777,7 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
 
     /** {@inheritDoc} */
     @Override public GridJobMetricsProcessor jobMetric() {
-        return metricsProc;
+        return jobMetricsProc;
     }
 
     /** {@inheritDoc} */
@@ -861,6 +868,11 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     /** {@inheritDoc} */
     @Override public TransactionalDrProcessor txDr() {
         return txDrProc;
+    }
+
+    /** {@inheritDoc} */
+    @Override public MetricProcessor metrics() {
+        return metricsProc;
     }
 
     /** {@inheritDoc} */

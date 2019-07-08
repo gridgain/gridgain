@@ -22,6 +22,8 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheMetrics;
 import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.internal.metrics.LongGauge;
+import org.apache.ignite.internal.metrics.MetricRegistry;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopologyFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
@@ -162,6 +164,8 @@ public class CacheMetricsImpl implements CacheMetrics {
     /** Write-behind store, if configured. */
     private GridCacheWriteBehindStore store;
 
+    private MetricRegistry metricRegistry;
+
     /**
      * Creates cache metrics;
      *
@@ -179,6 +183,50 @@ public class CacheMetricsImpl implements CacheMetrics {
             store = (GridCacheWriteBehindStore)cctx.store().store();
 
         delegate = null;
+
+        String key = "cache." + cctx.name();
+
+        if (cctx.isNear())
+            key += ".near";
+
+        metricRegistry = new MetricRegistry(key);
+
+        metricRegistry.add( "reads", (LongGauge)reads::get);
+        metricRegistry.add( "entryProcessorPuts", (LongGauge)entryProcessorPuts::get);
+        metricRegistry.add( "entryProcessorRemovals", (LongGauge)entryProcessorRemovals::get);
+        metricRegistry.add( "entryProcessorReadOnlyInvocations", (LongGauge)entryProcessorReadOnlyInvocations::get);
+        metricRegistry.add( "entryProcessorInvokeTimeNanos", (LongGauge)entryProcessorInvokeTimeNanos::get);
+        metricRegistry.add( "entryProcessorMinInvocationTime", (LongGauge)entryProcessorMinInvocationTime::get);
+        metricRegistry.add( "entryProcessorMaxInvocationTime", (LongGauge)entryProcessorMaxInvocationTime::get);
+        metricRegistry.add( "entryProcessorHits", (LongGauge)entryProcessorHits::get);
+        metricRegistry.add( "entryProcessorMisses", (LongGauge)entryProcessorMisses::get);
+        metricRegistry.add( "writes", (LongGauge)writes::get);
+        metricRegistry.add( "hits", (LongGauge)hits::get);
+        metricRegistry.add( "misses", (LongGauge)misses::get);
+        metricRegistry.add( "txCommits", (LongGauge)txCommits::get);
+        metricRegistry.add( "txRollbacks", (LongGauge)txRollbacks::get);
+        metricRegistry.add( "evictCnt", (LongGauge)evictCnt::get);
+        metricRegistry.add( "rmCnt", (LongGauge)rmCnt::get);
+        metricRegistry.add( "putTimeNanos", (LongGauge)putTimeNanos::get);
+        metricRegistry.add( "getTimeNanos", (LongGauge)getTimeNanos::get);
+        metricRegistry.add( "rmvTimeNanos", (LongGauge)rmvTimeNanos::get);
+        metricRegistry.add( "commitTimeNanos", (LongGauge)commitTimeNanos::get);
+        metricRegistry.add( "rollbackTimeNanos", (LongGauge)rollbackTimeNanos::get);
+        metricRegistry.add( "offHeapGets", (LongGauge)offHeapGets::get);
+        metricRegistry.add( "offHeapPuts", (LongGauge)offHeapPuts::get);
+        metricRegistry.add( "offHeapRemoves", (LongGauge)offHeapRemoves::get);
+        metricRegistry.add( "offHeapEvicts", (LongGauge)offHeapEvicts::get);
+        metricRegistry.add( "offHeapHits", (LongGauge)offHeapHits::get);
+        metricRegistry.add( "offHeapMisses", (LongGauge)offHeapMisses::get);
+        metricRegistry.add( "rebalancedKeys", (LongGauge)rebalancedKeys::get);
+        metricRegistry.add( "totalRebalancedBytes", (LongGauge)totalRebalancedBytes::get);
+        metricRegistry.add( "rebalanceStartTime", (LongGauge)rebalanceStartTime::get);
+        metricRegistry.add( "estimatedRebalancingKeys", (LongGauge)estimatedRebalancingKeys::get);
+        // TODO: add HitRateMetrics: rebalancingKeysRate and rebalancingBytesRate
+        metricRegistry.add( "rebalanceClearingPartitions", (LongGauge)rebalanceClearingPartitions::get);
+
+        cctx.kernalContext().metrics().register(key, metricRegistry);
+
     }
 
     /**
