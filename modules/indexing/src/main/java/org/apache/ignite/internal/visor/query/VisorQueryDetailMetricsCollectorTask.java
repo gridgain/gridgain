@@ -101,7 +101,7 @@ public class VisorQueryDetailMetricsCollectorTask extends VisorMultiNodeTask<Vis
          * @param since Time when metrics were collected last time.
          * @param res Response.
          * @param metrics Metrics.
-         * @param skipQueryMetrics Skip metrics for SQL and SQL_FIELD queries when {@code true}
+         * @param skipQueryMetrics Skip metrics for SQL and SQL_FIELD queries when {@code true}.
          */
         private static void aggregateMetrics(
             long since, Map<GridCacheQueryDetailMetricsKey,

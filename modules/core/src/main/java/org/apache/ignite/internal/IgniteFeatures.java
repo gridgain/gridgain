@@ -159,7 +159,7 @@ public enum IgniteFeatures {
     /**
      * Features supported by the current node.
      *
-     * @param ctx Kernal context
+     * @param ctx Kernal context.
      * @return Byte array representing all supported features by current node.
      */
     public static byte[] allFeatures(GridKernalContext ctx) {
