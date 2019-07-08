@@ -933,7 +933,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                             curPart = ds.partId();
 
                             // Data page scan is disabled by default for scan queries.
-                            CacheDataTree.setDataPageScanEnabled(dataPageScanEnabled == TRUE);
+                            // TODO https://ggsystems.atlassian.net/browse/GG-20800
+                            CacheDataTree.setDataPageScanEnabled(false);
 
                             try {
                                 if (mvccSnapshot == null)
@@ -1623,10 +1624,11 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             if (oldRow.expireTime() != dataRow.expireTime())
                 return false;
 
-            // Use grp.sharedGroup() flag since it is possible cacheId is not yet set here.
-            boolean sizeWithCacheId = grp.sharedGroup();
-
             int oldLen = oldRow.size();
+
+            // Use grp.sharedGroup() flag since it is possible cacheId is not yet set here.
+            if (!grp.storeCacheIdInDataPage() && grp.sharedGroup() && oldRow.cacheId() != CU.UNDEFINED_CACHE_ID)
+                oldLen -= 4;
 
             if (oldLen > updateValSizeThreshold)
                 return false;
