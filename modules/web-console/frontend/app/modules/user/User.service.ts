@@ -79,6 +79,7 @@ export default function UserFactory(
             delete Demo.enabled;
 
             sessionStorage.removeItem('demoMode');
+            sessionStorage.removeItem('refreshRate');
         },
 
         async save(user: Partial<User>): Promise<User> {
