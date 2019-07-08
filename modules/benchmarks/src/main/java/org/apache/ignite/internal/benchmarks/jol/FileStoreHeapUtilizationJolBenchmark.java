@@ -15,179 +15,73 @@
  */
 package org.apache.ignite.internal.benchmarks.jol;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteException;
-import org.apache.ignite.Ignition;
-import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
-import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.configuration.DataRegionConfiguration;
+import java.io.File;
+import java.nio.ByteBuffer;
+import java.nio.file.Path;
+import java.util.LinkedList;
+import java.util.List;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.DataStorageConfiguration;
-import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.configuration.WALMode;
-import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.internal.util.typedef.G;
+import org.apache.ignite.internal.pagemem.PageMemory;
+import org.apache.ignite.internal.pagemem.store.PageStore;
+import org.apache.ignite.internal.processors.cache.persistence.file.AsyncFileIOFactory;
+import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreFactory;
+import org.apache.ignite.internal.processors.cache.persistence.file.FileVersionCheckingFactory;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
-import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.openjdk.jol.info.GraphLayout;
 
-import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.DFLT_STORE_DIR;
+import static org.apache.ignite.configuration.DataStorageConfiguration.MIN_PAGE_SIZE;
+import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.PART_FILE_TEMPLATE;
 
 /**
  *
  */
 public class FileStoreHeapUtilizationJolBenchmark {
     /** */
-    private static final String CACHE_NAME = "testCache";
-
-    /** */
-    private static final String HEAP_USAGE = "heap usage";
-
-    /** */
-    private static final String CACHE_WORK_TIME = "cache work time";
-
-    /** */
-    private static final TestResultParameterInfo HEAP_USAGE_PARAM = new TestResultParameterInfo(HEAP_USAGE, false);
-
-    /** */
-    private static final TestResultParameterInfo CACHE_WORK_TIME_PARAM = new TestResultParameterInfo(CACHE_WORK_TIME, false);
-
-    /**
-     * Cleans persistent directory.
-     *
-     * @throws Exception if failed.
-     */
-    private void cleanPersistenceDir() throws Exception {
-        if (!F.isEmpty(G.allGrids()))
-            throw new IgniteException("Grids are not stopped");
-
-        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), "cp", false));
-        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), DFLT_STORE_DIR, false));
-        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), "marshaller", false));
-        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), "binary_meta", false));
-    }
-
-    /** */
-    private IgniteConfiguration getConfiguration(String igniteInstanceName) {
-        IgniteConfiguration cfg = new IgniteConfiguration();
-
-        cfg.setIgniteInstanceName(igniteInstanceName);
-
-        cfg.setDiscoverySpi(
-            new TcpDiscoverySpi()
-                .setIpFinder(
-                    new TcpDiscoveryVmIpFinder()
-                        .setAddresses(Collections.singleton("127.0.0.1:47500..47502"))
-                )
+    private void benchmark() throws IgniteCheckedException {
+        FilePageStoreFactory factory = new FileVersionCheckingFactory(
+            new AsyncFileIOFactory(),
+            new AsyncFileIOFactory(),
+            new DataStorageConfiguration()
+                .setPageSize(MIN_PAGE_SIZE)
         );
 
-        CacheConfiguration ccfg = new CacheConfiguration(CACHE_NAME);
+        List<PageStore> stores = new LinkedList<>();
 
-        ccfg.setAffinity(new RendezvousAffinityFunction(false, CacheConfiguration.MAX_PARTITIONS_COUNT));
+        File workDir = U.resolveWorkDirectory(U.defaultWorkDirectory(), "db", false);
 
-        cfg.setCacheConfiguration(ccfg);
+        for (int i = 0; i < 10000; i++) {
+            final int p = i;
 
-        cfg.setActiveOnStart(false);
+            PageStore ps = factory.createPageStore(
+                PageMemory.FLAG_DATA,
+                () -> getPartitionFilePath(workDir, p),
+                d -> { }
+            );
 
-        DataStorageConfiguration memCfg = new DataStorageConfiguration()
-            .setDefaultDataRegionConfiguration(
-                new DataRegionConfiguration()
-                    .setPersistenceEnabled(true)
-                    .setMaxSize(DataStorageConfiguration.DFLT_DATA_REGION_INITIAL_SIZE)
-            )
-            .setWalMode(WALMode.LOG_ONLY);
+            ps.ensure();
 
-        cfg.setDataStorageConfiguration(memCfg);
+            ps.write(0, ByteBuffer.allocate(256), 1, false);
 
-        return cfg;
+            stores.add(ps);
+        }
+
+        System.gc();
+
+        GraphLayout layout = GraphLayout.parseInstance(stores);
+
+        System.out.println("heap usage: " + layout.totalSize());
+
+        U.delete(workDir);
     }
 
     /** */
-    private Map<TestResultParameterInfo, Comparable> testGrid() {
-        String name = UUID.randomUUID().toString().substring(0, 8);
-
-        Ignite ignite = Ignition.start(getConfiguration(name));
-
-        ignite.cluster().active(true);
-
-        long start = System.currentTimeMillis();
-
-        IgniteCache<Object, Object> cache = ignite.getOrCreateCache(CACHE_NAME);
-
-        for (int i = 0; i < 100; i++)
-            cache.put(i, new byte[512]);
-
-        for (int i = 50; i < 100; i++)
-            cache.remove(i);
-
-        for (int i = 50; i < 150; i++)
-            cache.put(i, new byte[512]);
-
-        long time = System.currentTimeMillis() - start;
-
-        GraphLayout layout = GraphLayout.parseInstance(ignite);
-
-        ignite.cluster().active(false);
-
-        Ignition.stop(name, true);
-
-        return new HashMap<TestResultParameterInfo, Comparable>() {{
-            put(HEAP_USAGE_PARAM, layout.totalSize());
-            put(CACHE_WORK_TIME_PARAM, time);
-        }};
-    }
-
-    /** */
-    private void beforeTest() throws Exception {
-        cleanPersistenceDir();
-    }
-
-    /** */
-    private void afterTest() throws Exception {
-        cleanPersistenceDir();
-    }
-
-    /**
-     * Benchmark body
-     *
-     * @throws Exception if failed.
-     */
-    private void benchmark() throws Exception {
-        beforeTest();
-
-        Map<TestResultParameterInfo, Comparable> results = testGrid();
-
-        afterTest();
-
-        System.out.println("Benchmark results: ");
-
-        results.forEach((k, v) -> System.out.println(k.name + ": " + v));
+    private Path getPartitionFilePath(File cacheWorkDir, int partId) {
+        return new File(cacheWorkDir, String.format(PART_FILE_TEMPLATE, partId)).toPath();
     }
 
     /** */
     public static void main(String[] args) throws Exception {
         new FileStoreHeapUtilizationJolBenchmark().benchmark();
-    }
-
-    /**
-     * This class contains info about single parameter, which is measured by benchmark (e.g. heap usage, etc.).
-     */
-    private static class TestResultParameterInfo {
-        /** */
-        final String name;
-
-        /** */
-        final boolean greaterIsBetter;
-
-        /** */
-        TestResultParameterInfo(String name, boolean better) {
-            this.name = name;
-            greaterIsBetter = better;
-        }
     }
 }
