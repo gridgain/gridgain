@@ -14,24 +14,12 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.distributed.near;
-
-import org.apache.ignite.cache.CacheMode;
-import org.apache.ignite.internal.processors.cache.GridCacheAbstractSelfTest;
-
-import static org.apache.ignite.cache.CacheMode.PARTITIONED;
+/**
+ *
+ */
 
 /**
- * Test for asynchronous cache entry lock with timeout.
+ * <!-- Package description. -->
+ * Contains Sql view metric exporter implementation.
  */
-public class GridCachePartitionedEntryLockSelfTest extends GridCacheAbstractSelfTest {
-    /** {@inheritDoc} */
-    @Override protected int gridCount() {
-        return 3;
-    }
-
-    /** {@inheritDoc} */
-    @Override protected CacheMode cacheMode() {
-        return PARTITIONED;
-    }
-}
+package org.apache.ignite.spi.metric.sql;
