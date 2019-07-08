@@ -25,12 +25,14 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.console.db.Table;
 import org.apache.ignite.console.dto.Account;
+import org.apache.ignite.console.messages.WebConsoleMessageSource;
+import org.apache.ignite.console.messages.WebConsoleMessageSourceAccessor;
 import org.apache.ignite.console.tx.TransactionManager;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Repository;
 
-import static org.apache.ignite.console.web.errors.Errors.checkDatabaseNotAvailable;
+import static org.apache.ignite.console.errors.Errors.checkDatabaseNotAvailable;
 
 /**
  * Repository to work with accounts.
@@ -42,6 +44,9 @@ public class AccountsRepository {
 
     /** */
     private final TransactionManager txMgr;
+
+    /** Messages accessor. */
+    private final WebConsoleMessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
 
     /** Accounts collection. */
     private Table<Account> accountsTbl;
@@ -56,9 +61,9 @@ public class AccountsRepository {
         txMgr.registerStarter("accounts", () ->
             accountsTbl = new Table<Account>(ignite, "wc_accounts")
                 .addUniqueIndex(a -> a.getUsername().trim().toLowerCase(),
-                    (acc) -> "The email address you have entered is already registered: " + acc.getUsername())
+                    (acc) -> messages.getMessageWithArgs("err.account-with-email-exists", acc.getUsername()))
                 .addUniqueIndex(Account::getToken,
-                    (acc) -> "Account with token '" + acc.getToken() + "' already exists")
+                    (acc) -> messages.getMessageWithArgs("err.account-with-token-exists", acc.getToken()))
         );
     }
 
@@ -167,7 +172,7 @@ public class AccountsRepository {
             Account acc = accountsTbl.delete(accId);
 
             if (acc == null)
-                throw new IllegalStateException("Account not found for ID: " + accId);
+                throw new IllegalStateException(messages.getMessageWithArgs("err.account-not-found-by-id", accId));
 
             return acc;
         });

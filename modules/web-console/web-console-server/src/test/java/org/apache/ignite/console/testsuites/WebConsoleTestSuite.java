@@ -19,6 +19,7 @@ package org.apache.ignite.console.testsuites;
 import org.apache.ignite.console.discovery.IsolatedCacheFullApiSelfTest;
 import org.apache.ignite.console.discovery.IsolatedDiscoverySpiSelfTest;
 import org.apache.ignite.console.listener.NotificationEventListenerTest;
+import org.apache.ignite.console.repositories.AccountsRepositoryTest;
 import org.apache.ignite.console.db.TableSelfTest;
 import org.apache.ignite.console.services.AccountServiceTest;
 import org.apache.ignite.console.services.ActivitiesServiceTest;
@@ -39,6 +40,7 @@ import org.junit.runners.Suite;
     ActivitiesServiceTest.class,
     AdminServiceTest.class,
     NotificationEventListenerTest.class,
+    AccountsRepositoryTest.class,
     NotificationServiceTest.class,
     IsolatedDiscoverySpiSelfTest.class,
     IsolatedCacheFullApiSelfTest.class
