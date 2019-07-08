@@ -39,6 +39,7 @@ import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.TcpDiscoveryIpFinder;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.eclipse.jetty.client.HttpResponseException;
+import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.hamcrest.core.Is;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -351,16 +352,48 @@ public class RestExecutorSelfTest {
 
     /** */
     @Test
-   public void testHttps() throws Throwable {
-       checkRest(
-           nodeConfiguration(JETTY_WITH_HTTPS),
-           HTTPS_URI,
-           null,
-           null,
-           true,
-           null,
-           null,
-           null
-       );
-   }
+    public void testHttps() throws Throwable {
+        checkRest(
+            nodeConfiguration(JETTY_WITH_HTTPS),
+            HTTPS_URI,
+            null,
+            null,
+            true,
+            null,
+            null,
+            null
+        );
+    }
+
+    /** */
+    @Test
+    public void testRequestWithManyParams() throws Throwable {
+        try(Ignite ignored = Ignition.getOrStart(nodeConfiguration(""))) {
+            RestExecutor exec = new RestExecutor(new SslContextFactory.Client());
+
+            JsonObject params = new JsonObject()
+                .add("cmd", "top")
+                .add("attr", false)
+                .add("mtr", false)
+                .add("caches", false);
+
+            for (int i = 0; i < 1000; i++) {
+                String param = UUID.randomUUID().toString();
+
+                params.add(param, param);
+            }
+
+            RestResult res = exec.sendRequest(HTTP_URI, params);
+
+            JsonNode json = toJson(res);
+
+            Assert.assertTrue(json.isArray());
+
+            for (JsonNode item : json) {
+                Assert.assertTrue(item.get("attributes").isNull());
+                Assert.assertTrue(item.get("metrics").isNull());
+                Assert.assertTrue(item.get("caches").isNull());
+            }
+        }
+    }
 }

@@ -158,7 +158,7 @@ public class AgentUtils {
         String trustStorePwd,
         List<String> ciphers
     ) {
-        SslContextFactory sslCtxFactory = new SslContextFactory();
+        SslContextFactory sslCtxFactory = new SslContextFactory.Client();
 
         if (!F.isEmpty(keyStore)) {
             sslCtxFactory.setKeyStorePath(keyStore);

@@ -22,8 +22,9 @@ import org.apache.ignite.console.json.JsonObject;
 import org.apache.ignite.logger.slf4j.Slf4jLogger;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.ContentResponse;
-import org.eclipse.jetty.client.api.Request;
+import org.eclipse.jetty.client.util.FormContentProvider;
 import org.eclipse.jetty.http.HttpMethod;
+import org.eclipse.jetty.util.Fields;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.slf4j.LoggerFactory;
 
@@ -49,9 +50,6 @@ public class RestExecutor implements AutoCloseable {
      */
     public RestExecutor(SslContextFactory sslCtxFactory) {
         httpClient = new HttpClient(sslCtxFactory);
-        
-        httpClient.setRequestBufferSize(512 * 1024);
-        httpClient.setRequestBufferSize(5 * 1024 * 1024);
     }
 
     /** {@inheritDoc} */
@@ -98,14 +96,16 @@ public class RestExecutor implements AutoCloseable {
         if (!httpClient.isRunning())
             httpClient.start();
 
-        Request req = httpClient
+        Fields fields = new Fields();
+
+        params.forEach((k, v) -> fields.add(k, String.valueOf(v)));
+
+        ContentResponse res = httpClient
             .newRequest(url)
             .path("/ignite")
-            .method(HttpMethod.POST);
-
-        params.forEach((k, v) -> req.param(k, String.valueOf(v)));
-
-        ContentResponse res = req.send();
+            .method(HttpMethod.POST)
+            .content(new FormContentProvider(fields))
+            .send();
 
         return parseResponse(res);
     }
