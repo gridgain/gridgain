@@ -23,6 +23,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.dto.ClusterInfo;
 import org.apache.ignite.console.metrics.MetricsDto;
+import org.apache.ignite.console.messages.WebConsoleMessageSource;
+import org.apache.ignite.console.messages.WebConsoleMessageSourceAccessor;
 import org.apache.ignite.console.repositories.AccountsRepository;
 import org.apache.ignite.console.repositories.ClusterInfoRepository;
 import org.apache.ignite.console.web.AbstractHandler;
@@ -60,6 +62,9 @@ public class AgentsHandler extends AbstractHandler {
     /** */
     private WebSocketsManager wsm;
 
+    /** Messages accessor. */
+    private WebConsoleMessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
+
     /**
      * @param accRepo Repository to work with accounts.
      * @param clusterRepo Repository to work with clusters.
@@ -77,10 +82,10 @@ public class AgentsHandler extends AbstractHandler {
     private void validateAgentHandshake(AgentHandshakeRequest req) {
         // TODO GG-19573 no tokens needed.
         //        if (F.isEmpty(req.getTokens()))
-        //            throw new IllegalArgumentException("Tokens not specified in agent handshake request");
+        //            throw new IllegalArgumentException(messages.getMessage("err.tokens-no-specified-in-agent-handshake-req"));
 
         if (!SUPPORTED_VERS.contains(req.getVersion()))
-            throw new IllegalArgumentException("Unsupported version of the agent: " + req.getVersion());
+            throw new IllegalArgumentException(messages.getMessageWithArgs("err.agent-unsupport-version", req.getVersion()));
     }
 
     /**
@@ -91,7 +96,7 @@ public class AgentsHandler extends AbstractHandler {
 
         // TODO GG-19573 no tokens needed.
         //        if (accounts.isEmpty())
-        //            throw new IllegalArgumentException("Failed to authenticate with token(s): " + tokens);
+        //            throw new IllegalArgumentException(messages.getMessageWithArgs("err.failed-auth-with-tokens", tokens));
 
         return accounts;
     }
