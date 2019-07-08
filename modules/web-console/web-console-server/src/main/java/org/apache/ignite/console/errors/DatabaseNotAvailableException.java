@@ -14,24 +14,20 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.distributed.near;
+package org.apache.ignite.console.errors;
 
-import org.apache.ignite.cache.CacheMode;
-import org.apache.ignite.internal.processors.cache.GridCacheAbstractSelfTest;
+import org.eclipse.jetty.http.BadMessageException;
 
-import static org.apache.ignite.cache.CacheMode.PARTITIONED;
+import static org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE;
 
 /**
- * Test for asynchronous cache entry lock with timeout.
+ * Special exception to handle database errors.
  */
-public class GridCachePartitionedEntryLockSelfTest extends GridCacheAbstractSelfTest {
-    /** {@inheritDoc} */
-    @Override protected int gridCount() {
-        return 3;
-    }
-
-    /** {@inheritDoc} */
-    @Override protected CacheMode cacheMode() {
-        return PARTITIONED;
+public class DatabaseNotAvailableException extends BadMessageException {
+    /**
+     * Default constructor.
+     */
+    public DatabaseNotAvailableException(String message) {
+        super(SERVICE_UNAVAILABLE.value(), message);
     }
 }

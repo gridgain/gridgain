@@ -14,19 +14,18 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.distributed.replicated;
+package org.apache.ignite.console.testsuites;
 
-import org.apache.ignite.cache.CacheMode;
-import org.apache.ignite.internal.processors.cache.distributed.GridCacheEntrySetAbstractSelfTest;
-
-import static org.apache.ignite.cache.CacheMode.REPLICATED;
+import org.apache.ignite.console.configuration.WebConsoleConfigurationSelfTest;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
 
 /**
- *
+ * Ignite Web Console test suite.
  */
-public class GridCacheReplicatedEntrySetSelfTest extends GridCacheEntrySetAbstractSelfTest {
-    /** {@inheritDoc} */
-    @Override protected CacheMode cacheMode() {
-        return REPLICATED;
-    }
+@RunWith(Suite.class)
+@Suite.SuiteClasses({
+    WebConsoleConfigurationSelfTest.class,
+})
+public class WebConsoleTestSuite {
 }
