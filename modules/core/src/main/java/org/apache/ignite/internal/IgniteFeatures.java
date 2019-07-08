@@ -68,7 +68,7 @@ public enum IgniteFeatures {
     IGNITE_SECURITY_PROCESSOR(13),
 
     /** Indexing enabled. */
-    INDEXING(14);
+    INDEXING(15);
 
     /**
      * Unique feature identifier.
