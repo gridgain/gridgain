@@ -1060,36 +1060,6 @@ namespace Apache.Ignite.Core.Impl.Cache
                     : default(T), _readException);
         }
 
-        /** <inheritdoc /> */
-        public ICacheLock Lock(TK key)
-        {
-            IgniteArgumentCheck.NotNull(key, "key");
-
-            return DoOutInOpX((int) CacheOp.Lock, w => w.Write(key),
-                (stream, res) => new CacheLock(stream.ReadInt(), this), _readException);
-        }
-
-        /** <inheritdoc /> */
-        public ICacheLock LockAll(IEnumerable<TK> keys)
-        {
-            IgniteArgumentCheck.NotNull(keys, "keys");
-
-            return DoOutInOpX((int) CacheOp.LockAll, w => w.WriteEnumerable(keys),
-                (stream, res) => new CacheLock(stream.ReadInt(), this), _readException);
-        }
-
-        /** <inheritdoc /> */
-        public bool IsLocalLocked(TK key, bool byCurrentThread)
-        {
-            IgniteArgumentCheck.NotNull(key, "key");
-
-            return DoOutOp(CacheOp.IsLocalLocked, writer =>
-            {
-                writer.Write(key);
-                writer.WriteBoolean(byCurrentThread);
-            });
-        }
-
         /** <inheritDoc /> */
         public ICacheMetrics GetMetrics()
         {

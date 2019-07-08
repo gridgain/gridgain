@@ -229,7 +229,6 @@
     <Compile Include="Cache\ICacheEntryFilter.cs" />
     <Compile Include="Cache\ICacheEntryProcessor.cs" />
     <Compile Include="Cache\ICacheEntryProcessorResult.cs" />
-    <Compile Include="Cache\ICacheLock.cs" />
     <Compile Include="Cache\ICacheMetrics.cs" />
     <Compile Include="Cache\CacheResult.cs" />
     <Compile Include="Cache\IMutableCacheEntry.cs" />
@@ -367,7 +366,6 @@
     <Compile Include="Impl\Cache\CacheEnumerator.cs" />
     <Compile Include="Impl\Cache\CacheEnumeratorProxy.cs" />
     <Compile Include="Impl\Cache\CacheImpl.cs" />
-    <Compile Include="Impl\Cache\CacheLock.cs" />
     <Compile Include="Impl\Cache\CacheMetricsImpl.cs" />
     <Compile Include="Impl\Cache\CacheOp.cs" />
     <Compile Include="Impl\Cache\Event\CacheEntryCreateEvent.cs" />

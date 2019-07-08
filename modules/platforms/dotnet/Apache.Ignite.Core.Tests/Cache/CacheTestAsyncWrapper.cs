@@ -549,24 +549,6 @@ namespace Apache.Ignite.Core.Tests.Cache
         }
 
         /** <inheritDoc /> */
-        public ICacheLock Lock(TK key)
-        {
-            return _cache.Lock(key);
-        }
-
-        /** <inheritDoc /> */
-        public ICacheLock LockAll(IEnumerable<TK> keys)
-        {
-            return _cache.LockAll(keys);
-        }
-
-        /** <inheritDoc /> */
-        public bool IsLocalLocked(TK key, bool byCurrentThread)
-        {
-            return _cache.IsLocalLocked(key, byCurrentThread);
-        }
-
-        /** <inheritDoc /> */
         public ICacheMetrics GetMetrics()
         {
             return _cache.GetMetrics();
