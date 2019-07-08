@@ -165,7 +165,7 @@
         <dependency>
             <groupId>org.gridgain</groupId>
             <artifactId>ignite-core</artifactId>
-            <version>${project.version}</version>
+            <version>${web-console.ignite.version}</version>
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
@@ -188,6 +188,12 @@
             <groupId>org.gridgain</groupId>
             <artifactId>ignite-urideploy</artifactId>
             <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
