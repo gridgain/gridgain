@@ -601,7 +601,6 @@ public class GridMapQueryExecutor {
             fldsQry.setTimeout(req.timeout(), TimeUnit.MILLISECONDS);
             fldsQry.setPageSize(req.pageSize());
             fldsQry.setLocal(true);
-            fldsQry.setDataPageScanEnabled(req.isDataPageScanEnabled());
 
             boolean local = true;
 
@@ -671,7 +670,17 @@ public class GridMapQueryExecutor {
             GridQueryFailResponse msg = new GridQueryFailResponse(qryReqId, err);
 
             if (node.isLocal()) {
-                U.error(log, "Failed to run map query on local node.", err);
+                if (err instanceof QueryCancelledException) {
+                    String errMsg = "Failed to run cancelled map query on local node: [localNodeId="
+                        + node.id() + ", reqId=" + qryReqId + ']';
+
+                    if (log.isDebugEnabled())
+                        U.warn(log, errMsg, err);
+                    else
+                        log.info(errMsg);
+                }
+                else
+                    U.error(log, "Failed to run map query on local node.", err);
 
                 h2.reduceQueryExecutor().onFail(node, msg);
             }

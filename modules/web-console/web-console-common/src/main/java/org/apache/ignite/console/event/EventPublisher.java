@@ -14,19 +14,16 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.distributed.replicated;
+package org.apache.ignite.console.event;
 
-import org.apache.ignite.cache.CacheMode;
-import org.apache.ignite.internal.processors.cache.distributed.GridCacheEntrySetAbstractSelfTest;
-
-import static org.apache.ignite.cache.CacheMode.REPLICATED;
+import org.springframework.context.ApplicationEvent;
 
 /**
- *
+ * Interface for generic event publisher.
  */
-public class GridCacheReplicatedEntrySetSelfTest extends GridCacheEntrySetAbstractSelfTest {
-    /** {@inheritDoc} */
-    @Override protected CacheMode cacheMode() {
-        return REPLICATED;
-    }
+public interface EventPublisher {
+    /**
+     * @param evt Event.
+     */
+    public void publish(ApplicationEvent evt);
 }

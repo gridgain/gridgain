@@ -14,24 +14,30 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.distributed.near;
-
-import org.apache.ignite.cache.CacheMode;
-import org.apache.ignite.internal.processors.cache.GridCacheAbstractSelfTest;
-
-import static org.apache.ignite.cache.CacheMode.PARTITIONED;
+package org.apache.ignite.console.event;
 
 /**
- * Test for asynchronous cache entry lock with timeout.
+ * Account types.
  */
-public class GridCachePartitionedEntryLockSelfTest extends GridCacheAbstractSelfTest {
-    /** {@inheritDoc} */
-    @Override protected int gridCount() {
-        return 3;
-    }
+public enum AccountEventType implements EventType {
+    /** */
+    ACCOUNT_CREATE,
 
-    /** {@inheritDoc} */
-    @Override protected CacheMode cacheMode() {
-        return PARTITIONED;
-    }
+    /** */
+    ACCOUNT_CREATE_BY_ADMIN,
+
+    /** */
+    ACCOUNT_UPDATE,
+
+    /** */
+    ACCOUNT_DELETE,
+
+    /** */
+    PASSWORD_RESET,
+
+    /** */
+    PASSWORD_CHANGED,
+
+    /** */
+    RESET_ACTIVATION_TOKEN,
 }
