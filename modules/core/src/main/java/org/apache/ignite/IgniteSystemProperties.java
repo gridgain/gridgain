@@ -1257,7 +1257,10 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_ENABLE_HASH_JOIN = "IGNITE_ENABLE_HASH_JOIN";
 
     /**
-     * Index rebuilding parallelism level.
+     * Index rebuilding parallelism level. If specified, set the count of threads that are used for index rebuilding
+     * and can only be greater than <code>0</code> and less than or equal to processors count,
+     * otherwise default value will be used. Default value is minimum of <code>4</code> and processors count / 4,
+     * but always greater than <code>0</code>.
      */
     public static final String INDEX_REBUILDING_PARALLELISM = "INDEX_REBUILDING_PARALLELISM";
 
