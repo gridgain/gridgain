@@ -16,6 +16,8 @@
 
 package org.apache.ignite.console.web.controller;
 
+import org.apache.ignite.console.messages.WebConsoleMessageSource;
+import org.apache.ignite.console.messages.WebConsoleMessageSourceAccessor;
 import org.apache.ignite.console.web.model.ErrorResponse;
 import org.apache.ignite.console.web.model.ErrorWithEmailResponse;
 import org.apache.ignite.console.web.security.MissingConfirmRegistrationException;
@@ -39,6 +41,11 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 @ControllerAdvice
 public class RestExceptionHandler extends ResponseEntityExceptionHandler {
     /**
+     * Messages accessor.
+     */
+    private WebConsoleMessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
+
+    /**
      * Handles account disabled exceptions.
      *
      * @param ex Service exception.
@@ -60,7 +67,7 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(value = {UsernameNotFoundException.class})
     protected ResponseEntity<Object> handleUsernameNotFoundException(UsernameNotFoundException ex, WebRequest req) {
         return handleExceptionInternal(ex,
-            new ErrorResponse(NOT_FOUND, "Account with email does not exists: " + ex.getMessage()), null, NOT_FOUND, req);
+            new ErrorResponse(NOT_FOUND, messages.getMessageWithArgs("err.account-not-found-by-email", ex.getMessage())), null, NOT_FOUND, req);
     }
 
     /**

@@ -122,4 +122,5 @@ public class AdminController {
         adminSrv.updateAnnouncement(ann);
 
         return ResponseEntity.ok().build();
-    }}
+    }
+}
