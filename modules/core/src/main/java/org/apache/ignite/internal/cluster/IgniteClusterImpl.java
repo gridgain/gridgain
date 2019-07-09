@@ -112,13 +112,6 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
         cfg = ctx.config();
 
         nodeLoc = new ClusterNodeLocalMapImpl(ctx);
-
-        if (!CU.isPersistenceEnabled(cfg))
-            clusterId = UUID.randomUUID();
-        else
-            //TODO we need to read it from distributed metastore but for now just generate it as well
-            clusterId = UUID.randomUUID();
-
     }
 
     /** {@inheritDoc} */
