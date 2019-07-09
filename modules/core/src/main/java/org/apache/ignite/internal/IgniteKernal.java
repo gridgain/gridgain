@@ -1117,11 +1117,11 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 startProcessor(new GridAffinityProcessor(ctx));
                 startProcessor(createComponent(GridSegmentationProcessor.class, ctx));
 
-                startTimer.finishGlobalStage("Managers starting");
+                startTimer.finishGlobalStage("Start managers");
 
                 startProcessor(createComponent(IgniteCacheObjectProcessor.class, ctx));
 
-                startTimer.finishGlobalStage("Binary metadata configuring");
+                startTimer.finishGlobalStage("Configure binary metadata");
 
                 startProcessor(createComponent(IGridClusterStateProcessor.class, ctx));
                 startProcessor(new IgniteAuthenticationProcessor(ctx));
@@ -1145,20 +1145,20 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 // Start transactional data replication processor.
                 startProcessor(createComponent(TransactionalDrProcessor.class, ctx));
 
-                startTimer.finishGlobalStage("Processors starting");
+                startTimer.finishGlobalStage("Start processors");
 
                 // Start plugins.
                 for (PluginProvider provider : ctx.plugins().allProviders()) {
                     ctx.add(new GridPluginComponent(provider));
 
                     provider.start(ctx.plugins().pluginContextForProvider(provider));
+
+                    startTimer.finishGlobalStage("Start '"+ provider.name() + "' plugin");
                 }
 
                 // Start platform plugins.
                 if (ctx.config().getPlatformConfiguration() != null)
                     startProcessor(new PlatformPluginProcessor(ctx));
-
-                startTimer.finishGlobalStage("Plugins starting");
 
                 ctx.cluster().initDiagnosticListeners();
 
@@ -1168,13 +1168,13 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
                 ((DistributedMetaStorageImpl)ctx.distributedMetastorage()).inMemoryReadyForRead();
 
-                startTimer.finishGlobalStage("Metastore init");
+                startTimer.finishGlobalStage("Init metastore");
 
-                ctx.cache().context().database().startMemoryRestore(ctx);
-
-                startTimer.finishGlobalStage("Memory restoring");
+                ctx.cache().context().database().startMemoryRestore(ctx, startTimer);
 
                 ctx.recoveryMode(false);
+
+                startTimer.finishGlobalStage("Finish recovery");
             }
             catch (Throwable e) {
                 U.error(
@@ -1198,7 +1198,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 gw.writeUnlock();
             }
 
-            startTimer.finishGlobalStage("Discovery joining");
+            startTimer.finishGlobalStage("Join discovery");
 
             // Check whether UTF-8 is the default character encoding.
             checkFileEncoding();
@@ -1240,7 +1240,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             else
                 active = joinData.active();
 
-            startTimer.finishGlobalStage("Transition awaiting");
+            startTimer.finishGlobalStage("Await transition");
 
             boolean recon = false;
 
@@ -1424,7 +1424,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             ctx.discovery().ackTopology(ctx.discovery().localJoin().joinTopologyVersion().topologyVersion(),
                 EventType.EVT_NODE_JOINED, localNode());
 
-        startTimer.finishGlobalStage("Exchange and etc. execution");
+        startTimer.finishGlobalStage("Execute exchange and etc.");
     }
 
     /**

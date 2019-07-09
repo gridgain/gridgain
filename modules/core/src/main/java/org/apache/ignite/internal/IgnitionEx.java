@@ -1981,7 +1981,7 @@ public class IgnitionEx {
                 // Init here to make grid available to lifecycle listeners.
                 grid = grid0;
 
-                startTimer.finishGlobalStage("System pool configuring");
+                startTimer.finishGlobalStage("Configure system pool");
 
                 grid0.start(
                     cfg,
