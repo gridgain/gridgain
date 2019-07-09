@@ -15,24 +15,37 @@
  */
 package org.apache.ignite.internal.cluster;
 
+import java.util.Arrays;
 import java.util.UUID;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.cluster.ClusterTagGenerator;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 /**
  * Test for cluster id and cluster name features of IgniteCluster.
  */
-public class IgniteClusterIdNameTest extends GridCommonAbstractTest {
+public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
+    /** */
+    private static final String CUSTOM_TAG_0 = "my_super_cluster";
+
+    /** */
+    private static final String CUSTOM_TAG_1 = "not_so_super_but_OK";
+
     /** */
     private boolean isPersistenceEnabled;
 
+    /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
+        if (!isPersistenceEnabled)
+            cfg.setActiveOnStart(false);
 
         DataStorageConfiguration dsCfg = new DataStorageConfiguration()
             .setDefaultDataRegionConfiguration(
@@ -86,6 +99,9 @@ public class IgniteClusterIdNameTest extends GridCommonAbstractTest {
         assertNotSame(id0, ig0.cluster().id());
     }
 
+    /**
+     *
+     */
     @Test
     public void testPersistentClusterId() throws Exception {
         isPersistenceEnabled = true;
@@ -105,11 +121,48 @@ public class IgniteClusterIdNameTest extends GridCommonAbstractTest {
         awaitPartitionMapExchange();
     }
 
+    /**
+     *
+     */
     @Test
     public void testInMemoryClusterTag() throws Exception {
+        IgniteEx ig0 = startGrid(0);
 
+        String tag0 = ig0.cluster().tag();
+
+        assertNotNull(tag0);
+
+        assertTrue(Arrays.asList(ClusterTagGenerator.IN_MEMORY_CLUSTER_TAGS).contains(tag0));
+
+        boolean expectedExceptionThrown = false;
+
+        try {
+            ig0.cluster().tag(CUSTOM_TAG_0);
+        }
+        catch (IgniteCheckedException e) {
+            if (e.getMessage().contains("Can not change cluster tag on inactive cluster."))
+                expectedExceptionThrown = true;
+        }
+
+        assertTrue(expectedExceptionThrown);
+
+        ig0.cluster().active(true);
+
+        ig0.cluster().tag(CUSTOM_TAG_0);
+
+        IgniteEx ig1 = startGrid(1);
+
+        String tag1 = ig1.cluster().tag();
+
+        assertNotNull(tag1);
+
+        assertEquals(CUSTOM_TAG_0, tag1);
     }
 
+    /**
+     *
+     */
+    @Test
     public void testPersistentClusterTag() throws Exception {
 
     }

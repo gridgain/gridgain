@@ -142,6 +142,9 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     /** */
     private volatile String localClusterTag;
 
+    /** */
+    private volatile DistributedMetaStorage metastorage;
+
     /**
      * @param ctx Kernal context.
      */
@@ -195,12 +198,28 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     }
 
     @Override public void onReadyForWrite(DistributedMetaStorage metastorage) {
+        this.metastorage = metastorage;
+
         try {
             metastorage.writeAsync(CLUSTER_ID, cluster.id());
+
+            metastorage.writeAsync(CLUSTER_TAG, cluster.tag());
         }
         catch (IgniteCheckedException e) {
             ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
         }
+    }
+
+    public void updateTag(String newTag) throws IgniteCheckedException {
+        Serializable oldTag = metastorage.read(CLUSTER_TAG);
+
+        if (!metastorage.compareAndSet(CLUSTER_TAG, oldTag, newTag)) {
+            Serializable concurrentlySetTag = metastorage.read(CLUSTER_TAG);
+
+            throw new IgniteCheckedException("Cluster tag has been concurrently updated to value: " + concurrentlySetTag);
+        }
+        else
+            cluster.setTag(newTag);
     }
 
     /**
@@ -208,6 +227,9 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
      */
     public void onLocalJoin() {
         cluster.id(localClusterId != null ? localClusterId : UUID.randomUUID());
+
+        cluster.setTag(localClusterTag != null ? localClusterTag :
+            ClusterTagGenerator.generateTag(CU.isPersistenceEnabled(ctx.config())));
     }
 
     /**
@@ -371,7 +393,8 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     @Override public void collectGridNodeData(DiscoveryDataBag dataBag) {
         dataBag.addNodeSpecificData(CLUSTER_PROC.ordinal(), getDiscoveryData(false));
 
-        dataBag.addGridCommonData(CLUSTER_PROC.ordinal(), cluster.id());
+        System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis() + " collected cluster[id=" + cluster.id() + "; tag=" + cluster.tag() + ']');
+        dataBag.addGridCommonData(CLUSTER_PROC.ordinal(), new DiscoCommonData(cluster.id(), cluster.tag()));
     }
 
     /**
@@ -399,18 +422,27 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
                 notifyEnabled.set(lstFlag);
         }
 
-        Serializable remoteClusterId = data.commonData();
+        DiscoCommonData commonData = (DiscoCommonData)data.commonData();
 
-        if (remoteClusterId != null) {
-            if (localClusterId != null && !localClusterId.equals(remoteClusterId)) {
-                if (log.isInfoEnabled())
-                    log.info("Received custer ID differs from locally stored cluster ID " +
-                        "and will be rewritten. " +
-                        "Received cluster ID: " + remoteClusterId +
-                        ", local cluster ID: " + localClusterId);
+        if (commonData != null) {
+            Serializable remoteClusterId = commonData.id;
+
+            if (remoteClusterId != null) {
+                if (localClusterId != null && !localClusterId.equals(remoteClusterId)) {
+                    if (log.isInfoEnabled())
+                        log.info("Received custer ID differs from locally stored cluster ID " +
+                            "and will be rewritten. " +
+                            "Received cluster ID: " + remoteClusterId +
+                            ", local cluster ID: " + localClusterId);
+                }
+
+                localClusterId = (UUID)remoteClusterId;
             }
 
-            localClusterId = (UUID)remoteClusterId;
+            String remoteClusterTag = commonData.tag;
+
+            if (remoteClusterTag != null)
+                localClusterTag = remoteClusterTag;
         }
     }
 
@@ -867,6 +899,17 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
         /** {@inheritDoc} */
         @Override public void onTimeout() {
             ctx.getSystemExecutorService().execute(this);
+        }
+    }
+
+    private static class DiscoCommonData implements Serializable {
+        private final UUID id;
+
+        private final String tag;
+
+        private DiscoCommonData(UUID id, String tag) {
+            this.id = id;
+            this.tag = tag;
         }
     }
 }

@@ -543,8 +543,10 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
     /**
      *
      * @param tag
+     *
+     * @throws IgniteCheckedException In case tag change is requested on inactive cluster.
      */
-    public void tag (String tag);
+    public void tag(String tag) throws IgniteCheckedException;
 
     /**
      * @return Value of manual baseline control or auto adjusting baseline. {@code True} If cluster in auto-adjust.
