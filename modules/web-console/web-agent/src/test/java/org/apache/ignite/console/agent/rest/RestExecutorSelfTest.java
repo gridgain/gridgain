@@ -32,6 +32,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.console.json.JsonObject;
+import org.apache.ignite.console.utils.Utils;
 import org.apache.ignite.internal.processors.rest.protocols.http.jetty.GridJettyObjectMapper;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.F;
@@ -45,8 +46,12 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.mockserver.integration.ClientAndServer;
 
 import static org.apache.ignite.console.agent.AgentUtils.sslContextFactory;
+import static org.mockserver.integration.ClientAndServer.startClientAndServer;
+import static org.mockserver.model.HttpRequest.request;
+import static org.mockserver.model.HttpResponse.response;
 
 /**
  * Test for RestExecutor.
@@ -394,6 +399,36 @@ public class RestExecutorSelfTest {
                 Assert.assertTrue(item.get("metrics").isNull());
                 Assert.assertTrue(item.get("caches").isNull());
             }
+        }
+    }
+
+    /** */
+    @Test
+    public void testLargeResponse() throws Throwable {
+        ClientAndServer mockSrv = null;
+
+        try {
+            mockSrv = startClientAndServer(8080);
+
+            char[] chars = new char[3 * 1024 * 1024];
+            
+            Arrays.fill(chars, 'a');
+
+            String err = new String(chars);
+
+            mockSrv
+                .when(request().withPath("/ignite"))
+                .respond(response().withStatusCode(200).withBody(Utils.toJson(RestResult.fail(1, err))));
+
+            RestExecutor exec = new RestExecutor(new SslContextFactory.Client());
+
+            RestResult res = exec.sendRequest(HTTP_URI, new JsonObject());
+
+            Assert.assertEquals(err, res.getError());
+        }
+        finally {
+            if (mockSrv != null)
+                mockSrv.stop();
         }
     }
 }
