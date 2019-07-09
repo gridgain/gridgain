@@ -70,6 +70,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.IgniteKernal;
+import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.affinity.GridAffinityFunctionContextImpl;
 import org.apache.ignite.internal.processors.cache.CacheGroupDescriptor;
@@ -571,6 +572,37 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
     }
 
     /**
+     * Await topology changed.
+     *
+     * @throws IgniteException If waiting failed.
+     */
+    private void awaitTopologyChanged(long timeout) throws IgniteException {
+        List<Ignite> allNodes = G.allGrids();
+
+        Set<ClusterNode> nodes0 = allNodes.stream()
+            .map(i -> (IgniteEx)i)
+            .map(IgniteEx::localNode)
+            .collect(Collectors.toSet());
+
+        for (Ignite ig : allNodes) {
+            IgniteEx igEx = (IgniteEx)ig;
+
+            GridDiscoveryManager disc = igEx.context().discovery();
+
+            while (true) {
+                AffinityTopologyVersion topVer = disc.topologyVersionEx();
+
+                Collection<ClusterNode> nodes = disc.nodes(topVer);
+
+                if (!nodes0.equals(new HashSet<>(nodes)))
+                    doSleep(50);
+                else
+                    break;
+            }
+        }
+    }
+
+    /**
      * @param waitEvicts If {@code true} will wait for evictions finished.
      * @param waitNode2PartUpdate If {@code true} will wait for nodes node2part info update finished.
      * @param nodes Optional nodes. If {@code null} method will wait for all nodes, for non null collection nodes will
@@ -586,6 +618,8 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
         boolean printPartState
     ) throws InterruptedException {
         long timeout = getPartitionMapExchangeTimeout();
+
+        awaitTopologyChanged(timeout);
 
         long startTime = -1;
 
