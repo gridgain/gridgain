@@ -48,6 +48,9 @@ public class RowStore {
     /** Row cache cleaner. */
     private GridQueryRowCacheCleaner rowCacheCleaner;
 
+    /** */
+    protected final CacheGroupContext grp;
+
     /**
      * @param grp Cache group.
      * @param freeList Free list.
@@ -56,6 +59,7 @@ public class RowStore {
         assert grp != null;
         assert freeList != null;
 
+        this.grp = grp;
         this.freeList = freeList;
 
         ctx = grp.shared();
@@ -94,8 +98,11 @@ public class RowStore {
      * @throws IgniteCheckedException If failed.
      */
     public void addRow(CacheDataRow row, IoStatisticsHolder statHolder) throws IgniteCheckedException {
-        if (!persistenceEnabled)
+        if (!persistenceEnabled) {
+            ctx.database().ensureFreeSpaceForInsert(grp.dataRegion());
+
             freeList.insertDataRow(row, statHolder);
+        }
         else {
             ctx.database().checkpointReadLock();
 
