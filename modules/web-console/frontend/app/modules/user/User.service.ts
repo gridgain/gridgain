@@ -17,6 +17,7 @@
 import {ReplaySubject, Subject} from 'rxjs';
 import {StateService} from '@uirouter/angularjs';
 import {default as MessagesFactory} from 'app/services/Messages.service';
+import {removeLocal} from 'app/services/Storage.service';
 import {DemoService} from 'app/modules/demo/Demo.module';
 
 export type User = {
@@ -79,7 +80,7 @@ export default function UserFactory(
             delete Demo.enabled;
 
             sessionStorage.removeItem('demoMode');
-            sessionStorage.removeItem('refreshRate');
+            removeLocal('refreshRate');
         },
 
         async save(user: Partial<User>): Promise<User> {
