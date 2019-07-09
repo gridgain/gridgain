@@ -42,7 +42,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Store
                     new CacheConfiguration
                     {
                         Name = "binary_store",
-                        CacheMode = CacheMode.Local,
+                        CacheMode = CacheMode.Partitioned,
                         AtomicityMode = CacheAtomicityMode.Transactional,
                         WriteThrough = true,
                         ReadThrough = true,
@@ -52,7 +52,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Store
                     new CacheConfiguration
                     {
                         Name = "object_store",
-                        CacheMode = CacheMode.Local,
+                        CacheMode = CacheMode.Partitioned,
                         AtomicityMode = CacheAtomicityMode.Transactional,
                         WriteThrough = true,
                         ReadThrough = true,
@@ -62,7 +62,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Store
                     new CacheConfiguration
                     {
                         Name = "template_store*",
-                        CacheMode = CacheMode.Local,
+                        CacheMode = CacheMode.Partitioned,
                         AtomicityMode = CacheAtomicityMode.Transactional,
                         WriteThrough = true,
                         ReadThrough = true,
@@ -72,7 +72,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Store
                     new CacheConfiguration
                     {
                         Name = "custom_store",
-                        CacheMode = CacheMode.Local,
+                        CacheMode = CacheMode.Partitioned,
                         AtomicityMode = CacheAtomicityMode.Transactional,
                         WriteThrough = true,
                         ReadThrough = true,
