@@ -35,10 +35,10 @@ namespace ignite
     struct IgniteProductVersion
     {
         /** Major version number. */
-        int8_t major;
+        int8_t majorNumber;
 
         /** Minor version number. */
-        int8_t minor;
+        int8_t minorNumber;
 
         /** Maintenance version number. */
         int8_t maintenance;
@@ -58,8 +58,8 @@ namespace ignite
         /**
          * Default constructor.
          */
-        IgniteProductVersion(int8_t major, int8_t minor, int8_t maintenance, std::string stage, int64_t releaseDate, std::vector<int8_t> revHash) :
-            major(major), minor(minor), maintenance(maintenance), stage(stage), releaseDate(releaseDate), revHash(revHash)
+        IgniteProductVersion(int8_t majorNumber, int8_t minorNumber, int8_t maintenance, std::string stage, int64_t releaseDate, std::vector<int8_t> revHash) :
+            majorNumber(majorNumber), minorNumber(minorNumber), maintenance(maintenance), stage(stage), releaseDate(releaseDate), revHash(revHash)
         {
             if (revHash.size() != SHA1_LENGTH)
             {
