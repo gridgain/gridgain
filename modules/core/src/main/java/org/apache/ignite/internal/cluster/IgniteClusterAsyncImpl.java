@@ -371,7 +371,7 @@ public class IgniteClusterAsyncImpl extends AsyncSupportAdapter<IgniteCluster>
     }
 
     /** {@inheritDoc} */
-    @Override public void tag(String tag) {
+    @Override public void tag(String tag) throws IgniteCheckedException {
         cluster.tag(tag);
     }
 

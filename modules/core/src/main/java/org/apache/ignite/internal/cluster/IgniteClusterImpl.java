@@ -94,7 +94,10 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
     private static final IgniteProductVersion MIN_BLT_SUPPORTING_VER = IgniteProductVersion.fromString("2.4.0");
 
     /** */
-    private volatile UUID clusterId;
+    private UUID id;
+
+    /** */
+    private String tag;
 
     /**
      * Required by {@link Externalizable}.
@@ -587,19 +590,26 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
     }
 
     @Override public UUID id() {
-        return clusterId;
+        return id;
     }
 
     public void id(UUID id) {
-        clusterId = id;
+        this.id = id;
     }
 
     @Override public String tag() {
-        return null;
+        return tag;
     }
 
-    @Override public void tag(String tag) {
+    @Override public void tag(String tag) throws IgniteCheckedException {
+        if (!ctx.state().publicApiActiveState(true))
+            throw new IgniteCheckedException("Can not change cluster tag on inactive cluster. To activate the cluster call Ignite.active(true).");
 
+        ctx.cluster().updateTag(tag);
+    }
+
+    public void setTag(String tag) {
+        this.tag = tag;
     }
 
     /** {@inheritDoc} */
