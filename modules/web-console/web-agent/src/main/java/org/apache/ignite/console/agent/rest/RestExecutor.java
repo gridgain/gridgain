@@ -17,12 +17,18 @@
 package org.apache.ignite.console.agent.rest;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.console.json.JsonObject;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.logger.slf4j.Slf4jLogger;
 import org.eclipse.jetty.client.HttpClient;
-import org.eclipse.jetty.client.api.ContentResponse;
+import org.eclipse.jetty.client.api.Response;
 import org.eclipse.jetty.client.util.FormContentProvider;
+import org.eclipse.jetty.client.util.InputStreamResponseListener;
 import org.eclipse.jetty.http.HttpMethod;
 import org.eclipse.jetty.util.Fields;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
@@ -63,15 +69,16 @@ public class RestExecutor implements AutoCloseable {
     }
 
     /**
-     * @param res Response from cluster.
+     * @param res represents a HTTP response.
+     * @param in Returns an {@link InputStream} providing the response content bytes.
      * @return Result of REST request.
      * @throws IOException If failed to parse REST result.
      */
-    private RestResult parseResponse(ContentResponse res) throws IOException {
+    private RestResult parseResponse(Response res, InputStream in) throws IOException {
         int code = res.getStatus();
 
         if (code == HTTP_OK)
-            return fromJson(res.getContent(), RestResult.class);
+            return fromJson(new InputStreamReader(in), RestResult.class);
 
         if (code == HTTP_UNAUTHORIZED) {
             return RestResult.fail(STATUS_AUTH_FAILED, "Failed to authenticate in cluster. " +
@@ -100,13 +107,26 @@ public class RestExecutor implements AutoCloseable {
 
         params.forEach((k, v) -> fields.add(k, String.valueOf(v)));
 
-        ContentResponse res = httpClient
-            .newRequest(url)
+        InputStreamResponseListener lsnr = new InputStreamResponseListener();
+
+        httpClient.newRequest(url)
             .path("/ignite")
             .method(HttpMethod.POST)
             .content(new FormContentProvider(fields))
-            .send();
+            .send(lsnr);
 
-        return parseResponse(res);
+        try {
+            Response res = lsnr.get(60L, TimeUnit.SECONDS);
+
+            return parseResponse(res, lsnr.getInputStream());
+        }
+        catch (Exception e) {
+            TimeoutException e0 = X.cause(e, TimeoutException.class);
+
+            if (e0 != null)
+                throw e0;
+
+            throw e;
+        }
     }
 }
