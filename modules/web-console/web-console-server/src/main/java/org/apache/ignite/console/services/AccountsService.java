@@ -22,6 +22,9 @@ import java.util.UUID;
 import org.apache.ignite.console.config.ActivationConfiguration;
 import org.apache.ignite.console.config.SignUpConfiguration;
 import org.apache.ignite.console.dto.Account;
+import org.apache.ignite.console.event.Event;
+import org.apache.ignite.console.event.EventPublisher;
+import org.apache.ignite.console.messages.WebConsoleMessageSource;
 import org.apache.ignite.console.repositories.AccountsRepository;
 import org.apache.ignite.console.tx.TransactionManager;
 import org.apache.ignite.console.web.model.ChangeUserRequest;
@@ -29,6 +32,8 @@ import org.apache.ignite.console.web.model.SignUpRequest;
 import org.apache.ignite.console.web.security.MissingConfirmRegistrationException;
 import org.apache.ignite.console.web.socket.WebSocketsManager;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.T2;
+import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.core.userdetails.UserDetailsChecker;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -37,33 +42,37 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import static java.time.temporal.ChronoUnit.MILLIS;
-import static org.apache.ignite.console.notification.NotificationDescriptor.ACTIVATION_LINK;
-import static org.apache.ignite.console.notification.NotificationDescriptor.PASSWORD_CHANGED;
-import static org.apache.ignite.console.notification.NotificationDescriptor.PASSWORD_RESET;
-import static org.apache.ignite.console.notification.NotificationDescriptor.WELCOME_LETTER;
+import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_CREATE;
+import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_UPDATE;
+import static org.apache.ignite.console.event.AccountEventType.PASSWORD_CHANGED;
+import static org.apache.ignite.console.event.AccountEventType.PASSWORD_RESET;
+import static org.apache.ignite.console.event.AccountEventType.RESET_ACTIVATION_TOKEN;
 
 /**
  * Service to handle accounts.
  */
 @Service
 public class AccountsService implements UserDetailsService {
-    /** */
+    /** Tx manager. */
     protected TransactionManager txMgr;
 
-    /** */
+    /** Accounts repository. */
     protected AccountsRepository accountsRepo;
 
-    /** */
+    /** Web socket manager. */
     protected WebSocketsManager wsm;
 
-    /** */
-    protected NotificationService notificationSrv;
+    /** Event publisher. */
+    protected EventPublisher evtPublisher;
 
-    /** */
+    /** Password encoder. */
     protected PasswordEncoder encoder;
 
     /** User details getChecker. */
     protected UserDetailsChecker userDetailsChecker;
+
+    /** Messages acessor. */
+    protected final MessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
 
     /** Flag if sign up disabled and new accounts can be created only by administrator. */
     private boolean disableSignup;
@@ -81,7 +90,7 @@ public class AccountsService implements UserDetailsService {
      * @param wsm Websocket manager.
      * @param accountsRepo Accounts repository.
      * @param txMgr Transactions manager.
-     * @param notificationSrv Notification service.
+     * @param evtPublisher Event publisher.
      */
     public AccountsService(
         SignUpConfiguration signUpCfg,
@@ -90,7 +99,7 @@ public class AccountsService implements UserDetailsService {
         WebSocketsManager wsm,
         AccountsRepository accountsRepo,
         TransactionManager txMgr,
-        NotificationService notificationSrv
+        EventPublisher evtPublisher
     ) {
         disableSignup = !signUpCfg.isEnabled();
         userDetailsChecker = activationCfg.getChecker();
@@ -101,7 +110,7 @@ public class AccountsService implements UserDetailsService {
         this.wsm = wsm;
         this.accountsRepo = accountsRepo;
         this.txMgr = txMgr;
-        this.notificationSrv = notificationSrv;
+        this.evtPublisher = evtPublisher;
     }
 
     /** {@inheritDoc} */
@@ -142,18 +151,18 @@ public class AccountsService implements UserDetailsService {
             Account acc0 = create(params);
 
             if (disableSignup && !acc0.isAdmin())
-                throw new AuthenticationServiceException("Sign-up is not allowed. Ask your administrator to create account for you.");
+                throw new AuthenticationServiceException(messages.getMessage("err.sign-up-not-allowed"));
 
             return acc0;
         });
 
         if (activationEnabled) {
-            notificationSrv.sendEmail(ACTIVATION_LINK, acc);
+            evtPublisher.publish(new Event<>(RESET_ACTIVATION_TOKEN, acc));
 
-            throw new MissingConfirmRegistrationException("Confirm your email", acc.getEmail());
+            throw new MissingConfirmRegistrationException(messages.getMessage("err.confirm-email"), acc.getEmail());
         }
 
-        notificationSrv.sendEmail(WELCOME_LETTER, acc);
+        evtPublisher.publish(new Event<>(ACCOUNT_CREATE, acc));
     }
 
     /**
@@ -214,13 +223,13 @@ public class AccountsService implements UserDetailsService {
      */
     public void resetActivationToken(String email) {
         if (!activationEnabled)
-            throw new IllegalAccessError("Activation was not enabled!");
+            throw new IllegalAccessError(messages.getMessage("err.activation-not-enabled"));
 
         Account acc = txMgr.doInTransaction(() -> {
             Account acc0 = accountsRepo.getByEmail(email);
 
             if (MILLIS.between(acc0.getActivationSentAt(), LocalDateTime.now()) >= activationSndTimeout)
-                throw new IllegalAccessError("Too many activation attempts");
+                throw new IllegalAccessError(messages.getMessage("err.too-many-activation-attempts"));
 
             acc0.resetActivationToken();
 
@@ -229,7 +238,7 @@ public class AccountsService implements UserDetailsService {
             return acc0;
         });
 
-        notificationSrv.sendEmail(ACTIVATION_LINK, acc);
+        evtPublisher.publish(new Event<>(RESET_ACTIVATION_TOKEN, acc));
     }
 
     /**
@@ -239,25 +248,28 @@ public class AccountsService implements UserDetailsService {
      * @param changes Changes to apply to user.
      */
     public Account save(UUID accId, ChangeUserRequest changes) {
-        Account acc = txMgr.doInTransaction(() -> {
-            Account acc0 = accountsRepo.getById(accId);
+        T2<Account, String> res = txMgr.doInTransaction(() -> {
+            Account acc = accountsRepo.getById(accId);
 
-            acc0.update(changes);
+            acc.update(changes);
 
             String pwd = changes.getPassword();
 
             if (!F.isEmpty(pwd))
-                acc0.setPassword(encoder.encode(pwd));
+                acc.setPassword(encoder.encode(pwd));
 
-            accountsRepo.save(acc0);
-            
-            return acc0;
+            Account oldAcc = accountsRepo.save(acc);
+
+            return new T2<>(acc, oldAcc.getToken());
         });
 
-        String oldTok = acc.getToken();
+        Account acc = res.get1();
+        String oldTok = res.get2();
 
         if (!oldTok.equals(acc.getToken()))
             wsm.revokeToken(acc, oldTok);
+
+        evtPublisher.publish(new Event<>(ACCOUNT_UPDATE, acc));
 
         return acc;
     }
@@ -278,7 +290,7 @@ public class AccountsService implements UserDetailsService {
             return acc0;
         });
 
-        notificationSrv.sendEmail(PASSWORD_RESET, acc);
+        evtPublisher.publish(new Event<>(PASSWORD_RESET, acc));
     }
 
     /**
@@ -291,7 +303,7 @@ public class AccountsService implements UserDetailsService {
             Account acc = accountsRepo.getByEmail(email);
 
             if (!resetPwdTok.equals(acc.getResetPasswordToken()))
-                throw new IllegalStateException("Failed to find account with this token! Please check link from email.");
+                throw new IllegalStateException(messages.getMessage("err.account-not-found-by-token"));
 
             userDetailsChecker.check(acc);
 
@@ -300,7 +312,7 @@ public class AccountsService implements UserDetailsService {
 
             accountsRepo.save(acc);
 
-            notificationSrv.sendEmail(PASSWORD_CHANGED, acc);
+            evtPublisher.publish(new Event<>(PASSWORD_CHANGED, acc));
         });
     }
 }

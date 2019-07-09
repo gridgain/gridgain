@@ -28,8 +28,11 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.dto.Announcement;
+import org.apache.ignite.console.messages.WebConsoleMessageSource;
+import org.apache.ignite.console.messages.WebConsoleMessageSourceAccessor;
 import org.apache.ignite.console.websocket.TopologySnapshot;
 import org.apache.ignite.console.websocket.WebSocketEvent;
+import org.apache.ignite.console.websocket.WebSocketResponse;
 import org.apache.ignite.internal.util.typedef.F;
 import org.jsr166.ConcurrentLinkedHashMap;
 import org.slf4j.Logger;
@@ -79,6 +82,9 @@ public class WebSocketsManager {
 
     /** */
     private volatile Announcement lastAnn;
+
+    /** Messages accessor. */
+    private WebConsoleMessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
 
     /**
      * Default constructor.
@@ -156,14 +162,14 @@ public class WebSocketsManager {
      * @param ws Browser session.
      * @param evt Event to send.
      */
-    public void sendToFirstAgent(WebSocketSession ws, WebSocketEvent evt) throws IOException {
+    public void sendToFirstAgent(WebSocketSession ws, WebSocketResponse evt) throws IOException {
         UUID accId = browsers.get(ws);
 
         WebSocketSession wsAgent = agents.entrySet().stream()
             .filter(e -> e.getValue().isActiveAccount(accId))
             .findFirst()
             .map(Map.Entry::getKey)
-            .orElseThrow(() -> new IllegalStateException("Failed to find agent for account: " + accId));
+            .orElseThrow(() -> new IllegalStateException(messages.getMessageWithArgs("err.agent-not-found-by-acc-id", accId)));
 
         if (log.isDebugEnabled())
             log.debug("Found agent session [accountId=" + accId + ", session=" + wsAgent + ", event=" + evt + "]");
@@ -180,7 +186,7 @@ public class WebSocketsManager {
      * @param clusterId Cluster id.
      * @param evt Event.
      */
-    public void sendToNode(WebSocketSession ws, String clusterId, WebSocketEvent evt) throws IOException {
+    public void sendToNode(WebSocketSession ws, String clusterId, WebSocketResponse evt) throws IOException {
         UUID accId = browsers.get(ws);
 
         WebSocketSession wsAgent = agents.entrySet().stream()
@@ -188,7 +194,7 @@ public class WebSocketsManager {
             .filter(e -> e.getValue().getClusterIds().contains(clusterId))
             .findFirst()
             .map(Map.Entry::getKey)
-            .orElseThrow(() -> new IllegalStateException("Failed to find agent for cluster [accountId=" + accId+", clusterId=" + clusterId + " ]"));
+            .orElseThrow(() -> new IllegalStateException(messages.getMessageWithArgs("err.agent-not-found-by-acc-id-and-cluster-id", accId, clusterId)));
 
         if (log.isDebugEnabled())
             log.debug("Found agent session [accountId=" + accId + ", session=" + wsAgent + ", event=" + evt + "]");
@@ -274,7 +280,7 @@ public class WebSocketsManager {
      * @param ann Announcement.
      */
     private void sendAnnouncement(Set<WebSocketSession> browsers, Announcement ann) {
-        WebSocketEvent evt = new WebSocketEvent(ADMIN_ANNOUNCEMENT, ann);
+        WebSocketResponse evt = new WebSocketResponse(ADMIN_ANNOUNCEMENT, ann);
 
         for (WebSocketSession ws : browsers) {
             try {
@@ -318,7 +324,7 @@ public class WebSocketsManager {
         res.put("clusters", tops);
 
         try {
-            sendMessage(ws, new WebSocketEvent(AGENT_STATUS, res));
+            sendMessage(ws, new WebSocketResponse(AGENT_STATUS, res));
         }
         catch (Throwable e) {
             log.error("Failed to update agent status [session=" + ws + ", token=" + accId + "]", e);
@@ -344,7 +350,7 @@ public class WebSocketsManager {
         agents.forEach((ws, desc) -> {
             try {
                 if (desc.revokeAccount(acc.getId()))
-                    sendMessage(ws, new WebSocketEvent(AGENT_REVOKE_TOKEN, oldTok));
+                    sendMessage(ws, new WebSocketResponse(AGENT_REVOKE_TOKEN, oldTok));
 
                 if (desc.canBeClose())
                     ws.close();

@@ -18,7 +18,10 @@ package org.apache.ignite.console.utils;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.util.AbstractMap;
 import java.util.Map;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.ignite.console.json.JsonObject;
 import org.apache.ignite.internal.processors.rest.protocols.http.jetty.GridJettyObjectMapper;
@@ -90,6 +93,16 @@ public class Utils {
     }
 
     /**
+     * @param json JSON.
+     * @param typeRef Type descriptor.
+     * @return Deserialized object.
+     * @throws IOException If deserialization failed.
+     */
+    public static <T> T fromJson(byte[] json, TypeReference<T> typeRef) throws IOException {
+        return MAPPER.readValue(json, typeRef);
+    }
+
+    /**
      * @param src source of JSON.
      * @param cls Object class.
      * @return Deserialized object.
@@ -124,6 +137,20 @@ public class Utils {
     }
 
     /**
+     * @param json JSON.
+     * @return Map with parameters.
+     * @throws IllegalStateException If deserialization failed.
+     */
+    public static JsonObject fromJson(byte[] json) {
+        try {
+            return MAPPER.readValue(json, JsonObject.class);
+        }
+        catch (Throwable e) {
+            throw new IllegalStateException("Failed to deserialize object from JSON", e);
+        }
+    }
+
+    /**
      * Helper method to get attribute.
      *
      * @param attrs Map with attributes.
@@ -152,5 +179,22 @@ public class Utils {
         String causeMsg = F.isEmpty(e.getMessage()) ? e.getClass().getName() : e.getMessage();
 
         return prefix + ": " + causeMsg;
+    }
+
+    /**
+     * Simple entry generator.
+     *
+     * @param key Key.
+     * @param val Value.
+     */
+    public static <K, V> Map.Entry<K, V> entry(K key, V val) {
+        return new AbstractMap.SimpleEntry<>(key, val);
+    }
+
+    /**
+     * Collector.
+     */
+    public static <K, U> Collector<Map.Entry<K, U>, ?, Map<K, U>> entriesToMap() {
+        return Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue);
     }
 }
