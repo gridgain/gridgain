@@ -38,7 +38,6 @@ import {default as ConfigureState} from '../../services/ConfigureState';
 import {default as AgentManager} from 'app/modules/agent/AgentModal.service'
 import {default as SqlTypes} from 'app/services/SqlTypes.service';
 import {default as JavaTypes} from 'app/services/JavaTypes.service';
-import {getLocal, setLocal} from 'app/services/Storage.service';
 // eslint-disable-next-line
 import {default as ActivitiesData} from 'app/core/activities/Activities.data';
 import {UserService} from 'app/modules/user/User.service';
@@ -418,7 +417,7 @@ export class ModalImportModels {
 
         function _loadPresets() {
             try {
-                const restoredPresets = JSON.parse(getLocal('dbPresets'));
+                const restoredPresets = JSON.parse(localStorage.dbPresets);
 
                 _.forEach(restoredPresets, (restoredPreset) => {
                     const preset = _.find(_dbPresets, {jdbcDriverClass: restoredPreset.jdbcDriverClass});
@@ -445,7 +444,7 @@ export class ModalImportModels {
                 else
                     _dbPresets.push(preset);
 
-                setLocal('dbPresets', JSON.stringify(_dbPresets));
+                localStorage.dbPresets = JSON.stringify(_dbPresets);
             }
             catch (err) {
                 Messages.showError(err);

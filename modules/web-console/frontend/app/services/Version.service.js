@@ -16,7 +16,6 @@
 
 import { BehaviorSubject } from 'rxjs';
 import _ from 'lodash';
-import {getLocal, setLocal} from './Storage.service';
 
 /**
  * Utility service for version parsing and comparing
@@ -70,16 +69,30 @@ export default class IgniteVersion {
 
         /** Current product version. */
         let current = _.head(this.supportedVersions);
-        const ignite = getLocal('configurationVersion');
-        const restored = _.find(this.supportedVersions, {ignite});
 
-        if (restored)
-            current = restored;
+        try {
+            const ignite = localStorage.configurationVersion;
+
+            const restored = _.find(this.supportedVersions, {ignite});
+
+            if (restored)
+                current = restored;
+        }
+        catch (ignored) {
+            // No-op.
+        }
 
         this.currentSbj = new BehaviorSubject(current);
 
         this.currentSbj.subscribe({
-            next: (ver) => setLocal('configurationVersion', ver.ignite)
+            next: (ver) => {
+                try {
+                    localStorage.setItem('configurationVersion', ver.ignite);
+                }
+                catch (ignored) {
+                    // No-op.
+                }
+            }
         });
     }
 

@@ -17,7 +17,6 @@
 import {StateOrName, StateService} from '@uirouter/angularjs';
 import {RawParams} from '@uirouter/core/lib/params/interface';
 import {default as UserFactory} from 'app/modules/user/User.service';
-import {getLocal} from 'app/services/Storage.service';
 
 interface State {
     name: StateOrName,
@@ -27,7 +26,7 @@ interface State {
 export class TimedRedirectionCtrl implements ng.IComponentController, ng.IOnInit, ng.IOnDestroy {
     static $inject = ['$state', '$interval', 'User'];
 
-    lastSuccessState = JSON.parse(getLocal('lastStateChangeSuccess'));
+    lastSuccessState = JSON.parse(localStorage.getItem('lastStateChangeSuccess'));
 
     stateToGo: State = this.lastSuccessState || {name: 'default-state', params: {}};
 

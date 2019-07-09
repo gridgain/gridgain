@@ -17,7 +17,6 @@
 import publicTemplate from '../../../views/public.pug';
 import {UIRouter, StateParams} from '@uirouter/angularjs';
 import {IIgniteNg1StateDeclaration} from 'app/types';
-import {getLocal} from 'app/services/Storage.service';
 
 export type PageSigninStateParams = StateParams & {activationToken?: string};
 
@@ -43,7 +42,7 @@ export function registerState($uiRouter: UIRouter) {
             return trans.injector().get('User').read()
                 .then(() => {
                     try {
-                        const {name, params} = JSON.parse(getLocal('lastStateChangeSuccess'));
+                        const {name, params} = JSON.parse(localStorage.getItem('lastStateChangeSuccess'));
 
                         const restored = trans.router.stateService.target(name, params);
 

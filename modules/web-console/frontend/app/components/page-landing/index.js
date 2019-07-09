@@ -19,7 +19,6 @@ import angular from 'angular';
 import baseTemplate from './public.pug';
 import template from './template.pug';
 import './style.scss';
-import {getLocal} from 'app/services/Storage.service';
 
 export default angular
     .module('ignite-console.landing', [
@@ -47,7 +46,7 @@ export default angular
                 return trans.injector().get('User').read()
                     .then(() => {
                         try {
-                            const {name, params} = JSON.parse(getLocal('lastStateChangeSuccess'));
+                            const {name, params} = JSON.parse(localStorage.getItem('lastStateChangeSuccess'));
 
                             const restored = trans.router.stateService.target(name, params);
 
