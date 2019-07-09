@@ -587,7 +587,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
             if (cctx0 != null) {
                 assert pageBuf.position() == 0 && pageBuf.limit() == pageSize: pageBuf;
 
-                ByteBuffer compressedPageBuf = cctx0.compress().compressPage(pageBuf, store);
+                ByteBuffer compressedPageBuf = cctx0.compress().compressPage(pageBuf, store, pageId);
 
                 if (compressedPageBuf != pageBuf) {
                     compressedPageSize = PageIO.getCompressedSize(compressedPageBuf);

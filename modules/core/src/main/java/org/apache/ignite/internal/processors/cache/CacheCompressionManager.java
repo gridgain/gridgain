@@ -22,6 +22,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.DiskPageCompression;
+import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.store.PageStore;
 import org.apache.ignite.internal.processors.compress.CompressionProcessor;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -86,15 +87,28 @@ public class CacheCompressionManager extends GridCacheManagerAdapter {
      * @return Compressed or the same buffer.
      * @throws IgniteCheckedException If failed.
      */
-    public ByteBuffer compressPage(ByteBuffer page, PageStore store) throws IgniteCheckedException {
+    public ByteBuffer compressPage(
+        ByteBuffer page,
+        PageStore store,
+        long pageId
+    ) throws IgniteCheckedException {
+        DiskPageCompression diskPageCompression = this.diskPageCompression;
+
         if (diskPageCompression == DiskPageCompression.DISABLED)
             return page;
 
         int blockSize = store.getBlockSize();
 
         if (blockSize <= 0)
-            throw new IgniteCheckedException("Failed to detect storage block size on " + U.osString());
+            throw new IgniteCheckedException("Failed to detect storage block size on " + U.osString()
+                + "\n diskPageCompression=" + diskPageCompression
+                + "\n cacheId=" + cctx.cacheId() + ", cacheName=" + cctx.name()
+                + "\n groupId=" + cctx.group().groupId() + ", groupName=" + cctx.group().name() + ", shared=" + cctx.group().sharedGroup()
+                + "\n partId=" + PageIdUtils.partId(pageId) + ", pageIdx=" + PageIdUtils.pageIndex(pageId)
+                + "\n storeBlockSize=" + store.getBlockSize() + ", pages=" + store.pages() + ", ver=" + store.version() + ", "
+                + "\n time=" + System.currentTimeMillis()
+            );
 
-        return compressProc.compressPage(page, store.getPageSize(), blockSize, diskPageCompression, diskPageCompressLevel);
+        return compressProc.compressPage(page, store.getPageSize(), blockSize, this.diskPageCompression, diskPageCompressLevel);
     }
 }
