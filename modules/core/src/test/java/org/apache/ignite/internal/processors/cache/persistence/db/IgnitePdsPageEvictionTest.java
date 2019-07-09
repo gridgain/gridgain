@@ -43,7 +43,7 @@ import org.junit.Test;
  */
 public class IgnitePdsPageEvictionTest extends GridCommonAbstractTest {
     /** Test entry count. */
-    public static final int ENTRY_CNT = SF.apply(1_000_000);
+    public static final int ENTRY_CNT = SF.applyLB(300_000, 100_000);
 
     /** Cache name. */
     private static final String CACHE_NAME = "cache";
