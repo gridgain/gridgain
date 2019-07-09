@@ -1001,7 +1001,9 @@ namespace ignite
                 else if (typeId == IGNITE_TYPE_COLLECTION)
                 {
                     int32_t cnt = stream->ReadInt32();
-                    int8_t colTypeId = stream->ReadInt8();
+
+                    // Collection type ID.
+                    stream->ReadInt8();
 
                     for (int32_t i = 0; i < cnt; i++)
                         Skip();
@@ -1011,7 +1013,9 @@ namespace ignite
                 else if (typeId == IGNITE_TYPE_MAP)
                 {
                     int32_t cnt = stream->ReadInt32();
-                    int8_t mapTypeId = stream->ReadInt8();
+
+                    // Map type ID.
+                    stream->ReadInt8();
 
                     for (int32_t i = 0; i < cnt; i++)
                     {

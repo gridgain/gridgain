@@ -203,7 +203,7 @@ namespace ignite
                 }
             }
 
-            inline void InteropInputStream::Shift(int32_t cnt)
+            void InteropInputStream::Shift(int32_t cnt)
             {
                 pos += cnt;
             }

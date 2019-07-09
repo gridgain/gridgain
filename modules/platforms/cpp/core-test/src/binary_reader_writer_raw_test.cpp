@@ -65,7 +65,7 @@ void CheckObjectPrimitive(T val)
     InteropInputStream in(&mem);
     BinaryReaderImpl reader(&in);
 
-    T readVal = reader.ReadObject<T>();
+    reader.ReadObject<T>();
     BOOST_REQUIRE(IsStreamPositionEqualOnSkip(in));
 }
 
@@ -388,7 +388,7 @@ void CheckRawCollectionIterators(CollectionType::Type* colType)
     BinaryReaderImpl reader(&in);
     BinaryRawReader rawReader(&reader);
 
-    int32_t collectionSize = rawReader.ReadCollectionSize();
+    size_t collectionSize = rawReader.ReadCollectionSize();
     BOOST_REQUIRE(collectionSize == writeValues.size());
 
     if (colType)
@@ -1035,7 +1035,6 @@ BOOST_AUTO_TEST_CASE(TestObject)
     rawWriter.WriteObject(writeVal1);
     rawWriter.WriteObject(writeVal2);
     rawWriter.WriteNull();
-    int wpos = out.Position();
 
     out.Synchronize();
 
