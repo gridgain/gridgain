@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.cache.expiry.AccessedExpiryPolicy;
 import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
@@ -51,6 +52,7 @@ import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.typedef.PA;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
@@ -80,10 +82,10 @@ public class IgnitePdsWithTtlDeactivateOnHighloadTest extends GridCommonAbstract
     public static final int ENTRIES = 1_000;
 
     /** */
-    public static final int CACHES_CNT = 50;
+    public static final int CACHES_CNT = 20;
 
     /** */
-    public static final int WORKLOAD_TRHEADS_CNT = 128;
+    public static final int WORKLOAD_TRHEADS_CNT = 512;
 
     /** Fail. */
     volatile boolean fail;
@@ -186,20 +188,20 @@ public class IgnitePdsWithTtlDeactivateOnHighloadTest extends GridCommonAbstract
         srv.cluster().active(true);
 
         // Start high workload
+        AtomicInteger cnt = new AtomicInteger();
         GridTestUtils.runMultiThreadedAsync(()-> {
             try {
-                while (!end.get()) {
-                    for(int i = 0; i < CACHES_CNT; ++i)
-                        fillCache(srv.cache(CACHE_NAME + i));
-                }
+                int cacheIdx = cnt.getAndIncrement() % CACHES_CNT;
+
+                while (!end.get())
+                    fillCache(srv.cache(CACHE_NAME + cacheIdx));
             }
             catch (Exception e) {
-                log.info("End workload on deactivate. Reason" + e.getMessage());
+                log.info("End workload on deactivate. Reason: " + e.getMessage());
             }
         }, WORKLOAD_TRHEADS_CNT, "high-workload");
 
-        for(int i = 0; i < 10; ++i)
-            fillCache(srv.cache(CACHE_NAME + i));
+        U.sleep(20000);
 
         srv.cluster().active(false);
 
@@ -218,14 +220,5 @@ public class IgnitePdsWithTtlDeactivateOnHighloadTest extends GridCommonAbstract
         //Touch entries.
         for (int i = 0; i < ENTRIES; i++)
             cache.get(i); // touch entries
-
-        printStatistics((IgniteCacheProxy)cache, "After cache puts");
-    }
-
-    /** */
-    private void printStatistics(IgniteCacheProxy cache, String msg) {
-        System.out.println(msg + " {{");
-        cache.context().printMemoryStats();
-        System.out.println("}} " + msg);
     }
 }
