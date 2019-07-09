@@ -819,7 +819,6 @@ public class GridCacheMvccManager extends GridCacheSharedManagerAdapter {
      */
     public boolean addNext(GridCacheContext cacheCtx, GridCacheMvccCandidate cand) {
         assert cand != null;
-        assert !cand.reentry() : "Lock reentries should not be linked: " + cand;
 
         // Don't order near candidates by thread as they will be ordered on
         // DHT node. Also, if candidate is implicit, no point to order him.

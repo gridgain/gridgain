@@ -488,7 +488,6 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
         GridCacheVersion ver,
         AffinityTopologyVersion topVer,
         long timeout,
-        boolean reenter,
         boolean implicitSingle,
         boolean read) throws GridCacheEntryRemovedException {
         return addNearLocal(
@@ -497,7 +496,6 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
             ver,
             topVer,
             timeout,
-            reenter,
             implicitSingle,
             read
         );
@@ -511,7 +509,6 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
      * @param ver Lock version.
      * @param topVer Topology version.
      * @param timeout Timeout to acquire lock.
-     * @param reenter Reentry flag.
      * @param implicitSingle Implicit flag.
      * @param read Read lock flag.
      * @return New candidate.
@@ -523,10 +520,9 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
         GridCacheVersion ver,
         AffinityTopologyVersion topVer,
         long timeout,
-        boolean reenter, // TODO remove? GG-19461
         boolean implicitSingle,
-        boolean read)
-        throws GridCacheEntryRemovedException {
+        boolean read
+    ) throws GridCacheEntryRemovedException {
         CacheLockCandidates prev;
         CacheLockCandidates owner = null;
         GridCacheMvccCandidate cand;
@@ -551,7 +547,7 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
             GridCacheMvccCandidate c = mvcc.localCandidate(locId, threadId);
 
             if (c != null)
-                return reenter ? c.reenter() : null;
+                return null;
 
             prev = mvcc.allOwners();
 
@@ -653,15 +649,6 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
                 assert cand == null || cand.nearLocal();
 
                 if (cand != null && cand.owner()) {
-                    // If a reentry, then release reentry. Otherwise, remove lock.
-                    GridCacheMvccCandidate reentry = cand.unenter();
-
-                    if (reentry != null) {
-                        assert reentry.reentry();
-
-                        return reentry;
-                    }
-
                     mvcc.remove(cand.version());
 
                     owner = mvcc.allOwners();

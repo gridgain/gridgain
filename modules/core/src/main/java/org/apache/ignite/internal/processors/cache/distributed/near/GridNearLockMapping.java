@@ -40,7 +40,7 @@ public class GridNearLockMapping {
     @GridToStringExclude
     private GridNearLockRequest req;
 
-    /** Distributed keys. Key will not be distributed if lock is reentry. */
+    /** Distributed keys. */
     @GridToStringInclude
     private Collection<KeyCacheObject> distributedKeys;
 

@@ -85,7 +85,6 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
             123,
             version(2),
             /*local*/false,
-            /*reentry*/false,
             false,
             false,
             false,
@@ -401,10 +400,9 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
         GridCacheTestEntryEx entry = new GridCacheTestEntryEx(cache.context(), "1");
 
         GridCacheVersion ver3 = version(3);
-        GridCacheVersion ver4 = version(4);
         GridCacheVersion ver5 = version(5);
 
-        entry.addLocal(3, ver3, 0, true);
+        entry.addLocal(3, ver3, 0);
 
         Collection<GridCacheMvccCandidate> cands = entry.localCandidates();
 
@@ -412,7 +410,7 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
 
         assert cands.iterator().next().version().equals(ver3);
 
-        entry.addLocal(5, ver5, 0, true);
+        entry.addLocal(5, ver5, 0);
 
         cands = entry.localCandidates();
 
@@ -427,35 +425,22 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
 
         entry.readyLocal(ver3);
 
-        checkLocalOwner(entry.anyOwner(), ver3, false);
-
-        // Reentry.
-        entry.addLocal(3, ver4, 0, true);
-
-        checkLocalOwner(entry.anyOwner(), ver4, true);
+        checkLocalOwner(entry.anyOwner(), ver3);
 
         assert entry.localCandidates().size() == 2;
-        assert entry.localCandidates(true).size() == 3;
-
-        // Check order.
-        checkOrder(entry.localCandidates(true), ver4, ver3, ver5);
-
-        entry.removeLock(ver4);
-
-        assert entry.localCandidates(true).size() == 2;
 
         entry.readyLocal(ver5);
 
-        checkLocalOwner(entry.anyOwner(), ver3, false);
+        checkLocalOwner(entry.anyOwner(), ver3);
 
         // Check order.
-        checkOrder(entry.localCandidates(true), ver3, ver5);
+        checkOrder(entry.localCandidates(), ver3, ver5);
 
         entry.removeLock(ver3);
 
-        assert entry.localCandidates(true).size() == 1;
+        assert entry.localCandidates().size() == 1;
 
-        checkLocalOwner(entry.anyOwner(), ver5, false);
+        checkLocalOwner(entry.anyOwner(), ver5);
 
         assert !entry.lockedByAny(ver5);
 
@@ -463,7 +448,7 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
 
         assert !entry.lockedByAny();
         assert entry.anyOwner() == null;
-        assert entry.localCandidates(true).isEmpty();
+        assert entry.localCandidates().isEmpty();
     }
 
     /**
@@ -482,7 +467,7 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
 
         entry.addRemote(nodeId, 1, ver2);
 
-        entry.addLocal(3, ver3, 0, false);
+        entry.addLocal(3, ver3, 0);
 
         assert entry.anyOwner() == null;
 
@@ -494,13 +479,13 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
 
         assert entry.localCandidates().size() == 1;
 
-        checkLocalOwner(entry.anyOwner(), ver3, false);
+        checkLocalOwner(entry.anyOwner(), ver3);
 
         entry.removeLock(ver3);
 
         assert !entry.lockedByAny();
         assert entry.anyOwner() == null;
-        assert entry.localCandidates(true).isEmpty();
+        assert entry.localCandidates().isEmpty();
     }
 
     /**
@@ -1029,7 +1014,7 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
         GridCacheVersion ver5 = version(5);
 
         entry.addRemote(node1, 1, ver1);
-        entry.addLocal(2, ver2, 0, true);
+        entry.addLocal(2, ver2, 0);
 
         Collection<GridCacheMvccCandidate> cands = entry.remoteMvccSnapshot();
 
@@ -1045,10 +1030,10 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
         info(cands);
 
         checkOrder(cands, ver1, ver5);
-        checkOrder(entry.localCandidates(true), ver2);
+        checkOrder(entry.localCandidates(), ver2);
 
         entry.addRemote(node1, 3, ver3);
-        entry.addLocal(4, ver4, 0, /*reenter*/true);
+        entry.addLocal(4, ver4, 0);
 
         cands = entry.remoteMvccSnapshot();
 
@@ -1098,7 +1083,7 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
 
         entry.removeLock(ver3);
 
-        checkLocalOwner(entry.anyOwner(), ver2, false);
+        checkLocalOwner(entry.anyOwner(), ver2);
 
         entry.removeLock(ver2);
 
@@ -1111,7 +1096,7 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
 
         entry.readyLocal(ver4);
 
-        checkLocalOwner(entry.anyOwner(), ver4, false);
+        checkLocalOwner(entry.anyOwner(), ver4);
 
         entry.removeLock(ver4);
 
@@ -1156,17 +1141,17 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
         GridCacheVersion ver2 = version(2);
         GridCacheVersion ver3 = version(3);
 
-        GridCacheMvccCandidate c13 = entry1.addLocal(1, ver3, 0, true);
+        GridCacheMvccCandidate c13 = entry1.addLocal(1, ver3, 0);
 
         entry1.readyLocal(ver3);
 
-        checkLocalOwner(entry1.candidate(ver3), ver3, false);
+        checkLocalOwner(entry1.candidate(ver3), ver3);
 
-        GridCacheMvccCandidate c11 = entry1.addLocal(2, ver1, 0, true);
-        GridCacheMvccCandidate c21 = entry2.addLocal(2, ver1, 0, true);
-        GridCacheMvccCandidate c31 = entry3.addLocal(2, ver1, 0, true);
+        GridCacheMvccCandidate c11 = entry1.addLocal(2, ver1, 0);
+        GridCacheMvccCandidate c21 = entry2.addLocal(2, ver1, 0);
+        GridCacheMvccCandidate c31 = entry3.addLocal(2, ver1, 0);
 
-        GridCacheMvccCandidate c33 = entry3.addLocal(1, ver3, 0, true);
+        GridCacheMvccCandidate c33 = entry3.addLocal(1, ver3, 0);
 
         linkCandidates(ctx, c11, c21, c31);
 
@@ -1228,17 +1213,17 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
         GridCacheVersion ver2 = version(2);
         GridCacheVersion ver3 = version(3);
 
-        GridCacheMvccCandidate c13 = entry1.addLocal(1, ver3, 0, true);
+        GridCacheMvccCandidate c13 = entry1.addLocal(1, ver3, 0);
 
         entry1.readyLocal(ver3);
 
-        checkLocalOwner(entry1.candidate(ver3), ver3, false);
+        checkLocalOwner(entry1.candidate(ver3), ver3);
 
-        GridCacheMvccCandidate c11 = entry1.addLocal(2, ver2, 0, true);
-        GridCacheMvccCandidate c21 = entry2.addLocal(2, ver2, 0, true);
-        GridCacheMvccCandidate c31 = entry3.addLocal(2, ver2, 0, true);
+        GridCacheMvccCandidate c11 = entry1.addLocal(2, ver2, 0);
+        GridCacheMvccCandidate c21 = entry2.addLocal(2, ver2, 0);
+        GridCacheMvccCandidate c31 = entry3.addLocal(2, ver2, 0);
 
-        GridCacheMvccCandidate c33 = entry3.addLocal(1, ver3, 0, true);
+        GridCacheMvccCandidate c33 = entry3.addLocal(1, ver3, 0);
 
         linkCandidates(ctx, c11, c21, c31);
 
@@ -1313,15 +1298,15 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
         GridCacheVersion ver1 = version(1);
         GridCacheVersion ver3 = version(3);
 
-        GridCacheMvccCandidate c13 = entry1.addLocal(1, ver3, 0, true);
+        GridCacheMvccCandidate c13 = entry1.addLocal(1, ver3, 0);
 
         entry1.readyLocal(ver3);
 
-        checkLocalOwner(entry1.candidate(ver3), ver3, false);
+        checkLocalOwner(entry1.candidate(ver3), ver3);
 
-        GridCacheMvccCandidate c11 = entry1.addLocal(2, ver1, 0, true);
+        GridCacheMvccCandidate c11 = entry1.addLocal(2, ver1, 0);
 
-        GridCacheMvccCandidate c21 = entry2.addLocal(2, ver1, 0, true);
+        GridCacheMvccCandidate c21 = entry2.addLocal(2, ver1, 0);
 
         linkCandidates(ctx, c11, c21);
 
@@ -1331,13 +1316,13 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
         checkLocal(entry1.candidate(ver1), ver1, true, false, false);
         checkLocal(entry2.candidate(ver1), ver1, true, false, false);
 
-        GridCacheMvccCandidate c23 = entry2.addLocal(1, ver3, 0, true);
+        GridCacheMvccCandidate c23 = entry2.addLocal(1, ver3, 0);
 
         linkCandidates(ctx, c13, c23);
 
         entry2.readyLocal(ver3);
 
-        checkLocalOwner(entry2.candidate(ver3), ver3, false);
+        checkLocalOwner(entry2.candidate(ver3), ver3);
     }
 
     /**
@@ -1356,19 +1341,19 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
         GridCacheVersion ver3 = version(3);
         GridCacheVersion ver4 = version(4);
 
-        GridCacheMvccCandidate c1 = entry.addLocal(1, ver1, 0, true);
+        GridCacheMvccCandidate c1 = entry.addLocal(1, ver1, 0);
 
         ctx.mvcc().addNext(ctx, c1);
 
         ctx.mvcc().contextReset();
 
-        GridCacheMvccCandidate c2 = entry.addLocal(2, ver2, 0, true);
+        GridCacheMvccCandidate c2 = entry.addLocal(2, ver2, 0);
 
         ctx.mvcc().addNext(ctx, c2);
 
         ctx.mvcc().contextReset();
 
-        GridCacheMvccCandidate c3 = entry.addLocal(3, ver3, 0, true);
+        GridCacheMvccCandidate c3 = entry.addLocal(3, ver3, 0);
 
         ctx.mvcc().addNext(ctx, c3);
 
@@ -1390,7 +1375,7 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
         assert c3 != null;
         assert c2 != null;
 
-        checkLocal(c2, ver2, false, false, false, true);
+        checkLocal(c2, ver2, false, false, true);
 
         checkLocal(entry.candidate(ver1), ver1, true, true, false);
         checkLocal(entry.candidate(ver3), ver3, true, false, false);
@@ -1399,7 +1384,7 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
 
         checkLocal(entry.candidate(ver3), ver3, true, true, false);
 
-        GridCacheMvccCandidate c4 = entry.addLocal(4, ver4, 0, true);
+        GridCacheMvccCandidate c4 = entry.addLocal(4, ver4, 0);
 
         ctx.mvcc().addNext(ctx, c4);
 
@@ -1423,7 +1408,7 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
         GridCacheVersion ver1 = version(1);
         GridCacheVersion ver2 = version(2);
 
-        GridCacheMvccCandidate c1k1 = entry1.addLocal(2, ver2, 0, true);
+        GridCacheMvccCandidate c1k1 = entry1.addLocal(2, ver2, 0);
 
         // Link up.
         ctx.mvcc().addNext(ctx, c1k1);
@@ -1440,7 +1425,7 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
         checkLocal(c1k1, ver2, true, true, false);
         checkRemote(c2k1, ver1, false, false);
 
-        GridCacheMvccCandidate c1k2 = entry2.addLocal(2, ver2, 0, true);
+        GridCacheMvccCandidate c1k2 = entry2.addLocal(2, ver2, 0);
 
         assert c1k2 != null;
 
@@ -1479,8 +1464,8 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
         GridCacheVersion ver3 = version(3);
 
         // Local with higher version.
-        GridCacheMvccCandidate v3k1 = entry1.addLocal(3, ver3, 0, true);
-        GridCacheMvccCandidate v3k2 = entry2.addLocal(3, ver3, 0, true);
+        GridCacheMvccCandidate v3k1 = entry1.addLocal(3, ver3, 0);
+        GridCacheMvccCandidate v3k2 = entry2.addLocal(3, ver3, 0);
 
         // Link up.
         linkCandidates(ctx, v3k1, v3k2);
@@ -1498,8 +1483,8 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
         checkRemote(v2k2, ver2, false, false);
 
         // Local with lower version.
-        GridCacheMvccCandidate v1k1 = entry1.addLocal(4, ver1, 0, true);
-        GridCacheMvccCandidate v1k2 = entry2.addLocal(4, ver1, 0, true);
+        GridCacheMvccCandidate v1k1 = entry1.addLocal(4, ver1, 0);
+        GridCacheMvccCandidate v1k2 = entry2.addLocal(4, ver1, 0);
 
         // Link up.
         linkCandidates(ctx, v1k1, v1k2);
@@ -1539,8 +1524,8 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
         GridCacheVersion ver3 = version(3);
 
         // Local with higher version.
-        GridCacheMvccCandidate v3k1 = entry1.addLocal(3, ver3, 0, true);
-        GridCacheMvccCandidate v3k2 = entry2.addLocal(3, ver3, 0, true);
+        GridCacheMvccCandidate v3k1 = entry1.addLocal(3, ver3, 0);
+        GridCacheMvccCandidate v3k2 = entry2.addLocal(3, ver3, 0);
 
         linkCandidates(ctx, v3k1, v3k2);
 
@@ -1549,8 +1534,8 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
         checkLocal(v3k1, ver3, true, true, false);
         checkLocal(v3k2, ver3, false, false, false);
 
-        GridCacheMvccCandidate v1k1 = entry1.addLocal(4, ver1, 0, true);
-        GridCacheMvccCandidate v1k2 = entry2.addLocal(4, ver1, 0, true);
+        GridCacheMvccCandidate v1k1 = entry1.addLocal(4, ver1, 0);
+        GridCacheMvccCandidate v1k2 = entry2.addLocal(4, ver1, 0);
 
         // Link up.
         linkCandidates(ctx, v1k1, v1k2);
@@ -1591,8 +1576,8 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
         GridCacheVersion ver3 = version(3);
 
         // Local with higher version.
-        GridCacheMvccCandidate v3k1 = entry1.addLocal(3, ver3, 0, true);
-        GridCacheMvccCandidate v3k2 = entry2.addLocal(3, ver3, 0, true);
+        GridCacheMvccCandidate v3k1 = entry1.addLocal(3, ver3, 0);
+        GridCacheMvccCandidate v3k2 = entry2.addLocal(3, ver3, 0);
 
         linkCandidates(ctx, v3k1, v3k2);
 
@@ -1601,8 +1586,8 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
         checkLocal(v3k1, ver3, true, true, false);
         checkLocal(v3k2, ver3, false, false, false);
 
-        GridCacheMvccCandidate v1k1 = entry1.addLocal(4, ver1, 0, true);
-        GridCacheMvccCandidate v1k2 = entry2.addLocal(4, ver1, 0, true);
+        GridCacheMvccCandidate v1k1 = entry1.addLocal(4, ver1, 0);
+        GridCacheMvccCandidate v1k2 = entry2.addLocal(4, ver1, 0);
 
         // Link up.
         linkCandidates(ctx, v1k1, v1k2);
@@ -1721,7 +1706,6 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
         assert cand.owner();
 
         assert !cand.ready();
-        assert !cand.reentry();
         assert !cand.local();
     }
 
@@ -1743,7 +1727,6 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
         assert cand.owner() == owner;
 
         assert !cand.ready();
-        assert !cand.reentry();
         assert !cand.local();
     }
 
@@ -1765,7 +1748,6 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
         assert cand.owner();
 
         assert !cand.ready();
-        assert !cand.reentry();
         assert !cand.local();
     }
 
@@ -1776,10 +1758,9 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
      * @param ver Cache version.
      * @param ready Ready flag.
      * @param owner Lock owner.
-     * @param reentry Reentry flag.
      */
     private void checkLocal(GridCacheMvccCandidate cand, GridCacheVersion ver, boolean ready,
-        boolean owner, boolean reentry) {
+        boolean owner) {
         assert cand != null;
 
         info("Done candidate: " + cand);
@@ -1789,7 +1770,6 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
         // Check flags.
         assert cand.ready() == ready;
         assert cand.owner() == owner;
-        assert cand.reentry() == reentry;
 
         assert !cand.used();
 
@@ -1803,11 +1783,10 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
      * @param ver Cache version.
      * @param ready Ready flag.
      * @param owner Lock owner.
-     * @param reentry Reentry flag.
      * @param used Used flag.
      */
     private void checkLocal(GridCacheMvccCandidate cand, GridCacheVersion ver, boolean ready,
-        boolean owner, boolean reentry, boolean used) {
+        boolean owner, boolean used) {
         assert cand != null;
 
         info("Done candidate: " + cand);
@@ -1817,7 +1796,6 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
         // Check flags.
         assert cand.ready() == ready;
         assert cand.owner() == owner;
-        assert cand.reentry() == reentry;
         assert cand.used() == used;
 
         assert cand.local();
@@ -1828,9 +1806,8 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
      *
      * @param cand Candidate to check.
      * @param ver Cache version.
-     * @param reentry Reentry flag.
      */
-    private void checkLocalOwner(GridCacheMvccCandidate cand, GridCacheVersion ver, boolean reentry) {
+    private void checkLocalOwner(GridCacheMvccCandidate cand, GridCacheVersion ver) {
         assert cand != null;
 
         info("Done candidate: " + cand);
@@ -1838,8 +1815,6 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
         assert cand.version().equals(ver);
 
         // Check flags.
-        assert cand.reentry() == reentry;
-
         assert !cand.used();
 
         assert cand.ready();

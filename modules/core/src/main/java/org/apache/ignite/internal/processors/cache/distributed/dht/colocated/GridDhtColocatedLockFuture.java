@@ -1263,7 +1263,6 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
             if (!cctx.affinity().primaryByKey(cctx.localNode(), key, topVer))
                 return false;
 
-            // TODO GG-19461 this all looks redundant.
             addLocalKey(key, topVer, distributedKeys);
 
             if (isDone())
@@ -1271,7 +1270,6 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
         }
 
         if (tx != null)
-            // TODO GG-19461 why this is needed?
             tx.colocatedLocallyMapped(true);
 
         if (!distributedKeys.isEmpty()) {

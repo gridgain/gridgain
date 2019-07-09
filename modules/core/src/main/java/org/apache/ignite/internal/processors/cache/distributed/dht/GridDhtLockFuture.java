@@ -422,7 +422,6 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
             lockVer,
             null,
             timeout,
-            /*reenter*/false,
             implicitSingle(),
             false
         );
@@ -437,9 +436,9 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
         }
 
         synchronized (this) {
-            entries.add(c == null || c.reentry() ? null : entry);
+            entries.add(c == null ? null : entry);
 
-            if (c != null && !c.reentry())
+            if (c != null)
                 pendingLocks.add(entry.key());
         }
 

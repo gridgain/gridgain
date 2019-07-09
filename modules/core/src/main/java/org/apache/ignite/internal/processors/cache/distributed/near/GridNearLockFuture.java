@@ -338,7 +338,6 @@ public final class GridNearLockFuture extends GridCacheCompoundIdentityFuture<Bo
             lockVer,
             topVer,
             timeout,
-            false,
             implicitSingleTx(),
             false
         );
@@ -1078,61 +1077,59 @@ public final class GridNearLockFuture extends GridCacheCompoundIdentityFuture<Bo
                                         valMap.put(key, val);
                                     }
 
-                                    if (!cand.reentry()) {
-                                        if (req == null) {
-                                            boolean clientFirst = false;
+                                    if (req == null) {
+                                        boolean clientFirst = false;
 
-                                            if (first) {
-                                                clientFirst = clientNode &&
-                                                    !topLocked &&
-                                                    (tx == null || !tx.hasRemoteLocks());
+                                        if (first) {
+                                            clientFirst = clientNode &&
+                                                !topLocked &&
+                                                (tx == null || !tx.hasRemoteLocks());
 
-                                                first = false;
-                                            }
-
-                                            assert !implicitTx() && !implicitSingleTx() : tx;
-
-                                            req = new GridNearLockRequest(
-                                                cctx.cacheId(),
-                                                topVer,
-                                                cctx.nodeId(),
-                                                threadId,
-                                                futId,
-                                                lockVer,
-                                                read,
-                                                retval,
-                                                isolation(),
-                                                isInvalidate(),
-                                                timeout,
-                                                mappedKeys.size(),
-                                                tx.size(),
-                                                tx.syncMode() == FULL_SYNC,
-                                                tx.subjectId(),
-                                                tx.taskNameHash(),
-                                                read ? createTtl : -1L,
-                                                read ? accessTtl : -1L,
-                                                skipStore,
-                                                keepBinary,
-                                                clientFirst,
-                                                true,
-                                                cctx.deploymentEnabled(),
-                                                tx.label());
-
-                                            mapping.request(req);
+                                            first = false;
                                         }
 
-                                        distributedKeys.add(key);
+                                        assert !implicitTx() && !implicitSingleTx() : tx;
 
-                                        if (tx != null)
-                                            tx.addKeyMapping(txKey, mapping.node());
+                                        req = new GridNearLockRequest(
+                                            cctx.cacheId(),
+                                            topVer,
+                                            cctx.nodeId(),
+                                            threadId,
+                                            futId,
+                                            lockVer,
+                                            read,
+                                            retval,
+                                            isolation(),
+                                            isInvalidate(),
+                                            timeout,
+                                            mappedKeys.size(),
+                                            tx.size(),
+                                            tx.syncMode() == FULL_SYNC,
+                                            tx.subjectId(),
+                                            tx.taskNameHash(),
+                                            read ? createTtl : -1L,
+                                            read ? accessTtl : -1L,
+                                            skipStore,
+                                            keepBinary,
+                                            clientFirst,
+                                            true,
+                                            cctx.deploymentEnabled(),
+                                            tx.label());
 
-                                        req.addKeyBytes(
-                                            key,
-                                            retval && dhtVer == null,
-                                            dhtVer,
-                                            // Include DHT version to match remote DHT entry.
-                                            cctx);
+                                        mapping.request(req);
                                     }
+
+                                    distributedKeys.add(key);
+
+                                    if (tx != null)
+                                        tx.addKeyMapping(txKey, mapping.node());
+
+                                    req.addKeyBytes(
+                                        key,
+                                        retval && dhtVer == null,
+                                        dhtVer,
+                                        // Include DHT version to match remote DHT entry.
+                                        cctx);
                                 }
                                 else {
                                     if (timedOut)

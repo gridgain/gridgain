@@ -72,7 +72,6 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
      * @param ver Lock version.
      * @param topVer Topology version.
      * @param timeout Timeout to acquire lock.
-     * @param reenter Reentry flag.
      * @param implicitSingle Implicit flag.
      * @param read Read lock flag.
      * @return New candidate.
@@ -83,7 +82,6 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
         GridCacheVersion ver,
         AffinityTopologyVersion topVer,
         long timeout,
-        boolean reenter,
         boolean implicitSingle,
         boolean read
     ) throws GridCacheEntryRemovedException {
@@ -114,7 +112,6 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
                 threadId,
                 ver,
                 timeout,
-                reenter,
                 implicitSingle,
                 read);
 
@@ -137,7 +134,7 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
         }
 
         // Don't link reentries.
-        if (cand != null && !cand.reentry())
+        if (cand != null)
             // Link with other candidates in the same thread.
             cctx.mvcc().addNext(cctx, cand);
 
@@ -156,8 +153,6 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
         Collection<GridCacheMvccCandidate> cands = new ArrayList<>(rmts.size());
 
         for (GridCacheMvccCandidate c : rmts) {
-            assert !c.reentry();
-
             // Don't include reentries.
             if (!U.containsObjectArray(exclude, c.version()))
                 cands.add(c);
@@ -634,7 +629,6 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
                 tx.xidVersion(),
                 tx.topologyVersion(),
                 timeout,
-                /*reenter*/false,
                 tx.implicitSingle(),
                 read) != null;
 

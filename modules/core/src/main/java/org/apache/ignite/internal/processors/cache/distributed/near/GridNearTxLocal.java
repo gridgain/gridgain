@@ -3419,7 +3419,6 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
     /**
      * Adds key mapping to dht mapping.
      *
-     * TODO GG-19461 Remove this method?
      * @param key Key to add.
      * @param node Node this key mapped to.
      */

@@ -280,7 +280,6 @@ public final class GridLocalLockFuture<K, V> extends GridCacheFutureAdapter<Bool
             null,
             null,
             timeout,
-            !inTx(),
             inTx(),
             implicitSingle(),
             false

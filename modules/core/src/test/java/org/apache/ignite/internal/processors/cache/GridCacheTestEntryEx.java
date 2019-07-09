@@ -157,21 +157,18 @@ public class GridCacheTestEntryEx extends GridMetadataAwareAdapter implements Gr
      * @param threadId Thread ID.
      * @param ver Lock version.
      * @param timeout Lock acquisition timeout.
-     * @param reenter Reentry flag ({@code true} if reentry is allowed).
      * @return New lock candidate if lock was added, or current owner if lock was reentered,
      *      or <tt>null</tt> if lock was owned by another thread and timeout is negative.
      */
     @Nullable GridCacheMvccCandidate addLocal(
         long threadId,
         GridCacheVersion ver,
-        long timeout,
-        boolean reenter) {
+        long timeout) {
         return mvcc.addLocal(
             this,
             threadId,
             ver,
             timeout,
-            reenter,
             false,
             false
         );
@@ -790,11 +787,6 @@ public class GridCacheTestEntryEx extends GridMetadataAwareAdapter implements Gr
     /** @inheritDoc */
     @Override public Collection<GridCacheMvccCandidate> localCandidates(GridCacheVersion... exclude) {
         return mvcc.localCandidates(exclude);
-    }
-
-    /** @inheritDoc */
-    Collection<GridCacheMvccCandidate> localCandidates(boolean reentries, GridCacheVersion... exclude) {
-        return mvcc.localCandidates(reentries, exclude);
     }
 
     /** @inheritDoc */

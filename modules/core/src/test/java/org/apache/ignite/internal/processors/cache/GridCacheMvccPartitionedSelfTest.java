@@ -101,7 +101,7 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
 
         entry.readyNearLocal(ver2, ver2, empty(), empty(), Arrays.asList(ver1));
 
-        checkLocalOwner(c2, ver2, false);
+        checkLocalOwner(c2, ver2);
         checkRemote(c1, ver1, false, false);
 
         assertNotNull(entry.anyOwner());
@@ -136,7 +136,7 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
 
         entry.readyNearLocal(ver1, ver1, Arrays.asList(ver2), empty(), empty());
 
-        checkLocal(c1, ver1, true, false, false);
+        checkLocal(c1, ver1, true, false);
         checkRemote(c2, ver2, true, false);
 
         assertNull(entry.anyOwner());
@@ -170,7 +170,7 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
 
         entry.readyNearLocal(ver1, ver1, empty(), Arrays.asList(ver2), empty());
 
-        checkLocal(c1, ver1, true, false, false);
+        checkLocal(c1, ver1, true, false);
         checkRemote(c2, ver2, true, false);
 
         assertNull(entry.anyOwner());
@@ -195,16 +195,16 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
 
         entry.readyNearLocal(ver2, ver2,  empty(), empty(), empty());
 
-        checkLocalOwner(c2, ver2, false);
-        checkLocal(c1, ver1, false, false, false);
+        checkLocalOwner(c2, ver2);
+        checkLocal(c1, ver1, false, false);
 
         Collection<GridCacheMvccCandidate> cands = entry.localCandidates();
 
         assert cands.size() == 2;
         assert cands.iterator().next().version().equals(ver2);
 
-        checkLocalOwner(c2, ver2, false);
-        checkLocal(c1, ver1, false, false, false);
+        checkLocalOwner(c2, ver2);
+        checkLocal(c1, ver1, false, false);
     }
 
     /**
@@ -241,7 +241,7 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
 
         assertFalse(c1.owner());
 
-        checkLocalOwner(c2, ver2, false);
+        checkLocalOwner(c2, ver2);
 
         assertNotNull(entry.anyOwner());
         assertEquals(ver2, entry.anyOwner().version());
@@ -594,7 +594,7 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
         rmtCands = entry.remoteMvccSnapshot();
 
         assertNotNull(entry.anyOwner());
-        checkLocalOwner(entry.anyOwner(), nearVer2, false);
+        checkLocalOwner(entry.anyOwner(), nearVer2);
 
         assertEquals(ver1, rmtCands.iterator().next().version());
     }
@@ -810,7 +810,6 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
             0,
             serOrder,
             false,
-            false,
             true,
             read
         );
@@ -848,7 +847,6 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
             0,
             null,
             false,
-            false,
             true,
             false
         );
@@ -862,7 +860,6 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
             version(2),
             0,
             new GridCacheVersion(0, 0, 1),
-            false,
             false,
             true,
             false
@@ -901,7 +898,6 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
             0,
             serOrder1,
             false,
-            false,
             true,
             false
             );
@@ -915,7 +911,6 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
             ver2,
             0,
             serOrder2,
-            false,
             false,
             true,
             false
@@ -931,7 +926,6 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
             0,
             serOrder3,
             false,
-            false,
             true,
             false
         );
@@ -945,7 +939,6 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
             ver4,
             0,
             serOrder4,
-            false,
             false,
             true,
             false
@@ -1004,9 +997,8 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
      *
      * @param cand Candidate to check.
      * @param ver Cache version.
-     * @param reentry Reentry flag.
      */
-    private void checkLocalOwner(GridCacheMvccCandidate cand, GridCacheVersion ver, boolean reentry) {
+    private void checkLocalOwner(GridCacheMvccCandidate cand, GridCacheVersion ver) {
         assert cand != null;
 
         info("Done candidate: " + cand);
@@ -1014,8 +1006,6 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
         assert cand.version().equals(ver);
 
         // Check flags.
-        assert cand.reentry() == reentry;
-
         assert !cand.used();
 
         assert cand.ready();
@@ -1041,7 +1031,6 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
         assert cand.owner() == owner;
 
         assert !cand.ready();
-        assert !cand.reentry();
         assert !cand.local();
     }
 
@@ -1052,10 +1041,9 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
      * @param ver Cache version.
      * @param ready Ready flag.
      * @param owner Lock owner.
-     * @param reentry Reentry flag.
      */
     private void checkLocal(GridCacheMvccCandidate cand, GridCacheVersion ver, boolean ready,
-        boolean owner, boolean reentry) {
+        boolean owner) {
         assert cand != null;
 
         info("Done candidate: " + cand);
@@ -1065,7 +1053,6 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
         // Check flags.
         assert cand.ready() == ready;
         assert cand.owner() == owner;
-        assert cand.reentry() == reentry;
 
         assert !cand.used();
 
