@@ -1750,7 +1750,6 @@ class ServerImpl extends TcpDiscoveryImpl {
             nodeAddedMsg.topology(null);
             nodeAddedMsg.topologyHistory(null);
             nodeAddedMsg.messages(null, null, null);
-            nodeAddedMsg.clearDiscoveryData();
         }
     }
 
@@ -2586,7 +2585,8 @@ class ServerImpl extends TcpDiscoveryImpl {
         }
 
         /**
-         *
+         *  Clears messages in {@link #msgs} until message having {@link #discardId} is found.
+         *  It is also cleared.
          */
         void cleanup() {
             Iterator<PendingMessage> msgIt = msgs.iterator();
@@ -2601,22 +2601,20 @@ class ServerImpl extends TcpDiscoveryImpl {
                     if (skipCustomMsg) {
                         assert customDiscardId != null;
 
-                        if (F.eq(customDiscardId, msg.id)) {
-                            msg.msg = null;
+                        msg.msg = null;
 
+                        if (F.eq(customDiscardId, msg.id))
                             return;
-                        }
                     }
                 }
                 else {
                     if (skipMsg) {
                         assert discardId != null;
 
-                        if (F.eq(discardId, msg.id)) {
-                            msg.msg = null;
+                        msg.msg = null;
 
+                        if (F.eq(discardId, msg.id))
                             return;
-                        }
                     }
                 }
             }
@@ -3440,7 +3438,6 @@ class ServerImpl extends TcpDiscoveryImpl {
                                             spi.getSocketTimeout()));
                                     }
                                     finally {
-                                        //TODO: if writeToSocket failed we clear nodeAddedMessage. Is this right?
                                         clearNodeAddedMessage(pendingMsg);
                                     }
 
@@ -4784,8 +4781,10 @@ class ServerImpl extends TcpDiscoveryImpl {
                                 msg.discardedCustomMessageId());
 
                             // Clear data to minimize message size.
-                            //TODO: check if using method is valid
-                            clearNodeAddedMessage(msg);
+                            msg.messages(null, null, null);
+                            msg.topology(null);
+                            msg.topologyHistory(null);
+                            msg.clearDiscoveryData();
                         }
                         else {
                             if (log.isDebugEnabled())
@@ -6592,18 +6591,17 @@ class ServerImpl extends TcpDiscoveryImpl {
                         TcpDiscoveryAbstractMessage msg = U.unmarshal(spi.marshaller(), in,
                             U.resolveClassLoader(spi.ignite().configuration()));
 
-                        //TODO: sender is changed before logging?
-                        msg.senderNodeId(nodeId);
-
                         DebugLogger debugLog = messageLogger(msg);
 
                         if (debugLog.isDebugEnabled())
                             debugLog.debug("Message has been received: " + msg);
 
-                        spi.stats.onMessageReceived(msg);
-
                         if (debugMode && recordable(msg))
                             debugLog(msg, "Message has been received: " + msg);
+
+                        msg.senderNodeId(nodeId);
+
+                        spi.stats.onMessageReceived(msg);
 
                         if (msg instanceof TcpDiscoveryConnectionCheckMessage) {
                             ringMessageReceived();
