@@ -1198,7 +1198,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 gw.writeUnlock();
             }
 
-            startTimer.finishGlobalStage("Join discovery");
+            startTimer.finishGlobalStage("Join topology");
 
             // Check whether UTF-8 is the default character encoding.
             checkFileEncoding();
@@ -1424,7 +1424,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             ctx.discovery().ackTopology(ctx.discovery().localJoin().joinTopologyVersion().topologyVersion(),
                 EventType.EVT_NODE_JOINED, localNode());
 
-        startTimer.finishGlobalStage("Execute exchange and etc.");
+        startTimer.finishGlobalStage("Await exchange");
     }
 
     /**
