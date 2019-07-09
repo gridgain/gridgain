@@ -32,6 +32,8 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
+import org.apache.ignite.failure.FailureContext;
+import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.ClusterMetricsSnapshot;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteDiagnosticInfo;
@@ -47,6 +49,10 @@ import org.apache.ignite.internal.managers.discovery.IgniteClusterNode;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
+import org.apache.ignite.internal.processors.metastorage.DistributedMetastorageLifecycleListener;
+import org.apache.ignite.internal.processors.metastorage.ReadableDistributedMetaStorage;
+import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
 import org.apache.ignite.internal.util.GridTimerTask;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
@@ -81,12 +87,15 @@ import static org.apache.ignite.internal.IgniteVersionUtils.VER_STR;
 /**
  *
  */
-public class ClusterProcessor extends GridProcessorAdapter {
+public class ClusterProcessor extends GridProcessorAdapter implements DistributedMetastorageLifecycleListener {
     /** */
     private static final String ATTR_UPDATE_NOTIFIER_STATUS = "UPDATE_NOTIFIER_STATUS";
 
-    /** */
+    /** Key to store and retrieve cluster ID to/from metastorage. */
     private static final String CLUSTER_ID = "CLUSTER_ID";
+
+    /** Key to store and retrieve cluster tag to/from metastorage. */
+    private static final String CLUSTER_TAG = "CLUSTER_TAG";
 
     /** Periodic version check delay. */
     private static final long PERIODIC_VER_CHECK_DELAY = 1000 * 60 * 60; // Every hour.
@@ -127,6 +136,12 @@ public class ClusterProcessor extends GridProcessorAdapter {
     /** */
     private boolean sndMetrics;
 
+    /** */
+    private volatile UUID localClusterId;
+
+    /** */
+    private volatile String localClusterTag;
+
     /**
      * @param ctx Kernal context.
      */
@@ -145,6 +160,54 @@ public class ClusterProcessor extends GridProcessorAdapter {
      */
     public boolean diagnosticEnabled() {
         return getBoolean(IGNITE_DIAGNOSTIC_ENABLED, true);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void start() throws IgniteCheckedException {
+        GridInternalSubscriptionProcessor isp = ctx.internalSubscriptionProcessor();
+
+        isp.registerDistributedMetastorageListener(this);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onReadyForRead(ReadableDistributedMetaStorage metastorage) {
+        localClusterId = readKey(metastorage, CLUSTER_ID,
+            "Reading cluster ID from metastorage has failed, new ID will be generated");
+
+        localClusterTag = readKey(metastorage, CLUSTER_TAG,
+            "Reading cluster tag from metastorage has failed, default tag will be chosen");
+    }
+
+    /**
+     * @param metastorage Metastorage.
+     * @param key Key.
+     * @param errMsg Err message.
+     */
+    private <T extends Serializable> T readKey(ReadableDistributedMetaStorage metastorage, String key, String errMsg) {
+        try {
+            return metastorage.read(key);
+        }
+        catch (IgniteCheckedException e) {
+            U.warn(log, errMsg, e);
+
+            return null;
+        }
+    }
+
+    @Override public void onReadyForWrite(DistributedMetaStorage metastorage) {
+        try {
+            metastorage.writeAsync(CLUSTER_ID, cluster.id());
+        }
+        catch (IgniteCheckedException e) {
+            ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
+        }
+    }
+
+    /**
+     *
+     */
+    public void onLocalJoin() {
+        cluster.id(localClusterId != null ? localClusterId : UUID.randomUUID());
     }
 
     /**
@@ -320,7 +383,7 @@ public class ClusterProcessor extends GridProcessorAdapter {
         map.put(ATTR_UPDATE_NOTIFIER_STATUS, notifyEnabled.get());
 
         if (isJoiningNode)
-            map.put(CLUSTER_ID, cluster.id());
+            map.put(CLUSTER_ID, localClusterId);
 
         return map;
     }
@@ -336,10 +399,19 @@ public class ClusterProcessor extends GridProcessorAdapter {
                 notifyEnabled.set(lstFlag);
         }
 
-        Serializable clusterId = data.commonData();
+        Serializable remoteClusterId = data.commonData();
 
-        if (clusterId != null)
-            cluster.id((UUID)clusterId);
+        if (remoteClusterId != null) {
+            if (localClusterId != null && !localClusterId.equals(remoteClusterId)) {
+                if (log.isInfoEnabled())
+                    log.info("Received custer ID differs from locally stored cluster ID " +
+                        "and will be rewritten. " +
+                        "Received cluster ID: " + remoteClusterId +
+                        ", local cluster ID: " + localClusterId);
+            }
+
+            localClusterId = (UUID)remoteClusterId;
+        }
     }
 
     /**
