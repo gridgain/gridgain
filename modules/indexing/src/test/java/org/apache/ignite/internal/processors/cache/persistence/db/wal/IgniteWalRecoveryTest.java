@@ -62,6 +62,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
+import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
 import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.pagemem.wal.WALIterator;
@@ -88,7 +89,6 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.Compactab
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.TrackingPageIO;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
-import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
 import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.lang.IgniteInClosureX;
 import org.apache.ignite.internal.util.typedef.F;
@@ -103,6 +103,7 @@ import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.GridTestUtils.SF;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.multijvm.IgniteProcessProxy;
@@ -677,7 +678,7 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
     private void checkWalRolloverMultithreaded() throws Exception {
         walSegmentSize = 2 * 1024 * 1024;
 
-        final long endTime = System.currentTimeMillis() + 60 * 1000;
+        final long endTime = System.currentTimeMillis() + SF.apply(50 * 1000);
 
         IgniteEx ignite = startGrid(1);
 
@@ -689,7 +690,7 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
             @Override public Void call() {
                 Random rnd = ThreadLocalRandom.current();
 
-                while (U.currentTimeMillis() < endTime)
+                while (System.currentTimeMillis() < endTime)
                     cache.put(rnd.nextInt(50_000), rnd.nextInt());
 
                 return null;
