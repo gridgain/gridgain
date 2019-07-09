@@ -39,7 +39,6 @@ public class AuthenticationContext {
     /** Subject address. */
     private InetSocketAddress addr;
 
-
     /** All Subject address. */
     private List<InetSocketAddress> allAddr;
 
@@ -174,10 +173,21 @@ public class AuthenticationContext {
 
         return this;
     }
+
+    /**
+     * Gets All subject network addresses.
+     *
+     * @return All subject network addresses.
+     */
     public List<InetSocketAddress> allAddresses() {
         return allAddr;
     }
 
+    /**
+     * Sets All subject network addresses.
+     *
+     * @param allAddr List of All subject network addresses.
+     */
     public void allAddresses(List<InetSocketAddress> allAddr) {
         this.allAddr = allAddr;
     }
