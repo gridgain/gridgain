@@ -114,7 +114,7 @@ if %MAJOR_JAVA_VER% GEQ 11 (
     %JVM_OPTS%
 )
 
-for %%f in (gridgain-web-console-*.jar) do set "JAR_FILE=%%f" & goto :run
+for %%f in (ignite-web-console-*.jar) do set "JAR_FILE=%%f" & goto :run
 
 :run
 "%JAVA_HOME%\bin\java.exe" -DIGNITE_HOME="%IGNITE_HOME%" %JVM_OPTS% -jar "%JAR_FILE%"

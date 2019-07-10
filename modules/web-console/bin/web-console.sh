@@ -38,10 +38,7 @@ setWebConsoleHome() {
     #
     # Set IGNITE_HOME, if needed.
     #
-    if [ "${WEB_CONSOLE_HOME:-}" = "" ];
-        then IGNITE_HOME="$(pwd)";
-        else IGNITE_HOME=${WEB_CONSOLE_HOME};
-    fi
+    IGNITE_HOME="$(cd "$(dirname "$0")"; "pwd")";
 
     #
     # Check IGNITE_HOME is valid.
@@ -150,4 +147,4 @@ elif [ $version -ge 11 ] ; then
         ${JVM_OPTS}"
 fi
 
-"$JAVA" -DIGNITE_HOME="${IGNITE_HOME}" ${JVM_OPTS} -jar ./gridgain-web-console-*.jar
+"$JAVA" -DIGNITE_HOME="${IGNITE_HOME}" ${JVM_OPTS} -jar "${IGNITE_HOME}"/ignite-web-console-*.jar
