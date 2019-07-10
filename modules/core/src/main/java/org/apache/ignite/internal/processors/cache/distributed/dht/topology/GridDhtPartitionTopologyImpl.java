@@ -709,6 +709,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 if (locPart == null)
                     updateLocal(p, EVICTED, updateSeq, topVer);
                 else {
+                    System.err.println("!!! RESTORE grp=" + grp.cacheOrGroupName() + " - " + Thread.currentThread().getName());
                     GridDhtPartitionState state = locPart.state();
 
                     updateLocal(p, state, updateSeq, topVer);
@@ -2555,6 +2556,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             map.put(p, state);
 
             if (!grp.isReplicated() && (state == MOVING || state == OWNING || state == RENTING)) {
+                System.err.println("!!!! STATE = " + state + ", ver=" + diffFromAffinityVer);
+
                 AffinityAssignment assignment = grp.affinity().cachedAffinity(diffFromAffinityVer);
 
                 if (!assignment.getIds(p).contains(ctx.localNodeId())) {

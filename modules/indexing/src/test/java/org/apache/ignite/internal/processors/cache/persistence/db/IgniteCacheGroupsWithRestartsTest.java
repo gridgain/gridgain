@@ -66,6 +66,8 @@ public class IgniteCacheGroupsWithRestartsTest extends GridCommonAbstractTest {
     /** Group name. */
     public static final String GROUP = "group";
 
+    volatile boolean start4th = false;
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration configuration = super.getConfiguration(gridName);
@@ -79,6 +81,20 @@ public class IgniteCacheGroupsWithRestartsTest extends GridCommonAbstractTest {
             .setMaxSize(256 * 1024 * 1024));
 
         configuration.setDataStorageConfiguration(cfg);
+
+        if (start4th)
+            configuration.setCacheConfiguration(
+                getCacheConfiguration(0),
+                getCacheConfiguration(1),
+                getCacheConfiguration(2),
+                getCacheConfiguration(3)
+            );
+        else
+            configuration.setCacheConfiguration(
+                getCacheConfiguration(0),
+                getCacheConfiguration(1),
+                getCacheConfiguration(2)
+            );
 
         return configuration;
     }
@@ -99,7 +115,7 @@ public class IgniteCacheGroupsWithRestartsTest extends GridCommonAbstractTest {
         Set<QueryIndex> indices = Collections.singleton(new QueryIndex("name", QueryIndexType.SORTED));
 
         ccfg.setName(getCacheName(i))
-            .setGroupName("group")
+//            .setGroupName("group")
             .setQueryEntities(Collections.singletonList(
                 new QueryEntity(Long.class, Account.class)
                     .setFields(fields)
@@ -155,6 +171,57 @@ public class IgniteCacheGroupsWithRestartsTest extends GridCommonAbstractTest {
         IgniteCache<Object, Object> cache = ex.createCache(getCacheConfiguration(0));
 
         awaitPartitionMapExchange();
+
+        assertEquals(0, cache.size());
+    }
+
+    @Test
+    public void testNodeRestartBetweenCacheStop() throws Exception {
+        IgniteEx ex = startGrids(3);
+
+        prepareCachesAndData(ex);
+
+        stopGrid(2, true);
+
+        ex.destroyCache(getCacheName(0));
+
+        assertNull(ex.cachex(getCacheName(0)));
+
+
+        IgniteEx node2 = startGrid(2);
+
+
+        assertNull(ex.cachex(getCacheName(0)));
+        assertNull(node2.cachex(getCacheName(0)));
+
+        IgniteCache<Object, Object> cache = ex.createCache(getCacheConfiguration(0));
+
+        awaitPartitionMapExchange();
+
+        assertEquals(0, cache.size());
+    }
+
+    @Test
+    public void testNodeRestartWithNewStaticallyConfiguredCache() throws Exception {
+        IgniteEx ex = startGrids(3);
+
+        prepareCachesAndData(ex);
+
+        stopGrid(2, true);
+
+
+        assertNull(ex.cachex(getCacheName(3)));
+
+        start4th = true;
+        System.err.println("!!!! START");
+        IgniteEx node2 = startGrid(2);
+        start4th = false;
+
+        assertNotNull(ex.cachex(getCacheName(3)));
+        assertNotNull(node2.cachex(getCacheName(3)));
+
+        IgniteCache<Object, Object> cache = ex.cache(getCacheName(3));
+
 
         assertEquals(0, cache.size());
     }

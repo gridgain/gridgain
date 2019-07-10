@@ -758,6 +758,9 @@ public class GridAffinityAssignmentCache {
         AffinityTopologyVersion topVer,
         AffinityTopologyVersion lastAffChangeTopVer
     ) {
+
+        AffinityTopologyVersion origTopVer = topVer;
+
         if (topVer.equals(AffinityTopologyVersion.NONE))
             topVer = lastAffChangeTopVer = lastVersion();
         else {
@@ -767,7 +770,13 @@ public class GridAffinityAssignmentCache {
             awaitTopologyVersion(lastAffChangeTopVer);
         }
 
-        assert topVer.topologyVersion() >= 0 : topVer;
+        try {
+            assert topVer.topologyVersion() >= 0 : topVer;
+        }
+        catch (AssertionError e) {
+            e.printStackTrace();
+            throw e;
+        }
 
         AffinityAssignment cache = head.get();
 
