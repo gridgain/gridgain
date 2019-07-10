@@ -203,12 +203,11 @@ public abstract class IgniteWalFlushMultiNodeFailoverAbstractSelfTest extends Gr
                     if (failWhileStart)
                         canFail.set(true);
 
-                    String instanceName = getTestIgniteInstanceName(gridCount());
-                    IgniteConfiguration cfg = optimize(getConfiguration(instanceName));
+                    startGrid(gridCount());
 
-                    cfg.getDataStorageConfiguration().setFileIOFactory(new FailingFileIOFactory(canFail));
+                    setFileIOFactory(grid(gridCount()).context().cache().context().wal());
 
-                    startGrid(instanceName, cfg, null);
+                    awaitPartitionMapExchange();
 
                     grid.cluster().setBaselineTopology(grid.cluster().topologyVersion());
 
