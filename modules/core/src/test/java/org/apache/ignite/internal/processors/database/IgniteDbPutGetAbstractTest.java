@@ -56,7 +56,7 @@ import org.junit.Test;
  */
 public abstract class IgniteDbPutGetAbstractTest extends IgniteDbAbstractTest {
     /** */
-    private static final int KEYS_COUNT = 20_000;
+    private static final int KEYS_COUNT = SF.applyLB(10_000, 2_000);
 
     /**
      * @return Ignite instance for testing.
@@ -92,7 +92,7 @@ public abstract class IgniteDbPutGetAbstractTest extends IgniteDbAbstractTest {
 
         Map<Integer, DbValue> map = new HashMap<>();
 
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < SF.applyLB(5, 3); i++) {
             info("Iteration: " + i);
 
             info("Grow...");

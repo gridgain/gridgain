@@ -643,7 +643,7 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
                 cache.put(i, i);
             }
 
-            final long endTime = System.currentTimeMillis() + 30_000;
+            final long endTime = System.currentTimeMillis() + SF.applyLB(30_000, 5_000);
 
             IgniteInternalFuture<Long> fut = GridTestUtils.runMultiThreadedAsync(new Callable<Void>() {
                 @Override public Void call() {
@@ -666,6 +666,8 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
             }
 
             fut.get();
+
+            ignite.context().cache().context().database().wakeupForCheckpoint("final-test-checkpoint").get();
         }
         finally {
             customFailureDetectionTimeout = prevFDTimeout;
