@@ -164,7 +164,7 @@ import static org.apache.ignite.events.EventType.EVT_NODE_METRICS_UPDATED;
 import static org.apache.ignite.events.EventType.EVT_NODE_SEGMENTED;
 import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
 import static org.apache.ignite.failure.FailureType.SYSTEM_WORKER_TERMINATION;
-import static org.apache.ignite.internal.IgniteFeatures.TCP_DISCOVERY_MESSAGE_NODE_SERIALIZATION_OPTIMIZATION;
+import static org.apache.ignite.internal.IgniteFeatures.TCP_DISCOVERY_MESSAGE_NODE_COMPACT_REPRESENTATION;
 import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_LATE_AFFINITY_ASSIGNMENT;
@@ -276,7 +276,7 @@ class ServerImpl extends TcpDiscoveryImpl {
     private volatile long lastRingMsgReceivedTime;
 
     /** */
-    private volatile boolean clusterSupportsTcpDiscoveryNodeSerializationOptimization =
+    private volatile boolean clusterSupportsTcpDiscoveryNodeCompactRepresentation =
         true; //assume that local node supports this feature
 
     /** Map with proceeding ping requests. */
@@ -635,12 +635,15 @@ class ServerImpl extends TcpDiscoveryImpl {
     /**
      * Creates new instance of {@link TcpDiscoveryStatusCheckMessage} trying to choose most optimal constructor.
      *
-     * @param creatorNode Creator node.
-     * @param creatorNodeId Creator node id, is used when <code>creatorNode</code> is null.
+     * @param creatorNode Creator node. It can be null when message will be sent from coordinator to creator node,
+     * in this case it will not contain creator node addresses as it will be discarded by creator; otherwise,
+     * this parameter must not be null.
+     * @param creatorNodeId Creator node id.
      * @param failedNodeId Failed node id.
-     * @return new instance of {@link TcpDiscoveryStatusCheckMessage}.
+     * @return <code>null</code> if <code>creatorNode</code> is null and we cannot retrieve creator node from ring
+     * by <code>creatorNodeId</code>, and new instance of {@link TcpDiscoveryStatusCheckMessage} in other cases.
      */
-    private TcpDiscoveryStatusCheckMessage createTcpDiscoveryStatusCheckMessage(
+    private  @Nullable TcpDiscoveryStatusCheckMessage createTcpDiscoveryStatusCheckMessage(
         @Nullable TcpDiscoveryNode creatorNode,
         @Nullable UUID creatorNodeId,
         UUID failedNodeId
@@ -649,37 +652,35 @@ class ServerImpl extends TcpDiscoveryImpl {
 
         TcpDiscoveryStatusCheckMessage msg;
 
-        if (clusterSupportsTcpDiscoveryNodeSerializationOptimization) {
+        if (clusterSupportsTcpDiscoveryNodeCompactRepresentation) {
             TcpDiscoveryNode crd = resolveCoordinator();
 
-            boolean sameMacs = creatorNode != null && crd != null && U.sameMacs(creatorNode, crd);
+            if (creatorNode == null)
+                msg = new TcpDiscoveryStatusCheckMessage(creatorNodeId, null, failedNodeId);
+            else {
+                boolean sameMacs = creatorNode != null && crd != null && U.sameMacs(creatorNode, crd);
 
-            msg = new TcpDiscoveryStatusCheckMessage(
-                creatorNode == null ? creatorNodeId : creatorNode.id(),
-                spi.getNodeAddresses(creatorNode, sameMacs),
-                failedNodeId
-            );
+                msg = new TcpDiscoveryStatusCheckMessage(
+                    creatorNode.id(),
+                    spi.getNodeAddresses(creatorNode, sameMacs),
+                    failedNodeId
+                );
+            }
         }
         else {
-            if (creatorNode != null)
-                msg = new TcpDiscoveryStatusCheckMessage(creatorNode, failedNodeId);
+            if (creatorNode == null) {
+                TcpDiscoveryNode node = ring.node(creatorNodeId);
+
+                if (node == null)
+                    return null;
+                else
+                    msg = new TcpDiscoveryStatusCheckMessage(node, failedNodeId);
+            }
             else
-                throw new IgniteSpiException("Cannot create status check message: creator node is unknown.");
+                msg = new TcpDiscoveryStatusCheckMessage(creatorNode, failedNodeId);
         }
 
         return msg;
-    }
-
-    /**
-     * Creates new instance of {@link TcpDiscoveryDuplicateIdMessage}.
-     *
-     * @param msg Message.
-     * @return new instance of {@link TcpDiscoveryDuplicateIdMessage}.
-     */
-    private TcpDiscoveryStatusCheckMessage createTcpDiscoveryStatusCheckMessage(
-        TcpDiscoveryStatusCheckMessage msg
-    ) {
-        return createTcpDiscoveryStatusCheckMessage(msg.creatorNode(), msg.creatorNodeId(), msg.failedNodeId());
     }
 
     /**
@@ -692,7 +693,7 @@ class ServerImpl extends TcpDiscoveryImpl {
     private TcpDiscoveryDuplicateIdMessage createTcpDiscoveryDuplicateIdMessage(UUID creatorNodeId, TcpDiscoveryNode node) {
         TcpDiscoveryDuplicateIdMessage msg;
 
-        if (clusterSupportsTcpDiscoveryNodeSerializationOptimization)
+        if (clusterSupportsTcpDiscoveryNodeCompactRepresentation)
             msg = new TcpDiscoveryDuplicateIdMessage(creatorNodeId, node.id());
         else
             msg = new TcpDiscoveryDuplicateIdMessage(creatorNodeId, node);
@@ -4527,12 +4528,16 @@ class ServerImpl extends TcpDiscoveryImpl {
         /**
          * Tries to send a message to all node's available addresses.
          *
-         * @param nodeId Node ID to send message to.
          * @param addrs Node addresses, used when node could not be found in <code>ring</code>.
+         * @param nodeId Node ID to send message to.
          * @param msg Message.
          * @throws IgniteSpiException Last failure if all attempts failed.
          */
-        private void trySendMessageDirectly(UUID nodeId, Collection<InetSocketAddress> addrs, TcpDiscoveryAbstractMessage msg) {
+        private void trySendMessageDirectly(
+            Collection<InetSocketAddress> addrs,
+            UUID nodeId,
+            TcpDiscoveryAbstractMessage msg
+        ) {
             TcpDiscoveryNode node = ring.node(nodeId);
 
             if (node == null) {
@@ -4862,8 +4867,10 @@ class ServerImpl extends TcpDiscoveryImpl {
                                 // Make all preceding nodes and local node visible.
                                 n.visible(true);
 
-                                clusterSupportsTcpDiscoveryNodeSerializationOptimization &=
-                                    nodeSupports(gridKernalContext(), n, TCP_DISCOVERY_MESSAGE_NODE_SERIALIZATION_OPTIMIZATION);
+                                if (clusterSupportsTcpDiscoveryNodeCompactRepresentation) {
+                                    clusterSupportsTcpDiscoveryNodeCompactRepresentation =
+                                        nodeSupports(gridKernalContext(), n, TCP_DISCOVERY_MESSAGE_NODE_COMPACT_REPRESENTATION);
+                                }
                             }
 
                             joiningNodes.clear();
@@ -4945,8 +4952,10 @@ class ServerImpl extends TcpDiscoveryImpl {
                 log.debug("Node to finish add: " + node);
 
             //we will need to recalculate this value since the topology changed
-            clusterSupportsTcpDiscoveryNodeSerializationOptimization &=
-                nodeSupports(gridKernalContext(), node, TCP_DISCOVERY_MESSAGE_NODE_SERIALIZATION_OPTIMIZATION);
+            if (clusterSupportsTcpDiscoveryNodeCompactRepresentation) {
+                clusterSupportsTcpDiscoveryNodeCompactRepresentation =
+                    nodeSupports(gridKernalContext(), node, TCP_DISCOVERY_MESSAGE_NODE_COMPACT_REPRESENTATION);
+            }
 
             boolean locNodeCoord = isLocalNodeCoordinator();
 
@@ -5191,8 +5200,10 @@ class ServerImpl extends TcpDiscoveryImpl {
 
             if (msg.verified() && !locNodeId.equals(leavingNodeId)) {
                 //we will need to recalculate this value since the topology changed
-                clusterSupportsTcpDiscoveryNodeSerializationOptimization =
-                    allNodesSupport(TCP_DISCOVERY_MESSAGE_NODE_SERIALIZATION_OPTIMIZATION);
+                if (!clusterSupportsTcpDiscoveryNodeCompactRepresentation) {
+                    clusterSupportsTcpDiscoveryNodeCompactRepresentation =
+                        allNodesSupport(TCP_DISCOVERY_MESSAGE_NODE_COMPACT_REPRESENTATION);
+                }
 
                 TcpDiscoveryNode leftNode = ring.removeNode(leavingNodeId);
 
@@ -5402,8 +5413,10 @@ class ServerImpl extends TcpDiscoveryImpl {
 
             if (msg.verified()) {
                 //we will need to recalculate this value since the topology changed
-                clusterSupportsTcpDiscoveryNodeSerializationOptimization =
-                    allNodesSupport(TCP_DISCOVERY_MESSAGE_NODE_SERIALIZATION_OPTIMIZATION);
+                if (!clusterSupportsTcpDiscoveryNodeCompactRepresentation) {
+                    clusterSupportsTcpDiscoveryNodeCompactRepresentation =
+                        allNodesSupport(TCP_DISCOVERY_MESSAGE_NODE_COMPACT_REPRESENTATION);
+                }
 
                 failedNode = ring.removeNode(failedNodeId);
 
@@ -5539,7 +5552,13 @@ class ServerImpl extends TcpDiscoveryImpl {
                                 TcpDiscoveryStatusCheckMessage msg0 = msg;
 
                                 if (F.contains(msg.failedNodes(), msg.creatorNodeId())) {
-                                    msg0 = createTcpDiscoveryStatusCheckMessage(msg);
+                                    msg0 = createTcpDiscoveryStatusCheckMessage(msg.creatorNode(), msg.creatorNodeId(), msg.failedNodeId());
+
+                                    if (msg0 == null) {
+                                        log.debug("Status check message discarded (creator node is not in topology).");
+
+                                        return;
+                                    }
 
                                     msg0.failedNodes(null);
 
@@ -5550,7 +5569,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                                 }
 
                                 try {
-                                    trySendMessageDirectly(msg0.creatorNodeId(), msg0.creatorNodeAddrs(), msg0);
+                                    trySendMessageDirectly(msg0.creatorNodeAddrs(), msg0.creatorNodeId(), msg0);
 
                                     if (log.isDebugEnabled())
                                         log.debug("Responded to status check message " +

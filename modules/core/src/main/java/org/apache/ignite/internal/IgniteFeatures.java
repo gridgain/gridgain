@@ -68,7 +68,7 @@ public enum IgniteFeatures {
     IGNITE_SECURITY_PROCESSOR(13),
 
     /** Support of dereferencing TcpDiscoveryNode field in discovery messages. */
-    TCP_DISCOVERY_MESSAGE_NODE_SERIALIZATION_OPTIMIZATION(14);
+    TCP_DISCOVERY_MESSAGE_NODE_COMPACT_REPRESENTATION(14);
 
     /**
      * Unique feature identifier.

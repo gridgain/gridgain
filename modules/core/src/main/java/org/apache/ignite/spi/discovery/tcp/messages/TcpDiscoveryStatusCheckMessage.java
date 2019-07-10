@@ -137,7 +137,7 @@ public class TcpDiscoveryStatusCheckMessage extends TcpDiscoveryAbstractMessage 
 
         TcpDiscoveryStatusCheckMessage other = (TcpDiscoveryStatusCheckMessage)obj;
 
-        return F.eqNodes(other.creatorNodeId(), creatorNodeId()) &&
+        return F.eq(other.creatorNodeId(), creatorNodeId()) &&
             F.eq(other.failedNodeId, failedNodeId) &&
             status == other.status;
     }
