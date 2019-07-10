@@ -15,7 +15,6 @@
  */
 package org.apache.ignite.internal.cluster;
 
-import java.util.Arrays;
 import java.util.UUID;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
@@ -23,12 +22,11 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.processors.cluster.ClusterTagGenerator;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 /**
- * Test for cluster id and cluster name features of IgniteCluster.
+ * Tests for ID and tag features of IgniteCluster.
  */
 public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
     /** */
@@ -82,8 +80,10 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Test verifies that cluster ID is generated upon cluster start
+     * and correctly spread across all nodes joining later.
      *
-     * @throws Exception
+     * @throws Exception If failed.
      */
     @Test
     public void testInMemoryClusterId() throws Exception {
@@ -104,10 +104,16 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
         ig0 = startGrid(0);
 
         assertNotSame(id0, ig0.cluster().id());
+
+        IgniteEx cl0 = startGrid("client0");
+
+        assertEquals(ig0.cluster().id(), cl0.cluster().id());
     }
 
     /**
+     * Verifies that in persistent-enabled cluster ID is not lost upon cluster restart.
      *
+     * @throws Exception If failed.
      */
     @Test
     public void testPersistentClusterId() throws Exception {
@@ -124,12 +130,17 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
         ig0 = startGrid(0);
 
         assertEquals(id0, ig0.cluster().id());
-
-        awaitPartitionMapExchange();
     }
 
     /**
+     * Test verifies consistency of tag changes in cluster:
+     * <ul>
+     *     <li>Consistency across all server nodes when changed from a specific server node.</li>
+     *     <li>Consistency across joining nodes including clients.</li>
+     *     <li>Consistency across clients and servers when changed from client.</li>
+     * </ul>
      *
+     * @throws Exception If failed.
      */
     @Test
     public void testInMemoryClusterTag() throws Exception {
@@ -138,8 +149,6 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
         String tag0 = ig0.cluster().tag();
 
         assertNotNull(tag0);
-
-        assertTrue(Arrays.asList(ClusterTagGenerator.IN_MEMORY_CLUSTER_TAGS).contains(tag0));
 
         ig0.cluster().tag(CUSTOM_TAG_0);
 
@@ -180,7 +189,9 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
     }
 
     /**
+     *  Verifies consistency of tag when set up in inactive and active clusters and on client nodes.
      *
+     * @throws Exception If failed.
      */
     @Test
     public void testPersistentClusterTag() throws Exception {
@@ -199,5 +210,35 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
         }
 
         assertTrue(expectedExceptionThrown);
+
+        IgniteEx ig1 = startGrid(1);
+
+        assertEquals(ig0.cluster().tag(), ig1.cluster().tag());
+
+        String tag1 = ig1.cluster().tag();
+
+        ig0.cluster().active(true);
+
+        stopAllGrids();
+
+        ig0 = startGrid(0);
+
+        ig1 = startGrid(1);
+
+        assertEquals(tag1, ig0.cluster().tag());
+
+        ig1.cluster().active(true);
+
+        IgniteEx cl0 = startGrid("client0");
+
+        cl0.cluster().tag(CUSTOM_TAG_0);
+
+        stopAllGrids();
+
+        ig0 = startGrid(0);
+
+        ig1 = startGrid(1);
+
+        assertEquals(CUSTOM_TAG_0, ig1.cluster().tag());
     }
 }
