@@ -36,14 +36,14 @@ public class NotificationService {
     private IMailService mailSrv;
 
     /** Web console url. */
+    @Value("${spring.mail.web-console-url:}")
     private String origin;
 
     /**
      * @param srv Mail service.
      */
-    public NotificationService(IMailService srv, @Value("${spring.mail.web-console-url:}") String origin) {
+    public NotificationService(IMailService srv) {
         this.mailSrv = srv;
-        this.origin = origin;
     }
 
     /**
