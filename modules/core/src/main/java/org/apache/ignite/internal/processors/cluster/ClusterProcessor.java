@@ -136,7 +136,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     /** */
     private boolean sndMetrics;
 
-    /** */
+    /** Cluster ID is stored in local variable before  */
     private volatile UUID localClusterId;
 
     /** */
@@ -237,7 +237,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
         cluster.id(localClusterId != null ? localClusterId : UUID.randomUUID());
 
         cluster.setTag(localClusterTag != null ? localClusterTag :
-            ClusterTagGenerator.generateTag(CU.isPersistenceEnabled(ctx.config())));
+            ClusterTagGenerator.generateTag());
     }
 
     /**
