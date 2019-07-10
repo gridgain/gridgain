@@ -507,7 +507,7 @@ public class WalStateManager extends GridCacheSharedManagerAdapter {
             // It's safe to switch partitions to owning state only if checkpoint was successfully finished.
             cpFut.finishFuture().listen(new IgniteInClosureX<IgniteInternalFuture>() {
                 @Override public void applyx(IgniteInternalFuture future) {
-                    if (X.hasCause(future.error(), NodeStoppingException.class))
+                    if (future.error() != null)
                         return;
 
                     for (Integer grpId0 : session0.disabledGrps) {
