@@ -39,7 +39,7 @@ public class MailPropertiesEx {
     private Map<String, String> templates;
 
     /** Web console url. */
-    @NotEmpty(message = "Please specify the web console url, for example: http://localhost:3000")
+    @NotEmpty(message = "Please specify the web console url, for example: http://<your-host-name>:<port-if-needed>")
     private String webConsoleUrl;
 
     /**
