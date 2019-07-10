@@ -59,7 +59,8 @@ public class LocalModelStorageProvider implements ModelStorageProvider {
         while ((ref = (WeakReferenceWithCleanUp)refQueue.poll()) != null)
             ref.cleanUp();
 
-        return locks.computeIfAbsent(key, k -> new WeakReferenceWithCleanUp(key, new ReentrantLock())).get();
+        Lock lock = new ReentrantLock();
+        return locks.computeIfAbsent(key, k -> new WeakReferenceWithCleanUp(key, lock)).get();
     }
 
     /**
