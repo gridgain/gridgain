@@ -16,7 +16,10 @@
 
 package org.apache.ignite.ml.inference.storage.model;
 
+import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.Lock;
@@ -30,7 +33,10 @@ public class LocalModelStorageProvider implements ModelStorageProvider {
     private final ConcurrentMap<String, FileOrDirectory> storage = new ConcurrentHashMap<>();
 
     /** Storage of the locks. */
-    private final ConcurrentMap<String, WeakReference<Lock>> locks = new ConcurrentHashMap<>();
+    private final Map<String, WeakReference<Lock>> locks = new HashMap<>();
+
+    /** Reference queue with reference to be cleaned up. */
+    private final ReferenceQueue<Lock> refQueue = new ReferenceQueue<>();
 
     /** {@inheritDoc} */
     @Override public FileOrDirectory get(String key) {
@@ -48,8 +54,37 @@ public class LocalModelStorageProvider implements ModelStorageProvider {
     }
 
     /** {@inheritDoc} */
-    @Override public Lock lock(String key) {
-        Lock lock = new ReentrantLock();
-        return locks.computeIfAbsent(key, k -> new WeakReference<>(lock)).get();
+    @Override public synchronized Lock lock(String key) {
+        WeakReferenceWithCleanUp ref;
+        while ((ref = (WeakReferenceWithCleanUp)refQueue.poll()) != null)
+            ref.cleanUp();
+
+        return locks.computeIfAbsent(key, k -> new WeakReferenceWithCleanUp(key, new ReentrantLock())).get();
+    }
+
+    /**
+     * Weak reference with clean up. Allows to clean up key associated with weak reference content.
+     */
+    private class WeakReferenceWithCleanUp extends WeakReference<Lock> {
+        /** Key to be cleaned up. */
+        private final String key;
+
+        /**
+         * Constructs a new instance of weak reference with clean up.
+         *
+         * @param key Key to be cleaned up.
+         * @param referent Reference containing a lock.
+         */
+        public WeakReferenceWithCleanUp(String key, Lock referent) {
+            super(referent, refQueue);
+            this.key = key;
+        }
+
+        /**
+         * Cleans up.
+         */
+        public void cleanUp() {
+            locks.remove(key);
+        }
     }
 }
