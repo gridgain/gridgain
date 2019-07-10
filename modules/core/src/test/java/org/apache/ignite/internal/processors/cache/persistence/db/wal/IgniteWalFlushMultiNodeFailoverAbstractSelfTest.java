@@ -287,8 +287,11 @@ public abstract class IgniteWalFlushMultiNodeFailoverAbstractSelfTest extends Gr
 
                 /** {@inheritDoc} */
                 @Override public MappedByteBuffer map(int sizeBytes) throws IOException {
-                    if (fail != null && fail.get())
-                        throw new IOException("No space left on deive");
+                    if (fail != null && fail.get()) {
+                        final IOException e = new IOException("<%> No space left on deive");
+                        e.printStackTrace();
+                        throw e;
+                    }
 
                     return delegate.map(sizeBytes);
                 }
