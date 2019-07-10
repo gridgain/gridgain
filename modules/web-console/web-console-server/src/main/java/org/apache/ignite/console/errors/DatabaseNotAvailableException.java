@@ -14,18 +14,20 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.console.testsuites;
+package org.apache.ignite.console.errors;
 
-import org.apache.ignite.console.configuration.WebConsoleConfigurationSelfTest;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+import org.eclipse.jetty.http.BadMessageException;
+
+import static org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE;
 
 /**
- * Ignite Web Console test suite.
+ * Special exception to handle database errors.
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-    WebConsoleConfigurationSelfTest.class,
-})
-public class WebConsoleTestSuite {
+public class DatabaseNotAvailableException extends BadMessageException {
+    /**
+     * Default constructor.
+     */
+    public DatabaseNotAvailableException(String message) {
+        super(SERVICE_UNAVAILABLE.value(), message);
+    }
 }

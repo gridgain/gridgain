@@ -122,7 +122,7 @@ import static org.apache.ignite.internal.commandline.OutputFormat.MULTI_LINE;
 import static org.apache.ignite.internal.commandline.OutputFormat.SINGLE_LINE;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.HELP;
 import static org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor.DEFAULT_TARGET_FOLDER;
-import static org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult.Status.FAIL;
+import static org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult.Result.FAIL;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
@@ -1229,7 +1229,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         // Ignite instase 1 can be logged only in arguments list.
         boolean isInstanse1Found = Arrays.stream(testOutStr.split("\n"))
-                                        .filter(s -> s.contains("Arguments:"))
+                                        .filter(s -> s.contains("Command arguments:"))
                                         .noneMatch(s -> s.contains(getTestIgniteInstanceName() + "1"));
 
         assertTrue(testOutStr, testOutStr.contains("Node not found for consistent ID:"));
@@ -2032,7 +2032,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         ignite.cluster().active(true);
 
-        injectTestSystemOut();
+        if (!isSystemOutAlreadyInjected())
+            injectTestSystemOut();
 
         // Adding some assignments without deployments.
         for (int i = 0; i < 100; i++) {
@@ -2728,7 +2729,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         RollingUpgradeModeChangeResult res = hnd.getLastOperationResult();
 
-        assertTrue("Enabling rolling upgrade should fail [res=" + res + ']', FAIL == res.status());
+        assertTrue("Enabling rolling upgrade should fail [res=" + res + ']', FAIL == res.result());
         assertTrue(
             "The cause of the failure should be UnsupportedOperationException [cause=" + res.cause() + ']',
             X.hasCause(res.cause(), UnsupportedOperationException.class));
@@ -2737,7 +2738,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         res = hnd.getLastOperationResult();
 
-        assertTrue("Disabling rolling upgrade should fail [res=" + res + ']', FAIL == res.status());
+        assertTrue("Disabling rolling upgrade should fail [res=" + res + ']', FAIL == res.result());
         assertTrue(
             "The cause of the failure should be UnsupportedOperationException [cause=" + res.cause() + ']',
             X.hasCause(res.cause(), UnsupportedOperationException.class));
