@@ -21,9 +21,8 @@ import org.apache.ignite.console.notification.Notification;
 import org.apache.ignite.console.notification.NotificationDescriptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-
-import static org.apache.ignite.console.common.Utils.currentRequestOrigin;
 
 /**
  * Notification service.
@@ -36,11 +35,15 @@ public class NotificationService {
     /** Mail service. */
     private IMailService mailSrv;
 
+    /** Web console url. */
+    private String origin;
+
     /**
      * @param srv Mail service.
      */
-    public NotificationService(IMailService srv) {
-        mailSrv = srv;
+    public NotificationService(IMailService srv, @Value("${spring.mail.web-console-url:}") String origin) {
+        this.mailSrv = srv;
+        this.origin = origin;
     }
 
     /**
@@ -49,7 +52,7 @@ public class NotificationService {
      */
     public void sendEmail(NotificationDescriptor desc, Account acc) {
         try {
-            Notification notification = new Notification(currentRequestOrigin(), acc, desc);
+            Notification notification = new Notification(origin, acc, desc);
 
             mailSrv.send(notification);
         }
