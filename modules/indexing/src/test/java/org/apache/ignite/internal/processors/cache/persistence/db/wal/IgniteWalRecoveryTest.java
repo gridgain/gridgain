@@ -636,7 +636,7 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
                 CacheConfiguration<Object, Object> ccfg = new CacheConfiguration<>("cache-" + i);
 
                 // We can get 'too many open files' with default number of partitions.
-                ccfg.setAffinity(new RendezvousAffinityFunction(false, 128));
+                ccfg.setAffinity(new RendezvousAffinityFunction(false, 32));
 
                 IgniteCache<Object, Object> cache = ignite.getOrCreateCache(ccfg);
 

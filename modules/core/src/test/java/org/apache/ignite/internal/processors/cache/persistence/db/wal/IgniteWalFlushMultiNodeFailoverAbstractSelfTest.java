@@ -207,8 +207,6 @@ public abstract class IgniteWalFlushMultiNodeFailoverAbstractSelfTest extends Gr
 
                     setFileIOFactory(grid(gridCount()).context().cache().context().wal());
 
-                    awaitPartitionMapExchange();
-
                     grid.cluster().setBaselineTopology(grid.cluster().topologyVersion());
 
                     awaitPartitionMapExchange();
@@ -286,11 +284,8 @@ public abstract class IgniteWalFlushMultiNodeFailoverAbstractSelfTest extends Gr
 
                 /** {@inheritDoc} */
                 @Override public MappedByteBuffer map(int sizeBytes) throws IOException {
-                    if (fail != null && fail.get()) {
-                        final IOException e = new IOException("<%> No space left on deive");
-                        e.printStackTrace();
-                        throw e;
-                    }
+                    if (fail != null && fail.get())
+                        throw new IOException("No space left on deive");
 
                     return delegate.map(sizeBytes);
                 }
