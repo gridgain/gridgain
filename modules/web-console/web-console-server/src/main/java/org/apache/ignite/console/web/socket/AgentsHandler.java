@@ -21,17 +21,15 @@ import java.util.Collection;
 import java.util.Set;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.ignite.console.dto.Account;
-import org.apache.ignite.console.dto.ClusterInfo;
-import org.apache.ignite.console.metrics.MetricsDto;
 import org.apache.ignite.console.messages.WebConsoleMessageSource;
 import org.apache.ignite.console.messages.WebConsoleMessageSourceAccessor;
 import org.apache.ignite.console.repositories.AccountsRepository;
-import org.apache.ignite.console.repositories.ClusterInfoRepository;
 import org.apache.ignite.console.web.AbstractHandler;
 import org.apache.ignite.console.websocket.AgentHandshakeRequest;
 import org.apache.ignite.console.websocket.AgentHandshakeResponse;
 import org.apache.ignite.console.websocket.TopologySnapshot;
 import org.apache.ignite.console.websocket.WebSocketRequest;
+import org.apache.ignite.internal.util.typedef.F;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -43,7 +41,6 @@ import static org.apache.ignite.console.utils.Utils.fromJson;
 import static org.apache.ignite.console.websocket.AgentHandshakeRequest.SUPPORTED_VERS;
 import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_HANDSHAKE;
 import static org.apache.ignite.console.websocket.WebSocketEvents.CLUSTER_TOPOLOGY;
-import static org.apache.ignite.console.websocket.WebSocketEvents.PULL_METRICS;
 
 /**
  * Agents web sockets handler.
@@ -56,9 +53,6 @@ public class AgentsHandler extends AbstractHandler {
     /** */
     private AccountsRepository accRepo;
 
-    /** Cluster repository. */
-    private ClusterInfoRepository clusterRepo;
-
     /** */
     private WebSocketsManager wsm;
 
@@ -67,12 +61,10 @@ public class AgentsHandler extends AbstractHandler {
 
     /**
      * @param accRepo Repository to work with accounts.
-     * @param clusterRepo Repository to work with clusters.
      * @param wsm Web sockets manager.
      */
-    public AgentsHandler(AccountsRepository accRepo, ClusterInfoRepository clusterRepo, WebSocketsManager wsm) {
+    public AgentsHandler(AccountsRepository accRepo, WebSocketsManager wsm) {
         this.accRepo = accRepo;
-        this.clusterRepo = clusterRepo;
         this.wsm = wsm;
     }
 
@@ -80,9 +72,8 @@ public class AgentsHandler extends AbstractHandler {
      * @param req Agent handshake.
      */
     private void validateAgentHandshake(AgentHandshakeRequest req) {
-        // TODO GG-19573 no tokens needed.
-        //        if (F.isEmpty(req.getTokens()))
-        //            throw new IllegalArgumentException(messages.getMessage("err.tokens-no-specified-in-agent-handshake-req"));
+        if (F.isEmpty(req.getTokens()))
+            throw new IllegalArgumentException(messages.getMessage("err.tokens-no-specified-in-agent-handshake-req"));
 
         if (!SUPPORTED_VERS.contains(req.getVersion()))
             throw new IllegalArgumentException(messages.getMessageWithArgs("err.agent-unsupport-version", req.getVersion()));
@@ -92,11 +83,10 @@ public class AgentsHandler extends AbstractHandler {
      * @param tokens Tokens.
      */
     private Collection<Account> loadAccounts(Set<String> tokens) {
-        Collection<Account> accounts = accRepo.list(); // TODO GG-19573 getAllByTokens(tokens);
+        Collection<Account> accounts = accRepo.getAllByTokens(tokens);
 
-        // TODO GG-19573 no tokens needed.
-        //        if (accounts.isEmpty())
-        //            throw new IllegalArgumentException(messages.getMessageWithArgs("err.failed-auth-with-tokens", tokens));
+        if (accounts.isEmpty())
+            throw new IllegalArgumentException(messages.getMessageWithArgs("err.failed-auth-with-tokens", tokens));
 
         return accounts;
     }
@@ -109,8 +99,6 @@ public class AgentsHandler extends AbstractHandler {
                     AgentHandshakeRequest req = fromJson(evt.getPayload(), AgentHandshakeRequest.class);
 
                     validateAgentHandshake(req);
-
-                    clusterRepo.save(new ClusterInfo(req.getClusterId(), req.getLastSeen()));
 
                     Collection<Account> accounts = loadAccounts(req.getTokens());
 
@@ -149,13 +137,6 @@ public class AgentsHandler extends AbstractHandler {
                 catch (Exception e) {
                     log.warn("Failed to process topology update: " + evt, e);
                 }
-
-                break;
-
-            case PULL_METRICS:
-                MetricsDto metrics = fromJson(evt.getPayload(), MetricsDto.class);
-
-                log.info("Received metrics [nid=" + metrics.getNodeId() + ", ts=" + metrics.getTimestamp() + "]");
 
                 break;
 
