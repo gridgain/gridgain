@@ -38,24 +38,31 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
     private static final String CUSTOM_TAG_1 = "not_so_super_but_OK";
 
     /** */
+    private static final String CLIENT_CUSTOM_TAG_0 = "client_custom_tag_0";
+
+    /** */
+    private static final String CLIENT_CUSTOM_TAG_1 = "client_custom_tag_1";
+
+    /** */
     private boolean isPersistenceEnabled;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        if (!isPersistenceEnabled)
-            cfg.setActiveOnStart(false);
+        if (igniteInstanceName.contains("client"))
+            cfg.setClientMode(true);
+        else {
+            DataStorageConfiguration dsCfg = new DataStorageConfiguration()
+                .setDefaultDataRegionConfiguration(
+                    new DataRegionConfiguration()
+                        .setInitialSize(128 * 1024 * 1024)
+                        .setMaxSize(128 * 1024 * 1024)
+                        .setPersistenceEnabled(isPersistenceEnabled)
+                );
 
-        DataStorageConfiguration dsCfg = new DataStorageConfiguration()
-            .setDefaultDataRegionConfiguration(
-                new DataRegionConfiguration()
-                    .setInitialSize(128 * 1024 * 1024)
-                    .setMaxSize(128 * 1024 * 1024)
-                    .setPersistenceEnabled(isPersistenceEnabled)
-            );
-
-        cfg.setDataStorageConfiguration(dsCfg);
+            cfg.setDataStorageConfiguration(dsCfg);
+        }
 
         return cfg;
     }
@@ -134,6 +141,53 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
 
         assertTrue(Arrays.asList(ClusterTagGenerator.IN_MEMORY_CLUSTER_TAGS).contains(tag0));
 
+        ig0.cluster().tag(CUSTOM_TAG_0);
+
+        IgniteEx ig1 = startGrid(1);
+
+        String tag1 = ig1.cluster().tag();
+
+        assertNotNull(tag1);
+
+        assertEquals(CUSTOM_TAG_0, tag1);
+
+        IgniteEx ig2 = startGrid(2);
+
+        assertEquals(CUSTOM_TAG_0, ig2.cluster().tag());
+
+        ig2.cluster().tag(CUSTOM_TAG_1);
+
+        //tag set from one server node is applied on all other nodes
+        assertEquals(CUSTOM_TAG_1, ig0.cluster().tag());
+
+        assertEquals(CUSTOM_TAG_1, ig1.cluster().tag());
+
+        IgniteEx cl0 = startGrid("client0");
+
+        assertEquals(CUSTOM_TAG_1, cl0.cluster().tag());
+
+        cl0.cluster().tag(CLIENT_CUSTOM_TAG_0);
+
+        //tag set from client is applied on server nodes
+        assertEquals(CLIENT_CUSTOM_TAG_0, ig0.cluster().tag());
+
+        IgniteEx cl1 = startGrid("client1");
+
+        cl1.cluster().tag(CLIENT_CUSTOM_TAG_1);
+
+        //tag set from client is applied on other client nodes
+        assertEquals(CLIENT_CUSTOM_TAG_1, cl0.cluster().tag());
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void testPersistentClusterTag() throws Exception {
+        isPersistenceEnabled = true;
+
+        IgniteEx ig0 = startGrid(0);
+
         boolean expectedExceptionThrown = false;
 
         try {
@@ -145,25 +199,5 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
         }
 
         assertTrue(expectedExceptionThrown);
-
-        ig0.cluster().active(true);
-
-        ig0.cluster().tag(CUSTOM_TAG_0);
-
-        IgniteEx ig1 = startGrid(1);
-
-        String tag1 = ig1.cluster().tag();
-
-        assertNotNull(tag1);
-
-        assertEquals(CUSTOM_TAG_0, tag1);
-    }
-
-    /**
-     *
-     */
-    @Test
-    public void testPersistentClusterTag() throws Exception {
-
     }
 }

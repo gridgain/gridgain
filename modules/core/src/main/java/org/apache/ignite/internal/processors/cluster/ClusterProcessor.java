@@ -197,8 +197,16 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
         }
     }
 
+    /** {@inheritDoc} */
     @Override public void onReadyForWrite(DistributedMetaStorage metastorage) {
         this.metastorage = metastorage;
+
+        metastorage.listen(
+            (k) -> k.equals(CLUSTER_TAG),
+            (String k, Serializable oldVal, Serializable newVal) -> {
+                cluster.setTag((String)newVal);
+            }
+        );
 
         try {
             metastorage.writeAsync(CLUSTER_ID, cluster.id());
@@ -393,7 +401,6 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     @Override public void collectGridNodeData(DiscoveryDataBag dataBag) {
         dataBag.addNodeSpecificData(CLUSTER_PROC.ordinal(), getDiscoveryData(false));
 
-        System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis() + " collected cluster[id=" + cluster.id() + "; tag=" + cluster.tag() + ']');
         dataBag.addGridCommonData(CLUSTER_PROC.ordinal(), new DiscoCommonData(cluster.id(), cluster.tag()));
     }
 
