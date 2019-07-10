@@ -1054,52 +1054,43 @@ public class GridToStringBuilder {
 
                 buf.a(fd.getName()).a('=');
 
-                if (fd.isStatic()) {
-                    Field field = cls.getDeclaredField(fd.getName());
+                switch (fd.type()) {
+                    case GridToStringFieldDescriptor.FIELD_TYPE_OBJECT:
+                        toString(buf, fd.fieldClass(), GridUnsafe.getObjectField(obj, fd.offset()));
 
-                    field.setAccessible(true);
+                        break;
+                    case GridToStringFieldDescriptor.FIELD_TYPE_BYTE:
+                        buf.a(GridUnsafe.getByteField(obj, fd.offset()));
 
-                    toString(buf, fd.fieldClass(), field.get(obj));
-                }
-                else {
-                    switch (fd.type()) {
-                        case GridToStringFieldDescriptor.FIELD_TYPE_OBJECT:
-                            toString(buf, fd.fieldClass(), GridUnsafe.getObjectField(obj, fd.offset()));
+                        break;
+                    case GridToStringFieldDescriptor.FIELD_TYPE_BOOLEAN:
+                        buf.a(GridUnsafe.getBooleanField(obj, fd.offset()));
 
-                            break;
-                        case GridToStringFieldDescriptor.FIELD_TYPE_BYTE:
-                            buf.a(GridUnsafe.getByteField(obj, fd.offset()));
+                        break;
+                    case GridToStringFieldDescriptor.FIELD_TYPE_CHAR:
+                        buf.a(GridUnsafe.getCharField(obj, fd.offset()));
 
-                            break;
-                        case GridToStringFieldDescriptor.FIELD_TYPE_BOOLEAN:
-                            buf.a(GridUnsafe.getBooleanField(obj, fd.offset()));
+                        break;
+                    case GridToStringFieldDescriptor.FIELD_TYPE_SHORT:
+                        buf.a(GridUnsafe.getShortField(obj, fd.offset()));
 
-                            break;
-                        case GridToStringFieldDescriptor.FIELD_TYPE_CHAR:
-                            buf.a(GridUnsafe.getCharField(obj, fd.offset()));
+                        break;
+                    case GridToStringFieldDescriptor.FIELD_TYPE_INT:
+                        buf.a(GridUnsafe.getIntField(obj, fd.offset()));
 
-                            break;
-                        case GridToStringFieldDescriptor.FIELD_TYPE_SHORT:
-                            buf.a(GridUnsafe.getShortField(obj, fd.offset()));
+                        break;
+                    case GridToStringFieldDescriptor.FIELD_TYPE_FLOAT:
+                        buf.a(GridUnsafe.getFloatField(obj, fd.offset()));
 
-                            break;
-                        case GridToStringFieldDescriptor.FIELD_TYPE_INT:
-                            buf.a(GridUnsafe.getIntField(obj, fd.offset()));
+                        break;
+                    case GridToStringFieldDescriptor.FIELD_TYPE_LONG:
+                        buf.a(GridUnsafe.getLongField(obj, fd.offset()));
 
-                            break;
-                        case GridToStringFieldDescriptor.FIELD_TYPE_FLOAT:
-                            buf.a(GridUnsafe.getFloatField(obj, fd.offset()));
+                        break;
+                    case GridToStringFieldDescriptor.FIELD_TYPE_DOUBLE:
+                        buf.a(GridUnsafe.getDoubleField(obj, fd.offset()));
 
-                            break;
-                        case GridToStringFieldDescriptor.FIELD_TYPE_LONG:
-                            buf.a(GridUnsafe.getLongField(obj, fd.offset()));
-
-                            break;
-                        case GridToStringFieldDescriptor.FIELD_TYPE_DOUBLE:
-                            buf.a(GridUnsafe.getDoubleField(obj, fd.offset()));
-
-                            break;
-                    }
+                        break;
                 }
             }
 

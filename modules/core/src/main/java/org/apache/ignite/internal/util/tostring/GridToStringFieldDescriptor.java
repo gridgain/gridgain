@@ -68,13 +68,10 @@ class GridToStringFieldDescriptor {
     private final Class<?> cls;
 
     /** */
-    private final boolean isStatic;
-
-    /** */
     GridToStringFieldDescriptor(Field field) {
-        isStatic = (field.getModifiers() & Modifier.STATIC) != 0;
+        assert (field.getModifiers() & Modifier.STATIC) == 0 : "Static fields are not allowed here: " + field;
 
-        off = isStatic ? -1 : GridUnsafe.objectFieldOffset(field);
+        off = GridUnsafe.objectFieldOffset(field);
 
         cls = field.getType();
 
@@ -138,9 +135,4 @@ class GridToStringFieldDescriptor {
      * @return Field name.
      */
     String getName() { return name; }
-
-    /** */
-    public boolean isStatic() {
-        return isStatic;
-    }
 }
