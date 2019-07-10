@@ -203,9 +203,12 @@ public abstract class IgniteWalFlushMultiNodeFailoverAbstractSelfTest extends Gr
                     if (failWhileStart)
                         canFail.set(true);
 
-                    startGrid(gridCount());
+                    String instanceName = getTestIgniteInstanceName(gridCount());
+                    IgniteConfiguration cfg = optimize(getConfiguration(instanceName));
 
-                    setFileIOFactory(grid(gridCount()).context().cache().context().wal());
+                    cfg.getDataStorageConfiguration().setFileIOFactory(new FailingFileIOFactory(canFail));
+
+                    startGrid(instanceName, cfg, null);
 
                     grid.cluster().setBaselineTopology(grid.cluster().topologyVersion());
 
@@ -283,25 +286,9 @@ public abstract class IgniteWalFlushMultiNodeFailoverAbstractSelfTest extends Gr
                 }
 
                 /** {@inheritDoc} */
-                @Override public int write(byte[] buf, int off, int len) throws IOException {
-                    if (fail != null && fail.get())
-                        throw new IOException("No space left on device");
-
-                    return super.write(buf, off, len);
-                }
-
-                /** {@inheritDoc} */
-                @Override public int write(ByteBuffer srcBuf, long position) throws IOException {
-                    if (fail != null && fail.get())
-                        throw new IOException("No space left on device");
-
-                    return super.write(srcBuf, position);
-                }
-
-                /** {@inheritDoc} */
                 @Override public MappedByteBuffer map(int sizeBytes) throws IOException {
                     if (fail != null && fail.get())
-                        throw new IOException("No space left on device");
+                        throw new IOException("No space left on deive");
 
                     return delegate.map(sizeBytes);
                 }
