@@ -33,7 +33,7 @@ public class LocalModelStorageProvider implements ModelStorageProvider {
     private final ConcurrentMap<String, FileOrDirectory> storage = new ConcurrentHashMap<>();
 
     /** Storage of the locks. */
-    private final Map<String, WeakReference<Lock>> locks = new HashMap<>();
+    private final Map<String, WeakReferenceWithCleanUp> locks = new HashMap<>();
 
     /** Reference queue with reference to be cleaned up. */
     private final ReferenceQueue<Lock> refQueue = new ReferenceQueue<>();
@@ -59,8 +59,15 @@ public class LocalModelStorageProvider implements ModelStorageProvider {
         while ((ref = (WeakReferenceWithCleanUp)refQueue.poll()) != null)
             ref.cleanUp();
 
+        ref = locks.get(key);
+        Lock lockInRef = ref.get();
+
+        if (lockInRef != null)
+            return lockInRef;
+
         Lock lock = new ReentrantLock();
-        return locks.computeIfAbsent(key, k -> new WeakReferenceWithCleanUp(key, lock)).get();
+        locks.put(key, new WeakReferenceWithCleanUp(key, lock));
+        return lock;
     }
 
     /**
