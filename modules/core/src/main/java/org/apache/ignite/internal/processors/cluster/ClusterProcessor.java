@@ -136,10 +136,10 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     /** */
     private boolean sndMetrics;
 
-    /** Cluster ID is stored in local variable before  */
+    /** Cluster ID is stored in local variable before activation when it goes to distributed metastorage. */
     private volatile UUID localClusterId;
 
-    /** */
+    /** Cluster tag is stored in local variable before activation when it goes to distributed metastorage. */
     private volatile String localClusterTag;
 
     /** */
@@ -218,6 +218,11 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
         }
     }
 
+    /**
+     * Method is called when user requests updating tag through public API.
+     *
+     * @param newTag New tag.
+     */
     public void updateTag(String newTag) throws IgniteCheckedException {
         Serializable oldTag = metastorage.read(CLUSTER_TAG);
 
@@ -231,7 +236,15 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     }
 
     /**
+     * Node makes ID and tag available through public API on local join event.
      *
+     * Two cases.
+     * <ul>
+     *     <li>In in-memory scenario very first node of the cluster generates ID and tag,
+     *     other nodes receives them on join.</li>
+     *     <li>When persistence is enabled each node reads ID and tag from metastorage
+     *     when it becomes ready for read.</li>
+     * </ul>
      */
     public void onLocalJoin() {
         cluster.id(localClusterId != null ? localClusterId : UUID.randomUUID());
@@ -394,12 +407,12 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
     /** {@inheritDoc} */
     @Override public void collectJoiningNodeData(DiscoveryDataBag dataBag) {
-        dataBag.addJoiningNodeData(CLUSTER_PROC.ordinal(), getDiscoveryData(true));
+        dataBag.addJoiningNodeData(CLUSTER_PROC.ordinal(), getDiscoveryData());
     }
 
     /** {@inheritDoc} */
     @Override public void collectGridNodeData(DiscoveryDataBag dataBag) {
-        dataBag.addNodeSpecificData(CLUSTER_PROC.ordinal(), getDiscoveryData(false));
+        dataBag.addNodeSpecificData(CLUSTER_PROC.ordinal(), getDiscoveryData());
 
         dataBag.addGridCommonData(CLUSTER_PROC.ordinal(), new DiscoCommonData(cluster.id(), cluster.tag()));
     }
@@ -407,13 +420,10 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     /**
      * @return Discovery data.
      */
-    private Serializable getDiscoveryData(boolean isJoiningNode) {
-        HashMap<String, Object> map = new HashMap<>(3);
+    private Serializable getDiscoveryData() {
+        HashMap<String, Object> map = new HashMap<>(2);
 
         map.put(ATTR_UPDATE_NOTIFIER_STATUS, notifyEnabled.get());
-
-        if (isJoiningNode)
-            map.put(CLUSTER_ID, localClusterId);
 
         return map;
     }
