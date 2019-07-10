@@ -31,8 +31,8 @@ import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.GridTestUtils.SF;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -50,7 +50,7 @@ public class IgnitePdsPageEvictionDuringPartitionClearTest extends GridCommonAbs
         CacheConfiguration ccfg = new CacheConfiguration(CACHE_NAME)
             .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
             .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC)
-            .setAffinity(new RendezvousAffinityFunction(false, 128))
+            .setAffinity(new RendezvousAffinityFunction(false, 32))
             .setRebalanceMode(CacheRebalanceMode.SYNC)
             .setBackups(1);
 
@@ -59,7 +59,7 @@ public class IgnitePdsPageEvictionDuringPartitionClearTest extends GridCommonAbs
         // Intentionally set small page cache size.
         DataStorageConfiguration memCfg = new DataStorageConfiguration()
             .setDefaultDataRegionConfiguration(
-                new DataRegionConfiguration().setMaxSize(70L * 1024 * 1024).setPersistenceEnabled(true))
+                new DataRegionConfiguration().setMaxSize(10L * 1024 * 1024).setPersistenceEnabled(true))
             .setWalMode(WALMode.LOG_ONLY);
 
         cfg.setDataStorageConfiguration(memCfg);
@@ -87,7 +87,7 @@ public class IgnitePdsPageEvictionDuringPartitionClearTest extends GridCommonAbs
      */
     @Test
     public void testPageEvictionOnNodeStart() throws Exception {
-        for (int r = 0; r < 3; r++) {
+        for (int r = 0; r < SF.applyLB(3, 1); r++) {
             cleanPersistenceDir();
 
             startGrids(2);
@@ -99,7 +99,9 @@ public class IgnitePdsPageEvictionDuringPartitionClearTest extends GridCommonAbs
 
                 IgniteDataStreamer<Object, Object> streamer = ig.dataStreamer(CACHE_NAME);
 
-                for (int i = 0; i < 300_000; i++) {
+                int firstLimit = SF.apply(300_000);
+
+                for (int i = 0; i < firstLimit; i++) {
                     streamer.addData(i, new TestValue(i));
 
                     if (i > 0 && i % 10_000 == 0)
@@ -120,14 +122,11 @@ public class IgnitePdsPageEvictionDuringPartitionClearTest extends GridCommonAbs
                     }
                 });
 
-                for (int i = 500_000; i < 1_000_000; i++) {
+                for (int i = firstLimit; i < SF.apply(1_000_000); i++) {
                     streamer.addData(i, new TestValue(i));
 
-                    if (i > 0 && i % 10_000 == 0) {
+                    if (i > 0 && i % 10_000 == 0)
                         info("Done: " + i);
-
-                        U.sleep(1000);
-                    }
                 }
 
                 streamer.close();
@@ -150,7 +149,7 @@ public class IgnitePdsPageEvictionDuringPartitionClearTest extends GridCommonAbs
         private int id;
 
         /** */
-        private byte[] payload = new byte[512];
+        private byte[] payload = new byte[1024];
 
         /**
          * @param id ID.

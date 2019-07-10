@@ -53,9 +53,6 @@ public class IgnitePdsMvccTestSuite4 {
         ignoredTests.add(FileDownloaderTest.class);
         ignoredTests.add(IgnitePdsTaskCancelingTest.class);
 
-        // TODO https://issues.apache.org/jira/browse/IGNITE-11937
-        ignoredTests.add(IgnitePdsContinuousRestartTestWithSharedGroupAndIndexes.class);
-
         // Skip page lock tracker tests for MVCC suite.
         ignoredTests.add(PageLockTrackerManagerTest.class);
         ignoredTests.add(SharedPageLockTrackerTest.class);

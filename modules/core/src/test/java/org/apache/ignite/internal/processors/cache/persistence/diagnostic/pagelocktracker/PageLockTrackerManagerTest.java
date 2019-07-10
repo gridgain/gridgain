@@ -86,7 +86,7 @@ public class PageLockTrackerManagerTest {
     public void testMemoryCalculation0(int type) throws Exception {
         System.out.println(">>> Calculation mempory tracker type:" + type);
 
-        int timeOutWorkerInterval = 10_000;
+        int timeOutWorkerInterval = 100;
 
         System.setProperty("IGNITE_PAGE_LOCK_TRACKER_TYPE", String.valueOf(type));
         System.setProperty("IGNITE_PAGE_LOCK_TRACKER_CHECK_INTERVAL", String.valueOf(timeOutWorkerInterval));

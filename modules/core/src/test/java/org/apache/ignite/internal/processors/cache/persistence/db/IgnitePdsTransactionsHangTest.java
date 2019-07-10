@@ -39,6 +39,7 @@ import org.apache.ignite.configuration.TransactionConfiguration;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
+import org.apache.ignite.testframework.GridTestUtils.SF;
 import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
@@ -65,16 +66,16 @@ public class IgnitePdsTransactionsHangTest extends GridCommonAbstractTest {
     public static final int THREADS_CNT = 32;
 
     /** Warm up period, seconds. */
-    public static final int WARM_UP_PERIOD = 20;
+    public static final int WARM_UP_PERIOD = SF.apply(20);
 
     /** Duration. */
-    public static final int DURATION = 180;
+    public static final int DURATION = SF.apply(180);
 
     /** Maximum count of inserted keys. */
-    public static final int MAX_KEY_COUNT = 500_000;
+    public static final int MAX_KEY_COUNT = SF.apply(500_000);
 
     /** Checkpoint frequency. */
-    public static final long CHECKPOINT_FREQUENCY = 20_000;
+    public static final long CHECKPOINT_FREQUENCY = SF.apply(20_000);
 
     /** {@inheritDoc} */
     @Override protected long getTestTimeout() {
@@ -216,7 +217,7 @@ public class IgnitePdsTransactionsHangTest extends GridCommonAbstractTest {
             long max = Long.MIN_VALUE, min = Long.MAX_VALUE;
 
             while (System.currentTimeMillis() < stopTime) {
-                U.sleep(1000);
+                U.sleep(SF.apply(1000));
 
                 long sum = operationCnt.sumThenReset();
                 periods++;

@@ -31,6 +31,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopologyImpl;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.testframework.GridTestUtils.SF;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -43,9 +44,9 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
  */
 public class ResetLostPartitionTest extends GridCommonAbstractTest {
     /** Cache name. */
-    private static final String[] CACHE_NAMES = {"cacheOne", "cacheTwo", "cacheThree"};
+    private static final String[] CACHE_NAMES = {"cacheOne", "cacheTwo"};
     /** Cache size */
-    public static final int CACHE_SIZE = 100000 / CACHE_NAMES.length;
+    public static final int CACHE_SIZE = SF.apply(10000) / CACHE_NAMES.length;
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
@@ -83,8 +84,7 @@ public class ResetLostPartitionTest extends GridCommonAbstractTest {
 
         CacheConfiguration[] ccfg = new CacheConfiguration[] {
             cacheConfiguration(CACHE_NAMES[0], CacheAtomicityMode.ATOMIC),
-            cacheConfiguration(CACHE_NAMES[1], CacheAtomicityMode.ATOMIC),
-            cacheConfiguration(CACHE_NAMES[2], CacheAtomicityMode.TRANSACTIONAL)
+            cacheConfiguration(CACHE_NAMES[1], CacheAtomicityMode.TRANSACTIONAL)
         };
 
         cfg.setCacheConfiguration(ccfg);
@@ -106,16 +106,6 @@ public class ResetLostPartitionTest extends GridCommonAbstractTest {
             .setPartitionLossPolicy(PartitionLossPolicy.READ_ONLY_SAFE)
             .setAffinity(new RendezvousAffinityFunction(false, 64))
             .setIndexedTypes(String.class, String.class);
-    }
-
-    /** Client configuration */
-    private IgniteConfiguration getClientConfiguration(String igniteInstanceName) throws Exception {
-        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
-
-        cfg.setPeerClassLoadingEnabled(true);
-        cfg.setClientMode(true);
-
-        return cfg;
     }
 
     /**
@@ -148,7 +138,7 @@ public class ResetLostPartitionTest extends GridCommonAbstractTest {
         grid(0).cluster().active(true);
 
         for (String cacheName : CACHE_NAMES) {
-            try(IgniteDataStreamer<Object, Object> st = grid(0).dataStreamer(cacheName)) {
+            try (IgniteDataStreamer<Object, Object> st = grid(0).dataStreamer(cacheName)) {
                 for (int j = 0; j < CACHE_SIZE; j++)
                     st.addData(j, "Value" + j);
             }

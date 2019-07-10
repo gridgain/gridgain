@@ -20,12 +20,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager.MemoryCalculator;
@@ -36,6 +34,7 @@ import org.apache.ignite.testframework.GridTestUtils.SF;
 import org.junit.Assert;
 import org.junit.Test;
 
+import static java.util.concurrent.locks.LockSupport.parkNanos;
 import static org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.LockTrackerFactory.HEAP_LOG;
 import static org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.LockTrackerFactory.HEAP_STACK;
 import static org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.LockTrackerFactory.OFF_HEAP_LOG;
@@ -49,6 +48,9 @@ import static org.junit.Assert.assertTrue;
  *
  */
 public class SharedPageLockTrackerTest extends AbstractPageLockTest {
+    /** */
+    private static final String THREAD_NAME_PREFFIX = "my-thread-";
+
     /**
      *
      */
@@ -65,35 +67,7 @@ public class SharedPageLockTrackerTest extends AbstractPageLockTest {
 
             doTestTakeDumpByCount(5, 1, dumps, 1);
 
-            doTestTakeDumpByCount(5, 2, dumps, 2);
-
-            doTestTakeDumpByCount(10, 3, dumps, 4);
-
-            doTestTakeDumpByCount(20, 6, dumps, 8);
-        }
-    }
-
-    /**
-     *
-     */
-    @Test
-    public void testTakeDumpByTime() throws Exception {
-        int[] trackerTypes = new int[] {HEAP_STACK, HEAP_LOG, OFF_HEAP_STACK, OFF_HEAP_LOG};
-
-        LockTrackerFactory.DEFAULT_CAPACITY = 512;
-
-        for (int i = 0; i < trackerTypes.length; i++) {
-            LockTrackerFactory.DEFAULT_TYPE = trackerTypes[i];
-
-            int time = SF.apply(30_000, 5_000, 40_000);
-
-            doTestTakeDumpByTime(5, 1, time, 1);
-
-            doTestTakeDumpByTime(5, 2, time, 2);
-
-            doTestTakeDumpByTime(10, 3, time, 4);
-
-            doTestTakeDumpByTime(20, 6, time, 8);
+            doTestTakeDumpByCount(20, 6, dumps, Runtime.getRuntime().availableProcessors() * 2);
         }
     }
 
@@ -130,49 +104,44 @@ public class SharedPageLockTrackerTest extends AbstractPageLockTest {
 
             pages.addAll(pageMetas);
 
-            boolean latchDown = false;
-
             while (!stop.get()) {
                 Collections.shuffle(locks);
                 Collections.shuffle(pages);
 
                 for (PageLockListener lsnr : locks) {
                     for (PageMeta pageMeta : pages) {
-                        awaitRandom(50);
+                        parkNanos(nextRandomWaitTimeout(500));
 
                         lsnr.onBeforeReadLock(pageMeta.structureId, pageMeta.pageId, pageMeta.page);
 
-                        awaitRandom(50);
+                        parkNanos(nextRandomWaitTimeout(500));
 
                         lsnr.onReadLock(pageMeta.structureId, pageMeta.pageId, pageMeta.page, pageMeta.pageAddr);
                     }
                 }
 
-                awaitRandom(10);
+                parkNanos(nextRandomWaitTimeout(1000));
 
                 Collections.reverse(locks);
                 Collections.reverse(pages);
 
                 for (PageLockListener lsnr : locks) {
                     for (PageMeta pageMeta : pages) {
-                        awaitRandom(50);
+                        parkNanos(nextRandomWaitTimeout(500));
 
                         lsnr.onReadUnlock(pageMeta.structureId, pageMeta.pageId, pageMeta.page, pageMeta.pageAddr);
                     }
                 }
 
-                if (!latchDown) {
+                if (awaitThreadStartLatch.getCount() > 0)
                     awaitThreadStartLatch.countDown();
-
-                    latchDown = true;
-                }
             }
         }, threads, "PageLocker");
 
         awaitThreadStartLatch.await();
 
         for (int i = 0; i < dumpCnt; i++) {
-            awaitRandom(1000);
+            awaitRandom(100);
 
             ThreadPageLocksDumpLock dump = sharedPageLockTracker.dump();
 
@@ -186,128 +155,86 @@ public class SharedPageLockTrackerTest extends AbstractPageLockTest {
     }
 
     /**
-     *
-     */
-    private void doTestTakeDumpByTime(
-        int pagesCnt,
-        int structuresCnt,
-        int dumpTime,
-        int threads
-    ) throws IgniteCheckedException, InterruptedException {
-        SharedPageLockTracker sharedPageLockTracker = new SharedPageLockTracker();
-
-        List<PageMeta> pageMetas = new CopyOnWriteArrayList<>();
-
-        int id = 1;
-
-        for (int i = 0; i < pagesCnt; i++)
-            pageMetas.add(new PageMeta((id++) % structuresCnt, id++, id++, id++));
-
-        List<PageLockListener> pageLsnrs = new ArrayList<>();
-
-        for (int i = 0; i < structuresCnt; i++)
-            pageLsnrs.add(sharedPageLockTracker.registrateStructure("my-structure-" + i));
-
-        AtomicBoolean stop = new AtomicBoolean();
-
-        CountDownLatch awaitThreadStartLatch = new CountDownLatch(threads);
-
-        IgniteInternalFuture f = GridTestUtils.runMultiThreadedAsync(() -> {
-            List<PageLockListener> locks = new ArrayList<>(pageLsnrs);
-            List<PageMeta> pages = new ArrayList<>();
-
-            pages.addAll(pageMetas);
-
-            boolean latchDown = false;
-
-            while (!stop.get()) {
-                Collections.shuffle(locks);
-                Collections.shuffle(pages);
-
-                for (PageLockListener lsnr : locks) {
-                    for (PageMeta pageMeta : pages) {
-                        awaitRandom(5);
-
-                        lsnr.onBeforeReadLock(pageMeta.structureId, pageMeta.pageId, pageMeta.page);
-
-                        awaitRandom(5);
-
-                        lsnr.onReadLock(pageMeta.structureId, pageMeta.pageId, pageMeta.page, pageMeta.pageAddr);
-                    }
-                }
-
-                Collections.reverse(locks);
-                Collections.reverse(pages);
-
-                for (PageLockListener lsnr : locks) {
-                    for (PageMeta pageMeta : pages) {
-                        awaitRandom(5);
-
-                        lsnr.onReadUnlock(pageMeta.structureId, pageMeta.pageId, pageMeta.page, pageMeta.pageAddr);
-                    }
-                }
-
-                if (!latchDown) {
-                    awaitThreadStartLatch.countDown();
-
-                    latchDown = true;
-                }
-            }
-        }, threads, "PageLocker");
-
-        IgniteInternalFuture dumpFut = GridTestUtils.runAsync(() -> {
-            try {
-                awaitThreadStartLatch.await();
-            }
-            catch (InterruptedException e) {
-                // Ignore.
-                return;
-            }
-
-            while (!stop.get()) {
-                awaitRandom(20);
-
-                ThreadPageLocksDumpLock dump = sharedPageLockTracker.dump();
-
-                assertEquals(threads, dump.threadStates.size());
-                assertEquals(0, dump.threadStates.stream().filter(e -> e.invalidContext != null).count());
-            }
-        });
-
-        Thread.sleep(dumpTime);
-
-        stop.set(true);
-
-        f.get();
-
-        dumpFut.get();
-    }
-
-    /**
      * Test for checking that internal maps is not leaked after threads stopped.
      */
     @Test
     public void testMemoryLeakOnThreadTerminates() throws Exception {
         int threadLimits = 1000;
-        int timeOutWorkerInterval = 10_000;
-        Consumer<Set<SharedPageLockTracker.State>> handler = (threads) -> {
-        };
 
         SharedPageLockTracker sharedPageLockTracker = new SharedPageLockTracker(
-            threadLimits, timeOutWorkerInterval, handler, new MemoryCalculator());
+            threadLimits, 10_000, (threads) -> {
+        }, new MemoryCalculator());
 
-        int threads = 10_000;
+        doLockingInThreads(10_000, sharedPageLockTracker.registrateStructure("test"));
 
+        sharedPageLockTracker.start();
+
+        ThreadPageLocksDumpLock dump = sharedPageLockTracker.dump();
+
+        assertTrue(dump.time > 0);
+        assertTrue(!dump.threadStates.isEmpty());
+
+        for (ThreadPageLocksDumpLock.ThreadState threadState : dump.threadStates) {
+            assertNull(threadState.invalidContext);
+            assertTrue(threadState.threadName.startsWith(THREAD_NAME_PREFFIX));
+            assertSame(Thread.State.TERMINATED, threadState.state);
+
+        }
+
+        Assert.assertEquals(1, dump.structureIdToStrcutureName.size());
+
+        synchronized (sharedPageLockTracker) {
+            Map<Long, Thread> threadMap0 = U.field(sharedPageLockTracker, "threadIdToThreadRef");
+            Map<Long, ?> threadStacksMap0 = U.field(sharedPageLockTracker, "threadStacks");
+
+            // Stopped threads should remove from map after map limit reached.
+            assertTrue(threadMap0.size() <= threadLimits);
+            assertTrue(threadStacksMap0.size() <= threadLimits);
+        }
+    }
+
+    /**
+     * Test for checking that internal maps is empty hen timeout worker have finished.
+     */
+    @Test
+    public void testCleanTermintatedThreads() throws Exception {
+        int timeOutWorkerInterval = 100;
+
+        SharedPageLockTracker sharedPageLockTracker = new SharedPageLockTracker(
+            1000, timeOutWorkerInterval, (threads1) -> {
+        }, new MemoryCalculator()
+        );
+
+        doLockingInThreads(3, sharedPageLockTracker.registrateStructure("test"));
+
+        sharedPageLockTracker.start();
+
+        // Await cleanup worker interval.
+        U.sleep(timeOutWorkerInterval * 2);
+
+        synchronized (sharedPageLockTracker) {
+            Map<Long, Thread> threadMap1 = U.field(sharedPageLockTracker, "threadIdToThreadRef");
+            Map<Long, ?> threadStacksMap1 = U.field(sharedPageLockTracker, "threadStacks");
+
+            // Cleanup worker should remove all stopped threads.
+            assertTrue(threadMap1.isEmpty());
+            assertTrue(threadStacksMap1.isEmpty());
+        }
+
+        ThreadPageLocksDumpLock dump1 = sharedPageLockTracker.dump();
+
+        assertTrue(dump1.time > 0);
+        assertTrue(dump1.threadStates.isEmpty());
+    }
+
+    /**
+     * Run and wait threads which do locking.
+     */
+    private void doLockingInThreads(int threads, PageLockListener lt) {
         int cacheId = 1;
-        long pageId = 2;
-        long page = 3;
-        long pageAdder = 4;
-
-        PageLockListener lt = sharedPageLockTracker.registrateStructure("test");
+        long pageId = 2, page = 3, pageAdder = 4;
 
         List<Thread> threadsList = new ArrayList<>(threads);
-
-        String threadNamePreffix = "my-thread-";
 
         for (int i = 0; i < threads; i++) {
             Thread th = new Thread(() -> {
@@ -318,7 +245,7 @@ public class SharedPageLockTrackerTest extends AbstractPageLockTest {
                 lt.onReadUnlock(cacheId, pageId, page, pageAdder);
             });
 
-            th.setName(threadNamePreffix + i);
+            th.setName(THREAD_NAME_PREFFIX + i);
 
             threadsList.add(th);
 
@@ -337,48 +264,6 @@ public class SharedPageLockTrackerTest extends AbstractPageLockTest {
                 e.printStackTrace();
             }
         });
-
-        sharedPageLockTracker.start();
-
-        ThreadPageLocksDumpLock dump = sharedPageLockTracker.dump();
-
-        assertTrue(dump.time > 0);
-        assertTrue(!dump.threadStates.isEmpty());
-
-        for (ThreadPageLocksDumpLock.ThreadState threadState : dump.threadStates) {
-            assertNull(threadState.invalidContext);
-            assertTrue(threadState.threadName.startsWith(threadNamePreffix));
-            assertSame(Thread.State.TERMINATED, threadState.state);
-
-        }
-
-        Assert.assertEquals(1, dump.structureIdToStrcutureName.size());
-
-        synchronized (sharedPageLockTracker) {
-            Map<Long, Thread> threadMap0 = U.field(sharedPageLockTracker, "threadIdToThreadRef");
-            Map<Long, ?> threadStacksMap0 = U.field(sharedPageLockTracker, "threadStacks");
-
-            // Stopped threads should remove from map after map limit reached.
-            assertTrue(threadMap0.size() <= threadLimits);
-            assertTrue(threadStacksMap0.size() <= threadLimits);
-        }
-
-        // Await cleanup worker interval.
-        U.sleep(timeOutWorkerInterval + 1000);
-
-        synchronized (sharedPageLockTracker) {
-            Map<Long, Thread> threadMap1 = U.field(sharedPageLockTracker, "threadIdToThreadRef");
-            Map<Long, ?> threadStacksMap1 = U.field(sharedPageLockTracker, "threadStacks");
-
-            // Cleanup worker should remove all stopped threads.
-            assertTrue(threadMap1.isEmpty());
-            assertTrue(threadStacksMap1.isEmpty());
-        }
-
-        ThreadPageLocksDumpLock dump1 = sharedPageLockTracker.dump();
-
-        assertTrue(dump1.time > 0);
-        assertTrue(dump1.threadStates.isEmpty());
     }
 
     /**
@@ -390,13 +275,13 @@ public class SharedPageLockTrackerTest extends AbstractPageLockTest {
         String thInRunnableName = "threadInRunnable";
         String thInAwaitWithoutLocksName = "threadInAwaitWithoutLocks";
 
-        AtomicReference<Exception> error = new AtomicReference<>();
+        AtomicReference<Exception> error = new AtomicReference<>(new Exception("Threads are not finished"));
 
         CountDownLatch awaitLatch = new CountDownLatch(1);
 
         SharedPageLockTracker sharedPageLockTracker = new SharedPageLockTracker(
             1000,
-            10_000,
+            10,
             hangsThreads -> {
                 if (hangsThreads.isEmpty()) {
                     error.set(new Exception("No one thread is hangs."));
@@ -434,7 +319,12 @@ public class SharedPageLockTrackerTest extends AbstractPageLockTest {
                     }
                 }
 
-                awaitLatch.countDown();
+                //Release threads only when all two threads are hangs.
+                if (hangsThreads.size() == 2) {
+                    error.set(null);
+
+                    awaitLatch.countDown();
+                }
             }, new MemoryCalculator()
         );
 
@@ -491,13 +381,13 @@ public class SharedPageLockTrackerTest extends AbstractPageLockTest {
 
         sharedPageLockTracker.start();
 
-        thInWait.start();
         thInRunnable.start();
+        thInWait.start();
         thInAwaitWithoutLocks.start();
 
-        thInWait.join();
-        thInRunnable.join();
-        thInAwaitWithoutLocks.join();
+        thInRunnable.join(5000);
+        thInWait.join(5000);
+        thInAwaitWithoutLocks.join(5000);
 
         if (error.get() != null)
             throw error.get();
@@ -515,6 +405,7 @@ public class SharedPageLockTrackerTest extends AbstractPageLockTest {
         final long page;
         /** */
         final long pageAddr;
+
         /** */
         private PageMeta(
             int structureId,

@@ -28,6 +28,7 @@ import org.junit.Test;
 
 import static java.lang.System.out;
 import static java.time.Duration.ofMinutes;
+import static java.util.concurrent.locks.LockSupport.parkNanos;
 import static java.util.stream.IntStream.range;
 import static org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.LockTrackerFactory.DEFAULT_CAPACITY;
 import static org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTracker.BEFORE_READ_LOCK;
@@ -497,7 +498,7 @@ public abstract class PageLockLogTest extends AbstractPageLockTest {
 
         AtomicBoolean done = new AtomicBoolean();
 
-        int maxWaitTime = 500;
+        int maxWaitTime = 5;
 
         int maxdeep = 16;
 
@@ -506,11 +507,11 @@ public abstract class PageLockLogTest extends AbstractPageLockTest {
                 int iter = nextRandomWaitTimeout(maxdeep);
 
                 doRunnable(iter, () -> {
-                    awaitRandom(100);
+                    parkNanos(nextRandomWaitTimeout(5_000));
 
                     lockLog.onBeforeReadLock(STRUCTURE_ID, pageId, page);
 
-                    awaitRandom(100);
+                    parkNanos(nextRandomWaitTimeout(5_000));
 
                     lockLog.onReadLock(STRUCTURE_ID, pageId, page, pageAddr);
                 });
@@ -529,7 +530,7 @@ public abstract class PageLockLogTest extends AbstractPageLockTest {
         long totalExecutionTime = 0L;
 
         for (int i = 0; i < cntlogs; i++) {
-            awaitRandom(50);
+            parkNanos(nextRandomWaitTimeout(100_000));
 
             long time = System.nanoTime();
 
