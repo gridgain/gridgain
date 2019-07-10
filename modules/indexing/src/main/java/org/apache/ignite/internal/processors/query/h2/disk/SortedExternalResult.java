@@ -108,7 +108,7 @@ public class SortedExternalResult extends AbstractExternalResult {
         this.cmp = ses.getDatabase().getCompareMode();
 
         if (isAnyDistinct())
-            hashIndex = new ExternalResultHashIndex(file, this, initSize);
+            hashIndex = new ExternalResultHashIndex(ctx, file, this, initSize);
     }
 
     /** {@inheritDoc} */
@@ -307,7 +307,7 @@ public class SortedExternalResult extends AbstractExternalResult {
 
     /** {@inheritDoc} */
     @Override public void close() {
-        U.closeQuiet(fileCh);
+        U.closeQuiet(fileIo);
         U.closeQuiet(hashIndex);
     }
 

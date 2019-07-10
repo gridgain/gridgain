@@ -19,9 +19,10 @@ package org.apache.ignite.internal.processors.query.h2.disk;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.util.EnumSet;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
+import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.h2.value.Value;
@@ -44,6 +45,9 @@ public class ExternalResultHashIndex implements AutoCloseable {
     /** Minimum index capacity. */
     private static final long MIN_CAPACITY = 1L << 8; // 256 entries.
 
+    /** */
+    private final GridKernalContext ctx;
+
     /** Index file directory. */
     private final String dir;
 
@@ -57,7 +61,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
     private File idxFile;
 
     /** Index file channel. */
-    private FileChannel idxFileCh;
+    private FileIO fileIo;
 
     /** Row store. */
     private final SortedExternalResult rowStore;
@@ -76,7 +80,8 @@ public class ExternalResultHashIndex implements AutoCloseable {
      * @param rowStore External result being indexed by this hash index.
      * @param initSize Init hash map size.
      */
-    ExternalResultHashIndex(File spillFile, SortedExternalResult rowStore, long initSize) {
+    ExternalResultHashIndex(GridKernalContext ctx, File spillFile, SortedExternalResult rowStore, long initSize) {
+        this.ctx = ctx;
         dir = spillFile.getParent();
         spillFileName = spillFile.getName();
         this.rowStore = rowStore;
@@ -136,7 +141,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
 
     /** {@inheritDoc} */
     @Override public void close() throws Exception {
-        U.closeQuiet(idxFileCh);
+        U.closeQuiet(fileIo);
     }
 
     /**
@@ -225,7 +230,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
      * @return Byte buffer with data.
      */
     private Entry readEntryFromIndexFile(long slot) {
-        return readEntryFromIndexFile(slot, idxFileCh);
+        return readEntryFromIndexFile(slot, fileIo);
     }
 
     /**
@@ -235,7 +240,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
      * @param fileCh File to read from.
      * @return Byte buffer with data.
      */
-    private Entry readEntryFromIndexFile(Long slot, FileChannel fileCh) {
+    private Entry readEntryFromIndexFile(Long slot, FileIO fileCh) {
         try {
             if (slot != null)
                 gotoSlot(slot);
@@ -288,7 +293,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
             reusableBuff.flip();
 
             while (reusableBuff.hasRemaining()) {
-                int bytesWritten = idxFileCh.write(reusableBuff);
+                int bytesWritten = fileIo.write(reusableBuff);
 
                 if (bytesWritten <= 0)
                     throw new IOException("Can not write data to file: " + idxFile.getAbsolutePath());
@@ -308,10 +313,10 @@ public class ExternalResultHashIndex implements AutoCloseable {
      */
     private void gotoSlot(long slot) {
         try {
-            idxFileCh.position(slot * Entry.ENTRY_BYTES);
+            fileIo.position(slot * Entry.ENTRY_BYTES);
         }
         catch (Exception e) {
-            U.closeQuiet(idxFileCh);
+            U.closeQuiet(fileIo);
 
             throw new IgniteException("Failed to reset the index spill file, slot=" + slot, e);
         }
@@ -322,7 +327,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
      */
     private void ensureCapacity() {
         if (entriesCnt > LOAD_FACTOR * cap) {
-            FileChannel oldFile = idxFileCh;
+            FileIO oldFile = fileIo;
 
             long oldSize = cap;
 
@@ -338,7 +343,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
      * @param oldFile Old file channel.
      * @param oldSize Old file size in slots.
      */
-    private void copyDataFromOldFile(FileChannel oldFile, long oldSize) {
+    private void copyDataFromOldFile(FileIO oldFile, long oldSize) {
         try {
             entriesCnt = 0;
 
@@ -352,7 +357,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
             }
         }
         catch (IOException e) {
-            U.closeQuiet(idxFileCh);
+            U.closeQuiet(fileIo);
             U.closeQuiet(oldFile);
 
             throw new IgniteException("Failed to extend hash index.", e);
@@ -375,11 +380,13 @@ public class ExternalResultHashIndex implements AutoCloseable {
 
             idxFile = new File(dir, spillFileName + "_idx_" + id++);
 
-            idxFileCh = FileChannel.open(idxFile.toPath(), EnumSet.of(CREATE_NEW, DELETE_ON_CLOSE, READ, WRITE));
+            FileIOFactory fileIOFactory = ctx.query().fileIOFactory();
+
+            fileIo = fileIOFactory.create(idxFile, CREATE_NEW,  DELETE_ON_CLOSE, READ, WRITE);
 
             // Write empty data to the end of the file to extend it.
             reusableBuff.clear();
-            idxFileCh.write(reusableBuff, cap * Entry.ENTRY_BYTES);
+            fileIo.write(reusableBuff, cap * Entry.ENTRY_BYTES);
         }
         catch (IOException e) {
             throw new IgniteException("Failed to create an index spill file for the intermediate query results.", e);

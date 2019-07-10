@@ -19,12 +19,12 @@ package org.apache.ignite.internal.processors.query.h2.disk;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.util.EnumSet;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
+import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -56,11 +56,11 @@ public abstract class AbstractExternalResult implements ResultExternal {
     /** Current size in rows. */
     protected int size;
 
-    /** File channel. */
-    protected final FileChannel fileCh;
-
     /** File. */
     protected final File file;
+
+    /** Spill file IO.*/
+    protected volatile FileIO fileIo;
 
     /** Memory tracker. */
     protected final H2MemoryTracker memTracker;
@@ -81,7 +81,9 @@ public abstract class AbstractExternalResult implements ResultExternal {
                 false
             ), fileName);
 
-            fileCh = FileChannel.open(file.toPath(), EnumSet.of(CREATE_NEW,  DELETE_ON_CLOSE, READ, WRITE));
+            FileIOFactory fileIOFactory = ctx.query().fileIOFactory();
+
+            fileIo = fileIOFactory.create(file, CREATE_NEW,  DELETE_ON_CLOSE, READ, WRITE);
         }
         catch (IgniteCheckedException | IOException e) {
             throw new IgniteException("Failed to create a spill file for the intermediate query results.", e);
@@ -149,11 +151,11 @@ public abstract class AbstractExternalResult implements ResultExternal {
             ByteBuffer rowBytes = ByteBuffer.allocate(rowLen); // 2 x integer for length in bytes and columns count.
 
             while (rowBytes.hasRemaining()) {
-                int bytesRead = fileCh.read(rowBytes);
+                int bytesRead = fileIo.read(rowBytes);
 
                 if (bytesRead <= 0)
                     throw new IOException("Can not read data from file: " + file.getAbsolutePath() +
-                        ", curPos=" + fileCh.position() + ", rowLen=" + rowLen + "]");
+                        ", curPos=" + fileIo.position() + ", rowLen=" + rowLen + "]");
             }
 
             rowBytes.flip();
@@ -209,7 +211,7 @@ public abstract class AbstractExternalResult implements ResultExternal {
             byteBuff.limit(buff.length());
 
             while (byteBuff.hasRemaining()) {
-                int bytesWritten = fileCh.write(byteBuff);
+                int bytesWritten = fileIo.write(byteBuff);
 
                 if (bytesWritten <= 0)
                     throw new IOException("Can not write data to file: " + file.getAbsolutePath());
@@ -244,7 +246,7 @@ public abstract class AbstractExternalResult implements ResultExternal {
 
         try {
             while (hdr.hasRemaining()) {
-                int bytesWritten = fileCh.write(hdr);
+                int bytesWritten = fileIo.write(hdr);
 
                 if (bytesWritten <= 0)
                     throw new IOException("Can not write data to file: " + file.getAbsolutePath());
@@ -262,7 +264,7 @@ public abstract class AbstractExternalResult implements ResultExternal {
      */
     protected long currentFilePosition() {
         try {
-            return fileCh.position();
+            return fileIo.position();
         }
         catch (IOException e) {
             close();
@@ -285,7 +287,7 @@ public abstract class AbstractExternalResult implements ResultExternal {
      */
     protected void setFilePosition(long pos) {
         try {
-            fileCh.position(pos);
+            fileIo.position(pos);
         }
         catch (IOException e) {
             close();
@@ -298,6 +300,6 @@ public abstract class AbstractExternalResult implements ResultExternal {
      * Closes the file.
      */
     @Override public void close() {
-        U.closeQuiet(fileCh);
+        U.closeQuiet(fileIo);
     }
 }
