@@ -1,17 +1,13 @@
 ::
-:: Copyright 2019 GridGain Systems, Inc. and Contributors.
+:: Copyright (C) GridGain Systems. All Rights Reserved.
+:: _________        _____ __________________        _____
+:: __  ____/___________(_)______  /__  ____/______ ____(_)_______
+:: _  / __  __  ___/__  / _  __  / _  / __  _  __ `/__  / __  __ \
+:: / /_/ /  _  /    _  /  / /_/ /  / /_/ /  / /_/ / _  /  _  / / /
+:: \____/   /_/     /_/   \_,__/   \____/   \__,_/  /_/   /_/ /_/
 ::
-:: Licensed under the GridGain Community Edition License (the "License");
-:: you may not use this file except in compliance with the License.
-:: You may obtain a copy of the License at
 ::
-::     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
-::
-:: Unless required by applicable law or agreed to in writing, software
-:: distributed under the License is distributed on an "AS IS" BASIS,
-:: WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-:: See the License for the specific language governing permissions and
-:: limitations under the License.
+:: Web Console command line loader.
 ::
 
 @echo off
@@ -58,6 +54,26 @@ if %MAJOR_JAVA_VER% LSS 8 (
 	goto error_finish
 )
 
+:: Check IGNITE_HOME.
+:checkIgniteHome1
+if defined WEB_CONSOLE_HOME goto checkIgniteHome2
+    pushd "%~dp0"
+    set IGNITE_HOME=%CD%
+    popd
+
+:checkIgniteHome2
+:: Strip double quotes from IGNITE_HOME
+set IGNITE_HOME=%WEB_CONSOLE_HOME:"=%
+
+:: remove all trailing slashes from IGNITE_HOME.
+if %IGNITE_HOME:~-1,1% == \ goto removeTrailingSlash
+if %IGNITE_HOME:~-1,1% == / goto removeTrailingSlash
+goto run_java
+
+:removeTrailingSlash
+set IGNITE_HOME=%IGNITE_HOME:~0,-1%
+goto checkIgniteHome2
+
 :run_java
 
 ::
@@ -94,9 +110,9 @@ if %MAJOR_JAVA_VER% GEQ 11 (
     %JVM_OPTS%
 )
 
-for %%f in (ignite-web-console-*.jar) do set "JAR_FILE=%%f" & goto :run
+for %%f in (gridgain-web-console-*.jar) do set "JAR_FILE=%%f" & goto :run
 
 :run
-"%JAVA_HOME%\bin\java.exe" %JVM_OPTS% -jar %JAR_FILE%
+"%JAVA_HOME%\bin\java.exe" -DIGNITE_HOME="%IGNITE_HOME%" %JVM_OPTS% -jar "%JAR_FILE%"
 
 :finish

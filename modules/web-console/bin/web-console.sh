@@ -9,24 +9,46 @@ then
 fi
 
 #
-# Copyright 2019 GridGain Systems, Inc. and Contributors.
-#
-# Licensed under the GridGain Community Edition License (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Copyright (C) GridGain Systems. All Rights Reserved.
+#  _________        _____ __________________        _____
+#  __  ____/___________(_)______  /__  ____/______ ____(_)_______
+#  _  / __  __  ___/__  / _  __  / _  / __  _  __ `/__  / __  __ \
+#  / /_/ /  _  /    _  /  / /_/ /  / /_/ /  / /_/ / _  /  _  / / /
+#  \____/   /_/     /_/   \_,__/   \____/   \__,_/  /_/   /_/ /_/
 #
 
 #
 # Web Console command line loader.
 #
+
+#
+# Discovers WEB_CONSOLE environment variable.
+# The function expects WEB_CONSOLE_TMP variable is set and points to the directory where the callee script resides.
+# The function exports WEB_CONSOLE variable with path to Ignite home directory.
+#
+
+setWebConsoleHome() {
+    #
+    # Set IGNITE_HOME, if needed.
+    #
+    if [ "${WEB_CONSOLE_HOME:-}" = "" ];
+        then IGNITE_HOME="$(pwd)";
+        else IGNITE_HOME=${WEB_CONSOLE_HOME};
+    fi
+
+    #
+    # Check IGNITE_HOME is valid.
+    #
+    if [ ! -d "${IGNITE_HOME}/agent_dists" ]; then
+        echo $0", ERROR:"
+        echo "Ignite installation folder is not found or WEB_CONSOLE_HOME environment variable is not valid."
+        echo "Please create WEB_CONSOLE_HOME environment variable pointing to location of Ignite installation folder."
+
+        exit 1
+    fi
+}
+
+setWebConsoleHome
 
 javaVersion() {
     version=$("$1" -version 2>&1 | awk -F '"' '/version/ {print $2}')
@@ -121,4 +143,4 @@ elif [ $version -ge 11 ] ; then
         ${JVM_OPTS}"
 fi
 
-"$JAVA" ${JVM_OPTS} -jar ./ignite-web-console-*.jar
+"$JAVA" -DIGNITE_HOME="${IGNITE_HOME}" ${JVM_OPTS} -jar ./gridgain-web-console-*.jar
