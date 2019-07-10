@@ -55,21 +55,31 @@ public class LocalModelStorageProvider implements ModelStorageProvider {
 
     /** {@inheritDoc} */
     @Override public synchronized Lock lock(String key) {
-        WeakReferenceWithCleanUp ref;
-        while ((ref = (WeakReferenceWithCleanUp)refQueue.poll()) != null)
-            ref.cleanUp();
+        WeakReferenceWithCleanUp ref = locks.get(key);
+        try {
+            if (ref != null) {
+                Lock lockInRef = ref.get();
 
-        ref = locks.get(key);
-        if (ref != null) {
-            Lock lockInRef = ref.get();
+                // Reference is not empty and it couldn't be emptied because object is reachable from "lockInRef".
+                if (lockInRef != null)
+                    return lockInRef;
+            }
 
-            if (lockInRef != null)
-                return lockInRef;
+            // If reference doesn't exists or it's empty we create a new one.
+            Lock lock = new ReentrantLock();
+            locks.put(key, new WeakReferenceWithCleanUp(key, lock));
+            return lock;
         }
-
-        Lock lock = new ReentrantLock();
-        locks.put(key, new WeakReferenceWithCleanUp(key, lock));
-        return lock;
+        finally {
+            // At this point we already replaced all keys we wanted to replace, so all empty references could be safely
+            // deleted.
+            while ((ref = (WeakReferenceWithCleanUp)refQueue.poll()) != null) {
+                String keyToBeRmv = ref.key;
+                // We double check that we don't replaced the key value already.
+                if (locks.containsKey(keyToBeRmv) && locks.get(keyToBeRmv).get() == null)
+                    locks.remove(keyToBeRmv);
+            }
+        }
     }
 
     /**
@@ -88,13 +98,6 @@ public class LocalModelStorageProvider implements ModelStorageProvider {
         public WeakReferenceWithCleanUp(String key, Lock referent) {
             super(referent, refQueue);
             this.key = key;
-        }
-
-        /**
-         * Cleans up.
-         */
-        public void cleanUp() {
-            locks.remove(key);
         }
     }
 }
