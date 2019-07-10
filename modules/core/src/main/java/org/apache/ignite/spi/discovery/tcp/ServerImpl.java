@@ -5686,16 +5686,31 @@ class ServerImpl extends TcpDiscoveryImpl {
             assert msgId != null;
 
             if (isLocalNodeCoordinator()) {
-                if (!getLocalNodeId().equals(msg.verifierNodeId()))
+                if (!getLocalNodeId().equals(msg.verifierNodeId())) {
                     // Message is not verified or verified by former coordinator.
                     msg.verify(getLocalNodeId());
-                else
+
+                    //TODO: remove logging
+                    if (log.isDebugEnabled())
+                        log.debug("DiscardMessage verified: " + msg);
+                }
+
+                else {
+                    //TODO: remove logging
+                    if (log.isDebugEnabled())
+                        log.debug("returning from processDiscardMessage: " + msg);
                     // Discard the message.
                     return;
+                }
             }
 
-            if (msg.verified())
+            if (msg.verified()) {
                 pendingMsgs.discard(msgId, msg.customMessageDiscard());
+
+                //TODO: remove logging
+                if (log.isDebugEnabled())
+                    log.debug("Message discarded: " + msg);
+            }
 
             if (ring.hasRemoteNodes())
                 sendMessageAcrossRing(msg);
