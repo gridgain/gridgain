@@ -60,10 +60,12 @@ public class LocalModelStorageProvider implements ModelStorageProvider {
             ref.cleanUp();
 
         ref = locks.get(key);
-        Lock lockInRef = ref.get();
+        if (ref != null) {
+            Lock lockInRef = ref.get();
 
-        if (lockInRef != null)
-            return lockInRef;
+            if (lockInRef != null)
+                return lockInRef;
+        }
 
         Lock lock = new ReentrantLock();
         locks.put(key, new WeakReferenceWithCleanUp(key, lock));
