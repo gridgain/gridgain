@@ -74,6 +74,7 @@ public class CacheLockCandidatesThreadTest extends GridCommonAbstractTest {
 
         try {
             final CountDownLatch unlock = new CountDownLatch(1);
+            final CountDownLatch locked = new CountDownLatch(1);
 
             final IgniteCache<Object, Object> cache = grid(0).cache(DEFAULT_CACHE_NAME);
 
@@ -91,6 +92,8 @@ public class CacheLockCandidatesThreadTest extends GridCommonAbstractTest {
 
                         System.out.println("Trigger is locked");
 
+                        locked.countDown();
+
                         unlock.await();
                     } finally {
                         lock.unlock();
@@ -102,6 +105,8 @@ public class CacheLockCandidatesThreadTest extends GridCommonAbstractTest {
                 }
             });
 
+            locked.await();
+
             Map<String, String> map = new TreeMap<>();
 
             map.put(triggerKey, "trigger-new-val");
@@ -109,16 +114,14 @@ public class CacheLockCandidatesThreadTest extends GridCommonAbstractTest {
             for (int i = 0; i < 4_000; i++)
                 map.put("key-" + i, "value");
 
-            IgniteCache<Object, Object> asyncCache = grid(0).cache(DEFAULT_CACHE_NAME).withAsync();
-            asyncCache.putAll(map);
-            IgniteFuture<Object> resFut = asyncCache.future();
+            IgniteFuture<Void> f = grid(0).cache(DEFAULT_CACHE_NAME).putAllAsync(map);
 
             Thread.sleep(200);
 
             unlock.countDown();
 
             future.get();
-            resFut.get();
+            f.get();
         }
         finally {
             stopAllGrids();
