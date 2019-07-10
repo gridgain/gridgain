@@ -88,8 +88,6 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
         long reserved0 = RESERVED_UPD.addAndGet(this, size);
 
         if (reserved0 >= maxMem) {
-            RESERVED_UPD.addAndGet(this, -size);
-
             if (failOnMemLimitExceed)
                 throw new IgniteSQLException("SQL query run out of memory: Query quota exceeded.",
                     IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY);

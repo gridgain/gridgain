@@ -40,10 +40,12 @@ import org.junit.Test;
  * TODO: lazy/not lazy, local/distributed
  * TODO: test directory cleaned on startup
  * TODO: ADD logging
+ * TODO: Global quota
  *
- * Test for the intermediate query results disk offloading (disk spilling).
+ * Test for the intermediate query results disk offloading (disk spilling).IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE
  */
 @WithSystemProperty(key = "IGNITE_SQL_FAIL_ON_QUERY_MEMORY_LIMIT_EXCEED", value = "false")
+@WithSystemProperty(key = "IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE", value = "512")
 public class DiskSpillingTest extends GridCommonAbstractTest {
     /** */
     private static final int PERS_CNT = 1000;
