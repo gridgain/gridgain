@@ -141,7 +141,7 @@ BOOST_AUTO_TEST_CASE(CacheClientGetCacheExisting)
 
     IgniteClient client = IgniteClient::Start(cfg);
 
-    client.GetCache<int32_t, std::string>("local");
+    client.GetCache<int32_t, std::string>("partitioned");
 }
 
 BOOST_AUTO_TEST_CASE(CacheClientGetCacheNonxisting)
@@ -163,7 +163,7 @@ BOOST_AUTO_TEST_CASE(CacheClientGetOrCreateCacheExisting)
 
     IgniteClient client = IgniteClient::Start(cfg);
 
-    client.GetOrCreateCache<std::string, int32_t>("local");
+    client.GetOrCreateCache<std::string, int32_t>("partitioned");
 }
 
 BOOST_AUTO_TEST_CASE(CacheClientGetOrCreateCacheNonexisting)
@@ -185,7 +185,7 @@ BOOST_AUTO_TEST_CASE(CacheClientCreateCacheExisting)
 
     IgniteClient client = IgniteClient::Start(cfg);
 
-    BOOST_REQUIRE_THROW((client.CreateCache<std::string, int32_t>("local")), ignite::IgniteError);
+    BOOST_REQUIRE_THROW((client.CreateCache<std::string, int32_t>("partitioned")), ignite::IgniteError);
 }
 
 BOOST_AUTO_TEST_CASE(CacheClientCreateCacheNonexisting)
@@ -207,7 +207,7 @@ BOOST_AUTO_TEST_CASE(CacheClientDestroyCacheExisting)
 
     IgniteClient client = IgniteClient::Start(cfg);
 
-    client.DestroyCache("local");
+    client.DestroyCache("partitioned");
 }
 
 BOOST_AUTO_TEST_CASE(CacheClientDestroyCacheNonexisting)
@@ -225,14 +225,12 @@ BOOST_AUTO_TEST_CASE(CacheClientGetCacheNames)
 {
     std::set<std::string> expectedNames;
 
-    expectedNames.insert("local_atomic");
     expectedNames.insert("partitioned_atomic_near");
     expectedNames.insert("partitioned_near");
     expectedNames.insert("partitioned2");
     expectedNames.insert("partitioned");
     expectedNames.insert("replicated");
     expectedNames.insert("replicated_atomic");
-    expectedNames.insert("local");
     expectedNames.insert("partitioned_atomic");
 
     IgniteClientConfiguration cfg;
@@ -261,7 +259,7 @@ BOOST_AUTO_TEST_CASE(CacheClientPutGetBasicKeyValue)
 
     IgniteClient client = IgniteClient::Start(cfg);
 
-    cache::CacheClient<int32_t, std::string> cache = client.GetCache<int32_t, std::string>("local");
+    cache::CacheClient<int32_t, std::string> cache = client.GetCache<int32_t, std::string>("partitioned");
 
     int32_t key = 42;
     std::string valIn = "Lorem ipsum";
@@ -281,7 +279,7 @@ BOOST_AUTO_TEST_CASE(CacheClientPutGetComplexValue)
 
     IgniteClient client = IgniteClient::Start(cfg);
 
-    cache::CacheClient<int32_t, ignite::ComplexType> cache = client.GetCache<int32_t, ignite::ComplexType>("local");
+    cache::CacheClient<int32_t, ignite::ComplexType> cache = client.GetCache<int32_t, ignite::ComplexType>("partitioned");
 
     ignite::ComplexType valIn;
 
@@ -310,7 +308,7 @@ BOOST_AUTO_TEST_CASE(CacheClientPutGetComplexKey)
 
     IgniteClient client = IgniteClient::Start(cfg);
 
-    cache::CacheClient<ignite::ComplexType, int32_t> cache = client.GetCache<ignite::ComplexType, int32_t>("local");
+    cache::CacheClient<ignite::ComplexType, int32_t> cache = client.GetCache<ignite::ComplexType, int32_t>("partitioned");
 
     ignite::ComplexType key;
 
@@ -336,7 +334,7 @@ BOOST_AUTO_TEST_CASE(CacheClientContainsBasicKey)
 
     IgniteClient client = IgniteClient::Start(cfg);
 
-    cache::CacheClient<int32_t, std::string> cache = client.GetCache<int32_t, std::string>("local");
+    cache::CacheClient<int32_t, std::string> cache = client.GetCache<int32_t, std::string>("partitioned");
 
     int32_t key = 42;
     std::string valIn = "Lorem ipsum";
@@ -356,7 +354,7 @@ BOOST_AUTO_TEST_CASE(CacheClientContainsComplexKey)
 
     IgniteClient client = IgniteClient::Start(cfg);
 
-    cache::CacheClient<ignite::ComplexType, int32_t> cache = client.GetCache<ignite::ComplexType, int32_t>("local");
+    cache::CacheClient<ignite::ComplexType, int32_t> cache = client.GetCache<ignite::ComplexType, int32_t>("partitioned");
 
     ignite::ComplexType key;
 
@@ -382,7 +380,7 @@ BOOST_AUTO_TEST_CASE(CacheClientReplaceBasicKey)
 
     IgniteClient client = IgniteClient::Start(cfg);
 
-    cache::CacheClient<int32_t, std::string> cache = client.GetCache<int32_t, std::string>("local");
+    cache::CacheClient<int32_t, std::string> cache = client.GetCache<int32_t, std::string>("partitioned");
 
     int32_t key = 42;
     std::string valIn = "Lorem ipsum";
@@ -404,7 +402,7 @@ BOOST_AUTO_TEST_CASE(CacheClientReplaceComplexKey)
 
     IgniteClient client = IgniteClient::Start(cfg);
 
-    cache::CacheClient<ignite::ComplexType, int32_t> cache = client.GetCache<ignite::ComplexType, int32_t>("local");
+    cache::CacheClient<ignite::ComplexType, int32_t> cache = client.GetCache<ignite::ComplexType, int32_t>("partitioned");
 
     ignite::ComplexType key;
 
@@ -1315,7 +1313,7 @@ BOOST_AUTO_TEST_CASE(CacheClientReplaceIfEqualsBasicKeyValue)
 
     IgniteClient client = IgniteClient::Start(cfg);
 
-    cache::CacheClient<int32_t, std::string> cache = client.GetCache<int32_t, std::string>("local");
+    cache::CacheClient<int32_t, std::string> cache = client.GetCache<int32_t, std::string>("partitioned");
 
     int32_t key = 42;
     std::string valIn1 = "Lorem ipsum";
@@ -1344,7 +1342,7 @@ BOOST_AUTO_TEST_CASE(CacheClientReplaceIfEqualsComplexValue)
 
     IgniteClient client = IgniteClient::Start(cfg);
 
-    cache::CacheClient<int32_t, ignite::ComplexType> cache = client.GetCache<int32_t, ignite::ComplexType>("local");
+    cache::CacheClient<int32_t, ignite::ComplexType> cache = client.GetCache<int32_t, ignite::ComplexType>("partitioned");
 
     int32_t key = 42;
 
@@ -1389,7 +1387,7 @@ BOOST_AUTO_TEST_CASE(CacheClientReplaceIfEqualsComplexKey)
 
     IgniteClient client = IgniteClient::Start(cfg);
 
-    cache::CacheClient<ignite::ComplexType, int32_t> cache = client.GetCache<ignite::ComplexType, int32_t>("local");
+    cache::CacheClient<ignite::ComplexType, int32_t> cache = client.GetCache<ignite::ComplexType, int32_t>("partitioned");
 
     ignite::ComplexType key;
 
@@ -1424,7 +1422,7 @@ BOOST_AUTO_TEST_CASE(CacheClientRemoveIfEqualsBasicKeyValue)
 
     IgniteClient client = IgniteClient::Start(cfg);
 
-    cache::CacheClient<int32_t, std::string> cache = client.GetCache<int32_t, std::string>("local");
+    cache::CacheClient<int32_t, std::string> cache = client.GetCache<int32_t, std::string>("partitioned");
 
     int32_t key = 42;
     std::string valIn1 = "Lorem ipsum";
@@ -1453,7 +1451,7 @@ BOOST_AUTO_TEST_CASE(CacheClientRemoveIfEqualsComplexValue)
 
     IgniteClient client = IgniteClient::Start(cfg);
 
-    cache::CacheClient<int32_t, ignite::ComplexType> cache = client.GetCache<int32_t, ignite::ComplexType>("local");
+    cache::CacheClient<int32_t, ignite::ComplexType> cache = client.GetCache<int32_t, ignite::ComplexType>("partitioned");
 
     int32_t key = 42;
 
@@ -1495,7 +1493,7 @@ BOOST_AUTO_TEST_CASE(CacheClientRemoveIfEqualsComplexKey)
 
     IgniteClient client = IgniteClient::Start(cfg);
 
-    cache::CacheClient<ignite::ComplexType, int32_t> cache = client.GetCache<ignite::ComplexType, int32_t>("local");
+    cache::CacheClient<ignite::ComplexType, int32_t> cache = client.GetCache<ignite::ComplexType, int32_t>("partitioned");
 
     ignite::ComplexType key;
 
@@ -1530,7 +1528,7 @@ BOOST_AUTO_TEST_CASE(CacheClientGetAndPutBasicKeyValue)
 
     IgniteClient client = IgniteClient::Start(cfg);
 
-    cache::CacheClient<int32_t, std::string> cache = client.GetCache<int32_t, std::string>("local");
+    cache::CacheClient<int32_t, std::string> cache = client.GetCache<int32_t, std::string>("partitioned");
 
     int32_t key = 42;
     std::string valIn1 = "Lorem ipsum";
@@ -1554,7 +1552,7 @@ BOOST_AUTO_TEST_CASE(CacheClientGetAndPutComplexValue)
 
     IgniteClient client = IgniteClient::Start(cfg);
 
-    cache::CacheClient<int32_t, ignite::ComplexType> cache = client.GetCache<int32_t, ignite::ComplexType>("local");
+    cache::CacheClient<int32_t, ignite::ComplexType> cache = client.GetCache<int32_t, ignite::ComplexType>("partitioned");
 
     int32_t key = 42;
 
@@ -1596,7 +1594,7 @@ BOOST_AUTO_TEST_CASE(CacheClientGetAndPutComplexKey)
 
     IgniteClient client = IgniteClient::Start(cfg);
 
-    cache::CacheClient<ignite::ComplexType, int32_t> cache = client.GetCache<ignite::ComplexType, int32_t>("local");
+    cache::CacheClient<ignite::ComplexType, int32_t> cache = client.GetCache<ignite::ComplexType, int32_t>("partitioned");
 
     ignite::ComplexType key;
 
@@ -1626,7 +1624,7 @@ BOOST_AUTO_TEST_CASE(CacheClientGetAndRemoveBasicKeyValue)
 
     IgniteClient client = IgniteClient::Start(cfg);
 
-    cache::CacheClient<int32_t, std::string> cache = client.GetCache<int32_t, std::string>("local");
+    cache::CacheClient<int32_t, std::string> cache = client.GetCache<int32_t, std::string>("partitioned");
 
     int32_t key = 42;
     std::string valIn = "Lorem ipsum";
@@ -1647,7 +1645,7 @@ BOOST_AUTO_TEST_CASE(CacheClientGetAndRemoveComplexValue)
 
     IgniteClient client = IgniteClient::Start(cfg);
 
-    cache::CacheClient<int32_t, ignite::ComplexType> cache = client.GetCache<int32_t, ignite::ComplexType>("local");
+    cache::CacheClient<int32_t, ignite::ComplexType> cache = client.GetCache<int32_t, ignite::ComplexType>("partitioned");
 
     int32_t key = 42;
 
@@ -1678,7 +1676,7 @@ BOOST_AUTO_TEST_CASE(CacheClientGetAndRemoveComplexKey)
 
     IgniteClient client = IgniteClient::Start(cfg);
 
-    cache::CacheClient<ignite::ComplexType, int32_t> cache = client.GetCache<ignite::ComplexType, int32_t>("local");
+    cache::CacheClient<ignite::ComplexType, int32_t> cache = client.GetCache<ignite::ComplexType, int32_t>("partitioned");
 
     ignite::ComplexType key;
 
@@ -1705,7 +1703,7 @@ BOOST_AUTO_TEST_CASE(CacheClientGetAndReplaceBasicKeyValue)
 
     IgniteClient client = IgniteClient::Start(cfg);
 
-    cache::CacheClient<int32_t, std::string> cache = client.GetCache<int32_t, std::string>("local");
+    cache::CacheClient<int32_t, std::string> cache = client.GetCache<int32_t, std::string>("partitioned");
 
     int32_t key = 42;
     std::string valIn1 = "Lorem ipsum";
@@ -1735,7 +1733,7 @@ BOOST_AUTO_TEST_CASE(CacheClientGetAndReplaceComplexValue)
 
     IgniteClient client = IgniteClient::Start(cfg);
 
-    cache::CacheClient<int32_t, ignite::ComplexType> cache = client.GetCache<int32_t, ignite::ComplexType>("local");
+    cache::CacheClient<int32_t, ignite::ComplexType> cache = client.GetCache<int32_t, ignite::ComplexType>("partitioned");
 
     int32_t key = 42;
 
@@ -1779,7 +1777,7 @@ BOOST_AUTO_TEST_CASE(CacheClientGetAndReplaceComplexKey)
 
     IgniteClient client = IgniteClient::Start(cfg);
 
-    cache::CacheClient<ignite::ComplexType, int32_t> cache = client.GetCache<ignite::ComplexType, int32_t>("local");
+    cache::CacheClient<ignite::ComplexType, int32_t> cache = client.GetCache<ignite::ComplexType, int32_t>("partitioned");
 
     ignite::ComplexType key;
 
@@ -1815,7 +1813,7 @@ BOOST_AUTO_TEST_CASE(CacheClientPutIfAbsentBasicKeyValue)
 
     IgniteClient client = IgniteClient::Start(cfg);
 
-    cache::CacheClient<int32_t, std::string> cache = client.GetCache<int32_t, std::string>("local");
+    cache::CacheClient<int32_t, std::string> cache = client.GetCache<int32_t, std::string>("partitioned");
 
     int32_t key = 42;
     std::string valIn1 = "Lorem ipsum";
@@ -1843,7 +1841,7 @@ BOOST_AUTO_TEST_CASE(CacheClientPutIfAbsentComplexValue)
 
     IgniteClient client = IgniteClient::Start(cfg);
 
-    cache::CacheClient<int32_t, ignite::ComplexType> cache = client.GetCache<int32_t, ignite::ComplexType>("local");
+    cache::CacheClient<int32_t, ignite::ComplexType> cache = client.GetCache<int32_t, ignite::ComplexType>("partitioned");
 
     int32_t key = 42;
 
@@ -1887,7 +1885,7 @@ BOOST_AUTO_TEST_CASE(CacheClientPutIfAbsentComplexKey)
 
     IgniteClient client = IgniteClient::Start(cfg);
 
-    cache::CacheClient<ignite::ComplexType, int32_t> cache = client.GetCache<ignite::ComplexType, int32_t>("local");
+    cache::CacheClient<ignite::ComplexType, int32_t> cache = client.GetCache<ignite::ComplexType, int32_t>("partitioned");
 
     ignite::ComplexType key;
 
@@ -1921,7 +1919,7 @@ BOOST_AUTO_TEST_CASE(CacheClientGetAndPutIfAbsentBasicKeyValue)
 
     IgniteClient client = IgniteClient::Start(cfg);
 
-    cache::CacheClient<int32_t, std::string> cache = client.GetCache<int32_t, std::string>("local");
+    cache::CacheClient<int32_t, std::string> cache = client.GetCache<int32_t, std::string>("partitioned");
 
     int32_t key = 42;
     std::string valIn1 = "Lorem ipsum";
@@ -1949,7 +1947,7 @@ BOOST_AUTO_TEST_CASE(CacheClientGetAndPutIfAbsentComplexValue)
 
     IgniteClient client = IgniteClient::Start(cfg);
 
-    cache::CacheClient<int32_t, ignite::ComplexType> cache = client.GetCache<int32_t, ignite::ComplexType>("local");
+    cache::CacheClient<int32_t, ignite::ComplexType> cache = client.GetCache<int32_t, ignite::ComplexType>("partitioned");
 
     int32_t key = 42;
 
@@ -1992,7 +1990,7 @@ BOOST_AUTO_TEST_CASE(CacheClientGetAndPutIfAbsentComplexValuePtr)
 
     IgniteClient client = IgniteClient::Start(cfg);
 
-    cache::CacheClient<int32_t, ignite::ComplexType*> cache = client.GetCache<int32_t, ignite::ComplexType*>("local");
+    cache::CacheClient<int32_t, ignite::ComplexType*> cache = client.GetCache<int32_t, ignite::ComplexType*>("partitioned");
 
     int32_t key = 42;
 
@@ -2040,7 +2038,7 @@ BOOST_AUTO_TEST_CASE(CacheClientGetAndPutIfAbsentComplexKey)
 
     IgniteClient client = IgniteClient::Start(cfg);
 
-    cache::CacheClient<ignite::ComplexType, int32_t> cache = client.GetCache<ignite::ComplexType, int32_t>("local");
+    cache::CacheClient<ignite::ComplexType, int32_t> cache = client.GetCache<ignite::ComplexType, int32_t>("partitioned");
 
     ignite::ComplexType key;
 
