@@ -101,19 +101,19 @@ public class VisorQueryDetailMetricsCollectorTask extends VisorMultiNodeTask<Vis
          * @param since Time when metrics were collected last time.
          * @param res Response.
          * @param metrics Metrics.
-         * @param skipQueryMetrics Skip metrics for SQL and SQL_FIELD queries when {@code true}.
+         * @param collectNotSqlMetrics When {@code true} collect metrics for no SQL queries only.
          */
         private static void aggregateMetrics(
             long since, Map<GridCacheQueryDetailMetricsKey,
             GridCacheQueryDetailMetricsAdapter> res,
             Collection<GridCacheQueryDetailMetricsAdapter> metrics,
-            boolean skipQueryMetrics
+            boolean collectNotSqlMetrics
         ) {
             for (GridCacheQueryDetailMetricsAdapter m : metrics) {
                 if (m.lastStartTime() > since) {
                     GridCacheQueryDetailMetricsKey key = m.key();
 
-                    if (skipQueryMetrics && (key.getQueryType() == SQL || key.getQueryType() == SQL_FIELDS))
+                    if (collectNotSqlMetrics && (key.getQueryType() == SQL || key.getQueryType() == SQL_FIELDS))
                         continue;
 
                     GridCacheQueryDetailMetricsAdapter aggMetrics = res.get(key);
