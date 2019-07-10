@@ -40,7 +40,6 @@ public class IgnitePdsMvccTestSuite3 {
         // TODO https://issues.apache.org/jira/browse/IGNITE-11937
         ignoredTests.add(IgnitePdsContinuousRestartTest.class);
         ignoredTests.add(IgnitePdsContinuousRestartTestWithExpiryPolicy.class);
-        ignoredTests.add(IgnitePdsContinuousRestartTestWithSharedGroupAndIndexes.class);
 
         return IgnitePdsTestSuite3.suite(ignoredTests);
     }
