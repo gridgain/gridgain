@@ -148,6 +148,7 @@ public class PagesWriteThrottle implements PagesWriteThrottlePolicy {
         }
     }
 
+    /** {@inheritDoc} */
     @Override public void tryWakeupThrottledThreads() {
         if (pageMemory.checkpointBufferPagesCount() <
             (int)(pageMemory.checkpointBufferPagesSize() * CP_BUF_FILL_THRESHOLD)) {
