@@ -190,7 +190,9 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
         Map<Integer, CacheGroupDescriptor> grpDescs,
         Map<String, DynamicCacheDescriptor> cacheDescs
     ) {
-        return cachesRegistry.init(grpDescs, cacheDescs);
+        return cachesRegistry.init(
+            grpDescs,
+            cacheDescs);
     }
 
     /**

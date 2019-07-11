@@ -257,7 +257,11 @@ public class CachesRegistry {
         if (cachesToPersist.isEmpty())
             return cachesConfPersistFuture = new GridFinishedFuture<>();
 
-        return cachesConfPersistFuture = persistCacheConfigurations(cachesToPersist);
+        List<StoredCacheData> cacheConfigsToPersist = cacheDescriptors.stream()
+            .map(desc -> desc.toStoredData(cctx.cache().splitter()))
+            .collect(Collectors.toList());
+
+        return cachesConfPersistFuture = persistCacheConfigurations(cacheConfigsToPersist);
     }
 
     /**
@@ -273,16 +277,12 @@ public class CachesRegistry {
     }
 
     /**
-     * Persists cache configurations from given {@code cacheDescriptors}.
+     * Persists cache configurations.
      *
-     * @param cacheDescriptors Cache descriptors to retrieve cache configurations.
+     * @param cacheConfigsToPersist Cache configurations to persist.
      * @return Future that will be completed when all cache configurations will be persisted to cache work directory.
      */
-    private IgniteInternalFuture<?> persistCacheConfigurations(List<DynamicCacheDescriptor> cacheDescriptors) {
-        List<StoredCacheData> cacheConfigsToPersist = cacheDescriptors.stream()
-            .map(desc -> desc.toStoredData(cctx.cache().splitter()))
-            .collect(Collectors.toList());
-
+    private IgniteInternalFuture<?> persistCacheConfigurations(List<StoredCacheData> cacheConfigsToPersist) {
         // Pre-create cache work directories if they don't exist.
         for (StoredCacheData data : cacheConfigsToPersist) {
             try {

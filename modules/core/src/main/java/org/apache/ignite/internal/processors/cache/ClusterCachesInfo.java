@@ -1012,7 +1012,7 @@ class ClusterCachesInfo {
     /**
      * @return Discovery date sent on local node join.
      */
-    private Serializable joinDiscoveryData() {
+    Serializable joinDiscoveryData() {
         if (cachesOnDisconnect != null) {
             Map<Integer, CacheClientReconnectDiscoveryData.CacheGroupInfo> cacheGrpsInfo = new HashMap<>();
             Map<String, CacheClientReconnectDiscoveryData.CacheInfo> cachesInfo = new HashMap<>();
@@ -1045,8 +1045,6 @@ class ClusterCachesInfo {
             return new CacheClientReconnectDiscoveryData(cacheGrpsInfo, cachesInfo);
         }
         else {
-            assert ctx.config().isDaemon() || joinDiscoData != null;
-
             return joinDiscoData;
         }
     }
@@ -1152,22 +1150,23 @@ class ClusterCachesInfo {
 
     /**
      * @param dataBag Discovery data bag.
+     * @param splitter Cache configuration splitter.
      */
-    public void collectGridNodeData(DiscoveryDataBag dataBag) {
+    public void collectGridNodeData(DiscoveryDataBag dataBag,
+        CacheConfigurationSplitter splitter) {
         if (ctx.isDaemon())
             return;
 
         if (!dataBag.commonDataCollectedFor(CACHE_PROC.ordinal()))
-            dataBag.addGridCommonData(CACHE_PROC.ordinal(), collectCommonDiscoveryData());
+            dataBag.addGridCommonData(CACHE_PROC.ordinal(), collectCommonDiscoveryData(splitter));
     }
 
     /**
      * @return Information about started caches.
+     * @param cfgSplitter Cache configuration splitter.
      */
-    private CacheNodeCommonDiscoveryData collectCommonDiscoveryData() {
+    private CacheNodeCommonDiscoveryData collectCommonDiscoveryData(CacheConfigurationSplitter cfgSplitter) {
         Map<Integer, CacheGroupData> cacheGrps = new HashMap<>();
-
-        CacheConfigurationSplitter cfgSplitter = ctx.cache().backwardCompatibleSplitter();
 
         for (CacheGroupDescriptor grpDesc : registeredCacheGrps.values()) {
             T2<CacheConfiguration, CacheConfigurationEnrichment> splitCfg = cfgSplitter.split(grpDesc);
@@ -1726,7 +1725,7 @@ class ClusterCachesInfo {
 
                         req.deploymentId(deploymentId);
                         req.startCacheConfiguration(ccfg);
-                        req.cacheType(ctx.cache().cacheType(ccfg.getName()));
+                        req.cacheType(CacheType.cacheType(ccfg.getName()));
                         req.schema(new QuerySchema(storedCfg.queryEntities()));
                         req.sql(storedCfg.sql());
 
