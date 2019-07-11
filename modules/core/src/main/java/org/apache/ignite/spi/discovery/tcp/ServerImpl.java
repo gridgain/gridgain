@@ -3517,6 +3517,12 @@ class ServerImpl extends TcpDiscoveryImpl {
                             finally {
                                 SecurityUtils.restoreDefaultSerializeVersion();
 
+                                if (msg instanceof TcpDiscoveryNodeAddedMessage) {
+                                    TcpDiscoveryNodeAddedMessage nodeAddedMsg = (TcpDiscoveryNodeAddedMessage)msg;
+
+                                    nodeAddedMsg.clearUnmarshalledDiscoveryData();
+                                }
+
                                 clearNodeAddedMessage(msg);
                             }
 

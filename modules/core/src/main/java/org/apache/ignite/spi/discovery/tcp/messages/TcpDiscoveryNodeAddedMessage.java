@@ -227,6 +227,14 @@ public class TcpDiscoveryNodeAddedMessage extends TcpDiscoveryAbstractMessage {
     }
 
     /**
+     * Clears unmarshalled discovery data to minimize message size.
+     */
+    public void clearUnmarshalledDiscoveryData() {
+        if (dataPacket != null)
+            dataPacket.clearUnmarshalledJoiningNodeData();
+    }
+
+    /**
      * @return First grid node start time.
      */
     public long gridStartTime() {
