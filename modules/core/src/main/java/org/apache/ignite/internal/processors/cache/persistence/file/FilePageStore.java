@@ -62,12 +62,6 @@ public class FilePageStore implements PageStore {
     /** */
     private final IgniteOutClosure<Path> pathProvider;
 
-    /**
-     * Caches the existence state of storage file. After it is initialized, it will be not set to null
-     * during FilePageStore lifecycle.
-     */
-    private volatile Boolean fileExists;
-
     /** */
     private final byte type;
 
@@ -155,22 +149,7 @@ public class FilePageStore implements PageStore {
 
     /** {@inheritDoc} */
     @Override public boolean exists() {
-        if (fileExists == null) {
-            lock.writeLock().lock();
-
-            try {
-                if (fileExists == null) {
-                    File file = pathProvider.apply().toFile();
-
-                    fileExists = file.exists() && file.length() > headerSize();
-                }
-            }
-            finally {
-                lock.writeLock().unlock();
-            }
-        }
-
-        return fileExists;
+        return Files.exists(pathProvider.apply());
     }
 
     /**
@@ -227,16 +206,7 @@ public class FilePageStore implements PageStore {
         }
         catch (ClosedByInterruptException e) {
             // If thread was interrupted written header can be inconsistent.
-            lock.writeLock().lock();
-
-            try {
-                Files.delete(pathProvider.apply());
-
-                fileExists = false;
-            }
-            finally {
-                lock.writeLock().unlock();
-            }
+            Files.delete(pathProvider.apply());
 
             throw e;
         }
@@ -310,11 +280,8 @@ public class FilePageStore implements PageStore {
 
             fileIO = null;
 
-            if (delete) {
+            if (delete)
                 Files.delete(pathProvider.apply());
-
-                fileExists = false;
-            }
         }
         catch (IOException e) {
             throw new StorageException("Failed to stop serving partition file [file=" + getFileAbsolutePath()
@@ -347,8 +314,6 @@ public class FilePageStore implements PageStore {
             fileIO = null;
 
             Files.delete(filePath);
-
-            fileExists = false;
         }
         catch (IOException e) {
             throw new StorageException("Failed to truncate partition file [file=" + filePath.toAbsolutePath() + "]", e);
@@ -514,8 +479,6 @@ public class FilePageStore implements PageStore {
 
                                 this.fileIO = fileIO = ioFactory.create(cfgFile, CREATE, READ, WRITE);
 
-                                fileExists = true;
-
                                 newSize = (cfgFile.length() == 0 ? initFile(fileIO) : checkFile(fileIO, cfgFile)) - headerSize();
 
                                 if (interrupted)
@@ -591,8 +554,6 @@ public class FilePageStore implements PageStore {
                         File cfgFile = pathProvider.apply().toFile();
 
                         fileIO = ioFactory.create(cfgFile, CREATE, READ, WRITE);
-
-                        fileExists = true;
 
                         checkFile(fileIO, cfgFile);
 
