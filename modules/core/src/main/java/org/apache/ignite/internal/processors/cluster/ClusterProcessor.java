@@ -174,6 +174,9 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
     /** {@inheritDoc} */
     @Override public void onReadyForRead(ReadableDistributedMetaStorage metastorage) {
+        if (!ReadableDistributedMetaStorage.isSupported(ctx))
+            return;
+
         localClusterId = readKey(metastorage, CLUSTER_ID,
             "Reading cluster ID from metastorage has failed, new ID will be generated");
 
@@ -199,6 +202,9 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
     /** {@inheritDoc} */
     @Override public void onReadyForWrite(DistributedMetaStorage metastorage) {
+        if (!ReadableDistributedMetaStorage.isSupported(ctx))
+            return;
+
         this.metastorage = metastorage;
 
         metastorage.listen(
@@ -224,6 +230,9 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
      * @param newTag New tag.
      */
     public void updateTag(String newTag) throws IgniteCheckedException {
+        if (!ReadableDistributedMetaStorage.isSupported(ctx))
+            throw new IgniteCheckedException("Cluster does not support IDs and tags");
+
         Serializable oldTag = metastorage.read(CLUSTER_TAG);
 
         if (!metastorage.compareAndSet(CLUSTER_TAG, oldTag, newTag)) {
