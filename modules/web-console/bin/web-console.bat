@@ -59,10 +59,20 @@ if %MAJOR_JAVA_VER% LSS 8 (
 )
 
 :: Check IGNITE_HOME.
-:checkIgniteHome
+:checkIgniteHome1
 pushd "%~dp0"
 set IGNITE_HOME=%CD%
 popd
+goto :checkIgniteHome2
+
+:checkIgniteHome2
+set WEB_CONSOLE_AGENT=%IGNITE_HOME%\agent_dists\*
+
+if not exist "%WEB_CONSOLE_AGENT%" (
+    echo Web Console installation folder is incorrect.
+    echo Please run web-console.bat from Web Console installation folder.
+    goto :eof
+)
 
 goto run_java
 

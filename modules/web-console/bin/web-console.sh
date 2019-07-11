@@ -29,9 +29,7 @@ fi
 #
 
 #
-# Discovers WEB_CONSOLE environment variable.
-# The function expects WEB_CONSOLE_TMP variable is set and points to the directory where the callee script resides.
-# The function exports WEB_CONSOLE variable with path to Ignite home directory.
+# The function exports IGNITE_HOME variable with path to Web Console home directory.
 #
 
 setWebConsoleHome() {
@@ -45,8 +43,8 @@ setWebConsoleHome() {
     #
     if [ ! -d "${IGNITE_HOME}/agent_dists" ]; then
         echo $0", ERROR:"
-        echo "Ignite installation folder is not found or WEB_CONSOLE_HOME environment variable is not valid."
-        echo "Please create WEB_CONSOLE_HOME environment variable pointing to location of Ignite installation folder."
+        echo "Web Console installation folder is incorrect."
+        echo "Please run web-console.sh from Web Console installation folder."
 
         exit 1
     fi
