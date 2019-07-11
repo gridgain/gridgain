@@ -1242,9 +1242,9 @@
     <option name="IGNORE_UNCHECKED_OVERRIDING" value="false" />
   </inspection_tool>
   <inspection_tool class="UNUSED_IMPORT" enabled="true" level="ERROR" enabled_by_default="true" />
-  <inspection_tool class="UNUSED_SYMBOL" enabled="false" level="WARNING" enabled_by_default="false">
+  <inspection_tool class="UNUSED_SYMBOL" enabled="true" level="ERROR" enabled_by_default="false">
     <option name="LOCAL_VARIABLE" value="true" />
-    <option name="FIELD" value="true" />
+    <option name="FIELD" value="false" />
     <option name="METHOD" value="false" />
     <option name="CLASS" value="false" />
     <option name="PARAMETER" value="true" />
@@ -1293,7 +1293,7 @@
   <inspection_tool class="UnsafeCastFromDynamic" enabled="false" level="INFO" enabled_by_default="false" />
   <inspection_tool class="UnsafeReturnStatementVisitor" enabled="false" level="WARNING" enabled_by_default="false" />
   <inspection_tool class="UnsafeVfsRecursion" enabled="false" level="WARNING" enabled_by_default="false" />
-  <inspection_tool class="UnusedAssignment" enabled="false" level="ERROR" enabled_by_default="false">
+  <inspection_tool class="UnusedAssignment" enabled="true" level="ERROR" enabled_by_default="false">
     <option name="REPORT_PREFIX_EXPRESSIONS" value="false" />
     <option name="REPORT_POSTFIX_EXPRESSIONS" value="true" />
     <option name="REPORT_REDUNDANT_INITIALIZER" value="true" />
@@ -1309,7 +1309,7 @@
   <inspection_tool class="UnusedProperty" enabled="false" level="WARNING" enabled_by_default="false" />
   <inspection_tool class="UnusedReceiverParameter" enabled="false" level="WARNING" enabled_by_default="false" />
   <inspection_tool class="UnusedReturnValue" enabled="false" level="WARNING" enabled_by_default="false" />
-  <inspection_tool class="UnusedSymbol" enabled="false" level="ERROR" enabled_by_default="false" />
+  <inspection_tool class="UnusedSymbol" enabled="true" level="ERROR" enabled_by_default="false" />
   <inspection_tool class="Use of postfix method call" enabled="false" level="WARNING" enabled_by_default="false" />
   <inspection_tool class="UseBulkOperation" enabled="false" level="WARNING" enabled_by_default="false" />
   <inspection_tool class="UseCompareMethod" enabled="false" level="WARNING" enabled_by_default="false" />
@@ -1364,7 +1364,7 @@
       </value>
     </option>
   </inspection_tool>
-  <inspection_tool class="unused" enabled="false" level="ERROR" enabled_by_default="false">
+  <inspection_tool class="unused" enabled="true" level="ERROR" enabled_by_default="false">
     <option name="LOCAL_VARIABLE" value="true" />
     <option name="FIELD" value="true" />
     <option name="METHOD" value="false" />
