@@ -146,7 +146,7 @@ public class AgentUtils {
      * @param keyStorePwd Optional key store password.
      * @param trustAll Whether we should trust for self-signed certificate.
      * @param trustStore Path to trust store.
-     * @param trustStorePwd Optional trust store passwo5rd.
+     * @param trustStorePwd Optional trust store password.
      * @param ciphers Optional list of enabled cipher suites.
      * @return SSL context factory.
      */
@@ -158,7 +158,7 @@ public class AgentUtils {
         String trustStorePwd,
         List<String> ciphers
     ) {
-        SslContextFactory sslCtxFactory = new SslContextFactory();
+        SslContextFactory sslCtxFactory = new SslContextFactory.Client();
 
         if (!F.isEmpty(keyStore)) {
             sslCtxFactory.setKeyStorePath(keyStore);
@@ -169,7 +169,7 @@ public class AgentUtils {
 
         if (trustAll) {
             sslCtxFactory.setTrustAll(true);
-            // Available in Jetty >= 9.4.15.xxxx sslCtxFactory.setHostnameVerifier((hostname, session) -> true);
+            // Available in Jetty >= 9.4.15.x sslCtxFactory.setHostnameVerifier((hostname, session) -> true);
         }
         else if (!F.isEmpty(trustStore)) {
             sslCtxFactory.setTrustStorePath(trustStore);
@@ -253,7 +253,7 @@ public class AgentUtils {
 
                     Origin.Address addr = new Origin.Address(inetAddr.getHostName(), inetAddr.getPort());
 
-                    if (p.type().equals(SOCKS))
+                    if (p.type() == SOCKS)
                         return new Socks4Proxy(addr, secure);
 
                     return new HttpProxy(addr, secure);
@@ -298,13 +298,15 @@ public class AgentUtils {
      *
      * @param ses Websocket session.
      * @param evt Event.
+     * @param timeout the maximum time to wait
+     * @param unit the time unit of the timeout argument
      * @throws Exception If failed to send event.
      */
-    public static void send(Session ses, WebSocketEvent evt) throws Exception {
+    public static void send(Session ses, WebSocketEvent evt, long timeout, TimeUnit unit) throws Exception {
         Future<Void> fut = ses.getRemote().sendStringByFuture(toJson(evt));
 
         try {
-            fut.get(10L, TimeUnit.SECONDS);
+            fut.get(timeout, unit);
         }
         catch (TimeoutException e) {
             fut.cancel(true);

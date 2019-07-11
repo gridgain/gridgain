@@ -33,6 +33,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.console.agent.AgentConfiguration;
+import org.apache.ignite.console.agent.AgentUtils;
 import org.apache.ignite.console.agent.rest.RestResult;
 import org.apache.ignite.console.demo.AgentClusterDemo;
 import org.apache.ignite.console.json.JsonObject;
@@ -62,7 +63,6 @@ import static org.apache.ignite.console.agent.AgentUtils.configureProxy;
 import static org.apache.ignite.console.agent.AgentUtils.entriesToMap;
 import static org.apache.ignite.console.agent.AgentUtils.entry;
 import static org.apache.ignite.console.agent.AgentUtils.secured;
-import static org.apache.ignite.console.agent.AgentUtils.send;
 import static org.apache.ignite.console.agent.AgentUtils.sslContextFactory;
 import static org.apache.ignite.console.agent.handlers.DemoClusterHandler.DEMO_CLUSTER_ID;
 import static org.apache.ignite.console.utils.Utils.extractErrorMessage;
@@ -285,7 +285,7 @@ public class WebSocketRouter implements AutoCloseable {
         AgentHandshakeRequest req = new AgentHandshakeRequest(CURRENT_VER, cfg.tokens());
 
         try {
-            send(ses, new WebSocketEvent(AGENT_HANDSHAKE, req));
+            AgentUtils.send(ses, new WebSocketEvent(AGENT_HANDSHAKE, req), 10L, TimeUnit.SECONDS);
         }
         catch (Throwable e) {
             log.error("Failed to send handshake to server", e);
@@ -472,5 +472,16 @@ public class WebSocketRouter implements AutoCloseable {
             log.info("Websocket connection closed with code: " + statusCode);
 
         connect();
+    }
+
+    /**
+     * Send event to websocket.
+     *
+     * @param ses Websocket session.
+     * @param evt Event.
+     * @throws Exception If failed to send event.
+     */
+    private static void send(Session ses, WebSocketEvent evt) throws Exception {
+        AgentUtils.send(ses, evt, 60L, TimeUnit.SECONDS);
     }
 }

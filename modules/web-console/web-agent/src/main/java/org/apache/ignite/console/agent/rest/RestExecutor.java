@@ -17,6 +17,11 @@
 package org.apache.ignite.console.agent.rest;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.io.IOException;
 import java.io.StringWriter;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
@@ -27,11 +32,14 @@ import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.console.json.JsonObject;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.logger.slf4j.Slf4jLogger;
 import org.eclipse.jetty.client.HttpClient;
-import org.eclipse.jetty.client.api.ContentResponse;
-import org.eclipse.jetty.client.api.Request;
+import org.eclipse.jetty.client.api.Response;
+import org.eclipse.jetty.client.util.FormContentProvider;
+import org.eclipse.jetty.client.util.InputStreamResponseListener;
 import org.eclipse.jetty.http.HttpMethod;
+import org.eclipse.jetty.util.Fields;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.slf4j.LoggerFactory;
 
@@ -74,15 +82,16 @@ public class RestExecutor implements AutoCloseable {
     }
 
     /**
-     * @param res Response from cluster.
+     * @param res represents a HTTP response.
+     * @param in Returns an {@link InputStream} providing the response content bytes.
      * @return Result of REST request.
-     * @throws Exception If failed to parse REST result.
+     * @throws IOException If failed to parse REST result.
      */
-    private RestResult parseResponse(ContentResponse res) throws Exception {
+    private RestResult parseResponse(Response res, InputStream in) throws IOException {
         int code = res.getStatus();
 
         if (code == HTTP_OK) {
-            RestResponseHolder holder = fromJson(res.getContent(), RestResponseHolder.class);
+            RestResponseHolder holder = fromJson(new InputStreamReader(in), RestResponseHolder.class);
 
             int status = holder.getSuccessStatus();
 
@@ -107,22 +116,38 @@ public class RestExecutor implements AutoCloseable {
      * @param url Request URL.
      * @param params Request parameters.
      * @return Request result.
-     * @throws Throwable If failed to send request.
+     * @throws IOException If failed to parse REST result.
+     * @throws Exception If failed to send request.
      */
-    public RestResult sendRequest(String url, JsonObject params) throws Throwable {
+    public RestResult sendRequest(String url, JsonObject params) throws Exception {
         if (!httpClient.isRunning())
             httpClient.start();
 
-        Request req = httpClient
-            .newRequest(url)
+        Fields fields = new Fields();
+
+        params.forEach((k, v) -> fields.add(k, String.valueOf(v)));
+
+        InputStreamResponseListener lsnr = new InputStreamResponseListener();
+
+        httpClient.newRequest(url)
             .path("/ignite")
-            .method(HttpMethod.POST);
+            .method(HttpMethod.POST)
+            .content(new FormContentProvider(fields))
+            .send(lsnr);
 
-        params.forEach((k, v) -> req.param(k, String.valueOf(v)));
+        try {
+            Response res = lsnr.get(60L, TimeUnit.SECONDS);
 
-        ContentResponse res = req.send();
+            return parseResponse(res, lsnr.getInputStream());
+        }
+        catch (Exception e) {
+            TimeoutException e0 = X.cause(e, TimeoutException.class);
 
-        return parseResponse(res);
+            if (e0 != null)
+                throw e0;
+
+            throw e;
+        }
     }
 
     /**

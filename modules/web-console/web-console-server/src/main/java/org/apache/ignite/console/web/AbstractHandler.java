@@ -73,8 +73,11 @@ public abstract class AbstractHandler extends TextWebSocketHandler {
      * @param evt Event.
      * @throws IOException If failed to send message.
      */
+    @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
     private void sendMessage(WebSocketSession ws, WebSocketEvent evt) throws IOException {
-        ws.sendMessage(new TextMessage(toJson(evt)));
+        synchronized (ws) {
+            ws.sendMessage(new TextMessage(toJson(evt)));
+        }
     }
 
     /**
