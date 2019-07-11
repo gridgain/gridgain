@@ -919,11 +919,23 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
         }
     }
 
+    /**
+     * Container class to send both ID and tag in grid common disco data to joining node.
+     */
     private static class DiscoCommonData implements Serializable {
+        /** */
+        private static final long serialVersionUID = 0L;
+
+        /** */
         private final UUID id;
 
+        /** */
         private final String tag;
 
+        /**
+         * @param id Cluster ID.
+         * @param tag Cluster tag.
+         */
         private DiscoCommonData(UUID id, String tag) {
             this.id = id;
             this.tag = tag;
