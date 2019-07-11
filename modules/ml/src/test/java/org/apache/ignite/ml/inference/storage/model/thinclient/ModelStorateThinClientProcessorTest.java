@@ -117,7 +117,7 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
         storageCfg.setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL);
         cache = ignite.createCache(storageCfg);
 
-        ms = new DefaultModelStorage(new IgniteModelStorageProvider(cache));
+        ms = new DefaultModelStorage(new IgniteModelStorageProvider(ignite, cache));
         msp = new ModelStorateThinClientProcessor(ms);
 
         ThinClientCustomQueryRegistry.registerIfAbsent(msp);

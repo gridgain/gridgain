@@ -38,7 +38,7 @@ public class ModelStorageFactory {
         if (cache == null)
             throw new IllegalStateException("Model storage doesn't exists. Enable ML plugin to create it.");
 
-        ModelStorageProvider storageProvider = new IgniteModelStorageProvider(cache);
+        ModelStorageProvider storageProvider = new IgniteModelStorageProvider(ignite, cache);
 
         return new DefaultModelStorage(storageProvider);
     }

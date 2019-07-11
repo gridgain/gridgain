@@ -16,7 +16,7 @@
 
 package org.apache.ignite.ml.inference.storage.model;
 
-import java.util.concurrent.locks.Lock;
+import java.util.function.Supplier;
 
 /**
  * Model storage provider that keeps files and directories presented as {@link FileOrDirectory} files and correspondent
@@ -24,15 +24,18 @@ import java.util.concurrent.locks.Lock;
  */
 public interface ModelStorageProvider {
     /**
-     * Returns file or directory associated with the specified path.
+     * Returns file or directory associated with the specified path. Will acquire an internal storage provider lock
+     * on the {@code path} when called inside {@link #synchronize(Supplier)} invocation.
      *
-     * @param path Path of file or directory.
-     * @return File or directory associated with the specified path.
+     * @param path Path of a file or a directory.
+     * @return File or directory associated with the specified path, {@code null} if no file or directory
+     * is associated with the path.
      */
     public FileOrDirectory get(String path);
 
     /**
-     * Saves file or directory associated with the specified path.
+     * Saves file or directory associated with the specified path. Will acquire an internal storage provider lock
+     * on the {@code path} when called inside {@link #synchronize(Supplier)} invocation.
      *
      * @param path Path to the file or directory.
      * @param file File or directory to be saved.
@@ -40,16 +43,19 @@ public interface ModelStorageProvider {
     public void put(String path, FileOrDirectory file);
 
     /**
-     * Removes file or directory associated with the specified path.
+     * Removes file or directory associated with the specified path. Will acquire an internal storage provider lock
+     * on the {@code path} when called inside {@link #synchronize(Supplier)} invocation.
      *
      * @param path Path to the file or directory.
      */
     public void remove(String path);
 
     /**
-     * Locks the specified path.
+     * Synchronizes accesses to this storage provider inside the given invocation. Calls to {@link #get(String)},
+     * {@link #put(String, FileOrDirectory)}, {@link #remove(String)} will automatically acquire a lock on the
+     * given key to synchronize actions across multiple threads. The locks will be released upon closure exit.
      *
-     * @param path Path to be locked.
+     * @param invocation {@code Runnable} to execute.
      */
-    public Lock lock(String path);
+    public <T> T synchronize(Supplier<T> invocation);
 }

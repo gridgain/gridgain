@@ -16,13 +16,24 @@
 
 package org.apache.ignite.ml.inference.storage.model;
 
-import java.util.concurrent.locks.Lock;
+import java.util.function.Supplier;
+import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
+import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.transactions.Transaction;
+
+import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
+import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
 
 /**
  * Implementation of {@link ModelStorageProvider} based on Apache Ignite cache.
  */
 public class IgniteModelStorageProvider implements ModelStorageProvider {
+    /** Ignite instane to start transactions. */
+    private final Ignite ignite;
+
     /** Storage of the files and directories. */
     private final IgniteCache<String, FileOrDirectory> cache;
 
@@ -31,7 +42,8 @@ public class IgniteModelStorageProvider implements ModelStorageProvider {
      *
      * @param cache Storage of the files and directories.
      */
-    public IgniteModelStorageProvider(IgniteCache<String, FileOrDirectory> cache) {
+    public IgniteModelStorageProvider(Ignite ignite, IgniteCache<String, FileOrDirectory> cache) {
+        this.ignite = ignite;
         this.cache = cache;
     }
 
@@ -51,8 +63,27 @@ public class IgniteModelStorageProvider implements ModelStorageProvider {
     }
 
     /** {@inheritDoc} */
-    @Override public Lock lock(String path) {
-        // TODO GG-19461. Need to replace lock with transactions.
-        return null;
+    @Override public <T> T synchronize(Supplier<T> supplier) {
+        Transaction tx0 = ignite.transactions().tx();
+
+        if (tx0 != null)
+            return supplier.get();
+        else {
+            try {
+                return CU.retryTopologySafe(() -> {
+                    try (Transaction tx = ignite.transactions().txStart(PESSIMISTIC, REPEATABLE_READ)) {
+                        T res = supplier.get();
+
+                        tx.commit();
+
+                        return res;
+
+                    }
+                });
+            }
+            catch (IgniteCheckedException e) {
+                throw new IgniteException(e);
+            }
+        }
     }
 }
