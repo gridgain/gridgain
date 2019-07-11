@@ -59,19 +59,11 @@ if %MAJOR_JAVA_VER% LSS 8 (
 )
 
 :: Check IGNITE_HOME.
-:checkIgniteHome1
-if defined WEB_CONSOLE_HOME goto checkIgniteHome2
-    pushd "%~dp0"
-    set IGNITE_HOME=%CD%
-    popd
+:checkIgniteHome
+pushd "%~dp0"
+set IGNITE_HOME=%CD%
+popd
 
-:checkIgniteHome2
-:: Strip double quotes from IGNITE_HOME
-set IGNITE_HOME=%WEB_CONSOLE_HOME:"=%
-
-:: remove all trailing slashes from IGNITE_HOME.
-if %IGNITE_HOME:~-1,1% == \ goto removeTrailingSlash
-if %IGNITE_HOME:~-1,1% == / goto removeTrailingSlash
 goto run_java
 
 :removeTrailingSlash
