@@ -45,6 +45,7 @@ import org.apache.ignite.internal.MarshallerContextLockingSelfTest;
 import org.apache.ignite.internal.TransactionsMXBeanImplTest;
 import org.apache.ignite.internal.managers.IgniteDiagnosticMessagesMultipleConnectionsTest;
 import org.apache.ignite.internal.managers.IgniteDiagnosticMessagesTest;
+import org.apache.ignite.internal.managers.discovery.IncompleteDeserializationExceptionTest;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecordTest;
 import org.apache.ignite.internal.processors.DeadLockOnNodeLeftExchangeTest;
 import org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentV2Test;
@@ -95,8 +96,8 @@ import org.apache.ignite.plugin.PluginNodeValidationTest;
 import org.apache.ignite.plugin.security.SecurityPermissionSetBuilderTest;
 import org.apache.ignite.spi.GridSpiLocalHostInjectionTest;
 import org.apache.ignite.startup.properties.NotStringSystemPropertyTest;
-import org.apache.ignite.testframework.MessageOrderLogListenerTest;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.MessageOrderLogListenerTest;
 import org.apache.ignite.testframework.test.ConfigVariationsTestSuiteBuilderTest;
 import org.apache.ignite.testframework.test.ListeningTestLoggerTest;
 import org.apache.ignite.testframework.test.ParametersTest;
@@ -248,6 +249,8 @@ public class IgniteBasicTestSuite {
         suite.addTest(new JUnit4TestAdapter(DeadLockOnNodeLeftExchangeTest.class));
 
         suite.addTest(new JUnit4TestAdapter(ClassPathContentLoggingTest.class));
+
+        suite.addTest(new JUnit4TestAdapter(IncompleteDeserializationExceptionTest.class));
 
         return suite;
     }
