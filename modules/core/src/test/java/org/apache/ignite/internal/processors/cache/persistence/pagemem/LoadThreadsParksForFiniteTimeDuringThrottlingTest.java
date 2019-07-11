@@ -49,7 +49,8 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 /**
- *
+ * Checks that, throttled load threads will be unparked earlier than parkTime, if number of pages in checkpoint buffer
+ * would decrease.
  **/
 public class LoadThreadsParksForFiniteTimeDuringThrottlingTest extends GridCommonAbstractTest {
     /** Cache name. */
@@ -189,7 +190,7 @@ public class LoadThreadsParksForFiniteTimeDuringThrottlingTest extends GridCommo
             loadThreads.forEach(LockSupport::unpark);
         }
 
-        assertTrue(throttlingEnabledFut.get());
+        assertTrue("Throttling wasn't enabled!", throttlingEnabledFut.get());
 
         SlowCheckpointFileIOFactory.disableSlowCheckpoint();
 
@@ -203,6 +204,9 @@ public class LoadThreadsParksForFiniteTimeDuringThrottlingTest extends GridCommo
         });
 
         try {
+            // Throttled threads hold read lock's on pages. Checkpoint cannot begin while other threads hold checkpoint
+            // readlock, because of checkpoint thread must get checkpoint writelock. So checkpoint cannot begin while
+            // load threads are not unparked.
             forceCpFut.get(60000L);
         }
         catch (IgniteFutureTimeoutCheckedException e) {
@@ -261,7 +265,7 @@ public class LoadThreadsParksForFiniteTimeDuringThrottlingTest extends GridCommo
         private static final AtomicBoolean slowCheckpointEnabled = new AtomicBoolean();
 
         /** */
-        private static final long PARK_TIME = U.millisToNanos(5000L);
+        private static final long PARK_TIME = U.millisToNanos(1000L);
 
         /** Delegate factory. */
         private final FileIOFactory delegateFactory = new RandomAccessFileIOFactory();
