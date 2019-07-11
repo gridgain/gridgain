@@ -48,22 +48,31 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
-/** */
+/**
+ *
+ **/
 public class LoadThreadsParksForFiniteTimeDuringThrottlingTest extends GridCommonAbstractTest {
     /** Cache name. */
     private static final String CACHE_NAME = "cache1";
+
     /** */
     private static final int KEYS_COUNT = 1000;
+
     /** */
     private static final long MAX_DATA_REGION_SIZE = 1024L * 1024L * 1024L;
+
     /** */
     private static final long CP_BUFFER_SIZE = MAX_DATA_REGION_SIZE / 4;
+
     /** */
     private static final int AVG_RECORD_SIZE = (int)(MAX_DATA_REGION_SIZE / KEYS_COUNT);
+
     /** */
     private static final int LOAD_THREADS_COUNT = 20;
+
     /** */
     private static final String DFLT_DATA_REGION_NAME = "dfltDataRegion";
+
     /** */
     private final List<Thread> loadThreads = new ArrayList<>(LOAD_THREADS_COUNT);
 
@@ -117,6 +126,9 @@ public class LoadThreadsParksForFiniteTimeDuringThrottlingTest extends GridCommo
         return 5 * 60 * 1000;
     }
 
+    /**
+     * See test class description.
+     */
     @Test
     public void testThrottleLongSleep() throws Exception {
         IgniteEx crd = startGrid(0);
@@ -146,14 +158,14 @@ public class LoadThreadsParksForFiniteTimeDuringThrottlingTest extends GridCommo
         AtomicBoolean throttlingEnabled = new AtomicBoolean(false);
 
         IgniteInternalFuture<Boolean> throttlingEnabledFut = GridTestUtils.runAsync(() -> {
+            final long sleepTime = 500L;
+            final int numOfLoops = (int)(getTestTimeout() / sleepTime);
             PageMemory pm = crd.context().cache().context().database().dataRegion(DFLT_DATA_REGION_NAME).pageMemory();
+
             // throttling will be enabled, if 2/3 of checkpoint buffer size is busy.
             final double limit = (0.67 * Math.ceil((CP_BUFFER_SIZE + 0.) / pm.pageSize()));
 
-            final long sleepTime = 500L;
-            final int numOfLoops = (int)(getTestTimeout()/sleepTime);
-
-            for (int i=0; i< numOfLoops; i++) {
+            for (int i = 0; i < numOfLoops; i++) {
                 if (pm.checkpointBufferPagesCount() > limit) {
                     log.info("Throttling enabled!");
 
@@ -192,7 +204,8 @@ public class LoadThreadsParksForFiniteTimeDuringThrottlingTest extends GridCommo
 
         try {
             forceCpFut.get(60000L);
-        } catch (IgniteFutureTimeoutCheckedException e) {
+        }
+        catch (IgniteFutureTimeoutCheckedException e) {
             log.error("awaiting checkpoint failed!", e);
 
             forceCpFut.cancel();
