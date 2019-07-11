@@ -276,7 +276,7 @@ class ServerImpl extends TcpDiscoveryImpl {
     private volatile long lastRingMsgReceivedTime;
 
     /** */
-    private volatile boolean clusterSupportsTcpDiscoveryNodeCompactRepresentation =
+    private volatile boolean nodeCompactRepresentationSuported =
         true; //assume that local node supports this feature
 
     /** Map with proceeding ping requests. */
@@ -650,7 +650,7 @@ class ServerImpl extends TcpDiscoveryImpl {
     ) {
         TcpDiscoveryStatusCheckMessage msg;
 
-        if (clusterSupportsTcpDiscoveryNodeCompactRepresentation) {
+        if (nodeCompactRepresentationSuported) {
             TcpDiscoveryNode crd = resolveCoordinator();
 
             if (creatorNode == null)
@@ -688,10 +688,13 @@ class ServerImpl extends TcpDiscoveryImpl {
      * @param node Node with duplicate ID.
      * @return new instance of {@link TcpDiscoveryDuplicateIdMessage}.
      */
-    private TcpDiscoveryDuplicateIdMessage createTcpDiscoveryDuplicateIdMessage(UUID creatorNodeId, TcpDiscoveryNode node) {
+    private TcpDiscoveryDuplicateIdMessage createTcpDiscoveryDuplicateIdMessage(
+        UUID creatorNodeId,
+        TcpDiscoveryNode node
+    ) {
         TcpDiscoveryDuplicateIdMessage msg;
 
-        if (clusterSupportsTcpDiscoveryNodeCompactRepresentation)
+        if (nodeCompactRepresentationSuported)
             msg = new TcpDiscoveryDuplicateIdMessage(creatorNodeId, node.id());
         else
             msg = new TcpDiscoveryDuplicateIdMessage(creatorNodeId, node);
@@ -4865,9 +4868,13 @@ class ServerImpl extends TcpDiscoveryImpl {
                                 // Make all preceding nodes and local node visible.
                                 n.visible(true);
 
-                                if (clusterSupportsTcpDiscoveryNodeCompactRepresentation) {
-                                    clusterSupportsTcpDiscoveryNodeCompactRepresentation =
-                                        nodeSupports(gridKernalContext(), n, TCP_DISCOVERY_MESSAGE_NODE_COMPACT_REPRESENTATION);
+                                if (nodeCompactRepresentationSuported) {
+                                    nodeCompactRepresentationSuported =
+                                        nodeSupports(
+                                            gridKernalContext(),
+                                            n,
+                                            TCP_DISCOVERY_MESSAGE_NODE_COMPACT_REPRESENTATION
+                                        );
                                 }
                             }
 
@@ -4950,8 +4957,8 @@ class ServerImpl extends TcpDiscoveryImpl {
                 log.debug("Node to finish add: " + node);
 
             //we will need to recalculate this value since the topology changed
-            if (clusterSupportsTcpDiscoveryNodeCompactRepresentation) {
-                clusterSupportsTcpDiscoveryNodeCompactRepresentation =
+            if (nodeCompactRepresentationSuported) {
+                nodeCompactRepresentationSuported =
                     nodeSupports(gridKernalContext(), node, TCP_DISCOVERY_MESSAGE_NODE_COMPACT_REPRESENTATION);
             }
 
@@ -5198,8 +5205,8 @@ class ServerImpl extends TcpDiscoveryImpl {
 
             if (msg.verified() && !locNodeId.equals(leavingNodeId)) {
                 //we will need to recalculate this value since the topology changed
-                if (!clusterSupportsTcpDiscoveryNodeCompactRepresentation) {
-                    clusterSupportsTcpDiscoveryNodeCompactRepresentation =
+                if (!nodeCompactRepresentationSuported) {
+                    nodeCompactRepresentationSuported =
                         allNodesSupport(TCP_DISCOVERY_MESSAGE_NODE_COMPACT_REPRESENTATION);
                 }
 
@@ -5411,8 +5418,8 @@ class ServerImpl extends TcpDiscoveryImpl {
 
             if (msg.verified()) {
                 //we will need to recalculate this value since the topology changed
-                if (!clusterSupportsTcpDiscoveryNodeCompactRepresentation) {
-                    clusterSupportsTcpDiscoveryNodeCompactRepresentation =
+                if (!nodeCompactRepresentationSuported) {
+                    nodeCompactRepresentationSuported =
                         allNodesSupport(TCP_DISCOVERY_MESSAGE_NODE_COMPACT_REPRESENTATION);
                 }
 
@@ -5550,7 +5557,10 @@ class ServerImpl extends TcpDiscoveryImpl {
                                 TcpDiscoveryStatusCheckMessage msg0 = msg;
 
                                 if (F.contains(msg.failedNodes(), msg.creatorNodeId())) {
-                                    msg0 = createTcpDiscoveryStatusCheckMessage(msg.creatorNode(), msg.creatorNodeId(), msg.failedNodeId());
+                                    msg0 = createTcpDiscoveryStatusCheckMessage(
+                                        msg.creatorNode(),
+                                        msg.creatorNodeId(),
+                                        msg.failedNodeId());
 
                                     if (msg0 == null) {
                                         log.debug("Status check message discarded (creator node is not in topology).");
