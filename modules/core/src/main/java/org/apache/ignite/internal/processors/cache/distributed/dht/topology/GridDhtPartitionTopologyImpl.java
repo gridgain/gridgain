@@ -709,7 +709,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 if (locPart == null)
                     updateLocal(p, EVICTED, updateSeq, topVer);
                 else {
-                    System.err.println("!!! RESTORE grp=" + grp.cacheOrGroupName() + " - " + Thread.currentThread().getName());
+//                    System.err.println("!!! RESTORE grp=" + grp.cacheOrGroupName() + " - " + Thread.currentThread().getName());
                     GridDhtPartitionState state = locPart.state();
 
                     updateLocal(p, state, updateSeq, topVer);
@@ -883,7 +883,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             if (loc != null)
                 loc.awaitDestroy();
 
-            System.err.println("!!! CREATE grp=" + grp.cacheOrGroupName() + " " + Thread.currentThread().getName());
+//            System.err.println("!!! CREATE grp=" + grp.cacheOrGroupName() + " " + Thread.currentThread().getName());
             locParts.set(p, loc = partFactory.create(ctx, grp, p));
 
             long updCntr = cntrMap.updateCounter(p);
@@ -921,7 +921,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
             part = new GridDhtLocalPartition(ctx, grp, p, true);
 
-            System.err.println("!!! CREATE force grp=" + grp.cacheOrGroupName() + " " + Thread.currentThread().getName());
+//            System.err.println("!!! CREATE force grp=" + grp.cacheOrGroupName() + " " + Thread.currentThread().getName());
             locParts.set(p, part);
 
             return part;
@@ -973,7 +973,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                     // Make sure that after eviction partition is destroyed.
                     loc.awaitDestroy();
 
-                    System.err.println("!!! CREATE0 grp=" + grp.cacheOrGroupName() + " " + Thread.currentThread().getName());
+//                    System.err.println("!!! CREATE0 grp=" + grp.cacheOrGroupName() + " " + Thread.currentThread().getName());
                     locParts.set(p, loc = null);
 
                     if (!belongs) {
@@ -998,7 +998,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                             "[grp=" + grp.cacheOrGroupName() + ", part=" + p + ", topVer=" + topVer +
                             ", this.topVer=" + this.readyTopVer + ']');
 
-                    System.err.println("!!! CREATE0 notnull grp=" + grp.cacheOrGroupName() + " " + Thread.currentThread().getName());
+//                    System.err.println("!!! CREATE0 notnull grp=" + grp.cacheOrGroupName() + " " + Thread.currentThread().getName());
                     locParts.set(p, loc = partFactory.create(ctx, grp, p));
 
                     this.updateSeq.incrementAndGet();
@@ -2560,7 +2560,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             map.put(p, state);
 
             if (!grp.isReplicated() && (state == MOVING || state == OWNING || state == RENTING)) {
-                System.err.println("!!!! STATE = " + state + ", ver=" + diffFromAffinityVer);
+//                System.err.println("!!!! STATE = " + state + ", ver=" + diffFromAffinityVer);
 
                 AffinityAssignment assignment = grp.affinity().cachedAffinity(diffFromAffinityVer);
 
