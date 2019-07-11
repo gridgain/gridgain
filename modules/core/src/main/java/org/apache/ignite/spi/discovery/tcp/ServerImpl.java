@@ -645,11 +645,9 @@ class ServerImpl extends TcpDiscoveryImpl {
      */
     private  @Nullable TcpDiscoveryStatusCheckMessage createTcpDiscoveryStatusCheckMessage(
         @Nullable TcpDiscoveryNode creatorNode,
-        @Nullable UUID creatorNodeId,
+        UUID creatorNodeId,
         UUID failedNodeId
     ) {
-        assert creatorNode != null || creatorNodeId != null;
-
         TcpDiscoveryStatusCheckMessage msg;
 
         if (clusterSupportsTcpDiscoveryNodeCompactRepresentation) {
@@ -6170,7 +6168,7 @@ class ServerImpl extends TcpDiscoveryImpl {
             if (elapsed > 0)
                 return;
 
-            msgWorker.addMessage(createTcpDiscoveryStatusCheckMessage(locNode, null, null));
+            msgWorker.addMessage(createTcpDiscoveryStatusCheckMessage(locNode, locNode.id(), null));
 
             lastTimeStatusMsgSentNanos = System.nanoTime();
         }
