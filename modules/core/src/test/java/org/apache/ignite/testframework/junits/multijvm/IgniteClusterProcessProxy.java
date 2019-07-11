@@ -166,11 +166,6 @@ public class IgniteClusterProcessProxy implements IgniteClusterEx {
     }
 
     /** {@inheritDoc} */
-    @Override public IgniteCluster withAsync() {
-        throw new UnsupportedOperationException("Operation is not supported yet.");
-    }
-
-    /** {@inheritDoc} */
     @Override public boolean enableWal(String cacheName) throws IgniteException {
         throw new UnsupportedOperationException("Operation is not supported yet.");
     }
@@ -197,16 +192,6 @@ public class IgniteClusterProcessProxy implements IgniteClusterEx {
 
     /** {@inheritDoc} */
     @Override public void tag(String tag) {
-        throw new UnsupportedOperationException("Operation is not supported yet.");
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean isAsync() {
-        throw new UnsupportedOperationException("Operation is not supported yet.");
-    }
-
-    /** {@inheritDoc} */
-    @Override public <R> IgniteFuture<R> future() {
         throw new UnsupportedOperationException("Operation is not supported yet.");
     }
 
