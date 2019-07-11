@@ -26,6 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
@@ -38,6 +39,7 @@ import org.apache.ignite.internal.ClusterMetricsSnapshot;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteDiagnosticInfo;
 import org.apache.ignite.internal.IgniteDiagnosticMessage;
+import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
@@ -66,11 +68,13 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgniteFuture;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.marshaller.jdk.JdkMarshaller;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag.GridDiscoveryData;
 import org.apache.ignite.spi.discovery.DiscoveryMetricsProvider;
+import org.apache.ignite.spi.discovery.DiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.jetbrains.annotations.Nullable;
 
@@ -145,6 +149,9 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     /** */
     private volatile DistributedMetaStorage metastorage;
 
+    /** Flag is used to detect and manage case when new node (this one) joins old cluster. */
+    private volatile boolean compatibilityMode;
+
     /**
      * @param ctx Kernal context.
      */
@@ -174,9 +181,6 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
     /** {@inheritDoc} */
     @Override public void onReadyForRead(ReadableDistributedMetaStorage metastorage) {
-        if (!ReadableDistributedMetaStorage.isSupported(ctx))
-            return;
-
         localClusterId = readKey(metastorage, CLUSTER_ID,
             "Reading cluster ID from metastorage has failed, new ID will be generated");
 
@@ -202,9 +206,6 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
     /** {@inheritDoc} */
     @Override public void onReadyForWrite(DistributedMetaStorage metastorage) {
-        if (!ReadableDistributedMetaStorage.isSupported(ctx))
-            return;
-
         this.metastorage = metastorage;
 
         metastorage.listen(
@@ -213,6 +214,9 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
                 cluster.setTag((String)newVal);
             }
         );
+
+        if (!compatibilityMode)
+            return;
 
         try {
             metastorage.writeAsync(CLUSTER_ID, cluster.id());
@@ -230,8 +234,8 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
      * @param newTag New tag.
      */
     public void updateTag(String newTag) throws IgniteCheckedException {
-        if (!ReadableDistributedMetaStorage.isSupported(ctx))
-            throw new IgniteCheckedException("Cluster does not support IDs and tags");
+        if (compatibilityMode)
+            throw new IgniteCheckedException("Not all nodes in the cluster support cluster ID and tag.");
 
         Serializable oldTag = metastorage.read(CLUSTER_TAG);
 
@@ -247,6 +251,8 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     /**
      * Node makes ID and tag available through public API on local join event.
      *
+     * Effectively no-op if working in compatibility mode (see javadoc for {@link ClusterProcessor#compatibilityMode})
+     *
      * Two cases.
      * <ul>
      *     <li>In in-memory scenario very first node of the cluster generates ID and tag,
@@ -256,7 +262,10 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
      * </ul>
      */
     public void onLocalJoin() {
-        cluster.id(localClusterId != null ? localClusterId : UUID.randomUUID());
+        if (compatibilityMode)
+            return;
+
+        cluster.setId(localClusterId != null ? localClusterId : UUID.randomUUID());
 
         cluster.setTag(localClusterTag != null ? localClusterTag :
             ClusterTagGenerator.generateTag());
@@ -470,6 +479,8 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
             if (remoteClusterTag != null)
                 localClusterTag = remoteClusterTag;
         }
+        else
+            compatibilityMode = true;
     }
 
     /**
@@ -516,6 +527,36 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
             ctx.timeout().addTimeoutObject(new MetricsUpdateTimeoutObject(updateFreq));
         }
+
+        ctx.event().addLocalEventListener((evt) -> {
+                if (!compatibilityMode)
+                    return;
+
+                Collection<ClusterNode> nodes = ctx.discovery().getInjectedDiscoverySpi().getRemoteNodes()
+                    .stream().filter((n) -> !n.isClient()).collect(Collectors.toList());
+
+                if (IgniteFeatures.allNodesSupports(ctx, nodes, IgniteFeatures.CLUSTER_ID_AND_TAG)) {
+                    compatibilityMode = false;
+
+                    localClusterId = localClusterId == null ? UUID.randomUUID() : localClusterId;
+
+                    localClusterTag = localClusterTag == null ? ClusterTagGenerator.generateTag() : localClusterTag;
+
+                    try {
+                        metastorage.writeAsync(CLUSTER_ID, localClusterId);
+
+                        metastorage.writeAsync(CLUSTER_TAG, localClusterTag);
+                    }
+                    catch (IgniteCheckedException e) {
+                        ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
+                    }
+
+                    cluster.setId(localClusterId);
+
+                    cluster.setTag(localClusterTag);
+                }
+            }
+            , EVT_NODE_LEFT, EVT_NODE_FAILED);
     }
 
     /** {@inheritDoc} */
