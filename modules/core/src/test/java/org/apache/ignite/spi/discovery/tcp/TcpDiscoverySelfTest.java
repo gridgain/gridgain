@@ -19,6 +19,7 @@ package org.apache.ignite.spi.discovery.tcp;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
@@ -42,6 +43,7 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteIllegalStateException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -50,6 +52,7 @@ import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.GridComponent;
+import org.apache.ignite.internal.GridLoggerProxy;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
@@ -89,6 +92,8 @@ import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryNodeFailedMessag
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryNodeLeftMessage;
 import org.apache.ignite.testframework.GridStringLogger;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -2246,6 +2251,45 @@ public class TcpDiscoverySelfTest extends GridCommonAbstractTest {
             }
         }
         finally {
+            stopAllGrids();
+        }
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCheckRingLatency() throws Exception {
+        int hops = 1;
+
+        ListeningTestLogger logger = new ListeningTestLogger();
+
+        LogListener lsnr = LogListener.matches("Latency check has been discarded").atLeast(hops).build();
+
+        logger.registerListener(lsnr);
+
+        try {
+            IgniteEx ignite0 = startGrid(0);
+
+            client = true;
+
+            startGrid(1);
+
+            TcpDiscoverySpi discoverySpi = (TcpDiscoverySpi) ignite0.context().discovery().getInjectedDiscoverySpi();
+
+            IgniteLogger currentLogerProxy = discoverySpi.log;
+
+            Field logField = GridLoggerProxy.class.getDeclaredField("impl");
+
+            logField.setAccessible(true);
+
+            logField.set(currentLogerProxy, logger);
+
+            discoverySpi.impl.checkRingLatency(hops);
+
+            assertTrue("No discard message", lsnr.check(1000));
+
+        } finally {
             stopAllGrids();
         }
     }
