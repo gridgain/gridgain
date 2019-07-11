@@ -192,7 +192,7 @@ public class IgnitePdsCacheWalDisabledOnRebalancingTest extends GridCommonAbstra
 
         stopGrid(1);
 
-        cleanPersistenceFiles(ig1Name);
+        cleanPersistenceDir(ig1Name);
 
         int groupId = ((IgniteEx) ig0).cachex(CACHE3_NAME).context().groupId();
 
@@ -300,7 +300,7 @@ public class IgnitePdsCacheWalDisabledOnRebalancingTest extends GridCommonAbstra
         // Stop idx=1 and cleanup LFS to trigger full rebalancing after it restart.
         String ig1Name = "node01-" + grid(1).localNode().consistentId();
         stopGrid(1);
-        cleanPersistenceFiles(ig1Name);
+        cleanPersistenceDir(ig1Name);
 
         // Blocking fileIO and blockMessagePredicate to block checkpointer and rebalancing for node idx=1.
         useBlockingFileIO = true;
@@ -366,7 +366,7 @@ public class IgnitePdsCacheWalDisabledOnRebalancingTest extends GridCommonAbstra
         // Stop idx=1 and cleanup LFS to trigger full rebalancing after it restart.
         String ig1Name = "node01-" + grid(1).localNode().consistentId();
         stopGrid(1);
-        cleanPersistenceFiles(ig1Name);
+        cleanPersistenceDir(ig1Name);
 
         // Blocking fileIO and blockMessagePredicate to block checkpointer and rebalancing for node idx=1.
         useBlockingFileIO = true;
@@ -439,20 +439,6 @@ public class IgnitePdsCacheWalDisabledOnRebalancingTest extends GridCommonAbstra
                 }
             };
         }
-    }
-
-    /** */
-    private void cleanPersistenceFiles(String igName) throws Exception {
-        String ig1DbPath = Paths.get(DFLT_STORE_DIR, igName).toString();
-
-        File igDbDir = U.resolveWorkDirectory(U.defaultWorkDirectory(), ig1DbPath, false);
-
-        U.delete(igDbDir);
-        Files.createDirectory(igDbDir.toPath());
-
-        String ig1DbWalPath = Paths.get(DFLT_STORE_DIR, "wal", igName).toString();
-
-        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), ig1DbWalPath, false));
     }
 
     /** */
