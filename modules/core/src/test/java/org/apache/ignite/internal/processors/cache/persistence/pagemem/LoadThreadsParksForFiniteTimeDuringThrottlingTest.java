@@ -163,7 +163,9 @@ public class LoadThreadsParksForFiniteTimeDuringThrottlingTest extends GridCommo
             final int numOfLoops = (int)(getTestTimeout() / sleepTime);
             PageMemory pm = crd.context().cache().context().database().dataRegion(DFLT_DATA_REGION_NAME).pageMemory();
 
-            // throttling will be enabled, if 2/3 of checkpoint buffer size is busy.
+            // throttling will be enabled, if 2/3 of checkpoint buffer size is busy. We have 256mb checkpoint buffer
+            // (i.e. 2^16 4kb pages). (0.67-2/3)*2^16 = 218. Load threads will be parked 4000*1.05^x/10^-6 ms, where
+            // x >= 198. For x=198 park time is 6.2739522e+13 ms. It's more then enough for test.
             final double limit = (0.67 * Math.ceil((CP_BUFFER_SIZE + 0.) / pm.pageSize()));
 
             for (int i = 0; i < numOfLoops; i++) {
@@ -185,7 +187,7 @@ public class LoadThreadsParksForFiniteTimeDuringThrottlingTest extends GridCommo
 
         // Emulate spurious wakeups.
         while (!throttlingEnabled.get()) {
-            doSleep(500L);
+            doSleep(5L);
 
             loadThreads.forEach(LockSupport::unpark);
         }
@@ -265,7 +267,7 @@ public class LoadThreadsParksForFiniteTimeDuringThrottlingTest extends GridCommo
         private static final AtomicBoolean slowCheckpointEnabled = new AtomicBoolean();
 
         /** */
-        private static final long PARK_TIME = U.millisToNanos(1000L);
+        private static final long PARK_TIME = U.millisToNanos(500L);
 
         /** Delegate factory. */
         private final FileIOFactory delegateFactory = new RandomAccessFileIOFactory();
