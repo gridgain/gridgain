@@ -36,6 +36,9 @@ public interface PagesWriteThrottlePolicy {
      */
     void onMarkDirty(boolean isPageInCheckpoint);
 
+    /**
+     * Callback to try wakeup throttled threads.
+     */
     default void tryWakeupThrottledThreads() {
         // No-op.
     }

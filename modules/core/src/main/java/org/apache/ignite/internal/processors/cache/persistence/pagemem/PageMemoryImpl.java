@@ -948,6 +948,7 @@ public class PageMemoryImpl implements PageMemoryEx {
         return relPtr;
     }
 
+    /** */
     private void releaseCheckpointBufferPage(long tmpBufPtr) {
         int resCntr = checkpointPool.releaseFreePage(tmpBufPtr);
 
@@ -1757,11 +1758,6 @@ public class PageMemoryImpl implements PageMemoryEx {
      */
     public int checkpointBufferPagesSize() {
         return checkpointPool.pages();
-    }
-
-    public void tryWakeupThrottledThreads() {
-        if (throttlingPlc != ThrottlingPolicy.DISABLED)
-            writeThrottle.tryWakeupThrottledThreads();
     }
 
     /**
