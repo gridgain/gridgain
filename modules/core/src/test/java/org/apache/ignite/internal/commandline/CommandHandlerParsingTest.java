@@ -25,6 +25,7 @@ import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
 import org.apache.ignite.internal.commandline.baseline.BaselineArguments;
 import org.apache.ignite.internal.commandline.cache.CacheCommands;
 import org.apache.ignite.internal.commandline.cache.CacheSubcommands;
@@ -280,19 +281,9 @@ public class CommandHandlerParsingTest {
     @Test
     @WithSystemProperty(key = IGNITE_ENABLE_EXPERIMENTAL_COMMAND, value = "false")
     public void testExperimentalCommandIsDisabled() {
-        GridTestUtils.assertThrows(
-            null,
-            () -> parseArgs(Arrays.asList(WAL.text(), WAL_PRINT)),
-            IllegalArgumentException.class,
-            null
-        );
-
-        GridTestUtils.assertThrows(
-            null,
-            () -> parseArgs(Arrays.asList(WAL.text(), WAL_DELETE)),
-            IllegalArgumentException.class,
-            null
-        );
+        Stream.of(WAL_PRINT, WAL_DELETE)
+            .map(walOperation -> asList(WAL.text(), walOperation))
+            .forEach(this::parseArgs);
     }
 
     /**
