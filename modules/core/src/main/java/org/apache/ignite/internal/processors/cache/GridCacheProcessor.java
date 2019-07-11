@@ -16,10 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache;
 
-import javax.cache.configuration.FactoryBuilder;
-import javax.cache.expiry.EternalExpiryPolicy;
-import javax.cache.expiry.ExpiryPolicy;
-import javax.management.MBeanServer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -41,6 +37,10 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.cache.configuration.FactoryBuilder;
+import javax.cache.expiry.EternalExpiryPolicy;
+import javax.cache.expiry.ExpiryPolicy;
+import javax.management.MBeanServer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteCompute;
 import org.apache.ignite.IgniteException;
@@ -896,7 +896,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         for (GridCacheSharedManager mgr : sharedCtx.managers())
             mgr.start(sharedCtx);
 
-        if (!ctx.isDaemon() && (!CU.isPersistenceEnabled(ctx.config())) || ctx.config().isClientMode())
+        if (!ctx.isDaemon() /*&& (!CU.isPersistenceEnabled(ctx.config())) || ctx.config().isClientMode()*/)
             restoreCacheConfigurations();
 
         if (log.isDebugEnabled())
@@ -964,8 +964,13 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @param cacheType Cache type.
      * @param isStaticalyConfigured Statically configured flag.
      */
-    private void addStoredCache(Map<String, CacheInfo> caches, StoredCacheData cacheData, String cacheName,
-        CacheType cacheType, boolean isStaticalyConfigured) {
+    private void addStoredCache(
+        Map<String, CacheInfo> caches,
+        StoredCacheData cacheData,
+        String cacheName,
+        CacheType cacheType,
+        boolean isStaticalyConfigured
+    ) {
         if (!caches.containsKey(cacheName)) {
             if (!cacheType.userCache())
                 stopSeq.addLast(cacheName);
@@ -6032,7 +6037,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         /** {@inheritDoc} */
         @Override public void onReadyForRead(ReadOnlyMetastorage metastorage) throws IgniteCheckedException {
-            restoreCacheConfigurations();
+//            restoreCacheConfigurations();
         }
 
         /** {@inheritDoc} */

@@ -136,6 +136,10 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         // No-op. Per-partition PendingTree should be used.
     }
 
+    public boolean isPartitionStatesRestored() {
+        return partitionStatesRestored;
+    }
+
     /** {@inheritDoc} */
     @Override protected void initDataStructures() throws IgniteCheckedException {
         assert ctx.database().checkpointLockIsHeldByThread();

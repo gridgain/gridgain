@@ -47,6 +47,7 @@ import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.persistence.GridCacheOffheapManager;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateFinishMessage;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateMessage;
 import org.apache.ignite.internal.processors.cluster.DiscoveryDataClusterState;
@@ -1048,6 +1049,11 @@ class ClusterCachesInfo {
 
             return joinDiscoData;
         }
+    }
+
+    private int getFlags(CacheGroupContext grp) {
+        return !grp.persistenceEnabled()? 0 :
+            (((GridCacheOffheapManager)grp.offheap()).isPartitionStatesRestored() ? 0 : 1);
     }
 
     /**
