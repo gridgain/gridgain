@@ -65,7 +65,10 @@ public enum IgniteFeatures {
     TX_TRACKING_UPDATE_COUNTER(12),
 
     /** Support new security processor */
-    IGNITE_SECURITY_PROCESSOR(13);
+    IGNITE_SECURITY_PROCESSOR(13),
+
+    /** Support of cluster ID and tag. */
+    CLUSTER_ID_AND_TAG(14);
 
     /**
      * Unique feature identifier.

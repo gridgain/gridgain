@@ -594,7 +594,7 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
      *
      * @param id Id.
      */
-    public void id(UUID id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 
