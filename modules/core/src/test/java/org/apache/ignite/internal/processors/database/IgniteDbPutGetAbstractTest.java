@@ -145,7 +145,7 @@ public abstract class IgniteDbPutGetAbstractTest extends IgniteDbAbstractTest {
     public void testRandomRemove() throws Exception {
         IgniteCache<Integer, DbValue> cache = cache(DEFAULT_CACHE_NAME);
 
-        final int cnt = 50_000;
+        final int cnt = 20_000;
 
         long seed = System.nanoTime();
 
@@ -845,7 +845,7 @@ public abstract class IgniteDbPutGetAbstractTest extends IgniteDbAbstractTest {
 
         long seed = System.currentTimeMillis();
 
-        int iterations = SF.apply(MvccFeatureChecker.forcedMvcc() ? 100_000 : 300_000);
+        int iterations = SF.apply(MvccFeatureChecker.forcedMvcc() ? 20_000 : 60_000);
 
         X.println("Seed: " + seed);
 

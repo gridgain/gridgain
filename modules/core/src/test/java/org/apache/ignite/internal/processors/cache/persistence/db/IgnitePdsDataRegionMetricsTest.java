@@ -73,10 +73,10 @@ public class IgnitePdsDataRegionMetricsTest extends GridCommonAbstractTest {
     private static final int BATCHES = 5;
 
     /** */
-    private static final int BATCH_SIZE_LOW = 100;
+    private static final int BATCH_SIZE_LOW = 10;
 
     /** */
-    private static final int BATCH_SIZE_HIGH = 1000;
+    private static final int BATCH_SIZE_HIGH = 100;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {

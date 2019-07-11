@@ -44,6 +44,7 @@ import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.GridTestUtils.SF;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -116,25 +117,25 @@ public class PagesWriteThrottleSmokeTest extends GridCommonAbstractTest {
      */
     @Test
     public void testThrottle() throws Exception {
-        startGrids(2).active(true);
+        IgniteEx ig = startGrids(2);
+
+        ig.cluster().active(true);
 
         try {
-            Ignite ig = ignite(0);
-
             final int keyCnt = 2_000_000;
 
             final AtomicBoolean run = new AtomicBoolean(true);
 
             final AtomicBoolean zeroDropdown = new AtomicBoolean(false);
 
-            final HitRateMetric putRate10secs = new HitRateMetric("putRate10secs", "", 10_000, 20);
+            final HitRateMetric putRate10secs = new HitRateMetric("putRate10secs", "", 2_000, 20);
 
-            final HitRateMetric putRate1sec = new HitRateMetric("putRate1sec", "", 1_000, 20);
+            final HitRateMetric putRate1sec = new HitRateMetric("putRate1sec", "", 200, 20);
 
             GridTestUtils.runAsync(new Runnable() {
                 @Override public void run() {
                     try {
-                        Thread.sleep(5000);
+                        Thread.sleep(3000);
 
                         while (run.get()) {
                             System.out.println(
@@ -165,7 +166,7 @@ public class PagesWriteThrottleSmokeTest extends GridCommonAbstractTest {
                 @Override public void run() {
                     long startTs = System.currentTimeMillis();
 
-                    for (int i = 0; i < keyCnt * 10 && System.currentTimeMillis() - startTs < 3 * 60 * 1000; i++) {
+                    for (int i = 0; i < keyCnt * 10 && System.currentTimeMillis() - startTs < SF.applyLB(30_000, 10_000); i++) {
                         if (!run.get())
                             break;
 

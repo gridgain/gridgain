@@ -34,6 +34,7 @@ import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -2339,6 +2340,10 @@ public class BPlusTreeSelfTest extends GridCommonAbstractTest {
             assertEquals(findKey, tree.findOne(findKey));
             checkIterate(tree, findKey, findKey, findKey, true);
 
+            int threads = 10;
+
+            CountDownLatch initLatch = new CountDownLatch(threads);
+
             IgniteInternalFuture getFut = GridTestUtils.runMultiThreadedAsync(new Callable<Void>() {
                 @Override public Void call() throws Exception {
                     ThreadLocalRandom rnd = ThreadLocalRandom.current();
@@ -2348,6 +2353,8 @@ public class BPlusTreeSelfTest extends GridCommonAbstractTest {
                     TestTreeRowClosure falseP = new TestTreeRowClosure(-1L);
 
                     int cnt = 0;
+
+                    boolean latchDown = false;
 
                     while (!stop.get()) {
                         int shift = MAX_PER_PAGE > 0 ? rnd.nextInt(MAX_PER_PAGE * 2) : rnd.nextInt(100);
@@ -2363,13 +2370,19 @@ public class BPlusTreeSelfTest extends GridCommonAbstractTest {
                         checkIterateC(tree, -100L, KEYS + 100L, falseP, false);
 
                         cnt++;
+
+                        if (!latchDown) {
+                            latchDown = true;
+
+                            initLatch.countDown();
+                        }
                     }
 
                     info("Done, read count: " + cnt);
 
                     return null;
                 }
-            }, 10, "find");
+            }, threads, "find");
 
             asyncRunFut = new GridCompoundFuture<>();
 
@@ -2378,7 +2391,7 @@ public class BPlusTreeSelfTest extends GridCommonAbstractTest {
             asyncRunFut.markInitialized();
 
             try {
-                U.sleep(100);
+                initLatch.await();
 
                 for (int j = 0; j < 20; j++) {
                     for (long idx = 0L; idx < KEYS / 2; ++idx) {

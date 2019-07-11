@@ -59,7 +59,7 @@ public class IgnitePdsPageReplacementTest extends GridCommonAbstractTest {
     private static final long MEMORY_LIMIT = 10 * CHUNK_SIZE;
 
     /** */
-    private static final int PAGES_NUM = 128_000;
+    private static final int PAGES_NUM = 32_000;
 
     /** Cache name. */
     private final String cacheName = "cache";

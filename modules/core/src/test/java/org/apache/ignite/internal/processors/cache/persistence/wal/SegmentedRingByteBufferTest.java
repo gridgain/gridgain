@@ -37,6 +37,7 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.GridTestUtils.SF;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -587,7 +588,7 @@ public class SegmentedRingByteBufferTest extends GridCommonAbstractTest {
 
             Random rnd = new Random();
 
-            long endTime = System.currentTimeMillis() + 60 * 1000L;
+            long endTime = System.currentTimeMillis() + SF.applyLB(30_000, 10_000);
 
             while (System.currentTimeMillis() < endTime && ex.get() == null) {
                 try {
