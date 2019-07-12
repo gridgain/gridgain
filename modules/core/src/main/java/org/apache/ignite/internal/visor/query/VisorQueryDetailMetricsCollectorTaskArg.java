@@ -23,7 +23,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.visor.VisorDataTransferObject;
 
 /**
- * Arguments for task {@link VisorQueryCacheDetailMetricsCollectorTask}
+ * Arguments for task {@link VisorQueryDetailMetricsCollectorTask}
  */
 public class VisorQueryDetailMetricsCollectorTaskArg extends VisorDataTransferObject {
     /** */

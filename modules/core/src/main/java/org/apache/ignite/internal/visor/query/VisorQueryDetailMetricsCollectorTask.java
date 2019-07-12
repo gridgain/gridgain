@@ -28,9 +28,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryDetailMetricsAdapter;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryDetailMetricsKey;
-import org.apache.ignite.internal.processors.query.GridQueryIndexing;
-import org.apache.ignite.internal.processors.query.QueryHistoryMetrics;
-import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.visor.VisorJob;
@@ -38,11 +35,9 @@ import org.apache.ignite.internal.visor.VisorMultiNodeTask;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isSystemCache;
-import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryType.SQL;
-import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryType.SQL_FIELDS;
 
 /**
- * Task to collect cache query metrics.
+ * Collect query detailed metrics from cache context only. For compatibility when node does not have indexing module.
  */
 @GridInternal
 public class VisorQueryDetailMetricsCollectorTask extends VisorMultiNodeTask<VisorQueryDetailMetricsCollectorTaskArg,
@@ -66,7 +61,7 @@ public class VisorQueryDetailMetricsCollectorTask extends VisorMultiNodeTask<Vis
 
             Collection<GridCacheQueryDetailMetricsAdapter> metrics = res.getData();
 
-            VisorCacheQueryDetailMetricsCollectorJob.aggregateMetrics(-1, taskRes, metrics, false);
+            VisorCacheQueryDetailMetricsCollectorJob.aggregateMetrics(-1, taskRes, metrics);
         }
 
         Collection<GridCacheQueryDetailMetricsAdapter> aggMetrics = taskRes.values();
@@ -101,20 +96,12 @@ public class VisorQueryDetailMetricsCollectorTask extends VisorMultiNodeTask<Vis
          * @param since Time when metrics were collected last time.
          * @param res Response.
          * @param metrics Metrics.
-         * @param collectNotSqlMetrics When {@code true} collect metrics for no SQL queries only.
          */
-        private static void aggregateMetrics(
-            long since, Map<GridCacheQueryDetailMetricsKey,
-            GridCacheQueryDetailMetricsAdapter> res,
-            Collection<GridCacheQueryDetailMetricsAdapter> metrics,
-            boolean collectNotSqlMetrics
-        ) {
+        private static void aggregateMetrics(long since, Map<GridCacheQueryDetailMetricsKey,
+            GridCacheQueryDetailMetricsAdapter> res, Collection<GridCacheQueryDetailMetricsAdapter> metrics) {
             for (GridCacheQueryDetailMetricsAdapter m : metrics) {
                 if (m.lastStartTime() > since) {
                     GridCacheQueryDetailMetricsKey key = m.key();
-
-                    if (collectNotSqlMetrics && (key.getQueryType() == SQL || key.getQueryType() == SQL_FIELDS))
-                        continue;
 
                     GridCacheQueryDetailMetricsAdapter aggMetrics = res.get(key);
 
@@ -142,47 +129,7 @@ public class VisorQueryDetailMetricsCollectorTask extends VisorMultiNodeTask<Vis
                     if (cache == null || !cache.context().started())
                         continue;
 
-                    aggregateMetrics(arg.getSince(), aggMetrics, cache.context().queries().detailMetrics(), true);
-                }
-            }
-
-            GridQueryIndexing indexing = ignite.context().query().getIndexing();
-
-            if (indexing instanceof IgniteH2Indexing) {
-                Collection<QueryHistoryMetrics> metrics = ((IgniteH2Indexing)indexing)
-                    .runningQueryManager().queryHistoryMetrics().values();
-
-                for (QueryHistoryMetrics m : metrics) {
-                    GridCacheQueryDetailMetricsKey key = new GridCacheQueryDetailMetricsKey(SQL_FIELDS, m.query());
-
-                    GridCacheQueryDetailMetricsAdapter oldMetrics = aggMetrics.get(key);
-
-                    GridCacheQueryDetailMetricsAdapter total = oldMetrics != null
-                        ? new GridCacheQueryDetailMetricsAdapter(
-                            SQL_FIELDS, m.query(),
-                            null,
-                            oldMetrics.executions() + (int)m.executions(),
-                            oldMetrics.completions() + (int)(m.executions() - m.failures()),
-                            oldMetrics.failures() + (int)m.failures(),
-                            Long.min(oldMetrics.minimumTime(), m.minimumTime()),
-                            Long.max(oldMetrics.maximumTime(), m.maximumTime()),
-                            oldMetrics.totalTime(),
-                            Long.max(oldMetrics.lastStartTime(), m.lastStartTime()),
-                            key)
-                        : new GridCacheQueryDetailMetricsAdapter(
-                            SQL_FIELDS,
-                            m.query(),
-                            null,
-                            (int)m.executions(),
-                            (int)(m.executions() - m.failures()),
-                            (int)m.failures(),
-                            m.minimumTime(),
-                            m.maximumTime(),
-                            0L,
-                            m.lastStartTime(),
-                            key);
-
-                    aggMetrics.put(key, total);
+                    aggregateMetrics(arg.getSince(), aggMetrics, cache.context().queries().detailMetrics());
                 }
             }
 

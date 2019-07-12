@@ -26,7 +26,7 @@ import org.apache.ignite.internal.visor.VisorOneNodeTask;
  * Reset query detailed metrics from cache context only. For compatibility when node does not have indexing module.
  */
 @GridInternal
-public class VisorQueryResetCacheDetailMetricsTask extends VisorOneNodeTask<Void, Void> {
+public class VisorQueryResetDetailMetricsTask extends VisorOneNodeTask<Void, Void> {
     /** */
     private static final long serialVersionUID = 0L;
 
