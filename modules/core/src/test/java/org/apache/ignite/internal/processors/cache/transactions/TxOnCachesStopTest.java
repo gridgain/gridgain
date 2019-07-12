@@ -22,6 +22,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -55,6 +56,7 @@ import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
 import org.apache.ignite.transactions.TransactionRollbackException;
+import org.junit.Assume;
 import org.junit.Test;
 
 import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
@@ -116,25 +118,7 @@ public class TxOnCachesStopTest extends GridCommonAbstractTest {
 
         surviveCacheCfg = ccfg2;
 
-        String GRP_NAME = "test-destroy-group";
-
-        List<CacheConfiguration<Integer, byte[]>> cacheCfgs = new ArrayList<>(50);
-
-        for (int i = 0; i < CACHE_CNT; ++i) {
-            CacheConfiguration<Integer, byte[]> c = new CacheConfiguration<>("test-cache-" + i);
-            c.setBackups(2);
-            c.setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL);
-            c.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
-            c.setAffinity(new RendezvousAffinityFunction(false, 32));
-            c.setGroupName(GRP_NAME);
-
-            cacheCfgs.add(c);
-        }
-
-        cacheCfgs.add(destroyCacheCfg);
-        cacheCfgs.add(surviveCacheCfg);
-
-        cfg.setCacheConfiguration(cacheCfgs.toArray(cacheCfgs.toArray(new CacheConfiguration[cacheCfgs.size()])));
+        cfg.setCacheConfiguration(destroyCacheCfg, surviveCacheCfg);
 
         return cfg;
     }
@@ -218,6 +202,8 @@ public class TxOnCachesStopTest extends GridCommonAbstractTest {
      */
     @Test
     public void testOptimisticTxMappedOnPMETopology() throws Exception {
+        Assume.assumeFalse(MvccFeatureChecker.forcedMvcc());
+
         startGridsMultiThreaded(1);
 
         Ignition.setClientMode(true);
@@ -237,7 +223,7 @@ public class TxOnCachesStopTest extends GridCommonAbstractTest {
 
         srvSpi.blockMessages((node, msg) -> (msg instanceof GridDhtPartitionsFullMessage));
 
-        try (Transaction tx = client.transactions().txStart(OPTIMISTIC, SERIALIZABLE, 20_000, 2)) {
+        try (Transaction tx = client.transactions().txStart(OPTIMISTIC, SERIALIZABLE)) {
             cache2.put(100, new byte[1024]);
             cache.put(100, new byte[1024]);
 
@@ -255,22 +241,17 @@ public class TxOnCachesStopTest extends GridCommonAbstractTest {
 
             commitFut.get(10_000);
 
-            fail(">>>>><<<<<");
+            fail("Transaction should be rolled back.");
         }
         catch (IgniteFutureTimeoutException fte) {
             srvSpi.stopBlock();
 
-            fail(">>>>><<<<< PME hangs");
+            fail("Partition map exchange hangs [err=" + fte + ']');
         }
         catch (IgniteException e) {
-            e.printStackTrace();
-
             srvSpi.stopBlock();
 
-            System.out.println(">>>>> tx rolled back: " + e);
-
-            assertTrue(X.hasCause(e, IgniteTxTimeoutCheckedException.class)
-                || X.hasCause(e, CacheInvalidStateException.class) || X.hasCause(e, IgniteException.class));
+            assertTrue(X.hasCause(e, CacheInvalidStateException.class) || X.hasCause(e, IgniteException.class));
         }
     }
 
@@ -365,7 +346,9 @@ public class TxOnCachesStopTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    public void testOptimisticSerializableTxOnCacheDestroy () throws Exception {
+    public void testOptimisticTransactionsOnCacheDestroy () throws Exception {
+        Assume.assumeFalse(MvccFeatureChecker.forcedMvcc());
+
         startGridsMultiThreaded(3);
 
         Ignition.setClientMode(true);
@@ -376,46 +359,104 @@ public class TxOnCachesStopTest extends GridCommonAbstractTest {
 
         clients.get(0).cluster().active(true);
 
-        AtomicBoolean stopTxLoad = new AtomicBoolean();
+        List<CacheConfiguration> cachesToBeDestroyed = createCacheConfigurations();
 
-        IgniteInternalFuture txloadfut = startTxLoad(stopTxLoad, clients, OPTIMISTIC, SERIALIZABLE);
+        for (TransactionIsolation iso : TransactionIsolation.values()) {
+            clients.get(0).getOrCreateCaches(cachesToBeDestroyed);
+
+            // Make sure that all caches are started.
+            awaitPartitionMapExchange();
+
+            testConcurrentTransactionsOnCacheDestroy(clients, OPTIMISTIC, iso);
+
+            // Make sure that all caches are stopped.
+            awaitPartitionMapExchange();
+        }
+    }
+
+    /**
+     * Creates a list of cache configurations.
+     *
+     * @return List of cache configurations.
+     */
+    private List<CacheConfiguration> createCacheConfigurations() {
+        String GRP_NAME = "test-destroy-group";
+
+        List<CacheConfiguration> cacheCfgs = new ArrayList<>(50);
+
+        for (int i = 0; i < CACHE_CNT; ++i) {
+            CacheConfiguration<Integer, byte[]> c = new CacheConfiguration<>("test-cache-" + i);
+            c.setBackups(2);
+            c.setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL);
+            c.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
+            c.setAffinity(new RendezvousAffinityFunction(false, 32));
+            c.setGroupName(GRP_NAME);
+
+            cacheCfgs.add(c);
+        }
+
+        return cacheCfgs;
+    }
+
+    /**
+     * @param clients Client nodes that are used for initiating transactions.
+     * @param conc Transaction concurrency mode.
+     * @param iso Transaction isolation.
+     * @throws Exception If failed.
+     */
+    private void testConcurrentTransactionsOnCacheDestroy(
+        final ArrayList<Ignite> clients,
+        TransactionConcurrency conc,
+        TransactionIsolation iso
+    ) throws Exception {
+        if (log.isInfoEnabled()) {
+            log.info("Starting testConcurrentTransactionsOnCacheDestroy " +
+                "[concurrency=" + conc + ", isolation=" + iso + ']');
+        }
+
+        final AtomicBoolean stopTxLoad = new AtomicBoolean();
+        final AtomicInteger cacheIdxToBeDestroyed = new AtomicInteger(-1);
+
+        IgniteInternalFuture txLoadFut = startTxLoad(stopTxLoad, cacheIdxToBeDestroyed, clients, conc, iso);
 
         try {
             for (int i = 0; i < CACHE_CNT; ++i) {
                 int clientIdx = (i % clients.size());
 
-                final int cacheIdxToBeDestroyed = i;
-
-                IgniteInternalFuture destFut = GridTestUtils.runAsync(() -> {
-                    clients.get(clientIdx).destroyCache("test-cache-" + cacheIdxToBeDestroyed);
-                });
+                IgniteInternalFuture destFut = GridTestUtils.runAsync(() ->
+                    clients.get(clientIdx).destroyCache("test-cache-" + cacheIdxToBeDestroyed.incrementAndGet())
+                );
 
                 try {
-                    destFut.get(25, TimeUnit.SECONDS);
+                    destFut.get(15, TimeUnit.SECONDS);
                 }
                 catch (IgniteCheckedException e) {
-                    throw new AssertionError("Looks like PME hangs.", e);
+                    fail("Looks like PME hangs [err=" + e + ']');
                 }
             }
         }
         catch (Throwable t) {
-            throw new AssertionError("Unexpected error.", t);
+            fail("Unexpected error [err=" + t + ']');
         }
 
         stopTxLoad.set(true);
 
-        txloadfut.get();
+        txLoadFut.get();
     }
 
     /**
      * Starts transactional load.
      *
      * @param stopTxLoad Boolean flag that is used to stop transactional load.
+     * @param cacheIdxToBeDestroyed Variable that allows to get an index of destroyed cache.
      * @param clients Client nodes that are used for initiating transactions.
+     * @param concurrency Transaction concurrency mode.
+     * @param isolation Transaction isolation.
      * @return TxLoad future.
      */
     private IgniteInternalFuture startTxLoad (
         final AtomicBoolean stopTxLoad,
+        final AtomicInteger cacheIdxToBeDestroyed,
         final ArrayList<Ignite> clients,
         TransactionConcurrency concurrency,
         TransactionIsolation isolation){
@@ -426,22 +467,37 @@ public class TxOnCachesStopTest extends GridCommonAbstractTest {
                 ThreadLocalRandom rnd = ThreadLocalRandom.current();
 
                 ArrayList<IgniteCache<Integer, byte[]>> caches = new ArrayList<>();
-                for (int i = 0; i < CACHE_CNT; ++i)
-                    caches.add(c.getOrCreateCache("test-cache-" + i));
+                for (int i = 0; i < CACHE_CNT; ++i) {
+                    IgniteCache<Integer, byte[]> testCache = c.cache("test-cache-" + i);
+
+                    if (testCache == null) {
+                        throw new IllegalStateException(
+                            "Cache test-cache-" + i + " is not started " +
+                                "on client node " + c.configuration().getIgniteInstanceName());
+                    }
+
+                    caches.add(testCache);
+                }
 
                 byte[] val = new byte[128];
 
                 while (!stopTxLoad.get()) {
                     try (Transaction tx = c.transactions().txStart(concurrency, isolation)) {
-                        caches.get(rnd.nextInt(caches.size())).get(rnd.nextInt());
-                        caches.get(rnd.nextInt(caches.size())).put(rnd.nextInt(), val);
+                        int cacheIdx = cacheIdxToBeDestroyed.get();
+
+                        caches.get(Math.max(0, cacheIdx)).put(rnd.nextInt(), val);
+                        caches.get(rnd.nextInt(Math.min(cacheIdx + 1, caches.size() - 1), caches.size())).put(rnd.nextInt(), val);
 
                         doSleep(200);
 
                         tx.commit();
                     }
-                    catch (Exception e) {
-                        //ignore
+                    // Expected exceptions:
+                    catch (TransactionRollbackException e) {
+                        // Failed to prepare the transaction (transaction is marked as rolled back).
+                    }
+                    catch (IgniteException | IllegalStateException  e) {
+                        // Failed to perform cache operation (cache is stopped).
                     }
                 }
             }, "tx-load-" + c.configuration().getIgniteInstanceName()));
