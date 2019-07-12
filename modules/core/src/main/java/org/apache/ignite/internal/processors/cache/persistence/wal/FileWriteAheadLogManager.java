@@ -370,7 +370,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     /** Page snapshot records compression level. */
     private int pageCompressionLevel;
 
-    /** Threshold wait time next wal segment */
+    /** Threshold wait time next wal segment. If exceeded, warning will be print in to log. */
     private final long THRESHOLD_WAIT_TIME_NEXT_WAL_SEGMENT =
         IgniteSystemProperties.getLong(IGNITE_THRESHOLD_WAIT_TIME_NEXT_WAL_SEGMENT, 1000L);
 
@@ -1579,7 +1579,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
         long absNextIdxWaitTime = U.nanosToMillis(System.nanoTime() - absNextIdxStartTime);
 
-        if (absNextIdxWaitTime > THRESHOLD_WAIT_TIME_NEXT_WAL_SEGMENT)
+        if (absNextIdxWaitTime > THRESHOLD_WAIT_TIME_NEXT_WAL_SEGMENT) {
             log.warning(
                 String.format("Waiting next wal segment was long [waitingTime=%s, curIdx=%s, absNextIdx=%s, walSegments=%s]",
                     absNextIdxWaitTime,
@@ -1587,6 +1587,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                     absNextIdx,
                     dsCfg.getWalSegments())
             );
+        }
 
         long segmentIdx = absNextIdx % dsCfg.getWalSegments();
 
