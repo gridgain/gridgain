@@ -106,6 +106,10 @@ public class VisorCacheRebalanceCollectorTask extends VisorMultiNodeTask<VisorCa
         /** {@inheritDoc} */
         @Override protected VisorCacheRebalanceCollectorJobResult run(VisorCacheRebalanceCollectorTaskArg arg) {
             VisorCacheRebalanceCollectorJobResult res = new VisorCacheRebalanceCollectorJobResult();
+            res.setBaseline(BASELINE_NOT_AVAILABLE);
+
+            if (!ignite.cluster().active())
+                return res;
 
             long start0 = U.currentTimeMillis();
 
@@ -177,11 +181,7 @@ public class VisorCacheRebalanceCollectorTask extends VisorMultiNodeTask<VisorCa
 
                     res.setBaseline(inBaseline ? NODE_IN_BASELINE : NODE_NOT_IN_BASELINE);
                 }
-                else
-                    res.setBaseline(BASELINE_NOT_AVAILABLE);
             }
-            else
-                res.setBaseline(BASELINE_NOT_AVAILABLE);
 
             if (debug)
                 log(ignite.log(), "Collected rebalance metrics", getClass(), start0);
