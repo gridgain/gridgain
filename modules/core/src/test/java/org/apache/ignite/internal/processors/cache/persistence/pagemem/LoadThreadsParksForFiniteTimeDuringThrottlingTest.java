@@ -148,8 +148,6 @@ public class LoadThreadsParksForFiniteTimeDuringThrottlingTest extends GridCommo
                         int val = ThreadLocalRandom.current().nextInt(KEYS_COUNT);
 
                         cache.put(key, new TestValue(key + val));
-
-                        log.info(Thread.currentThread().getName() + " put by key: " + key);
                     }
                 },
                 "load-" + tn
