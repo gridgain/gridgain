@@ -161,6 +161,10 @@ public class CacheJoinNodeDiscoveryData implements Serializable {
             return staticallyConfigured;
         }
 
+        public long getFlags() {
+            return flags;
+        }
+
         /**
          * @param ois ObjectInputStream.
          */

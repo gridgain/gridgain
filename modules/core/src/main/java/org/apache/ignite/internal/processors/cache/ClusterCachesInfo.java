@@ -31,6 +31,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.CacheExistsException;
@@ -1787,6 +1788,49 @@ class ClusterCachesInfo {
             else if (joiningNodeData instanceof CacheJoinNodeDiscoveryData)
                 processJoiningNode((CacheJoinNodeDiscoveryData)joiningNodeData, data.joiningNodeId(), false);
         }
+    }
+
+    public String validateJoiningNodeData(DiscoveryDataBag.JoiningNodeDiscoveryData data) {
+        if (data.hasJoiningNodeData()) {
+            Serializable joiningNodeData = data.joiningNodeData();
+
+            if (joiningNodeData instanceof CacheJoinNodeDiscoveryData) {
+                CacheJoinNodeDiscoveryData joinData = (CacheJoinNodeDiscoveryData)joiningNodeData;
+
+                Set<String> problemCaches = null;
+
+                for (CacheJoinNodeDiscoveryData.CacheInfo cacheInfo : joinData.caches().values()) {
+                    CacheConfiguration<?, ?> cfg = cacheInfo.cacheData().config();
+
+                    if (!registeredCaches.containsKey(cfg.getName())) {
+                        String conflictErr = checkCacheConflict(cfg);
+
+                        if (conflictErr != null) {
+                            U.warn(log, "Ignore cache received from joining node. " + conflictErr);
+
+                            continue;
+                        }
+
+                        long flags = cacheInfo.getFlags();
+
+                        if (flags == 1L) {
+                            if (problemCaches == null)
+                                problemCaches = new HashSet<>();
+
+                            problemCaches.add(cfg.getName());
+                        }
+                    }
+                }
+
+                if (!F.isEmpty(problemCaches))
+                    return problemCaches.stream().collect(Collectors.joining(", ",
+                        "Joining node has caches with data which are not presented on cluster, " +
+                            "it could mean that they were already destroyed, to add the node to cluster - " +
+                            "remove directories with the caches", "]"));
+            }
+        }
+
+        return  null;
     }
 
     /**

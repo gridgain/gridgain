@@ -2950,6 +2950,12 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             return null;
         }
 
+        String validationResult = cachesInfo.validateJoiningNodeData(discoData);
+
+        if (validationResult != null) {
+            return new IgniteNodeValidationResult(node.id(), validationResult);
+        }
+
         return Validator.validateNode(node, discoData, marsh, ctx, this::cacheDescriptor);
     }
 

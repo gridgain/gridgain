@@ -222,7 +222,6 @@ public class IgniteCacheGroupsWithRestartsTest extends GridCommonAbstractTest {
 
         IgniteCache<Object, Object> cache = ex.cache(getCacheName(3));
 
-
         assertEquals(0, cache.size());
     }
 
