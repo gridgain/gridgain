@@ -36,6 +36,13 @@ public class PlainExternalResult extends AbstractExternalResult {
         super(ctx, memTracker);
     }
 
+    /**
+     * @param parent Parent result.
+     */
+    private PlainExternalResult(AbstractExternalResult parent) {
+        super(parent);
+    }
+
     /** {@inheritDoc} */
     @Override public void reset() {
         rewindFile();
@@ -85,9 +92,9 @@ public class PlainExternalResult extends AbstractExternalResult {
     }
 
     /** {@inheritDoc} */
-    @Override public ResultExternal createShallowCopy() {
-        // TODO: CODE: implement.
+    @Override public synchronized ResultExternal createShallowCopy() {
+        onChildCreated();
 
-        throw new UnsupportedOperationException();
+        return new PlainExternalResult(this);
     }
 }

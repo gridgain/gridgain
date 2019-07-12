@@ -103,7 +103,7 @@ public class H2ManagedLocalResult implements LocalResult {
     }
 
     /** */
-    private boolean onUpdate(ValueRow distinctRowKey, Value[] oldRow, Value[] row) { //TODO Rename
+    private boolean isEnoughMemoryAfterReservation(ValueRow distinctRowKey, Value[] oldRow, Value[] row) {
         assert !isClosed();
         assert row != null;
 
@@ -137,24 +137,35 @@ public class H2ManagedLocalResult implements LocalResult {
         if (containsLobs) {
             return null;
         }
-        // TODO External result
+
         ResultExternal e2 = null;
-        H2ManagedLocalResult copy = new H2ManagedLocalResult();
-        copy.session = (Session)targetSession;
-        copy.visibleColumnCount = this.visibleColumnCount;
-        copy.expressions = this.expressions;
-        copy.rowId = -1;
-        copy.rowCount = this.rowCount;
-        copy.rows = this.rows;
-        copy.sort = this.sort;
-        copy.distinctRows = this.distinctRows;
-        copy.distinct = distinct;
-        copy.distinctIndexes = distinctIndexes;
-        copy.currentRow = null;
-        copy.offset = 0;
-        copy.limit = -1;
-        copy.containsNull = containsNull;
-        return copy;
+
+        if (external != null) {
+            e2 = external.createShallowCopy();
+
+            if (e2 == null)
+                return null;
+        }
+
+        H2ManagedLocalResult cp = new H2ManagedLocalResult();
+
+        cp.session = (Session)targetSession;
+        cp.visibleColumnCount = this.visibleColumnCount;
+        cp.expressions = this.expressions;
+        cp.rowId = -1;
+        cp.rowCount = this.rowCount;
+        cp.rows = this.rows;
+        cp.sort = this.sort;
+        cp.distinctRows = this.distinctRows;
+        cp.distinct = distinct;
+        cp.distinctIndexes = distinctIndexes;
+        cp.currentRow = null;
+        cp.offset = 0;
+        cp.limit = -1;
+        cp.containsNull = containsNull;
+        cp.external = e2;
+
+        return cp;
     }
 
     /** {@inheritDoc} */
@@ -334,7 +345,7 @@ public class H2ManagedLocalResult implements LocalResult {
                     distinctRows.put(array, values);
                 }
                 rowCount = distinctRows.size();
-                if (!onUpdate(array, previous, values)) {
+                if (!isEnoughMemoryAfterReservation(array, previous, values)) {
                     createExternalResult();
                     rowCount = external.addRows(distinctRows.values());
                     distinctRows = null;
@@ -345,7 +356,7 @@ public class H2ManagedLocalResult implements LocalResult {
         } else {
             rows.add(values);
             rowCount++;
-            if (!onUpdate(null,null, values)) {
+            if (!isEnoughMemoryAfterReservation(null,null, values)) {
                 addRowsToDisk();
             }
         }
@@ -460,7 +471,7 @@ public class H2ManagedLocalResult implements LocalResult {
         while (--limit >= 0) {
             row = temp.next();
             rows.add(row);
-            if (!onUpdate(null,null, row))
+            if (!isEnoughMemoryAfterReservation(null,null, row))
                 addRowsToDisk();
         }
         if (withTiesSortOrder != null && row != null) {
@@ -468,7 +479,7 @@ public class H2ManagedLocalResult implements LocalResult {
             while ((row = temp.next()) != null && withTiesSortOrder.compare(expected, row) == 0) {
                 rows.add(row);
                 rowCount++;
-                if (!onUpdate(null,null, row))
+                if (!isEnoughMemoryAfterReservation(null,null, row))
                     addRowsToDisk();
             }
         }

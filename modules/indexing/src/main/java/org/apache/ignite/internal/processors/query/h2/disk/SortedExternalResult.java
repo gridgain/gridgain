@@ -62,19 +62,19 @@ public class SortedExternalResult extends AbstractExternalResult {
     /** In-memory buffer for gathering rows before spilling to disk. */
     private TreeMap<ValueRow, Value[]> rowsBuf;
 
-    /** Sorted chunks addresses on disk. */
-    private final Collection<Chunk> chunks = new ArrayList<>();
+    /** Sorted chunks addresses on the disk. */
+    private final Collection<Chunk> chunks;
 
     /**
      * Hash index for fast lookup of the distinct rows.
      * RowKey hashcode -> list of row addressed with the same hashcode.
      */
-    private ExternalResultHashIndex hashIndex;
+    private ExternalResultHashIndex hashIdx;
 
     /**
      * Result queue.
      */
-    private Queue<Chunk> resultQueue;
+    private Queue<Chunk> resQueue;
 
     /**
      * Comparator for {@code rowsBuf}.
@@ -105,15 +105,31 @@ public class SortedExternalResult extends AbstractExternalResult {
         this.distinctIndexes = distinctIndexes;
         this.visibleColCnt = visibleColCnt;
         this.sort = sort;
-        this.cmp = ses.getDatabase().getCompareMode();
+        cmp = ses.getDatabase().getCompareMode();
+        chunks = new ArrayList<>();
 
         if (isAnyDistinct())
-            hashIndex = new ExternalResultHashIndex(ctx, file, this, initSize);
+            hashIdx = new ExternalResultHashIndex(ctx, file, this, initSize);
+    }
+
+    /**
+     * @param parent Parent.
+     */
+    private SortedExternalResult(SortedExternalResult parent) {
+        super(parent);
+
+        distinct = parent.distinct;
+        distinctIndexes = parent.distinctIndexes;
+        visibleColCnt = parent.visibleColCnt;
+        sort = parent.sort;
+        cmp = parent.cmp;
+        hashIdx = parent.hashIdx;
+        chunks = parent.chunks;
     }
 
     /** {@inheritDoc} */
     @Override public Value[] next() {
-        Chunk batch = resultQueue.poll();
+        Chunk batch = resQueue.poll();
 
         if (batch == null)
             throw new NoSuchElementException();
@@ -121,7 +137,7 @@ public class SortedExternalResult extends AbstractExternalResult {
         Value[] row = batch.currentRow();
 
         if (batch.next())
-            resultQueue.offer(batch);
+            resQueue.offer(batch);
 
         return row;
     }
@@ -179,7 +195,7 @@ public class SortedExternalResult extends AbstractExternalResult {
     @Nullable private Value[] getPreviousRow(Value[] row) { // TODO merge removeRow and getPreviousRow
         ValueRow distKey = getRowKey(row);
 
-        Value[] previous = null;
+        Value[] previous;
 
         // Check in memory - it might not has been spilled yet.
         if (rowsBuf != null) {
@@ -190,7 +206,7 @@ public class SortedExternalResult extends AbstractExternalResult {
         }
 
         // Check on-disk
-        Long addr = hashIndex.get(distKey);
+        Long addr = hashIdx.get(distKey);
 
         if (addr == null)
             return null;
@@ -277,21 +293,21 @@ public class SortedExternalResult extends AbstractExternalResult {
     private void addRowToHashIndex(Value[] row, long rowPosInFile) {
         ValueRow distKey = getRowKey(row);
 
-        hashIndex.put(distKey, rowPosInFile);
+        hashIdx.put(distKey, rowPosInFile);
     }
 
     /** {@inheritDoc} */
     @Override public void reset() {
         spillRowsBufferToDisk();
 
-        if (resultQueue != null) {
-            resultQueue.clear();
+        if (resQueue != null) {
+            resQueue.clear();
 
             for (Chunk chunk : chunks)
                 chunk.reset();
         }
         else {
-            resultQueue = sort == null ? new LinkedList<>() : new PriorityQueue<>(new Comparator<Chunk>() {
+            resQueue = sort == null ? new LinkedList<>() : new PriorityQueue<>(new Comparator<Chunk>() {
                 @Override public int compare(Chunk o1, Chunk o2) {
                     return sort.compare(o1.currentRow(), o2.currentRow());
                 }
@@ -301,14 +317,17 @@ public class SortedExternalResult extends AbstractExternalResult {
         // Init chunks.
         for (Chunk chunk : chunks) {
             if (chunk.next())
-                resultQueue.offer(chunk);
+                resQueue.offer(chunk);
         }
     }
 
+
+
     /** {@inheritDoc} */
-    @Override public void close() {
-        U.closeQuiet(fileIo);
-        U.closeQuiet(hashIndex);
+    @Override protected void onClose() {
+        super.onClose();
+
+        U.closeQuiet(hashIdx);
     }
 
     /** {@inheritDoc} */
@@ -323,7 +342,7 @@ public class SortedExternalResult extends AbstractExternalResult {
         }
 
         // Check on-disk
-        Long addr = hashIndex.remove(key);
+        Long addr = hashIdx.remove(key);
 
         if (addr == null)
             return size;
@@ -344,10 +363,10 @@ public class SortedExternalResult extends AbstractExternalResult {
     }
 
     /** {@inheritDoc} */
-    @Override public ResultExternal createShallowCopy() {
-        //return null; // TODO: CODE: implement.
+    @Override public synchronized ResultExternal createShallowCopy() {
+        onChildCreated();
 
-        throw new UnsupportedOperationException();
+        return new SortedExternalResult(this);
     }
 
     /**
@@ -362,7 +381,7 @@ public class SortedExternalResult extends AbstractExternalResult {
      * @param row Row.
      * @return Distinct key.
      */
-    public ValueRow getRowKey(Value[] row) {
+    ValueRow getRowKey(Value[] row) {
         if (distinctIndexes != null) {
             int cnt = distinctIndexes.length;
 

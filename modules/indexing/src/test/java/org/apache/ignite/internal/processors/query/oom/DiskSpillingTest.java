@@ -16,36 +16,47 @@
 
 package org.apache.ignite.internal.processors.query.oom;
 
+import java.io.IOException;
+import java.nio.file.FileSystems;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.WatchEvent;
+import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
+import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
+import static org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing.DISK_SPILL_DIR;
+
 /**
- * TODO: all possible data types and nulls
- * TODO: BLOBS/CLOBS??
- * TODO: sorted/unsorted
- * TODO: UNION/EXCEPT
  * TODO: createShallowCopy (query caching)
  * TODO: client/server
  * TODO: multinode/multithreaded
  * TODO: multiple spills during one query
  * TODO: file deleted in the case of query exception/kill/etc
- * TODO: DISTINCT ON(...)/DISTINCT/EXCEPT/INTERSECT
  * TODO: lazy/not lazy, local/distributed
  * TODO: test directory cleaned on startup
  * TODO: ADD logging
  * TODO: Global quota
+ * TODO: persistence and in-memory
+ * TODO: parallelism
+ * TODO local/not local
+ * TODO: scale
  *
  * Test for the intermediate query results disk offloading (disk spilling).IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE
  */
 @WithSystemProperty(key = "IGNITE_SQL_FAIL_ON_QUERY_MEMORY_LIMIT_EXCEED", value = "false")
-@WithSystemProperty(key = "IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE", value = "512")
+@WithSystemProperty(key = "IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE", value = "2048")
 public class DiskSpillingTest extends GridCommonAbstractTest {
     /** */
     private static final int PERS_CNT = 1000;
@@ -54,14 +65,13 @@ public class DiskSpillingTest extends GridCommonAbstractTest {
     private static final int DEPS_CNT = 100;
 
     /** */
-    private static final long SMALL_MEM_LIMIT = 2048;
+    private static final long SMALL_MEM_LIMIT = 4096;
 
     /** */
     private static final long HUGE_MEM_LIMIT = Long.MAX_VALUE;
 
     /** */
     private boolean checkSortOrder;
-
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -91,6 +101,14 @@ public class DiskSpillingTest extends GridCommonAbstractTest {
         checkSortOrder = false;
     }
 
+
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        super.afterTest();
+
+
+    }
+
     /** */
     @Test
     public void simpleSelect() {
@@ -107,8 +125,22 @@ public class DiskSpillingTest extends GridCommonAbstractTest {
 
     /** */
     @Test
+    public void simpleSelectWithSortLazy() {
+        checkSortOrder = true;
+
+        assertInMemoryAndOnDiskSameResults(true, "SELECT * FROM person ORDER BY id ASC, code ASC");
+    }
+
+    /** */
+    @Test
     public void simpleSelectWithDistinct() {
-        assertInMemoryAndOnDiskSameResults(false, "SELECT DISTINCT(code) FROM person");
+        assertInMemoryAndOnDiskSameResults(false, "SELECT DISTINCT code FROM person");
+    }
+
+    /** */
+    @Test
+    public void simpleSelectWithDistinctLazy() {
+        assertInMemoryAndOnDiskSameResults(true, "SELECT DISTINCT depId, code FROM person");
     }
 
     /** */
@@ -121,18 +153,43 @@ public class DiskSpillingTest extends GridCommonAbstractTest {
 
     /** */
     @Test
+    public void simpleSelectWithDistinctOrderByLazy() {
+        checkSortOrder = true;
+
+        assertInMemoryAndOnDiskSameResults(true, "SELECT DISTINCT ON (code, depId) salary  " +
+            "FROM person ORDER BY code, salary DESC");
+    }
+
+    /** */
+    @Test
     public void simpleSelectWithDistinctOrderByAggregate() {
         checkSortOrder = true;
 
         assertInMemoryAndOnDiskSameResults(false, "SELECT DISTINCT code, depId " +
-            "FROM person ORDER BY CONCAT(depId,code)");
+            "FROM person ORDER BY CONCAT(depId, code)");
+    }
+
+    /** */
+    @Test
+    public void simpleSelectWithDistinctOrderByAggregateLazy() {
+        checkSortOrder = true;
+
+        assertInMemoryAndOnDiskSameResults(true, "SELECT DISTINCT code, depId, temperature " +
+            "FROM person ORDER BY CONCAT(depId, code)");
     }
 
     /** */
     @Test
     public void simpleSubSelect() {
-        assertInMemoryAndOnDiskSameResults(false, "SELECT name, depId " +
+        assertInMemoryAndOnDiskSameResults(false, "SELECT * " +
             "FROM person WHERE depId IN (SELECT id FROM department)");
+    }
+
+    /** */
+    @Test
+    public void simpleSubSelectLazy() {
+        assertInMemoryAndOnDiskSameResults(true, "SELECT * " +
+            "FROM person WHERE depId IN (SELECT id FROM department) ORDER BY salary DESC");
     }
 
     /** */
@@ -146,10 +203,27 @@ public class DiskSpillingTest extends GridCommonAbstractTest {
 
     /** */
     @Test
+    public void simpleSelectWithDistinctOnLazy() {
+        checkSortOrder = true;
+
+        assertInMemoryAndOnDiskSameResults(true, "SELECT DISTINCT ON (code, depId) age " +
+            "FROM person ORDER BY code, depId");
+    }
+
+    /** */
+    @Test
     public void simpleJoin() {
         assertInMemoryAndOnDiskSameResults(false, "SELECT p.id, p.name, p.depId, d.title " +
             "FROM person p, department d " +
             " WHERE p.depId = d.id");
+    }
+
+    /** */
+    @Test
+    public void simpleJoinLazy() {
+        assertInMemoryAndOnDiskSameResults(true, "SELECT p.id, p.name, p.depId, d.title " +
+            "FROM person p, department d " +
+            " WHERE p.depId = d.id ORDER BY p.salary DESC");
     }
 
     /** */
@@ -163,6 +237,15 @@ public class DiskSpillingTest extends GridCommonAbstractTest {
 
     /** */
     @Test
+    public void simpleUnionLazy() {
+        assertInMemoryAndOnDiskSameResults(true,
+            "(SELECT DISTINCT id, name, code, depId FROM person WHERE depId < 10  ORDER BY code DESC OFFSET 20)" +
+                " UNION " +
+                "SELECT id, name, code, depId FROM person WHERE depId > 5 ORDER BY depId DESC LIMIT 200");
+    }
+
+    /** */
+    @Test
     public void simpleExcept() {
         assertInMemoryAndOnDiskSameResults(false,
             "SELECT id, name, code, depId FROM person WHERE depId >= 0 " +
@@ -172,9 +255,27 @@ public class DiskSpillingTest extends GridCommonAbstractTest {
 
     /** */
     @Test
+    public void simpleExceptLazy() {
+        assertInMemoryAndOnDiskSameResults(true,
+            "SELECT id, name, code, depId FROM person WHERE depId >= 1 " +
+                " EXCEPT " +
+                "SELECT DISTINCT id, name, code, depId FROM person WHERE depId > 5 ");
+    }
+
+    /** */
+    @Test
     public void simpleIntersect() {
         assertInMemoryAndOnDiskSameResults(false,
             "SELECT id, name, code, depId FROM person WHERE depId < 10 " +
+                " INTERSECT " +
+                "SELECT id, name, code, depId FROM person WHERE depId > 5 ");
+    }
+
+    /** */
+    @Test
+    public void simpleIntersectLazy() {
+        assertInMemoryAndOnDiskSameResults(true,
+            "(SELECT id, name, code, depId FROM person WHERE depId < 10 ORDER BY code DESC LIMIT 900 OFFSET 10) " +
                 " INTERSECT " +
                 "SELECT id, name, code, depId FROM person WHERE depId > 5 ");
     }
@@ -189,10 +290,27 @@ public class DiskSpillingTest extends GridCommonAbstractTest {
 
     /** */
     @Test
+    public void simpleSelectLimitOffsetLazy() {
+        checkSortOrder = true;
+
+        assertInMemoryAndOnDiskSameResults(true, "SELECT * FROM person ORDER BY name LIMIT 800 OFFSET 20");
+    }
+
+    /** */
+    @Test
     public void simpleSelectOffset() {
         checkSortOrder = true;
 
         assertInMemoryAndOnDiskSameResults(false, "SELECT * FROM person ORDER BY name DESC OFFSET 300");
+    }
+
+    /** */
+    @Test
+    public void simpleSelectOffsetLazy() {
+        checkSortOrder = true;
+
+        assertInMemoryAndOnDiskSameResults(true, "SELECT code, male, age, height, salary, tax, weight, " +
+            "temperature, time, date, timestamp, uuid FROM person ORDER BY name DESC OFFSET 300");
     }
 
     /** */
@@ -202,41 +320,198 @@ public class DiskSpillingTest extends GridCommonAbstractTest {
     }
 
 
-    public void assertInMemoryAndOnDiskSameResults(boolean lazy, String sql) {
-        long startOnDisk = System.currentTimeMillis();
-
-        List<List<?>> onDiskRes = runSql(sql, lazy, SMALL_MEM_LIMIT);
-
-        long startInMem = System.currentTimeMillis();
-
-        List<List<?>> inMemRes = runSql(sql, lazy, HUGE_MEM_LIMIT);
-
-        long finish = System.currentTimeMillis();
-
-        assertFalse(inMemRes.isEmpty());
-
-        System.out.println("with disk spill=" + (startInMem - startOnDisk) + ", inMemory time=" + (finish - startInMem));
-
-        if (!checkSortOrder) {
-            fixSortOrder(onDiskRes);
-            fixSortOrder(inMemRes);
-        }
-
-        assertEqualsCollections(inMemRes, onDiskRes);
+    /** */
+    @Test
+    public void simpleSelectLimitLazy() {
+        assertInMemoryAndOnDiskSameResults(true, "SELECT DISTINCT" +
+            " code, male, age, height, salary, tax, weight FROM person ORDER BY tax DESC LIMIT 700");
     }
 
 
+    /** */
+    @Test
+    public void intersectUnionAllLimitOffset() {
+        assertInMemoryAndOnDiskSameResults(false,
+            "(SELECT *FROM person WHERE depId < 10 " +
+                "INTERSECT " +
+                "SELECT * FROM person WHERE depId > 5 )" +
+                "UNION ALL " +
+                "SELECT * FROM person WHERE age > 50 ORDER BY id LIMIT 1000 OFFSET 300 ");
+    }
+
+    /** */
+    @Test
+    public void intersectUnionAllLimitOffsetLazy() {
+        assertInMemoryAndOnDiskSameResults(true,
+            "((SELECT * FROM person WHERE depId < 20 ORDER BY depId) " +
+                "INTERSECT " +
+                "SELECT * FROM person WHERE depId > 10 )" +
+                "UNION ALL " +
+                "SELECT DISTINCT * FROM person WHERE age <100  ORDER BY id LIMIT 10000 OFFSET 20 ");
+    }
+
+    /** */
+    @Test
+    public void intersectJoinAllLimitOffset() {
+        assertInMemoryAndOnDiskSameResults(false,
+            "(SELECT DISTINCT p.age FROM person p JOIN department d WHERE d.id = p.depId AND depId < 10 " +
+                "UNION " +
+                "SELECT MAX(height) FROM person WHERE depId > 5  )" +
+                "UNION ALL " +
+                "SELECT DISTINCT id FROM person WHERE age < (SELECT SUM(id) FROM department WHERE id > 3)  " +
+                "UNION " +
+                "SELECT DISTINCT salary FROM person p JOIN department d ON p.age=d.id OR p.weight < 60");
+    }
+
+    /** */
+    @Test
+    public void intersectJoinAllLimitOffsetLazy() {
+        assertInMemoryAndOnDiskSameResults(true,
+            "(SELECT DISTINCT p.age FROM person p JOIN department d WHERE d.id = p.depId AND depId < 44 " +
+                "UNION " +
+                "SELECT MAX(height) FROM person WHERE depId > 5  )" +
+                "UNION ALL " +
+                "SELECT DISTINCT id FROM person WHERE age < (SELECT SUM(id) FROM department WHERE id > 2)  " +
+                "EXCEPT " +
+                "SELECT DISTINCT salary FROM person p JOIN department d ON p.age=d.id OR p.weight > 10");
+    }
+
+    /** */
+    @Test
+    public void simpleGroupBy() {
+        assertInMemoryAndOnDiskSameResults(false,
+            "SELECT depId, COUNT(*) FROM person GROUP BY depId");
+    }
+
+    /** */
+    @Test
+    public void simpleGroupByLazy() {
+        assertInMemoryAndOnDiskSameResults(true,
+            "SELECT depId, COUNT(*), SUM(salary) FROM person GROUP BY depId");
+    }
+
+    /** */
+    private void assertInMemoryAndOnDiskSameResults(boolean lazy, String sql) {
+        WatchService watchSvc = null;
+
+        try {
+            Path workDir = getWorkDir();
+
+            if (log.isInfoEnabled())
+                log.info("workDir=" + workDir.toString());
+
+            // Run query with disk spill.
+            watchSvc = FileSystems.getDefault().newWatchService();
+
+            WatchKey watchKey = workDir.register(watchSvc, ENTRY_CREATE, ENTRY_DELETE);
+
+            long startOnDisk = System.currentTimeMillis();
+
+            List<List<?>> onDiskRes = runSql(sql, lazy, SMALL_MEM_LIMIT);
+
+            long startInMem = System.currentTimeMillis();
+
+            // Check that files have been created.
+            List<WatchEvent<?>> dirEvts = watchKey.pollEvents();
+
+            assertFalse(dirEvts.isEmpty());
+
+            if (log.isInfoEnabled())
+                log.info("Spill files events (created + deleted): " + dirEvts.size());
+
+            assertTrue(workDir.toFile().isDirectory());
+            assertEquals(0, workDir.toFile().list().length);
+
+            // Run in-memory query.
+            watchKey.reset();
+
+            List<List<?>> inMemRes = runSql(sql, lazy, HUGE_MEM_LIMIT);
+
+            long finish = System.currentTimeMillis();
+
+            assertFalse(inMemRes.isEmpty());
+
+            // Check that files haven't been created.
+            dirEvts = watchKey.pollEvents();
+
+            assertTrue(dirEvts.isEmpty());
+            assertTrue(workDir.toFile().isDirectory());
+            assertEquals(0, workDir.toFile().list().length);
+
+            if (log.isInfoEnabled())
+                log.info("with disk spill=" + (startInMem - startOnDisk) + ", inMemory time=" + (finish - startInMem));
+
+            if (!checkSortOrder) {
+                fixSortOrder(onDiskRes);
+                fixSortOrder(inMemRes);
+            }
+
+            assertEqualsCollections(inMemRes, onDiskRes);
+        }
+        catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        finally {
+            U.closeQuiet(watchSvc);
+        }
+    }
+
+    /** */
     private void populateData() {
         // Persons
         runDdlDml("CREATE TABLE person (" +
             "id BIGINT PRIMARY KEY, " +
             "name VARCHAR, " +
-            "depId INT, " +
-            "code CHAR(3))");
+            "depId SMALLINT, " +
+            "code CHAR(3)," +
+            "male BOOLEAN," +
+            "age TINYINT," +
+            "height SMALLINT," +
+            "salary INT," +
+            "tax DECIMAL(4,4)," +
+            "weight DOUBLE," +
+            "temperature REAL," +
+            "time TIME," +
+            "date DATE," +
+            "timestamp TIMESTAMP," +
+            "uuid UUID, " +
+            "nulls INT)");
 
         for (int i = 0; i < PERS_CNT; i++) {
-            runDdlDml("INSERT INTO person (id, name, depId,  code) VALUES (?, ?, ?, ?)",
-                i, "Vasya" + i, i % DEPS_CNT, "p" + i % 31);
+            runDdlDml("INSERT INTO person (" +
+                    "id, " +
+                    "name, " +
+                    "depId,  " +
+                    "code, " +
+                    "male, " +
+                    "age, " +
+                    "height, " +
+                    "salary, " +
+                    "tax, " +
+                    "weight, " +
+                    "temperature," +
+                    "time," +
+                    "date," +
+                    "timestamp," +
+                    "uuid, " +
+                    "nulls) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                i,                    // id
+                "Vasya" + i,                // name
+                i % DEPS_CNT,               // depId
+                "p" + i % 31,               // code
+                i % 2,                      // male
+                i % 100,                    // age
+                150 + (i % 50),             // height
+                50000 + i,                  // salary
+                i / 1000d,       // tax
+                50d + i % 50.0,             // weight
+                36.6,                       // temperature
+                "20:00:" + i % 60,          // time
+                "2019-04-" + (i % 29 + 1),  // date
+                "2019-04-04 04:20:08." + i % 900, // timestamp
+                "736bc956-090c-40d2-94da-916f2161cda" + i % 10, // uuid
+                null);                      // nulls
         }
 
         // Departments
@@ -249,14 +524,16 @@ public class DiskSpillingTest extends GridCommonAbstractTest {
         }
     }
 
+    /** */
     private List<List<?>> runSql(String sql, boolean lazy, long memLimit) {
         return grid(0).cache(DEFAULT_CACHE_NAME).query(new SqlFieldsQueryEx(sql, null)
             .setMaxMemory(memLimit)
             .setLazy(lazy)
-            .setLocal(true)// TODO local/not local
+            .setLocal(true)
         ).getAll();
     }
 
+    /** */
     private List<List<?>> runDdlDml(String sql, Object... args) {
         return grid(0)
             .cache(DEFAULT_CACHE_NAME)
@@ -265,9 +542,9 @@ public class DiskSpillingTest extends GridCommonAbstractTest {
             ).getAll();
     }
 
-
-    private void fixSortOrder(List<List<?>> onDiskRes) {
-        Collections.sort(onDiskRes, new Comparator<List<?>>() {
+    /** */
+    private void fixSortOrder(List<List<?>> res) {
+        Collections.sort(res, new Comparator<List<?>>() {
             @Override public int compare(List<?> l1, List<?> l2) {
                 for (int i = 0; i < l1.size(); i++) {
                     Object o1 = l1.get(i);
@@ -282,5 +559,13 @@ public class DiskSpillingTest extends GridCommonAbstractTest {
                 return 0;
             }
         });
+    }
+
+    /** */
+    private Path getWorkDir() {
+        Path workDir = Paths.get(grid(0).configuration().getWorkDirectory(), DISK_SPILL_DIR);
+
+        workDir.toFile().mkdir();
+        return workDir;
     }
 }

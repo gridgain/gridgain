@@ -29,6 +29,7 @@ import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.h2.result.ResultExternal;
+import org.h2.result.ResultInterface;
 import org.h2.store.Data;
 import org.h2.value.Value;
 import org.jetbrains.annotations.NotNull;
@@ -65,6 +66,14 @@ public abstract class AbstractExternalResult implements ResultExternal {
     /** Memory tracker. */
     protected final H2MemoryTracker memTracker;
 
+    /** Parent result. */
+    protected final AbstractExternalResult parent;
+
+    /** Child results count. Parent result is closed only when all children are closed. */
+    private int childCnt;
+
+    private boolean closed = true;
+
     /**
      * @param ctx Kernal context.
      * @param memTracker Memory tracker
@@ -84,10 +93,24 @@ public abstract class AbstractExternalResult implements ResultExternal {
             FileIOFactory fileIOFactory = ctx.query().fileIOFactory();
 
             fileIo = fileIOFactory.create(file, CREATE_NEW,  DELETE_ON_CLOSE, READ, WRITE);
+
+            parent = null;
         }
         catch (IgniteCheckedException | IOException e) {
             throw new IgniteException("Failed to create a spill file for the intermediate query results.", e);
         }
+    }
+
+    /**
+     * Used for {@link ResultInterface#createShallowCopy(org.h2.engine.SessionInterface)} only.
+     * @param parent Parent result.
+     */
+    protected AbstractExternalResult(AbstractExternalResult parent) {
+        size = parent.size;
+        file = parent.file;
+        fileIo = parent.fileIo;
+        memTracker = null;
+        this.parent = parent;
     }
 
     /**
@@ -296,10 +319,34 @@ public abstract class AbstractExternalResult implements ResultExternal {
         }
     }
 
-    /**
-     * Closes the file.
-     */
-    @Override public void close() {
+    /** */
+    protected synchronized void onChildCreated() {
+        childCnt++;
+    }
+
+    /** {@inheritDoc} */
+    @Override public synchronized void close() {
+        if (closed)
+            return;
+
+        closed = true;
+
+        if (parent == null) {
+            if (childCnt == 0)
+                onClose();
+        }
+        else
+            parent.closeChild();
+    }
+
+    /** */
+    protected synchronized void closeChild() {
+        if (--childCnt == 0 && closed)
+            close();
+    }
+
+    /** */
+    protected void onClose() {
         U.closeQuiet(fileIo);
     }
 }
