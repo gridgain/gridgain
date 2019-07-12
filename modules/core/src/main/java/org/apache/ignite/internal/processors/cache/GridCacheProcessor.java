@@ -4041,9 +4041,10 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     ) {
         assert cacheName != null;
 
-        if (checkThreadTx)
+        if (checkThreadTx) {
             checkEmptyTransactionsEx(() -> String.format(CACHE_NAME_AND_OPERATION_FORMAT, cacheName,
                 "dynamicStartCache"));
+        }
 
         GridPlainClosure<Collection<byte[]>, IgniteInternalFuture<Boolean>> startCacheClsr = (grpKeys) -> {
             assert ccfg == null || !ccfg.isEncryptionEnabled() || !grpKeys.isEmpty();
@@ -4192,7 +4193,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         boolean disabledAfterStart,
         IgniteUuid restartId
     ) {
-        if (checkThreadTx)
+        if (checkThreadTx) {
             checkEmptyTransactionsEx(() -> {
                 List<String> cacheNames = storedCacheDataList.stream()
                     .map(StoredCacheData::config)
@@ -4201,6 +4202,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
                 return String.format(CACHE_NAMES_AND_OPERATION_FORMAT, cacheNames, "dynamicStartCachesByStoredConf");
             });
+        }
 
         GridPlainClosure<Collection<byte[]>, IgniteInternalFuture<Boolean>> startCacheClsr = (grpKeys) -> {
             List<DynamicCacheChangeRequest> srvReqs = null;
@@ -4302,9 +4304,10 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     ) {
         assert cacheName != null;
 
-        if (checkThreadTx)
+        if (checkThreadTx) {
             checkEmptyTransactionsEx(() -> String.format(CACHE_NAME_AND_OPERATION_FORMAT, cacheName,
                 "dynamicDestroyCache"));
+        }
 
         DynamicCacheChangeRequest req = DynamicCacheChangeRequest.stopRequest(ctx, cacheName, sql, true);
 
@@ -4336,9 +4339,10 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         boolean checkThreadTx,
         boolean destroy
     ) {
-        if (checkThreadTx)
+        if (checkThreadTx) {
             checkEmptyTransactionsEx(() -> String.format(CACHE_NAMES_AND_OPERATION_FORMAT, cacheNames,
                 "dynamicDestroyCaches"));
+        }
 
         List<DynamicCacheChangeRequest> reqs = new ArrayList<>(cacheNames.size());
 
