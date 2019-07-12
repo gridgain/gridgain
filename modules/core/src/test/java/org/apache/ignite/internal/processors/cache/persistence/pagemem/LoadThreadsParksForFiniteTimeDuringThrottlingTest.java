@@ -39,7 +39,6 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.pagemem.PageMemory;
-import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIODecorator;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
@@ -93,7 +92,6 @@ public class LoadThreadsParksForFiniteTimeDuringThrottlingTest extends GridCommo
                     .setMaxSize(MAX_DATA_REGION_SIZE)
                     .setName(DFLT_DATA_REGION_NAME)
                     .setPersistenceEnabled(true)
-                    .setMetricsEnabled(true)
                 )
             );
     }
@@ -176,9 +174,7 @@ public class LoadThreadsParksForFiniteTimeDuringThrottlingTest extends GridCommo
             for (int i = 0; i < numOfLoops; i++) {
                 int count = pm.checkpointBufferPagesCount();
 
-                DataRegionMetricsImpl metrics = crd.context().cache().context().database().dataRegion(DFLT_DATA_REGION_NAME).memoryMetrics();
-
-                log.info("GG-21123 limit: " + limit + " pages in cp buffer: " + count + " dirty pages: " + metrics.getDirtyPages() + "" + (metrics.getDirtyPages() * 100f / metrics.getTotalAllocatedPages()) + "%");
+                log.info("GG-21123 limit: " + limit + " pages in cp buffer: " + count);
 
                 if (count > limit) {
                     log.info("Throttling enabled!");
