@@ -911,6 +911,7 @@ public final class IgniteSystemProperties {
 
     /**
      * Property for setup threshold wait time next wal segment.
+     * If exceeded, need print warning message in to log.
      * Default value is 1000 milliseconds
      */
     public static final String IGNITE_THRESHOLD_WAIT_TIME_NEXT_WAL_SEGMENT = "IGNITE_THRESHOLD_WAIT_TIME_NEXT_WAL_SEGMENT";
