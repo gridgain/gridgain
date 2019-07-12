@@ -1633,8 +1633,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                     else {
                         checkpointLock.readLock().unlock();
 
-                        log.info("GG-21123 wakeupForCheckpoint");
-
                         if (timeout > 0 && U.currentTimeMillis() - start >= timeout)
                             failCheckpointReadLock();
 
