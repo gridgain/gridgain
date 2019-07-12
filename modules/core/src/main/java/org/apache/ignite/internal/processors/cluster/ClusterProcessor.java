@@ -26,7 +26,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
@@ -48,6 +47,7 @@ import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.discovery.IgniteClusterNode;
+import org.apache.ignite.internal.managers.eventstorage.DiscoveryEventListener;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
@@ -62,19 +62,16 @@ import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.future.IgniteFinishedFutureImpl;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.CI1;
-import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgniteFuture;
-import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.marshaller.jdk.JdkMarshaller;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag.GridDiscoveryData;
 import org.apache.ignite.spi.discovery.DiscoveryMetricsProvider;
-import org.apache.ignite.spi.discovery.DiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.jetbrains.annotations.Nullable;
 
@@ -153,6 +150,44 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     private volatile boolean compatibilityMode;
 
     /**
+     * Listener for LEFT and FAILED events intended to catch the moment when all nodes in topology support ID and tag.
+     */
+    private final DiscoveryEventListener discoLsnr = new DiscoveryEventListener() {
+        @Override public void onEvent(DiscoveryEvent evt, DiscoCache discoCache) {
+            if (!compatibilityMode)
+                return;
+
+            if (IgniteFeatures.allNodesSupports(ctx, discoCache.remoteNodes(), IgniteFeatures.CLUSTER_ID_AND_TAG)) {
+                compatibilityMode = false;
+
+                ClusterNode crd = discoCache.serverNodes().get(0);
+
+                //only coordinator initializes ID and tag
+                if (ctx.discovery().localNode().id().equals(crd.id())) {
+                    localClusterId = localClusterId == null ? UUID.randomUUID() : localClusterId;
+
+                    localClusterTag = localClusterTag == null ? ClusterTagGenerator.generateTag() : localClusterTag;
+
+                    try {
+                        metastorage.writeAsync(CLUSTER_ID, localClusterId);
+
+                        metastorage.writeAsync(CLUSTER_TAG, localClusterTag);
+                    }
+                    catch (IgniteCheckedException e) {
+                        ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
+                    }
+
+                    cluster.setId(localClusterId);
+
+                    cluster.setTag(localClusterTag);
+                }
+
+                ctx.event().removeDiscoveryEventListener(discoLsnr);
+            }
+        }
+    };
+
+    /**
      * @param ctx Kernal context.
      */
     public ClusterProcessor(GridKernalContext ctx) {
@@ -215,8 +250,17 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
             }
         );
 
-        if (!compatibilityMode)
+        if (compatibilityMode) {
+            //in compatibility mode ID will be stored to metastorage on coordinator instead of receiving it on join
+            metastorage.listen(
+                (k) -> k.equals(CLUSTER_ID),
+                (String k, Serializable oldVal, Serializable newVal) -> {
+                    cluster.setId((UUID)newVal);
+                }
+            );
+
             return;
+        }
 
         try {
             metastorage.writeAsync(CLUSTER_ID, cluster.id());
@@ -432,7 +476,8 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     @Override public void collectGridNodeData(DiscoveryDataBag dataBag) {
         dataBag.addNodeSpecificData(CLUSTER_PROC.ordinal(), getDiscoveryData());
 
-        dataBag.addGridCommonData(CLUSTER_PROC.ordinal(), new DiscoCommonData(cluster.id(), cluster.tag()));
+        if (!compatibilityMode)
+            dataBag.addGridCommonData(CLUSTER_PROC.ordinal(), new DiscoCommonData(cluster.id(), cluster.tag()));
     }
 
     /**
@@ -479,8 +524,11 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
             if (remoteClusterTag != null)
                 localClusterTag = remoteClusterTag;
         }
-        else
+        else {
             compatibilityMode = true;
+
+            ctx.event().addDiscoveryEventListener(discoLsnr, EVT_NODE_LEFT, EVT_NODE_FAILED);
+        }
     }
 
     /**
@@ -527,36 +575,6 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
             ctx.timeout().addTimeoutObject(new MetricsUpdateTimeoutObject(updateFreq));
         }
-
-        ctx.event().addLocalEventListener((evt) -> {
-                if (!compatibilityMode)
-                    return;
-
-                Collection<ClusterNode> nodes = ctx.discovery().getInjectedDiscoverySpi().getRemoteNodes()
-                    .stream().filter((n) -> !n.isClient()).collect(Collectors.toList());
-
-                if (IgniteFeatures.allNodesSupports(ctx, nodes, IgniteFeatures.CLUSTER_ID_AND_TAG)) {
-                    compatibilityMode = false;
-
-                    localClusterId = localClusterId == null ? UUID.randomUUID() : localClusterId;
-
-                    localClusterTag = localClusterTag == null ? ClusterTagGenerator.generateTag() : localClusterTag;
-
-                    try {
-                        metastorage.writeAsync(CLUSTER_ID, localClusterId);
-
-                        metastorage.writeAsync(CLUSTER_TAG, localClusterTag);
-                    }
-                    catch (IgniteCheckedException e) {
-                        ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
-                    }
-
-                    cluster.setId(localClusterId);
-
-                    cluster.setTag(localClusterTag);
-                }
-            }
-            , EVT_NODE_LEFT, EVT_NODE_FAILED);
     }
 
     /** {@inheritDoc} */
