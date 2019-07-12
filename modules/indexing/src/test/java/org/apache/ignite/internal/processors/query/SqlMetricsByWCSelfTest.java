@@ -30,9 +30,9 @@ import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonT
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
 import org.apache.ignite.internal.visor.query.VisorQueryDetailMetrics;
-import org.apache.ignite.internal.visor.query.VisorQueryDetailMetricsCollectorTask;
 import org.apache.ignite.internal.visor.query.VisorQueryDetailMetricsCollectorTaskArg;
-import org.apache.ignite.internal.visor.query.VisorQueryResetDetailMetricsTask;
+import org.apache.ignite.internal.visor.query.VisorQueryDetailMetricsHistoryCollectorTask;
+import org.apache.ignite.internal.visor.query.VisorQueryResetDetailMetricsHistoryTask;
 import org.junit.Test;
 
 /**
@@ -112,7 +112,7 @@ public class SqlMetricsByWCSelfTest extends AbstractIndexingCommonTest {
 
         // Collect query metrics.
         Collection<VisorQueryDetailMetrics> res = ignite.compute().execute(
-            VisorQueryDetailMetricsCollectorTask.class,
+            VisorQueryDetailMetricsHistoryCollectorTask.class,
             new VisorTaskArgument<>(
                 ignite.localNode().id(),
                 new VisorQueryDetailMetricsCollectorTaskArg(-1),
@@ -132,13 +132,13 @@ public class SqlMetricsByWCSelfTest extends AbstractIndexingCommonTest {
 
         // Clear query metrics.
         ignite.compute().execute(
-            VisorQueryResetDetailMetricsTask.class,
+            VisorQueryResetDetailMetricsHistoryTask.class,
             new VisorTaskArgument<>(ignite.localNode().id(), null, false)
         );
 
         // Collect query metrics after clean.
         res = ignite.compute().execute(
-            VisorQueryDetailMetricsCollectorTask.class,
+            VisorQueryDetailMetricsHistoryCollectorTask.class,
             new VisorTaskArgument<>(
                 ignite.localNode().id(),
                 new VisorQueryDetailMetricsCollectorTaskArg(-1),
