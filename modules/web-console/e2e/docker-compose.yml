@@ -24,9 +24,9 @@ services:
       - SPRING_PROFILES_ACTIVE=test
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/swagger-ui.html"]
-      interval: 5s # interval health check
+      interval: 6s # interval health check
       timeout: 2s # timeout for check
-      retries: 10 # maximum retries
+      retries: 30 # maximum retries
 
   frontend:
     build:
@@ -43,4 +43,5 @@ services:
       - REPORTER=teamcity
       - QUARANTINE_MODE=true
     depends_on:
+      - backend
       - frontend
