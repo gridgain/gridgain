@@ -178,7 +178,7 @@ public class LoadThreadsParksForFiniteTimeDuringThrottlingTest extends GridCommo
 
                 DataRegionMetricsImpl metrics = crd.context().cache().context().database().dataRegion(DFLT_DATA_REGION_NAME).memoryMetrics();
 
-                log.info("GG-21123 limit: " + limit + " pages in cp buffer: " + count + " dirty pages: " + metrics.getDirtyPages() + "" + (metrics.getDirtyPages() * 100f / metrics.getTotalAllocatedPages()) + "%");
+                log.info("GG-21123 limit: " + limit + " pages in cp buffer: " + count + " dirty pages: " + metrics.getDirtyPages() + " " + (metrics.getDirtyPages() * 100f / metrics.getTotalAllocatedPages()) + "%");
 
                 if (count > limit) {
                     log.info("Throttling enabled!");
