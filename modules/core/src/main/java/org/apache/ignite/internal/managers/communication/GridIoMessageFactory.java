@@ -1072,13 +1072,13 @@ public class GridIoMessageFactory implements MessageFactory {
 
                 break;
 
-            case SerializedSpanMessage.TYPE_CODE:
-                msg = new SerializedSpanMessage();
+            case GridIoSecurityAwareMessage.TYPE_CODE:
+                msg = new GridIoSecurityAwareMessage();
 
                 break;
 
-            case GridIoSecurityAwareMessage.TYPE_CODE:
-                msg = new GridIoSecurityAwareMessage();
+            case SerializedSpanMessage.TYPE_CODE:
+                msg = new SerializedSpanMessage();
 
                 break;
 

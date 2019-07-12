@@ -28,7 +28,7 @@ import org.apache.ignite.plugin.extensions.communication.MessageWriter;
  */
 public class SerializedSpanMessage implements Message {
     /** */
-    public static final short TYPE_CODE = 174;
+    public static final short TYPE_CODE = 175;
 
     /** */
     private byte[] serializedSpanBytes;

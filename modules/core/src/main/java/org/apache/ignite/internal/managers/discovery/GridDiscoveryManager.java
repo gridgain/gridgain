@@ -700,7 +700,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                                 nextTopVer,
                                 ctx.state().clusterState(),
                                 locNode,
-                                topSnapshot
+                                notification.getTopSnapshot()
                             );
 
                             discoCacheHist.put(nextTopVer, discoCache);
