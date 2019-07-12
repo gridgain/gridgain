@@ -170,11 +170,7 @@ public class LoadThreadsParksForFiniteTimeDuringThrottlingTest extends GridCommo
             final double limit = (0.67 * Math.ceil((CP_BUFFER_SIZE + 0.) / pm.pageSize()));
 
             for (int i = 0; i < numOfLoops; i++) {
-                int count = pm.checkpointBufferPagesCount();
-
-                log.info("GG-21123 limit: " + limit + " pages in cp buffer: " + count);
-
-                if (count > limit) {
+                if (pm.checkpointBufferPagesCount() > limit) {
                     log.info("Throttling enabled!");
 
                     throttlingEnabled.set(true);
