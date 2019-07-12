@@ -74,10 +74,8 @@ public class LocalModelStorageProvider implements ModelStorageProvider {
             // At this point we already replaced all keys we wanted to replace, so all empty references could be safely
             // deleted.
             while ((ref = (WeakReferenceWithCleanUp)refQueue.poll()) != null) {
-                String keyToBeRmv = ref.key;
                 // We double check that we don't replaced the key value already.
-                if (locks.containsKey(keyToBeRmv) && locks.get(keyToBeRmv).get() == null)
-                    locks.remove(keyToBeRmv);
+                locks.remove(ref.key, ref);
             }
         }
     }
