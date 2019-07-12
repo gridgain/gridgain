@@ -28,9 +28,11 @@ import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.CheckpointWriteOrder;
 import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.marshaller.optimized.OptimizedMarshaller;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
+import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.rest.GridRestCommand;
 import org.apache.ignite.internal.util.GridLogThrottle;
 import org.apache.ignite.stream.StreamTransformer;
@@ -291,7 +293,10 @@ public final class IgniteSystemProperties {
      * System property to override default job metrics processor property defining
      * concurrency level for structure holding job metrics snapshots.
      * Default value is {@code 64}.
+     *
+     * @deprecated Use {@link GridMetricManager} instead.
      */
+    @Deprecated
     public static final String IGNITE_JOBS_METRICS_CONCURRENCY_LEVEL = "IGNITE_JOBS_METRICS_CONCURRENCY_LEVEL";
 
     /**
@@ -1036,9 +1041,11 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_WAIT_SCHEMA_UPDATE = "IGNITE_WAIT_SCHEMA_UPDATE";
 
     /**
-     * System property to override {@link CacheConfiguration#rebalanceThrottle} configuration property for all caches.
+     * System property to override {@link CacheConfiguration#getRebalanceThrottle} configuration property for all caches.
      * {@code 0} by default, which means that override is disabled.
+     * @deprecated Use {@link IgniteConfiguration#getRebalanceThrottle()} instead.
      */
+    @Deprecated
     public static final String IGNITE_REBALANCE_THROTTLE_OVERRIDE = "IGNITE_REBALANCE_THROTTLE_OVERRIDE";
 
     /**
@@ -1146,6 +1153,13 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_DIAGNOSTIC_WARN_LIMIT = "IGNITE_DIAGNOSTIC_WARN_LIMIT";
 
     /**
+     * Flag to enable triggering failure handler for node if unrecoverable partition inconsistency is
+     * discovered during partition update counters exchange.
+     */
+    public static final String IGNITE_FAIL_NODE_ON_UNRECOVERABLE_PARTITION_INCONSISTENCY =
+        "IGNITE_FAIL_NODE_ON_UNRECOVERABLE_PARTITION_INCONSISTENCY";
+
+    /**
      * Allow use composite _key, _val columns at the INSERT/UPDATE/MERGE statements.
      */
     public static final String IGNITE_SQL_ALLOW_KEY_VAL_UPDATES = "IGNITE_SQL_ALLOW_KEY_VAL_UPDATES";
@@ -1177,6 +1191,98 @@ public final class IgniteSystemProperties {
      * owner thread.
      */
     public static final String IGNITE_TX_OWNER_DUMP_REQUESTS_ALLOWED = "IGNITE_TX_OWNER_DUMP_REQUESTS_ALLOWED";
+
+    /**
+     * Defines factory class for H2 LocalResult (see org.h2.result.LocalResult).
+     */
+    public static final String IGNITE_H2_LOCAL_RESULT_FACTORY = "IGNITE_H2_LOCAL_RESULT_FACTORY";
+
+    /**
+     * Defines default memory limit for every single sql query (query quota).
+     * Note: Negative value disables memory tracking (for both: query and global quotas) for query by default.
+     *
+     * Default: MaxHeapSize/AvailableCPUs.
+     */
+    public static final String IGNITE_DEFAULT_SQL_QUERY_MEMORY_LIMIT = "IGNITE_DEFAULT_SQL_QUERY_MEMORY_LIMIT";
+
+    /**
+     * Defines memory pool size available for sql queries on node (global quota).
+     * Note: Negative value disables global memory quota for SQL, but it doesn't affects query quota.
+     *
+     * Default: 60% MaxHeapSize.
+     */
+
+    public static final String IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE = "IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE";
+
+    /**
+     * Defines default memory reservation block size.
+     *
+     * Default: 512K.
+     */
+    public static final String IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE = "IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE";
+
+    /**
+     * Page lock tracker type.
+     * -1 - Disable lock tracking.
+     *  1 - HEAP_STACK
+     *  2 - HEAP_LOG
+     *  3 - OFF_HEAP_STACK
+     *  4 - OFF_HEAP_LOG
+     *
+     * Default is 2 - HEAP_LOG.
+     */
+    public static final String IGNITE_PAGE_LOCK_TRACKER_TYPE = "IGNITE_PAGE_LOCK_TRACKER_TYPE";
+
+    /**
+     * Capacity in pages for storing in page lock tracker strucuture.
+     *
+     * Default is 512 pages.
+     */
+    public static final String IGNITE_PAGE_LOCK_TRACKER_CAPACITY = "IGNITE_PAGE_LOCK_TRACKER_CAPACITY";
+
+    /**
+     * Page lock tracker thread for checking hangs threads interval.
+     *
+     * Default is 60_000 ms.
+     */
+    public static final String IGNITE_PAGE_LOCK_TRACKER_CHECK_INTERVAL = "IGNITE_PAGE_LOCK_TRACKER_CHECK_INTERVAL";
+
+    /**
+     * Enables threads locks dumping on critical node failure.
+     *
+     * Default is {@code true}.
+     */
+    public static final String IGNITE_DUMP_PAGE_LOCK_ON_FAILURE = "IGNITE_DUMP_PAGE_LOCK_ON_FAILURE";
+
+    /**
+     * Scan the classpath on startup and log all the files containing in it.
+     */
+    public static final String IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP = "IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP";
+
+    /**
+     * Maximum size of table (rows count) when temporary hash index can be built on fly.
+     *
+     * Default: 100_000 (rows).
+     */
+    public static final String IGNITE_HASH_JOIN_MAX_TABLE_SIZE = "IGNITE_HASH_JOIN_MAX_TABLE_SIZE";
+
+    /**
+     * Enable hash join (create hash index on the fly) for query optimizer.
+     * When disabled hash join may be enabled only by index hint.
+     * e.g.: SELECT * from A, B USE INDEX (HASH_JOIN_IDX) WHERE A.jid = B.jid
+     * hash index will be created for B.jid on the fly.
+     *
+     * Default: false.
+     */
+    public static final String IGNITE_ENABLE_HASH_JOIN = "IGNITE_ENABLE_HASH_JOIN";
+
+    /**
+     * Index rebuilding parallelism level. If specified, sets the count of threads that are used for index rebuilding
+     * and can only be greater than <code>0</code>, otherwise default value will be used. Maximum count of threads
+     * can't be greater than total available processors count.
+     * Default value is minimum of <code>4</code> and processors count / 4, but always greater than <code>0</code>.
+     */
+    public static final String INDEX_REBUILDING_PARALLELISM = "INDEX_REBUILDING_PARALLELISM";
 
     /**
      * Enforces singleton.
@@ -1277,7 +1383,7 @@ public final class IgniteSystemProperties {
     public static boolean getBoolean(String name, boolean dflt) {
         String val = getString(name);
 
-        return val == null ? dflt : Boolean.valueOf(val);
+        return val == null ? dflt : Boolean.parseBoolean(val);
     }
 
     /**

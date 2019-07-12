@@ -26,17 +26,18 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
-import java.util.stream.Collectors;
 import com.beust.jcommander.Parameter;
 import org.apache.ignite.internal.util.typedef.F;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.apache.ignite.console.agent.AgentUtils.secured;
+import static org.apache.ignite.console.agent.AgentUtils.trim;
 
 /**
  * Agent configuration.
  */
 public class AgentConfiguration {
-    /** Default path to agent property file. */
+    /** Default path to properties file. */
     public static final String DFLT_CFG_PATH = "default.properties";
 
     /** Default server URI. */
@@ -52,7 +53,7 @@ public class AgentConfiguration {
 
     /** */
     @Parameter(names = {"-s", "--server-uri"},
-        description = "URI for connect to Ignite Console via web-socket protocol" +
+        description = "URI of Ignite Console server" +
             "           " +
             "      Default value: " + DFLT_SERVER_URI)
     private String srvUri;
@@ -78,7 +79,7 @@ public class AgentConfiguration {
     private String demoNodeUri;
 
     /** */
-    @Parameter(names = {"-c", "--config"}, description = "Path to agent property file" +
+    @Parameter(names = {"-c", "--config"}, description = "Path to properties file" +
         "                                  " +
         "      Default value: " + DFLT_CFG_PATH)
     private String cfgPath;
@@ -93,7 +94,7 @@ public class AgentConfiguration {
     @Parameter(names = {"-dd", "--disable-demo"}, description = "Disable demo mode on this agent " +
         "                             " +
         "      Default value: false")
-    private Boolean disableDemo;
+    private boolean disableDemo;
 
     /** */
     @Parameter(names = {"-nks", "--node-key-store"},
@@ -142,7 +143,7 @@ public class AgentConfiguration {
 
     /** */
     @Parameter(names = {"-h", "--help"}, help = true, description = "Print this help message")
-    private Boolean help;
+    private boolean help;
 
     /**
      * @return Tokens.
@@ -153,9 +154,12 @@ public class AgentConfiguration {
 
     /**
      * @param tokens Tokens.
+     * @return {@code this} for chaining.
      */
-    public void tokens(List<String> tokens) {
+    public AgentConfiguration tokens(List<String> tokens) {
         this.tokens = tokens;
+
+        return this;
     }
 
     /**
@@ -167,9 +171,12 @@ public class AgentConfiguration {
 
     /**
      * @param srvUri URI.
+     * @return {@code this} for chaining.
      */
-    public void serverUri(String srvUri) {
+    public AgentConfiguration serverUri(String srvUri) {
         this.srvUri = srvUri;
+
+        return this;
     }
 
     /**
@@ -181,9 +188,12 @@ public class AgentConfiguration {
 
     /**
      * @param nodeURIs Node URIs.
+     * @return {@code this} for chaining.
      */
-    public void nodeURIs(List<String> nodeURIs) {
+    public AgentConfiguration nodeURIs(List<String> nodeURIs) {
         this.nodeURIs = nodeURIs;
+
+        return this;
     }
 
     /**
@@ -195,9 +205,12 @@ public class AgentConfiguration {
 
     /**
      * @param nodeLogin User name for agent to authenticate on node.
+     * @return {@code this} for chaining.
      */
-    public void nodeLogin(String nodeLogin) {
+    public AgentConfiguration nodeLogin(String nodeLogin) {
         this.nodeLogin = nodeLogin;
+
+        return this;
     }
 
     /**
@@ -209,9 +222,12 @@ public class AgentConfiguration {
 
     /**
      * @param nodePwd Agent password to authenticate on node.
+     * @return {@code this} for chaining.
      */
-    public void nodePassword(String nodePwd) {
+    public AgentConfiguration nodePassword(String nodePwd) {
         this.nodePwd = nodePwd;
+
+        return this;
     }
 
     /**
@@ -223,9 +239,12 @@ public class AgentConfiguration {
 
     /**
      * @param demoNodeUri Demo node URI.
+     * @return {@code this} for chaining.
      */
-    public void demoNodeUri(String demoNodeUri) {
+    public AgentConfiguration demoNodeUri(String demoNodeUri) {
         this.demoNodeUri = demoNodeUri;
+
+        return this;
     }
 
     /**
@@ -244,23 +263,29 @@ public class AgentConfiguration {
 
     /**
      * @param driversFolder Driver folder.
+     * @return {@code this} for chaining.
      */
-    public void driversFolder(String driversFolder) {
+    public AgentConfiguration driversFolder(String driversFolder) {
         this.driversFolder = driversFolder;
+
+        return this;
     }
 
     /**
      * @return Disable demo mode.
      */
-    public Boolean disableDemo() {
-        return disableDemo != null ? disableDemo : Boolean.FALSE;
+    public boolean disableDemo() {
+        return disableDemo;
     }
 
     /**
      * @param disableDemo Disable demo mode.
+     * @return {@code this} for chaining.
      */
-    public void disableDemo(Boolean disableDemo) {
+    public AgentConfiguration disableDemo(boolean disableDemo) {
         this.disableDemo = disableDemo;
+
+        return this;
     }
 
     /**
@@ -272,9 +297,12 @@ public class AgentConfiguration {
 
     /**
      * @param nodeKeyStore Path to node key store.
+     * @return {@code this} for chaining.
      */
-    public void nodeKeyStore(String nodeKeyStore) {
+    public AgentConfiguration nodeKeyStore(String nodeKeyStore) {
         this.nodeKeyStore = nodeKeyStore;
+
+        return this;
     }
 
     /**
@@ -286,9 +314,12 @@ public class AgentConfiguration {
 
     /**
      * @param nodeKeyStorePass Node key store password.
+     * @return {@code this} for chaining.
      */
-    public void nodeKeyStorePassword(String nodeKeyStorePass) {
+    public AgentConfiguration nodeKeyStorePassword(String nodeKeyStorePass) {
         this.nodeKeyStorePass = nodeKeyStorePass;
+
+        return this;
     }
 
     /**
@@ -300,9 +331,12 @@ public class AgentConfiguration {
 
     /**
      * @param nodeTrustStore Path to node trust store.
+     * @return {@code this} for chaining.
      */
-    public void nodeTrustStore(String nodeTrustStore) {
+    public AgentConfiguration nodeTrustStore(String nodeTrustStore) {
         this.nodeTrustStore = nodeTrustStore;
+
+        return this;
     }
 
     /**
@@ -314,9 +348,12 @@ public class AgentConfiguration {
 
     /**
      * @param nodeTrustStorePass Node trust store password.
+     * @return {@code this} for chaining.
      */
-    public void nodeTrustStorePassword(String nodeTrustStorePass) {
+    public AgentConfiguration nodeTrustStorePassword(String nodeTrustStorePass) {
         this.nodeTrustStorePass = nodeTrustStorePass;
+
+        return this;
     }
 
     /**
@@ -328,9 +365,12 @@ public class AgentConfiguration {
 
     /**
      * @param srvKeyStore Path to server key store.
+     * @return {@code this} for chaining.
      */
-    public void serverKeyStore(String srvKeyStore) {
+    public AgentConfiguration serverKeyStore(String srvKeyStore) {
         this.srvKeyStore = srvKeyStore;
+
+        return this;
     }
 
     /**
@@ -342,9 +382,12 @@ public class AgentConfiguration {
 
     /**
      * @param srvKeyStorePass Server key store password.
+     * @return {@code this} for chaining.
      */
-    public void serverKeyStorePassword(String srvKeyStorePass) {
+    public AgentConfiguration serverKeyStorePassword(String srvKeyStorePass) {
         this.srvKeyStorePass = srvKeyStorePass;
+
+        return this;
     }
 
     /**
@@ -356,9 +399,12 @@ public class AgentConfiguration {
 
     /**
      * @param srvTrustStore Path to server trust store.
+     * @return {@code this} for chaining.
      */
-    public void serverTrustStore(String srvTrustStore) {
+    public AgentConfiguration serverTrustStore(String srvTrustStore) {
         this.srvTrustStore = srvTrustStore;
+
+        return this;
     }
 
     /**
@@ -370,9 +416,12 @@ public class AgentConfiguration {
 
     /**
      * @param srvTrustStorePass Server trust store password.
+     * @return {@code this} for chaining.
      */
-    public void serverTrustStorePassword(String srvTrustStorePass) {
+    public AgentConfiguration serverTrustStorePassword(String srvTrustStorePass) {
         this.srvTrustStorePass = srvTrustStorePass;
+
+        return this;
     }
 
     /**
@@ -384,16 +433,19 @@ public class AgentConfiguration {
 
     /**
      * @param cipherSuites SSL cipher suites.
+     * @return {@code this} for chaining.
      */
-    public void cipherSuites(List<String> cipherSuites) {
+    public AgentConfiguration cipherSuites(List<String> cipherSuites) {
         this.cipherSuites = cipherSuites;
+
+        return this;
     }
 
     /**
      * @return {@code true} If agent options usage should be printed.
      */
-    public Boolean help() {
-        return help != null ? help : Boolean.FALSE;
+    public boolean help() {
+        return help;
     }
 
     /**
@@ -418,7 +470,7 @@ public class AgentConfiguration {
 
         val = props.getProperty("node-uri");
 
-        // Intentionaly wrapped by ArrayList, for further maniulations.
+        // Intentionally wrapped by ArrayList, for further manipulations.
         if (val != null)
             nodeURIs(new ArrayList<>(Arrays.asList(val.split(","))));
 
@@ -511,8 +563,7 @@ public class AgentConfiguration {
         if (driversFolder == null)
             driversFolder(cfg.driversFolder());
 
-        if (disableDemo == null)
-            disableDemo(cfg.disableDemo());
+        disableDemo(disableDemo || cfg.disableDemo());
 
         if (nodeKeyStore == null)
             nodeKeyStore(cfg.nodeKeyStore());
@@ -540,18 +591,12 @@ public class AgentConfiguration {
 
         if (cipherSuites == null)
             cipherSuites(cfg.cipherSuites());
+
+        tokens = trim(tokens);
+        nodeURIs = trim(nodeURIs);
+        cipherSuites = trim(cipherSuites);
     }
 
-    /**
-     * @param s String with sensitive data.
-     * @return Secured string.
-     */
-    private String secured(String s) {
-        int len = s.length();
-        int toShow = len > 4 ? 4 : 1;
-
-        return new String(new char[len - toShow]).replace('\0', '*') + s.substring(len - toShow, len);
-    }
 
     /** {@inheritDoc} */
     @Override public String toString() {
@@ -562,7 +607,7 @@ public class AgentConfiguration {
         if (!F.isEmpty(tokens)) {
             sb.append("User's security tokens          : ");
 
-            sb.append(tokens.stream().map(this::secured).collect(Collectors.joining(", "))).append(nl);
+            sb.append(secured(tokens)).append(nl);
         }
 
         sb.append("URI to Ignite node REST server  : ")
@@ -572,7 +617,7 @@ public class AgentConfiguration {
             sb.append("Login to Ignite node REST server: ").append(nodeLogin).append(nl);
 
         sb.append("URI to Ignite Console server    : ").append(srvUri == null ? DFLT_SERVER_URI : srvUri).append(nl);
-        sb.append("Path to agent property file     : ").append(configPath()).append(nl);
+        sb.append("Path to properties file         : ").append(configPath()).append(nl);
 
         String drvFld = driversFolder();
 

@@ -17,7 +17,7 @@
 import {StateService} from '@uirouter/angularjs';
 import MessagesFactory from '../../services/Messages.service';
 import {service as GettingsStartedFactory} from '../../modules/getting-started/GettingStarted.provider';
-import UserServiceFactory from './User.service';
+import {UserService} from './User.service';
 
 type SignupUserInfo = {
     email: string,
@@ -28,28 +28,34 @@ type SignupUserInfo = {
     country: string,
 };
 
+type SigninUserInfo = {
+    email: string,
+    password: string,
+    activationToken?: string
+};
+
 type AuthActions = 'signin' | 'signup' | 'password/forgot';
-type AuthOptions = {email:string, password:string, activationToken?: string}|SignupUserInfo|{email:string};
+
+type AuthOptions = SigninUserInfo|SignupUserInfo|{email:string};
 
 export default class AuthService {
-    static $inject = ['$http', '$rootScope', '$state', '$window', 'IgniteMessages', 'gettingStarted', 'User'];
+    static $inject = ['$http', '$state', '$window', 'IgniteMessages', 'gettingStarted', 'User'];
 
     constructor(
         private $http: ng.IHttpService,
-        private $root: ng.IRootScopeService,
         private $state: StateService,
         private $window: ng.IWindowService,
         private Messages: ReturnType<typeof MessagesFactory>,
         private gettingStarted: ReturnType<typeof GettingsStartedFactory>,
-        private User: ReturnType<typeof UserServiceFactory>
+        private User: UserService
     ) {}
 
     signup(userInfo: SignupUserInfo, loginAfterSignup: boolean = true) {
         return this._auth('signup', userInfo, loginAfterSignup);
     }
 
-    signin(email: string, password: string, activationToken?: string) {
-        return this._auth('signin', {email, password, activationToken});
+    signin(signinInfo: SigninUserInfo) {
+        return this._auth('signin', signinInfo);
     }
 
     remindPassword(email: string) {
@@ -60,36 +66,34 @@ export default class AuthService {
     /**
      * Performs the REST API call.
      */
-    private _auth(action: AuthActions, userInfo: AuthOptions, loginAfterwards: boolean = true) {
+    private _auth(action: AuthActions, userInfo: AuthOptions) {
         return this.$http.post('/api/v1/' + action, userInfo)
             .then(() => {
                 if (action === 'password/forgot')
                     return;
 
-                this.User.read()
+                return this.User.read()
                     .then((user) => {
-                        if (loginAfterwards) {
-                            this.$root.$broadcast('user', user);
-                            this.$state.go('default-state');
-                            this.$root.gettingStarted.tryShow();
-                        } else
-                            this.$root.$broadcast('userCreated');
+                        this.User.current$.next(user);
+                        this.$state.go('default-state');
+                        this.gettingStarted.tryShow();
                     });
             });
     }
+
     logout() {
         return this.$http.post('/api/v1/logout')
-            .then(() => {
+            .catch((e) => this.Messages.showError(e))
+            .finally(() => {
                 this.User.clean();
 
                 this.$window.open(this.$state.href('signin'), '_self');
-            })
-            .catch((e) => this.Messages.showError(e));
+            });
     }
 
     async resendSignupConfirmation(email: string) {
         try {
-            return await this.$http.post('/api/v1/activation/resend/', {email});
+            return await this.$http.post('/api/v1/activation/resend', {email});
         }
         catch (err) {
             throw err.data;

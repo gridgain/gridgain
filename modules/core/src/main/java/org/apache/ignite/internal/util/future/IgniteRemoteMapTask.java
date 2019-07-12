@@ -20,7 +20,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCompute;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeJob;
@@ -35,6 +34,7 @@ import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.JobContextResource;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -60,7 +60,7 @@ import org.jetbrains.annotations.Nullable;
     }
 
     /** {@inheritDoc} */
-    @Nullable @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
+    @NotNull @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
         @Nullable T arg) throws IgniteException {
 
         for (ClusterNode node : subgrid) {
@@ -114,28 +114,20 @@ import org.jetbrains.annotations.Nullable;
         /** {@inheritDoc} */
         @Override public Object execute() throws IgniteException {
             if (future == null) {
-                IgniteCompute compute = ignite.compute().withAsync();
-
-                compute.execute(remoteTask, arg);
-
-                ComputeTaskFuture<R> future = compute.future();
-
-                this.future = future;
+                future = ignite.compute().executeAsync(remoteTask, arg);
 
                 jobCtx.holdcc();
 
                 future.listen(new IgniteInClosure<IgniteFuture<R>>() {
-                    @Override public void apply(IgniteFuture<R> future) {
+                    @Override public void apply(IgniteFuture<R> fut) {
                         jobCtx.callcc();
                     }
                 });
 
                 return null;
             }
-            else {
+            else
                 return future.get();
-            }
         }
     }
-
 }

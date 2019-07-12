@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-import {Selector} from 'testcafe';
-import {getLocationPathname} from '../../helpers';
+import {getLocationPathname, scrollIntoView, scrollToPageBottom} from '../../helpers';
 import {dropTestDB, insertTestUser, resolveUrl} from '../../environment/envtools';
 import {createRegularUser} from '../../roles';
 import {PageConfigurationOverview} from '../../page-models/PageConfigurationOverview';
@@ -26,7 +25,6 @@ import {PageConfigurationAdvancedCluster} from '../../page-models/PageConfigurat
 import {confirmation} from '../../components/confirmation';
 import {successNotification} from '../../components/notifications';
 import * as models from '../../page-models/pageConfigurationAdvancedModels';
-import * as igfs from '../../page-models/pageConfigurationAdvancedIGFS';
 import {configureNavButton} from '../../components/topNavigation';
 
 const regularUser = createRegularUser();
@@ -66,14 +64,16 @@ test('Create cluster basic/advanced clusters amount redirect', async(t) => {
     await overviewPage.removeAllItems();
 });
 
-
 test('Cluster edit basic/advanced redirect based on caches amount', async(t) => {
     const clusterName = 'Seven caches cluster';
     const clusterEditLink = overviewPage.clustersTable.findCell(0, 'Name').find('a');
     const cachesAmountThreshold = 5;
 
     await t.click(overviewPage.createClusterConfigButton);
-    await repeat(cachesAmountThreshold, () => basicConfigPage.cachesList.addItem());
+    await repeat(cachesAmountThreshold, async() => {
+        await scrollToPageBottom();
+        basicConfigPage.cachesList.addItem();
+    });
     await basicConfigPage.saveWithoutDownload();
     await t
         .click(configureNavButton)
@@ -81,9 +81,11 @@ test('Cluster edit basic/advanced redirect based on caches amount', async(t) => 
         .expect(getLocationPathname()).contains('basic', `Opens basic with ${cachesAmountThreshold} caches`);
     await basicConfigPage.cachesList.addItem();
     await basicConfigPage.saveWithoutDownload();
+    await scrollIntoView.with({dependencies: {el: configureNavButton}});
     await t
-        .click(configureNavButton)
-        .click(clusterEditLink)
+        .expect(configureNavButton.visible).ok()
+        .click(configureNavButton.with({timeout: 0}))
+        .click(clusterEditLink.with({timeout: 0}))
         .expect(getLocationPathname()).contains('advanced', `Opens advanced with ${cachesAmountThreshold + 1} caches`);
     await t.click(configureNavButton);
     await overviewPage.removeAllItems();
@@ -109,9 +111,9 @@ test('Cluster cell values', async(t) => {
     const staticDiscovery = 'Static IPs';
     const cachesAmount = 3;
     const modelsAmount = 2;
-    const igfsAmount = 1;
 
     await t
+        .resizeWindow(1200, 1080)
         .click(overviewPage.createClusterConfigButton)
         .typeText(basicConfigPage.clusterNameInput.control, name, {replace: true});
     await basicConfigPage.clusterDiscoveryInput.selectOption(staticDiscovery);
@@ -130,17 +132,10 @@ test('Cluster cell values', async(t) => {
             .typeText(models.general.valueType.control, `bar${i}`)
             .click(pageAdvancedConfiguration.saveButton);
     });
-    await t.click(pageAdvancedConfiguration.igfsNavButton);
-    await repeat(igfsAmount, async() => {
-        await t
-            .click(igfs.createIGFSButton)
-            .click(pageAdvancedConfiguration.saveButton);
-    });
     await t
         .click(configureNavButton)
         .expect(overviewPage.clustersTable.findCell(0, 'Name').textContent).contains(name)
         .expect(overviewPage.clustersTable.findCell(0, 'Discovery').textContent).contains(staticDiscovery)
         .expect(overviewPage.clustersTable.findCell(0, 'Caches').textContent).contains(cachesAmount)
-        .expect(overviewPage.clustersTable.findCell(0, 'Models').textContent).contains(modelsAmount)
-        .expect(overviewPage.clustersTable.findCell(0, 'IGFS').textContent).contains(igfsAmount);
+        .expect(overviewPage.clustersTable.findCell(0, 'Models').textContent).contains(modelsAmount);
 });

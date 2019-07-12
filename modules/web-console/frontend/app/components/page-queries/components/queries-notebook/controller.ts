@@ -17,8 +17,8 @@
 import _ from 'lodash';
 import {nonEmpty, nonNil} from 'app/utils/lodashMixins';
 import id8 from 'app/utils/id8';
-import {Subject, defer, from, of, merge, timer, EMPTY} from 'rxjs';
-import {catchError, distinctUntilChanged, expand, exhaustMap, filter, finalize, first, ignoreElements, map, mergeMap, pluck, switchMap, takeUntil, takeWhile, take, tap} from 'rxjs/operators';
+import {Subject, defer, from, of, merge, timer, EMPTY, combineLatest} from 'rxjs';
+import {catchError, distinctUntilChanged, expand, exhaustMap, filter, finalize, first, ignoreElements, map, pluck, switchMap, takeUntil, takeWhile, take, tap} from 'rxjs/operators';
 
 import {CSV} from 'app/services/CSV';
 
@@ -33,6 +33,7 @@ import {default as LegacyConfirmServiceFactory} from 'app/services/Confirm.servi
 import {default as InputDialog} from 'app/components/input-dialog/input-dialog.service';
 import {QueryActions} from './components/query-actions-button/controller';
 import {CancellationError} from 'app/errors/CancellationError';
+import {DemoService} from 'app/modules/demo/Demo.module';
 
 // Time line X axis descriptor.
 const TIME_LINE = {value: -1, type: 'java.sql.Date', label: 'TIME_LINE'};
@@ -68,13 +69,13 @@ let paragraphId = 0;
 
 class Paragraph {
     name: string;
-    qryType: 'scan' | 'query';
+    queryType: 'SCAN' | 'SQL_FIELDS';
 
     constructor($animate, $timeout, JavaTypes, errorParser, paragraph) {
         const self = this;
 
         self.id = 'paragraph-' + paragraphId++;
-        self.qryType = paragraph.qryType || 'query';
+        self.queryType = paragraph.queryType || 'SQL_FIELDS';
         self.maxPages = 0;
         self.filter = '';
         self.useAsDefaultSchema = false;
@@ -152,22 +153,26 @@ class Paragraph {
         }});
 
         this.showLoading = (enable) => {
-            if (this.qryType === 'scan')
+            if (this.queryType === 'SCAN')
                 this.scanningInProgress = enable;
 
             this.loading = enable;
         };
 
         this.setError = (err) => {
+            const parsedErr = errorParser.parse(err);
+
             this.error.root = err;
-            this.error.message = errorParser.extractMessage(err);
+            this.error.message = parsedErr.message;
 
             let cause = err;
 
             while (nonNil(cause)) {
                 if (nonEmpty(cause.className) &&
                     _.includes(['SQLException', 'JdbcSQLException', 'QueryCancelledException'], JavaTypes.shortClassName(cause.className))) {
-                    this.error.message = errorParser.extractMessage(cause.message || cause.className);
+                    const parsedCause = errorParser.parse(cause.message || cause.className);
+
+                    this.error.message = parsedCause.message;
 
                     break;
                 }
@@ -194,7 +199,7 @@ class Paragraph {
         if (_.isEmpty(this.rows))
             return 'empty';
 
-        return this.result === 'table' ? 'table' : 'chart';
+        return this.result === 'TABLE' ? 'table' : 'chart';
     }
 
     nonRefresh() {
@@ -202,11 +207,11 @@ class Paragraph {
     }
 
     table() {
-        return this.result === 'table';
+        return this.result === 'TABLE';
     }
 
     chart() {
-        return this.result !== 'table' && this.result !== 'none';
+        return this.result !== 'TABLE' && this.result !== 'NONE';
     }
 
     nonEmpty() {
@@ -218,11 +223,11 @@ class Paragraph {
     }
 
     scanExplain() {
-        return this.queryExecuted() && (this.qryType === 'scan' || this.queryArgs.query.startsWith('EXPLAIN '));
+        return this.queryExecuted() && (this.queryType === 'SCAN' || this.queryArgs.query.startsWith('EXPLAIN '));
     }
 
     timeLineSupported() {
-        return this.result !== 'pie';
+        return this.result !== 'PIE';
     }
 
     chartColumnsConfigured() {
@@ -274,7 +279,7 @@ class Paragraph {
             useAsDefaultSchema: this.useAsDefaultSchema,
             chartsOptions: this.chartsOptions,
             rate: this.rate,
-            qryType: this.qryType,
+            queryType: this.queryType,
             nonCollocatedJoins: this.nonCollocatedJoins,
             enforceJoinOrder: this.enforceJoinOrder,
             lazy: this.lazy,
@@ -285,16 +290,16 @@ class Paragraph {
 
 // Controller for SQL notebook screen.
 export class NotebookCtrl {
-    static $inject = ['IgniteInput', '$rootScope', '$scope', '$http', '$q', '$timeout', '$transitions', '$interval', '$animate', '$location', '$anchorScroll', '$state', '$filter', '$modal', '$popover', '$window', 'IgniteLoading', 'IgniteLegacyUtils', 'IgniteMessages', 'IgniteConfirm', 'AgentManager', 'IgniteChartColors', 'IgniteNotebook', 'IgniteNodes', 'uiGridExporterConstants', 'IgniteVersion', 'IgniteActivitiesData', 'JavaTypes', 'IgniteCopyToClipboard', 'CSV', 'IgniteErrorParser', 'DemoInfo'];
+    static $inject = ['Demo', 'IgniteInput', '$scope', '$http', '$q', '$timeout', '$transitions', '$interval', '$animate', '$location', '$anchorScroll', '$state', '$filter', '$modal', '$popover', '$window', 'IgniteLoading', 'IgniteLegacyUtils', 'IgniteMessages', 'IgniteConfirm', 'AgentManager', 'IgniteChartColors', 'IgniteNotebook', 'IgniteNodes', 'uiGridExporterConstants', 'IgniteVersion', 'IgniteActivitiesData', 'JavaTypes', 'IgniteCopyToClipboard', 'CSV', 'IgniteErrorParser', 'DemoInfo'];
 
     /**
      * @param {CSV} CSV
      */
-    constructor(private IgniteInput: InputDialog, $root, private $scope, $http, $q, $timeout, $transitions, $interval, $animate, $location, $anchorScroll, $state, $filter, $modal, $popover, $window, Loading, LegacyUtils, private Messages: ReturnType<typeof MessagesServiceFactory>, private Confirm: ReturnType<typeof LegacyConfirmServiceFactory>, agentMgr, IgniteChartColors, private Notebook: Notebook, Nodes, uiGridExporterConstants, Version, ActivitiesData, JavaTypes, IgniteCopyToClipboard, CSV, errorParser, DemoInfo) {
+    constructor(private Demo: DemoService, private IgniteInput: InputDialog, private $scope, $http, $q, $timeout, $transitions, $interval, $animate, $location, $anchorScroll, $state, $filter, $modal, $popover, $window, Loading, LegacyUtils, private Messages: ReturnType<typeof MessagesServiceFactory>, private Confirm: ReturnType<typeof LegacyConfirmServiceFactory>, agentMgr, IgniteChartColors, private Notebook: Notebook, Nodes, uiGridExporterConstants, Version, ActivitiesData, JavaTypes, IgniteCopyToClipboard, CSV, errorParser, DemoInfo) {
         const $ctrl = this;
 
         this.CSV = CSV;
-        Object.assign(this, { $root, $scope, $http, $q, $timeout, $transitions, $interval, $animate, $location, $anchorScroll, $state, $filter, $modal, $popover, $window, Loading, LegacyUtils, Messages, Confirm, agentMgr, IgniteChartColors, Notebook, Nodes, uiGridExporterConstants, Version, ActivitiesData, JavaTypes, errorParser, DemoInfo });
+        Object.assign(this, { $scope, $http, $q, $timeout, $transitions, $interval, $animate, $location, $anchorScroll, $state, $filter, $modal, $popover, $window, Loading, LegacyUtils, Messages, Confirm, agentMgr, IgniteChartColors, Notebook, Nodes, uiGridExporterConstants, Version, ActivitiesData, JavaTypes, errorParser, DemoInfo });
 
         // Define template urls.
         $ctrl.paragraphRateTemplateUrl = paragraphRateTemplateUrl;
@@ -302,7 +307,7 @@ export class NotebookCtrl {
         $ctrl.chartSettingsTemplateUrl = chartSettingsTemplateUrl;
         $ctrl.demoStarted = false;
 
-        this.isDemo = $root.IgniteDemoMode;
+        this.isDemo = this.Demo.enabled;
 
         const _tryStopRefresh = function(paragraph) {
             paragraph.cancelRefresh($interval);
@@ -334,13 +339,13 @@ export class NotebookCtrl {
             {label: '100', value: 100}
         ];
 
-        $scope.timeLineSpans = ['1', '5', '10', '15', '30'];
+        $scope.timeLineSpans = [1, 5, 10, 15, 30];
 
         $scope.aggregateFxs = ['FIRST', 'LAST', 'MIN', 'MAX', 'SUM', 'AVG', 'COUNT'];
 
         $scope.modes = LegacyUtils.mkOptions(['PARTITIONED', 'REPLICATED', 'LOCAL']);
 
-        $scope.loadingText = $root.IgniteDemoMode ? 'Demo grid is starting. Please wait...' : 'Loading query notebook screen...';
+        $scope.loadingText = this.Demo.enabled ? 'Demo grid is starting. Please wait...' : 'Loading query notebook screen...';
 
         $scope.timeUnit = [
             {value: 1000, label: 'seconds', short: 's'},
@@ -472,7 +477,7 @@ export class NotebookCtrl {
                         const chartData = _.find(datum, {series: valCol.label});
 
                         const leftBound = new Date();
-                        leftBound.setMinutes(leftBound.getMinutes() - parseInt(paragraph.timeLineSpan, 10));
+                        leftBound.setMinutes(leftBound.getMinutes() - paragraph.timeLineSpan);
 
                         if (chartData) {
                             const lastItem = _.last(paragraph.chartHistory);
@@ -607,9 +612,7 @@ export class NotebookCtrl {
             const datum = _chartDatum(paragraph);
 
             if (_.isEmpty(paragraph.charts)) {
-                const stacked = paragraph.chartsOptions && paragraph.chartsOptions.barChart
-                    ? paragraph.chartsOptions.barChart.stacked
-                    : true;
+                const stacked = _.get(paragraph, 'chartsOptions.barChartStacked', true);
 
                 const options = {
                     chart: {
@@ -756,9 +759,7 @@ export class NotebookCtrl {
             const datum = _chartDatum(paragraph);
 
             if (_.isEmpty(paragraph.charts)) {
-                const style = paragraph.chartsOptions && paragraph.chartsOptions.areaChart
-                    ? paragraph.chartsOptions.areaChart.style
-                    : 'stack';
+                const style = _.get(paragraph, 'chartsOptions.areaChartStyle', 'stack');
 
                 const options = {
                     chart: {
@@ -800,19 +801,19 @@ export class NotebookCtrl {
 
             if (paragraph.chart() && paragraph.nonEmpty()) {
                 switch (paragraph.result) {
-                    case 'bar':
+                    case 'BAR':
                         _barChart(paragraph);
                         break;
 
-                    case 'pie':
+                    case 'PIE':
                         _pieChart(paragraph);
                         break;
 
-                    case 'line':
+                    case 'LINE':
                         _lineChart(paragraph);
                         break;
 
-                    case 'area':
+                    case 'AREA':
                         _areaChart(paragraph);
                         break;
 
@@ -937,7 +938,7 @@ export class NotebookCtrl {
                     });
 
                     // Await for demo caches.
-                    if (!$ctrl.demoStarted && $root.IgniteDemoMode && nonEmpty(cacheNames)) {
+                    if (!$ctrl.demoStarted && this.Demo.enabled && nonEmpty(cacheNames)) {
                         $ctrl.demoStarted = true;
 
                         Loading.finish('sqlLoading');
@@ -952,7 +953,7 @@ export class NotebookCtrl {
 
         const _startWatch = () => {
             const finishLoading$ = defer(() => {
-                if (!$root.IgniteDemoMode)
+                if (!this.Demo.enabled)
                     Loading.finish('sqlLoading');
             }).pipe(take(1));
 
@@ -963,20 +964,21 @@ export class NotebookCtrl {
             const cluster$ = agentMgr.connectionSbj.pipe(
                 pluck('cluster'),
                 distinctUntilChanged(),
-                tap((cluster) => {
-                    this.clusterIsAvailable = (!!cluster && cluster.active === true) || agentMgr.isDemoMode();
-                })
             );
 
-            this.refresh$ = cluster$.pipe(
-                switchMap((cluster) => {
-                    if (!cluster && !agentMgr.isDemoMode()) {
-                        return of(EMPTY).pipe(
-                            tap(() => {
-                                $scope.caches = [];
-                            })
-                        );
-                    }
+            const checkState$ = combineLatest(
+                cluster$,
+                agentMgr.currentCluster$.pipe(pluck('state'), distinctUntilChanged())
+            );
+
+            this.refresh$ = checkState$.pipe(
+                tap(([cluster, state]) => {
+                    if (state !== 'CONNECTED' || (!cluster && !agentMgr.isDemoMode()))
+                        $scope.caches = [];
+                }),
+                switchMap(([cluster, state]) => {
+                    if (state !== 'CONNECTED' || (!cluster && !agentMgr.isDemoMode()))
+                        return of(EMPTY);
 
                     return of(cluster).pipe(
                         tap(() => Loading.start('sqlLoading')),
@@ -1017,7 +1019,7 @@ export class NotebookCtrl {
                     $scope.rebuildScrollParagraphs();
             })
             .then(() => {
-                if ($root.IgniteDemoMode && sessionStorage.showDemoInfo !== 'true') {
+                if (this.Demo.enabled && sessionStorage.showDemoInfo !== 'true') {
                     sessionStorage.showDemoInfo = 'true';
 
                     this.DemoInfo.show().then(_startWatch);
@@ -1076,13 +1078,13 @@ export class NotebookCtrl {
                 query: '',
                 pageSize: $scope.pageSizesOptions[1].value,
                 timeLineSpan: $scope.timeLineSpans[0],
-                result: 'none',
+                result: 'NONE',
                 rate: {
                     value: 1,
                     unit: 60000,
                     installed: false
                 },
-                qryType: 'query',
+                queryType: 'SQL_FIELDS',
                 lazy: true
             });
 
@@ -1105,13 +1107,13 @@ export class NotebookCtrl {
                 query: '',
                 pageSize: $scope.pageSizesOptions[1].value,
                 timeLineSpan: $scope.timeLineSpans[0],
-                result: 'none',
+                result: 'NONE',
                 rate: {
                     value: 1,
                     unit: 60000,
                     installed: false
                 },
-                qryType: 'scan'
+                queryType: 'SCAN'
             });
 
             $scope.addParagraph(paragraph, sz);
@@ -1122,16 +1124,16 @@ export class NotebookCtrl {
                 const chart = paragraph.charts[0].api.getScope().chart;
 
                 if (!LegacyUtils.isDefined(paragraph.chartsOptions))
-                    paragraph.chartsOptions = {barChart: {stacked: true}, areaChart: {style: 'stack'}};
+                    paragraph.chartsOptions = {barChartStacked: true, areaChartStyle: 'stack'};
 
                 switch (paragraph.result) {
-                    case 'bar':
-                        paragraph.chartsOptions.barChart.stacked = chart.stacked();
+                    case 'BAR':
+                        paragraph.chartsOptions.barChartStacked = chart.stacked();
 
                         break;
 
-                    case 'area':
-                        paragraph.chartsOptions.areaChart.style = chart.style();
+                    case 'AREA':
+                        paragraph.chartsOptions.areaChartStyle = chart.style();
 
                         break;
 
@@ -1266,13 +1268,13 @@ export class NotebookCtrl {
         /**
          * Execute query and get first result page.
          *
-         * @param qryType Query type. 'query' or `scan`.
+         * @param queryType Query type. 'SQL_FIELDS' or `SCAN`.
          * @param qryArg Argument with query properties.
          * @param {(res) => any} onQueryStarted Action to execute when query ID is received.
          * @return {Observable<VisorQueryResult>} Observable with first query result page.
          */
-        const _executeQuery0 = (qryType, qryArg, onQueryStarted: (res) => any = () => {}) => {
-            return from(qryType === 'scan' ? agentMgr.queryScan(qryArg) : agentMgr.querySql(qryArg)).pipe(
+        const _executeQuery0 = (queryType, qryArg, onQueryStarted: (res) => any = () => {}) => {
+            return from(queryType === 'SCAN' ? agentMgr.queryScan(qryArg) : agentMgr.querySql(qryArg)).pipe(
                 tap((res) => {
                     onQueryStarted(res);
                     $scope.$applyAsync();
@@ -1316,7 +1318,7 @@ export class NotebookCtrl {
             onError: (err) => any = () => {}
         ) => {
             return from(_closeOldQuery(paragraph)).pipe(
-                switchMap(() => _executeQuery0(paragraph.qryType, qryArg, onQueryStarted)),
+                switchMap(() => _executeQuery0(paragraph.queryType, qryArg, onQueryStarted)),
                 tap((res) => {
                     onQueryFinished(res);
                     $scope.$applyAsync();
@@ -1349,7 +1351,7 @@ export class NotebookCtrl {
             onError: (err) => any = () => {}
         ) => {
             return from(_closeOldExport(paragraph)).pipe(
-                switchMap(() => _executeQuery0(paragraph.qryType, qryArg, onQueryStarted)),
+                switchMap(() => _executeQuery0(paragraph.queryType, qryArg, onQueryStarted)),
                 expand((acc) => {
                     return from(agentMgr.queryNextPage(acc.responseNodeId, acc.queryId, qryArg.pageSize)
                         .then((res) => {
@@ -1452,8 +1454,8 @@ export class NotebookCtrl {
 
             paragraph.showLoading(false);
 
-            if (_.isNil(paragraph.result) || paragraph.result === 'none' || paragraph.scanExplain())
-                paragraph.result = 'table';
+            if (_.isNil(paragraph.result) || paragraph.result === 'NONE' || paragraph.scanExplain())
+                paragraph.result = 'TABLE';
             else if (paragraph.chart()) {
                 let resetCharts = clearChart;
 
@@ -1536,6 +1538,12 @@ export class NotebookCtrl {
                 );
         };
 
+        const dfltErrorHandler = (err: any) => {
+            Messages.showError(err);
+
+            return of(err);
+        };
+
         /**
          * @param {string} name Cache name.
          * @param {boolean} local Local query.
@@ -1554,8 +1562,7 @@ export class NotebookCtrl {
                     }
 
                     return nids[_.random(0, nids.length - 1)];
-                })
-                .catch(Messages.showError);
+                });
         };
 
         const _executeRefresh = (paragraph) => {
@@ -1591,6 +1598,7 @@ export class NotebookCtrl {
                         }
                     );
                 }),
+                catchError(dfltErrorHandler),
                 finalize(() => paragraph.showLoading(false))
             ).toPromise();
         };
@@ -1605,10 +1613,16 @@ export class NotebookCtrl {
             }
         };
 
-        const addLimit = (query, limitSize) =>
-            `SELECT * FROM (
-            ${query} 
+        const addLimit = (query, limitSize) => {
+            let qry = query.trim();
+
+            if (qry.endsWith(';'))
+                qry = qry.substring(0, qry.length - 1);
+
+            return `SELECT * FROM (
+                ${qry} 
             ) LIMIT ${limitSize}`;
+        };
 
         $scope.nonCollocatedJoinsAvailable = () => {
             return Version.since(this.agentMgr.clusterVersion, NON_COLLOCATED_JOINS_SINCE);
@@ -1719,6 +1733,7 @@ export class NotebookCtrl {
                         }
                     );
                 }),
+                catchError(dfltErrorHandler),
                 finalize(() => paragraph.showLoading(false))
             ).toPromise();
         };
@@ -1778,6 +1793,7 @@ export class NotebookCtrl {
                         }
                     );
                 }),
+                catchError(dfltErrorHandler),
                 finalize(() => paragraph.showLoading(false))
             ).toPromise();
         };
@@ -1823,6 +1839,7 @@ export class NotebookCtrl {
                         (err) => paragraph.setError(err)
                     );
                 }),
+                catchError(dfltErrorHandler),
                 finalize(() => paragraph.showLoading(false))
             ).toPromise();
         };
@@ -1854,7 +1871,7 @@ export class NotebookCtrl {
             paragraph.rows = res.rows;
 
             if (paragraph.chart()) {
-                if (paragraph.result === 'pie')
+                if (paragraph.result === 'PIE')
                     _updatePieChartsWithData(paragraph, _pieChartDatum(paragraph));
                 else
                     _updateChartsWithData(paragraph, _chartDatum(paragraph));
@@ -1948,7 +1965,7 @@ export class NotebookCtrl {
         const exportFileName = (paragraph, all) => {
             const args = paragraph.queryArgs;
 
-            if (paragraph.qryType === 'scan')
+            if (paragraph.queryType === 'SCAN')
                 return `export-scan-${args.cacheName}-${paragraph.name}${all ? '-all' : ''}.csv`;
 
             return `export-query-${paragraph.name}${all ? '-all' : ''}.csv`;
@@ -1982,11 +1999,9 @@ export class NotebookCtrl {
                     arg,
                     (res) => _initExportResult(paragraph, res),
                     (res) => _export(exportFileName(paragraph, true), paragraph.gridOptions.columnDefs, res.columns, res.rows),
-                    (err) => {
-                        Messages.showError(err);
-                        return of(err);
-                    }
+                    dfltErrorHandler
                 )),
+                catchError(dfltErrorHandler),
                 finalize(() => paragraph.csvIsPreparing = false)
             ).toPromise();
         };
@@ -2033,13 +2048,6 @@ export class NotebookCtrl {
 
         $scope.paragraphTimeSpanVisible = function(paragraph) {
             return paragraph.timeLineSupported() && paragraph.chartTimeLineEnabled();
-        };
-
-        $scope.paragraphTimeLineSpan = function(paragraph) {
-            if (paragraph && paragraph.timeLineSpan)
-                return paragraph.timeLineSpan.toString();
-
-            return '1';
         };
 
         $scope.applyChartSettings = function(paragraph) {
@@ -2115,7 +2123,7 @@ export class NotebookCtrl {
             if (!_.isNil(paragraph)) {
                 const scope = $scope.$new();
 
-                if (paragraph.qryType === 'scan') {
+                if (paragraph.queryType === 'SCAN') {
                     scope.title = 'SCAN query';
 
                     const filter = paragraph.queryArgs.filter;
@@ -2242,7 +2250,7 @@ export class NotebookCtrl {
         return true;
     }
 
-    scanActions: QueryActions<Paragraph & {type: 'scan'}> = [
+    scanActions: QueryActions<Paragraph & {type: 'SCAN'}> = [
         {
             text: 'Scan',
             click: (p) => this.$scope.scan(p),
@@ -2257,7 +2265,7 @@ export class NotebookCtrl {
         {text: 'Remove', click: (p) => this.removeParagraph(p), available: () => true}
     ];
 
-    queryActions: QueryActions<Paragraph & {type: 'query'}> = [
+    queryActions: QueryActions<Paragraph & {type: 'SQL_FIELDS'}> = [
         {
             text: 'Execute',
             click: (p) => this.$scope.execute(p),

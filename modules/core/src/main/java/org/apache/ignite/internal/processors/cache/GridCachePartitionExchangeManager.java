@@ -52,6 +52,7 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.affinity.AffinityFunction;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterGroup;
+import org.apache.ignite.cluster.ClusterGroupEmptyException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -115,6 +116,7 @@ import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.CI1;
@@ -177,6 +179,9 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
     /** Stripe id for cluster activation event. */
     private static final int CLUSTER_ACTIVATION_EVT_STRIPE_ID = Integer.MAX_VALUE;
+
+    /** */
+    private static final String EXCHANGE_WORKER_THREAD_NAME = "exchange-worker";
 
     /** Atomic reference for pending partition resend timeout object. */
     private AtomicReference<ResendTimeoutObject> pendingResend = new AtomicReference<>();
@@ -734,7 +739,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
         else if (reconnect)
             reconnectExchangeFut.onDone();
 
-        new IgniteThread(cctx.igniteInstanceName(), "exchange-worker", exchWorker).start();
+        new IgniteThread(cctx.igniteInstanceName(), exchWorker.name(), exchWorker).start();
 
         if (reconnect) {
             if (fut != null) {
@@ -1820,7 +1825,9 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                             null,
                             msg.partsToReload(cctx.localNodeId(), grpId),
                             partsSizes.getOrDefault(grpId, Collections.emptyMap()),
-                            msg.topologyVersion());
+                            msg.topologyVersion(),
+                            null
+                        );
                     }
                 }
 
@@ -1862,8 +1869,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
         try {
             if (msg.exchangeId() == null) {
-                if (log.isTraceEnabled())
-                    log.trace("Received local partition update [nodeId=" + node.id() + ", parts=" +
+                if (log.isDebugEnabled())
+                    log.debug("Received local partition update [nodeId=" + node.id() + ", parts=" +
                         msg + ']');
 
                 boolean updated = false;
@@ -1912,7 +1919,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                         U.warn(log, "Client node tries to connect but its exchange " +
                             "info is cleaned up from exchange history. " +
                             "Consider increasing 'IGNITE_EXCHANGE_HISTORY_SIZE' property " +
-                            "or start clients in  smaller batches. " +
+                            "or start clients in smaller batches. " +
                             "Current settings and versions: " +
                             "[IGNITE_EXCHANGE_HISTORY_SIZE=" + EXCHANGE_HISTORY_SIZE + ", " +
                             "initVer=" + initVer + ", " +
@@ -2169,7 +2176,13 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
                 ClusterGroup nearNode = ignite.cluster().forNodeId(nearNodeId);
 
-                if (allNodesSupports(nearNode.nodes(), TRANSACTION_OWNER_THREAD_DUMP_PROVIDING)) {
+                String txRequestInfo = String.format(
+                    "[xidVer=%s, nodeId=%s]",
+                    tx.xidVersion().toString(),
+                    nearNodeId.toString()
+                );
+
+                if (allNodesSupports(cctx.kernalContext(), nearNode.nodes(), TRANSACTION_OWNER_THREAD_DUMP_PROVIDING)) {
                     IgniteCompute compute = ignite.compute(ignite.cluster().forNodeId(nearNodeId));
 
                     try {
@@ -2182,10 +2195,17 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                                     try {
                                         traceDump = strIgniteFut.get();
                                     }
+                                    catch (ClusterGroupEmptyException e) {
+                                        U.error(
+                                            diagnosticLog,
+                                            "Could not get thread dump from transaction owner because near node " +
+                                                    "is now out of topology. " + txRequestInfo
+                                        );
+                                    }
                                     catch (Exception e) {
                                         U.error(
                                             diagnosticLog,
-                                            "Could not get thread dump from transaction owner near node: ",
+                                            "Could not get thread dump from transaction owner near node " + txRequestInfo,
                                             e
                                         );
                                     }
@@ -2194,8 +2214,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                                         U.warn(
                                             diagnosticLog,
                                             String.format(
-                                                "Dumping the near node thread that started transaction [xidVer=%s]\n%s",
-                                                tx.xidVersion().toString(),
+                                                "Dumping the near node thread that started transaction %s\n%s",
+                                                txRequestInfo,
                                                 traceDump
                                             )
                                         );
@@ -2204,13 +2224,14 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                             });
                     }
                     catch (Exception e) {
-                        U.error(diagnosticLog, "Could not send dump request to transaction owner near node: ", e);
+                        U.error(diagnosticLog, "Could not send dump request to transaction owner near node " + txRequestInfo, e);
                     }
                 }
                 else {
                     U.warn(
                         diagnosticLog,
-                        "Could not send dump request to transaction owner near node: node does not support this feature."
+                        "Could not send dump request to transaction owner near node: node does not support this feature. " +
+                            txRequestInfo
                     );
                 }
             }
@@ -2774,7 +2795,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
          * Constructor.
          */
         private ExchangeWorker() {
-            super(cctx.igniteInstanceName(), "partition-exchanger", GridCachePartitionExchangeManager.this.log,
+            super(cctx.igniteInstanceName(), EXCHANGE_WORKER_THREAD_NAME, GridCachePartitionExchangeManager.this.log,
                 cctx.kernalContext().workersRegistry());
         }
 
@@ -2973,7 +2994,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                     err = e;
             }
             catch (Throwable e) {
-                if (!(stop && X.hasCause(e, IgniteInterruptedCheckedException.class)))
+                if (!(e == stopErr || (stop && (X.hasCause(e, IgniteInterruptedCheckedException.class)))))
                     err = e;
             }
             finally {
@@ -3038,11 +3059,14 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                     if (isCancelled())
                         Thread.currentThread().interrupt();
 
-                    updateHeartbeat();
+                    blockingSectionBegin();
 
-                    task = futQ.poll(timeout, MILLISECONDS);
-
-                    updateHeartbeat();
+                    try {
+                        task = futQ.poll(timeout, MILLISECONDS);
+                    }
+                    finally {
+                        blockingSectionEnd();
+                    }
 
                     if (task == null)
                         continue; // Main while loop.
@@ -3121,7 +3145,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
                             int dumpCnt = 0;
 
-                            long waitStart = U.currentTimeMillis();
+                            long waitStartNanos = System.nanoTime();
 
                             // Call rollback logic only for client node, for server nodes
                             // rollback logic is in GridDhtPartitionsExchangeFuture.
@@ -3176,7 +3200,9 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                                         nextDumpTime = U.currentTimeMillis() + nextDumpTimeout(dumpCnt++, dumpTimeout);
                                     }
 
-                                    if (!txRolledBack && curTimeout > 0 && U.currentTimeMillis() - waitStart >= curTimeout) {
+                                    long passedMillis = U.millisSinceNanos(waitStartNanos);
+
+                                    if (!txRolledBack && curTimeout > 0 && passedMillis >= curTimeout) {
                                         txRolledBack = true; // Try automatic rollback only once.
 
                                         cctx.tm().rollbackOnTopologyChange(exchFut.initialVersion());
@@ -3411,7 +3437,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
         /** {@inheritDoc} */
         @Override public void onTimeout() {
-            cctx.kernalContext().closure().runLocalSafe(new Runnable() {
+            cctx.kernalContext().closure().runLocalSafe(new GridPlainRunnable() {
                 @Override public void run() {
                     if (!busyLock.readLock().tryLock())
                         return;

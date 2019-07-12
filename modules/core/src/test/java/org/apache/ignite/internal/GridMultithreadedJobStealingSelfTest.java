@@ -27,7 +27,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCompute;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
@@ -45,6 +44,7 @@ import org.apache.ignite.spi.failover.jobstealing.JobStealingFailoverSpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonTest;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
@@ -155,11 +155,7 @@ public class GridMultithreadedJobStealingSelfTest extends GridCommonAbstractTest
             /** */
             @Override public void run() {
                 try {
-                    final IgniteCompute compute = ignite.compute().withAsync();
-
-                    compute.execute(new JobStealingTask(jobsPerTask), null);
-
-                    JobStealingResult res = (JobStealingResult)compute.future().get();
+                    JobStealingResult res = ignite.compute().executeAsync(new JobStealingTask(jobsPerTask), null).get();
 
                     info("Task result: " + res);
 
@@ -243,7 +239,7 @@ public class GridMultithreadedJobStealingSelfTest extends GridCommonAbstractTest
         }
 
         /** {@inheritDoc} */
-        @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
+        @NotNull @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
             @Nullable Object arg) {
             assert subgrid.size() == 2 : "Invalid subgrid size: " + subgrid.size();
 

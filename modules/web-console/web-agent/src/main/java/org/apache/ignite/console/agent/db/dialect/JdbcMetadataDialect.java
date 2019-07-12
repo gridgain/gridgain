@@ -27,7 +27,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.console.agent.db.DbColumn;
 import org.apache.ignite.console.agent.db.DbTable;
@@ -76,18 +75,23 @@ public class JdbcMetadataDialect extends DatabaseMetadataDialect {
     private static final int IDX_ASC_OR_DESC_IDX = 10;
 
     /** {@inheritDoc} */
-    @Override public Collection<String> schemas(Connection conn) throws SQLException {
+    @Override public Collection<String> schemas(Connection conn, boolean importSamples) throws SQLException {
         Collection<String> schemas = new ArrayList<>();
 
-        ResultSet rs = conn.getMetaData().getSchemas();
+        ResultSet rs = getSchemas(conn);
 
         Set<String> sys = systemSchemas();
+        Set<String> samples = sampleSchemas();
 
         while(rs.next()) {
             String schema = rs.getString(1);
 
             // Skip system schemas.
             if (sys.contains(schema))
+                continue;
+
+            // Skip sample schemas.
+            if (!importSamples && samples.contains(schema))
                 continue;
 
             schemas.add(schema);
@@ -160,13 +164,7 @@ public class JdbcMetadataDialect extends DatabaseMetadataDialect {
                                 if (idxName == null || colName == null)
                                     continue;
 
-                                Set<String> idxCols = uniqueIdxs.get(idxName);
-
-                                if (idxCols == null) {
-                                    idxCols = new LinkedHashSet<>();
-
-                                    uniqueIdxs.put(idxName, idxCols);
-                                }
+                                Set<String> idxCols = uniqueIdxs.computeIfAbsent(idxName, k -> new LinkedHashSet<>());
 
                                 idxCols.add(colName);
                             }

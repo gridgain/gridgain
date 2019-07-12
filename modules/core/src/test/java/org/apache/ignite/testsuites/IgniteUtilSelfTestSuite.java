@@ -124,7 +124,7 @@ import org.junit.runners.Suite;
     PageIdUtilsSelfTest.class,
 
     // control.sh
-    CommandHandlerParsingTest.class,
+    CommandHandlerParsingTest.class
 })
 public class IgniteUtilSelfTestSuite {
 }

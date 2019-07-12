@@ -22,7 +22,7 @@ const JasmineReporters = require('jasmine-reporters');
 const Util = require('util');
 const exec = require('child_process').exec;
 const config = require('./config');
-const IgniteClient = require('apache-ignite-client');
+const IgniteClient = require('gridgain-client');
 const IgniteClientConfiguration = IgniteClient.IgniteClientConfiguration;
 const Errors = IgniteClient.Errors;
 const EnumItem = IgniteClient.EnumItem;
@@ -166,7 +166,7 @@ const arrayValues = {
     [ObjectType.PRIMITIVE_TYPE.TIME_ARRAY] : { elemType : ObjectType.PRIMITIVE_TYPE.TIME }
 };
 
-// Helper class for testing apache-ignite-client library.
+// Helper class for testing gridgain-client library.
 // Contains common methods for testing environment initialization and cleanup.
 class TestingHelper {
     static get TIMEOUT() {
@@ -183,12 +183,13 @@ class TestingHelper {
 
     // Initializes testing environment: creates and starts the library client, sets default jasmine test timeout.
     // Should be called from any test suite beforeAll method.
-    static async init() {
+    static async init(affinityAwareness = config.affinityAwareness) {
         jasmine.DEFAULT_TIMEOUT_INTERVAL = TIMEOUT_MS;
 
         TestingHelper._igniteClient = new IgniteClient();
         TestingHelper._igniteClient.setDebug(config.debug);
-        await TestingHelper._igniteClient.connect(new IgniteClientConfiguration(...config.endpoints));
+        await TestingHelper._igniteClient.connect(new IgniteClientConfiguration(...config.endpoints).
+            setConnectionOptions(false, null, affinityAwareness));
     }
 
     // Cleans up testing environment.

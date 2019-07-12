@@ -81,8 +81,11 @@ public class JdbcThinTcpIo {
     /** Version 2.8.0. */
     private static final ClientListenerProtocolVersion VER_2_8_0 = ClientListenerProtocolVersion.create(2, 8, 0);
 
+    /** Version 2.8.1. */
+    private static final ClientListenerProtocolVersion VER_2_8_1 = ClientListenerProtocolVersion.create(2, 8, 1);
+
     /** Current version. */
-    private static final ClientListenerProtocolVersion CURRENT_VER = VER_2_8_0;
+    private static final ClientListenerProtocolVersion CURRENT_VER = VER_2_8_1;
 
     /** Initial output stream capacity for handshake. */
     private static final int HANDSHAKE_MSG_SIZE = 13;
@@ -121,7 +124,7 @@ public class JdbcThinTcpIo {
     private final BufferedInputStream in;
 
     /** Connected flag. */
-    private boolean connected;
+    private volatile boolean connected;
 
     /** Ignite server version. */
     private final IgniteProductVersion igniteVer;
@@ -252,6 +255,9 @@ public class JdbcThinTcpIo {
 
             JdbcUtils.writeNullableInteger(writer, connProps.getUpdateBatchSize());
         }
+
+        if (ver.compareTo(VER_2_8_1) >= 0)
+            JdbcUtils.writeNullableLong(writer, connProps.getQueryMaxMemory());
 
         if (!F.isEmpty(connProps.getUsername())) {
             assert ver.compareTo(VER_2_5_0) >= 0 : "Authentication is supported since 2.5";
@@ -421,10 +427,9 @@ public class JdbcThinTcpIo {
 
         JdbcResponse resp = readResponse();
 
-        if (stmt != null && stmt.isCancelled())
-            return new JdbcResponse(IgniteQueryErrorCode.QUERY_CANCELED, QueryCancelledException.ERR_MSG);
-        else
-            return resp;
+        return stmt != null && stmt.isCancelled() ?
+            new JdbcResponse(IgniteQueryErrorCode.QUERY_CANCELED, QueryCancelledException.ERR_MSG) :
+            resp;
     }
 
     /**
@@ -648,5 +653,19 @@ public class JdbcThinTcpIo {
      */
     public UUID nodeId() {
         return nodeId;
+    }
+
+    /**
+     * @return Socket address.
+     */
+    public InetSocketAddress socketAddress() {
+        return sockAddr;
+    }
+
+    /**
+     * @return Connected flag.
+     */
+    public boolean connected() {
+        return connected;
     }
 }

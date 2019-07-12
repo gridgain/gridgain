@@ -373,7 +373,7 @@ public class GridEventStorageManager extends GridManagerAdapter<EventStorageSpi>
     public synchronized void enableEvents(int[] types) {
         assert types != null;
 
-        ctx.security().authorize(null, SecurityPermission.EVENTS_ENABLE, null);
+        ctx.security().authorize(SecurityPermission.EVENTS_ENABLE);
 
         boolean[] userRecordableEvts0 = userRecordableEvts;
         boolean[] recordableEvts0 = recordableEvts;
@@ -415,7 +415,7 @@ public class GridEventStorageManager extends GridManagerAdapter<EventStorageSpi>
     public synchronized void disableEvents(int[] types) {
         assert types != null;
 
-        ctx.security().authorize(null, SecurityPermission.EVENTS_DISABLE, null);
+        ctx.security().authorize(SecurityPermission.EVENTS_DISABLE);
 
         boolean[] userRecordableEvts0 = userRecordableEvts;
         boolean[] recordableEvts0 = recordableEvts;
@@ -1060,21 +1060,18 @@ public class GridEventStorageManager extends GridManagerAdapter<EventStorageSpi>
             if (timeout == 0)
                 timeout = Long.MAX_VALUE;
 
-            long now = U.currentTimeMillis();
+            long startNanos = System.nanoTime();
 
-            // Account for overflow of long value.
-            long endTime = now + timeout <= 0 ? Long.MAX_VALUE : now + timeout;
-
-            long delta = timeout;
+            long passedMillis = 0L;
 
             Collection<UUID> uidsCp = null;
 
             synchronized (qryMux) {
                 try {
-                    while (!uids.isEmpty() && err.get() == null && delta > 0) {
-                        qryMux.wait(delta);
+                    while (!uids.isEmpty() && err.get() == null && passedMillis < timeout) {
+                        qryMux.wait(timeout - passedMillis);
 
-                        delta = endTime - U.currentTimeMillis();
+                        passedMillis = U.millisSinceNanos(startNanos);
                     }
                 }
                 catch (InterruptedException e) {

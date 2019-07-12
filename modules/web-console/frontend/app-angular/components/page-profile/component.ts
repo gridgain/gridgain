@@ -15,19 +15,17 @@
  */
 
 import omit from 'lodash/fp/omit';
+import uuidv4 from 'uuid/v4';
 import {merge} from 'rxjs';
 import {tap, filter} from 'rxjs/operators';
 import {Component, Inject, OnInit, OnDestroy} from '@angular/core';
 import {FormGroup, FormControl, Validators, FormBuilder} from '@angular/forms';
-import templateUrl from 'file-loader!./template.html';
 import {default as CountriesFactory, Country} from 'app/services/Countries.service';
 import {default as UserFactory, User} from 'app/modules/user/User.service';
 import {Confirm} from 'app/services/Confirm.service';
-import {default as LegacyUtilsFactory} from 'app/services/LegacyUtils.service';
 import {
     FORM_FIELD_OPTIONS, FormFieldRequiredMarkerStyles, FormFieldErrorStyles
 } from '../form-field';
-import './style.scss';
 
 const passwordMatch = (newPassword: string) => (confirmPassword: FormControl) => newPassword === confirmPassword.value
     ? null
@@ -37,7 +35,8 @@ const disableFormGroup = (fg: FormGroup) => {fg.disable(); return fg;};
 
 @Component({
     selector: 'page-profile',
-    templateUrl,
+    templateUrl: './template.html',
+    styleUrls: ['./style.url.scss'],
     viewProviders: [
         {
             provide: FORM_FIELD_OPTIONS,
@@ -53,7 +52,6 @@ export class PageProfile implements OnInit, OnDestroy {
         [new Inject('IgniteCountries')],
         [new Inject('User')],
         [new Inject('Confirm')],
-        [new Inject('IgniteLegacyUtils')],
         [new Inject(FormBuilder)]
     ];
 
@@ -61,7 +59,6 @@ export class PageProfile implements OnInit, OnDestroy {
         Countries: ReturnType<typeof CountriesFactory>,
         private User: ReturnType<typeof UserFactory>,
         private Confirm: Confirm,
-        private LegacyUtils: ReturnType<typeof LegacyUtilsFactory>,
         private fb: FormBuilder
     ) {
         this.countries = Countries.getAll();
@@ -103,7 +100,7 @@ export class PageProfile implements OnInit, OnDestroy {
     async generateToken() {
         try {
             await this.Confirm.confirm('Are you sure you want to change security token?<br>If you change the token you will need to restart the agent.');
-            this.form.get('token').setValue(this.LegacyUtils.randomString(20));
+            this.form.get('token').setValue(uuidv4());
         }
         catch (ignored) {
             // No-op.

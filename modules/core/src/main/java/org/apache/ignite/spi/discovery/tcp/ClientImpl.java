@@ -376,7 +376,10 @@ class ClientImpl extends TcpDiscoveryImpl {
 
     /** {@inheritDoc} */
     @Override public boolean allNodesSupport(IgniteFeatures feature) {
-        return IgniteFeatures.allNodesSupports(upcast(rmtNodes.values()), feature);
+        return IgniteFeatures.allNodesSupports(
+            (spi.ignite() instanceof IgniteEx) ? ((IgniteEx)spi.ignite()).context() : null,
+            upcast(rmtNodes.values()),
+            feature);
     }
 
     /** {@inheritDoc} */
@@ -558,7 +561,7 @@ class ClientImpl extends TcpDiscoveryImpl {
     ) throws IgniteSpiException, InterruptedException {
         List<InetSocketAddress> addrs = null;
 
-        long startTime = U.currentTimeMillis();
+        long startNanos = System.nanoTime();
 
         while (true) {
             if (Thread.currentThread().isInterrupted())
@@ -572,7 +575,7 @@ class ClientImpl extends TcpDiscoveryImpl {
                         log.debug("Resolved addresses from IP finder: " + addrs);
                 }
                 else {
-                    if (timeout > 0 && (U.currentTimeMillis() - startTime) > timeout)
+                    if (timeout > 0 && U.millisSinceNanos(startNanos) > timeout)
                         return null;
 
                     LT.warn(log, "IP finder returned empty addresses list. " +
@@ -641,7 +644,7 @@ class ClientImpl extends TcpDiscoveryImpl {
                 }
             }
 
-            if (timeout > 0 && (U.currentTimeMillis() - startTime) > timeout)
+            if (timeout > 0 && U.millisSinceNanos(startNanos) > timeout)
                 return null;
 
             if (wait) {
@@ -709,7 +712,7 @@ class ClientImpl extends TcpDiscoveryImpl {
             Socket sock = null;
 
             try {
-                long tstamp = U.currentTimeMillis();
+                long tsNanos = System.nanoTime();
 
                 sock = spi.openSocket(addr, timeoutHelper);
 
@@ -728,11 +731,11 @@ class ClientImpl extends TcpDiscoveryImpl {
                 assert rmtNodeId != null;
                 assert !getLocalNodeId().equals(rmtNodeId);
 
-                spi.stats.onClientSocketInitialized(U.currentTimeMillis() - tstamp);
+                spi.stats.onClientSocketInitialized(U.millisSinceNanos(tsNanos));
 
                 locNode.clientRouterNodeId(rmtNodeId);
 
-                tstamp = U.currentTimeMillis();
+                tsNanos = System.nanoTime();
 
                 TcpDiscoveryAbstractMessage msg;
 
@@ -775,7 +778,7 @@ class ClientImpl extends TcpDiscoveryImpl {
 
                 spi.writeToSocket(sock, msg, timeoutHelper.nextTimeoutChunk(spi.getSocketTimeout()));
 
-                spi.stats.onMessageSent(msg, U.currentTimeMillis() - tstamp);
+                spi.stats.onMessageSent(msg, U.millisSinceNanos(tsNanos));
 
                 if (log.isDebugEnabled())
                     log.debug("Message has been sent to address [msg=" + msg + ", addr=" + addr +
@@ -1406,14 +1409,19 @@ class ClientImpl extends TcpDiscoveryImpl {
                     msg = null;
 
                     if (ack) {
-                        long waitEnd = U.currentTimeMillis() + (spi.failureDetectionTimeoutEnabled() ?
+                        long waitEndNanos = System.nanoTime() + U.millisToNanos(spi.failureDetectionTimeoutEnabled() ?
                             spi.failureDetectionTimeout() : spi.getAckTimeout());
 
                         TcpDiscoveryAbstractMessage unacked;
 
                         synchronized (mux) {
-                            while (unackedMsg != null && U.currentTimeMillis() < waitEnd)
-                                mux.wait(waitEnd);
+                            long nowNanos = System.nanoTime();
+
+                            while (unackedMsg != null && waitEndNanos - nowNanos > 0) {
+                                mux.wait(U.nanosToMillis(waitEndNanos - nowNanos));
+
+                                nowNanos = System.nanoTime();
+                            }
 
                             unacked = unackedMsg;
 
@@ -1527,7 +1535,7 @@ class ClientImpl extends TcpDiscoveryImpl {
 
             long timeout = join ? spi.joinTimeout : spi.netTimeout;
 
-            long startTime = U.currentTimeMillis();
+            long startNanos = System.nanoTime();
 
             if (log.isDebugEnabled())
                 log.debug("Started reconnect process [join=" + join + ", timeout=" + timeout + ']');
@@ -1613,7 +1621,7 @@ class ClientImpl extends TcpDiscoveryImpl {
                         if (log.isDebugEnabled())
                             log.error("Reconnect error [join=" + join + ", timeout=" + timeout + ']', e);
 
-                        if (timeout > 0 && (U.currentTimeMillis() - startTime) > timeout) {
+                        if (timeout > 0 && U.millisSinceNanos(startNanos) > timeout) {
                             String msg = join ? "Failed to connect to cluster (consider increasing 'joinTimeout' " +
                                 "configuration  property) [joinTimeout=" + spi.joinTimeout + ", err=" + e + ']' :
                                 "Failed to reconnect to cluster (consider increasing 'networkTimeout' " +
@@ -1673,7 +1681,7 @@ class ClientImpl extends TcpDiscoveryImpl {
         private boolean nodeAdded;
 
         /** */
-        private long lastReconnectTimestamp = -1;
+        private long lastReconnectTsNanos = -1;
 
         /** */
         private long currentReconnectDelay = -1;
@@ -1978,7 +1986,9 @@ class ClientImpl extends TcpDiscoveryImpl {
          * @throws InterruptedException If thread is interrupted.
          */
         private void throttleClientReconnect() throws InterruptedException {
-            if (U.currentTimeMillis() - lastReconnectTimestamp > CLIENT_THROTTLE_RECONNECT_RESET_TIMEOUT)
+            if (currentReconnectDelay == -1
+                || U.millisSinceNanos(lastReconnectTsNanos) > CLIENT_THROTTLE_RECONNECT_RESET_TIMEOUT
+            )
                 currentReconnectDelay = 0; // Skip pause on first reconnect.
             else if (currentReconnectDelay == 0)
                 currentReconnectDelay = 200;
@@ -1996,7 +2006,7 @@ class ClientImpl extends TcpDiscoveryImpl {
                 Thread.sleep(random.nextLong(currentReconnectDelay / 2, currentReconnectDelay));
             }
 
-            lastReconnectTimestamp = U.currentTimeMillis();
+            lastReconnectTsNanos = System.nanoTime();
         }
 
         /**
@@ -2461,7 +2471,7 @@ class ClientImpl extends TcpDiscoveryImpl {
                     log.debug("Received metrics response: " + msg);
             }
             else {
-                long tstamp = U.currentTimeMillis();
+                long tsNanos = System.nanoTime();
 
                 if (msg.hasMetrics()) {
                     for (Map.Entry<UUID, TcpDiscoveryMetricsUpdateMessage.MetricsSet> e : msg.metrics().entrySet()) {
@@ -2472,10 +2482,10 @@ class ClientImpl extends TcpDiscoveryImpl {
                         Map<Integer, CacheMetrics> cacheMetrics = msg.hasCacheMetrics(nodeId) ?
                             msg.cacheMetrics().get(nodeId) : Collections.<Integer, CacheMetrics>emptyMap();
 
-                        updateMetrics(nodeId, metricsSet.metrics(), cacheMetrics, tstamp);
+                        updateMetrics(nodeId, metricsSet.metrics(), cacheMetrics, tsNanos);
 
                         for (T2<UUID, ClusterMetrics> t : metricsSet.clientMetrics())
-                            updateMetrics(t.get1(), t.get2(), cacheMetrics, tstamp);
+                            updateMetrics(t.get1(), t.get2(), cacheMetrics, tsNanos);
                     }
                 }
             }
@@ -2581,12 +2591,12 @@ class ClientImpl extends TcpDiscoveryImpl {
          * @param nodeId Node ID.
          * @param metrics Metrics.
          * @param cacheMetrics Cache metrics.
-         * @param tstamp Timestamp.
+         * @param tsNanos Timestamp as returned by {@link System#nanoTime()}.
          */
         private void updateMetrics(UUID nodeId,
             ClusterMetrics metrics,
             Map<Integer, CacheMetrics> cacheMetrics,
-            long tstamp)
+            long tsNanos)
         {
             boolean isLocDaemon = spi.locNode.isDaemon();
 
@@ -2602,7 +2612,7 @@ class ClientImpl extends TcpDiscoveryImpl {
                 if (!isLocDaemon)
                     node.setCacheMetrics(cacheMetrics);
 
-                node.lastUpdateTime(tstamp);
+                node.lastUpdateTimeNanos(tsNanos);
 
                 notifyDiscovery(EVT_NODE_METRICS_UPDATED, topVer, node, allVisibleNodes(), null);
             }

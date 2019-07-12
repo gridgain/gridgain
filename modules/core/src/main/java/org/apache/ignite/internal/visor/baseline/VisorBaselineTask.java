@@ -34,6 +34,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorOneNodeTask;
+import org.apache.ignite.internal.visor.util.VisorIllegalStateException;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -77,11 +78,6 @@ public class VisorBaselineTask extends VisorOneNodeTask<VisorBaselineTaskArg, Vi
 
             Collection<? extends BaselineNode> srvrs = cluster.forServers().nodes();
 
-            VisorBaselineAutoAdjustSettings autoAdjustSettings = new VisorBaselineAutoAdjustSettings(
-                cluster.isBaselineAutoAdjustEnabled(),
-                cluster.baselineAutoAdjustTimeout()
-            );
-
             BaselineAutoAdjustStatus adjustStatus = cluster.baselineAutoAdjustStatus();
 
             return new VisorBaselineTaskResult(
@@ -89,7 +85,8 @@ public class VisorBaselineTask extends VisorOneNodeTask<VisorBaselineTaskArg, Vi
                 cluster.topologyVersion(),
                 F.isEmpty(baseline) ? null : baseline,
                 srvrs,
-                autoAdjustSettings,
+                cluster.isBaselineAutoAdjustEnabled(),
+                cluster.baselineAutoAdjustTimeout(),
                 adjustStatus.getTimeUntilAutoAdjust(),
                 adjustStatus.getTaskState() == BaselineAutoAdjustStatus.TaskState.IN_PROGRESS
             );
@@ -172,7 +169,7 @@ public class VisorBaselineTask extends VisorOneNodeTask<VisorBaselineTaskArg, Vi
                 BaselineNode node = srvrs.get(consistentId);
 
                 if (node == null)
-                    throw new IllegalStateException("Node not found for consistent ID: " + consistentId);
+                    throw new VisorIllegalStateException("Check arguments. Node not found for consistent ID: " + consistentId);
 
                 baseline.put(consistentId, node);
             }
@@ -196,7 +193,7 @@ public class VisorBaselineTask extends VisorOneNodeTask<VisorBaselineTaskArg, Vi
                 BaselineNode node = baseline.remove(consistentId);
 
                 if (node == null)
-                    throw new IllegalStateException("Node not found for consistent ID: " + consistentId);
+                    throw new VisorIllegalStateException("Check arguments. Node not found for consistent ID: " + consistentId);
             }
 
             return set0(baseline.values());
@@ -212,9 +209,14 @@ public class VisorBaselineTask extends VisorOneNodeTask<VisorBaselineTaskArg, Vi
             IgniteClusterEx cluster = ignite.cluster();
 
             if (targetVer > cluster.topologyVersion())
-                throw new IllegalArgumentException("Topology version is ahead of time: " + targetVer);
+                throw new VisorIllegalStateException("Check arguments. Topology version is ahead of time: " + targetVer);
 
-            cluster.setBaselineTopology(targetVer);
+            try {
+                cluster.setBaselineTopology(targetVer);
+            }
+            catch (Throwable e) {
+                throw new VisorIllegalStateException(e.getMessage());
+            }
 
             return collect();
         }
@@ -225,12 +227,12 @@ public class VisorBaselineTask extends VisorOneNodeTask<VisorBaselineTaskArg, Vi
          * @param settings Baseline autoAdjustment settings.
          * @return New baseline.
          */
-        private VisorBaselineTaskResult updateAutoAdjustmentSettings(VisorBaselineAutoAdjustSettings settings) {
-            if (settings.getSoftTimeout() != null)
-                ignite.cluster().baselineAutoAdjustTimeout(settings.getSoftTimeout());
+        private VisorBaselineTaskResult updateAutoAdjustmentSettings(VisorBaselineTaskArg settings) {
+            if (settings.isAutoAdjustEnabled() != null)
+                ignite.cluster().baselineAutoAdjustEnabled(settings.isAutoAdjustEnabled());
 
-            if (settings.getEnabled() != null)
-                ignite.cluster().baselineAutoAdjustEnabled(settings.getEnabled());
+            if (settings.getAutoAdjustAwaitingTime() != null)
+                ignite.cluster().baselineAutoAdjustTimeout(settings.getAutoAdjustAwaitingTime());
 
             return collect();
         }
@@ -251,7 +253,7 @@ public class VisorBaselineTask extends VisorOneNodeTask<VisorBaselineTaskArg, Vi
                     return version(arg.getTopologyVersion());
 
                 case AUTOADJUST:
-                    return updateAutoAdjustmentSettings(arg.getAutoAdjustSettings());
+                    return updateAutoAdjustmentSettings(arg);
 
                 default:
                     return collect();

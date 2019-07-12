@@ -89,6 +89,7 @@ import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridClosureException;
 import org.apache.ignite.internal.util.lang.GridInClosure3;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.C1;
 import org.apache.ignite.internal.util.typedef.C2;
@@ -3848,13 +3849,24 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
             return chainFinishFuture(finishFut, true, true, false);
 
         if (!fastFinish) {
-            final IgniteInternalFuture<?> prepareFut = prepareNearTxLocal();
+            IgniteInternalFuture<?> prepareFut;
+            try {
+                prepareFut = prepareNearTxLocal();
+            }
+            catch (Throwable t) {
+                prepareFut = prepFut;
+
+                // Properly finish prepFut in case of unchecked error.
+                assert prepareFut != null; // Prep future must be set.
+
+                ((GridNearTxPrepareFutureAdapter)prepFut).onDone(t);
+            }
 
             prepareFut.listen(new CI1<IgniteInternalFuture<?>>() {
                 @Override public void apply(IgniteInternalFuture<?> f) {
                     try {
                         // Make sure that here are no exceptions.
-                        prepareFut.get();
+                        f.get();
 
                         fut.finish(true, true, false);
                     }
@@ -4543,7 +4555,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
      */
     public TransactionProxy proxy() {
         if (proxy == null)
-            proxy = new TransactionProxyImpl(this, cctx, false);
+            proxy = new TransactionProxyImpl(this, cctx);
 
         return proxy;
     }
@@ -4553,7 +4565,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
      */
     public TransactionProxy rollbackOnlyProxy() {
         if (rollbackOnlyProxy == null)
-            rollbackOnlyProxy = new TransactionProxyRollbackOnlyImpl<>(this, cctx, false);
+            rollbackOnlyProxy = new TransactionProxyRollbackOnlyImpl<>(this, cctx);
 
         return rollbackOnlyProxy;
     }
@@ -4858,7 +4870,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
         }
 
         if (proceed || (state() == MARKED_ROLLBACK)) {
-            cctx.kernalContext().closure().runLocalSafe(new Runnable() {
+            cctx.kernalContext().closure().runLocalSafe(new GridPlainRunnable() {
                 @Override public void run() {
                     // Note: if rollback asynchronously on timeout should not clear thread map
                     // since thread started tx still should be able to see this tx.
