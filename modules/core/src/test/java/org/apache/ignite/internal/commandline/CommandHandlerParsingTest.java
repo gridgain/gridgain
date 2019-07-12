@@ -25,7 +25,6 @@ import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Stream;
 import org.apache.ignite.internal.commandline.baseline.BaselineArguments;
 import org.apache.ignite.internal.commandline.cache.CacheCommands;
 import org.apache.ignite.internal.commandline.cache.CacheSubcommands;
@@ -273,17 +272,6 @@ public class CommandHandlerParsingTest {
 
             generateAllCombinations(res0, sourceCopy, stopFunc, acc);
         }
-    }
-
-    /**
-     * Test that experimental command (i.e. WAL command) is disabled by default.
-     */
-    @Test
-    @WithSystemProperty(key = IGNITE_ENABLE_EXPERIMENTAL_COMMAND, value = "false")
-    public void testExperimentalCommandIsDisabled() {
-        Stream.of(WAL_PRINT, WAL_DELETE)
-            .map(walOperation -> asList(WAL.text(), walOperation))
-            .forEach(this::parseArgs);
     }
 
     /**

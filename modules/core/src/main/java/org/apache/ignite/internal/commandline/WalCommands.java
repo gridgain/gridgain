@@ -101,9 +101,10 @@ public class WalCommands implements Command<T2<String, String>> {
                         break;
                 }
             }
-        } else
+        } else {
             logger.warning(String.format("For use experimental command add %s=true to JVM_OPTS in %s",
                 IGNITE_ENABLE_EXPERIMENTAL_COMMAND, UTILITY_NAME));
+        }
 
         return null;
     }
