@@ -33,6 +33,7 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 
 import static java.lang.Thread.State.TIMED_WAITING;
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
@@ -233,7 +234,7 @@ public class IgniteThrottlingUnitTest {
 
     /** */
     @Test
-    public void wakeupThrottledThread() throws IgniteInterruptedCheckedException {
+    public void wakeupThrottledThread() throws IgniteInterruptedCheckedException, InterruptedException {
         PagesWriteThrottlePolicy plc = new PagesWriteThrottle(pageMemory2g, null, stateChecker, true, log);
 
         AtomicBoolean stopLoad = new AtomicBoolean();
@@ -252,28 +253,37 @@ public class IgniteThrottlingUnitTest {
         when(pageMemory2g.checkpointBufferPagesSize()).thenReturn(100);
         when(pageMemory2g.checkpointBufferPagesCount()).thenReturn(70);
 
-        loadThreads.forEach(Thread::start);
+        try {
+            loadThreads.forEach(Thread::start);
 
-        for (int i=0; i<100_000; i++)
-            loadThreads.forEach(LockSupport::unpark);
+            for (int i = 0; i < 100_000; i++)
+                loadThreads.forEach(LockSupport::unpark);
 
-        // Awaiting that all load threads are parked.
-        for (Thread t : loadThreads)
-            assertTrue(t.getName(), GridTestUtils.waitForCondition(() -> t.getState() == TIMED_WAITING, 500L));
+            // Awaiting that all load threads are parked.
+            for (Thread t : loadThreads)
+                assertTrue(t.getName(), waitForCondition(() -> t.getState() == TIMED_WAITING, 500L));
 
-        plc.tryWakeupThrottledThreads();
+            plc.tryWakeupThrottledThreads();
 
-        // Threads shouldn't wakeup because of throttling enabled.
-        for (Thread t : loadThreads)
-            assertEquals(t.getName(), TIMED_WAITING, t.getState());
+            // Threads shouldn't wakeup because of throttling enabled.
+            for (Thread t : loadThreads)
+                assertEquals(t.getName(), TIMED_WAITING, t.getState());
 
-        // Disable throttling
-        when(pageMemory2g.checkpointBufferPagesCount()).thenReturn(50);
+            // Disable throttling
+            when(pageMemory2g.checkpointBufferPagesCount()).thenReturn(50);
 
-        plc.tryWakeupThrottledThreads();
+            plc.tryWakeupThrottledThreads();
 
-        for (Thread t : loadThreads)
-            assertNotEquals(t.getName(), TIMED_WAITING, t.getState());
+            // Awaiting that all load threads are unparked.
+            for (Thread t : loadThreads)
+                assertTrue(t.getName(), waitForCondition(() -> t.getState() != TIMED_WAITING, 500L));
+
+            for (Thread t : loadThreads)
+                assertNotEquals(t.getName(), TIMED_WAITING, t.getState());
+        }
+        finally {
+            stopLoad.set(true);
+        }
     }
 
     /**
