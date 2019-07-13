@@ -124,6 +124,7 @@ import org.apache.ignite.transactions.TransactionRollbackException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.cache.CacheMode.LOCAL;
@@ -2337,7 +2338,7 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
         List<T3<String, @Nullable PartitionUpdateCounter, Boolean>> cntrMap = G.allGrids().stream().filter(ignite ->
             !ignite.configuration().isClientMode()).map(ignite ->
             new T3<>(ignite.name(), counter(partId, ignite.name()),
-                ignite.affinity(DEFAULT_CACHE_NAME).isPrimary(ignite.cluster().localNode(), Integer.valueOf(partId)))).collect(Collectors.toList());
+                ignite.affinity(DEFAULT_CACHE_NAME).isPrimary(ignite.cluster().localNode(), partId))).collect(toList());
 
         for (T3<String, PartitionUpdateCounter, Boolean> cntr : cntrMap) {
             if (cntr.get2() == null)
