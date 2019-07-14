@@ -162,7 +162,7 @@ public class VisorCacheRebalanceCollectorTask extends VisorMultiNodeTask<VisorCa
                     else
                         res.setRebalance(total > 0 && rebalanceInProgress ? Math.max(ready / total, MINIMAL_REBALANCE) : REBALANCE_COMPLETE);
                 }
-                catch (Throwable e) {
+                catch (Exception e) {
                     res.setRebalance(REBALANCE_NOT_AVAILABLE);
 
                     ignite.log().error("Failed to collect rebalance metrics", e);
