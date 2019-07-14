@@ -30,6 +30,8 @@ import org.junit.Test;
 import static org.apache.ignite.configuration.WALMode.LOG_ONLY;
 import static org.apache.ignite.internal.visor.node.VisorNodeBaselineStatus.BASELINE_NOT_AVAILABLE;
 import static org.apache.ignite.internal.visor.node.VisorNodeBaselineStatus.NODE_IN_BASELINE;
+import static org.apache.ignite.internal.visor.util.VisorTaskUtils.REBALANCE_COMPLETE;
+import static org.apache.ignite.internal.visor.util.VisorTaskUtils.REBALANCE_NOT_AVAILABLE;
 
 /**
  * Tests for {@link VisorCacheRebalanceCollectorTask}.
@@ -74,6 +76,18 @@ public class VisorCacheRebalanceCollectorTaskSelfTest extends GridCommonAbstract
     }
 
     /**
+     * @param ignite Ignite.
+     * @param nid Node ID.
+     * @return Task result.
+     */
+    private VisorCacheRebalanceCollectorTaskResult executeTask(IgniteEx ignite, UUID nid) {
+        return ignite
+            .compute()
+            .execute(VisorCacheRebalanceCollectorTask.class,
+                new VisorTaskArgument<>(nid, new VisorCacheRebalanceCollectorTaskArg(), false));
+    }
+
+    /**
      * This test execute internal tasks over grid with custom balancer.
      *
      * @throws Exception In case of error.
@@ -84,27 +98,30 @@ public class VisorCacheRebalanceCollectorTaskSelfTest extends GridCommonAbstract
 
         UUID nid = ignite.localNode().id();
 
-        VisorCacheRebalanceCollectorTaskResult taskRes = ignite
-            .compute()
-            .execute(VisorCacheRebalanceCollectorTask.class,
-                new VisorTaskArgument<>(nid, new VisorCacheRebalanceCollectorTaskArg(), false));
+        VisorCacheRebalanceCollectorTaskResult taskRes = executeTask(ignite, nid);
 
         assertNotNull(taskRes);
-
         assertFalse(F.isEmpty(taskRes.getBaseline()));
         assertEquals(1, taskRes.getBaseline().size());
-        assertEquals(BASELINE_NOT_AVAILABLE, taskRes.getBaseline().get(nid));
-        assertEquals(0.0, taskRes.getRebalance().get(nid));
+        assertEquals(BASELINE_NOT_AVAILABLE, taskRes.getBaseline().get(nid)); // In new cluster node is not in baseline.
+        assertEquals(REBALANCE_NOT_AVAILABLE, taskRes.getRebalance().get(nid));
 
         ignite.cluster().active(true);
 
-        taskRes = ignite
-            .compute()
-            .execute(VisorCacheRebalanceCollectorTask.class,
-                new VisorTaskArgument<>(nid, new VisorCacheRebalanceCollectorTaskArg(), false));
+        taskRes = executeTask(ignite, nid);
 
         assertNotNull(taskRes);
         assertEquals(NODE_IN_BASELINE, taskRes.getBaseline().get(nid));
-        assertEquals(1.0, taskRes.getRebalance().get(nid));
+        assertEquals(REBALANCE_COMPLETE, taskRes.getRebalance().get(nid));
+
+        ignite.cluster().active(false);
+
+        taskRes = executeTask(ignite, nid);
+
+        assertNotNull(taskRes);
+        assertFalse(F.isEmpty(taskRes.getBaseline()));
+        assertEquals(1, taskRes.getBaseline().size());
+        assertEquals(NODE_IN_BASELINE, taskRes.getBaseline().get(nid)); // Node in baseline after first activation.
+        assertEquals(REBALANCE_NOT_AVAILABLE, taskRes.getRebalance().get(nid));
     }
 }
