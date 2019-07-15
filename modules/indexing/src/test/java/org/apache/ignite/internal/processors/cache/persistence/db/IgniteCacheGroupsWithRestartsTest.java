@@ -47,7 +47,6 @@ import org.apache.ignite.internal.visor.cache.VisorFindAndDeleteGarbageInPersist
 import org.apache.ignite.internal.visor.cache.VisorFindAndDeleteGarbageInPersistenceTaskResult;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.apache.ignite.testframework.junits.multijvm.IgniteProcessProxy;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -151,7 +150,7 @@ public class IgniteCacheGroupsWithRestartsTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Ignore("https://issues.apache.org/jira/browse/IGNITE-8717")
+    @Ignore("https://issues.apache.org/jira/browse/IGNITE-9562")
     @Test
     public void testNodeRestartRightAfterCacheStop() throws Exception {
         IgniteEx ex = startGrids(3);
@@ -162,7 +161,7 @@ public class IgniteCacheGroupsWithRestartsTest extends GridCommonAbstractTest {
 
         assertNull(ex.cachex(getCacheName(0)));
 
-        IgniteProcessProxy.kill(grid(2).configuration().getIgniteInstanceName());
+        stopGrid(2, true);
 
         startGrid(2);
 
