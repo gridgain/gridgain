@@ -71,7 +71,7 @@ public enum IgniteFeatures {
     TCP_DISCOVERY_MESSAGE_NODE_COMPACT_REPRESENTATION(14),
 
     /** Support of cluster ID and tag. */
-    CLUSTER_ID_AND_TAG(15);
+    CLUSTER_ID_AND_TAG(16);
 
     /**
      * Unique feature identifier.
