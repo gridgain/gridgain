@@ -84,16 +84,7 @@ public class IgniteCacheGroupsWithRestartsTest extends GridCommonAbstractTest {
 
         if (start4th)
             configuration.setCacheConfiguration(
-                getCacheConfiguration(0),
-                getCacheConfiguration(1),
-                getCacheConfiguration(2),
                 getCacheConfiguration(3)
-            );
-        else
-            configuration.setCacheConfiguration(
-                getCacheConfiguration(0),
-                getCacheConfiguration(1),
-                getCacheConfiguration(2)
             );
 
         return configuration;
@@ -115,7 +106,7 @@ public class IgniteCacheGroupsWithRestartsTest extends GridCommonAbstractTest {
         Set<QueryIndex> indices = Collections.singleton(new QueryIndex("name", QueryIndexType.SORTED));
 
         ccfg.setName(getCacheName(i))
-//            .setGroupName("group")
+            .setGroupName("group")
             .setQueryEntities(Collections.singletonList(
                 new QueryEntity(Long.class, Account.class)
                     .setFields(fields)
@@ -151,7 +142,7 @@ public class IgniteCacheGroupsWithRestartsTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Ignore("https://issues.apache.org/jira/browse/IGNITE-9562")
+    @Ignore("https://issues.apache.org/jira/browse/IGNITE-8717")
     @Test
     public void testNodeRestartRightAfterCacheStop() throws Exception {
         IgniteEx ex = startGrids(3);
@@ -217,7 +208,6 @@ public class IgniteCacheGroupsWithRestartsTest extends GridCommonAbstractTest {
         assertNull(ex.cachex(getCacheName(3)));
 
         start4th = true;
-        System.err.println("!!!! START");
         IgniteEx node2 = startGrid(2);
         start4th = false;
 
