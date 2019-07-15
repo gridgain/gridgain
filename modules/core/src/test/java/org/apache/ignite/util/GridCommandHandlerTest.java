@@ -338,21 +338,21 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "find_garbage", "--port", "11212"));
 
-        assertTrue(testOut.toString().contains("garbage not found"));
+        assertContains(log, testOut.toString(), "garbage not found");
 
         testOut.reset();
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "find_garbage",
             ignite(0).localNode().id().toString(), "--port", "11212"));
 
-        assertTrue(testOut.toString().contains("garbage not found"));
+        assertContains(log, testOut.toString(), "garbage not found");
 
         testOut.reset();
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "find_garbage",
             "groupGarbage", "--port", "11212"));
 
-        assertTrue(testOut.toString().contains("garbage not found"));
+        assertContains(log, testOut.toString(), "garbage not found");
     }
 
     /**
@@ -3056,16 +3056,27 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
     }
 
     /**
-     * In case --help don't show --wal command.
-     * In case invoke particular wal command print only warning.
-     * */
+     * Don't show wal commands by --help in case
+     * {@link org.apache.ignite.IgniteSystemProperties#IGNITE_ENABLE_EXPERIMENTAL_COMMAND} = false or empty.
+     */
     @Test
     @WithSystemProperty(key = IGNITE_ENABLE_EXPERIMENTAL_COMMAND, value = "false")
-    public void testHideWalCommandsInCaseDisableExperimentalCommand() {
+    public void testHideWalInHelpWhenDisableExperimentalCommand() {
         injectTestSystemOut();
 
         execute("--help");
-        assertFalse(testOut.toString().contains(WAL.text()));
+
+        assertNotContains(log, testOut.toString(), WAL.text());
+    }
+
+    /**
+     * Wal commands should ignored and print warrning in case
+     * {@link org.apache.ignite.IgniteSystemProperties#IGNITE_ENABLE_EXPERIMENTAL_COMMAND} = false or empty.
+     * */
+    @Test
+    @WithSystemProperty(key = IGNITE_ENABLE_EXPERIMENTAL_COMMAND, value = "false")
+    public void testWalCommandsInCaseDisableExperimentalCommand() {
+        injectTestSystemOut();
 
         String warning = String.format("For use experimental command add %s=true to JVM_OPTS in %s",
             IGNITE_ENABLE_EXPERIMENTAL_COMMAND, UTILITY_NAME);
@@ -3073,6 +3084,6 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
         Stream.of("print", "delete")
             .peek(c -> testOut.reset())
             .peek(c -> assertEquals(EXIT_CODE_OK, execute(WAL.text(), c)))
-            .forEach(c -> assertTrue(testOut.toString().contains(warning)));
+            .forEach(c -> assertContains(log, testOut.toString(), warning));
     }
 }
