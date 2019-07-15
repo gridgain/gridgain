@@ -3070,7 +3070,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
     }
 
     /**
-     * Wal commands should ignored and print warrning in case
+     * Wal commands should ignored and print warning in case
      * {@link org.apache.ignite.IgniteSystemProperties#IGNITE_ENABLE_EXPERIMENTAL_COMMAND} = false or empty.
      * */
     @Test
