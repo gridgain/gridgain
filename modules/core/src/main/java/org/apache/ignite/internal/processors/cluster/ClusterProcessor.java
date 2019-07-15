@@ -546,6 +546,8 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
                 localClusterTag = remoteClusterTag;
         }
         else {
+            System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis() + " entering compatibility mode");
+
             compatibilityMode = true;
 
             ctx.event().addDiscoveryEventListener(discoLsnr, EVT_NODE_LEFT, EVT_NODE_FAILED);
