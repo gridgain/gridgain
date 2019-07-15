@@ -378,7 +378,8 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         IgniteInternalFuture prepFut = tx.currentPrepareFuture();
 
         if (prepFut != null) {
-            assert prepFut instanceof GridFutureAdapter;
+            assert prepFut instanceof GridFutureAdapter :
+                "It is assumed that prepare future should extend GridFutureAdapter class [prepFut=" + prepFut + ']';
 
             ((GridFutureAdapter)prepFut).onDone(
                 new IgniteTxRollbackCheckedException(

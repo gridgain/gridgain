@@ -382,7 +382,7 @@ public class TxOnCachesStopTest extends GridCommonAbstractTest {
     private List<CacheConfiguration> createCacheConfigurations() {
         String GRP_NAME = "test-destroy-group";
 
-        List<CacheConfiguration> cacheCfgs = new ArrayList<>(50);
+        List<CacheConfiguration> cacheCfgs = new ArrayList<>(CACHE_CNT);
 
         for (int i = 0; i < CACHE_CNT; ++i) {
             CacheConfiguration<Integer, byte[]> c = new CacheConfiguration<>("test-cache-" + i);
@@ -457,7 +457,7 @@ public class TxOnCachesStopTest extends GridCommonAbstractTest {
     private IgniteInternalFuture startTxLoad (
         final AtomicBoolean stopTxLoad,
         final AtomicInteger cacheIdxToBeDestroyed,
-        final ArrayList<Ignite> clients,
+        final List<Ignite> clients,
         TransactionConcurrency concurrency,
         TransactionIsolation isolation){
         final GridCompoundFuture fut = new GridCompoundFuture();
@@ -466,7 +466,8 @@ public class TxOnCachesStopTest extends GridCommonAbstractTest {
             fut.add(GridTestUtils.runAsync(() -> {
                 ThreadLocalRandom rnd = ThreadLocalRandom.current();
 
-                ArrayList<IgniteCache<Integer, byte[]>> caches = new ArrayList<>();
+                List<IgniteCache<Integer, byte[]>> caches = new ArrayList<>();
+
                 for (int i = 0; i < CACHE_CNT; ++i) {
                     IgniteCache<Integer, byte[]> testCache = c.cache("test-cache-" + i);
 
