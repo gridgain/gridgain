@@ -1750,6 +1750,7 @@ class ServerImpl extends TcpDiscoveryImpl {
             nodeAddedMsg.topology(null);
             nodeAddedMsg.topologyHistory(null);
             nodeAddedMsg.messages(null, null, null);
+            nodeAddedMsg.clearUnmarshalledDiscoveryData();
         }
     }
 
@@ -3516,12 +3517,6 @@ class ServerImpl extends TcpDiscoveryImpl {
                             }
                             finally {
                                 SecurityUtils.restoreDefaultSerializeVersion();
-
-                                if (msg instanceof TcpDiscoveryNodeAddedMessage) {
-                                    TcpDiscoveryNodeAddedMessage nodeAddedMsg = (TcpDiscoveryNodeAddedMessage)msg;
-
-                                    nodeAddedMsg.clearUnmarshalledDiscoveryData();
-                                }
 
                                 clearNodeAddedMessage(msg);
                             }
