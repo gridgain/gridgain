@@ -6124,6 +6124,9 @@ class ServerImpl extends TcpDiscoveryImpl {
                 if (waitForNotification || msgObj.isMutable()) {
                     blockingSectionBegin();
 
+                    System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis()
+                        + " before waiting for notification: " + lsnr.getClass().getName() + "; custom evt: " + msgObj.getClass().getName());
+
                     try {
                         fut.get();
                     }
