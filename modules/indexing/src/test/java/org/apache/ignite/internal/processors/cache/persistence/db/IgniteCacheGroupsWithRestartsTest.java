@@ -38,6 +38,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.commandline.CommandHandler;
 import org.apache.ignite.internal.commandline.cache.argument.FindAndDeleteGarbageArg;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
@@ -187,17 +188,21 @@ public class IgniteCacheGroupsWithRestartsTest extends GridCommonAbstractTest {
         assertNull(ex.cachex(getCacheName(0)));
 
 
-        IgniteEx node2 = startGrid(2);
+        try {
+            IgniteEx node2 = startGrid(2);
+
+            fail();
+        }
+        catch (Exception e){
+            List<Throwable> list = X.getThrowableList(e);
+
+            assertTrue(list.stream().
+                anyMatch(x -> x.getMessage().
+                    contains("Joining node has caches with data which are not presented on cluster")));
+        }
 
 
-        assertNull(ex.cachex(getCacheName(0)));
-        assertNull(node2.cachex(getCacheName(0)));
-
-        IgniteCache<Object, Object> cache = ex.createCache(getCacheConfiguration(0));
-
-        awaitPartitionMapExchange();
-
-        assertEquals(0, cache.size());
+        //TODO remove directories and start should be successful
     }
 
     @Test

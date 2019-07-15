@@ -1829,7 +1829,7 @@ class ClusterCachesInfo {
                     return problemCaches.stream().collect(Collectors.joining(", ",
                         "Joining node has caches with data which are not presented on cluster, " +
                             "it could mean that they were already destroyed, to add the node to cluster - " +
-                            "remove directories with the caches", "]"));
+                            "remove directories with the caches[", "]"));
             }
         }
 
