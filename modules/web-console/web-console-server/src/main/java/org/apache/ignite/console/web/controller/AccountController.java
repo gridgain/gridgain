@@ -92,12 +92,14 @@ public class AccountController {
     }
 
     /**
+     * @param req Request wrapper.
      * @param acc Current user.
      * @param changes Changes to apply to user.
      */
     @ApiOperation(value = "Save user.")
     @PostMapping(path = "/api/v1/profile/save", consumes = APPLICATION_JSON_VALUE)
-    public ResponseEntity<Void> save(
+    public ResponseEntity<UserResponse> save(
+        SecurityContextHolderAwareRequestWrapper req,
         @AuthenticationPrincipal Account acc,
         @Valid @RequestBody ChangeUserRequest changes
     ) {
@@ -107,7 +109,7 @@ public class AccountController {
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(new UserResponse(acc, req.isUserInRole(ROLE_PREVIOUS_ADMINISTRATOR)));
     }
 
     /**
