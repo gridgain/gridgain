@@ -50,6 +50,10 @@ class DistributedMetaStorageUpdateMessage implements DiscoveryCustomMessage {
 
     /** */
     public DistributedMetaStorageUpdateMessage(UUID reqId, String key, byte[] valBytes) {
+        if (key.equals("CLUSTER_ID")) {
+            System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis() + " sending req " + reqId);
+        }
+
         this.reqId = reqId;
         this.key = key;
         this.valBytes = valBytes;
