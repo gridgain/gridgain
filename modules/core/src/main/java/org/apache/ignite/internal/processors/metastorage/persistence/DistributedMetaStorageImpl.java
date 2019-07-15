@@ -310,6 +310,9 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
                 lock.writeLock().unlock();
             }
 
+            System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis() +
+                " countdown inMemoryReadyForWrite");
+
             for (DistributedMetastorageLifecycleListener subscriber : isp.getDistributedMetastorageSubscribers())
                 subscriber.onReadyForWrite(this);
 
@@ -346,6 +349,9 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
 
             if (writeAvailable.getCount() > 0)
                 writeAvailable.countDown();
+
+            System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis() +
+                " countdown onDeactivate");
 
             writeAvailable = new CountDownLatch(1);
         }
@@ -433,6 +439,9 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
         finally {
             lock.writeLock().unlock();
         }
+
+        System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis() +
+            " countdown onMetastorageReadyForWrite");
 
         for (DistributedMetastorageLifecycleListener subscriber : isp.getDistributedMetastorageSubscribers())
             subscriber.onReadyForWrite(this);
@@ -963,6 +972,9 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
 
             if (writeAvailable.getCount() > 0)
                 writeAvailable.countDown();
+
+            System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis() +
+                " countdown onDisconnected");
 
             writeAvailable = new CountDownLatch(1);
 
