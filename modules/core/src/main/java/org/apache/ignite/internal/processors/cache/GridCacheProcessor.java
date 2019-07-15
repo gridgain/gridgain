@@ -34,11 +34,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import javax.management.MBeanServer;
-import java.util.stream.Stream;
-import javax.cache.configuration.FactoryBuilder;
-import javax.cache.expiry.EternalExpiryPolicy;
-import javax.cache.expiry.ExpiryPolicy;
-import javax.management.MBeanServer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteCompute;
 import org.apache.ignite.IgniteException;
@@ -556,7 +551,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         if (!ctx.isDaemon() && (!CU.isPersistenceEnabled(ctx.config())) || ctx.config().isClientMode()) {
             CacheJoinNodeDiscoveryData data = localConfigManager.restoreCacheConfigurations();
 
-            cachesInfo.onStart(data);
+            if (data != null)
+                cachesInfo.onStart(data);
         }
 
         if (log.isDebugEnabled())

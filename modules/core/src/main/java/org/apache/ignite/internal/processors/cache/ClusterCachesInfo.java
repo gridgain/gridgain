@@ -252,6 +252,9 @@ class ClusterCachesInfo {
 
         Map<String, CacheConfiguration> grpCfgs = new HashMap<>();
 
+        if (joinDiscoData == null)
+            System.err.println();
+
         for (CacheJoinNodeDiscoveryData.CacheInfo info : joinDiscoData.caches().values()) {
             if (info.cacheData().config().getGroupName() == null)
                 continue;
