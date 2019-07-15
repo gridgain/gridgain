@@ -243,6 +243,9 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     @Override public void onReadyForWrite(DistributedMetaStorage metastorage) {
         this.metastorage = metastorage;
 
+        System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis() +
+            " listening for cluster.tag");
+
         metastorage.listen(
             (k) -> k.equals(CLUSTER_TAG),
             (String k, Serializable oldVal, Serializable newVal) -> {
@@ -252,6 +255,9 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
         if (compatibilityMode) {
             //in compatibility mode ID will be stored to metastorage on coordinator instead of receiving it on join
+            System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis() +
+                " listening for cluster.id");
+
             metastorage.listen(
                 (k) -> k.equals(CLUSTER_ID),
                 (String k, Serializable oldVal, Serializable newVal) -> {
