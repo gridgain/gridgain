@@ -20,7 +20,7 @@ import java.util.UUID;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
- * Websocket event POJO.
+ * Websocket response POJO.
  */
 public class WebSocketResponse implements WebSocketEvent<Object> {
     /** */

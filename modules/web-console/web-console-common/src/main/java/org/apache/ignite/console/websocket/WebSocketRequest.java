@@ -26,7 +26,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import static org.apache.ignite.console.websocket.WebSocketEvents.ERROR;
 
 /**
- * Websocket event POJO.
+ * Websocket request POJO.
  */
 public class WebSocketRequest implements WebSocketEvent<String> {
     /** */
