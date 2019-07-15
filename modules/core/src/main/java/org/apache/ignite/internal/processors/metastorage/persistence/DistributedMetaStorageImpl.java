@@ -1192,6 +1192,9 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
         }
 
         try {
+            System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis() +
+                " before waiting for writeAvailable, message is " + msg);
+
             U.await(writeAvailable);
 
             if (msg instanceof DistributedMetaStorageCasMessage)
