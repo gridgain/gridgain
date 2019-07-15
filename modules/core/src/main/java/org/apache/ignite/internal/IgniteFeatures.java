@@ -67,8 +67,11 @@ public enum IgniteFeatures {
     /** Support new security processor */
     IGNITE_SECURITY_PROCESSOR(13),
 
+    /** Replacing TcpDiscoveryNode field with nodeId field in discovery messages. */
+    TCP_DISCOVERY_MESSAGE_NODE_COMPACT_REPRESENTATION(14),
+
     /** Support of cluster ID and tag. */
-    CLUSTER_ID_AND_TAG(14);
+    CLUSTER_ID_AND_TAG(15);
 
     /**
      * Unique feature identifier.
