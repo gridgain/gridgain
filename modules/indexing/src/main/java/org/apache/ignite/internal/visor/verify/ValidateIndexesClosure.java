@@ -739,8 +739,14 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
 
         CacheGroupContext group = ctx.group();
 
-        String uniqueIdxName = String.format("[cacheGroup=%s, cacheGroupId=%s, cache=%s, cacheId=%s, idx=%s]",
-            group.name(), group.groupId(), ctx.name(), ctx.cacheId(), idx.getName());
+        String uniqueIdxName = String.format(
+            "[cacheGroup=%s, cacheGroupId=%s, cache=%s, cacheId=%s, idx=%s]",
+            group.name(),
+            group.groupId(),
+            ctx.name(),
+            ctx.cacheId(),
+            idx.getName()
+        );
 
         processedIndexes.incrementAndGet();
 
