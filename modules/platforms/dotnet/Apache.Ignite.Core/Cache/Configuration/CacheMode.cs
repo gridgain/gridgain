@@ -25,6 +25,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// Do not use this mode. It's left for compatibility needs.
         /// </summary>
         Reserved,
+
         /// <summary>
         /// Specifies fully replicated cache behavior. In this mode all the keys are distributed
         /// to all participating nodes. 
