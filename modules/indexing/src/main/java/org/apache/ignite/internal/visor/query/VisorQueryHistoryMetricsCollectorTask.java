@@ -45,14 +45,14 @@ import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryTy
  * Task to collect cache query metrics.
  */
 @GridInternal
-public class VisorQueryDetailMetricsHistoryCollectorTask extends VisorMultiNodeTask<VisorQueryDetailMetricsCollectorTaskArg,
+public class VisorQueryHistoryMetricsCollectorTask extends VisorMultiNodeTask<VisorQueryDetailMetricsCollectorTaskArg,
     Collection<VisorQueryDetailMetrics>, Collection<? extends QueryDetailMetrics>> {
     /** */
     private static final long serialVersionUID = 0L;
 
     /** {@inheritDoc} */
-    @Override protected VisorCacheQueryDetailMetricsCollectorJob job(VisorQueryDetailMetricsCollectorTaskArg arg) {
-        return new VisorCacheQueryDetailMetricsCollectorJob(arg, debug);
+    @Override protected VisorQueryHistoryMetricsCollectorJob job(VisorQueryDetailMetricsCollectorTaskArg arg) {
+        return new VisorQueryHistoryMetricsCollectorJob(arg, debug);
     }
 
     /** {@inheritDoc} */
@@ -66,7 +66,7 @@ public class VisorQueryDetailMetricsHistoryCollectorTask extends VisorMultiNodeT
 
             Collection<GridCacheQueryDetailMetricsAdapter> metrics = res.getData();
 
-            VisorCacheQueryDetailMetricsCollectorJob.aggregateMetrics(-1, taskRes, metrics, false);
+            VisorQueryHistoryMetricsCollectorJob.aggregateMetrics(-1, taskRes, metrics, false);
         }
 
         Collection<GridCacheQueryDetailMetricsAdapter> aggMetrics = taskRes.values();
@@ -82,7 +82,7 @@ public class VisorQueryDetailMetricsHistoryCollectorTask extends VisorMultiNodeT
     /**
      * Job that will actually collect query metrics.
      */
-    private static class VisorCacheQueryDetailMetricsCollectorJob
+    private static class VisorQueryHistoryMetricsCollectorJob
         extends VisorJob<VisorQueryDetailMetricsCollectorTaskArg, Collection<? extends QueryDetailMetrics>> {
         /** */
         private static final long serialVersionUID = 0L;
@@ -93,7 +93,7 @@ public class VisorQueryDetailMetricsHistoryCollectorTask extends VisorMultiNodeT
          * @param arg Last time when metrics were collected.
          * @param debug Debug flag.
          */
-        protected VisorCacheQueryDetailMetricsCollectorJob(@Nullable VisorQueryDetailMetricsCollectorTaskArg arg, boolean debug) {
+        protected VisorQueryHistoryMetricsCollectorJob(@Nullable VisorQueryDetailMetricsCollectorTaskArg arg, boolean debug) {
             super(arg, debug);
         }
 
@@ -101,7 +101,7 @@ public class VisorQueryDetailMetricsHistoryCollectorTask extends VisorMultiNodeT
          * @param since Time when metrics were collected last time.
          * @param res Response.
          * @param metrics Metrics.
-         * @param collectNotSqlMetrics When {@code true} collect metrics for no SQL queries only.
+         * @param collectNotSqlMetrics When {@code true} collect metrics for not SQL queries only.
          */
         private static void aggregateMetrics(
             long since, Map<GridCacheQueryDetailMetricsKey,
@@ -191,7 +191,7 @@ public class VisorQueryDetailMetricsHistoryCollectorTask extends VisorMultiNodeT
 
         /** {@inheritDoc} */
         @Override public String toString() {
-            return S.toString(VisorCacheQueryDetailMetricsCollectorJob.class, this);
+            return S.toString(VisorQueryHistoryMetricsCollectorJob.class, this);
         }
     }
 }

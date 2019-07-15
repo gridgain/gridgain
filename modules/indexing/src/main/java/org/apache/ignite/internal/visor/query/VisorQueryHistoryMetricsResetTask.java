@@ -28,7 +28,7 @@ import org.apache.ignite.internal.visor.VisorOneNodeTask;
  * Reset query detail metrics.
  */
 @GridInternal
-public class VisorQueryResetDetailMetricsHistoryTask extends VisorOneNodeTask<Void, Void> {
+public class VisorQueryHistoryMetricsResetTask extends VisorOneNodeTask<Void, Void> {
     /** */
     private static final long serialVersionUID = 0L;
 
