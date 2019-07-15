@@ -48,7 +48,6 @@ import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
-import org.apache.ignite.internal.processors.cache.persistence.GridCacheOffheapManager;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateFinishMessage;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateMessage;
 import org.apache.ignite.internal.processors.cluster.DiscoveryDataClusterState;
@@ -251,9 +250,6 @@ class ClusterCachesInfo {
         this.joinDiscoData = joinDiscoData;
 
         Map<String, CacheConfiguration> grpCfgs = new HashMap<>();
-
-        if (joinDiscoData == null)
-            System.err.println();
 
         for (CacheJoinNodeDiscoveryData.CacheInfo info : joinDiscoData.caches().values()) {
             if (info.cacheData().config().getGroupName() == null)
@@ -1016,7 +1012,7 @@ class ClusterCachesInfo {
     /**
      * @return Discovery date sent on local node join.
      */
-    Serializable joinDiscoveryData() {
+    private Serializable joinDiscoveryData() {
         if (cachesOnDisconnect != null) {
             Map<Integer, CacheClientReconnectDiscoveryData.CacheGroupInfo> cacheGrpsInfo = new HashMap<>();
             Map<String, CacheClientReconnectDiscoveryData.CacheInfo> cachesInfo = new HashMap<>();
@@ -1049,13 +1045,10 @@ class ClusterCachesInfo {
             return new CacheClientReconnectDiscoveryData(cacheGrpsInfo, cachesInfo);
         }
         else {
+            assert ctx.config().isDaemon() || joinDiscoData != null;
+
             return joinDiscoData;
         }
-    }
-
-    private int getFlags(CacheGroupContext grp) {
-        return !grp.persistenceEnabled()? 0 :
-            (((GridCacheOffheapManager)grp.offheap()).isPartitionStatesRestored() ? 0 : 1);
     }
 
     /**
@@ -1156,8 +1149,7 @@ class ClusterCachesInfo {
      * @param dataBag Discovery data bag.
      * @param splitter Cache configuration splitter.
      */
-    public void collectGridNodeData(DiscoveryDataBag dataBag,
-        CacheConfigurationSplitter splitter) {
+    public void collectGridNodeData(DiscoveryDataBag dataBag, CacheConfigurationSplitter splitter) {
         if (ctx.isDaemon())
             return;
 
@@ -1793,6 +1785,10 @@ class ClusterCachesInfo {
         }
     }
 
+    /**
+     * @param data Joining node data.
+     * @return Message with error or null if everything was OK.
+     */
     public String validateJoiningNodeData(DiscoveryDataBag.JoiningNodeDiscoveryData data) {
         if (data.hasJoiningNodeData()) {
             Serializable joiningNodeData = data.joiningNodeData();

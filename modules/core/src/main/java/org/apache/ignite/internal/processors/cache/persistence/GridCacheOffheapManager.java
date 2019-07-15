@@ -136,10 +136,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         // No-op. Per-partition PendingTree should be used.
     }
 
-    public boolean isPartitionStatesRestored() {
-        return partitionStatesRestored;
-    }
-
     /** {@inheritDoc} */
     @Override protected void initDataStructures() throws IgniteCheckedException {
         assert ctx.database().checkpointLockIsHeldByThread();
@@ -488,9 +484,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
     /** {@inheritDoc} */
     @Override public long restorePartitionStates(Map<GroupPartitionId, Integer> partitionRecoveryStates) throws IgniteCheckedException {
-
-        //TODO there we recreate local partitions
-
         if (grp.isLocal() || !grp.affinityNode() || !grp.dataRegion().config().isPersistenceEnabled())
             return 0;
 

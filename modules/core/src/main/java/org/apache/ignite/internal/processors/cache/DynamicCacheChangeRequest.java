@@ -133,7 +133,7 @@ public class DynamicCacheChangeRequest implements Serializable {
     /**
      * @param ctx Context.
      * @param cfg0 Template configuration.
-     * @param splitCfg
+     * @param splitCfg Cache configuration splitter.
      * @return Request to add template.
      */
     static DynamicCacheChangeRequest addTemplateRequest(

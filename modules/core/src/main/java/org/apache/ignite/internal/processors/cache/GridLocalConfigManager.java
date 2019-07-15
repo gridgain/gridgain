@@ -56,9 +56,10 @@ public class GridLocalConfigManager {
     private final GridKernalContext ctx;
 
 
-    public GridLocalConfigManager(GridCacheProcessor cacheProcessor,
-        ClusterCachesInfo cachesInfo,
-        GridKernalContext kernalContext) {
+    public GridLocalConfigManager(
+        GridCacheProcessor cacheProcessor,
+        GridKernalContext kernalContext
+    ) {
         this.cacheProcessor = cacheProcessor;
         ctx = kernalContext;
         this.log = ctx.log(getClass());

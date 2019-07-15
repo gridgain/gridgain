@@ -161,6 +161,9 @@ public class CacheJoinNodeDiscoveryData implements Serializable {
             return staticallyConfigured;
         }
 
+        /**
+         * @return Long which bits represent some flags.
+         */
         public long getFlags() {
             return flags;
         }

@@ -165,6 +165,9 @@ public class IgniteCacheGroupsWithRestartsTest extends GridCommonAbstractTest {
         assertEquals(0, cache.size());
     }
 
+    /**
+     * @throws Exception If failed.
+     */
     @Test
     public void testNodeRestartBetweenCacheStop() throws Exception {
         IgniteEx ex = startGrids(3);
@@ -195,6 +198,9 @@ public class IgniteCacheGroupsWithRestartsTest extends GridCommonAbstractTest {
         //TODO remove directories and start should be successful
     }
 
+    /**
+     * @throws Exception If failed.
+     */
     @Test
     public void testNodeRestartWithNewStaticallyConfiguredCache() throws Exception {
         IgniteEx ex = startGrids(3);

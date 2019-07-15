@@ -539,8 +539,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         sharedCtx = createSharedContext(ctx, sessionListeners);
 
-
-        localConfigManager = new GridLocalConfigManager(this, cachesInfo, ctx);
+        localConfigManager = new GridLocalConfigManager(this, ctx);
 
         transactions = new IgniteTransactionsImpl(sharedCtx, null);
 
@@ -568,8 +567,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @param cacheObjCtx Cache object context.
      * @throws IgniteCheckedException If configuration is not valid.
      */
-    void initialize(CacheConfiguration cfg, CacheObjectContext cacheObjCtx)
-        throws IgniteCheckedException {
+    void initialize(CacheConfiguration cfg, CacheObjectContext cacheObjCtx) throws IgniteCheckedException {
         CU.initializeConfigDefaults(log, cfg, cacheObjCtx);
 
         ctx.coordinators().preProcessCacheConfiguration(cfg);
@@ -653,7 +651,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     private void addRemovedItemsCleanupTask(long timeout) {
         ctx.timeout().addTimeoutObject(new RemovedItemsCleanupTask(timeout));
     }
-
 
     /** {@inheritDoc} */
     @Override public void stop(boolean cancel) throws IgniteCheckedException {
@@ -1580,7 +1577,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         return cachesInfo.localJoinCachesContext();
     }
-
 
     /**
      * @param exchTopVer Local join exchange future version.
@@ -2971,9 +2967,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         String validationResult = cachesInfo.validateJoiningNodeData(discoData);
 
-        if (validationResult != null) {
+        if (validationResult != null)
             return new IgniteNodeValidationResult(node.id(), validationResult);
-        }
 
         return Validator.validateNode(node, discoData, marsh, ctx, this::cacheDescriptor);
     }
@@ -3896,7 +3891,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * Authorize creating cache.
      *
      * @param cfg Cache configuration.
-     * @param ctx
+     * @param ctx Kernal context.
      */
     static void authorizeCacheCreate(CacheConfiguration cfg, GridKernalContext ctx) {
         if(cfg != null) {
