@@ -169,6 +169,9 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
                     localClusterTag = localClusterTag == null ? ClusterTagGenerator.generateTag() : localClusterTag;
 
                     try {
+                        System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis()
+                            + " request for writing CLUSTER_ID");
+
                         metastorage.writeAsync(CLUSTER_ID, localClusterId);
 
                         metastorage.writeAsync(CLUSTER_TAG, localClusterTag);
