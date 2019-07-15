@@ -38,7 +38,7 @@ import org.junit.Test;
 /**
  * Tests for ignite SQL system views.
  */
-public class SqlMetricsByWCSelfTest extends AbstractIndexingCommonTest {
+public class SqlMetricsOnWebConsoleSelfTest extends AbstractIndexingCommonTest {
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
