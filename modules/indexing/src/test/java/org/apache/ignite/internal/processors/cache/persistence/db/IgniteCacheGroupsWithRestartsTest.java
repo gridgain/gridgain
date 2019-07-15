@@ -66,7 +66,8 @@ public class IgniteCacheGroupsWithRestartsTest extends GridCommonAbstractTest {
     /** Group name. */
     public static final String GROUP = "group";
 
-    volatile boolean start4th = false;
+    /** */
+    volatile boolean startExtraStaticCache;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
@@ -82,10 +83,8 @@ public class IgniteCacheGroupsWithRestartsTest extends GridCommonAbstractTest {
 
         configuration.setDataStorageConfiguration(cfg);
 
-        if (start4th)
-            configuration.setCacheConfiguration(
-                getCacheConfiguration(3)
-            );
+        if (startExtraStaticCache)
+            configuration.setCacheConfiguration(getCacheConfiguration(3));
 
         return configuration;
     }
@@ -207,9 +206,15 @@ public class IgniteCacheGroupsWithRestartsTest extends GridCommonAbstractTest {
 
         assertNull(ex.cachex(getCacheName(3)));
 
-        start4th = true;
-        IgniteEx node2 = startGrid(2);
-        start4th = false;
+        startExtraStaticCache = true;
+
+        IgniteEx node2;
+        try {
+            node2 = startGrid(2);
+        }
+        finally {
+            startExtraStaticCache = false;
+        }
 
         assertNotNull(ex.cachex(getCacheName(3)));
         assertNotNull(node2.cachex(getCacheName(3)));
