@@ -617,7 +617,9 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
             // Note what partition can be owned while clearing.
             // This is possible if no owners are left other than current node.
-            assert group().topology().owners(id).isEmpty() || !clear : this;
+            assert !group().topology().initialized() ||
+                    group().topology().owners(id).isEmpty() ||
+                    !clear : this;
 
             assert partState == MOVING || partState == LOST;
 
