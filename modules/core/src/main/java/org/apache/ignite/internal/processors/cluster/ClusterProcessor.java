@@ -212,6 +212,8 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
     /** {@inheritDoc} */
     @Override public void start() throws IgniteCheckedException {
+        System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis() + " ClusterProcessor started");
+
         GridInternalSubscriptionProcessor isp = ctx.internalSubscriptionProcessor();
 
         isp.registerDistributedMetastorageListener(this);
