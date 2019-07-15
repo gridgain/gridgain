@@ -263,9 +263,21 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
         }
 
         try {
+            System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis() +
+                " writing cluster.id to metastorage: " + cluster.id());
+
             metastorage.writeAsync(CLUSTER_ID, cluster.id());
 
+            System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis() +
+                " cluster.id has been written successfully");
+
+            System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis() +
+                " writing cluster.tag to metastorage: " + cluster.tag());
+
             metastorage.writeAsync(CLUSTER_TAG, cluster.tag());
+
+            System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis() +
+                " cluster.tag has been written successfully");
         }
         catch (IgniteCheckedException e) {
             ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
