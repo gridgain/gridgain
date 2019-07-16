@@ -149,7 +149,9 @@ public class FilePageStore implements PageStore {
 
     /** {@inheritDoc} */
     @Override public boolean exists() {
-        return Files.exists(pathProvider.apply());
+        File file = pathProvider.apply().toFile();
+
+        return file.exists() && file.length() > headerSize();
     }
 
     /**
@@ -275,8 +277,10 @@ public class FilePageStore implements PageStore {
                 if (fileIO != null) // Ensure the file is closed even if not initialized yet.
                     fileIO.close();
 
-                if (delete && cfgFile.exists())
-                    Files.delete(cfgFile.toPath());
+                Path path = pathProvider.apply();
+
+                if (delete && Files.exists(path))
+                    Files.delete(path);
 
                 return;
             }
