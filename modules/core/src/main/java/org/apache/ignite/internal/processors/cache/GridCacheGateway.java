@@ -355,12 +355,7 @@ public class GridCacheGateway<K, V> {
      * @throws IgniteException - in case of atomic operation inside transaction without permission.
      */
     private void checkAtomicOpsInTx(CacheOperationContext opCtx) throws IgniteException {
-        CacheConfiguration cfg = ctx.config();
-
-        if (cfg == null)
-            throw new IllegalStateException(new CacheStoppedException(ctx.name()));
-
-        if (cfg.getAtomicityMode() == ATOMIC && !opCtx.allowedAtomicOpsInTx()) {
+        if (ctx.atomic() && !opCtx.allowedAtomicOpsInTx()) {
             if (ctx.grid().transactions().tx() != null) {
                 throw new IgniteException("Transaction spans operations on atomic cache " +
                     "(don't use atomic cache inside transaction or set up flag by cache.allowedAtomicOpsInTx()).");
