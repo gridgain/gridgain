@@ -25,6 +25,9 @@ import org.apache.ignite.cluster.ClusterNode;
  */
 public class PageReplacementStartEvent extends EventAdapter {
     /** */
+    private static final long serialVersionUID = 0L;
+
+    /** */
     private final String dataRegionName;
 
     /**
