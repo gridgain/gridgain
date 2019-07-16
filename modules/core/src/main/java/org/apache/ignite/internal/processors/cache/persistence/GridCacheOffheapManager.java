@@ -2230,10 +2230,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         /** {@inheritDoc} */
         @Override public void updateInitialCounter(long start, long delta) {
             try {
-                CacheDataStore delegate0 = init0(true);
-
-                if (delegate0 == null)
-                    throw new IllegalStateException("Should be never called.");
+                CacheDataStore delegate0 = init0(false);
 
                 delegate0.updateInitialCounter(start, delta);
             }
