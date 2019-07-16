@@ -16,8 +16,10 @@
 
 package org.apache.ignite.internal.processors.metric;
 
+import java.util.Collections;
 import java.util.Iterator;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 import java.util.function.IntSupplier;
@@ -51,16 +53,18 @@ import static org.apache.ignite.internal.util.lang.GridFunc.nonThrowableSupplier
 
 /**
  * Metric registry.
+ *
+ * Represents named set of metrics produced by one metrics source.
  */
 public class MetricRegistry implements Iterable<Metric> {
     /** Registry name. */
-    private String grpName;
+    private final String grpName;
 
     /** Logger. */
-    private IgniteLogger log;
+    private final IgniteLogger log;
 
     /** Registered metrics. */
-    private final ConcurrentHashMap<String, Metric> metrics = new ConcurrentHashMap<>();
+    private final Map<String, Metric> metrics = new TreeMap<>();
 
     /**
      * @param grpName Group name.
@@ -101,6 +105,10 @@ public class MetricRegistry implements Iterable<Metric> {
     /** {@inheritDoc} */
     @NotNull @Override public Iterator<Metric> iterator() {
         return metrics.values().iterator();
+    }
+
+    public Map<String, Metric> metrics() {
+        return Collections.unmodifiableMap(metrics);
     }
 
     /**
