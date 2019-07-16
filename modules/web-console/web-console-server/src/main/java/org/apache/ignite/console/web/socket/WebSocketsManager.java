@@ -429,7 +429,7 @@ public class WebSocketsManager {
     @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
     protected void sendMessage(WebSocketSession ws, WebSocketEvent evt) throws IOException {
         if (!ws.isOpen()) {
-            log.warn("Failed to send event to websocket is already closed [session=" + ws + ", evt=" + evt + "]");
+            log.warn("Failed to send event because websocket is already closed [session=" + ws + ", evt=" + evt + "]");
 
             return;
         }
