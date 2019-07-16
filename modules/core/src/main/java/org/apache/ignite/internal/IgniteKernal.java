@@ -1088,8 +1088,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
             // Start SPI managers.
             // NOTE: that order matters as there are dependencies between managers.
-            startManager(new GridMetricManager(ctx));
             startManager(new GridIoManager(ctx));
+            startManager(new GridMetricManager(ctx));
             startManager(new GridCheckpointManager(ctx));
 
             startManager(new GridEventStorageManager(ctx));
