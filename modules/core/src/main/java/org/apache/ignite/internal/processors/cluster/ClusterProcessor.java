@@ -306,8 +306,13 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
      * </ul>
      */
     public void onLocalJoin() {
-        if (compatibilityMode)
+        if (!IgniteFeatures.allNodesSupports(ctx, ctx.discovery().remoteNodes(), IgniteFeatures.CLUSTER_ID_AND_TAG)) {
+            compatibilityMode = true;
+
+            ctx.event().addDiscoveryEventListener(discoLsnr, EVT_NODE_LEFT, EVT_NODE_FAILED);
+
             return;
+        }
 
         cluster.setId(localClusterId != null ? localClusterId : UUID.randomUUID());
 
@@ -523,11 +528,6 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
             if (remoteClusterTag != null)
                 localClusterTag = remoteClusterTag;
-        }
-        else {
-            compatibilityMode = true;
-
-            ctx.event().addDiscoveryEventListener(discoLsnr, EVT_NODE_LEFT, EVT_NODE_FAILED);
         }
     }
 
