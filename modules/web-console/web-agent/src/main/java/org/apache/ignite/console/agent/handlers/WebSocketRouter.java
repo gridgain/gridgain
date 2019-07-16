@@ -416,7 +416,7 @@ public class WebSocketRouter implements AutoCloseable {
                 return;
             }
             
-            log.error("Failed to send event response: " + evt, e);
+            log.error("Failed to send response: " + evt, e);
 
             try {
                 send(ses, evt.withError(extractErrorMessage(ERROR_MSGS.get(evt.getEventType()), e)));
