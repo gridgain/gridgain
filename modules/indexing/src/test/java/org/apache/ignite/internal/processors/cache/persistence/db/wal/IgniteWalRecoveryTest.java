@@ -100,6 +100,7 @@ import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.GridTestUtils.SF;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.multijvm.IgniteProcessProxy;
 import org.apache.ignite.transactions.Transaction;
@@ -635,14 +636,14 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
                 CacheConfiguration<Object, Object> ccfg = new CacheConfiguration<>("cache-" + i);
 
                 // We can get 'too many open files' with default number of partitions.
-                ccfg.setAffinity(new RendezvousAffinityFunction(false, 128));
+                ccfg.setAffinity(new RendezvousAffinityFunction(false, 32));
 
                 IgniteCache<Object, Object> cache = ignite.getOrCreateCache(ccfg);
 
                 cache.put(i, i);
             }
 
-            final long endTime = System.currentTimeMillis() + 30_000;
+            final long endTime = System.currentTimeMillis() + SF.applyLB(30_000, 5_000);
 
             IgniteInternalFuture<Long> fut = GridTestUtils.runMultiThreadedAsync(new Callable<Void>() {
                 @Override public Void call() {
@@ -665,6 +666,8 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
             }
 
             fut.get();
+
+            ignite.context().cache().context().database().wakeupForCheckpoint("final-test-checkpoint").get();
         }
         finally {
             customFailureDetectionTimeout = prevFDTimeout;
@@ -679,7 +682,7 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
     private void checkWalRolloverMultithreaded() throws Exception {
         walSegmentSize = 2 * 1024 * 1024;
 
-        final long endTime = System.currentTimeMillis() + 60 * 1000;
+        final long endTime = System.currentTimeMillis() + SF.apply(50 * 1000);
 
         try {
             IgniteEx ignite = startGrid(1);
@@ -692,8 +695,8 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
                 @Override public Void call() {
                     Random rnd = ThreadLocalRandom.current();
 
-                    while (U.currentTimeMillis() < endTime)
-                        cache.put(rnd.nextInt(50_000), rnd.nextInt());
+                while (System.currentTimeMillis() < endTime)
+                    cache.put(rnd.nextInt(50_000), rnd.nextInt());
 
                     return null;
                 }
