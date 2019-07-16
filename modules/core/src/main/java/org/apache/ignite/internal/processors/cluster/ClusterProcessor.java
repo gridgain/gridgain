@@ -83,6 +83,7 @@ import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType.CLUSTER_PROC;
 import static org.apache.ignite.internal.GridTopic.TOPIC_INTERNAL_DIAGNOSTIC;
 import static org.apache.ignite.internal.GridTopic.TOPIC_METRICS;
+import static org.apache.ignite.internal.IgniteFeatures.CLUSTER_ID_AND_TAG;
 import static org.apache.ignite.internal.IgniteVersionUtils.VER_STR;
 
 /**
@@ -157,7 +158,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
             if (!compatibilityMode)
                 return;
 
-            if (IgniteFeatures.allNodesSupports(ctx, discoCache.remoteNodes(), IgniteFeatures.CLUSTER_ID_AND_TAG)) {
+            if (IgniteFeatures.allNodesSupports(ctx, discoCache.remoteNodes(), CLUSTER_ID_AND_TAG)) {
                 compatibilityMode = false;
 
                 ClusterNode crd = discoCache.serverNodes().get(0);
@@ -212,8 +213,6 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
     /** {@inheritDoc} */
     @Override public void start() throws IgniteCheckedException {
-        System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis() + " ClusterProcessor started");
-
         GridInternalSubscriptionProcessor isp = ctx.internalSubscriptionProcessor();
 
         isp.registerDistributedMetastorageListener(this);
@@ -248,9 +247,6 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     @Override public void onReadyForWrite(DistributedMetaStorage metastorage) {
         this.metastorage = metastorage;
 
-        System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis() +
-            " listening for cluster.tag");
-
         metastorage.listen(
             (k) -> k.equals(CLUSTER_TAG),
             (String k, Serializable oldVal, Serializable newVal) -> {
@@ -260,9 +256,6 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
         if (compatibilityMode) {
             //in compatibility mode ID will be stored to metastorage on coordinator instead of receiving it on join
-            System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis() +
-                " listening for cluster.id");
-
             metastorage.listen(
                 (k) -> k.equals(CLUSTER_ID),
                 (String k, Serializable oldVal, Serializable newVal) -> {
@@ -274,21 +267,9 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
         }
 
         try {
-            System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis() +
-                " writing cluster.id to metastorage: " + cluster.id());
-
             metastorage.writeAsync(CLUSTER_ID, cluster.id());
 
-            System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis() +
-                " cluster.id has been written successfully");
-
-            System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis() +
-                " writing cluster.tag to metastorage: " + cluster.tag());
-
             metastorage.writeAsync(CLUSTER_TAG, cluster.tag());
-
-            System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis() +
-                " cluster.tag has been written successfully");
         }
         catch (IgniteCheckedException e) {
             ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
@@ -499,9 +480,6 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     @Override public void collectGridNodeData(DiscoveryDataBag dataBag) {
         dataBag.addNodeSpecificData(CLUSTER_PROC.ordinal(), getDiscoveryData());
 
-        System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis() +
-            " compatibility mode: " + compatibilityMode + ", id " + cluster.id() + ", tag " + cluster.tag());
-
         if (!compatibilityMode)
             dataBag.addGridCommonData(CLUSTER_PROC.ordinal(), new DiscoCommonData(cluster.id(), cluster.tag()));
     }
@@ -550,9 +528,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
             if (remoteClusterTag != null)
                 localClusterTag = remoteClusterTag;
         }
-        else {
-            System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis() + " entering compatibility mode");
-
+        else if (!IgniteFeatures.allNodesSupports(ctx, ctx.discovery().remoteNodes(), CLUSTER_ID_AND_TAG)) {
             compatibilityMode = true;
 
             ctx.event().addDiscoveryEventListener(discoLsnr, EVT_NODE_LEFT, EVT_NODE_FAILED);

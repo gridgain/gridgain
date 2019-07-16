@@ -455,9 +455,6 @@ public class IgniteProjectionStartStopRestartSelfTest extends GridCommonAbstract
     public void testStopNodes() throws Exception {
         joinedLatch = new CountDownLatch(3);
 
-        System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis() +
-            " starting additional nodes");
-
         Collection<ClusterStartNodeResult> res =
             startNodes(ignite.cluster(),
                 maps(Collections.singleton(HOST), pwd, null, 3, U.getIgniteHome(), CFG_NO_ATTR,
