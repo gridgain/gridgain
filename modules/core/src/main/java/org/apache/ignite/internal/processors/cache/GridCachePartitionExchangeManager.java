@@ -100,6 +100,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Sto
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.latch.ExchangeLatchManager;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridClientPartitionTopology;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
 import org.apache.ignite.internal.processors.cache.persistence.snapshot.IgniteCacheSnapshotManager;
 import org.apache.ignite.internal.processors.cache.persistence.snapshot.SnapshotDiscoveryMessage;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
@@ -111,6 +112,7 @@ import org.apache.ignite.internal.processors.query.schema.SchemaNodeLeaveExchang
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
 import org.apache.ignite.internal.util.GridListSet;
 import org.apache.ignite.internal.util.GridPartitionStateMap;
+import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
@@ -2069,8 +2071,26 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                         found = true;
 
                         if (warnings.canAddMessage()) {
-                            warnings.add(">>> Transaction [startTime=" + formatTime(tx.startTime()) +
-                                ", curTime=" + formatTime(curTime) + ", tx=" + tx + ']');
+                            GridStringBuilder warning = new GridStringBuilder()
+                                .a(">>> Transaction [startTime=")
+                                .a(formatTime(tx.startTime()))
+                                .a(", curTime=")
+                                .a(formatTime(curTime));
+
+                            if (tx instanceof GridNearTxLocal) {
+                                long sysTimeCurr = ((GridNearTxLocal) tx).systemTimeCurrent();
+
+                                warning.a(", systemTime=")
+                                    .a(sysTimeCurr)
+                                    .a(", userTime=")
+                                    .a(System.currentTimeMillis() - tx.startTime() - sysTimeCurr);
+                            }
+
+                            warning.a(", tx=")
+                                .a(tx)
+                                .a("]");
+
+                            warnings.add(warning.toString());
 
                             if (ltrDumpLimiter.allowAction(tx))
                                 dumpLongRunningTransaction(tx);

@@ -17,8 +17,14 @@
 package org.apache.ignite.internal;
 
 import java.util.Map;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
+import org.apache.ignite.internal.processors.metric.MetricRegistry;
+import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
 import org.apache.ignite.mxbean.TransactionMetricsMxBean;
+import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.transactions.TransactionMetrics;
+
+import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.toJson;
 
 /**
  * Transactions MXBean implementation.
@@ -30,18 +36,22 @@ public class TransactionMetricsMxBeanImpl implements TransactionMetricsMxBean {
     /** */
     private final TransactionMetrics transactionMetrics;
 
+    /** */
+    private final MetricRegistry transactionMetricRegistry;
+
     /**
      * Create TransactionMetricsMxBeanImpl.
      */
     public TransactionMetricsMxBeanImpl() {
-        this(null);
+        this(null, null);
     }
 
     /**
      * @param transactionMetrics Transaction metrics.
      */
-    public TransactionMetricsMxBeanImpl(TransactionMetrics transactionMetrics) {
+    public TransactionMetricsMxBeanImpl(TransactionMetrics transactionMetrics, MetricRegistry transactionMetricRegistry) {
         this.transactionMetrics = transactionMetrics;
+        this.transactionMetricRegistry = transactionMetricRegistry;
     }
 
     /** {@inheritDoc} */
@@ -97,6 +107,38 @@ public class TransactionMetricsMxBeanImpl implements TransactionMetricsMxBean {
     /** {@inheritDoc} */
     @Override public long getOwnerTransactionsNumber() {
         return transactionMetrics.getOwnerTransactionsNumber();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getTotalNodeSystemTime() {
+        LongMetric totalNodeSystemTime =
+            (LongMetric)transactionMetricRegistry.findMetric(GridNearTxLocal.METRIC_TOTAL_SYSTEM_TIME);
+
+        return totalNodeSystemTime == null ? 0L : totalNodeSystemTime.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getTotalNodeUserTime() {
+        LongMetric totalNodeUserTime =
+            (LongMetric)transactionMetricRegistry.findMetric(GridNearTxLocal.METRIC_TOTAL_USER_TIME);
+
+        return totalNodeUserTime == null ? 0L : totalNodeUserTime.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override public String getNodeSystemTimeHistogram() {
+        HistogramMetric systemTimeHistogram =
+            (HistogramMetric)transactionMetricRegistry.findMetric(GridNearTxLocal.METRIC_SYSTEM_TIME_HISTOGRAM);
+
+        return systemTimeHistogram == null ? "{}" : toJson(systemTimeHistogram);
+    }
+
+    /** {@inheritDoc} */
+    @Override public String getNodeUserTimeHistogram() {
+        HistogramMetric userTimeHistogram =
+            (HistogramMetric)transactionMetricRegistry.findMetric(GridNearTxLocal.METRIC_USER_TIME_HISTOGRAM);
+
+        return userTimeHistogram == null ? "{}" : toJson(userTimeHistogram);
     }
 }
 

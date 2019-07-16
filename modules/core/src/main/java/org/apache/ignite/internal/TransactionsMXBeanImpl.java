@@ -141,6 +141,16 @@ public class TransactionsMXBeanImpl implements TransactionsMXBean {
     }
 
     /** {@inheritDoc} */
+    @Override public long getLongTransactionTimeDumpThreshold() {
+        return ctx.cache().context().tm().longTransactionTimeDumpThreshold();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setLongTransactionTimeDumpThreshold(long threshold) {
+        ctx.cache().context().tm().longTransactionTimeDumpThreshold(threshold);
+    }
+
+    /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(TransactionsMXBeanImpl.class, this);
     }

@@ -127,4 +127,24 @@ public interface TransactionsMXBean {
         "whether to allow"
     )
     public void setTxOwnerDumpRequestsAllowed(boolean allowed);
+
+    @MXBeanDescription(
+        "Returns threshold timeout in milliseconds for long transactions, if transaction exceeds it, " +
+        "it will be dumped in log with information about how much time did " +
+        "it spent in system time (time while aquiring locks, preparing, commiting, etc.)" +
+        "and user time (time when client node runs some code while holding transaction). " +
+        "Returns 0 if not set. No transactions are dumped in log if this parameter is not set."
+    )
+    public long getLongTransactionTimeDumpThreshold();
+
+    @MXBeanDescription(
+        "Sets threshold timeout in milliseconds for long transactions, if transaction exceeds it, " +
+        "it will be dumped in log with information about how much time did " +
+        "it spent in system time (time while aquiring locks, preparing, commiting, etc.) " +
+        "and user time (time when client node runs some code while holding transaction). " +
+        "Can be set to 0 - no transactions will be dumped in log in this case."
+    )
+    @MXBeanParametersNames("threshold")
+    @MXBeanParametersDescriptions("threshold timeout")
+    public void setLongTransactionTimeDumpThreshold(long threshold);
 }

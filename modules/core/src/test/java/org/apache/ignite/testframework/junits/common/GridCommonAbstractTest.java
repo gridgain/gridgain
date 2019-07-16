@@ -16,6 +16,7 @@
 
 package org.apache.ignite.testframework.junits.common;
 
+import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -36,6 +37,9 @@ import java.util.stream.Collectors;
 import javax.cache.Cache;
 import javax.cache.CacheException;
 import javax.cache.integration.CompletionListener;
+import javax.management.MBeanServer;
+import javax.management.MBeanServerInvocationHandler;
+import javax.management.ObjectName;
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSession;
@@ -70,6 +74,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.IgniteKernal;
+import org.apache.ignite.internal.TransactionsMXBeanImpl;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.affinity.GridAffinityFunctionContextImpl;
 import org.apache.ignite.internal.processors.cache.CacheGroupDescriptor;
@@ -112,6 +117,7 @@ import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteRunnable;
+import org.apache.ignite.mxbean.TransactionsMXBean;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
 import org.apache.ignite.testframework.GridTestNode;
@@ -2356,5 +2362,33 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
 
             cntr0 = cntr.get2();
         }
+    }
+
+    /**
+     * Returns MX bean by specified group name and class.
+     *
+     * @param igniteInstanceName Ignite instance name.
+     * @param grp Name of the group.
+     * @param cls Bean class.
+     * @param implCls Bean implementation class.
+     * @param <T> Type parameter for bean class.
+     * @param <I> Type parameter for bean implementation class.
+     * @return MX bean.
+     * @throws Exception If failed.
+     */
+    protected <T, I> T getMxBean(
+        String igniteInstanceName,
+        String grp,
+        Class<T> cls,
+        Class<I> implCls
+    ) throws Exception {
+        ObjectName mbeanName = U.makeMBeanName(igniteInstanceName, grp, implCls.getSimpleName());
+
+        MBeanServer mbeanSrv = ManagementFactory.getPlatformMBeanServer();
+
+        if (!mbeanSrv.isRegistered(mbeanName))
+            fail("MBean is not registered: " + mbeanName.getCanonicalName());
+
+        return MBeanServerInvocationHandler.newProxyInstance(mbeanSrv, mbeanName, cls, true);
     }
 }

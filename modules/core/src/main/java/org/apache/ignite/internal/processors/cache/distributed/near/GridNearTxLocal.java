@@ -17,16 +17,21 @@
 package org.apache.ignite.internal.processors.cache.distributed.near;
 
 import java.io.Externalizable;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import javax.cache.Cache;
 import javax.cache.CacheException;
@@ -74,6 +79,10 @@ import org.apache.ignite.internal.processors.cache.transactions.TransactionProxy
 import org.apache.ignite.internal.processors.cache.transactions.TransactionProxyImpl;
 import org.apache.ignite.internal.processors.cache.transactions.TransactionProxyRollbackOnlyImpl;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.processors.metric.GridMetricManager;
+import org.apache.ignite.internal.processors.metric.MetricRegistry;
+import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
+import org.apache.ignite.internal.processors.metric.impl.LongAdderMetricImpl;
 import org.apache.ignite.internal.processors.query.EnlistOperation;
 import org.apache.ignite.internal.processors.query.UpdateSourceIterator;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
@@ -81,6 +90,7 @@ import org.apache.ignite.internal.transactions.IgniteTxOptimisticCheckedExceptio
 import org.apache.ignite.internal.transactions.IgniteTxRollbackCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxTimeoutCheckedException;
 import org.apache.ignite.internal.util.GridLeanMap;
+import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.future.GridEmbeddedFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
@@ -134,6 +144,21 @@ import static org.apache.ignite.transactions.TransactionState.UNKNOWN;
  */
 @SuppressWarnings("unchecked")
 public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeoutObject, AutoCloseable, MvccCoordinatorChangeAware {
+    /** Metric name for total system time on node. */
+    public static final String METRIC_TOTAL_SYSTEM_TIME = "TotalNodeSystemTime";
+
+    /** Metric name system time histogram on node. */
+    public static final String METRIC_SYSTEM_TIME_HISTOGRAM = "NodeSystemTimeHistogram";
+
+    /** Metric name for total user time on node. */
+    public static final String METRIC_TOTAL_USER_TIME = "TotalNodeUserTime";
+
+    /** Metric name user time histogram on node. */
+    public static final String METRIC_USER_TIME_HISTOGRAM = "NodeUserTimeHistogram";
+
+    /** Histogram buckets for metrics of system and user time. */
+    public static final long[] METRIC_TIME_BUCKETS = new long[] { 1, 2, 4, 8, 16, 25, 50, 75, 100, 250, 500, 750, 1000, 3000};
+
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -180,6 +205,37 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
     /** */
     private boolean trackTimeout;
+
+    /** Counts how much time this transaction has spent on system calls, in nanoseconds. */
+    private final AtomicLong systemTime = new AtomicLong(0);
+
+    /**
+     * Stores the nano time value when current system time has started, or <code>0</code> if no system section
+     * is running currently.
+     */
+    private final AtomicLong systemStartTime = new AtomicLong(0);
+
+    /**
+     * Stores the nano time value when prepare step has started, or <code>0</code> if no prepare step
+     * has started yet.
+     */
+    private final AtomicLong prepareStartTime = new AtomicLong(0);
+
+    /**
+     * Stores prepare step duration, or <code>0</code> if it has not finished yet.
+     */
+    private final AtomicLong prepareTime = new AtomicLong(0);
+
+    /**
+     * Stores the nano time value when commit or rollback step has started, or <code>0</code> if it
+     * has not started yet.
+     */
+    private final AtomicLong commitOrRollbackStartTime = new AtomicLong(0);
+
+    /**
+     * Stores commit or rollback step duration, or <code>0</code> if it has not finished yet.
+     */
+    private final AtomicLong commitOrRollbackTime = new AtomicLong(0);
 
     /** */
     @GridToStringExclude
@@ -3745,9 +3801,87 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
     }
 
     /**
+     * Returns current amount of time that transaction has spent on system activities (acquiring locks, commiting,
+     * rolling back, etc.)
+     *
+     * @return Amount of time in milliseconds.
+     */
+    public long systemTimeCurrent() {
+        long systemStartTime0 = systemStartTime.get();
+
+        long t = systemStartTime0 == 0 ? 0 : (System.nanoTime() - systemStartTime0);
+
+        return (this.systemTime.get() + t)  / 1_000_000;
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean state(TransactionState state) {
+        boolean res = super.state(state);
+
+        if (state == COMMITTED || state == ROLLED_BACK) {
+            leaveSystemSection();
+
+            commitOrRollbackTime.compareAndSet(0, System.nanoTime() - commitOrRollbackStartTime.get());
+
+            long systemTimeMillis = this.systemTime.get() / 1_000_000;
+            long totalTimeMillis = System.currentTimeMillis() - startTime();
+            long userTimeMillis = totalTimeMillis - systemTimeMillis;
+
+            writeTxMetrics(systemTimeMillis, userTimeMillis);
+
+            if (cctx.tm().longTransactionTimeDumpThreshold() > 0
+                && totalTimeMillis > cctx.tm().longTransactionTimeDumpThreshold()) {
+                DateFormat timeFormat = new SimpleDateFormat("HH:mm:ss.SSS");
+                timeFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+
+                long cacheOperationsTimeMillis =
+                    (systemTime.get() - prepareTime.get() - commitOrRollbackTime.get()) / 1_000_000;
+
+                GridStringBuilder logMsg = new GridStringBuilder("Long transaction detected [startTime=")
+                    //separate SimpleDateFormat for startTime
+                    .a(new SimpleDateFormat("HH:mm:ss.SSS").format(new Date(startTime)))
+                    .a(", totalTime=")
+                    .a(timeFormat.format(new Date(totalTimeMillis)))
+                    .a(", systemTime=")
+                    .a(timeFormat.format(new Date(systemTimeMillis)))
+                    .a(", userTime=")
+                    .a(timeFormat.format(new Date(userTimeMillis)))
+                    .a(", cacheOperationsTime=")
+                    .a(timeFormat.format(new Date(cacheOperationsTimeMillis)));
+
+                if (state == COMMITTED) {
+                    logMsg
+                        .a(", prepareTime=")
+                        .a(timeFormat.format(new Date(timeMillis(prepareTime))))
+                        .a(", commitTime=")
+                        .a(timeFormat.format(new Date(timeMillis(commitOrRollbackTime))));
+                }
+                else {
+                    logMsg
+                        .a(", rollbackTime=")
+                        .a(timeFormat.format(new Date(timeMillis(commitOrRollbackTime))));
+                }
+
+                logMsg
+                    .a(", tx=")
+                    .a(this)
+                    .a("]");
+
+                log.warning(logMsg.toString());
+            }
+        }
+
+        return res;
+    }
+
+    /**
      * @return Tx prepare future.
      */
     public IgniteInternalFuture<?> prepareNearTxLocal() {
+        enterSystemSection();
+
+        prepareStartTime.compareAndSet(0, System.nanoTime());
+
         GridNearTxPrepareFutureAdapter fut = (GridNearTxPrepareFutureAdapter)prepFut;
 
         if (fut == null) {
@@ -3846,6 +3980,10 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
             prepareFut.listen(new CI1<IgniteInternalFuture<?>>() {
                 @Override public void apply(IgniteInternalFuture<?> f) {
+                    prepareTime.compareAndSet(0, System.nanoTime() - prepareStartTime.get());
+
+                    commitOrRollbackStartTime.compareAndSet(0, System.nanoTime());
+
                     try {
                         // Make sure that here are no exceptions.
                         f.get();
@@ -3907,6 +4045,8 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
         final boolean onTimeout) {
         if (log.isDebugEnabled())
             log.debug("Rolling back near tx: " + this);
+
+        enterSystemSection();
 
         if (!onTimeout && trackTimeout)
             removeTimeoutHandler();
@@ -4863,6 +5003,48 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
             if (log.isDebugEnabled())
                 log.debug("Skip rollback tx on timeout: " + this);
         }
+    }
+
+    /** */
+    private long timeMillis(AtomicLong atomicNanoTime) {
+        return atomicNanoTime.get() / 1_000_000;
+    }
+
+    /** Enters the section when system time for this transaction is counted. */
+    public void enterSystemSection() {
+        systemStartTime.compareAndSet(0, System.nanoTime());
+    }
+
+    /** Leaves the section when system time for this transaction is counted. */
+    public void leaveSystemSection() {
+        long systemStartTime0 = systemStartTime.getAndSet(0);
+
+        if (systemStartTime0 > 0)
+            systemTime.addAndGet(System.nanoTime() - systemStartTime0);
+    }
+
+    /** Writes system and user time metrics. */
+    private void writeTxMetrics(long systemTime, long userTime) {
+        MetricRegistry txMetricRegistry = cctx.kernalContext().metric().registry(GridMetricManager.TRANSACTION_METRICS);
+
+        writeTxMetrics(txMetricRegistry, METRIC_TOTAL_SYSTEM_TIME, METRIC_SYSTEM_TIME_HISTOGRAM, systemTime);
+        writeTxMetrics(txMetricRegistry, METRIC_TOTAL_USER_TIME, METRIC_USER_TIME_HISTOGRAM, userTime);
+    }
+
+    /** */
+    private void writeTxMetrics(MetricRegistry registry, String monotonicMetricName, String histoMetricName, long val) {
+        if (registry == null || val == 0)
+            return;
+
+        LongAdderMetricImpl monotonic = (LongAdderMetricImpl)registry.findMetric(monotonicMetricName);
+
+        if (monotonic != null)
+            monotonic.add(val);
+
+        HistogramMetric histo = (HistogramMetric)registry.findMetric(histoMetricName);
+
+        if (histo != null)
+            histo.value(val);
     }
 
     /**
