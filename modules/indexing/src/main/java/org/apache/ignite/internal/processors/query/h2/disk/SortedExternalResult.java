@@ -21,7 +21,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedList;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.PriorityQueue;
 import java.util.Queue;
@@ -60,7 +59,10 @@ public class SortedExternalResult extends AbstractExternalResult {
     private long lastWrittenPos;
 
     /** In-memory buffer for gathering rows before spilling to disk. */
-    private TreeMap<ValueRow, Value[]> rowsBuf;
+    private TreeMap<ValueRow, Value[]> sortedRowsBuf;
+
+    /** In-memory buffer for gathering rows before spilling to disk. */
+    private ArrayList<Value[]> unsortedRowsBuf;
 
     /** Sorted chunks addresses on the disk. */
     private final Collection<Chunk> chunks;
@@ -77,7 +79,7 @@ public class SortedExternalResult extends AbstractExternalResult {
     private Queue<Chunk> resQueue;
 
     /**
-     * Comparator for {@code rowsBuf}.
+     * Comparator for {@code sortedRowsBuf}.
      */
     private Comparator<Value> cmp;
 
@@ -151,13 +153,13 @@ public class SortedExternalResult extends AbstractExternalResult {
     }
 
     /** {@inheritDoc} */
-    @Override public int addRow(Value[] values) {
+    @Override public int addRow(Value[] row) {
         if (isAnyDistinct()) {
-            if (containsRowWithOrderCheck(values))
+            if (containsRowWithOrderCheck(row))
                 return size;
         }
 
-        addRowToBuffer(values);
+        addRowToBuffer(row);
 
         if (needToSpill())
             spillRowsBufferToDisk();
@@ -193,13 +195,15 @@ public class SortedExternalResult extends AbstractExternalResult {
      * @return Previous row.
      */
     @Nullable private Value[] getPreviousRow(Value[] row) { // TODO merge removeRow and getPreviousRow
+        assert unsortedRowsBuf == null;
+
         ValueRow distKey = getRowKey(row);
 
         Value[] previous;
 
         // Check in memory - it might not has been spilled yet.
-        if (rowsBuf != null) {
-            previous = rowsBuf.get(distKey);
+        if (sortedRowsBuf != null) {
+            previous = sortedRowsBuf.get(distKey);
 
             if (previous != null)
                 return previous;
@@ -228,34 +232,41 @@ public class SortedExternalResult extends AbstractExternalResult {
      * @param row Row.
      */
     private void addRowToBuffer(Value[] row) {
-        if (rowsBuf == null)
-            rowsBuf = new TreeMap<>(cmp);
+        if (isAnyDistinct()) {
+            assert unsortedRowsBuf == null;
 
-        ValueRow key = getRowKey(row);
+            if (sortedRowsBuf == null)
+                sortedRowsBuf = new TreeMap<>(cmp);
+
+            ValueRow key = getRowKey(row);
+
+            sortedRowsBuf.put(key, row);
+        }
+        else {
+            assert sortedRowsBuf == null;
+
+            if (unsortedRowsBuf == null)
+                unsortedRowsBuf = new ArrayList<>();
+
+            unsortedRowsBuf.add(row);
+        }
 
         long delta = H2Utils.calculateMemoryDelta(null, null, row);
 
         memTracker.reserved(delta);
-
-        rowsBuf.put(key, row);
     }
 
     /**
      * Spills rows to disk from the in-memory buffer.
      */
     private void spillRowsBufferToDisk() {
-        if (F.isEmpty(rowsBuf))
+        if (F.isEmpty(sortedRowsBuf) && F.isEmpty(unsortedRowsBuf))
             return;
 
-        ArrayList<Value[]> rows = new ArrayList<>(rowsBuf.values());
+        ArrayList<Value[]> rows = isAnyDistinct() ? new ArrayList<>(sortedRowsBuf.values()) : unsortedRowsBuf;
 
-        for (Map.Entry<ValueRow, Value[]> e : rowsBuf.entrySet()) {
-            long delta = H2Utils.calculateMemoryDelta(null, e.getValue(), null);
-
-            memTracker.released(-delta);
-        }
-
-        rowsBuf = null;
+        sortedRowsBuf = null;
+        unsortedRowsBuf = null;
 
         if (sort != null)
             sort.sort(rows);
@@ -263,7 +274,6 @@ public class SortedExternalResult extends AbstractExternalResult {
         Data buff = createDataBuffer();
 
         long initFilePos = lastWrittenPos;
-
 
         for (Value[] row : rows) {
             if(isAnyDistinct()) {
@@ -282,6 +292,12 @@ public class SortedExternalResult extends AbstractExternalResult {
         lastWrittenPos = initFilePos + written;
 
         chunks.add(new Chunk(initFilePos, lastWrittenPos));
+
+        for (Value[] row : rows) {
+            long delta = H2Utils.calculateMemoryDelta(null, row, null);
+
+            memTracker.released(-delta);
+        }
     }
 
     /**
@@ -334,8 +350,8 @@ public class SortedExternalResult extends AbstractExternalResult {
     @Override public int removeRow(Value[] values) { // TODO merge removeRow and getPreviousRow
         ValueRow key = getRowKey(values);
 
-        if (rowsBuf != null) {
-            Object prev = rowsBuf.remove(key);
+        if (sortedRowsBuf != null) {
+            Object prev = sortedRowsBuf.remove(key);
 
             if (prev != null)
                 return size--;

@@ -223,7 +223,7 @@ public class DiskSpillingTest extends GridCommonAbstractTest {
     public void simpleJoinLazy() {
         assertInMemoryAndOnDiskSameResults(true, "SELECT p.id, p.name, p.depId, d.title " +
             "FROM person p, department d " +
-            " WHERE p.depId = d.id ORDER BY p.salary DESC");
+            " WHERE p.depId = d.id AND  (p.id > 10 OR p.id < 10000) ORDER BY p.salary DESC OFFSET 10");
     }
 
     /** */
@@ -275,7 +275,7 @@ public class DiskSpillingTest extends GridCommonAbstractTest {
     @Test
     public void simpleIntersectLazy() {
         assertInMemoryAndOnDiskSameResults(true,
-            "(SELECT id, name, code, depId FROM person WHERE depId < 10 ORDER BY code DESC LIMIT 900 OFFSET 10) " +
+            "(SELECT id, name, code, depId FROM person WHERE depId < 10 ORDER BY code, id DESC LIMIT 900 OFFSET 10) " +
                 " INTERSECT " +
                 "SELECT id, name, code, depId FROM person WHERE depId > 5 ");
     }
@@ -446,6 +446,9 @@ public class DiskSpillingTest extends GridCommonAbstractTest {
                 fixSortOrder(inMemRes);
             }
 
+            if (log.isDebugEnabled())
+                log.debug("In-memory result:\n" + inMemRes + "\nOn disk result:\n" + onDiskRes);
+
             assertEqualsCollections(inMemRes, onDiskRes);
         }
         catch (IOException e) {
@@ -549,6 +552,13 @@ public class DiskSpillingTest extends GridCommonAbstractTest {
                 for (int i = 0; i < l1.size(); i++) {
                     Object o1 = l1.get(i);
                     Object o2 = l2.get(i);
+
+                    if (o1 == null  ||  o2 == null) {
+                        if (o1 == null && o2 == null)
+                            return 0;
+
+                        return o1 == null ? 1 : -1;
+                    }
 
                     if (o1.hashCode() == o2.hashCode())
                         continue;
