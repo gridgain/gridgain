@@ -150,7 +150,7 @@ public class WebSocketsManager {
         WebSocketSession ws = requests.remove(evt.getRequestId());
 
         if (ws == null) {
-            log.warn("Failed to send response browser, connection was already closed: " + evt);
+            log.warn("Failed to send response to browser, connection was already closed: " + evt);
 
             return;
         }
