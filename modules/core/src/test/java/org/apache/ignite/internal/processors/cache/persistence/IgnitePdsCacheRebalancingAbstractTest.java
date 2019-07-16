@@ -597,7 +597,7 @@ public abstract class IgnitePdsCacheRebalancingAbstractTest extends GridCommonAb
                 ds.addData(keys, keys);
         }
 
-        for (int it = 0; it < 10; it++) {
+        for (int it = 0; it < SF.applyLB(10, 3); it++) {
             final int it0 = it;
 
             IgniteInternalFuture fut = GridTestUtils.runAsync(() -> {
