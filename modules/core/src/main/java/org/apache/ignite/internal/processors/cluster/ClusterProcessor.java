@@ -499,6 +499,9 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     @Override public void collectGridNodeData(DiscoveryDataBag dataBag) {
         dataBag.addNodeSpecificData(CLUSTER_PROC.ordinal(), getDiscoveryData());
 
+        System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis() +
+            " compatibility mode: " + compatibilityMode + ", id " + cluster.id() + ", tag " + cluster.tag());
+
         if (!compatibilityMode)
             dataBag.addGridCommonData(CLUSTER_PROC.ordinal(), new DiscoCommonData(cluster.id(), cluster.tag()));
     }
