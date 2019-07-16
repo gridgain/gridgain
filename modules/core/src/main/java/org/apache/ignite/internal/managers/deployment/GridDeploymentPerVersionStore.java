@@ -276,24 +276,20 @@ public class GridDeploymentPerVersionStore extends GridDeploymentStoreAdapter {
         }
     }
 
-    /**
-     * @param meta Deployment meatdata.
-     * @return Grid deployment instance if it was finded in cache, {@code null} otherwise.
-     */
-    public GridDeployment searchDeploymentFromCahec(GridDeploymentMetadata meta) {
+    /** {@inheritDoc} */
+    @Override public GridDeployment searchDeploymentCache(GridDeploymentMetadata meta) {
+        List<SharedDeployment> deps = null;
+
         synchronized (mux) {
-            if (isDeadClassLoader(meta))
-                return null;
+            deps = cache.get(meta.userVersion());
+        }
 
-            List<SharedDeployment> deps = cache.get(meta.userVersion());
+        if (deps != null) {
+            assert !deps.isEmpty();
 
-            if (deps != null) {
-                assert !deps.isEmpty();
-
-                for (SharedDeployment d : deps) {
-                    if (d.hasParticipant(meta.senderNodeId(), meta.classLoaderId()))
-                        return d;
-                }
+            for (SharedDeployment d : deps) {
+                if (d.hasParticipant(meta.senderNodeId(), meta.classLoaderId()))
+                    return d;
             }
         }
 
@@ -384,15 +380,7 @@ public class GridDeploymentPerVersionStore extends GridDeploymentStoreAdapter {
                 if (deps != null) {
                     assert !deps.isEmpty();
 
-                    for (SharedDeployment d : deps) {
-                        if (d.hasParticipant(meta.senderNodeId(), meta.classLoaderId()) ||
-                            meta.senderNodeId().equals(ctx.localNodeId())) {
-                            // Done.
-                            dep = d;
-
-                            break;
-                        }
-                    }
+                    dep  = (SharedDeployment)searchDeploymentCache(meta);
 
                     if (dep == null) {
                         checkRedeploy(meta);

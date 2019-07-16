@@ -467,7 +467,7 @@ public class GridDhtPartitionDemander {
                 if (fut.isDone())
                     break;
 
-                parts = fut.remaining.get(node.id());
+                parts = assignments.get(node.id()).partitions();
 
                 U.log(log, "Prepared rebalancing [grp=" + grp.cacheOrGroupName()
                     + ", mode=" + cfg.getRebalanceMode() + ", supplier=" + node.id() + ", partitionsCount=" + parts.size()
