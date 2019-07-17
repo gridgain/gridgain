@@ -2229,7 +2229,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                         GridDhtPartitionState state = partMap.get(part);
 
-                        if (state == null || state != OWNING)
+                        if (state != OWNING)
                             continue;
 
                         if (!newOwners.contains(remoteNodeId)) {
@@ -2267,7 +2267,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 }
 
                 node2part = new GridDhtPartitionFullMap(node2part, updateSeq.incrementAndGet());
-            } finally {
+            }
+            finally {
                 lock.writeLock().unlock();
             }
         }
