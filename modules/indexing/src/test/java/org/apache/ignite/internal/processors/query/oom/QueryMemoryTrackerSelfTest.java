@@ -123,9 +123,12 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
         checkQueryExpectOOM("select DISTINCT K.name from K GROUP BY K.id", true);
 
         // Local result is quite small.
-        assertEquals(1, localResults.size());
-        assertTrue(maxMem > localResults.get(0).memoryReserved());
+        assertEquals(2, localResults.size());
+
+        assertTrue(maxMem > localResults.get(0).memoryReserved() + localResults.get(1).memoryReserved());
+
         assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
+        assertTrue(BIG_TABLE_SIZE > localResults.get(1).getRowCount());
     }
 
     /** {@inheritDoc} */
@@ -173,6 +176,17 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
         assertEquals(1, localResults.size());
         assertTrue(maxMem > localResults.get(0).memoryReserved());
         assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
+    }
+
+    /** Check simple query with DISTINCT constraint. */
+    @Test
+    @Override public void testQueryWithDistinctAndLowCardinality() throws Exception {
+        // Distinct on indexed column with small cardinality.
+        execQuery("select DISTINCT K.grp_indexed from K", false);
+
+        assertEquals(2, localResults.size());
+        assertEquals(100, localResults.get(0).getRowCount());
+        assertEquals(100, localResults.get(1).getRowCount());
     }
 
     /** {@inheritDoc} */
