@@ -119,22 +119,22 @@ public class WalCommands implements Command<T2<String, String>> {
 
     /** {@inheritDoc} */
     @Override public void parseArguments(CommandArgIterator argIter) {
-            String str = argIter.nextArg("Expected arguments for " + WAL.text());
+        String str = argIter.nextArg("Expected arguments for " + WAL.text());
 
-            String walAct = str.toLowerCase();
+        String walAct = str.toLowerCase();
 
-            if (WAL_PRINT.equals(walAct) || WAL_DELETE.equals(walAct)) {
-                String walArgs = (str = argIter.peekNextArg()) != null && !isCommandOrOption(str)
-                    ? argIter.nextArg("Unexpected argument for " + WAL.text() + ": " + walAct)
-                    : "";
+        if (WAL_PRINT.equals(walAct) || WAL_DELETE.equals(walAct)) {
+            String walArgs = (str = argIter.peekNextArg()) != null && !isCommandOrOption(str)
+                ? argIter.nextArg("Unexpected argument for " + WAL.text() + ": " + walAct)
+                : "";
 
-                if (enableExperimental()) {
-                    this.walAct = walAct;
-                    this.walArgs = walArgs;
-                }
+            if (enableExperimental()) {
+                this.walAct = walAct;
+                this.walArgs = walArgs;
             }
-            else
-                throw new IllegalArgumentException("Unexpected action " + walAct + " for " + WAL.text());
+        }
+        else
+            throw new IllegalArgumentException("Unexpected action " + walAct + " for " + WAL.text());
     }
 
     /**
