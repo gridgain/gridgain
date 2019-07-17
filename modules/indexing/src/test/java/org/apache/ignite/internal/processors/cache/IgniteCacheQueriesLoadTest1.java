@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -45,12 +45,12 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.lang.IgniteCallable;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.testframework.GridTestUtils.SF;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -137,7 +137,7 @@ public class IgniteCacheQueriesLoadTest1 extends GridCommonAbstractTest {
     private static Map<UUID, List<Integer>> partitionsMap;
 
     /** Preload amount. */
-    private static final int preloadAmount = 10_000;
+    private static final int preloadAmount = SF.applyLB(10_000, 2_000);
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -171,23 +171,27 @@ public class IgniteCacheQueriesLoadTest1 extends GridCommonAbstractTest {
      */
     @Test
     public void testQueries() throws Exception {
-        runQueries(1, true, 10_000);
+        int runSingleMs = SF.applyLB(10_000, 1_000);
 
-        runQueries(10, false, 30_000);
+        runQueries(1, true, runSingleMs);
+
+        int runParMs = SF.applyLB(30_000, 3_000);
+
+        runQueries(10, false, runParMs);
     }
 
     /**
-     * @param threads Threads number.
-     * @param checkBalance Check balance flag.
-     * @param time Execution time.
+     * @param threads number of threads executing the queries.
+     * @param checkBalance whether or not to perform balance check.
+     * @param runAtLeast minimum number of milliseconds thread should perform scan query in a loop.
      * @throws Exception If failed.
      */
-    private void runQueries(int threads, final boolean checkBalance, final long time) throws Exception {
+    private void runQueries(int threads, final boolean checkBalance, final long runAtLeast) throws Exception {
         final Ignite ignite = grid(0);
 
         GridTestUtils.runMultiThreaded(new Callable<Object>() {
             @Override public Object call() {
-                long endTime = System.currentTimeMillis() + time;
+                long endTime = System.currentTimeMillis() + runAtLeast;
 
                 while (System.currentTimeMillis() < endTime) {
                     ScanQueryBroadcastClosure c = new ScanQueryBroadcastClosure(partitionsMap, checkBalance);
