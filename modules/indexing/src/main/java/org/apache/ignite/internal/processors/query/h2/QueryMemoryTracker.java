@@ -81,9 +81,9 @@ public class QueryMemoryTracker extends H2MemoryTracker {
             if (closed)
                 throw new IllegalStateException("Memory tracker has been closed concurrently.");
 
-            long res = reserved + size;
+            reserved += size;
 
-            if (res >= maxMem) {
+            if (reserved >= maxMem) {
                 if (failOnMemLimitExceed)
                     throw new IgniteSQLException("SQL query run out of memory: Query quota exceeded.",
                         IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY);
@@ -91,12 +91,10 @@ public class QueryMemoryTracker extends H2MemoryTracker {
                     return false;
             }
 
-            long reserved0 = reserved = res;
-
-            if (parent != null && reserved0 > reservedFromParent) {
+            if (parent != null && reserved > reservedFromParent) {
                 try {
                     // If single block size is too small.
-                    long blockSize = Math.max(reserved0 - reservedFromParent, this.blockSize);
+                    long blockSize = Math.max(reserved - reservedFromParent, this.blockSize);
                     // If we are too close to limit.
                     blockSize = Math.min(blockSize, maxMem - reservedFromParent);
 
