@@ -315,19 +315,19 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
     public void testOptimizedWriteTwice() throws Exception {
         startGrid(0).cluster().active(true);
 
-        assertEquals(0, metastorage(0).getUpdatesCount());
+        long initialUpdatesCount = metastorage(0).getUpdatesCount();
 
         metastorage(0).write("key1", "value1");
 
-        assertEquals(1, metastorage(0).getUpdatesCount());
+        assertEquals(1, metastorage(0).getUpdatesCount() - initialUpdatesCount);
 
         metastorage(0).write("key2", "value2");
 
-        assertEquals(2, metastorage(0).getUpdatesCount());
+        assertEquals(2, metastorage(0).getUpdatesCount() - initialUpdatesCount);
 
         metastorage(0).write("key1", "value1");
 
-        assertEquals(2, metastorage(0).getUpdatesCount());
+        assertEquals(2, metastorage(0).getUpdatesCount() - initialUpdatesCount);
     }
 
     /** */
@@ -336,13 +336,15 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
     public void testClient() throws Exception {
         startGrid(0).cluster().active(true);
 
+        long initialUpdatesCount = metastorage(0).getUpdatesCount();
+
         metastorage(0).write("key0", "value0");
 
         startClient(1);
 
         AtomicInteger clientLsnrUpdatesCnt = new AtomicInteger();
 
-        assertEquals(1, metastorage(1).getUpdatesCount());
+        assertEquals(1, metastorage(1).getUpdatesCount() - initialUpdatesCount);
 
         assertEquals("value0", metastorage(1).read("key0"));
 
@@ -375,6 +377,8 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
 
         startGrid(2).cluster().active(true);
 
+        long initialUpdatesCount = metastorage(1).getUpdatesCount();
+
         metastorage(2).write("key1", "value1");
 
         metastorage(2).write("key2", "value2");
@@ -382,7 +386,8 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
         int expUpdatesCnt = isPersistent() ? 3 : 2;
 
         // Wait enough to cover failover timeout.
-        assertTrue(GridTestUtils.waitForCondition(() -> metastorage(1).getUpdatesCount() == expUpdatesCnt, 15_000));
+        assertTrue(GridTestUtils.waitForCondition(
+            () -> metastorage(1).getUpdatesCount() - initialUpdatesCount == expUpdatesCnt, 15_000));
 
         if (isPersistent())
             assertEquals("value0", metastorage(1).read("key0"));
