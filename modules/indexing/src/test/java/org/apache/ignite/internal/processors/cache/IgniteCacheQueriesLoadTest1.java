@@ -181,6 +181,7 @@ public class IgniteCacheQueriesLoadTest1 extends AbstractIndexingCommonTest {
      * @param threads number of threads executing the queries.
      * @param checkBalance whether or not to perform balance check.
      * @param runAtLeast minimum number of milliseconds thread should perform scan query in a loop.
+     * @throws Exception If failed.
      */
     private void runQueries(int threads, final boolean checkBalance, final long runAtLeast) throws Exception {
         final Ignite ignite = grid(0);
