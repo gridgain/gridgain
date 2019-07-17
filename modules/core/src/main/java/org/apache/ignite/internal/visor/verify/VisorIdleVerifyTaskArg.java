@@ -71,8 +71,9 @@ public class VisorIdleVerifyTaskArg extends VisorDataTransferObject {
         this.caches = caches;
         this.excludeCaches = excludeCaches;
         this.skipZeros = skipZeros;
-        this.cacheFilterEnum = (cacheFilterEnum == null ? CacheFilterEnum.DEFAULT : cacheFilterEnum);
         this.checkCrc = checkCrc;
+
+        cacheFilterEnum(cacheFilterEnum);
     }
 
     /**
@@ -159,10 +160,10 @@ public class VisorIdleVerifyTaskArg extends VisorDataTransferObject {
             if (protoVer >= V4) {
                 skipZeros = in.readBoolean();
 
-                CacheFilterEnum cfe = CacheFilterEnum.fromOrdinal(in.readByte());
-
-                cacheFilterEnum = (cfe == null ? CacheFilterEnum.DEFAULT : cfe);
+                cacheFilterEnum = CacheFilterEnum.fromOrdinal(in.readByte());
             }
+
+            cacheFilterEnum(cacheFilterEnum);
         }
     }
 
