@@ -42,6 +42,7 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_ENABLED;
@@ -165,6 +166,7 @@ public class IgnitePdsWithTtlDeactivateOnHighloadTest extends GridCommonAbstract
      * @throws Exception if failed.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-21444")
     public void test() throws Exception {
         final AtomicBoolean end = new AtomicBoolean();
 
