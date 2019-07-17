@@ -34,7 +34,7 @@
     <url>http://ignite.apache.org</url>
 
     <properties>
-        <mesos.version>1.5.0</mesos.version>
+        <mesos.version>1.5.2</mesos.version>
         <ignite.version.url>https://ignite.apache.org/latest</ignite.version.url>
         <ignite.path>/ignite/%s/apache-ignite-%s-bin.zip</ignite.path>
         <apache.mirror.url>https://www.apache.org/dyn/closer.cgi?as_json=1</apache.mirror.url>
