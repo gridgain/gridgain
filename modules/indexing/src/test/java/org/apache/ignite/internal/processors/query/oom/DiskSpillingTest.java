@@ -24,10 +24,13 @@ import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.apache.commons.io.FileUtils;
+import org.apache.ignite.Ignite;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
@@ -35,31 +38,42 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
 import static org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing.DISK_SPILL_DIR;
 
 /**
- * TODO: createShallowCopy (query caching)
- * TODO: client/server
- * TODO: multinode/multithreaded
- * TODO: multiple spills during one query
- * TODO: file deleted in the case of query exception/kill/etc
- * TODO: lazy/not lazy, local/distributed
+ *
+ *
+ *
+ * // Extra test
  * TODO: test directory cleaned on startup
- * TODO: ADD logging
  * TODO: Global quota
- * TODO: persistence and in-memory
- * TODO: parallelism
+ * TODO: file deleted in the case of query exception/kill/etc
+ * TODO: multithreaded
+ *
+ * // Parametrized
+ * TODO: client/server
  * TODO local/not local
+ *
+ * // Before start
+ * TODO: single node/multiple nodes
+ * TODO: parallelism
+ * TODO: persistence and in-memory
+ *
+ *
+ * // Coding
  * TODO: scale
- * TODO: close
+ * TODO: ADD logging
  *
  * Test for the intermediate query results disk offloading (disk spilling).IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE
  */
 @WithSystemProperty(key = "IGNITE_SQL_FAIL_ON_QUERY_MEMORY_LIMIT_EXCEED", value = "false")
 @WithSystemProperty(key = "IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE", value = "2048")
+@RunWith(Parameterized.class)
 public class DiskSpillingTest extends GridCommonAbstractTest {
     /** */
     private static final int PERS_CNT = 1000;
@@ -75,6 +89,28 @@ public class DiskSpillingTest extends GridCommonAbstractTest {
 
     /** */
     private boolean checkSortOrder;
+
+    /** */
+    @Parameterized.Parameter(0)
+    public boolean fromClient;
+
+    /** */
+    @Parameterized.Parameter(1)
+    public boolean local;
+
+    /**
+     * @return Test parameters.
+     */
+    @Parameterized.Parameters(name = "fromClient={0}, local={1}")
+    public static Collection parameters() {
+        return Arrays.asList(new Object[][] {
+            //client, local
+            { false, false },
+            { false, true },
+            { true,  false },
+        });
+    }
+
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -92,9 +128,15 @@ public class DiskSpillingTest extends GridCommonAbstractTest {
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
 
-        startGrid(0);
+        startGrids(nodeCount());
+
+        startGrid(getConfiguration("client").setClientMode(true));
 
         populateData();
+    }
+
+    protected int nodeCount() {
+        return 1;
     }
 
     /** {@inheritDoc} */
@@ -403,51 +445,52 @@ public class DiskSpillingTest extends GridCommonAbstractTest {
             if (log.isInfoEnabled())
                 log.info("workDir=" + workDir.toString());
 
-            // Run query with disk spill.
+
             watchSvc = FileSystems.getDefault().newWatchService();
 
             WatchKey watchKey = workDir.register(watchSvc, ENTRY_CREATE, ENTRY_DELETE);
 
-            long startOnDisk = System.currentTimeMillis();
-
-            List<List<?>> onDiskRes = runSql(sql, lazy, SMALL_MEM_LIMIT);
-
+            // In-memory.
             long startInMem = System.currentTimeMillis();
-
-            // Check that files have been created.
-            List<WatchEvent<?>> dirEvts = watchKey.pollEvents();
-
-            assertFalse(dirEvts.isEmpty());
-
-            if (log.isInfoEnabled())
-                log.info("Spill files events (created + deleted): " + dirEvts.size());
-
-            assertTrue(workDir.toFile().isDirectory());
-            assertEquals("Files=" + Arrays.toString(workDir.toFile().list()),0, workDir.toFile().list().length);
-
-            // Run in-memory query.
-            watchKey.reset();
 
             List<List<?>> inMemRes = runSql(sql, lazy, HUGE_MEM_LIMIT);
 
+            List<WatchEvent<?>> dirEvts = watchKey.pollEvents();
+
+            // No files should be created for in-memory mode.
+            assertEquals(0, workDir.toFile().list().length);
+            assertTrue("Evts:" + dirEvts.stream().map(e ->
+                e.kind().toString()).collect(Collectors.joining(", ")), dirEvts.isEmpty());
+            assertTrue(workDir.toFile().isDirectory());
+
+            // On disk.
+            long startOnDisk = System.currentTimeMillis();
+
+            watchKey.reset();
+
+            List<List<?>> onDiskRes = runSql(sql, lazy, SMALL_MEM_LIMIT);
+
             long finish = System.currentTimeMillis();
 
-            assertFalse(inMemRes.isEmpty());
-
-            // Check that files haven't been created.
             dirEvts = watchKey.pollEvents();
 
-            assertTrue(dirEvts.isEmpty());
+            // Check files have been created but deleted later.
+            assertFalse(dirEvts.isEmpty());
             assertTrue(workDir.toFile().isDirectory());
-            assertEquals(0, workDir.toFile().list().length);
+            assertEquals("Files=" + Arrays.toString(workDir.toFile().list()),0, workDir.toFile().list().length);
+            assertFalse(inMemRes.isEmpty());
 
-            if (log.isInfoEnabled())
-                log.info("with disk spill=" + (startInMem - startOnDisk) + ", inMemory time=" + (finish - startInMem));
+            if (log.isInfoEnabled()) {
+                log.info("Spill files events (created + deleted): " + dirEvts.size());
+            }
 
             if (!checkSortOrder) {
                 fixSortOrder(onDiskRes);
                 fixSortOrder(inMemRes);
             }
+
+            if (log.isInfoEnabled())
+                log.info("In-memory time=" + (startOnDisk - startInMem) + ", on-disk time=" + (finish - startOnDisk));
 
             if (log.isDebugEnabled())
                 log.debug("In-memory result:\n" + inMemRes + "\nOn disk result:\n" + onDiskRes);
@@ -532,10 +575,11 @@ public class DiskSpillingTest extends GridCommonAbstractTest {
 
     /** */
     private List<List<?>> runSql(String sql, boolean lazy, long memLimit) {
-        return grid(0).cache(DEFAULT_CACHE_NAME).query(new SqlFieldsQueryEx(sql, null)
+        Ignite node = fromClient ? grid("client") : grid(0);
+        return node.cache(DEFAULT_CACHE_NAME).query(new SqlFieldsQueryEx(sql, null)
             .setMaxMemory(memLimit)
             .setLazy(lazy)
-            .setLocal(true)
+            .setLocal(local)
         ).getAll();
     }
 
