@@ -19,9 +19,8 @@ package org.apache.ignite.console.agent.rest;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.io.IOException;
 import java.io.StringWriter;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
@@ -32,7 +31,6 @@ import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.console.json.JsonObject;
-import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.logger.slf4j.Slf4jLogger;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.Response;
@@ -117,9 +115,9 @@ public class RestExecutor implements AutoCloseable {
      * @param params Request parameters.
      * @return Request result.
      * @throws IOException If failed to parse REST result.
-     * @throws Exception If failed to send request.
+     * @throws Throwable If failed to send request.
      */
-    public RestResult sendRequest(String url, JsonObject params) throws Exception {
+    public RestResult sendRequest(String url, JsonObject params) throws Throwable {
         if (!httpClient.isRunning())
             httpClient.start();
 
@@ -140,13 +138,8 @@ public class RestExecutor implements AutoCloseable {
 
             return parseResponse(res, lsnr.getInputStream());
         }
-        catch (Exception e) {
-            TimeoutException e0 = X.cause(e, TimeoutException.class);
-
-            if (e0 != null)
-                throw e0;
-
-            throw e;
+        catch (ExecutionException e) {
+            throw e.getCause();
         }
     }
 
