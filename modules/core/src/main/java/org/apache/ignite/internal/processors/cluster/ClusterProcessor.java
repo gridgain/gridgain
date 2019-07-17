@@ -920,6 +920,9 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     }
 
     private static class DiscoCommonData implements Serializable {
+        /** */
+        private static final long serialVersionUID = 0L;
+
         private final UUID id;
 
         private final String tag;
