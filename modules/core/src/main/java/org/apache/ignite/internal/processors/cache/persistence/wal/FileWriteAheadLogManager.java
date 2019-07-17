@@ -234,6 +234,12 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     private final int WAL_COMPRESSOR_WORKER_THREAD_CNT =
             IgniteSystemProperties.getInteger(IGNITE_WAL_COMPRESSOR_WORKER_THREAD_CNT, 4);
 
+    /**
+     * Threshold time to print warning to log if awaiting for next wal segment took too long (exceeded this threshold).
+     */
+    private static final long THRESHOLD_WAIT_TIME_NEXT_WAL_SEGMENT =
+        IgniteSystemProperties.getLong(IGNITE_THRESHOLD_WAIT_TIME_NEXT_WAL_SEGMENT, 1000L);
+
     /** */
     private final boolean alwaysWriteFullPages;
 
@@ -369,10 +375,6 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
     /** Page snapshot records compression level. */
     private int pageCompressionLevel;
-
-    /** Threshold wait time next wal segment. If exceeded, warning message will be print in to log. */
-    private final long THRESHOLD_WAIT_TIME_NEXT_WAL_SEGMENT =
-        IgniteSystemProperties.getLong(IGNITE_THRESHOLD_WAIT_TIME_NEXT_WAL_SEGMENT, 1000L);
 
     /**
      * @param ctx Kernal context.
@@ -1581,7 +1583,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
         if (absNextIdxWaitTime > THRESHOLD_WAIT_TIME_NEXT_WAL_SEGMENT) {
             log.warning(
-                String.format("Waiting next wal segment was long [waitingTime=%s, curIdx=%s, absNextIdx=%s, walSegments=%s]",
+                String.format("Waiting for next wal segment was too long " +
+                        "[waitingTime=%s, curIdx=%s, absNextIdx=%s, walSegments=%s]",
                     absNextIdxWaitTime,
                     curIdx,
                     absNextIdx,
