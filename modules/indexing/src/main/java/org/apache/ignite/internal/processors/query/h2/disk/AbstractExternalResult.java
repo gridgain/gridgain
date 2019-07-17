@@ -35,7 +35,6 @@ import org.h2.value.Value;
 import org.jetbrains.annotations.NotNull;
 
 import static java.nio.file.StandardOpenOption.CREATE_NEW;
-import static java.nio.file.StandardOpenOption.DELETE_ON_CLOSE;
 import static java.nio.file.StandardOpenOption.READ;
 import static java.nio.file.StandardOpenOption.WRITE;
 import static org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing.DISK_SPILL_DIR;
@@ -72,7 +71,8 @@ public abstract class AbstractExternalResult implements ResultExternal {
     /** Child results count. Parent result is closed only when all children are closed. */
     private int childCnt;
 
-    private boolean closed = true;
+    /** */
+    private boolean closed;
 
     /**
      * @param ctx Kernal context.
@@ -80,8 +80,6 @@ public abstract class AbstractExternalResult implements ResultExternal {
      */
     protected AbstractExternalResult(GridKernalContext ctx, H2MemoryTracker memTracker) {
         try {
-            this.memTracker = memTracker;
-
             String fileName = String.valueOf(idGen.incrementAndGet());
 
             file = new File(U.resolveWorkDirectory(
@@ -90,9 +88,16 @@ public abstract class AbstractExternalResult implements ResultExternal {
                 false
             ), fileName);
 
+            file.deleteOnExit();
+
             FileIOFactory fileIOFactory = ctx.query().fileIOFactory();
 
-            fileIo = fileIOFactory.create(file, CREATE_NEW,  DELETE_ON_CLOSE, READ, WRITE);
+            fileIo = fileIOFactory.create(file, CREATE_NEW, READ, WRITE);
+
+            this.memTracker = memTracker;
+
+            if (memTracker != null)
+                memTracker.registerCloseListener(this::close);
 
             parent = null;
         }
@@ -109,8 +114,11 @@ public abstract class AbstractExternalResult implements ResultExternal {
         size = parent.size;
         file = parent.file;
         fileIo = parent.fileIo;
-        memTracker = null;
         this.parent = parent;
+        memTracker = parent.memTracker;
+
+        if (memTracker != null)
+            memTracker.registerCloseListener(this::close);
     }
 
     /**
@@ -342,11 +350,12 @@ public abstract class AbstractExternalResult implements ResultExternal {
     /** */
     protected synchronized void closeChild() {
         if (--childCnt == 0 && closed)
-            close();
+            onClose();
     }
 
     /** */
     protected void onClose() {
         U.closeQuiet(fileIo);
+        file.delete();
     }
 }

@@ -172,6 +172,8 @@ public class QueryMemoryTracker extends H2MemoryTracker implements AutoCloseable
 
     /** {@inheritDoc} */
     @Override public void close() {
+        super.close();
+
         // It is not expected to be called concurrently with reserve\release.
         // But query can be cancelled concurrently on query finish.
         if (CLOSED_UPD.compareAndSet(this, Boolean.FALSE, Boolean.TRUE)) {

@@ -29,7 +29,6 @@ import org.h2.value.Value;
 import org.h2.value.ValueRow;
 
 import static java.nio.file.StandardOpenOption.CREATE_NEW;
-import static java.nio.file.StandardOpenOption.DELETE_ON_CLOSE;
 import static java.nio.file.StandardOpenOption.READ;
 import static java.nio.file.StandardOpenOption.WRITE;
 
@@ -142,6 +141,8 @@ public class ExternalResultHashIndex implements AutoCloseable {
     /** {@inheritDoc} */
     @Override public void close() throws Exception {
         U.closeQuiet(fileIo);
+
+        idxFile.delete();
     }
 
     /**
@@ -327,13 +328,14 @@ public class ExternalResultHashIndex implements AutoCloseable {
      */
     private void ensureCapacity() {
         if (entriesCnt > LOAD_FACTOR * cap) {
-            FileIO oldFile = fileIo;
+            FileIO oldFileIo = fileIo;
+            File oldIdxFile = idxFile;
 
             long oldSize = cap;
 
             initNewIndexFile(oldSize * 2);
 
-            copyDataFromOldFile(oldFile, oldSize);
+            copyDataFromOldFile(oldFileIo, oldIdxFile, oldSize);
         }
     }
 
@@ -341,9 +343,10 @@ public class ExternalResultHashIndex implements AutoCloseable {
      * Copies data from the ols file to the extended new one.
      *
      * @param oldFile Old file channel.
+     * @param oldIdxFile Old index file.
      * @param oldSize Old file size in slots.
      */
-    private void copyDataFromOldFile(FileIO oldFile, long oldSize) {
+    private void copyDataFromOldFile(FileIO oldFile, File oldIdxFile, long oldSize) {
         try {
             entriesCnt = 0;
 
@@ -364,6 +367,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
         }
         finally {
             U.closeQuiet(oldFile);
+            oldIdxFile.delete();
         }
     }
 
@@ -380,9 +384,11 @@ public class ExternalResultHashIndex implements AutoCloseable {
 
             idxFile = new File(dir, spillFileName + "_idx_" + id++);
 
+            idxFile.deleteOnExit();
+
             FileIOFactory fileIOFactory = ctx.query().fileIOFactory();
 
-            fileIo = fileIOFactory.create(idxFile, CREATE_NEW,  DELETE_ON_CLOSE, READ, WRITE);
+            fileIo = fileIOFactory.create(idxFile, CREATE_NEW, READ, WRITE);
 
             // Write empty data to the end of the file to extend it.
             reusableBuff.clear();

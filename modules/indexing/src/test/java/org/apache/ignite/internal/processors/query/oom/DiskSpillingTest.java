@@ -23,9 +23,11 @@ import java.nio.file.Paths;
 import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import org.apache.commons.io.FileUtils;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
@@ -52,6 +54,7 @@ import static org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing.DI
  * TODO: parallelism
  * TODO local/not local
  * TODO: scale
+ * TODO: close
  *
  * Test for the intermediate query results disk offloading (disk spilling).IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE
  */
@@ -106,7 +109,7 @@ public class DiskSpillingTest extends GridCommonAbstractTest {
     @Override protected void afterTest() throws Exception {
         super.afterTest();
 
-
+        FileUtils.cleanDirectory(getWorkDir().toFile());
     }
 
     /** */
@@ -420,7 +423,7 @@ public class DiskSpillingTest extends GridCommonAbstractTest {
                 log.info("Spill files events (created + deleted): " + dirEvts.size());
 
             assertTrue(workDir.toFile().isDirectory());
-            assertEquals(0, workDir.toFile().list().length);
+            assertEquals("Files=" + Arrays.toString(workDir.toFile().list()),0, workDir.toFile().list().length);
 
             // Run in-memory query.
             watchKey.reset();
