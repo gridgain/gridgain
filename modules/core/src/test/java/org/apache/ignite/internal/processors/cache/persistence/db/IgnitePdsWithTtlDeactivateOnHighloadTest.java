@@ -18,20 +18,14 @@ package org.apache.ignite.internal.processors.cache.persistence.db;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.cache.expiry.AccessedExpiryPolicy;
-import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
-import javax.cache.expiry.ExpiryPolicy;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteSystemProperties;
-import org.apache.ignite.cache.CachePeekMode;
-import org.apache.ignite.cache.CacheRebalanceMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -43,16 +37,7 @@ import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.failure.NoOpFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.processors.cache.GridCacheContext;
-import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
-import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
-import org.apache.ignite.internal.processors.cache.IgniteCacheProxy;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
-import org.apache.ignite.internal.util.lang.GridAbsPredicate;
-import org.apache.ignite.internal.util.lang.GridCursor;
-import org.apache.ignite.internal.util.typedef.PA;
-import org.apache.ignite.internal.util.typedef.internal.CU;
-import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
@@ -79,13 +64,13 @@ public class IgnitePdsWithTtlDeactivateOnHighloadTest extends GridCommonAbstract
     private static final int EXPIRATION_TIMEOUT = 1;
 
     /** */
-    public static final int ENTRIES = 1_000;
+    public static final int ENTRIES = 5_000;
 
     /** */
     public static final int CACHES_CNT = 20;
 
     /** */
-    public static final int WORKLOAD_TRHEADS_CNT = 512;
+    public static final int WORKLOAD_THREADS_CNT = 8;
 
     /** Fail. */
     volatile boolean fail;
@@ -109,6 +94,8 @@ public class IgnitePdsWithTtlDeactivateOnHighloadTest extends GridCommonAbstract
         MvccFeatureChecker.skipIfNotSupported(MvccFeatureChecker.Feature.EXPIRATION);
 
         super.beforeTest();
+
+        stopAllGrids();
 
         cleanPersistenceDir();
     }
@@ -150,6 +137,7 @@ public class IgnitePdsWithTtlDeactivateOnHighloadTest extends GridCommonAbstract
         return new NoOpFailureHandler() {
             @Override protected boolean handle(Ignite ignite, FailureContext failureCtx) {
                 fail = true;
+
                 return super.handle(ignite, failureCtx);
             }
         };
@@ -169,7 +157,6 @@ public class IgnitePdsWithTtlDeactivateOnHighloadTest extends GridCommonAbstract
         ccfg.setExpiryPolicyFactory(AccessedExpiryPolicy.factoryOf(new Duration(TimeUnit.SECONDS, EXPIRATION_TIMEOUT)));
         ccfg.setEagerTtl(true);
         ccfg.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
-        ccfg.setRebalanceMode(CacheRebalanceMode.SYNC);
 
         return ccfg;
     }
@@ -189,33 +176,39 @@ public class IgnitePdsWithTtlDeactivateOnHighloadTest extends GridCommonAbstract
 
         // Start high workload
         AtomicInteger cnt = new AtomicInteger();
-        GridTestUtils.runMultiThreadedAsync(()-> {
-            try {
-                int cacheIdx = cnt.getAndIncrement() % CACHES_CNT;
 
-                while (!end.get())
+        IgniteInternalFuture loadFut = GridTestUtils.runMultiThreadedAsync(()-> {
+            int cacheIdx = cnt.getAndIncrement() % CACHES_CNT;
+
+            try {
+                while (!end.get() && !fail)
                     fillCache(srv.cache(CACHE_NAME + cacheIdx));
             }
             catch (Exception e) {
-                log.info("End workload on deactivate. Reason: " + e.getMessage());
+                // ignore cache stop exceptions
             }
-        }, WORKLOAD_TRHEADS_CNT, "high-workload");
+        }, WORKLOAD_THREADS_CNT, "high-workload");
 
-        U.sleep(20000);
+        doSleep(15_000);
 
         srv.cluster().active(false);
 
         end.set(true);
 
-        stopAllGrids();
+        try {
+            loadFut.get();
+        }
+        catch (Exception e) {
+            // ignore
+        }
 
-        assertFalse("Failure handler was run. See log above.", fail);
+        assertFalse("Failure handler was called. See log above.", fail);
     }
 
     /** */
-    protected void fillCache(IgniteCache<Integer, byte[]> cache) {
+    protected void fillCache(IgniteCache<Integer, String> cache) {
         for (int i = 0; i < ENTRIES; i++)
-            cache.put(i, new byte[1024]);
+            cache.put(i, "deadbeef");
 
         //Touch entries.
         for (int i = 0; i < ENTRIES; i++)
