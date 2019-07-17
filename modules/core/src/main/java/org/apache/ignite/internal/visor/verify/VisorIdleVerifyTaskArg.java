@@ -23,10 +23,10 @@ import java.util.Set;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.VisorDataTransferObject;
+import org.jetbrains.annotations.NotNull;
 
 /**
- * Arguments for task {@link VisorIdleVerifyTask}.
- * <br/>
+ * Arguments for task {@link VisorIdleVerifyTask}. <br/>
  */
 public class VisorIdleVerifyTaskArg extends VisorDataTransferObject {
     /** */
@@ -197,7 +197,7 @@ public class VisorIdleVerifyTaskArg extends VisorDataTransferObject {
     /**
      * @return Kind fo cache.
      */
-    public CacheFilterEnum cacheFilterEnum() {
+    @NotNull public CacheFilterEnum cacheFilterEnum() {
         return cacheFilterEnum;
     }
 
