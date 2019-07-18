@@ -14,26 +14,16 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.ml.knn;
-
-import org.apache.ignite.ml.knn.utils.ArraySpatialIndexTest;
-import org.apache.ignite.ml.knn.utils.BallTreeSpatialIndexTest;
-import org.apache.ignite.ml.knn.utils.KDTreeSpatialIndexTest;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+package org.apache.ignite.ml.knn.utils;
 
 /**
- * Test suite for all tests located in org.apache.ignite.ml.trees package.
+ * Tests for {@link BallTreeSpatialIndex}.
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-    ANNClassificationTest.class,
-    KNNClassificationTest.class,
-    KNNRegressionTest.class,
-    LabeledVectorSetTest.class,
-    ArraySpatialIndexTest.class,
-    BallTreeSpatialIndexTest.class,
-    KDTreeSpatialIndexTest.class
-})
-public class KNNTestSuite {
+public class BallTreeSpatialIndexTest extends SpatialIndexTest {
+    /**
+     * Constructs a new instance of Ball tree spatial index test.
+     */
+    public BallTreeSpatialIndexTest() {
+        super(BallTreeSpatialIndex::new);
+    }
 }

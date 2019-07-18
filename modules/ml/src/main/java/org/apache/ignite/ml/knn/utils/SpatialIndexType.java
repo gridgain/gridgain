@@ -14,15 +14,18 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.ml.knn.classification;
+package org.apache.ignite.ml.knn.utils;
 
-/** This enum contains settings for kNN algorithm. */
-public enum NNStrategy {
-    /** The default strategy. All k neighbors have the same weight which is independent
-     * on their distance to the query point.*/
-    SIMPLE,
+/**
+ * Spatial index type.
+ */
+public enum SpatialIndexType {
+    /** Array based spatial index (see {@link ArraySpatialIndex}. */
+    ARRAY,
 
-    /** A refinement of the k-NN classification algorithm is to weigh the contribution of each of the k neighbors
-     * according to their distance to the query point, giving greater weight to closer neighbors. */
-    WEIGHTED
+    /** KD tree based spatial index (see {@link KDTreeSpatialIndex}). */
+    KD_TREE,
+
+    /** Ball tree based spatial index (see {@link BallTreeSpatialIndex}). */
+    BALL_TREE
 }
