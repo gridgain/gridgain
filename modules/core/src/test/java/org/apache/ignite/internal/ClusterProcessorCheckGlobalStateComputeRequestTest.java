@@ -46,7 +46,7 @@ public class ClusterProcessorCheckGlobalStateComputeRequestTest extends GridComm
      * @throws Exception If failed.
      */
     @Test
-    public void testCheckGlobalSateComputeRequest() throws Exception {
+    public void testCheckGlobalStateComputeRequest() throws Exception {
 
         startGrids(1);
         IgniteEx daemon = startGrid("daemon");
