@@ -346,7 +346,7 @@ public class TxOnCachesStopTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    public void testOptimisticTransactionsOnCacheDestroy () throws Exception {
+    public void testOptimisticTransactionsOnCacheDestroy() throws Exception {
         Assume.assumeFalse(MvccFeatureChecker.forcedMvcc());
 
         startGridsMultiThreaded(3);
@@ -359,10 +359,8 @@ public class TxOnCachesStopTest extends GridCommonAbstractTest {
 
         clients.get(0).cluster().active(true);
 
-        List<CacheConfiguration> cachesToBeDestroyed = createCacheConfigurations();
-
         for (TransactionIsolation iso : TransactionIsolation.values()) {
-            clients.get(0).getOrCreateCaches(cachesToBeDestroyed);
+            grid(0).getOrCreateCaches(createCacheConfigurations());
 
             // Make sure that all caches are started.
             awaitPartitionMapExchange();
@@ -461,6 +459,11 @@ public class TxOnCachesStopTest extends GridCommonAbstractTest {
         TransactionConcurrency concurrency,
         TransactionIsolation isolation){
         final GridCompoundFuture fut = new GridCompoundFuture();
+
+        for (Ignite c : clients) {
+            for (int i = 0; i < CACHE_CNT; ++i)
+                c.getOrCreateCache("test-cache-" + i);
+        }
 
         clients.forEach(c -> {
             fut.add(GridTestUtils.runAsync(() -> {

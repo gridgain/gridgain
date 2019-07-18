@@ -332,9 +332,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      */
     public void rollbackTransactionsForCaches(Set<Integer> cachesToStop) {
         if (!cachesToStop.isEmpty()) {
-            IgniteTxManager tm = context().tm();
-
-            Collection<IgniteInternalTx> active = tm.activeTransactions();
+            Collection<IgniteInternalTx> active = activeTransactions();
 
             GridCompoundFuture<IgniteInternalTx, IgniteInternalTx> compFut = new GridCompoundFuture<>();
 

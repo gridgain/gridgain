@@ -3146,6 +3146,63 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     }
 
     /**
+     * Blocks cache gateways before rolling back transactions that were affected by Exchange,
+     * which in turn was caused by the destroyCache call for these caches.
+     * This should be done in order to prohibit enlisting new entries into optimistic transactions.
+     *
+     * @param exchActions Change requests.
+     */
+    private void blockCacheGatewaysOnExchangeDone(ExchangeActions exchActions) {
+        // Reserve at least 2 threads for system operations.
+        int parallelismLvl = U.availableThreadCount(ctx, GridIoPolicy.SYSTEM_POOL, 2);
+
+        Map<Integer, List<ExchangeActions.CacheActionData>> cachesToStop = exchActions.cacheStopRequests().stream()
+            .collect(Collectors.groupingBy(action -> action.descriptor().groupId()));
+
+        try {
+            doInParallel(
+                parallelismLvl,
+                sharedCtx.kernalContext().getSystemExecutorService(),
+                cachesToStop.entrySet(),
+                cachesToStopByGrp -> {
+                    CacheGroupContext gctx = cacheGrps.get(cachesToStopByGrp.getKey());
+
+                    if (gctx != null)
+                        gctx.preloader().pause();
+
+                    try {
+
+                        if (gctx != null) {
+                            final String msg = "Failed to wait for topology update, cache group is stopping.";
+
+                            // If snapshot operation in progress we must throw CacheStoppedException
+                            // for correct cache proxy restart. For more details see
+                            // IgniteCacheProxy.cacheException()
+                            gctx.affinity().cancelFutures(new CacheStoppedException(msg));
+                        }
+
+                        for (ExchangeActions.CacheActionData action : cachesToStopByGrp.getValue())
+                            stopGateway(action.request());
+                    }
+                    finally {
+                        if (gctx != null)
+                            gctx.preloader().resume();
+                    }
+
+                    return null;
+                }
+            );
+        }
+        catch (IgniteCheckedException e) {
+            String msg = "Failed to stop caches";
+
+            log.error(msg, e);
+
+            throw new IgniteException(msg, e);
+        }
+    }
+
+    /**
      * @param exchActions Change requests.
      */
     private void processCacheStopRequestOnExchangeDone(ExchangeActions exchActions) {
@@ -3326,6 +3383,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                 cachesToStop.add(act.descriptor().cacheId());
 
             if (!cachesToStop.isEmpty()) {
+                blockCacheGatewaysOnExchangeDone(exchActions);
+
                 IgniteTxManager tm = context().tm();
 
                 tm.rollbackTransactionsForCaches(cachesToStop);
