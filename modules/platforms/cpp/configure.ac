@@ -88,6 +88,11 @@ AC_ARG_ENABLE([tests],
     [tests=true]
 )
 
+AC_ARG_WITH(sanitize, 
+	[AS_HELP_STRING([--with-sanitize],[compile with sanitazer support])], 
+	[CXXFLAGS="$CXXFLAGS -fsanitize=address"]
+)
+
 AM_CONDITIONAL([COND_ODBC], [test "x$odbc" = "xtrue"])
 AM_CONDITIONAL([COND_CORE], [test "x$core" = "xtrue"])
 AM_CONDITIONAL([COND_THIN_CLIENT], [test "x$thin_client" = "xtrue"])
