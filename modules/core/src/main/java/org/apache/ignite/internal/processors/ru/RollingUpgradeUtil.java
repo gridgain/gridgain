@@ -37,7 +37,7 @@ public abstract class RollingUpgradeUtil {
      * @return List of alive nodes in the cluster that are not updated yet.
      */
     public static List<String> initialNodes(GridKernalContext ctx, RollingUpgradeStatus status) {
-        return nodes(ctx, status, status.initialVersion());
+        return nodes(ctx, status, status.getInitialVersion());
     }
 
     /**
@@ -48,7 +48,7 @@ public abstract class RollingUpgradeUtil {
      * @return List of alive nodes in the cluster that are updated.
      */
     public static List<String> updatedNodes(GridKernalContext ctx, RollingUpgradeStatus status) {
-        return nodes(ctx, status, status.targetVersion());
+        return nodes(ctx, status, status.getTargetVersion());
     }
 
     /**
@@ -60,7 +60,7 @@ public abstract class RollingUpgradeUtil {
      * @return List of nodes with the given version.
      */
     private static List<String> nodes(GridKernalContext ctx, RollingUpgradeStatus status, IgniteProductVersion ver) {
-        if (!status.enabled() || ver == null)
+        if (!status.isEnabled() || ver == null)
             return Collections.emptyList();
 
         final DiscoCache disco = ctx.discovery().discoCache();

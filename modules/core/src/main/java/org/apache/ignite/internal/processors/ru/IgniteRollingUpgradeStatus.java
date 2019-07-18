@@ -79,27 +79,27 @@ public class IgniteRollingUpgradeStatus extends IgniteDataTransferObject impleme
     }
 
     /** {@inheritDoc} */
-    @Override public boolean enabled() {
+    @Override public boolean isEnabled() {
         return enabled;
     }
 
     /** {@inheritDoc} */
-    @Override public boolean forcedModeEnabled() {
+    @Override public boolean isForcedModeEnabled() {
         return forcedModeEnabled;
     }
 
     /** {@inheritDoc} */
-    @Override public IgniteProductVersion initialVersion() {
+    @Override public IgniteProductVersion getInitialVersion() {
         return initVer;
     }
 
     /** {@inheritDoc} */
-    @Override public @Nullable IgniteProductVersion targetVersion() {
+    @Override public @Nullable IgniteProductVersion getTargetVersion() {
         return updateVer;
     }
 
     /** {@inheritDoc} */
-    @Override public Set<IgniteFeatures> supportedFeatures() {
+    @Override public Set<IgniteFeatures> getSupportedFeatures() {
         return supportedFeatures;
     }
 
