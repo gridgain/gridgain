@@ -261,17 +261,19 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
                     cluster.setId((UUID)newVal);
                 }
             );
-
-            return;
         }
 
-        try {
-            metastorage.writeAsync(CLUSTER_ID, cluster.id());
+        //only first node has to store ID and TAG to distributed metastorage,
+        //all other nodes will be synced automatically during discovery data exchange
+        if (ctx.discovery().localNode().order() == 1) {
+            try {
+                metastorage.writeAsync(CLUSTER_ID, cluster.id());
 
-            metastorage.writeAsync(CLUSTER_TAG, cluster.tag());
-        }
-        catch (IgniteCheckedException e) {
-            ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
+                metastorage.writeAsync(CLUSTER_TAG, cluster.tag());
+            }
+            catch (IgniteCheckedException e) {
+                ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
+            }
         }
     }
 
@@ -321,6 +323,27 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
         cluster.setTag(localClusterTag != null ? localClusterTag :
             ClusterTagGenerator.generateTag());
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onDisconnected(IgniteFuture<?> reconnectFut) {
+        assert ctx.clientNode();
+
+        localClusterId = null;
+        localClusterTag = null;
+
+        cluster.setId(null);
+        cluster.setTag(null);
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteInternalFuture<?> onReconnected(boolean clusterRestarted) {
+        assert ctx.clientNode();
+
+        cluster.setId(localClusterId);
+        cluster.setTag(localClusterTag);
+
+        return null;
     }
 
     /**

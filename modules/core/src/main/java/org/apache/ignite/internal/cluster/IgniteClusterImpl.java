@@ -590,9 +590,15 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
     }
 
     /**
-     * Not part of public API. Enables ClusterProcessor to set ID for the first time on node startup.
+     * Not part of public API.
+     * Enables ClusterProcessor to set ID in the following cases:
+     * <ol>
+     *     <li>For the first time on node startup.</li>
+     *     <li>Set to null on client disconnect.</li>
+     *     <li>Set to some not-null value on client reconnect.</li>
+     * </ol>
      *
-     * @param id Id.
+     * @param id ID to set.
      */
     public void setId(UUID id) {
         this.id = id;
@@ -612,9 +618,15 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
     }
 
     /**
-     * Not part of public API. Enables ClusterProcessor to set tag for the first time on node startup.
+     * Not part of public API.
+     * Enables ClusterProcessor to set tag in the following cases:
+     * <ol>
+     *     <li>For the first time on node startup.</li>
+     *     <li>Set to null on client disconnect.</li>
+     *     <li>Set to some not-null value on client reconnect.</li>
+     * </ol>
      *
-     * @param tag Tag.
+     * @param tag Tag to set.
      */
     public void setTag(String tag) {
         this.tag = tag;
