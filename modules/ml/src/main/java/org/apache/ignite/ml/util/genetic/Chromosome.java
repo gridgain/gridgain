@@ -42,7 +42,7 @@ public class Chromosome implements Comparable {
      * @param doubles Doubles.
      */
     public Chromosome(Double[] doubles) {
-        genes = doubles;
+        genes = doubles.clone();
     }
 
     /**

@@ -16,7 +16,13 @@
 
 package org.apache.ignite.ml.selection.paramgrid;
 
+/**
+ * The parent abstract class of all hyper-parameter tuning strategies.
+ */
 public abstract class HyperParameterTuningStrategy {
+    /**
+     * Returns the name of strategy.
+     */
     public abstract String getName();
 }
 

@@ -17,6 +17,7 @@
 package org.apache.ignite.ml.util.genetic;
 
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.function.Function;
 
 /**
@@ -26,11 +27,15 @@ public class Population {
     /** Chromosomes. */
     private Chromosome[] chromosomes;
 
+    /** Fitness calculated flags. */
+    private BitSet fitnessCalculatedFlags;
+
     /**
      * @param size Size.
      */
     public Population(int size) {
         chromosomes = new Chromosome[size];
+        fitnessCalculatedFlags = new BitSet(size);
     }
 
     /**
@@ -51,6 +56,7 @@ public class Population {
     public double calculateFitnessForChromosome(int idx, Function<Chromosome, Double> fitnessFunction){
         double fitness = fitnessFunction.apply(chromosomes[idx]);
         chromosomes[idx].setFitness(fitness);
+        fitnessCalculatedFlags.set(idx);
         return fitness;
     }
 
@@ -86,38 +92,49 @@ public class Population {
     }
 
     /**
-     * Selects the top K chromosomes by fitness value.
+     * Selects the top K chromosomes by fitness value from the smallest to the largest.
      *
      * @param k The amount of top chromosome with highest value of the fitness.
+     *
+     * Returns null if not all fitnesses are calculated for all chromosomes.
      */
     public Chromosome[] selectBestKChromosome(int k) {
-        Chromosome[] cp = Arrays.copyOf(chromosomes, chromosomes.length);
-        Arrays.sort(cp);
-        return Arrays.copyOfRange(cp, cp.length - k, cp.length);
+        if (fitnessCalculatedFlags.cardinality() == chromosomes.length) {
+            Chromosome[] cp = Arrays.copyOf(chromosomes, chromosomes.length);
+            Arrays.sort(cp);
+            return Arrays.copyOfRange(cp, cp.length - k, cp.length);
+        }
+        return null;
     }
 
     /**
-     * Returns the total fitness value of population.
+     * Returns the total fitness value of population or Double.NaN if not all fitnesses are calculated for all chromosomes.
      */
     public double getTotalFitness() {
-        double totalFitness = 0.0;
+        if (fitnessCalculatedFlags.cardinality() == chromosomes.length) {
+            double totalFitness = 0.0;
 
-        for (int i = 0; i < chromosomes.length; i++)
-            totalFitness+=chromosomes[i].getFitness();
+            for (int i = 0; i < chromosomes.length; i++)
+                totalFitness += chromosomes[i].getFitness();
 
-        return totalFitness;
+            return totalFitness;
+        }
+        return Double.NaN;
     }
 
     /**
-     * Returns the average fitness of population.
+     * Returns the average fitness of population or Double.NaN if not all fitnesses are calculated for all chromosomes.
      */
     public double getAverageFitness() {
-        double totalFitness = 0.0;
+        if (fitnessCalculatedFlags.cardinality() == chromosomes.length) {
+            double totalFitness = 0.0;
 
-        for (int i = 0; i < chromosomes.length; i++)
-            totalFitness+=chromosomes[i].getFitness();
+            for (int i = 0; i < chromosomes.length; i++)
+                totalFitness += chromosomes[i].getFitness();
 
-        return totalFitness/chromosomes.length;
+            return totalFitness / chromosomes.length;
+        }
+        return Double.NaN;
     }
 
 
@@ -137,5 +154,6 @@ public class Population {
      */
     public void setFitness(Integer idx, Double fitness) {
         chromosomes[idx].setFitness(fitness);
+        fitnessCalculatedFlags.set(idx);
     }
 }

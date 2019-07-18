@@ -17,7 +17,11 @@
 
 package org.apache.ignite.ml.selection.paramgrid;
 
+/**
+ * This strategy enables the brut-force search in hyper-parameter space.
+ */
 public class BrutForceStrategy extends HyperParameterTuningStrategy {
+    /** {@inheritDoc} */
     @Override public String getName() {
         return "Brut Force";
     }
