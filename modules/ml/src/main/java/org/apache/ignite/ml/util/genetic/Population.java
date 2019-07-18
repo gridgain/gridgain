@@ -79,6 +79,8 @@ public class Population {
      */
     public void setChromosome(int idx, Chromosome chromosome) {
         chromosomes[idx] = chromosome;
+        if (!Double.isNaN(chromosome.getFitness())) fitnessCalculatedFlags.set(idx);
+
     }
 
 

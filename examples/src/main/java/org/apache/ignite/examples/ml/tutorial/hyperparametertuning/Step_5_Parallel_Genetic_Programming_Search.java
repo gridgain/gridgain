@@ -144,7 +144,6 @@ public class Step_5_Parallel_Genetic_Programming_Search {
                     .withTrainer(trainerCV)
                     .withMetric(metrics)
                     .withFilter(split.getTrainFilter())
-
                     .isRunningOnPipeline(false)
                     .withPreprocessor(normalizationPreprocessor)
                     .withAmountOfFolds(3)
