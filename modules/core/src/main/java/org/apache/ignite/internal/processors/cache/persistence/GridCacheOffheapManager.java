@@ -2232,6 +2232,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             try {
                 CacheDataStore delegate0 = init0(false);
 
+                // Partition may not exists before recovery starts in case of recovering counters from RollbackRecord.
                 delegate0.updateInitialCounter(start, delta);
             }
             catch (IgniteCheckedException e) {
