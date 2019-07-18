@@ -126,6 +126,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.cache.CacheMode.LOCAL;
@@ -579,12 +580,17 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
      * @throws IgniteException If waiting failed.
      */
     private void awaitTopologyChanged(long timeout) throws IgniteException {
+        if (isMultiJvm())
+            return;
+
         List<Ignite> allNodes = G.allGrids();
 
         Set<ClusterNode> nodes0 = allNodes.stream()
             .map(i -> (IgniteEx)i)
             .map(IgniteEx::localNode)
-            .collect(Collectors.toSet());
+            .collect(toSet());
+
+        long endTime = System.currentTimeMillis() + timeout;
 
         for (Ignite ig : allNodes) {
             IgniteEx igEx = (IgniteEx)ig;
@@ -595,6 +601,20 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
                 AffinityTopologyVersion topVer = disc.topologyVersionEx();
 
                 Collection<ClusterNode> nodes = disc.nodes(topVer);
+
+                if (System.currentTimeMillis() > endTime) {
+                    Set<String> exp = nodes0.stream().map(ClusterNode::id).map(UUID::toString).collect(toSet());
+                    Set<String> actl = nodes.stream().map(ClusterNode::id).map(UUID::toString).collect(toSet());
+
+                    throw new IgniteException("Timeout of waiting topology "
+                        + ig.cluster().localNode().id() + " topVer=" + topVer +
+                        " [" +
+                        "exp:" + String.join(",", exp)
+                        + " | " +
+                        "actl:" + String.join(",", actl) +
+                        "]"
+                    );
+                }
 
                 if (!nodes0.equals(new HashSet<>(nodes)))
                     doSleep(50);
@@ -633,11 +653,11 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
             if (nodes != null) {
                 Set<UUID> gClusterNodeIds = g.cluster().nodes().stream()
                     .map(ClusterNode::id)
-                    .collect(Collectors.toSet());
+                    .collect(toSet());
 
                 Set<UUID> awaitPmeNodeIds = nodes.stream()
                     .map(ClusterNode::id)
-                    .collect(Collectors.toSet());
+                    .collect(toSet());
 
                 gClusterNodeIds.retainAll(awaitPmeNodeIds);
 
