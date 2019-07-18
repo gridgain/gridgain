@@ -66,22 +66,22 @@ import org.junit.runners.Suite;
 //    IgnitePdsNoActualWalHistoryTest.class,
 //    IgniteWalRebalanceTest.class,
 //
-//    IgnitePdsAtomicCacheRebalancingTest.class,
-//    IgnitePdsAtomicCacheHistoricalRebalancingTest.class,
-//
-//    IgnitePdsTxCacheRebalancingTest.class,
-//    IgnitePdsTxHistoricalRebalancingTest.class,
-//
-//    IgniteWalRecoveryPPCTest.class,
-//
-//    IgnitePdsDiskErrorsRecoveringTest.class,
-//
-//    IgnitePdsCacheDestroyDuringCheckpointTest.class,
-//
-//    IgnitePdsBinaryMetadataOnClusterRestartTest.class,
-//    IgnitePdsMarshallerMappingRestoreOnNodeStartTest.class,
-//    IgnitePdsThreadInterruptionTest.class,
-//    IgnitePdsBinarySortObjectFieldsTest.class,
+    IgnitePdsAtomicCacheRebalancingTest.class,
+    IgnitePdsAtomicCacheHistoricalRebalancingTest.class,
+
+    IgnitePdsTxCacheRebalancingTest.class,
+    IgnitePdsTxHistoricalRebalancingTest.class,
+
+    IgniteWalRecoveryPPCTest.class,
+
+    IgnitePdsDiskErrorsRecoveringTest.class,
+
+    IgnitePdsCacheDestroyDuringCheckpointTest.class,
+
+    IgnitePdsBinaryMetadataOnClusterRestartTest.class,
+    IgnitePdsMarshallerMappingRestoreOnNodeStartTest.class,
+    IgnitePdsThreadInterruptionTest.class,
+    IgnitePdsBinarySortObjectFieldsTest.class,
 
     IgnitePdsCorruptedIndexTest.class,
 
