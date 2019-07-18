@@ -428,7 +428,7 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
                             ", rmtAddr=" + ses.remoteAddress() + ']');
 
                     try {
-                        boolean client = ignite.configuration().isClientMode();
+                        boolean client = Boolean.TRUE.equals(ignite().configuration().isClientMode());
 
                         if (client || ctxInitLatch.getCount() == 0 || !isHandshakeWaitSupported()) {
                             if (log.isDebugEnabled())
@@ -4124,9 +4124,30 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
      * @return Node ID message.
      */
     private NodeIdMessage nodeIdMessage() {
-        UUID locNodeId = ((IgniteEx)ignite).context().localNodeId();
+        final UUID locNodeId = (ignite instanceof IgniteEx) ? ((IgniteEx)ignite).context().localNodeId() :
+            safeLocalNodeId();
 
         return new NodeIdMessage(locNodeId);
+    }
+
+    /**
+     * @return Local node ID.
+     */
+    private UUID safeLocalNodeId() {
+        ClusterNode locNode = getLocalNode();
+
+        UUID id;
+
+        if (locNode == null) {
+            U.warn(log, "Local node is not started or fully initialized [isStopping=" +
+                getSpiContext().isStopping() + ']');
+
+            id = new UUID(0, 0);
+        }
+        else
+            id = locNode.id();
+
+        return id;
     }
 
     /** {@inheritDoc} */
