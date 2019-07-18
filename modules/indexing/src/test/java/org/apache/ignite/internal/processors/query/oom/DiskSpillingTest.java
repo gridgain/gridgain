@@ -37,6 +37,7 @@ import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -54,10 +55,6 @@ import static org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing.DI
  * TODO: Global quota
  * TODO: file deleted in the case of query exception/kill/etc
  * TODO: multithreaded
- *
- * // Parametrized
- * TODO: client/server
- * TODO local/not local
  *
  * // Before start
  * TODO: single node/multiple nodes
@@ -197,6 +194,7 @@ public class DiskSpillingTest extends GridCommonAbstractTest {
     }
 
     /** */
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-21599")
     @Test
     public void simpleSelectWithDistinctOrderByLazy() {
         checkSortOrder = true;
@@ -206,6 +204,7 @@ public class DiskSpillingTest extends GridCommonAbstractTest {
     }
 
     /** */
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-21595")
     @Test
     public void simpleSelectWithDistinctOrderByAggregate() {
         checkSortOrder = true;
@@ -215,6 +214,7 @@ public class DiskSpillingTest extends GridCommonAbstractTest {
     }
 
     /** */
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-21595")
     @Test
     public void simpleSelectWithDistinctOrderByAggregateLazy() {
         checkSortOrder = true;
@@ -247,6 +247,7 @@ public class DiskSpillingTest extends GridCommonAbstractTest {
     }
 
     /** */
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-21599")
     @Test
     public void simpleSelectWithDistinctOnLazy() {
         checkSortOrder = true;
@@ -445,13 +446,15 @@ public class DiskSpillingTest extends GridCommonAbstractTest {
             if (log.isInfoEnabled())
                 log.info("workDir=" + workDir.toString());
 
-
             watchSvc = FileSystems.getDefault().newWatchService();
 
             WatchKey watchKey = workDir.register(watchSvc, ENTRY_CREATE, ENTRY_DELETE);
 
             // In-memory.
             long startInMem = System.currentTimeMillis();
+
+            if (log.isInfoEnabled())
+                log.info("Run query in memory.");
 
             List<List<?>> inMemRes = runSql(sql, lazy, HUGE_MEM_LIMIT);
 
@@ -464,6 +467,9 @@ public class DiskSpillingTest extends GridCommonAbstractTest {
             assertTrue(workDir.toFile().isDirectory());
 
             // On disk.
+            if (log.isInfoEnabled())
+                log.info("Run query with disk offloading.");
+
             long startOnDisk = System.currentTimeMillis();
 
             watchKey.reset();
