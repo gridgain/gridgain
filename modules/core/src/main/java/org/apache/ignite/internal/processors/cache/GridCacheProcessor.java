@@ -1527,6 +1527,14 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
             IgnitePageStoreManager pageStore;
 
+            try {
+                ctx.shared().wal().flush(null, false);
+            }
+            catch (IgniteCheckedException e) {
+                U.error(log, "Failed to flush WAL data while destroying cache" +
+                    "[cache=" + ctx.name() + "]", e);
+            }
+
             if (destroy && (pageStore = sharedCtx.pageStore()) != null) {
                 try {
                     pageStore.removeCacheData(new StoredCacheData(ctx.config()));
