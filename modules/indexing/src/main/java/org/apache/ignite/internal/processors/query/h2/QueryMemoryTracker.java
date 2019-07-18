@@ -175,6 +175,8 @@ public class QueryMemoryTracker extends H2MemoryTracker {
 
             if (parent != null)
                 parent.released(reservedFromParent);
+
+            super.close();
         }
     }
 
