@@ -2745,19 +2745,19 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         RollingUpgradeModeChangeResult res = hnd.getLastOperationResult();
 
-        assertTrue("Enabling rolling upgrade should fail [res=" + res + ']', FAIL == res.getResult());
+        assertTrue("Enabling rolling upgrade should fail [res=" + res + ']', FAIL == res.result());
         assertTrue(
-            "The cause of the failure should be UnsupportedOperationException [cause=" + res.getCause() + ']',
-            X.hasCause(res.getCause(), UnsupportedOperationException.class));
+            "The cause of the failure should be UnsupportedOperationException [cause=" + res.cause() + ']',
+            X.hasCause(res.cause(), UnsupportedOperationException.class));
 
         assertEquals(EXIT_CODE_OK, execute(hnd, "--rolling-upgrade", "off"));
 
         res = hnd.getLastOperationResult();
 
-        assertTrue("Disabling rolling upgrade should fail [res=" + res + ']', FAIL == res.getResult());
+        assertTrue("Disabling rolling upgrade should fail [res=" + res + ']', FAIL == res.result());
         assertTrue(
-            "The cause of the failure should be UnsupportedOperationException [cause=" + res.getCause() + ']',
-            X.hasCause(res.getCause(), UnsupportedOperationException.class));
+            "The cause of the failure should be UnsupportedOperationException [cause=" + res.cause() + ']',
+            X.hasCause(res.cause(), UnsupportedOperationException.class));
     }
 
     /**

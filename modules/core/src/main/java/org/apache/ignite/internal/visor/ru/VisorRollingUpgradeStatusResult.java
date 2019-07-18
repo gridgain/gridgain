@@ -82,7 +82,7 @@ public class VisorRollingUpgradeStatusResult extends IgniteDataTransferObject {
     /**
      * Returns a list of node IDs that are alive and have been updated.
      * The returned collection can be empty if Rolling Upgrade is disabled or
-     * {@link RollingUpgradeStatus#getTargetVersion()} is not determined yet.
+     * {@link RollingUpgradeStatus#targetVersion()} is not determined yet.
      *
      * This method makes sense only for the case when the {@code forced} mode is disabled.
      *

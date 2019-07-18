@@ -133,14 +133,14 @@ public class RollingUpgradeCommand implements Command<RollingUpgradeArguments> {
     private void printRollingUpgradeStatus(Logger log, VisorRollingUpgradeStatusResult res) {
         RollingUpgradeStatus status = res.status();
 
-        log.info("Rolling upgrade is " + (status.isEnabled()? "enabled" : "disabled"));
-        log.info("Initial version: " + status.getInitialVersion());
-        log.info("Target version: " + ((status.getTargetVersion() != null)? status.getTargetVersion(): "N/A"));
+        log.info("Rolling upgrade is " + (status.enabled()? "enabled" : "disabled"));
+        log.info("Initial version: " + status.initialVersion());
+        log.info("Target version: " + ((status.targetVersion() != null)? status.targetVersion(): "N/A"));
 
-        if (status.isForcedModeEnabled())
+        if (status.forcedModeEnabled())
             log.info("Forced mode is enabled.");
 
-        if (status.isEnabled()) {
+        if (status.enabled()) {
             log.info("List of alive nodes in the cluster that are not updated yet:");
 
             res.initialVerNodes().forEach(id -> log.info(CommandLogger.INDENT + id));
@@ -157,10 +157,10 @@ public class RollingUpgradeCommand implements Command<RollingUpgradeArguments> {
      * @param res Mode change result.
      */
     private void printRollingUpgradeChangeModeResult(Logger log, RollingUpgradeModeChangeResult res) {
-        if (RollingUpgradeModeChangeResult.Result.SUCCESS == res.getResult())
+        if (RollingUpgradeModeChangeResult.Result.SUCCESS == res.result())
             log.info("Rolling upgrade mode successfully " +
                 (RollingUpgradeSubCommands.ENABLE == rollingUpgradeArgs.command()? "enabled." : "disabled."));
         else
-            log.info("Rolling upgrade operation failed due to " + res.getCause());
+            log.info("Rolling upgrade operation failed due to " + res.cause());
     }
 }

@@ -102,7 +102,7 @@ public class RollingUpgradeModeChangeResult extends IgniteDataTransferObject {
      *
      * @return Status of the operation.
      */
-    public Result getResult() {
+    public Result result() {
         return result;
     }
 
@@ -111,7 +111,7 @@ public class RollingUpgradeModeChangeResult extends IgniteDataTransferObject {
      *
      * @return Rolling upgrade status.
      */
-    public RollingUpgradeStatus getStatus() {
+    public RollingUpgradeStatus status() {
         return status;
     }
 
@@ -120,7 +120,7 @@ public class RollingUpgradeModeChangeResult extends IgniteDataTransferObject {
      *
      * @return cause of the failure.
      */
-    public Exception getCause() {
+    public Exception cause() {
         return cause;
     }
 
