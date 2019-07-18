@@ -22,6 +22,7 @@ import java.io.ObjectOutput;
 import java.util.List;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  * Represents an extended rolling upgrade state that includes additional parameters, like as follows:
@@ -32,15 +33,15 @@ public class VisorRollingUpgradeStatusResult extends IgniteDataTransferObject {
     private static final long serialVersionUID = 0L;
 
     /** */
-    private RollingUpgradeStatus status;
+    private VisorRollingUpgradeStatus status;
 
     /** List of node IDs that are alive and not updated yet.*/
-    private List<String> initVerNodes;
+    private List<String> initNodes;
 
     /** List of node IDs that are alive and have been updated. */
-    private List<String> updateVerNodes;
+    private List<String> updatedNodes;
 
-    /** Default construsctor. */
+    /** Default constructor. */
     public VisorRollingUpgradeStatusResult() {
     }
 
@@ -48,17 +49,17 @@ public class VisorRollingUpgradeStatusResult extends IgniteDataTransferObject {
      * Creates a new instance of VisorRollingUpgradeStatusResult with the given parameters.
      *
      * @param status Rolling upgrade status.
-     * @param initVerNodes List of node IDs that are alive and not updated yet.
-     * @param updateVerNodes List of node IDs that are alive and have been updated.
+     * @param initNodes List of node IDs that are alive and not updated yet.
+     * @param updatedNodes List of node IDs that are alive and have been updated.
      */
     public VisorRollingUpgradeStatusResult(
-        RollingUpgradeStatus status,
-        List<String> initVerNodes,
-        List<String> updateVerNodes
+        VisorRollingUpgradeStatus status,
+        List<String> initNodes,
+        List<String> updatedNodes
     ) {
         this.status = status;
-        this.initVerNodes = initVerNodes;
-        this.updateVerNodes = updateVerNodes;
+        this.initNodes = initNodes;
+        this.updatedNodes = updatedNodes;
     }
 
     /**
@@ -66,7 +67,7 @@ public class VisorRollingUpgradeStatusResult extends IgniteDataTransferObject {
      *
      * @return Rolling upgrade status.
      */
-    public RollingUpgradeStatus status() {
+    public VisorRollingUpgradeStatus getStatus() {
         return status;
     }
 
@@ -75,8 +76,8 @@ public class VisorRollingUpgradeStatusResult extends IgniteDataTransferObject {
      *
      * @return List of node IDs.
      */
-    public List<String> initialVerNodes() {
-        return initVerNodes;
+    public List<String> getInitialNodes() {
+        return initNodes;
     }
 
     /**
@@ -88,21 +89,26 @@ public class VisorRollingUpgradeStatusResult extends IgniteDataTransferObject {
      *
      * @return List of node IDs.
      */
-    public List<String> updateVerNodes() {
-        return updateVerNodes;
+    public List<String> getUpdatedNodes() {
+        return updatedNodes;
     }
 
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         out.writeObject(status);
-        out.writeObject(initVerNodes);
-        out.writeObject(updateVerNodes);
+        out.writeObject(initNodes);
+        out.writeObject(updatedNodes);
     }
 
     /** {@inheritDoc} */
     @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
-        status = (RollingUpgradeStatus)in.readObject();
-        initVerNodes = (List<String>)in.readObject();
-        updateVerNodes = (List<String>)in.readObject();
+        status = (VisorRollingUpgradeStatus)in.readObject();
+        initNodes = (List<String>)in.readObject();
+        updatedNodes = (List<String>)in.readObject();
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(VisorRollingUpgradeStatusResult.class, this);
     }
 }
