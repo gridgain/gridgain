@@ -51,10 +51,10 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-//    IgnitePdsCacheIntegrationTest.class,
-//    IgnitePdsPageEvictionTest.class,
-//    IgnitePdsMultiNodePutGetRestartTest.class,
-//    IgnitePersistentStoreCacheGroupsTest.class,
+    IgnitePdsCacheIntegrationTest.class,
+    IgnitePdsPageEvictionTest.class,
+    IgnitePdsMultiNodePutGetRestartTest.class,
+    IgnitePersistentStoreCacheGroupsTest.class,
     PersistenceDirectoryWarningLoggingTest.class,
     WalPathsTest.class,
     WalRecoveryTxLogicalRecordsTest.class,
