@@ -36,7 +36,7 @@ import org.apache.ignite.ml.preprocessing.minmaxscaling.MinMaxScalerTrainer;
 import org.apache.ignite.ml.preprocessing.normalization.NormalizationTrainer;
 import org.apache.ignite.ml.selection.cv.CrossValidation;
 import org.apache.ignite.ml.selection.cv.CrossValidationResult;
-import org.apache.ignite.ml.selection.paramgrid.EvolutionOptimizationStrategy;
+import org.apache.ignite.ml.selection.paramgrid.BrutForceStrategy;
 import org.apache.ignite.ml.selection.paramgrid.ParamGrid;
 import org.apache.ignite.ml.selection.scoring.evaluator.Evaluator;
 import org.apache.ignite.ml.selection.scoring.metric.classification.Accuracy;
@@ -71,7 +71,7 @@ import org.apache.ignite.ml.tree.DecisionTreeNode;
  * <p>
  * All scenarios are described there: https://sebastianraschka.com/faq/docs/evaluate-a-model.html</p>
  */
-public class Step_5_Parallel_Genetic_Programming_Search {
+public class Step_11_Parallel_BrutForce_Search {
     /** Run example. */
     public static void main(String[] args) {
         try (Ignite ignite = Ignition.start("examples/config/example-ignite.xml")) {
@@ -107,6 +107,7 @@ public class Step_5_Parallel_Genetic_Programming_Search {
                         imputingPreprocessor
                     );
 
+
                 NormalizationTrainer<Integer, Vector> normalizationTrainer = new NormalizationTrainer<Integer, Vector>()
                     .withP(1);
 
@@ -125,10 +126,11 @@ public class Step_5_Parallel_Genetic_Programming_Search {
                     = new CrossValidation<>();
 
                 ParamGrid paramGrid = new ParamGrid()
-                    .withParameterSearchStrategy(new EvolutionOptimizationStrategy())
+                    .withParameterSearchStrategy(new BrutForceStrategy())
                     .addHyperParam("p", normalizationTrainer::withP, new Double[]{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0})
                     .addHyperParam("maxDeep", trainerCV::withMaxDeep, new Double[]{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0})
                     .addHyperParam("minImpurityDecrease", trainerCV::withMinImpurityDecrease, new Double[]{0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0});
+
 
                 BinaryClassificationMetrics metrics = (BinaryClassificationMetrics) new BinaryClassificationMetrics()
                     .withNegativeClsLb(0.0)
@@ -142,9 +144,9 @@ public class Step_5_Parallel_Genetic_Programming_Search {
                         .withParallelismStrategyTypeDependency(ParallelismStrategy.ON_DEFAULT_POOL)
                         .withLoggingFactoryDependency(ConsoleLogger.Factory.LOW))
                     .withTrainer(trainerCV)
+                    .isRunningOnPipeline(false)
                     .withMetric(metrics)
                     .withFilter(split.getTrainFilter())
-                    .isRunningOnPipeline(false)
                     .withPreprocessor(normalizationPreprocessor)
                     .withAmountOfFolds(3)
                     .withParamGrid(paramGrid);

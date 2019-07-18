@@ -68,7 +68,7 @@ import org.apache.ignite.ml.tree.DecisionTreeNode;
  * <p>
  * All scenarios are described there: https://sebastianraschka.com/faq/docs/evaluate-a-model.html</p>
  */
-public class Step_4_Genetic_Programming_Search {
+public class Step_13_Genetic_Programming_Search {
     /** Run example. */
     public static void main(String[] args) {
         try (Ignite ignite = Ignition.start("examples/config/example-ignite.xml")) {

@@ -71,7 +71,7 @@ import org.apache.ignite.ml.tree.DecisionTreeNode;
  * <p>
  * All scenarios are described there: https://sebastianraschka.com/faq/docs/evaluate-a-model.html</p>
  */
-public class Step_3_Parallel_Random_Search {
+public class Step_12_Parallel_Random_Search {
     /** Run example. */
     public static void main(String[] args) {
         try (Ignite ignite = Ignition.start("examples/config/example-ignite.xml")) {
