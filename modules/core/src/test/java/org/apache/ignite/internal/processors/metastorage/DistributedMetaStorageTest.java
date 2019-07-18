@@ -365,6 +365,8 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
     public void testClientReconnect() throws Exception {
         startGrid(0).cluster().active(true);
 
+        long initialUpdatesCount = metastorage(0).getUpdatesCount();
+
         startClient(1);
 
         metastorage(0).write("key0", "value0");
@@ -376,8 +378,6 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
         stopGrid(2);
 
         startGrid(2).cluster().active(true);
-
-        long initialUpdatesCount = metastorage(1).getUpdatesCount();
 
         metastorage(2).write("key1", "value1");
 
