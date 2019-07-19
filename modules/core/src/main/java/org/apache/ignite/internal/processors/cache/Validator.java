@@ -447,8 +447,8 @@ public class Validator {
     }
 
     /**
-     * @param ctx
-     * @param log
+     * @param ctx Context.
+     * @param log Logger.
      * @throws IgniteCheckedException if check failed.
      */
     static void checkConsistency(GridKernalContext ctx, IgniteLogger log) throws IgniteCheckedException {
@@ -525,12 +525,15 @@ public class Validator {
 
     /**
      * @param assertParam Assert parameter.
-     * @param x X.
-     * @param y Y.
+     * @param cond The condition result.
+     * @param condDesc The description of condition.
      */
-    private static void apply(BiFunction<Boolean, String, IgniteCheckedException> assertParam, Boolean x,
-        String y) throws IgniteCheckedException {
-        IgniteCheckedException apply = assertParam.apply(x, y);
+    private static void apply(
+        BiFunction<Boolean, String, IgniteCheckedException> assertParam,
+        Boolean cond,
+        String condDesc
+    ) throws IgniteCheckedException {
+        IgniteCheckedException apply = assertParam.apply(cond, condDesc);
 
         if (apply != null)
             throw apply;
@@ -556,11 +559,13 @@ public class Validator {
 
     /**
      * @param rmt Remote node to check.
-     * @param ctx
+     * @param ctx Context.
      * @throws IgniteCheckedException If check failed.
      */
-    private static void checkRebalanceConfiguration(ClusterNode rmt,
-        GridKernalContext ctx) throws IgniteCheckedException {
+    private static void checkRebalanceConfiguration(
+        ClusterNode rmt,
+        GridKernalContext ctx
+    ) throws IgniteCheckedException {
         ClusterNode locNode = ctx.discovery().localNode();
 
         if (ctx.config().isClientMode() || locNode.isDaemon() || rmt.isClient() || rmt.isDaemon())
@@ -580,11 +585,15 @@ public class Validator {
 
     /**
      * @param rmt Remote node to check.
-     * @param ctx
+     * @param ctx Context.
+     * @param log Logger.
      * @throws IgniteCheckedException If check failed.
      */
-    private static void checkTransactionConfiguration(ClusterNode rmt, GridKernalContext ctx,
-        IgniteLogger log) throws IgniteCheckedException {
+    private static void checkTransactionConfiguration(
+        ClusterNode rmt,
+        GridKernalContext ctx,
+        IgniteLogger log
+    ) throws IgniteCheckedException {
         TransactionConfiguration rmtTxCfg = rmt.attribute(ATTR_TX_CONFIG);
 
         if (rmtTxCfg != null) {
@@ -599,8 +608,12 @@ public class Validator {
     /**
      *
      */
-    private static void checkDeadlockDetectionConfig(ClusterNode rmt, TransactionConfiguration rmtTxCfg,
-        TransactionConfiguration locTxCfg, IgniteLogger log) {
+    private static void checkDeadlockDetectionConfig(
+        ClusterNode rmt,
+        TransactionConfiguration rmtTxCfg,
+        TransactionConfiguration locTxCfg,
+        IgniteLogger log
+    ) {
         boolean locDeadlockDetectionEnabled = locTxCfg.getDeadlockTimeout() > 0;
         boolean rmtDeadlockDetectionEnabled = rmtTxCfg.getDeadlockTimeout() > 0;
 
@@ -615,8 +628,11 @@ public class Validator {
     /**
      *
      */
-    private static void checkSerializableEnabledConfig(ClusterNode rmt, TransactionConfiguration rmtTxCfg,
-        TransactionConfiguration locTxCfg) throws IgniteCheckedException {
+    private static void checkSerializableEnabledConfig(
+        ClusterNode rmt,
+        TransactionConfiguration rmtTxCfg,
+        TransactionConfiguration locTxCfg
+    ) throws IgniteCheckedException {
         if (locTxCfg.isTxSerializableEnabled() != rmtTxCfg.isTxSerializableEnabled())
             throw new IgniteCheckedException("Serializable transactions enabled mismatch " +
                 "(fix txSerializableEnabled property or set -D" + IGNITE_SKIP_CONFIGURATION_CONSISTENCY_CHECK + "=true " +
@@ -627,7 +643,7 @@ public class Validator {
 
     /**
      * @param rmt Remote node to check.
-     * @param ctx
+     * @param ctx Context.
      * @throws IgniteCheckedException If check failed.
      */
     private static void checkMemoryConfiguration(ClusterNode rmt, GridKernalContext ctx) throws IgniteCheckedException {
@@ -668,12 +684,15 @@ public class Validator {
 
     /**
      * @param node Joining node.
-     * @param ctx
-     * @param map
+     * @param ctx Context.
+     * @param map Cache descriptors.
      * @return Validation result or {@code null} in case of success.
      */
-    @Nullable static IgniteNodeValidationResult validateHashIdResolvers(ClusterNode node, GridKernalContext ctx,
-        Map<String, DynamicCacheDescriptor> map) {
+    @Nullable static IgniteNodeValidationResult validateHashIdResolvers(
+        ClusterNode node,
+        GridKernalContext ctx,
+        Map<String, DynamicCacheDescriptor> map
+    ) {
         if (!node.isClient()) {
             for (DynamicCacheDescriptor desc : map.values()) {
                 CacheConfiguration cfg = desc.cacheConfiguration();
@@ -707,7 +726,7 @@ public class Validator {
 
     /**
      * @param rmtNode Remote node to check.
-     * @param ctx
+     * @param ctx Context.
      * @return Data storage configuration
      */
     private static DataStorageConfiguration extractDataStorage(ClusterNode rmtNode, GridKernalContext ctx) {
@@ -764,5 +783,4 @@ public class Validator {
 
         return maxOrder;
     }
-
 }
