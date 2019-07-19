@@ -470,8 +470,11 @@ public class CacheContinuousQueryHandler<K, V> implements GridContinuousHandler 
                 for (Map.Entry<Integer, Long> e : updateCntrs.entrySet()) {
                     CacheContinuousQueryEventBuffer buf = entryBufs.get(e.getKey());
 
-                    if (buf != null)
+                    if (buf != null) {
                         buf.cleanupBackupQueue(e.getValue());
+
+                        buf.cleanupEntries(e.getValue());
+                    }
                 }
             }
 
