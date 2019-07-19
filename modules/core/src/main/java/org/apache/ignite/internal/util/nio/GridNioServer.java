@@ -134,19 +134,19 @@ public class GridNioServer<T> {
     public static final String OUTBOUND_MESSAGES_QUEUE_SIZE_METRIC_NAME = "outboundMessagesQueueSize";
 
     /** */
-    public static final String OUTBOUND_MESSAGES_QUEUE_SIZE_METRIC_DESC = "Amount of messages waiting to be sent";
+    public static final String OUTBOUND_MESSAGES_QUEUE_SIZE_METRIC_DESC = "Number of messages waiting to be sent";
 
     /** */
     public static final String RECEIVED_BYTES_METRIC_NAME = "receivedBytes";
 
     /** */
-    public static final String RECEIVED_BYTES_METRIC_DESC = "Total amount of bytes received by current node";
+    public static final String RECEIVED_BYTES_METRIC_DESC = "Total number of bytes received by current node";
 
     /** */
     public static final String SENT_BYTES_METRIC_NAME = "sentBytes";
 
     /** */
-    public static final String SENT_BYTES_METRIC_DESC = "Total amount of bytes sent by current node";
+    public static final String SENT_BYTES_METRIC_DESC = "Total number of bytes sent by current node";
 
     /**
      *

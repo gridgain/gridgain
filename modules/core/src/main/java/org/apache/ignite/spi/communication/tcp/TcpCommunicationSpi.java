@@ -393,16 +393,16 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
     public static final String COMMUNICATION_METRICS_GROUP_NAME = "communication.tcp";
 
     /** */
-    public static final String SENT_MESSAGES_METRIC_NAME = "sentMessages";
+    public static final String SENT_MESSAGES_METRIC_NAME = "sentMessagesCount";
 
     /** */
-    public static final String SENT_MESSAGES_METRIC_DESC = "Total amount of messages sent by current node";
+    public static final String SENT_MESSAGES_METRIC_DESC = "Total number of messages sent by current node";
 
     /** */
-    public static final String RECEIVED_MESSAGES_METRIC_NAME = "receivedMessages";
+    public static final String RECEIVED_MESSAGES_METRIC_NAME = "receivedMessagesCount";
 
     /** */
-    public static final String RECEIVED_MESSAGES_METRIC_DESC = "Total amount of messages received by current node";
+    public static final String RECEIVED_MESSAGES_METRIC_DESC = "Total number of messages received by current node";
 
 
     /** */
@@ -411,7 +411,7 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
     }
 
     /** */
-    public static final String SENT_MESSAGES_BY_TYPE_METRIC_DESC = "Total amount of messages with given type sent by current node";
+    public static final String SENT_MESSAGES_BY_TYPE_METRIC_DESC = "Total number of messages with given type sent by current node";
 
     /** */
     public static String receivedMessagesByTypeMetricName(Short directType) {
@@ -419,23 +419,23 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
     }
 
     /** */
-    public static final String RECEIVED_MESSAGES_BY_TYPE_METRIC_DESC = "Total amount of messages with given type received by current node";
+    public static final String RECEIVED_MESSAGES_BY_TYPE_METRIC_DESC = "Total number of messages with given type received by current node";
 
     /** */
     public static String sentMessagesByNodeIdMetricName(UUID nodeId) {
-        return "sentMessagesByNodeId." + nodeId;
+        return "sentMessagesToNode." + nodeId;
     }
 
     /** */
-    public static final String SENT_MESSAGES_BY_NODE_ID_METRIC_DESC = "Total amount of messages sent by current node to the given node";
+    public static final String SENT_MESSAGES_BY_NODE_ID_METRIC_DESC = "Total number of messages sent by current node to the given node";
 
     /** */
     public static String receivedMessagesByNodeIdMetricName(UUID nodeId) {
-        return "receivedMessagesByNodeId." + nodeId;
+        return "receivedMessagesFromNode." + nodeId;
     }
 
     /** */
-    public static final String RECEIVED_MESSAGES_BY_NODE_ID_METRIC_DESC = "Total amount of messages received by current node from the given node";
+    public static final String RECEIVED_MESSAGES_BY_NODE_ID_METRIC_DESC = "Total number of messages received by current node from the given node";
 
     /** */
     private ConnectGateway connectGate;
