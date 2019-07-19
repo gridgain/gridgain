@@ -22,6 +22,7 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
@@ -53,6 +54,9 @@ public abstract class AbstractExternalResult implements ResultExternal {
     /** Serialized row header size. */
     protected static final int ROW_HEADER_SIZE = 8; // 2 x int: row length in bytes + column count.
 
+    /** Logger. */
+    protected final IgniteLogger log;
+
     /** Current size in rows. */
     protected int size;
 
@@ -79,8 +83,10 @@ public abstract class AbstractExternalResult implements ResultExternal {
      * @param memTracker Memory tracker
      */
     protected AbstractExternalResult(GridKernalContext ctx, H2MemoryTracker memTracker) {
+        this.log = ctx.log(AbstractExternalResult.class);
+
         try {
-            String fileName = String.valueOf(idGen.incrementAndGet());
+            String fileName = "spill_" + ctx.localNodeId() + "_" + idGen.incrementAndGet();
 
             file = new File(U.resolveWorkDirectory(
                 ctx.config().getWorkDirectory(),
@@ -93,6 +99,9 @@ public abstract class AbstractExternalResult implements ResultExternal {
             FileIOFactory fileIOFactory = ctx.query().fileIOFactory();
 
             fileIo = fileIOFactory.create(file, CREATE_NEW, READ, WRITE);
+
+            if (log.isDebugEnabled())
+                log.debug("Created spill file "+ file.getName());
 
             this.memTracker = memTracker;
 
@@ -111,6 +120,7 @@ public abstract class AbstractExternalResult implements ResultExternal {
      * @param parent Parent result.
      */
     protected AbstractExternalResult(AbstractExternalResult parent) {
+        log = parent.log;
         size = parent.size;
         file = parent.file;
         fileIo = parent.fileIo;
@@ -357,5 +367,8 @@ public abstract class AbstractExternalResult implements ResultExternal {
     protected void onClose() {
         U.closeQuiet(fileIo);
         file.delete();
+
+        if (log.isDebugEnabled())
+            log.debug("Deleted spill file "+ file.getName());
     }
 }

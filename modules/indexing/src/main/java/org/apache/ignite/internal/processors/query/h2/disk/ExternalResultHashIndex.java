@@ -374,11 +374,11 @@ public class ExternalResultHashIndex implements AutoCloseable {
     /**
      * Initiates new file.
      *
-     * @param cap Ne file capacity in entries (rows). Should be the power of 2.
+     * @param cap New file capacity in entries (rows). Should be the power of 2.
      */
     private void initNewIndexFile(long cap) {
         try {
-            assert cap > 0 && (cap & (cap - 1)) == 0; // Should be positive power of 2.
+            assert cap > 0 && (cap & (cap - 1)) == 0; // Should be the positive power of 2.
 
             this.cap = cap;
 

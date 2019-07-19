@@ -66,7 +66,12 @@ import org.apache.ignite.internal.processors.query.h2.twostep.NonCollocatedRetry
 import org.apache.ignite.internal.processors.query.h2.twostep.NoneOrSinglePartitionsQueryOptimizationsTest;
 import org.apache.ignite.internal.processors.query.h2.twostep.RetryCauseMessageSelfTest;
 import org.apache.ignite.internal.processors.query.h2.twostep.TableViewSubquerySelfTest;
-import org.apache.ignite.internal.processors.query.oom.DiskSpillingTest;
+import org.apache.ignite.internal.processors.query.oom.DiskSpillingBasicTest;
+import org.apache.ignite.internal.processors.query.oom.DiskSpillingGlobalQuotaTest;
+import org.apache.ignite.internal.processors.query.oom.DiskSpillingMultipleNodesTest;
+import org.apache.ignite.internal.processors.query.oom.DiskSpillingPersistenceTest;
+import org.apache.ignite.internal.processors.query.oom.DiskSpillingQueriesTest;
+import org.apache.ignite.internal.processors.query.oom.DiskSpillingQueryParallelismTest;
 import org.apache.ignite.internal.processors.query.oom.LocalQueryMemoryTrackerSelfTest;
 import org.apache.ignite.internal.processors.query.oom.LocalQueryMemoryTrackerWithQueryParallelismSelfTest;
 import org.apache.ignite.internal.processors.query.oom.QueryMemoryTrackerSelfTest;
@@ -155,7 +160,12 @@ import org.junit.runners.Suite;
 
     DmlBatchSizeDeadlockTest.class,
 
-    DiskSpillingTest.class,
+    DiskSpillingBasicTest.class,
+    DiskSpillingGlobalQuotaTest.class,
+    DiskSpillingQueriesTest.class,
+    DiskSpillingMultipleNodesTest.class,
+    DiskSpillingPersistenceTest.class,
+    DiskSpillingQueryParallelismTest.class,
 
     GridCachePartitionedTxMultiNodeSelfTest.class,
     GridCacheReplicatedTxMultiNodeBasicTest.class
