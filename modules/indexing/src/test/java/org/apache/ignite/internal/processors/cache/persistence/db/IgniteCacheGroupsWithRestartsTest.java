@@ -26,6 +26,7 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BiFunction;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.QueryIndexType;
@@ -41,6 +42,7 @@ import org.apache.ignite.internal.commandline.cache.argument.FindAndDeleteGarbag
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
 import org.apache.ignite.internal.visor.cache.VisorFindAndDeleteGarbageInPersistenceJobResult;
 import org.apache.ignite.internal.visor.cache.VisorFindAndDeleteGarbageInPersistenceTask;
@@ -53,6 +55,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.IGNITE_PDS_SKIP_CHECKPOINT_ON_NODE_STOP;
+import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.DFLT_STORE_DIR;
 
 /**
  * Testing corner cases in cache group functionality: -stopping cache in shared group and immediate node leaving;
@@ -72,6 +75,8 @@ public class IgniteCacheGroupsWithRestartsTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration configuration = super.getConfiguration(gridName);
+
+        configuration.setConsistentId(gridName);
 
         configuration.setConnectorConfiguration(new ConnectorConfiguration());
 
@@ -193,7 +198,19 @@ public class IgniteCacheGroupsWithRestartsTest extends GridCommonAbstractTest {
                     contains("Joining node has caches with data which are not presented on cluster")));
         }
 
-        //TODO remove directories and start should be successful
+        removeCacheDir(getTestIgniteInstanceName(2), "cacheGroup-group");
+
+        assertEquals(3, startGrid(2).cluster().nodes().size());
+    }
+
+    /**
+     * @param instanceName Instance name.
+     * @param cacheGroup Cache group.
+     */
+    private void removeCacheDir(String instanceName, String cacheGroup) throws IgniteCheckedException {
+        String dn2DirName = instanceName.replace(".", "_");
+
+        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), DFLT_STORE_DIR + "/" + dn2DirName + "/" + cacheGroup, true));
     }
 
     /**

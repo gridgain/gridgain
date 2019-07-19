@@ -750,37 +750,4 @@ public class Validator {
 
         return Collections.emptyMap();
     }
-
-    /**
-     * Checks that preload-order-dependant caches has SYNC or ASYNC preloading mode.
-     *
-     * @param cfgs Caches.
-     * @return Maximum detected preload order.
-     * @throws IgniteCheckedException If validation failed.
-     */
-    private static int validatePreloadOrder(CacheConfiguration[] cfgs) throws IgniteCheckedException {
-        int maxOrder = 0;
-
-        for (CacheConfiguration cfg : cfgs) {
-            int rebalanceOrder = cfg.getRebalanceOrder();
-
-            if (rebalanceOrder > 0) {
-                if (cfg.getCacheMode() == LOCAL)
-                    throw new IgniteCheckedException("Rebalance order set for local cache (fix configuration and restart the " +
-                        "node): " + U.maskName(cfg.getName()));
-
-                if (cfg.getRebalanceMode() == CacheRebalanceMode.NONE)
-                    throw new IgniteCheckedException("Only caches with SYNC or ASYNC rebalance mode can be set as rebalance " +
-                        "dependency for other caches [cacheName=" + U.maskName(cfg.getName()) +
-                        ", rebalanceMode=" + cfg.getRebalanceMode() + ", rebalanceOrder=" + cfg.getRebalanceOrder() + ']');
-
-                maxOrder = Math.max(maxOrder, rebalanceOrder);
-            }
-            else if (rebalanceOrder < 0)
-                throw new IgniteCheckedException("Rebalance order cannot be negative for cache (fix configuration and restart " +
-                    "the node) [cacheName=" + cfg.getName() + ", rebalanceOrder=" + rebalanceOrder + ']');
-        }
-
-        return maxOrder;
-    }
 }
