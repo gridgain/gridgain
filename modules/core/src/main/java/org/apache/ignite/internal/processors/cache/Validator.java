@@ -85,8 +85,11 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_TX_CONFIG;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isDefaultDataRegionPersistent;
 import static org.apache.ignite.internal.processors.security.SecurityUtils.nodeSecurityContext;
 
+/**
+ * Util class for joining node validation.
+ */
 public class Validator {
-    /** Template of message of conflicts during configuration merge*/
+    /** Template of message of conflicts during configuration merge */
     private static final String MERGE_OF_CONFIG_CONFLICTS_MESSAGE =
         "Conflicts during configuration merge for cache '%s' : \n%s";
 
@@ -102,12 +105,25 @@ public class Validator {
     /** Supports non default precision and scale for DECIMAL and VARCHAR types. */
     private static final IgniteProductVersion PRECISION_SCALE_SINCE_VER = IgniteProductVersion.fromString("2.7.0");
 
+    /** Invalid region configuration message. */
+    private static final String INVALID_REGION_CONFIGURATION_MESSAGE = "Failed to join node " +
+        "(Incompatible data region configuration [region=%s, locNodeId=%s, isPersistenceEnabled=%s, rmtNodeId=%s, isPersistenceEnabled=%s])";
+
+    /**
+     * Checks a joining node to configuration consistency.
+     *
+     * @param node Node.
+     * @param discoData Disco data.
+     * @param marsh Marsh.
+     * @param ctx Context.
+     * @param cacheDescProvider Cache descriptor provider.
+     */
     @Nullable static IgniteNodeValidationResult validateNode(
         ClusterNode node,
         DiscoveryDataBag.JoiningNodeDiscoveryData discoData,
         Marshaller marsh,
         GridKernalContext ctx,
-        Function<String, DynamicCacheDescriptor> cacheDescriptorProvider
+        Function<String, DynamicCacheDescriptor> cacheDescProvider
     ) {
         if (discoData.hasJoiningNodeData() && discoData.joiningNodeData() instanceof CacheJoinNodeDiscoveryData) {
             CacheJoinNodeDiscoveryData nodeData = (CacheJoinNodeDiscoveryData)discoData.joiningNodeData();
@@ -118,9 +134,8 @@ public class Validator {
 
             if (!node.isClient()) {
                 Validator.validateRmtRegions(node, ctx).forEach(error -> {
-                    if (errorMsg.length() > 0) {
+                    if (errorMsg.length() > 0)
                         errorMsg.append("\n");
-                    }
 
                     errorMsg.append(error);
                 });
@@ -150,7 +165,7 @@ public class Validator {
                     }
                 }
 
-                DynamicCacheDescriptor locDesc = cacheDescriptorProvider.apply(cacheInfo.cacheData().config().getName());
+                DynamicCacheDescriptor locDesc = cacheDescProvider.apply(cacheInfo.cacheData().config().getName());
 
                 if (locDesc == null)
                     continue;
@@ -196,17 +211,20 @@ public class Validator {
      * @param cc Configuration to validate.
      * @param cacheType Cache type.
      * @param cfgStore Cache store.
-     * @param ctx
-     * @param log
+     * @param ctx Context.
+     * @param log Logger.
      * @throws IgniteCheckedException If failed.
      */
-    static void validate(IgniteConfiguration c,
+    static void validate(
+        IgniteConfiguration c,
         CacheConfiguration cc,
         CacheType cacheType,
-        @Nullable CacheStore cfgStore, GridKernalContext ctx, IgniteLogger log,
-        BiFunction<Boolean, String, IgniteCheckedException> assertParameter
+        @Nullable CacheStore cfgStore,
+        GridKernalContext ctx,
+        IgniteLogger log,
+        BiFunction<Boolean, String, IgniteCheckedException> assertParam
     ) throws IgniteCheckedException {
-        apply(assertParameter,cc.getName() != null && !cc.getName().isEmpty(), "name is null or empty");
+        apply(assertParam, cc.getName() != null && !cc.getName().isEmpty(), "name is null or empty");
 
         if (cc.getCacheMode() == REPLICATED) {
             if (cc.getNearConfiguration() != null &&
@@ -231,10 +249,10 @@ public class Validator {
                 " partitions [cacheName=" + cc.getName() + ", partitions=" + cc.getAffinity().partitions() + ']');
 
         if (cc.getRebalanceMode() != CacheRebalanceMode.NONE) {
-            apply(assertParameter,cc.getRebalanceBatchSize() > 0, "rebalanceBatchSize > 0");
-            apply(assertParameter,cc.getRebalanceTimeout() >= 0, "rebalanceTimeout >= 0");
-            apply(assertParameter,cc.getRebalanceThrottle() >= 0, "rebalanceThrottle >= 0");
-            apply(assertParameter,cc.getRebalanceBatchesPrefetchCount() > 0, "rebalanceBatchesPrefetchCount > 0");
+            apply(assertParam, cc.getRebalanceBatchSize() > 0, "rebalanceBatchSize > 0");
+            apply(assertParam, cc.getRebalanceTimeout() >= 0, "rebalanceTimeout >= 0");
+            apply(assertParam, cc.getRebalanceThrottle() >= 0, "rebalanceThrottle >= 0");
+            apply(assertParam, cc.getRebalanceBatchesPrefetchCount() > 0, "rebalanceBatchesPrefetchCount > 0");
         }
 
         if (cc.getCacheMode() == PARTITIONED || cc.getCacheMode() == REPLICATED) {
@@ -258,22 +276,22 @@ public class Validator {
                 ", affFunction=" + cc.getAffinity() + ", cacheName=" + cc.getName() + ']');
 
         if (cc.getAtomicityMode() == TRANSACTIONAL_SNAPSHOT) {
-            apply(assertParameter,cc.getCacheMode() != LOCAL,
+            apply(assertParam, cc.getCacheMode() != LOCAL,
                 "LOCAL cache mode cannot be used with TRANSACTIONAL_SNAPSHOT atomicity mode");
 
-            apply(assertParameter,cc.getNearConfiguration() == null,
+            apply(assertParam, cc.getNearConfiguration() == null,
                 "near cache cannot be used with TRANSACTIONAL_SNAPSHOT atomicity mode");
 
-            apply(assertParameter,!cc.isReadThrough(),
+            apply(assertParam, !cc.isReadThrough(),
                 "readThrough cannot be used with TRANSACTIONAL_SNAPSHOT atomicity mode");
 
-            apply(assertParameter,!cc.isWriteThrough(),
+            apply(assertParam, !cc.isWriteThrough(),
                 "writeThrough cannot be used with TRANSACTIONAL_SNAPSHOT atomicity mode");
 
-            apply(assertParameter,!cc.isWriteBehindEnabled(),
+            apply(assertParam, !cc.isWriteBehindEnabled(),
                 "writeBehindEnabled cannot be used with TRANSACTIONAL_SNAPSHOT atomicity mode");
 
-            apply(assertParameter,cc.getRebalanceMode() != NONE,
+            apply(assertParam, cc.getRebalanceMode() != NONE,
                 "Rebalance mode NONE cannot be used with TRANSACTIONAL_SNAPSHOT atomicity mode");
 
             ExpiryPolicy expPlc = null;
@@ -282,11 +300,11 @@ public class Validator {
                 expPlc = (ExpiryPolicy)cc.getExpiryPolicyFactory().create();
 
             if (!(expPlc instanceof EternalExpiryPolicy)) {
-                apply(assertParameter,cc.getExpiryPolicyFactory() == null,
+                apply(assertParam, cc.getExpiryPolicyFactory() == null,
                     "expiry policy cannot be used with TRANSACTIONAL_SNAPSHOT atomicity mode");
             }
 
-            apply(assertParameter,cc.getInterceptor() == null,
+            apply(assertParam, cc.getInterceptor() == null,
                 "interceptor cannot be used with TRANSACTIONAL_SNAPSHOT atomicity mode");
 
             // Disable in-memory evictions for mvcc cache. TODO IGNITE-10738
@@ -304,7 +322,7 @@ public class Validator {
 
             IndexingSpi idxSpi = ctx.config().getIndexingSpi();
 
-            apply(assertParameter,idxSpi == null || idxSpi instanceof NoopIndexingSpi,
+            apply(assertParam, idxSpi == null || idxSpi instanceof NoopIndexingSpi,
                 "Custom IndexingSpi cannot be used with TRANSACTIONAL_SNAPSHOT atomicity mode");
         }
 
@@ -313,10 +331,10 @@ public class Validator {
                 throw new IgniteCheckedException("Cannot enable write-behind (writer or store is not provided) " +
                     "for cache: " + U.maskName(cc.getName()));
 
-            apply(assertParameter,cc.getWriteBehindBatchSize() > 0, "writeBehindBatchSize > 0");
-            apply(assertParameter,cc.getWriteBehindFlushSize() >= 0, "writeBehindFlushSize >= 0");
-            apply(assertParameter,cc.getWriteBehindFlushFrequency() >= 0, "writeBehindFlushFrequency >= 0");
-            apply(assertParameter,cc.getWriteBehindFlushThreadCount() > 0, "writeBehindFlushThreadCount > 0");
+            apply(assertParam, cc.getWriteBehindBatchSize() > 0, "writeBehindBatchSize > 0");
+            apply(assertParam, cc.getWriteBehindFlushSize() >= 0, "writeBehindFlushSize >= 0");
+            apply(assertParam, cc.getWriteBehindFlushFrequency() >= 0, "writeBehindFlushFrequency >= 0");
+            apply(assertParam, cc.getWriteBehindFlushThreadCount() > 0, "writeBehindFlushThreadCount > 0");
 
             if (cc.getWriteBehindFlushSize() == 0 && cc.getWriteBehindFlushFrequency() == 0)
                 throw new IgniteCheckedException("Cannot set both 'writeBehindFlushFrequency' and " +
@@ -353,7 +371,7 @@ public class Validator {
         ctx.coordinators().validateCacheConfiguration(cc);
 
         if (cc.getAtomicityMode() == ATOMIC)
-            apply(assertParameter,cc.getTransactionManagerLookupClassName() == null,
+            apply(assertParam, cc.getTransactionManagerLookupClassName() == null,
                 "transaction manager can not be used with ATOMIC cache");
 
         if ((cc.getEvictionPolicyFactory() != null || cc.getEvictionPolicy() != null) && !cc.isOnheapCacheEnabled())
@@ -427,40 +445,11 @@ public class Validator {
             }
         }
     }
-    
-    private static void apply(BiFunction<Boolean, String, IgniteCheckedException> assertParameter, Boolean x, String y) throws IgniteCheckedException {
-        IgniteCheckedException apply = assertParameter.apply(x, y);
-        
-        if (apply != null)
-            throw apply;
-    }
-
 
     /**
-     * @param c Ignite Configuration.
-     * @param cc Cache Configuration.
-     * @param ctx
-     * @return {@code true} if cache is starting on client node and this node is affinity node for the cache.
-     */
-    private static boolean storesLocallyOnClient(IgniteConfiguration c, CacheConfiguration cc, GridKernalContext ctx) {
-        if (c.isClientMode() && c.getDataStorageConfiguration() == null) {
-            if (cc.getCacheMode() == LOCAL)
-                return true;
-
-            return ctx.discovery().cacheAffinityNode(ctx.discovery().localNode(), cc.getName());
-
-        }
-        else
-            return false;
-    }
-
-
-
-
-    /**
-     * @throws IgniteCheckedException if check failed.
      * @param ctx
      * @param log
+     * @throws IgniteCheckedException if check failed.
      */
     static void checkConsistency(GridKernalContext ctx, IgniteLogger log) throws IgniteCheckedException {
         Collection<ClusterNode> rmtNodes = ctx.discovery().remoteNodes();
@@ -472,7 +461,7 @@ public class Validator {
             if (Boolean.TRUE.equals(n.attribute(ATTR_CONSISTENCY_CHECK_SKIPPED)))
                 continue;
 
-            if(!changeablePoolSize)
+            if (!changeablePoolSize)
                 checkRebalanceConfiguration(n, ctx);
 
             checkTransactionConfiguration(n, ctx, log);
@@ -488,11 +477,90 @@ public class Validator {
     }
 
     /**
+     * @param rmtNode Joining node.
+     * @param ctx Context
+     * @return List of validation errors.
+     */
+    private static List<String> validateRmtRegions(ClusterNode rmtNode, GridKernalContext ctx) {
+        List<String> errorMessages = new ArrayList<>();
+
+        DataStorageConfiguration rmtStorageCfg = extractDataStorage(rmtNode, ctx);
+        Map<String, DataRegionConfiguration> rmtRegionCfgs = dataRegionCfgs(rmtStorageCfg);
+
+        DataStorageConfiguration locStorageCfg = ctx.config().getDataStorageConfiguration();
+
+        if (isDefaultDataRegionPersistent(locStorageCfg) != isDefaultDataRegionPersistent(rmtStorageCfg)) {
+            errorMessages.add(String.format(
+                INVALID_REGION_CONFIGURATION_MESSAGE,
+                "DEFAULT",
+                ctx.localNodeId(),
+                isDefaultDataRegionPersistent(locStorageCfg),
+                rmtNode.id(),
+                isDefaultDataRegionPersistent(rmtStorageCfg)
+            ));
+        }
+
+        for (ClusterNode clusterNode : ctx.discovery().aliveServerNodes()) {
+            Map<String, DataRegionConfiguration> nodeRegionCfg = dataRegionCfgs(extractDataStorage(clusterNode, ctx));
+
+            for (Map.Entry<String, DataRegionConfiguration> nodeRegionCfgEntry : nodeRegionCfg.entrySet()) {
+                String regionName = nodeRegionCfgEntry.getKey();
+
+                DataRegionConfiguration rmtRegionCfg = rmtRegionCfgs.get(regionName);
+
+                if (rmtRegionCfg != null && rmtRegionCfg.isPersistenceEnabled() != nodeRegionCfgEntry.getValue().isPersistenceEnabled())
+                    errorMessages.add(String.format(
+                        INVALID_REGION_CONFIGURATION_MESSAGE,
+                        regionName,
+                        ctx.localNodeId(),
+                        nodeRegionCfgEntry.getValue().isPersistenceEnabled(),
+                        rmtNode.id(),
+                        rmtRegionCfg.isPersistenceEnabled()
+                    ));
+            }
+        }
+
+        return errorMessages;
+    }
+
+    /**
+     * @param assertParam Assert parameter.
+     * @param x X.
+     * @param y Y.
+     */
+    private static void apply(BiFunction<Boolean, String, IgniteCheckedException> assertParam, Boolean x,
+        String y) throws IgniteCheckedException {
+        IgniteCheckedException apply = assertParam.apply(x, y);
+
+        if (apply != null)
+            throw apply;
+    }
+
+    /**
+     * @param c Ignite Configuration.
+     * @param cc Cache Configuration.
+     * @param ctx Context.
+     * @return {@code true} if cache is starting on client node and this node is affinity node for the cache.
+     */
+    private static boolean storesLocallyOnClient(IgniteConfiguration c, CacheConfiguration cc, GridKernalContext ctx) {
+        if (c.isClientMode() && c.getDataStorageConfiguration() == null) {
+            if (cc.getCacheMode() == LOCAL)
+                return true;
+
+            return ctx.discovery().cacheAffinityNode(ctx.discovery().localNode(), cc.getName());
+
+        }
+        else
+            return false;
+    }
+
+    /**
      * @param rmt Remote node to check.
      * @param ctx
      * @throws IgniteCheckedException If check failed.
      */
-    private static void checkRebalanceConfiguration(ClusterNode rmt, GridKernalContext ctx) throws IgniteCheckedException {
+    private static void checkRebalanceConfiguration(ClusterNode rmt,
+        GridKernalContext ctx) throws IgniteCheckedException {
         ClusterNode locNode = ctx.discovery().localNode();
 
         if (ctx.config().isClientMode() || locNode.isDaemon() || rmt.isClient() || rmt.isDaemon())
@@ -510,13 +578,13 @@ public class Validator {
         }
     }
 
-
     /**
      * @param rmt Remote node to check.
      * @param ctx
      * @throws IgniteCheckedException If check failed.
      */
-    private static void checkTransactionConfiguration(ClusterNode rmt, GridKernalContext ctx, IgniteLogger log) throws IgniteCheckedException {
+    private static void checkTransactionConfiguration(ClusterNode rmt, GridKernalContext ctx,
+        IgniteLogger log) throws IgniteCheckedException {
         TransactionConfiguration rmtTxCfg = rmt.attribute(ATTR_TX_CONFIG);
 
         if (rmtTxCfg != null) {
@@ -528,8 +596,9 @@ public class Validator {
         }
     }
 
-
-    /** */
+    /**
+     *
+     */
     private static void checkDeadlockDetectionConfig(ClusterNode rmt, TransactionConfiguration rmtTxCfg,
         TransactionConfiguration locTxCfg, IgniteLogger log) {
         boolean locDeadlockDetectionEnabled = locTxCfg.getDeadlockTimeout() > 0;
@@ -543,7 +612,9 @@ public class Validator {
         }
     }
 
-    /** */
+    /**
+     *
+     */
     private static void checkSerializableEnabledConfig(ClusterNode rmt, TransactionConfiguration rmtTxCfg,
         TransactionConfiguration locTxCfg) throws IgniteCheckedException {
         if (locTxCfg.isTxSerializableEnabled() != rmtTxCfg.isTxSerializableEnabled())
@@ -595,7 +666,6 @@ public class Validator {
         }
     }
 
-
     /**
      * @param node Joining node.
      * @param ctx
@@ -635,60 +705,6 @@ public class Validator {
         return null;
     }
 
-    /** Invalid region configuration message. */
-    private static final String INVALID_REGION_CONFIGURATION_MESSAGE = "Failed to join node " +
-        "(Incompatible data region configuration [region=%s, locNodeId=%s, isPersistenceEnabled=%s, rmtNodeId=%s, isPersistenceEnabled=%s])";
-
-
-
-    /**
-     * @param rmtNode Joining node.
-     * @param ctx
-     * @return List of validation errors.
-     */
-    static List<String> validateRmtRegions(ClusterNode rmtNode, GridKernalContext ctx) {
-        List<String> errorMessages = new ArrayList<>();
-
-        DataStorageConfiguration rmtStorageCfg = extractDataStorage(rmtNode, ctx);
-        Map<String, DataRegionConfiguration> rmtRegionCfgs = dataRegionCfgs(rmtStorageCfg);
-
-        DataStorageConfiguration locStorageCfg = ctx.config().getDataStorageConfiguration();
-
-        if (isDefaultDataRegionPersistent(locStorageCfg) != isDefaultDataRegionPersistent(rmtStorageCfg)) {
-            errorMessages.add(String.format(
-                INVALID_REGION_CONFIGURATION_MESSAGE,
-                "DEFAULT",
-                ctx.localNodeId(),
-                isDefaultDataRegionPersistent(locStorageCfg),
-                rmtNode.id(),
-                isDefaultDataRegionPersistent(rmtStorageCfg)
-            ));
-        }
-
-        for (ClusterNode clusterNode : ctx.discovery().aliveServerNodes()) {
-            Map<String, DataRegionConfiguration> nodeRegionCfg = dataRegionCfgs(extractDataStorage(clusterNode, ctx));
-
-            for (Map.Entry<String, DataRegionConfiguration> nodeRegionCfgEntry : nodeRegionCfg.entrySet()) {
-                String regionName = nodeRegionCfgEntry.getKey();
-
-                DataRegionConfiguration rmtRegionCfg = rmtRegionCfgs.get(regionName);
-
-                if (rmtRegionCfg != null && rmtRegionCfg.isPersistenceEnabled() != nodeRegionCfgEntry.getValue().isPersistenceEnabled())
-                    errorMessages.add(String.format(
-                        INVALID_REGION_CONFIGURATION_MESSAGE,
-                        regionName,
-                        ctx.localNodeId(),
-                        nodeRegionCfgEntry.getValue().isPersistenceEnabled(),
-                        rmtNode.id(),
-                        rmtRegionCfg.isPersistenceEnabled()
-                    ));
-            }
-        }
-
-        return errorMessages;
-    }
-
-
     /**
      * @param rmtNode Remote node to check.
      * @param ctx
@@ -706,7 +722,7 @@ public class Validator {
      * @param dataStorageCfg User-defined data regions.
      */
     private static Map<String, DataRegionConfiguration> dataRegionCfgs(DataStorageConfiguration dataStorageCfg) {
-        if(dataStorageCfg != null) {
+        if (dataStorageCfg != null) {
             return Optional.ofNullable(dataStorageCfg.getDataRegionConfigurations())
                 .map(Stream::of)
                 .orElseGet(Stream::empty)
@@ -715,7 +731,6 @@ public class Validator {
 
         return Collections.emptyMap();
     }
-
 
     /**
      * Checks that preload-order-dependant caches has SYNC or ASYNC preloading mode.

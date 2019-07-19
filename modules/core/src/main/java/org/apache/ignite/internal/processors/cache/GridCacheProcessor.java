@@ -240,7 +240,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     private ClusterCachesInfo cachesInfo;
 
     /** */
-    private GridLocalConfigManager localConfigManager;
+    private GridLocalConfigManager locCfgMgr;
 
     /** */
     private IdentityHashMap<CacheStore, ThreadLocal> sesHolders = new IdentityHashMap<>();
@@ -546,7 +546,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         sharedCtx = createSharedContext(ctx, sessionListeners);
 
-        localConfigManager = new GridLocalConfigManager(this, ctx);
+        locCfgMgr = new GridLocalConfigManager(this, ctx);
 
         transactions = new IgniteTransactionsImpl(sharedCtx, null);
 
@@ -555,7 +555,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             mgr.start(sharedCtx);
 
         if (!ctx.isDaemon() && (!CU.isPersistenceEnabled(ctx.config())) || ctx.config().isClientMode()) {
-            CacheJoinNodeDiscoveryData data = localConfigManager.restoreCacheConfigurations();
+            CacheJoinNodeDiscoveryData data = locCfgMgr.restoreCacheConfigurations();
 
             if (data != null)
                 cachesInfo.onStart(data);
@@ -683,7 +683,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @param cancel Cancel.
      */
     public void stopCaches(boolean cancel) {
-        for (String cacheName : localConfigManager.stopSequence()) {
+        for (String cacheName : locCfgMgr.stopSequence()) {
             GridCacheAdapter<?, ?> cache = stoppedCaches.remove(cacheName);
 
             if (cache != null)
@@ -750,7 +750,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             aff.cancelFutures(affErr);
         }
 
-        for (String cacheName : localConfigManager.stopSequence()) {
+        for (String cacheName : locCfgMgr.stopSequence()) {
             GridCacheAdapter<?, ?> cache = caches.remove(cacheName);
 
             if (cache != null) {
@@ -1575,11 +1575,11 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @return Caches to be started when this node starts.
      */
     @Nullable public LocalJoinCachesContext localJoinCachesContext() {
-        if (ctx.discovery().localNode().order() == 1 ) {
-            CacheJoinNodeDiscoveryData localConfigs = localConfigManager.localConfigs();
+        if (ctx.discovery().localNode().order() == 1) {
+            CacheJoinNodeDiscoveryData locConfigs = locCfgMgr.localConfigs();
 
-            if (localConfigs != null)
-                cachesInfo.filterDynamicCacheDescriptors(localConfigs);
+            if (locConfigs != null)
+                cachesInfo.filterDynamicCacheDescriptors(locConfigs);
         }
 
         return cachesInfo.localJoinCachesContext();
@@ -2968,14 +2968,13 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     @Override public @Nullable IgniteNodeValidationResult validateNode(
         ClusterNode node, JoiningNodeDiscoveryData discoData
     ) {
-        if(!cachesInfo.isMergeConfigSupports(node)) {
+        if(!cachesInfo.isMergeConfigSupports(node))
             return null;
-        }
 
-        String validationResult = cachesInfo.validateJoiningNodeData(discoData);
+        String validationRes = cachesInfo.validateJoiningNodeData(discoData);
 
-        if (validationResult != null)
-            return new IgniteNodeValidationResult(node.id(), validationResult);
+        if (validationRes != null)
+            return new IgniteNodeValidationResult(node.id(), validationRes);
 
         return Validator.validateNode(node, discoData, marsh, ctx, this::cacheDescriptor);
     }
@@ -5201,7 +5200,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         /** {@inheritDoc} */
         @Override public void onReadyForRead(ReadOnlyMetastorage metastorage) throws IgniteCheckedException {
-            CacheJoinNodeDiscoveryData data = localConfigManager.restoreCacheConfigurations();
+            CacheJoinNodeDiscoveryData data = locCfgMgr.restoreCacheConfigurations();
 
             cachesInfo.onStart(data);
         }
