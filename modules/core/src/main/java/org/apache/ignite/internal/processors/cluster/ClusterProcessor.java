@@ -263,17 +263,13 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
             );
         }
 
-        //only first node has to store ID and TAG to distributed metastorage,
-        //all other nodes will be synced automatically during discovery data exchange
-        if (ctx.discovery().localNode().order() == 1) {
-            try {
-                metastorage.writeAsync(CLUSTER_ID, cluster.id());
+        try {
+            metastorage.writeAsync(CLUSTER_ID, cluster.id());
 
-                metastorage.writeAsync(CLUSTER_TAG, cluster.tag());
-            }
-            catch (IgniteCheckedException e) {
-                ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
-            }
+            metastorage.writeAsync(CLUSTER_TAG, cluster.tag());
+        }
+        catch (IgniteCheckedException e) {
+            ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
         }
     }
 
