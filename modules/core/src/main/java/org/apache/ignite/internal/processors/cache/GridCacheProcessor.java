@@ -194,7 +194,6 @@ import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
-import static org.apache.ignite.cache.CacheMode.RESERVED;
 import static org.apache.ignite.cache.CacheRebalanceMode.NONE;
 import static org.apache.ignite.cache.CacheRebalanceMode.SYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_ASYNC;
@@ -489,10 +488,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         CacheType cacheType,
         @Nullable CacheStore cfgStore) throws IgniteCheckedException {
         assertParameter(cc.getName() != null && !cc.getName().isEmpty(), "name is null or empty");
-
-        if (cc.getCacheMode() == RESERVED) {
-            throw new IgniteCheckedException("Cannot start cache. Unsupported cache mode: RESERVED.");
-        }
 
         if (cc.getCacheMode() == REPLICATED) {
             if (cc.getNearConfiguration() != null &&

@@ -49,7 +49,6 @@ import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -911,11 +910,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
 
                         String cacheName = cacheData.config().getName();
 
-                        if (cacheData.config().getCacheMode() == CacheMode.RESERVED) {
-                            U.warn(log, "Cache with name=" + cacheName + " has unsupported cache mode, skipping config file "
-                                + file.getName());
-                        }
-                        else if (!ccfgs.containsKey(cacheName))
+                        if (!ccfgs.containsKey(cacheName))
                             ccfgs.put(cacheName, cacheData);
                         else {
                             U.warn(log, "Cache with name=" + cacheName + " is already registered, skipping config file "
@@ -948,11 +943,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
 
                 String cacheName = cacheData.config().getName();
 
-                if (cacheData.config().getCacheMode() == CacheMode.RESERVED) {
-                    U.warn(log, "Cache with name=" + cacheName + " has unsupported cache mode, skipping config file "
-                        + file.getName());
-                }
-                else if (!ccfgs.containsKey(cacheName))
+                if (!ccfgs.containsKey(cacheName))
                     ccfgs.put(cacheName, cacheData);
                 else {
                     U.warn(log, "Cache with name=" + cacheName + " is already registered, skipping config file "

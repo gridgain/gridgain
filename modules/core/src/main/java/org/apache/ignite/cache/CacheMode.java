@@ -26,11 +26,6 @@ import org.jetbrains.annotations.Nullable;
  */
 public enum CacheMode {
     /**
-     * Do not use this mode. It's left for compatibility needs.
-     */
-    RESERVED,
-
-    /**
      * Specifies fully replicated cache behavior. In this mode all the keys are distributed
      * to all participating nodes. User still has affinity control
      * over subset of nodes for any given key via {@link AffinityFunction}
