@@ -3807,11 +3807,13 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
      * @return Amount of time in milliseconds.
      */
     public long systemTimeCurrent() {
+        long systemTime0 = systemTime.get();
+
         long systemStartTime0 = systemStartTime.get();
 
         long t = systemStartTime0 == 0 ? 0 : (System.nanoTime() - systemStartTime0);
 
-        return (this.systemTime.get() + t)  / 1_000_000;
+        return (systemTime0 + t)  / 1_000_000;
     }
 
     /** {@inheritDoc} */
