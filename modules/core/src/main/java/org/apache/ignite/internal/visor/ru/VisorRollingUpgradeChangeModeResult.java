@@ -23,6 +23,7 @@ import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.internal.visor.util.VisorExceptionWrapper;
 
 /**
  * Represents a wrapper class for a value of {@link RollingUpgradeModeChangeResult}.
@@ -38,23 +39,24 @@ public class VisorRollingUpgradeChangeModeResult extends IgniteDataTransferObjec
     private RollingUpgradeModeChangeResult.Result res;
 
     /** The reason why the operation was failed. */
-    private Exception cause;
+    private VisorExceptionWrapper cause;
 
     /**
-     * Creates a new wrapper that represents a value of {@link RollingUpgradeModeChangeResult}.
+     * Default constructor, required for serialization.
      */
     public VisorRollingUpgradeChangeModeResult() {
+        // No-op.
     }
 
     /**
      * Creates a new wrapper that represents the given {@code changeModeRes}.
      *
-     * @param changeModeRes status of the operation.
+     * @param changeModeRes Status of the operation.
      */
     public VisorRollingUpgradeChangeModeResult(RollingUpgradeModeChangeResult changeModeRes) {
         res = changeModeRes.result();
         status = new VisorRollingUpgradeStatus(changeModeRes.status());
-        cause = changeModeRes.cause();
+        cause = (changeModeRes.cause() != null)? new VisorExceptionWrapper(changeModeRes.cause()) : null;
     }
 
     /**
@@ -78,9 +80,9 @@ public class VisorRollingUpgradeChangeModeResult extends IgniteDataTransferObjec
     /**
      * Returns the reason for the failed operation.
      *
-     * @return cause of the failure.
+     * @return Cause of the failure.
      */
-    public Exception getCause() {
+    public VisorExceptionWrapper getCause() {
         return cause;
     }
 
@@ -96,7 +98,7 @@ public class VisorRollingUpgradeChangeModeResult extends IgniteDataTransferObjec
         throws IOException, ClassNotFoundException {
         res = RollingUpgradeModeChangeResult.Result.fromOrdinal(in.readByte());
         status = (VisorRollingUpgradeStatus)in.readObject();
-        cause = (Exception)in.readObject();
+        cause = (VisorExceptionWrapper)in.readObject();
     }
 
     /** {@inheritDoc} */

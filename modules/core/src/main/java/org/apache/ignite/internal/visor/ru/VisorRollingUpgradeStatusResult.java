@@ -23,6 +23,7 @@ import java.util.List;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  * Represents an extended rolling upgrade state that includes additional parameters, like as follows:
@@ -96,15 +97,15 @@ public class VisorRollingUpgradeStatusResult extends IgniteDataTransferObject {
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         out.writeObject(status);
-        out.writeObject(initNodes);
-        out.writeObject(updatedNodes);
+        U.writeCollection(out, initNodes);
+        U.writeCollection(out, updatedNodes);
     }
 
     /** {@inheritDoc} */
     @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
         status = (VisorRollingUpgradeStatus)in.readObject();
-        initNodes = (List<String>)in.readObject();
-        updatedNodes = (List<String>)in.readObject();
+        initNodes = U.readList(in);
+        updatedNodes = U.readList(in);
     }
 
     /** {@inheritDoc} */

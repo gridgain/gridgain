@@ -19,7 +19,6 @@ package org.apache.ignite.internal.visor.ru;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
@@ -50,9 +49,10 @@ public class VisorRollingUpgradeStatus extends IgniteDataTransferObject {
     private Set<String> supportedFeatures;
 
     /**
-     * Default constructor.
+     * Default constructor, required for serialization.
      */
     public VisorRollingUpgradeStatus() {
+        // No-op.
     }
 
     /**
@@ -145,7 +145,7 @@ public class VisorRollingUpgradeStatus extends IgniteDataTransferObject {
         out.writeBoolean(forcedModeEnabled);
         U.writeString(out, initVer);
         U.writeString(out, targetVer);
-        out.writeObject(supportedFeatures);
+        U.writeCollection(out, supportedFeatures);
     }
 
     /** {@inheritDoc} */
@@ -155,7 +155,7 @@ public class VisorRollingUpgradeStatus extends IgniteDataTransferObject {
         forcedModeEnabled = in.readBoolean();
         initVer = U.readString(in);
         targetVer = U.readString(in);
-        supportedFeatures = (Set)in.readObject();
+        supportedFeatures = U.readSet(in);
     }
 
     /** {@inheritDoc} */
