@@ -16,12 +16,15 @@
 package org.apache.ignite.internal.cluster;
 
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -108,6 +111,45 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
         IgniteEx cl0 = startGrid("client0");
 
         assertEquals(ig0.cluster().id(), cl0.cluster().id());
+    }
+
+    /**
+     * Test verifies that reconnected client applies newly generated ID and tag
+     * and throws away values from old cluster.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testInMemoryClusterIdWithClientReconnect() throws Exception {
+        IgniteClusterEx cluster0 = startGrid(0).cluster();
+
+        UUID oldId = cluster0.id();
+        String oldTag = cluster0.tag();
+
+        IgniteEx client0 = startGrid("client0");
+
+        AtomicBoolean reconnectEvent = new AtomicBoolean(false);
+
+        client0.events().localListen((e) -> {
+            reconnectEvent.set(true);
+
+            return true;
+        }, EventType.EVT_CLIENT_NODE_RECONNECTED);
+
+        assertEquals(oldId, client0.cluster().id());
+        assertEquals(oldTag, client0.cluster().tag());
+
+        stopGrid(0);
+
+        cluster0 = startGrid(0).cluster();
+
+        assertNotSame(oldId, cluster0.id());
+        assertNotSame(oldTag, cluster0.tag());
+
+        assertTrue(GridTestUtils.waitForCondition(reconnectEvent::get, 10_000));
+
+        assertEquals("OldID " + oldId, cluster0.id(), client0.cluster().id());
+        assertEquals(cluster0.tag(), client0.cluster().tag());
     }
 
     /**
