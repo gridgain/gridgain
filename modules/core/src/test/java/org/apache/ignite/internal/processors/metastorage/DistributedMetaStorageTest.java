@@ -46,6 +46,12 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_GLOBAL_METASTORAGE
  * Test for {@link DistributedMetaStorageImpl} with disabled persistence.
  */
 public class DistributedMetaStorageTest extends GridCommonAbstractTest {
+    /**
+     * Used in tests for updatesCount counter of metastorage and corresponds to keys CLUSTER_ID and CLUSTER_TAG
+     * that were added but should not be counted along with keys defined in tests.
+     */
+    private static final int INITIAL_UPDATES_COUNT = 2;
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
@@ -315,19 +321,17 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
     public void testOptimizedWriteTwice() throws Exception {
         startGrid(0).cluster().active(true);
 
-        long initialUpdatesCount = metastorage(0).getUpdatesCount();
-
         metastorage(0).write("key1", "value1");
 
-        assertEquals(1, metastorage(0).getUpdatesCount() - initialUpdatesCount);
+        assertEquals(1, metastorage(0).getUpdatesCount() - INITIAL_UPDATES_COUNT);
 
         metastorage(0).write("key2", "value2");
 
-        assertEquals(2, metastorage(0).getUpdatesCount() - initialUpdatesCount);
+        assertEquals(2, metastorage(0).getUpdatesCount() - INITIAL_UPDATES_COUNT);
 
         metastorage(0).write("key1", "value1");
 
-        assertEquals(2, metastorage(0).getUpdatesCount() - initialUpdatesCount);
+        assertEquals(2, metastorage(0).getUpdatesCount() - INITIAL_UPDATES_COUNT);
     }
 
     /** */
@@ -336,15 +340,13 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
     public void testClient() throws Exception {
         startGrid(0).cluster().active(true);
 
-        long initialUpdatesCount = metastorage(0).getUpdatesCount();
-
         metastorage(0).write("key0", "value0");
 
         startClient(1);
 
         AtomicInteger clientLsnrUpdatesCnt = new AtomicInteger();
 
-        assertEquals(1, metastorage(1).getUpdatesCount() - initialUpdatesCount);
+        assertEquals(1, metastorage(1).getUpdatesCount() - INITIAL_UPDATES_COUNT);
 
         assertEquals("value0", metastorage(1).read("key0"));
 
@@ -364,8 +366,6 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
     @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_ENABLED, value = "false")
     public void testClientReconnect() throws Exception {
         startGrid(0).cluster().active(true);
-
-        long initialUpdatesCount = metastorage(0).getUpdatesCount();
 
         startClient(1);
 
@@ -387,7 +387,7 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
 
         // Wait enough to cover failover timeout.
         assertTrue(GridTestUtils.waitForCondition(
-            () -> metastorage(1).getUpdatesCount() - initialUpdatesCount == expUpdatesCnt, 15_000));
+            () -> metastorage(1).getUpdatesCount() - INITIAL_UPDATES_COUNT == expUpdatesCnt, 15_000));
 
         if (isPersistent())
             assertEquals("value0", metastorage(1).read("key0"));
