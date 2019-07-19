@@ -37,8 +37,11 @@ import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.makeMe
  * IgniteFeatures#allNodesSupports} isn't consistent, because the list of nodes is empty.
  */
 public class GridTcpCommunicationSpiSkipWaitHandshakeOnClientTest extends GridCommonAbstractTest {
-    /** Tcp communication port. */
-    private static final int TCP_COMMUNICATION_PORT = 45010;
+    /** Tcp communication start message. */
+    private final String TCP_COMM_START_MSG = "Successfully bound communication NIO server to TCP port [port=";
+
+    /** Port number of digits. */
+    private final int PORT_NUM_OF_DIGITS = 5;
 
     /** Local adders. */
     private static final String LOCAL_ADDERS = "127.0.0.1";
@@ -49,13 +52,19 @@ public class GridTcpCommunicationSpiSkipWaitHandshakeOnClientTest extends GridCo
     /** Test logger. */
     private final ListeningTestLogger log = new ListeningTestLogger(false, GridAbstractTest.log);
 
+    /** Fetched tcp port. */
+    private volatile int fetchedTcpPort = -1;
+
+    /** Client. */
+    private boolean client = true;
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         cfg.setGridLogger(log);
 
-        cfg.setClientMode(true);
+        cfg.setClientMode(client);
 
         return cfg;
     }
@@ -67,7 +76,9 @@ public class GridTcpCommunicationSpiSkipWaitHandshakeOnClientTest extends GridCo
     public void clientCanNotSendHandshakeWaitMessage() throws Exception {
         startClientAndWaitCommunicationActivation();
 
-        try (Socket sock = new Socket(LOCAL_ADDERS, TCP_COMMUNICATION_PORT)) {
+        assert fetchedTcpPort != -1;
+
+        try (Socket sock = new Socket(LOCAL_ADDERS, fetchedTcpPort)) {
             try (InputStream in = sock.getInputStream()) {
                 byte[] b = new byte[MESSAGE_TYPE_BYTES];
 
@@ -81,6 +92,10 @@ public class GridTcpCommunicationSpiSkipWaitHandshakeOnClientTest extends GridCo
                 Assert.assertEquals(NODE_ID_MSG_TYPE, respMsgType);
             }
         }
+
+        client = false;
+
+        startGrid(1); //This is hack because, stopAllGrids can't interrupt the client node:(
     }
 
     /**
@@ -88,7 +103,14 @@ public class GridTcpCommunicationSpiSkipWaitHandshakeOnClientTest extends GridCo
      */
     private void startClientAndWaitCommunicationActivation() throws IgniteInterruptedCheckedException {
         LogListener lsnr = LogListener
-            .matches(s -> s.startsWith("Successfully bound communication NIO server to TCP port [port=" + TCP_COMMUNICATION_PORT))
+            .matches(msg -> {
+                boolean matched = msg.startsWith(TCP_COMM_START_MSG);
+
+                if (matched)
+                    fetchedTcpPort = parsePort(msg);
+
+                return matched;
+            })
             .times(1)
             .build();
         log.registerListener(lsnr);
@@ -98,10 +120,19 @@ public class GridTcpCommunicationSpiSkipWaitHandshakeOnClientTest extends GridCo
                 startGrid(0);
             }
             catch (Exception e) {
-                e.printStackTrace();
+                // Noop
             }
         }).start();
 
         assertTrue(GridTestUtils.waitForCondition(lsnr::check, 20_000));
+    }
+
+    /**
+     * @param msg Message.
+     */
+    private int parsePort(String msg) {
+        return Integer.valueOf(
+            msg.substring(TCP_COMM_START_MSG.length(), TCP_COMM_START_MSG.length() + PORT_NUM_OF_DIGITS)
+        );
     }
 }
