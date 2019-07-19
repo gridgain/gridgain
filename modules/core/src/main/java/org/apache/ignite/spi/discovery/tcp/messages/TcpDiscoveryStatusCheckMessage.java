@@ -53,6 +53,9 @@ public class TcpDiscoveryStatusCheckMessage extends TcpDiscoveryAbstractMessage 
     /** Creator node status (initialized by coordinator). */
     private int status;
 
+    /** Creator node id. */
+    private final UUID creatorNodeId;
+
     /**
      * Constructor.
      *
@@ -65,6 +68,7 @@ public class TcpDiscoveryStatusCheckMessage extends TcpDiscoveryAbstractMessage 
         this.creatorNode = creatorNode;
         this.failedNodeId = failedNodeId;
         this.creatorNodeAddrs = null;
+        this.creatorNodeId = creatorNode.id();
     }
 
     /**
@@ -74,12 +78,14 @@ public class TcpDiscoveryStatusCheckMessage extends TcpDiscoveryAbstractMessage 
      * @param creatorNodeId Creator node ID.
      * @param failedNodeId Failed node id.
      */
-    public TcpDiscoveryStatusCheckMessage(UUID creatorNodeId, Collection<InetSocketAddress> creatorNodeAddrs, UUID failedNodeId) {
+    public TcpDiscoveryStatusCheckMessage(UUID creatorNodeId, Collection<InetSocketAddress> creatorNodeAddrs,
+        UUID failedNodeId) {
         super(creatorNodeId);
 
         this.creatorNodeAddrs = creatorNodeAddrs;
         this.creatorNode = null;
         this.failedNodeId = failedNodeId;
+        this.creatorNodeId = creatorNodeId;
     }
 
     /**
@@ -89,6 +95,15 @@ public class TcpDiscoveryStatusCheckMessage extends TcpDiscoveryAbstractMessage 
      */
     public TcpDiscoveryNode creatorNode() {
         return creatorNode;
+    }
+
+    /**
+     * Gets creator node id.
+     *
+     * @return Creator node id.
+     */
+    public UUID getCreatorNodeId() {
+        return creatorNode != null ? creatorNode.id() : creatorNodeId;
     }
 
     /**

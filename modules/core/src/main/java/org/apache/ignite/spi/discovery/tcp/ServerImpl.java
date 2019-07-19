@@ -16,6 +16,9 @@
 
 package org.apache.ignite.spi.discovery.tcp;
 
+import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLServerSocket;
+import javax.net.ssl.SSLSocket;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -57,9 +60,6 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLServerSocket;
-import javax.net.ssl.SSLSocket;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -5595,7 +5595,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                                             "[recipient=" + msg0.creatorNodeId() + ", status=" + msg0.status() + ']', e);
                                     }
                                     else if (!spi.isNodeStopping0()) {
-                                        if (pingNode(msg0.creatorNode()))
+                                        if (pingNode(msg0.creatorNodeId()))
                                             // Node exists and accepts incoming connections.
                                             U.error(log, "Failed to respond to status check message [recipient=" +
                                                 msg0.creatorNodeId() + ", status=" + msg0.status() + ']', e);
