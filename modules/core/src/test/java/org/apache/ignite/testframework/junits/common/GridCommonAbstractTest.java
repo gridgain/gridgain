@@ -587,6 +587,7 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
 
         Set<ClusterNode> nodes0 = allNodes.stream()
             .map(i -> (IgniteEx)i)
+            .filter(i -> !i.localNode().isDaemon())
             .map(IgniteEx::localNode)
             .collect(toSet());
 
@@ -603,16 +604,29 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
                 Collection<ClusterNode> nodes = disc.nodes(topVer);
 
                 if (System.currentTimeMillis() > endTime) {
-                    Set<String> exp = nodes0.stream().map(ClusterNode::id).map(UUID::toString).collect(toSet());
-                    Set<String> actl = nodes.stream().map(ClusterNode::id).map(UUID::toString).collect(toSet());
+                    StringBuilder exp = new StringBuilder();
 
-                    throw new IgniteException("Timeout of waiting topology "
-                        + ig.cluster().localNode().id() + " topVer=" + topVer +
-                        " [" +
-                        "exp:" + String.join(",", exp)
-                        + " | " +
-                        "actl:" + String.join(",", actl) +
-                        "]"
+                    nodes0.stream()
+                        .map(n -> new T2<>(n.id().toString(), n.consistentId().toString()))
+                        .forEach(t -> {
+                            exp.append("(")
+                                .append(t.get1()).append(", ").append(t.get2())
+                                .append(")");
+                        });
+
+                    StringBuilder actl = new StringBuilder();
+
+                    nodes.stream()
+                        .map(n -> new T2<>(n.id().toString(), n.consistentId().toString()))
+                        .forEach(t -> {
+                            actl.append("(")
+                                .append(t.get1()).append(", ").append(t.get2())
+                                .append(")");
+                        });
+
+                    throw new IgniteException("Timeout of waiting topology localNode=("
+                        + ig.cluster().localNode().id() + "," + ig.cluster().localNode().consistentId()
+                        + " topVer=" + topVer + " [" + "exp:" + exp + " | " + "actl:" + actl + "]"
                     );
                 }
 
