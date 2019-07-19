@@ -25,6 +25,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.StringJoiner;
@@ -32,11 +33,9 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.stream.Collectors;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheRebalanceMode;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -48,7 +47,6 @@ import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.processors.affinity.AffinityAssignment;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
-import org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentCache;
 import org.apache.ignite.internal.processors.cache.CacheEntryInfoCollection;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.CacheMetricsImpl;
@@ -75,6 +73,7 @@ import org.apache.ignite.internal.util.lang.IgniteInClosureX;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.CI1;
+import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -86,12 +85,15 @@ import org.jetbrains.annotations.Nullable;
 
 import static java.lang.String.format;
 import static java.lang.System.currentTimeMillis;
+import static java.util.Comparator.comparing;
 import static java.util.Objects.nonNull;
+import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.reducing;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_QUIET;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_WRITE_REBALANCE_STATISTICS;
@@ -1643,13 +1645,27 @@ public class GridDhtPartitionDemander {
             .map(GridCachePreloader::rebalanceFuture)
             .filter(RebalanceFuture.class::isInstance)
             .map(RebalanceFuture.class::cast)
+            .filter(future -> Objects.equals(future.topVer, currRebFut.topVer))
             .collect(toList());
 
         try {
             if (getBoolean(IGNITE_QUIET, true) || !getBoolean(IGNITE_WRITE_REBALANCE_STATISTICS, false))
                 return;
 
-            log.info(totalRebalanceStatistics(rebFuts) + " " + cacheGroupsRebalanceStatistics(rebFuts));
+            AtomicInteger nodeCnt = new AtomicInteger();
+
+            Map<ClusterNode, Integer> nodeAliases = rebFuts.stream()
+                .flatMap(future -> future.stat.partStat.entrySet().stream())
+                .flatMap(entry -> entry.getValue().keySet().stream())
+                .distinct()
+                .collect(toMap(identity(), node -> nodeCnt.getAndIncrement()));
+
+            StringJoiner joiner = new StringJoiner(" ")
+                .add(totalRebalanceStatistics(rebFuts, nodeAliases))
+                .add(cacheGroupsRebalanceStatistics(rebFuts, nodeAliases, nodeCnt))
+                .add(aliasesRebalanceStatistics(nodeAliases));
+
+            log.info(joiner.toString());
         }
         finally {
             rebFuts.forEach(future -> future.stat.partStat.clear());
@@ -1660,9 +1676,13 @@ public class GridDhtPartitionDemander {
      * Total statistics for current rebalance.
      *
      * @param rebFuts {@link RebalanceFuture}'s in current rebalance
+     * @param nodeAliases for print nodeId=1 instead long string
      * @return total statistics
-     * */
-    private String totalRebalanceStatistics(final List<RebalanceFuture> rebFuts) {
+     */
+    private String totalRebalanceStatistics(
+        final List<RebalanceFuture> rebFuts,
+        final Map<ClusterNode, Integer> nodeAliases
+    ) {
         assert nonNull(rebFuts);
 
         long minStartTime = rebFuts.stream()
@@ -1693,13 +1713,13 @@ public class GridDhtPartitionDemander {
 
         return joiner.add("Total information:")
             .add(format(
-                "Time [start=%s, end=%s, duration=%s ms]",
+                "Time [start=%s, end=%s, d=%s ms]",
                 dateFormat.format(new Date(minStartTime)),
                 dateFormat.format(new Date(maxEndTime)),
                 maxEndTime - minStartTime
             ))
             .add(topicRebalanceStatistics(topicStat))
-            .add(supplierRebalanceStatistics(supplierStat))
+            .add(supplierRebalanceStatistics(supplierStat, nodeAliases))
             .toString();
     }
 
@@ -1707,9 +1727,15 @@ public class GridDhtPartitionDemander {
      * Statistics per cache group for current rebalance.
      *
      * @param rebFuts {@link RebalanceFuture}'s in current rebalance
+     * @param nodeAliases for print nodeId=1 instead long string
+     * @param nodeCnt for add new node into nodeAliases
      * @return statistics per cache group
-     * */
-    private String cacheGroupsRebalanceStatistics(final List<RebalanceFuture> rebFuts){
+     */
+    private String cacheGroupsRebalanceStatistics(
+        final List<RebalanceFuture> rebFuts,
+        final Map<ClusterNode, Integer> nodeAliases,
+        final AtomicInteger nodeCnt
+    ) {
         assert nonNull(rebFuts);
 
         StringJoiner joiner = new StringJoiner(" ")
@@ -1734,46 +1760,43 @@ public class GridDhtPartitionDemander {
                 .collect(groupingBy(Map.Entry::getKey, mapping(Map.Entry::getValue, toList())));
 
             joiner.add(format(
-                "CacheGroup [id=%s, name=%s, start=%s, end=%s, duration=%s ms]",
+                "[id=%s, name=%s, start=%s, end=%s, d=%s ms]",
                 future.grp.groupId(),
                 future.grp.cacheOrGroupName(),
                 dateFormat.format(stat.startTime),
                 dateFormat.format(stat.endTime),
                 stat.endTime - stat.startTime
             ))
-            .add(topicRebalanceStatistics(topicStat))
-            .add(supplierRebalanceStatistics(supplierStat));
+                .add(topicRebalanceStatistics(topicStat))
+                .add(supplierRebalanceStatistics(supplierStat, nodeAliases));
 
             if (!writePartStat)
                 return;
 
             joiner.add("Partitions:");
 
+            AffinityAssignment affinity = future.grp.affinity().cachedAffinity(future.topVer);
+
+            Map<ClusterNode, Set<Integer>> primaryParts = affinity.nodes().stream()
+                .collect(toMap(identity(), node -> affinity.primaryPartitions(node.id())));
+
             stat.partStat.entrySet().stream()
                 .flatMap(entry -> entry.getValue().entrySet().stream())
-                .forEach(entry -> {
-                    ClusterNode supplierNode = entry.getKey();
+                .flatMap(entry -> entry.getValue().parts.stream().map(partInfo -> new T2<>(entry.getKey(), partInfo)))
+                .sorted(comparing(t2 -> t2.get2().id))
+                .forEach(t2 -> {
+                    ClusterNode supplierNode = t2.get1();
+                    int partId = t2.get2().id;
 
-                    AffinityAssignment affinity = future.grp.affinity().cachedAffinity(future.topVer);
+                    String nodes = affinity.get(partId).stream()
+                        .peek(node -> nodeAliases.computeIfAbsent(node, node1 -> nodeCnt.getAndIncrement()))
+                        .map(node -> { return "[" + nodeAliases.get(node) +
+                            (primaryParts.get(node).contains(partId) ? ",p" : ",b") +
+                            (node.equals(supplierNode) ? ",s" : "") + "]";
+                        })
+                        .collect(joining(","));
 
-                    Set<ClusterNode> primaryNodes = affinity.primaryPartitionNodes();
-
-                    entry.getValue().parts.stream()
-                        .forEach(partInfo -> {
-                            int partId = partInfo.id;
-
-                            String nodes = affinity.get(partId).stream()
-                                .map(node -> format(
-                                    "Node [id=%s, consistentId=%s, primary=%s, supplier=%s]",
-                                    node.id(),
-                                    node.consistentId(),
-                                    primaryNodes.contains(node),
-                                    node.equals(supplierNode)
-                                ))
-                                .collect(joining(", "));
-
-                            joiner.add(partId + " = " + nodes);
-                        });
+                    joiner.add(partId + " = " + nodes);
                 });
         });
 
@@ -1785,7 +1808,7 @@ public class GridDhtPartitionDemander {
      *
      * @param topicStat statistics by topics
      * @return statistics per topic
-     * */
+     */
     private String topicRebalanceStatistics(final Map<Integer, Collection<PartitionStatistics>> topicStat) {
         assert nonNull(topicStat);
 
@@ -1807,7 +1830,7 @@ public class GridDhtPartitionDemander {
                 .sum();
 
             joiner.add(format(
-                "Topic [id=%s, partitions=%s, entries=%s, bytes=%s]",
+                "[id=%s, p=%s, e=%s, b=%s]",
                 tipicId,
                 partCnt,
                 entryCount,
@@ -1822,9 +1845,13 @@ public class GridDhtPartitionDemander {
      * Stattistics per supplier node.
      *
      * @param supplierStat statistics by supplier node
+     * @param nodeAliases for print nodeId=1 instead long string
      * @return statistics per supplier node
-     * */
-    private String supplierRebalanceStatistics(final Map<ClusterNode, List<PartitionStatistics>> supplierStat){
+     */
+    private String supplierRebalanceStatistics(
+        final Map<ClusterNode, List<PartitionStatistics>> supplierStat,
+        final Map<ClusterNode, Integer> nodeAliases
+    ) {
         assert nonNull(supplierStat);
 
         StringJoiner joiner = new StringJoiner(" ")
@@ -1849,9 +1876,8 @@ public class GridDhtPartitionDemander {
                 .sum();
 
             joiner.add(format(
-                "Supplier [id=%s, consistentId=%s, partitions=%s, entries=%s, bytes=%s, duration=%s ms]",
-                node.id(),
-                node.consistentId(),
+                "[nodeId=%s, p=%s, e=%s, b=%s, d=%s ms]",
+                nodeAliases.get(node),
                 partCnt,
                 entryCount,
                 byteSum,
@@ -1860,5 +1886,24 @@ public class GridDhtPartitionDemander {
         });
 
         return joiner.toString();
+    }
+
+    /**
+     * Statistics aliases, for reducing output string
+     *
+     * @param nodeAliases for print nodeId=1 instead long string
+     * @return aliases
+     */
+    private String aliasesRebalanceStatistics(final Map<ClusterNode, Integer> nodeAliases) {
+        assert nonNull(nodeAliases);
+
+        String nodes = nodeAliases.entrySet().stream()
+            .sorted(comparing(Map.Entry::getValue))
+            .map(entry -> format("[%s=%s,%s]", entry.getValue(), entry.getKey().id(), entry.getKey().consistentId()))
+            .collect(joining(", "));
+
+        return "Aliases: " +
+            "p - partitions, e - entries, b - bytes, d - duration, " +
+            "nodeId mapping (nodeId=id,consistentId) " + nodes;
     }
 }

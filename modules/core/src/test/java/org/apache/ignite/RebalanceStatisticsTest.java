@@ -86,8 +86,7 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     /** TODO: javadoc later */
     @Test
     public void testRebalanceStatistics() throws Exception {
-        for (int i = 0; i < 3; i++)
-            startGrid(i);
+        startGrids(3);
 
         IgniteEx crd = grid(0);
 
