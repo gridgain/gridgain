@@ -42,6 +42,9 @@ public class DataRegionMetricsImpl implements DataRegionMetrics, AllocatedPageTr
      */
     public static final String DATAREGION_METRICS_PREFIX = metricName("io", "dataregion");
 
+    /** **/
+    private static final int DEFAULT_RATE_TIME_INTERVAL = 60_000;
+
     /** */
     private final DataRegionMetricsProvider dataRegionMetricsProvider;
 
@@ -140,10 +143,10 @@ public class DataRegionMetricsImpl implements DataRegionMetrics, AllocatedPageTr
         this.replacedPages = new LongAdderMetricImpl("NO_OP", null);
         this.offHeapSize = new LongMetricImpl("NO_OP", null);
         this.checkpointBufferSize = new LongMetricImpl("NO_OP", null);
-        this.allocRate = new HitRateMetric("NO_OP", null, 60_000, 5);
-        this.evictRate = new HitRateMetric("NO_OP", null, 60_000, 5);
-        this.pageReplaceRate = new HitRateMetric("NO_OP", null, 60_000, 5);
-        this.pageReplaceAge = new HitRateMetric("NO_OP", null, 60_000, 5);
+        this.allocRate = new HitRateMetric("NO_OP", null, DEFAULT_RATE_TIME_INTERVAL, 5);
+        this.evictRate = new HitRateMetric("NO_OP", null, DEFAULT_RATE_TIME_INTERVAL, 5);
+        this.pageReplaceRate = new HitRateMetric("NO_OP", null, DEFAULT_RATE_TIME_INTERVAL, 5);
+        this.pageReplaceAge = new HitRateMetric("NO_OP", null, DEFAULT_RATE_TIME_INTERVAL, 5);
     }
 
     /**
@@ -165,80 +168,90 @@ public class DataRegionMetricsImpl implements DataRegionMetrics, AllocatedPageTr
 
         subInts = memPlcCfg.getMetricsSubIntervalCount();
 
-        MetricRegistry mreg = mmgr.registry(metricName(DATAREGION_METRICS_PREFIX, memPlcCfg.getName()));
+        MetricRegistry mreg = mmgr.registry(metricName(DATAREGION_METRICS_PREFIX, metricDataRegion(memPlcCfg.getName())));
 
-        totalAllocatedPages = mreg.longAdderMetric("TotalAllocatedPages",
+        totalAllocatedPages = mreg.longAdderMetric("totalAllocatedPages",
             "Total number of allocated pages.");
 
-        allocRate = mreg.hitRateMetric("AllocationRate",
+        allocRate = mreg.hitRateMetric("allocationRate",
             "Allocation rate (pages per second) averaged across rateTimeInternal.",
-            60_000,
+            DEFAULT_RATE_TIME_INTERVAL,
             5);
 
-        evictRate = mreg.hitRateMetric("EvictionRate",
+        evictRate = mreg.hitRateMetric("evictionRate",
             "Eviction rate (pages per second).",
-            60_000,
+            DEFAULT_RATE_TIME_INTERVAL,
             5);
 
-        pageReplaceRate = mreg.hitRateMetric("PagesReplaceRate",
+        pageReplaceRate = mreg.hitRateMetric("pagesReplaceRate",
             "Rate at which pages in memory are replaced with pages from persistent storage (pages per second).",
-            60_000,
+            DEFAULT_RATE_TIME_INTERVAL,
             5);
 
-        pageReplaceAge = mreg.hitRateMetric("PagesReplaceAge",
+        pageReplaceAge = mreg.hitRateMetric("pagesReplaceAge",
             "Average age at which pages in memory are replaced with pages from persistent storage (milliseconds).",
-            60_000,
+            DEFAULT_RATE_TIME_INTERVAL,
             5);
 
-        largeEntriesPages = mreg.longAdderMetric("LargeEntriesPagesCount",
-            "Count of pages that fully ocupied by large entries that go beyond page size");
+        largeEntriesPages = mreg.longAdderMetric("largeEntriesPagesCount",
+            "Count of pages that fully ocupied by large entries that go beyond page size.");
 
-        dirtyPages = mreg.longAdderMetric("DirtyPages",
+        dirtyPages = mreg.longAdderMetric("dirtyPages",
             "Number of pages in memory not yet synchronized with persistent storage.");
 
-        readPages = mreg.longAdderMetric("PagesRead",
+        readPages = mreg.longAdderMetric("pagesRead",
             "Number of pages read from last restart.");
 
-        writtenPages = mreg.longAdderMetric("PagesWritten",
+        writtenPages = mreg.longAdderMetric("pagesWritten",
             "Number of pages written from last restart.");
 
-        replacedPages = mreg.longAdderMetric("PagesReplaced",
+        replacedPages = mreg.longAdderMetric("pagesReplaced",
             "Number of pages replaced from last restart.");
 
-        offHeapSize = mreg.metric("OffHeapSize",
+        offHeapSize = mreg.metric("offHeapSize",
             "Offheap size in bytes.");
 
-        checkpointBufferSize = mreg.metric("CheckpointBufferSize",
+        checkpointBufferSize = mreg.metric("checkpointBufferSize",
             "Checkpoint buffer size in bytes.");
 
-        mreg.register("EmptyDataPages",
+        mreg.register("emptyDataPages",
             dataRegionMetricsProvider::emptyDataPages,
             "Calculates empty data pages count for region. It counts only totally free pages that can be reused " +
                 "(e. g. pages that are contained in reuse bucket of free list).");
 
-        mreg.register("PagesFillFactor",
+        mreg.register("pagesFillFactor",
             this::getPagesFillFactor,
             "The percentage of the used space.");
 
-        mreg.register("PhysicalMemoryPages",
+        mreg.register("physicalMemoryPages",
             this::getPhysicalMemoryPages,
             "Number of pages residing in physical RAM.");
 
-        mreg.register("OffheapUsedSize",
+        mreg.register("offheapUsedSize",
             this::getOffheapUsedSize,
             "Offheap used size in bytes.");
 
-        mreg.register("TotalAllocatedSize",
+        mreg.register("totalAllocatedSize",
             this::getTotalAllocatedSize,
-            "Gets a total size of memory allocated in the data region, in bytes");
+            "Gets a total size of memory allocated in the data region, in bytes.");
 
-        mreg.register("PhysicalMemorySize",
+        mreg.register("physicalMemorySize",
             this::getPhysicalMemorySize,
-            "Gets total size of pages loaded to the RAM, in bytes");
+            "Gets total size of pages loaded to the RAM, in bytes.");
 
-        mreg.register("UsedCheckpointBufferSize",
+        mreg.register("usedCheckpointBufferSize",
             this::getUsedCheckpointBufferSize,
-            "Gets used checkpoint buffer size in bytes");
+            "Gets used checkpoint buffer size in bytes.");
+    }
+
+    /**
+     * Convert origin data region name to metric name.
+     *
+     * @param originDataRegionName Name for conversion.
+     * @return Name of metric.
+     */
+    private static String metricDataRegion(String originDataRegionName) {
+        return originDataRegionName.replaceAll(" ", "-");
     }
 
     /** {@inheritDoc} */
@@ -285,8 +298,8 @@ public class DataRegionMetricsImpl implements DataRegionMetrics, AllocatedPageTr
             return 0;
 
         return totalAllocatedPages.longValue() != 0 ?
-                (float) largeEntriesPages.longValue() / totalAllocatedPages.longValue()
-                : 0;
+            (float)largeEntriesPages.longValue() / totalAllocatedPages.longValue()
+            : 0;
     }
 
     /** {@inheritDoc} */
@@ -299,7 +312,7 @@ public class DataRegionMetricsImpl implements DataRegionMetrics, AllocatedPageTr
         long totalAllocated = getPageSize() * totalAllocatedPages.longValue();
 
         return totalAllocated != 0 ?
-            (float) (totalAllocated - freeSpace) / totalAllocated
+            (float)(totalAllocated - freeSpace) / totalAllocated
             : 0f;
     }
 
@@ -447,7 +460,7 @@ public class DataRegionMetricsImpl implements DataRegionMetrics, AllocatedPageTr
     /**
      * Updates page read.
      */
-    public void onPageRead(){
+    public void onPageRead() {
         if (metricsEnabled)
             readPages.increment();
     }
@@ -455,7 +468,7 @@ public class DataRegionMetricsImpl implements DataRegionMetrics, AllocatedPageTr
     /**
      * Updates page written.
      */
-    public void onPageWritten(){
+    public void onPageWritten() {
         if (metricsEnabled)
             writtenPages.increment();
     }
@@ -596,7 +609,7 @@ public class DataRegionMetricsImpl implements DataRegionMetrics, AllocatedPageTr
             return;
 
         if (rateTimeInterval / subInts < 10)
-            subInts = (int) rateTimeInterval / 10;
+            subInts = (int)rateTimeInterval / 10;
 
         allocRate.reset(rateTimeInterval, subInts);
         evictRate.reset(rateTimeInterval, subInts);
