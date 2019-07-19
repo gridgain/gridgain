@@ -16,9 +16,9 @@
 
 package org.apache.ignite.spi.communication.tcp;
 
+import javax.cache.Cache;
 import java.lang.management.ManagementFactory;
 import java.util.Iterator;
-import javax.cache.Cache;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteLogger;
@@ -58,8 +58,8 @@ public class TcpCommunicationSpiFreezingClientTest extends GridCommonAbstractTes
 
         TcpCommunicationSpi spi = new TcpCommunicationSpi();
 
-        spi.setConnectTimeout(3000);
-        spi.setMaxConnectTimeout(6000);
+        spi.setConnectTimeout(500);
+        spi.setMaxConnectTimeout(1000);
         spi.setReconnectCount(3);
         spi.setIdleConnectionTimeout(100);
         spi.setSharedMemoryPort(-1);

@@ -17,6 +17,7 @@
 package org.apache.ignite.spi.communication.tcp;
 
 import java.io.IOException;
+import java.net.BindException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.util.Collections;
@@ -77,6 +78,8 @@ public class TcpCommunicationSpiFaultyClientTest extends GridCommonAbstractTest 
     /** */
     private int reconnectCnt = -1;
 
+    private static int port;
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
@@ -84,7 +87,7 @@ public class TcpCommunicationSpiFaultyClientTest extends GridCommonAbstractTest 
         cfg.setFailureDetectionTimeout(failureDetectionTimeout);
         cfg.setClientMode(clientMode);
 
-        TestCommunicationSpi spi = new TestCommunicationSpi();
+        TestCommunicationSpi spi = new TestCommunicationSpi(port);
 
         if (connectTimeout != -1) {
             spi.setConnectTimeout(connectTimeout);
@@ -105,6 +108,25 @@ public class TcpCommunicationSpiFaultyClientTest extends GridCommonAbstractTest 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
+
+        int defaultPort = 47200;
+
+        while(true) {
+            try {
+                FakeServer server = new FakeServer(defaultPort);
+
+                server.stop();
+
+                server.run();
+
+                port = defaultPort;
+
+                break;
+            }
+            catch (BindException e){
+                defaultPort++;
+            }
+        }
 
         System.setProperty(IgniteSystemProperties.IGNITE_ENABLE_FORCIBLE_NODE_KILL, "true");
     }
@@ -168,7 +190,7 @@ public class TcpCommunicationSpiFaultyClientTest extends GridCommonAbstractTest 
      */
     @Test
     public void testNotAcceptedConnection() throws Exception {
-        testFailClient(new FakeServer(), computeExpectedDelay());
+        testFailClient(new FakeServer(port), computeExpectedDelay());
     }
 
     /**
@@ -180,7 +202,7 @@ public class TcpCommunicationSpiFaultyClientTest extends GridCommonAbstractTest 
         maxConnectTimeout = 6000;
         reconnectCnt = 3;
 
-        testFailClient(new FakeServer(), computeExpectedDelay());
+        testFailClient(new FakeServer(port), computeExpectedDelay());
     }
 
     /**
@@ -295,8 +317,8 @@ public class TcpCommunicationSpiFaultyClientTest extends GridCommonAbstractTest 
         /**
          * Default constructor.
          */
-        FakeServer() throws IOException {
-            srv = new ServerSocket(47200, 50, InetAddress.getByName("127.0.0.1"));
+        FakeServer(int port) throws IOException {
+            srv = new ServerSocket(port, 50, InetAddress.getByName("127.0.0.1"));
         }
 
         /**
@@ -319,7 +341,7 @@ public class TcpCommunicationSpiFaultyClientTest extends GridCommonAbstractTest 
                 }
             }
             finally {
-                U.closeQuiet(srv);
+                U.close(srv, log);
             }
         }
     }
@@ -328,6 +350,13 @@ public class TcpCommunicationSpiFaultyClientTest extends GridCommonAbstractTest 
      *
      */
     private static class TestCommunicationSpi extends TcpCommunicationSpi {
+
+        private int port;
+
+        private TestCommunicationSpi(int port) {
+            this.port = port;
+        }
+
         /** {@inheritDoc} */
         @Override protected GridCommunicationClient createTcpClient(ClusterNode node, int connIdx)
             throws IgniteCheckedException {
@@ -335,7 +364,7 @@ public class TcpCommunicationSpiFaultyClientTest extends GridCommonAbstractTest 
                 Map<String, Object> attrs = new HashMap<>(node.attributes());
 
                 attrs.put(createAttributeName(ATTR_ADDRS), Collections.singleton("127.0.0.1"));
-                attrs.put(createAttributeName(ATTR_PORT), 47200);
+                attrs.put(createAttributeName(ATTR_PORT), port);
                 attrs.put(createAttributeName(ATTR_EXT_ADDRS), Collections.emptyList());
                 attrs.put(createAttributeName(ATTR_HOST_NAMES), Collections.emptyList());
 
