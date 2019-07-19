@@ -140,16 +140,24 @@ public class VisorBaselineTask extends VisorOneNodeTask<VisorBaselineTaskArg, Vi
          */
         private VisorBaselineTaskResult set(List<String> consistentIds) {
             Map<String, BaselineNode> srvrs = currentServers();
+            Map<String, BaselineNode> baseline = currentBaseLine();
 
             Collection<BaselineNode> baselineTop = new ArrayList<>();
 
             for (String consistentId : consistentIds) {
-                BaselineNode node = srvrs.get(consistentId);
+                BaselineNode nodeFromCurrBlT = baseline.get(consistentId);
 
-                if (node != null)
-                    baselineTop.add(node);
-                else
-                    baselineTop.add(new DetachedClusterNode(consistentId, null));
+                if (nodeFromCurrBlT != null)
+                    baselineTop.add(nodeFromCurrBlT);
+                else {
+                    BaselineNode nodeFromCurrSrvrs = srvrs.get(consistentId);
+
+                    if (nodeFromCurrSrvrs != null)
+                        baselineTop.add(nodeFromCurrSrvrs);
+                    else
+                        throw new VisorIllegalStateException("Check arguments. Node not found for consistent ID: " +
+                            consistentId);
+                }
             }
 
             return set0(baselineTop);

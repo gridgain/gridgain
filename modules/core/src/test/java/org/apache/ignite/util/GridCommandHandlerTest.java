@@ -98,6 +98,7 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.tx.VisorTxInfo;
 import org.apache.ignite.internal.visor.tx.VisorTxTaskResult;
+import org.apache.ignite.internal.visor.util.VisorIllegalStateException;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgnitePredicate;
@@ -3085,5 +3086,25 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
             .peek(c -> testOut.reset())
             .peek(c -> assertEquals(EXIT_CODE_OK, execute(WAL.text(), c)))
             .forEach(c -> assertContains(log, testOut.toString(), warning));
+    }
+
+    /**
+     * Verify that in case of setting baseline topology with offline node among others
+     * {@link VisorIllegalStateException} is thrown.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    public void setConsistenceIdsWithOfflineBaselineNode() throws Exception {
+        Ignite ignite = startGrids(1);
+
+        ignite.cluster().active(true);
+
+        ignite(0).createCache(defaultCacheConfiguration().setNodeFilter(
+            (IgnitePredicate<ClusterNode>)node -> node.attribute("some-attr") != null));
+
+        assertEquals(EXIT_CODE_ILLEGAL_SATE_ERROR,
+            execute("--baseline", "set", "non-existing-node-id ," + consistentIds(ignite)));
     }
 }
