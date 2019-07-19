@@ -121,76 +121,76 @@ public class DataStorageMetricsImpl implements DataStorageMetricsMXBean {
 
         MetricRegistry mreg = mmgr.registry(DATASTORAGE_METRIC_PREFIX);
 
-        walLoggingRate = mreg.hitRateMetric("WalLoggingRate",
+        walLoggingRate = mreg.hitRateMetric("walLoggingRate",
             "Average number of WAL records per second written during the last time interval.",
             rateTimeInterval,
             subInts);
 
         walWritingRate = mreg.hitRateMetric(
-            "WalWritingRate",
+            "walWritingRate",
             "Average number of bytes per second written during the last time interval.",
             rateTimeInterval,
             subInts);
 
         walFsyncTimeDuration = mreg.hitRateMetric(
-            "WalFsyncTimeDuration",
-            "Total duration of fsync",
+            "walFsyncTimeDuration",
+            "Total duration of fsync.",
             rateTimeInterval,
             subInts);
 
         walFsyncTimeNum = mreg.hitRateMetric(
-            "WalFsyncTimeNum",
-            "Total count of fsync",
+            "walFsyncTimeNum",
+            "Total count of fsync.",
             rateTimeInterval,
             subInts);
 
         walBuffPollSpinsNum = mreg.hitRateMetric(
-            "WalBuffPollSpinsRate",
+            "walBuffPollSpinsRate",
             "WAL buffer poll spins number over the last time interval.",
             rateTimeInterval,
             subInts);
 
-        lastCpLockWaitDuration = mreg.metric("LastCheckpointLockWaitDuration",
+        lastCpLockWaitDuration = mreg.metric("lastCheckpointLockWaitDuration",
             "Duration of the checkpoint lock wait in milliseconds.");
 
-        lastCpMarkDuration = mreg.metric("LastCheckpointMarkDuration",
+        lastCpMarkDuration = mreg.metric("lastCheckpointMarkDuration",
             "Duration of the checkpoint lock wait in milliseconds.");
 
-        lastCpPagesWriteDuration = mreg.metric("LastCheckpointPagesWriteDuration",
+        lastCpPagesWriteDuration = mreg.metric("lastCheckpointPagesWriteDuration",
             "Duration of the checkpoint pages write in milliseconds.");
 
-        lastCpDuration = mreg.metric("LastCheckpointDuration",
+        lastCpDuration = mreg.metric("lastCheckpointDuration",
             "Duration of the last checkpoint in milliseconds.");
 
-        lastCpFsyncDuration = mreg.metric("LastCheckpointFsyncDuration",
+        lastCpFsyncDuration = mreg.metric("lastCheckpointFsyncDuration",
             "Duration of the sync phase of the last checkpoint in milliseconds.");
 
-        lastCpTotalPages = mreg.metric("LastCheckpointTotalPagesNumber",
+        lastCpTotalPages = mreg.metric("lastCheckpointTotalPagesNumber",
             "Total number of pages written during the last checkpoint.");
 
-        lastCpDataPages = mreg.metric("LastCheckpointDataPagesNumber",
+        lastCpDataPages = mreg.metric("lastCheckpointDataPagesNumber",
             "Total number of data pages written during the last checkpoint.");
 
-        lastCpCowPages = mreg.metric("LastCheckpointCopiedOnWritePagesNumber",
+        lastCpCowPages = mreg.metric("lastCheckpointCopiedOnWritePagesNumber",
             "Number of pages copied to a temporary checkpoint buffer during the last checkpoint.");
 
-        lastWalSegmentRollOverTime = mreg.metric("WalLastRollOverTime",
+        lastWalSegmentRollOverTime = mreg.metric("walLastRollOverTime",
             "Time of the last WAL segment rollover.");
 
-        totalCheckpointTime = mreg.metric("CheckpointTotalTime",
-            "Total duration of checkpoint");
+        totalCheckpointTime = mreg.metric("checkpointTotalTime",
+            "Total duration of checkpoint.");
 
-        storageSize = mreg.metric("StorageSize",
+        storageSize = mreg.metric("storageSize",
             "Storage space allocated, in bytes.");
 
-        sparseStorageSize = mreg.metric("SparseStorageSize",
+        sparseStorageSize = mreg.metric("sparseStorageSize",
             "Storage space allocated adjusted for possible sparsity, in bytes.");
 
-        mreg.register("WalArchiveSegments",
+        mreg.register("walArchiveSegments",
             this::getWalArchiveSegments,
             "Current number of WAL segments in the WAL archive.");
 
-        mreg.register("WalTotalSize",
+        mreg.register("walTotalSize",
             this::getWalTotalSize,
             "Total size in bytes for storage wal files.");
     }
