@@ -213,7 +213,7 @@ public class IgniteTestResources {
             //
             // BUT it requires changing current injection framework a little bit. Parameterized annotations are
             // not supported.
-            // Another option is to inject GridMetricManager, this much easier to implement actually.
+            // Another option is to inject GridMetricManager, this is much easier to implement actually.
             GridTestUtils.setFieldValue(commSpi, "metricsLsnr", tcpCommunicationMetricsListener());
         }
     }
