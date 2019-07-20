@@ -31,6 +31,7 @@ import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.LongJVMPauseDetector;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.plugin.IgnitePluginProcessor;
+import org.apache.ignite.internal.processors.resource.GridResourceProcessor;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.PluginProvider;
@@ -95,6 +96,7 @@ public class GridTestKernalContext extends GridKernalContextImpl {
             cfg.setMetricExporterSpi(new NoopMetricExporterSpi());
 
         add(new GridMetricManager(this));
+        add(new GridResourceProcessor(this));
     }
 
     /**
