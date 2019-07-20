@@ -18,6 +18,7 @@ package org.apache.ignite.testframework.junits;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
+import java.lang.reflect.Constructor;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -30,6 +31,7 @@ import org.apache.ignite.internal.SensitiveInfoTestLoggerProxy;
 import org.apache.ignite.internal.binary.BinaryCachingMetadataHandler;
 import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
+import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.resource.GridResourceProcessor;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -38,9 +40,13 @@ import org.apache.ignite.marshaller.Marshaller;
 import org.apache.ignite.marshaller.MarshallerContextTestImpl;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
+import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.logger.GridTestLog4jLogger;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 import org.jetbrains.annotations.Nullable;
+
+import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.COMMUNICATION_METRICS_GROUP_NAME;
 
 /**
  * Test resources for injection.
@@ -74,6 +80,9 @@ public class IgniteTestResources {
     private IgniteConfiguration cfg;
 
     /** */
+    private GridTestKernalContext ctx;
+
+    /** */
     private GridResourceProcessor rsrcProc;
 
     /**
@@ -92,9 +101,11 @@ public class IgniteTestResources {
         else
             log = rootLog.getLogger(getClass());
 
-        this.jmx = prepareMBeanServer();
+        jmx = prepareMBeanServer();
 
-        this.rsrcProc = new GridResourceProcessor(new GridTestKernalContext(this.log));
+        ctx = new GridTestKernalContext(log);
+
+        rsrcProc = new GridResourceProcessor(ctx);
     }
 
     /**
@@ -102,9 +113,10 @@ public class IgniteTestResources {
      */
     public IgniteTestResources(IgniteConfiguration cfg) throws IgniteCheckedException {
         this.cfg = cfg;
-        this.log = rootLog.getLogger(getClass());
-        this.jmx = prepareMBeanServer();
-        this.rsrcProc = new GridResourceProcessor(new GridTestKernalContext(this.log, this.cfg));
+        log = rootLog.getLogger(getClass());
+        jmx = prepareMBeanServer();
+        ctx = new GridTestKernalContext(log, this.cfg);
+        rsrcProc = new GridResourceProcessor(ctx);
     }
 
     /**
@@ -114,8 +126,9 @@ public class IgniteTestResources {
         assert jmx != null;
 
         this.jmx = jmx;
-        this.log = rootLog.getLogger(getClass());
-        this.rsrcProc = new GridResourceProcessor(new GridTestKernalContext(this.log));
+        log = rootLog.getLogger(getClass());
+        ctx = new GridTestKernalContext(log);
+        rsrcProc = new GridResourceProcessor(ctx);
     }
 
     /**
@@ -125,8 +138,9 @@ public class IgniteTestResources {
         assert log != null;
 
         this.log = log.getLogger(getClass());
-        this.jmx = prepareMBeanServer();
-        this.rsrcProc = new GridResourceProcessor(new GridTestKernalContext(this.log));
+        jmx = prepareMBeanServer();
+        ctx = new GridTestKernalContext(log);
+        rsrcProc = new GridResourceProcessor(ctx);
     }
 
     /**
@@ -184,6 +198,34 @@ public class IgniteTestResources {
         rsrcProc.injectBasicResource(target, LoggerResource.class, getLogger().getLogger(target.getClass()));
         rsrcProc.injectBasicResource(target, IgniteInstanceResource.class,
             new IgniteMock(null, locHost, nodeId, getMarshaller(), jmx, home, cfg));
+
+        if (target instanceof TcpCommunicationSpi) {
+            TcpCommunicationSpi commSpi = (TcpCommunicationSpi)target;
+
+            // I know it's shit, please suggest better solution.
+            GridTestUtils.setFieldValue(commSpi, "metricsLsnr", tcpCommunicationMetricsListener());
+        }
+    }
+
+    /** */
+    private Object tcpCommunicationMetricsListener() throws IgniteCheckedException {
+        try {
+            Class<?> metricsLsnrCls = Class.forName(
+                "org.apache.ignite.spi.communication.tcp.TcpCommunicationMetricsListener"
+            );
+
+            MetricRegistry mreg = ctx.metric().registry(COMMUNICATION_METRICS_GROUP_NAME);
+
+            @SuppressWarnings("JavaReflectionMemberAccess")
+            Constructor<?> ctor = metricsLsnrCls.getDeclaredConstructor(MetricRegistry.class);
+
+            ctor.setAccessible(true);
+
+            return ctor.newInstance(mreg);
+        }
+        catch (Exception e) {
+            throw new IgniteCheckedException(e);
+        }
     }
 
     /**

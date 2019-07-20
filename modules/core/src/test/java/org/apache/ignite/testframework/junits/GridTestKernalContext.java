@@ -91,7 +91,9 @@ public class GridTestKernalContext extends GridKernalContextImpl {
 
         config().setGridLogger(log);
 
-        cfg.setMetricExporterSpi(new NoopMetricExporterSpi());
+        if (cfg.getMetricExporterSpi() == null || cfg.getMetricExporterSpi().length == 0)
+            cfg.setMetricExporterSpi(new NoopMetricExporterSpi());
+
         add(new GridMetricManager(this));
     }
 
