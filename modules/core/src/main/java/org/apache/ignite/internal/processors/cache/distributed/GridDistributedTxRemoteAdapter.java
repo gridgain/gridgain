@@ -623,7 +623,7 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
                                                 "evicted [grp=" + cacheCtx.group().cacheOrGroupName() + ", part=" + p + "]");
                                     }
 
-                                    assert locPart.state() == OWNING || locPart.state() == MOVING : locPart;
+                                    assert locPart.state() != RENTING : locPart;
 
                                     if (op == CREATE || op == UPDATE) {
                                         // Invalidate only for near nodes (backups cannot be invalidated).
