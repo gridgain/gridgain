@@ -203,6 +203,17 @@ public class IgniteTestResources {
             TcpCommunicationSpi commSpi = (TcpCommunicationSpi)target;
 
             // I know it's shit, please suggest better solution.
+            // The problem is that here we inject mock instance that is not IgniteEx as TcpCommunicationSpi expects.
+            //
+            // It would be cool to have MetricRegistry injected like
+            // @MetricRegistryResource(COMMUNICATION_METRICS_GROUP_NAME)
+            // private void injectMetricRegistry(MetricRegistry mreg) {
+            //     // initialization of metrics.
+            // }
+            //
+            // BUT it requires changing current injection framework a little bit. Parameterized annotations are
+            // not supported.
+            // Another option is to inject GridMetricManager, this much easier to implement actually.
             GridTestUtils.setFieldValue(commSpi, "metricsLsnr", tcpCommunicationMetricsListener());
         }
     }
