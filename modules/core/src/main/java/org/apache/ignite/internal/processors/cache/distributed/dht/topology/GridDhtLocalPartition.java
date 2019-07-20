@@ -847,7 +847,9 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
         GridDhtPartitionState state = getPartState(state0);
 
-        if (state == EVICTED || (freeAndEmpty(state0) && state == RENTING && casState(state0, EVICTED)))
+        // Some entries still might be present in partition cache maps due to concurrent updates on backup nodes,
+        // but it's safe to finish eviction because no physical updates are possible.
+        if (state == EVICTED || (store.isEmpty() && state == RENTING && casState(state0, EVICTED)))
             updateSeqOnDestroy = updateSeq;
     }
 
