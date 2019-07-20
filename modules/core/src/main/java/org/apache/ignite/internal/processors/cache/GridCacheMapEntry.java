@@ -4277,7 +4277,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         GridCacheVersion ver,
         @Nullable IgnitePredicate<CacheDataRow> predicate) throws IgniteCheckedException {
         assert lock.isHeldByCurrentThread();
-        assert localPartition().state() != RENTING : localPartition(); // Updates to RENTING partition are not allowed.
+        assert localPartition() == null || localPartition().state() != RENTING : localPartition();
 
         UpdateClosure closure = new UpdateClosure(this, val, ver, expireTime, predicate);
 
