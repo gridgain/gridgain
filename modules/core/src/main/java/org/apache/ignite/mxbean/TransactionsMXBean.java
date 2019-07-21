@@ -147,4 +147,18 @@ public interface TransactionsMXBean {
     @MXBeanParametersNames("threshold")
     @MXBeanParametersDescriptions("threshold timeout")
     public void setLongTransactionTimeDumpThreshold(long threshold);
+
+    @MXBeanDescription(
+        "Returns the percentage of samples of long running transactions that will be dumped in log, if " +
+        "longTransactionTimeDumpThreshold is set to non-zero value."
+    )
+    public float getLongTransactionTimeDumpSampleLimit();
+
+    @MXBeanDescription(
+        "Sets the percentage of samples of long running transactions that will be dumped in log, if " +
+        "longTransactionTimeDumpThreshold is set to non-zero value."
+    )
+    @MXBeanParametersNames("percentage")
+    @MXBeanParametersDescriptions("Samples percentage.")
+    public void setLongTransactionTimeDumpSampleLimit(float percentage);
 }

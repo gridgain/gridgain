@@ -107,6 +107,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_TX_DEADLOCK_DETECT
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TX_OWNER_DUMP_REQUESTS_ALLOWED;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TX_SALVAGE_TIMEOUT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_WAL_LOG_TX_RECORDS;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_LONG_TRANSACTION_TIME_DUMP_SAMPLE_LIMIT;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.events.EventType.EVT_TX_STARTED;
@@ -202,6 +203,13 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      */
     private long longTransactionTimeDumpThreshold =
         IgniteSystemProperties.getLong(IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD, 0);
+
+    /**
+     * The percentage of samples of long running transactions that will be dumped in log, if
+     * {@link #longTransactionTimeDumpThreshold} is set to non-zero value.
+     */
+    private float longTransactionTimeDumpSampleLimit =
+            IgniteSystemProperties.getFloat(IGNITE_LONG_TRANSACTION_TIME_DUMP_SAMPLE_LIMIT, 0.0f);
 
     /** Committed local transactions. */
     private final GridBoundedConcurrentOrderedMap<GridCacheVersion, Boolean> completedVersSorted =
@@ -478,6 +486,22 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      */
     public void longTransactionTimeDumpThreshold(long longTransactionTimeDumpThreshold) {
         this.longTransactionTimeDumpThreshold = longTransactionTimeDumpThreshold;
+    }
+
+    /**
+     * The percentage of samples of long running transactions that will be dumped in log, if
+     * {@link #longTransactionTimeDumpThreshold} is set to non-zero value.
+     */
+    public float longTransactionTimeDumpSampleLimit() {
+        return longTransactionTimeDumpSampleLimit;
+    }
+
+    /**
+     * Sets the percentage of samples of long running transactions that will be dumped in log, if
+     * {@link #longTransactionTimeDumpThreshold} is set to non-zero value.
+     */
+    public void longTransactionTimeDumpSampleLimit(float longTransactionTimeDumpSampleLimit) {
+        this.longTransactionTimeDumpSampleLimit = longTransactionTimeDumpSampleLimit;
     }
 
     /**

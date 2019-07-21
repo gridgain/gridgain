@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
+import java.util.Random;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import javax.cache.Cache;
@@ -158,6 +159,9 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
     /** Histogram buckets for metrics of system and user time. */
     public static final long[] METRIC_TIME_BUCKETS = new long[] { 1, 2, 4, 8, 16, 25, 50, 75, 100, 250, 500, 750, 1000, 3000};
+
+    /** */
+    private static final Random RANDOM = new Random();
 
     /** */
     private static final long serialVersionUID = 0L;
@@ -3832,7 +3836,8 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
             writeTxMetrics(systemTimeMillis, userTimeMillis);
 
             if (cctx.tm().longTransactionTimeDumpThreshold() > 0
-                && totalTimeMillis > cctx.tm().longTransactionTimeDumpThreshold()) {
+                && totalTimeMillis > cctx.tm().longTransactionTimeDumpThreshold()
+                && RANDOM.nextDouble() <= cctx.tm().longTransactionTimeDumpSampleLimit()) {
                 DateFormat timeFormat = new SimpleDateFormat("HH:mm:ss.SSS");
                 timeFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
 

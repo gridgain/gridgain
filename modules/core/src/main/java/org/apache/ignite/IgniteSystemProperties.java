@@ -1293,6 +1293,11 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD = "IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD";
 
     /**
+     *
+     */
+    public static final String IGNITE_LONG_TRANSACTION_TIME_DUMP_SAMPLE_LIMIT = "IGNITE_LONG_TRANSACTION_TIME_DUMP_SAMPLE_LIMIT";
+
+    /**
      * Enforces singleton.
      */
     private IgniteSystemProperties() {

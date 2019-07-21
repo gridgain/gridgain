@@ -209,6 +209,7 @@ import static org.apache.ignite.configuration.DeploymentMode.PRIVATE;
 import static org.apache.ignite.configuration.DeploymentMode.SHARED;
 import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType.CACHE_PROC;
 import static org.apache.ignite.internal.IgniteComponentType.JTA;
+import static org.apache.ignite.internal.IgniteFeatures.LRT_SYSTEM_USER_TIME_DUMP_SETTINGS;
 import static org.apache.ignite.internal.IgniteFeatures.TRANSACTION_OWNER_THREAD_DUMP_PROVIDING;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_CONSISTENCY_CHECK_SKIPPED;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_TX_CONFIG;
@@ -6029,6 +6030,28 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         IgniteCompute compute = ctx.grid().compute(grp);
 
         compute.broadcast(new TxOwnerDumpRequestAllowedSettingClosure(allowed));
+    }
+
+    /** */
+    public void longTransactionTimeDumpThreshold(long threshold) {
+        ClusterGroup grp = ctx.grid()
+                .cluster()
+                .forPredicate(node -> IgniteFeatures.nodeSupports(ctx, node, LRT_SYSTEM_USER_TIME_DUMP_SETTINGS));
+
+        IgniteCompute compute = ctx.grid().compute(grp);
+
+        compute.broadcast(new LongRunningTxTimeDumpSettingsClosure(threshold, null));
+    }
+
+    /** */
+    public void longTransactionTimeDumpSampleLimit(float percentage) {
+        ClusterGroup grp = ctx.grid()
+                .cluster()
+                .forPredicate(node -> IgniteFeatures.nodeSupports(ctx, node, LRT_SYSTEM_USER_TIME_DUMP_SETTINGS));
+
+        IgniteCompute compute = ctx.grid().compute(grp);
+
+        compute.broadcast(new LongRunningTxTimeDumpSettingsClosure(null, percentage));
     }
 
     /**
