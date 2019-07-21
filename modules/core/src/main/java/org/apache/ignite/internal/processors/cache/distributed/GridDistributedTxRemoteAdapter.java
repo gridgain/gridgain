@@ -613,17 +613,18 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
                                         );
                                     }
 
-                                    GridDhtLocalPartition locPart = cacheCtx.group().topology().localPartition(txEntry.cached().partition());
+                                    GridDhtLocalPartition locPart =
+                                            cacheCtx.group().topology().localPartition(txEntry.cached().partition());
 
-                                    if (locPart == null ||
-                                            (reserved.add(locPart) && (!locPart.reserve() || locPart.state() == RENTING))) {
+                                    if (locPart != null && reserved.add(locPart) &&
+                                            (!locPart.reserve() || locPart.state() == RENTING)) {
                                         int p = locPart.id();
 
                                         throw new GridDhtInvalidPartitionException(p, "Adding entry to partition that is concurrently " +
                                                 "evicted [grp=" + cacheCtx.group().cacheOrGroupName() + ", part=" + p + "]");
                                     }
 
-                                    assert locPart.state() != RENTING : locPart;
+                                    assert locPart == null || locPart.state() != RENTING : locPart;
 
                                     if (op == CREATE || op == UPDATE) {
                                         // Invalidate only for near nodes (backups cannot be invalidated).
