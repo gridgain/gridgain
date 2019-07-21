@@ -594,12 +594,12 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
 
                                     boolean reserved = false;
 
-                                    if (locPart != null && !reservedParts.contains(locPart) &&
+                                    if (!near() && locPart != null && !reservedParts.contains(locPart) &&
                                             (!(reserved = locPart.reserve()) || locPart.state() == RENTING)) {
                                         LT.warn(log(), "Skipping update to partition that is concurrently evicting " +
                                                 "[grp=" + cacheCtx.group().cacheOrGroupName() + ", part=" + locPart + "]");
 
-                                        // RENTING partition is reserved.
+                                        // Reserved RENTING partition.
                                         if (reserved)
                                             reservedParts.add(locPart);
 
@@ -609,7 +609,7 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
                                     if (reserved)
                                         reservedParts.add(locPart);
 
-                                    assert locPart == null ||
+                                    assert near() || locPart == null ||
                                             !(locPart.state() == RENTING || locPart.state() == EVICTED) : locPart;
 
                                     GridCacheVersion dhtVer = cached.isNear() ? writeVersion() : null;
