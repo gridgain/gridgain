@@ -204,7 +204,7 @@ public class DiskSpillingQueriesTest extends DiskSpillingAbstractTest {
         assertInMemoryAndOnDiskSameResults(false,
             "SELECT id, name, code, depId FROM person WHERE depId >= 0 " +
             " EXCEPT " +
-            "SELECT id, name, code, depId FROM person WHERE depId > 0 ");
+            "SELECT id, name, code, depId FROM person WHERE depId > 5 ");
     }
 
     /** */

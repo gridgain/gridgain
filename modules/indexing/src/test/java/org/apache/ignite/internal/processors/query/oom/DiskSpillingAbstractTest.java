@@ -22,6 +22,7 @@ import java.nio.file.Paths;
 import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -176,14 +177,14 @@ public class DiskSpillingAbstractTest extends GridCommonAbstractTest {
 
             List<List<?>> inMemRes = runSql(sql, lazy, HUGE_MEM_LIMIT);
 
-            assertFalse(inMemRes.isEmpty());
+            assertFalse("In-memory result is empty.", inMemRes.isEmpty());
 
             assertWorkDirClean();
 
             List<WatchEvent<?>> dirEvts = watchKey.pollEvents();
 
             // No files should be created for in-memory mode.
-            assertTrue("Evts:" + dirEvts.stream().map(e ->
+            assertTrue("Disk events is not empty for in-memory query: :" + dirEvts.stream().map(e ->
                 e.kind().toString()).collect(Collectors.joining(", ")), dirEvts.isEmpty());
 
             // On disk.
@@ -196,14 +197,14 @@ public class DiskSpillingAbstractTest extends GridCommonAbstractTest {
 
             List<List<?>> onDiskRes = runSql(sql, lazy, SMALL_MEM_LIMIT);
 
-            assertFalse(onDiskRes.isEmpty());
+            assertFalse("On disk result is empty.", onDiskRes.isEmpty());
 
             long finish = System.currentTimeMillis();
 
             dirEvts = watchKey.pollEvents();
 
             // Check files have been created but deleted later.
-            assertFalse(dirEvts.isEmpty());
+            assertFalse("Disk events is empty for on-disk query. ", dirEvts.isEmpty());
 
             assertWorkDirClean();
 
@@ -360,6 +361,7 @@ public class DiskSpillingAbstractTest extends GridCommonAbstractTest {
         Path workDir = getWorkDir();
 
         assertTrue(workDir.toFile().isDirectory());
-        assertEquals(0, workDir.toFile().list().length);
+        assertEquals("Files are not deleted: " + Arrays.toString(workDir.toFile().list()),  0,
+            workDir.toFile().list().length);
     }
 }
