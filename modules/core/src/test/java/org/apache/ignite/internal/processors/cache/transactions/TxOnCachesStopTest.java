@@ -23,6 +23,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import javax.cache.CacheException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -497,8 +498,10 @@ public class TxOnCachesStopTest extends GridCommonAbstractTest {
                         tx.commit();
                     }
                     // Expected exceptions:
-                    catch (TransactionRollbackException e) {
+                    catch (TransactionRollbackException | CacheException e) {
                         // Failed to prepare the transaction (transaction is marked as rolled back).
+                        if (!X.hasCause(e, TransactionRollbackException.class))
+                            throw e;
                     }
                     catch (IgniteException | IllegalStateException  e) {
                         // Failed to perform cache operation (cache is stopped).

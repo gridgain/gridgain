@@ -328,32 +328,30 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     }
 
     /**
-     * @param cachesToStop Caches to stop.
+     * @param cacheToStop Cache to stop.
      */
-    public void rollbackTransactionsForCaches(Set<Integer> cachesToStop) {
-        if (!cachesToStop.isEmpty()) {
-            Collection<IgniteInternalTx> active = activeTransactions();
+    public void rollbackTransactionsForStoppingCache(int cacheToStop) {
+        GridCompoundFuture<IgniteInternalTx, IgniteInternalTx> compFut = new GridCompoundFuture<>();
 
-            GridCompoundFuture<IgniteInternalTx, IgniteInternalTx> compFut = new GridCompoundFuture<>();
+        Collection<IgniteInternalTx> active = activeTransactions();
 
-            for (IgniteInternalTx tx : active) {
-                for (IgniteTxEntry e : tx.allEntries()) {
-                    if (cachesToStop.contains(e.context().cacheId())) {
-                        compFut.add(failTxOnPreparing(tx));
+        for (IgniteInternalTx tx : active) {
+            for (IgniteTxEntry e : tx.allEntries()) {
+                if (e.context().cacheId() == cacheToStop) {
+                    compFut.add(failTxOnPreparing(tx));
 
-                        break;
-                    }
+                    break;
                 }
             }
+        }
 
-            compFut.markInitialized();
+        compFut.markInitialized();
 
-            try {
-                compFut.get();
-            }
-            catch (IgniteCheckedException e) {
-                U.error(log, "Error occurred during tx rollback.", e);
-            }
+        try {
+            compFut.get();
+        }
+        catch (IgniteCheckedException e) {
+            U.error(log, "Error occurred during tx rollback.", e);
         }
     }
 
