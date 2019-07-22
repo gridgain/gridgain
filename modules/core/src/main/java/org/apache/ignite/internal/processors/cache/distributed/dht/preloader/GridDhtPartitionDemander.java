@@ -1671,8 +1671,8 @@ public class GridDhtPartitionDemander {
             StringJoiner joiner = new StringJoiner(" ")
                 .add(totalRebalanceStatistics(rebFuts, nodeAliases))
                 .add(cacheGroupsRebalanceStatistics(rebFuts, nodeAliases))
-                .add(partitionsDistributionRebalanceStatistics(rebFuts, nodeAliases, nodeCnt))
-                .add(aliasesRebalanceStatistics(nodeAliases));
+                .add(aliasesRebalanceStatistics("p - partitions, e - entries, b - bytes, d - duration", nodeAliases))
+                .add(partitionsDistributionRebalanceStatistics(rebFuts, nodeAliases, nodeCnt));
 
             log.info(joiner.toString());
         }
@@ -1825,8 +1825,8 @@ public class GridDhtPartitionDemander {
                         .peek(node -> nodeAliases.computeIfAbsent(node, node1 -> nodeCnt.getAndIncrement()))
                         .sorted(comparing(nodeAliases::get))
                         .map(node -> { return "[" + nodeAliases.get(node) +
-                            (primaryParts.get(node).contains(partId) ? ",p" : ",b") +
-                            (node.equals(supplierNode) ? ",s" : "") + "]";
+                            (primaryParts.get(node).contains(partId) ? ",pr" : ",bu") +
+                            (node.equals(supplierNode) ? ",su" : "") + "]";
                         })
                         .collect(joining(","));
 
@@ -1834,6 +1834,8 @@ public class GridDhtPartitionDemander {
                 });
 
         });
+
+        joiner.add(aliasesRebalanceStatistics("pr - primary, bu - backup, su - supplier node", nodeAliases));
 
         return joiner.toString();
     }
@@ -1924,12 +1926,17 @@ public class GridDhtPartitionDemander {
     }
 
     /**
-     * Statistics aliases, for reducing output string
+     * Statistics aliases, for reducing output string.
      *
      * @param nodeAliases for print nodeId=1 instead long string
+     * @param abbreviations abbreviations ex. b - bytes
      * @return aliases
      */
-    private String aliasesRebalanceStatistics(final Map<ClusterNode, Integer> nodeAliases) {
+    private String aliasesRebalanceStatistics(
+        final String abbreviations,
+        final Map<ClusterNode, Integer> nodeAliases
+    ) {
+        assert nonNull(abbreviations);
         assert nonNull(nodeAliases);
 
         String nodes = nodeAliases.entrySet().stream()
@@ -1937,8 +1944,6 @@ public class GridDhtPartitionDemander {
             .map(entry -> format("[%s=%s,%s]", entry.getValue(), entry.getKey().id(), entry.getKey().consistentId()))
             .collect(joining(", "));
 
-        return "Aliases: " +
-            "p - partitions, e - entries, b - bytes, d - duration, " +
-            "nodeId mapping (nodeId=id,consistentId) " + nodes;
+        return "Aliases: " + abbreviations + ", nodeId mapping (nodeId=id,consistentId) " + nodes;
     }
 }
