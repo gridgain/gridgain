@@ -23,11 +23,7 @@ import java.lang.management.MemoryUsage;
 import java.lang.management.OperatingSystemMXBean;
 import java.lang.management.RuntimeMXBean;
 import java.lang.management.ThreadMXBean;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionHandler;
@@ -39,7 +35,12 @@ import java.util.function.IntSupplier;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.GridTopic;
 import org.apache.ignite.internal.managers.GridManagerAdapter;
+import org.apache.ignite.internal.managers.communication.GridMessageListener;
+import org.apache.ignite.internal.processors.metric.export.MetricExporter;
+import org.apache.ignite.internal.processors.metric.export.MetricRequest;
+import org.apache.ignite.internal.processors.metric.export.MetricResponse;
 import org.apache.ignite.internal.processors.metric.impl.DoubleMetricImpl;
 import org.apache.ignite.internal.processors.metric.impl.LongMetricImpl;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
@@ -53,6 +54,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static org.apache.ignite.internal.GridTopic.TOPIC_METRICS;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_PHY_RAM;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
 
@@ -152,7 +154,8 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
     private static final Collection<GarbageCollectorMXBean> gc = ManagementFactory.getGarbageCollectorMXBeans();
 
     /** Registered metrics registries. */
-    private final ConcurrentHashMap<String, MetricRegistry> registries = new ConcurrentHashMap<>();
+    //TODO: Replace synchronizedMap by copy on write collection
+    private final Map<String, MetricRegistry> registries = Collections.synchronizedMap(new TreeMap<>());
 
     /** Metric registry creation listeners. */
     private final List<Consumer<MetricRegistry>> metricRegCreationLsnrs = new CopyOnWriteArrayList<>();
@@ -171,6 +174,8 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
 
     /** Nonheap memory metrics. */
     private final MemoryUsageMetrics nonHeap;
+
+    private final MetricExporter exporter = new MetricExporter();
 
     /**
      * @param ctx Kernal context.
@@ -212,6 +217,26 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
             spi.setMetricRegistry(this);
 
         startSpi();
+
+        ctx.io().addMessageListener(TOPIC_METRICS, new GridMessageListener() {
+            @Override public void onMessage(UUID nodeId, Object msg, byte plc) {
+                if (msg instanceof MetricRequest) {
+                    int schemaVer = ((MetricRequest) msg).schemaVersion();
+
+                    if (schemaVer == -1) {
+                        MetricResponse res = exporter.export(ctx);
+
+                        try {
+                            ctx.io().sendToGridTopic(nodeId, TOPIC_METRICS, res, plc);
+                        }
+                        catch (IgniteCheckedException e) {
+                            log.error("Error during sending message [topic" + TOPIC_METRICS +
+                                    ", dstNodeId=" + nodeId + ", msg=" + msg + ']');
+                        }
+                    }
+                }
+            }
+        });
     }
 
     /** {@inheritDoc} */
@@ -236,6 +261,10 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
 
             return mreg;
         });
+    }
+
+    public Map<String, MetricRegistry> registries() {
+        return registries;
     }
 
     /** {@inheritDoc} */
