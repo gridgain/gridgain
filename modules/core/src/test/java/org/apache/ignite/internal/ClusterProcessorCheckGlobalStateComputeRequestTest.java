@@ -36,7 +36,8 @@ public class ClusterProcessorCheckGlobalStateComputeRequestTest extends GridComm
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
-        if(igniteInstanceName.equalsIgnoreCase("daemon")) cfg.setDaemon(true);
+        if(igniteInstanceName.equalsIgnoreCase("daemon"))
+            cfg.setDaemon(true);
 
         return cfg;
     }
@@ -47,16 +48,17 @@ public class ClusterProcessorCheckGlobalStateComputeRequestTest extends GridComm
      */
     @Test
     public void testCheckGlobalStateComputeRequest() throws Exception {
-
         startGrids(1);
         IgniteEx daemon = startGrid("daemon");
 
         //the GridInternal annotation will cause the job and response message to execute on management pool.
-        for(int i = 0; i < 100; i++) daemon.cluster().active();
-        checkBeanForAGrid(daemon,"Thread Pools", "GridManagementExecutor", "TaskCount", 100L);
+        for(int i = 0; i < 100; i++)
+            daemon.cluster().active();
+        checkBeanForAGrid(daemon, "Thread Pools", "GridManagementExecutor", "TaskCount", 100L);
 
-        for(int i = 0; i < 100; i++) grid(0).cluster().active();
-        checkBeanForAGrid(grid(0),"Thread Pools", "GridManagementExecutor", "TaskCount", 100L);
+        for(int i = 0; i < 100; i++)
+            grid(0).cluster().active();
+        checkBeanForAGrid(grid(0), "Thread Pools", "GridManagementExecutor", "TaskCount", 100L);
     }
 
 
