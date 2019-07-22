@@ -27,6 +27,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
@@ -506,7 +507,8 @@ public class CacheBaselineTopologyTest extends GridCommonAbstractTest {
 
         Set<ClusterNode> blt2 = new HashSet<>(ignite.cluster().nodes());
 
-        ignite.cluster().setBaselineTopology(baselineNodes(blt2));
+        ignite.cluster().setBaselineTopology(baselineNodes(
+            blt2.stream().filter(n -> ! n.isClient()).collect(Collectors.toSet())));
 
         awaitPartitionMapExchange();
 
@@ -527,7 +529,8 @@ public class CacheBaselineTopologyTest extends GridCommonAbstractTest {
 
         Set<ClusterNode> blt3 = new HashSet<>(ignite.cluster().nodes());
 
-        ignite.cluster().setBaselineTopology(baselineNodes(blt3));
+        ignite.cluster().setBaselineTopology(baselineNodes(
+            blt3.stream().filter(n -> ! n.isClient()).collect(Collectors.toSet())));
 
         awaitPartitionMapExchange();
 
