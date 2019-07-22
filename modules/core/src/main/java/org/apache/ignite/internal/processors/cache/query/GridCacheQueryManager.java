@@ -680,6 +680,8 @@ public class GridCacheQueryManager<K, V> extends GridCacheManagerAdapter<K, V> {
 
             res.data(data);
             res.finished(finished);
+
+            sendQueryResponse(qryInfo.senderId(), res, qryInfo.query().timeout());
         }
     }
 
@@ -722,6 +724,8 @@ public class GridCacheQueryManager<K, V> extends GridCacheManagerAdapter<K, V> {
 
             res.metadata(metadata);
             res.data(entities != null ? entities : data);
+
+            sendQueryResponse(qryInfo.senderId(), res, qryInfo.query().timeout());
         }
     }
 
