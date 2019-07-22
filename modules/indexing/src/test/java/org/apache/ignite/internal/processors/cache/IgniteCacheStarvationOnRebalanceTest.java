@@ -84,7 +84,7 @@ public class IgniteCacheStarvationOnRebalanceTest extends GridCacheAbstractSelfT
     public void testLoadSystemWithPutAndStartRebalancing() throws Exception {
         final IgniteCache<Integer, CacheValue> cache = grid(0).cache(DEFAULT_CACHE_NAME);
 
-        final long endTime = System.currentTimeMillis() + SF.applyUB(60_000, (int)getTestTimeout() - 60_000);
+        final long endTime = System.currentTimeMillis() + SF.applyLB((int)getTestTimeout() - 60_000, 5_000);
 
         int iter = 0;
 

@@ -367,6 +367,14 @@ public class CacheLoadingConcurrentGridStartSelfTest extends GridCommonAbstractT
         assertCacheSize(insertedKeys);
     }
 
+
+    /**
+     * Scalable count of keys.
+     */
+    private int getKeysCnt() {
+       return GridTestUtils.SF.applyUB(10_000, KEYS_CNT);
+    }
+
     /**
      * Loads cache using closure and asserts cache size.
      *

@@ -2134,7 +2134,7 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
 
         final AtomicInteger nodeIdx = new AtomicInteger();
 
-        final long stopTime = System.currentTimeMillis() + GridTestUtils.SF.applyLB(60_000, 40_000);
+        final long stopTime = System.currentTimeMillis() + GridTestUtils.SF.apply(60_000);
 
         IgniteInternalFuture<?> updateFut = GridTestUtils.runMultiThreadedAsync(new Callable<Void>() {
             @Override public Void call() throws Exception {

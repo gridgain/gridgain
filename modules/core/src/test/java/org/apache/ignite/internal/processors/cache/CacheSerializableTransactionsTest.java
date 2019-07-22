@@ -3570,7 +3570,7 @@ public class CacheSerializableTransactionsTest extends GridCommonAbstractTest {
     public void testRandomOperations() throws Exception {
         Ignite ignite0 = ignite(0);
 
-        long stopTime = U.currentTimeMillis() + SF.applyUB(60_000, (int) getTestTimeout() - 30_000);
+        long stopTime = U.currentTimeMillis() + SF.apply((int) getTestTimeout() - 30_000);
 
         for (CacheConfiguration<Integer, Integer> ccfg : cacheConfigurations()) {
             logCacheInfo(ccfg);
@@ -3732,7 +3732,7 @@ public class CacheSerializableTransactionsTest extends GridCommonAbstractTest {
 
             IgniteInternalFuture<?> restartFut = restart ? restartFuture(stop, null) : null;
 
-            final long stopTime = U.currentTimeMillis() + SF.applyUB(60_000, (int) getTestTimeout() - 30_000);
+            final long stopTime = U.currentTimeMillis() + SF.apply((int) getTestTimeout() - 30_000);
 
             for (int i = 0; i < SF.apply(30); i++) {
                 final AtomicInteger cntr = new AtomicInteger();
@@ -3959,7 +3959,7 @@ public class CacheSerializableTransactionsTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     private void getRemoveTx(boolean nearCache, boolean store) throws Exception {
-        long stopTime = U.currentTimeMillis() + SF.applyUB(60_000, (int) getTestTimeout() - 30_000);
+        long stopTime = U.currentTimeMillis() + SF.apply((int) getTestTimeout() - 30_000);
 
         final Ignite ignite0 = ignite(0);
 
