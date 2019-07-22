@@ -351,22 +351,22 @@ public class GridAffinityAssignmentCache {
             if (hasBaseline && changedBaseline) {
                 recalculateBaselineAssignment(topVer, events, prevAssignment, sorted, blt);
 
-                assignment = IdealAffinityAssignment.createWithPreservedPrimaries(
+                assignment = IdealAffinityAssignment.create(
                     topVer,
-                    baselineAssignmentWithoutOfflineNodes(topVer),
-                    baselineAssignment
+                    sorted,
+                    baselineAssignmentWithoutOfflineNodes(topVer)
                 );
             }
             else if (skipCalculation)
                 assignment = prevAssignment;
-            else if (hasBaseline && !changedBaseline) {
+            else if (hasBaseline) {
                 if (baselineAssignment == null)
                     recalculateBaselineAssignment(topVer, events, prevAssignment, sorted, blt);
 
-                assignment = IdealAffinityAssignment.createWithPreservedPrimaries(
+                assignment = IdealAffinityAssignment.create(
                     topVer,
-                    baselineAssignmentWithoutOfflineNodes(topVer),
-                    baselineAssignment
+                    sorted,
+                    baselineAssignmentWithoutOfflineNodes(topVer)
                 );
             }
             else {
@@ -519,7 +519,7 @@ public class GridAffinityAssignmentCache {
         float deltaPrimary = Math.abs(1 - (float)locPrimaryCnt / expCnt) * 100;
         float deltaBackup = Math.abs(1 - (float)locBackupCnt / (expCnt * backups)) * 100;
 
-        if (deltaPrimary > partDistribution || deltaBackup > partDistribution) {
+        if ((deltaPrimary > partDistribution || deltaBackup > partDistribution) && log.isInfoEnabled()) {
             log.info(String.format("Local node affinity assignment distribution is not ideal " +
                     "[cache=%s, expectedPrimary=%.2f, actualPrimary=%d, " +
                     "expectedBackups=%.2f, actualBackups=%d, warningThreshold=%.2f%%]",

@@ -42,7 +42,6 @@ import org.apache.ignite.spi.eventstorage.memory.MemoryEventStorageSpi;
  * <li>{@link #EVTS_DISCOVERY}</li>
  * <li>{@link #EVTS_DISCOVERY_ALL}</li>
  * <li>{@link #EVTS_ERROR}</li>
- * <li>{@link #EVTS_IGFS}</li>
  * <li>{@link #EVTS_JOB_EXECUTION}</li>
  * <li>{@link #EVTS_TASK_EXECUTION}</li>
  * </ul>
@@ -654,150 +653,6 @@ public interface EventType {
     public static final int EVT_CACHE_NODES_LEFT = 100;
 
     /**
-     * Built-in event type: IGFS file created.
-     * <p>
-     * Fired when IGFS component creates new file.
-     * <p>
-     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
-     * internal Ignite events and should not be used by user-defined events.
-     *
-     * @see IgfsEvent
-     */
-    public static final int EVT_IGFS_FILE_CREATED = 116;
-
-    /**
-     * Built-in event type: IGFS file renamed.
-     * <p>
-     * Fired when IGFS component renames an existing file.
-     * <p>
-     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
-     * internal Ignite events and should not be used by user-defined events.
-     *
-     * @see IgfsEvent
-     */
-    public static final int EVT_IGFS_FILE_RENAMED = 117;
-
-    /**
-     * Built-in event type: IGFS file deleted.
-     * <p>
-     * Fired when IGFS component deletes a file.
-     * <p>
-     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
-     * internal Ignite events and should not be used by user-defined events.
-     *
-     * @see IgfsEvent
-     */
-    public static final int EVT_IGFS_FILE_DELETED = 118;
-
-    /**
-     * Built-in event type: IGFS file opened for reading.
-     * <p>
-     * Fired when IGFS file is opened for reading.
-     * <p>
-     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
-     * internal Ignite events and should not be used by user-defined events.
-     *
-     * @see IgfsEvent
-     */
-    public static final int EVT_IGFS_FILE_OPENED_READ = 119;
-
-    /**
-     * Built-in event type: IGFS file opened for writing.
-     * <p>
-     * Fired when IGFS file is opened for writing.
-     * <p>
-     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
-     * internal Ignite events and should not be used by user-defined events.
-     *
-     * @see IgfsEvent
-     */
-    public static final int EVT_IGFS_FILE_OPENED_WRITE = 120;
-
-    /**
-     * Built-in event type: IGFS file or directory metadata updated.
-     * <p>
-     * Fired when IGFS file or directory metadata is updated.
-     * <p>
-     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
-     * internal Ignite events and should not be used by user-defined events.
-     *
-     * @see IgfsEvent
-     */
-    public static final int EVT_IGFS_META_UPDATED = 121;
-
-    /**
-     * Built-in event type: IGFS file closed.
-     * <p>
-     * Fired when IGFS file is closed.
-     * <p>
-     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
-     * internal Ignite events and should not be used by user-defined events.
-     *
-     * @see IgfsEvent
-     */
-    public static final int EVT_IGFS_FILE_CLOSED_WRITE = 122;
-
-    /**
-     * Built-in event type: IGFS file closed.
-     * <p>
-     * Fired when IGFS file is closed.
-     * <p>
-     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
-     * internal Ignite events and should not be used by user-defined events.
-     *
-     * @see IgfsEvent
-     */
-    public static final int EVT_IGFS_FILE_CLOSED_READ = 123;
-
-    /**
-     * Built-in event type: IGFS directory created.
-     * <p>
-     * Fired when IGFS component creates new directory.
-     * <p>
-     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
-     * internal Ignite events and should not be used by user-defined events.
-     *
-     * @see IgfsEvent
-     */
-    public static final int EVT_IGFS_DIR_CREATED = 124;
-
-    /**
-     * Built-in event type: IGFS directory renamed.
-     * <p>
-     * Fired when IGFS component renames an existing directory.
-     * <p>
-     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
-     * internal Ignite events and should not be used by user-defined events.
-     *
-     * @see IgfsEvent
-     */
-    public static final int EVT_IGFS_DIR_RENAMED = 125;
-
-    /**
-     * Built-in event type: IGFS directory deleted.
-     * <p>
-     * Fired when IGFS component deletes a directory.
-     * <p>
-     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
-     * internal Ignite events and should not be used by user-defined events.
-     *
-     * @see IgfsEvent
-     */
-    public static final int EVT_IGFS_DIR_DELETED = 126;
-
-    /**
-     * Built-in event type: IGFS file purged.
-     * <p>
-     * Fired when IGFS file data was actually removed from cache.
-     * <p>
-     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
-     * internal Ignite events and should not be used by user-defined events.
-     *
-     * @see IgfsEvent
-     */
-    public static final int EVT_IGFS_FILE_PURGED = 127;
-
-    /**
      * Built-in event type: WAL segment movement to archive folder completed
      * <p>
      * Fired for each completed WAL segment which was moved to archive
@@ -905,6 +760,24 @@ public interface EventType {
      * @see ClusterActivationEvent
      */
     public static final int EVT_CLUSTER_DEACTIVATED = 141;
+
+    /**
+     * Built-in event type: page replacement started in one of the data regions. The name of the data region will
+     * be indicated in the event.
+     * <p>
+     * Fired whan all existing free pages are exhausted and Ignite replaces one of the loaded pages with a
+     * cold page from disk.
+     * <p>
+     * When started, page replacement negatively affects performance; it is recommended to monitor page replacement
+     * metrics and set data region size accordingly.
+     * <p>
+     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
+     * internal Ignite events and should not be used by user-defined events.
+     *
+     * @see org.apache.ignite.configuration.DataRegionConfiguration#setMaxSize(long)
+     * @see PageReplacementStartEvent
+     */
+    public static final int EVT_PAGE_REPLACEMENT_STARTED = 142;
 
     /**
      * All checkpoint events. This array can be directly passed into
@@ -1082,28 +955,6 @@ public interface EventType {
     public static final int[] EVTS_CACHE_QUERY = {
         EVT_CACHE_QUERY_EXECUTED,
         EVT_CACHE_QUERY_OBJECT_READ
-    };
-
-    /**
-     * All Igfs events. This array can be directly passed into
-     * {@link IgniteEvents#localListen(IgnitePredicate, int...)} method to
-     * subscribe to all cloud events.
-     *
-     * @see IgfsEvent
-     */
-    public static final int[] EVTS_IGFS = {
-        EVT_IGFS_FILE_CREATED,
-        EVT_IGFS_FILE_RENAMED,
-        EVT_IGFS_FILE_DELETED,
-        EVT_IGFS_FILE_OPENED_READ,
-        EVT_IGFS_FILE_OPENED_WRITE,
-        EVT_IGFS_FILE_CLOSED_WRITE,
-        EVT_IGFS_FILE_CLOSED_READ,
-        EVT_IGFS_FILE_PURGED,
-        EVT_IGFS_META_UPDATED,
-        EVT_IGFS_DIR_CREATED,
-        EVT_IGFS_DIR_RENAMED,
-        EVT_IGFS_DIR_DELETED,
     };
 
     /**

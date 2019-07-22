@@ -35,7 +35,6 @@ namespace Apache.Ignite.Core.Tests.ApiParity
         private static readonly string[] UnneededProperties =
         {
             "PeerClassLoadingThreadPoolSize",
-            "IgfsThreadPoolSize",
             "UtilityCacheKeepAliveTime",
             "MBeanServer",
             "isPeerClassLoadingEnabled",
@@ -71,6 +70,10 @@ namespace Apache.Ignite.Core.Tests.ApiParity
         private static readonly string[] MissingProperties =
         {
             "RebalanceThreadPoolSize",
+            "RebalanceTimeout",
+            "RebalanceBatchesPrefetchCount",
+            "RebalanceThrottle",
+            "RebalanceBatchSize",
             "SegmentationPolicy",
             "isWaitForSegmentOnStart",
             "isAllSegmentationResolversPassRequired",

@@ -21,6 +21,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.logging.Logger;
 import org.apache.ignite.ssl.SslContextFactory;
 
 import static org.apache.ignite.internal.client.GridClientConfiguration.DFLT_PING_INTERVAL;
@@ -36,7 +37,7 @@ import static org.apache.ignite.ssl.SslContextFactory.DFLT_SSL_PROTOCOL;
  */
 public class CommonArgParser {
     /** */
-    private final CommandLogger logger;
+    private final Logger logger;
 
     /** */
     static final String CMD_HOST = "--host";
@@ -91,6 +92,9 @@ public class CommonArgParser {
     /** List of optional auxiliary commands. */
     private static final Set<String> AUX_COMMANDS = new HashSet<>();
 
+    /** Set of sensitive arguments */
+    private static final Set<String> SENSITIVE_ARGUMENTS = new HashSet<>();
+
     static {
         AUX_COMMANDS.add(CMD_HOST);
         AUX_COMMANDS.add(CMD_PORT);
@@ -114,12 +118,25 @@ public class CommonArgParser {
         AUX_COMMANDS.add(CMD_TRUSTSTORE);
         AUX_COMMANDS.add(CMD_TRUSTSTORE_PASSWORD);
         AUX_COMMANDS.add(CMD_TRUSTSTORE_TYPE);
+
+        SENSITIVE_ARGUMENTS.add(CMD_PASSWORD);
+        SENSITIVE_ARGUMENTS.add(CMD_KEYSTORE_PASSWORD);
+        SENSITIVE_ARGUMENTS.add(CMD_TRUSTSTORE_PASSWORD);
     }
+
+    /**
+     * @param arg To check.
+     * @return True if provided argument is among sensitive one and not should be displayed.
+     */
+    public static boolean isSensitiveArgument(String arg) {
+        return SENSITIVE_ARGUMENTS.contains(arg);
+    }
+
 
     /**
      * @param logger Logger.
      */
-    public CommonArgParser(CommandLogger logger) {
+    public CommonArgParser(Logger logger) {
         this.logger = logger;
     }
 
@@ -249,7 +266,7 @@ public class CommonArgParser {
                     case CMD_PASSWORD:
                         pwd = argIter.nextArg("Expected password");
 
-                        logger.log(securityWarningMessage(CMD_PASSWORD));
+                        logger.info(securityWarningMessage(CMD_PASSWORD));
 
                         break;
 
@@ -276,7 +293,7 @@ public class CommonArgParser {
                     case CMD_KEYSTORE_PASSWORD:
                         sslKeyStorePassword = argIter.nextArg("Expected SSL key store password").toCharArray();
 
-                        logger.log(securityWarningMessage(CMD_KEYSTORE_PASSWORD));
+                        logger.info(securityWarningMessage(CMD_KEYSTORE_PASSWORD));
 
                         break;
 
@@ -293,7 +310,7 @@ public class CommonArgParser {
                     case CMD_TRUSTSTORE_PASSWORD:
                         sslTrustStorePassword = argIter.nextArg("Expected SSL trust store password").toCharArray();
 
-                        logger.log(securityWarningMessage(CMD_TRUSTSTORE_PASSWORD));
+                        logger.info(securityWarningMessage(CMD_TRUSTSTORE_PASSWORD));
 
                         break;
 

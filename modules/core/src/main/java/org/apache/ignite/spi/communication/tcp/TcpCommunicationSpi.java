@@ -66,6 +66,7 @@ import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.IgniteClientDisconnectedCheckedException;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFeatures;
+import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.IgniteKernal;
@@ -427,7 +428,9 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
                             ", rmtAddr=" + ses.remoteAddress() + ']');
 
                     try {
-                        if (ctxInitLatch.getCount() == 0 || !isHandshakeWaitSupported()) {
+                        boolean client = Boolean.TRUE.equals(ignite().configuration().isClientMode());
+
+                        if (client || ctxInitLatch.getCount() == 0 || !isHandshakeWaitSupported()) {
                             if (log.isDebugEnabled())
                                 log.debug("Sending local node ID to newly accepted session: " + ses);
 
@@ -2957,7 +2960,34 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
                 else
                     fut = oldFut;
 
-                client = fut.get();
+                WorkersRegistry registry = getWorkersRegistry(ignite);
+
+                long clientReserveWaitTimeout = registry != null ? registry.getSystemWorkerBlockedTimeout() / 3
+                    : connTimeout / 3;
+
+                long currTimeout = System.currentTimeMillis();
+
+                // This cycle will eventually quit when future is completed by concurrent thread reserving client.
+                while (true) {
+                    try {
+                        client = fut.get(clientReserveWaitTimeout, TimeUnit.MILLISECONDS);
+
+                        break;
+                    }
+                    catch (IgniteFutureTimeoutCheckedException ignored) {
+                        currTimeout += clientReserveWaitTimeout;
+
+                        if (log.isDebugEnabled())
+                            log.debug("Still waiting for reestablishing connection to node [nodeId=" + node.id() + ", waitingTime=" + currTimeout + "ms]");
+
+                        if (registry != null) {
+                            GridWorker wrkr = registry.worker(Thread.currentThread().getName());
+
+                            if (wrkr != null)
+                                wrkr.updateHeartbeat();
+                        }
+                    }
+                }
 
                 if (client == null) {
                     if (isLocalNodeDisconnected())
@@ -3031,14 +3061,11 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
             }
         }
 
-        connectGate.enter();
+        final long start = System.currentTimeMillis();
 
-        try {
-            final long start = System.currentTimeMillis();
+        GridCommunicationClient client = createTcpClient(node, connIdx);
 
-            GridCommunicationClient client = createTcpClient(node, connIdx);
-
-            final long time = System.currentTimeMillis() - start;
+        final long time = System.currentTimeMillis() - start;
 
             if (time > CONNECTION_ESTABLISH_THRESHOLD_MS) {
                 if (log.isInfoEnabled())
@@ -3047,11 +3074,7 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
             else if (log.isDebugEnabled())
                 log.debug("TCP client created [client=" + clientString(client, node) + ", duration=" + time + "ms]");
 
-            return client;
-        }
-        finally {
-            connectGate.leave();
-        }
+        return client;
     }
 
     /**
@@ -3374,6 +3397,8 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
 
                 long timeout = 0;
 
+                connectGate.enter();
+
                 try {
                     if (getSpiContext().node(node.id()) == null)
                         throw new ClusterTopologyCheckedException("Failed to send message (node left topology): " + node);
@@ -3593,6 +3618,9 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
 
                         break;
                     }
+                }
+                finally {
+                    connectGate.leave();
                 }
 
                 CommunicationWorker commWorker0 = commWorker;
@@ -4096,7 +4124,10 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
      * @return Node ID message.
      */
     private NodeIdMessage nodeIdMessage() {
-        return new NodeIdMessage(safeLocalNodeId());
+        final UUID locNodeId = (ignite instanceof IgniteEx) ? ((IgniteEx)ignite).context().localNodeId() :
+            safeLocalNodeId();
+
+        return new NodeIdMessage(locNodeId);
     }
 
     /**
@@ -4139,7 +4170,10 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
         else {
             Collection<ClusterNode> nodes = discoSpi.getRemoteNodes();
 
-            return IgniteFeatures.allNodesSupports(nodes, IgniteFeatures.TCP_COMMUNICATION_SPI_HANDSHAKE_WAIT_MESSAGE);
+            return IgniteFeatures.allNodesSupports(
+                (ignite instanceof IgniteEx)? ((IgniteEx)ignite).context() : null,
+                nodes,
+                IgniteFeatures.TCP_COMMUNICATION_SPI_HANDSHAKE_WAIT_MESSAGE);
         }
     }
 

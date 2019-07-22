@@ -68,7 +68,7 @@ public class Step_5_Scaling {
                     .fit(ignite,
                         dataCache,
                         vectorizer
-                );
+                    );
 
                 Preprocessor<Integer, Vector> imputingPreprocessor = new ImputerTrainer<Integer, Vector>()
                     .fit(ignite,
@@ -117,6 +117,8 @@ public class Step_5_Scaling {
             catch (FileNotFoundException e) {
                 e.printStackTrace();
             }
+        } finally {
+            System.out.flush();
         }
     }
 }

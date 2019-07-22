@@ -28,10 +28,10 @@ import org.h2.value.ValueRow;
  */
 public class H2ManagedLocalResult extends H2BaseLocalResult {
     /** Query memory tracker. */
-    private QueryMemoryTracker mem;
+    private H2MemoryTracker mem;
 
-    /** Allocated memory. */
-    private long allocMem;
+    /** Reserved memory. */
+    private long memReserved;
 
     /**
      * Constructor.
@@ -41,7 +41,7 @@ public class H2ManagedLocalResult extends H2BaseLocalResult {
      * @param expressions the expression array
      * @param visibleColCnt the number of visible columns
      */
-    public H2ManagedLocalResult(Session ses, QueryMemoryTracker memTracker, Expression[] expressions,
+    public H2ManagedLocalResult(Session ses, H2MemoryTracker memTracker, Expression[] expressions,
         int visibleColCnt) {
         super(ses, expressions, visibleColCnt);
 
@@ -51,43 +51,63 @@ public class H2ManagedLocalResult extends H2BaseLocalResult {
     /** {@inheritDoc} */
     @Override protected void onUpdate(ValueRow distinctRowKey, Value[] oldRow, Value[] row) {
         assert !isClosed();
+        assert row != null;
 
+        long memory;
+
+        // Replace old row.
         if (oldRow != null) {
-            long rowSize = Constants.MEMORY_ARRAY + oldRow.length * Constants.MEMORY_POINTER;
+            memory = (row.length - oldRow.length) * Constants.MEMORY_POINTER;
 
             for (int i = 0; i < oldRow.length; i++)
-                rowSize += oldRow[i].getMemory();
+                memory -= oldRow[i].getMemory();
+        }
+        // Add new row.
+        else {
+            memory = Constants.MEMORY_ARRAY + row.length * Constants.MEMORY_POINTER;
 
-            allocMem -= rowSize;
-
-            mem.free(rowSize);
+            if (distinctRowKey != null)
+                memory += distinctRowKey.getMemory();
         }
 
-        long rowSize = Constants.MEMORY_ARRAY + row.length * Constants.MEMORY_POINTER;
-
-        if (distinctRowKey != null)
-            rowSize += distinctRowKey.getMemory();
-
         for (int i = 0; i < row.length; i++)
-            rowSize += row[i].getMemory();
+            memory += row[i].getMemory();
 
-        allocMem += rowSize;
+        if (memory < 0)
+            mem.release(memory);
+        else
+            mem.reserve(memory);
 
-        mem.allocate(rowSize);
+        memReserved += memory;
     }
 
     /** */
-    public long memoryAllocated() {
-        return allocMem;
+    public long memoryReserved() {
+        return memReserved;
     }
 
     /** {@inheritDoc} */
     @Override public void close() {
-        boolean closed = isClosed();
+        if (!isClosed()) {
+            super.close();
 
-        super.close();
+            onClose();
+        }
+    }
 
-        if (!closed)
-            mem.free(allocMem);
+    /**
+     * @return Query memory tracker.
+     */
+    public H2MemoryTracker getMemoryTracker() {
+        return mem;
+    }
+
+    /** Close event handler. */
+    protected void onClose() {
+        // Allow results to be collected by GC before mark memory released.
+        distinctRows = null;
+        rows = null;
+
+        mem.release(memReserved);
     }
 }

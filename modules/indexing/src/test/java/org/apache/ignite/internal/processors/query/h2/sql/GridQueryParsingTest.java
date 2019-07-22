@@ -46,6 +46,7 @@ import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
+import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -1039,7 +1040,14 @@ public class GridQueryParsingTest extends AbstractIndexingCommonTest {
     private <T extends Prepared> T parse(String sql) throws Exception {
         Session ses = (Session)connection().getSession();
 
-        return (T)ses.prepare(sql);
+        ses.setQueryContext(QueryContext.parseContext(null, true));
+
+        try {
+            return (T)ses.prepare(sql);
+        }
+        finally {
+            ses.setQueryContext(null);
+        }
     }
 
     /**

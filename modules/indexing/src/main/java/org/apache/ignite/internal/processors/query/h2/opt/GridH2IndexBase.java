@@ -21,8 +21,9 @@ import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
-import org.apache.ignite.internal.processors.query.h2.opt.join.CollocationModelMultiplier;
 import org.apache.ignite.internal.processors.query.h2.opt.join.CollocationModel;
+import org.apache.ignite.internal.processors.query.h2.opt.join.CollocationModelMultiplier;
+import org.apache.ignite.spi.indexing.IndexingQueryCacheFilter;
 import org.h2.engine.Session;
 import org.h2.index.BaseIndex;
 import org.h2.index.IndexType;
@@ -67,13 +68,12 @@ public abstract class GridH2IndexBase extends BaseIndex {
     }
 
     /**
+     * @param qctx Query context.
      * @return Index segment ID for current query context.
      */
-    protected int threadLocalSegment() {
+    protected int segment(QueryContext qctx) {
         if(segmentsCount() == 1)
             return 0;
-
-        QueryContext qctx = queryContextRegistry().getThreadLocal();
 
         if(qctx == null)
             throw new IllegalStateException("GridH2QueryContext is not initialized.");
@@ -245,4 +245,16 @@ public abstract class GridH2IndexBase extends BaseIndex {
 
         return cols;
     }
+
+
+    /** {@inheritDoc} */
+    @Override public long getRowCountApproximation(Session ses) {
+        return table.getRowCountApproximation(ses);
+    }
+
+    /**
+     * @param partsFilter Partitions filter.
+     * @return Total row count in the current index for filtered partitions.
+     */
+    public abstract long totalRowCount(IndexingQueryCacheFilter partsFilter);
 }

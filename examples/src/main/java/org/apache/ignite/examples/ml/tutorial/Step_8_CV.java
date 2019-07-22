@@ -190,6 +190,8 @@ public class Step_8_CV {
             catch (FileNotFoundException e) {
                 e.printStackTrace();
             }
+        } finally {
+            System.out.flush();
         }
     }
 }

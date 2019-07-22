@@ -16,17 +16,20 @@
 
 package org.apache.ignite.internal.commandline;
 
+import java.util.logging.Logger;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.client.GridClientFactory;
 
 import static org.apache.ignite.internal.commandline.CommandHandler.UTILITY_NAME;
+import static org.apache.ignite.internal.commandline.CommandLogger.DOUBLE_INDENT;
+import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
 
 /**
  * Abstract class for all control.sh commands, has already implemented methods and abstract methods.
  * Define flow how to work with command.
  *
- * @param <T> Generic for getArg method which should return command-specific paramters which it would be run with.
+ * @param <T> Generic for getArg method which should return command-specific parameters which it would be run with.
  */
 public interface Command<T> {
     /**
@@ -49,13 +52,14 @@ public interface Command<T> {
     /**
      * Print command usage.
      *
+     * @param logger Logger to use.
      * @param desc Command description.
      * @param args Arguments.
      */
-    public static void usage(CommandLogger logger, String desc, CommandList cmd, String... args) {
-        logger.logWithIndent(desc);
-        logger.logWithIndent(CommandLogger.join(" ", UTILITY_NAME, cmd, CommandLogger.join(" ", args)), 2);
-        logger.nl();
+    public static void usage(Logger logger, String desc, CommandList cmd, String... args) {
+        logger.info(INDENT + desc);
+        logger.info(DOUBLE_INDENT + CommandLogger.join(" ", UTILITY_NAME, cmd, CommandLogger.join(" ", args)));
+        logger.info("");
     }
 
     /**
@@ -66,10 +70,10 @@ public interface Command<T> {
      * @return Result of operation (mostly usable for tests).
      * @throws Exception If error occur.
      */
-    public Object execute(GridClientConfiguration clientCfg, CommandLogger logger) throws Exception;
+    public Object execute(GridClientConfiguration clientCfg, Logger logger) throws Exception;
 
     /**
-     * @return Message text to show user for. If null it means that confirmantion is not needed.
+     * @return Message text to show user for. If null it means that confirmation is not needed.
      */
     public default String confirmationPrompt() {
         return null;
@@ -92,7 +96,12 @@ public interface Command<T> {
     /**
      * Print info for user about command (parameters, use cases and so on).
      *
-     * @param logger Would be used as output.
+     * @param logger Logger to use.
      */
-    public void printUsage(CommandLogger logger);
+    public void printUsage(Logger logger);
+
+    /**
+     * @return command name.
+     */
+    String name();
 }

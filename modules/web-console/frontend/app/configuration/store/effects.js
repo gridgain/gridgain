@@ -23,11 +23,9 @@ import {defaultNames} from '../defaultNames';
 import {
     cachesActionTypes,
     clustersActionTypes,
-    igfssActionTypes,
     modelsActionTypes,
     shortCachesActionTypes,
     shortClustersActionTypes,
-    shortIGFSsActionTypes,
     shortModelsActionTypes
 } from './reducer';
 
@@ -35,7 +33,8 @@ import {
     ADVANCED_SAVE_CACHE,
     ADVANCED_SAVE_CLUSTER,
     ADVANCED_SAVE_COMPLETE_CONFIGURATION,
-    ADVANCED_SAVE_IGFS,
+    ADVANCED_SAVE_COMPLETE_CONFIGURATION_OK,
+    ADVANCED_SAVE_COMPLETE_CONFIGURATION_ERR,
     ADVANCED_SAVE_MODEL,
     BASIC_SAVE,
     BASIC_SAVE_AND_DOWNLOAD,
@@ -62,7 +61,6 @@ import ConfigSelectors from './selectors';
 import Clusters from '../services/Clusters';
 import Caches from '../services/Caches';
 import Models from '../services/Models';
-import IGFSs from '../services/IGFSs';
 import {Confirm} from 'app/services/Confirm.service';
 
 export const ofType = (type) => (s) => s.pipe(filter((a) => a.type === type));
@@ -71,7 +69,6 @@ export default class ConfigEffects {
     static $inject = [
         'ConfigureState',
         'Caches',
-        'IGFSs',
         'Models',
         'ConfigSelectors',
         'Clusters',
@@ -85,7 +82,6 @@ export default class ConfigEffects {
     /**
      * @param {ConfigureState} ConfigureState
      * @param {Caches} Caches
-     * @param {IGFSs} IGFSs
      * @param {Models} Models
      * @param {ConfigSelectors} ConfigSelectors
      * @param {Clusters} Clusters
@@ -95,10 +91,9 @@ export default class ConfigEffects {
      * @param {Confirm} Confirm
      * @param {ConfigurationDownload} ConfigurationDownload
      */
-    constructor(ConfigureState, Caches, IGFSs, Models, ConfigSelectors, Clusters, $state, IgniteMessages, IgniteConfirm, Confirm, ConfigurationDownload) {
+    constructor(ConfigureState, Caches, Models, ConfigSelectors, Clusters, $state, IgniteMessages, IgniteConfirm, Confirm, ConfigurationDownload) {
         this.ConfigureState = ConfigureState;
         this.ConfigSelectors = ConfigSelectors;
-        this.IGFSs = IGFSs;
         this.Models = Models;
         this.Caches = Caches;
         this.Clusters = Clusters;
@@ -119,7 +114,7 @@ export default class ConfigEffects {
                     catchError((error) => of({
                         type: 'LOAD_COMPLETE_CONFIGURATION_ERR',
                         error: {
-                            message: `Failed to load cluster configuration: ${error.data}.`
+                            message: `Failed to load cluster configuration: ${error.data.message}.`
                         },
                         action
                     })));
@@ -128,11 +123,10 @@ export default class ConfigEffects {
 
         this.storeConfigurationEffect$ = this.ConfigureState.actions$.pipe(
             ofType(COMPLETE_CONFIGURATION),
-            exhaustMap(({configuration: {cluster, caches, models, igfss}}) => of(...[
+            exhaustMap(({configuration: {cluster, caches, models}}) => of(...[
                 cluster && {type: clustersActionTypes.UPSERT, items: [cluster]},
                 caches && caches.length && {type: cachesActionTypes.UPSERT, items: caches},
-                models && models.length && {type: modelsActionTypes.UPSERT, items: models},
-                igfss && igfss.length && {type: igfssActionTypes.UPSERT, items: igfss}
+                models && models.length && {type: modelsActionTypes.UPSERT, items: models}
             ].filter((v) => v)))
         );
 
@@ -147,14 +141,6 @@ export default class ConfigEffects {
                     {
                         type: shortModelsActionTypes.UPSERT,
                         items: action.changedItems.models.map((m) => this.Models.toShortModel(m))
-                    },
-                    {
-                        type: igfssActionTypes.UPSERT,
-                        items: action.changedItems.igfss
-                    },
-                    {
-                        type: shortIGFSsActionTypes.UPSERT,
-                        items: action.changedItems.igfss
                     },
                     {
                         type: cachesActionTypes.UPSERT,
@@ -180,12 +166,12 @@ export default class ConfigEffects {
                         switchMap((res) => {
                             return of(
                                 {type: 'EDIT_CLUSTER', cluster: action.changedItems.cluster},
-                                {type: 'ADVANCED_SAVE_COMPLETE_CONFIGURATION_OK', changedItems: action.changedItems}
+                                {type: ADVANCED_SAVE_COMPLETE_CONFIGURATION_OK, changedItems: action.changedItems}
                             );
                         }),
                         catchError((res) => {
                             return of({
-                                type: 'ADVANCED_SAVE_COMPLETE_CONFIGURATION_ERR',
+                                type: ADVANCED_SAVE_COMPLETE_CONFIGURATION_ERR,
                                 changedItems: action.changedItems,
                                 action,
                                 error: {
@@ -209,7 +195,7 @@ export default class ConfigEffects {
 
         this.errorNotificationsEffect$ = this.ConfigureState.actions$.pipe(
             filter((a) => a.error),
-            tap((action) => this.IgniteMessages.showError(action.error)),
+            tap((action) => this.IgniteMessages.showError(action.error.message)),
             ignoreElements()
         );
 
@@ -224,7 +210,7 @@ export default class ConfigEffects {
                     catchError((error) => of({
                         type: `${a.type}_ERR`,
                         error: {
-                            message: `Failed to load clusters: ${error.data}`
+                            message: `Failed to load clusters:  ${error.data.message}`
                         },
                         action: a
                     }))
@@ -267,7 +253,7 @@ export default class ConfigEffects {
                             catchError((error) => of({
                                 type: 'LOAD_AND_EDIT_CLUSTER_ERR',
                                 error: {
-                                    message: `Failed to load cluster: ${error.data}.`
+                                    message: `Failed to load cluster: ${error.data.message}.`
                                 }
                             }))
                         );
@@ -296,7 +282,7 @@ export default class ConfigEffects {
                     catchError((error) => of({
                         type: `${a.type}_ERR`,
                         error: {
-                            message: `Failed to load cache: ${error.data}.`
+                            message: `Failed to load cache: ${error.data.message}.`
                         }
                     }))
                 );
@@ -318,7 +304,7 @@ export default class ConfigEffects {
                     this.ConfigSelectors.selectShortCaches(),
                     take(1),
                     switchMap((items) => {
-                        if (!items.pristine && a.ids && a.ids.every((_id) => items.value.has(_id)))
+                        if (!items.pristine && a.ids && a.ids.every((id) => items.value.has(id)))
                             return of({type: `${a.type}_OK`});
 
                         return from(this.Clusters.getClusterCaches(a.clusterID)).pipe(
@@ -331,73 +317,7 @@ export default class ConfigEffects {
                     catchError((error) => of({
                         type: `${a.type}_ERR`,
                         error: {
-                            message: `Failed to load caches: ${error.data}.`
-                        },
-                        action: a
-                    }))
-                );
-            })
-        );
-
-        this.loadIgfsEffect$ = this.ConfigureState.actions$.pipe(
-            ofType('LOAD_IGFS'),
-            exhaustMap((a) => {
-                return this.ConfigureState.state$.pipe(
-                    this.ConfigSelectors.selectIGFS(a.igfsID),
-                    take(1),
-                    switchMap((igfs) => {
-                        if (igfs)
-                            return of({type: `${a.type}_OK`, igfs});
-
-                        return from(this.IGFSs.getIGFS(a.igfsID)).pipe(
-                            switchMap(({data}) => of(
-                                {type: 'IGFS', igfs: data},
-                                {type: `${a.type}_OK`, igfs: data}
-                            ))
-                        );
-                    }),
-                    catchError((error) => of({
-                        type: `${a.type}_ERR`,
-                        error: {
-                            message: `Failed to load IGFS: ${error.data}.`
-                        }
-                    }))
-                );
-            })
-        );
-
-        this.storeIgfsEffect$ = this.ConfigureState.actions$.pipe(
-            ofType('IGFS'),
-            map((a) => ({type: igfssActionTypes.UPSERT, items: [a.igfs]}))
-        );
-
-        this.loadShortIgfssEffect$ = ConfigureState.actions$.pipe(
-            ofType('LOAD_SHORT_IGFSS'),
-            exhaustMap((a) => {
-                if (!(a.ids || []).length) {
-                    return of(
-                        {type: shortIGFSsActionTypes.UPSERT, items: []},
-                        {type: `${a.type}_OK`}
-                    );
-                }
-                return this.ConfigureState.state$.pipe(
-                    this.ConfigSelectors.selectShortIGFSs(),
-                    take(1),
-                    switchMap((items) => {
-                        if (!items.pristine && a.ids && a.ids.every((_id) => items.value.has(_id)))
-                            return of({type: `${a.type}_OK`});
-
-                        return from(this.Clusters.getClusterIGFSs(a.clusterID)).pipe(
-                            switchMap(({data}) => of(
-                                {type: shortIGFSsActionTypes.UPSERT, items: data},
-                                {type: `${a.type}_OK`}
-                            ))
-                        );
-                    }),
-                    catchError((error) => of({
-                        type: `${a.type}_ERR`,
-                        error: {
-                            message: `Failed to load IGFSs: ${error.data}.`
+                            message: `Failed to load caches: ${error.data.message}.`
                         },
                         action: a
                     }))
@@ -425,7 +345,7 @@ export default class ConfigEffects {
                     catchError((error) => of({
                         type: `${a.type}_ERR`,
                         error: {
-                            message: `Failed to load domain model: ${error.data}.`
+                            message: `Failed to load domain model: ${error.data.message}.`
                         }
                     }))
                 );
@@ -450,7 +370,7 @@ export default class ConfigEffects {
                     this.ConfigSelectors.selectShortModels(),
                     take(1),
                     switchMap((items) => {
-                        if (!items.pristine && a.ids && a.ids.every((_id) => items.value.has(_id)))
+                        if (!items.pristine && a.ids && a.ids.every((id) => items.value.has(id)))
                             return of({type: `${a.type}_OK`});
 
                         return from(this.Clusters.getClusterModels(a.clusterID)).pipe(
@@ -463,7 +383,7 @@ export default class ConfigEffects {
                     catchError((error) => of({
                         type: `${a.type}_ERR`,
                         error: {
-                            message: `Failed to load domain models: ${error.data}.`
+                            message: `Failed to load domain models: ${error.data.message}.`
                         },
                         action: a
                     }))
@@ -473,7 +393,7 @@ export default class ConfigEffects {
 
         this.basicSaveRedirectEffect$ = this.ConfigureState.actions$.pipe(
             ofType(BASIC_SAVE_OK),
-            tap((a) => this.$state.go('base.configuration.edit.basic', {clusterID: a.changedItems.cluster._id}, {location: 'replace', custom: {justIDUpdate: true}})),
+            tap((a) => this.$state.go('base.configuration.edit.basic', {clusterID: a.changedItems.cluster.id}, {location: 'replace', custom: {justIDUpdate: true}})),
             ignoreElements()
         );
 
@@ -488,7 +408,6 @@ export default class ConfigEffects {
         this.advancedDownloadAfterSaveEffect$ = merge(
             this.ConfigureState.actions$.pipe(ofType(ADVANCED_SAVE_CLUSTER)),
             this.ConfigureState.actions$.pipe(ofType(ADVANCED_SAVE_CACHE)),
-            this.ConfigureState.actions$.pipe(ofType(ADVANCED_SAVE_IGFS)),
             this.ConfigureState.actions$.pipe(ofType(ADVANCED_SAVE_MODEL)),
         ).pipe(
             filter((a) => a.download),
@@ -511,7 +430,7 @@ export default class ConfigEffects {
             }),
             tap(([type, value, cluster]) => {
                 const go = (state, params = {}) => this.$state.go(
-                    state, {...params, clusterID: cluster._id}, {location: 'replace', custom: {justIDUpdate: true}}
+                    state, {...params, clusterID: cluster.id}, {location: 'replace', custom: {justIDUpdate: true}}
                 );
 
                 switch (type) {
@@ -519,8 +438,8 @@ export default class ConfigEffects {
                         const state = 'base.configuration.edit.advanced.models.model';
                         this.IgniteMessages.showInfo(`Model "${value.valueType}" saved`);
 
-                        if (this.$state.is(state) && this.$state.params.modelID !== value._id)
-                            return go(state, {modelID: value._id});
+                        if (this.$state.is(state) && this.$state.params.modelID !== value.id)
+                            return go(state, {modelID: value.id});
 
                         break;
                     }
@@ -529,18 +448,8 @@ export default class ConfigEffects {
                         const state = 'base.configuration.edit.advanced.caches.cache';
                         this.IgniteMessages.showInfo(`Cache "${value.name}" saved`);
 
-                        if (this.$state.is(state) && this.$state.params.cacheID !== value._id)
-                            return go(state, {cacheID: value._id});
-
-                        break;
-                    }
-
-                    case 'igfss': {
-                        const state = 'base.configuration.edit.advanced.igfs.igfs';
-                        this.IgniteMessages.showInfo(`IGFS "${value.name}" saved`);
-
-                        if (this.$state.is(state) && this.$state.params.igfsID !== value._id)
-                            return go(state, {igfsID: value._id});
+                        if (this.$state.is(state) && this.$state.params.cacheID !== value.id)
+                            return go(state, {cacheID: value.id});
 
                         break;
                     }
@@ -549,7 +458,7 @@ export default class ConfigEffects {
                         const state = 'base.configuration.edit.advanced.cluster';
                         this.IgniteMessages.showInfo(`Cluster "${value.name}" saved`);
 
-                        if (this.$state.is(state) && this.$state.params.clusterID !== value._id)
+                        if (this.$state.is(state) && this.$state.params.clusterID !== value.id)
                             return go(state);
 
                         break;
@@ -622,7 +531,7 @@ export default class ConfigEffects {
                 this.ConfigureState.actions$.pipe(ofType(shortClustersActionTypes.REMOVE)),
                 this.ConfigureState.actions$.pipe(ofType(clustersActionTypes.REMOVE))
             ),
-            switchMap(([, {clusterIDs}, ...backup]) => this.Clusters.removeCluster$(clusterIDs).pipe(
+            switchMap(([, {clusterIDs}, ...backup]) => from(this.Clusters.removeCluster(clusterIDs)).pipe(
                 mapTo({
                     type: 'REMOVE_CLUSTERS_OK'
                 }),
@@ -648,23 +557,20 @@ export default class ConfigEffects {
             ignoreElements()
         );
 
-        const _applyChangedIDs = (edit, {cache, igfs, model, cluster} = {}) => ({
+        const _applyChangedIDs = (edit, {cache, model, cluster} = {}) => ({
             cluster: {
                 ...edit.changes.cluster,
                 ...(cluster ? cluster : {}),
-                caches: cache ? uniq([...edit.changes.caches.ids, cache._id]) : edit.changes.caches.ids,
-                igfss: igfs ? uniq([...edit.changes.igfss.ids, igfs._id]) : edit.changes.igfss.ids,
-                models: model ? uniq([...edit.changes.models.ids, model._id]) : edit.changes.models.ids
+                caches: cache ? uniq([...edit.changes.caches.ids, cache.id]) : edit.changes.caches.ids,
+                models: model ? uniq([...edit.changes.models.ids, model.id]) : edit.changes.models.ids
             },
             caches: cache ? uniq([...edit.changes.caches.changedItems, cache]) : edit.changes.caches.changedItems,
-            igfss: igfs ? uniq([...edit.changes.igfss.changedItems, igfs]) : edit.changes.igfss.changedItems,
             models: model ? uniq([...edit.changes.models.changedItems, model]) : edit.changes.models.changedItems
         });
 
         this.advancedSaveCacheEffect$ = merge(
             this.ConfigureState.actions$.pipe(ofType(ADVANCED_SAVE_CLUSTER)),
             this.ConfigureState.actions$.pipe(ofType(ADVANCED_SAVE_CACHE)),
-            this.ConfigureState.actions$.pipe(ofType(ADVANCED_SAVE_IGFS)),
             this.ConfigureState.actions$.pipe(ofType(ADVANCED_SAVE_MODEL)),
         ).pipe(
             withLatestFrom(this.ConfigureState.state$.pipe(pluck('edit'))),

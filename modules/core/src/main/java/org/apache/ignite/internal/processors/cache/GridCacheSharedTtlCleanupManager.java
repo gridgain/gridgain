@@ -16,11 +16,12 @@
 
 package org.apache.ignite.internal.processors.cache;
 
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
+import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
@@ -45,8 +46,8 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
     /** Mutex on worker thread creation. */
     private final Object mux = new Object();
 
-    /** List of registered ttl managers. */
-    private List<GridCacheTtlManager> mgrs = new CopyOnWriteArrayList<>();
+    /** Map of registered ttl managers, where the cache id is used as the key. */
+    private final Map<Integer, GridCacheTtlManager> mgrs = new HashMap<>();
 
     /** {@inheritDoc} */
     @Override protected void onKernalStop0(boolean cancel) {
@@ -65,7 +66,7 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
             if (cleanupWorker == null)
                 startCleanupWorker();
 
-            mgrs.add(mgr);
+            mgrs.put(mgr.context().cacheId(), mgr);
         }
     }
 
@@ -76,7 +77,7 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
      * */
     public void unregister(GridCacheTtlManager mgr) {
         synchronized (mux) {
-            mgrs.remove(mgr);
+            mgrs.remove(mgr.context().cacheId());
 
             if (mgrs.isEmpty())
                 stopCleanupWorker();
@@ -89,7 +90,9 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
     public boolean eagerTtlEnabled() {
         assert cctx != null : "Manager is not started";
 
-        return cleanupWorker != null;
+        synchronized (mux) {
+            return cleanupWorker != null;
+        }
     }
 
     /**
@@ -144,14 +147,25 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
                 while (!isCancelled()) {
                     boolean expiredRemains = false;
 
-                    for (GridCacheTtlManager mgr : mgrs) {
-                        updateHeartbeat();
+                    Map<Integer, GridCacheTtlManager> cp;
 
-                        if (mgr.expire(CLEANUP_WORKER_ENTRIES_PROCESS_LIMIT))
-                            expiredRemains = true;
+                    synchronized (mux) {
+                        cp = new HashMap<>(mgrs);
+                    }
 
-                        if (isCancelled())
-                            return;
+                    for (Map.Entry<Integer, GridCacheTtlManager> mgr : cp.entrySet()) {
+                        synchronized (mux) {
+                            if (!mgrs.containsKey(mgr.getKey()))
+                                continue;
+
+                            updateHeartbeat();
+
+                            if (mgr.getValue().expire(CLEANUP_WORKER_ENTRIES_PROCESS_LIMIT))
+                                expiredRemains = true;
+
+                            if (isCancelled())
+                                return;
+                        }
                     }
 
                     updateHeartbeat();
@@ -163,7 +177,13 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
                 }
             }
             catch (Throwable t) {
-                if (!(X.hasCause(t, IgniteInterruptedCheckedException.class, InterruptedException.class)))
+                if (X.hasCause(t, NodeStoppingException.class)) {
+                    isCancelled = true; // Treat node stopping as valid worker cancellation.
+
+                    return;
+                }
+
+                if (!(t instanceof IgniteInterruptedCheckedException || t instanceof InterruptedException))
                     err = t;
 
                 throw t;

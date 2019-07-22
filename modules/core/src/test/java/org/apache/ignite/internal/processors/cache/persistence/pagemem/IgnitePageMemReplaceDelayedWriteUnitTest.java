@@ -31,6 +31,7 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.managers.encryption.GridEncryptionManager;
+import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.mem.DirectMemoryProvider;
 import org.apache.ignite.internal.mem.unsafe.UnsafeMemoryProvider;
 import org.apache.ignite.internal.pagemem.FullPageId;
@@ -40,11 +41,14 @@ import org.apache.ignite.internal.processors.cache.persistence.CheckpointWritePr
 import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
 import org.apache.ignite.internal.util.GridMultiCollectionWrapper;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.logger.NullLogger;
 import org.apache.ignite.spi.encryption.noop.NoopEncryptionSpi;
+import org.apache.ignite.spi.eventstorage.NoopEventStorageSpi;
+import org.apache.ignite.spi.metric.noop.NoopMetricExporterSpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Rule;
@@ -237,7 +241,19 @@ public class IgnitePageMemReplaceDelayedWriteUnitTest {
                 return new GridEncryptionManager(kernalCtx);
             }
         });
+        when(kernalCtx.metric()).thenAnswer(new Answer<Object>() {
+            @Override public Object answer(InvocationOnMock mock) throws Throwable {
+                return new GridMetricManager(kernalCtx);
+            }
+        });
+
         when(sctx.kernalContext()).thenReturn(kernalCtx);
+
+        when(sctx.gridEvents()).thenAnswer(new Answer<Object>() {
+            @Override public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
+                return new GridEventStorageManager(kernalCtx);
+            }
+        });
 
         DataRegionConfiguration regCfg = cfg.getDataStorageConfiguration().getDefaultDataRegionConfiguration();
 
@@ -263,6 +279,8 @@ public class IgnitePageMemReplaceDelayedWriteUnitTest {
         IgniteConfiguration cfg = new IgniteConfiguration();
 
         cfg.setEncryptionSpi(new NoopEncryptionSpi());
+        cfg.setEventStorageSpi(new NoopEventStorageSpi());
+        cfg.setMetricExporterSpi(new NoopMetricExporterSpi());
 
         cfg.setDataStorageConfiguration(
             new DataStorageConfiguration()

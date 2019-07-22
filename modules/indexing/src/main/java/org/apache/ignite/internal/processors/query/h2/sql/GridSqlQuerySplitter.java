@@ -42,6 +42,7 @@ import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.affinity.PartitionExtractor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
+import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.h2.command.Prepared;
@@ -266,7 +267,7 @@ public class GridSqlQuerySplitter {
         // Here we will have correct normalized AST with optimized join order.
         // The distributedJoins parameter is ignored because it is not relevant for
         // the REDUCE query optimization.
-        qry = GridSqlQueryParser.parseQuery(prepare(conn, qry.getSQL(), false, enforceJoinOrder), true);
+        qry = GridSqlQueryParser.parseQuery(prepare(conn, H2Utils.context(conn), qry.getSQL(), false, enforceJoinOrder), true);
 
         // Do the actual query split. We will update the original query AST, need to be careful.
         splitter.splitQuery(qry);
@@ -281,7 +282,8 @@ public class GridSqlQuerySplitter {
             boolean allCollocated = true;
 
             for (GridCacheSqlQuery mapSqlQry : splitter.mapSqlQrys) {
-                Prepared prepared0 = prepare(conn, mapSqlQry.query(), true, enforceJoinOrder);
+
+                Prepared prepared0 = prepare(conn, H2Utils.context(conn), mapSqlQry.query(), true, enforceJoinOrder);
 
                 allCollocated &= isCollocated((Query)prepared0);
 
@@ -1167,11 +1169,8 @@ public class GridSqlQuerySplitter {
         for (GridSqlAst exp : mapExps) // Add all map expressions as visible.
             mapQry.addColumn(exp, true);
 
-        for (int i = 0; i < visibleCols; i++) // Add visible reduce columns.
-            rdcQry.addColumn(rdcExps.get(i), true);
-
-        for (int i = visibleCols; i < rdcExps.size(); i++) // Add invisible reduce columns (HAVING).
-            rdcQry.addColumn(rdcExps.get(i), false);
+        for (GridSqlAst exp: rdcExps) // Add all reduce columns as visible.
+            rdcQry.addColumn(exp, true);
 
         for (int i = rdcExps.size(); i < mapExps.size(); i++)  // Add all extra map columns as invisible reduce columns.
             rdcQry.addColumn(SplitterUtils.column(((GridSqlAlias)mapExps.get(i)).alias()), false);
@@ -1233,14 +1232,27 @@ public class GridSqlQuerySplitter {
             mapQry.offset(null);
         }
 
+        GridSqlSelect resQry;
+        if (rdcQry.visibleColumns() > visibleCols) { // Reduce query has extra columns which should be omitted in result query.
+            resQry = new GridSqlSelect().from(new GridSqlSubquery(rdcQry));
+
+            for (int i = 0; i < visibleCols; i++)
+                if (rdcExps.get(i) instanceof GridSqlAlias)
+                    resQry.addColumn(SplitterUtils.column(((GridSqlAlias) rdcExps.get(i)).alias()), true);
+                else
+                    resQry.addColumn(rdcExps.get(i), true);
+
+        } else // Reduce query contains only desired columns, so we do not need any wrapper.
+            resQry = rdcQry;
+
         // -- DISTINCT
         if (mapQry.distinct()) {
             mapQry.distinct(!aggregateFound && mapQry.groupColumns() == null && mapQry.havingColumn() < 0);
-            rdcQry.distinct(true);
+            resQry.distinct(true);
         }
 
-        // Replace the given select with generated reduce query in the parent.
-        parent.child(childIdx, rdcQry);
+        // Replace the given select with generated result query in the parent.
+        parent.child(childIdx, resQry);
 
         // Setup resulting map query.
         GridCacheSqlQuery map = new GridCacheSqlQuery(mapQry.getSQL());
@@ -1761,9 +1773,9 @@ public class GridSqlQuerySplitter {
      * @return Optimized prepared command.
      * @throws SQLException If failed.
      */
-    public static Prepared prepare(Connection c, String qry, boolean distributedJoins,
+    public static Prepared prepare(Connection c, QueryContext qctx, String qry, boolean distributedJoins,
         boolean enforceJoinOrder) throws SQLException {
-        H2Utils.setupConnection(c, null, distributedJoins, enforceJoinOrder);
+        H2Utils.setupConnection(c, qctx, distributedJoins, enforceJoinOrder);
 
         try (PreparedStatement s = c.prepareStatement(qry)) {
             return GridSqlQueryParser.prepared(s);

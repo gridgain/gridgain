@@ -16,6 +16,12 @@
 
 package org.apache.ignite.console.agent.rest;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonRawValue;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import org.apache.ignite.console.json.RawContentDeserializer;
+
 /**
  * Request result.
  */
@@ -32,18 +38,22 @@ public class RestResult {
     /** Session token string representation. */
     private String sesTok;
 
-    /** Flag of zipped data. */
-    private boolean zipped;
-
     /**
      * @param status REST http code.
      * @param error The field contains description of error if server could not handle the request.
      * @param data The field contains result of command.
      */
-    private RestResult(int status, String error, String data) {
+    @JsonCreator
+    private RestResult(
+        @JsonProperty("successStatus") int status,
+        @JsonProperty("error") String error,
+        @JsonProperty("sessionToken") String sesTok,
+        @JsonProperty("response") @JsonDeserialize(using = RawContentDeserializer.class) String data
+    ) {
         this.status = status;
         this.error = error;
         this.data = data;
+        this.sesTok = sesTok;
     }
 
     /**
@@ -52,19 +62,7 @@ public class RestResult {
      * @return Request result.
      */
     public static RestResult fail(int status, String error) {
-        return new RestResult(status, error, null);
-    }
-
-    /**
-     * @param data The field contains result of command.
-     * @return Request result.
-     */
-    public static RestResult success(String data, String sesTok) {
-        RestResult res = new RestResult(0, null, data);
-
-        res.sesTok = sesTok;
-
-        return res;
+        return new RestResult(status, error, null, null);
     }
 
     /**
@@ -84,6 +82,7 @@ public class RestResult {
     /**
      * @return The field contains result of command.
      */
+    @JsonRawValue
     public String getData() {
         return data;
     }
@@ -93,21 +92,5 @@ public class RestResult {
      */
     public String getSessionToken() {
         return sesTok;
-    }
-
-    /**
-     * @param data Set zipped data.
-     */
-    public void zipData(String data) {
-        zipped = true;
-
-        this.data = data;
-    }
-
-    /**
-     * @return {@code true if data is zipped and Base64 encoded.}
-     */
-    public boolean isZipped() {
-        return zipped;
     }
 }

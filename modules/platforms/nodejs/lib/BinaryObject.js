@@ -25,6 +25,7 @@ const BinaryType = require('./internal/BinaryType');
 const BinaryField = require('./internal/BinaryType').BinaryField;
 const BinaryTypeBuilder = require('./internal/BinaryType').BinaryTypeBuilder;
 const ArgumentChecker = require('./internal/ArgumentChecker');
+const MessageBuffer = require('./internal/MessageBuffer');
 const Logger = require('./internal/Logger');
 
 const HEADER_LENGTH = 24;
@@ -44,14 +45,14 @@ const FLAG_OFFSET_TWO_BYTES = 0x0010;
 const FLAG_COMPACT_FOOTER = 0x0020;
 
 /**
- * Class representing a complex Ignite object in the binary form.
+ * Class representing a complex GridGain object in the binary form.
  *
  * It corresponds to COMPOSITE_TYPE.COMPLEX_OBJECT {@link ObjectType.COMPOSITE_TYPE},
  * has mandatory type Id, which corresponds to a name of the complex type,
  * and includes optional fields.
  *
  * An instance of the BinaryObject can be obtained/created by the following ways:
- *   - returned by the client when a complex object is received from Ignite cache
+ *   - returned by the client when a complex object is received from GridGain cache
  * and is not deserialized to another JavaScript object.
  *   - created using the public constructor. Fields may be added to such an instance using setField() method.
  *   - created from a JavaScript object using static fromObject() method.
@@ -79,6 +80,7 @@ class BinaryObject {
         this._hasSchema = false;
         this._compactFooter = false;
         this._hasRawData = false;
+        this._hashCode = null;
     }
 
     /**
@@ -96,7 +98,7 @@ class BinaryObject {
      *   which adds and initializes the fields of the BinaryObject instance.
      * @param {ComplexObjectType} [complexObjectType] - instance of complex type definition
      *   which specifies non-standard mapping of the fields of the BinaryObject instance
-     *   to/from the Ignite types.
+     *   to/from the GridGain types.
      *
      * @return {BinaryObject} - new BinaryObject instance.
      *
@@ -130,8 +132,8 @@ class BinaryObject {
      * Adds the specified field, if it did not exist before.
      *
      * Optionally, specifies a type of the field.
-     * If the type is not specified then during operations the Ignite client
-     * will try to make automatic mapping between JavaScript types and Ignite object types -
+     * If the type is not specified then during operations the GridGain client
+     * will try to make automatic mapping between JavaScript types and GridGain object types -
      * according to the mapping table defined in the description of the {@link ObjectType} class.
      *
      * @param {string} fieldName - name of the field.
@@ -190,8 +192,8 @@ class BinaryObject {
      * Returns a value of the specified field.
      *
      * Optionally, specifies a type of the field.
-     * If the type is not specified then the Ignite client
-     * will try to make automatic mapping between JavaScript types and Ignite object types -
+     * If the type is not specified then the GridGain client
+     * will try to make automatic mapping between JavaScript types and GridGain object types -
      * according to the mapping table defined in the description of the {@link ObjectType} class.
      *
      * @async
@@ -294,6 +296,25 @@ class BinaryObject {
     /**
      * @ignore
      */
+    async _getHashCode(communicator) {
+        if (this._hashCode !== null && !this._modified) {
+            return this._hashCode;
+        }
+
+        await this._write(communicator, new MessageBuffer());
+        return this._hashCode;
+    }
+
+    /**
+     * @ignore
+     */
+    _getTypeId() {
+        return this._typeBuilder.getTypeId();
+    }
+
+    /**
+     * @ignore
+     */
     async _write(communicator, buffer) {
         if (this._buffer && !this._modified) {
             buffer.writeBuffer(this._buffer.buffer, this._startPos, this._startPos + this._length);
@@ -356,8 +377,9 @@ class BinaryObject {
         // type id
         this._buffer.writeInteger(this._typeBuilder.getTypeId());
         // hash code
-        this._buffer.writeInteger(BinaryUtils.contentHashCode(
-            this._buffer, this._startPos + HEADER_LENGTH, this._schemaOffset - 1));
+        this._hashCode = BinaryUtils.contentHashCode(
+            this._buffer, this._startPos + HEADER_LENGTH, this._schemaOffset - 1);
+        this._buffer.writeInteger(this._hashCode);
         // length
         this._buffer.writeInteger(this._length);
         // schema id
@@ -428,7 +450,7 @@ class BinaryObject {
         // type id
         const typeId = this._buffer.readInteger();
         // hash code
-        this._buffer.readInteger();
+        this._hashCode = this._buffer.readInteger();
         // length
         this._length = this._buffer.readInteger();
         // schema id

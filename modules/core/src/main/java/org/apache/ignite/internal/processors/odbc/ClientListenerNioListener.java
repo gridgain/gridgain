@@ -33,8 +33,7 @@ import org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext;
 import org.apache.ignite.internal.processors.odbc.odbc.OdbcConnectionContext;
 import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
 import org.apache.ignite.internal.processors.platform.client.ClientStatus;
-import org.apache.ignite.internal.processors.security.SecurityContext;
-import org.apache.ignite.internal.processors.security.SecurityContextHolder;
+import org.apache.ignite.internal.processors.security.OperationSecurityContext;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.nio.GridNioServerListenerAdapter;
 import org.apache.ignite.internal.util.nio.GridNioSession;
@@ -131,7 +130,13 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
         ClientListenerConnectionContext connCtx = ses.meta(CONN_CTX_META_KEY);
 
         if (connCtx == null) {
-            onHandshake(ses, msg);
+            try {
+                onHandshake(ses, msg);
+            }
+            catch (Exception e) {
+                U.error(log, "Failed to handle handshake request " +
+                    "(probably, connection has already been closed).", e);
+            }
 
             return;
         }
@@ -174,17 +179,14 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
             ClientListenerResponse resp;
 
             AuthorizationContext authCtx = connCtx.authorizationContext();
-            SecurityContext oldSecCtx = SecurityContextHolder.push(connCtx.securityContext());
 
             if (authCtx != null)
                 AuthorizationContext.context(authCtx);
 
-            try {
+            try(OperationSecurityContext s = ctx.security().withContext(connCtx.securityContext())) {
                 resp = handler.handle(req);
             }
             finally {
-                SecurityContextHolder.pop(oldSecCtx);
-
                 if (authCtx != null)
                     AuthorizationContext.clear();
             }

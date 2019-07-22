@@ -188,7 +188,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
         "Whether data page scan for queries is allowed. If not specified, server defines the default behaviour.",
         null, false);
 
-    /** affinity awareness flag. */
+    /** Affinity awareness flag. */
     private BooleanProperty affinityAwareness = new BooleanProperty(
         "affinityAwareness",
         "Whether jdbc thin affinity awareness is enabled.",
@@ -199,6 +199,22 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
         "Update bach size (the size of internal batches are used for INSERT/UPDATE/DELETE operation). " +
             "Set to 1 to prevent deadlock on update where keys sequence are different " +
             "in several concurrent updates.", null, false, 1, Integer.MAX_VALUE);
+
+    /** Affinity awareness SQL cache size. */
+    private IntegerProperty affinityAwarenessSQLCacheSize = new IntegerProperty("affinityAwarenessSQLCacheSize",
+        "The size of sql cache that is used within affinity awareness optimization.",
+        1_000, false, 1, Integer.MAX_VALUE);
+
+    /** Affinity awareness partition distributions cache size. */
+    private IntegerProperty affinityAwarenessPartDistributionsCacheSize = new IntegerProperty(
+        "affinityAwarenessPartitionDistributionsCacheSize",
+        "The size of partition distributions cache that is used within affinity awareness optimization.",
+        1_000, false, 1, Integer.MAX_VALUE);
+
+    /** Query memory limit. */
+    private LongProperty qryMaxMemory = new LongProperty("queryMaxMemory",
+        "Query max memory limit. Set to 0 to use default value. Set to negative value to disable memory limits.",
+        0L, false, Long.MIN_VALUE, Long.MAX_VALUE);
 
     /** Properties array. */
     private final ConnectionProperty [] propsArray = {
@@ -211,7 +227,10 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
         user, passwd,
         dataPageScanEnabled,
         affinityAwareness,
-        updateBatchSize
+        updateBatchSize,
+        affinityAwarenessSQLCacheSize,
+        affinityAwarenessPartDistributionsCacheSize,
+        qryMaxMemory
     };
 
     /** {@inheritDoc} */
@@ -535,6 +554,39 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
     /** {@inheritDoc} */
     @Override public void setUpdateBatchSize(@Nullable Integer updateBatchSize) throws SQLException {
         this.updateBatchSize.setValue(updateBatchSize);
+    }
+
+    /** {@inheritDoc} */
+    @Override public int getAffinityAwarenessSqlCacheSize() {
+        return affinityAwarenessSQLCacheSize.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setAffinityAwarenessSqlCacheSize(int affinityAwarenessSQLCacheSize)
+        throws SQLException {
+        this.affinityAwarenessSQLCacheSize.setValue(affinityAwarenessSQLCacheSize);
+    }
+
+    /** {@inheritDoc} */
+    @Override public int getAffinityAwarenessPartitionDistributionsCacheSize() {
+        return affinityAwarenessPartDistributionsCacheSize.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setAffinityAwarenessPartitionDistributionsCacheSize(
+        int affinityAwarenessPartDistributionsCacheSize) throws SQLException {
+        this.affinityAwarenessPartDistributionsCacheSize.setValue(
+            affinityAwarenessPartDistributionsCacheSize);
+    }
+
+    /** {@inheritDoc} */
+    @Override public Long getQueryMaxMemory() {
+        return qryMaxMemory.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setQueryMaxMemory(Long maxMemory) throws SQLException {
+        this.qryMaxMemory.setValue(maxMemory);
     }
 
     /**
@@ -1045,7 +1097,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
         /** {@inheritDoc} */
         @Override void init(String str) throws SQLException {
             if (str == null)
-                val = dfltVal != null ? (int)dfltVal : null;
+                val = dfltVal != null ? (Number)dfltVal : null;
             else {
                 try {
                     setValue(parse(str));
@@ -1119,6 +1171,38 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
          */
         Integer value() {
             return val != null ? val.intValue() : null;
+        }
+    }
+
+    /**
+     *
+     */
+    private static class LongProperty extends NumberProperty {
+        /** */
+        private static final long serialVersionUID = 0L;
+
+        /**
+         * @param name Name.
+         * @param desc Description.
+         * @param dfltVal Default value.
+         * @param required {@code true} if the property is required.
+         * @param min Lower bound of allowed range.
+         * @param max Upper bound of allowed range.
+         */
+        LongProperty(String name, String desc, Number dfltVal, boolean required, long min, long max) {
+            super(name, desc, dfltVal, required, min, max);
+        }
+
+        /** {@inheritDoc} */
+        @Override protected Number parse(String str) throws NumberFormatException {
+            return Long.parseLong(str);
+        }
+
+        /**
+         * @return Property value.
+         */
+        Long value() {
+            return val != null ? val.longValue() : 0L;
         }
     }
 
