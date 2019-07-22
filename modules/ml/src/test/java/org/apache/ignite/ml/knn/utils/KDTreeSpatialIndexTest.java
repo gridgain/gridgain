@@ -24,6 +24,6 @@ public class KDTreeSpatialIndexTest extends SpatialIndexTest {
      * Constructs a new instance of KD tree spatial index test.
      */
     public KDTreeSpatialIndexTest() {
-        super((dataset, distanceMeasure) -> new KDTreeSpatialIndex<>(dataset));
+        super(KDTreeSpatialIndex::new);
     }
 }
