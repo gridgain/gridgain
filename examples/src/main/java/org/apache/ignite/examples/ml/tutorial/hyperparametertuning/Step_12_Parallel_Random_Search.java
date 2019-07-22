@@ -198,6 +198,8 @@ public class Step_12_Parallel_Random_Search {
             } catch (FileNotFoundException e) {
                 e.printStackTrace();
             }
+        } finally {
+            System.out.flush();
         }
     }
 }
