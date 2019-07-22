@@ -157,25 +157,6 @@ public class IgnitePdsDiscoDataHandlingInNewClusterTest extends GridCommonAbstra
         verifyCachesAndGroups(ig1);
     }
 
-    @Test
-    public void simpleTest() throws Exception {
-        IgniteEx ig0 = startGrid(NODE_CONS_ID_0);
-
-        startGrid(NODE_CONS_ID_1);
-    }
-
-    @Override protected void beforeTest() throws Exception {
-        stopAllGrids();
-
-        cleanPersistenceDir();
-    }
-
-    @Override protected void afterTest() throws Exception {
-        stopAllGrids();
-
-        cleanPersistenceDir();
-    }
-
     /** */
     private void startDynamicCache(Ignite ig, String cacheName, String groupName) {
         ig.getOrCreateCache(new CacheConfiguration<>(cacheName)
