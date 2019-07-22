@@ -128,6 +128,7 @@ public class Step_8_CV_with_Param_Grid {
                     .withTrainer(trainerCV)
                     .withMetric(new Accuracy<>())
                     .withFilter(split.getTrainFilter())
+                    .isRunningOnPipeline(false)
                     .withPreprocessor(normalizationPreprocessor)
                     .withAmountOfFolds(3)
                     .withParamGrid(paramGrid);

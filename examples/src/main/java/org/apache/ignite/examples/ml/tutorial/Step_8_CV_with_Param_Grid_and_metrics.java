@@ -135,6 +135,7 @@ public class Step_8_CV_with_Param_Grid_and_metrics {
                     .withTrainer(trainerCV)
                     .withMetric(metrics)
                     .withFilter(split.getTrainFilter())
+                    .isRunningOnPipeline(false)
                     .withPreprocessor(normalizationPreprocessor)
                     .withAmountOfFolds(3)
                     .withParamGrid(paramGrid);
