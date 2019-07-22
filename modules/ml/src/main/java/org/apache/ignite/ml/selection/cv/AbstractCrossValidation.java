@@ -38,7 +38,7 @@ import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.pipeline.Pipeline;
 import org.apache.ignite.ml.pipeline.PipelineMdl;
 import org.apache.ignite.ml.preprocessing.Preprocessor;
-import org.apache.ignite.ml.selection.paramgrid.BrutForceStrategy;
+import org.apache.ignite.ml.selection.paramgrid.BruteForceStrategy;
 import org.apache.ignite.ml.selection.paramgrid.EvolutionOptimizationStrategy;
 import org.apache.ignite.ml.selection.paramgrid.HyperParameterTuningStrategy;
 import org.apache.ignite.ml.selection.paramgrid.ParamGrid;
@@ -111,7 +111,7 @@ public abstract class AbstractCrossValidation<M extends IgniteModel<Vector, L>, 
     public CrossValidationResult tuneHyperParamterers() {
         HyperParameterTuningStrategy hyperParamTuningStgy = paramGrid.getHyperParameterTuningStrategy();
 
-        if (hyperParamTuningStgy instanceof BrutForceStrategy) return scoreBrutForceHyperparameterOptimiztion();
+        if (hyperParamTuningStgy instanceof BruteForceStrategy) return scoreBruteForceHyperparameterOptimiztion();
         if (hyperParamTuningStgy instanceof RandomStrategy) return scoreRandomSearchHyperparameterOptimiztion();
         if (hyperParamTuningStgy instanceof EvolutionOptimizationStrategy)
             return scoreEvolutionAlgorithmSearchHyperparameterOptimization();
@@ -220,7 +220,7 @@ public abstract class AbstractCrossValidation<M extends IgniteModel<Vector, L>, 
     /**
      * Finds the best set of hyperparameters based on brute force approach .
      */
-    private CrossValidationResult scoreBrutForceHyperparameterOptimiztion() {
+    private CrossValidationResult scoreBruteForceHyperparameterOptimiztion() {
         List<Double[]> paramSets = new ParameterSetGenerator(paramGrid.getParamValuesByParamIdx()).generate();
 
         CrossValidationResult cvRes = new CrossValidationResult();

@@ -40,7 +40,7 @@ public class ParamGrid {
     private int paramCntr;
 
     /** Parameter search strategy. */
-    private HyperParameterTuningStrategy paramSearchStgy = new BrutForceStrategy();
+    private HyperParameterTuningStrategy paramSearchStgy = new BruteForceStrategy();
 
     /** */
     public Map<Integer, Double[]> getParamValuesByParamIdx() {
