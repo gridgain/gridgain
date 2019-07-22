@@ -76,6 +76,7 @@ import org.jetbrains.annotations.Nullable;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DIAGNOSTIC_ENABLED;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_UPDATE_NOTIFIER;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
+import static org.apache.ignite.events.EventType.EVT_CLUSTER_TAG_UPDATED;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType.CLUSTER_PROC;
@@ -252,8 +253,13 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
             throw new IgniteCheckedException("Cluster tag has been concurrently updated to different value: " +
                 concurrentValue.tag());
         }
-        else
+        else {
             cluster.setTag(newTag);
+
+            if (ctx.event().isRecordable(EVT_CLUSTER_TAG_UPDATED)) {
+                ctx.event().record();
+            }
+        }
     }
 
     /**
