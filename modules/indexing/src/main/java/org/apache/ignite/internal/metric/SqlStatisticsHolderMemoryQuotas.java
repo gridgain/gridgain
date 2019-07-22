@@ -29,7 +29,7 @@ import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
  */
 public class SqlStatisticsHolderMemoryQuotas {
     /** Name of MetricRegistry that contains for sql purposes. */
-    private static final String SQL_QUOTAS_REG_NAME = "sql.memory.quotas";
+    public static final String SQL_QUOTAS_REG_NAME = "sql.memory.quotas";
 
     /** Memory manager who is responcible for memory reservation and release. One per node. */
     private final QueryMemoryManager memMgr;
