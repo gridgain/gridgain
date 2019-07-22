@@ -93,11 +93,11 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
     /** Minimal IgniteProductVersion supporting BaselineTopology */
     private static final IgniteProductVersion MIN_BLT_SUPPORTING_VER = IgniteProductVersion.fromString("2.4.0");
 
-    /** */
-    private UUID id;
+    /** Unique ID of cluster. Generated on start, shared by all nodes. */
+    private volatile UUID id;
 
-    /** */
-    private String tag;
+    /** User-defined human-readable tag. Generated automatically on start, can be changed later. */
+    private volatile String tag;
 
     /**
      * Required by {@link Externalizable}.

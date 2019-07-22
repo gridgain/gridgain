@@ -163,6 +163,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
                 ClusterNode crd = discoCache.serverNodes().get(0);
 
                 //only coordinator initializes ID and tag
+                //TODO util method to detect coordinator
                 if (ctx.discovery().localNode().id().equals(crd.id())) {
                     localClusterId = localClusterId == null ? UUID.randomUUID() : localClusterId;
 
@@ -249,20 +250,25 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
         metastorage.listen(
             (k) -> k.equals(CLUSTER_TAG),
             (String k, Serializable oldVal, Serializable newVal) -> {
+                //TODO add logging
+
                 cluster.setTag((String)newVal);
             }
         );
 
         if (compatibilityMode) {
-            //in compatibility mode ID will be stored to metastorage on coordinator instead of receiving it on join
+            // In compatibility mode ID will be stored to metastorage on coordinator instead of receiving it on join.
             metastorage.listen(
                 (k) -> k.equals(CLUSTER_ID),
                 (String k, Serializable oldVal, Serializable newVal) -> {
+                    //TODO add logging and validation exactly once behavior
+
                     cluster.setId((UUID)newVal);
                 }
             );
         }
 
+        // TODO create ticket to investigate hang (try to wrap in local call)
         try {
             metastorage.writeAsync(CLUSTER_ID, cluster.id());
 
@@ -536,6 +542,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
             if (remoteClusterId != null) {
                 if (localClusterId != null && !localClusterId.equals(remoteClusterId)) {
+                    //TODO warning
                     if (log.isInfoEnabled())
                         log.info("Received custer ID differs from locally stored cluster ID " +
                             "and will be rewritten. " +
