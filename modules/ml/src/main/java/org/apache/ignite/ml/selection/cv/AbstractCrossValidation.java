@@ -111,8 +111,8 @@ public abstract class AbstractCrossValidation<M extends IgniteModel<Vector, L>, 
     public CrossValidationResult tuneHyperParamterers() {
         HyperParameterTuningStrategy hyperParamTuningStgy = paramGrid.getHyperParameterTuningStrategy();
 
-        if (hyperParamTuningStgy instanceof BruteForceStrategy) return scoreBruteForceHyperparameterOptimiztion();
-        if (hyperParamTuningStgy instanceof RandomStrategy) return scoreRandomSearchHyperparameterOptimiztion();
+        if (hyperParamTuningStgy instanceof BruteForceStrategy) return scoreBruteForceHyperparameterOptimization();
+        if (hyperParamTuningStgy instanceof RandomStrategy) return scoreRandomSearchHyperparameterOptimization();
         if (hyperParamTuningStgy instanceof EvolutionOptimizationStrategy)
             return scoreEvolutionAlgorithmSearchHyperparameterOptimization();
         else throw new UnsupportedOperationException("This strategy is not supported yet [strategy="
@@ -183,7 +183,7 @@ public abstract class AbstractCrossValidation<M extends IgniteModel<Vector, L>, 
     /**
      * Finds the best set of hyperparameters based on Random Serach.
      */
-    private CrossValidationResult scoreRandomSearchHyperparameterOptimiztion() {
+    private CrossValidationResult scoreRandomSearchHyperparameterOptimization() {
         RandomStrategy stgy = (RandomStrategy) paramGrid.getHyperParameterTuningStrategy();
 
         List<Double[]> paramSets = new ParameterSetGenerator(paramGrid.getParamValuesByParamIdx()).generate();
@@ -220,7 +220,7 @@ public abstract class AbstractCrossValidation<M extends IgniteModel<Vector, L>, 
     /**
      * Finds the best set of hyperparameters based on brute force approach .
      */
-    private CrossValidationResult scoreBruteForceHyperparameterOptimiztion() {
+    private CrossValidationResult scoreBruteForceHyperparameterOptimization() {
         List<Double[]> paramSets = new ParameterSetGenerator(paramGrid.getParamValuesByParamIdx()).generate();
 
         CrossValidationResult cvRes = new CrossValidationResult();
