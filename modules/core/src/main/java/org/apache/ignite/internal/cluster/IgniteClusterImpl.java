@@ -29,6 +29,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -403,11 +404,22 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
             if (baselineTop.isEmpty())
                 throw new IgniteException("BaselineTopology must contain at least one node.");
 
+            for (BaselineNode node : baselineTop) {
+                Object consistentId = node.consistentId();
+
+                if (ignite().cluster().currentBaselineTopology().stream().noneMatch(
+                    currBlTNode -> Objects.equals(currBlTNode.consistentId(), consistentId)) &&
+                    ignite().cluster().forServers().nodes().stream().noneMatch(
+                        currServersNode -> Objects.equals(currServersNode.consistentId(), consistentId)))
+                    throw new IgniteException("Check arguments. Node not found for consistent ID: " + consistentId);
+            }
+
             Collection<Object> onlineNodes = onlineBaselineNodesRequestedForRemoval(baselineTop);
 
             if (onlineNodes != null) {
                 if (!onlineNodes.isEmpty())
-                    throw new IgniteException("Removing online nodes from BaselineTopology is not supported: " + onlineNodes);
+                    throw new IgniteException("Removing online nodes from BaselineTopology is not supported: " +
+                        onlineNodes);
             }
         }
     }

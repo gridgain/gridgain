@@ -26,8 +26,10 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
@@ -45,6 +47,7 @@ import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
+import org.apache.ignite.internal.cluster.DetachedClusterNode;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionFullMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
@@ -1001,6 +1004,32 @@ public class CacheBaselineTopologyTest extends GridCommonAbstractTest {
 
         for (int k = 0; k < 1000; k++)
             assertEquals("k=" + k, Integer.valueOf(k), cache.get(k));
+    }
+
+    /**
+     * Verify that in case of setting baseline topology with offline node among others
+     * {@link IgniteException} is thrown.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    public void setConsistenceIdsWithOfflineBaselineNode() throws Exception {
+        Ignite ignite = startGrids(2);
+
+        ignite.cluster().active(true);
+
+        ignite(0).createCache(defaultCacheConfiguration().setNodeFilter(
+            (IgnitePredicate<ClusterNode>)node -> node.attribute("some-attr") != null));
+
+        Collection<ClusterNode> nodes = new ArrayList<>(ignite.cluster().nodes());
+        nodes.add(new DetachedClusterNode("non-existing-node-id", null));
+
+        GridTestUtils.assertThrows(log, (Callable<Void>)() -> {
+            ignite.cluster().setBaselineTopology(nodes);
+
+            return null;
+        }, IgniteException.class, "Check arguments. Node not found for consistent ID: non-existing-node-id");
     }
 
     /** */

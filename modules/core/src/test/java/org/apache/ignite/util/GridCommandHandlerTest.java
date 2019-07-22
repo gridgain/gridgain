@@ -53,6 +53,7 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.IgniteDataStreamer;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterNode;
@@ -98,7 +99,6 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.tx.VisorTxInfo;
 import org.apache.ignite.internal.visor.tx.VisorTxTaskResult;
-import org.apache.ignite.internal.visor.util.VisorIllegalStateException;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgnitePredicate;
@@ -3090,21 +3090,21 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
     /**
      * Verify that in case of setting baseline topology with offline node among others
-     * {@link VisorIllegalStateException} is thrown.
+     * {@link IgniteException} is thrown.
      *
      * @throws Exception If failed.
      */
     @Test
     @SuppressWarnings("unchecked")
     public void setConsistenceIdsWithOfflineBaselineNode() throws Exception {
-        Ignite ignite = startGrids(1);
+        Ignite ignite = startGrids(2);
 
         ignite.cluster().active(true);
 
         ignite(0).createCache(defaultCacheConfiguration().setNodeFilter(
             (IgnitePredicate<ClusterNode>)node -> node.attribute("some-attr") != null));
 
-        assertEquals(EXIT_CODE_ILLEGAL_SATE_ERROR,
+        assertEquals(EXIT_CODE_UNEXPECTED_ERROR,
             execute("--baseline", "set", "non-existing-node-id ," + consistentIds(ignite)));
     }
 }
