@@ -41,6 +41,7 @@ import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.junit.Assert;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
@@ -60,7 +61,7 @@ public class JdbcThinResultSetSelfTest extends JdbcThinAbstractSelfTest {
     /** SQL query. */
     private static final String SQL =
         "select id, boolVal, byteVal, shortVal, intVal, longVal, floatVal, " +
-            "doubleVal, bigVal, strVal, arrVal, dateVal, timeVal, tsVal " +
+            "doubleVal, bigVal, strVal, arrVal, dateVal, timeVal, tsVal, f1 " +
             "from TestObject where id = 1";
 
     /** Statement. */
@@ -695,14 +696,30 @@ public class JdbcThinResultSetSelfTest extends JdbcThinAbstractSelfTest {
      * @throws Exception If failed.
      */
     @Test
-    public void testObjectNotSupported() throws Exception {
-        assertThrowsAnyCause(log, new Callable<Object>() {
-            @Override public Object call() throws Exception {
-                stmt.executeQuery("select f1 from TestObject where id = 1");
+    public void testObject() throws Exception {
+        ResultSet rs = stmt.executeQuery(SQL);
 
-                return null;
+        int cnt = 0;
+
+        TestObjectField exp = new TestObjectField(100, "AAAA");
+
+        while (rs.next()) {
+            if (cnt == 0) {
+                Assert.assertEquals("Result by column label mismatch", exp, rs.getObject("f1"));
+
+                Assert.assertEquals("Result by column index mismatch", exp, rs.getObject(15));
+
+                Assert.assertEquals("Result by column index with general cast mismatch",
+                    exp, rs.getObject(15, Object.class));
+
+                Assert.assertEquals("Result by column index with precise cast mismatch",
+                    exp, rs.getObject(15, TestObjectField.class));
             }
-        }, SQLException.class, "Custom objects are not supported");
+
+            cnt++;
+        }
+
+        Assert.assertEquals("Result count mismatch", 1, cnt);
     }
 
     /**
@@ -1612,6 +1629,18 @@ public class JdbcThinResultSetSelfTest extends JdbcThinAbstractSelfTest {
         checkResultSetClosed(new RunnableX() {
             @Override public void runx() throws Exception {
                 rs.getTimestamp("id", new GregorianCalendar());
+            }
+        });
+
+        checkResultSetClosed(new RunnableX() {
+            @Override public void runx() throws Exception {
+                rs.getObject("f1");
+            }
+        });
+
+        checkResultSetClosed(new RunnableX() {
+            @Override public void runx() throws Exception {
+                rs.getObject("f1", TestObjectField.class);
             }
         });
 

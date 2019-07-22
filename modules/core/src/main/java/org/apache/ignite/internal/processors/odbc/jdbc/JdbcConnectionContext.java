@@ -197,8 +197,6 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
                 byte [] cliFeatures = reader.readByteArray();
 
                 features = JdbcThinFeature.enumSet(cliFeatures);
-
-                features.retainAll(JdbcThinFeature.allFeaturesAsEnumSet());
             }
         }
         catch (Exception ex) {
@@ -225,7 +223,7 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
             actx = authenticate(ses.certificates(), user, passwd);
         }
 
-        protoCtx = new JdbcProtocolContext(ver, features, null, false);
+        protoCtx = new JdbcProtocolContext(ver, features, null, false, true);
 
         initClientDescriptor("jdbc-thin");
 
