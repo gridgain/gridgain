@@ -583,25 +583,27 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
         if (isMultiJvm())
             return;
 
-        List<Ignite> allNodes = G.allGrids();
-
-        Set<ClusterNode> nodes0 = allNodes.stream()
+        List<IgniteEx> allNodes0 = G.allGrids().stream()
             .map(i -> (IgniteEx)i)
-            .filter(i -> !i.localNode().isDaemon())
+            .filter(i -> isServer(i.localNode()))
+            .collect(toList());
+
+        Set<ClusterNode> nodes0 = allNodes0.stream()
             .map(IgniteEx::localNode)
             .collect(toSet());
 
         long endTime = System.currentTimeMillis() + timeout;
 
-        for (Ignite ig : allNodes) {
-            IgniteEx igEx = (IgniteEx)ig;
-
-            GridDiscoveryManager disc = igEx.context().discovery();
+        for (IgniteEx ig : allNodes0) {
+            GridDiscoveryManager disc = ig.context().discovery();
 
             while (true) {
                 AffinityTopologyVersion topVer = disc.topologyVersionEx();
 
-                Collection<ClusterNode> nodes = disc.nodes(topVer);
+                Collection<ClusterNode> nodes = disc.nodes(topVer)
+                    .stream()
+                    .filter(GridCommonAbstractTest::isServer)
+                    .collect(Collectors.toSet());
 
                 if (System.currentTimeMillis() > endTime) {
                     StringBuilder exp = new StringBuilder();
@@ -625,7 +627,7 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
                         });
 
                     throw new IgniteException("Timeout of waiting topology localNode=("
-                        + ig.cluster().localNode().id() + "," + ig.cluster().localNode().consistentId()
+                        + ig.cluster().localNode().id() + "," + ig.cluster().localNode().consistentId() + ") "
                         + " topVer=" + topVer + " [" + "exp:" + exp + " | " + "actl:" + actl + "]"
                     );
                 }
@@ -636,6 +638,14 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
                     break;
             }
         }
+    }
+
+    /**
+     * @param node Cluster node.
+     * @return {@code True} If node is a server. {@False} if not.
+     */
+    private static boolean isServer(ClusterNode node){
+        return !node.isClient() && !node.isDaemon();
     }
 
     /**
