@@ -1,4 +1,4 @@
-package org.apache.ignite.internal.processors.tracing.impl;
+package org.apache.ignite.opencensus.spi.tracing;
 
 import org.apache.ignite.internal.processors.tracing.SerializedSpan;
 

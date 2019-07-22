@@ -1,20 +1,18 @@
 package org.apache.ignite.internal.processors.tracing;
 
-import io.opencensus.exporter.trace.zipkin.ZipkinExporterConfiguration;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
-import org.apache.ignite.internal.processors.tracing.impl.OpenCensusTracingSpi;
-import org.apache.ignite.internal.processors.tracing.impl.OpenCensusZipkinTraceExporter;
+import org.apache.ignite.internal.processors.tracing.noop.NoopTracingSpi;
+import org.apache.ignite.spi.IgniteSpiException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class TracingProcessor extends GridProcessorAdapter implements Tracing {
-    // TODO: Make configurable in Ignite configuration (Tracing section?).
-    private final TracingSpi spi;
+    /** Spi. */
+    private TracingSpi spi;
 
-    private final TraceExporter traceExporter;
-
+    /** Message process. */
     private final TracingMessagesProcessor msgProc;
 
     /**
@@ -23,30 +21,35 @@ public class TracingProcessor extends GridProcessorAdapter implements Tracing {
     public TracingProcessor(GridKernalContext ctx) {
         super(ctx);
 
-        spi = new OpenCensusTracingSpi();
-
-        traceExporter = new OpenCensusZipkinTraceExporter(
-            ZipkinExporterConfiguration.builder()
-                .setV2Url("http://localhost:9411/api/v2/spans")
-                .setServiceName("ignite")
-                .build()
-        );
+        spi = ctx.config().getTracingSpi();
 
         msgProc = new TracingMessagesProcessor(ctx, spi);
     }
 
+    /** {@inheritDoc} */
     @Override public void start() throws IgniteCheckedException {
         super.start();
 
-        traceExporter.start();
+        try {
+            spi.spiStart(ctx.igniteInstanceName());
+        }
+        catch (IgniteSpiException e) {
+            log.warning("Failed to start tracing processor with spi: " + spi.getName()
+                + ". Noop implementation will be used instead.", e);
 
-        log.info("Started tracing processor with configured spi " + spi + " and traceExporter " + traceExporter);
+            spi = new NoopTracingSpi();
+
+            spi.spiStart(ctx.igniteInstanceName());
+        }
+
+        log.info("Started tracing processor with configured spi: " + spi.getName());
     }
 
+    /** {@inheritDoc} */
     @Override public void stop(boolean cancel) throws IgniteCheckedException {
         super.stop(cancel);
 
-        //traceExporter.stop();
+        spi.spiStop();
     }
 
     /** {@inheritDoc} */
