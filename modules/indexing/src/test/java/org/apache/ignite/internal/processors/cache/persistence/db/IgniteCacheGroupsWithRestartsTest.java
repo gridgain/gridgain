@@ -200,7 +200,9 @@ public class IgniteCacheGroupsWithRestartsTest extends GridCommonAbstractTest {
 
         removeCacheDir(getTestIgniteInstanceName(2), "cacheGroup-group");
 
-        assertEquals(3, startGrid(2).cluster().nodes().size());
+        IgniteEx node2 = startGrid(2);
+
+        assertEquals(3, node2.cluster().nodes().size());
     }
 
     /**
@@ -210,7 +212,8 @@ public class IgniteCacheGroupsWithRestartsTest extends GridCommonAbstractTest {
     private void removeCacheDir(String instanceName, String cacheGroup) throws IgniteCheckedException {
         String dn2DirName = instanceName.replace(".", "_");
 
-        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), DFLT_STORE_DIR + "/" + dn2DirName + "/" + cacheGroup, true));
+        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(),
+            DFLT_STORE_DIR + "/" + dn2DirName + "/" + cacheGroup, true));
     }
 
     /**

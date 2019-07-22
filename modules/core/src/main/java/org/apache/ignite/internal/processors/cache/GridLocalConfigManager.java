@@ -20,9 +20,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
@@ -40,7 +42,8 @@ import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isPersistentCache;
 
 /**
- *
+ * Responsible for restoring local cache configurations (both from static configuration and persistence).
+ * Keep stop sequence of caches and caches which were presented on node before node join.
  */
 public class GridLocalConfigManager {
     /** */
@@ -53,8 +56,8 @@ public class GridLocalConfigManager {
     /** Logger. */
     private final IgniteLogger log;
 
-    /** Node's local cache configurations (both from static configuration and from persistent caches). */
-    private CacheJoinNodeDiscoveryData locConfigs;
+    /** Node's local caches on start (both from static configuration and from persistent caches). */
+    private Set<String> localCachesOnStart;
 
     /** Cache processor. */
     private final GridCacheProcessor cacheProcessor;
@@ -72,7 +75,24 @@ public class GridLocalConfigManager {
     ) {
         this.cacheProcessor = cacheProcessor;
         ctx = kernalCtx;
-        this.log = ctx.log(getClass());
+        log = ctx.log(getClass());
+    }
+
+    /**
+     * Save cache configuration to persistent store if necessary.
+     *
+     * @param storedCacheData Stored cache data.
+     * @param overwrite Overwrite existing.
+     */
+    public void saveCacheConfiguration(StoredCacheData storedCacheData, boolean overwrite) throws IgniteCheckedException {
+        assert storedCacheData != null;
+
+        GridCacheSharedContext<Object, Object> sharedContext = cacheProcessor.context();
+
+        if (sharedContext.pageStore() != null
+            && !sharedContext.kernalContext().clientNode()
+            && isPersistentCache(storedCacheData.config(), sharedContext.gridConfig().getDataStorageConfiguration()))
+            sharedContext.pageStore().storeCacheData(storedCacheData, overwrite);
     }
 
     /**
@@ -80,6 +100,13 @@ public class GridLocalConfigManager {
      */
     public Collection<String> stopSequence() {
         return stopSeq;
+    }
+
+    /**
+     * @return Caches to be started when this node starts.
+     */
+    public Set<String> localCachesOnStart() {
+        return localCachesOnStart;
     }
 
     /**
@@ -93,7 +120,7 @@ public class GridLocalConfigManager {
 
         Map<String, CacheJoinNodeDiscoveryData.CacheInfo> templates = new HashMap<>();
 
-        addCacheOnJoinFromConfig(caches, templates);
+        restoreCaches(caches, templates, ctx.config(), ctx.cache().context().pageStore());
 
         CacheJoinNodeDiscoveryData discoData = new CacheJoinNodeDiscoveryData(
             IgniteUuid.randomUuid(),
@@ -102,37 +129,31 @@ public class GridLocalConfigManager {
             startAllCachesOnClientStart()
         );
 
-        locConfigs = discoData;
+        localCachesOnStart = new HashSet<>(discoData.caches().keySet());
 
         return discoData;
     }
 
     /**
-     * @param caches Caches map.
-     * @param templates Templates map.
-     * @throws IgniteCheckedException If failed.
+     * @return {@code True} if need locally start all existing caches on client node start.
      */
-    private void addCacheOnJoinFromConfig(
-        Map<String, CacheJoinNodeDiscoveryData.CacheInfo> caches,
-        Map<String, CacheJoinNodeDiscoveryData.CacheInfo> templates
-    ) throws IgniteCheckedException {
-        addCachesOnJoin(caches, templates, ctx.config(), ctx.cache().context().pageStore());
+    private boolean startAllCachesOnClientStart() {
+        return startClientCaches && ctx.clientNode();
     }
 
     /**
-     * @param caches Caches.
-     * @param templates Templates.
-     * @param config Config.
-     * @param mgr Manager.
-     * @param log Logger.
+     * @param caches Caches accumulator.
+     * @param templates Templates accumulator.
+     * @param config Ignite configuration.
+     * @param pageStoreManager Page store manager.
      */
-    private void addCachesOnJoin(
+    private void restoreCaches(
         Map<String, CacheJoinNodeDiscoveryData.CacheInfo> caches,
         Map<String, CacheJoinNodeDiscoveryData.CacheInfo> templates,
         IgniteConfiguration config,
-        IgnitePageStoreManager mgr
+        IgnitePageStoreManager pageStoreManager
     ) throws IgniteCheckedException {
-        assert !config.isDaemon();
+        assert !config.isDaemon() : "Trying to restore cache configurations on daemon node.";
 
         CacheConfiguration[] cfgs = config.getCacheConfiguration();
 
@@ -142,11 +163,11 @@ public class GridLocalConfigManager {
             // Replace original configuration value.
             cfgs[i] = cfg;
 
-            addCacheOnJoinFromConfiguration(cfg, false, caches, templates);
+            addCacheFromConfiguration(cfg, false, caches, templates);
         }
 
-        if (CU.isPersistenceEnabled(config) && mgr != null) {
-            Map<String, StoredCacheData> storedCaches = mgr.readCacheConfigurations();
+        if (CU.isPersistenceEnabled(config) && pageStoreManager != null) {
+            Map<String, StoredCacheData> storedCaches = pageStoreManager.readCacheConfigurations();
 
             if (!F.isEmpty(storedCaches)) {
                 List<String> skippedConfigs = new ArrayList<>();
@@ -163,7 +184,7 @@ public class GridLocalConfigManager {
                         storedCacheData.cacheConfigurationEnrichment(splitCfg.get2());
 
                         // Overwrite with new format.
-                        saveCacheConfiguration(storedCacheData);
+                        saveCacheConfiguration(storedCacheData, true);
                     }
 
                     String cacheName = storedCacheData.config().getName();
@@ -234,7 +255,7 @@ public class GridLocalConfigManager {
      * @param templates Templates map.
      * @throws IgniteCheckedException If failed.
      */
-    private void addCacheOnJoinFromConfiguration(
+    private void addCacheFromConfiguration(
         CacheConfiguration<?, ?> cfg,
         boolean sql,
         Map<String, CacheJoinNodeDiscoveryData.CacheInfo> caches,
@@ -280,38 +301,6 @@ public class GridLocalConfigManager {
     }
 
     /**
-     * @return Caches to be started when this node starts.
-     */
-    public CacheJoinNodeDiscoveryData localConfigs() {
-        CacheJoinNodeDiscoveryData configs = locConfigs;
-
-        locConfigs = null;
-
-        return configs;
-    }
-
-    /**
-     * @return {@code True} if need locally start all existing caches on client node start.
-     */
-    private boolean startAllCachesOnClientStart() {
-        return startClientCaches && ctx.clientNode();
-    }
-
-    /**
-     * Save cache configuration to persistent store if necessary.
-     *
-     * @param storedCacheData Stored cache data.
-     */
-    public void saveCacheConfiguration(StoredCacheData storedCacheData) throws IgniteCheckedException {
-        assert storedCacheData != null;
-
-        GridCacheSharedContext<Object, Object> sharedContext = cacheProcessor.context();
-        if (sharedContext.pageStore() != null && !sharedContext.kernalContext().clientNode() &&
-            isPersistentCache(storedCacheData.config(), sharedContext.gridConfig().getDataStorageConfiguration()))
-            sharedContext.pageStore().storeCacheData(storedCacheData, true);
-    }
-
-    /**
      * Validates cache configuration against stored cache configuration when persistence is enabled.
      *
      * @param cfg Configured cache configuration.
@@ -340,5 +329,4 @@ public class GridLocalConfigManager {
                 "' and value stored on the disk is '" + storedVal + "'");
         }
     }
-
 }

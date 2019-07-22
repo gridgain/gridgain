@@ -151,15 +151,13 @@ class ClusterCachesInfo {
      * Filters all dynamic cache descriptors and groups that were not presented on node start
      * and were received with grid discovery data.
      *
-     * @param localConfigData node's local cache configurations
-     * (both from static config and stored with persistent caches).
-     *
+     * @param localCachesOnStart Caches which were already presented on node start.
      */
-    public void filterDynamicCacheDescriptors(CacheJoinNodeDiscoveryData localConfigData) {
+    public void filterDynamicCacheDescriptors(Set<String> localCachesOnStart) {
         if (ctx.isDaemon())
             return;
 
-        filterRegisteredCachesAndCacheGroups(localConfigData.caches());
+        filterRegisteredCachesAndCacheGroups(localCachesOnStart);
 
         List<T2<DynamicCacheDescriptor, NearCacheConfiguration>> locJoinStartCaches = locJoinCachesCtx.caches();
 
@@ -183,14 +181,14 @@ class ClusterCachesInfo {
      *
      * @param locCaches Caches from local node configuration (static configuration and persistent caches).
      */
-    private void filterRegisteredCachesAndCacheGroups(Map<String, CacheJoinNodeDiscoveryData.CacheInfo> locCaches) {
+    private void filterRegisteredCachesAndCacheGroups(Set<String> locCaches) {
         //filter registered caches
         Iterator<Map.Entry<String, DynamicCacheDescriptor>> cachesIter = registeredCaches.entrySet().iterator();
 
         while (cachesIter.hasNext()) {
             Map.Entry<String, DynamicCacheDescriptor> e = cachesIter.next();
 
-            if (!locCaches.containsKey(e.getKey())) {
+            if (!locCaches.contains(e.getKey())) {
                 cachesIter.remove();
 
                 ctx.discovery().removeCacheFilter(e.getKey());

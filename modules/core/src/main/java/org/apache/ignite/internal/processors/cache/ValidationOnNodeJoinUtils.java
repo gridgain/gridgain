@@ -88,7 +88,7 @@ import static org.apache.ignite.internal.processors.security.SecurityUtils.nodeS
 /**
  * Util class for joining node validation.
  */
-public class Validator {
+public class ValidationOnNodeJoinUtils {
     /** Template of message of conflicts during configuration merge */
     private static final String MERGE_OF_CONFIG_CONFLICTS_MESSAGE =
         "Conflicts during configuration merge for cache '%s' : \n%s";
@@ -133,7 +133,7 @@ public class Validator {
             StringBuilder errorMsg = new StringBuilder();
 
             if (!node.isClient()) {
-                Validator.validateRmtRegions(node, ctx).forEach(error -> {
+                ValidationOnNodeJoinUtils.validateRmtRegions(node, ctx).forEach(error -> {
                     if (errorMsg.length() > 0)
                         errorMsg.append("\n");
 
