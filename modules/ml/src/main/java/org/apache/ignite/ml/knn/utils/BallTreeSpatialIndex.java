@@ -108,6 +108,8 @@ public class BallTreeSpatialIndex<L> implements SpatialIndex<L> {
 
         splitPoints(data, leftCenter, rightCenter, leftBallPnts, rightBallPnts);
 
+        data.clear(); // Help GC to collect unused list.
+
         return new TreeInnerNode(
             center,
             radius,

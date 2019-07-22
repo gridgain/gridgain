@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import org.apache.ignite.ml.math.distances.DistanceMeasure;
-import org.apache.ignite.ml.math.distances.EuclideanDistance;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.structures.LabeledVector;
 
@@ -30,25 +29,27 @@ import static org.apache.ignite.ml.knn.utils.PointWithDistanceUtil.tryToAddIntoH
 
 /**
  * KD tree based implementation of {@link SpatialIndex}. Asymptotic runtime complexity of finding {@code k} closest
- * elements is {@code O(log(n)*k)}, but it degrades on high dimensional data. Works only with Euclidean distance
- * measure.
+ * elements is {@code O(log(n)*k)}, but it degrades on high dimensional data.
  *
  * @param <L> Label type.
  */
 public class KDTreeSpatialIndex<L> implements SpatialIndex<L> {
-    /** Euclidean distance (the only one distance measure KD tree works with). */
-    private static final DistanceMeasure distanceMeasure = new EuclideanDistance();
+    /** Distance measure. */
+    private final DistanceMeasure distanceMeasure;
 
     /** Root node of the KD tree. */
     private TreeNode root;
 
     /**
-     * Constructs a new instance of KD tree spatial index. To construct KD tree a "randomized" appraoch is uses, all
+     * Constructs a new instance of KD tree spatial index. To construct KD tree a "randomized" approach is uses, all
      * nodes are inserted into the tree sequentially without any additional computations and rebalancing.
      *
      * @param data Data points.
+     * @param distanceMeasure Distance measure.
      */
-    public KDTreeSpatialIndex(List<LabeledVector<L>> data) {
+    public KDTreeSpatialIndex(List<LabeledVector<L>> data, DistanceMeasure distanceMeasure) {
+        this.distanceMeasure = distanceMeasure;
+
         data.forEach(dataPnt -> root = add(root, dataPnt));
     }
 
