@@ -1029,7 +1029,7 @@ public class TcpDiscoverySelfTest extends GridCommonAbstractTest {
             for (int i = 0; i < 5; i++) {
                 Ignite g = startGrid("MulticastIpFinder-" + i);
 
-                assertEquals(i + 1, g.cluster().nodes().size());
+                assertEquals(g.cluster().nodes().toString(), i + 1, g.cluster().nodes().size());
 
                 TcpDiscoverySpi spi = (TcpDiscoverySpi)g.configuration().getDiscoverySpi();
 
