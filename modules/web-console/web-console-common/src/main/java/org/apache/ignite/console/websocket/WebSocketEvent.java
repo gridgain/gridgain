@@ -16,6 +16,11 @@
 
 package org.apache.ignite.console.websocket;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import static org.apache.ignite.console.websocket.WebSocketEvents.ERROR;
+
 /**
  * Websocket event with payload.
  *
@@ -51,4 +56,17 @@ public interface WebSocketEvent<T> {
      * @param payload New payload.
      */
     public void setPayload(T payload);
+
+    /**
+     * Create event with error for response with same ID.
+     *
+     * @param msg Message.
+     */
+    public default WebSocketResponse withError(String msg) {
+        Map<String, String> err = new HashMap<>();
+
+        err.put("message", msg);
+
+        return new WebSocketResponse(getRequestId(), ERROR, err);
+    }
 }

@@ -16,7 +16,7 @@
 
 package org.apache.ignite.console.websocket;
 
-import java.util.List;
+import java.util.Collection;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
@@ -31,7 +31,7 @@ public class AgentHandshakeResponse {
 
     /** */
     @GridToStringInclude
-    private List<String> tokens;
+    private Collection<String> tokens;
 
     /**
      * Constructor for deserialization.
@@ -39,7 +39,7 @@ public class AgentHandshakeResponse {
      * @param tokens Tokens.
      */
     @JsonCreator
-    private AgentHandshakeResponse(@JsonProperty("error") String err, @JsonProperty("tokens") List<String> tokens) {
+    private AgentHandshakeResponse(@JsonProperty("error") String err, @JsonProperty("tokens") Collection<String> tokens) {
         this.err = err;
         this.tokens = tokens;
     }
@@ -54,7 +54,7 @@ public class AgentHandshakeResponse {
     /**
      * @param toks Tokens.
      */
-    public AgentHandshakeResponse(List<String> toks) {
+    public AgentHandshakeResponse(Collection<String> toks) {
         this(null, toks);
     }
 
@@ -68,7 +68,7 @@ public class AgentHandshakeResponse {
     /**
      * @return value of tokens
      */
-    public List<String> getTokens() {
+    public Collection<String> getTokens() {
         return tokens;
     }
 

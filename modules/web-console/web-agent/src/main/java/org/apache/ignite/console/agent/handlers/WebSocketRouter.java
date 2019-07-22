@@ -20,6 +20,7 @@ import java.net.ConnectException;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -124,7 +125,7 @@ public class WebSocketRouter implements AutoCloseable {
     private int reconnectCnt = -1;
 
     /** Active tokens after handshake. */
-    private List<String> validTokens;
+    private Collection<String> validTokens;
 
     /** Connector pool. */
     private ExecutorService connectorPool = Executors.newSingleThreadExecutor(r -> new Thread(r, "Connect thread"));
@@ -363,7 +364,7 @@ public class WebSocketRouter implements AutoCloseable {
                     break;
 
                 case AGENT_REVOKE_TOKEN:
-                    processRevokeToken(fromJson(evt.getPayload(), String.class));
+                    processRevokeToken(evt.getPayload());
 
                     return;
 

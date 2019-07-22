@@ -21,6 +21,7 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
+import org.apache.ignite.transactions.TransactionException;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
@@ -57,13 +58,44 @@ public class CacheHolder<K, V> {
     }
 
     /**
+     * @param key the key whose associated value is to be returned.
+     * @return {@code true} If table containsKey specified key.
+     */
+    public boolean containsKey(K key) throws TransactionException {
+        return cache().containsKey(key);
+    }
+
+    /**
+     * @param key the key whose associated value is to be returned.
+     * @return DTO.
+     */
+    public V get(K key) throws TransactionException {
+        return cache().get(key);
+    }
+
+    /**
+     * @param val DTO.
+     * @return Saved DTO.
+     */
+    public void put(K key, V val) throws TransactionException {
+        cache().put(key, val);
+    }
+
+    /**
+     * @param val DTO.
+     * @return Saved DTO.
+     */
+    public V getAndPut(K key, V val) throws TransactionException {
+        return cache().getAndPut(key, val);
+    }
+
+    /**
      * @return Underlying cache.
      */
     public IgniteCache<K, V> cache() {
         return cache;
     }
 
-    /** */
     public IgniteInternalCache<K, V> internalCache() {
         return ((IgniteKernal)ignite).getCache(cacheName);
     }

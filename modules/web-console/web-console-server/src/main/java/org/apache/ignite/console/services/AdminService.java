@@ -27,7 +27,7 @@ import org.apache.ignite.console.json.JsonObject;
 import org.apache.ignite.console.repositories.AnnouncementRepository;
 import org.apache.ignite.console.tx.TransactionManager;
 import org.apache.ignite.console.web.model.SignUpRequest;
-import org.apache.ignite.console.web.socket.WebSocketsManager;
+import org.apache.ignite.console.web.socket.BrowsersService;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
@@ -62,7 +62,7 @@ public class AdminService {
     private final AnnouncementRepository annRepo;
 
     /** */
-    private final WebSocketsManager wsm;
+    private final BrowsersService browsersHnd;
 
     /**
      * @param txMgr Transactions manager.
@@ -72,7 +72,7 @@ public class AdminService {
      * @param activitiesSrv Service to work with activities.
      * @param evtPublisher Service to publish events.
      * @param annRepo Repository to work with announcement.
-     * @param wsm Web sockets manager.
+     * @param browsersHnd Browser handler.
      */
     public AdminService(
         TransactionManager txMgr,
@@ -82,7 +82,7 @@ public class AdminService {
         ActivitiesService activitiesSrv,
         EventPublisher evtPublisher,
         AnnouncementRepository annRepo,
-        WebSocketsManager wsm
+        BrowsersService browsersHnd
     ) {
         this.txMgr = txMgr;
         this.accountsSrv = accountsSrv;
@@ -91,7 +91,7 @@ public class AdminService {
         this.activitiesSrv = activitiesSrv;
         this.evtPublisher = evtPublisher;
         this.annRepo = annRepo;
-        this.wsm = wsm;
+        this.browsersHnd = browsersHnd;
     }
 
     /**
@@ -175,6 +175,6 @@ public class AdminService {
     public void updateAnnouncement(Announcement ann) {
         annRepo.save(ann);
 
-        wsm.broadcastAnnouncement(ann);
+        browsersHnd.broadcastAnnouncement(ann);
     }
 }
