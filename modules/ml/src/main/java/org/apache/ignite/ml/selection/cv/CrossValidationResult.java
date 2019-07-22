@@ -64,7 +64,7 @@ public class CrossValidationResult {
      * @param locScores The scores.
      * @param paramMap  The parameter set associated with the given scores.
      */
-    public synchronized void addScores(double[] locScores, Map<String, Double> paramMap) {
+    synchronized void addScores(double[] locScores, Map<String, Double> paramMap) {
         scoringBoard.put(paramMap, locScores);
     }
 
@@ -86,7 +86,7 @@ public class CrossValidationResult {
      *
      * @param bestScore The best score.
      */
-    public synchronized void setBestScore(double[] bestScore) {
+    synchronized void setBestScore(double[] bestScore) {
         this.bestScore = bestScore;
     }
 
