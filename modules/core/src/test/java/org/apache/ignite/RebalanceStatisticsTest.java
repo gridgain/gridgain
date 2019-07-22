@@ -66,6 +66,7 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
             .toArray(CacheConfiguration[]::new);
 
         cfg.setCacheConfiguration(cacheConfigurations);
+        cfg.setRebalanceThreadPoolSize(5);
         return cfg;
     }
 
@@ -79,16 +80,15 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
         CacheConfiguration<Object, Object> ccfg = new CacheConfiguration<>(cacheName);
         ccfg.setCacheMode(CacheMode.PARTITIONED);
         ccfg.setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL);
-        ccfg.setAffinity(new RendezvousAffinityFunction(false, 10));
+        ccfg.setAffinity(new RendezvousAffinityFunction(false, 100));
+        ccfg.setBackups(3);
         return ccfg;
     }
 
     /** TODO: javadoc later */
     @Test
     public void testRebalanceStatistics() throws Exception {
-        startGrids(3);
-
-        IgniteEx crd = grid(0);
+        IgniteEx crd = startGrids(3);
 
         for (String cacheName : CACHE_NAMES) {
             IgniteCache<Object, Object> cache = crd.cache(cacheName);
@@ -102,5 +102,7 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
         System.setProperty(IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS, Boolean.TRUE.toString());
 
         startGrid(3);
+
+        awaitPartitionMapExchange();
     }
 }

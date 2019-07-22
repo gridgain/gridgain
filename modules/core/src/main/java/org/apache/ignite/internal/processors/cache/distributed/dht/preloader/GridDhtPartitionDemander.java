@@ -33,9 +33,9 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheRebalanceMode;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -88,10 +88,10 @@ import static java.lang.System.currentTimeMillis;
 import static java.util.Comparator.comparing;
 import static java.util.Objects.nonNull;
 import static java.util.function.Function.identity;
+import static java.util.stream.Collector.of;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.mapping;
-import static java.util.stream.Collectors.reducing;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_QUIET;
@@ -110,19 +110,13 @@ import static org.apache.ignite.internal.processors.dr.GridDrType.DR_PRELOAD;
  * Thread pool for requesting partitions from other nodes and populating local cache.
  */
 public class GridDhtPartitionDemander {
-    /**
-     *
-     */
+    /** */
     private final GridCacheSharedContext<?, ?> ctx;
 
-    /**
-     *
-     */
+    /** */
     private final CacheGroupContext grp;
 
-    /**
-     *
-     */
+    /** */
     private final IgniteLogger log;
 
     /** Preload predicate. */
@@ -270,8 +264,8 @@ public class GridDhtPartitionDemander {
 
     /**
      * @param fut Future.
-     * @return {@code True} if rebalance topology version changed by exchange thread or force reassing exchange occurs,
-     * see {@link RebalanceReassignExchangeTask} for details.
+     * @return {@code True} if rebalance topology version changed by exchange thread or force
+     * reassing exchange occurs, see {@link RebalanceReassignExchangeTask} for details.
      */
     private boolean topologyChanged(RebalanceFuture fut) {
         return !ctx.exchange().rebalanceTopologyVersion().equals(fut.topVer) ||
@@ -295,9 +289,9 @@ public class GridDhtPartitionDemander {
     }
 
     /**
-     * This method initiates new rebalance process from given {@code assignments} by creating new rebalance future based
-     * on them. Cancels previous rebalance future and sends rebalance started event. In case of delayed rebalance method
-     * schedules the new one with configured delay based on {@code lastExchangeFut}.
+     * This method initiates new rebalance process from given {@code assignments} by creating new rebalance
+     * future based on them. Cancels previous rebalance future and sends rebalance started event.
+     * In case of delayed rebalance method schedules the new one with configured delay based on {@code lastExchangeFut}.
      *
      * @param assignments Assignments to process.
      * @param force {@code True} if preload request by {@link ForceRebalanceExchangeTask}.
@@ -449,12 +443,11 @@ public class GridDhtPartitionDemander {
     }
 
     /**
-     * Asynchronously sends initial demand messages formed from {@code assignments} and initiates supply-demand
-     * processes.
+     * Asynchronously sends initial demand messages formed from {@code assignments} and initiates supply-demand processes.
      *
-     * For each node participating in rebalance process method distributes set of partitions for that node to several
-     * stripes (topics). It means that each stripe containing a subset of partitions can be processed in parallel. The
-     * number of stripes are controlled by {@link IgniteConfiguration#getRebalanceThreadPoolSize()} property.
+     * For each node participating in rebalance process method distributes set of partitions for that node to several stripes (topics).
+     * It means that each stripe containing a subset of partitions can be processed in parallel.
+     * The number of stripes are controlled by {@link IgniteConfiguration#getRebalanceThreadPoolSize()} property.
      *
      * Partitions that can be rebalanced using only WAL are called historical, others are called full.
      *
@@ -490,7 +483,7 @@ public class GridDhtPartitionDemander {
 
             GridDhtPartitionDemandMessage d = e.getValue();
 
-            int rmtStripes = Optional.ofNullable((Integer)node.attribute(IgniteNodeAttributes.ATTR_REBALANCE_POOL_SIZE))
+            int rmtStripes = Optional.ofNullable((Integer) node.attribute(IgniteNodeAttributes.ATTR_REBALANCE_POOL_SIZE))
                 .orElse(1);
 
             int rmtTotalStripes = rmtStripes <= locStripes ? rmtStripes : locStripes;
@@ -691,9 +684,10 @@ public class GridDhtPartitionDemander {
      *
      * Supply message contains entries to populate rebalancing partitions.
      *
-     * There is a cyclic process: Populate rebalancing partitions with entries from Supply message. If not all
-     * partitions specified in {@link #rebalanceFut} were rebalanced or marked as missed send new Demand message to
-     * request next batch of entries.
+     * There is a cyclic process:
+     * Populate rebalancing partitions with entries from Supply message.
+     * If not all partitions specified in {@link #rebalanceFut} were rebalanced or marked as missed
+     * send new Demand message to request next batch of entries.
      *
      * @param topicId Topic id.
      * @param nodeId Node id.
@@ -786,11 +780,14 @@ public class GridDhtPartitionDemander {
 
                 partStat.msgSize = supplyMsg.messageSize();
 
+                boolean isPrintStatistics = isPrintRebalanceStatistics();
+
                 // Preload.
                 for (Map.Entry<Integer, CacheEntryInfoCollection> e : supplyMsg.infos().entrySet()) {
                     int p = e.getKey();
 
-                    partStat.parts.add(new PartitionInfoStatistics(p, e.getValue().infos().size()));
+                    if (isPrintStatistics)
+                        partStat.parts.add(new PartitionInfoStatistics(p, e.getValue().infos().size()));
 
                     if (aff.get(p).contains(ctx.localNode())) {
                         GridDhtLocalPartition part;
@@ -1240,19 +1237,13 @@ public class GridDhtPartitionDemander {
      *
      */
     public static class RebalanceFuture extends GridFutureAdapter<Boolean> {
-        /**
-         *
-         */
+        /** */
         private final GridCacheSharedContext<?, ?> ctx;
 
-        /**
-         *
-         */
+        /** */
         private final CacheGroupContext grp;
 
-        /**
-         *
-         */
+        /** */
         private final IgniteLogger log;
 
         /** Remaining. */
@@ -1274,11 +1265,9 @@ public class GridDhtPartitionDemander {
         /** The number of rebalance routines. */
         private final long routines;
 
-        /**
-         * Used to order rebalance cancellation and supply message processing, they should not overlap. Otherwise
-         * partition clearing could start on still rebalancing partition resulting in eviction of partition in OWNING
-         * state.
-         */
+        /** Used to order rebalance cancellation and supply message processing, they should not overlap.
+         * Otherwise partition clearing could start on still rebalancing partition resulting in eviction of
+         * partition in OWNING state. */
         private final ReentrantReadWriteLock cancelLock;
 
         /** Rebalance statistics */
@@ -1487,10 +1476,10 @@ public class GridDhtPartitionDemander {
                     int remainingRoutines = remaining.size() - 1;
 
                     U.log(log, "Completed " + ((remainingRoutines == 0 ? "(final) " : "") +
-                        "rebalancing [grp=" + grp.cacheOrGroupName() +
-                        ", supplier=" + nodeId +
-                        ", topVer=" + topologyVersion() +
-                        ", progress=" + (routines - remainingRoutines) + "/" + routines + "]"));
+                            "rebalancing [grp=" + grp.cacheOrGroupName() +
+                            ", supplier=" + nodeId +
+                            ", topVer=" + topologyVersion() +
+                            ", progress=" + (routines - remainingRoutines) + "/" + routines + "]"));
 
                     remaining.remove(nodeId);
                 }
@@ -1635,7 +1624,22 @@ public class GridDhtPartitionDemander {
         }
     }
 
-    /** Print statistics for current rebalance into log and clear it. */
+    /**
+     * Is enable print statistics or not by {@code IGNITE_QUIET}, {@code IGNITE_WRITE_REBALANCE_STATISTICS}.
+     *
+     * @return is enable print statisctics or not
+     * @see IgniteSystemProperties#IGNITE_QUIET
+     * @see IgniteSystemProperties#IGNITE_WRITE_REBALANCE_STATISTICS
+     */
+    private boolean isPrintRebalanceStatistics() {
+        return !getBoolean(IGNITE_QUIET, true) && getBoolean(IGNITE_WRITE_REBALANCE_STATISTICS, false);
+    }
+
+    /**
+     * Print statistics for current rebalance into log.
+     * Statistic will print if {@link #isPrintRebalanceStatistics()}.
+     * Clears statistics when printed or not.
+     * */
     private void printRebalanceStatistics() {
         RebalanceFuture currRebFut = rebalanceFut;
 
@@ -1649,8 +1653,12 @@ public class GridDhtPartitionDemander {
             .collect(toList());
 
         try {
-            if (getBoolean(IGNITE_QUIET, true) || !getBoolean(IGNITE_WRITE_REBALANCE_STATISTICS, false))
+            if (!isPrintRebalanceStatistics())
                 return;
+
+            rebFuts.stream()
+                .collect(toMap(o -> o.grp, o -> o.stat))
+                .forEach((context, statistics) -> log.info(format("{%s = %s}", context.cacheOrGroupName(), statistics)));
 
             AtomicInteger nodeCnt = new AtomicInteger();
 
@@ -1662,7 +1670,8 @@ public class GridDhtPartitionDemander {
 
             StringJoiner joiner = new StringJoiner(" ")
                 .add(totalRebalanceStatistics(rebFuts, nodeAliases))
-                .add(cacheGroupsRebalanceStatistics(rebFuts, nodeAliases, nodeCnt))
+                .add(cacheGroupsRebalanceStatistics(rebFuts, nodeAliases))
+                .add(partitionsDistributionRebalanceStatistics(rebFuts, nodeAliases, nodeCnt))
                 .add(aliasesRebalanceStatistics(nodeAliases));
 
             log.info(joiner.toString());
@@ -1693,13 +1702,12 @@ public class GridDhtPartitionDemander {
             .mapToLong(value -> value.stat.endTime)
             .max().getAsLong();
 
-        Map<Integer, Collection<PartitionStatistics>> topicStat = rebFuts.stream()
-            .flatMap(future -> future.stat.partStat.entrySet().stream())
-            .collect(groupingBy(Map.Entry::getKey, mapping(entry -> entry.getValue().values(),
-                reducing(new ArrayList<>(),
-                    (stat1, stat2) -> {
-                        stat1.addAll(stat2);
-                        return stat1;
+        Map<Integer, Collection<PartitionStatistics>> topicStat =
+            rebFuts.stream().flatMap(future -> future.stat.partStat.entrySet().stream())
+                .collect(groupingBy(Map.Entry::getKey, mapping(entry -> entry.getValue().values(), of(ArrayList::new,
+                    (s1, s2) -> s1.addAll(s2), (s1, s2) -> {
+                        s1.addAll(s2);
+                        return s1;
                     }))));
 
         Map<ClusterNode, List<PartitionStatistics>> supplierStat = rebFuts.stream()
@@ -1728,13 +1736,11 @@ public class GridDhtPartitionDemander {
      *
      * @param rebFuts {@link RebalanceFuture}'s in current rebalance
      * @param nodeAliases for print nodeId=1 instead long string
-     * @param nodeCnt for add new node into nodeAliases
      * @return statistics per cache group
      */
     private String cacheGroupsRebalanceStatistics(
         final List<RebalanceFuture> rebFuts,
-        final Map<ClusterNode, Integer> nodeAliases,
-        final AtomicInteger nodeCnt
+        final Map<ClusterNode, Integer> nodeAliases
     ) {
         assert nonNull(rebFuts);
 
@@ -1743,44 +1749,71 @@ public class GridDhtPartitionDemander {
 
         SimpleDateFormat dateFormat = new SimpleDateFormat(REBALANCE_DATE_FORMAT_PATTERN);
 
-        boolean writePartStat = getBoolean(IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS, false);
-
         rebFuts.forEach(future -> {
             RebalanceStatistics stat = future.stat;
 
             Map<Integer, Collection<PartitionStatistics>> topicStat = stat.partStat.entrySet().stream()
-                .collect(groupingBy(Map.Entry::getKey, mapping(entry -> entry.getValue().values(),
-                    reducing(new ArrayList<>(), (stat1, stat2) -> {
-                        stat1.addAll(stat2);
-                        return stat1;
+                .collect(groupingBy(Map.Entry::getKey, mapping(entry -> entry.getValue().values(), of(ArrayList::new,
+                    (s1, s2) -> s1.addAll(s2), (s1, s2) -> {
+                        s1.addAll(s2);
+                        return s1;
                     }))));
 
             Map<ClusterNode, List<PartitionStatistics>> supplierStat = stat.partStat.entrySet().stream()
                 .flatMap(entry -> entry.getValue().entrySet().stream())
                 .collect(groupingBy(Map.Entry::getKey, mapping(Map.Entry::getValue, toList())));
 
+            CacheGroupContext cacheGrpCtx = future.grp;
+
             joiner.add(format(
                 "[id=%s, name=%s, start=%s, end=%s, d=%s ms]",
-                future.grp.groupId(),
-                future.grp.cacheOrGroupName(),
+                cacheGrpCtx.groupId(),
+                cacheGrpCtx.cacheOrGroupName(),
                 dateFormat.format(stat.startTime),
                 dateFormat.format(stat.endTime),
                 stat.endTime - stat.startTime
             ))
                 .add(topicRebalanceStatistics(topicStat))
                 .add(supplierRebalanceStatistics(supplierStat, nodeAliases));
+        });
 
-            if (!writePartStat)
-                return;
+        return joiner.toString();
+    }
 
-            joiner.add("Partitions:");
+    /**
+     * Partitions distribution per cache group.
+     * Works if {@link IgniteSystemProperties#IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS} set true.
+     *
+     * @param rebFuts {@link RebalanceFuture}'s in current rebalance
+     * @param nodeAliases for print nodeId=1 instead long string
+     * @param nodeCnt partitions distribution
+     */
+    private String partitionsDistributionRebalanceStatistics(
+        final List<RebalanceFuture> rebFuts,
+        final Map<ClusterNode, Integer> nodeAliases,
+        final AtomicInteger nodeCnt)
+    {
+        assert nonNull(rebFuts);
+        assert nonNull(nodeAliases);
+        assert nonNull(nodeCnt);
+
+        if (!getBoolean(IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS, false))
+            return "";
+
+        StringJoiner joiner = new StringJoiner(" ")
+            .add("Partitions distribution per cache group:");
+
+        rebFuts.forEach(future -> {
+            CacheGroupContext cacheGrpCtx = future.grp;
+
+            joiner.add(format("[id=%s, name=%s]", cacheGrpCtx.groupId(), cacheGrpCtx.cacheOrGroupName()));
 
             AffinityAssignment affinity = future.grp.affinity().cachedAffinity(future.topVer);
 
             Map<ClusterNode, Set<Integer>> primaryParts = affinity.nodes().stream()
                 .collect(toMap(identity(), node -> affinity.primaryPartitions(node.id())));
 
-            stat.partStat.entrySet().stream()
+            future.stat.partStat.entrySet().stream()
                 .flatMap(entry -> entry.getValue().entrySet().stream())
                 .flatMap(entry -> entry.getValue().parts.stream().map(partInfo -> new T2<>(entry.getKey(), partInfo)))
                 .sorted(comparing(t2 -> t2.get2().id))
@@ -1790,6 +1823,7 @@ public class GridDhtPartitionDemander {
 
                     String nodes = affinity.get(partId).stream()
                         .peek(node -> nodeAliases.computeIfAbsent(node, node1 -> nodeCnt.getAndIncrement()))
+                        .sorted(comparing(nodeAliases::get))
                         .map(node -> { return "[" + nodeAliases.get(node) +
                             (primaryParts.get(node).contains(partId) ? ",p" : ",b") +
                             (node.equals(supplierNode) ? ",s" : "") + "]";
@@ -1798,6 +1832,7 @@ public class GridDhtPartitionDemander {
 
                     joiner.add(partId + " = " + nodes);
                 });
+
         });
 
         return joiner.toString();
