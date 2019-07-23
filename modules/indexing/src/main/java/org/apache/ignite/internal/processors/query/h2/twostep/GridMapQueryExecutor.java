@@ -458,7 +458,8 @@ public class GridMapQueryExecutor {
                             dataPageScanEnabled
                         );
 
-                        sendNextPage(node, msg);
+                        if(msg != null)
+                            sendNextPage(node, msg);
                     }
                     else {
                         assert !qry.isPartitioned();
@@ -670,7 +671,17 @@ public class GridMapQueryExecutor {
             GridQueryFailResponse msg = new GridQueryFailResponse(qryReqId, err);
 
             if (node.isLocal()) {
-                U.error(log, "Failed to run map query on local node.", err);
+                if (err instanceof QueryCancelledException) {
+                    String errMsg = "Failed to run cancelled map query on local node: [localNodeId="
+                        + node.id() + ", reqId=" + qryReqId + ']';
+
+                    if (log.isDebugEnabled())
+                        U.warn(log, errMsg, err);
+                    else if (log.isInfoEnabled())
+                        log.info(errMsg);
+                }
+                else
+                    U.error(log, "Failed to run map query on local node.", err);
 
                 h2.reduceQueryExecutor().onFail(node, msg);
             }
@@ -764,7 +775,8 @@ public class GridMapQueryExecutor {
                         req.pageSize(),
                         dataPageScanEnabled);
 
-                    sendNextPage(node, msg);
+                    if(msg != null)
+                        sendNextPage(node, msg);
                 }
                 finally {
                     try {

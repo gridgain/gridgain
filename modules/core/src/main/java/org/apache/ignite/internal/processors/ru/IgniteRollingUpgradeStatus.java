@@ -23,7 +23,6 @@ import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteProductVersion;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Represent cluster-wide status of Rolling Upgrade process.
@@ -79,27 +78,27 @@ public class IgniteRollingUpgradeStatus extends IgniteDataTransferObject impleme
     }
 
     /** {@inheritDoc} */
-    @Override public boolean isEnabled() {
+    @Override public boolean enabled() {
         return enabled;
     }
 
     /** {@inheritDoc} */
-    @Override public boolean isForcedModeEnabled() {
+    @Override public boolean forcedModeEnabled() {
         return forcedModeEnabled;
     }
 
     /** {@inheritDoc} */
-    @Override public IgniteProductVersion getInitialVersion() {
+    @Override public IgniteProductVersion initialVersion() {
         return initVer;
     }
 
     /** {@inheritDoc} */
-    @Override public @Nullable IgniteProductVersion getUpdateVersion() {
+    @Override public IgniteProductVersion targetVersion() {
         return updateVer;
     }
 
     /** {@inheritDoc} */
-    @Override public Set<IgniteFeatures> getSupportedFeatures() {
+    @Override public Set<IgniteFeatures> supportedFeatures() {
         return supportedFeatures;
     }
 
