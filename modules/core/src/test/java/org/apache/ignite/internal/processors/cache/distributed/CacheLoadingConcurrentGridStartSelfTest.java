@@ -153,7 +153,7 @@ public class CacheLoadingConcurrentGridStartSelfTest extends GridCommonAbstractT
                     try (IgniteDataStreamer<Integer, String> dataStreamer = grid.dataStreamer(DEFAULT_CACHE_NAME)) {
                         dataStreamer.allowOverwrite(allowOverwrite);
 
-                        for (int i = 0; i < KEYS_CNT; i++)
+                        for (int i = 0; i < getKeysCnt(); i++)
                             dataStreamer.addData(i, Integer.toString(i));
                     }
 
@@ -315,7 +315,7 @@ public class CacheLoadingConcurrentGridStartSelfTest extends GridCommonAbstractT
                     restarts = (System.currentTimeMillis() - startingEndTs) < 1000;
 
                 //Stop test when all keys were inserted or restarts timeout was exceeded.
-                stop = insertedKeys >= KEYS_CNT || (fut.isDone() && !restarts);
+                stop = insertedKeys >= getKeysCnt() || (fut.isDone() && !restarts);
             }
         }
 
@@ -371,8 +371,8 @@ public class CacheLoadingConcurrentGridStartSelfTest extends GridCommonAbstractT
     /**
      * Scalable count of keys.
      */
-    private int getKeysCnt() {
-       return GridTestUtils.SF.applyUB(10_000, KEYS_CNT);
+    private static int getKeysCnt() {
+       return GridTestUtils.SF.apply(KEYS_CNT);
     }
 
     /**
@@ -397,7 +397,7 @@ public class CacheLoadingConcurrentGridStartSelfTest extends GridCommonAbstractT
             fut.get();
         }
 
-        assertCacheSize(KEYS_CNT);
+        assertCacheSize(getKeysCnt());
     }
 
     /**
@@ -434,7 +434,7 @@ public class CacheLoadingConcurrentGridStartSelfTest extends GridCommonAbstractT
     private static class TestCacheStoreAdapter extends CacheStoreAdapter<Integer, String> implements Serializable {
         /** {@inheritDoc} */
         @Override public void loadCache(IgniteBiInClosure<Integer, String> f, Object... args) {
-            for (int i = 0; i < KEYS_CNT; i++)
+            for (int i = 0; i < getKeysCnt(); i++)
                 f.apply(i, Integer.toString(i));
         }
 

@@ -3875,7 +3875,7 @@ public class CacheSerializableTransactionsTest extends GridCommonAbstractTest {
 
                         barrier.await();
 
-                        final int ITERATIONS_COUNT = SF.apply(600, 50, 1000);
+                        final int ITERATIONS_COUNT = SF.applyLB(600, 50);
                         for (int i = 0; i < ITERATIONS_COUNT; i++) {
                             try {
                                 try (Transaction tx = txs.txStart(OPTIMISTIC, SERIALIZABLE)) {
@@ -3959,7 +3959,7 @@ public class CacheSerializableTransactionsTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     private void getRemoveTx(boolean nearCache, boolean store) throws Exception {
-        long stopTime = U.currentTimeMillis() + SF.applyUB(60_000, (int) getTestTimeout() - 30_000);
+        long stopTime = U.currentTimeMillis() + SF.apply((int) getTestTimeout() - 30_000);
 
         final Ignite ignite0 = ignite(0);
 
@@ -4765,10 +4765,10 @@ public class CacheSerializableTransactionsTest extends GridCommonAbstractTest {
             IgniteInternalFuture<?> fut = restart ? restartFuture(finished, null) : null;
 
             try {
-                for (int i = 0; i < SF.apply(5, 2, 10); i++) {
+                for (int i = 0; i < SF.applyLB(10, 2); i++) {
                     log.info("Iteration: " + i);
 
-                    final long stopTime = U.currentTimeMillis() + SF.apply(6_000, 1_000, 10_000);
+                    final long stopTime = U.currentTimeMillis() + SF.applyLB(10_000, 1_000);
 
                     final AtomicInteger idx = new AtomicInteger();
 
