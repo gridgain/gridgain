@@ -126,7 +126,7 @@ public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
         System.setOut(sysOut);
 
         if (testOut != null)
-            System.out.println(testOut.toString());
+            log.info(testOut.toString());
 
         testOut = null;
 
