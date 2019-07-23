@@ -123,6 +123,17 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
     }
 
     /**
+     * Unregister this TTL manager of cache from periodical check on expired entries.
+     */
+    public void unregister() {
+        // Ignoring attempt to unregister manager that has never been started.
+        if (!starting.get())
+            return;
+
+        cctx.shared().ttl().unregister(this);
+    }
+
+    /**
      * Adds tracked entry to ttl processor.
      *
      * @param entry Entry to add.

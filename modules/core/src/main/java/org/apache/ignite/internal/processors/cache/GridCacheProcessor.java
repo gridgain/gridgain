@@ -3210,7 +3210,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                                 // TTL manager has to be unregistered before the checkpointReadLock is acquired.
                                 GridCacheAdapter<?, ?> cache = caches.get(action.request().cacheName());
                                 if (cache != null)
-                                    sharedCtx.ttl().unregister(cache.context().ttl());
+                                    cache.context().ttl().unregister();
 
                                 sharedCtx.database().checkpointReadLock();
 
