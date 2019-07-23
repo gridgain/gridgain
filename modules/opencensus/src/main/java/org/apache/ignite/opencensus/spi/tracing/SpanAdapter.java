@@ -35,12 +35,12 @@ public class SpanAdapter implements SpanEx<io.opencensus.trace.Span> {
     }
 
     /** {@inheritDoc} */
-    @Override public Span addLog(String logDesc, Map<String, String> attributes) {
+    @Override public Span addLog(String logDesc, Map<String, String> attrs) {
         span.addAnnotation(Annotation.fromDescriptionAndAttributes(
             logDesc,
-            attributes.entrySet().stream()
+            attrs.entrySet().stream()
                 .collect(Collectors.toMap(
-                    e -> e.getKey(),
+                    Map.Entry::getKey,
                     e -> AttributeValue.stringAttributeValue(e.getValue())
                 ))
         ));

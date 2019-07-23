@@ -273,7 +273,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
             timeoutAddedLatch = new CountDownLatch(1);
 
         if (rmtSpanMsg != null)
-            dhtPrepareSpan = cctx.kernalContext().tracing().create("primary.prepare", rmtSpanMsg.serializedSpan());
+            dhtPrepareSpan = cctx.kernalContext().tracing().create("primary.prepare", rmtSpanMsg.serializedSpanBytes());
     }
 
     /** {@inheritDoc} */

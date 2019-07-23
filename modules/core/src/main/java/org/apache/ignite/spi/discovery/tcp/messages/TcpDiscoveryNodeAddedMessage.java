@@ -20,7 +20,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.cluster.ClusterNode;
-import org.apache.ignite.internal.processors.tracing.messages.Trace;
+import org.apache.ignite.internal.processors.tracing.messages.TraceContainer;
 import org.apache.ignite.internal.processors.tracing.messages.TraceableMessage;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -70,7 +70,7 @@ public class TcpDiscoveryNodeAddedMessage extends TcpDiscoveryAbstractMessage im
     /** Start time of the first grid node. */
     private final long gridStartTime;
 
-    private Trace trace = new Trace();
+    private TraceContainer traceContainer = new TraceContainer();
 
     /**
      * Constructor.
@@ -110,7 +110,7 @@ public class TcpDiscoveryNodeAddedMessage extends TcpDiscoveryAbstractMessage im
         this.topHist = msg.topHist;
         this.dataPacket = msg.dataPacket;
         this.gridStartTime = msg.gridStartTime;
-        this.trace = msg.trace;
+        this.traceContainer = msg.traceContainer;
     }
 
     /**
@@ -253,8 +253,8 @@ public class TcpDiscoveryNodeAddedMessage extends TcpDiscoveryAbstractMessage im
         return S.toString(TcpDiscoveryNodeAddedMessage.class, this, "super", super.toString());
     }
 
-    @Override public @NotNull Trace trace() {
-        return trace;
+    @Override public @NotNull TraceContainer trace() {
+        return traceContainer;
     }
 
     @Override public String traceName() {

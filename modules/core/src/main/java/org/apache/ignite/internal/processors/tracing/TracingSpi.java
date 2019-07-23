@@ -9,6 +9,6 @@ public interface TracingSpi<T> extends IgniteSpi {
         return create(name, (SpanEx<T>)null);
     }
     SpanEx<T> create(@NotNull String name, @Nullable SpanEx<T> parentSpan);
-    SpanEx<T> create(@NotNull String name, @Nullable SerializedSpan serializedSpan);
-    SerializedSpan serialize(@NotNull SpanEx<T> span);
+    SpanEx<T> create(@NotNull String name, @Nullable byte[] serializedSpanBytes);
+    byte[] serialize(@NotNull SpanEx<T> span);
 }

@@ -17,8 +17,6 @@
 package org.apache.ignite.internal.processors.cache.distributed;
 
 import java.nio.ByteBuffer;
-import org.apache.ignite.internal.processors.tracing.SerializedSpan;
-import org.apache.ignite.internal.processors.tracing.impl.SerializedSpanAdapter;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
@@ -41,36 +39,48 @@ public class SerializedSpanMessage implements Message {
     }
 
     /**
-     * @param serializedSpan Serialized span.
+     * @param serializedSpanBytes New serialized span bytes.
      */
-    public SerializedSpanMessage(SerializedSpan serializedSpan) {
-        serializedSpanBytes = serializedSpan.value();
+    public SerializedSpanMessage (byte[] serializedSpanBytes) {
+        this.serializedSpanBytes = serializedSpanBytes;
     }
 
     /**
-     * @return Transferred span context.
+     * @return Serialized span bytes.
      */
-    public SerializedSpan serializedSpan() {
-        return new SerializedSpanAdapter(serializedSpanBytes);
+    public byte[] serializedSpanBytes() {
+        return serializedSpanBytes;
     }
 
-    /** {@inheritDoc} */
-    @Override public short directType() {
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public short directType() {
         return TYPE_CODE;
     }
 
-    /** {@inheritDoc} */
-    @Override public byte fieldsCount() {
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public byte fieldsCount() {
         return 1;
     }
 
-    /** {@inheritDoc} */
-    @Override public void onAckReceived() {
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void onAckReceived() {
         // No-op.
     }
 
-    /** {@inheritDoc} */
-    @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
         writer.setBuffer(buf);
 
         if (!writer.isHeaderWritten()) {
@@ -92,8 +102,11 @@ public class SerializedSpanMessage implements Message {
         return true;
     }
 
-    /** {@inheritDoc} */
-    @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean readFrom(ByteBuffer buf, MessageReader reader) {
         reader.setBuffer(buf);
 
         if (!reader.beforeMessageRead())

@@ -2,7 +2,7 @@ package org.apache.ignite.internal.processors.tracing;
 
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.processors.tracing.messages.Trace;
+import org.apache.ignite.internal.processors.tracing.messages.TraceContainer;
 import org.apache.ignite.internal.processors.tracing.messages.TraceableMessage;
 
 public class TracingMessagesProcessor {
@@ -23,16 +23,16 @@ public class TracingMessagesProcessor {
     /**
      * Called when message is received.
      * A span with name {@link TraceableMessage#traceName()} will be created
-     * from contained serialized span {@link Trace#serializedSpan()}
+     * from contained serialized span {@link TraceContainer#serializedSpanBytes()}
      *
      * @param msg Traceable message.
      */
     public void afterReceive(TraceableMessage msg) {
         log.warning("Received " + msg);
 
-        if (msg.trace().serializedSpan() != null && msg.trace().span() == null)
+        if (msg.trace().serializedSpanBytes() != null && msg.trace().span() == null)
             msg.trace().span(
-                spi.create(msg.traceName(), msg.trace().serializedSpan())
+                spi.create(msg.traceName(), msg.trace().serializedSpanBytes())
                     .addTag("node.id", ctx.localNodeId().toString())
                     .addTag("node.consistent.id", ctx.discovery().localNode().consistentId().toString())
                     .addLog("Received")
@@ -46,8 +46,8 @@ public class TracingMessagesProcessor {
      * @param msg Traceable message.
      */
     public void beforeSend(TraceableMessage msg) {
-        if (msg.trace().span() != null && msg.trace().serializedSpan() == null)
-            msg.trace().serializedSpan(spi.serialize((SpanEx) msg.trace().span()));
+        if (msg.trace().span() != null && msg.trace().serializedSpanBytes() == null)
+            msg.trace().serializedSpanBytes(spi.serialize((SpanEx) msg.trace().span()));
     }
 
     /**
@@ -61,7 +61,7 @@ public class TracingMessagesProcessor {
     public <T extends TraceableMessage> T branch(T msg, TraceableMessage parent) {
         assert parent.trace().span() != null : parent;
 
-        msg.trace().serializedSpan(
+        msg.trace().serializedSpanBytes(
             spi.serialize((SpanEx) parent.trace().span())
         );
 

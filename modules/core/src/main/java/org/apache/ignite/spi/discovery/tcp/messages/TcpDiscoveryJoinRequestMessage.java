@@ -16,7 +16,7 @@
 
 package org.apache.ignite.spi.discovery.tcp.messages;
 
-import org.apache.ignite.internal.processors.tracing.messages.Trace;
+import org.apache.ignite.internal.processors.tracing.messages.TraceContainer;
 import org.apache.ignite.internal.processors.tracing.messages.TraceableMessage;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -38,8 +38,8 @@ public class TcpDiscoveryJoinRequestMessage extends TcpDiscoveryAbstractMessage 
     /** Discovery data container. */
     private final DiscoveryDataPacket dataPacket;
 
-    /** Trace. */
-    private Trace trace = new Trace();
+    /** TraceContainer. */
+    private TraceContainer traceContainer = new TraceContainer();
 
     /**
      * Constructor.
@@ -102,8 +102,8 @@ public class TcpDiscoveryJoinRequestMessage extends TcpDiscoveryAbstractMessage 
         return S.toString(TcpDiscoveryJoinRequestMessage.class, this, "super", super.toString());
     }
 
-    @Override public @NotNull Trace trace() {
-        return trace;
+    @Override public @NotNull TraceContainer trace() {
+        return traceContainer;
     }
 
     @Override public String traceName() {

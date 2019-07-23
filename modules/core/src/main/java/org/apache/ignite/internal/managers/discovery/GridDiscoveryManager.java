@@ -85,7 +85,7 @@ import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateMessage;
 import org.apache.ignite.internal.processors.cluster.DiscoveryDataClusterState;
 import org.apache.ignite.internal.processors.cluster.IGridClusterStateProcessor;
 import org.apache.ignite.internal.processors.security.SecurityContext;
-import org.apache.ignite.internal.processors.tracing.messages.Trace;
+import org.apache.ignite.internal.processors.tracing.messages.TraceContainer;
 import org.apache.ignite.internal.util.GridAtomicLong;
 import org.apache.ignite.internal.util.GridBoundedConcurrentLinkedHashMap;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
@@ -623,7 +623,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                     if (incMinorTopVer)
                         ctx.cache().onDiscoveryEvent(type, customMsg, node, nextTopVer, ctx.state().clusterState());
 
-                    log.warning("Here " + notification.getTrace());
+                    log.warning("Here " + notification.getTraceContainer());
                 }
                 else {
                     nextTopVer = new AffinityTopologyVersion(topVer, minorTopVer);
@@ -727,8 +727,8 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
                     discoEvt.topologySnapshot(topVer, new ArrayList<>(F.view(notification.getTopSnapshot(), FILTER_NOT_DAEMON)));
 
-                    if (notification.getTrace() != null)
-                        discoEvt.setSpan(notification.getTrace().span());
+                    if (notification.getTraceContainer() != null)
+                        discoEvt.setSpan(notification.getTraceContainer().span());
 
                     discoWrk.discoCache = discoCache;
 
@@ -810,7 +810,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
                                 discoWrk.addEvent(
                                     new NotificationEvent(
-                                        EVT_CLIENT_NODE_RECONNECTED, nextTopVer, node, discoCache0, notification.getTopSnapshot(), null, notification.getTrace()
+                                        EVT_CLIENT_NODE_RECONNECTED, nextTopVer, node, discoCache0, notification.getTopSnapshot(), null, notification.getTraceContainer()
                                     )
                                 );
                             }
@@ -825,12 +825,12 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
                 if (type == EVT_CLIENT_NODE_DISCONNECTED || type == EVT_NODE_SEGMENTED || !ctx.clientDisconnected())
                     discoWrk.addEvent(
-                        new NotificationEvent(type, nextTopVer, node, discoCache, notification.getTopSnapshot(), customMsg, notification.getTrace())
+                        new NotificationEvent(type, nextTopVer, node, discoCache, notification.getTopSnapshot(), customMsg, notification.getTraceContainer())
                     );
 
                 if (stateFinishMsg != null)
                     discoWrk.addEvent(
-                        new NotificationEvent(EVT_DISCOVERY_CUSTOM_EVT, nextTopVer, node, discoCache, notification.getTopSnapshot(), stateFinishMsg, notification.getTrace())
+                        new NotificationEvent(EVT_DISCOVERY_CUSTOM_EVT, nextTopVer, node, discoCache, notification.getTopSnapshot(), stateFinishMsg, notification.getTraceContainer())
                     );
             }
         });
@@ -2690,16 +2690,16 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
         DiscoCache discoCache;
         Collection<ClusterNode> topSnapshot;
         @Nullable DiscoveryCustomMessage data;
-        Trace trace;
+        TraceContainer traceContainer;
 
-        public NotificationEvent(int type, AffinityTopologyVersion topVer, ClusterNode node, DiscoCache discoCache, Collection<ClusterNode> topSnapshot, @Nullable DiscoveryCustomMessage data, Trace trace) {
+        public NotificationEvent(int type, AffinityTopologyVersion topVer, ClusterNode node, DiscoCache discoCache, Collection<ClusterNode> topSnapshot, @Nullable DiscoveryCustomMessage data, TraceContainer traceContainer) {
             this.type = type;
             this.topVer = topVer;
             this.node = node;
             this.discoCache = discoCache;
             this.topSnapshot = topSnapshot;
             this.data = data;
-            this.trace = trace;
+            this.traceContainer = traceContainer;
         }
     }
 
@@ -2737,7 +2737,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
          * @param topSnapshot Topology snapshot.
          */
         @SuppressWarnings("RedundantTypeArguments")
-        private void recordEvent(int type, long topVer, ClusterNode node, DiscoCache discoCache, Collection<ClusterNode> topSnapshot, @Nullable Trace trace) {
+        private void recordEvent(int type, long topVer, ClusterNode node, DiscoCache discoCache, Collection<ClusterNode> topSnapshot, @Nullable TraceContainer traceContainer) {
             assert node != null;
 
             if (ctx.event().isRecordable(type)) {
@@ -2747,7 +2747,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                 evt.eventNode(node);
                 evt.type(type);
                 evt.topologySnapshot(topVer, U.<ClusterNode, ClusterNode>arrayList(topSnapshot, FILTER_NOT_DAEMON));
-                evt.setSpan(trace != null ? trace.span() : null);
+                evt.setSpan(traceContainer != null ? traceContainer.span() : null);
 
                 if (type == EVT_NODE_METRICS_UPDATED)
                     evt.messageTemplate("Metrics were updated: ");
@@ -2963,7 +2963,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                         customEvt.topologySnapshot(topVer.topologyVersion(), evt.topSnapshot);
                         customEvt.affinityTopologyVersion(topVer);
                         customEvt.customMessage(evt.data);
-                        customEvt.setSpan(evt.trace != null ? evt.trace.span() : null);
+                        customEvt.setSpan(evt.traceContainer != null ? evt.traceContainer.span() : null);
 
                         if (evt.discoCache == null) {
                             assert discoCache != null : evt.data;
@@ -2985,7 +2985,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                     assert false : "Invalid discovery event: " + type;
             }
 
-            recordEvent(type, topVer.topologyVersion(), node, evt.discoCache, evt.topSnapshot, evt.trace);
+            recordEvent(type, topVer.topologyVersion(), node, evt.discoCache, evt.topSnapshot, evt.traceContainer);
 
             if (segmented)
                 onSegmentation();

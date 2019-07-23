@@ -69,7 +69,7 @@ import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.managers.discovery.CustomMessageWrapper;
 import org.apache.ignite.internal.managers.discovery.DiscoveryServerOnlyCustomMessage;
-import org.apache.ignite.internal.processors.tracing.messages.Trace;
+import org.apache.ignite.internal.processors.tracing.messages.TraceContainer;
 import org.apache.ignite.internal.processors.tracing.messages.TraceableMessage;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
@@ -2627,8 +2627,8 @@ class ClientImpl extends TcpDiscoveryImpl {
          * @param node Node.
          * @param top Topology snapshot.
          */
-        private void notifyDiscovery(int type, long topVer, ClusterNode node, Collection<ClusterNode> top, Trace trace) {
-            notifyDiscovery(type, topVer, node, top, null, trace);
+        private void notifyDiscovery(int type, long topVer, ClusterNode node, Collection<ClusterNode> top, TraceContainer traceContainer) {
+            notifyDiscovery(type, topVer, node, top, null, traceContainer);
         }
 
         /**
@@ -2644,7 +2644,7 @@ class ClientImpl extends TcpDiscoveryImpl {
             ClusterNode node,
             Collection<ClusterNode> top,
             @Nullable DiscoverySpiCustomMessage data,
-            Trace trace
+            TraceContainer traceContainer
         ) {
             DiscoverySpiListener lsnr = spi.lsnr;
 
@@ -2656,7 +2656,7 @@ class ClientImpl extends TcpDiscoveryImpl {
                         ", topVer=" + topVer + ']');
 
                 lsnr.onDiscovery(
-                    new DiscoveryNotification(type, topVer, node, top, new TreeMap<>(topHist), data, trace)
+                    new DiscoveryNotification(type, topVer, node, top, new TreeMap<>(topHist), data, traceContainer)
                 ).get();
             }
             else if (debugLog.isDebugEnabled())

@@ -83,7 +83,7 @@ import org.apache.ignite.internal.processors.security.SecurityContext;
 import org.apache.ignite.internal.processors.security.SecurityUtils;
 import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.processors.tracing.Status;
-import org.apache.ignite.internal.processors.tracing.messages.Trace;
+import org.apache.ignite.internal.processors.tracing.messages.TraceContainer;
 import org.apache.ignite.internal.processors.tracing.messages.TraceableMessage;
 import org.apache.ignite.internal.util.GridBoundedLinkedHashSet;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
@@ -489,7 +489,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                 .addTag("event.node.consistent.id", locNode.consistentId().toString())
                 .addLog("Created");
 
-            leftMsg.trace().serializedSpan(tracing.serialize(rootSpan));
+            leftMsg.trace().serializedSpanBytes(tracing.serialize(rootSpan));
 
             msgWorker.addMessage(leftMsg);
 
@@ -977,7 +977,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                 .addTag("node.id", getLocalNodeId().toString());
 
             // This root span will be parent both from local and remote nodes.
-            msg.trace().serializedSpan(tracing.serialize(rootSpan));
+            msg.trace().serializedSpanBytes(tracing.serialize(rootSpan));
 
             msgWorker.addMessage(msg);
 
@@ -1661,7 +1661,7 @@ class ServerImpl extends TcpDiscoveryImpl {
      * @param topVer Topology version.
      * @param node Remote node this event is connected with.
      */
-    private boolean notifyDiscovery(int type, long topVer, TcpDiscoveryNode node, Trace trace) {
+    private boolean notifyDiscovery(int type, long topVer, TcpDiscoveryNode node, TraceContainer traceContainer) {
         assert type > 0;
         assert node != null;
 
@@ -1681,7 +1681,7 @@ class ServerImpl extends TcpDiscoveryImpl {
             Map<Long, Collection<ClusterNode>> hist = updateTopologyHistory(topVer, top);
 
             lsnr.onDiscovery(
-                new DiscoveryNotification(type, topVer, node, top, hist, null, trace)
+                new DiscoveryNotification(type, topVer, node, top, hist, null, traceContainer)
             );
 
             return true;
@@ -2966,14 +2966,14 @@ class ServerImpl extends TcpDiscoveryImpl {
                 if (fromSocket)
                     tracing.messages().afterReceive(tMsg);
                 else { // If we're going to send this message.
-                    if (!msg.verified() && tMsg.trace().serializedSpan() == null) {
+                    if (!msg.verified() && tMsg.trace().serializedSpanBytes() == null) {
                         Span rootSpan = tracing.create(tMsg.traceName())
                             .addTag("node.id", getLocalNodeId().toString())
                             .addTag("stack_trace", U.stackTrace())
                             .end();
 
                         // This root span will be parent both from local and remote nodes.
-                        tMsg.trace().serializedSpan(tracing.serialize(rootSpan));
+                        tMsg.trace().serializedSpanBytes(tracing.serialize(rootSpan));
                     }
                 }
             }

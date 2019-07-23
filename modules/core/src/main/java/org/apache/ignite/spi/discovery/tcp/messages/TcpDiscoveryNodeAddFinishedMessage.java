@@ -18,7 +18,7 @@ package org.apache.ignite.spi.discovery.tcp.messages;
 
 import java.util.Map;
 import java.util.UUID;
-import org.apache.ignite.internal.processors.tracing.messages.Trace;
+import org.apache.ignite.internal.processors.tracing.messages.TraceContainer;
 import org.apache.ignite.internal.processors.tracing.messages.TraceableMessage;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -47,7 +47,7 @@ public class TcpDiscoveryNodeAddFinishedMessage extends TcpDiscoveryAbstractMess
     @GridToStringExclude
     private Map<String, Object> clientNodeAttrs;
 
-    private Trace trace = new Trace();
+    private TraceContainer traceContainer = new TraceContainer();
 
     /**
      * Constructor.
@@ -70,7 +70,7 @@ public class TcpDiscoveryNodeAddFinishedMessage extends TcpDiscoveryAbstractMess
         nodeId = msg.nodeId;
         clientDiscoData = msg.clientDiscoData;
         clientNodeAttrs = msg.clientNodeAttrs;
-        trace = msg.trace;
+        traceContainer = msg.traceContainer;
     }
 
     /**
@@ -120,8 +120,8 @@ public class TcpDiscoveryNodeAddFinishedMessage extends TcpDiscoveryAbstractMess
     }
 
     /** {@inheritDoc} */
-    @Override public Trace trace() {
-        return trace;
+    @Override public TraceContainer trace() {
+        return traceContainer;
     }
 
     /** {@inheritDoc} */

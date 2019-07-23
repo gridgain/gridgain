@@ -1,7 +1,6 @@
 package org.apache.ignite.internal.processors.tracing.noop;
 
 import java.util.Map;
-import org.apache.ignite.internal.processors.tracing.SerializedSpan;
 import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.processors.tracing.SpanEx;
 import org.apache.ignite.internal.processors.tracing.Status;
@@ -38,26 +37,22 @@ public class NoopTracingSpi extends IgniteSpiAdapter implements TracingSpi {
         }
     };
 
-    private static final SerializedSpan NOOP_SERIALIZED_SPAN = new SerializedSpan() {
-        @Override public byte[] value() {
-            return new byte[0];
-        }
-    };
+    private static final byte[] NOOP_SERIALIZED_SPAN = new byte[0];
 
     @Override public SpanEx create(@NotNull String name, @Nullable SpanEx parentSpan) {
         return NOOP_SPAN;
     }
 
-    @Override public SpanEx create(@NotNull String name, @Nullable SerializedSpan serializedSpan) {
+    @Override public SpanEx create(@NotNull String name, @Nullable byte[] serializedSpanBytes) {
         return NOOP_SPAN;
     }
 
-    @Override public SerializedSpan serialize(@NotNull SpanEx span) {
+    @Override public byte[] serialize(@NotNull SpanEx span) {
         return NOOP_SERIALIZED_SPAN;
     }
 
     @Override public void spiStart(String igniteInstanceName) throws IgniteSpiException {
-        log.info("Tracing SPI is not configured. Noop implementation will be used instead.");
+        // Do nothing.
     }
 
     @Override public void spiStop() throws IgniteSpiException {

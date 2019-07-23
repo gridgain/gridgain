@@ -3,7 +3,7 @@ package org.apache.ignite.spi.discovery;
 import java.util.Collection;
 import java.util.Map;
 import org.apache.ignite.cluster.ClusterNode;
-import org.apache.ignite.internal.processors.tracing.messages.Trace;
+import org.apache.ignite.internal.processors.tracing.messages.TraceContainer;
 import org.jetbrains.annotations.Nullable;
 
 public class DiscoveryNotification {
@@ -14,7 +14,7 @@ public class DiscoveryNotification {
 
     private @Nullable Map<Long, Collection<ClusterNode>> topHist;
     private @Nullable DiscoverySpiCustomMessage customMsgData;
-    private Trace trace;
+    private TraceContainer traceContainer;
 
     public DiscoveryNotification(int eventType, long topVer, ClusterNode node, Collection<ClusterNode> topSnapshot) {
         this.eventType = eventType;
@@ -30,7 +30,7 @@ public class DiscoveryNotification {
         Collection<ClusterNode> topSnapshot,
         @Nullable Map<Long, Collection<ClusterNode>> topHist,
         @Nullable DiscoverySpiCustomMessage customMsgData,
-        Trace trace
+        TraceContainer traceContainer
     ) {
         this.eventType = eventType;
         this.topVer = topVer;
@@ -38,7 +38,7 @@ public class DiscoveryNotification {
         this.topSnapshot = topSnapshot;
         this.topHist = topHist;
         this.customMsgData = customMsgData;
-        this.trace = trace;
+        this.traceContainer = traceContainer;
     }
 
     public int type() {
@@ -73,11 +73,11 @@ public class DiscoveryNotification {
         this.customMsgData = customMsgData;
     }
 
-    public Trace getTrace() {
-        return trace;
+    public TraceContainer getTraceContainer() {
+        return traceContainer;
     }
 
-    public void setTrace(Trace trace) {
-        this.trace = trace;
+    public void setTraceContainer(TraceContainer traceContainer) {
+        this.traceContainer = traceContainer;
     }
 }
