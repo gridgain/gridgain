@@ -1757,9 +1757,9 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
     public void testRandomOperations() throws Exception {
         forceSrvMode = true;
 
-        final int MAX_SRVS = 10;
-        final int MAX_CLIENTS = 10;
-        final int MAX_CACHES = 15;
+        final int MAX_SRVS = GridTestUtils.SF.applyLB(10, 5);
+        final int MAX_CLIENTS = GridTestUtils.SF.applyLB(10, 5);
+        final int MAX_CACHES = GridTestUtils.SF.applyLB(15, 5);
 
         List<String> srvs = new ArrayList<>();
         List<String> clients = new ArrayList<>();
