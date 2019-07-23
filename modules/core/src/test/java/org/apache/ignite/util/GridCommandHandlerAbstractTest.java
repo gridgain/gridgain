@@ -156,7 +156,7 @@ public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
     }
 
     /** */
-    private boolean idleVerifyRes(Path p) {
+    protected boolean idleVerifyRes(Path p) {
         return p.toFile().getName().startsWith(IDLE_DUMP_FILE_PREFIX);
     }
 
