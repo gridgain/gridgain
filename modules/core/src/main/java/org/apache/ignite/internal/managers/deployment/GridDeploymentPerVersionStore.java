@@ -1200,8 +1200,6 @@ public class GridDeploymentPerVersionStore extends GridDeploymentStoreAdapter {
             assert nodeId != null;
             assert ldrId != null;
 
-            assert Thread.holdsLock(mux);
-
             return classLoader().hasRegisteredNode(nodeId, ldrId);
         }
 
