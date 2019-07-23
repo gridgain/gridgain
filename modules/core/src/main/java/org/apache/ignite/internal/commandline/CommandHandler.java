@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.commandline;
 
 import java.io.File;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
@@ -42,6 +43,7 @@ import org.apache.ignite.internal.client.impl.connection.GridClientConnectionRes
 import org.apache.ignite.internal.client.ssl.GridSslBasicContextFactory;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.util.VisorIllegalStateException;
 import org.apache.ignite.logger.java.JavaLoggerFileHandler;
@@ -208,12 +210,14 @@ public class CommandHandler {
      * @return Exit code.
      */
     public int execute(List<String> rawArgs) {
+        LocalDateTime startTime = LocalDateTime.now();
+
         Thread.currentThread().setName("session=" + ses);
 
         logger.info("Control utility [ver. " + ACK_VER_STR + "]");
         logger.info(COPYRIGHT);
         logger.info("User: " + System.getProperty("user.name"));
-        logger.info("Time: " + LocalDateTime.now());
+        logger.info("Time: " + startTime);
 
         String commandName = "";
 
@@ -242,7 +246,8 @@ public class CommandHandler {
             GridClientConfiguration clientCfg = getClientConfiguration(args);
 
             logger.info("Command [" + commandName + "] started");
-            logger.info("Arguments: " + String.join(" ", rawArgs));
+            logger.info("Arguments: " + argumentsToString(rawArgs));
+
             logger.info(DELIM);
 
             boolean credentialsRequested = false;
@@ -326,10 +331,45 @@ public class CommandHandler {
             return EXIT_CODE_UNEXPECTED_ERROR;
         }
         finally {
+            LocalDateTime endTime = LocalDateTime.now();
+
+            Duration diff = Duration.between(startTime, endTime);
+
+            logger.info("Control utility has completed execution at: " + endTime);
+            logger.info("Execution time: " + diff.toMillis() + " ms");
+
             Arrays.stream(logger.getHandlers())
                   .filter(handler -> handler instanceof FileHandler)
                   .forEach(Handler::close);
         }
+    }
+
+    /**
+     * @param rawArgs Arguments which user has provided.
+     * @return String which could be shown in console and pritned to log.
+     */
+    private String argumentsToString(List<String> rawArgs) {
+        boolean hide = false;
+
+        SB sb = new SB();
+
+        for (int i = 0; i < rawArgs.size(); i++) {
+            if (hide) {
+                sb.a("***** ");
+
+                hide = false;
+
+                continue;
+            }
+
+            String arg = rawArgs.get(i);
+
+            sb.a(arg).a(' ');
+
+            hide = CommonArgParser.isSensitiveArgument(arg);
+        }
+
+        return sb.toString();
     }
 
     /**

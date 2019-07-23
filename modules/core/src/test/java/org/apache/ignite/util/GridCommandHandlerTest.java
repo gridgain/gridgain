@@ -43,6 +43,7 @@ import java.util.concurrent.atomic.LongAdder;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.MutableEntry;
@@ -88,13 +89,13 @@ import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
 import org.apache.ignite.internal.processors.cache.transactions.TransactionProxyImpl;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.datastructures.GridCacheInternalKeyImpl;
-import org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.internal.visor.ru.VisorRollingUpgradeChangeModeResult;
 import org.apache.ignite.internal.visor.tx.VisorTxInfo;
 import org.apache.ignite.internal.visor.tx.VisorTxTaskResult;
 import org.apache.ignite.lang.IgniteBiPredicate;
@@ -103,26 +104,33 @@ import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.SystemPropertiesRule;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionRollbackException;
 import org.apache.ignite.transactions.TransactionState;
 import org.apache.ignite.transactions.TransactionTimeoutException;
 import org.jetbrains.annotations.NotNull;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestRule;
 
 import static java.io.File.separatorChar;
 import static java.util.Arrays.asList;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXPERIMENTAL_COMMAND;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_ILLEGAL_SATE_ERROR;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_INVALID_ARGUMENTS;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_UNEXPECTED_ERROR;
+import static org.apache.ignite.internal.commandline.CommandHandler.UTILITY_NAME;
+import static org.apache.ignite.internal.commandline.CommandList.WAL;
 import static org.apache.ignite.internal.commandline.OutputFormat.MULTI_LINE;
 import static org.apache.ignite.internal.commandline.OutputFormat.SINGLE_LINE;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.HELP;
 import static org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor.DEFAULT_TARGET_FOLDER;
-import static org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult.Status.FAIL;
+import static org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult.Result.FAIL;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
@@ -134,6 +142,9 @@ import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED
  * Command line handler test.
  */
 public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
+    /** */
+    @Rule public final TestRule methodRule = new SystemPropertiesRule();
+
     /** */
     private File defaultDiagnosticDir;
     /** */
@@ -326,21 +337,21 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "find_garbage", "--port", "11212"));
 
-        assertTrue(testOut.toString().contains("garbage not found"));
+        assertContains(log, testOut.toString(), "garbage not found");
 
         testOut.reset();
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "find_garbage",
             ignite(0).localNode().id().toString(), "--port", "11212"));
 
-        assertTrue(testOut.toString().contains("garbage not found"));
+        assertContains(log, testOut.toString(), "garbage not found");
 
         testOut.reset();
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "find_garbage",
             "groupGarbage", "--port", "11212"));
 
-        assertTrue(testOut.toString().contains("garbage not found"));
+        assertContains(log, testOut.toString(), "garbage not found");
     }
 
     /**
@@ -535,6 +546,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
         assertEquals(EXIT_CODE_OK, execute("--baseline", "auto_adjust", "disable"));
 
         assertFalse(cl.isBaselineAutoAdjustEnabled());
+
+        assertEquals(timeout + 1, cl.baselineAutoAdjustTimeout());
 
         assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "auto_adjust"));
 
@@ -1299,6 +1312,18 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
         assertNotContains(log, testOutStr, "Control.sh");
     }
 
+    /** */
+    @Test
+    public void testPrintTimestampAtEndsOfExecution() {
+        injectTestSystemOut();
+
+        assertEquals(EXIT_CODE_OK, execute());
+
+        String testOutStr = testOut.toString();
+
+        assertContains(log, testOutStr, "Control utility has completed execution at: ");
+    }
+
     /**
      * @throws Exception If failed.
      */
@@ -2022,7 +2047,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         ignite.cluster().active(true);
 
-        injectTestSystemOut();
+        if (!isSystemOutAlreadyInjected())
+            injectTestSystemOut();
 
         // Adding some assignments without deployments.
         for (int i = 0; i < 100; i++) {
@@ -2716,21 +2742,21 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
         // Apache Ignite does not support rolling upgrade from out of the box.
         assertEquals(EXIT_CODE_OK, execute(hnd, "--rolling-upgrade", "on"));
 
-        RollingUpgradeModeChangeResult res = hnd.getLastOperationResult();
+        VisorRollingUpgradeChangeModeResult res = hnd.getLastOperationResult();
 
-        assertTrue("Enabling rolling upgrade should fail [res=" + res + ']', FAIL == res.status());
-        assertTrue(
-            "The cause of the failure should be UnsupportedOperationException [cause=" + res.cause() + ']',
-            X.hasCause(res.cause(), UnsupportedOperationException.class));
+        assertTrue("Enabling rolling upgrade should fail [res=" + res + ']', FAIL == res.getResult());
+        assertEquals(
+            "The cause of the failure should be UnsupportedOperationException [cause=" + res.getCause() + ']',
+            res.getCause().getClassName(), UnsupportedOperationException.class.getName());
 
         assertEquals(EXIT_CODE_OK, execute(hnd, "--rolling-upgrade", "off"));
 
         res = hnd.getLastOperationResult();
 
-        assertTrue("Disabling rolling upgrade should fail [res=" + res + ']', FAIL == res.status());
-        assertTrue(
-            "The cause of the failure should be UnsupportedOperationException [cause=" + res.cause() + ']',
-            X.hasCause(res.cause(), UnsupportedOperationException.class));
+        assertTrue("Disabling rolling upgrade should fail [res=" + res + ']', FAIL == res.getResult());
+        assertEquals(
+            "The cause of the failure should be UnsupportedOperationException [cause=" + res.getCause() + ']',
+            res.getCause().getClassName(), UnsupportedOperationException.class.getName());
     }
 
     /**
@@ -3026,5 +3052,37 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
         catch (IgniteCheckedException e) {
             e.printStackTrace();
         }
+    }
+
+    /**
+     * Don't show wal commands by --help in case
+     * {@link org.apache.ignite.IgniteSystemProperties#IGNITE_ENABLE_EXPERIMENTAL_COMMAND} = false or empty.
+     */
+    @Test
+    @WithSystemProperty(key = IGNITE_ENABLE_EXPERIMENTAL_COMMAND, value = "false")
+    public void testHideWalInHelpWhenDisableExperimentalCommand() {
+        injectTestSystemOut();
+
+        execute("--help");
+
+        assertNotContains(log, testOut.toString(), WAL.text());
+    }
+
+    /**
+     * Wal commands should ignored and print warning in case
+     * {@link org.apache.ignite.IgniteSystemProperties#IGNITE_ENABLE_EXPERIMENTAL_COMMAND} = false or empty.
+     * */
+    @Test
+    @WithSystemProperty(key = IGNITE_ENABLE_EXPERIMENTAL_COMMAND, value = "false")
+    public void testWalCommandsInCaseDisableExperimentalCommand() {
+        injectTestSystemOut();
+
+        String warning = String.format("For use experimental command add %s=true to JVM_OPTS in %s",
+            IGNITE_ENABLE_EXPERIMENTAL_COMMAND, UTILITY_NAME);
+
+        Stream.of("print", "delete")
+            .peek(c -> testOut.reset())
+            .peek(c -> assertEquals(EXIT_CODE_OK, execute(WAL.text(), c)))
+            .forEach(c -> assertContains(log, testOut.toString(), warning));
     }
 }

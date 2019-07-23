@@ -19,6 +19,7 @@ package org.apache.ignite.console.agent.handlers;
 import java.net.ConnectException;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.console.agent.AgentConfiguration;
 import org.apache.ignite.console.agent.rest.RestResult;
@@ -94,24 +95,22 @@ public class ClusterHandler extends AbstractClusterHandler {
                 RestResult res = restExecutor.sendRequest(nodeUrl, params);
 
                 // If first attempt failed then throttling should be cleared.
-                if (i > 0)
-                    LT.clear();
-
-                LT.info(log, "Connected to cluster [url=" + nodeUrl + "]");
+                if (i > 0 || !startIdxs.containsKey(nodeURIs))
+                    log.info("Connected to node [url=" + nodeUrl + "]");
 
                 startIdxs.put(nodeURIs, currIdx);
 
                 return res;
             }
+            catch (ConnectException | InterruptedException | TimeoutException ignored) {
+                // No-op.
+            }
             catch (Throwable e) {
-                if (log.isDebugEnabled())
-                    log.error("Failed connect to cluster [url=" + nodeUrl + "]", e);
-                else
-                    LT.warn(log, "Failed connect to cluster [url=" + nodeUrl + "]");
+                LT.error(log, e, "Failed execute request on node [url=" + nodeUrl + ", parameters=" + params + "]");
             }
         }
 
-        LT.warn(log, "Failed connect to cluster. " +
+        LT.warn(log, "Failed to connect to cluster. " +
             "Please ensure that nodes have [ignite-rest-http] module in classpath " +
             "(was copied from libs/optional to libs folder).");
 

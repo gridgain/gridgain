@@ -20,6 +20,9 @@ import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
+
+import org.apache.ignite.console.messages.WebConsoleMessageSource;
+import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.security.crypto.codec.Hex;
 import org.springframework.security.crypto.keygen.BytesKeyGenerator;
 import org.springframework.security.crypto.keygen.KeyGenerators;
@@ -45,7 +48,10 @@ public class PassportLocalPasswordEncoder implements PasswordEncoder {
 
     /** Hash width. */
     private final int hashWidth;
-    
+
+    /** Messages accessor. */
+    private final MessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
+
     /** Iterations. */
     private final int iterations;
 
@@ -69,7 +75,7 @@ public class PassportLocalPasswordEncoder implements PasswordEncoder {
 
     /** {@inheritDoc} */
     @Override public String encode(CharSequence rawPwd) {
-        byte[] salt = this.saltGenerator.generateKey();
+        byte[] salt = saltGenerator.generateKey();
         byte[] encoded = encode(rawPwd, salt);
         return encode(encoded);
     }
@@ -84,7 +90,7 @@ public class PassportLocalPasswordEncoder implements PasswordEncoder {
     /** {@inheritDoc} */
     @Override public boolean matches(CharSequence rawPwd, String encodedPwd) {
         byte[] digested = decode(encodedPwd);
-        byte[] salt = subArray(digested, 0, this.saltGenerator.getKeyLength());
+        byte[] salt = subArray(digested, 0, saltGenerator.getKeyLength());
         
         return matches(digested, encode(rawPwd, salt));
     }
@@ -120,8 +126,8 @@ public class PassportLocalPasswordEncoder implements PasswordEncoder {
             PBEKeySpec spec = new PBEKeySpec(
                 rawPwd.toString().toCharArray(),
                 encode(salt).getBytes(StandardCharsets.UTF_8),
-                this.iterations,
-                this.hashWidth
+                iterations,
+                hashWidth
             );
 
             SecretKeyFactory skf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
@@ -129,7 +135,7 @@ public class PassportLocalPasswordEncoder implements PasswordEncoder {
             return concatenate(salt, skf.generateSecret(spec).getEncoded());
         }
         catch (GeneralSecurityException e) {
-            throw new IllegalStateException("Could not create hash", e);
+            throw new IllegalStateException(messages.getMessage("err.could-not-create-hash"), e);
         }
     }
 }

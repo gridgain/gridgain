@@ -60,6 +60,7 @@ spring.mail.properties.*= # Additional JavaMail Session properties.
 spring.mail.protocol=smtp # Protocol used by the SMTP server.
 spring.mail.test-connection=false # Whether to test that the mail server is available on startup.
 spring.mail.username= # Login user of the SMTP server.
+spring.mail.web-console-url= # Web console url for links in notifications.
 
 # SSL options.
 server.ssl.ciphers= # Supported SSL ciphers.
@@ -87,6 +88,7 @@ spring.mail.host=smtp.gmail.com
 spring.mail.port=587
 spring.mail.username=<login user to smtp server>
 spring.mail.password=<login password to smtp server>
+spring.mail.web-console-url=http://<your-web-console-host>:<port-if-needed>
 spring.mail.properties.mail.smtp.auth=true
 spring.mail.properties.mail.smtp.starttls.enable=true
 
@@ -219,13 +221,13 @@ Example of grid configuration:
 Migration from previous version of Web Console (based on Mongo DB).
 -------------------------------------
 1. Configure MongDB database name for migration:
-migration.mongo.db.name=console
+migration.mongo.db.url: mongodb://localhost:27017/console
 
 2. Start Mongo DB on the same host with Web Console backend.
 
 3. Start Web Console backed, data will be migrated during startup.
 
-4. It is recommended to remove "migration.mongo.db.name" from settings after migration.
+4. It is recommended to remove "migration.mongo.db.url" from settings after migration.
 
 5. Migration possible only on "clean" GridGain database.
  If you need to repeat migration, just delete folder "work" and restart Web Console.

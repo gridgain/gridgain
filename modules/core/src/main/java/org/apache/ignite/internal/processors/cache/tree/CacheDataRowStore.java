@@ -49,9 +49,6 @@ public class CacheDataRowStore extends RowStore {
     /** */
     private final int partId;
 
-    /** */
-    private final CacheGroupContext grp;
-
     /**
      * @param grp Cache group.
      * @param freeList Free list.
@@ -61,7 +58,6 @@ public class CacheDataRowStore extends RowStore {
         super(grp, freeList);
 
         this.partId = partId;
-        this.grp = grp;
     }
 
     /**
@@ -141,7 +137,7 @@ public class CacheDataRowStore extends RowStore {
      * @param cacheId Cache ID.
      */
     private <T extends DataRow> T initDataRow(T dataRow, int cacheId) {
-        if (dataRow.cacheId() == CU.UNDEFINED_CACHE_ID && grp.storeCacheIdInDataPage())
+        if (dataRow.cacheId() == CU.UNDEFINED_CACHE_ID && grp.sharedGroup())
             dataRow.cacheId(cacheId);
 
         return dataRow;
