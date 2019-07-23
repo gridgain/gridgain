@@ -223,7 +223,14 @@ public class AgentsService extends AbstractSocketHandler {
             clustersChanged = clustersChanged || newTop.changed(oldTop);
         }
 
-        desc.setClusterIds(tops.stream().map(TopologySnapshot::getId).collect(toSet()));
+        desc.setClusterIds(mapToSet(tops, TopologySnapshot::getId));
+
+        Set<String> leftClusterIds = mapToSet(oldTops, TopologySnapshot::getId);
+
+        leftClusterIds.removeAll(desc.getClusterIds());
+
+        if (!leftClusterIds.isEmpty())
+            tryCleanupIndexes(desc.getAccIds(), leftClusterIds);
 
         if (clustersChanged)
             sendAgentStats(desc.getAccIds());
