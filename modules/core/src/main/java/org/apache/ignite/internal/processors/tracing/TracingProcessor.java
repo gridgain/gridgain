@@ -3,7 +3,6 @@ package org.apache.ignite.internal.processors.tracing;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
-import org.apache.ignite.internal.processors.tracing.noop.NoopTracingSpi;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

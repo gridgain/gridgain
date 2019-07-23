@@ -1,5 +1,6 @@
 package org.apache.ignite.opencensus.spi.tracing;
 
+import io.opencensus.internal.DefaultVisibilityForTesting;
 import io.opencensus.internal.Provider;
 import io.opencensus.trace.Span;
 import io.opencensus.trace.TraceComponent;
@@ -18,10 +19,25 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
 
     private TraceComponent traceComponent;
 
+    public OpenCensusTracingSpi() {
+    }
+
+    public OpenCensusTracingSpi(TraceComponent traceComponent) {
+        this.traceComponent = traceComponent;
+    }
+
     public OpenCensusTracingSpi withExporter(OpenCensusTraceExporter exporter) {
         this.exporter = exporter;
 
         return this;
+    }
+
+    /**
+     *
+     */
+    @DefaultVisibilityForTesting
+    OpenCensusTraceExporter getExporter() {
+        return exporter;
     }
 
     /** {@inheritDoc} */
@@ -62,7 +78,8 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
 
     /** {@inheritDoc} */
     @Override public void spiStart(String igniteInstanceName) throws IgniteSpiException {
-        traceComponent = loadTraceComponent(TraceComponent.class.getClassLoader());
+        if (traceComponent == null)
+            traceComponent = createTraceComponent(getClass().getClassLoader());
 
         if (exporter != null)
             exporter.start(traceComponent, igniteInstanceName);
@@ -79,7 +96,7 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
      *
      * @param classLoader Class loader.
      */
-    private TraceComponent loadTraceComponent(@javax.annotation.Nullable ClassLoader classLoader) {
+    public static TraceComponent createTraceComponent(@javax.annotation.Nullable ClassLoader classLoader) {
         // Exception that contains possible causes of failed TraceComponent start.
         IgniteSpiException startE;
 
@@ -90,7 +107,7 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
                     "io.opencensus.impl.trace.TraceComponentImpl", /*initialize=*/ true, classLoader),
                 TraceComponent.class);
         }
-        catch (ClassNotFoundException e) {
+        catch (Exception e) {
             startE = new IgniteSpiException("Failed to start TraceComponent.");
 
             startE.addSuppressed(e);
@@ -105,7 +122,7 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
                     classLoader),
                 TraceComponent.class);
         }
-        catch (ClassNotFoundException e) {
+        catch (Exception e) {
             startE.addSuppressed(e);
         }
 

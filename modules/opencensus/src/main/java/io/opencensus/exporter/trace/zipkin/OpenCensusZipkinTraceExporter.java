@@ -9,8 +9,6 @@ import zipkin2.reporter.urlconnection.URLConnectionSender;
 
 /**
  * Zipkin Trace Exporter based on OpenCensus tracing library.
- *
- * Moved to io.opencensus package to get access to package-private {@link ZipkinExporterHandler}.
  */
 public class OpenCensusZipkinTraceExporter implements OpenCensusTraceExporter {
     private final ZipkinExporterConfiguration cfg;
@@ -27,9 +25,10 @@ public class OpenCensusZipkinTraceExporter implements OpenCensusTraceExporter {
                 snd = URLConnectionSender.create(cfg.getV2Url());
 
             SpanExporter.Handler exporterHnd = new ZipkinExporterHandler(
+                traceComponent.getTracer(),
                 cfg.getEncoder(),
                 snd,
-                cfg.getServiceName() + "-" + igniteInstanceName,
+                cfg.getServiceName() + "-" + igniteInstanceName, //TODO: Maybe use consistentId instead?
                 cfg.getDeadline()
             );
 

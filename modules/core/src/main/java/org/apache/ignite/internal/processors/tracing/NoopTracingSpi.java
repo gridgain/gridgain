@@ -1,10 +1,6 @@
-package org.apache.ignite.internal.processors.tracing.noop;
+package org.apache.ignite.internal.processors.tracing;
 
 import java.util.Map;
-import org.apache.ignite.internal.processors.tracing.Span;
-import org.apache.ignite.internal.processors.tracing.SpanEx;
-import org.apache.ignite.internal.processors.tracing.Status;
-import org.apache.ignite.internal.processors.tracing.TracingSpi;
 import org.apache.ignite.spi.IgniteSpiAdapter;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.jetbrains.annotations.NotNull;

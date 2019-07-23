@@ -46,7 +46,6 @@ import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
 import org.apache.ignite.internal.processors.tracing.TracingSpi;
-import org.apache.ignite.internal.processors.tracing.noop.NoopTracingSpi;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteAsyncCallback;
 import org.apache.ignite.lang.IgniteInClosure;
@@ -398,7 +397,7 @@ public class IgniteConfiguration {
     private MetricExporterSpi[] metricExporterSpi;
 
     /** Tracing SPI. */
-    private TracingSpi tracingSpi = new NoopTracingSpi();
+    private TracingSpi tracingSpi;
 
     /** Cache configurations. */
     private CacheConfiguration[] cacheCfg;
@@ -580,6 +579,7 @@ public class IgniteConfiguration {
         indexingSpi = cfg.getIndexingSpi();
         encryptionSpi = cfg.getEncryptionSpi();
         metricExporterSpi = cfg.getMetricExporterSpi();
+        tracingSpi = cfg.getTracingSpi();
 
         commFailureRslvr = cfg.getCommunicationFailureResolver();
 
