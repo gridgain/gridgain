@@ -120,8 +120,6 @@ public class GridCacheTtlManager extends GridCacheManagerAdapter {
     @Override protected void onKernalStop0(boolean cancel) {
         if (pendingEntries != null)
             pendingEntries.clear();
-
-        cctx.shared().ttl().unregister(this);
     }
 
     /**
