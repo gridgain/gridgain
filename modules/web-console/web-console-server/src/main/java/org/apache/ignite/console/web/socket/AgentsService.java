@@ -128,7 +128,7 @@ public class AgentsService extends AbstractSocketHandler {
 
 
                 if (locAgent.isPresent()) {
-                    sendLocally(locAgent.get(), evt);
+                    sendLocally(locAgent.get(), evt, nodeId);
 
                     return;
                 }
@@ -237,15 +237,6 @@ public class AgentsService extends AbstractSocketHandler {
             if (F.isEmpty(newTop.getName()))
                 newTop.setName("Cluster " + newTop.getId().substring(0, 8).toUpperCase());
 
-            txMgr.doInTransaction(() -> {
-                ClusterSession clusterSes = new ClusterSession(ignite.cluster().localNode().id(), newTop.getId());
-
-                for (UUID accId : desc.getAccIds())
-                    clusterIdsByBrowser.add(new UserKey(accId, newTop.isDemo()), clusterSes);
-
-                return clusters.getAndPut(newTop.getId(), newTop);
-            });
-
             TopologySnapshot oldTop = updateTopology(desc.getAccIds(), newTop);
 
             clustersChanged = clustersChanged || newTop.changed(oldTop);
@@ -319,13 +310,13 @@ public class AgentsService extends AbstractSocketHandler {
      * @param ses Agent session.
      * @param evt Event.
      */
-    private void sendLocally(WebSocketSession ses, WebSocketEvent evt) {
+    private void sendLocally(WebSocketSession ses, WebSocketEvent evt, UUID destNid) {
         log.debug("Found local agent session [session=" + ses + ", event=" + evt + "]");
 
         try {
             sendMessage(ses, evt);
 
-            backendByReq.put(evt.getRequestId(), ignite.cluster().localNode().id());
+            backendByReq.put(evt.getRequestId(), destNid);
         }
         catch (Exception e) {
             ignite.message(ignite.cluster().forLocal()).send(
@@ -364,7 +355,7 @@ public class AgentsService extends AbstractSocketHandler {
         Optional<WebSocketSession> locAgent = findLocalAgent(key);
 
         if (locAgent.isPresent()) {
-            sendLocally(locAgent.get(), evt);
+            sendLocally(locAgent.get(), evt, ignite.cluster().localNode().id());
 
             return;
         }
@@ -476,11 +467,16 @@ public class AgentsService extends AbstractSocketHandler {
      * @return Old topology.
      */
     protected TopologySnapshot updateTopology(Set<UUID> accIds, TopologySnapshot newTop) {
-        return txMgr.doInTransaction(() -> {
-            ClusterSession clusterId = new ClusterSession(ignite.cluster().localNode().id(), newTop.getId());
+        UUID nid = ignite.cluster().localNode().id();
 
-            for (UUID accId : accIds)
+        return txMgr.doInTransaction(() -> {
+            ClusterSession clusterId = new ClusterSession(nid, newTop.getId());
+
+            for (UUID accId : accIds) {
+                backendByAgent.add(new AgentKey(accId, newTop.getId()), nid);
+
                 clusterIdsByBrowser.add(new UserKey(accId, newTop.isDemo()), clusterId);
+            }
 
             return clusters.getAndPut(newTop.getId(), newTop);
         });
