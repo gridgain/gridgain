@@ -158,29 +158,43 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
                 return;
 
             if (IgniteFeatures.allNodesSupports(ctx, discoCache.remoteNodes(), IgniteFeatures.CLUSTER_ID_AND_TAG)) {
-                compatibilityMode = false;
-
-                ClusterNode crd = discoCache.serverNodes().get(0);
-
-                //only coordinator initializes ID and tag
-                //TODO util method to detect coordinator
-                if (ctx.discovery().localNode().id().equals(crd.id())) {
+                // Only coordinator initializes ID and tag.
+                if (U.isLocalNodeCoordinator(ctx.discovery())) {
                     localClusterId = localClusterId == null ? UUID.randomUUID() : localClusterId;
 
                     localClusterTag = localClusterTag == null ? ClusterTagGenerator.generateTag() : localClusterTag;
 
-                    try {
-                        metastorage.writeAsync(CLUSTER_ID, localClusterId);
+                    IgniteInternalFuture<?> clusterIdFut = null;
+                    IgniteInternalFuture<?> clusterTagFut = null;
 
-                        metastorage.writeAsync(CLUSTER_TAG, localClusterTag);
+                    try {
+                        clusterIdFut = metastorage.writeAsync(CLUSTER_ID, localClusterId);
+
+                        clusterTagFut = metastorage.writeAsync(CLUSTER_TAG, localClusterTag);
                     }
                     catch (IgniteCheckedException e) {
                         ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
                     }
 
+                    if (clusterIdFut != null) {
+                        clusterIdFut.listen(fut -> {
+                            if (fut.error() != null)
+                                ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, fut.error()));
+                        });
+                    }
+
+                    if (clusterTagFut != null) {
+                        clusterTagFut.listen(fut -> {
+                            if (fut.error() != null)
+                                ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, fut.error()));
+                        });
+                    }
+
                     cluster.setId(localClusterId);
 
                     cluster.setTag(localClusterTag);
+
+                    compatibilityMode = false;
                 }
 
                 ctx.event().removeDiscoveryEventListener(discoLsnr);
@@ -250,7 +264,12 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
         metastorage.listen(
             (k) -> k.equals(CLUSTER_TAG),
             (String k, Serializable oldVal, Serializable newVal) -> {
-                //TODO add logging
+                if (log.isInfoEnabled())
+                    log.info(
+                        "Cluster tag will be set to new value: " +
+                            newVal +
+                            ", previous value was: " +
+                            oldVal);
 
                 cluster.setTag((String)newVal);
             }
@@ -261,22 +280,31 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
             metastorage.listen(
                 (k) -> k.equals(CLUSTER_ID),
                 (String k, Serializable oldVal, Serializable newVal) -> {
-                    //TODO add logging and validation exactly once behavior
+                    // Additional check that cluster ID is set only once.
+                    assert oldVal == null : "Previous cluster ID should be null when leaving compatibility mode: " +
+                        oldVal;
+
+                    if (log.isInfoEnabled())
+                        log.info("Cluster ID will be initialized to the value: " + newVal);
 
                     cluster.setId((UUID)newVal);
                 }
             );
         }
 
-        // TODO create ticket to investigate hang (try to wrap in local call)
-        try {
-            metastorage.writeAsync(CLUSTER_ID, cluster.id());
+        //TODO GG-21718 - implement optimization so only coordinator makes a write to metastorage.
+        ctx.closure().runLocalSafe(
+            () -> {
+                try {
+                    metastorage.writeAsync(CLUSTER_ID, cluster.id());
 
-            metastorage.writeAsync(CLUSTER_TAG, cluster.tag());
-        }
-        catch (IgniteCheckedException e) {
-            ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
-        }
+                    metastorage.writeAsync(CLUSTER_TAG, cluster.tag());
+                }
+                catch (IgniteCheckedException e) {
+                    ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
+                }
+            }
+        );
     }
 
     /**
@@ -293,7 +321,8 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
         if (!metastorage.compareAndSet(CLUSTER_TAG, oldTag, newTag)) {
             Serializable concurrentlySetTag = metastorage.read(CLUSTER_TAG);
 
-            throw new IgniteCheckedException("Cluster tag has been concurrently updated to value: " + concurrentlySetTag);
+            throw new IgniteCheckedException("Cluster tag has been concurrently updated to different value: " +
+                concurrentlySetTag);
         }
         else
             cluster.setTag(newTag);
@@ -542,12 +571,10 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
             if (remoteClusterId != null) {
                 if (localClusterId != null && !localClusterId.equals(remoteClusterId)) {
-                    //TODO warning
-                    if (log.isInfoEnabled())
-                        log.info("Received custer ID differs from locally stored cluster ID " +
-                            "and will be rewritten. " +
-                            "Received cluster ID: " + remoteClusterId +
-                            ", local cluster ID: " + localClusterId);
+                    log.warning("Received cluster ID differs from locally stored cluster ID " +
+                        "and will be rewritten. " +
+                        "Received cluster ID: " + remoteClusterId +
+                        ", local cluster ID: " + localClusterId);
                 }
 
                 localClusterId = (UUID)remoteClusterId;
