@@ -601,7 +601,8 @@ public class IgniteTxCachePrimarySyncTest extends GridCommonAbstractTest {
             if (!MvccFeatureChecker.forcedMvcc() || MvccFeatureChecker.isSupported(Feature.NEAR_CACHE))
                 ignite(NODES - 1).createNearCache(ccfg.getName(), new NearCacheConfiguration<>());
 
-            for (int i = 1; i < NODES; i++) {
+            // Two nodes: server and client
+            for (int i = SRVS; i < SRVS + 2; i++) {
                 Ignite node = ignite(i);
 
                 log.info("Test node: " + node.name());
@@ -625,16 +626,15 @@ public class IgniteTxCachePrimarySyncTest extends GridCommonAbstractTest {
                     }
                 });
 
-                for (final TransactionConcurrency concurrency : TransactionConcurrency.values()) {
-                    for (final TransactionIsolation isolation : TransactionIsolation.values()) {
-                        if (MvccFeatureChecker.forcedMvcc() && !MvccFeatureChecker.isSupported(concurrency, isolation))
+                for (IgniteBiTuple<TransactionConcurrency, TransactionIsolation> basePair : BASE_PAIRS) {
+                        if (MvccFeatureChecker.forcedMvcc() && !MvccFeatureChecker.isSupported(basePair.get1(), basePair.get2()))
                             continue;
 
                         checkWaitPrimaryResponse(node, ccfg, new IgniteBiInClosure<Integer, IgniteCache<Object, Object>>() {
                             @Override public void apply(Integer key, IgniteCache<Object, Object> cache) {
                                 Ignite ignite = cache.unwrap(Ignite.class);
 
-                                try (Transaction tx = ignite.transactions().txStart(concurrency, isolation)) {
+                                try (Transaction tx = ignite.transactions().txStart(basePair.get1(), basePair.get2())) {
                                     cache.put(key, key);
 
                                     tx.commit();
@@ -653,14 +653,13 @@ public class IgniteTxCachePrimarySyncTest extends GridCommonAbstractTest {
 
                                 Ignite ignite = cache.unwrap(Ignite.class);
 
-                                try (Transaction tx = ignite.transactions().txStart(concurrency, isolation)) {
+                                try (Transaction tx = ignite.transactions().txStart(basePair.get1(), basePair.get2())) {
                                     cache.putAll(map);
 
                                     tx.commit();
                                 }
                             }
                         });
-                    }
                 }
             }
         }
