@@ -24,6 +24,8 @@ import java.util.UUID;
 import java.util.function.Function;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.console.dto.AbstractDto;
+import org.apache.ignite.console.messages.WebConsoleMessageSource;
+import org.apache.ignite.console.messages.WebConsoleMessageSourceAccessor;
 import org.apache.ignite.internal.util.typedef.F;
 
 import static java.util.stream.Collectors.toSet;
@@ -32,6 +34,9 @@ import static java.util.stream.Collectors.toSet;
  * Index for one to many relation.
  */
 public class OneToManyIndex<K, V> extends CacheHolder<K, Set<V>> {
+    /** Messages accessor. */
+    private static WebConsoleMessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
+
     /** Message generator function */
     private final Function<K, String> msgGenerator;
 
@@ -45,6 +50,16 @@ public class OneToManyIndex<K, V> extends CacheHolder<K, Set<V>> {
         super(ignite, idxName);
 
         this.msgGenerator = msgGenerator;
+    }
+
+    /**
+     * Constructor.
+     *
+     * @param ignite Ignite.
+     * @param idxName Index name.
+     */
+    public OneToManyIndex(Ignite ignite, String idxName) {
+        this(ignite, idxName, (key) -> messages.getMessage("err.data-access-violation"));
     }
 
     /**

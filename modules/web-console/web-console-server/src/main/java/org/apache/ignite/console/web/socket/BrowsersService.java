@@ -38,10 +38,8 @@ import org.apache.ignite.console.web.AbstractSocketHandler;
 import org.apache.ignite.console.web.model.VisorTaskDescriptor;
 import org.apache.ignite.console.websocket.WebSocketEvent;
 import org.apache.ignite.console.websocket.WebSocketRequest;
-import org.apache.ignite.console.websocket.WebSocketResponse;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgniteBiTuple;
-import org.apache.ignite.messaging.MessagingListenActor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -51,7 +49,7 @@ import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketSession;
 
 import static org.apache.ignite.console.utils.Utils.fromJson;
-import static org.apache.ignite.console.websocket.WebSocketEvents.ADMIN_ANNOUNCEMENT;
+import static org.apache.ignite.console.web.socket.TransitionService.SEND_TO_AGENT;
 import static org.apache.ignite.console.websocket.WebSocketEvents.NODE_REST;
 import static org.apache.ignite.console.websocket.WebSocketEvents.NODE_VISOR;
 import static org.apache.ignite.console.websocket.WebSocketEvents.SCHEMA_IMPORT_DRIVERS;
@@ -80,7 +78,7 @@ public class BrowsersService extends AbstractSocketHandler {
     private final Map<String, WebSocketSession> locRequests;
 
     /** */
-    private volatile WebSocketEvent<Object> lastAnn;
+    private volatile WebSocketEvent<Announcement> lastAnn;
 
     /** */
     private AgentsService agentsHnd;
@@ -130,6 +128,15 @@ public class BrowsersService extends AbstractSocketHandler {
         sendMessageQuiet(ses, agentsHnd.collectAgentStats(id));
     }
 
+    /**
+     * @param key Key.
+     * @param evt Event.
+     */
+    private void sendToAgent(AgentKey key, WebSocketEvent evt) {
+        ignite.message(ignite.cluster().forLocal())
+            .send(SEND_TO_AGENT, new AgentRequest(ignite.cluster().localNode().id(), key, evt));
+    }
+
     /** {@inheritDoc} */
     @Override public void handleEvent(WebSocketSession ses, WebSocketRequest evt) {
         try {
@@ -140,8 +147,7 @@ public class BrowsersService extends AbstractSocketHandler {
                 case SCHEMA_IMPORT_SCHEMAS:
                 case SCHEMA_IMPORT_METADATA:
 
-
-                    agentsHnd.sendToAgent(new AgentKey(accId), evt);
+                    sendToAgent(new AgentKey(accId), evt);
 
                     break;
 
@@ -157,7 +163,7 @@ public class BrowsersService extends AbstractSocketHandler {
                     WebSocketEvent reqEvt = evt.getEventType().equals(NODE_REST) ?
                         evt : evt.withPayload(prepareNodeVisorParams(payload));
 
-                    agentsHnd.sendToAgent(new AgentKey(accId, clusterId), reqEvt);
+                    sendToAgent(new AgentKey(accId, clusterId), reqEvt);
 
                     break;
 
@@ -346,31 +352,10 @@ public class BrowsersService extends AbstractSocketHandler {
         return payload;
     }
 
-    /** {@inheritDoc} */
-    @Override public void registerListeners() {
-        ignite.message().localListen(SEND_RESPONSE_TO_BROWSER, new MessagingListenActor<WebSocketEvent>() {
-            @Override protected void receive(UUID nodeId, WebSocketEvent evt) {
-                sendResponseToBrowser(evt);
-            }
-        });
-
-        ignite.message().localListen(SEND_TO_USER_BROWSER, new MessagingListenActor<UserEvent>() {
-            @Override protected void receive(UUID nodeId, UserEvent res) {
-                sendToBrowsers(res.getKey(), res.getEvt());
-            }
-        });
-
-        ignite.message().localListen(SEND_TO_ALL_BROWSERS, new MessagingListenActor<Announcement>() {
-            @Override protected void receive(UUID nodeId, Announcement ann) {
-                sendAnnouncement(ann);
-            }
-        });
-    }
-
     /**
      * @param evt Event.
      */
-    private void sendResponseToBrowser(WebSocketEvent evt) {
+    void sendResponseToBrowser(WebSocketEvent evt) {
         WebSocketSession ses = locRequests.remove(evt.getRequestId());
 
         if (ses == null) {
@@ -390,7 +375,7 @@ public class BrowsersService extends AbstractSocketHandler {
     /**
      * @param evt Announcement.
      */
-    private void sendToBrowsers(UserKey id, WebSocketEvent evt) {
+    void sendToBrowsers(UserKey id, WebSocketEvent evt) {
         Collection<WebSocketSession> sessions = locBrowsers.get(id);
 
         if (!F.isEmpty(sessions)) {
@@ -402,19 +387,12 @@ public class BrowsersService extends AbstractSocketHandler {
     /**
      * @param ann Announcement.
      */
-    private void sendAnnouncement(Announcement ann) {
-        lastAnn = new WebSocketResponse(ADMIN_ANNOUNCEMENT, ann);
+    void sendAnnouncement(WebSocketEvent<Announcement> ann) {
+        lastAnn = ann;
 
         for (Collection<WebSocketSession> sessions : locBrowsers.values()) {
             for (WebSocketSession ses : sessions)
                 sendMessageQuiet(ses, lastAnn);
         }
-    }
-
-    /**
-     * @param ann Announcement.
-     */
-    public void broadcastAnnouncement(Announcement ann) {
-        ignite.message().send(SEND_TO_ALL_BROWSERS, ann);
     }
 }

@@ -19,6 +19,7 @@ package org.apache.ignite.console.websocket;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.apache.ignite.console.utils.Utils.extractErrorMessage;
 import static org.apache.ignite.console.websocket.WebSocketEvents.ERROR;
 
 /**
@@ -60,12 +61,13 @@ public interface WebSocketEvent<T> {
     /**
      * Create event with error for response with same ID.
      *
-     * @param msg Message.
+     * @param prefix Message prefix.
+     * @param e Exception.
      */
-    public default WebSocketResponse withError(String msg) {
+    public default WebSocketResponse withError(String prefix, Throwable e) {
         Map<String, String> err = new HashMap<>();
 
-        err.put("message", msg);
+        err.put("message", extractErrorMessage(prefix, e));
 
         return new WebSocketResponse(getRequestId(), ERROR, err);
     }

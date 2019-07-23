@@ -67,7 +67,6 @@ import static org.apache.ignite.console.agent.AgentUtils.entry;
 import static org.apache.ignite.console.agent.AgentUtils.secured;
 import static org.apache.ignite.console.agent.AgentUtils.sslContextFactory;
 import static org.apache.ignite.console.agent.handlers.DemoClusterHandler.DEMO_CLUSTER_ID;
-import static org.apache.ignite.console.utils.Utils.extractErrorMessage;
 import static org.apache.ignite.console.utils.Utils.fromJson;
 import static org.apache.ignite.console.websocket.AgentHandshakeRequest.CURRENT_VER;
 import static org.apache.ignite.console.websocket.WebSocketEvents.AGENTS_PATH;
@@ -420,7 +419,7 @@ public class WebSocketRouter implements AutoCloseable {
             log.error("Failed to send response: " + evt, e);
 
             try {
-                send(ses, evt.withError(extractErrorMessage(ERROR_MSGS.get(evt.getEventType()), e)));
+                send(ses, evt.withError(ERROR_MSGS.get(evt.getEventType()), e));
             }
             catch (Exception ex) {
                 log.error("Failed to send response with error", e);

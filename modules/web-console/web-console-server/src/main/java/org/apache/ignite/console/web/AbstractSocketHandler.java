@@ -37,7 +37,6 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.apache.ignite.console.utils.Utils.extractErrorMessage;
 import static org.apache.ignite.console.utils.Utils.fromJson;
 import static org.apache.ignite.console.utils.Utils.toJson;
 
@@ -50,18 +49,6 @@ public abstract class AbstractSocketHandler extends TextWebSocketHandler {
 
     /** */
     private static final PingMessage PING = new PingMessage(UTF_8.encode("PING"));
-
-    /** */
-    public static final String SEND_RESPONSE_TO_BROWSER = "SEND_RESPONSE_TO_BROWSER";
-
-    /** */
-    protected static final String SEND_TO_USER_BROWSER = "SEND_TO_USER_BROWSER";
-
-    /** */
-    protected static final String SEND_TO_ALL_BROWSERS = "SEND_TO_ALL_BROWSERS";
-
-    /** */
-    protected static final String SEND_TO_BACKEND = "SEND_TO_BACKEND";
 
     /** Messages accessor. */
     protected WebConsoleMessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
@@ -139,7 +126,7 @@ public abstract class AbstractSocketHandler extends TextWebSocketHandler {
      */
     protected void sendError(WebSocketSession ws, WebSocketEvent evt, String prefix, Throwable err) {
         try {
-            sendMessage(ws, evt.withError(extractErrorMessage(prefix, err)));
+            sendMessage(ws, evt.withError(prefix, err));
         }
         catch (Throwable e) {
             log.error("Failed to send error in response [session=" + ws + ", event=" + evt + "]", e);
@@ -193,9 +180,4 @@ public abstract class AbstractSocketHandler extends TextWebSocketHandler {
             log.error("Failed to send event [session=" + ses + ", event=" + evt + "]", e);
         }
     }
-
-    /**
-     * Register message listener.
-     */
-    public abstract void registerListeners();
 }

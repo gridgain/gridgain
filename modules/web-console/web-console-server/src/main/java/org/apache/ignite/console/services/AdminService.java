@@ -27,7 +27,7 @@ import org.apache.ignite.console.json.JsonObject;
 import org.apache.ignite.console.repositories.AnnouncementRepository;
 import org.apache.ignite.console.tx.TransactionManager;
 import org.apache.ignite.console.web.model.SignUpRequest;
-import org.apache.ignite.console.web.socket.BrowsersService;
+import org.apache.ignite.console.web.socket.TransitionService;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
@@ -62,7 +62,7 @@ public class AdminService {
     private final AnnouncementRepository annRepo;
 
     /** */
-    private final BrowsersService browsersHnd;
+    private final TransitionService transitionSrvc;
 
     /**
      * @param txMgr Transactions manager.
@@ -72,7 +72,7 @@ public class AdminService {
      * @param activitiesSrv Service to work with activities.
      * @param evtPublisher Service to publish events.
      * @param annRepo Repository to work with announcement.
-     * @param browsersHnd Browser handler.
+     * @param transitionSrvc Transition service.
      */
     public AdminService(
         TransactionManager txMgr,
@@ -82,7 +82,7 @@ public class AdminService {
         ActivitiesService activitiesSrv,
         EventPublisher evtPublisher,
         AnnouncementRepository annRepo,
-        BrowsersService browsersHnd
+        TransitionService transitionSrvc
     ) {
         this.txMgr = txMgr;
         this.accountsSrv = accountsSrv;
@@ -91,7 +91,7 @@ public class AdminService {
         this.activitiesSrv = activitiesSrv;
         this.evtPublisher = evtPublisher;
         this.annRepo = annRepo;
-        this.browsersHnd = browsersHnd;
+        this.transitionSrvc = transitionSrvc;
     }
 
     /**
@@ -175,6 +175,6 @@ public class AdminService {
     public void updateAnnouncement(Announcement ann) {
         annRepo.save(ann);
 
-        browsersHnd.broadcastAnnouncement(ann);
+        transitionSrvc.broadcastAnnouncement(ann);
     }
 }

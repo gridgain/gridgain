@@ -28,6 +28,7 @@ import java.util.stream.Stream;
 import com.fasterxml.jackson.core.type.TypeReference;
 import javax.cache.Cache;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.cluster.ClusterGroupEmptyException;
 import org.apache.ignite.console.db.CacheHolder;
 import org.apache.ignite.console.db.OneToManyIndex;
 import org.apache.ignite.console.dto.Account;
@@ -42,7 +43,6 @@ import org.apache.ignite.console.websocket.WebSocketRequest;
 import org.apache.ignite.console.websocket.WebSocketResponse;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.messaging.MessagingListenActor;
 import org.jsr166.ConcurrentLinkedHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,8 +57,9 @@ import static java.util.stream.Collectors.toSet;
 import static java.util.stream.StreamSupport.stream;
 import static org.apache.ignite.console.utils.Utils.entriesToMap;
 import static org.apache.ignite.console.utils.Utils.entry;
-import static org.apache.ignite.console.utils.Utils.extractErrorMessage;
 import static org.apache.ignite.console.utils.Utils.fromJson;
+import static org.apache.ignite.console.web.socket.TransitionService.SEND_RESPONSE;
+import static org.apache.ignite.console.web.socket.TransitionService.SEND_TO_USER_BROWSER;
 import static org.apache.ignite.console.websocket.AgentHandshakeRequest.SUPPORTED_VERS;
 import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_HANDSHAKE;
 import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_REVOKE_TOKEN;
@@ -83,12 +84,6 @@ public class AgentsService extends AbstractSocketHandler {
     protected AccountsRepository accRepo;
 
     /** */
-    private final Map<WebSocketSession, AgentSession> locAgents;
-    
-    /** */
-    private final Map<String, UUID> backendByReq;
-
-    /** */
     private CacheHolder<String, TopologySnapshot> clusters;
 
     /** */
@@ -96,6 +91,12 @@ public class AgentsService extends AbstractSocketHandler {
 
     /** */
     private OneToManyIndex<AgentKey, UUID> backendByAgent;
+
+    /** */
+    private final Map<WebSocketSession, AgentSession> locAgents;
+    
+    /** */
+    private final Map<String, UUID> srcOfRequests;
 
     /**
      * @param accRepo Repository to work with accounts.
@@ -105,40 +106,17 @@ public class AgentsService extends AbstractSocketHandler {
 
         this.accRepo = accRepo;
 
-        locAgents = new ConcurrentLinkedHashMap<>();
-        backendByReq = new ConcurrentHashMap<>();
-
         this.txMgr.registerStarter(() -> {
-            backendByAgent = new OneToManyIndex<>(ignite, "wc_backend", (key) -> messages.getMessage("err.data-access-violation"));
-            cleanupBackendIndex(backendByAgent);
-
-            clusterIdsByBrowser = new OneToManyIndex<>(ignite, "wc_clusters_idx", (key) -> messages.getMessage("err.data-access-violation"));
-            cleanupClusterIndex();
-
             clusters = new CacheHolder<>(ignite, "wc_clusters");
+            backendByAgent = new OneToManyIndex<>(ignite, "wc_backend");
+            clusterIdsByBrowser = new OneToManyIndex<>(ignite, "wc_clusters_idx");
+
+            cleanupBackendIndex();
+            cleanupClusterIndex();
         });
-    }
 
-    /** {@inheritDoc} */
-    @Override public void registerListeners() {
-        ignite.message().localListen(SEND_TO_BACKEND, new MessagingListenActor<AgentEvent>() {
-            @Override protected void receive(UUID nodeId, AgentEvent req) {
-                Optional<WebSocketSession> locAgent = findLocalAgent(req.getAgentKey());
-                WebSocketEvent evt = req.getEvent();
-
-
-                if (locAgent.isPresent()) {
-                    sendLocally(locAgent.get(), evt, nodeId);
-
-                    return;
-                }
-
-                ignite.message(ignite.cluster().forNodeId(nodeId)).send(
-                    SEND_RESPONSE_TO_BROWSER,
-                    evt.withError(messages.getMessage("err.agent-not-found"))
-                );
-            }
-        });
+        locAgents = new ConcurrentLinkedHashMap<>();
+        srcOfRequests = new ConcurrentHashMap<>();
     }
 
     /** {@inheritDoc} */
@@ -189,12 +167,15 @@ public class AgentsService extends AbstractSocketHandler {
 
             default:
                 try {
-                    UUID nid = backendByReq.remove(evt.getRequestId());
+                    UUID nid = srcOfRequests.remove(evt.getRequestId());
 
-                    ignite.message(ignite.cluster().forNodeId(nid)).send(SEND_RESPONSE_TO_BROWSER, evt);
+                    ignite.message(ignite.cluster().forNodeId(nid)).send(SEND_RESPONSE, evt);
+                }
+                catch (ClusterGroupEmptyException ignored) {
+                    // No-op.
                 }
                 catch (Exception e) {
-                    log.warn("Failed to backend to send response: " + evt, e);
+                    log.warn("Failed to send response to browser: " + evt, e);
                 }
         }
     }
@@ -203,7 +184,7 @@ public class AgentsService extends AbstractSocketHandler {
      * @param wsAgent Session.
      * @param tops Topology snapshots.
      */
-    public void processTopologyUpdate(WebSocketSession wsAgent, Collection<TopologySnapshot> tops) {
+    private void processTopologyUpdate(WebSocketSession wsAgent, Collection<TopologySnapshot> tops) {
         AgentSession desc = locAgents.get(wsAgent);
 
         Set<TopologySnapshot> oldTops =
@@ -261,8 +242,6 @@ public class AgentsService extends AbstractSocketHandler {
 
                 if (agentSes.canBeClose())
                     U.closeQuiet(ws);
-
-                cleanupAccountCache(Collections.singleton(acc.getId()), agentSes.getClusterIds());
             }
         });
         
@@ -288,85 +267,26 @@ public class AgentsService extends AbstractSocketHandler {
             return;
         }
 
-        cleanupAccountCache(agentSes.getAccIds(), agentSes.getClusterIds());
+        tryCleanupIndexes(agentSes.getAccIds(), agentSes.getClusterIds());
 
         sendAgentStats(agentSes.getAccIds());
     }
 
     /**
-     * @param accIds Acc ids.
-     * @param clusterIds Cluster ids.
+     * Send request to loccaly connected agent.
+     * @param req Request.
+     * @throws IllegalStateException If connected agent not founded.
      */
-    private void cleanupAccountCache(Set<UUID> accIds, Set<String> clusterIds) {
-        UUID nid = ignite.cluster().localNode().id();
+    void sendLocally(AgentRequest req) throws IllegalStateException, IOException {
+        WebSocketSession ses = findLocalAgent(req.getKey()).orElseThrow(IllegalStateException::new);
 
-        for (UUID accId : accIds) {
-            this.txMgr.doInTransaction(() -> {
-                backendByAgent.remove(new AgentKey(accId), nid);
+        WebSocketEvent evt = req.getEvent();
 
-                for (String clusterId : clusterIds)
-                    backendByAgent.remove(new AgentKey(accId, clusterId), nid);
-            });
-        }
-    }
-
-    /**
-     * @param ses Agent session.
-     * @param evt Event.
-     */
-    private void sendLocally(WebSocketSession ses, WebSocketEvent evt, UUID destNid) {
         log.debug("Found local agent session [session=" + ses + ", event=" + evt + "]");
 
-        try {
-            sendMessage(ses, evt);
+        sendMessage(ses, evt);
 
-            backendByReq.put(evt.getRequestId(), destNid);
-        }
-        catch (Exception e) {
-            ignite.message(ignite.cluster().forLocal()).send(
-                SEND_RESPONSE_TO_BROWSER,
-                evt.withError(extractErrorMessage(messages.getMessage("err.failed-to-send-to-agent"), e))
-            );
-        }
-    }
-
-    /**
-     * @param nids Nodes to send.
-     * @param req Request object.
-     */
-    private void sendRemote(Set<UUID> nids, AgentEvent req) {
-        try {
-            if (nids.isEmpty())
-                throw new IllegalStateException(messages.getMessage("err.agent-not-found"));
-
-            ignite.message(ignite.cluster().forNodeIds(nids).forRandom()).send(SEND_TO_BACKEND, req);
-        }
-        catch (Exception e) {
-            ignite.message(ignite.cluster().forLocal()).send(
-                SEND_RESPONSE_TO_BROWSER,
-                req.getEvent().withError(extractErrorMessage(messages.getMessage("err.failed-to-send-to-agent"), e))
-            );
-        }
-    }
-
-    /**
-     * Send event to first user agent.
-     *
-     * @param key Agent key.
-     * @param evt Event.
-     */
-    void sendToAgent(AgentKey key, WebSocketEvent evt) {
-        Optional<WebSocketSession> locAgent = findLocalAgent(key);
-
-        if (locAgent.isPresent()) {
-            sendLocally(locAgent.get(), evt, ignite.cluster().localNode().id());
-
-            return;
-        }
-
-        Set<UUID> nids = txMgr.doInTransaction(() -> backendByAgent.get(key));
-
-        sendRemote(nids, new AgentEvent(key, evt));
+        srcOfRequests.put(evt.getRequestId(), req.getSrcNid());
     }
 
     /**
@@ -413,9 +333,21 @@ public class AgentsService extends AbstractSocketHandler {
     }
 
     /**
-     * Periodically cleanup agents without topology updates.
+     * Cleanup backend index.
      */
-    private void cleanupClusterIndex() {
+    void cleanupBackendIndex() {
+        Collection<UUID> nids = U.nodeIds(ignite.cluster().nodes());
+
+        stream(backendByAgent.cache().spliterator(), false)
+            .peek(entry -> entry.getValue().removeAll(nids))
+            .filter(entry -> entry.getValue().isEmpty())
+            .forEach(entry -> backendByAgent.cache().remove(entry.getKey()));
+    }
+
+    /**
+     * Cleanup cluster index.
+     */
+    void cleanupClusterIndex() {
         Collection<UUID> nids = U.nodeIds(ignite.cluster().nodes());
 
         stream(clusterIdsByBrowser.cache().spliterator(), false)
@@ -430,15 +362,29 @@ public class AgentsService extends AbstractSocketHandler {
     }
 
     /**
-     * Periodically cleanup agents without topology updates.
+     * @param accIds Acc ids.
+     * @param clusterIds Cluster ids.
      */
-    private <K> void cleanupBackendIndex(OneToManyIndex<K, UUID> backendBy) {
-        Collection<UUID> nids = U.nodeIds(ignite.cluster().nodes());
+    private void tryCleanupIndexes(Set<UUID> accIds, Set<String> clusterIds) {
+        UUID nid = ignite.cluster().localNode().id();
 
-        stream(backendBy.cache().spliterator(), false)
-            .peek(entry -> entry.getValue().removeAll(nids))
-            .filter(entry -> entry.getValue().isEmpty())
-            .forEach(entry -> backendBy.cache().remove(entry.getKey()));
+        for (UUID accId : accIds) {
+            this.txMgr.doInTransaction(() -> {
+                AgentKey agentKey = new AgentKey(accId);
+
+                boolean allAgentsLeft = !findLocalAgent(agentKey).isPresent();
+
+                if (allAgentsLeft)
+                    backendByAgent.remove(agentKey, nid);
+
+                for (String clusterId : clusterIds) {
+                    AgentKey clusterKey = new AgentKey(accId, clusterId);
+
+                    if (allAgentsLeft || !findLocalAgent(clusterKey).isPresent())
+                        backendByAgent.remove(clusterKey, nid);
+                }
+            });
+        }
     }
 
     /**
@@ -545,13 +491,13 @@ public class AgentsService extends AbstractSocketHandler {
      * @param demo is demo stats.
      */
     private void sendAgentStats(Set<UUID> accIds, boolean demo) {
-        accIds.stream()
-            .map(accId -> new UserKey(accId, demo))
-            .forEach((key) -> {
-                WebSocketResponse stats = collectAgentStats(key);
+        for (UUID accId : accIds) {
+            UserKey key = new UserKey(accId, demo);
+            WebSocketResponse stats = collectAgentStats(key);
 
-                ignite.message().send(SEND_TO_USER_BROWSER, new UserEvent(key, stats));
-            });
+            
+            ignite.message().send(SEND_TO_USER_BROWSER, new UserEvent(key, stats));
+        }
     }
 
     /**
