@@ -93,6 +93,12 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
     /** Minimal IgniteProductVersion supporting BaselineTopology */
     private static final IgniteProductVersion MIN_BLT_SUPPORTING_VER = IgniteProductVersion.fromString("2.4.0");
 
+    /** */
+    private UUID id;
+
+    /** */
+    private String tag;
+
     /**
      * Required by {@link Externalizable}.
      */
@@ -576,6 +582,42 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
         finally {
             unguard();
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override public UUID id() {
+        return id;
+    }
+
+    /**
+     * Not part of public API. Enables ClusterProcessor to set ID for the first time on node startup.
+     *
+     * @param id Id.
+     */
+    public void id(UUID id) {
+        this.id = id;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String tag() {
+        return tag;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void tag(String tag) throws IgniteCheckedException {
+        if (!ctx.state().publicApiActiveState(true))
+            throw new IgniteCheckedException("Can not change cluster tag on inactive cluster. To activate the cluster call Ignite.active(true).");
+
+        ctx.cluster().updateTag(tag);
+    }
+
+    /**
+     * Not part of public API. Enables ClusterProcessor to set tag for the first time on node startup.
+     *
+     * @param tag Tag.
+     */
+    public void setTag(String tag) {
+        this.tag = tag;
     }
 
     /** {@inheritDoc} */

@@ -241,6 +241,7 @@ import static org.apache.ignite.internal.GridKernalState.STARTING;
 import static org.apache.ignite.internal.GridKernalState.STOPPED;
 import static org.apache.ignite.internal.GridKernalState.STOPPING;
 import static org.apache.ignite.internal.IgniteComponentType.COMPRESSION;
+import static org.apache.ignite.internal.IgniteComponentType.MANAGEMENT_CONSOLE_AGENT;
 import static org.apache.ignite.internal.IgniteComponentType.SCHEDULE;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_BUILD_DATE;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_BUILD_VER;
@@ -1111,6 +1112,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             // Start processors before discovery manager, so they will
             // be able to start receiving messages once discovery completes.
             try {
+                startProcessor(MANAGEMENT_CONSOLE_AGENT.createOptional(ctx));
                 startProcessor(COMPRESSION.createOptional(ctx));
                 startProcessor(new PdsConsistentIdProcessor(ctx));
                 startProcessor(new MvccProcessorImpl(ctx));

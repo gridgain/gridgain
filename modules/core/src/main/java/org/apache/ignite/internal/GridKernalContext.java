@@ -48,6 +48,7 @@ import org.apache.ignite.internal.processors.datastreamer.DataStreamProcessor;
 import org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor;
 import org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
+import org.apache.ignite.internal.processors.gmc.ManagementConsoleProcessor;
 import org.apache.ignite.internal.processors.job.GridJobProcessor;
 import org.apache.ignite.internal.processors.jobmetrics.GridJobMetricsProcessor;
 import org.apache.ignite.internal.processors.marshaller.GridMarshallerMappingProcessor;
@@ -732,4 +733,11 @@ public interface GridKernalContext extends Iterable<GridComponent> {
      * @return Rolling Upgrade processor.
      */
     public RollingUpgradeProcessor rollingUpgrade();
+
+    /**
+     * GMC processor.
+     *
+     * @return GMC processor.
+     */
+    public ManagementConsoleProcessor gmc();
 }
