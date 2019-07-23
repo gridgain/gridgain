@@ -380,4 +380,11 @@ public class MetricResponse implements Message {
     @Override public void onAckReceived() {
         // No-op.
     }
+
+    /**
+     * @return Raw bytes.
+     */
+    public byte[] body() {
+        return body;
+    }
 }
