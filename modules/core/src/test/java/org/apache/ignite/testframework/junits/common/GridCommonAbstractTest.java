@@ -575,7 +575,9 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
     }
 
     /**
-     * Await topology changed.
+     * Awaits that all nodes have seen latest topology change.
+     *
+     * Takes into account only server nodes, clients are ignored.
      *
      * @throws IgniteException If waiting failed.
      */
@@ -628,7 +630,7 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
 
                     throw new IgniteException("Timeout of waiting topology localNode=("
                         + ig.cluster().localNode().id() + "," + ig.cluster().localNode().consistentId() + ") "
-                        + " topVer=" + topVer + " [" + "exp:" + exp + " | " + "actl:" + actl + "]"
+                        + " topVer=" + topVer + " [" + "expected:" + exp + " | " + "actual:" + actl + "]"
                     );
                 }
 
