@@ -249,19 +249,14 @@ namespace Apache.Ignite.Core.Tests.Cache
                 var ex = Assert.Throws<IgniteException>(() => cluster.SetBaselineTopology(2));
                 Assert.AreEqual("Changing BaselineTopology on inactive cluster is not allowed.", ex.Message);
 
-                // Set with version.
                 cluster.SetActive(true);
-                cluster.SetBaselineTopology(2);
 
-                var res = cluster.GetBaselineTopology();
-                CollectionAssert.AreEquivalent(new[] {"node1", "node2"}, res.Select(x => x.ConsistentId));
+                // Can not set baseline with offline node.
+                ex = Assert.Throws<IgniteException>(() => cluster.SetBaselineTopology(2));
+                Assert.AreEqual("Check arguments. Node not found for consistent ID: node2.", ex.Message);
 
                 cluster.SetBaselineTopology(1);
                 Assert.AreEqual("node1", cluster.GetBaselineTopology().Single().ConsistentId);
-
-                // Can not set baseline with offline node.
-                ex = Assert.Throws<IgniteException>(() => cluster.SetBaselineTopology(res));
-                Assert.AreEqual("Check arguments. Node not found for consistent ID: node2.", ex.Message);
 
                 // Set with node.
                 cluster.SetBaselineTopology(cluster.GetBaselineTopology());
