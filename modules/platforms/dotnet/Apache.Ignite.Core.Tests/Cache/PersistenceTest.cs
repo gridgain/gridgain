@@ -259,17 +259,22 @@ namespace Apache.Ignite.Core.Tests.Cache
                 cluster.SetBaselineTopology(1);
                 Assert.AreEqual("node1", cluster.GetBaselineTopology().Single().ConsistentId);
 
-                // Set with nodes.
-                cluster.SetBaselineTopology(res);
-                
+                // Can not set baseline with offline node.
+                ex = Assert.Throws<IgniteException>(() => cluster.SetBaselineTopology(res));
+                Assert.AreEqual("Check arguments. Node not found for consistent ID: node2.", ex.Message);
+
+                // Set with node.
+                cluster.SetBaselineTopology(cluster.GetBaselineTopology());
+
                 res = cluster.GetBaselineTopology();
-                CollectionAssert.AreEquivalent(new[] { "node1", "node2" }, res.Select(x => x.ConsistentId));
+                CollectionAssert.AreEquivalent(new[] { "node1"}, res.Select(x => x.ConsistentId));
 
                 cluster.SetBaselineTopology(cluster.GetTopology(1));
                 Assert.AreEqual("node1", cluster.GetBaselineTopology().Single().ConsistentId);
 
-                // Set to two nodes.
-                cluster.SetBaselineTopology(cluster.GetTopology(2));
+                // Can not set baseline with offline node.
+                ex = Assert.Throws<IgniteException>(() => cluster.SetBaselineTopology(cluster.GetTopology(2)));
+                Assert.AreEqual("Check arguments. Node not found for consistent ID: node2.", ex.Message);
             }
 
             // Check auto activation on cluster restart.
@@ -278,7 +283,7 @@ namespace Apache.Ignite.Core.Tests.Cache
             {
                 var cluster = ignite.GetCluster();
                 Assert.IsTrue(cluster.IsActive());
-                
+
                 var res = cluster.GetBaselineTopology();
                 CollectionAssert.AreEquivalent(new[] { "node1", "node2" }, res.Select(x => x.ConsistentId));
             }
