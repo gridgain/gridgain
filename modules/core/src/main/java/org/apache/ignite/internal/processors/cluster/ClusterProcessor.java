@@ -288,6 +288,8 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
                         log.info("Cluster ID will be initialized to the value: " + newVal);
 
                     cluster.setId((UUID)newVal);
+
+                    compatibilityMode = false;
                 }
             );
         }
