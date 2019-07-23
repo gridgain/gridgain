@@ -18,17 +18,23 @@ package org.apache.ignite.internal.metric;
 
 import java.util.Collections;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.QueryEntity;
+import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.spi.metric.Metric;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -39,10 +45,16 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
     private static final int TABLE_SIZE = 10_000;
 
     /**
+     * Timeout for each wait on sync operation in seconds.
+     */
+    public static final long WAIT_OP_TIMEOUT_SEC = 15;
+
+    /**
      * Create cache with a test table.
      */
     private IgniteCache createCacheFrom(Ignite node) {
         CacheConfiguration<Integer, String> ccfg = new CacheConfiguration<Integer, String>("TestCache")
+            .setSqlFunctionClasses()
             .setQueryEntities(Collections.singleton(
                 new QueryEntity(Integer.class.getName(), String.class.getName())
                     .setTableName("TAB")
@@ -67,6 +79,17 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
     public void cleanUp() {
         stopAllGrids();
     }
+
+    /**
+     * Clean up.
+     */
+    @Before
+    public void setup() {
+        stopAllGrids();
+
+        SuspendQuerySqlFunctions.refresh();
+    }
+
 
     /**
      * Check values of all sql memory metrics right after grid starts and no queries are executed.
@@ -107,8 +130,10 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
 
         int runCnt = 10;
 
+        final String scanQry = "SELECT * FROM TAB WHERE ID <> 5";
+
         for (int i = 0; i < runCnt; i++)
-            cache.query(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID <> 5")).getAll();
+            cache.query(new SqlFieldsQuery(scanQry)).getAll();
 
         long otherCntAfterDistQry = longMetricValue(otherNodeIdx, "requests");
         long connCntAfterDistQry = longMetricValue(connNodeIdx, "requests");
@@ -119,7 +144,7 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
         // And then run local query and check that only connect node metric has changed.
 
         for (int i = 0; i < runCnt; i++)
-            cache.query(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID <> 5").setLocal(true)).getAll();
+            cache.query(new SqlFieldsQuery(scanQry).setLocal(true)).getAll();
 
         long otherCntAfterLocQry = longMetricValue(otherNodeIdx, "requests");
         long connCntAfterLocQry = longMetricValue(connNodeIdx, "requests");
@@ -129,8 +154,81 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
     }
 
 
+    @Test
+    public void testMemoryIsTrackedWhenQueryIsRunningAndReleasedOnFinish() throws Exception {
+        startGrids(2);
+
+        int connNodeIdx = 1;
+        int otherNodeIdx = 0;
+
+        MemValidator memoryIsUsed = (freeMem, maxMem) -> {
+            if (freeMem == maxMem)
+                fail("No memory is reserved during the query");
+        };
+        MemValidator memoryIsFree = (freeMem, maxMem) -> {
+            if (freeMem < maxMem)
+                fail(String.format("Expected no memory reserved: [freeMem=%d, maxMem=%d]", freeMem, maxMem));
+        } ;
+
+        IgniteCache cache = createCacheFrom(grid(connNodeIdx));
+
+        final String scanQry = "SELECT * FROM TAB WHERE ID <> suspendHook(5)";
+
+        IgniteInternalFuture<FieldsQueryCursor> distQryIsDone =
+            GridTestUtils.runAsync(() -> cache.query(new SqlFieldsQuery(scanQry)));
+
+        SuspendQuerySqlFunctions.awaitQueryStopsInTheMiddle();
+
+        validateMemoryUsageOn(connNodeIdx, memoryIsUsed);
+        validateMemoryUsageOn(otherNodeIdx, memoryIsUsed);
+
+        SuspendQuerySqlFunctions.resumeQueryExecution();
+
+        distQryIsDone.get(WAIT_OP_TIMEOUT_SEC, TimeUnit.SECONDS);
+
+        validateMemoryUsageOn(connNodeIdx, memoryIsFree);
+        validateMemoryUsageOn(otherNodeIdx, memoryIsFree);
+
+        // And for the local query:
+        SuspendQuerySqlFunctions.refresh();
+
+        IgniteInternalFuture<FieldsQueryCursor> locQryIsDone =
+            GridTestUtils.runAsync(() -> cache.query(new SqlFieldsQuery(scanQry).setLocal(true)));
+
+        SuspendQuerySqlFunctions.awaitQueryStopsInTheMiddle();
+
+        validateMemoryUsageOn(connNodeIdx, memoryIsUsed);
+        validateMemoryUsageOn(otherNodeIdx, memoryIsFree);
+
+        SuspendQuerySqlFunctions.resumeQueryExecution();
+
+        locQryIsDone.get(WAIT_OP_TIMEOUT_SEC, TimeUnit.SECONDS);
+
+        validateMemoryUsageOn(connNodeIdx, memoryIsFree);
+        validateMemoryUsageOn(otherNodeIdx, memoryIsFree);
+    }
+
+
     /**
-     * Finds LongMetric from sql memory registry by specified metric name and returns its value.
+     * Validate memory metrics freeMem and maxMem on the specified node.
+     *
+     * @param nodeIdx index of the node which metrics to validate.
+     * @param validator function(freeMem, maxMem) that validates these values.
+     */
+    private void validateMemoryUsageOn(int nodeIdx, MemValidator validator) {
+        long free = longMetricValue(0, "freeMem");
+        long maxMem = longMetricValue(0, "maxMem");
+
+        if (free > maxMem)
+            fail(String.format("Illegal state: there's more free memory (%s) than " +
+                "maximum available for sql (%s) on the node %d", free, maxMem, nodeIdx));
+
+        validator.validate(free, maxMem);
+    }
+
+
+    /**
+     * Finds LongMetric from sql memory registry by specified metric name and returns it's value.
      *
      * @param gridIdx index of a grid which metric value to find.
      * @param metricName short name of the metric from the "sql memory" metric registry.
@@ -145,5 +243,87 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
         Assert.assertTrue("Expected long metric, but got "+ metric.getClass(),  metric instanceof LongMetric);
 
         return ((LongMetric)metric).value();
+    }
+
+    /**
+     *
+     */
+    public static class SuspendQuerySqlFunctions {
+        /**
+         * How many rows should be processed (by all nodes in total)
+         */
+        private static final int PROCESS_ROWS_TO_SUSPEND = TABLE_SIZE / 2;
+
+        /**
+         * Latch to await till full scan query that uses this class function have done some job, so some memory is
+         * reserved.
+         */
+        public static volatile CountDownLatch qryIsInTheMiddle;
+
+        /**
+         * This latch is released when query should continue it's execution after stop in the middle.
+         */
+        private static volatile CountDownLatch resumeQryExec;
+
+        static {
+            refresh();
+        }
+
+        /**
+         * Refresh syncs.
+         */
+        public static void refresh() {
+            if (qryIsInTheMiddle != null) {
+                for (int i = 0; i < qryIsInTheMiddle.getCount(); i++)
+                    qryIsInTheMiddle.countDown();
+            }
+
+            if (resumeQryExec != null)
+                resumeQryExec.countDown();
+
+            qryIsInTheMiddle = new CountDownLatch(PROCESS_ROWS_TO_SUSPEND);
+
+            resumeQryExec = new CountDownLatch(1);
+        }
+
+        /**
+         * See {@link #qryIsInTheMiddle}.
+         */
+        public static void awaitQueryStopsInTheMiddle() throws InterruptedException {
+            qryIsInTheMiddle.await(WAIT_OP_TIMEOUT_SEC, TimeUnit.SECONDS);
+        }
+
+        /**
+         * See {@link #resumeQryExec}.
+         */
+        public static void resumeQueryExecution() {
+            resumeQryExec.countDown();
+        }
+
+        /**
+         * Sql function used to suspend query when half of the table is processed. Should be used in full scan queries.
+         *
+         * @param ret number to return.
+         */
+        public static long suspendHook(long ret) throws InterruptedException {
+            qryIsInTheMiddle.countDown();
+
+            if (qryIsInTheMiddle.getCount() == 0)
+                resumeQryExec.await(WAIT_OP_TIMEOUT_SEC, TimeUnit.SECONDS);
+
+            return ret;
+        }
+    }
+
+    /**
+     * Functional interface to validate metrics values.
+     */
+    public static interface MemValidator {
+        /**
+         *
+         * @param free freeMem metric value.
+         * @param max maxMem metric value.
+         */
+        void validate(long free, long max);
     }
 }
