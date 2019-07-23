@@ -23,8 +23,8 @@ import java.util.concurrent.TimeUnit;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.QueryEntity;
-import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
@@ -41,7 +41,9 @@ import org.junit.Test;
  * Tests for {@link SqlStatisticsHolderMemoryQuotas}.
  */
 public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
-    /** Number of rows in the test table. */
+    /**
+     * Number of rows in the test table.
+     */
     private static final int TABLE_SIZE = 10_000;
 
     /**
@@ -54,7 +56,7 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
      */
     private IgniteCache createCacheFrom(Ignite node) {
         CacheConfiguration<Integer, String> ccfg = new CacheConfiguration<Integer, String>("TestCache")
-            .setSqlFunctionClasses()
+            .setSqlFunctionClasses(SuspendQuerySqlFunctions.class)
             .setQueryEntities(Collections.singleton(
                 new QueryEntity(Integer.class.getName(), String.class.getName())
                     .setTableName("TAB")
@@ -165,17 +167,18 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
             if (freeMem == maxMem)
                 fail("No memory is reserved during the query");
         };
+
         MemValidator memoryIsFree = (freeMem, maxMem) -> {
             if (freeMem < maxMem)
                 fail(String.format("Expected no memory reserved: [freeMem=%d, maxMem=%d]", freeMem, maxMem));
-        } ;
+        };
 
         IgniteCache cache = createCacheFrom(grid(connNodeIdx));
 
         final String scanQry = "SELECT * FROM TAB WHERE ID <> suspendHook(5)";
 
-        IgniteInternalFuture<FieldsQueryCursor> distQryIsDone =
-            GridTestUtils.runAsync(() -> cache.query(new SqlFieldsQuery(scanQry)));
+        IgniteInternalFuture distQryIsDone =
+            runAsync0(() -> cache.query(new SqlFieldsQuery(scanQry)).getAll());
 
         SuspendQuerySqlFunctions.awaitQueryStopsInTheMiddle();
 
@@ -192,8 +195,8 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
         // And for the local query:
         SuspendQuerySqlFunctions.refresh();
 
-        IgniteInternalFuture<FieldsQueryCursor> locQryIsDone =
-            GridTestUtils.runAsync(() -> cache.query(new SqlFieldsQuery(scanQry).setLocal(true)));
+        IgniteInternalFuture locQryIsDone =
+            runAsync0(() -> cache.query(new SqlFieldsQuery(scanQry).setLocal(true)).getAll());
 
         SuspendQuerySqlFunctions.awaitQueryStopsInTheMiddle();
 
@@ -208,6 +211,22 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
         validateMemoryUsageOn(otherNodeIdx, memoryIsFree);
     }
 
+    /**
+     * Run async action and log if exception occured.
+     *
+     * @param action action to perform on other thread.
+     * @return future object.
+     */
+    private IgniteInternalFuture runAsync0(Runnable action) {
+        return GridTestUtils.runAsync(() -> {
+            try {
+                action.run();
+            }
+            catch (Throwable th) {
+                log.error("Failed to perform async action.", th);
+            }
+        });
+    }
 
     /**
      * Validate memory metrics freeMem and maxMem on the specified node.
@@ -290,7 +309,10 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
          * See {@link #qryIsInTheMiddle}.
          */
         public static void awaitQueryStopsInTheMiddle() throws InterruptedException {
-            qryIsInTheMiddle.await(WAIT_OP_TIMEOUT_SEC, TimeUnit.SECONDS);
+            boolean reached = qryIsInTheMiddle.await(WAIT_OP_TIMEOUT_SEC, TimeUnit.SECONDS);
+
+            if (!reached)
+                throw new IllegalStateException("Unable to wait when query starts. Test is broken");
         }
 
         /**
@@ -305,11 +327,16 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
          *
          * @param ret number to return.
          */
+        @QuerySqlFunction
         public static long suspendHook(long ret) throws InterruptedException {
             qryIsInTheMiddle.countDown();
 
-            if (qryIsInTheMiddle.getCount() == 0)
-                resumeQryExec.await(WAIT_OP_TIMEOUT_SEC, TimeUnit.SECONDS);
+            if (qryIsInTheMiddle.getCount() == 0) {
+                boolean reached = resumeQryExec.await(WAIT_OP_TIMEOUT_SEC, TimeUnit.SECONDS);
+
+                if (!reached)
+                    throw new IllegalStateException("Unable to wait when query starts. Test is broken");
+            }
 
             return ret;
         }
