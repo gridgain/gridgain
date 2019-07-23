@@ -32,12 +32,12 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.metric.AbstractExporterSpiTest;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
-import org.apache.ignite.spi.metric.opencensus.OpenCensusMetricExporterSpi;
+import org.apache.ignite.opencensus.spi.metric.OpenCensusMetricExporterSpi;
 import org.junit.Test;
 
-import static org.apache.ignite.spi.metric.opencensus.OpenCensusMetricExporterSpi.CONSISTENT_ID_TAG;
-import static org.apache.ignite.spi.metric.opencensus.OpenCensusMetricExporterSpi.INSTANCE_NAME_TAG;
-import static org.apache.ignite.spi.metric.opencensus.OpenCensusMetricExporterSpi.NODE_ID_TAG;
+import static org.apache.ignite.opencensus.spi.metric.OpenCensusMetricExporterSpi.CONSISTENT_ID_TAG;
+import static org.apache.ignite.opencensus.spi.metric.OpenCensusMetricExporterSpi.INSTANCE_NAME_TAG;
+import static org.apache.ignite.opencensus.spi.metric.OpenCensusMetricExporterSpi.NODE_ID_TAG;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /** */

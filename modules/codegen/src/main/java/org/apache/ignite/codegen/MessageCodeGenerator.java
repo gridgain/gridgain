@@ -172,8 +172,8 @@ public class MessageCodeGenerator {
         gen.generateAndWrite(GridQueryKillRequest.class);
         gen.generateAndWrite(GridQueryKillResponse.class);
 
-//        gen.generateAndWrite(ProbedTx.class);
-//        gen.generateAndWrite(DeadlockProbe.class);
+//        gen.generateAndWrite(GridNearTxPrepareRequest.class);
+//        gen.generateAndWrite(SerializedSpanMessage.class);
 
 //        gen.generateAll(true);
 

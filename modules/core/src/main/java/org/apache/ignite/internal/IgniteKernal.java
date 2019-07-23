@@ -176,6 +176,7 @@ import org.apache.ignite.internal.processors.session.GridTaskSessionProcessor;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
 import org.apache.ignite.internal.processors.task.GridTaskProcessor;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
+import org.apache.ignite.internal.processors.tracing.TracingProcessor;
 import org.apache.ignite.internal.processors.txdr.NoOpTransactionalDrProcessor;
 import org.apache.ignite.internal.processors.txdr.TransactionalDrProcessor;
 import org.apache.ignite.internal.suggestions.GridPerformanceSuggestions;
@@ -1141,6 +1142,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 startProcessor(new GridMarshallerMappingProcessor(ctx));
                 startProcessor(new DistributedMetaStorageImpl(ctx));
                 startProcessor(new DistributedConfigurationProcessor(ctx));
+                startProcessor(new TracingProcessor(ctx));
 
                 // Start transactional data replication processor.
                 startProcessor(createComponent(TransactionalDrProcessor.class, ctx));

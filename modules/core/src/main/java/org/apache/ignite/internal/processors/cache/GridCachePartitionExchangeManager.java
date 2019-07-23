@@ -109,6 +109,7 @@ import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateFinishMess
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateMessage;
 import org.apache.ignite.internal.processors.query.schema.SchemaNodeLeaveExchangeWorkerTask;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
+import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.util.GridListSet;
 import org.apache.ignite.internal.util.GridPartitionStateMap;
 import org.apache.ignite.internal.util.IgniteUtils;
@@ -625,6 +626,16 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
             // Event callback - without this callback future will never complete.
             exchFut.onEvent(exchId, evt, cache);
+
+            Span span = cctx.kernalContext().tracing().create("exchange.future", evt.getSpan());
+
+            if (exchId != null)
+                span.addTag("exchange.id", exchId.toString());
+
+            span.addTag("node.id", cctx.localNodeId().toString());
+            span.addLog("Created");
+
+            exchFut.span(span);
 
             // Start exchange process.
             addFuture(exchFut);

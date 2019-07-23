@@ -897,7 +897,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         sharedCtx = createSharedContext(ctx, sessionListeners);
 
-        transactions = new IgniteTransactionsImpl(sharedCtx, null);
+        transactions = new IgniteTransactionsImpl(sharedCtx, null, false);
 
         // Start shared managers.
         for (GridCacheSharedManager mgr : sharedCtx.managers())
