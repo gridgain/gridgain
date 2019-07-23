@@ -1016,8 +1016,8 @@ public class CacheBaselineTopologyTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    @SuppressWarnings("unchecked")
-    public void setConsistenceIdsWithOfflineBaselineNode() throws Exception {
+    @SuppressWarnings({"unchecked", "ThrowableNotThrown"})
+    public void testSettingBaselineTopologyWithOfflineNode() throws Exception {
         Ignite ignite = startGrids(2);
 
         ignite.cluster().active(true);
@@ -1033,6 +1033,31 @@ public class CacheBaselineTopologyTest extends GridCommonAbstractTest {
 
             return null;
         }, IgniteException.class, "Check arguments. Node not found for consistent ID: non-existing-node-id");
+    }
+
+    /**
+     * Verify that in case of setting baseline topology with offline node among others {@link IgniteException} is
+     * thrown.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    @SuppressWarnings({"unchecked", "ThrowableNotThrown"})
+    public void testSettingBaselineTopologyWithOfflineNodeFromOldTopology() throws Exception {
+        Ignite ignite = startGrids(2);
+
+        ignite.cluster().active(true);
+
+        stopGrid(1);
+
+        ignite.cluster().setBaselineTopology(ignite.cluster().topologyVersion());
+
+        GridTestUtils.assertThrows(log, (Callable<Void>)() -> {
+            ignite.cluster().setBaselineTopology(ignite.cluster().topologyVersion() - 1);
+
+            return null;
+        }, IgniteException.class, "Check arguments. Node not found for consistent ID: " +
+            "distributed.CacheBaselineTopologyTest1");
     }
 
     /** */
