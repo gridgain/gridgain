@@ -206,8 +206,6 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
 
         assertTrue(tmMxMetricsBean.getTotalNodeSystemTime() >= SYSTEM_DELAY);
 
-        assertTrue(logLsnr.check());
-
         String sysTimeHisto = tmMxMetricsBean.getNodeSystemTimeHistogram();
         String userTimeHisto = tmMxMetricsBean.getNodeUserTimeHistogram();
 
