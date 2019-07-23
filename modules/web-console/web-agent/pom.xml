@@ -45,13 +45,13 @@
         <dependency>
             <groupId>org.gridgain</groupId>
             <artifactId>ignite-core</artifactId>
-            <version>${web-console.ignite.version}</version>
+            <version>${project.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.gridgain</groupId>
             <artifactId>ignite-indexing</artifactId>
-            <version>${web-console.ignite.version}</version>
+            <version>${project.version}</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.apache.lucene</groupId>
@@ -63,13 +63,13 @@
         <dependency>
             <groupId>org.gridgain</groupId>
             <artifactId>ignite-rest-http</artifactId>
-            <version>${web-console.ignite.version}</version>
+            <version>${project.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.gridgain</groupId>
             <artifactId>ignite-spring</artifactId>
-            <version>${web-console.ignite.version}</version>
+            <version>${project.version}</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.springframework</groupId>
@@ -89,7 +89,7 @@
         <dependency>
             <groupId>org.gridgain</groupId>
             <artifactId>ignite-slf4j</artifactId>
-            <version>${web-console.ignite.version}</version>
+            <version>${project.version}</version>
         </dependency>
 
         <!-- Third-party dependencies -->
