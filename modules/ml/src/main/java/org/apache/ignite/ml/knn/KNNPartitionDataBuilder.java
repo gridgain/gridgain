@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.ml.knn.utils;
+package org.apache.ignite.ml.knn;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -23,6 +23,11 @@ import org.apache.ignite.ml.dataset.PartitionDataBuilder;
 import org.apache.ignite.ml.dataset.UpstreamEntry;
 import org.apache.ignite.ml.dataset.primitive.context.EmptyContext;
 import org.apache.ignite.ml.environment.LearningEnvironment;
+import org.apache.ignite.ml.knn.utils.indices.ArraySpatialIndex;
+import org.apache.ignite.ml.knn.utils.indices.BallTreeSpatialIndex;
+import org.apache.ignite.ml.knn.utils.indices.KDTreeSpatialIndex;
+import org.apache.ignite.ml.knn.utils.indices.SpatialIndex;
+import org.apache.ignite.ml.knn.utils.indices.SpatialIndexType;
 import org.apache.ignite.ml.math.distances.DistanceMeasure;
 import org.apache.ignite.ml.math.distances.EuclideanDistance;
 import org.apache.ignite.ml.preprocessing.Preprocessor;

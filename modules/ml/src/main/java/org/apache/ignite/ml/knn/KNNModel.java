@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.ml.knn.utils;
+package org.apache.ignite.ml.knn;
 
 import java.util.Collections;
 import java.util.List;
@@ -23,6 +23,8 @@ import java.util.Queue;
 import org.apache.ignite.ml.IgniteModel;
 import org.apache.ignite.ml.dataset.Dataset;
 import org.apache.ignite.ml.dataset.primitive.context.EmptyContext;
+import org.apache.ignite.ml.knn.utils.PointWithDistance;
+import org.apache.ignite.ml.knn.utils.indices.SpatialIndex;
 import org.apache.ignite.ml.math.distances.DistanceMeasure;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.structures.LabeledVector;

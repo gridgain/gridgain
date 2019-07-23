@@ -28,7 +28,7 @@ import org.apache.ignite.ml.structures.LabeledVector;
 /**
  * Util class with method that help working with {@link PointWithDistance}.
  */
-class PointWithDistanceUtil {
+public class PointWithDistanceUtil {
     /**
      * Util method that transforms collection of {@link PointWithDistance} to array of {@link LabeledVector}. Be aware
      * that this method uses {@link Queue#remove()} method to extract elements and the asymptotic complexity of this

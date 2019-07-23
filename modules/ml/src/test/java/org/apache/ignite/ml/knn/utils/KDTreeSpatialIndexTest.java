@@ -16,6 +16,8 @@
 
 package org.apache.ignite.ml.knn.utils;
 
+import org.apache.ignite.ml.knn.utils.indices.KDTreeSpatialIndex;
+
 /**
  * Tests for {@link KDTreeSpatialIndex}.
  */

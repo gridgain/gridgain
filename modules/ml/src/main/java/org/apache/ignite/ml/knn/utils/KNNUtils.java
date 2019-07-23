@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.ml.knn;
+package org.apache.ignite.ml.knn.utils;
 
 import java.io.Serializable;
 import org.apache.ignite.ml.dataset.Dataset;

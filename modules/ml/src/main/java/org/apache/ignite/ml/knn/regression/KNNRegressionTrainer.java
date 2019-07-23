@@ -18,8 +18,8 @@ package org.apache.ignite.ml.knn.regression;
 
 import org.apache.ignite.ml.dataset.Dataset;
 import org.apache.ignite.ml.dataset.primitive.context.EmptyContext;
-import org.apache.ignite.ml.knn.utils.KNNTrainer;
-import org.apache.ignite.ml.knn.utils.SpatialIndex;
+import org.apache.ignite.ml.knn.KNNTrainer;
+import org.apache.ignite.ml.knn.utils.indices.SpatialIndex;
 
 /**
  * KNN regression model trader that trains model on top of distribtued spatial indices. Be aware that this model is

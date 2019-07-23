@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.ml.knn.utils;
+package org.apache.ignite.ml.knn.utils.indices;
 
 /**
  * Spatial index type.

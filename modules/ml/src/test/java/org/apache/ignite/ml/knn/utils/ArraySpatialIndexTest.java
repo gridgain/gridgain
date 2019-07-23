@@ -16,6 +16,8 @@
 
 package org.apache.ignite.ml.knn.utils;
 
+import org.apache.ignite.ml.knn.utils.indices.ArraySpatialIndex;
+
 /**
  * Test for {@link ArraySpatialIndex}.
  */

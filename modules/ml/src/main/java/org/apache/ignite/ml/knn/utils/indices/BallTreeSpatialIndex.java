@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.ml.knn.utils;
+package org.apache.ignite.ml.knn.utils.indices;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Queue;
+import org.apache.ignite.ml.knn.utils.PointWithDistance;
 import org.apache.ignite.ml.math.distances.DistanceMeasure;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.math.primitives.vector.VectorUtils;

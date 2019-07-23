@@ -25,7 +25,7 @@ import org.apache.ignite.ml.structures.LabeledVector;
  *
  * @param <L> Label type.
  */
-final class PointWithDistance<L> implements Comparable<PointWithDistance> {
+public final class PointWithDistance<L> implements Comparable<PointWithDistance> {
     /** Data point. */
     private final LabeledVector<L> pnt;
 

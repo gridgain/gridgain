@@ -30,7 +30,6 @@ import org.junit.runners.Suite;
     ANNClassificationTest.class,
     KNNClassificationTest.class,
     KNNRegressionTest.class,
-    LabeledVectorSetTest.class,
     ArraySpatialIndexTest.class,
     BallTreeSpatialIndexTest.class,
     KDTreeSpatialIndexTest.class

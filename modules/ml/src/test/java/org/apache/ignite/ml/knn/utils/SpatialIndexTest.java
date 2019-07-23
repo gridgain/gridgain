@@ -19,6 +19,7 @@ package org.apache.ignite.ml.knn.utils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiFunction;
+import org.apache.ignite.ml.knn.utils.indices.SpatialIndex;
 import org.apache.ignite.ml.math.distances.DistanceMeasure;
 import org.apache.ignite.ml.math.distances.EuclideanDistance;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
