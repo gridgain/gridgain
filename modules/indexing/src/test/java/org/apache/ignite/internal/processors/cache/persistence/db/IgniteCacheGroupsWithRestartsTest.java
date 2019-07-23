@@ -219,6 +219,7 @@ public class IgniteCacheGroupsWithRestartsTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-21755")
     @Test
     public void testNodeRestartWithNewStaticallyConfiguredCache() throws Exception {
         IgniteEx ex = startGrids(3);
