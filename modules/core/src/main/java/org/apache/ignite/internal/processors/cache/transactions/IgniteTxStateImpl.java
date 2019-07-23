@@ -21,6 +21,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.ignite.IgniteCacheRestartingException;
@@ -45,6 +46,7 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
+import org.jsr166.ConcurrentLinkedHashMap;
 
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_ASYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
@@ -285,20 +287,26 @@ public class IgniteTxStateImpl extends IgniteTxLocalStateAdapter {
         if (activeCacheIds.isEmpty())
             return cctx.exchange().lastTopologyFuture();
 
-        GridCacheContext<?, ?> cacheCtx = cctx.cacheContext(F.nonNull(firstCacheId()));
+        List<GridCacheContext> cctxs = new ArrayList<>(activeCacheIds.size());
 
-        cacheCtx.topology().readLock();
-
-        if (cacheCtx.topology().stopping()) {
-            fut.onDone(
-                cctx.cache().isCacheRestarting(cacheCtx.name())?
-                    new IgniteCacheRestartingException(cacheCtx.name()):
-                    new CacheStoppedException(cacheCtx.name()));
-
-            return null;
+        for (int i = 0; i < activeCacheIds.size(); i++) {
+            cctxs.add(cctx.cacheContext(activeCacheIds.get(i)));
         }
 
-        return cacheCtx.topology().topologyVersionFuture();
+        F.first(cctxs).topology().readLock();
+
+        for (GridCacheContext activeCacheCtx : cctxs) {
+            if (activeCacheCtx.topology().stopping()) {
+                fut.onDone(
+                    cctx.cache().isCacheRestarting(activeCacheCtx.name())?
+                        new IgniteCacheRestartingException(activeCacheCtx.name()):
+                        new CacheStoppedException(activeCacheCtx.name()));
+
+                return null;
+            }
+        }
+
+        return F.first(cctxs).topology().topologyVersionFuture();
     }
 
     /** {@inheritDoc} */
@@ -375,7 +383,7 @@ public class IgniteTxStateImpl extends IgniteTxLocalStateAdapter {
     /** {@inheritDoc} */
     @Override public boolean init(int txSize) {
         if (txMap == null) {
-            txMap = U.newLinkedHashMap(txSize > 0 ? txSize : 16);
+            txMap = new ConcurrentLinkedHashMap<>(U.capacity(txSize > 0 ? txSize : 16));
 
             readView = new IgniteTxMap(txMap, CU.reads());
             writeView = new IgniteTxMap(txMap, CU.writes());
