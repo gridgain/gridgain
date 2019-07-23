@@ -65,7 +65,6 @@ import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
 import org.apache.ignite.internal.processors.cache.transactions.TransactionProxyImpl;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.datastructures.GridCacheInternalKeyImpl;
-import org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -128,7 +127,6 @@ import static org.apache.ignite.internal.commandline.OutputFormat.MULTI_LINE;
 import static org.apache.ignite.internal.commandline.OutputFormat.SINGLE_LINE;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.HELP;
 import static org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor.DEFAULT_TARGET_FOLDER;
-import static org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult.Result.FAIL;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
 import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
@@ -159,7 +157,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
     private static final int clientNodeCnt = 1;
 
     /** */
-    private static IgniteEx crd;
+    protected static IgniteEx crd;
     /** */
     private static IgniteEx client;
 
@@ -1349,7 +1347,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
      */
     @Test
     public void testCacheGroups() throws Exception {
-        Ignite ignite = startGrid();
+        Ignite ignite = crd;
 
         ignite.cluster().active(true);
 
@@ -1674,36 +1672,6 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
         assertNotContains(log, out, nodes.get(1));
 
         assertNotContains(log, out, "error");
-    }
-
-    /**
-     * Tests enabling/disabling rolling upgrade.
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testRollingUpgrade() throws Exception {
-
-        CommandHandler hnd = new CommandHandler();
-
-        // Apache Ignite does not support rolling upgrade from out of the box.
-        assertEquals(EXIT_CODE_OK, execute(hnd, "--rolling-upgrade", "on"));
-
-        RollingUpgradeModeChangeResult res = hnd.getLastOperationResult();
-
-        assertTrue("Enabling rolling upgrade should fail [res=" + res + ']', FAIL == res.result());
-        assertTrue(
-            "The cause of the failure should be UnsupportedOperationException [cause=" + res.cause() + ']',
-            X.hasCause(res.cause(), UnsupportedOperationException.class));
-
-        assertEquals(EXIT_CODE_OK, execute(hnd, "--rolling-upgrade", "off"));
-
-        res = hnd.getLastOperationResult();
-
-        assertTrue("Disabling rolling upgrade should fail [res=" + res + ']', FAIL == res.result());
-        assertTrue(
-            "The cause of the failure should be UnsupportedOperationException [cause=" + res.cause() + ']',
-            X.hasCause(res.cause(), UnsupportedOperationException.class));
     }
 
     /**
