@@ -38,22 +38,59 @@ import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.junits.SystemPropertiesRule;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestRule;
+
+import java.io.ByteArrayOutputStream;
+import java.io.PrintWriter;
 
 import static java.util.stream.IntStream.range;
 import static java.util.stream.Stream.of;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_QUIET;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_WRITE_REBALANCE_STATISTICS;
+import static org.apache.ignite.testframework.GridTestUtils.assertContains;
+import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
 
 public class RebalanceStatisticsTest extends GridCommonAbstractTest {
+
+    /** Method rule */
+    @Rule public final TestRule methodRule = new SystemPropertiesRule();
+
+    /** Logger for listen messages */
+    private final ListeningTestLogger log = new ListeningTestLogger(false, super.log);
+
+    /** For remember messages from {@link #log} */
+    private final ByteArrayOutputStream baos = new ByteArrayOutputStream(32 * 1024);
+
+    /** For write messages from {@link #log} */
+    private final PrintWriter pw = new PrintWriter(baos);
 
     /** Cache names */
     private static final String[] CACHE_NAMES = {"ch0", "ch1", "ch2", "ch3"};
 
+    /** Node count */
+    private static final int NODE_CNT = 4;
+
+    /** Coordinator */
+    private IgniteEx crd;
+
+    @Override protected void beforeTest() throws Exception {
+        crd = startGrids(NODE_CNT);
+
+        super.beforeTest();
+    }
+
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
+
+        baos.reset();
+        log.clearListeners();
 
         super.afterTest();
     }
@@ -67,6 +104,7 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
 
         cfg.setCacheConfiguration(cacheConfigurations);
         cfg.setRebalanceThreadPoolSize(5);
+        cfg.setGridLogger(log);
         return cfg;
     }
 
@@ -85,26 +123,108 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
         return ccfg;
     }
 
-    /** TODO: javadoc later */
+    /**
+     * Should not write statistics when {@code IGNITE_QUIET} == true.
+     *
+     * @throws Exception not expected
+     * @see IgniteSystemProperties#IGNITE_QUIET
+     * */
     @Test
-    public void testRebalanceStatistics() throws Exception {
-        int nodeCnt = 4;
+    @WithSystemProperty(key = IGNITE_QUIET, value = "true")
+    public void testNotPrintStatWhenIgniteQuite() throws Exception {
+        fillCaches(100);
 
-        IgniteEx crd = startGrids(nodeCnt);
+        log.registerListener(pw::write);
 
+        startGrid(NODE_CNT);
+
+        awaitPartitionMapExchange();
+
+        assertNotContains(super.log, baos.toString(), "Total information:");
+    }
+
+    /**
+     * Should not write statistics when {@code IGNITE_QUIET} == false &&
+     * {@code IGNITE_WRITE_REBALANCE_STATISTICS} == false
+     *
+     * @throws Exception not expected
+     * @see IgniteSystemProperties#IGNITE_QUIET
+     * @see IgniteSystemProperties#IGNITE_WRITE_REBALANCE_STATISTICS
+     * */
+    @Test
+    @WithSystemProperty(key = IGNITE_QUIET, value = "false")
+    @WithSystemProperty(key = IGNITE_WRITE_REBALANCE_STATISTICS, value = "false")
+    public void testNotPrintStatWhenNotIgniteWriteRebalanceStatistics() throws Exception {
+        fillCaches(100);
+
+        log.registerListener(pw::write);
+
+        startGrid(NODE_CNT);
+
+        awaitPartitionMapExchange();
+
+        assertNotContains(super.log, baos.toString(), "Total information:");
+    }
+
+    /**
+     * Should not write statistics when {@code IGNITE_QUIET} == false &&
+     * {@code IGNITE_WRITE_REBALANCE_STATISTICS} == false
+     *
+     * @throws Exception not expected
+     * @see IgniteSystemProperties#IGNITE_QUIET
+     * @see IgniteSystemProperties#IGNITE_WRITE_REBALANCE_STATISTICS
+     * */
+    @Test
+    @WithSystemProperty(key = IGNITE_QUIET, value = "false")
+    @WithSystemProperty(key = IGNITE_WRITE_REBALANCE_STATISTICS, value = "true")
+    public void testPrintStatisticsWithOutPartitionDistribution() throws Exception {
+        fillCaches(100);
+
+        log.registerListener(pw::write);
+
+        startGrid(NODE_CNT);
+
+        awaitPartitionMapExchange();
+
+        assertContains(super.log, baos.toString(), "Total information:");
+        assertNotContains(super.log, baos.toString(), "Partitions distribution per cache group:");
+    }
+
+    /**
+     * Should not write statistics when {@code IGNITE_QUIET} == false &&
+     * {@code IGNITE_WRITE_REBALANCE_STATISTICS} == false
+     *
+     * @throws Exception not expected
+     * @see IgniteSystemProperties#IGNITE_QUIET
+     * @see IgniteSystemProperties#IGNITE_WRITE_REBALANCE_STATISTICS
+     * */
+    @Test
+    @WithSystemProperty(key = IGNITE_QUIET, value = "false")
+    @WithSystemProperty(key = IGNITE_WRITE_REBALANCE_STATISTICS, value = "true")
+    @WithSystemProperty(key = IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS, value = "true")
+    public void testPrintFullStatistics() throws Exception {
+        fillCaches(100);
+
+        log.registerListener(pw::write);
+
+        startGrid(NODE_CNT);
+
+        awaitPartitionMapExchange();
+
+        assertContains(super.log, baos.toString(), "Total information:");
+        assertContains(super.log, baos.toString(), "Partitions distribution per cache group:");
+    }
+
+    /**
+     * Fill all {@link #CACHE_NAMES}.
+     *
+     * @param cnt - count of additions
+     */
+    private void fillCaches(final int cnt) {
         for (String cacheName : CACHE_NAMES) {
             IgniteCache<Object, Object> cache = crd.cache(cacheName);
 
-            range(0, 10_000)
-                .forEach(value -> cache.put(value, cacheName + value));
+            range(0, cnt).forEach(value -> cache.put(value, cacheName + value));
         }
-
-        System.setProperty(IGNITE_QUIET, Boolean.FALSE.toString());
-        System.setProperty(IGNITE_WRITE_REBALANCE_STATISTICS, Boolean.TRUE.toString());
-        System.setProperty(IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS, Boolean.TRUE.toString());
-
-        startGrid(nodeCnt++);
-
-        awaitPartitionMapExchange();
     }
 }
