@@ -293,6 +293,10 @@ public class AgentsService extends AbstractSocketHandler {
         sendAgentStats(agentSes.getAccIds());
     }
 
+    /**
+     * @param accIds Acc ids.
+     * @param clusterIds Cluster ids.
+     */
     private void cleanupAccountCache(Set<UUID> accIds, Set<String> clusterIds) {
         UUID nid = ignite.cluster().localNode().id();
 
