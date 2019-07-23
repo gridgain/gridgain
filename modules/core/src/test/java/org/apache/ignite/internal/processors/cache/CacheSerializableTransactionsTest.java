@@ -3959,7 +3959,7 @@ public class CacheSerializableTransactionsTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     private void getRemoveTx(boolean nearCache, boolean store) throws Exception {
-        long stopTime = U.currentTimeMillis() + SF.apply((int) getTestTimeout() - 30_000);
+        long stopTime = U.currentTimeMillis() + SF.applyUB(60_000, (int) getTestTimeout() - 30_000);
 
         final Ignite ignite0 = ignite(0);
 
