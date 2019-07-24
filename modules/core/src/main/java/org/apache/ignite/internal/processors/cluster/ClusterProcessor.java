@@ -92,7 +92,9 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     /** */
     private static final String ATTR_UPDATE_NOTIFIER_STATUS = "UPDATE_NOTIFIER_STATUS";
 
-    private static final String CLUSTER_ID_TAG_KEY = DistributedMetaStorage.IGNITE_INTERNAL_KEY_PREFIX + "cluster.id.tag";
+    /** */
+    private static final String CLUSTER_ID_TAG_KEY =
+        DistributedMetaStorage.IGNITE_INTERNAL_KEY_PREFIX + "cluster.id.tag";
 
     /** Periodic version check delay. */
     private static final long PERIODIC_VER_CHECK_DELAY = 1000 * 60 * 60; // Every hour.
@@ -164,8 +166,17 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
                         IgniteInternalFuture<?> clusterIdTagFut = null;
 
                         try {
+                            ClusterIdAndTag idAndTag = new ClusterIdAndTag(localClusterId, localClusterTag);
+
+                            if (log.isInfoEnabled())
+                                log.info(
+                                    "Writing cluster ID and tag to metastorage " +
+                                        "on leaving compatibility mode " +
+                                        idAndTag
+                                );
+
                             clusterIdTagFut = metastorage.writeAsync(CLUSTER_ID_TAG_KEY,
-                                new ClusterIdAndTag(localClusterId, localClusterTag));
+                                idAndTag);
                         }
                         catch (IgniteCheckedException e) {
                             ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
@@ -174,7 +185,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
                         if (clusterIdTagFut != null) {
                             clusterIdTagFut.listen(fut -> {
                                 if (fut.error() != null)
-                                    log.error("Write to metastorage failed unexpectedly");
+                                    log.error("Write to metastorage failed unexpectedly", fut.error());
                             });
                         }
                     }
@@ -225,6 +236,9 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     @Override public void onReadyForRead(ReadableDistributedMetaStorage metastorage) {
         ClusterIdAndTag idAndTag = readKey(metastorage, CLUSTER_ID_TAG_KEY, "Reading cluster ID and tag from metastorage failed, " +
             "default values will be generated");
+
+        if (log.isInfoEnabled())
+            log.info("Cluster ID and tag has been read from metastorage: " + idAndTag);
 
         if (idAndTag != null) {
             localClusterId = idAndTag.id;
@@ -280,16 +294,26 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
         );
 
         //TODO GG-21718 - implement optimization so only coordinator makes a write to metastorage.
-        ctx.closure().runLocalSafe(
-            () -> {
-                try {
-                    metastorage.writeAsync(CLUSTER_ID_TAG_KEY, new ClusterIdAndTag(cluster.id(), cluster.tag()));
+
+        // Should not write to metastorage before leaving compatibility mode.
+        // On coordinator this happens in disco listener, on other nodes in metastorage update listener.
+        if (!compatibilityMode) {
+            ctx.closure().runLocalSafe(
+                () -> {
+                    try {
+                        ClusterIdAndTag idAndTag = new ClusterIdAndTag(cluster.id(), cluster.tag());
+
+                        if (log.isInfoEnabled())
+                            log.info("Writing cluster ID and tag to metastorage on ready for write " + idAndTag);
+
+                        metastorage.writeAsync(CLUSTER_ID_TAG_KEY, idAndTag);
+                    }
+                    catch (IgniteCheckedException e) {
+                        ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
+                    }
                 }
-                catch (IgniteCheckedException e) {
-                    ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
-                }
-            }
-        );
+            );
+        }
     }
 
     /**
@@ -1063,6 +1087,11 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
             ClusterIdAndTag idAndTag = (ClusterIdAndTag)obj;
 
             return id.equals(idAndTag.id) && tag.equals(idAndTag.tag);
+        }
+
+        /** {@inheritDoc} */
+        @Override public String toString() {
+            return S.toString(ClusterIdAndTag.class, this);
         }
     }
 }
