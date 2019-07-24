@@ -80,7 +80,7 @@ public class IgniteExamplesMLTestSuite {
     /** */
     @AfterClass
     public static void tearDown() throws Exception {
-        if (igniteProxy != null)
+        if (localIgnite != null)
             localIgnite.close();
     }
 
