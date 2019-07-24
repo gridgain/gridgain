@@ -34,7 +34,7 @@ AM_CPPFLAGS = \
 
 AM_CXXFLAGS = \
     -Wall \
-    -std=c++03
+    -std=c++11
 
 ignite_odbc_example_LDADD = \
     @top_srcdir@/../core/libignite.la \

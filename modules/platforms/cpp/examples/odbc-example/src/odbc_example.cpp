@@ -15,14 +15,18 @@
  */
 
 #ifdef _WIN32
-#include <windows.h>
+#   include <windows.h>
+#else
+#   include <thread>
+#   include <sys/time.h>
+#   include <unistd.h>
 #endif
 
 #include <sql.h>
 #include <sqlext.h>
 
+#include <stdint.h>
 #include <cstdlib>
-#include <cstdint>
 
 #include <iostream>
 #include <iomanip>
@@ -43,7 +47,8 @@ struct OdbcStringBuffer
     SQLLEN reallen;
 };
 
-uint64_t GetNanos()
+#ifdef _WIN32
+uint64_t GetMicros()
 {
     FILETIME ft;
     GetSystemTimeAsFileTime(&ft);
@@ -53,6 +58,22 @@ uint64_t GetNanos()
 
     return tt / 10;
 }
+#else
+uint64_t GetMicros()
+{
+    struct timeval now;
+
+    gettimeofday(&now, NULL);
+
+    return (now.tv_sec) * 1000 + now.tv_usec / 1000;
+}
+
+void Sleep(unsigned ms)
+{
+    usleep(ms * 1000);
+}
+
+#endif
 
 /**
  * Fetch result set returned by query.
@@ -317,11 +338,13 @@ void Initialize(unsigned departmentsNum, unsigned employeesNum)
     SQLFreeHandle(SQL_HANDLE_ENV, env);
 }
 
+
+#ifdef _WIN32
 class Thread
 {
 public:
     Thread() :
-        lastNanos(0),
+        lastMicros(0),
         handle(INVALID_HANDLE_VALUE),
         running(false)
     {
@@ -365,7 +388,7 @@ public:
 
     uint64_t GetLastTaskDuration() const
     {
-        return lastNanos;
+        return lastMicros;
     }
 
     virtual void Init()
@@ -391,13 +414,13 @@ private:
 
             while (self->running)
             {
-                uint64_t begin = GetNanos();
+                uint64_t begin = GetMicros();
 
                 self->Task();
                 
-                uint64_t end = GetNanos();
+                uint64_t end = GetMicros();
 
-                self->lastNanos = end - begin;
+                self->lastMicros = end - begin;
             }
 
             self->Deinit();
@@ -428,23 +451,142 @@ private:
         }
     }
 
-    volatile uint64_t lastNanos;
+    volatile uint64_t lastMicros;
 
     HANDLE handle;
 
     volatile bool running;
 };
+#else
+class Thread
+{
+public:
+    Thread() :
+        lastMicros(0),
+        running(false)
+    {
+        // No-op.
+    }
+
+    virtual ~Thread()
+    {
+        Stop();
+        Join();
+        Close();
+    }
+
+    void Start()
+    {
+        if (running)
+            return;
+
+        Close();
+
+        running = true;
+
+        thread.reset(new std::thread(&Thread::Run, this));
+    }
+
+    void Stop()
+    {
+        if (running)
+        {
+            running = false;
+        }
+    }
+
+    void Join()
+    {
+        if (thread)
+            thread->join();
+    }
+
+    uint64_t GetLastTaskDuration() const
+    {
+        return lastMicros;
+    }
+
+    virtual void Init()
+    {
+        // No-op.
+    }
+
+    virtual void Deinit()
+    {
+        // No-op.
+    }
+
+    virtual void Task() = 0;
+
+private:
+    static void Run(void* vself)
+    {
+        Thread* self = static_cast<Thread*>(vself);
+
+        try
+        {
+            self->Init();
+
+            while (self->running)
+            {
+                uint64_t begin = GetMicros();
+
+                self->Task();
+
+                uint64_t end = GetMicros();
+
+                self->lastMicros = end - begin;
+            }
+
+            self->Deinit();
+        }
+        catch (std::exception& err)
+        {
+            std::cout << "An error occurred: " << err.what() << std::endl;
+
+            throw;
+        }
+        catch (...)
+        {
+            std::cout << "An unknown error occurred" << std::endl;
+
+            throw;
+        }
+    }
+
+    void Close()
+    {
+        if (thread)
+            thread.reset();
+    }
+
+    volatile uint64_t lastMicros;
+
+    std::unique_ptr<std::thread> thread;
+
+    volatile bool running;
+};
+#endif
 
 class OdbcClient : public Thread
 {
 public:
     OdbcClient() :
-        id(GetRandomUnsigned(1000)),
         env(NULL),
         dbc(NULL)
     {
         // No-op.
     }
+
+#ifndef _WIN32
+    OdbcClient(OdbcClient&& other) :
+        env(other.env),
+        dbc(other.dbc)
+    {
+        other.env = NULL;
+        other.dbc = NULL;
+    }
+#endif
     
     virtual void Init()
     {
@@ -496,8 +638,6 @@ public:
     }
 
 private:
-    unsigned id;
-
     SQLHENV env;
 
     SQLHDBC dbc;
@@ -528,6 +668,29 @@ private:
     const std::vector<OdbcClient>& clients;
 };
 
+template<typename TO, typename TI>
+TO LexicalCast(const TI& in)
+{
+    TO out;
+
+    std::stringstream converter;
+    converter << in;
+    converter >> out;
+
+    return out;
+}
+
+template<typename OutType = std::string>
+OutType GetEnvVar(const std::string& name, const OutType& dflt)
+{
+    char* var = std::getenv(name.c_str());
+
+    if (!var)
+        return dflt;
+
+    return LexicalCast<OutType>(var);
+}
+
 /**
  * Program entry point.
  *
@@ -535,9 +698,9 @@ private:
  */
 int main()
 {
-    const unsigned departmentsNum = 11;
-    const unsigned employeesNum = 1083;
-    const unsigned clientNum = 200;
+    const unsigned departmentsNum = GetEnvVar<unsigned>("DEPARTMENTS_NUM", 11);
+    const unsigned employeesNum = GetEnvVar<unsigned>("EMPLOYEES_NUM", 1083);
+    const unsigned clientNum = GetEnvVar<unsigned>("CLIENTS_NUM", 100);
 
     int exitCode = 0;
 
