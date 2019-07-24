@@ -38,6 +38,7 @@ import org.apache.ignite.console.web.AbstractSocketHandler;
 import org.apache.ignite.console.web.model.VisorTaskDescriptor;
 import org.apache.ignite.console.websocket.WebSocketEvent;
 import org.apache.ignite.console.websocket.WebSocketRequest;
+import org.apache.ignite.console.websocket.WebSocketResponse;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.slf4j.Logger;
@@ -49,6 +50,7 @@ import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketSession;
 
 import static org.apache.ignite.console.utils.Utils.fromJson;
+import static org.apache.ignite.console.utils.Utils.toJson;
 import static org.apache.ignite.console.web.socket.TransitionService.SEND_TO_AGENT;
 import static org.apache.ignite.console.websocket.WebSocketEvents.NODE_REST;
 import static org.apache.ignite.console.websocket.WebSocketEvents.NODE_VISOR;
@@ -68,6 +70,9 @@ public class BrowsersService extends AbstractSocketHandler {
     /** */
     private static final String VISOR_IGNITE = "org.apache.ignite.internal.visor.";
 
+    /** Max text message size. */
+    private static final int MAX_TEXT_MESSAGE_SIZE = 10 * 1024 * 1024;
+
     /** */
     private final Map<String, VisorTaskDescriptor> visorTasks = new HashMap<>();
 
@@ -83,8 +88,10 @@ public class BrowsersService extends AbstractSocketHandler {
     /** */
     private AgentsService agentsHnd;
 
-    /**                                                                          `
-     * 
+    /**
+     * @param ignite Ignite.
+     * @param txMgr Tx manager.
+     * @param agentsHnd Agents handler.
      */
     public BrowsersService(Ignite ignite, TransactionManager txMgr, AgentsService agentsHnd) {
         super(ignite, txMgr);
@@ -109,7 +116,7 @@ public class BrowsersService extends AbstractSocketHandler {
     @Override public void afterConnectionEstablished(WebSocketSession ses) {
         log.info("Browser session opened [socket=" + ses + "]");
 
-        ses.setTextMessageSizeLimit(10 * 1024 * 1024);
+        ses.setTextMessageSizeLimit(MAX_TEXT_MESSAGE_SIZE);
 
         UserKey id = getId(ses);
 
@@ -132,7 +139,7 @@ public class BrowsersService extends AbstractSocketHandler {
      * @param key Key.
      * @param evt Event.
      */
-    private void sendToAgent(AgentKey key, WebSocketEvent evt) {
+    private void sendToAgent(AgentKey key, WebSocketRequest evt) {
         ignite.message(ignite.cluster().forLocal())
             .send(SEND_TO_AGENT, new AgentRequest(ignite.cluster().localNode().id(), key, evt));
     }
@@ -160,10 +167,10 @@ public class BrowsersService extends AbstractSocketHandler {
                     if (F.isEmpty(clusterId))
                         throw new IllegalStateException(messages.getMessage("err.missing-cluster-id-param"));
 
-                    WebSocketEvent reqEvt = evt.getEventType().equals(NODE_REST) ?
-                        evt : evt.withPayload(prepareNodeVisorParams(payload));
+                    if (evt.getEventType().equals(NODE_VISOR))
+                        evt.setPayload(toJson(fillVisorGatawayTaskParams(payload)));
 
-                    sendToAgent(new AgentKey(accId, clusterId), reqEvt);
+                    sendToAgent(new AgentKey(accId, clusterId), evt);
 
                     break;
 
@@ -176,14 +183,14 @@ public class BrowsersService extends AbstractSocketHandler {
         catch (IllegalStateException e) {
             log.warn(e.toString());
 
-            sendError(ses, evt, "Failed to send event to agent: " + evt.getPayload(), e);
+            sendMessageQuiet(ses, evt.withError("Failed to send event to agent: " + evt.getPayload(), e));
         }
         catch (Throwable e) {
             String errMsg = "Failed to send event to agent: " + evt.getPayload();
 
             log.error(errMsg, e);
 
-            sendError(ses, evt, errMsg, e);
+            sendMessageQuiet(ses, evt.withError(errMsg, e));
         }
     }
 
@@ -315,7 +322,7 @@ public class BrowsersService extends AbstractSocketHandler {
      *
      * @param payload Task event.
      */
-    private JsonObject prepareNodeVisorParams(JsonObject payload) {
+    private JsonObject fillVisorGatawayTaskParams(JsonObject payload) {
         JsonObject params = payload.getJsonObject("params");
 
         String taskId = params.getString("taskId");
@@ -355,7 +362,7 @@ public class BrowsersService extends AbstractSocketHandler {
     /**
      * @param evt Event.
      */
-    void sendResponseToBrowser(WebSocketEvent evt) {
+    void sendResponseToBrowser(WebSocketResponse evt) {
         WebSocketSession ses = locRequests.remove(evt.getRequestId());
 
         if (ses == null) {
@@ -364,12 +371,7 @@ public class BrowsersService extends AbstractSocketHandler {
             return;
         }
 
-        try {
-            sendMessage(ses, evt);
-        }
-        catch (Exception e) {
-            sendError(ses, evt, "Failed to send response", e);
-        }
+        sendMessageQuiet(ses, evt);
     }
 
     /**

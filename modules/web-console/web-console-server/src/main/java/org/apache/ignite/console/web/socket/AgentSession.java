@@ -48,7 +48,7 @@ public class AgentSession {
     /**
      * @return {@code True} if connection to agent can be closed.
      */
-    boolean canBeClose() {
+    boolean canBeClosed() {
         return accIds.isEmpty();
     }
 

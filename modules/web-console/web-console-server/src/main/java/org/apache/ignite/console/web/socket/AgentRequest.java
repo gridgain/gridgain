@@ -17,7 +17,7 @@
 package org.apache.ignite.console.web.socket;
 
 import java.util.UUID;
-import org.apache.ignite.console.websocket.WebSocketEvent;
+import org.apache.ignite.console.websocket.WebSocketRequest;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
@@ -31,13 +31,13 @@ public class AgentRequest {
     private AgentKey key;
 
     /** Event. */
-    private WebSocketEvent evt;
+    private WebSocketRequest evt;
 
     /**
      * @param key Cluster.
      * @param evt Event.
      */
-    public AgentRequest(UUID srcNid, AgentKey key, WebSocketEvent evt) {
+    public AgentRequest(UUID srcNid, AgentKey key, WebSocketRequest evt) {
         this.srcNid = srcNid;
         this.key = key;
         this.evt = evt;
@@ -60,7 +60,7 @@ public class AgentRequest {
     /**
      * @return value of event.
      */
-    public WebSocketEvent getEvent() {
+    public WebSocketRequest getEvent() {
         return evt;
     }
 

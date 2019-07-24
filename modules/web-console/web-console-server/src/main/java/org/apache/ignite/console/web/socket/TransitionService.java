@@ -37,7 +37,7 @@ import static org.apache.ignite.console.websocket.WebSocketEvents.ADMIN_ANNOUNCE
 import static org.apache.ignite.events.EventType.EVTS_DISCOVERY;
 
 /**
- * 
+ * Service for transition request/response between backend.
  */
 @Service
 public class TransitionService {
@@ -77,6 +77,8 @@ public class TransitionService {
     /**
      * @param ignite Ignite.
      * @param txMgr Tx manager.
+     * @param agentsSrvc Agents service.
+     * @param browsersSrvc Browsers service.
      */
     public TransitionService(Ignite ignite, TransactionManager txMgr, AgentsService agentsSrvc, BrowsersService browsersSrvc) {
         this.ignite = ignite;
@@ -159,8 +161,8 @@ public class TransitionService {
             }
         });
 
-        ignite.message().localListen(SEND_RESPONSE, new MessagingListenActor<WebSocketEvent>() {
-            @Override protected void receive(UUID nodeId, WebSocketEvent evt) {
+        ignite.message().localListen(SEND_RESPONSE, new MessagingListenActor<WebSocketResponse>() {
+            @Override protected void receive(UUID nodeId, WebSocketResponse evt) {
                 browsersSrvc.sendResponseToBrowser(evt);
             }
         });

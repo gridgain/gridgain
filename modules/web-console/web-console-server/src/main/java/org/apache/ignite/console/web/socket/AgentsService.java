@@ -247,7 +247,7 @@ public class AgentsService extends AbstractSocketHandler {
             if (agentSes.revokeAccount(acc.getId())) {
                 sendMessageQuiet(ws, new WebSocketResponse(AGENT_REVOKE_TOKEN, oldTok));
 
-                if (agentSes.canBeClose())
+                if (agentSes.canBeClosed())
                     U.closeQuiet(ws);
             }
         });
@@ -502,7 +502,6 @@ public class AgentsService extends AbstractSocketHandler {
             UserKey key = new UserKey(accId, demo);
             WebSocketResponse stats = collectAgentStats(key);
 
-            
             ignite.message().send(SEND_TO_USER_BROWSER, new UserEvent(key, stats));
         }
     }

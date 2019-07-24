@@ -111,28 +111,12 @@ public abstract class AbstractSocketHandler extends TextWebSocketHandler {
 
     /**
      * @param ws Session to send message.
-     * @param reqEvt Event .
+     * @param req Event .
      * @throws IOException If failed to send message.
      */
-    protected void sendResponse(WebSocketSession ws, WebSocketRequest reqEvt, Object payload) throws IOException {
-        sendMessage(ws, reqEvt.withPayload(payload));
+    protected void sendResponse(WebSocketSession ws, WebSocketRequest req, Object payload) throws IOException {
+        sendMessage(ws, req.response(payload));
     }
-
-    /**
-     * @param ws Websocket session.
-     * @param evt Event.
-     * @param prefix Error message.
-     * @param err Error.
-     */
-    protected void sendError(WebSocketSession ws, WebSocketEvent evt, String prefix, Throwable err) {
-        try {
-            sendMessage(ws, evt.withError(prefix, err));
-        }
-        catch (Throwable e) {
-            log.error("Failed to send error in response [session=" + ws + ", event=" + evt + "]", e);
-        }
-    }
-
 
     /**
      * @param ws Session to ping.

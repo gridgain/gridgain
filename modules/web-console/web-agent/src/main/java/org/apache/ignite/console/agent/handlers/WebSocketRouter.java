@@ -368,17 +368,17 @@ public class WebSocketRouter implements AutoCloseable {
                     return;
 
                 case SCHEMA_IMPORT_DRIVERS:
-                    send(ses, evt.withPayload(dbHnd.collectJdbcDrivers()));
+                    send(ses, evt.response(dbHnd.collectJdbcDrivers()));
 
                     break;
 
                 case SCHEMA_IMPORT_SCHEMAS:
-                    send(ses, evt.withPayload(dbHnd.collectDbSchemas(evt)));
+                    send(ses, evt.response(dbHnd.collectDbSchemas(evt)));
 
                     break;
 
                 case SCHEMA_IMPORT_METADATA:
-                    send(ses, evt.withPayload(dbHnd.collectDbMetadata(evt)));
+                    send(ses, evt.response(dbHnd.collectDbMetadata(evt)));
 
                     break;
 
@@ -401,7 +401,7 @@ public class WebSocketRouter implements AutoCloseable {
                         res = RestResult.fail(HTTP_INTERNAL_ERROR, e.getMessage());
                     }
 
-                    send(ses, evt.withPayload(res));
+                    send(ses, evt.response(res));
 
                     break;
 
