@@ -18,12 +18,13 @@ package org.apache.ignite.testsuites;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Enumeration;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 import javassist.CannotCompileException;
 import javassist.ClassClassPath;
@@ -37,48 +38,10 @@ import javassist.bytecode.AnnotationsAttribute;
 import javassist.bytecode.ClassFile;
 import javassist.bytecode.ConstPool;
 import javassist.bytecode.annotation.Annotation;
-import javax.cache.CacheException;
-import org.apache.ignite.DataRegionMetrics;
-import org.apache.ignite.DataStorageMetrics;
 import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteAtomicLong;
-import org.apache.ignite.IgniteAtomicReference;
-import org.apache.ignite.IgniteAtomicSequence;
-import org.apache.ignite.IgniteAtomicStamped;
-import org.apache.ignite.IgniteBinary;
-import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteCluster;
-import org.apache.ignite.IgniteCompute;
-import org.apache.ignite.IgniteCountDownLatch;
-import org.apache.ignite.IgniteDataStreamer;
-import org.apache.ignite.IgniteEvents;
-import org.apache.ignite.IgniteException;
-import org.apache.ignite.IgniteLock;
-import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.IgniteMessaging;
-import org.apache.ignite.IgniteQueue;
-import org.apache.ignite.IgniteScheduler;
-import org.apache.ignite.IgniteSemaphore;
-import org.apache.ignite.IgniteServices;
-import org.apache.ignite.IgniteSet;
-import org.apache.ignite.IgniteTransactions;
 import org.apache.ignite.Ignition;
-import org.apache.ignite.MemoryMetrics;
-import org.apache.ignite.PersistenceMetrics;
-import org.apache.ignite.cache.affinity.Affinity;
-import org.apache.ignite.cluster.ClusterGroup;
-import org.apache.ignite.configuration.AtomicConfiguration;
-import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.configuration.CollectionConfiguration;
-import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.examples.ml.util.MLExamplesCommonArgs;
-import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.util.typedef.internal.A;
-import org.apache.ignite.lang.IgniteProductVersion;
-import org.apache.ignite.plugin.IgnitePlugin;
-import org.apache.ignite.plugin.PluginNotFoundException;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -101,8 +64,11 @@ public class IgniteExamplesMLTestSuite {
     /** Test class name pattern. */
     private static final String clsNamePtrn = ".*Example$";
 
-    /** Ignite signleton for examples test suite. */
-    private static IgniteTestMLProxy ignite;
+    /** Ignite proxy. */
+    private static Ignite igniteProxy;
+
+    /** Ignite for tests. */
+    private static Ignite localIgnite;
 
     /** */
     @BeforeClass
@@ -114,22 +80,29 @@ public class IgniteExamplesMLTestSuite {
     /** */
     @AfterClass
     public static void tearDown() throws Exception {
-        if (ignite != null)
-            ignite.delegate.close();
+        if (igniteProxy != null)
+            localIgnite.close();
     }
 
     /** */
     public static Ignite getTestIgnite(String someString) {
-        if (ignite == null) {
-            try {
-                ignite = new IgniteTestMLProxy(IgnitionEx.start("examples/config/example-ignite-ml.xml"));
-            }
-            catch (IgniteCheckedException e) {
-                throw new RuntimeException(e);
-            }
+        if (igniteProxy == null) {
+            localIgnite = Ignition.start("examples/config/example-ignite-ml.xml");
+            InvocationHandler handler = new InvocationHandler() {
+                @Override public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+                    if (method.getName().equals("close")) {
+                        System.out.println("FUCK");
+                        return 42;
+                    }
+                    else
+                        return Ignite.class.getMethod(method.getName(), method.getParameterTypes()).invoke(localIgnite, args);
+                }
+            };
+
+            igniteProxy = (Ignite) Proxy.newProxyInstance(Ignite.class.getClassLoader(), new Class[] {Ignite.class}, handler);
         }
 
-        return ignite;
+        return igniteProxy;
     }
 
     /**
@@ -204,7 +177,6 @@ public class IgniteExamplesMLTestSuite {
         while (resources.hasMoreElements())
             dirs.add(new File(resources.nextElement().getFile()));
 
-
         List<Class> classes = new ArrayList<>();
         for (File directory : dirs) {
             // Replace Ignition.Start call in Tutorial.
@@ -225,7 +197,8 @@ public class IgniteExamplesMLTestSuite {
      * @return The classes.
      * @throws ClassNotFoundException If class not found.
      */
-    private static List<Class> findClassesAndReplaceIgniteStartCall(File dir, String pkgName, String clsNamePtrn) throws ClassNotFoundException {
+    private static List<Class> findClassesAndReplaceIgniteStartCall(File dir, String pkgName,
+        String clsNamePtrn) throws ClassNotFoundException {
         List<Class> classes = new ArrayList<>();
 
         if (!dir.exists())
@@ -251,6 +224,9 @@ public class IgniteExamplesMLTestSuite {
     private static Class replaceIgniteStartCall(String clsName) {
         try {
             ClassPool cp = ClassPool.getDefault();
+            cp.insertClassPath(new ClassClassPath(Ignition.class));
+            cp.insertClassPath(new ClassClassPath(IgniteExamplesMLTestSuite.class));
+
             CtClass ignClass = cp.get(Ignition.class.getName());
             CtClass suiteClass = cp.get(IgniteExamplesMLTestSuite.class.getName());
             CtMethod getTestIgniteMethod = suiteClass.getDeclaredMethod("getTestIgnite");
@@ -280,333 +256,6 @@ public class IgniteExamplesMLTestSuite {
         /** */
         public DynamicSuite(Class<?> cls) throws InitializationError, IOException, ClassNotFoundException {
             super(cls, suite());
-        }
-    }
-
-    /** */
-    private static class IgniteTestMLProxy implements Ignite {
-        /** */
-        private final Ignite delegate;
-
-        /** */
-        public IgniteTestMLProxy(Ignite delegate) {
-            this.delegate = delegate;
-        }
-
-        /** */
-        @Override public String name() {
-            return delegate.name();
-        }
-
-        /** */
-        @Override public IgniteLogger log() {
-            return delegate.log();
-        }
-
-        /** */
-        @Override public IgniteConfiguration configuration() {
-            return delegate.configuration();
-        }
-
-        /** */
-        @Override public IgniteCluster cluster() {
-            return delegate.cluster();
-        }
-
-        /** */
-        @Override public IgniteCompute compute() {
-            return delegate.compute();
-        }
-
-        /** */
-        @Override public IgniteCompute compute(ClusterGroup grp) {
-            return delegate.compute(grp);
-        }
-
-        /** */
-        @Override public IgniteMessaging message() {
-            return delegate.message();
-        }
-
-        /** */
-        @Override public IgniteMessaging message(ClusterGroup grp) {
-            return delegate.message(grp);
-        }
-
-        /** */
-        @Override public IgniteEvents events() {
-            return delegate.events();
-        }
-
-        /** */
-        @Override public IgniteEvents events(ClusterGroup grp) {
-            return delegate.events(grp);
-        }
-
-        /** */
-        @Override public IgniteServices services() {
-            return delegate.services();
-        }
-
-        /** */
-        @Override public IgniteServices services(ClusterGroup grp) {
-            return delegate.services(grp);
-        }
-
-        /** */
-        @Override public ExecutorService executorService() {
-            return delegate.executorService();
-        }
-
-        /** */
-        @Override public ExecutorService executorService(ClusterGroup grp) {
-            return delegate.executorService(grp);
-        }
-
-        /** */
-        @Override public IgniteProductVersion version() {
-            return delegate.version();
-        }
-
-        /** */
-        @Override public IgniteScheduler scheduler() {
-            return delegate.scheduler();
-        }
-
-        /** */
-        @Override public <K, V> IgniteCache<K, V> createCache(
-            CacheConfiguration<K, V> cacheCfg) throws CacheException {
-            return delegate.createCache(cacheCfg);
-        }
-
-        /** */
-        @Override public Collection<IgniteCache> createCaches(
-            Collection<CacheConfiguration> cacheCfgs) throws CacheException {
-            return delegate.createCaches(cacheCfgs);
-        }
-
-        /** */
-        @Override public <K, V> IgniteCache<K, V> createCache(String cacheName) throws CacheException {
-            return delegate.createCache(cacheName);
-        }
-
-        /** */
-        @Override public <K, V> IgniteCache<K, V> getOrCreateCache(
-            CacheConfiguration<K, V> cacheCfg) throws CacheException {
-            return delegate.getOrCreateCache(cacheCfg);
-        }
-
-        /** */
-        @Override public <K, V> IgniteCache<K, V> getOrCreateCache(String cacheName) throws CacheException {
-            return delegate.getOrCreateCache(cacheName);
-        }
-
-        /** */
-        @Override public Collection<IgniteCache> getOrCreateCaches(
-            Collection<CacheConfiguration> cacheCfgs) throws CacheException {
-            return delegate.getOrCreateCaches(cacheCfgs);
-        }
-
-        /** */
-        @Override public <K, V> void addCacheConfiguration(CacheConfiguration<K, V> cacheCfg) throws CacheException {
-            delegate.addCacheConfiguration(cacheCfg);
-        }
-
-        /** */
-        @Override public <K, V> IgniteCache<K, V> createCache(
-            CacheConfiguration<K, V> cacheCfg,
-            NearCacheConfiguration<K, V> nearCfg) throws CacheException {
-            return delegate.createCache(cacheCfg, nearCfg);
-        }
-
-        /** */
-        @Override public <K, V> IgniteCache<K, V> getOrCreateCache(
-            CacheConfiguration<K, V> cacheCfg,
-            NearCacheConfiguration<K, V> nearCfg) throws CacheException {
-            return delegate.getOrCreateCache(cacheCfg, nearCfg);
-        }
-
-        /** */
-        @Override public <K, V> IgniteCache<K, V> createNearCache(String cacheName,
-            NearCacheConfiguration<K, V> nearCfg) throws CacheException {
-            return delegate.createNearCache(cacheName, nearCfg);
-        }
-
-        /** */
-        @Override public <K, V> IgniteCache<K, V> getOrCreateNearCache(String cacheName,
-            NearCacheConfiguration<K, V> nearCfg) throws CacheException {
-            return delegate.getOrCreateNearCache(cacheName, nearCfg);
-        }
-
-        /** */
-        @Override public void destroyCache(String cacheName) throws CacheException {
-            delegate.destroyCache(cacheName);
-        }
-
-        /** */
-        @Override public void destroyCaches(Collection<String> cacheNames) throws CacheException {
-            delegate.destroyCaches(cacheNames);
-        }
-
-        /** */
-        @Override public <K, V> IgniteCache<K, V> cache(String name) throws CacheException {
-            return delegate.cache(name);
-        }
-
-        /** */
-        @Override public Collection<String> cacheNames() {
-            return delegate.cacheNames();
-        }
-
-        /** */
-        @Override public IgniteTransactions transactions() {
-            return delegate.transactions();
-        }
-
-        /** */
-        @Override public <K, V> IgniteDataStreamer<K, V> dataStreamer(String cacheName) throws IllegalStateException {
-            return delegate.dataStreamer(cacheName);
-        }
-
-        /** */
-        @Override
-        public IgniteAtomicSequence atomicSequence(String name, long initVal, boolean create) throws IgniteException {
-            return delegate.atomicSequence(name, initVal, create);
-        }
-
-        /** */
-        @Override public IgniteAtomicSequence atomicSequence(String name,
-            AtomicConfiguration cfg, long initVal, boolean create) throws IgniteException {
-            return delegate.atomicSequence(name, cfg, initVal, create);
-        }
-
-        /** */
-        @Override public IgniteAtomicLong atomicLong(String name, long initVal, boolean create) throws IgniteException {
-            return delegate.atomicLong(name, initVal, create);
-        }
-
-        /** */
-        @Override public IgniteAtomicLong atomicLong(String name,
-            AtomicConfiguration cfg, long initVal, boolean create) throws IgniteException {
-            return delegate.atomicLong(name, cfg, initVal, create);
-        }
-
-        /** */
-        @Override public <T> IgniteAtomicReference<T> atomicReference(String name, T initVal,
-            boolean create) throws IgniteException {
-            return delegate.atomicReference(name, initVal, create);
-        }
-
-        /** */
-        @Override public <T> IgniteAtomicReference<T> atomicReference(String name,
-            AtomicConfiguration cfg, T initVal, boolean create) throws IgniteException {
-            return delegate.atomicReference(name, cfg, initVal, create);
-        }
-
-        /** */
-        @Override public <T, S> IgniteAtomicStamped<T, S> atomicStamped(String name, T initVal, S initStamp,
-            boolean create) throws IgniteException {
-            return delegate.atomicStamped(name, initVal, initStamp, create);
-        }
-
-        /** */
-        @Override public <T, S> IgniteAtomicStamped<T, S> atomicStamped(String name,
-            AtomicConfiguration cfg, T initVal, S initStamp, boolean create) throws IgniteException {
-            return delegate.atomicStamped(name, cfg, initVal, initStamp, create);
-        }
-
-        /** */
-        @Override public IgniteCountDownLatch countDownLatch(String name, int cnt, boolean autoDel,
-            boolean create) throws IgniteException {
-            return delegate.countDownLatch(name, cnt, autoDel, create);
-        }
-
-        /** */
-        @Override public IgniteSemaphore semaphore(String name, int cnt, boolean failoverSafe,
-            boolean create) throws IgniteException {
-            return delegate.semaphore(name, cnt, failoverSafe, create);
-        }
-
-        /** */
-        @Override public IgniteLock reentrantLock(String name, boolean failoverSafe, boolean fair,
-            boolean create) throws IgniteException {
-            return delegate.reentrantLock(name, failoverSafe, fair, create);
-        }
-
-        /** */
-        @Override public <T> IgniteQueue<T> queue(String name, int cap,
-            CollectionConfiguration cfg) throws IgniteException {
-            return delegate.queue(name, cap, cfg);
-        }
-
-        /** */
-        @Override public <T> IgniteSet<T> set(String name, CollectionConfiguration cfg) throws IgniteException {
-            return delegate.set(name, cfg);
-        }
-
-        /** */
-        @Override public <T extends IgnitePlugin> T plugin(String name) throws PluginNotFoundException {
-            return delegate.plugin(name);
-        }
-
-        /** */
-        @Override public IgniteBinary binary() {
-            return delegate.binary();
-        }
-
-        /** */
-        @Override public void close() throws IgniteException {
-            // No op.
-        }
-
-        /** */
-        @Override public <K> Affinity<K> affinity(String cacheName) {
-            return delegate.affinity(cacheName);
-        }
-
-        /** */
-        @Override @Deprecated public boolean active() {
-            return delegate.active();
-        }
-
-        /** */
-        @Override @Deprecated public void active(boolean active) {
-            delegate.active(active);
-        }
-
-        /** */
-        @Override public void resetLostPartitions(Collection<String> cacheNames) {
-            delegate.resetLostPartitions(cacheNames);
-        }
-
-        /** */
-        @Override @Deprecated public Collection<MemoryMetrics> memoryMetrics() {
-            return delegate.memoryMetrics();
-        }
-
-        /** */
-        @Override @Deprecated public MemoryMetrics memoryMetrics(String memPlcName) {
-            return delegate.memoryMetrics(memPlcName);
-        }
-
-        /** */
-        @Override @Deprecated public PersistenceMetrics persistentStoreMetrics() {
-            return delegate.persistentStoreMetrics();
-        }
-
-        /** */
-        @Override public Collection<DataRegionMetrics> dataRegionMetrics() {
-            return delegate.dataRegionMetrics();
-        }
-
-        /** */
-        @Override public DataRegionMetrics dataRegionMetrics(String memPlcName) {
-            return delegate.dataRegionMetrics(memPlcName);
-        }
-
-        /** */
-        @Override public DataStorageMetrics dataStorageMetrics() {
-            return delegate.dataStorageMetrics();
         }
     }
 }
