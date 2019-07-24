@@ -261,7 +261,7 @@ namespace Apache.Ignite.Core.Tests.Cache
                 // Set with node.
                 cluster.SetBaselineTopology(cluster.GetBaselineTopology());
 
-                res = cluster.GetBaselineTopology();
+                var res = cluster.GetBaselineTopology();
                 CollectionAssert.AreEquivalent(new[] { "node1"}, res.Select(x => x.ConsistentId));
 
                 cluster.SetBaselineTopology(cluster.GetTopology(1));
