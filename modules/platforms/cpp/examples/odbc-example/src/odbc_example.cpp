@@ -581,6 +581,7 @@ public:
 
 #ifndef _WIN32
     OdbcClient(const OdbcClient& other) :
+        addr(other.addr),
         env(other.env),
         dbc(other.dbc)
     {
@@ -589,11 +590,13 @@ public:
 
     OdbcClient operator=(const OdbcClient& other)
     {
+        addr = other.addr;
         env = other.env;
         dbc = other.dbc;
     }
 
     OdbcClient(OdbcClient&& other) :
+        addr(other.addr),
         env(other.env),
         dbc(other.dbc)
     {
@@ -677,7 +680,7 @@ public:
         for (size_t i = 0; i < clients.size(); ++i)
             sum += clients[i].GetLastTaskDuration();
 
-        std::cout << "Average latency: " << ((sum / clients.size()) / 1000) << "ms" << std::endl;
+        std::cout << "Average latency: " << (sum / clients.size()) << "us" << std::endl;
     }
 
 private:
