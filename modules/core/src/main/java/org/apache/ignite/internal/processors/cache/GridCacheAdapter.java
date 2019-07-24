@@ -3181,50 +3181,26 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
 
         final ExpiryPolicy plc = plc0 != null ? plc0 : ctx.expiry();
 
-        final boolean keepBinary = opCtx != null && opCtx.isKeepBinary();
-
         if (p != null)
             ctx.kernalContext().resource().injectGeneric(p);
 
         try {
-            if (ctx.store().isLocal()) {
-                DataStreamerImpl ldr = ctx.kernalContext().dataStream().dataStreamer(ctx.name());
+            // Version for all loaded entries.
+            final GridCacheVersion ver0 = ctx.versions().nextForLoad();
 
-                try {
-                    ldr.skipStore(true);
+            ctx.store().loadCache(new CIX3<KeyCacheObject, Object, GridCacheVersion>() {
+                @Override public void applyx(KeyCacheObject key, Object val, @Nullable GridCacheVersion ver)
+                    throws IgniteException {
+                    assert ver == null;
 
-                    ldr.receiver(new IgniteDrDataStreamerCacheUpdater());
+                    long ttl = CU.ttlForLoad(plc);
 
-                    ldr.keepBinary(keepBinary);
+                    if (ttl == CU.TTL_ZERO)
+                        return;
 
-                    LocalStoreLoadClosure c = new LocalStoreLoadClosure(p, ldr, plc);
-
-                    ctx.store().loadCache(c, args);
-
-                    c.onDone();
+                    loadEntry(key, val, ver0, (IgniteBiPredicate<Object, Object>)p, topVer, replicate, ttl);
                 }
-                finally {
-                    ldr.closeEx(false);
-                }
-            }
-            else {
-                // Version for all loaded entries.
-                final GridCacheVersion ver0 = ctx.versions().nextForLoad();
-
-                ctx.store().loadCache(new CIX3<KeyCacheObject, Object, GridCacheVersion>() {
-                    @Override public void applyx(KeyCacheObject key, Object val, @Nullable GridCacheVersion ver)
-                        throws IgniteException {
-                        assert ver == null;
-
-                        long ttl = CU.ttlForLoad(plc);
-
-                        if (ttl == CU.TTL_ZERO)
-                            return;
-
-                        loadEntry(key, val, ver0, (IgniteBiPredicate<Object, Object>)p, topVer, replicate, ttl);
-                    }
-                }, args);
-            }
+            }, args);
         }
         finally {
             if (p instanceof PlatformCacheEntryFilter)
@@ -3389,41 +3365,19 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
 
         Collection<KeyCacheObject> keys0 = ctx.cacheKeysView(keys);
 
-        if (ctx.store().isLocal()) {
-            DataStreamerImpl ldr = ctx.kernalContext().dataStream().dataStreamer(ctx.name());
+        // Version for all loaded entries.
+        final GridCacheVersion ver0 = ctx.versions().nextForLoad();
 
-            try {
-                ldr.skipStore(true);
+        ctx.store().loadAll(null, keys0, new CI2<KeyCacheObject, Object>() {
+            @Override public void apply(KeyCacheObject key, Object val) {
+                long ttl = CU.ttlForLoad(plc0);
 
-                ldr.keepBinary(keepBinary);
+                if (ttl == CU.TTL_ZERO)
+                    return;
 
-                ldr.receiver(new IgniteDrDataStreamerCacheUpdater());
-
-                LocalStoreLoadClosure c = new LocalStoreLoadClosure(null, ldr, plc0);
-
-                ctx.store().localStoreLoadAll(null, keys0, c);
-
-                c.onDone();
+                loadEntry(key, val, ver0, null, topVer, replicate, ttl);
             }
-            finally {
-                ldr.closeEx(false);
-            }
-        }
-        else {
-            // Version for all loaded entries.
-            final GridCacheVersion ver0 = ctx.versions().nextForLoad();
-
-            ctx.store().loadAll(null, keys0, new CI2<KeyCacheObject, Object>() {
-                @Override public void apply(KeyCacheObject key, Object val) {
-                    long ttl = CU.ttlForLoad(plc0);
-
-                    if (ttl == CU.TTL_ZERO)
-                        return;
-
-                    loadEntry(key, val, ver0, null, topVer, replicate, ttl);
-                }
-            });
-        }
+        });
     }
 
     /**

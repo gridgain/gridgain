@@ -60,11 +60,6 @@ public interface CacheStoreManager extends GridCacheManager {
     public CacheStore<?, ?> configuredStore();
 
     /**
-     * @return {@code true} If local store is configured.
-     */
-    public boolean isLocal();
-
-    /**
      * @return {@code True} is write-through is enabled.
      */
     public boolean isWriteThrough();
@@ -100,15 +95,6 @@ public interface CacheStoreManager extends GridCacheManager {
      */
     public boolean loadAll(@Nullable IgniteInternalTx tx, Collection<? extends KeyCacheObject> keys,
         IgniteBiInClosure<KeyCacheObject, Object> vis) throws IgniteCheckedException;
-
-    /**
-     * @param tx Cache transaction.
-     * @param keys Cache keys.
-     * @param vis Closure to apply for loaded elements.
-     * @throws IgniteCheckedException If data loading failed.
-     */
-    public void localStoreLoadAll(@Nullable IgniteInternalTx tx, Collection<? extends KeyCacheObject> keys,
-        final GridInClosure3<KeyCacheObject, Object, GridCacheVersion> vis) throws IgniteCheckedException;
 
     /**
      * Loads data from persistent store.

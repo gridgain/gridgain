@@ -129,16 +129,6 @@ public class IgniteTxRemoteSingleStateImpl extends IgniteTxRemoteStateAdapter {
 
     /** {@inheritDoc} */
     @Override public Collection<CacheStoreManager> stores(GridCacheSharedContext cctx) {
-        if (entry == null)
-            return null;
-
-        CacheStoreManager store = entry.context().store();
-
-        if (store.configured()
-            && store.isLocal()) { // Only local stores take part at tx on backup node.
-            return Collections.singleton(store);
-        }
-
         return null;
     }
 }

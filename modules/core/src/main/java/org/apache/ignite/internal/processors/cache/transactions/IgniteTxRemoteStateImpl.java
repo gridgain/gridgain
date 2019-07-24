@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.transactions;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -181,31 +180,6 @@ public class IgniteTxRemoteStateImpl extends IgniteTxRemoteStateAdapter {
 
     /** {@inheritDoc} */
     @Override public Collection<CacheStoreManager> stores(GridCacheSharedContext cctx) {
-        int locStoreCnt = cctx.getLocalStoreCount();
-
-        if (locStoreCnt > 0 && !writeMap.isEmpty()) {
-            Collection<CacheStoreManager> stores = null;
-
-            for (IgniteTxEntry e : writeMap.values()) {
-                if (e.skipStore())
-                    continue;
-
-                CacheStoreManager store = e.context().store();
-
-                if (store.configured() && store.isLocal()) {
-                    if (stores == null)
-                        stores = new ArrayList<>(locStoreCnt);
-
-                    stores.add(store);
-
-                    if (stores.size() == locStoreCnt)
-                        break;
-                }
-            }
-
-            return stores;
-        }
-
         return null;
     }
 }

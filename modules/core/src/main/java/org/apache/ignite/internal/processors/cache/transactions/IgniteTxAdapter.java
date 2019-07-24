@@ -1434,7 +1434,7 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
 
         boolean isWriteToStoreFromDht = first.isWriteToStoreFromDht();
 
-        if ((local() || first.isLocal()) && (near() || isWriteToStoreFromDht)) {
+        if (local() && (near() || isWriteToStoreFromDht)) {
             try {
                 if (writeEntries != null) {
                     Map<KeyCacheObject, IgniteBiTuple<? extends CacheObject, GridCacheVersion>> putMap = null;
@@ -1451,10 +1451,6 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
                                 e.cached().detached() ||
                                 !e.context().affinity().primaryByPartition(e.cached().partition(), topologyVersion()).isLocal();
                         }
-
-                        if (!skip && !local() && // Update local store at backups only if needed.
-                            cctx.localStorePrimaryOnly())
-                            skip = true;
 
                         if (skip)
                             continue;
