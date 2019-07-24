@@ -6081,9 +6081,11 @@ class ServerImpl extends TcpDiscoveryImpl {
                     msg.message(null, msg.messageBytes());
                 }
                 else {
-                    msg.trace().span()
-                        .addLog("Discarded")
-                        .setStatus(Status.CANCELLED);
+                    if (msg.trace().span() != null) {
+                        msg.trace().span()
+                            .addLog("Discarded")
+                            .setStatus(Status.CANCELLED);
+                    }
 
                     addMessage(new TcpDiscoveryDiscardMessage(getLocalNodeId(), msg.id(), true));
 
