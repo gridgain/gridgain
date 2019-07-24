@@ -79,9 +79,6 @@ public class KNNPartitionDataBuilder<K, V> implements PartitionDataBuilder<K, V,
                 return new ArraySpatialIndex<>(dataPnts, distanceMeasure);
             }
             case KD_TREE: {
-                if (!(distanceMeasure instanceof EuclideanDistance))
-                    throw new IllegalArgumentException("KD tree supports only Euclidean distance measure.");
-
                 return new KDTreeSpatialIndex<>(dataPnts, distanceMeasure);
             }
             case BALL_TREE: {
