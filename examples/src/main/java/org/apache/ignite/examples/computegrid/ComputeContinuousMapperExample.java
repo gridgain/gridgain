@@ -111,7 +111,7 @@ public class ComputeContinuousMapperExample {
             sendWord();
 
             // Since we have sent at least one job, we are allowed to return
-            // 'null' from map method.
+            // empty hashmap from map method.
             return new HashMap<>();
         }
 
