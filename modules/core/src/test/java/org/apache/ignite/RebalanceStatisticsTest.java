@@ -48,13 +48,19 @@ import org.junit.rules.TestRule;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 
 import static java.lang.Integer.parseInt;
 import static java.util.Objects.nonNull;
 import static java.util.regex.Pattern.compile;
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.mapping;
+import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
 import static java.util.stream.Stream.of;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_QUIET;
@@ -112,9 +118,6 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
 
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
-
-        baos.reset();
-        log.clearListeners();
 
         super.afterTest();
     }
@@ -291,6 +294,53 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Test fot check that we get statistics for each cache group and total statistics.
+     *
+     * @throws Exception not expected
+     * */
+    @Test
+    public void testGetStatisticsForEachCacheGroupAndTotal() throws Exception {
+        cacheCfgs = defaultCacheConfigurations();
+
+        crd = startGrids(DEFAULT_NODE_CNT);
+
+        fillCaches(100);
+
+        List<String> perCacheGrpOnly = new ArrayList<>();
+        List<String> totals = new ArrayList<>();
+
+        log.registerListener(logOutputStr -> {
+            if (!logOutputStr.contains(INFORMATION_PER_CACHE_GROUP_TEXT))
+                return;
+
+            (logOutputStr.contains(TOTAL_INFORMATION_TEXT) ? totals : perCacheGrpOnly).add(logOutputStr);
+        });
+
+        startGrid(DEFAULT_NODE_CNT);
+
+        awaitPartitionMapExchange();
+
+        //+1 - because ignite-sys-cache
+        assertEquals(cacheCfgs.length + 1, perCacheGrpOnly.size());
+        assertEquals(1, totals.size());
+
+        Map<String, List<String>> perCacheGrpStat = perCacheGrpOnly.stream()
+            .map(this::perCacheGroupTopicStatistics)
+            .map(Map::entrySet)
+            .flatMap(Collection::stream)
+            .collect(groupingBy(Map.Entry::getKey, mapping(Map.Entry::getValue, toList())));
+
+        of(cacheCfgs)
+            .map(CacheConfiguration::getName)
+            .forEach(cacheName -> {
+                List<String> stats = perCacheGrpStat.get(cacheName);
+
+                assertNotNull(stats);
+                assertEquals(1, stats.size());
+            });
+    }
+
+    /**
      * Extract topic statistics for each caches.
      *
      * @param s text
@@ -333,7 +383,7 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     /** Create default {@link CacheConfiguration}'s  */
     private CacheConfiguration[] defaultCacheConfigurations() {
         return of(DEFAULT_CACHE_NAMES)
-            .map(cacheName -> cacheConfiguration(cacheName, 100, 3))
+            .map(cacheName -> cacheConfiguration(cacheName, 10, 3))
             .toArray(CacheConfiguration[]::new);
     }
 

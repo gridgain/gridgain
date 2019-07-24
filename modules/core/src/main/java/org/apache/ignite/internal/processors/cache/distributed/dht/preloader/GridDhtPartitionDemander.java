@@ -85,7 +85,9 @@ import org.jetbrains.annotations.Nullable;
 
 import static java.lang.String.format;
 import static java.lang.System.currentTimeMillis;
+import static java.util.Collections.singletonList;
 import static java.util.Comparator.comparing;
+import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collector.of;
@@ -392,10 +394,18 @@ public class GridDhtPartitionDemander {
                     fut.stat.endTime = currentTimeMillis();
 
                     try {
-                        if (nonNull(next) && f.get()) //Has next AND Not cancelled
+                        boolean success = f.get();
+
+                        if (nonNull(next) && success) { //Has next AND Not cancelled
                             next.run();
-                        else
-                            printRebalanceStatistics();
+                            printRebalanceStatistics(false);
+                        } else if (isNull(next) && success) {//Has't next AND Not cancelled
+                            printRebalanceStatistics(false);
+                            printRebalanceStatistics(true);
+                        }
+
+                        if (!success)
+                            currentRebalanceFutures().forEach(future -> future.stat.partStat.clear());
                     }
                     catch (IgniteCheckedException e) {
                         if (log.isDebugEnabled())
@@ -1635,30 +1645,38 @@ public class GridDhtPartitionDemander {
         return !getBoolean(IGNITE_QUIET, true) && getBoolean(IGNITE_WRITE_REBALANCE_STATISTICS, false);
     }
 
-    /**
-     * Print statistics for current rebalance into log.
-     * Statistic will print if {@link #isPrintRebalanceStatistics()}.
-     * Clears statistics when printed or not.
-     * */
-    private void printRebalanceStatistics() {
+    /** Return {@link RebalanceFuture}'s for current rebalance.  */
+    private List<RebalanceFuture> currentRebalanceFutures() {
         RebalanceFuture currRebFut = rebalanceFut;
 
-        //collect all RebalanceFuture in current rebalance
-        List<RebalanceFuture> rebFuts = ctx.cacheContexts().stream()
+        return ctx.cacheContexts().stream()
             .map(GridCacheContext::preloader)
             .map(GridCachePreloader::rebalanceFuture)
             .filter(RebalanceFuture.class::isInstance)
             .map(RebalanceFuture.class::cast)
             .filter(future -> Objects.equals(future.topVer, currRebFut.topVer))
             .collect(toList());
+    }
+
+    /**
+     * Print statistics for current rebalance into log.
+     * Statistic will print if {@link #isPrintRebalanceStatistics()}.
+     * <p/>
+     * If {@code finish} == true then print full statistics, else print statistics only for current cache group.
+     * <p/>
+     * If {@code finish} == true then clears statistics when printed or not.
+     *
+     * @param finish is finish rebalance
+     * */
+    private void printRebalanceStatistics(final boolean finish) {
+        RebalanceFuture currRebFut = rebalanceFut;
+
+        //collect all RebalanceFuture in current rebalance
+        List<RebalanceFuture> rebFuts = !finish ? singletonList(currRebFut) : currentRebalanceFutures();
 
         try {
             if (!isPrintRebalanceStatistics())
                 return;
-
-            rebFuts.stream()
-                .collect(toMap(o -> o.grp, o -> o.stat))
-                .forEach((context, statistics) -> log.info(format("{%s = %s}", context.cacheOrGroupName(), statistics)));
 
             AtomicInteger nodeCnt = new AtomicInteger();
 
@@ -1668,8 +1686,12 @@ public class GridDhtPartitionDemander {
                 .distinct()
                 .collect(toMap(identity(), node -> nodeCnt.getAndIncrement()));
 
-            StringJoiner joiner = new StringJoiner(" ")
-                .add(totalRebalanceStatistics(rebFuts, nodeAliases))
+            StringJoiner joiner = new StringJoiner(" ");
+
+            if (finish)
+                joiner.add(totalRebalanceStatistics(rebFuts, nodeAliases));
+
+            joiner
                 .add(cacheGroupsRebalanceStatistics(rebFuts, nodeAliases))
                 .add(aliasesRebalanceStatistics("p - partitions, e - entries, b - bytes, d - duration", nodeAliases))
                 .add(partitionsDistributionRebalanceStatistics(rebFuts, nodeAliases, nodeCnt));
@@ -1677,7 +1699,8 @@ public class GridDhtPartitionDemander {
             log.info(joiner.toString());
         }
         finally {
-            rebFuts.forEach(future -> future.stat.partStat.clear());
+            if (finish)
+                rebFuts.forEach(future -> future.stat.partStat.clear());
         }
     }
 
@@ -1693,6 +1716,7 @@ public class GridDhtPartitionDemander {
         final Map<ClusterNode, Integer> nodeAliases
     ) {
         assert nonNull(rebFuts);
+        assert nonNull(nodeAliases);
 
         long minStartTime = rebFuts.stream()
             .mapToLong(value -> value.stat.startTime)
@@ -1743,6 +1767,7 @@ public class GridDhtPartitionDemander {
         final Map<ClusterNode, Integer> nodeAliases
     ) {
         assert nonNull(rebFuts);
+        assert nonNull(nodeAliases);
 
         StringJoiner joiner = new StringJoiner(" ")
             .add("Information per cache group:");
