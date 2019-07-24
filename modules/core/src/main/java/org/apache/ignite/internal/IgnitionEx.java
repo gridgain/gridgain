@@ -2269,6 +2269,7 @@ public class IgnitionEx {
             }
 
             initializeDataStorageConfiguration(myCfg);
+            myCfg.setTracingSpi(cfg.getTracingSpi());
 
             return myCfg;
         }

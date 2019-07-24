@@ -78,6 +78,10 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
             exporter.stop(traceComponent);
     }
 
+    @Override public TraceComponent traceComponent() {
+        return traceComponent;
+    }
+
     /**
      * Any provider that may be used for TraceComponent can be added here.
      *

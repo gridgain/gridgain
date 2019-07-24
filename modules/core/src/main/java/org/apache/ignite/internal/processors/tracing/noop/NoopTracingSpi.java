@@ -1,6 +1,7 @@
 package org.apache.ignite.internal.processors.tracing.noop;
 
 import java.util.Map;
+import io.opencensus.trace.TraceComponent;
 import org.apache.ignite.internal.processors.tracing.SerializedSpan;
 import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.processors.tracing.SpanEx;
@@ -57,10 +58,14 @@ public class NoopTracingSpi extends IgniteSpiAdapter implements TracingSpi {
     }
 
     @Override public void spiStart(String igniteInstanceName) throws IgniteSpiException {
-        log.info("Tracing SPI is not configured. Noop implementation will be used instead.");
+        //log.info("Tracing SPI is not configured. Noop implementation will be used instead.");
     }
 
     @Override public void spiStop() throws IgniteSpiException {
         // Do nothing.
+    }
+
+    @Override public TraceComponent traceComponent() {
+        return null;
     }
 }

@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.cache.distributed;
 
 import java.nio.ByteBuffer;
 import org.apache.ignite.internal.processors.tracing.SerializedSpan;
-import org.apache.ignite.internal.processors.tracing.impl.SerializedSpanAdapter;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
@@ -51,7 +50,11 @@ public class SerializedSpanMessage implements Message {
      * @return Transferred span context.
      */
     public SerializedSpan serializedSpan() {
-        return new SerializedSpanAdapter(serializedSpanBytes);
+        return new SerializedSpan() {
+            @Override public byte[] value() {
+                return serializedSpanBytes.clone();
+            }
+        };
     }
 
     /** {@inheritDoc} */
