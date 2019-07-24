@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -1462,7 +1462,7 @@ public class IgniteCacheGroupsTest extends GridCommonAbstractTest {
      */
     @Test
     public void testStartManyCaches() throws Exception {
-        final int CACHES = 5_000;
+        final int CACHES = GridTestUtils.SF.apply(5_000);
 
         final int NODES = 4;
 
@@ -4022,7 +4022,7 @@ public class IgniteCacheGroupsTest extends GridCommonAbstractTest {
 
         client = false;
 
-        final int CACHES = 10;
+        final int CACHES = GridTestUtils.SF.applyLB(10, 2);
 
         final AtomicReferenceArray<IgniteCache> caches = new AtomicReferenceArray<>(CACHES);
 
@@ -4037,7 +4037,8 @@ public class IgniteCacheGroupsTest extends GridCommonAbstractTest {
         final AtomicInteger cacheCntr = new AtomicInteger();
 
         try {
-            for (int i = 0; i < 10; i++) {
+            final int ITERATIONS_COUNT = GridTestUtils.SF.applyLB(10, 1);
+            for (int i = 0; i < ITERATIONS_COUNT; i++) {
                 stop.set(false);
 
                 final AtomicReference<Exception> err = new AtomicReference<>();
@@ -4158,7 +4159,7 @@ public class IgniteCacheGroupsTest extends GridCommonAbstractTest {
                     }
                 }, 8, "op-thread");
 
-                Thread.sleep(10_000);
+                Thread.sleep(GridTestUtils.SF.applyLB(10_000, 1_000));
 
                 stop.set(true);
 
