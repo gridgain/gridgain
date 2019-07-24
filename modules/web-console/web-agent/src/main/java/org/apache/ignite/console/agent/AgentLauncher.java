@@ -16,6 +16,7 @@
 
 package org.apache.ignite.console.agent;
 
+import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 import java.net.Authenticator;
@@ -152,6 +153,14 @@ public class AgentLauncher {
                 return;
             }
 
+            EOFException eof = X.cause(e, EOFException.class);
+
+            if (eof != null) {
+                log.error("Failed to receive response from server (connection lost).");
+
+                return;
+            }
+
             IOException ignore = X.cause(e, IOException.class);
 
             if (ignore != null && "404".equals(ignore.getMessage())) {
@@ -172,10 +181,18 @@ public class AgentLauncher {
 
         IOException ioCause = X.cause(e, IOException.class);
 
-        if (ioCause != null && "404".equals(ioCause.getMessage())) {
-            log.error("You are using outdated version of Web agent. Please download latest version of Web agent from Web console");
+        if (ioCause != null) {
+            if ("404".equals(ioCause.getMessage())) {
+                log.error("You are using outdated version of Web agent. Please download latest version of Web agent from Web console.");
 
-            System.exit(1);
+                System.exit(1);
+            }
+
+            if ("504".equals(ioCause.getMessage())) {
+                log.error("Failed to establish connection to server, connection timeout.");
+
+                return;
+            }
         }
 
         onError.call(args);
