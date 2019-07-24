@@ -1371,7 +1371,8 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                         currBlTNode -> Objects.equals(currBlTNode.consistentId(), consistentId)) &&
                     srvrs.stream().noneMatch(
                         currServersNode -> Objects.equals(currServersNode.consistentId(), consistentId)))
-                    throw new IgniteException("Check arguments. Node not found for consistent ID: " + consistentId);
+                    throw new IgniteException("Check arguments. Node with consistent ID [" + consistentId +
+                        "] not found in server nodes.");
             }
 
             Collection<Object> onlineNodes = onlineBaselineNodesRequestedForRemoval(baselineTop);

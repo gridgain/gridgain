@@ -1036,7 +1036,8 @@ public class CacheBaselineTopologyTest extends GridCommonAbstractTest {
             ignite.cluster().setBaselineTopology(nodes);
 
             return null;
-        }, IgniteException.class, "Check arguments. Node not found for consistent ID: non-existing-node-id");
+        }, IgniteException.class, "Check arguments. Node with consistent ID [non-existing-node-id] " +
+            "not found in server nodes.");
     }
 
     /**
@@ -1060,8 +1061,8 @@ public class CacheBaselineTopologyTest extends GridCommonAbstractTest {
             ignite.cluster().setBaselineTopology(ignite.cluster().topologyVersion() - 1);
 
             return null;
-        }, IgniteException.class, "Check arguments. Node not found for consistent ID: " +
-            "distributed.CacheBaselineTopologyTest1");
+        }, IgniteException.class, "Check arguments. Node with consistent ID " +
+            "[distributed.CacheBaselineTopologyTest1] not found in server nodes.");
     }
 
     /** */
