@@ -300,7 +300,7 @@ void Initialize(SQLHDBC dbc, unsigned departmentsNum, unsigned employeesNum)
     }
 }
 
-void Initialize(unsigned departmentsNum, unsigned employeesNum)
+void Initialize(const std::string& addr, unsigned departmentsNum, unsigned employeesNum)
 {
     SQLHENV env;
 
@@ -316,7 +316,7 @@ void Initialize(unsigned departmentsNum, unsigned employeesNum)
     SQLAllocHandle(SQL_HANDLE_DBC, env, &dbc);
 
     // Combining connect string
-    std::string connectStr = "DRIVER={Apache Ignite};SERVER=localhost;PORT=10800;SCHEMA=PUBLIC;";
+    std::string connectStr = "DRIVER={Apache Ignite};ADDRESS=" + addr + ";SCHEMA=PUBLIC;";
 
     SQLCHAR outstr[ODBC_BUFFER_SIZE];
     SQLSMALLINT outstrlen;
@@ -571,7 +571,8 @@ private:
 class OdbcClient : public Thread
 {
 public:
-    OdbcClient() :
+    OdbcClient(const std::string& addr) :
+        addr(addr),
         env(NULL),
         dbc(NULL)
     {
@@ -579,6 +580,19 @@ public:
     }
 
 #ifndef _WIN32
+    OdbcClient(const OdbcClient& other) :
+        env(other.env),
+        dbc(other.dbc)
+    {
+        // No-op.
+    }
+
+    OdbcClient operator=(const OdbcClient& other)
+    {
+        env = other.env;
+        dbc = other.dbc;
+    }
+
     OdbcClient(OdbcClient&& other) :
         env(other.env),
         dbc(other.dbc)
@@ -600,7 +614,7 @@ public:
         SQLAllocHandle(SQL_HANDLE_DBC, env, &dbc);
 
         // Combining connect string
-        std::string connectStr = "DRIVER={Apache Ignite};SERVER=localhost;PORT=10800;SCHEMA=PUBLIC;";
+        std::string connectStr = "DRIVER={Apache Ignite};ADDRESS=" + addr + ";SCHEMA=PUBLIC;";
 
         SQLCHAR outstr[ODBC_BUFFER_SIZE];
         SQLSMALLINT outstrlen;
@@ -638,6 +652,8 @@ public:
     }
 
 private:
+    std::string addr;
+
     SQLHENV env;
 
     SQLHDBC dbc;
@@ -701,6 +717,7 @@ int main()
     const unsigned departmentsNum = GetEnvVar<unsigned>("DEPARTMENTS_NUM", 11);
     const unsigned employeesNum = GetEnvVar<unsigned>("EMPLOYEES_NUM", 1083);
     const unsigned clientNum = GetEnvVar<unsigned>("CLIENTS_NUM", 100);
+    const std::string address = GetEnvVar<std::string>("NODES_ADDRESS", "localhost");
 
     int exitCode = 0;
 
@@ -710,7 +727,7 @@ int main()
     {
         std::cout << "Initializing..." << std::endl;
 
-        Initialize(departmentsNum, employeesNum);
+        Initialize(address, departmentsNum, employeesNum);
         
         std::cout << "Done" << std::endl;
 
@@ -718,7 +735,7 @@ int main()
 
         std::vector<OdbcClient> clients;
 
-        clients.resize(clientNum);
+        clients.resize(clientNum, OdbcClient(address));
 
         for (size_t i = 0; i < clients.size(); ++i)
             clients[i].Start();
