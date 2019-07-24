@@ -31,7 +31,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import javax.cache.Cache;
@@ -145,6 +145,9 @@ import static org.apache.ignite.transactions.TransactionState.UNKNOWN;
  */
 @SuppressWarnings("unchecked")
 public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeoutObject, AutoCloseable, MvccCoordinatorChangeAware {
+    /** */
+    private static final long serialVersionUID = 0L;
+
     /** Metric name for total system time on node. */
     public static final String METRIC_TOTAL_SYSTEM_TIME = "TotalNodeSystemTime";
 
@@ -161,10 +164,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
     public static final long[] METRIC_TIME_BUCKETS = new long[] { 1, 2, 4, 8, 16, 25, 50, 75, 100, 250, 500, 750, 1000, 3000};
 
     /** */
-    private static final Random RANDOM = new Random();
-
-    /** */
-    private static final long serialVersionUID = 0L;
+    private static final ThreadLocalRandom RANDOM = ThreadLocalRandom.current();
 
     /** Prepare future updater. */
     private static final AtomicReferenceFieldUpdater<GridNearTxLocal, IgniteInternalFuture> PREP_FUT_UPD =
@@ -3817,7 +3817,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
         long t = systemStartTime0 == 0 ? 0 : (System.nanoTime() - systemStartTime0);
 
-        return (systemTime0 + t)  / 1_000_000;
+        return U.nanosToMillis(systemTime0 + t);
     }
 
     /** {@inheritDoc} */
@@ -3827,58 +3827,73 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
         if (state == COMMITTED || state == ROLLED_BACK) {
             leaveSystemSection();
 
-            commitOrRollbackTime.compareAndSet(0, System.nanoTime() - commitOrRollbackStartTime.get());
+            //if commitOrRollbackTime != 0 it means that we already have written metrics and dumped it in log at least once
+            if (commitOrRollbackTime.compareAndSet(0, System.nanoTime() - commitOrRollbackStartTime.get()))
+                return res;
 
-            long systemTimeMillis = this.systemTime.get() / 1_000_000;
+            long systemTimeMillis = U.nanosToMillis(this.systemTime.get());
             long totalTimeMillis = System.currentTimeMillis() - startTime();
             long userTimeMillis = totalTimeMillis - systemTimeMillis;
 
             writeTxMetrics(systemTimeMillis, userTimeMillis);
 
-            if (cctx.tm().longTransactionTimeDumpThreshold() > 0
-                && totalTimeMillis > cctx.tm().longTransactionTimeDumpThreshold()
-                && RANDOM.nextDouble() <= cctx.tm().longTransactionTimeDumpSampleLimit()) {
-                DateFormat timeFormat = new SimpleDateFormat("HH:mm:ss.SSS");
-                timeFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+            long longTransactionTimeDumpThreshold = cctx.tm().longTransactionTimeDumpThreshold();
 
-                long cacheOperationsTimeMillis =
-                    (systemTime.get() - prepareTime.get() - commitOrRollbackTime.get()) / 1_000_000;
-
-                GridStringBuilder logMsg = new GridStringBuilder("Long transaction detected [startTime=")
-                    //separate SimpleDateFormat for startTime
-                    .a(new SimpleDateFormat("HH:mm:ss.SSS").format(new Date(startTime)))
-                    .a(", totalTime=")
-                    .a(timeFormat.format(new Date(totalTimeMillis)))
-                    .a(", systemTime=")
-                    .a(timeFormat.format(new Date(systemTimeMillis)))
-                    .a(", userTime=")
-                    .a(timeFormat.format(new Date(userTimeMillis)))
-                    .a(", cacheOperationsTime=")
-                    .a(timeFormat.format(new Date(cacheOperationsTimeMillis)));
-
-                if (state == COMMITTED) {
-                    logMsg
-                        .a(", prepareTime=")
-                        .a(timeFormat.format(new Date(timeMillis(prepareTime))))
-                        .a(", commitTime=")
-                        .a(timeFormat.format(new Date(timeMillis(commitOrRollbackTime))));
-                }
-                else {
-                    logMsg
-                        .a(", rollbackTime=")
-                        .a(timeFormat.format(new Date(timeMillis(commitOrRollbackTime))));
-                }
-
-                logMsg
-                    .a(", tx=")
-                    .a(this)
-                    .a("]");
-
-                log.warning(logMsg.toString());
-            }
+            if (longTransactionTimeDumpThreshold > 0
+                && totalTimeMillis > longTransactionTimeDumpThreshold
+                && RANDOM.nextDouble() <= cctx.tm().longTransactionTimeDumpSampleLimit())
+                log.warning(longRunningTransactionWarning(state, systemTimeMillis, userTimeMillis));
         }
 
         return res;
+    }
+
+    /**
+     * Builds warning string for long running transaction.
+     *
+     * @param state Transaction state.
+     * @param systemTimeMillis system time in milliseconds.
+     * @param userTimeMillis user time in milliseconds.
+     * @return Warning string.
+     */
+    private String longRunningTransactionWarning(TransactionState state, long systemTimeMillis, long userTimeMillis) {
+        DateFormat timeFormat = new SimpleDateFormat("HH:mm:ss.SSS");
+        timeFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+
+        long cacheOperationsTimeMillis =
+            U.nanosToMillis(systemTime.get() - prepareTime.get() - commitOrRollbackTime.get());
+
+        GridStringBuilder warning = new GridStringBuilder("Long transaction detected [startTime=")
+            //separate SimpleDateFormat for startTime
+            .a(new SimpleDateFormat("HH:mm:ss.SSS").format(new Date(startTime)))
+            .a(", totalTime=")
+            .a(timeFormat.format(new Date(systemTimeMillis + userTimeMillis)))
+            .a(", systemTime=")
+            .a(timeFormat.format(new Date(systemTimeMillis)))
+            .a(", userTime=")
+            .a(timeFormat.format(new Date(userTimeMillis)))
+            .a(", cacheOperationsTime=")
+            .a(timeFormat.format(new Date(cacheOperationsTimeMillis)));
+
+        if (state == COMMITTED) {
+            warning
+                .a(", prepareTime=")
+                .a(timeFormat.format(new Date(timeMillis(prepareTime))))
+                .a(", commitTime=")
+                .a(timeFormat.format(new Date(timeMillis(commitOrRollbackTime))));
+        }
+        else {
+            warning
+                .a(", rollbackTime=")
+                .a(timeFormat.format(new Date(timeMillis(commitOrRollbackTime))));
+        }
+
+        warning
+            .a(", tx=")
+            .a(this)
+            .a("]");
+
+        return warning.toString();
     }
 
     /**
@@ -5014,15 +5029,21 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
     /** */
     private long timeMillis(AtomicLong atomicNanoTime) {
-        return atomicNanoTime.get() / 1_000_000;
+        return U.nanosToMillis(atomicNanoTime.get());
     }
 
-    /** Enters the section when system time for this transaction is counted. */
+    /**
+     * Enters the section when system time for this transaction is counted.
+     */
     public void enterSystemSection() {
+        //setting systemStartTime only if it equals 0, otherwise it means that we are already in system section
+        //and sould do nothing.
         systemStartTime.compareAndSet(0, System.nanoTime());
     }
 
-    /** Leaves the section when system time for this transaction is counted. */
+    /**
+     * Leaves the section when system time for this transaction is counted.
+     */
     public void leaveSystemSection() {
         long systemStartTime0 = systemStartTime.getAndSet(0);
 
@@ -5030,7 +5051,12 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
             systemTime.addAndGet(System.nanoTime() - systemStartTime0);
     }
 
-    /** Writes system and user time metrics. */
+    /**
+     * Writes system and user time metrics.
+     *
+     * @param systemTime System time.
+     * @param userTime User time.
+     */
     private void writeTxMetrics(long systemTime, long userTime) {
         MetricRegistry txMetricRegistry = cctx.kernalContext().metric().registry(GridMetricManager.TRANSACTION_METRICS);
 

@@ -86,8 +86,7 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        ListeningTestLogger testLog =
-            new ListeningTestLogger(false, super.getConfiguration(igniteInstanceName).getGridLogger());
+        ListeningTestLogger testLog = new ListeningTestLogger(false, log());
 
         testLog.registerListener(logLsnr);
 

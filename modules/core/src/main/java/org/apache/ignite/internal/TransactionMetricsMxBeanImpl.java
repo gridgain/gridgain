@@ -34,6 +34,9 @@ public class TransactionMetricsMxBeanImpl implements TransactionMetricsMxBean {
     private static final long serialVersionUID = 0L;
 
     /** */
+    private static final String EMPTY_HISTOGRAM_JSON = "{}";
+
+    /** */
     private final TransactionMetrics transactionMetrics;
 
     /** */
@@ -48,6 +51,7 @@ public class TransactionMetricsMxBeanImpl implements TransactionMetricsMxBean {
 
     /**
      * @param transactionMetrics Transaction metrics.
+     * @param transactionMetricRegistry Metric registry used for transaction metrics.
      */
     public TransactionMetricsMxBeanImpl(TransactionMetrics transactionMetrics, MetricRegistry transactionMetricRegistry) {
         this.transactionMetrics = transactionMetrics;
@@ -130,7 +134,7 @@ public class TransactionMetricsMxBeanImpl implements TransactionMetricsMxBean {
         HistogramMetric systemTimeHistogram =
             (HistogramMetric)transactionMetricRegistry.findMetric(GridNearTxLocal.METRIC_SYSTEM_TIME_HISTOGRAM);
 
-        return systemTimeHistogram == null ? "{}" : toJson(systemTimeHistogram);
+        return systemTimeHistogram == null ? EMPTY_HISTOGRAM_JSON : toJson(systemTimeHistogram);
     }
 
     /** {@inheritDoc} */
@@ -138,7 +142,7 @@ public class TransactionMetricsMxBeanImpl implements TransactionMetricsMxBean {
         HistogramMetric userTimeHistogram =
             (HistogramMetric)transactionMetricRegistry.findMetric(GridNearTxLocal.METRIC_USER_TIME_HISTOGRAM);
 
-        return userTimeHistogram == null ? "{}" : toJson(userTimeHistogram);
+        return userTimeHistogram == null ? EMPTY_HISTOGRAM_JSON : toJson(userTimeHistogram);
     }
 }
 

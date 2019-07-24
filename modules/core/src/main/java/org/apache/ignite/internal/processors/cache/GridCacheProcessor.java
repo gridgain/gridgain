@@ -6032,8 +6032,18 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         compute.broadcast(new TxOwnerDumpRequestAllowedSettingClosure(allowed));
     }
 
-    /** */
+    /**
+     * Sets threshold timeout in milliseconds for long transactions, if transaction exceeds it,
+     * it will be dumped in log with information about how much time did
+     * it spent in system time (time while aquiring locks, preparing, commiting, etc.)
+     * and user time (time when client node runs some code while holding transaction).
+     * Can be set to 0 - no transactions will be dumped in log in this case.
+     *
+     * @param threshold Threshold timeout in milliseconds.
+     */
     public void longTransactionTimeDumpThreshold(long threshold) {
+        assert threshold >= 0 : "Threshold timeout must be greater than or equal to 0.";
+
         ClusterGroup grp = ctx.grid()
                 .cluster()
                 .forPredicate(node -> IgniteFeatures.nodeSupports(ctx, node, LRT_SYSTEM_USER_TIME_DUMP_SETTINGS));
@@ -6043,8 +6053,15 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         compute.broadcast(new LongRunningTxTimeDumpSettingsClosure(threshold, null));
     }
 
-    /** */
-    public void longTransactionTimeDumpSampleLimit(float percentage) {
+    /**
+     * Sets the percentage of samples of long running transactions that will be dumped in log, if
+     * {@link #longTransactionTimeDumpThreshold} is set to non-zero value."
+     *
+     * @param percentage Percentage, must be value between 0.0 and 1.0 inclusively.
+     */
+    public void longTransactionTimeDumpSampleLimit(double percentage) {
+        assert percentage >= 0.0 && percentage <= 1.0 : "Percentage value must be between 0.0 and 1.0 inclusively.";
+
         ClusterGroup grp = ctx.grid()
                 .cluster()
                 .forPredicate(node -> IgniteFeatures.nodeSupports(ctx, node, LRT_SYSTEM_USER_TIME_DUMP_SETTINGS));

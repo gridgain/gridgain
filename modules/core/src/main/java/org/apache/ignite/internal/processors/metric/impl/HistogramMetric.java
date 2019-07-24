@@ -90,7 +90,9 @@ public class HistogramMetric extends AbstractMetric implements ObjectMetric<long
         return res;
     }
 
-    /** Returns bounds of this histogram. */
+    /**
+     * Returns bounds of this histogram.
+     */
     public long[] bounds() {
         long[] res = new long[holder.bounds.length];
 

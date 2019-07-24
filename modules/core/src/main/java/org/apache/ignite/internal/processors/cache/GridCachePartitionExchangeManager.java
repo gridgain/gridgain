@@ -2046,6 +2046,36 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
     }
 
     /**
+     * Builds warning string for long running transaction.
+     *
+     * @param tx Transaction.
+     * @param curTime Current timestamp.
+     * @return Warning string.
+     */
+    private String longRunningTransactionWarning(IgniteInternalTx tx, long curTime) {
+        GridStringBuilder warning = new GridStringBuilder()
+            .a(">>> Transaction [startTime=")
+            .a(formatTime(tx.startTime()))
+            .a(", curTime=")
+            .a(formatTime(curTime));
+
+        if (tx instanceof GridNearTxLocal) {
+            long sysTimeCurr = ((GridNearTxLocal) tx).systemTimeCurrent();
+
+            warning.a(", systemTime=")
+                .a(sysTimeCurr)
+                .a(", userTime=")
+                .a(System.currentTimeMillis() - tx.startTime() - sysTimeCurr);
+        }
+
+        warning.a(", tx=")
+            .a(tx)
+            .a("]");
+
+        return warning.toString();
+    }
+
+    /**
      * @param timeout Operation timeout.
      * @return {@code True} if found long running operations.
      */
@@ -2071,26 +2101,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                         found = true;
 
                         if (warnings.canAddMessage()) {
-                            GridStringBuilder warning = new GridStringBuilder()
-                                .a(">>> Transaction [startTime=")
-                                .a(formatTime(tx.startTime()))
-                                .a(", curTime=")
-                                .a(formatTime(curTime));
-
-                            if (tx instanceof GridNearTxLocal) {
-                                long sysTimeCurr = ((GridNearTxLocal) tx).systemTimeCurrent();
-
-                                warning.a(", systemTime=")
-                                    .a(sysTimeCurr)
-                                    .a(", userTime=")
-                                    .a(System.currentTimeMillis() - tx.startTime() - sysTimeCurr);
-                            }
-
-                            warning.a(", tx=")
-                                .a(tx)
-                                .a("]");
-
-                            warnings.add(warning.toString());
+                            warnings.add(longRunningTransactionWarning(tx, curTime));
 
                             if (ltrDumpLimiter.allowAction(tx))
                                 dumpLongRunningTransaction(tx);

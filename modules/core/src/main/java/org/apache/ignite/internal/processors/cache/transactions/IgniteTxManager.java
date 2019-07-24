@@ -201,14 +201,14 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * commiting, etc) and user time (time when client node runs some code while holding transaction and not
      * waiting it). Equals 0 if not set. No transactions are dumped in log if this parameter is not set.
      */
-    private long longTransactionTimeDumpThreshold =
+    private volatile long longTransactionTimeDumpThreshold =
         IgniteSystemProperties.getLong(IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD, 0);
 
     /**
      * The percentage of samples of long running transactions that will be dumped in log, if
      * {@link #longTransactionTimeDumpThreshold} is set to non-zero value.
      */
-    private float longTransactionTimeDumpSampleLimit =
+    private volatile double longTransactionTimeDumpSampleLimit =
             IgniteSystemProperties.getFloat(IGNITE_LONG_TRANSACTION_TIME_DUMP_SAMPLE_LIMIT, 0.0f);
 
     /** Committed local transactions. */
@@ -485,6 +485,9 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * @param longTransactionTimeDumpThreshold Value of threshold timeout in milliseconds.
      */
     public void longTransactionTimeDumpThreshold(long longTransactionTimeDumpThreshold) {
+        assert longTransactionTimeDumpThreshold >= 0
+            : "longTransactionTimeDumpThreshold must be greater than or equal to 0.";
+
         this.longTransactionTimeDumpThreshold = longTransactionTimeDumpThreshold;
     }
 
@@ -492,7 +495,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * The percentage of samples of long running transactions that will be dumped in log, if
      * {@link #longTransactionTimeDumpThreshold} is set to non-zero value.
      */
-    public float longTransactionTimeDumpSampleLimit() {
+    public double longTransactionTimeDumpSampleLimit() {
         return longTransactionTimeDumpSampleLimit;
     }
 
@@ -500,7 +503,10 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * Sets the percentage of samples of long running transactions that will be dumped in log, if
      * {@link #longTransactionTimeDumpThreshold} is set to non-zero value.
      */
-    public void longTransactionTimeDumpSampleLimit(float longTransactionTimeDumpSampleLimit) {
+    public void longTransactionTimeDumpSampleLimit(double longTransactionTimeDumpSampleLimit) {
+        assert longTransactionTimeDumpSampleLimit >= 0.0 && longTransactionTimeDumpSampleLimit <= 1.0
+            : "longTransactionTimeDumpSampleLimit value must be between 0.0 and 1.0 inclusively.";
+
         this.longTransactionTimeDumpSampleLimit = longTransactionTimeDumpSampleLimit;
     }
 

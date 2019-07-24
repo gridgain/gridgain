@@ -1293,7 +1293,9 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD = "IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD";
 
     /**
-     *
+     * The percentage of samples of long running transactions that will be dumped in log, if
+     * {@link #IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD} is set to non-zero value. Must be float value
+     * between 0.0 and 1.0 inclusive.
      */
     public static final String IGNITE_LONG_TRANSACTION_TIME_DUMP_SAMPLE_LIMIT = "IGNITE_LONG_TRANSACTION_TIME_DUMP_SAMPLE_LIMIT";
 

@@ -116,7 +116,7 @@ public class MetricUtils {
     public static String toJson(HistogramMetric metric) {
         GridStringBuilder json = new GridStringBuilder();
 
-        json.a("{\"bounds\": [");
+        json.a("{\"bounds\":[");
 
         long[] bounds = metric.bounds();
 
@@ -124,10 +124,10 @@ public class MetricUtils {
             json.a(bounds[i]);
 
             if (i < bounds.length - 1)
-                json.a(", ");
+                json.a(",");
         }
 
-        json.a("], \"values\": [");
+        json.a("],\"values\":[");
 
         long[] values = metric.value();
 
@@ -136,18 +136,18 @@ public class MetricUtils {
             long toInclusive = (i == values.length - 1 ? -1 : bounds[i]);
             long val = values[i];
 
-            json.a("{\"fromExclusive\": ").a(fromExclusive);
+            json.a("{\"fromExclusive\":").a(fromExclusive);
 
             if (toInclusive >= 0)
-                json.a(", \"toInclusive\": ").a(toInclusive);
+                json.a(",\"toInclusive\":").a(toInclusive);
 
             json
-                .a(", \"value\": ")
+                .a(",\"value\":")
                 .a(val)
                 .a("}");
 
             if (i < values.length - 1)
-                json.a(", ");
+                json.a(",");
         }
 
         json.a("]}");
