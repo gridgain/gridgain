@@ -43,7 +43,6 @@ import org.apache.ignite.testframework.junits.SystemPropertiesRule;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.ClassRule;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
 
@@ -70,7 +69,7 @@ import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
 public class RebalanceStatisticsTest extends GridCommonAbstractTest {
 
     /** Class rule */
-    @ClassRule public final TestRule classRule = new SystemPropertiesRule();
+    @ClassRule public static final TestRule classRule = new SystemPropertiesRule();
 
     /** Cache names */
     private static final String[] DEFAULT_CACHE_NAMES = {"ch0", "ch1", "ch2", "ch3"};
