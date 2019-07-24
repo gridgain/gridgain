@@ -280,7 +280,7 @@ namespace Apache.Ignite.Core.Tests.Cache
                 Assert.IsTrue(cluster.IsActive());
 
                 var res = cluster.GetBaselineTopology();
-                CollectionAssert.AreEquivalent(new[] { "node1", "node2" }, res.Select(x => x.ConsistentId));
+                CollectionAssert.AreEquivalent(new[] { "node1"}, res.Select(x => x.ConsistentId));
             }
 
             Environment.SetEnvironmentVariable("IGNITE_BASELINE_AUTO_ADJUST_ENABLED", null);
