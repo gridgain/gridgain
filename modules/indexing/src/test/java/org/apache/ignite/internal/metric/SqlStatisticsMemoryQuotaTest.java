@@ -249,21 +249,76 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
     public void testMaxMemMetricShowCustomMaxMemoryValuesForDifferentNodes() throws Exception {
         final int oneMaxMem = 512 * 1024;
         final int otherMaxMem = 1024 * 1024;
+        final int unlimMaxMem = -1;
 
         final int oneNodeIdx = 0;
         final int otherNodeIdx = 1;
+        final int unlimNodeIdx = 2;
 
+        startGridWithMaxMem(oneNodeIdx, oneMaxMem);
+        startGridWithMaxMem(otherNodeIdx, otherMaxMem);
+        startGridWithMaxMem(unlimNodeIdx, unlimMaxMem);
+
+        assertEquals(oneMaxMem, longMetricValue(oneNodeIdx, "maxMem"));
+        assertEquals(otherMaxMem, longMetricValue(otherNodeIdx, "maxMem"));
+        assertEquals(unlimMaxMem, longMetricValue(unlimNodeIdx, "maxMem"));
+    }
+
+    /**
+     * Check in complex scenario that metrics are not changed if global (maxMem) quota is unlimited.
+     *
+     * @throws Exception if failed.
+     */
+    @Test
+    public void testAllMetricsIfMemoryQuotaIsUnlimited() throws Exception {
+        final MemValidator quotaUnlim = (free, max) -> {
+            assertEquals(-1, max);
+            assertEquals(max, free);
+        };
+
+        int connNodeIdx = 1;
+        int otherNodeIdx = 0;
+
+        startGridWithMaxMem(connNodeIdx, -1);
+        startGridWithMaxMem(otherNodeIdx, -1);
+
+        IgniteCache cache = createCacheFrom(grid(connNodeIdx));
+
+        final String scanQry = "SELECT * FROM TAB WHERE ID <> suspendHook(5)";
+
+        IgniteInternalFuture distQryIsDone =
+            runAsyncX(() -> cache.query(new SqlFieldsQuery(scanQry)).getAll());
+
+        SuspendQuerySqlFunctions.awaitQueryStopsInTheMiddle();
+
+        validateMemoryUsageOn(connNodeIdx, quotaUnlim);
+        validateMemoryUsageOn(otherNodeIdx, quotaUnlim);
+
+        assertEquals(0, longMetricValue(connNodeIdx, "requests"));
+        assertEquals(0, longMetricValue(otherNodeIdx, "requests"));
+
+        SuspendQuerySqlFunctions.resumeQueryExecution();
+
+        distQryIsDone.get(WAIT_OP_TIMEOUT_SEC, TimeUnit.SECONDS);
+
+        validateMemoryUsageOn(connNodeIdx, quotaUnlim);
+        validateMemoryUsageOn(otherNodeIdx, quotaUnlim);
+
+        assertEquals(0, longMetricValue(connNodeIdx, "requests"));
+        assertEquals(0, longMetricValue(otherNodeIdx, "requests"));
+    }
+
+    /**
+     * Starts grid with specified global (max memory quota) value.
+     *
+     * @param nodeIdx test framework index to start node with.
+     * @param maxMem value of default global quota to set on node start; -1 for unlimited.
+     */
+    private void startGridWithMaxMem(int nodeIdx, long maxMem) throws Exception {
         try {
-            System.setProperty(IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE, String.valueOf(oneMaxMem));
+            System.setProperty(IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE, String.valueOf(maxMem));
 
-            startGrid(oneNodeIdx);
-
-            System.setProperty(IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE, String.valueOf(otherMaxMem));
-
-            startGrid(otherNodeIdx);
-
-            assertEquals(oneMaxMem, longMetricValue(oneNodeIdx, "maxMem"));
-            assertEquals(otherMaxMem, longMetricValue(otherNodeIdx, "maxMem"));
+            startGrid(nodeIdx);
         }
         finally {
             System.clearProperty(IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE);
