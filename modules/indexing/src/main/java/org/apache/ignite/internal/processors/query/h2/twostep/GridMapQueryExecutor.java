@@ -458,7 +458,8 @@ public class GridMapQueryExecutor {
                             dataPageScanEnabled
                         );
 
-                        sendNextPage(node, msg);
+                        if(msg != null)
+                            sendNextPage(node, msg);
                     }
                     else {
                         assert !qry.isPartitioned();
@@ -676,7 +677,7 @@ public class GridMapQueryExecutor {
 
                     if (log.isDebugEnabled())
                         U.warn(log, errMsg, err);
-                    else
+                    else if (log.isInfoEnabled())
                         log.info(errMsg);
                 }
                 else
@@ -774,7 +775,8 @@ public class GridMapQueryExecutor {
                         req.pageSize(),
                         dataPageScanEnabled);
 
-                    sendNextPage(node, msg);
+                    if(msg != null)
+                        sendNextPage(node, msg);
                 }
                 finally {
                     try {

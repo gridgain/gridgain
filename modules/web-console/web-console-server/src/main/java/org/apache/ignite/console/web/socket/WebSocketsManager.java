@@ -28,6 +28,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.dto.Announcement;
+import org.apache.ignite.console.messages.WebConsoleMessageSource;
+import org.apache.ignite.console.messages.WebConsoleMessageSourceAccessor;
 import org.apache.ignite.console.websocket.TopologySnapshot;
 import org.apache.ignite.console.websocket.WebSocketEvent;
 import org.apache.ignite.console.websocket.WebSocketResponse;
@@ -80,6 +82,9 @@ public class WebSocketsManager {
 
     /** */
     private volatile Announcement lastAnn;
+
+    /** Messages accessor. */
+    private WebConsoleMessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
 
     /**
      * Default constructor.
@@ -134,6 +139,8 @@ public class WebSocketsManager {
      */
     public void onBrowserConnectionClosed(WebSocketSession ws) {
         browsers.remove(ws);
+
+        requests.values().remove(ws);
     }
 
     /**
@@ -143,7 +150,7 @@ public class WebSocketsManager {
         WebSocketSession ws = requests.remove(evt.getRequestId());
 
         if (ws == null) {
-            log.warn("Failed to send event to browser: " + evt);
+            log.warn("Failed to send response to browser, connection was already closed: " + evt);
 
             return;
         }
@@ -164,7 +171,7 @@ public class WebSocketsManager {
             .filter(e -> e.getValue().isActiveAccount(accId))
             .findFirst()
             .map(Map.Entry::getKey)
-            .orElseThrow(() -> new IllegalStateException("Failed to find agent for account: " + accId));
+            .orElseThrow(() -> new IllegalStateException(messages.getMessageWithArgs("err.agent-not-found-by-acc-id", accId)));
 
         if (log.isDebugEnabled())
             log.debug("Found agent session [accountId=" + accId + ", session=" + wsAgent + ", event=" + evt + "]");
@@ -189,7 +196,7 @@ public class WebSocketsManager {
             .filter(e -> e.getValue().getClusterIds().contains(clusterId))
             .findFirst()
             .map(Map.Entry::getKey)
-            .orElseThrow(() -> new IllegalStateException("Failed to find agent for cluster [accountId=" + accId+", clusterId=" + clusterId + " ]"));
+            .orElseThrow(() -> new IllegalStateException(messages.getMessageWithArgs("err.agent-not-found-by-acc-id-and-cluster-id", accId, clusterId)));
 
         if (log.isDebugEnabled())
             log.debug("Found agent session [accountId=" + accId + ", session=" + wsAgent + ", event=" + evt + "]");
@@ -395,19 +402,21 @@ public class WebSocketsManager {
     /**
      * @param ws Session to ping.
      */
+    @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
     private void ping(WebSocketSession ws) {
-        try {
-            if (ws.isOpen())
-                ws.sendMessage(PING);
-        }
-        catch (Throwable e) {
-            log.error("Failed to send PING request [session=" + ws + "]");
-
+        synchronized (ws) {
             try {
-                ws.close(CloseStatus.SESSION_NOT_RELIABLE);
+                ws.sendMessage(PING);
             }
-            catch (IOException ignored) {
-                // No-op.
+            catch (Throwable e) {
+                log.error("Failed to send PING request [session=" + ws + "]");
+
+                try {
+                    ws.close(CloseStatus.SESSION_NOT_RELIABLE);
+                }
+                catch (IOException ignored) {
+                    // No-op.
+                }
             }
         }
     }
@@ -417,8 +426,17 @@ public class WebSocketsManager {
      * @param evt Event.
      * @throws IOException If failed to send message.
      */
+    @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
     protected void sendMessage(WebSocketSession ws, WebSocketEvent evt) throws IOException {
-        ws.sendMessage(new TextMessage(toJson(evt)));
+        if (!ws.isOpen()) {
+            log.warn("Failed to send event because websocket is already closed [session=" + ws + ", evt=" + evt + "]");
+
+            return;
+        }
+
+        synchronized (ws) {
+            ws.sendMessage(new TextMessage(toJson(evt)));
+        }
     }
 
     /**
