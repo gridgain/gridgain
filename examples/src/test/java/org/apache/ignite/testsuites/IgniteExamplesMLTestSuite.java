@@ -596,5 +596,3 @@ public class IgniteExamplesMLTestSuite {
         }
     }
 }
-
-
