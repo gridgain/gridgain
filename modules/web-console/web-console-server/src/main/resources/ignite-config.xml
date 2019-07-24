@@ -22,7 +22,7 @@
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
                            http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
 
-    <!-- Set up jetty port from the spring config. -->
+    <!-- Set up IGNITE_NO_DISCO_ORDER from the Spring config. -->
     <bean class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
         <property name="targetObject">
             <!-- System.getProperties() -->
@@ -31,11 +31,11 @@
                 <property name="targetMethod" value="getProperties"/>
             </bean>
         </property>
-        
+
         <property name="targetMethod" value="putAll"/>
         <property name="arguments">
             <util:properties>
-                <prop key="IGNITE_JETTY_PORT">60080</prop>
+                <prop key="IGNITE_NO_DISCO_ORDER">true</prop>
             </util:properties>
         </property>
     </bean>
@@ -63,34 +63,13 @@
             </bean>
         </property>
 
-        <property name="connectorConfiguration">
-            <bean class="org.apache.ignite.configuration.ConnectorConfiguration">
-                <property name="port" value="60300"/>
-            </bean>
-        </property>
+        <property name="connectorConfiguration"><null/></property>
 
         <property name="clientConnectorConfiguration"><null/></property>
 
         <property name="communicationSpi">
-            <bean class="org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi">
-                <property name="localPort" value="60200"/>
-                <!-- Sets socket write timeout for TCP connection. -->
-                <property name="socketWriteTimeout" value="10000"/>
-            </bean>
+            <bean class="org.apache.ignite.console.discovery.IsolatedCommunicationSpi"/>
         </property>
-
-        <!-- Allows encryption with SSL and TLS. For more details refer to https://apacheignite.readme.io/docs/ssltls -->
-        <!--
-            <property name="sslContextFactory">
-              <bean class="org.apache.ignite.ssl.SslContextFactory">
-                <property name="keyStoreFilePath" value="keystore/server.jks"/>
-                <property name="keyStorePassword" value="123456"/>
-                <property name="trustStoreFilePath" value="keystore/trust.jks"/>
-                <property name="trustStorePassword" value="123456"/>
-                <property name="setProtocol" value="SSL"/>
-              </bean>
-            </property>
-        -->
 
         <property name="transactionConfiguration">
             <bean class="org.apache.ignite.configuration.TransactionConfiguration">
@@ -124,15 +103,7 @@
         </property>
 
         <property name="discoverySpi">
-            <bean class="org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi">
-                <property name="localPort" value="60100"/>
-
-                <property name="ipFinder">
-                    <bean class="org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder">
-                        <property name="shared" value="true" />
-                    </bean>
-                </property>
-            </bean>
+            <bean class="org.apache.ignite.console.discovery.IsolatedDiscoverySpi"/>
         </property>
     </bean>
 </beans>
