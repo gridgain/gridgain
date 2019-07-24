@@ -63,6 +63,7 @@ import org.apache.ignite.IgniteSemaphore;
 import org.apache.ignite.IgniteServices;
 import org.apache.ignite.IgniteSet;
 import org.apache.ignite.IgniteTransactions;
+import org.apache.ignite.Ignition;
 import org.apache.ignite.MemoryMetrics;
 import org.apache.ignite.PersistenceMetrics;
 import org.apache.ignite.cache.affinity.Affinity;
@@ -246,17 +247,18 @@ public class IgniteExamplesMLTestSuite {
         return classes;
     }
 
+    /** */
     private static Class replaceIgniteStartCall(String clsName) {
         try {
             ClassPool cp = ClassPool.getDefault();
-            CtClass ignClass = cp.get("org.apache.ignite.Ignition");
+            CtClass ignClass = cp.get(Ignition.class.getName());
             CtClass suiteClass = cp.get(IgniteExamplesMLTestSuite.class.getName());
             CtMethod getTestIgniteMethod = suiteClass.getDeclaredMethod("getTestIgnite");
 
             CtMethod startM = null;
             for (CtMethod m : ignClass.getDeclaredMethods("start")) {
                 CtClass[] params = m.getParameterTypes();
-                if (params.length == 1 && params[0].getName().equalsIgnoreCase(String.class.getName())) {
+                if (params.length == 1 && params[0].getName().equals(String.class.getName())) {
                     startM = m;
                     break;
                 }
