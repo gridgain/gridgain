@@ -98,14 +98,17 @@ public class MockConfiguration {
             .thenReturn(Collections.singleton(new GridTestNode(UUID.randomUUID())));
 
         return new IgniteMock("testGrid", null, null, null, null, null, null) {
+            /** {@inheritDoc} */
             @Override public IgniteConfiguration configuration() {
                 return cfg;
             }
 
+            /** {@inheritDoc} */
             @Override public IgniteTransactions transactions() {
                 return txs;
             }
 
+            /** {@inheritDoc} */
             @Override public IgniteCluster cluster() {
                 return cluster;
             }

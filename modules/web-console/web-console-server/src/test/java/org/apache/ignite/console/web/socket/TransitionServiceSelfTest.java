@@ -45,11 +45,11 @@ public class TransitionServiceSelfTest {
     @MockBean
     private BrowsersService browsersSrvc;
 
+    /** Announcement captor. */
     @Captor
     private ArgumentCaptor<WebSocketEvent<Announcement>> annCaptor;
 
-    /**
-     */
+    /** */
     @Test
     public void testSendAnnouncement() {
         Announcement ann = new Announcement(UUID.randomUUID(), "test", true);
