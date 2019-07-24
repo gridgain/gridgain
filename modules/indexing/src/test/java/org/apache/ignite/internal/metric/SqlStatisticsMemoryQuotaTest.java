@@ -28,6 +28,7 @@ import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
+import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.spi.metric.Metric;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -38,7 +39,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 /**
- * Tests for {@link SqlStatisticsHolderMemoryQuotas}.
+ * Tests for {@link SqlStatisticsHolderMemoryQuotas}. In this test we check that memory metrics reports plausible
+ * values. Here we want to verify metrics based on the new framework work well, not {@link H2MemoryTracker}.
  */
 public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
     /**
@@ -52,7 +54,23 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
     public static final long WAIT_OP_TIMEOUT_SEC = 15;
 
     /**
-     * Create cache with a test table.
+     * This callback validates that some memory is reserved.
+     */
+    private static final MemValidator MEMORY_IS_USED = (freeMem, maxMem) -> {
+        if (freeMem == maxMem)
+            fail("Expected some memory reserved.");
+    };
+
+    /**
+     * This callback validates that no "sql" memory is reserved.
+     */
+    private static final MemValidator MEMORY_IS_FREE = (freeMem, maxMem) -> {
+        if (freeMem < maxMem)
+            fail(String.format("Expected no memory reserved: [freeMem=%d, maxMem=%d]", freeMem, maxMem));
+    };
+
+    /**
+     * Start the cache with a test table and test data.
      */
     private IgniteCache createCacheFrom(Ignite node) {
         CacheConfiguration<Integer, String> ccfg = new CacheConfiguration<Integer, String>("TestCache")
@@ -80,6 +98,8 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
     @After
     public void cleanUp() {
         stopAllGrids();
+
+        SuspendQuerySqlFunctions.refresh();
     }
 
     /**
@@ -155,60 +175,70 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
         assertTrue(connCntAfterLocQry >= connCntAfterDistQry + runCnt);
     }
 
-
+    /**
+     * Check that memory metric reports non-zero memery is reserved on both nodes when distributed query is executed and
+     * that memory is released when the query finishes.
+     *
+     * @throws Exception if failed.
+     */
     @Test
-    public void testMemoryIsTrackedWhenQueryIsRunningAndReleasedOnFinish() throws Exception {
+    public void testMemoryIsTrackedWhenDistributedQueryIsRunningAndReleasedOnFinish() throws Exception {
         startGrids(2);
 
         int connNodeIdx = 1;
         int otherNodeIdx = 0;
-
-        MemValidator memoryIsUsed = (freeMem, maxMem) -> {
-            if (freeMem == maxMem)
-                fail("No memory is reserved during the query");
-        };
-
-        MemValidator memoryIsFree = (freeMem, maxMem) -> {
-            if (freeMem < maxMem)
-                fail(String.format("Expected no memory reserved: [freeMem=%d, maxMem=%d]", freeMem, maxMem));
-        };
 
         IgniteCache cache = createCacheFrom(grid(connNodeIdx));
 
         final String scanQry = "SELECT * FROM TAB WHERE ID <> suspendHook(5)";
 
         IgniteInternalFuture distQryIsDone =
-            runAsync0(() -> cache.query(new SqlFieldsQuery(scanQry)).getAll());
+            runAsyncX(() -> cache.query(new SqlFieldsQuery(scanQry)).getAll());
 
         SuspendQuerySqlFunctions.awaitQueryStopsInTheMiddle();
 
-        validateMemoryUsageOn(connNodeIdx, memoryIsUsed);
-        validateMemoryUsageOn(otherNodeIdx, memoryIsUsed);
+        validateMemoryUsageOn(connNodeIdx, MEMORY_IS_USED);
+        validateMemoryUsageOn(otherNodeIdx, MEMORY_IS_USED);
 
         SuspendQuerySqlFunctions.resumeQueryExecution();
 
         distQryIsDone.get(WAIT_OP_TIMEOUT_SEC, TimeUnit.SECONDS);
 
-        validateMemoryUsageOn(connNodeIdx, memoryIsFree);
-        validateMemoryUsageOn(otherNodeIdx, memoryIsFree);
+        validateMemoryUsageOn(connNodeIdx, MEMORY_IS_FREE);
+        validateMemoryUsageOn(otherNodeIdx, MEMORY_IS_FREE);
+    }
 
-        // And for the local query:
-        SuspendQuerySqlFunctions.refresh();
+    /**
+     * Check that memory metric reports non-zero memery is reserved only on one node when local query is executed and
+     * that memory is released when the query finishes. The other node should not reserve the memory at any moment.
+     *
+     * @throws Exception if failed.
+     */
+    @Test
+    public void testMemoryIsTrackedWhenLocalQueryIsRunningAndReleasedOnFinish() throws Exception {
+        startGrids(2);
+
+        int connNodeIdx = 1;
+        int otherNodeIdx = 0;
+
+        IgniteCache cache = createCacheFrom(grid(connNodeIdx));
+
+        final String scanQry = "SELECT * FROM TAB WHERE ID <> suspendHook(5)";
 
         IgniteInternalFuture locQryIsDone =
-            runAsync0(() -> cache.query(new SqlFieldsQuery(scanQry).setLocal(true)).getAll());
+            runAsyncX(() -> cache.query(new SqlFieldsQuery(scanQry).setLocal(true)).getAll());
 
         SuspendQuerySqlFunctions.awaitQueryStopsInTheMiddle();
 
-        validateMemoryUsageOn(connNodeIdx, memoryIsUsed);
-        validateMemoryUsageOn(otherNodeIdx, memoryIsFree);
+        validateMemoryUsageOn(connNodeIdx, MEMORY_IS_USED);
+        validateMemoryUsageOn(otherNodeIdx, MEMORY_IS_FREE);
 
         SuspendQuerySqlFunctions.resumeQueryExecution();
 
         locQryIsDone.get(WAIT_OP_TIMEOUT_SEC, TimeUnit.SECONDS);
 
-        validateMemoryUsageOn(connNodeIdx, memoryIsFree);
-        validateMemoryUsageOn(otherNodeIdx, memoryIsFree);
+        validateMemoryUsageOn(connNodeIdx, MEMORY_IS_FREE);
+        validateMemoryUsageOn(otherNodeIdx, MEMORY_IS_FREE);
     }
 
     /**
@@ -217,13 +247,13 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
      * @param action action to perform on other thread.
      * @return future object.
      */
-    private IgniteInternalFuture runAsync0(Runnable action) {
+    private IgniteInternalFuture runAsyncX(Runnable action) {
         return GridTestUtils.runAsync(() -> {
             try {
                 action.run();
             }
             catch (Throwable th) {
-                log.error("Failed to perform async action.", th);
+                log.error("Failed to perform async action. Probably test is broken.", th);
             }
         });
     }
@@ -235,8 +265,8 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
      * @param validator function(freeMem, maxMem) that validates these values.
      */
     private void validateMemoryUsageOn(int nodeIdx, MemValidator validator) {
-        long free = longMetricValue(0, "freeMem");
-        long maxMem = longMetricValue(0, "maxMem");
+        long free = longMetricValue(nodeIdx, "freeMem");
+        long maxMem = longMetricValue(nodeIdx, "maxMem");
 
         if (free > maxMem)
             fail(String.format("Illegal state: there's more free memory (%s) than " +
@@ -265,7 +295,8 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
     }
 
     /**
-     *
+     * This class exports function to the sql engine. Function implementation allows us to suspend query execution on
+     * test logic condition.
      */
     public static class SuspendQuerySqlFunctions {
         /**
@@ -312,7 +343,7 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
             boolean reached = qryIsInTheMiddle.await(WAIT_OP_TIMEOUT_SEC, TimeUnit.SECONDS);
 
             if (!reached)
-                throw new IllegalStateException("Unable to wait when query starts. Test is broken");
+                throw new IllegalStateException("Unable to wait when query starts. Test is broken.");
         }
 
         /**
@@ -334,8 +365,15 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
             if (qryIsInTheMiddle.getCount() == 0) {
                 boolean reached = resumeQryExec.await(WAIT_OP_TIMEOUT_SEC, TimeUnit.SECONDS);
 
-                if (!reached)
-                    throw new IllegalStateException("Unable to wait when query starts. Test is broken");
+                if (!reached) {
+                    IllegalStateException exc =
+                        new IllegalStateException("Unable to wait when to continue the query. Test is broken.");
+
+                    // In some error cases exceptions from sql functions are ignored. Duplicate it in the log.
+                    log.error("Test error.", exc);
+
+                    throw exc;
+                }
             }
 
             return ret;
@@ -343,9 +381,9 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Functional interface to validate metrics values.
+     * Functional interface to validate memory metrics values.
      */
-    public static interface MemValidator {
+    private static interface MemValidator {
         /**
          *
          * @param free freeMem metric value.
