@@ -633,7 +633,7 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
      *
      * @param tag Tag to set.
      */
-    public void setTag(String tag) {
+    public void setTag(@Nullable String tag) {
         this.tag = tag;
     }
 
