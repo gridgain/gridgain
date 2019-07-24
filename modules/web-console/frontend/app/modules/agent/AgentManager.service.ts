@@ -183,8 +183,6 @@ export default class AgentManager {
         private Version: VersionService,
         private ClusterLoginSrv: ClusterLoginService
     ) {
-        this.clusterVersion = this.Version.webConsole;
-
         let prevCluster;
 
         this.currentCluster$ = this.connectionSbj.pipe(
