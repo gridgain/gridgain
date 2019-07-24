@@ -18,6 +18,7 @@ package org.apache.ignite.examples.computegrid;
 
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
@@ -111,7 +112,7 @@ public class ComputeContinuousMapperExample {
 
             // Since we have sent at least one job, we are allowed to return
             // 'null' from map method.
-            return null;
+            return new HashMap<>();
         }
 
         /** {@inheritDoc} */

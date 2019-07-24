@@ -25,11 +25,14 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
+import javassist.CannotCompileException;
 import javassist.ClassClassPath;
 import javassist.ClassPool;
+import javassist.CodeConverter;
 import javassist.CtClass;
 import javassist.CtMethod;
 import javassist.CtNewMethod;
+import javassist.NotFoundException;
 import javassist.bytecode.AnnotationsAttribute;
 import javassist.bytecode.ClassFile;
 import javassist.bytecode.ConstPool;
@@ -71,16 +74,14 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.examples.ml.util.MLExamplesCommonArgs;
 import org.apache.ignite.internal.IgnitionEx;
+import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.plugin.IgnitePlugin;
 import org.apache.ignite.plugin.PluginNotFoundException;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.runner.Description;
 import org.junit.runner.RunWith;
-import org.junit.runner.Runner;
-import org.junit.runner.notification.RunNotifier;
 import org.junit.runners.Suite;
 import org.junit.runners.model.InitializationError;
 
@@ -105,17 +106,6 @@ public class IgniteExamplesMLTestSuite {
     /** */
     @BeforeClass
     public static void init() {
-        try {
-            // Replace all start methods in Ignition to getting singleton.
-            CtClass ignClazz = ClassPool.getDefault().get("org.apache.ignite.Ignition");
-            CtMethod[] methods = ignClazz.getDeclaredMethods("start");
-            for (CtMethod m : methods)
-                m.setBody("{ return org.apache.ignite.testsuites.IgniteExamplesMLTestSuite.getTestIgnite(); }");
-            ignClazz.toClass();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-
         System.setProperty(IGNITE_OVERRIDE_MCAST_GRP,
             GridTestUtils.getNextMulticastGroup(IgniteExamplesMLTestSuite.class));
     }
@@ -127,9 +117,8 @@ public class IgniteExamplesMLTestSuite {
             ignite.delegate.close();
     }
 
-
     /** */
-    public static Ignite getTestIgnite() {
+    public static Ignite getTestIgnite(String someString) {
         if (ignite == null) {
             try {
                 ignite = new IgniteTestMLProxy(IgnitionEx.start("examples/config/example-ignite-ml.xml"));
@@ -214,9 +203,14 @@ public class IgniteExamplesMLTestSuite {
         while (resources.hasMoreElements())
             dirs.add(new File(resources.nextElement().getFile()));
 
+
         List<Class> classes = new ArrayList<>();
-        for (File directory : dirs)
-            classes.addAll(findClasses(directory, pkgName, clsNamePtrn));
+        for (File directory : dirs) {
+            // Replace Ignition.Start call in Tutorial.
+            List<Class> tutorialClassess = findClassesAndReplaceIgniteStartCall(directory, pkgName, ".*Step_\\d+.*");
+            A.notEmpty(tutorialClassess, "tutorialClassess.size() != 0");
+            classes.addAll(findClassesAndReplaceIgniteStartCall(directory, pkgName, clsNamePtrn));
+        }
 
         return classes;
     }
@@ -230,7 +224,7 @@ public class IgniteExamplesMLTestSuite {
      * @return The classes.
      * @throws ClassNotFoundException If class not found.
      */
-    private static List<Class> findClasses(File dir, String pkgName, String clsNamePtrn) throws ClassNotFoundException {
+    private static List<Class> findClassesAndReplaceIgniteStartCall(File dir, String pkgName, String clsNamePtrn) throws ClassNotFoundException {
         List<Class> classes = new ArrayList<>();
 
         if (!dir.exists())
@@ -240,16 +234,42 @@ public class IgniteExamplesMLTestSuite {
         if (files != null)
             for (File file : files) {
                 if (file.isDirectory())
-                    classes.addAll(findClasses(file, pkgName + "." + file.getName(), clsNamePtrn));
+                    classes.addAll(findClassesAndReplaceIgniteStartCall(file, pkgName + "." + file.getName(), clsNamePtrn));
                 else if (file.getName().endsWith(".class")) {
                     String clsName = pkgName + '.' + file.getName().substring(0, file.getName().length() - 6);
 
                     if (clsName.matches(clsNamePtrn))
-                        classes.add(Class.forName(clsName));
+                        classes.add(replaceIgniteStartCall(clsName));
                 }
             }
 
         return classes;
+    }
+
+    private static Class replaceIgniteStartCall(String clsName) {
+        try {
+            ClassPool cp = ClassPool.getDefault();
+            CtClass ignClass = cp.get("org.apache.ignite.Ignition");
+            CtClass suiteClass = cp.get(IgniteExamplesMLTestSuite.class.getName());
+            CtMethod getTestIgniteMethod = suiteClass.getDeclaredMethod("getTestIgnite");
+
+            CtMethod startM = null;
+            for (CtMethod m : ignClass.getDeclaredMethods("start")) {
+                CtClass[] params = m.getParameterTypes();
+                if (params.length == 1 && params[0].getName().equalsIgnoreCase(String.class.getName())) {
+                    startM = m;
+                    break;
+                }
+            }
+
+            CodeConverter converter = new CodeConverter();
+            converter.redirectMethodCall(startM, getTestIgniteMethod);
+            cp.get(clsName).instrument(converter);
+            return cp.get(clsName).toClass();
+        }
+        catch (NotFoundException | CannotCompileException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /** */
@@ -259,14 +279,6 @@ public class IgniteExamplesMLTestSuite {
         public DynamicSuite(Class<?> cls) throws InitializationError, IOException, ClassNotFoundException {
             super(cls, suite());
         }
-        @Override protected void runChild(Runner runner, RunNotifier notifier) {
-            super.runChild(runner, notifier);
-        }
-
-        @Override public Description getDescription() {
-            return super.getDescription().getChildren().get(0);
-        }
-
     }
 
     /** */
