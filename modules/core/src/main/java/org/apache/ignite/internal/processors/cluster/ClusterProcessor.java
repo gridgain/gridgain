@@ -276,7 +276,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
                             ", previous value was: " +
                             oldVal != null ? oldVal.tag : "null");
 
-                cluster.setTag(newVal != null ? newVal.tag : "null");
+                cluster.setTag(newVal != null ? newVal.tag : null);
 
                 if (compatibilityMode) {
                     // In compatibility mode ID and tag
@@ -295,7 +295,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
         //TODO GG-21718 - implement optimization so only coordinator makes a write to metastorage.
 
-        // Should not write to metastorage before leaving compatibility mode.
+        // Should not write to metastorage before exiting compatibility mode.
         // On coordinator this happens in disco listener, on other nodes in metastorage update listener.
         if (!compatibilityMode) {
             ctx.closure().runLocalSafe(
