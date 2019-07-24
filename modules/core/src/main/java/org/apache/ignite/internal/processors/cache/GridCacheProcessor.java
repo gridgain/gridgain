@@ -3174,6 +3174,12 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                             for (ExchangeActions.CacheActionData action: cachesToStopByGrp.getValue()) {
                                 stopGateway(action.request());
 
+                                // TTL manager has to be unregistered before the checkpointReadLock is acquired.
+                                GridCacheAdapter<?, ?> cache = caches.get(action.request().cacheName());
+
+                                if (cache != null)
+                                    cache.context().ttl().unregister();
+
                                 sharedCtx.database().checkpointReadLock();
 
                                 try {
