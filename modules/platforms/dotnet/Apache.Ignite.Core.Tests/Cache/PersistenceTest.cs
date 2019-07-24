@@ -253,7 +253,7 @@ namespace Apache.Ignite.Core.Tests.Cache
 
                 // Can not set baseline with offline node.
                 ex = Assert.Throws<IgniteException>(() => cluster.SetBaselineTopology(2));
-                Assert.AreEqual("Check arguments. Node not found for consistent ID: node2.", ex.Message);
+                Assert.AreEqual("Check arguments. Node not found for consistent ID: node2", ex.Message);
 
                 cluster.SetBaselineTopology(1);
                 Assert.AreEqual("node1", cluster.GetBaselineTopology().Single().ConsistentId);
@@ -269,7 +269,7 @@ namespace Apache.Ignite.Core.Tests.Cache
 
                 // Can not set baseline with offline node.
                 ex = Assert.Throws<IgniteException>(() => cluster.SetBaselineTopology(cluster.GetTopology(2)));
-                Assert.AreEqual("Check arguments. Node not found for consistent ID: node2.", ex.Message);
+                Assert.AreEqual("Check arguments. Node not found for consistent ID: node2", ex.Message);
             }
 
             // Check auto activation on cluster restart.
