@@ -280,7 +280,7 @@ public class AgentsService extends AbstractSocketHandler {
     }
 
     /**
-     * Send request to loccaly connected agent.
+     * Send request to locally connected agent.
      * @param req Request.
      * @throws IllegalStateException If connected agent not founded.
      */
