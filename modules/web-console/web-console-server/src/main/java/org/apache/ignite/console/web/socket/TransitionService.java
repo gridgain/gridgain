@@ -88,7 +88,7 @@ public class TransitionService {
         this.browsersSrvc = browsersSrvc;
 
         this.txMgr.registerStarter(() -> {
-            backendByAgent = new OneToManyIndex<>(ignite, "wc_backend");
+            backendByAgent = new OneToManyIndex<>(ignite, "wc_backends");
 
             registerListeners();
         });

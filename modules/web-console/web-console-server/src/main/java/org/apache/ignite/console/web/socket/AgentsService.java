@@ -108,7 +108,7 @@ public class AgentsService extends AbstractSocketHandler {
 
         this.txMgr.registerStarter(() -> {
             clusters = new CacheHolder<>(ignite, "wc_clusters");
-            backendByAgent = new OneToManyIndex<>(ignite, "wc_backend");
+            backendByAgent = new OneToManyIndex<>(ignite, "wc_backends");
             clusterIdsByBrowser = new OneToManyIndex<>(ignite, "wc_clusters_idx");
 
             cleanupBackendIndex();
@@ -289,7 +289,8 @@ public class AgentsService extends AbstractSocketHandler {
 
         WebSocketEvent evt = req.getEvent();
 
-        log.debug("Found local agent session [session=" + ses + ", event=" + evt + "]");
+        if (log.isDebugEnabled())
+            log.debug("Found local agent session [session=" + ses + ", event=" + evt + "]");
 
         sendMessage(ses, evt);
 
@@ -331,7 +332,7 @@ public class AgentsService extends AbstractSocketHandler {
                 .map(Cache.Entry::getKey)
                 .collect(toSet());
 
-            if (!clusterIds.isEmpty()) {
+            if (!F.isEmpty(clusterIds)) {
                 clusters.cache().removeAll(clusterIds);
 
                 log.error("Failed to receive topology update for clusters: " + clusterIds);
