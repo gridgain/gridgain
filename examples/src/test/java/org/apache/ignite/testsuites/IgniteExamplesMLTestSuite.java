@@ -90,10 +90,8 @@ public class IgniteExamplesMLTestSuite {
             localIgnite = Ignition.start("examples/config/example-ignite-ml.xml");
             InvocationHandler handler = new InvocationHandler() {
                 @Override public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-                    if (method.getName().equals("close")) {
-                        System.out.println("FUCK");
+                    if (method.getName().equals("close"))
                         return 42;
-                    }
                     else
                         return Ignite.class.getMethod(method.getName(), method.getParameterTypes()).invoke(localIgnite, args);
                 }
