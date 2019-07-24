@@ -500,7 +500,12 @@ public class GridDeploymentManager extends GridManagerAdapter<DeploymentSpi> {
         // Private or Isolated mode.
         meta.record(false);
 
-        GridDeployment dep = locStore.getDeployment(meta);
+        GridDeployment dep = ldrStore.searchDeploymentCache(meta);
+
+        if (dep != null)
+            return dep;
+
+        dep = locStore.getDeployment(meta);
 
         if (sndNodeId.equals(ctx.localNodeId())) {
             if (dep == null)
