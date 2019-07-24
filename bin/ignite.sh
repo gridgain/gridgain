@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -x
 if [ ! -z "${IGNITE_SCRIPT_STRICT_MODE:-}" ]
 then
     set -o nounset
