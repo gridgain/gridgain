@@ -38,6 +38,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE;
+
 /**
  * Tests for {@link SqlStatisticsHolderMemoryQuotas}. In this test we check that memory metrics reports plausible
  * values. Here we want to verify metrics based on the new framework work well, not {@link H2MemoryTracker}.
@@ -98,8 +100,6 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
     @After
     public void cleanUp() {
         stopAllGrids();
-
-        SuspendQuerySqlFunctions.refresh();
     }
 
     /**
@@ -107,8 +107,6 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
      */
     @Before
     public void setup() {
-        stopAllGrids();
-
         SuspendQuerySqlFunctions.refresh();
     }
 
@@ -242,15 +240,46 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Check that if we set different sql mem pool sizes for 2 different nodes, appropriate metric values reflect this
+     * fact.
+     *
+     * @throws Exception if failed.
+     */
+    @Test
+    public void testMaxMemMetricShowCustomMaxMemoryValuesForDifferentNodes() throws Exception {
+        final int oneMaxMem = 512 * 1024;
+        final int otherMaxMem = 1024 * 1024;
+
+        final int oneNodeIdx = 0;
+        final int otherNodeIdx = 1;
+
+        try {
+            System.setProperty(IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE, String.valueOf(oneMaxMem));
+
+            startGrid(oneNodeIdx);
+
+            System.setProperty(IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE, String.valueOf(otherMaxMem));
+
+            startGrid(otherNodeIdx);
+
+            assertEquals(oneMaxMem, longMetricValue(oneNodeIdx, "maxMem"));
+            assertEquals(otherMaxMem, longMetricValue(otherNodeIdx, "maxMem"));
+        }
+        finally {
+            System.clearProperty(IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE);
+        }
+    }
+
+    /**
      * Run async action and log if exception occured.
      *
-     * @param action action to perform on other thread.
-     * @return future object.
+     * @param act action to perform on other thread.
+     * @return future object to "action complited" event.
      */
-    private IgniteInternalFuture runAsyncX(Runnable action) {
+    private IgniteInternalFuture runAsyncX(Runnable act) {
         return GridTestUtils.runAsync(() -> {
             try {
-                action.run();
+                act.run();
             }
             catch (Throwable th) {
                 log.error("Failed to perform async action. Probably test is broken.", th);
