@@ -18,6 +18,7 @@ package org.apache.ignite.events;
 
 import java.util.Collection;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -77,6 +78,8 @@ public class DiscoveryEvent extends EventAdapter {
 
     /** Template to generate {@link #message()} lazily. Will be joined with {@link #eventNode()} converted to string. */
     private volatile String msgTemplate;
+
+    private transient Span span;
 
     /** {@inheritDoc} */
     @Override public String shortDisplay() {
@@ -197,5 +200,13 @@ public class DiscoveryEvent extends EventAdapter {
             "msg", message(),
             "type", name(),
             "tstamp", timestamp());
+    }
+
+    public Span getSpan() {
+        return span;
+    }
+
+    public void setSpan(Span span) {
+        this.span = span;
     }
 }

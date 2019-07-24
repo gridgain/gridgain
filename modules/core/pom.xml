@@ -58,6 +58,7 @@
             org.jsr166.*;version=1.0.0;
             {local-packages}
         </osgi.export.package>
+        <opencensus.version>0.22.0</opencensus.version>
     </properties>
 
     <dependencies>
@@ -71,6 +72,24 @@
             <groupId>org.jetbrains</groupId>
             <artifactId>annotations</artifactId>
             <version>${jetbrains.annotations.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.opencensus</groupId>
+            <artifactId>opencensus-api</artifactId>
+            <version>${opencensus.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.opencensus</groupId>
+            <artifactId>opencensus-impl</artifactId>
+            <version>${opencensus.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.opencensus</groupId>
+            <artifactId>opencensus-exporter-trace-zipkin</artifactId>
+            <version>${opencensus.version}</version>
         </dependency>
 
         <dependency>

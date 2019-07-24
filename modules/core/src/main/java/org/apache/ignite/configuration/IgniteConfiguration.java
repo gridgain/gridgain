@@ -45,6 +45,7 @@ import org.apache.ignite.events.EventType;
 import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
+import org.apache.ignite.internal.processors.tracing.TracingSpi;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteAsyncCallback;
 import org.apache.ignite.lang.IgniteInClosure;
@@ -395,6 +396,9 @@ public class IgniteConfiguration {
     /** Metric exporter SPI. */
     private MetricExporterSpi[] metricExporterSpi;
 
+    /** Tracing SPI. */
+    private TracingSpi tracingSpi;
+
     /** Cache configurations. */
     private CacheConfiguration[] cacheCfg;
 
@@ -575,6 +579,7 @@ public class IgniteConfiguration {
         indexingSpi = cfg.getIndexingSpi();
         encryptionSpi = cfg.getEncryptionSpi();
         metricExporterSpi = cfg.getMetricExporterSpi();
+        tracingSpi = cfg.getTracingSpi();
 
         commFailureRslvr = cfg.getCommunicationFailureResolver();
 
@@ -2306,6 +2311,21 @@ public class IgniteConfiguration {
      */
     public MetricExporterSpi[] getMetricExporterSpi() {
         return metricExporterSpi;
+    }
+
+    /**
+     *
+     * @param tracingSpi
+     * @return
+     */
+    public IgniteConfiguration setTracingSpi(TracingSpi tracingSpi) {
+        this.tracingSpi = tracingSpi;
+
+        return this;
+    }
+
+    public TracingSpi getTracingSpi() {
+        return tracingSpi;
     }
 
     /**
