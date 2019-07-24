@@ -557,7 +557,7 @@ public class CacheJdbcPojoWriteBehindStoreWithCoalescingTest extends GridCommonA
             @Override public void run() {
                 try {
                     while (t2Count.get() > 0) {
-                        for (int i = stepSize; i < 2* stepSize; i++) {
+                        for (int i = stepSize; i < 2 * stepSize; i++) {
                             TestPojo next = new TestPojo("ORIGIN" + i, i, new java.sql.Date(new java.util.Date().getTime()));
 
                             cache.put(i, next);
