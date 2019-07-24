@@ -203,18 +203,16 @@ export default class AgentManager {
             map((cluster) => !!cluster)
         );
 
-        if (!this.isDemoMode()) {
-            this.connectionSbj.subscribe({
-                next: ({cluster}) => {
-                    const version = this.getClusterVersion(cluster);
+        this.connectionSbj.subscribe({
+            next: ({cluster}) => {
+                const version = this.getClusterVersion(cluster);
 
-                    if (_.isEmpty(version))
-                        return;
+                if (_.isEmpty(version))
+                    return;
 
-                    this.clusterVersion = version;
-                }
-            });
-        }
+                this.clusterVersion = version;
+            }
+        });
     }
 
     isDemoMode() {
