@@ -65,7 +65,7 @@ uint64_t GetMicros()
 
     gettimeofday(&now, NULL);
 
-    return (now.tv_sec) * 1000 + now.tv_usec / 1000;
+    return (now.tv_sec) * 1000000 + now.tv_usec;
 }
 
 void Sleep(unsigned ms)
@@ -214,7 +214,7 @@ std::string GetRandomString(size_t size)
 void Initialize(SQLHDBC dbc, unsigned departmentsNum, unsigned employeesNum)
 {
     ExecuteNoFetch(dbc, "drop table if exists EMPLOYEES");
-    ExecuteNoFetch(dbc, "drop table if exists DEPARTMENTS");
+    ExecuteNoFetch(dbc, "drop table if exists DEPARMENTS");
 
     ExecuteNoFetch(dbc, ""
         "create table EMPLOYEES("
@@ -239,13 +239,15 @@ void Initialize(SQLHDBC dbc, unsigned departmentsNum, unsigned employeesNum)
             "DEPARTMENT_ID smallint primary key"
         ")");
 
+    ExecuteNoFetch(dbc, "set streaming on");
+
     for (unsigned i = 0; i < departmentsNum; ++i)
     {
         // This is slow but this is does not matter for us.
         std::stringstream queryCtor;
 
         queryCtor <<
-            "MERGE INTO DEPARTMENTS("
+            "INSERT INTO DEPARTMENTS("
                 "DEPARTMENT_NAME,"
                 "MANAGER_ID,"
                 "LOCATION_ID,"
@@ -268,7 +270,7 @@ void Initialize(SQLHDBC dbc, unsigned departmentsNum, unsigned employeesNum)
         std::stringstream queryCtor;
 
         queryCtor <<
-            "MERGE INTO EMPLOYEES("
+            "INSERT INTO EMPLOYEES("
                 "FIRST_NAME,"
                 "LAST_NAME,"
                 "EMAIL,"
@@ -298,6 +300,8 @@ void Initialize(SQLHDBC dbc, unsigned departmentsNum, unsigned employeesNum)
 
         ExecuteNoFetch(dbc, query);
     }
+
+    ExecuteNoFetch(dbc, "set streaming off");
 }
 
 void Initialize(const std::string& addr, unsigned departmentsNum, unsigned employeesNum)
@@ -682,7 +686,7 @@ public:
         for (size_t i = 0; i < clients.size(); ++i)
             sum += clients[i].GetLastTaskDuration();
 
-        std::cout << "Average latency: " << (sum / clients.size()) << "us" << std::endl;
+        std::cout << "Average latency: " << (sum / clients.size()) << "ms" << std::endl;
     }
 
 private:
@@ -720,8 +724,8 @@ OutType GetEnvVar(const std::string& name, const OutType& dflt)
 int main()
 {
     const unsigned departmentsNum = GetEnvVar<unsigned>("DEPARTMENTS_NUM", 11);
-    const unsigned employeesNum = GetEnvVar<unsigned>("EMPLOYEES_NUM", 1083);
-    const unsigned clientNum = GetEnvVar<unsigned>("CLIENTS_NUM", 100);
+    const unsigned employeesNum = GetEnvVar<unsigned>("EMPLOYEES_NUM", 53396);
+    const unsigned clientNum = GetEnvVar<unsigned>("CLIENTS_NUM", 32);
     const std::string address = GetEnvVar<std::string>("NODES_ADDRESS", "localhost");
 
     std::cout << "DEPARTMENTS_NUM=" << departmentsNum << std::endl;
