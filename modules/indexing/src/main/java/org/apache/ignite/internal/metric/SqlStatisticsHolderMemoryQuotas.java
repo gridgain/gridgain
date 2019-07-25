@@ -53,20 +53,21 @@ public class SqlStatisticsHolderMemoryQuotas {
         this.memMgr = memMgr;
 
         MetricRegistry quotasMetrics = metricMgr.registry(SQL_QUOTAS_REG_NAME);
-
-        // TODO review: is it better to use longAdderMetric?
+        
         quotaRequestedCnt = quotasMetrics.metric("requests",
-            "How many times memory quota have been requested on the node by all the queries in total.");
+            "How many times memory quota have been requested on this node by all the queries in total. " +
+                "Always 0 if sql memory quotas are disabled.");
 
         quotaMaxMem = new LongGauge("maxMem",
-            "How much memory in bytes all the queries are allowed to reserve on this node in total. " +
+            "How much memory in bytes it is possible to reserve by all the queries in total on this node. " +
+                "Negative value if sql memory quotas are disabled. " +
                 "Individual queries have additional per query quotas.",
             this.memMgr::maxMemory
         );
 
         quotaFreeMem = new LongGauge("freeMem",
-            "How much memory in bytes currently available for the queries on this node. " +
-                "Individual queries have additional per query quotas.",
+            "How much memory in bytes currently left available for the queries on this node. " +
+                "Negative value if sql memory quotas are disabled.",
             () -> this.memMgr.maxMemory() - this.memMgr.memoryReserved()
         );
 
