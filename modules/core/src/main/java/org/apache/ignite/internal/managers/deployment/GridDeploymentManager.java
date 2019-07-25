@@ -459,8 +459,8 @@ public class GridDeploymentManager extends GridManagerAdapter<DeploymentSpi> {
 
             GridDeployment dep = verStore.searchDeploymentCache(meta);
 
-                if (dep != null)
-                    return dep;
+            if (dep != null)
+                return dep;
 
             if (reuse) {
                 GridDeployment locDep = locStore.getDeployment(meta);
