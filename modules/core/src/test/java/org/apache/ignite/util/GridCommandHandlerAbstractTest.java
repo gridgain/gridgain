@@ -29,7 +29,10 @@ import java.util.logging.Handler;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteDataStreamer;
+import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.AtomicConfiguration;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -67,6 +70,9 @@ import static org.apache.ignite.internal.processors.cache.verify.VerifyBackupPar
 public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
     /** */
     @ClassRule public static final TestRule classRule = new SystemPropertiesRule();
+
+    /** */
+    protected static final String CLIENT_NODE_NAME_PREFIX = "client";
 
     /** Option is used for auto confirmation. */
     protected static final String CMD_AUTO_CONFIRMATION = "--yes";
@@ -182,7 +188,7 @@ public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
 
         cfg.setConsistentId(igniteInstanceName);
 
-        cfg.setClientMode(igniteInstanceName.startsWith("client"));
+        cfg.setClientMode(igniteInstanceName.startsWith(CLIENT_NODE_NAME_PREFIX));
 
         return cfg;
     }
@@ -292,6 +298,23 @@ public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
 
             if (!txs.isEmpty())
                 fail("Some transaction are not finished");
+        }
+    }
+
+    /**
+     * Creates default cache and preload some data entries.
+     *
+     * @param ignite Ignite.
+     * @param countEntries Count of entries.
+     */
+    protected void createCacheAndPreload(Ignite ignite, int countEntries) {
+        ignite.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME)
+            .setAffinity(new RendezvousAffinityFunction(false, 32))
+            .setBackups(1));
+
+        try (IgniteDataStreamer streamer = ignite.dataStreamer(DEFAULT_CACHE_NAME)) {
+            for (int i = 0; i < countEntries; i++)
+                streamer.addData(i, i);
         }
     }
 }

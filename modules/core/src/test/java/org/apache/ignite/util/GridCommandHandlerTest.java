@@ -20,7 +20,6 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteAtomicSequence;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterNode;
@@ -286,7 +285,6 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         assertEquals("(Coordinator: ConsistentId=" +
             grid(0).cluster().localNode().consistentId() + ", Order=4)", crdStr);
-
     }
 
     /**
@@ -1126,23 +1124,6 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
         injectTestSystemOut();
 
         assertEquals(EXIT_CODE_OK, execute(args));
-    }
-
-    /**
-     * Creates default cache and preload some data entries.
-     *
-     * @param ignite Ignite.
-     * @param countEntries Count of entries.
-     */
-    private void createCacheAndPreload(Ignite ignite, int countEntries) {
-        ignite.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME)
-            .setAffinity(new RendezvousAffinityFunction(false, 32))
-            .setBackups(1));
-
-        try (IgniteDataStreamer streamer = ignite.dataStreamer(DEFAULT_CACHE_NAME)) {
-            for (int i = 0; i < countEntries; i++)
-                streamer.addData(i, i);
-        }
     }
 
     /**

@@ -134,7 +134,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
         sysOut = System.out;
 
         crd = startGrids(SERVER_NODE_CNT);
-        client = startGrid("client");
+        client = startGrid(CLIENT_NODE_NAME_PREFIX);
 
         crd.cluster().active(true);
 
@@ -931,23 +931,6 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
         }
 
         assertContains(log, resReport, "found 2 conflict partitions: [counterConflicts=1, hashConflicts=1]");
-    }
-
-    /**
-     * Creates default cache and preload some data entries.
-     *
-     * @param ignite Ignite.
-     * @param countEntries Count of entries.
-     */
-    private void createCacheAndPreload(Ignite ignite, int countEntries) {
-        ignite.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME)
-            .setAffinity(new RendezvousAffinityFunction(false, 32))
-            .setBackups(1));
-
-        try (IgniteDataStreamer streamer = ignite.dataStreamer(DEFAULT_CACHE_NAME)) {
-            for (int i = 0; i < countEntries; i++)
-                streamer.addData(i, i);
-        }
     }
 
     /**
