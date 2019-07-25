@@ -33,7 +33,6 @@ import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.dto.Announcement;
 import org.apache.ignite.console.json.JsonArray;
 import org.apache.ignite.console.json.JsonObject;
-import org.apache.ignite.console.tx.TransactionManager;
 import org.apache.ignite.console.web.AbstractSocketHandler;
 import org.apache.ignite.console.web.model.VisorTaskDescriptor;
 import org.apache.ignite.console.websocket.WebSocketEvent;
@@ -90,11 +89,10 @@ public class BrowsersService extends AbstractSocketHandler {
 
     /**
      * @param ignite Ignite.
-     * @param txMgr Tx manager.
      * @param agentsHnd Agents handler.
      */
-    public BrowsersService(Ignite ignite, TransactionManager txMgr, AgentsService agentsHnd) {
-        super(ignite, txMgr);
+    public BrowsersService(Ignite ignite, AgentsService agentsHnd) {
+        super(ignite);
 
         this.agentsHnd = agentsHnd;
 
@@ -362,7 +360,7 @@ public class BrowsersService extends AbstractSocketHandler {
     /**
      * @param evt Event.
      */
-    void sendResponseToBrowser(WebSocketResponse evt) {
+    void sendResponseToBrowser(WebSocketRequest evt) {
         WebSocketSession ses = locRequests.remove(evt.getRequestId());
 
         if (ses == null) {

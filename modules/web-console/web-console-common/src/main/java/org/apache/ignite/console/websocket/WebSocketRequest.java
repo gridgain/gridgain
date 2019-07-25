@@ -89,7 +89,7 @@ public class WebSocketRequest implements WebSocketEvent<String> {
     public WebSocketResponse withError(String prefix, Throwable e) {
         Map<String, String> err = new HashMap<>();
 
-        err.put("message", extractErrorMessage(prefix, e));
+        err.put("message", e != null ? extractErrorMessage(prefix, e) : prefix);
 
         return new WebSocketResponse(getRequestId(), ERROR, err);
     }

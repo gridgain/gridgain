@@ -20,12 +20,11 @@ import java.util.Set;
 import java.util.UUID;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.cluster.ClusterGroupEmptyException;
-import org.apache.ignite.console.db.OneToManyIndex;
 import org.apache.ignite.console.dto.Announcement;
 import org.apache.ignite.console.messages.WebConsoleMessageSource;
 import org.apache.ignite.console.messages.WebConsoleMessageSourceAccessor;
-import org.apache.ignite.console.tx.TransactionManager;
 import org.apache.ignite.console.websocket.WebSocketEvent;
+import org.apache.ignite.console.websocket.WebSocketRequest;
 import org.apache.ignite.console.websocket.WebSocketResponse;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.messaging.MessagingListenActor;
@@ -60,46 +59,43 @@ public class TransitionService {
     private WebConsoleMessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
 
     /** */
-    private OneToManyIndex<AgentKey, UUID> backendByAgent;
-
-    /** */
     private Ignite ignite;
 
     /** */
-    private TransactionManager txMgr;
+    private AgentsRepository agentsRepo;
 
     /** */
     private AgentsService agentsSrvc;
-    
+
     /** */
     private BrowsersService browsersSrvc;
 
     /**
      * @param ignite Ignite.
-     * @param txMgr Tx manager.
+     * @param agentsRepo Agents repository.
+     * @param clustersRepo Clusters repository.
      * @param agentsSrvc Agents service.
      * @param browsersSrvc Browsers service.
      */
-    public TransitionService(Ignite ignite, TransactionManager txMgr, AgentsService agentsSrvc, BrowsersService browsersSrvc) {
+    public TransitionService(
+        Ignite ignite,
+        AgentsRepository agentsRepo,
+        ClustersRepository clustersRepo,
+        AgentsService agentsSrvc,
+        BrowsersService browsersSrvc
+    ) {
         this.ignite = ignite;
-        this.txMgr = txMgr;
-        
+        this.agentsRepo = agentsRepo;
         this.agentsSrvc = agentsSrvc;
         this.browsersSrvc = browsersSrvc;
 
-        this.txMgr.registerStarter(() -> {
-            backendByAgent = new OneToManyIndex<>(ignite, "wc_backends");
-
-            registerListeners();
-        });
+        registerListeners();
 
         ignite.events().enableLocal(EVTS_DISCOVERY);
 
         ignite.events().localListen((event) -> {
-            txMgr.doInTransaction(() -> {
-                agentsSrvc.cleanupClusterIndex();
-                agentsSrvc.cleanupBackendIndex();
-            });
+            clustersRepo.cleanupClusterIndex();
+            agentsRepo.cleanupBackendIndex();
 
             return true;
         }, EVTS_DISCOVERY);
@@ -114,7 +110,8 @@ public class TransitionService {
         try {
             ignite.message(ignite.cluster().forNodeId(req.getSrcNid()))
                 .send(SEND_RESPONSE, req.getEvent().withError(prefix, e));
-        } catch (Exception e1) {
+        }
+        catch (Exception e1) {
             log.warn("Failed to send response to browser: " + req.getEvent(), e1);
         }
     }
@@ -123,7 +120,7 @@ public class TransitionService {
      * @param req Request.
      */
     private void resendToRemote(AgentRequest req) {
-        Set<UUID> nids = txMgr.doInTransaction(() -> backendByAgent.get(req.getKey()));
+        Set<UUID> nids = agentsRepo.get(req.getKey());
 
         if (nids.isEmpty())
             responseWithError(req, messages.getMessage("err.agent-not-found"), null);
@@ -134,7 +131,7 @@ public class TransitionService {
             ignite.message(ignite.cluster().forNodeId(targetNid)).send(SEND_TO_AGENT, req);
         }
         catch (ClusterGroupEmptyException ignored) {
-            txMgr.doInTransaction(() -> backendByAgent.remove(req.getKey(), targetNid));
+            agentsRepo.remove(req.getKey(), targetNid);
 
             resendToRemote(req);
         }
@@ -161,8 +158,8 @@ public class TransitionService {
             }
         });
 
-        ignite.message().localListen(SEND_RESPONSE, new MessagingListenActor<WebSocketResponse>() {
-            @Override protected void receive(UUID nodeId, WebSocketResponse evt) {
+        ignite.message().localListen(SEND_RESPONSE, new MessagingListenActor<WebSocketRequest>() {
+            @Override protected void receive(UUID nodeId, WebSocketRequest evt) {
                 browsersSrvc.sendResponseToBrowser(evt);
             }
         });

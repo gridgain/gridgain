@@ -26,14 +26,10 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 import com.fasterxml.jackson.core.type.TypeReference;
-import javax.cache.Cache;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.cluster.ClusterGroupEmptyException;
-import org.apache.ignite.console.db.CacheHolder;
-import org.apache.ignite.console.db.OneToManyIndex;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.repositories.AccountsRepository;
-import org.apache.ignite.console.tx.TransactionManager;
 import org.apache.ignite.console.web.AbstractSocketHandler;
 import org.apache.ignite.console.websocket.AgentHandshakeRequest;
 import org.apache.ignite.console.websocket.AgentHandshakeResponse;
@@ -51,10 +47,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketSession;
 
-import static java.util.concurrent.TimeUnit.MINUTES;
-import static java.util.concurrent.TimeUnit.SECONDS;
-import static java.util.stream.Collectors.toSet;
-import static java.util.stream.StreamSupport.stream;
 import static org.apache.ignite.console.utils.Utils.entriesToMap;
 import static org.apache.ignite.console.utils.Utils.entry;
 import static org.apache.ignite.console.utils.Utils.fromJson;
@@ -71,26 +63,17 @@ import static org.apache.ignite.console.websocket.WebSocketEvents.CLUSTER_TOPOLO
  */
 @Service
 public class AgentsService extends AbstractSocketHandler {
-    /** Default for cluster topology expire. */
-    private static final long DEFAULT_CLUSTER_CLEANUP = MINUTES.toMillis(10);
-
-    /** Default for cluster topology expire. */
-    private static final long DEFAULT_MAX_INACTIVE_INTERVAL = SECONDS.toMillis(30);
-
     /** */
     private static final Logger log = LoggerFactory.getLogger(AgentsService.class);
 
     /** */
     protected AccountsRepository accRepo;
+    
+    /** */
+    private AgentsRepository agentsRepo;
 
     /** */
-    private CacheHolder<String, TopologySnapshot> clusters;
-
-    /** */
-    private OneToManyIndex<UserKey, ClusterSession> clusterIdsByBrowser;
-
-    /** */
-    private OneToManyIndex<AgentKey, UUID> backendByAgent;
+    private ClustersRepository clustersRepo;
 
     /** */
     private final Map<WebSocketSession, AgentSession> locAgents;
@@ -101,19 +84,12 @@ public class AgentsService extends AbstractSocketHandler {
     /**
      * @param accRepo Repository to work with accounts.
      */
-    public AgentsService(Ignite ignite, TransactionManager txMgr, AccountsRepository accRepo) {
-        super(ignite, txMgr);
+    public AgentsService(Ignite ignite, AccountsRepository accRepo, AgentsRepository agentsRepo, ClustersRepository clustersRepo) {
+        super(ignite);
 
         this.accRepo = accRepo;
-
-        this.txMgr.registerStarter(() -> {
-            clusters = new CacheHolder<>(ignite, "wc_clusters");
-            backendByAgent = new OneToManyIndex<>(ignite, "wc_backends");
-            clusterIdsByBrowser = new OneToManyIndex<>(ignite, "wc_clusters_idx");
-
-            cleanupBackendIndex();
-            cleanupClusterIndex();
-        });
+        this.agentsRepo = agentsRepo;
+        this.clustersRepo = clustersRepo;
 
         locAgents = new ConcurrentLinkedHashMap<>();
         srcOfRequests = new ConcurrentHashMap<>();
@@ -187,8 +163,7 @@ public class AgentsService extends AbstractSocketHandler {
     private void processTopologyUpdate(WebSocketSession wsAgent, Collection<TopologySnapshot> tops) {
         AgentSession desc = locAgents.get(wsAgent);
 
-        Set<TopologySnapshot> oldTops =
-            txMgr.doInTransaction(() -> desc.getClusterIds().stream().map(clusters::get).collect(toSet()));
+        Set<TopologySnapshot> oldTops = clustersRepo.get(desc.getClusterIds());
 
         boolean clustersChanged = oldTops.size() != tops.size();
 
@@ -203,15 +178,8 @@ public class AgentsService extends AbstractSocketHandler {
                     .orElse(null);
             }
 
-            if (F.isEmpty(clusterId)) {
-                clusterId = txMgr.doInTransaction(() ->
-                    stream(this.clusters.cache().spliterator(), false)
-                        .filter(e -> e.getValue().sameNodes(newTop))
-                        .map(Cache.Entry::getKey)
-                        .findFirst()
-                        .orElse(null)
-                );
-            }
+            if (F.isEmpty(clusterId))
+                clusterId = clustersRepo.findClusterId(newTop);
 
             newTop.setId(F.isEmpty(clusterId) ? UUID.randomUUID().toString() : clusterId);
 
@@ -306,115 +274,16 @@ public class AgentsService extends AbstractSocketHandler {
     }
 
     /**
-     * Periodically cleanup agents without topology updates.
-     */
-    @Scheduled(initialDelay = 0, fixedRate = 15_000)
-    private void disconnectFreezedAgents() {
-        Set<String> clusterIds = txMgr.doInTransaction(() -> stream(this.clusters.cache().spliterator(), false)
-            .filter(entry -> entry.getValue().isExpired(DEFAULT_MAX_INACTIVE_INTERVAL))
-            .map(Cache.Entry::getKey)
-            .collect(toSet()));
-
-        locAgents.entrySet().stream()
-            .filter(e -> !Collections.disjoint(clusterIds, e.getValue().getClusterIds()))
-            .map(Map.Entry::getKey)
-            .forEach(U::closeQuiet);
-    }
-
-    /**
-     * Periodically cleanup expired cluster topology.
-     */
-    @Scheduled(initialDelay = 0, fixedRate = 60_000)
-    private void cleanupClusterHistory() {
-        txMgr.doInTransaction(() -> {
-            Set<String> clusterIds = stream(this.clusters.cache().spliterator(), false)
-                .filter(entry -> entry.getValue().isExpired(DEFAULT_CLUSTER_CLEANUP))
-                .map(Cache.Entry::getKey)
-                .collect(toSet());
-
-            if (!F.isEmpty(clusterIds)) {
-                clusters.cache().removeAll(clusterIds);
-
-                log.error("Failed to receive topology update for clusters: " + clusterIds);
-            }
-        });
-    }
-
-    /**
-     * Cleanup backend index.
-     */
-    void cleanupBackendIndex() {
-        Collection<UUID> nids = U.nodeIds(ignite.cluster().nodes());
-
-        stream(backendByAgent.cache().spliterator(), false)
-            .peek(entry -> entry.getValue().removeAll(nids))
-            .filter(entry -> entry.getValue().isEmpty())
-            .forEach(entry -> backendByAgent.cache().remove(entry.getKey()));
-    }
-
-    /**
-     * Cleanup cluster index.
-     */
-    void cleanupClusterIndex() {
-        Collection<UUID> nids = U.nodeIds(ignite.cluster().nodes());
-
-        stream(clusterIdsByBrowser.cache().spliterator(), false)
-            .peek(entry -> {
-                Set<ClusterSession> activeClusters =
-                    entry.getValue().stream().filter(cluster -> nids.contains(cluster.getNid())).collect(toSet());
-
-                entry.getValue().removeAll(activeClusters);
-            })
-            .filter(entry -> !entry.getValue().isEmpty())
-            .forEach(entry -> clusterIdsByBrowser.removeAll(entry.getKey(), entry.getValue()));
-    }
-
-    /**
-     * @param accIds Acc ids.
-     * @param clusterIds Cluster ids.
-     */
-    private void tryCleanupIndexes(Set<UUID> accIds, Set<String> clusterIds) {
-        UUID nid = ignite.cluster().localNode().id();
-
-        for (UUID accId : accIds) {
-            this.txMgr.doInTransaction(() -> {
-                AgentKey agentKey = new AgentKey(accId);
-
-                boolean allAgentsLeft = !findLocalAgent(agentKey).isPresent();
-
-                if (allAgentsLeft)
-                    backendByAgent.remove(agentKey, nid);
-
-                for (String clusterId : clusterIds) {
-                    AgentKey clusterKey = new AgentKey(accId, clusterId);
-
-                    if (allAgentsLeft || !findLocalAgent(clusterKey).isPresent())
-                        backendByAgent.remove(clusterKey, nid);
-                }
-            });
-        }
-    }
-
-    /**
      * Send to browser info about agent status.
      */
     WebSocketResponse collectAgentStats(UserKey userKey) {
-        Map<String, Object> res = txMgr.doInTransaction(() -> {
-            boolean hasAgent = !backendByAgent.get(new AgentKey(userKey.getAccId())).isEmpty();
+        Set<TopologySnapshot> clusters = clustersRepo.get(userKey);
 
-            Set<TopologySnapshot> clusters = clusters(userKey);
-
-            boolean hasDemo = !clusters.isEmpty();
-
-            if (!userKey.isDemo())
-                hasDemo = !F.isEmpty(clusterIdsByBrowser.get(new UserKey(userKey.getAccId(), true)));
-
-            return Stream.<Map.Entry<String, Object>>of(
-                entry("clusters", clusters),
-                entry("hasAgent", hasAgent),
-                entry("hasDemo", hasDemo)
-            ).collect(entriesToMap());
-        });
+        Map<String, Object> res = Stream.<Map.Entry<String, Object>>of(
+            entry("clusters", clusters),
+            entry("hasAgent", agentsRepo.hasAgent(userKey.getAccId())),
+            entry("hasDemo", clustersRepo.hasDemo(userKey.getAccId()))
+        ).collect(entriesToMap());
 
         return new WebSocketResponse(AGENT_STATUS, res);
     }
@@ -425,19 +294,31 @@ public class AgentsService extends AbstractSocketHandler {
      * @return Old topology.
      */
     protected TopologySnapshot updateTopology(Set<UUID> accIds, TopologySnapshot newTop) {
-        UUID nid = ignite.cluster().localNode().id();
+        agentsRepo.addCluster(accIds, newTop.getId());
 
-        return txMgr.doInTransaction(() -> {
-            ClusterSession clusterId = new ClusterSession(nid, newTop.getId());
+        return clustersRepo.getAndPut(accIds, newTop);
+    }
 
-            for (UUID accId : accIds) {
-                backendByAgent.add(new AgentKey(accId, newTop.getId()), nid);
+    /**
+     * @param accIds Acc ids.
+     * @param clusterIds Cluster ids.
+     */
+    private void tryCleanupIndexes(Set<UUID> accIds, Set<String> clusterIds) {
+        for (UUID accId : accIds) {
+            AgentKey agentKey = new AgentKey(accId);
 
-                clusterIdsByBrowser.add(new UserKey(accId, newTop.isDemo()), clusterId);
+            boolean allAgentsLeft = !findLocalAgent(agentKey).isPresent();
+
+            if (allAgentsLeft)
+                agentsRepo.remove(agentKey);
+
+            for (String clusterId : clusterIds) {
+                AgentKey clusterKey = new AgentKey(accId, clusterId);
+
+                if (allAgentsLeft || !findLocalAgent(clusterKey).isPresent())
+                    agentsRepo.remove(clusterKey);
             }
-
-            return clusters.getAndPut(newTop.getId(), newTop);
-        });
+        }
     }
 
     /**
@@ -461,18 +342,6 @@ public class AgentsService extends AbstractSocketHandler {
             throw new IllegalArgumentException(messages.getMessageWithArgs("err.failed-auth-with-tokens", tokens));
 
         return accounts;
-    }
-
-    /**
-     * @param user User.
-     */
-    private Set<TopologySnapshot> clusters(UserKey user) {
-        return Optional.ofNullable(clusterIdsByBrowser.get(user))
-            .orElseGet(Collections::emptySet).stream()
-            .map(ClusterSession::getClusterId)
-            .distinct()
-            .map(this.clusters::get)
-            .collect(toSet());
     }
 
     /**
@@ -520,11 +389,7 @@ public class AgentsService extends AbstractSocketHandler {
      * @param accIds Account ids.
      */
     private void updateAgentsCache(WebSocketSession ses, Set<UUID> accIds) {
-        UUID nid = ignite.cluster().localNode().id();
-
-        this.txMgr.doInTransaction(() ->
-            accIds.forEach(accId -> backendByAgent.add(new AgentKey(accId), nid))
-        );
+        agentsRepo.add(accIds);
 
         locAgents.put(ses, new AgentSession(accIds));
     }

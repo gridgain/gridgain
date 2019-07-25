@@ -24,7 +24,6 @@ import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.console.messages.WebConsoleMessageSource;
 import org.apache.ignite.console.messages.WebConsoleMessageSourceAccessor;
-import org.apache.ignite.console.tx.TransactionManager;
 import org.apache.ignite.console.websocket.WebSocketEvent;
 import org.apache.ignite.console.websocket.WebSocketRequest;
 import org.apache.ignite.console.websocket.WebSocketResponse;
@@ -56,16 +55,11 @@ public abstract class AbstractSocketHandler extends TextWebSocketHandler {
     /** */
     protected Ignite ignite;
 
-    /** */
-    protected TransactionManager txMgr;
-
     /**
      * @param ignite Ignite.
-     * @param txMgr Tx manager.
      */
-    protected AbstractSocketHandler(Ignite ignite, TransactionManager txMgr) {
+    protected AbstractSocketHandler(Ignite ignite) {
         this.ignite = ignite;
-        this.txMgr = txMgr;
     }
 
     /**
