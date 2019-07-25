@@ -61,7 +61,7 @@ public class VisorIdleVerifyTaskArg extends VisorDataTransferObject {
      * @param caches Caches.
      * @param excludeCaches Exclude caches or group.
      * @param skipZeros Skip zeros partitions.
-     * @param cacheFilterEnum Cache kind.
+     * @param cacheFilterEnum Cache kind, require non null.
      * @param checkCrc Check CRC sum on stored pages on disk.
      */
     public VisorIdleVerifyTaskArg(
@@ -71,7 +71,7 @@ public class VisorIdleVerifyTaskArg extends VisorDataTransferObject {
         CacheFilterEnum cacheFilterEnum,
         boolean checkCrc
     ) {
-        assert nonNull(cacheFilterEnum);
+        assert nonNull(cacheFilterEnum) : "Cache filter can't be null";
 
         this.caches = caches;
         this.excludeCaches = excludeCaches;
@@ -192,6 +192,8 @@ public class VisorIdleVerifyTaskArg extends VisorDataTransferObject {
 
     /** */
     protected void cacheFilterEnum(CacheFilterEnum cacheFilterEnum) {
+        assert nonNull(cacheFilterEnum);
+
         this.cacheFilterEnum = cacheFilterEnum;
     }
 

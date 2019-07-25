@@ -21,7 +21,7 @@ import org.apache.ignite.internal.processors.cache.distributed.near.GridCachePar
 import org.apache.ignite.internal.processors.cache.distributed.near.GridCachePartitionedNodeRestartTest;
 import org.apache.ignite.internal.processors.cache.distributed.replicated.GridCacheReplicatedMultiNodeFullApiSelfTest;
 import org.apache.ignite.util.GridCommandHandlerClusterByClassTest;
-import org.apache.ignite.util.GridCommandHandlerClusterPerMethodTest;
+import org.apache.ignite.util.GridCommandHandlerTest;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
@@ -36,7 +36,7 @@ import org.junit.runners.Suite;
     IgniteClientReconnectCacheTest.class,
     GridCachePartitionedMultiNodeFullApiSelfTest.class,
     GridCacheReplicatedMultiNodeFullApiSelfTest.class,
-    GridCommandHandlerClusterPerMethodTest.class,
+    GridCommandHandlerTest.class,
     GridCommandHandlerClusterByClassTest.class
 })
 public class ZookeeperDiscoverySpiTestSuite2  {

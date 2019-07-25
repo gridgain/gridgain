@@ -41,10 +41,14 @@ import org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxFinishRequest;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLockResponse;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxFinishRequest;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.dumpprocessors.ToFileDumpProcessor;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry;
+import org.apache.ignite.internal.processors.cache.transactions.TransactionProxyImpl;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.G;
@@ -60,14 +64,11 @@ import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.junits.SystemPropertiesRule;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionRollbackException;
 import org.apache.ignite.transactions.TransactionTimeoutException;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TestRule;
 
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
@@ -113,10 +114,7 @@ import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED
 /**
  * Command line handler test. Cluster creates per method.
  */
-public class GridCommandHandlerClusterPerMethodTest extends GridCommandHandlerAbstractTest {
-    /** */
-    @Rule public final TestRule methodRule = new SystemPropertiesRule();
-
+public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
     /** */
     private File defaultDiagnosticDir;
     /** */
@@ -161,6 +159,7 @@ public class GridCommandHandlerClusterPerMethodTest extends GridCommandHandlerAb
     @Override public String getTestIgniteInstanceName() {
         return "gridCommandHandlerTest";
     }
+
     /**
      * Test activation works via control.sh
      *
@@ -1077,8 +1076,8 @@ public class GridCommandHandlerClusterPerMethodTest extends GridCommandHandlerAb
 
         String outputStr = testOut.toString();
 
-        assertTrue(outputStr, outputStr.contains("idle_verify failed on 1 node."));
-        assertTrue(outputStr, outputStr.contains("idle_verify check has finished, no conflicts have been found."));
+        assertContains(log,outputStr, "idle_verify failed on 1 node.");
+        assertContains(log, outputStr, "idle_verify check has finished, no conflicts have been found.");
     }
 
     /** */
@@ -1596,7 +1595,7 @@ public class GridCommandHandlerClusterPerMethodTest extends GridCommandHandlerAb
      */
     @Test
     public void testRollingUpgrade() throws Exception {
-        Ignite ignite = startGrid(0);
+        startGrid(0);
 
         CommandHandler hnd = new CommandHandler();
 
@@ -1627,7 +1626,7 @@ public class GridCommandHandlerClusterPerMethodTest extends GridCommandHandlerAb
      */
     @Test
     public void testRollingUpgradeStatus() throws Exception {
-        Ignite ignite = startGrid(0);
+        startGrid(0);
 
         injectTestSystemOut();
 
@@ -1636,5 +1635,75 @@ public class GridCommandHandlerClusterPerMethodTest extends GridCommandHandlerAb
         String out = testOut.toString();
 
         assertContains(log, out, "Rolling upgrade is disabled");
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void testKillHangingLocalTransactions() throws Exception {
+        Ignite ignite = startGridsMultiThreaded(2);
+
+        ignite.cluster().active(true);
+
+        Ignite client = startGrid("client");
+
+        client.getOrCreateCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME).
+            setAtomicityMode(TRANSACTIONAL).
+            setWriteSynchronizationMode(FULL_SYNC).
+            setAffinity(new RendezvousAffinityFunction(false, 64)));
+
+        Ignite prim = primaryNode(0L, DEFAULT_CACHE_NAME);
+
+        // Blocks lock response to near node.
+        TestRecordingCommunicationSpi.spi(prim).blockMessages(GridNearLockResponse.class, client.name());
+
+        TestRecordingCommunicationSpi.spi(client).blockMessages(GridNearTxFinishRequest.class, prim.name());
+
+        GridNearTxLocal clientTx = null;
+
+        try (Transaction tx = client.transactions().txStart(PESSIMISTIC, READ_COMMITTED, 2000, 1)) {
+            clientTx = ((TransactionProxyImpl)tx).tx();
+
+            client.cache(DEFAULT_CACHE_NAME).put(0L, 0L);
+
+            fail();
+        }
+        catch (Exception e) {
+            assertTrue(X.hasCause(e, TransactionTimeoutException.class));
+        }
+
+        assertNotNull(clientTx);
+
+        IgniteEx primEx = (IgniteEx)prim;
+
+        IgniteInternalTx tx0 = primEx.context().cache().context().tm().activeTransactions().iterator().next();
+
+        assertNotNull(tx0);
+
+        CommandHandler h = new CommandHandler();
+
+        validate(h, map -> {
+            ClusterNode node = grid(0).cluster().localNode();
+
+            VisorTxTaskResult res = map.get(node);
+
+            for (VisorTxInfo info : res.getInfos())
+                assertEquals(tx0.xid(), info.getXid());
+
+            assertEquals(1, map.size());
+        }, "--tx", "--xid", tx0.xid().toString(), "--kill");
+
+        tx0.finishFuture().get();
+
+        TestRecordingCommunicationSpi.spi(prim).stopBlock();
+
+        TestRecordingCommunicationSpi.spi(client).stopBlock();
+
+        IgniteInternalFuture<?> nearFinFut = U.field(clientTx, "finishFut");
+
+        nearFinFut.get();
+
+        checkUserFutures();
     }
 }

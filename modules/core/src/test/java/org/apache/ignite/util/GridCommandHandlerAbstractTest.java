@@ -46,7 +46,11 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.SystemPropertiesRule;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.ClassRule;
+import org.junit.rules.TestRule;
 
 import static java.nio.file.Files.delete;
 import static java.nio.file.Files.newDirectoryStream;
@@ -58,7 +62,12 @@ import static org.apache.ignite.internal.processors.cache.verify.VerifyBackupPar
 /**
  *
  */
+@WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_ENABLED, value = "false")
+@WithSystemProperty(key = IGNITE_ENABLE_EXPERIMENTAL_COMMAND, value = "true")
 public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
+    /** */
+    @ClassRule public static final TestRule classRule = new SystemPropertiesRule();
+
     /** Option is used for auto confirmation. */
     protected static final String CMD_AUTO_CONFIRMATION = "--yes";
 
@@ -85,21 +94,10 @@ public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
         super.afterTestsStopped();
 
         GridTestUtils.cleanIdleVerifyLogFiles();
-
-        System.clearProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED);
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void beforeTestsStarted() throws Exception {
-        System.setProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED, "false");
-
-        super.beforeTestsStarted();
     }
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
-        System.setProperty(IGNITE_ENABLE_EXPERIMENTAL_COMMAND, "true");
-
         cleanPersistenceDir();
 
         stopAllGrids();
@@ -139,8 +137,6 @@ public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
             for (Path path : files)
                 delete(path);
         }
-
-        System.clearProperty(IGNITE_ENABLE_EXPERIMENTAL_COMMAND);
     }
 
     /**
@@ -189,6 +185,16 @@ public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
         cfg.setClientMode(igniteInstanceName.startsWith("client"));
 
         return cfg;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void cleanPersistenceDir() throws Exception {
+        super.cleanPersistenceDir();
+
+        try (DirectoryStream<Path> files = newDirectoryStream(Paths.get(U.defaultWorkDirectory()), this::idleVerifyRes)) {
+            for (Path path : files)
+                delete(path);
+        }
     }
 
     /**

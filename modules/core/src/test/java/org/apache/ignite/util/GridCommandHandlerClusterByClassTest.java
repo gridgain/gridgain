@@ -1,21 +1,4 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
@@ -42,10 +25,8 @@ import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.AtomicConfiguration;
 import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
-import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.commandline.CommandHandler;
 import org.apache.ignite.internal.commandline.CommandList;
 import org.apache.ignite.internal.commandline.argument.CommandArg;
@@ -56,39 +37,28 @@ import org.apache.ignite.internal.processors.cache.CacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
-import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLockResponse;
-import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxFinishRequest;
-import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
-import org.apache.ignite.internal.processors.cache.transactions.TransactionProxyImpl;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.datastructures.GridCacheInternalKeyImpl;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.internal.visor.tx.VisorTxInfo;
 import org.apache.ignite.internal.visor.tx.VisorTxTaskResult;
 import org.apache.ignite.lang.IgniteInClosure;
-import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.junits.SystemPropertiesRule;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionRollbackException;
 import org.apache.ignite.transactions.TransactionState;
-import org.apache.ignite.transactions.TransactionTimeoutException;
 import org.jetbrains.annotations.NotNull;
-import org.junit.ClassRule;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TestRule;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.DirectoryStream;
+import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -106,15 +76,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 
 import static java.io.File.separatorChar;
-import static java.nio.file.Files.delete;
-import static java.nio.file.Files.newDirectoryStream;
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_ENABLED;
+import static java.util.stream.Stream.of;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXPERIMENTAL_COMMAND;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
@@ -136,25 +103,23 @@ import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED
 /**
  * Command line handler test. Cluster creates only one time.
  */
-@WithSystemProperty(key = IGNITE_ENABLE_EXPERIMENTAL_COMMAND, value = "true")
-@WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_ENABLED, value = "false")
 public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbstractTest {
+    /** */
+    private static File defaultDiagnosticDir;
+    /** */
+    private static File customDiagnosticDir;
+
+    /** System out. */
+    protected static PrintStream sysOut;
+
+    /**
+     * Test out - can be injected via {@link #injectTestSystemOut()} instead of System.out and analyzed in test.
+     * Will be as well passed as a handler output for an anonymous logger in the test.
+     */
+    protected static ByteArrayOutputStream testOut;
 
     /** */
-    @ClassRule public static final TestRule classRule = new SystemPropertiesRule();
-
-    /** */
-    @Rule public final TestRule methodRule = new SystemPropertiesRule();
-
-    /** */
-    private File defaultDiagnosticDir;
-    /** */
-    private File customDiagnosticDir;
-
-    /** */
-    private static final int serverNodeCnt = 2;
-    /** */
-    private static final int clientNodeCnt = 1;
+    private static final int SERVER_NODE_CNT = 2;
 
     /** */
     protected static IgniteEx crd;
@@ -163,60 +128,55 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
-        crd = startGrids(serverNodeCnt);
+        super.beforeTestsStarted();
+
+        testOut = new ByteArrayOutputStream(16 * 1024);
+        sysOut = System.out;
+
+        crd = startGrids(SERVER_NODE_CNT);
         client = startGrid("client");
 
         crd.cluster().active(true);
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTestsStopped() throws Exception {
-        GridTestUtils.cleanIdleVerifyLogFiles();
-
-        try (DirectoryStream<Path> files = newDirectoryStream(Paths.get(U.defaultWorkDirectory()), this::idleVerifyRes)) {
-            for (Path path : files)
-                delete(path);
-        }
-
-        stopAllGrids();
-
-        cleanPersistenceDir();
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void beforeTest() throws Exception {
-        sysOut = System.out;
-
-        testOut = new ByteArrayOutputStream(16 * 1024);
-
-        checkpointFreq = DataStorageConfiguration.DFLT_CHECKPOINT_FREQ;
 
         initDiagnosticDir();
         cleanDiagnosticDir();
     }
 
     /** {@inheritDoc} */
+    @Override protected void afterTestsStopped() throws Exception {
+        super.afterTestsStopped();
+
+        stopAllGrids();
+
+        cleanPersistenceDir();
+        cleanDiagnosticDir();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        //no-op because super.beforeTest() stop all grids
+    }
+
+    /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
+        //super.beforeTest(); because stop all grids
         log.info("Test output for " + currentTestMethod());
         log.info("----------------------------------------");
 
         System.setOut(sysOut);
 
-        if (testOut != null)
-            System.out.println(testOut.toString());
+        log.info(testOut.toString());
 
-        testOut = null;
+        testOut.reset();
 
-        G.allGrids().stream().forEach(grid -> {
-            Set<String> cfgCacheNames = Stream.of(grid.configuration().getCacheConfiguration())
-                .map(CacheConfiguration::getName)
-                .collect(toSet());
+        Set<String> cfgCacheNames = of(crd.configuration().getCacheConfiguration())
+            .map(CacheConfiguration::getName)
+            .collect(toSet());
 
-            Set<String> rmvCacheNames = new HashSet<>(grid.cacheNames());
-            rmvCacheNames.removeAll(cfgCacheNames);
+        Set<String> rmvCacheNames = new HashSet<>(crd.cacheNames());
+        rmvCacheNames.removeAll(cfgCacheNames);
 
-            grid.destroyCaches(rmvCacheNames);
-        });
+        crd.destroyCaches(rmvCacheNames);
     }
 
     /**
@@ -241,6 +201,11 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
     /** {@inheritDoc} */
     @Override public String getTestIgniteInstanceName() {
         return "gridCommandHandlerTest";
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void injectTestSystemOut() {
+        System.setOut(new PrintStream(testOut));
     }
 
     /**
@@ -286,8 +251,6 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
     public void testBaselineAutoAdjustmentSettings() throws Exception {
         Ignite ignite = crd;
 
-        ignite.cluster().active(true);
-
         IgniteCluster cl = ignite.cluster();
 
         assertFalse(cl.isBaselineAutoAdjustEnabled());
@@ -319,11 +282,6 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
         assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "auto_adjust", "enable", "x"));
 
         assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "auto_adjust", "disable", "x"));
-
-        log.info("================================================");
-        System.out.println(testOut.toString());
-
-        log.info("================================================");
     }
 
     /**
@@ -334,8 +292,6 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
     @Test
     public void shouldReturnErrorCodeForManualSetInBaselineAutoAdjustmentEnable() throws Exception {
         Ignite ignite = crd;
-
-        ignite.cluster().active(true);
 
         IgniteCluster cl = ignite.cluster();
 
@@ -359,12 +315,8 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
      */
     @Test
     public void testTransactionInfo() throws Exception {
-        Ignite ignite = crd;
-
-        ignite.cluster().active(true);
-
         client.getOrCreateCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME)
-            .setAtomicityMode(TRANSACTIONAL).setBackups(2).setWriteSynchronizationMode(FULL_SYNC));
+            .setAtomicityMode(TRANSACTIONAL).setBackups(1).setWriteSynchronizationMode(FULL_SYNC));
 
         for (Ignite ig : G.allGrids())
             assertNotNull(ig.cache(DEFAULT_CACHE_NAME));
@@ -381,7 +333,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
 
             Set<GridCacheVersion> nearXids = new HashSet<>();
 
-            for (int i = 0; i < serverNodeCnt; i++) {
+            for (int i = 0; i < SERVER_NODE_CNT; i++) {
                 IgniteEx grid = grid(i);
 
                 IgniteTxManager tm = grid.context().cache().context().tm();
@@ -412,10 +364,6 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
      */
     @Test
     public void testTransactionHistoryInfo() throws Exception {
-        Ignite ignite = crd;
-
-        ignite.cluster().active(true);
-
         client.getOrCreateCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME)
             .setAtomicityMode(TRANSACTIONAL).setBackups(2).setWriteSynchronizationMode(FULL_SYNC));
 
@@ -433,7 +381,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
 
         Set<GridCacheVersion> nearXids = new HashSet<>();
 
-        for (int i = 0; i < serverNodeCnt; i++) {
+        for (int i = 0; i < SERVER_NODE_CNT; i++) {
             IgniteEx grid = grid(i);
 
             IgniteTxManager tm = grid.context().cache().context().tm();
@@ -480,76 +428,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
         assertTrue(rollbackMatched);
     }
 
-    /**
-     *
-     */
-    @Test
-    public void testKillHangingLocalTransactions() throws Exception {
-        Ignite ignite = crd;
-
-        ignite.cluster().active(true);
-
-        client.getOrCreateCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME).
-            setAtomicityMode(TRANSACTIONAL).
-            setWriteSynchronizationMode(FULL_SYNC).
-            setAffinity(new RendezvousAffinityFunction(false, 64)));
-
-        Ignite prim = primaryNode(0L, DEFAULT_CACHE_NAME);
-
-        // Blocks lock response to near node.
-        TestRecordingCommunicationSpi.spi(prim).blockMessages(GridNearLockResponse.class, client.name());
-
-        TestRecordingCommunicationSpi.spi(client).blockMessages(GridNearTxFinishRequest.class, prim.name());
-
-        GridNearTxLocal clientTx = null;
-
-        try (Transaction tx = client.transactions().txStart(PESSIMISTIC, READ_COMMITTED, 2000, 1)) {
-            clientTx = ((TransactionProxyImpl)tx).tx();
-
-            client.cache(DEFAULT_CACHE_NAME).put(0L, 0L);
-
-            fail();
-        }
-        catch (Exception e) {
-            assertTrue(X.hasCause(e, TransactionTimeoutException.class));
-        }
-
-        assertNotNull(clientTx);
-
-        IgniteEx primEx = (IgniteEx)prim;
-
-        IgniteInternalTx tx0 = primEx.context().cache().context().tm().activeTransactions().iterator().next();
-
-        assertNotNull(tx0);
-
-        CommandHandler h = new CommandHandler();
-
-        validate(h, map -> {
-            ClusterNode node = grid(0).cluster().localNode();
-
-            VisorTxTaskResult res = map.get(node);
-
-            for (VisorTxInfo info : res.getInfos())
-                assertEquals(tx0.xid(), info.getXid());
-
-            assertEquals(1, map.size());
-        }, "--tx", "--xid", tx0.xid().toString(), "--kill");
-
-        tx0.finishFuture().get();
-
-        TestRecordingCommunicationSpi.spi(prim).stopBlock();
-
-        TestRecordingCommunicationSpi.spi(client).stopBlock();
-
-        IgniteInternalFuture<?> nearFinFut = U.field(clientTx, "finishFut");
-
-        nearFinFut.get();
-
-        checkUserFutures();
-    }
-
-    /**
-     */
+    /** */
     @Test
     public void testCacheHelp() {
         injectTestSystemOut();
@@ -577,8 +456,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
         }
     }
 
-    /**
-     */
+    /** */
     @Test
     public void testCorrectCacheOptionsNaming() {
         Pattern p = Pattern.compile("^--([a-z]+(-)?)+([a-z]+)");
@@ -592,8 +470,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
         }
     }
 
-    /**
-     */
+    /** */
     @Test
     public void testHelp() {
         injectTestSystemOut();
@@ -630,8 +507,6 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
     public void testCacheIdleVerify() throws Exception {
         IgniteEx ignite = crd;
 
-        ignite.cluster().active(true);
-
         createCacheAndPreload(ignite, 100);
 
         injectTestSystemOut();
@@ -655,8 +530,6 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
     @Test
     public void testCacheIdleVerifyNodeFilter() throws Exception {
         IgniteEx ignite = crd;
-
-        ignite.cluster().active(true);
 
         Object lastNodeCId = ignite.localNode().consistentId();
 
@@ -686,8 +559,6 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
     public void testCacheIdleVerifyTwoConflictTypes() throws Exception {
         IgniteEx ignite = crd;
 
-        ignite.cluster().active(true);
-
         createCacheAndPreload(ignite, 100);
 
         injectTestSystemOut();
@@ -715,8 +586,6 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
     @Test
     public void testCacheIdleVerifyDumpSkipZerosUpdateCounters() throws Exception {
         IgniteEx ignite = crd;
-
-        ignite.cluster().active(true);
 
         int emptyPartId = 31;
 
@@ -772,8 +641,6 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
     @Test
     public void testCacheIdleVerifyDump() throws Exception {
         IgniteEx ignite = crd;
-
-        ignite.cluster().active(true);
 
         int keysCount = 20;//less than parts number for ability to check skipZeros flag.
 
@@ -831,8 +698,6 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
     public void testCacheIdleVerifyMultipleCacheFilterOptions()
             throws Exception {
         IgniteEx ignite = crd;
-
-        ignite.cluster().active(true);
 
         ignite.createCache(new CacheConfiguration<>()
                 .setAffinity(new RendezvousAffinityFunction(false, 32))
@@ -1007,8 +872,6 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
     public void testCacheIdleVerifyDumpForCorruptedData() throws Exception {
         IgniteEx ignite = crd;
 
-        ignite.cluster().active(true);
-
         createCacheAndPreload(ignite, 100);
 
         injectTestSystemOut();
@@ -1024,8 +887,6 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
     @Test
     public void testCacheIdleVerifyForCorruptedData() throws Exception {
         IgniteEx ignite = crd;
-
-        ignite.cluster().active(true);
 
         createCacheAndPreload(ignite, 100);
 
@@ -1104,8 +965,6 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
 
         IgniteEx ignite = crd;
 
-        ignite.cluster().active(true);
-
         if (!isSystemOutAlreadyInjected())
             injectTestSystemOut();
 
@@ -1162,8 +1021,6 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
     public void testCacheIdleVerifyDumpForCorruptedDataOnPersistenceClientCache() throws Exception {
         IgniteEx ignite = crd;
 
-        ignite.cluster().active(true);
-
         createCacheAndPreload(ignite, 100);
 
         corruptingAndCheckDefaultCache(ignite, "PERSISTENT", true);
@@ -1177,8 +1034,6 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
     @Test
     public void testCacheIdleVerifyDumpExcludedCacheGrp() throws Exception {
         IgniteEx ignite = crd;
-
-        ignite.cluster().active(true);
 
         int parts = 32;
 
@@ -1217,8 +1072,6 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
     @Test
     public void testCacheIdleVerifyDumpExcludedCaches() throws Exception {
         IgniteEx ignite = crd;
-
-        ignite.cluster().active(true);
 
         int parts = 32;
 
@@ -1266,9 +1119,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
         return fileNamePattern.matcher(testOut.toString());
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testCacheContention() throws Exception {
         int cnt = 10;
@@ -1277,8 +1128,6 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
 
         try {
             Ignite ignite = crd;
-
-            ignite.cluster().active(true);
 
             final IgniteCache<Object, Object> cache = ignite.createCache(new CacheConfiguration<>()
                 .setAffinity(new RendezvousAffinityFunction(false, 32))
@@ -1342,14 +1191,10 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
         }
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testCacheGroups() throws Exception {
         Ignite ignite = crd;
-
-        ignite.cluster().active(true);
 
         IgniteCache<Object, Object> cache = ignite.createCache(new CacheConfiguration<>()
             .setAffinity(new RendezvousAffinityFunction(false, 32))
@@ -1367,14 +1212,10 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
         assertContains(log, testOut.toString(), "G100");
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testCacheAffinity() throws Exception {
         Ignite ignite = crd;
-
-        ignite.cluster().active(true);
 
         IgniteCache<Object, Object> cache1 = ignite.createCache(new CacheConfiguration<>()
             .setAffinity(new RendezvousAffinityFunction(false, 32))
@@ -1454,8 +1295,6 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
 
         Ignite ignite = crd;
 
-        ignite.cluster().active(true);
-
         List<CacheConfiguration> ccfgs = new ArrayList<>(cachesCnt);
 
         for (int i = 0; i < cachesCnt; i++) {
@@ -1505,14 +1344,10 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
             fail("Unknown output format: " + outputFormat);
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testCacheDistribution() throws Exception {
         Ignite ignite = crd;
-
-        ignite.cluster().active(true);
 
         createCacheAndPreload(ignite, 100);
 
@@ -1551,14 +1386,10 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
         assertEquals(3, userArrtCommaNum - commaNum);
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testCacheResetLostPartitions() throws Exception {
         Ignite ignite = crd;
-
-        ignite.cluster().active(true);
 
         createCacheAndPreload(ignite, 100);
 
@@ -1607,8 +1438,6 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
     public void testUnusedWalPrint() throws Exception {
         Ignite ignite = crd;
 
-        ignite.cluster().active(true);
-
         List<String> nodes = new ArrayList<>(2);
 
         for (ClusterNode node : ignite.cluster().forServers().nodes())
@@ -1645,8 +1474,6 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
     public void testUnusedWalDelete() throws Exception {
         Ignite ignite = crd;
 
-        ignite.cluster().active(true);
-
         List<String> nodes = new ArrayList<>(2);
 
         for (ClusterNode node : ignite.cluster().forServers().nodes())
@@ -1672,22 +1499,6 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
         assertNotContains(log, out, nodes.get(1));
 
         assertNotContains(log, out, "error");
-    }
-
-    /**
-     * Tests execution of '--rolling-upgrade state' command.
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testRollingUpgradeStatus() throws Exception {
-        injectTestSystemOut();
-
-        assertEquals(EXIT_CODE_OK, execute("--rolling-upgrade", "status"));
-
-        String out = testOut.toString();
-
-        assertContains(log, out, "Rolling upgrade is disabled");
     }
 
     /**
@@ -1856,7 +1667,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
         String warning = String.format("For use experimental command add %s=true to JVM_OPTS in %s",
             IGNITE_ENABLE_EXPERIMENTAL_COMMAND, UTILITY_NAME);
 
-        Stream.of("print", "delete")
+        of("print", "delete")
             .peek(c -> testOut.reset())
             .peek(c -> assertEquals(EXIT_CODE_OK, execute(WAL.text(), c)))
             .forEach(c -> assertContains(log, testOut.toString(), warning));
