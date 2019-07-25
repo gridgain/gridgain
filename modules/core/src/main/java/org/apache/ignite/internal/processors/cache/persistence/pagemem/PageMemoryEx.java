@@ -20,13 +20,13 @@ import java.nio.ByteBuffer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.metric.IoStatisticsHolder;
 import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.PageMemory;
+import org.apache.ignite.internal.processors.cache.persistence.CheckpointPageWriteContext;
 import org.apache.ignite.internal.processors.cache.persistence.StorageException;
-import org.apache.ignite.internal.metric.IoStatisticsHolder;
 import org.apache.ignite.internal.util.GridMultiCollectionWrapper;
 import org.apache.ignite.lang.IgniteBiTuple;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Page memory with some persistence related additions.
@@ -140,11 +140,10 @@ public interface PageMemoryEx extends PageMemory {
      * @param pageId Page ID to get byte buffer for. The page ID must be present in the collection returned by
      *      the {@link #beginCheckpoint()} method call.
      * @param outBuf Temporary buffer to write changes into.
-     * @param tracker Checkpoint metrics tracker.
-     * @return {@code Partition generation} if data was read, {@code null} otherwise (data already saved to storage).
-     * @throws IgniteException If failed to obtain page data.
+     * @param pwCtx Checkpoint page write context.
+     * @throws IgniteCheckedException If failed to obtain page data.
      */
-    @Nullable public Integer getForCheckpoint(FullPageId pageId, ByteBuffer outBuf, CheckpointMetricsTracker tracker);
+     public void checkpointWritePage(FullPageId pageId, ByteBuffer outBuf, CheckpointPageWriteContext pwCtx) throws IgniteCheckedException;
 
     /**
      * Marks partition as invalid / outdated.

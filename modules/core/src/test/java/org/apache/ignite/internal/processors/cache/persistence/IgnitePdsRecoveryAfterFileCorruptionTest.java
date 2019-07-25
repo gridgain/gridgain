@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Collection;
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -327,36 +328,41 @@ public class IgnitePdsRecoveryAfterFileCorruptionTest extends GridCommonAbstract
 
             long cp = 0;
 
-            long write = 0;
+            AtomicLong write = new AtomicLong();
 
-            for (FullPageId fullId : pages) {
-                if (pageIds.contains(fullId)) {
-                    long cpStart = System.nanoTime();
+            CheckpointPageWriteContext pageWriteCtx = new CheckpointPageWriteContextAdapter() {
+                @Override public void writePage(
+                    FullPageId fullPageId,
+                    ByteBuffer buf,
+                    Integer tag
+                ) throws IgniteCheckedException {
+                    int groupId = fullPageId.groupId();
+                    long pageId = fullPageId.pageId();
 
-                    Integer tag = mem.getForCheckpoint(fullId, tmpBuf, null);
-
-                    if (tag == null)
-                        continue;
-
-                    long cpEnd = System.nanoTime();
-
-                    cp += cpEnd - cpStart;
-                    tmpBuf.rewind();
-
-                    for (int j = PageIO.COMMON_HEADER_END; j < mem.realPageSize(fullId.groupId()); j += 4)
-                        assertEquals(j + (int)fullId.pageId(), tmpBuf.getInt(j));
+                    for (int j = PageIO.COMMON_HEADER_END; j < mem.realPageSize(groupId); j += 4)
+                        assertEquals(j + (int)pageId, tmpBuf.getInt(j));
 
                     tmpBuf.rewind();
 
                     long writeStart = System.nanoTime();
 
-                    storeMgr.write(cacheId, fullId.pageId(), tmpBuf, tag);
+                    storeMgr.write(cacheId, pageId, tmpBuf, tag);
 
                     long writeEnd = System.nanoTime();
 
-                    write += writeEnd - writeStart;
+                    write.getAndAdd(writeEnd - writeStart);
+                }
+            };
 
-                    tmpBuf.rewind();
+            for (FullPageId fullId : pages) {
+                if (pageIds.contains(fullId)) {
+                    long cpStart = System.nanoTime();
+
+                    mem.checkpointWritePage(fullId, tmpBuf, pageWriteCtx);
+
+                    long cpEnd = System.nanoTime();
+
+                    cp += cpEnd - cpStart;
                 }
             }
 
@@ -367,7 +373,7 @@ public class IgnitePdsRecoveryAfterFileCorruptionTest extends GridCommonAbstract
             long end = System.currentTimeMillis();
 
             info("Written pages in " + (end - begin) + "ms, copy took " + (cp / 1_000_000) + "ms, " +
-                "write took " + (write / 1_000_000) + "ms, sync took " + (end - syncStart) + "ms");
+                "write took " + (write.get() / 1_000_000) + "ms, sync took " + (end - syncStart) + "ms");
         }
         finally {
             info("Finishing checkpoint...");
