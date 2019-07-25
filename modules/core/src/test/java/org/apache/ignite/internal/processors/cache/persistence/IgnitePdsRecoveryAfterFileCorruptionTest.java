@@ -320,45 +320,39 @@ public class IgnitePdsRecoveryAfterFileCorruptionTest extends GridCommonAbstract
         info("Acquired pages for checkpoint: " + pageIds.size());
 
         try {
-            ByteBuffer tmpBuf = ByteBuffer.allocate(mem.pageSize());
-
-            tmpBuf.order(ByteOrder.nativeOrder());
-
             long begin = System.currentTimeMillis();
 
             long cp = 0;
 
             AtomicLong write = new AtomicLong();
 
-            CheckpointPageWriteContext pageWriteCtx = new CheckpointPageWriteContextAdapter() {
-                @Override public void writePage(
-                    FullPageId fullPageId,
-                    ByteBuffer buf,
-                    Integer tag
-                ) throws IgniteCheckedException {
-                    int groupId = fullPageId.groupId();
-                    long pageId = fullPageId.pageId();
+            PageStoreWriter pageStoreWriter = (fullPageId, buf, tag) -> {
+                int groupId = fullPageId.groupId();
+                long pageId = fullPageId.pageId();
 
-                    for (int j = PageIO.COMMON_HEADER_END; j < mem.realPageSize(groupId); j += 4)
-                        assertEquals(j + (int)pageId, tmpBuf.getInt(j));
+                for (int j = PageIO.COMMON_HEADER_END; j < mem.realPageSize(groupId); j += 4)
+                    assertEquals(j + (int)pageId, buf.getInt(j));
 
-                    tmpBuf.rewind();
+                buf.rewind();
 
-                    long writeStart = System.nanoTime();
+                long writeStart = System.nanoTime();
 
-                    storeMgr.write(cacheId, pageId, tmpBuf, tag);
+                storeMgr.write(cacheId, pageId, buf, tag);
 
-                    long writeEnd = System.nanoTime();
+                long writeEnd = System.nanoTime();
 
-                    write.getAndAdd(writeEnd - writeStart);
-                }
+                write.getAndAdd(writeEnd - writeStart);
             };
+
+            ByteBuffer tmpBuf = ByteBuffer.allocate(mem.pageSize());
+
+            tmpBuf.order(ByteOrder.nativeOrder());
 
             for (FullPageId fullId : pages) {
                 if (pageIds.contains(fullId)) {
                     long cpStart = System.nanoTime();
 
-                    mem.checkpointWritePage(fullId, tmpBuf, pageWriteCtx);
+                    mem.checkpointWritePage(fullId, tmpBuf, pageStoreWriter, null);
 
                     long cpEnd = System.nanoTime();
 

@@ -19,18 +19,21 @@ package org.apache.ignite.internal.processors.cache.persistence;
 import java.nio.ByteBuffer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.pagemem.FullPageId;
-import org.apache.ignite.internal.processors.cache.persistence.pagemem.CheckpointMetricsTracker;
+import org.apache.ignite.internal.pagemem.store.PageStore;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryEx;
 
 /**
- * No-op implementation for {@link CheckpointPageWriteContext}.
+ * Interface for write page to {@link PageStore}.
  */
-public class CheckpointPageWriteContextAdapter implements CheckpointPageWriteContext {
-    /** {@inheritDoc} */
-    @Override public void writePage(FullPageId fullPageId, ByteBuffer buf, Integer tag) throws IgniteCheckedException {
-
-    }
-    /** {@inheritDoc} */
-    @Override public CheckpointMetricsTracker checkpointMetrics() {
-        return null;
-    }
+public interface PageStoreWriter {
+    /**
+     * Callback for write page. {@link PageMemoryEx} will copy page content to buffer before call.
+     *
+     * @param fullPageId Page ID to get byte buffer for. The page ID must be present in the collection returned by
+     *      the {@link PageMemoryEx#beginCheckpoint()} method call.
+     * @param buf Temporary buffer to write changes into.
+     * @param tag  {@code Partition generation} if data was read, {@code null} otherwise (data already saved to storage).
+     * @throws IgniteCheckedException If write page failed.
+     */
+    void writePage(FullPageId fullPageId, ByteBuffer buf, int tag) throws IgniteCheckedException;
 }

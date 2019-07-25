@@ -67,11 +67,10 @@ import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccVersionImpl;
-import org.apache.ignite.internal.processors.cache.persistence.CheckpointPageWriteContext;
-import org.apache.ignite.internal.processors.cache.persistence.CheckpointPageWriteContextAdapter;
 import org.apache.ignite.internal.processors.cache.persistence.DummyPageIO;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.persistence.PageStoreWriter;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryEx;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryImpl;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPageIO;
@@ -645,7 +644,8 @@ public class IgnitePdsCheckpointSimulationWithRealCpDisabledTest extends GridCom
 
                     buf.rewind();
 
-                    mem.checkpointWritePage(fullId, buf, new CheckpointPageWriteContextAdapter());
+                    mem.checkpointWritePage(fullId, buf, (fullPageId, buffer, tag) -> {
+                    }, null);
 
                     buf.position(PageIO.COMMON_HEADER_END);
 
@@ -977,18 +977,12 @@ public class IgnitePdsCheckpointSimulationWithRealCpDisabledTest extends GridCom
 
                     AtomicReference<Integer> tag0 = new AtomicReference<>();
 
-                    CheckpointPageWriteContext pageWriteCtx = new CheckpointPageWriteContextAdapter() {
-                        @Override public void writePage(
-                            FullPageId fullPageId,
-                            ByteBuffer buf,
-                            Integer tag
-                        ) throws IgniteCheckedException {
-                            tag0.set(tag);
-                        }
+                    PageStoreWriter pageStoreWriter = (fullPageId, buf, tagx) -> {
+                        tag0.set(tagx);
                     };
 
                     while (true) {
-                        mem.checkpointWritePage(fullId, tmpBuf, pageWriteCtx);
+                        mem.checkpointWritePage(fullId, tmpBuf, pageStoreWriter, null);
 
                         tag = tag0.get();
 

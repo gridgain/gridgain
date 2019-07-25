@@ -67,9 +67,9 @@ import org.apache.ignite.internal.pagemem.wal.record.delta.InitNewPageRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.PageDeltaRecord;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.persistence.CheckpointLockStateChecker;
-import org.apache.ignite.internal.processors.cache.persistence.CheckpointPageWriteContext;
 import org.apache.ignite.internal.processors.cache.persistence.CheckpointWriteProgressSupplier;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
+import org.apache.ignite.internal.processors.cache.persistence.PageStoreWriter;
 import org.apache.ignite.internal.processors.cache.persistence.StorageException;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.io.PagesListMetaIO;
 import org.apache.ignite.internal.processors.cache.persistence.partstate.GroupPartitionId;
@@ -256,7 +256,7 @@ public class PageMemoryImpl implements PageMemoryEx {
     private OffheapReadWriteLock rwLock;
 
     /** Flush dirty page closure. When possible, will be called by evictPage(). */
-    private final ReplacedPageWriter flushDirtyPage;
+    private final PageStoreWriter flushDirtyPage;
 
     /** */
     private final AtomicBoolean dirtyUserPagesPresent = new AtomicBoolean();
@@ -318,7 +318,7 @@ public class PageMemoryImpl implements PageMemoryEx {
         long[] sizes,
         GridCacheSharedContext<?, ?> ctx,
         int pageSize,
-        ReplacedPageWriter flushDirtyPage,
+        PageStoreWriter flushDirtyPage,
         @Nullable GridInClosure3X<Long, FullPageId, PageMemoryEx> changeTracker,
         CheckpointLockStateChecker stateChecker,
         DataRegionMetricsImpl memMetrics,
@@ -552,7 +552,7 @@ public class PageMemoryImpl implements PageMemoryEx {
         // because there is no crc inside them.
         Segment seg = segment(grpId, pageId);
 
-        DelayedDirtyPageWrite delayedWriter = delayedPageReplacementTracker != null
+        DelayedDirtyPageStoreWrite delayedWriter = delayedPageReplacementTracker != null
             ? delayedPageReplacementTracker.delayedPageWrite() : null;
 
         FullPageId fullId = new FullPageId(pageId, grpId);
@@ -755,7 +755,7 @@ public class PageMemoryImpl implements PageMemoryEx {
             seg.readLock().unlock();
         }
 
-        DelayedDirtyPageWrite delayedWriter = delayedPageReplacementTracker != null
+        DelayedDirtyPageStoreWrite delayedWriter = delayedPageReplacementTracker != null
             ? delayedPageReplacementTracker.delayedPageWrite() : null;
 
         seg.writeLock().lock();
@@ -1190,10 +1190,11 @@ public class PageMemoryImpl implements PageMemoryEx {
     /** {@inheritDoc} */
     @Override public void checkpointWritePage(
         FullPageId fullId,
-        ByteBuffer outBuf,
-        CheckpointPageWriteContext pageWriteCtx
+        ByteBuffer buf,
+        PageStoreWriter pageStoreWriter,
+        CheckpointMetricsTracker metricsTracker
     ) throws IgniteCheckedException {
-        assert outBuf.remaining() == pageSize();
+        assert buf.remaining() == pageSize();
 
         Segment seg = segment(fullId.groupId(), fullId.pageId());
 
@@ -1211,7 +1212,7 @@ public class PageMemoryImpl implements PageMemoryEx {
             if (!isInCheckpoint(fullId))
                 return;
 
-            relPtr = resolverRelatedPointer(seg, fullId, tag = generateTag(seg, fullId));
+            relPtr = resolveRelativePointer(seg, fullId, tag = generationTag(seg, fullId));
 
             // Page may have been cleared during eviction. We have nothing to do in this case.
             if (relPtr == INVALID_REL_PTR)
@@ -1236,7 +1237,7 @@ public class PageMemoryImpl implements PageMemoryEx {
 
             try {
                 // Double-check.
-                relPtr = resolverRelatedPointer(seg, fullId, generateTag(seg, fullId));
+                relPtr = resolveRelativePointer(seg, fullId, generationTag(seg, fullId));
 
                 if (relPtr == INVALID_REL_PTR)
                     return;
@@ -1259,24 +1260,25 @@ public class PageMemoryImpl implements PageMemoryEx {
             }
         }
 
-        copyPageForCheckpoint(absPtr, fullId, outBuf, tag, pageSingleAcquire, pageWriteCtx);
+        copyPageForCheckpoint(absPtr, fullId, buf, tag, pageSingleAcquire, pageStoreWriter, metricsTracker);
     }
 
     /**
      * @param absPtr Absolute ptr.
      * @param fullId Full id.
-     * @param outBuf Output buffer to write page content into.
+     * @param buf Buffer for copy page content for future write via {@link PageStoreWriter}.
      * @param pageSingleAcquire Page is acquired only once. We don't pin the page second time (until page will not be
      * copied) in case checkpoint temporary buffer is used.
-     * @param pageWriteCtx Checkpoint page write context.
+     * @param pageStoreWriter Checkpoint page write context.
      */
     private void copyPageForCheckpoint(
         long absPtr,
         FullPageId fullId,
-        ByteBuffer outBuf,
+        ByteBuffer buf,
         Integer tag,
         boolean pageSingleAcquire,
-        CheckpointPageWriteContext pageWriteCtx
+        PageStoreWriter pageStoreWriter,
+        CheckpointMetricsTracker tracker
     ) throws IgniteCheckedException {
         assert absPtr != 0;
         assert PageHeader.isAcquired(absPtr);
@@ -1293,9 +1295,9 @@ public class PageMemoryImpl implements PageMemoryEx {
             if (!pageSingleAcquire)
                 PageHeader.releasePage(absPtr);
 
-            outBuf.clear();
+            buf.clear();
 
-            pageWriteCtx.writePage(fullId, outBuf, TRY_AGAIN_TAG);
+            pageStoreWriter.writePage(fullId, buf, TRY_AGAIN_TAG);
 
             return;
         }
@@ -1312,11 +1314,9 @@ public class PageMemoryImpl implements PageMemoryEx {
 
                 long tmpAbsPtr = checkpointPool.absolute(tmpRelPtr);
 
-                copyInBuffer(tmpAbsPtr, outBuf);
+                copyInBuffer(tmpAbsPtr, buf);
 
                 GridUnsafe.setMemory(tmpAbsPtr + PAGE_OVERHEAD, pageSize(), (byte)0);
-
-                CheckpointMetricsTracker tracker = pageWriteCtx.checkpointMetrics();
 
                 if (tracker != null)
                     tracker.onCowPageWritten();
@@ -1329,13 +1329,13 @@ public class PageMemoryImpl implements PageMemoryEx {
                     PageHeader.releasePage(absPtr);
             }
             else {
-                copyInBuffer(absPtr, outBuf);
+                copyInBuffer(absPtr, buf);
 
                 PageHeader.dirty(absPtr, false);
             }
 
-            assert PageIO.getType(outBuf) != 0 : "Invalid state. Type is 0! pageId = " + U.hexLong(fullId.pageId());
-            assert PageIO.getVersion(outBuf) != 0 : "Invalid state. Version is 0! pageId = " + U.hexLong(fullId.pageId());
+            assert PageIO.getType(buf) != 0 : "Invalid state. Type is 0! pageId = " + U.hexLong(fullId.pageId());
+            assert PageIO.getVersion(buf) != 0 : "Invalid state. Version is 0! pageId = " + U.hexLong(fullId.pageId());
 
             canWrite = true;
         }
@@ -1343,13 +1343,13 @@ public class PageMemoryImpl implements PageMemoryEx {
             rwLock.writeUnlock(absPtr + PAGE_LOCK_OFFSET, OffheapReadWriteLock.TAG_LOCK_ALWAYS);
 
             if (canWrite){
-                outBuf.rewind();
+                buf.rewind();
 
-                pageWriteCtx.writePage(fullId, outBuf, tag);
+                pageStoreWriter.writePage(fullId, buf, tag);
 
                 memMetrics.onPageWritten();
 
-                outBuf.rewind();
+                buf.rewind();
             }
 
             // We pinned the page either when allocated the temp buffer, or when resolved abs pointer.
@@ -1381,14 +1381,29 @@ public class PageMemoryImpl implements PageMemoryEx {
         }
     }
 
-    private int generateTag(Segment seg, FullPageId fullId) {
+    /**
+     * Get current prartition generation tag.
+     *
+     * @param seg Segment.
+     * @param fullId Full page id.
+     * @return Current partition generation tag.
+     */
+    private int generationTag(Segment seg, FullPageId fullId) {
         return seg.partGeneration(
             fullId.groupId(),
             PageIdUtils.partId(fullId.pageId())
         );
     }
 
-    private long resolverRelatedPointer(Segment seg, FullPageId fullId, int reqVer) {
+    /**
+     * Resolver relative pointer via {@link LoadedPagesMap}.
+     *
+     * @param seg Segment.
+     * @param fullId Full page id.
+     * @param reqVer Required version.
+     * @return Relative pointer.
+     */
+    private long resolveRelativePointer(Segment seg, FullPageId fullId, int reqVer) {
         return seg.loadedPages.get(
             fullId.groupId(),
             PageIdUtils.effectivePageId(fullId.pageId()),
@@ -2252,7 +2267,7 @@ public class PageMemoryImpl implements PageMemoryEx {
          * @return {@code True} if it is ok to replace this page, {@code false} if another page should be selected.
          * @throws IgniteCheckedException If failed to write page to the underlying store during eviction.
          */
-        private boolean preparePageRemoval(FullPageId fullPageId, long absPtr, ReplacedPageWriter saveDirtyPage) throws IgniteCheckedException {
+        private boolean preparePageRemoval(FullPageId fullPageId, long absPtr, PageStoreWriter saveDirtyPage) throws IgniteCheckedException {
             assert writeLock().isHeldByCurrentThread();
 
             // Do not evict cache meta pages.
@@ -2345,7 +2360,7 @@ public class PageMemoryImpl implements PageMemoryEx {
          * @throws IgniteCheckedException If failed to evict page.
          * @param saveDirtyPage Replaced page writer, implementation to save dirty page to persistent storage.
          */
-        private long removePageForReplacement(ReplacedPageWriter saveDirtyPage) throws IgniteCheckedException {
+        private long removePageForReplacement(PageStoreWriter saveDirtyPage) throws IgniteCheckedException {
             assert getWriteHoldCount() > 0;
 
             if (pageReplacementWarned == 0) {
@@ -2531,7 +2546,7 @@ public class PageMemoryImpl implements PageMemoryEx {
          * @param cap Capacity.
          * @param saveDirtyPage Evicted page writer.
          */
-        private long tryToFindSequentially(int cap, ReplacedPageWriter saveDirtyPage) throws IgniteCheckedException {
+        private long tryToFindSequentially(int cap, PageStoreWriter saveDirtyPage) throws IgniteCheckedException {
             assert getWriteHoldCount() > 0;
 
             long prevAddr = INVALID_REL_PTR;

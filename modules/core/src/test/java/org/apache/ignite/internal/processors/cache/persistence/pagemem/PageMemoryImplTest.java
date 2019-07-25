@@ -41,11 +41,11 @@ import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.pagemem.store.IgnitePageStoreManager;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.persistence.CheckpointLockStateChecker;
-import org.apache.ignite.internal.processors.cache.persistence.CheckpointPageWriteContextAdapter;
 import org.apache.ignite.internal.processors.cache.persistence.CheckpointWriteProgressSupplier;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
 import org.apache.ignite.internal.processors.cache.persistence.DummyPageIO;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.persistence.PageStoreWriter;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
@@ -191,7 +191,8 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
             1,
             PageMemoryImpl.ThrottlingPolicy.TARGET_RATIO_BASED,
             pageStoreMgr,
-            pageStoreMgr);
+            pageStoreMgr
+        );
 
         int initPageCnt = 10;
 
@@ -240,16 +241,10 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
         PageMemoryImpl memory,
         TestPageStoreManager pageStoreMgr
     ) throws Exception {
-        CheckpointPageWriteContextAdapter pageWriteCtx = new CheckpointPageWriteContextAdapter() {
-            @Override public void writePage(
-                FullPageId fullPageId,
-                ByteBuffer buf,
-                Integer tag
-            ) throws IgniteCheckedException {
-                assertNotNull(tag);
+        PageStoreWriter pageStoreWriter = (fullPageId, buf, tag) -> {
+            assertNotNull(tag);
 
-                pageStoreMgr.write(fullPageId.groupId(), fullPageId.pageId(), buf, 1);
-            }
+            pageStoreMgr.write(fullPageId.groupId(), fullPageId.pageId(), buf, 1);
         };
 
         for (FullPageId cpPage : cpPages) {
@@ -257,7 +252,7 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
 
             ByteBuffer buf = ByteBuffer.wrap(data);
 
-            memory.checkpointWritePage(cpPage, buf, pageWriteCtx);
+            memory.checkpointWritePage(cpPage, buf, pageStoreWriter, null);
         }
 
         memory.finishCheckpoint();
@@ -294,37 +289,29 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
         memory.beginCheckpoint();
         // CP Write unlock.
 
-        // Assume we are writing in 128 threads.
-        for (int i = 0; i < 128; i++) {
-            byte[] buf = new byte[PAGE_SIZE];
+        byte[] buf = new byte[PAGE_SIZE];
 
-            memory.checkpointWritePage(allocated.get(i), ByteBuffer.wrap(buf),
-                new CheckpointPageWriteContextAdapter() {
-                    @Override public void writePage(
-                        FullPageId fullPageId,
-                        ByteBuffer buf,
-                        Integer tag
-                    ) throws IgniteCheckedException {
-                        assertNotNull(tag);
+        memory.checkpointWritePage(allocated.get(0), ByteBuffer.wrap(buf),
+            (fullPageId, buf0, tag) -> {
+                assertNotNull(tag);
 
-                        boolean oom = false;
+                boolean oom = false;
 
-                        try {
-                            // Try force page replacement.
-                            while (true) {
-                                memory.allocatePage(1, INDEX_PARTITION, FLAG_IDX);
-                            }
-                        }
-                        catch (IgniteOutOfMemoryException ex) {
-                            oom = true;
-                        }
-
-                        assertTrue("Should oom before check replaced page.", oom);
-
-                        assertTrue("Missing page: " + fullPageId, memory.hasLoadedPage(fullPageId));
+                try {
+                    // Try force page replacement.
+                    while (true) {
+                        memory.allocatePage(1, INDEX_PARTITION, FLAG_IDX);
                     }
-                });
-        }
+                }
+                catch (IgniteOutOfMemoryException ex) {
+                    oom = true;
+                }
+
+                assertTrue("Should oom before check replaced page.", oom);
+
+                assertTrue("Missing page: " + fullPageId, memory.hasLoadedPage(fullPageId));
+            }
+            , null);
     }
 
     /**
@@ -378,14 +365,11 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
 
         CheckpointMetricsTracker mockTracker = Mockito.mock(CheckpointMetricsTracker.class);
 
-        CheckpointPageWriteContextAdapter pageWriteCtx = new CheckpointPageWriteContextAdapter() {
-            @Override public CheckpointMetricsTracker checkpointMetrics() {
-                return mockTracker;
-            }
-        };
-
         for (FullPageId checkpointPage : pages)
-            memory.checkpointWritePage(checkpointPage, ByteBuffer.allocate(PAGE_SIZE), pageWriteCtx);
+            memory.checkpointWritePage(checkpointPage, ByteBuffer.allocate(PAGE_SIZE),
+                (fullPageId, buffer, tag) -> {
+                    // No-op.
+                }, mockTracker);
 
         memory.finishCheckpoint();
 
@@ -479,7 +463,7 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
         int maxSize,
         PageMemoryImpl.ThrottlingPolicy throttlingPlc,
         IgnitePageStoreManager mgr,
-        ReplacedPageWriter replaceWriter
+        PageStoreWriter replaceWriter
     ) throws Exception {
         long[] sizes = new long[5];
 
@@ -568,7 +552,7 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
     /**
      *
      */
-    private static class TestPageStoreManager extends NoOpPageStoreManager implements ReplacedPageWriter {
+    private static class TestPageStoreManager extends NoOpPageStoreManager implements PageStoreWriter {
         /** */
         private Map<FullPageId, byte[]> storedPages = new HashMap<>();
 
