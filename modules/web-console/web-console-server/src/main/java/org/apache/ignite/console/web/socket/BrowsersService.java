@@ -37,7 +37,6 @@ import org.apache.ignite.console.web.AbstractSocketHandler;
 import org.apache.ignite.console.web.model.VisorTaskDescriptor;
 import org.apache.ignite.console.websocket.WebSocketEvent;
 import org.apache.ignite.console.websocket.WebSocketRequest;
-import org.apache.ignite.console.websocket.WebSocketResponse;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.slf4j.Logger;
@@ -48,6 +47,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketSession;
 
+import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.console.utils.Utils.fromJson;
 import static org.apache.ignite.console.utils.Utils.toJson;
 import static org.apache.ignite.console.web.socket.TransitionService.SEND_TO_AGENT;
@@ -107,7 +107,7 @@ public class BrowsersService extends AbstractSocketHandler {
      */
     @Scheduled(fixedRate = 3_000)
     public void heartbeat() {
-        locBrowsers.values().stream().flatMap(Collection::stream).forEach(this::ping);
+        locBrowsers.values().stream().flatMap(Collection::stream).collect(toList()).forEach(this::ping);
     }
 
     /** {@inheritDoc} */
