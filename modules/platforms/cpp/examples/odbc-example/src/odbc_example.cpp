@@ -722,6 +722,11 @@ int main()
     const unsigned clientNum = GetEnvVar<unsigned>("CLIENTS_NUM", 100);
     const std::string address = GetEnvVar<std::string>("NODES_ADDRESS", "localhost");
 
+    std::cout << "DEPARTMENTS_NUM=" << departmentsNum << std::endl;
+    std::cout << "EMPLOYEES_NUM=" << employeesNum << std::endl;
+    std::cout << "CLIENTS_NUM=" << clientNum << std::endl;
+    std::cout << "NODES_ADDRESS=" << address << std::endl;
+
     int exitCode = 0;
 
     srand(static_cast<unsigned>(time(NULL)));

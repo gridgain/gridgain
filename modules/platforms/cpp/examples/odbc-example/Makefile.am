@@ -19,15 +19,9 @@ noinst_PROGRAMS = ignite-odbc-example
 
 AM_CPPFLAGS = \
     -I@top_srcdir@/include \
-    -I@top_srcdir@/../core/include \
-    -I@top_srcdir@/../core/os/linux/include \
     -I@top_srcdir@/../common/include \
     -I@top_srcdir@/../common/os/linux/include \
     -I@top_srcdir@/../binary/include \
-    -I@top_srcdir@/../jni/include \
-    -I@top_srcdir@/../jni/os/linux/include \
-    -I$(JAVA_HOME)/include \
-    -I$(JAVA_HOME)/include/linux \
     -DIGNITE_IMPL \
     -D__STDC_LIMIT_MACROS \
     -D__STDC_CONSTANT_MACROS
@@ -37,7 +31,6 @@ AM_CXXFLAGS = \
     -std=c++11
 
 ignite_odbc_example_LDADD = \
-    @top_srcdir@/../core/libignite.la \
     -lodbc \
     -lpthread
 

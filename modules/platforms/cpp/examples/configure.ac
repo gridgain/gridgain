@@ -51,13 +51,7 @@ fi
 AC_CONFIG_FILES([ \
     Makefile \
     include/Makefile \
-    put-get-example/Makefile \
     odbc-example/Makefile \
-    query-example/Makefile \
-    continuous-query-example/Makefile \
-    compute-example/Makefile \
-    cluster-compute-example/Makefile \
-    thin-client-put-get-example/Makefile \
 ])
 
 AC_OUTPUT
