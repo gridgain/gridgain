@@ -33,8 +33,8 @@ public class TracingMessagesProcessor {
         if (msg.trace().serializedSpanBytes() != null && msg.trace().span() == null)
             msg.trace().span(
                 spi.create(msg.traceName(), msg.trace().serializedSpanBytes())
-                    .addTag("node.id", ctx.localNodeId().toString())
-                    .addTag("node.consistent.id", ctx.discovery().localNode().consistentId().toString())
+                    .addTag(TraceTags.NODE_ID, ctx.localNodeId().toString())
+                    .addTag(TraceTags.NODE_CONSISTENT_ID, ctx.discovery().localNode().consistentId().toString())
                     .addLog("Received")
             );
     }
@@ -47,7 +47,7 @@ public class TracingMessagesProcessor {
      */
     public void beforeSend(TraceableMessage msg) {
         if (msg.trace().span() != null && msg.trace().serializedSpanBytes() == null)
-            msg.trace().serializedSpanBytes(spi.serialize((SpanEx) msg.trace().span()));
+            msg.trace().serializedSpanBytes(spi.serialize(msg.trace().span()));
     }
 
     /**
@@ -62,12 +62,12 @@ public class TracingMessagesProcessor {
         assert parent.trace().span() != null : parent;
 
         msg.trace().serializedSpanBytes(
-            spi.serialize((SpanEx) parent.trace().span())
+            spi.serialize(parent.trace().span())
         );
 
         msg.trace().span(
-            spi.create(msg.traceName(), (SpanEx) parent.trace().span())
-                .addTag("node.id", ctx.localNodeId().toString())
+            spi.create(msg.traceName(), parent.trace().span())
+                .addTag(TraceTags.NODE_ID, ctx.localNodeId().toString())
                 .addLog("Created")
         );
 

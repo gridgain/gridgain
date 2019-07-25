@@ -83,6 +83,7 @@ import org.apache.ignite.internal.processors.security.SecurityContext;
 import org.apache.ignite.internal.processors.security.SecurityUtils;
 import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.processors.tracing.Status;
+import org.apache.ignite.internal.processors.tracing.TraceTags;
 import org.apache.ignite.internal.processors.tracing.messages.TraceContainer;
 import org.apache.ignite.internal.processors.tracing.messages.TraceableMessage;
 import org.apache.ignite.internal.util.GridBoundedLinkedHashSet;
@@ -2968,7 +2969,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                 else { // If we're going to send this message.
                     if (!msg.verified() && tMsg.trace().serializedSpanBytes() == null) {
                         Span rootSpan = tracing.create(tMsg.traceName())
-                            .addTag("node.id", getLocalNodeId().toString())
+                            .addTag(TraceTags.NODE_ID, getLocalNodeId().toString())
                             .addTag("stack_trace", U.stackTrace())
                             .end();
 
@@ -4563,7 +4564,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                 nodeAddedMsg = tracing.messages().branch(nodeAddedMsg, msg);
 
                 nodeAddedMsg.trace().span()
-                    .addTag("event.node.id", node.id().toString())
+                    .addTag(TraceTags.EVENT_NODE_ID, node.id().toString())
                     .addTag("event.node.consistent.id", node.consistentId().toString());
 
                 nodeAddedMsg.client(msg.client());
@@ -4770,7 +4771,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                     addFinishMsg = tracing.messages().branch(addFinishMsg, msg);
 
                     addFinishMsg.trace().span()
-                        .addTag("event.node.id", node.id().toString())
+                        .addTag(TraceTags.EVENT_NODE_ID, node.id().toString())
                         .addTag("event.node.consistent.id", node.consistentId().toString());
 
                     processNodeAddFinishedMessage(addFinishMsg);

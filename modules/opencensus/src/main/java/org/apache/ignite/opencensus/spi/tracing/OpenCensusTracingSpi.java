@@ -2,19 +2,18 @@ package org.apache.ignite.opencensus.spi.tracing;
 
 import io.opencensus.internal.DefaultVisibilityForTesting;
 import io.opencensus.internal.Provider;
-import io.opencensus.trace.Span;
 import io.opencensus.trace.TraceComponent;
 import io.opencensus.trace.propagation.SpanContextParseException;
 import io.opencensus.trace.samplers.Samplers;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.internal.processors.tracing.SpanEx;
+import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.processors.tracing.TracingSpi;
 import org.apache.ignite.spi.IgniteSpiAdapter;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi<Span> {
+public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi {
     private OpenCensusTraceExporter exporter;
 
     private TraceComponent traceComponent;
@@ -41,10 +40,12 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
     }
 
     /** {@inheritDoc} */
-    @Override public SpanEx<Span> create(@NotNull String name, @Nullable SpanEx<Span> parentSpan) {
+    @Override public SpanAdapter create(@NotNull String name, @Nullable Span parentSpan) {
         try {
+            SpanAdapter spanAdapter = (SpanAdapter) parentSpan;
+
             return new SpanAdapter(
-                traceComponent.getTracer().spanBuilderWithExplicitParent(name, parentSpan != null ? parentSpan.impl() : null)
+                traceComponent.getTracer().spanBuilderWithExplicitParent(name, spanAdapter != null ? spanAdapter.impl() : null)
                     .setSampler(Samplers.alwaysSample())
                     .startSpan()
             ).addTag("node.name", igniteInstanceName);
@@ -55,7 +56,7 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
     }
 
     /** {@inheritDoc} */
-    @Override public SpanEx<Span> create(@NotNull String name, @Nullable byte[] serializedSpanBytes) {
+    @Override public SpanAdapter create(@NotNull String name, @Nullable byte[] serializedSpanBytes) {
         try {
             return new SpanAdapter(
                 traceComponent.getTracer().spanBuilderWithRemoteParent(
@@ -72,8 +73,10 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
     }
 
     /** {@inheritDoc} */
-    @Override public byte[] serialize(@NotNull SpanEx<Span> span) {
-        return traceComponent.getPropagationComponent().getBinaryFormat().toByteArray(span.impl().getContext());
+    @Override public byte[] serialize(@NotNull Span span) {
+        SpanAdapter spanAdapter = (SpanAdapter) span;
+
+        return traceComponent.getPropagationComponent().getBinaryFormat().toByteArray(spanAdapter.impl().getContext());
     }
 
     /** {@inheritDoc} */

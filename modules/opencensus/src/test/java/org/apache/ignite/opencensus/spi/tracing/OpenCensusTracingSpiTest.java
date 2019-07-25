@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import io.opencensus.trace.AttributeValue;
 import io.opencensus.trace.TraceComponent;
@@ -59,7 +60,20 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
 
     @Test
     public void testNodeJoinTracing() throws Exception {
-        IgniteEx joiningNode = startGrid(GRID_CNT);
+        IgniteEx joinedNode = startGrid(GRID_CNT);
+
+        String joinedNodeId = joinedNode.localNode().id().toString();
+
+        // Check node.join.request on coordinator:
+
+        // Check node.join traces:
+        for (int i = 0; i <= GRID_CNT; i++) {
+            List<SpanData> nodeJoinTraces = exporter.handler.spansReportedByNode(getTestIgniteInstanceName(i))
+                .filter(span -> "node.join".equals(span.getName()))
+                .collect(Collectors.toList());
+
+
+        }
 
         int k = 2;
     }

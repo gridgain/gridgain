@@ -7,11 +7,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class NoopTracingSpi extends IgniteSpiAdapter implements TracingSpi {
-    private static final SpanEx NOOP_SPAN = new SpanEx() {
-        @Override public Object impl() {
-            return null;
-        }
-
+    private static final Span NOOP_SPAN = new Span() {
         @Override public Span addTag(String tagName, String tagVal) {
             return this;
         }
@@ -35,15 +31,15 @@ public class NoopTracingSpi extends IgniteSpiAdapter implements TracingSpi {
 
     private static final byte[] NOOP_SERIALIZED_SPAN = new byte[0];
 
-    @Override public SpanEx create(@NotNull String name, @Nullable SpanEx parentSpan) {
+    @Override public Span create(@NotNull String name, @Nullable Span parentSpan) {
         return NOOP_SPAN;
     }
 
-    @Override public SpanEx create(@NotNull String name, @Nullable byte[] serializedSpanBytes) {
+    @Override public Span create(@NotNull String name, @Nullable byte[] serializedSpanBytes) {
         return NOOP_SPAN;
     }
 
-    @Override public byte[] serialize(@NotNull SpanEx span) {
+    @Override public byte[] serialize(@NotNull Span span) {
         return NOOP_SERIALIZED_SPAN;
     }
 

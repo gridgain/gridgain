@@ -4,10 +4,10 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import io.opencensus.trace.Annotation;
 import io.opencensus.trace.AttributeValue;
-import org.apache.ignite.internal.processors.tracing.SpanEx;
+import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.processors.tracing.Status;
 
-public class SpanAdapter implements SpanEx<io.opencensus.trace.Span> {
+public class SpanAdapter implements Span {
     private final io.opencensus.trace.Span span;
 
     public SpanAdapter(io.opencensus.trace.Span span) {
@@ -15,7 +15,7 @@ public class SpanAdapter implements SpanEx<io.opencensus.trace.Span> {
     }
 
     /** {@inheritDoc} */
-    @Override public io.opencensus.trace.Span impl() {
+    public io.opencensus.trace.Span impl() {
         return span;
     }
 

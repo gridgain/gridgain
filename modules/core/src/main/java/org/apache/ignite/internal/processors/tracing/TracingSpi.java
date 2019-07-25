@@ -4,11 +4,11 @@ import org.apache.ignite.spi.IgniteSpi;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public interface TracingSpi<T> extends IgniteSpi {
-    default SpanEx<T> create(@NotNull String name) {
-        return create(name, (SpanEx<T>)null);
+public interface TracingSpi extends IgniteSpi {
+    default Span create(@NotNull String name) {
+        return create(name, (Span)null);
     }
-    SpanEx<T> create(@NotNull String name, @Nullable SpanEx<T> parentSpan);
-    SpanEx<T> create(@NotNull String name, @Nullable byte[] serializedSpanBytes);
-    byte[] serialize(@NotNull SpanEx<T> span);
+    Span create(@NotNull String name, @Nullable Span parentSpan);
+    Span create(@NotNull String name, @Nullable byte[] serializedSpanBytes);
+    byte[] serialize(@NotNull Span span);
 }

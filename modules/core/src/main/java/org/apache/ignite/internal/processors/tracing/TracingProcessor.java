@@ -55,7 +55,7 @@ public class TracingProcessor extends GridProcessorAdapter implements Tracing {
 
     /** {@inheritDoc} */
     @Override public Span create(@NotNull String name, @Nullable Span parentSpan) {
-        return spi.create(name, (SpanEx) parentSpan);
+        return spi.create(name, parentSpan);
     }
 
     /** {@inheritDoc} */
@@ -65,7 +65,7 @@ public class TracingProcessor extends GridProcessorAdapter implements Tracing {
 
     /** {@inheritDoc} */
     @Override public byte[] serialize(@NotNull Span span) {
-        return spi.serialize((SpanEx) span);
+        return spi.serialize(span);
     }
 
     /** {@inheritDoc} */

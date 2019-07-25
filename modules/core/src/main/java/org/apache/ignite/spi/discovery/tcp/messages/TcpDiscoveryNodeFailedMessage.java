@@ -101,6 +101,6 @@ public class TcpDiscoveryNodeFailedMessage extends TcpDiscoveryAbstractMessage i
     }
 
     @Override public String traceName() {
-        return "node.fail." + failedNodeId;
+        return "node.fail";
     }
 }
