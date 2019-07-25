@@ -20,6 +20,7 @@ import java.io.Serializable;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Timer;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -1076,7 +1077,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
         /** {@inheritDoc} */
         @Override public int hashCode() {
-            return id.hashCode() + tag.hashCode();
+            return Objects.hash(id, tag);
         }
 
         /** {@inheritDoc} */
