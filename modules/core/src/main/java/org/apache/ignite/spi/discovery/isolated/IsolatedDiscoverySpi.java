@@ -47,7 +47,12 @@ import org.jetbrains.annotations.Nullable;
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 
 /**
- * Special discovery for isolated single-node cluster.
+ * Special discovery SPI implementation to start a single-node cluster in "isolated" mode.
+ *
+ * When used, node doesn't try to seek or communicate to other nodes that may be up and running even in the same JVM.
+ *
+ * At the same time all functions like sending discovery messages are functional with only note that
+ * no messages are sent to network but are processed by local node immediately when they are created.
  */
 @IgniteSpiMultipleInstancesSupport(true)
 @DiscoverySpiHistorySupport(true)

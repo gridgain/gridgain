@@ -26,7 +26,10 @@ import org.apache.ignite.spi.communication.CommunicationListener;
 import org.apache.ignite.spi.communication.CommunicationSpi;
 
 /**
- * Special communication spi for isolated single node cluster.
+ * Special communication SPI implementation single-node cluster working in "isolated" mode.
+ *
+ * This node doesn't establish communication connections to other nodes but
+ * immediately redirects all generated communication messages to corresponding handlers within the same node.
  */
 @IgniteSpiMultipleInstancesSupport(true)
 public class IsolatedCommunicationSpi extends IgniteSpiAdapter implements CommunicationSpi {
