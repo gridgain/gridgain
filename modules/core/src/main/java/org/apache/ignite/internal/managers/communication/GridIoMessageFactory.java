@@ -65,6 +65,7 @@ import org.apache.ignite.internal.processors.cache.distributed.GridDistributedTx
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedTxPrepareRequest;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedTxPrepareResponse;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedUnlockRequest;
+import org.apache.ignite.internal.processors.cache.distributed.SerializedSpanMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtAffinityAssignmentRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtAffinityAssignmentResponse;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtLockRequest;
@@ -1085,6 +1086,11 @@ public class GridIoMessageFactory implements MessageFactory {
 
             case GridIoSecurityAwareMessage.TYPE_CODE:
                 msg = new GridIoSecurityAwareMessage();
+
+                break;
+
+            case SerializedSpanMessage.TYPE_CODE:
+                msg = new SerializedSpanMessage();
 
                 break;
 

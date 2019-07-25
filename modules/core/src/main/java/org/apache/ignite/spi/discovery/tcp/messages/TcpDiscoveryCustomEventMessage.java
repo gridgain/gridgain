@@ -20,6 +20,8 @@ import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.managers.discovery.CustomMessageWrapper;
 import org.apache.ignite.internal.managers.discovery.IncompleteDeserializationException;
+import org.apache.ignite.internal.processors.tracing.messages.TraceContainer;
+import org.apache.ignite.internal.processors.tracing.messages.TraceableMessage;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -33,7 +35,7 @@ import org.jetbrains.annotations.Nullable;
  */
 @TcpDiscoveryRedirectToClient
 @TcpDiscoveryEnsureDelivery
-public class TcpDiscoveryCustomEventMessage extends TcpDiscoveryAbstractMessage {
+public class TcpDiscoveryCustomEventMessage extends TcpDiscoveryAbstractMessage implements TraceableMessage {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -42,6 +44,8 @@ public class TcpDiscoveryCustomEventMessage extends TcpDiscoveryAbstractMessage 
 
     /** */
     private byte[] msgBytes;
+
+    private TraceContainer traceContainer = new TraceContainer();
 
     /**
      * @param creatorNodeId Creator node id.
@@ -65,6 +69,7 @@ public class TcpDiscoveryCustomEventMessage extends TcpDiscoveryAbstractMessage 
 
         this.msgBytes = msg.msgBytes;
         this.msg = msg.msg;
+        this.traceContainer = msg.traceContainer;
     }
 
     /**
@@ -127,5 +132,13 @@ public class TcpDiscoveryCustomEventMessage extends TcpDiscoveryAbstractMessage 
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(TcpDiscoveryCustomEventMessage.class, this, "super", super.toString());
+    }
+
+    @Override public @NotNull TraceContainer trace() {
+        return traceContainer;
+    }
+
+    @Override public String traceName() {
+        return "discovery.custom.event";
     }
 }

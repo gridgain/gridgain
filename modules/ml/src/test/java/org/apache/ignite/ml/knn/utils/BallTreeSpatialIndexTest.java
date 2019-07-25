@@ -14,12 +14,18 @@
  * limitations under the License.
  */
 
-/**
- *
- */
-package org.apache.ignite.spi.metric.opencensus;
+package org.apache.ignite.ml.knn.utils;
+
+import org.apache.ignite.ml.knn.utils.indices.BallTreeSpatialIndex;
 
 /**
- * <!-- Package description. -->
- * Contains Opencensus based implementation of MetricExporterSpi.
+ * Tests for {@link BallTreeSpatialIndex}.
  */
+public class BallTreeSpatialIndexTest extends SpatialIndexTest {
+    /**
+     * Constructs a new instance of Ball tree spatial index test.
+     */
+    public BallTreeSpatialIndexTest() {
+        super(BallTreeSpatialIndex::new);
+    }
+}

@@ -18,6 +18,8 @@ package org.apache.ignite.spi.discovery.tcp.messages;
 
 import java.util.Map;
 import java.util.UUID;
+import org.apache.ignite.internal.processors.tracing.messages.TraceContainer;
+import org.apache.ignite.internal.processors.tracing.messages.TraceableMessage;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.spi.discovery.tcp.internal.DiscoveryDataPacket;
@@ -27,7 +29,7 @@ import org.apache.ignite.spi.discovery.tcp.internal.DiscoveryDataPacket;
  */
 @TcpDiscoveryEnsureDelivery
 @TcpDiscoveryRedirectToClient
-public class TcpDiscoveryNodeAddFinishedMessage extends TcpDiscoveryAbstractMessage {
+public class TcpDiscoveryNodeAddFinishedMessage extends TcpDiscoveryAbstractMessage implements TraceableMessage {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -44,6 +46,8 @@ public class TcpDiscoveryNodeAddFinishedMessage extends TcpDiscoveryAbstractMess
     /** */
     @GridToStringExclude
     private Map<String, Object> clientNodeAttrs;
+
+    private TraceContainer traceContainer = new TraceContainer();
 
     /**
      * Constructor.
@@ -66,6 +70,7 @@ public class TcpDiscoveryNodeAddFinishedMessage extends TcpDiscoveryAbstractMess
         nodeId = msg.nodeId;
         clientDiscoData = msg.clientDiscoData;
         clientNodeAttrs = msg.clientNodeAttrs;
+        traceContainer = msg.traceContainer;
     }
 
     /**
@@ -107,8 +112,20 @@ public class TcpDiscoveryNodeAddFinishedMessage extends TcpDiscoveryAbstractMess
         this.clientNodeAttrs = clientNodeAttrs;
     }
 
+
+
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(TcpDiscoveryNodeAddFinishedMessage.class, this, "super", super.toString());
+    }
+
+    /** {@inheritDoc} */
+    @Override public TraceContainer trace() {
+        return traceContainer;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String traceName() {
+        return "node.join.finish";
     }
 }
