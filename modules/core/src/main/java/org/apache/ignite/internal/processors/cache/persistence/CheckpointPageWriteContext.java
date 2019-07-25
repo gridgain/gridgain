@@ -23,8 +23,8 @@ import org.apache.ignite.internal.processors.cache.persistence.pagemem.Checkpoin
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryEx;
 
 /**
- * Context for serving write page on {@link GridCacheDatabaseSharedManager.Checkpoint}
- * throught {@link PageMemoryEx}.
+ * Context for serving write page {@link GridCacheDatabaseSharedManager.Checkpoint}
+ * through {@link PageMemoryEx}.
  */
 public interface CheckpointPageWriteContext {
     /**
