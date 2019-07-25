@@ -68,9 +68,14 @@ class PartitionDataStorage implements AutoCloseable {
 
             lock.lock();
             try {
-                data = storage.computeIfAbsent(part, p -> supplier.get());
-                if (ttl > -1)
-                    executor.schedule(new Cleaner(part), ttl, TimeUnit.SECONDS);
+                data = storage.computeIfAbsent(part, p -> {
+                    Object res = supplier.get();
+
+                    if (ttl > -1)
+                        executor.schedule(new Cleaner(part), ttl, TimeUnit.SECONDS);
+
+                    return res;
+                });
             }
             finally {
                 lock.unlock();
