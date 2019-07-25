@@ -35,7 +35,7 @@
         <property name="targetMethod" value="putAll"/>
         <property name="arguments">
             <map>
-                <entry key="IGNITE_JETTY_PORT" value="#{systemProperties['IGNITE_JETTY_PORT'] == null ? 60080 : systemProperties['IGNITE_JETTY_PORT']}"/>
+                <entry key="IGNITE_JETTY_PORT" value="${IGNITE_JETTY_PORT:60080}"/>
             </map>
         </property>
     </bean>

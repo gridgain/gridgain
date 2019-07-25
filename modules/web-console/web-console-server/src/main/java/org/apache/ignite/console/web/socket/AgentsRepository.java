@@ -125,7 +125,7 @@ public class AgentsRepository {
         Collection<UUID> nids = U.nodeIds(ignite.cluster().nodes());
 
         stream(backendByAgent.cache().spliterator(), false)
-            .peek(entry -> entry.getValue().removeAll(nids))
+            .peek(entry -> entry.getValue().retainAll(nids))
             .filter(entry -> entry.getValue().isEmpty())
             .forEach(entry -> backendByAgent.cache().remove(entry.getKey()));
     }

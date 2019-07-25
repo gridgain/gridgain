@@ -129,12 +129,30 @@ public class ClustersRepository {
         UUID nid = ignite.cluster().localNode().id();
 
         return txMgr.doInTransaction(() -> {
-            ClusterSession clusterId = new ClusterSession(nid, top.getId());
+            ClusterSession clusterSes = new ClusterSession(nid, top.getId());
 
             for (UUID accId : accIds)
-                clusterIdsByBrowser.add(new UserKey(accId, top.isDemo()), clusterId);
+                clusterIdsByBrowser.add(new UserKey(accId, top.isDemo()), clusterSes);
 
             return clusters.getAndPut(top.getId(), top);
+        });
+    }
+
+    /**
+     * Remove cluster from local backend
+     *
+     * @param accId Acc id.
+     * @param clusterId Cluster id.
+     */
+    public void remove(UUID accId, String clusterId) {
+        UUID nid = ignite.cluster().localNode().id();
+
+        ClusterSession clusterSes = new ClusterSession(nid, clusterId);
+
+        txMgr.doInTransaction(() -> {
+            boolean demo = clusters.get(clusterId).isDemo();
+
+            clusterIdsByBrowser.remove(new UserKey(accId, demo), clusterSes);
         });
     }
 

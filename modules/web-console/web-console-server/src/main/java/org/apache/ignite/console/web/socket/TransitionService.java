@@ -24,7 +24,6 @@ import org.apache.ignite.console.dto.Announcement;
 import org.apache.ignite.console.messages.WebConsoleMessageSource;
 import org.apache.ignite.console.messages.WebConsoleMessageSourceAccessor;
 import org.apache.ignite.console.websocket.WebSocketEvent;
-import org.apache.ignite.console.websocket.WebSocketRequest;
 import org.apache.ignite.console.websocket.WebSocketResponse;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.messaging.MessagingListenActor;
@@ -122,8 +121,11 @@ public class TransitionService {
     private void resendToRemote(AgentRequest req) {
         Set<UUID> nids = agentsRepo.get(req.getKey());
 
-        if (nids.isEmpty())
+        if (nids.isEmpty()) {
             responseWithError(req, messages.getMessage("err.agent-not-found"), null);
+            
+            return;
+        }
 
         UUID targetNid = F.rand(nids);
 
@@ -158,8 +160,8 @@ public class TransitionService {
             }
         });
 
-        ignite.message().localListen(SEND_RESPONSE, new MessagingListenActor<WebSocketRequest>() {
-            @Override protected void receive(UUID nodeId, WebSocketRequest evt) {
+        ignite.message().localListen(SEND_RESPONSE, new MessagingListenActor<WebSocketEvent>() {
+            @Override protected void receive(UUID nodeId, WebSocketEvent evt) {
                 browsersSrvc.sendResponseToBrowser(evt);
             }
         });

@@ -315,8 +315,11 @@ public class AgentsService extends AbstractSocketHandler {
             for (String clusterId : clusterIds) {
                 AgentKey clusterKey = new AgentKey(accId, clusterId);
 
-                if (allAgentsLeft || !findLocalAgent(clusterKey).isPresent())
+                if (allAgentsLeft || !findLocalAgent(clusterKey).isPresent()) {
                     agentsRepo.remove(clusterKey);
+
+                    clustersRepo.remove(accId, clusterId);
+                }
             }
         }
     }
