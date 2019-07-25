@@ -28,8 +28,11 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.events.DiscoveryCustomEvent;
+import org.apache.ignite.internal.managers.discovery.CustomMessageWrapper;
+import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpiInternalListener;
+import org.apache.ignite.internal.processors.marshaller.MappingProposedMessage;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.spi.IgniteSpiAdapter;
 import org.apache.ignite.spi.IgniteSpiContext;
@@ -143,6 +146,24 @@ public class IsolatedDiscoverySpi extends IgniteSpiAdapter implements IgniteDisc
             Collections.singleton(locNode),
             null,
             msg));
+
+        if (msg instanceof CustomMessageWrapper) {
+            CustomMessageWrapper wrp = (CustomMessageWrapper)msg;
+
+            DiscoveryCustomMessage delegate = wrp.delegate();
+
+            DiscoveryCustomMessage ack = delegate.ackMessage();
+
+            if (ack != null) {
+                exec.execute(() -> lsnr.onDiscovery(DiscoveryCustomEvent.EVT_DISCOVERY_CUSTOM_EVT,
+                    1,
+                    locNode,
+                    Collections.singleton(locNode),
+                    null,
+                    new CustomMessageWrapper(ack))
+                );
+            }
+        }
     }
 
     /** {@inheritDoc} */
