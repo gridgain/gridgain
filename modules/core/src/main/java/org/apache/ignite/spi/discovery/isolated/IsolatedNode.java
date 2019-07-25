@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.console.discovery;
+package org.apache.ignite.spi.discovery.isolated;
 
 import java.io.Serializable;
 import java.util.Collection;
@@ -28,21 +28,12 @@ import org.apache.ignite.internal.ClusterMetricsSnapshot;
 import org.apache.ignite.internal.managers.discovery.IgniteClusterNode;
 import org.apache.ignite.lang.IgniteProductVersion;
 
-import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_CLIENT_MODE;
-import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_LATE_AFFINITY_ASSIGNMENT;
-import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MACS;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_NODE_CONSISTENT_ID;
-import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_PEER_CLASSLOADING;
-import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_PHY_RAM;
-import static org.apache.ignite.lang.IgniteProductVersion.fromString;
 
 /**
  * Special isolated node.
  */
 public class IsolatedNode implements IgniteClusterNode {
-    /** */
-    private static final IgniteProductVersion VERSION = fromString("99.99.99");
-
     /** */
     private final UUID id = UUID.randomUUID();
 
@@ -50,26 +41,16 @@ public class IsolatedNode implements IgniteClusterNode {
     private Object consistentId;
 
     /** Node attributes. */
-    private Map<String, Object> attrs = new HashMap<>();
+    private Map<String, Object> attrs;
+
+    /** */
+    private IgniteProductVersion ver;
 
     /** */
     private ClusterMetrics metrics = new ClusterMetricsSnapshot();
 
     /** */
     private Map<Integer, CacheMetrics> cacheMetrics = new HashMap<>();
-
-    /**
-     *
-     */
-    public IsolatedNode() {
-        consistentId = "Web-Console-Isolated-Node";
-
-        attrs.put(ATTR_PEER_CLASSLOADING, false);
-        attrs.put(ATTR_LATE_AFFINITY_ASSIGNMENT, false);
-        attrs.put(ATTR_PHY_RAM, -1L);
-        attrs.put(ATTR_CLIENT_MODE, false);
-        attrs.put(ATTR_MACS, "1.1.1.1");
-    }
 
     /** {@inheritDoc} */
     @Override public UUID id() {
@@ -96,6 +77,13 @@ public class IsolatedNode implements IgniteClusterNode {
         return attrs;
     }
 
+    /**
+     * @param attrs Node attributes.
+     */
+    public void attributes(Map<String, Object> attrs) {
+        this.attrs = attrs;
+    }
+
     /** {@inheritDoc} */
     @Override public Collection<String> addresses() {
         return Collections.singleton("127.0.0.1");
@@ -113,7 +101,14 @@ public class IsolatedNode implements IgniteClusterNode {
 
     /** {@inheritDoc} */
     @Override public IgniteProductVersion version() {
-        return VERSION;
+        return ver;
+    }
+
+    /**
+     * @param ver Version.
+     */
+    public void version(IgniteProductVersion ver) {
+        this.ver = ver;
     }
 
     /** {@inheritDoc} */

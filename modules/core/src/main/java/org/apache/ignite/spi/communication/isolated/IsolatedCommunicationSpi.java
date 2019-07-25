@@ -14,35 +14,45 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.console.discovery;
+package org.apache.ignite.spi.communication.isolated;
 
 import java.io.Serializable;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.spi.IgniteSpiAdapter;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.IgniteSpiMultipleInstancesSupport;
 import org.apache.ignite.spi.communication.CommunicationListener;
 import org.apache.ignite.spi.communication.CommunicationSpi;
-import org.jetbrains.annotations.Nullable;
 
 /**
- * No-operation SPI for standalone WAL reader
+ * Special communication spi for isolated single node cluster.
  */
 @IgniteSpiMultipleInstancesSupport(true)
 public class IsolatedCommunicationSpi extends IgniteSpiAdapter implements CommunicationSpi {
-    /** {@inheritDoc} */
-    @Override public void spiStart(@Nullable String igniteInstanceName) throws IgniteSpiException {
+    /** No-op runnable. */
+    private static final IgniteRunnable NOOP = new IgniteRunnable() {
+        @Override public void run() {
+            // No-op.
+        }
+    };
 
+    /** */
+    private CommunicationListener lsnr;
+
+    /** {@inheritDoc} */
+    @Override public void spiStart(String igniteInstanceName) throws IgniteSpiException {
+        // No-op.
     }
 
     /** {@inheritDoc} */
     @Override public void spiStop() throws IgniteSpiException {
-
+        // No-op.
     }
 
     /** {@inheritDoc} */
     @Override public void sendMessage(ClusterNode destNode, Serializable msg) throws IgniteSpiException {
-
+        lsnr.onMessage(getSpiContext().localNode().id(), msg, NOOP);
     }
 
     /** {@inheritDoc} */
@@ -72,11 +82,11 @@ public class IsolatedCommunicationSpi extends IgniteSpiAdapter implements Commun
 
     /** {@inheritDoc} */
     @Override public void resetMetrics() {
-
+        // No-op.
     }
 
     /** {@inheritDoc} */
-    @Override public void setListener(@Nullable CommunicationListener lsnr) {
-
+    @Override public void setListener(CommunicationListener lsnr) {
+        this.lsnr = lsnr;
     }
 }

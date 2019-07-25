@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.console.discovery;
+package org.apache.ignite.spi.discovery.isolated;
 
 import java.io.Serializable;
 import java.util.Collection;
@@ -25,14 +25,17 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.events.DiscoveryCustomEvent;
+import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
+import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpiInternalListener;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.spi.IgniteSpiAdapter;
 import org.apache.ignite.spi.IgniteSpiContext;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.IgniteSpiMultipleInstancesSupport;
 import org.apache.ignite.spi.discovery.DiscoveryMetricsProvider;
-import org.apache.ignite.spi.discovery.DiscoverySpi;
 import org.apache.ignite.spi.discovery.DiscoverySpiCustomMessage;
 import org.apache.ignite.spi.discovery.DiscoverySpiDataExchange;
 import org.apache.ignite.spi.discovery.DiscoverySpiHistorySupport;
@@ -47,9 +50,12 @@ import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
  */
 @IgniteSpiMultipleInstancesSupport(true)
 @DiscoverySpiHistorySupport(true)
-public class IsolatedDiscoverySpi extends IgniteSpiAdapter implements DiscoverySpi {
+public class IsolatedDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscoverySpi {
     /** */
-    private final ClusterNode locNode = new IsolatedNode();
+    private Serializable consistentId;
+
+    /** */
+    private final IsolatedNode locNode = new IsolatedNode();
 
     /** */
     private final long startTime = System.currentTimeMillis();
@@ -62,7 +68,15 @@ public class IsolatedDiscoverySpi extends IgniteSpiAdapter implements DiscoveryS
 
     /** {@inheritDoc} */
     @Override public Serializable consistentId() throws IgniteSpiException {
-        return "standalone-isolated-node";
+        if (consistentId == null) {
+            IgniteConfiguration cfg = ignite.configuration();
+
+            final Serializable cfgId = cfg.getConsistentId();
+
+            consistentId = cfgId != null ? cfgId : UUID.randomUUID();
+        }
+
+        return consistentId;
     }
 
     /** {@inheritDoc} */
@@ -87,7 +101,8 @@ public class IsolatedDiscoverySpi extends IgniteSpiAdapter implements DiscoveryS
 
     /** {@inheritDoc} */
     @Override public void setNodeAttributes(Map<String, Object> attrs, IgniteProductVersion ver) {
-
+        locNode.attributes(attrs);
+        locNode.version(ver);
     }
 
     /** {@inheritDoc} */
@@ -142,14 +157,18 @@ public class IsolatedDiscoverySpi extends IgniteSpiAdapter implements DiscoveryS
 
     /** {@inheritDoc} */
     @Override public void spiStart(@Nullable String igniteInstanceName) throws IgniteSpiException {
-        exec.execute(() -> lsnr.onDiscovery(
-            EVT_NODE_JOINED,
-            1,
-            locNode,
-            Collections.singleton(locNode),
-            null,
-            null
-        ));
+        exec.execute(() -> {
+            lsnr.onLocalNodeInitialized(locNode);
+
+            lsnr.onDiscovery(
+                EVT_NODE_JOINED,
+                1,
+                locNode,
+                Collections.singleton(locNode),
+                null,
+                null
+            );
+        });
     }
 
     /** {@inheritDoc} */
@@ -160,5 +179,45 @@ public class IsolatedDiscoverySpi extends IgniteSpiAdapter implements DiscoveryS
     /** {@inheritDoc} */
     @Override protected void onContextInitialized0(final IgniteSpiContext spiCtx) throws IgniteSpiException {
         // No-op.
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean knownNode(UUID nodeId) {
+        return getNode(nodeId) != null;
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean clientReconnectSupported() {
+        return false;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void clientReconnect() {
+
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean allNodesSupport(IgniteFeatures feature) {
+        return false;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void simulateNodeFailure() {
+
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setInternalListener(IgniteDiscoverySpiInternalListener lsnr) {
+
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean supportsCommunicationFailureResolve() {
+        return false;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void resolveCommunicationFailure(ClusterNode node, Exception err) {
+
     }
 }

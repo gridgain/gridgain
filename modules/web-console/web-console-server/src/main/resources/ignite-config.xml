@@ -22,60 +22,14 @@
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
                            http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
 
-    <!-- Set up IGNITE_NO_DISCO_ORDER from the Spring config. -->
-    <bean class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
-        <property name="targetObject">
-            <!-- System.getProperties() -->
-            <bean class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
-                <property name="targetClass" value="java.lang.System"/>
-                <property name="targetMethod" value="getProperties"/>
-            </bean>
-        </property>
-
-        <property name="targetMethod" value="putAll"/>
-        <property name="arguments">
-            <util:properties>
-                <prop key="IGNITE_NO_DISCO_ORDER">true</prop>
-            </util:properties>
-        </property>
-    </bean>
-
     <bean class="org.apache.ignite.configuration.IgniteConfiguration">
-        <property name="authenticationEnabled" value="false"/>
         <property name="metricsLogFrequency" value="0"/>
-
         <property name="queryThreadPoolSize" value="16"/>
         <property name="failureDetectionTimeout" value="10000"/>
-        <property name="clientFailureDetectionTimeout" value="10000"/>
         <property name="networkTimeout" value="10000"/>
 
-        <property name="cacheConfiguration">
-            <bean class="org.apache.ignite.configuration.CacheConfiguration">
-                <property name="name" value="*"/>
-                <property name="cacheMode" value="PARTITIONED"/>
-                <property name="backups" value="1"/>
-
-                <property name="affinity">
-                    <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">
-                        <property name="partitions" value="256"/>
-                    </bean>
-                </property>
-            </bean>
-        </property>
-
         <property name="connectorConfiguration"><null/></property>
-
         <property name="clientConnectorConfiguration"><null/></property>
-
-        <property name="communicationSpi">
-            <bean class="org.apache.ignite.console.discovery.IsolatedCommunicationSpi"/>
-        </property>
-
-        <property name="transactionConfiguration">
-            <bean class="org.apache.ignite.configuration.TransactionConfiguration">
-                <property name="txTimeoutOnPartitionMapExchange" value="#{60L * 1000L}"/>
-            </bean>
-        </property>
 
         <property name="dataStorageConfiguration">
             <bean class="org.apache.ignite.configuration.DataStorageConfiguration">
@@ -102,8 +56,12 @@
             <bean class="org.apache.ignite.failure.NoOpFailureHandler"/>
         </property>
 
+        <property name="communicationSpi">
+            <bean class="org.apache.ignite.spi.communication.isolated.IsolatedCommunicationSpi"/>
+        </property>
+
         <property name="discoverySpi">
-            <bean class="org.apache.ignite.console.discovery.IsolatedDiscoverySpi"/>
+            <bean class="org.apache.ignite.spi.discovery.isolated.IsolatedDiscoverySpi"/>
         </property>
     </bean>
 </beans>
