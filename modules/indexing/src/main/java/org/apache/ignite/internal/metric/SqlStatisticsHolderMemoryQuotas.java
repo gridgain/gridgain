@@ -18,8 +18,8 @@ package org.apache.ignite.internal.metric;
 
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
+import org.apache.ignite.internal.processors.metric.impl.LongAdderMetricImpl;
 import org.apache.ignite.internal.processors.metric.impl.LongGauge;
-import org.apache.ignite.internal.processors.metric.impl.LongMetricImpl;
 import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
 
 /**
@@ -35,7 +35,7 @@ public class SqlStatisticsHolderMemoryQuotas {
     private final QueryMemoryManager memMgr;
 
     /** Measures number of sql memory allocations on this node. */
-    private final LongMetricImpl quotaRequestedCnt;
+    private final LongAdderMetricImpl quotaRequestedCnt;
 
     /** Measures total memory in bytes it is possible to allocate on this node. */
     private final LongGauge quotaMaxMem;
@@ -54,7 +54,7 @@ public class SqlStatisticsHolderMemoryQuotas {
 
         MetricRegistry quotasMetrics = metricMgr.registry(SQL_QUOTAS_REG_NAME);
         
-        quotaRequestedCnt = quotasMetrics.metric("requests",
+        quotaRequestedCnt = quotasMetrics.longAdderMetric("requests",
             "How many times memory quota have been requested on this node by all the queries in total. " +
                 "Always 0 if sql memory quotas are disabled.");
 
