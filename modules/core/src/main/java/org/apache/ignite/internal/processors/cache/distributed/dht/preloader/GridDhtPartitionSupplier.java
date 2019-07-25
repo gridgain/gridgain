@@ -53,8 +53,6 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.spi.IgniteSpiException;
 
-import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_PART_MISSED;
-import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_PART_SUPPLIED;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 
 /**
@@ -389,9 +387,6 @@ class GridDhtPartitionSupplier {
 
                     remainingParts.remove(part);
 
-                    if (grp.eventRecordable(EVT_CACHE_REBALANCE_PART_MISSED))
-                        grp.addRebalanceMissEvent(part);
-
                     if (log.isDebugEnabled())
                         log.debug("Requested partition is marked as missing ["
                             + supplyRoutineInfo(topicId, nodeId, demandMsg) + ", p=" + part + "]");
@@ -419,9 +414,6 @@ class GridDhtPartitionSupplier {
                     supplyMsg.last(part, initUpdateCntrs.get(part));
 
                     remainingParts.remove(part);
-
-                    if (grp.eventRecordable(EVT_CACHE_REBALANCE_PART_SUPPLIED))
-                        grp.addRebalanceSupplyEvent(part);
                 }
             }
 
@@ -439,17 +431,11 @@ class GridDhtPartitionSupplier {
                     supplyMsg.last(p, loc.updateCounter());
 
                     remainingIter.remove();
-
-                    if (grp.eventRecordable(EVT_CACHE_REBALANCE_PART_SUPPLIED))
-                        grp.addRebalanceSupplyEvent(p);
                 }
                 else if (iter.isPartitionMissing(p)) {
                     supplyMsg.missed(p);
 
                     remainingIter.remove();
-
-                    if (grp.eventRecordable(EVT_CACHE_REBALANCE_PART_MISSED))
-                        grp.addRebalanceMissEvent(p);
                 }
             }
 
