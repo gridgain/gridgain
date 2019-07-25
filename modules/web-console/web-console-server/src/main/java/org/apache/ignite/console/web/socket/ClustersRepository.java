@@ -178,7 +178,7 @@ public class ClustersRepository {
             if (!F.isEmpty(clusterIds)) {
                 clusters.cache().removeAll(clusterIds);
 
-                log.error("Failed to receive topology update for clusters: " + clusterIds);
+                log.debug("Failed to receive topology update for clusters: " + clusterIds);
             }
         });
     }
