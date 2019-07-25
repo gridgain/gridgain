@@ -60,7 +60,7 @@ public class IsolatedDiscoverySpiSelfTest extends GridCommonAbstractTest {
      * Test that node starts and can execute cache operations.
      */
     @Test
-    public void testIsolatedDiscover() {
+    public void testIsolatedDiscovery() {
         IgniteConfiguration cfg = new IgniteConfiguration()
             .setDiscoverySpi(new IsolatedDiscoverySpi())
             .setCommunicationSpi(new IsolatedCommunicationSpi())
