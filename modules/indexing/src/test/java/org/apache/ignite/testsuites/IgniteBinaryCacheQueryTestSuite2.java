@@ -16,6 +16,7 @@
 
 package org.apache.ignite.testsuites;
 
+import org.apache.ignite.internal.metric.SqlStatisticsMemoryQuotaTest;
 import org.apache.ignite.internal.processors.cache.CacheScanPartitionQueryFallbackSelfTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheCrossCacheJoinRandomTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheObjectKeyIndexingSelfTest;
@@ -150,6 +151,9 @@ import org.junit.runners.Suite;
 
     LocalQueryMemoryTrackerSelfTest.class,
     LocalQueryMemoryTrackerWithQueryParallelismSelfTest.class,
+
+    SqlStatisticsMemoryQuotaTest.class,
+
     QueryMemoryTrackerSelfTest.class,
 
     DmlBatchSizeDeadlockTest.class,
