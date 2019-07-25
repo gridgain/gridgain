@@ -51,14 +51,29 @@ public class ClusterTagUpdatedEvent extends EventAdapter {
         this.newTag = newTag;
     }
 
+    /**
+     * Cluster ID which tag was updated.
+     *
+     * @return UUID of cluster.
+     */
     public UUID clusterId() {
         return clusterId;
     }
 
+    /**
+     * Value of cluster tag before update request that triggered this event.
+     *
+     * @return Previous value of tag.
+     */
     public String previousTag() {
         return prevTag;
     }
 
+    /**
+     * Value of cluster tag after update request that triggered this event.
+     *
+     * @return New value of tag.
+     */
     public String newTag() {
         return newTag;
     }
