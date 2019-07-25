@@ -20,7 +20,6 @@ import java.util.UUID;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.Ignition;
-import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -36,7 +35,7 @@ import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
 
 /**
- *
+ * Test for {@link IsolatedDiscoverySpi}.
  */
 public class IsolatedDiscoverySpiSelfTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
@@ -79,7 +78,7 @@ public class IsolatedDiscoverySpiSelfTest extends GridCommonAbstractTest {
 
         assertTrue(ignite.cluster().active());
 
-        CacheConfiguration<Object, Object> ccfg = new CacheConfiguration<>("test")
+        CacheConfiguration<Object, Object> ccfg = new CacheConfiguration<>("test1")
             .setCacheMode(REPLICATED)
             .setAtomicityMode(TRANSACTIONAL);
 
@@ -94,11 +93,15 @@ public class IsolatedDiscoverySpiSelfTest extends GridCommonAbstractTest {
 
         assertEquals("2", cache.get("1"));
 
-        CacheConfiguration ccfg2 = new CacheConfiguration()
-            .setName("wc_sessions")
+        CacheConfiguration<Object, Object> ccfg2 = new CacheConfiguration<>()
+            .setName("test2")
             .setCacheMode(REPLICATED);
 
-        ignite.getOrCreateCache(ccfg2);
+        IgniteCache<Object, Object> c2 = ignite.getOrCreateCache(ccfg2);
+
+        c2.put(1, 2);
+
+        assertEquals(2, c2.get(1));
     }
 
     /** Test POJO. */
@@ -116,6 +119,20 @@ public class IsolatedDiscoverySpiSelfTest extends GridCommonAbstractTest {
         Pojo(UUID id, String name) {
             this.id = id;
             this.name = name;
+        }
+
+        /**
+         * @return ID.
+         */
+        public UUID getId() {
+            return id;
+        }
+
+        /**
+         * @return Name.
+         */
+        public String getName() {
+            return name;
         }
     }
 }

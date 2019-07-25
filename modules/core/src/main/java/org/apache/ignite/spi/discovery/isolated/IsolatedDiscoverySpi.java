@@ -28,11 +28,9 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.events.DiscoveryCustomEvent;
-import org.apache.ignite.internal.managers.discovery.CustomMessageWrapper;
-import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpiInternalListener;
-import org.apache.ignite.internal.processors.marshaller.MappingProposedMessage;
+import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.spi.IgniteSpiAdapter;
 import org.apache.ignite.spi.IgniteSpiContext;
@@ -67,7 +65,7 @@ public class IsolatedDiscoverySpi extends IgniteSpiAdapter implements IgniteDisc
     private DiscoverySpiListener lsnr;
 
     /** */
-    private Executor exec = Executors.newSingleThreadExecutor();
+    private Executor exec = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
     /** {@inheritDoc} */
     @Override public Serializable consistentId() throws IgniteSpiException {
@@ -115,7 +113,7 @@ public class IsolatedDiscoverySpi extends IgniteSpiAdapter implements IgniteDisc
 
     /** {@inheritDoc} */
     @Override public void setDataExchange(DiscoverySpiDataExchange exchange) {
-
+        // No-op.
     }
 
     /** {@inheritDoc} */
@@ -140,30 +138,29 @@ public class IsolatedDiscoverySpi extends IgniteSpiAdapter implements IgniteDisc
 
     /** {@inheritDoc} */
     @Override public void sendCustomEvent(DiscoverySpiCustomMessage msg) throws IgniteException {
-        exec.execute(() -> lsnr.onDiscovery(DiscoveryCustomEvent.EVT_DISCOVERY_CUSTOM_EVT,
-            1,
-            locNode,
-            Collections.singleton(locNode),
-            null,
-            msg));
+        exec.execute(() -> {
+            IgniteFuture<?> fut = lsnr.onDiscovery(DiscoveryCustomEvent.EVT_DISCOVERY_CUSTOM_EVT,
+                1,
+                locNode,
+                Collections.singleton(locNode),
+                null,
+                msg);
 
-        if (msg instanceof CustomMessageWrapper) {
-            CustomMessageWrapper wrp = (CustomMessageWrapper)msg;
+            // Ack message must be created after initial message processed.
+            fut.listen((f) -> {
+                DiscoverySpiCustomMessage ack = msg.ackMessage();
 
-            DiscoveryCustomMessage delegate = wrp.delegate();
-
-            DiscoveryCustomMessage ack = delegate.ackMessage();
-
-            if (ack != null) {
-                exec.execute(() -> lsnr.onDiscovery(DiscoveryCustomEvent.EVT_DISCOVERY_CUSTOM_EVT,
-                    1,
-                    locNode,
-                    Collections.singleton(locNode),
-                    null,
-                    new CustomMessageWrapper(ack))
-                );
-            }
-        }
+                if (ack != null) {
+                    exec.execute(() -> lsnr.onDiscovery(DiscoveryCustomEvent.EVT_DISCOVERY_CUSTOM_EVT,
+                        1,
+                        locNode,
+                        Collections.singleton(locNode),
+                        null,
+                        ack)
+                    );
+                }
+            });
+        });
     }
 
     /** {@inheritDoc} */
@@ -214,7 +211,7 @@ public class IsolatedDiscoverySpi extends IgniteSpiAdapter implements IgniteDisc
 
     /** {@inheritDoc} */
     @Override public void clientReconnect() {
-
+        // No-op.
     }
 
     /** {@inheritDoc} */
@@ -224,12 +221,12 @@ public class IsolatedDiscoverySpi extends IgniteSpiAdapter implements IgniteDisc
 
     /** {@inheritDoc} */
     @Override public void simulateNodeFailure() {
-
+        // No-op.
     }
 
     /** {@inheritDoc} */
     @Override public void setInternalListener(IgniteDiscoverySpiInternalListener lsnr) {
-
+        // No-op.
     }
 
     /** {@inheritDoc} */
@@ -239,6 +236,6 @@ public class IsolatedDiscoverySpi extends IgniteSpiAdapter implements IgniteDisc
 
     /** {@inheritDoc} */
     @Override public void resolveCommunicationFailure(ClusterNode node, Exception err) {
-
+        // No-op.
     }
 }
