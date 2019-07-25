@@ -30,6 +30,8 @@ public class TracingProcessor extends GridProcessorAdapter implements Tracing {
         super.start();
 
         try {
+            ctx.resource().inject(spi);
+
             spi.spiStart(ctx.igniteInstanceName());
         }
         catch (IgniteSpiException e) {

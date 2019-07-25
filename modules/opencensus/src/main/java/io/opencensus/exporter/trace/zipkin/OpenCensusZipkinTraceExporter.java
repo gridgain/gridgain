@@ -33,7 +33,7 @@ public class OpenCensusZipkinTraceExporter implements OpenCensusTraceExporter {
             );
 
             traceComponent.getExportComponent().getSpanExporter().registerHandler(
-                ZipkinTraceExporter.class.getName(),
+                ZipkinTraceExporter.class.getName() + "-" + igniteInstanceName,
                 exporterHnd
             );
         }

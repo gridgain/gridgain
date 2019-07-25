@@ -42,11 +42,16 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
 
     /** {@inheritDoc} */
     @Override public SpanEx<Span> create(@NotNull String name, @Nullable SpanEx<Span> parentSpan) {
-        return new SpanAdapter(
-            traceComponent.getTracer().spanBuilderWithExplicitParent(name, parentSpan != null ? parentSpan.impl() : null)
-                .setSampler(Samplers.alwaysSample())
-                .startSpan()
-            );
+        try {
+            return new SpanAdapter(
+                traceComponent.getTracer().spanBuilderWithExplicitParent(name, parentSpan != null ? parentSpan.impl() : null)
+                    .setSampler(Samplers.alwaysSample())
+                    .startSpan()
+            ).addTag("node.name", igniteInstanceName);
+        }
+        catch (Exception e) {
+            throw new IgniteException("Failed to create from parent", e);
+        }
     }
 
     /** {@inheritDoc} */
@@ -59,7 +64,7 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
                 )
                 .setSampler(Samplers.alwaysSample())
                 .startSpan()
-            );
+            ).addTag("node.name", igniteInstanceName);
         }
         catch (SpanContextParseException e) {
             throw new IgniteException("Failed to create span from serialized value: " + name, e);
@@ -78,17 +83,18 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
 
     /** {@inheritDoc} */
     @Override public void spiStart(String igniteInstanceName) throws IgniteSpiException {
-        if (traceComponent == null)
+        if (traceComponent == null) {
             traceComponent = createTraceComponent(getClass().getClassLoader());
 
-        if (exporter != null)
-            exporter.start(traceComponent, igniteInstanceName);
+            if (exporter != null)
+                exporter.start(traceComponent, igniteInstanceName);
+        }
     }
 
     /** {@inheritDoc} */
     @Override public void spiStop() throws IgniteSpiException {
-        if (exporter != null)
-            exporter.stop(traceComponent);
+        // if (exporter != null)
+        //    exporter.stop(traceComponent);
     }
 
     /**

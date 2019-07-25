@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Stream;
+import io.opencensus.trace.AttributeValue;
 import io.opencensus.trace.TraceComponent;
 import io.opencensus.trace.export.SpanData;
 import io.opencensus.trace.export.SpanExporter;
@@ -21,11 +23,13 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
     /** Shared trace component. */
     private static TraceComponent traceComponent;
 
+    private TraceTestExporter exporter;
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        cfg.setTracingSpi(new OpenCensusTracingSpi(traceComponent).withExporter(new TraceTestExporter()));
+        cfg.setTracingSpi(new OpenCensusTracingSpi(traceComponent));
 
         return cfg;
     }
@@ -39,12 +43,18 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
 
     @Before
     public void before() throws Exception {
+        exporter = new TraceTestExporter();
+
+        exporter.start(traceComponent, "all");
+
         startGrids(GRID_CNT);
     }
 
     @After
     public void after() {
         stopAllGrids();
+
+        traceComponent.getExportComponent().shutdown();
     }
 
     @Test
@@ -57,12 +67,6 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
     @Test
     public void testPartitionsMapExchangeTracing() {
 
-    }
-
-    private List<SpanData> spansReportedByNode(int nodeId) {
-        OpenCensusTracingSpi spi = (OpenCensusTracingSpi) grid(nodeId).configuration().getTracingSpi();
-        TraceTestExporter exporter = (TraceTestExporter) spi.getExporter();
-        return exporter.handler.collectedSpans;
     }
 
     /**
@@ -91,6 +95,12 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
         @Override public void export(Collection<SpanData> spanDataList) {
             for (SpanData data : spanDataList)
                 collectedSpans.add(data);
+        }
+
+        public Stream<SpanData> spansReportedByNode(String igniteInstanceName) {
+            return collectedSpans.stream()
+                    .filter(spanData -> AttributeValue.stringAttributeValue(igniteInstanceName)
+                        .equals(spanData.getAttributes().getAttributeMap().get("node.name")));
         }
     }
 }

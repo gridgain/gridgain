@@ -4,7 +4,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import io.opencensus.trace.Annotation;
 import io.opencensus.trace.AttributeValue;
-import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.processors.tracing.SpanEx;
 import org.apache.ignite.internal.processors.tracing.Status;
 
@@ -21,21 +20,21 @@ public class SpanAdapter implements SpanEx<io.opencensus.trace.Span> {
     }
 
     /** {@inheritDoc} */
-    @Override public Span addTag(String tagName, String tagVal) {
+    @Override public SpanAdapter addTag(String tagName, String tagVal) {
         span.putAttribute(tagName, AttributeValue.stringAttributeValue(tagVal));
 
         return this;
     }
 
     /** {@inheritDoc} */
-    @Override public Span addLog(String logDesc) {
+    @Override public SpanAdapter addLog(String logDesc) {
         span.addAnnotation(logDesc);
 
         return this;
     }
 
     /** {@inheritDoc} */
-    @Override public Span addLog(String logDesc, Map<String, String> attrs) {
+    @Override public SpanAdapter addLog(String logDesc, Map<String, String> attrs) {
         span.addAnnotation(Annotation.fromDescriptionAndAttributes(
             logDesc,
             attrs.entrySet().stream()
@@ -49,14 +48,14 @@ public class SpanAdapter implements SpanEx<io.opencensus.trace.Span> {
     }
 
     /** {@inheritDoc} */
-    @Override public Span setStatus(Status status) {
+    @Override public SpanAdapter setStatus(Status status) {
         span.setStatus(StatusMatchTable.match(status));
 
         return this;
     }
 
     /** {@inheritDoc} */
-    @Override public Span end() {
+    @Override public SpanAdapter end() {
         span.end();
 
         return this;
