@@ -226,7 +226,7 @@ public abstract class CacheStoreUsageMultinodeAbstractTest extends GridCommonAbs
 
         assertTrue("Store is not updated", wait);
 
-        assertEquals("Write on wrong node: " + writeMap, 2, writeMap.size());
+        assertEquals("Write on wrong node: " + writeMap, 1, writeMap.size());
 
         assertEquals(expNode, writeMap.keySet().iterator().next());
 
