@@ -593,6 +593,8 @@ public:
         addr = other.addr;
         env = other.env;
         dbc = other.dbc;
+
+        return *this;
     }
 
     OdbcClient(OdbcClient&& other) :
