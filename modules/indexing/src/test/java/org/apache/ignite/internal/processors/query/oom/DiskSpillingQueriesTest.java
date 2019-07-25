@@ -25,6 +25,8 @@ import org.junit.runners.Parameterized;
 
 /**
  * Test for the intermediate query results disk offloading (disk spilling).
+ * TODO: Tests with indexes on fields
+ *
  */
 @RunWith(Parameterized.class)
 public class DiskSpillingQueriesTest extends DiskSpillingAbstractTest {
@@ -112,7 +114,6 @@ public class DiskSpillingQueriesTest extends DiskSpillingAbstractTest {
     }
 
     /** */
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-21595")
     @Test
     public void simpleSelectWithDistinctOrderByAggregate() {
         checkSortOrder = true;
@@ -122,7 +123,6 @@ public class DiskSpillingQueriesTest extends DiskSpillingAbstractTest {
     }
 
     /** */
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-21595")
     @Test
     public void simpleSelectWithDistinctOrderByAggregateLazy() {
         checkSortOrder = true;

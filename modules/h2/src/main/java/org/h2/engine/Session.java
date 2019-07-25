@@ -24,8 +24,12 @@ import org.h2.command.CommandInterface;
 import org.h2.command.Parser;
 import org.h2.command.Prepared;
 import org.h2.command.ddl.Analyze;
+import org.h2.command.dml.GroupByData;
+import org.h2.command.dml.GroupedGroupByData;
+import org.h2.command.dml.PlainGroupByData;
 import org.h2.command.dml.Query;
 import org.h2.constraint.Constraint;
+import org.h2.expression.Expression;
 import org.h2.index.Index;
 import org.h2.index.ViewIndex;
 import org.h2.jdbc.JdbcConnection;
@@ -235,6 +239,22 @@ public class Session extends SessionWithState implements TransactionStore.Rollba
      */
     public H2MemoryTracker queryMemoryTracker() {
         return qryContext != null ? qryContext.queryMemoryTracker() : null;
+    }
+
+    /**
+     * @return Creates new data holder for GROUP BY data.
+     */
+    public GroupByData newGroupByDataInstance(Session ses, ArrayList<Expression> expressions, boolean isGrpQry,
+        int[] grpIdx) {
+        if (qryContext != null) {
+            GroupByData grpByData = qryContext.newGroupByDataInstance(ses, expressions, isGrpQry, grpIdx);
+
+            if (grpByData != null)
+                return grpByData;
+        }
+
+        return isGrpQry ? new GroupedGroupByData(ses, grpIdx) :
+            new PlainGroupByData(ses);
     }
 
     /**

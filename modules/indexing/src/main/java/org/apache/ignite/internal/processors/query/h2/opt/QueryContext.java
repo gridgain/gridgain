@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.query.h2.opt;
 
+import java.util.ArrayList;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
@@ -24,6 +25,9 @@ import org.apache.ignite.internal.processors.query.h2.opt.join.DistributedJoinCo
 import org.apache.ignite.internal.processors.query.h2.twostep.PartitionReservation;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.spi.indexing.IndexingQueryFilter;
+import org.h2.command.dml.GroupByData;
+import org.h2.engine.Session;
+import org.h2.expression.Expression;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -147,6 +151,12 @@ public class QueryContext implements H2QueryContext {
      */
     @Override public @Nullable H2MemoryTracker queryMemoryTracker() {
         return memTracker;
+    }
+
+    /** {@inheritDoc} */
+    @Override public GroupByData newGroupByDataInstance(Session ses, ArrayList<Expression> expressions,
+        boolean isGrpQry, int[] grpIdx) {
+        return null; // TODO: CODE: implement.
     }
 
     /**

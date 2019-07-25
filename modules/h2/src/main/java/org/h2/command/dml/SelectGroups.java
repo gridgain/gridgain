@@ -8,11 +8,7 @@ package org.h2.command.dml;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.TreeMap;
-import org.h2.engine.Constants;
 import org.h2.engine.Session;
 import org.h2.expression.Expression;
 import org.h2.expression.aggregate.AggregateData;
@@ -52,7 +48,7 @@ public abstract class SelectGroups {
         /**
          * Map of group-by key to group-by expression data e.g. AggregateData
          */
-        private TreeMap<ValueRow, Object[]> groupByData;
+        private GroupByData groupByData;
 
         /**
          * Key into groupByData that produces currentGroupByExprData. Not used
@@ -63,8 +59,6 @@ public abstract class SelectGroups {
         /**
          * Cursor for {@link #next()} method.
          */
-        private Iterator<Entry<ValueRow, Object[]>> cursor;
-
         Grouped(Session session, ArrayList<Expression> expressions, int[] groupIndex) {
             super(session, expressions);
             this.groupIndex = groupIndex;
@@ -74,13 +68,11 @@ public abstract class SelectGroups {
         public void reset() {
             super.reset();
             if (groupByData != null) {
-                for (Object[] aggrs : groupByData.values())
-                    cleanupAggregates(aggrs);
+                groupByData.cleanup();
             }
 
-            groupByData = new TreeMap<>(session.getDatabase().getCompareMode());
+            groupByData = session.newGroupByDataInstance(session, expressions, true, groupIndex);
             currentGroupsKey = null;
-            cursor = null;
         }
 
         @Override
@@ -97,14 +89,8 @@ public abstract class SelectGroups {
                 }
                 currentGroupsKey = ValueRow.get(keyValues);
             }
-            Object[] values = groupByData.get(currentGroupsKey);
-            if (values == null) {
-                values = createRow();
-                groupByData.put(currentGroupsKey, values);
 
-                onGroupChanged(currentGroupsKey, null, values);
-            }
-            currentGroupByExprData = values;
+            currentGroupByExprData = groupByData.nextSource(currentGroupsKey, width());
             currentGroupRowId++;
         }
 
@@ -112,67 +98,48 @@ public abstract class SelectGroups {
         void updateCurrentGroupExprData() {
             // this can be null in lazy mode
             if (currentGroupsKey != null) {
-                // since we changed the size of the array, update the object in
-                // the groups map
-                Object[] old = groupByData.put(currentGroupsKey, currentGroupByExprData);
-
-                onGroupChanged(currentGroupsKey, old, currentGroupByExprData);
+                groupByData.updateCurrent(currentGroupByExprData);
             }
         }
 
         @Override
         public void done() {
             super.done();
-            if (groupIndex == null && groupByData.size() == 0) {
-                groupByData.put(ValueRow.getEmpty(), createRow());
-            }
-            cursor = groupByData.entrySet().iterator();
-        }
 
-        /** Current cursor entry. */
-        Map.Entry<ValueRow, Object[]> curEntry;
+            groupByData.done(width());
+        }
 
         @Override
         public ValueRow next() {
-            if (cursor.hasNext()) {
-                curEntry = cursor.next();
-                currentGroupByExprData = curEntry.getValue();
+            if (groupByData.next()) {
+                currentGroupByExprData = groupByData.groupByExprData();
                 currentGroupRowId++;
-                return curEntry.getKey();
+
+                return groupByData.groupKey();
             }
-            curEntry = null;
             return null;
         }
 
         @Override
         public void remove() {
-            cursor.remove();
+            groupByData.remove();
+
+            cleanupAggregates(currentGroupByExprData);
+
             currentGroupByExprData = null;
             currentGroupRowId--;
-
-            cleanupAggregates(curEntry.getValue());
-
-            onGroupChanged(curEntry.getKey(), curEntry.getValue(), null);
-
-            curEntry = null;
         }
 
         @Override
         public void resetLazy() {
             super.resetLazy();
-            assert groupByData == null || !groupByData.containsKey(currentGroupsKey);
             currentGroupsKey = null;
         }
     }
 
     private static final class Plain extends SelectGroups {
 
-        private ArrayList<Object[]> rows;
-
-        /**
-         * Cursor for {@link #next()} method.
-         */
-        private Iterator<Object[]> cursor;
+        private GroupByData rows;
 
         Plain(Session session, ArrayList<Expression> expressions) {
             super(session, expressions);
@@ -182,41 +149,34 @@ public abstract class SelectGroups {
         public void reset() {
             super.reset();
             if (rows != null) {
-                for (Object[] r : rows)
-                    cleanupAggregates(r);
+                rows.reset();
             }
 
-            rows = new ArrayList<>();
-            cursor = null;
+            rows = session.newGroupByDataInstance(session, expressions, false, null);
         }
 
         @Override
         public void nextSource() {
-            Object[] values = createRow();
-            rows.add(values);
-            currentGroupByExprData = values;
+            currentGroupByExprData = rows.nextSource(null, width());
             currentGroupRowId++;
-
-            onGroupChanged(null, null, currentGroupByExprData);
         }
 
         @Override
         void updateCurrentGroupExprData() {
-            Object[] old = rows.set(rows.size() - 1, currentGroupByExprData);
-
-            onGroupChanged(null, old, currentGroupByExprData);
+            rows.updateCurrent(currentGroupByExprData);
         }
 
         @Override
         public void done() {
             super.done();
-            cursor = rows.iterator();
+
+            rows.done(width());
         }
 
         @Override
         public ValueRow next() {
-            if (cursor.hasNext()) {
-                currentGroupByExprData = cursor.next();
+            if (rows.next()) {
+                currentGroupByExprData = rows.groupByExprData();
                 currentGroupRowId++;
                 return ValueRow.getEmpty();
             }
@@ -260,12 +220,7 @@ public abstract class SelectGroups {
      */
     int currentGroupRowId;
 
-    /**
-     * Memory reserved in bytes.
-     *
-     * Note: Poison value '-1' means memory tracking is disabled.
-     */
-    long memReserved;
+
 
     /**
      * Creates new instance of grouped data.
@@ -288,9 +243,6 @@ public abstract class SelectGroups {
     SelectGroups(Session session, ArrayList<Expression> expressions) {
         this.session = session;
         this.expressions = expressions;
-
-        if (session.queryMemoryTracker() == null)
-            memReserved = -1;
     }
 
     /**
@@ -343,12 +295,10 @@ public abstract class SelectGroups {
     }
 
     /**
-     * Creates new object arrays to holds group-by data.
-     *
-     * @return new object array to holds group-by data.
+     * @return Number of aggregates for group-by data.
      */
-    final Object[] createRow() {
-        return new Object[Math.max(exprToIndexInGroupByData.size(), expressions.size())];
+    final int width() {
+        return Math.max(exprToIndexInGroupByData.size(), expressions.size());
     }
 
     /**
@@ -418,11 +368,11 @@ public abstract class SelectGroups {
         windowPartitionData.clear();
         currentGroupRowId = 0;
 
-        if (trackable()) {
-            session.queryMemoryTracker().released(memReserved);
-
-            memReserved = 0;
-        }
+//        if (trackable()) { TODO Do we really need to release memory here?
+//            session.queryMemoryTracker().released(memReserved);
+//
+//            memReserved = 0;
+//        }
     }
 
     /**
@@ -466,7 +416,7 @@ public abstract class SelectGroups {
      * @param aggrs Aggregates to cleanup.
      */
     void cleanupAggregates(Object[] aggrs) {
-        if (aggrs == null || !trackable())
+        if (aggrs == null || session.queryMemoryTracker() == null)
             return;
 
         for (Object agg : aggrs) {
@@ -474,7 +424,6 @@ public abstract class SelectGroups {
                 ((AggregateData)agg).cleanup(session);
         }
     }
-
     /**
      * Moves group data to the next group in lazy mode.
      */
@@ -499,51 +448,5 @@ public abstract class SelectGroups {
      */
     public ArrayList<Expression> expressions() {
         return expressions;
-    }
-
-    /**
-     * Group result updated callback.
-     *
-     * @param groupKey Row key.
-     * @param old Old row.
-     * @param row New row.
-     */
-    protected void onGroupChanged(ValueRow groupKey, Object[] old, Object[] row) {
-        if (!trackable())
-            return;
-
-        assert old != null || row != null;
-
-        long size;
-
-        // Group result changed.
-        if (row != null && old != null)
-            size = (row.length - old.length) * Constants.MEMORY_OBJECT;
-        // New group added.
-        else if (old == null) {
-            size = groupKey != null ? groupKey.getMemory() : 0;
-            size += Constants.MEMORY_ARRAY + row.length * Constants.MEMORY_OBJECT;
-        }
-        // Group removed.
-        else {
-            size = groupKey != null ? -groupKey.getMemory() : 0;
-            size -= Constants.MEMORY_ARRAY + old.length * Constants.MEMORY_OBJECT;
-        }
-
-        if (size > 0)
-            session.queryMemoryTracker().reserved(size);
-        else
-            session.queryMemoryTracker().released(-size);
-
-        memReserved += size;
-    }
-
-    /**
-     * @return {@code True} if memory tracker available, {@code False} otherwise.
-     */
-    boolean trackable() {
-        assert memReserved == -1 || session.queryMemoryTracker() != null;
-
-        return memReserved != -1;
     }
 }
