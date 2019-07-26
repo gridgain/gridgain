@@ -33,6 +33,7 @@ import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -42,6 +43,7 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC
 /**
  *
  */
+@WithSystemProperty(key="IGNITE_DUMP_THREADS_ON_FAILURE", value = "false")
 public class IgniteCache150ClientsTest extends GridCommonAbstractTest {
     /** */
     private static final int CACHES = 10;
@@ -159,11 +161,11 @@ public class IgniteCache150ClientsTest extends GridCommonAbstractTest {
             }
         }, CLIENTS, "start-client");
 
-        fut.get();
+        fut.get(getTestTimeout());
 
         log.info("Started all clients.");
 
-        waitForTopology(CLIENTS + 1);
+        waitForTopology(CLIENTS + 1, (int)getTestTimeout());
 
         checkNodes(CLIENTS + 1);
     }

@@ -2307,6 +2307,14 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @throws Exception If failed.
      */
     protected void waitForTopology(final int expSize) throws Exception {
+        waitForTopology(expSize, 30_000);
+    }
+
+    /**
+     * @param expSize Expected nodes number.
+     * @throws Exception If failed.
+     */
+    protected void waitForTopology(final int expSize, int timeout) throws Exception {
         assertTrue(GridTestUtils.waitForCondition(new GridAbsPredicate() {
             @Override public boolean apply() {
                 List<Ignite> nodes = G.allGrids();
@@ -2344,7 +2352,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
 
                 return true;
             }
-        }, 30_000));
+        }, timeout));
     }
 
     /**
