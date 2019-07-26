@@ -115,7 +115,7 @@ public class IsolatedDiscoverySpiSelfTest extends GridCommonAbstractTest {
      * Test that isolated node restarts correctly.
      */
     @Test
-    public void testRestatrt() {
+    public void testRestart() {
         Ignite ignite = Ignition.start(isolatedConfiguration("isolated-node"));
 
         ignite.cluster().active(true);
