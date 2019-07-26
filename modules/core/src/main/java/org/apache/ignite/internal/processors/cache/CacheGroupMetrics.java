@@ -14,18 +14,16 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.util.offheap.unsafe;
-
-import org.apache.ignite.internal.util.offheap.GridOffHeapMap;
-import org.apache.ignite.internal.util.offheap.GridOffHeapMapFactory;
-import org.apache.ignite.internal.util.offheap.GridOffHeapMapPerformanceAbstractTest;
+package org.apache.ignite.internal.processors.cache;
 
 /**
- * Unsafe map test.
+ * Cache group metrics.
  */
-public class GridUnsafeMapPerformanceTest extends GridOffHeapMapPerformanceAbstractTest {
-    /** {@inheritDoc} */
-    @Override protected GridOffHeapMap newMap() {
-        return GridOffHeapMapFactory.unsafeMap(concurrency, load, initCap, mem, lruStripes, evictClo);
-    }
+public interface CacheGroupMetrics {
+    /**
+     * @return Number of partitions need processed for finished indexes create or rebuilding.
+     * It is calculated as the number of local partition minus the processed.
+     * A value of 0 indicates that the index is built.
+     */
+    public long getIndexBuildCountPartitionsLeft();
 }
