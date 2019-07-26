@@ -22,10 +22,10 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -33,7 +33,6 @@ import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.console.json.JsonObject;
 import org.apache.ignite.console.utils.Utils;
-import org.apache.ignite.internal.processors.rest.protocols.http.jetty.GridJettyObjectMapper;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
@@ -64,7 +63,7 @@ public class RestExecutorSelfTest {
     private static final String PATH_TO_RESOURCES = "modules/web-console/web-agent/src/test/resources/";
 
     /** JSON object mapper. */
-    private static final ObjectMapper MAPPER = new GridJettyObjectMapper();
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     /** */
     private static final String HTTP_URI = "http://localhost:8080";
@@ -235,7 +234,7 @@ public class RestExecutorSelfTest {
     /** */
     @Test
     public void nodeNoSslAgentWithSsl() throws Throwable {
-        ruleForExpectedException.expectCause(Is.isA(SSLException.class));
+        ruleForExpectedException.expect(Is.isA(SSLException.class));
         checkRest(
             nodeConfiguration(""),
             HTTPS_URI,
@@ -249,7 +248,7 @@ public class RestExecutorSelfTest {
     /** */
     @Test
     public void nodeWithSslAgentNoSsl() throws Throwable {
-        ruleForExpectedException.expectCause(Is.isA(HttpResponseException.class));
+        ruleForExpectedException.expect(Is.isA(HttpResponseException.class));
         checkRest(
             nodeConfiguration(JETTY_WITH_SSL),
             HTTP_URI,
@@ -276,7 +275,7 @@ public class RestExecutorSelfTest {
     /** */
     @Test
     public void nodeNoCiphersAgentWithCiphers() throws Throwable {
-        ruleForExpectedException.expectCause(Is.isA(SSLHandshakeException.class));
+        ruleForExpectedException.expect(Is.isA(SSLHandshakeException.class));
         checkRest(
             nodeConfiguration(JETTY_WITH_SSL),
             HTTPS_URI,
@@ -290,7 +289,7 @@ public class RestExecutorSelfTest {
     /** */
     @Test
     public void nodeWithCiphersAgentNoCiphers() throws Throwable {
-        ruleForExpectedException.expectCause(Is.isA(SSLException.class));
+        ruleForExpectedException.expect(Is.isA(SSLException.class));
         checkRest(
             nodeConfiguration(JETTY_WITH_CIPHERS_0),
             HTTPS_URI,
@@ -317,7 +316,7 @@ public class RestExecutorSelfTest {
     /** */
     @Test
     public void differentCiphers1() throws Throwable {
-        ruleForExpectedException.expectCause(Is.isA(SSLHandshakeException.class));
+        ruleForExpectedException.expect(Is.isA(SSLHandshakeException.class));
         checkRest(
             nodeConfiguration(JETTY_WITH_CIPHERS_1),
             HTTPS_URI,
@@ -331,7 +330,7 @@ public class RestExecutorSelfTest {
     /** */
     @Test
     public void differentCiphers2() throws Throwable {
-        ruleForExpectedException.expectCause(Is.isA(SSLException.class));
+        ruleForExpectedException.expect(Is.isA(SSLException.class));
         checkRest(
             nodeConfiguration(JETTY_WITH_CIPHERS_2),
             HTTPS_URI,
