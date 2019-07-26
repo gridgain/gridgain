@@ -1658,4 +1658,24 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         assertContains(log, out, "Rolling upgrade is disabled");
     }
+
+    /**
+     * Verify that in case of setting baseline topology with offline node among others
+     * {@link IgniteException} is thrown.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    public void setConsistenceIdsWithOfflineBaselineNode() throws Exception {
+        Ignite ignite = startGrids(2);
+
+        ignite.cluster().active(true);
+
+        ignite(0).createCache(defaultCacheConfiguration().setNodeFilter(
+            (IgnitePredicate<ClusterNode>)node -> node.attribute("some-attr") != null));
+
+        assertEquals(EXIT_CODE_UNEXPECTED_ERROR,
+            execute("--baseline", "set", "non-existing-node-id ," + consistentIds(ignite)));
+    }
 }
