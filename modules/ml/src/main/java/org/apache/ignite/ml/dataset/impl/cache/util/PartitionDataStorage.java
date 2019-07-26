@@ -29,8 +29,8 @@ import java.util.function.Supplier;
  * Local storage used to keep partition {@code data}.
  */
 class PartitionDataStorage implements AutoCloseable {
-    /** Storage of a partition {@code data}. */
-    private final ConcurrentMap<Integer, Object> storage = new ConcurrentHashMap<>();
+    /** Storage of a partition {@code data} with usage stat. */
+    private final ConcurrentMap<Integer, ObjectWithUsageStat> storage = new ConcurrentHashMap<>();
 
     /** Storage of locks correspondent to partition {@code data} objects. */
     private final ConcurrentMap<Integer, Lock> locks = new ConcurrentHashMap<>();
@@ -38,7 +38,7 @@ class PartitionDataStorage implements AutoCloseable {
     /** Schedured thread pool executor for cleaners. */
     private final ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
 
-    /** Time-to-live in seconds (-1 for an infinite lifetime). */
+    /** Time-to-live in milliseconds (-1 for an infinite lifetime). */
     private final long ttl;
 
     /**
@@ -47,7 +47,7 @@ class PartitionDataStorage implements AutoCloseable {
      * @param ttl Time-to-live in seconds (-1 for an infinite lifetime).
      */
     public PartitionDataStorage(long ttl) {
-       this.ttl = ttl;
+       this.ttl = ttl * 1_000;
     }
 
     /**
@@ -61,28 +61,29 @@ class PartitionDataStorage implements AutoCloseable {
      * @return Partition {@code data}.
      */
     <D> D computeDataIfAbsent(int part, Supplier<D> supplier) {
-        Object data = storage.get(part);
+        ObjectWithUsageStat objWithStat = storage.get(part);
 
-        if (data == null) {
+        if (objWithStat == null) {
             Lock lock = locks.computeIfAbsent(part, p -> new ReentrantLock());
 
             lock.lock();
             try {
-                data = storage.computeIfAbsent(part, p -> {
-                    Object res = supplier.get();
-
+                objWithStat = storage.get(part);
+                if (objWithStat == null) {
+                    objWithStat = new ObjectWithUsageStat(supplier.get());
+                    storage.put(part, objWithStat);
                     if (ttl > -1)
-                        executor.schedule(new Cleaner(part), ttl, TimeUnit.SECONDS);
-
-                    return res;
-                });
+                        executor.schedule(new Cleaner(part), ttl, TimeUnit.MILLISECONDS);
+                }
             }
             finally {
                 lock.unlock();
             }
         }
 
-        return (D)data;
+        objWithStat.updateLastAccessTime();
+
+        return (D)objWithStat.data;
     }
 
     /** {@inheritDoc} */
@@ -109,11 +110,78 @@ class PartitionDataStorage implements AutoCloseable {
 
         /** {@inheritDoc} */
         @Override public void run() {
-            Object data = storage.remove(part);
-            locks.remove(part);
+            ObjectWithUsageStat objWithStat = storage.get(part);
 
+            if (objWithStat.isExpired()) {
+                removeFromStorage();
+                objWithStat.close();
+            }
+            else
+                reschedule(objWithStat.lastAccessTime);
+        }
+
+        /**
+         * Removes partition data and correspondent lock from storage.
+         */
+        private void removeFromStorage() {
+            storage.remove(part);
+            locks.remove(part);
+        }
+
+        /**
+         * Reschedules this cleaner using the last access time as a reference point. The next attepmt to clean up will
+         * be {@link #ttl} milliseconds after the last access.
+         *
+         * @param lastAccessTime Last access time in milliseconds (difference between the last access time and midnight,
+         *                       January 1, 1970 UTC).
+         */
+        private void reschedule(long lastAccessTime) {
+            long delay = lastAccessTime - System.currentTimeMillis() + ttl;
+            executor.schedule(this, delay, TimeUnit.MILLISECONDS);
+        }
+    }
+
+    /**
+     * Util container that keeps an object and the last access time to it. Allows to check if the object is already
+     * expired and to clean it up.
+     */
+    private class ObjectWithUsageStat implements AutoCloseable {
+        /** Data object. */
+        private final Object data;
+
+        /** Last access time in milliseconds (see {@link System#currentTimeMillis()}). */
+        private volatile long lastAccessTime;
+
+        /**
+         * Constructs a new instance of object with usage stat.
+         *
+         * @param data Data object.
+         */
+        ObjectWithUsageStat(Object data) {
+            this.data = data;
+        }
+
+        /**
+         * Updates last access time.
+         */
+        void updateLastAccessTime() {
+            lastAccessTime = System.currentTimeMillis();
+        }
+
+        /**
+         * Checks if the object is already expired. In ohter words, checks if the last access to the object occured more
+         * than {@link #ttl} milliseconds ago.
+         *
+         * @return {@code true} if object is already expired, otherwise {@code false}.
+         */
+        boolean isExpired() {
+            return lastAccessTime + ttl <= System.currentTimeMillis();
+        }
+
+        /** {@inheritDoc} */
+        @Override public void close() {
             if (data instanceof AutoCloseable) {
-                AutoCloseable closeableData = (AutoCloseable) data;
+                AutoCloseable closeableData = (AutoCloseable)data;
                 try {
                     closeableData.close();
                 }
