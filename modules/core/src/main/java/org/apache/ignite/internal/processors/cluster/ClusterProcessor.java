@@ -182,8 +182,8 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
             log.info("Cluster ID and tag has been read from metastorage: " + idAndTag);
 
         if (idAndTag != null) {
-            localClusterId = idAndTag.id;
-            localClusterTag = idAndTag.tag;
+            localClusterId = idAndTag.id();
+            localClusterTag = idAndTag.tag();
         }
     }
 
@@ -213,11 +213,11 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
                 if (log.isInfoEnabled())
                     log.info(
                         "Cluster tag will be set to new value: " +
-                            newVal != null ? newVal.tag : "null" +
+                            newVal != null ? newVal.tag() : "null" +
                             ", previous value was: " +
-                            oldVal != null ? oldVal.tag : "null");
+                            oldVal != null ? oldVal.tag() : "null");
 
-                cluster.setTag(newVal != null ? newVal.tag : null);
+                cluster.setTag(newVal != null ? newVal.tag() : null);
             }
         );
 
@@ -247,11 +247,11 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     public void updateTag(String newTag) throws IgniteCheckedException {
         ClusterIdAndTag oldTag = metastorage.read(CLUSTER_ID_TAG_KEY);
 
-        if (!metastorage.compareAndSet(CLUSTER_ID_TAG_KEY, oldTag, new ClusterIdAndTag(oldTag.id, newTag))) {
+        if (!metastorage.compareAndSet(CLUSTER_ID_TAG_KEY, oldTag, new ClusterIdAndTag(oldTag.id(), newTag))) {
             ClusterIdAndTag concurrentValue = metastorage.read(CLUSTER_ID_TAG_KEY);
 
             throw new IgniteCheckedException("Cluster tag has been concurrently updated to different value: " +
-                concurrentValue.tag);
+                concurrentValue.tag());
         }
         else
             cluster.setTag(newTag);
@@ -484,7 +484,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
         ClusterIdAndTag commonData = (ClusterIdAndTag)data.commonData();
 
-        Serializable remoteClusterId = commonData.id;
+        Serializable remoteClusterId = commonData.id();
 
         if (remoteClusterId != null) {
             if (localClusterId != null && !localClusterId.equals(remoteClusterId)) {
@@ -497,7 +497,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
             localClusterId = (UUID)remoteClusterId;
         }
 
-        String remoteClusterTag = commonData.tag;
+        String remoteClusterTag = commonData.tag();
 
         if (remoteClusterTag != null)
             localClusterTag = remoteClusterTag;
@@ -956,49 +956,6 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
         /** {@inheritDoc} */
         @Override public void onTimeout() {
             ctx.getSystemExecutorService().execute(this);
-        }
-    }
-
-    /**
-     * Container class to send cluster ID and tag in disco data and to write them atomically to metastorage.
-     */
-    private static class ClusterIdAndTag implements Serializable {
-        /** */
-        private static final long serialVersionUID = 0L;
-
-        /** */
-        private final UUID id;
-
-        /** */
-        private final String tag;
-
-        /**
-         * @param id Cluster ID.
-         * @param tag Cluster tag.
-         */
-        private ClusterIdAndTag(UUID id, String tag) {
-            this.id = id;
-            this.tag = tag;
-        }
-
-        /** {@inheritDoc} */
-        @Override public int hashCode() {
-            return Objects.hash(id, tag);
-        }
-
-        /** {@inheritDoc} */
-        @Override public boolean equals(Object obj) {
-            if (!(obj instanceof ClusterIdAndTag))
-                return false;
-
-            ClusterIdAndTag idAndTag = (ClusterIdAndTag)obj;
-
-            return id.equals(idAndTag.id) && tag.equals(idAndTag.tag);
-        }
-
-        /** {@inheritDoc} */
-        @Override public String toString() {
-            return S.toString(ClusterIdAndTag.class, this);
         }
     }
 }
