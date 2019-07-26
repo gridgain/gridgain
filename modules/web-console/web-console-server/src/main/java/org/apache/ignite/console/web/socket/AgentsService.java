@@ -375,7 +375,12 @@ public class AgentsService extends AbstractSocketHandler {
             UserKey key = new UserKey(accId, demo);
             WebSocketResponse stats = collectAgentStats(key);
 
-            ignite.message().send(SEND_TO_USER_BROWSER, new UserEvent(key, stats));
+            try {
+                ignite.message().send(SEND_TO_USER_BROWSER, new UserEvent(key, stats));
+            }
+            catch (Throwable e) {
+                log.error("Failed to send connected clusters to browsers", e);
+            }
         }
     }
 
