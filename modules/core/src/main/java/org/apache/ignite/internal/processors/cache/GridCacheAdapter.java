@@ -128,6 +128,7 @@ import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteBiInClosure;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteCallable;
@@ -3187,11 +3188,8 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
             // Version for all loaded entries.
             final GridCacheVersion ver0 = ctx.versions().nextForLoad();
 
-            ctx.store().loadCache(new CIX3<KeyCacheObject, Object, GridCacheVersion>() {
-                @Override public void applyx(KeyCacheObject key, Object val, @Nullable GridCacheVersion ver)
-                    throws IgniteException {
-                    assert ver == null;
-
+            ctx.store().loadCache(new IgniteBiInClosure<KeyCacheObject, Object>() {
+                @Override public void apply(KeyCacheObject key, Object val) throws IgniteException {
                     long ttl = CU.ttlForLoad(plc);
 
                     if (ttl == CU.TTL_ZERO)

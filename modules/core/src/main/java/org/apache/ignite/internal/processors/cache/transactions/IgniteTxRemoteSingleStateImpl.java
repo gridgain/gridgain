@@ -126,9 +126,4 @@ public class IgniteTxRemoteSingleStateImpl extends IgniteTxRemoteStateAdapter {
     @Override public String toString() {
         return S.toString(IgniteTxRemoteSingleStateImpl.class, this);
     }
-
-    /** {@inheritDoc} */
-    @Override public Collection<CacheStoreManager> stores(GridCacheSharedContext cctx) {
-        return null;
-    }
 }

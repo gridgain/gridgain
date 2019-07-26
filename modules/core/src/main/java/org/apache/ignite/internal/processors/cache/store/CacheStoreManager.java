@@ -104,7 +104,7 @@ public interface CacheStoreManager extends GridCacheManager {
      * @return {@code True} if there is a persistent storage.
      * @throws IgniteCheckedException If data loading failed.
      */
-    public boolean loadCache(final GridInClosure3<KeyCacheObject, Object, GridCacheVersion> vis, Object[] args)
+    public boolean loadCache(final IgniteBiInClosure<KeyCacheObject, Object> vis, Object[] args)
         throws IgniteCheckedException;
 
     /**

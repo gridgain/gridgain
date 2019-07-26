@@ -622,10 +622,8 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
             ctx.kernalContext().resource().injectGeneric(p);
 
         try {
-            ctx.store().loadCache(new CI3<KeyCacheObject, Object, GridCacheVersion>() {
-                @Override public void apply(KeyCacheObject key, Object val, @Nullable GridCacheVersion ver) {
-                    assert ver == null;
-
+            ctx.store().loadCache(new IgniteBiInClosure<KeyCacheObject, Object>() {
+                @Override public void apply(KeyCacheObject key, Object val) {
                     loadEntry(key, val, ver0, p, topVer, replicate, plc);
                 }
             }, args);

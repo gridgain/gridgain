@@ -50,7 +50,6 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.GridEmptyIterator;
 import org.apache.ignite.internal.util.GridLeanMap;
 import org.apache.ignite.internal.util.GridSetWrapper;
-import org.apache.ignite.internal.util.lang.GridInClosure3;
 import org.apache.ignite.internal.util.lang.GridMetadataAwareAdapter;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
@@ -443,7 +442,7 @@ public abstract class GridCacheStoreManagerAdapter extends GridCacheManagerAdapt
     }
 
     /** {@inheritDoc} */
-    @Override public final boolean loadCache(final GridInClosure3 vis, Object[] args) throws IgniteCheckedException {
+    @Override public final boolean loadCache(final IgniteBiInClosure<KeyCacheObject, Object> vis, Object[] args) throws IgniteCheckedException {
         if (store != null) {
             if (log.isDebugEnabled())
                 log.debug("Loading all values from store.");
@@ -457,7 +456,7 @@ public abstract class GridCacheStoreManagerAdapter extends GridCacheManagerAdapt
                     @Override public void apply(Object k, Object o) {
                         KeyCacheObject cacheKey = cctx.toCacheKeyObject(k);
 
-                        vis.apply(cacheKey, o, null);
+                        vis.apply(cacheKey, o);
                     }
                 }, args);
 
