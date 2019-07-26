@@ -137,7 +137,7 @@ class PartitionDataStorage implements AutoCloseable {
          */
         private void reschedule(long lastAccessTime) {
             long delay = lastAccessTime - System.currentTimeMillis() + ttl;
-            executor.schedule(this, delay, TimeUnit.MILLISECONDS);
+            executor.schedule(this, Math.max(0, delay), TimeUnit.MILLISECONDS);
         }
     }
 

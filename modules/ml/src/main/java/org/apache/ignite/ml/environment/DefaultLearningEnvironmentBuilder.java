@@ -35,7 +35,7 @@ public class DefaultLearningEnvironmentBuilder implements LearningEnvironmentBui
     private static final long serialVersionUID = 8502532880517447662L;
 
     /** Default partition data TTL (infinite). */
-    private static final long DEFAULT_TTL = -1;
+    private static final long INFINITE_TTL = -1;
 
     /** Dependency (partition -> Parallelism strategy). */
     private IgniteFunction<Integer, ParallelismStrategy> parallelismStgy;
@@ -60,7 +60,7 @@ public class DefaultLearningEnvironmentBuilder implements LearningEnvironmentBui
         loggingFactory = constant(NoOpLogger.factory());
         seed = constant(new Random().nextLong());
         rngSupplier = p -> new Random();
-        dataTtl = DEFAULT_TTL;
+        dataTtl = INFINITE_TTL;
     }
 
 
