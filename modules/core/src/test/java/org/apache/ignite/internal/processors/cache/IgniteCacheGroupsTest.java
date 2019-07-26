@@ -1459,7 +1459,7 @@ public class IgniteCacheGroupsTest extends GridCommonAbstractTest {
      */
     @Test
     public void testStartManyCaches() throws Exception {
-        final int CACHES =  SF.apply(5_000);
+        final int CACHES = SF.apply(5_000);
 
         final int NODES = 4;
 

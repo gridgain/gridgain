@@ -19,6 +19,7 @@ package org.apache.ignite.ml.inference.storage.model;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.Lock;
@@ -33,7 +34,7 @@ public class LocalModelStorageProvider implements ModelStorageProvider {
     private final ConcurrentMap<String, FileOrDirectory> storage = new ConcurrentHashMap<>();
 
     /** Storage of the locks. */
-    private final ConcurrentMap<String, WeakReference<Lock>> locks = new ConcurrentHashMap<>();
+    private final Map<String, WeakReference> locks = new ConcurrentHashMap<>();
 
     /** */
     private final ThreadLocal<SynchronizationContext> syncCtx = ThreadLocal.withInitial(SynchronizationContext::new);
@@ -97,7 +98,7 @@ public class LocalModelStorageProvider implements ModelStorageProvider {
      * @param key Key to acquire lock for.
      * @return Acquired lock.
      */
-    @SuppressWarnings("LockAcquiredButNotSafelyReleased")
+    @SuppressWarnings({"LockAcquiredButNotSafelyReleased", "unchecked"})
     private Lock lock(String key) {
         Lock resLock;
 

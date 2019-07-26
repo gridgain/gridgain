@@ -203,6 +203,8 @@ public class ZookeeperDiscoveryCommunicationFailureTest extends ZookeeperDiscove
 
         stopGrid(0);
 
+        awaitPartitionMapExchange();
+
         commSpi.pingLatch.countDown();
 
         fut.get();
@@ -398,7 +400,7 @@ public class ZookeeperDiscoveryCommunicationFailureTest extends ZookeeperDiscove
 
         int nodeIdx = 10;
 
-        for (int i = 0; i < GridTestUtils.SF.applyLB(10, 2); i++) {
+        for (int i = 0; i < GridTestUtils.SF.applyLB(4, 2); i++) {
             info("Iteration: " + i);
 
             for (Ignite node : G.allGrids())
@@ -720,6 +722,8 @@ public class ZookeeperDiscoveryCommunicationFailureTest extends ZookeeperDiscove
         checkResolverCachesInfo(ignite(1), expCaches);
 
         stopGrid(1);
+
+        awaitPartitionMapExchange();
 
         expCaches.put("c3", new T3<>(256, 1, 3));
 

@@ -189,6 +189,9 @@ public class CacheGroupContext {
     /** */
     private volatile boolean hasAtomicCaches;
 
+    /** Store cache group metrics. */
+    private final CacheGroupMetricsImpl metrics;
+
     /**
      * @param ctx Context.
      * @param grpId Group ID.
@@ -249,6 +252,8 @@ public class CacheGroupContext {
         mvccEnabled = ccfg.getAtomicityMode() == TRANSACTIONAL_SNAPSHOT;
 
         log = ctx.kernalContext().log(getClass());
+
+        metrics = new CacheGroupMetricsImpl();
 
         mxBean = new CacheGroupMetricsMXBeanImpl(this);
 
@@ -1238,8 +1243,9 @@ public class CacheGroupContext {
      */
     public void globalWalEnabled(boolean enabled) {
         if (globalWalEnabled != enabled) {
-            log.info("Global WAL state for group=" + cacheOrGroupName() +
-                " changed from " + globalWalEnabled + " to " + enabled);
+            if (log.isInfoEnabled())
+                log.info("Global WAL state for group=" + cacheOrGroupName() +
+                    " changed from " + globalWalEnabled + " to " + enabled);
 
             persistGlobalWalState(enabled);
 
@@ -1253,8 +1259,9 @@ public class CacheGroupContext {
      */
     public void localWalEnabled(boolean enabled, boolean persist) {
         if (localWalEnabled != enabled){
-            log.info("Local WAL state for group=" + cacheOrGroupName() +
-                " changed from " + localWalEnabled + " to " + enabled);
+            if (log.isInfoEnabled())
+                log.info("Local WAL state for group=" + cacheOrGroupName() +
+                    " changed from " + localWalEnabled + " to " + enabled);
 
             if (persist)
                 persistLocalWalState(enabled);
@@ -1296,5 +1303,12 @@ public class CacheGroupContext {
      */
     public boolean hasAtomicCaches() {
         return hasAtomicCaches;
+    }
+
+    /**
+     * @return Metrics.
+     */
+    public CacheGroupMetricsImpl metrics0() {
+        return metrics;
     }
 }

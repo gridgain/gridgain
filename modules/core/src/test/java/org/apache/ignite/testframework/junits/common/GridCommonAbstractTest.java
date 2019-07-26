@@ -70,6 +70,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.IgniteKernal;
+import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.affinity.GridAffinityFunctionContextImpl;
 import org.apache.ignite.internal.processors.cache.CacheGroupDescriptor;
@@ -100,6 +101,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.PA;
 import org.apache.ignite.internal.util.typedef.T2;
+import org.apache.ignite.internal.util.typedef.T3;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
@@ -122,6 +124,8 @@ import org.apache.ignite.transactions.TransactionRollbackException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.cache.CacheMode.LOCAL;
@@ -570,6 +574,83 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
     }
 
     /**
+     * Awaits that all nodes have seen latest topology change.
+     *
+     * Takes into account only server nodes, clients are ignored.
+     *
+     * @param timeout Await timeout.
+     * @throws IgniteException If waiting failed.
+     */
+    private void awaitTopologyChanged(long timeout) throws IgniteException {
+        if (isMultiJvm())
+            return;
+
+        List<IgniteEx> allNodes0 = G.allGrids().stream()
+            .map(i -> (IgniteEx)i)
+            .filter(i -> isServer(i.localNode()))
+            .collect(toList());
+
+        Set<ClusterNode> nodes0 = allNodes0.stream()
+            .map(IgniteEx::localNode)
+            .collect(toSet());
+
+        long endTime = System.currentTimeMillis() + timeout;
+
+        for (IgniteEx ig : allNodes0) {
+            GridDiscoveryManager disc = ig.context().discovery();
+
+            while (true) {
+                AffinityTopologyVersion topVer = disc.topologyVersionEx();
+
+                Collection<ClusterNode> nodes = disc.nodes(topVer)
+                    .stream()
+                    .filter(GridCommonAbstractTest::isServer)
+                    .collect(Collectors.toSet());
+
+                if (System.currentTimeMillis() > endTime) {
+                    StringBuilder exp = new StringBuilder();
+
+                    nodes0.stream()
+                        .map(n -> new T2<>(n.id().toString(), n.consistentId().toString()))
+                        .forEach(t -> {
+                            exp.append("(")
+                                .append(t.get1()).append(", ").append(t.get2())
+                                .append(")");
+                        });
+
+                    StringBuilder actl = new StringBuilder();
+
+                    nodes.stream()
+                        .map(n -> new T2<>(n.id().toString(), n.consistentId().toString()))
+                        .forEach(t -> {
+                            actl.append("(")
+                                .append(t.get1()).append(", ").append(t.get2())
+                                .append(")");
+                        });
+
+                    throw new IgniteException("Timeout of waiting topology localNode=("
+                        + ig.cluster().localNode().id() + "," + ig.cluster().localNode().consistentId() + ") "
+                        + " topVer=" + topVer + " [" + "expected:" + exp + " | " + "actual:" + actl + "]"
+                    );
+                }
+
+                if (!nodes0.equals(new HashSet<>(nodes)))
+                    doSleep(50);
+                else
+                    break;
+            }
+        }
+    }
+
+    /**
+     * @param node Cluster node.
+     * @return {@code True} If node is a server. {@False} if not.
+     */
+    private static boolean isServer(ClusterNode node){
+        return !node.isClient() && !node.isDaemon();
+    }
+
+    /**
      * @param waitEvicts If {@code true} will wait for evictions finished.
      * @param waitNode2PartUpdate If {@code true} will wait for nodes node2part info update finished.
      * @param nodes Optional nodes. If {@code null} method will wait for all nodes, for non null collection nodes will
@@ -586,6 +667,8 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
     ) throws InterruptedException {
         long timeout = getPartitionMapExchangeTimeout();
 
+        awaitTopologyChanged(timeout);
+
         long startTime = -1;
 
         Set<String> names = new HashSet<>();
@@ -596,11 +679,11 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
             if (nodes != null) {
                 Set<UUID> gClusterNodeIds = g.cluster().nodes().stream()
                     .map(ClusterNode::id)
-                    .collect(Collectors.toSet());
+                    .collect(toSet());
 
                 Set<UUID> awaitPmeNodeIds = nodes.stream()
                     .map(ClusterNode::id)
-                    .collect(Collectors.toSet());
+                    .collect(toSet());
 
                 gClusterNodeIds.retainAll(awaitPmeNodeIds);
 
@@ -1302,7 +1385,7 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
      * @return List of keys.
      */
     protected final List<Integer> movingKeysAfterJoin(Ignite ign, String cacheName, int size) {
-        return movingKeysAfterJoin(ign, cacheName, size, null);
+        return movingKeysAfterJoin(ign, cacheName, size, null, null);
     }
 
     /**
@@ -1313,11 +1396,13 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
      * @param cacheName Cache name.
      * @param size Number of keys.
      * @param nodeInitializer Node initializer closure.
+     * @param joiningNodeConsistentId Joining node consistent id.
      * @return List of keys.
      */
     protected final List<Integer> movingKeysAfterJoin(Ignite ign, String cacheName, int size,
-        @Nullable IgniteInClosure<ClusterNode> nodeInitializer) {
-        assertEquals("Expected consistentId is set to node name", ign.name(), ign.cluster().localNode().consistentId());
+        @Nullable IgniteInClosure<ClusterNode> nodeInitializer, @Nullable String joiningNodeConsistentId) {
+        if (joiningNodeConsistentId == null)
+            assertEquals("Expected consistentId is set to node name", ign.name(), ign.cluster().localNode().consistentId());
 
         ArrayList<ClusterNode> nodes = new ArrayList<>(ign.cluster().nodes());
 
@@ -1328,7 +1413,8 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
         if (nodeInitializer != null)
             nodeInitializer.apply(fakeNode);
 
-        fakeNode.consistentId(getTestIgniteInstanceName(nodes.size()));
+        fakeNode.consistentId(joiningNodeConsistentId == null ? getTestIgniteInstanceName(nodes.size()) :
+            joiningNodeConsistentId);
 
         nodes.add(fakeNode);
 
@@ -2324,20 +2410,26 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
     protected void assertCountersSame(int partId, boolean withReserveCntr) throws AssertionFailedError {
         PartitionUpdateCounter cntr0 = null;
 
-        for (Ignite ignite : G.allGrids()) {
-            if (ignite.configuration().isClientMode())
+        List<T3<String, @Nullable PartitionUpdateCounter, Boolean>> cntrMap = G.allGrids().stream().filter(ignite ->
+            !ignite.configuration().isClientMode()).map(ignite ->
+            new T3<>(ignite.name(), counter(partId, ignite.name()),
+                ignite.affinity(DEFAULT_CACHE_NAME).isPrimary(ignite.cluster().localNode(), partId))).collect(toList());
+
+        for (T3<String, PartitionUpdateCounter, Boolean> cntr : cntrMap) {
+            if (cntr.get2() == null)
                 continue;
 
-            PartitionUpdateCounter cntr = counter(partId, ignite.name());
-
             if (cntr0 != null) {
-                assertEquals("Expecting same counters [partId=" + partId + ']', cntr0, cntr);
+                assertEquals("Expecting same counters [partId=" + partId +
+                    ", cntrs=" + cntrMap + ']', cntr0, cntr.get2());
 
                 if (withReserveCntr)
-                    assertEquals("Expecting same reservation counters", cntr0.reserved(), cntr.reserved());
+                    assertEquals("Expecting same reservation counters [partId=" + partId +
+                            ", cntrs=" + cntrMap + ']',
+                        cntr0.reserved(), cntr.get2().reserved());
             }
 
-            cntr0 = cntr;
+            cntr0 = cntr.get2();
         }
     }
 }
