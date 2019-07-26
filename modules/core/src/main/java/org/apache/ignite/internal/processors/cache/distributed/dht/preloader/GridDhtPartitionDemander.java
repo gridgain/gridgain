@@ -30,9 +30,12 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
@@ -553,7 +556,7 @@ public class GridDhtPartitionDemander {
                             partStatistics.sndMsgTime = currentTimeMillis();
 
                             fut.stat.partStat
-                                .computeIfAbsent(topicId, integer -> new HashMap<>())
+                                .computeIfAbsent(topicId, integer -> new ConcurrentHashMap<>())
                                 .put(node, partStatistics);
 
                             ctx.io().sendOrderedMessage(node, rebalanceTopics.get(topicId),
@@ -790,14 +793,17 @@ public class GridDhtPartitionDemander {
 
                 partStat.msgSize = supplyMsg.messageSize();
 
-                boolean isPrintStatistics = isPrintRebalanceStatistics();
+                if (isPrintRebalanceStatistics()) {
+                    List<PartitionInfoStatistics> partInfos = supplyMsg.infos().entrySet().stream()
+                        .map(entry -> new PartitionInfoStatistics(entry.getKey(), entry.getValue().infos().size()))
+                        .collect(toList());
+
+                    partStat.parts = partInfos;
+                }
 
                 // Preload.
                 for (Map.Entry<Integer, CacheEntryInfoCollection> e : supplyMsg.infos().entrySet()) {
                     int p = e.getKey();
-
-                    if (isPrintStatistics)
-                        partStat.parts.add(new PartitionInfoStatistics(p, e.getValue().infos().size()));
 
                     if (aff.get(p).contains(ctx.localNode())) {
                         GridDhtLocalPartition part;
@@ -1596,28 +1602,28 @@ public class GridDhtPartitionDemander {
     /** Rebalance statistics1 */
     private static class RebalanceStatistics {
         /** Start rebalance time in mills */
-        private long startTime = currentTimeMillis();
+        private volatile long startTime = currentTimeMillis();
 
         /** End rebalance time in mills */
-        private long endTime = currentTimeMillis();
+        private volatile long endTime = currentTimeMillis();
 
         /** First key - topic id. Second key - supplier node id. */
-        private final Map<Integer, Map<ClusterNode, PartitionStatistics>> partStat = new HashMap<>();
+        private final Map<Integer, Map<ClusterNode, PartitionStatistics>> partStat = new ConcurrentHashMap<>();
     }
 
     /** Partition statistics */
     private static class PartitionStatistics {
         /** Time send message for partition in mills */
-        private long sndMsgTime;
+        private volatile long sndMsgTime;
 
         /** Time receive message with partition in mills */
-        private long rcvMsgTime;
+        private volatile long rcvMsgTime;
 
         /** Size receive message in bytes */
-        private long msgSize;
+        private volatile long msgSize;
 
         /** Received partitions */
-        private final List<PartitionInfoStatistics> parts = new ArrayList<>();
+        private volatile List<PartitionInfoStatistics> parts;
     }
 
     /** Received partition info */
