@@ -484,23 +484,25 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
         ClusterIdAndTag commonData = (ClusterIdAndTag)data.commonData();
 
-        Serializable remoteClusterId = commonData.id();
+        if (commonData != null) {
+            Serializable remoteClusterId = commonData.id();
 
-        if (remoteClusterId != null) {
-            if (localClusterId != null && !localClusterId.equals(remoteClusterId)) {
-                log.warning("Received cluster ID differs from locally stored cluster ID " +
-                    "and will be rewritten. " +
-                    "Received cluster ID: " + remoteClusterId +
-                    ", local cluster ID: " + localClusterId);
+            if (remoteClusterId != null) {
+                if (localClusterId != null && !localClusterId.equals(remoteClusterId)) {
+                    log.warning("Received cluster ID differs from locally stored cluster ID " +
+                        "and will be rewritten. " +
+                        "Received cluster ID: " + remoteClusterId +
+                        ", local cluster ID: " + localClusterId);
+                }
+
+                localClusterId = (UUID)remoteClusterId;
             }
 
-            localClusterId = (UUID)remoteClusterId;
+            String remoteClusterTag = commonData.tag();
+
+            if (remoteClusterTag != null)
+                localClusterTag = remoteClusterTag;
         }
-
-        String remoteClusterTag = commonData.tag();
-
-        if (remoteClusterTag != null)
-            localClusterTag = remoteClusterTag;
     }
 
     /**
