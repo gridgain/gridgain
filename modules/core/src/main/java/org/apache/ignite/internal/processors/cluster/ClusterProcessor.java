@@ -258,16 +258,16 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
             cluster.setTag(newTag);
 
             String msg = "Tag of cluster with id " +
-                    oldTag.id +
+                    oldTag.id() +
                     " has been updated to new value: " +
                     newTag +
                     ", previous value was " +
-                    oldTag.tag
+                    oldTag.tag()
                 ;
 
             if (ctx.event().isRecordable(EVT_CLUSTER_TAG_UPDATED)) {
                 ctx.closure().runLocalSafe(() -> ctx.event().record(
-                    new ClusterTagUpdatedEvent(ctx.discovery().localNode(), msg, oldTag.id, oldTag.tag, newTag)
+                    new ClusterTagUpdatedEvent(ctx.discovery().localNode(), msg, oldTag.id(), oldTag.tag(), newTag)
                 ));
             }
         }
