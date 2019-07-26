@@ -16,7 +16,6 @@
 
 package org.apache.ignite.console.agent.handlers;
 
-import java.net.ConnectException;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -48,7 +47,6 @@ import org.apache.ignite.logger.slf4j.Slf4jLogger;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.websocket.api.Session;
-import org.eclipse.jetty.websocket.api.UpgradeException;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketClose;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketConnect;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketError;
@@ -239,7 +237,7 @@ public class WebSocketRouter implements AutoCloseable {
 
             httpClient.start();
             client.start();
-            client.connect(this, URI.create(cfg.serverUri()).resolve(AGENTS_PATH)).get(10L, TimeUnit.SECONDS);
+            client.connect(this, URI.create(cfg.serverUri()).resolve(AGENTS_PATH)).get(5L, TimeUnit.SECONDS);
 
             reconnectCnt = -1;
         }
@@ -449,16 +447,14 @@ public class WebSocketRouter implements AutoCloseable {
     }
 
     /**
-     * @param e Error.
+     * @param ignored Error.
      */
     @OnWebSocketError
-    public void onError(Throwable e) {
-        if (e instanceof ConnectException || e instanceof UpgradeException) {
-            if (reconnectCnt <= 0)
-                log.error("Failed to establish websocket connection with server: " + cfg.serverUri());
+    public void onError(Throwable ignored) {
+        if (reconnectCnt <= 0)
+            log.error("Failed to establish websocket connection with server: " + cfg.serverUri());
 
-            connect();
-        }
+        connect();
     }
 
     /**
