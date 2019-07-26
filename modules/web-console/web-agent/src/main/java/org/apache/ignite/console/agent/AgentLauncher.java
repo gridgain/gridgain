@@ -163,10 +163,18 @@ public class AgentLauncher {
 
             IOException ignore = X.cause(e, IOException.class);
 
-            if (ignore != null && "404".equals(ignore.getMessage())) {
-                log.error("Failed to receive response from server (connection refused).");
+            if (ignore != null) {
+                if ("404".equals(ignore.getMessage())) {
+                    log.error("Failed to receive response from server (connection refused).");
 
-                return;
+                    return;
+                }
+
+                if ("504".equals(ignore.getMessage())) {
+                    log.error("Failed to receive response from server (connection timeout).");
+
+                    return;
+                }
             }
 
             log.error("Connection error.", e);
@@ -183,13 +191,14 @@ public class AgentLauncher {
 
         if (ioCause != null) {
             if ("404".equals(ioCause.getMessage())) {
-                log.error("You are using outdated version of Web agent. Please download latest version of Web agent from Web console.");
+                log.error("You have configured invalid server-uri property or are using outdated version of Web agent.");
+                log.error("Please check you configuration file or download latest version of Web agent from Web console.");
 
                 System.exit(1);
             }
 
             if ("504".equals(ioCause.getMessage())) {
-                log.error("Failed to establish connection to server, connection timeout.");
+                log.error("Failed to establish connection to server (connection timeout).");
 
                 return;
             }
