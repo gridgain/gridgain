@@ -20,13 +20,15 @@ import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import org.apache.calcite.adapter.enumerable.EnumerableConvention;
+import org.apache.calcite.adapter.enumerable.EnumerableInterpreter;
+import org.apache.calcite.interpreter.Bindables;
 import org.apache.calcite.plan.ConventionTraitDef;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptPlanner;
+import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelCollation;
@@ -57,6 +59,7 @@ import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContextInfo;
+import org.apache.ignite.internal.processors.cache.QueryCursorImpl;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.persistence.RootPage;
@@ -74,6 +77,8 @@ import org.apache.ignite.internal.processors.query.QueryIndexDescriptorImpl;
 import org.apache.ignite.internal.processors.query.SqlClientContext;
 import org.apache.ignite.internal.processors.query.UpdateSourceIterator;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitor;
+import org.apache.ignite.internal.sql.calcite.physical.PhysicalOperator;
+import org.apache.ignite.internal.sql.calcite.physical.TableScan;
 import org.apache.ignite.internal.util.GridAtomicLong;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.TimeBag;
@@ -91,6 +96,8 @@ import static org.apache.calcite.tools.Programs.ofRules;
  */
 public class CalciteIndexing implements GridQueryIndexing {
 
+    private GridKernalContext ctx;
+
     private final SchemaPlus rootSchema = Frameworks.createRootSchema(true);
 
     private static final List<RelTraitDef> TRAITS = Collections
@@ -104,12 +111,11 @@ public class CalciteIndexing implements GridQueryIndexing {
         //.setQuoting(Quoting.BACK_TICK)
         .build();
 
-    // TODO NOT THREAD-SAFE!
-    private Planner planner;
-
     /** {@inheritDoc} */
     @Override public void start(GridKernalContext ctx, GridSpinBusyLock busyLock) throws IgniteCheckedException {
         System.out.println("CalciteIndexing.start");
+
+        this.ctx = ctx;
     }
 
     /** {@inheritDoc} */
@@ -118,8 +124,6 @@ public class CalciteIndexing implements GridQueryIndexing {
 
         // TODO: CODE: implement.
     }
-
-
 
     /** {@inheritDoc} */
     @Override public void registerCache(String cacheName, String schemaName,
@@ -135,7 +139,7 @@ public class CalciteIndexing implements GridQueryIndexing {
             Collection<QueryEntity> entities = cacheInfo.config().getQueryEntities();
 
             for (QueryEntity entity : entities) {
-                schema.add(entity.getTableName(), new IgniteTable(entity));
+                schema.add(entity.getTableName(), new IgniteTable(entity, cacheName));
             }
         }
         System.out.println("CalciteIndexing.registerCache");
@@ -162,27 +166,15 @@ public class CalciteIndexing implements GridQueryIndexing {
     /** {@inheritDoc} */
     @Override public List<FieldsQueryCursor<List<?>>> querySqlFields(String schemaName, SqlFieldsQuery qry,
         SqlClientContext cliCtx, boolean keepBinary, boolean failOnMultipleStmts, GridQueryCancel cancel) {
-        System.out.println("CalciteIndexing.querySqlFields");
-
-        TimeBag timeBag = new TimeBag();
-
-        SchemaPlus schema = rootSchema.getSubSchema(schemaName);
-
-        if (schema == null)
-            throw new IgniteException("No schema: " + schemaName);
-
-        final FrameworkConfig config = Frameworks.newConfigBuilder()
-            .parserConfig(CALCITE_PARSER_CONFIG)
-            .defaultSchema(schema)
-            .traitDefs(TRAITS)
-            .programs(ofRules(CalciteUtils.RULE_SET)) // TODO add rules
-            .build();
-
-        Planner planner = Frameworks.getPlanner(config);
-
-        timeBag.finishGlobalStage("Planner created");
-
         try {
+            System.out.println("CalciteIndexing.querySqlFields");
+
+            TimeBag timeBag = new TimeBag();
+
+            Planner planner = getPlanner(schemaName);
+
+            timeBag.finishGlobalStage("Planner created");
+
             // 1. Parsing
             SqlNode sqlAst = planner.parse(qry.getSql());
 
@@ -196,10 +188,9 @@ public class CalciteIndexing implements GridQueryIndexing {
             // 3. Converting AST to RelTree
             RelNode logicalPlan = planner.rel(sqlAst).project();
 
+            System.out.println("Initial logical plan:\n" + RelOptUtil.toString(logicalPlan));
+
             timeBag.finishGlobalStage("Logical planning finished");
-
-
-            //RelDataType originalRowType = logicalPlan.getRowType();
 
             RelOptCluster cluster = logicalPlan.getCluster();
 
@@ -208,51 +199,71 @@ public class CalciteIndexing implements GridQueryIndexing {
             RelTraitSet desiredTraits
                 = cluster.traitSet()
                 .replace(EnumerableConvention.INSTANCE);
+
             final RelCollation collation
                 = logicalPlan instanceof Sort
-                ? ((Sort) logicalPlan).collation
+                ? ((Sort)logicalPlan).collation
                 : null;
+
             if (collation != null) {
                 desiredTraits = desiredTraits.replace(collation);
             }
+
             final RelNode newRoot = optPlanner.changeTraits(logicalPlan, desiredTraits);
             optPlanner.setRoot(newRoot);
 
             timeBag.finishGlobalStage("Planner prepared");
 
-            RelNode bestExp = optPlanner.findBestExp();
+            RelNode bestPlan = optPlanner.findBestExp();
 
             timeBag.finishGlobalStage("Best plan found");
 
+            System.out.println("Optimal plan:\n" + RelOptUtil.toString(bestPlan));
+            System.out.println("Planning timings=" + timeBag.stagesTimings());
+
+            //ctx.cache().cache()
+
+            PhysicalOperator physicalOperator = convertToPhysical(bestPlan);
+
+            return Arrays.asList(new QueryCursorImpl<List<?>>(physicalOperator)); // TODO: CODE: implement.
 
         }
         catch (SqlParseException | ValidationException | RelConversionException e) {
             throw new IgniteException("Parsing error.", e);
         }
+    }
 
-        System.out.println("timings=" + timeBag.stagesTimings());
 
-        return Arrays.asList(new FieldsQueryCursor<List<?>>() {
-            @Override public String getFieldName(int idx) {
-                return null; // TODO: CODE: implement.
-            }
 
-            @Override public int getColumnsCount() {
-                return 0; // TODO: CODE: implement.
-            }
+    @NotNull private Planner getPlanner(String schemaName) {
+        SchemaPlus schema = rootSchema.getSubSchema(schemaName);
 
-            @Override public List<List<?>> getAll() {
-                return null; // TODO: CODE: implement.
-            }
+        if (schema == null)
+            throw new IgniteException("No schema: " + schemaName);
 
-            @Override public void close() {
-                // TODO: CODE: implement.
-            }
+        final FrameworkConfig config = Frameworks.newConfigBuilder()
+            .parserConfig(CALCITE_PARSER_CONFIG)
+            .defaultSchema(schema)
+            .traitDefs(TRAITS)
+            .programs(ofRules(CalciteUtils.RULE_SET)) // TODO add rules
+            .build();
 
-            @NotNull @Override public Iterator<List<?>> iterator() {
-                return null; // TODO: CODE: implement.
-            }
-        }); // TODO: CODE: implement.
+        return Frameworks.getPlanner(config);
+    }
+
+    private PhysicalOperator convertToPhysical(RelNode plan) {
+
+        if (plan instanceof Bindables.BindableTableScan) {
+            List<String> tblName = plan.getTable().getQualifiedName(); // Schema + tblName
+
+            IgniteTable tbl = (IgniteTable)rootSchema.getSubSchema(tblName.get(0)).getTable(tblName.get(1));
+
+            return new TableScan(tbl, ctx.cache().cache(tbl.cacheName()));
+        }
+        else if (plan instanceof EnumerableInterpreter)
+            return convertToPhysical(plan.getInput(0));
+
+        throw new IgniteException("Operation is not supported yet: " + plan);
     }
 
     /** {@inheritDoc} */

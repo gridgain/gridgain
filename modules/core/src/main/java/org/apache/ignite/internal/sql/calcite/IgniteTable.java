@@ -46,7 +46,10 @@ public class IgniteTable extends AbstractTable implements ScannableTable/*, Proj
 
     List<Column> cols;
 
-    public IgniteTable(QueryEntity entity) {
+    final String cacheName;
+
+    public IgniteTable(QueryEntity entity, String cacheName) {
+        this.cacheName = cacheName;
         keys = Collections.singletonList(ImmutableBitSet.builder().set(0).build()); // PK is at the 0 position.
         cols = new ArrayList<>(entity.getFields().size() + 1); // Fields + _key;
         cols.add(new Column(0, entity.getKeyFieldName(), classNameToSqlType(entity.getKeyType())));
@@ -86,7 +89,15 @@ public class IgniteTable extends AbstractTable implements ScannableTable/*, Proj
         rowCnt--;
     }
 
-//    @Override public Enumerable<Object[]> scan(DataContext root, List<RexNode> filters, int[] projects) {
+    public String cacheName() {
+        return cacheName;
+    }
+
+    public List<Column> columns() {
+        return cols;
+    }
+
+    //    @Override public Enumerable<Object[]> scan(DataContext root, List<RexNode> filters, int[] projects) {
 //        throw new UnsupportedOperationException();
 //    }
 

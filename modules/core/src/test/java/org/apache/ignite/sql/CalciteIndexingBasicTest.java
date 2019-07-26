@@ -18,7 +18,7 @@ package org.apache.ignite.sql;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
+import javax.cache.Cache;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.QueryEntity;
@@ -59,17 +59,24 @@ public class CalciteIndexingBasicTest extends GridCommonAbstractTest {
 
     @Test
     public void testSelect() {
-        IgniteCache<Integer, String> cache = grid(0).cache(DEFAULT_CACHE_NAME);
+        IgniteCache<Integer, String> cache = grid(0).cache(DEFAULT_CACHE_NAME).withKeepBinary();
 
-        List res;// = cache.query(new SqlFieldsQuery("SELECT id, name FROM ProjectTbl WHERE ver > 1 ORDER BY name")).getAll();
+        for (Cache.Entry entry : cache) {
+            System.out.println(entry);
+        }
+
+        List res = cache.query(new SqlFieldsQuery("SELECT * FROM ProjectTbl ")).getAll();
 
 
-        for(int i = 0; i < 1000; i++)
-            res = cache.query(new SqlFieldsQuery("SELECT id, name " + (ThreadLocalRandom.current().nextBoolean() ? ", ver" : "") +
-                " FROM ProjectTbl WHERE" +
-                " ver > " + ThreadLocalRandom.current().nextInt(3) +
-                " OR id < " + ThreadLocalRandom.current().nextInt(3, 10) +
-                " ORDER BY name")).getAll();
+        //List res = cache.query(new SqlFieldsQuery("SELECT id, name FROM ProjectTbl WHERE ver > 1 ORDER BY name")).getAll();
+
+        System.out.println("res="  + res);
+//        for(int i = 0; i < 1000; i++)
+//            res = cache.query(new SqlFieldsQuery("SELECT id, name " + (ThreadLocalRandom.current().nextBoolean() ? ", ver" : "") +
+//                " FROM ProjectTbl WHERE" +
+//                " ver > " + ThreadLocalRandom.current().nextInt(3) +
+//                " OR id < " + ThreadLocalRandom.current().nextInt(3, 10) +
+//                " ORDER BY name")).getAll();
     }
 
     private static class Project {
