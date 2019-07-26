@@ -289,4 +289,8 @@ public class ValueTimestampTimeZone extends Value {
                 "manipulating TIMESTAMP WITH TIME ZONE values is unsupported");
     }
 
+    /** {@inheritDoc} */
+    @Override public boolean hasFixedSizeInBytes() {
+        return true;
+    }
 }

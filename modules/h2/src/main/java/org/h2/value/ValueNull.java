@@ -169,6 +169,11 @@ public class ValueNull extends Value {
         prep.setNull(parameterIndex, Types.NULL);
     }
 
+    /** {@inheritDoc} */
+    @Override public boolean hasFixedSizeInBytes() {
+        return true;
+    }
+
     @Override
     public boolean equals(Object other) {
         return other == this;

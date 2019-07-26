@@ -113,4 +113,8 @@ public class ValueBoolean extends Value {
         return this == other;
     }
 
+    /** {@inheritDoc} */
+    @Override public boolean hasFixedSizeInBytes() {
+        return true;
+    }
 }

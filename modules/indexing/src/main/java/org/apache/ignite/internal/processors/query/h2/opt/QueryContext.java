@@ -21,6 +21,8 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.H2QueryContext;
+import org.apache.ignite.internal.processors.query.h2.disk.GroupedExternalGroupByData;
+import org.apache.ignite.internal.processors.query.h2.disk.PlainExternalGroupByData;
 import org.apache.ignite.internal.processors.query.h2.opt.join.DistributedJoinContext;
 import org.apache.ignite.internal.processors.query.h2.twostep.PartitionReservation;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -156,7 +158,8 @@ public class QueryContext implements H2QueryContext {
     /** {@inheritDoc} */
     @Override public GroupByData newGroupByDataInstance(Session ses, ArrayList<Expression> expressions,
         boolean isGrpQry, int[] grpIdx) {
-        return null; // TODO: CODE: implement.
+        return isGrpQry ? new GroupedExternalGroupByData(ses, grpIdx) :
+            new PlainExternalGroupByData(ses);
     }
 
     /**

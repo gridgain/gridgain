@@ -212,6 +212,11 @@ public class ValueLong extends Value {
         return super.getMemory();
     }
 
+    /** {@inheritDoc} */
+    @Override public boolean hasFixedSizeInBytes() {
+        return true;
+    }
+
     @Override
     public boolean equals(Object other) {
         return other instanceof ValueLong && value == ((ValueLong) other).value;

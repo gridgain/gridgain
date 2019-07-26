@@ -124,7 +124,7 @@ public abstract class SelectGroups {
         public void remove() {
             groupByData.remove();
 
-            cleanupAggregates(currentGroupByExprData);
+            cleanupAggregates(currentGroupByExprData, session);
 
             currentGroupByExprData = null;
             currentGroupRowId--;
@@ -134,6 +134,10 @@ public abstract class SelectGroups {
         public void resetLazy() {
             super.resetLazy();
             currentGroupsKey = null;
+        }
+
+        @Override void onRowProcessed() {
+            groupByData.onRowProcessed();
         }
     }
 
@@ -181,6 +185,10 @@ public abstract class SelectGroups {
                 return ValueRow.getEmpty();
             }
             return null;
+        }
+
+        @Override void onRowProcessed() {
+            rows.onRowProcessed();
         }
     }
 
@@ -415,7 +423,7 @@ public abstract class SelectGroups {
     /**
      * @param aggrs Aggregates to cleanup.
      */
-    void cleanupAggregates(Object[] aggrs) {
+    static void cleanupAggregates(Object[] aggrs, Session session) {
         if (aggrs == null || session.queryMemoryTracker() == null)
             return;
 
@@ -428,7 +436,7 @@ public abstract class SelectGroups {
      * Moves group data to the next group in lazy mode.
      */
     public void nextLazyGroup() {
-        cleanupAggregates(currentGroupByExprData);
+        cleanupAggregates(currentGroupByExprData, session);
 
         currentGroupByExprData = new Object[Math.max(exprToIndexInGroupByData.size(), expressions.size())];
     }
@@ -449,4 +457,6 @@ public abstract class SelectGroups {
     public ArrayList<Expression> expressions() {
         return expressions;
     }
+
+    abstract void onRowProcessed();
 }

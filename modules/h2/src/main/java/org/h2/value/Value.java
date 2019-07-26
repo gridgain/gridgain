@@ -1664,4 +1664,7 @@ public abstract class Value extends VersionedValue {
         return null;
     }
 
+    public boolean hasFixedSizeInBytes() {
+        return false;
+    }
 }

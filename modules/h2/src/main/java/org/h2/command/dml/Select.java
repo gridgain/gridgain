@@ -539,6 +539,7 @@ public class Select extends Query {
                 if (sampleSize > 0 && rowNumber >= sampleSize) {
                     break;
                 }
+                groupData.onRowProcessed();
             }
         }
         groupData.done();

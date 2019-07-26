@@ -148,6 +148,11 @@ public class ValueByte extends Value {
         return (ValueByte) Value.cache(new ValueByte(i));
     }
 
+    /** {@inheritDoc} */
+    @Override public boolean hasFixedSizeInBytes() {
+        return true;
+    }
+
     @Override
     public boolean equals(Object other) {
         return other instanceof ValueByte && value == ((ValueByte) other).value;

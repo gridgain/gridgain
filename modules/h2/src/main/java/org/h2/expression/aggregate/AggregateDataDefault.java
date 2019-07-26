@@ -183,4 +183,7 @@ class AggregateDataDefault extends AggregateData {
         return a;
     }
 
+    @Override public boolean hasFixedSizeInBytes() {
+        return value.hasFixedSizeInBytes();
+    }
 }

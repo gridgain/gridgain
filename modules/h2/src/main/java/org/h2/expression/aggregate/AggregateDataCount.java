@@ -36,10 +36,7 @@ class AggregateDataCount extends AggregateData {
         return ValueLong.get(count).convertTo(dataType);
     }
 
-    @Override public String toString() {
-        return "AggregateDataCount{" +
-            "all=" + all +
-            ", count=" + count +
-            '}';
+    @Override public boolean hasFixedSizeInBytes() {
+        return true;
     }
 }

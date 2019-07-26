@@ -140,4 +140,8 @@ public class ValueDate extends Value {
         prep.setDate(parameterIndex, getDate());
     }
 
+    /** {@inheritDoc} */
+    @Override public boolean hasFixedSizeInBytes() {
+        return true;
+    }
 }

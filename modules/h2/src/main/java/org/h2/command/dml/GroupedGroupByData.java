@@ -35,9 +35,6 @@ public class GroupedGroupByData extends GroupByData {
 
     Map.Entry<ValueRow, Object[]> curEntry;
 
-
-
-
     public GroupedGroupByData(Session ses, int[] grpIdx) {
         super(ses);
         this.grpIdx = grpIdx;
@@ -87,7 +84,7 @@ public class GroupedGroupByData extends GroupByData {
     }
 
     @Override public void cleanup() {
-        // TODO: CODE: implement.
+        // TODO Cleanup aggregates and merge with reset()?
     }
 
     @Override public void reset() {
@@ -103,6 +100,10 @@ public class GroupedGroupByData extends GroupByData {
         cursor.remove();
 
         onGroupChanged(curEntry.getKey(), curEntry.getValue(), null);
+    }
+
+    @Override public void onRowProcessed() {
+        // No-op.
     }
 
     @Override public void updateCurrent(Object[] grpByExprData) {

@@ -92,10 +92,8 @@ public class PlainGroupByData extends GroupByData {
 
     /** {@inheritDoc} */
     @Override public void cleanup() {
-        // TODO: CODE: implement.
+        // TODO: Cleanup aggregates and merge with reset()?
     }
-
-
 
     /** {@inheritDoc} */
     @Override public void reset() {
@@ -106,5 +104,9 @@ public class PlainGroupByData extends GroupByData {
     @Override public void remove() {
         cursor.remove();
         curr = null;
+    }
+
+    @Override public void onRowProcessed() {
+        // No-op.
     }
 }

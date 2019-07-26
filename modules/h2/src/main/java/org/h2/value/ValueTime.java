@@ -216,4 +216,9 @@ public class ValueTime extends Value {
         return ValueTime.fromNanos((long) (nanos / v.getDouble()));
     }
 
+    /** {@inheritDoc} */
+    @Override public boolean hasFixedSizeInBytes() {
+        return true;
+    }
+
 }

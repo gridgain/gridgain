@@ -148,6 +148,11 @@ public class ValueShort extends Value {
         return (ValueShort) Value.cache(new ValueShort(i));
     }
 
+    /** {@inheritDoc} */
+    @Override public boolean hasFixedSizeInBytes() {
+        return true;
+    }
+
     @Override
     public boolean equals(Object other) {
         return other instanceof ValueShort && value == ((ValueShort) other).value;

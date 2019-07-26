@@ -18,6 +18,8 @@ package org.h2.command.dml;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.h2.engine.Constants;
 import org.h2.engine.Session;
+import org.h2.expression.aggregate.AggregateData;
+import org.h2.value.Value;
 import org.h2.value.ValueRow;
 
 /**
@@ -25,7 +27,7 @@ import org.h2.value.ValueRow;
  */
 public abstract class GroupByData {
 
-    private final H2MemoryTracker tracker;
+    protected final H2MemoryTracker tracker;
 
     protected final Session ses;
 
@@ -34,7 +36,7 @@ public abstract class GroupByData {
      *
      * Note: Poison value '-1' means memory tracking is disabled.
      */
-    long memReserved;
+    protected long memReserved;
 
     protected GroupByData(Session ses) {
         this.ses = ses;
@@ -66,6 +68,22 @@ public abstract class GroupByData {
 
 
     public abstract void remove();
+
+    abstract void onRowProcessed();
+
+    protected static boolean canSpillToDisk(Object agg) {
+        assert agg != null;
+
+        if (agg instanceof AggregateData)
+            return ((AggregateData)agg).hasFixedSizeInBytes(); // Not all children of AggregateData can be spilled to disk.
+
+        if (agg instanceof org.h2.api.Aggregate)
+            return false; // We can not spill user-defined aggregates.
+
+        assert agg instanceof Value : agg.getClass();
+
+        return ((Value)agg).hasFixedSizeInBytes(); // At the moment values with the fixed size can be spilled to disk.
+    }
 
     /**
      * Group result updated callback.
