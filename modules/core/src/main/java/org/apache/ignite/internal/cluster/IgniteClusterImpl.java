@@ -86,11 +86,11 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
     /** Client reconnect future. */
     private IgniteFuture<?> reconnecFut;
 
-    /** */
-    private UUID id;
+    /** Unique ID of cluster. Generated on start, shared by all nodes. */
+    private volatile UUID id;
 
-    /** */
-    private String tag;
+    /** User-defined human-readable tag. Generated automatically on start, can be changed later. */
+    private volatile String tag;
 
     /**
      * Required by {@link Externalizable}.
@@ -498,11 +498,17 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
     }
 
     /**
-     * Not part of public API. Enables ClusterProcessor to set ID for the first time on node startup.
+     * Not part of public API.
+     * Enables ClusterProcessor to set ID in the following cases:
+     * <ol>
+     *     <li>For the first time on node startup.</li>
+     *     <li>Set to null on client disconnect.</li>
+     *     <li>Set to some not-null value on client reconnect.</li>
+     * </ol>
      *
-     * @param id Id.
+     * @param id ID to set.
      */
-    public void id(UUID id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 
@@ -513,6 +519,13 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
 
     /** {@inheritDoc} */
     @Override public void tag(String tag) throws IgniteCheckedException {
+        if (tag != null && tag.length() > MAX_TAG_LENGTH)
+            throw new IgniteCheckedException("Maximum tag length is exceeded, max length is " +
+                MAX_TAG_LENGTH +
+                " symbols, provided value has " +
+                tag.length() +
+                " symbols.");
+
         if (!ctx.state().publicApiActiveState(true))
             throw new IgniteCheckedException("Can not change cluster tag on inactive cluster. To activate the cluster call Ignite.active(true).");
 
@@ -520,11 +533,17 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
     }
 
     /**
-     * Not part of public API. Enables ClusterProcessor to set tag for the first time on node startup.
+     * Not part of public API.
+     * Enables ClusterProcessor to set tag in the following cases:
+     * <ol>
+     *     <li>For the first time on node startup.</li>
+     *     <li>Set to null on client disconnect.</li>
+     *     <li>Set to some not-null value on client reconnect.</li>
+     * </ol>
      *
-     * @param tag Tag.
+     * @param tag Tag to set.
      */
-    public void setTag(String tag) {
+    public void setTag(@Nullable String tag) {
         this.tag = tag;
     }
 

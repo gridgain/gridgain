@@ -14,16 +14,18 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.util.offheap.unsafe;
+package org.apache.ignite.console.testsuites;
+
+import org.apache.ignite.console.configuration.WebConsoleConfigurationSelfTest;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
 
 /**
- * Polls LRU.
+ * Ignite Web Console test suite.
  */
-interface GridUnsafeLruPoller {
-    /**
-     * Frees space from LRU queue.
-     *
-     * @param size Size of the space to free.
-     */
-    public void lruPoll(int size);
+@RunWith(Suite.class)
+@Suite.SuiteClasses({
+    WebConsoleConfigurationSelfTest.class
+})
+public class WebConsoleConfigurationTestsTestSuite {
 }
