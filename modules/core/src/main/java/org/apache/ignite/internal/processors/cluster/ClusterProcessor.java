@@ -60,7 +60,6 @@ import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.future.IgniteFinishedFutureImpl;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.CI1;
-import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -91,11 +90,9 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     /** */
     private static final String ATTR_UPDATE_NOTIFIER_STATUS = "UPDATE_NOTIFIER_STATUS";
 
-    /** Key to store and retrieve cluster ID to/from metastorage. */
-    private static final String CLUSTER_ID = "CLUSTER_ID";
-
-    /** Key to store and retrieve cluster tag to/from metastorage. */
-    private static final String CLUSTER_TAG = "CLUSTER_TAG";
+    /** */
+    private static final String CLUSTER_ID_TAG_KEY =
+        DistributedMetaStorage.IGNITE_INTERNAL_KEY_PREFIX + "cluster.id.tag";
 
     /** Periodic version check delay. */
     private static final long PERIODIC_VER_CHECK_DELAY = 1000 * 60 * 60; // Every hour.
@@ -167,6 +164,9 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
     /** {@inheritDoc} */
     @Override public void start() throws IgniteCheckedException {
+        if (ctx.isDaemon())
+            return;
+
         GridInternalSubscriptionProcessor isp = ctx.internalSubscriptionProcessor();
 
         isp.registerDistributedMetastorageListener(this);
@@ -174,11 +174,16 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
     /** {@inheritDoc} */
     @Override public void onReadyForRead(ReadableDistributedMetaStorage metastorage) {
-        localClusterId = readKey(metastorage, CLUSTER_ID,
-            "Reading cluster ID from metastorage has failed, new ID will be generated");
+        ClusterIdAndTag idAndTag = readKey(metastorage, CLUSTER_ID_TAG_KEY, "Reading cluster ID and tag from metastorage failed, " +
+            "default values will be generated");
 
-        localClusterTag = readKey(metastorage, CLUSTER_TAG,
-            "Reading cluster tag from metastorage has failed, default tag will be chosen");
+        if (log.isInfoEnabled())
+            log.info("Cluster ID and tag has been read from metastorage: " + idAndTag);
+
+        if (idAndTag != null) {
+            localClusterId = idAndTag.id();
+            localClusterTag = idAndTag.tag();
+        }
     }
 
     /**
@@ -202,20 +207,35 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
         this.metastorage = metastorage;
 
         metastorage.listen(
-            (k) -> k.equals(CLUSTER_TAG),
-            (String k, Serializable oldVal, Serializable newVal) -> {
-                cluster.setTag((String)newVal);
+            (k) -> k.equals(CLUSTER_ID_TAG_KEY),
+            (String k, ClusterIdAndTag oldVal, ClusterIdAndTag newVal) -> {
+                if (log.isInfoEnabled())
+                    log.info(
+                        "Cluster tag will be set to new value: " +
+                            newVal != null ? newVal.tag() : "null" +
+                            ", previous value was: " +
+                            oldVal != null ? oldVal.tag() : "null");
+
+                cluster.setTag(newVal != null ? newVal.tag() : null);
             }
         );
 
-        try {
-            metastorage.writeAsync(CLUSTER_ID, cluster.id());
+        //TODO GG-21718 - implement optimization so only coordinator makes a write to metastorage.
+        ctx.closure().runLocalSafe(
+            () -> {
+                try {
+                    ClusterIdAndTag idAndTag = new ClusterIdAndTag(cluster.id(), cluster.tag());
 
-            metastorage.writeAsync(CLUSTER_TAG, cluster.tag());
-        }
-        catch (IgniteCheckedException e) {
-            ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
-        }
+                    if (log.isInfoEnabled())
+                        log.info("Writing cluster ID and tag to metastorage on ready for write " + idAndTag);
+
+                    metastorage.writeAsync(CLUSTER_ID_TAG_KEY, idAndTag);
+                }
+                catch (IgniteCheckedException e) {
+                    ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
+                }
+            }
+        );
     }
 
     /**
@@ -224,12 +244,13 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
      * @param newTag New tag.
      */
     public void updateTag(String newTag) throws IgniteCheckedException {
-        Serializable oldTag = metastorage.read(CLUSTER_TAG);
+        ClusterIdAndTag oldTag = metastorage.read(CLUSTER_ID_TAG_KEY);
 
-        if (!metastorage.compareAndSet(CLUSTER_TAG, oldTag, newTag)) {
-            Serializable concurrentlySetTag = metastorage.read(CLUSTER_TAG);
+        if (!metastorage.compareAndSet(CLUSTER_ID_TAG_KEY, oldTag, new ClusterIdAndTag(oldTag.id(), newTag))) {
+            ClusterIdAndTag concurrentValue = metastorage.read(CLUSTER_ID_TAG_KEY);
 
-            throw new IgniteCheckedException("Cluster tag has been concurrently updated to value: " + concurrentlySetTag);
+            throw new IgniteCheckedException("Cluster tag has been concurrently updated to different value: " +
+                concurrentValue.tag());
         }
         else
             cluster.setTag(newTag);
@@ -247,10 +268,31 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
      * </ul>
      */
     public void onLocalJoin() {
-        cluster.id(localClusterId != null ? localClusterId : UUID.randomUUID());
+        cluster.setId(localClusterId != null ? localClusterId : UUID.randomUUID());
 
         cluster.setTag(localClusterTag != null ? localClusterTag :
             ClusterTagGenerator.generateTag());
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onDisconnected(IgniteFuture<?> reconnectFut) {
+        assert ctx.clientNode();
+
+        localClusterId = null;
+        localClusterTag = null;
+
+        cluster.setId(null);
+        cluster.setTag(null);
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteInternalFuture<?> onReconnected(boolean clusterRestarted) {
+        assert ctx.clientNode();
+
+        cluster.setId(localClusterId);
+        cluster.setTag(localClusterTag);
+
+        return null;
     }
 
     /**
@@ -414,7 +456,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     @Override public void collectGridNodeData(DiscoveryDataBag dataBag) {
         dataBag.addNodeSpecificData(CLUSTER_PROC.ordinal(), getDiscoveryData());
 
-        dataBag.addGridCommonData(CLUSTER_PROC.ordinal(), new DiscoCommonData(cluster.id(), cluster.tag()));
+        dataBag.addGridCommonData(CLUSTER_PROC.ordinal(), new ClusterIdAndTag(cluster.id(), cluster.tag()));
     }
 
     /**
@@ -439,24 +481,23 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
                 notifyEnabled.set(lstFlag);
         }
 
-        DiscoCommonData commonData = (DiscoCommonData)data.commonData();
+        ClusterIdAndTag commonData = (ClusterIdAndTag)data.commonData();
 
         if (commonData != null) {
-            Serializable remoteClusterId = commonData.id;
+            Serializable remoteClusterId = commonData.id();
 
             if (remoteClusterId != null) {
                 if (localClusterId != null && !localClusterId.equals(remoteClusterId)) {
-                    if (log.isInfoEnabled())
-                        log.info("Received custer ID differs from locally stored cluster ID " +
-                            "and will be rewritten. " +
-                            "Received cluster ID: " + remoteClusterId +
-                            ", local cluster ID: " + localClusterId);
+                    log.warning("Received cluster ID differs from locally stored cluster ID " +
+                        "and will be rewritten. " +
+                        "Received cluster ID: " + remoteClusterId +
+                        ", local cluster ID: " + localClusterId);
                 }
 
                 localClusterId = (UUID)remoteClusterId;
             }
 
-            String remoteClusterTag = commonData.tag;
+            String remoteClusterTag = commonData.tag();
 
             if (remoteClusterTag != null)
                 localClusterTag = remoteClusterTag;
@@ -916,20 +957,6 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
         /** {@inheritDoc} */
         @Override public void onTimeout() {
             ctx.getSystemExecutorService().execute(this);
-        }
-    }
-
-    private static class DiscoCommonData implements Serializable {
-        /** */
-        private static final long serialVersionUID = 0L;
-
-        private final UUID id;
-
-        private final String tag;
-
-        private DiscoCommonData(UUID id, String tag) {
-            this.id = id;
-            this.tag = tag;
         }
     }
 }
