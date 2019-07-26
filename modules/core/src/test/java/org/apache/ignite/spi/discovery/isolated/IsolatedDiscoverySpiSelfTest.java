@@ -57,11 +57,12 @@ public class IsolatedDiscoverySpiSelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Test that node starts and can execute cache operations.
+     * @param instanceName Instance name.
+     * @return Ignite isolated configuration.
      */
-    @Test
-    public void testIsolatedDiscovery() {
-        IgniteConfiguration cfg = new IgniteConfiguration()
+    private IgniteConfiguration isolatedConfiguration(String instanceName) {
+        return new IgniteConfiguration()
+            .setIgniteInstanceName(instanceName)
             .setDiscoverySpi(new IsolatedDiscoverySpi())
             .setCommunicationSpi(new IsolatedCommunicationSpi())
             .setDataStorageConfiguration(
@@ -71,8 +72,14 @@ public class IsolatedDiscoverySpiSelfTest extends GridCommonAbstractTest {
                             .setPersistenceEnabled(true)
                     )
             );
+    }
 
-        Ignite ignite = Ignition.start(cfg);
+    /**
+     * Test that node starts and can execute cache operations.
+     */
+    @Test
+    public void testCacheOperations() {
+        Ignite ignite = Ignition.start(isolatedConfiguration("isolated-node"));
 
         ignite.cluster().active(true);
 
@@ -85,13 +92,13 @@ public class IsolatedDiscoverySpiSelfTest extends GridCommonAbstractTest {
         IgniteCache<Object, Object> cache = ignite.getOrCreateCache(ccfg);
 
         try(Transaction tx = ignite.transactions().txStart(PESSIMISTIC, REPEATABLE_READ)) {
-            cache.put("1", "2");
-            cache.put("3", new Pojo(UUID.randomUUID(), "Test"));
+            cache.put(1, 2);
+            cache.put(3, new Pojo(UUID.randomUUID(), "Test"));
 
             tx.commit();
         }
 
-        assertEquals("2", cache.get("1"));
+        assertEquals(2, cache.get(1));
 
         CacheConfiguration<Object, Object> ccfg2 = new CacheConfiguration<>()
             .setName("test2")
@@ -102,6 +109,62 @@ public class IsolatedDiscoverySpiSelfTest extends GridCommonAbstractTest {
         c2.put(1, 2);
 
         assertEquals(2, c2.get(1));
+    }
+
+    /**
+     * Test that isolated node restarts correctly.
+     */
+    @Test
+    public void testRestatrt() {
+        Ignite ignite = Ignition.start(isolatedConfiguration("isolated-node"));
+
+        ignite.cluster().active(true);
+
+        Object consistentId = ignite.cluster().localNode().consistentId();
+
+        IgniteCache<Object, Object> cache = ignite.getOrCreateCache("test-restart");
+
+        cache.put(1, 2);
+
+        stopAllGrids();
+
+        ignite = Ignition.start(isolatedConfiguration("isolated-node"));
+
+        cache = ignite.getOrCreateCache("test-restart");
+
+        assertEquals(2, cache.get(1));
+        assertEquals(consistentId, ignite.cluster().localNode().consistentId());
+    }
+
+    /**
+     * Test that several isolated nodes do not see each other.
+     */
+    @Test
+    public void testSeveralIsolatedNodes() {
+        Ignite ignite1 = Ignition.start(isolatedConfiguration("isolated-node-1"));
+        ignite1.cluster().active(true);
+
+        Ignite ignite2 = Ignition.start(isolatedConfiguration("isolated-node-2"));
+        ignite2.cluster().active(true);
+
+        assertEquals(1, ignite1.cluster().currentBaselineTopology().size());
+        assertEquals(1, ignite2.cluster().currentBaselineTopology().size());
+    }
+
+    /**
+     * Test that several isolated nodes do not see each other.
+     * @throws Exception If failed
+     */
+    @Test
+    public void testIsolatedNodeWithNormalNode() throws Exception {
+        Ignite ignite1 = Ignition.start(isolatedConfiguration("isolated-node"));
+        ignite1.cluster().active(true);
+
+        Ignite ignite2 = Ignition.start(getConfiguration("normal-node"));
+        ignite2.cluster().active(true);
+
+        assertEquals(1, ignite1.cluster().currentBaselineTopology().size());
+        assertEquals(1, ignite2.cluster().currentBaselineTopology().size());
     }
 
     /** Test POJO. */
