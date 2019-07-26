@@ -4873,7 +4873,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
      * @param prevOwners Previous owners.
      * @param owners Current owners.
      * @param val Entry value.
-     * @param checkCandidateChain flag to enable or disable check of candidate chain
+     * @param checkingCandidate flag to enable or disable check of candidate chain
      */
     protected final void checkOwnerChanged(@Nullable CacheLockCandidates prevOwners,
         @Nullable CacheLockCandidates owners,

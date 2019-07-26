@@ -65,6 +65,9 @@ public class CacheLockCandidatesThreadTest extends GridCommonAbstractTest {
         lockThreadOfCandidates(CacheMode.PARTITIONED);
     }
 
+    /**
+     * @param mode Mode.
+     */
     private void lockThreadOfCandidates(CacheMode mode) throws Exception {
         startGridsMultiThreaded(1);
 
