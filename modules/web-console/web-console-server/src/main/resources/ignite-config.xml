@@ -18,9 +18,7 @@
 
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-       xmlns:util="http://www.springframework.org/schema/util"
-       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
-                           http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
 
     <bean class="org.apache.ignite.configuration.IgniteConfiguration">
         <property name="metricsLogFrequency" value="0"/>
@@ -28,9 +26,18 @@
         <property name="failureDetectionTimeout" value="10000"/>
         <property name="networkTimeout" value="10000"/>
 
+        <!-- Disable all clients. -->
         <property name="connectorConfiguration"><null/></property>
         <property name="clientConnectorConfiguration"><null/></property>
 
+        <!-- Recommened by CS team. -->
+        <property name="transactionConfiguration">
+            <bean class="org.apache.ignite.configuration.TransactionConfiguration">
+                <property name="txTimeoutOnPartitionMapExchange" value="#{60L * 1000L}"/>
+            </bean>
+        </property>
+
+        <!-- Persitence required to store user data on disk. -->
         <property name="dataStorageConfiguration">
             <bean class="org.apache.ignite.configuration.DataStorageConfiguration">
                 <property name="defaultDataRegionConfiguration">
