@@ -66,6 +66,15 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerAbstractTe
     /** Test group name. */
     protected static final String GROUP_NAME = "group1";
 
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        super.afterTest();
+
+        stopAllGrids();
+
+        cleanPersistenceDir();
+    }
+
     /**
      * Tests that validation doesn't fail if nothing is broken.
      */

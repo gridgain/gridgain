@@ -17,6 +17,7 @@
 package org.apache.ignite.util;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.PrintStream;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Path;
@@ -29,6 +30,7 @@ import java.util.logging.Handler;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.AtomicConfiguration;
@@ -55,16 +57,16 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.ClassRule;
 import org.junit.rules.TestRule;
 
+import static java.io.File.separatorChar;
 import static java.nio.file.Files.delete;
 import static java.nio.file.Files.newDirectoryStream;
 import static java.util.Arrays.asList;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_ENABLED;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXPERIMENTAL_COMMAND;
 import static org.apache.ignite.internal.processors.cache.verify.VerifyBackupPartitionsDumpTask.IDLE_DUMP_FILE_PREFIX;
+import static org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor.DEFAULT_TARGET_FOLDER;
 
-/**
- *
- */
+/** */
 @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_ENABLED, value = "false")
 @WithSystemProperty(key = IGNITE_ENABLE_EXPERIMENTAL_COMMAND, value = "true")
 public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
@@ -77,14 +79,19 @@ public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
     /** Option is used for auto confirmation. */
     protected static final String CMD_AUTO_CONFIRMATION = "--yes";
 
+    /** */
+    protected static File defaultDiagnosticDir;
+    /** */
+    protected static File customDiagnosticDir;
+
     /** System out. */
-    protected PrintStream sysOut;
+    protected static PrintStream sysOut;
 
     /**
      * Test out - can be injected via {@link #injectTestSystemOut()} instead of System.out and analyzed in test.
      * Will be as well passed as a handler output for an anonymous logger in the test.
      */
-    protected ByteArrayOutputStream testOut;
+    protected static ByteArrayOutputStream testOut;
 
     /** Atomic configuration. */
     protected AtomicConfiguration atomicConfiguration;
@@ -96,6 +103,14 @@ public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
     protected long checkpointFreq;
 
     /** {@inheritDoc} */
+    @Override protected void beforeTestsStarted() throws Exception {
+        super.beforeTestsStarted();
+
+        testOut = new ByteArrayOutputStream(16 * 1024);
+        sysOut = System.out;
+    }
+
+    /** {@inheritDoc} */
     @Override protected void afterTestsStopped() throws Exception {
         super.afterTestsStopped();
 
@@ -104,15 +119,28 @@ public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
-        cleanPersistenceDir();
-
-        stopAllGrids();
-
-        sysOut = System.out;
-
-        testOut = new ByteArrayOutputStream(16 * 1024);
+        super.beforeTest();
 
         checkpointFreq = DataStorageConfiguration.DFLT_CHECKPOINT_FREQ;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        super.afterTest();
+
+        log.info("Test output for " + currentTestMethod());
+        log.info("----------------------------------------");
+
+        System.setOut(sysOut);
+
+        log.info(testOut.toString());
+
+        testOut.reset();
+    }
+
+    /** {@inheritDoc} */
+    @Override public String getTestIgniteInstanceName() {
+        return "gridCommandHandlerTest";
     }
 
     /**
@@ -122,27 +150,23 @@ public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
         return false;
     }
 
-    /** {@inheritDoc} */
-    @Override protected void afterTest() throws Exception {
-        log.info("Test output for " + currentTestMethod());
-        log.info("----------------------------------------");
+    /**
+     * @throws IgniteCheckedException If failed.
+     */
+    protected void initDiagnosticDir() throws IgniteCheckedException {
+        defaultDiagnosticDir = new File(U.defaultWorkDirectory()
+            + separatorChar + DEFAULT_TARGET_FOLDER + separatorChar);
 
-        System.setOut(sysOut);
+        customDiagnosticDir = new File(U.defaultWorkDirectory()
+            + separatorChar + "diagnostic_test_dir" + separatorChar);
+    }
 
-        if (testOut != null)
-            log.info(testOut.toString());
-
-        testOut = null;
-
-        stopAllGrids();
-
-        cleanPersistenceDir();
-
-        // Delete idle-verify dump files.
-        try (DirectoryStream<Path> files = newDirectoryStream(Paths.get(U.defaultWorkDirectory()), this::idleVerifyRes)) {
-            for (Path path : files)
-                delete(path);
-        }
+    /**
+     * Clean diagnostic directories.
+     */
+    protected void cleanDiagnosticDir() {
+        U.delete(defaultDiagnosticDir);
+        U.delete(customDiagnosticDir);
     }
 
     /**

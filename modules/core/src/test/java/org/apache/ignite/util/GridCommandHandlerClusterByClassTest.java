@@ -55,10 +55,7 @@ import org.apache.ignite.transactions.TransactionState;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -77,7 +74,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static java.io.File.separatorChar;
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
@@ -93,7 +89,6 @@ import static org.apache.ignite.internal.commandline.CommandList.WAL;
 import static org.apache.ignite.internal.commandline.OutputFormat.MULTI_LINE;
 import static org.apache.ignite.internal.commandline.OutputFormat.SINGLE_LINE;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.HELP;
-import static org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor.DEFAULT_TARGET_FOLDER;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
 import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
@@ -101,23 +96,12 @@ import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED;
 
 /**
- * Command line handler test. Cluster creates only one time.
+ * Command line handler test.
+ * You can use this class if you don't need create nodes for test because here create {@link #SERVER_NODE_CNT} server
+ * and 1 client nodes at before all tests. If you need create nodes for test you can use {@link GridCommandHandlerTest}
+ *
  */
 public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbstractTest {
-    /** */
-    private static File defaultDiagnosticDir;
-    /** */
-    private static File customDiagnosticDir;
-
-    /** System out. */
-    protected static PrintStream sysOut;
-
-    /**
-     * Test out - can be injected via {@link #injectTestSystemOut()} instead of System.out and analyzed in test.
-     * Will be as well passed as a handler output for an anonymous logger in the test.
-     */
-    protected static ByteArrayOutputStream testOut;
-
     /** */
     private static final int SERVER_NODE_CNT = 2;
 
@@ -129,9 +113,6 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
-
-        testOut = new ByteArrayOutputStream(16 * 1024);
-        sysOut = System.out;
 
         crd = startGrids(SERVER_NODE_CNT);
         client = startGrid(CLIENT_NODE_NAME_PREFIX);
@@ -153,21 +134,8 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
     }
 
     /** {@inheritDoc} */
-    @Override protected void beforeTest() throws Exception {
-        //no-op because super.beforeTest() stop all grids
-    }
-
-    /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
-        //super.beforeTest(); because stop all grids
-        log.info("Test output for " + currentTestMethod());
-        log.info("----------------------------------------");
-
-        System.setOut(sysOut);
-
-        log.info(testOut.toString());
-
-        testOut.reset();
+        super.afterTest();
 
         Set<String> cfgCacheNames = of(crd.configuration().getCacheConfiguration())
             .map(CacheConfiguration::getName)
@@ -177,35 +145,6 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
         rmvCacheNames.removeAll(cfgCacheNames);
 
         crd.destroyCaches(rmvCacheNames);
-    }
-
-    /**
-     * @throws IgniteCheckedException If failed.
-     */
-    private void initDiagnosticDir() throws IgniteCheckedException {
-        defaultDiagnosticDir = new File(U.defaultWorkDirectory()
-            + separatorChar + DEFAULT_TARGET_FOLDER + separatorChar);
-
-        customDiagnosticDir = new File(U.defaultWorkDirectory()
-            + separatorChar + "diagnostic_test_dir" + separatorChar);
-    }
-
-    /**
-     * Clean diagnostic directories.
-     */
-    private void cleanDiagnosticDir() {
-        U.delete(defaultDiagnosticDir);
-        U.delete(customDiagnosticDir);
-    }
-
-    /** {@inheritDoc} */
-    @Override public String getTestIgniteInstanceName() {
-        return "gridCommandHandlerTest";
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void injectTestSystemOut() {
-        System.setOut(new PrintStream(testOut));
     }
 
     /**
@@ -518,6 +457,8 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbst
         HashSet<Integer> clearKeys = new HashSet<>(asList(1, 2, 3, 4, 5, 6));
 
         ignite.context().cache().cache(DEFAULT_CACHE_NAME).clearLocallyAll(clearKeys, true, true, true);
+
+        testOut.reset();
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify"));
 

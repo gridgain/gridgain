@@ -41,6 +41,15 @@ public class GridCommandHandlerSslTest extends GridCommandHandlerAbstractTest {
     /** */
     private volatile String[] cipherSuites;
 
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        super.afterTest();
+
+        stopAllGrids();
+
+        cleanPersistenceDir();
+    }
+
     /**
      * @return SSL factory.
      */

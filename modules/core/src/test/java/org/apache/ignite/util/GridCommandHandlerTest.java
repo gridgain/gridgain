@@ -95,14 +95,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static java.io.File.separatorChar;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_ILLEGAL_SATE_ERROR;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_INVALID_ARGUMENTS;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_UNEXPECTED_ERROR;
-import static org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor.DEFAULT_TARGET_FOLDER;
 import static org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult.Result.FAIL;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
@@ -111,14 +109,11 @@ import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED;
 
 /**
- * Command line handler test. Cluster creates per method.
+ * Command line handler test.
+ * You can use this class if you need create nodes for each test.
+ * If you not necessary create nodes for each test you can try use {@link GridCommandHandlerClusterByClassTest}
  */
 public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
-    /** */
-    private File defaultDiagnosticDir;
-    /** */
-    private File customDiagnosticDir;
-
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
@@ -132,31 +127,11 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
     @Override protected void afterTest() throws Exception {
         super.afterTest();
 
+        stopAllGrids();
+
+        cleanPersistenceDir();
+
         cleanDiagnosticDir();
-    }
-
-    /**
-     * @throws IgniteCheckedException If failed.
-     */
-    private void initDiagnosticDir() throws IgniteCheckedException {
-        defaultDiagnosticDir = new File(U.defaultWorkDirectory()
-            + separatorChar + DEFAULT_TARGET_FOLDER + separatorChar);
-
-        customDiagnosticDir = new File(U.defaultWorkDirectory()
-            + separatorChar + "diagnostic_test_dir" + separatorChar);
-    }
-
-    /**
-     * Clean diagnostic directories.
-     */
-    private void cleanDiagnosticDir() {
-        U.delete(defaultDiagnosticDir);
-        U.delete(customDiagnosticDir);
-    }
-
-    /** {@inheritDoc} */
-    @Override public String getTestIgniteInstanceName() {
-        return "gridCommandHandlerTest";
     }
 
     /**
@@ -1240,9 +1215,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
         assertContains(log, testOut.toString(), "MOVING partitions");
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testCacheSequence() throws Exception {
         Ignite ignite = startGrid();
@@ -1600,27 +1573,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
             res.getCause().getClassName(), UnsupportedOperationException.class.getName());
     }
 
-    /**
-     * Tests execution of '--rolling-upgrade state' command.
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testRollingUpgradeStatus() throws Exception {
-        startGrid(0);
-
-        injectTestSystemOut();
-
-        assertEquals(EXIT_CODE_OK, execute("--rolling-upgrade", "status"));
-
-        String out = testOut.toString();
-
-        assertContains(log, out, "Rolling upgrade is disabled");
-    }
-
-    /**
-     *
-     */
+    /** */
     @Test
     public void testKillHangingLocalTransactions() throws Exception {
         Ignite ignite = startGridsMultiThreaded(2);
@@ -1686,5 +1639,23 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
         nearFinFut.get();
 
         checkUserFutures();
+    }
+
+    /**
+     * Tests execution of '--rolling-upgrade state' command.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testRollingUpgradeStatus() throws Exception {
+        startGrid(0);
+
+        injectTestSystemOut();
+
+        assertEquals(EXIT_CODE_OK, execute("--rolling-upgrade", "status"));
+
+        String out = testOut.toString();
+
+        assertContains(log, out, "Rolling upgrade is disabled");
     }
 }
