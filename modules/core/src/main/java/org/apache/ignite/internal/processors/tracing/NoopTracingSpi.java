@@ -12,6 +12,14 @@ public class NoopTracingSpi extends IgniteSpiAdapter implements TracingSpi {
             return this;
         }
 
+        @Override public Span addTag(String tagName, Long tagVal) {
+            return this;
+        }
+
+        @Override public Span addTag(String tagName, Integer tagVal) {
+            return this;
+        }
+
         @Override public Span addLog(String logDesc) {
             return this;
         }

@@ -86,6 +86,7 @@ import org.apache.ignite.internal.processors.tracing.Status;
 import org.apache.ignite.internal.processors.tracing.TraceTags;
 import org.apache.ignite.internal.processors.tracing.messages.TraceContainer;
 import org.apache.ignite.internal.processors.tracing.messages.TraceableMessage;
+import org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesTable;
 import org.apache.ignite.internal.util.GridBoundedLinkedHashSet;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.util.IgniteUtils;
@@ -482,17 +483,16 @@ class ServerImpl extends TcpDiscoveryImpl {
 
         if (msgWorker != null && msgWorker.runner() != null && msgWorker.runner().isAlive() && !disconnect) {
             // Send node left message only if it is final stop.
-            TcpDiscoveryNodeLeftMessage leftMsg = new TcpDiscoveryNodeLeftMessage(locNode.id());
+            TcpDiscoveryNodeLeftMessage nodeLeftMsg = new TcpDiscoveryNodeLeftMessage(locNode.id());
 
-            Span rootSpan = tracing.create(leftMsg.traceName())
-                .addTag("node.id", locNode.id().toString())
-                .addTag("event.node.id", locNode.id().toString())
-                .addTag("event.node.consistent.id", locNode.consistentId().toString())
+            Span rootSpan = tracing.create(TraceableMessagesTable.traceName(nodeLeftMsg.getClass()))
+                .addTag(TraceTags.tag(TraceTags.EVENT_NODE, TraceTags.ID), locNode.id().toString())
+                .addTag(TraceTags.tag(TraceTags.EVENT_NODE, TraceTags.CONSISTENT_ID), locNode.consistentId().toString())
                 .addLog("Created");
 
-            leftMsg.trace().serializedSpanBytes(tracing.serialize(rootSpan));
+            nodeLeftMsg.trace().serializedSpanBytes(tracing.serialize(rootSpan));
 
-            msgWorker.addMessage(leftMsg);
+            msgWorker.addMessage(nodeLeftMsg);
 
             rootSpan.addLog("Sent").end();
 
@@ -973,9 +973,9 @@ class ServerImpl extends TcpDiscoveryImpl {
                 msg = new TcpDiscoveryCustomEventMessage(getLocalNodeId(), evt,
                     U.marshal(spi.marshaller(), evt));
 
-            Span rootSpan = tracing.create(msg.traceName())
-                .addLog("Created")
-                .addTag("node.id", getLocalNodeId().toString());
+            Span rootSpan = tracing.create(TraceableMessagesTable.traceName(msg.getClass()))
+                .addTag(TraceTags.tag(TraceTags.EVENT_NODE, TraceTags.ID), getLocalNodeId().toString())
+                .addLog("Created");
 
             // This root span will be parent both from local and remote nodes.
             msg.trace().serializedSpanBytes(tracing.serialize(rootSpan));
@@ -1062,20 +1062,21 @@ class ServerImpl extends TcpDiscoveryImpl {
 
         DiscoveryDataPacket discoveryData = spi.collectExchangeData(new DiscoveryDataPacket(getLocalNodeId()));
 
-        TcpDiscoveryJoinRequestMessage joinMsg = new TcpDiscoveryJoinRequestMessage(locNode, discoveryData);
+        TcpDiscoveryJoinRequestMessage joinReqMsg = new TcpDiscoveryJoinRequestMessage(locNode, discoveryData);
 
-        joinMsg.trace().span(
-            tracing.create(joinMsg.traceName())
-                .addTag("event.node.id", locNode.id().toString())
-                .addTag("event.node.consistent.id", locNode.consistentId() != null ? locNode.consistentId().toString() : "")
+        joinReqMsg.trace().span(
+            tracing.create(TraceableMessagesTable.traceName(joinReqMsg.getClass()))
+                .addTag(TraceTags.tag(TraceTags.EVENT_NODE, TraceTags.ID), locNode.id().toString())
+                .addTag(TraceTags.tag(TraceTags.EVENT_NODE, TraceTags.CONSISTENT_ID),
+                    locNode.consistentId() != null ? locNode.consistentId().toString() : "")
                 .addLog("Created")
                 .end()
         );
 
-        tracing.messages().beforeSend(joinMsg);
+        tracing.messages().beforeSend(joinReqMsg);
 
         while (true) {
-            if (!sendJoinRequestMessage(joinMsg)) {
+            if (!sendJoinRequestMessage(joinReqMsg)) {
                 if (log.isDebugEnabled())
                     log.debug("Join request message has not been sent (local node is the first in the topology).");
 
@@ -1113,7 +1114,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                             mux.notifyAll();
                         }
 
-                        notifyDiscovery(EVT_NODE_JOINED, 1, locNode, joinMsg.trace());
+                        notifyDiscovery(EVT_NODE_JOINED, 1, locNode, joinReqMsg.trace());
 
                         return null;
                     }
@@ -2968,9 +2969,8 @@ class ServerImpl extends TcpDiscoveryImpl {
                     tracing.messages().afterReceive(tMsg);
                 else { // If we're going to send this message.
                     if (!msg.verified() && tMsg.trace().serializedSpanBytes() == null) {
-                        Span rootSpan = tracing.create(tMsg.traceName())
+                        Span rootSpan = tracing.create(TraceableMessagesTable.traceName(tMsg.getClass()))
                             .addTag(TraceTags.NODE_ID, getLocalNodeId().toString())
-                            .addTag("stack_trace", U.stackTrace())
                             .end();
 
                         // This root span will be parent both from local and remote nodes.
@@ -3085,7 +3085,11 @@ class ServerImpl extends TcpDiscoveryImpl {
             if (msg instanceof TraceableMessage) {
                 TraceableMessage tMsg = (TraceableMessage) msg;
 
-                tracing.messages().afterReceive(tMsg);
+                if (msg instanceof TcpDiscoveryNodeLeftMessage && !msg.verified())
+                {
+
+                } else
+                    tracing.messages().afterReceive(tMsg);
             }
 
             spi.startMessageProcess(msg);
@@ -3213,6 +3217,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                 (msg instanceof TcpDiscoveryNodeAddedMessage
                     || msg instanceof TcpDiscoveryJoinRequestMessage
                     || msg instanceof TcpDiscoveryNodeFailedMessage
+                    || msg instanceof TcpDiscoveryNodeLeftMessage
                     || notifiedDiscovery.get())) {
                 TraceableMessage tMsg = (TraceableMessage) msg;
 
@@ -4564,8 +4569,8 @@ class ServerImpl extends TcpDiscoveryImpl {
                 nodeAddedMsg = tracing.messages().branch(nodeAddedMsg, msg);
 
                 nodeAddedMsg.trace().span()
-                    .addTag(TraceTags.EVENT_NODE_ID, node.id().toString())
-                    .addTag("event.node.consistent.id", node.consistentId().toString());
+                    .addTag(TraceTags.tag(TraceTags.EVENT_NODE, TraceTags.ID), node.id().toString())
+                    .addTag(TraceTags.tag(TraceTags.EVENT_NODE, TraceTags.CONSISTENT_ID), node.consistentId().toString());
 
                 nodeAddedMsg.client(msg.client());
 
@@ -4771,8 +4776,8 @@ class ServerImpl extends TcpDiscoveryImpl {
                     addFinishMsg = tracing.messages().branch(addFinishMsg, msg);
 
                     addFinishMsg.trace().span()
-                        .addTag(TraceTags.EVENT_NODE_ID, node.id().toString())
-                        .addTag("event.node.consistent.id", node.consistentId().toString());
+                        .addTag(TraceTags.tag(TraceTags.EVENT_NODE, TraceTags.ID), node.id().toString())
+                        .addTag(TraceTags.tag(TraceTags.EVENT_NODE, TraceTags.CONSISTENT_ID), node.consistentId().toString());
 
                     processNodeAddFinishedMessage(addFinishMsg);
 
@@ -5258,6 +5263,10 @@ class ServerImpl extends TcpDiscoveryImpl {
             UUID locNodeId = getLocalNodeId();
 
             UUID leavingNodeId = msg.creatorNodeId();
+
+            if (msg.trace().span() != null)
+                msg.trace().span()
+                    .addTag(TraceTags.tag(TraceTags.EVENT_NODE, TraceTags.ID), leavingNodeId.toString());
 
             if (locNodeId.equals(leavingNodeId)) {
                 if (msg.senderNodeId() == null) {

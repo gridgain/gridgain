@@ -104,6 +104,7 @@ import org.apache.ignite.internal.processors.cluster.DiscoveryDataClusterState;
 import org.apache.ignite.internal.processors.cluster.IgniteChangeGlobalStateSupport;
 import org.apache.ignite.internal.processors.service.GridServiceProcessor;
 import org.apache.ignite.internal.processors.tracing.Span;
+import org.apache.ignite.internal.processors.tracing.TraceTags;
 import org.apache.ignite.internal.processors.txdr.TransactionalDrProcessor;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.TimeBag;
@@ -2196,11 +2197,15 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
         assert res != null || err != null;
 
-        if (res != null)
-            span.addTag("result.topology.version", res.toString());
+        if (res != null) {
+            span.addTag(TraceTags.tag(TraceTags.RESULT, TraceTags.TOPOLOGY_VERSION, TraceTags.MAJOR),
+                res.topologyVersion());
+            span.addTag(TraceTags.tag(TraceTags.RESULT, TraceTags.TOPOLOGY_VERSION, TraceTags.MINOR),
+                res.minorTopologyVersion());
+        }
 
         if (err != null)
-            span.addTag("error", err.toString());
+            span.addTag(TraceTags.ERROR, err.toString());
 
         try {
             waitUntilNewCachesAreRegistered();

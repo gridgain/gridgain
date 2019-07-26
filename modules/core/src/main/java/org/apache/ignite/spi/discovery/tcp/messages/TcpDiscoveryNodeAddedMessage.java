@@ -256,8 +256,4 @@ public class TcpDiscoveryNodeAddedMessage extends TcpDiscoveryAbstractMessage im
     @Override public @NotNull TraceContainer trace() {
         return traceContainer;
     }
-
-    @Override public String traceName() {
-        return "node.join.add";
-    }
 }

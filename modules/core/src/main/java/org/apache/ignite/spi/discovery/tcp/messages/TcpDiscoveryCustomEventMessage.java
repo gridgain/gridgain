@@ -137,8 +137,4 @@ public class TcpDiscoveryCustomEventMessage extends TcpDiscoveryAbstractMessage 
     @Override public @NotNull TraceContainer trace() {
         return traceContainer;
     }
-
-    @Override public String traceName() {
-        return "discovery.custom.event";
-    }
 }

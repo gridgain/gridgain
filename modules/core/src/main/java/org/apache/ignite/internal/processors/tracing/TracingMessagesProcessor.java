@@ -5,9 +5,21 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.tracing.messages.TraceContainer;
 import org.apache.ignite.internal.processors.tracing.messages.TraceableMessage;
 
+import static org.apache.ignite.internal.processors.tracing.TraceTags.CONSISTENT_ID;
+import static org.apache.ignite.internal.processors.tracing.TraceTags.NODE;
+import static org.apache.ignite.internal.processors.tracing.TraceTags.NODE_ID;
+import static org.apache.ignite.internal.processors.tracing.TraceTags.tag;
+import static org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesTable.traceName;
+
+/**
+ * Helper for processing traceable message.
+ */
 public class TracingMessagesProcessor {
+    /** Context. */
     private final GridKernalContext ctx;
+    /** Spi. */
     private final TracingSpi spi;
+    /** Logger. */
     private final IgniteLogger log;
 
     /**
@@ -22,19 +34,21 @@ public class TracingMessagesProcessor {
 
     /**
      * Called when message is received.
-     * A span with name {@link TraceableMessage#traceName()} will be created
+     * A span with name associated with given message will be created.
      * from contained serialized span {@link TraceContainer#serializedSpanBytes()}
      *
      * @param msg Traceable message.
+     * @see org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesTable
      */
     public void afterReceive(TraceableMessage msg) {
-        log.warning("Received " + msg);
+        if (log.isDebugEnabled())
+            log.debug("Received traceable message: " + msg);
 
         if (msg.trace().serializedSpanBytes() != null && msg.trace().span() == null)
             msg.trace().span(
-                spi.create(msg.traceName(), msg.trace().serializedSpanBytes())
-                    .addTag(TraceTags.NODE_ID, ctx.localNodeId().toString())
-                    .addTag(TraceTags.NODE_CONSISTENT_ID, ctx.discovery().localNode().consistentId().toString())
+                spi.create(traceName(msg.getClass()), msg.trace().serializedSpanBytes())
+                    .addTag(NODE_ID, ctx.localNodeId().toString())
+                    .addTag(tag(NODE, CONSISTENT_ID), ctx.discovery().localNode().consistentId().toString())
                     .addLog("Received")
             );
     }
@@ -66,8 +80,8 @@ public class TracingMessagesProcessor {
         );
 
         msg.trace().span(
-            spi.create(msg.traceName(), parent.trace().span())
-                .addTag(TraceTags.NODE_ID, ctx.localNodeId().toString())
+            spi.create(traceName(msg.getClass()), parent.trace().span())
+                .addTag(NODE_ID, ctx.localNodeId().toString())
                 .addLog("Created")
         );
 
@@ -78,13 +92,14 @@ public class TracingMessagesProcessor {
      * @param msg Message.
      */
     public void finishProcessing(TraceableMessage msg) {
-        log.warning("Processed " + msg);
+        if (log.isDebugEnabled())
+            log.debug("Processed traceable message: " + msg);
 
         if (msg.trace().span() != null)
             msg.trace().span()
                 .addLog("Processed")
                 .end();
         else
-            log.warning("Null span at " + msg);
+            log.warning("There is no deserialized span in message after processing for: " + msg);
     }
 }

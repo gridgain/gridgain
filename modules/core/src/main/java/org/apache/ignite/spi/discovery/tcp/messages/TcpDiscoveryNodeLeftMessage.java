@@ -51,8 +51,4 @@ public class TcpDiscoveryNodeLeftMessage extends TcpDiscoveryAbstractMessage imp
     @Override public @NotNull TraceContainer trace() {
         return traceContainer;
     }
-
-    @Override public String traceName() {
-        return "node.left";
-    }
 }

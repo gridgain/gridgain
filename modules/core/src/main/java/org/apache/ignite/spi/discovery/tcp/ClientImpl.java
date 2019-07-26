@@ -69,8 +69,10 @@ import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.managers.discovery.CustomMessageWrapper;
 import org.apache.ignite.internal.managers.discovery.DiscoveryServerOnlyCustomMessage;
+import org.apache.ignite.internal.processors.tracing.TraceTags;
 import org.apache.ignite.internal.processors.tracing.messages.TraceContainer;
 import org.apache.ignite.internal.processors.tracing.messages.TraceableMessage;
+import org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesTable;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.F;
@@ -751,17 +753,17 @@ class ClientImpl extends TcpDiscoveryImpl {
                     if (discoveryData == null)
                         discoveryData = spi.collectExchangeData(new DiscoveryDataPacket(getLocalNodeId()));
 
-                    TcpDiscoveryJoinRequestMessage joinMsg = new TcpDiscoveryJoinRequestMessage(node, discoveryData);
+                    TcpDiscoveryJoinRequestMessage joinReqMsg = new TcpDiscoveryJoinRequestMessage(node, discoveryData);
 
-                    joinMsg.trace().span(
-                        tracing.create(joinMsg.traceName())
-                            .addTag("event.node.id", node.id().toString())
-                            .addTag("event.node.consistent.id", node.consistentId().toString())
+                    joinReqMsg.trace().span(
+                        tracing.create(TraceableMessagesTable.traceName(joinReqMsg.getClass()))
+                            .addTag(TraceTags.tag(TraceTags.EVENT_NODE, TraceTags.ID), node.id().toString())
+                            .addTag(TraceTags.tag(TraceTags.EVENT_NODE, TraceTags.CONSISTENT_ID), node.consistentId().toString())
                             .addLog("Created")
                             .end()
                     );
 
-                    msg = joinMsg;
+                    msg = joinReqMsg;
 
                     // During marshalling, SPI didn't know whether all nodes support compression as we didn't join yet.
                     // The only way to know is passing flag directly with handshake response.

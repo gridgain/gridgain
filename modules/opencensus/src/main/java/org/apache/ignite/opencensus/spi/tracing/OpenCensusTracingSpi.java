@@ -7,6 +7,7 @@ import io.opencensus.trace.propagation.SpanContextParseException;
 import io.opencensus.trace.samplers.Samplers;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.processors.tracing.Span;
+import org.apache.ignite.internal.processors.tracing.TraceTags;
 import org.apache.ignite.internal.processors.tracing.TracingSpi;
 import org.apache.ignite.spi.IgniteSpiAdapter;
 import org.apache.ignite.spi.IgniteSpiException;
@@ -48,7 +49,7 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
                 traceComponent.getTracer().spanBuilderWithExplicitParent(name, spanAdapter != null ? spanAdapter.impl() : null)
                     .setSampler(Samplers.alwaysSample())
                     .startSpan()
-            ).addTag("node.name", igniteInstanceName);
+            ).addTag(TraceTags.tag(TraceTags.NODE, TraceTags.NAME), igniteInstanceName);
         }
         catch (Exception e) {
             throw new IgniteException("Failed to create from parent", e);
@@ -65,7 +66,7 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
                 )
                 .setSampler(Samplers.alwaysSample())
                 .startSpan()
-            ).addTag("node.name", igniteInstanceName);
+            ).addTag(TraceTags.tag(TraceTags.NODE, TraceTags.NAME), igniteInstanceName);
         }
         catch (SpanContextParseException e) {
             throw new IgniteException("Failed to create span from serialized value: " + name, e);
@@ -96,8 +97,8 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
 
     /** {@inheritDoc} */
     @Override public void spiStop() throws IgniteSpiException {
-        // if (exporter != null)
-        //    exporter.stop(traceComponent);
+        if (exporter != null)
+            exporter.stop(traceComponent);
     }
 
     /**

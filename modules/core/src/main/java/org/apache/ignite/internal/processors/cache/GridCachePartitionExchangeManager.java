@@ -630,8 +630,13 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
             Span span = cctx.kernalContext().tracing().create("exchange.future", evt.getSpan());
 
-            if (exchId != null)
-                span.addTag("exchange.id", exchId.toString());
+            if (exchId != null) {
+                span.addTag(TraceTags.tag(TraceTags.EXCHANGE, TraceTags.ID), exchId.toString());
+                span.addTag(TraceTags.tag(TraceTags.INITIAL, TraceTags.TOPOLOGY_VERSION, TraceTags.MAJOR),
+                    exchId.topologyVersion().topologyVersion());
+                span.addTag(TraceTags.tag(TraceTags.INITIAL, TraceTags.TOPOLOGY_VERSION, TraceTags.MINOR),
+                    exchId.topologyVersion().minorTopologyVersion());
+            }
 
             span.addTag(TraceTags.NODE_ID, cctx.localNodeId().toString());
             span.addLog("Created");

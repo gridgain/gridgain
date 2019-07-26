@@ -105,8 +105,4 @@ public class TcpDiscoveryJoinRequestMessage extends TcpDiscoveryAbstractMessage 
     @Override public @NotNull TraceContainer trace() {
         return traceContainer;
     }
-
-    @Override public String traceName() {
-        return "node.join.request";
-    }
 }
