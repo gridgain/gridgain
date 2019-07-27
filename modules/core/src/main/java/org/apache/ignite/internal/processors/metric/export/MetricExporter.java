@@ -20,8 +20,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
-
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.cluster.IgniteClusterImpl;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.spi.metric.BooleanMetric;
@@ -42,17 +42,19 @@ public class MetricExporter {
     private final Map<Integer, IgniteBiTuple<Schema, byte[]>> schemas = new HashMap<>();
 
     public MetricResponse export(GridKernalContext ctx) {
-        UUID clusterId = UUID.randomUUID(); //TODO: get real cluster ID
+        IgniteClusterImpl cluster = ctx.cluster().get();
 
-        String userTag = "test_user_tag"; //TODO: get real user tag
+        UUID clusterId = cluster.id();
+
+        String userTag = cluster.tag();
 
         Map<String, MetricRegistry> metrics = ctx.metric().registries();
 
-        String consistentId = (String)ctx.config().getConsistentId();
+        Object consistentId = ctx.grid().localNode().consistentId();
 
-        assert consistentId != null : "consistent ID i null";
+        assert consistentId != null : "consistent ID is null";
 
-        return metricMessage(clusterId, userTag, consistentId, metrics);
+        return metricMessage(clusterId, userTag, consistentId.toString(), metrics);
     }
 
     @NotNull
