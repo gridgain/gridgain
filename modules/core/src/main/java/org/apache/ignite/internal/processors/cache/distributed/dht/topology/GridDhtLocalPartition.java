@@ -506,7 +506,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             if (reservations == 0)
                 return;
 
-            assert getPartState(state) != EVICTED : getPartState(state);
+            assert getPartState(state) != EVICTED : this;
 
             long newState = setReservations(state, --reservations);
             newState = setSize(newState, getSize(newState) + sizeChange);
@@ -519,9 +519,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                 if (reservations == 0 && delayedRenting)
                     rent(true);
 
-                // Partition could be only reserved in OWNING state so no further actions
-                // are required.
-                break;
+                return;
             }
         }
     }
@@ -569,6 +567,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                 boolean update = this.state.compareAndSet(state, setPartState(state, toState));
 
                 if (update) {
+                    assert toState != EVICTED || reservations() == 0 : this;
+
                     try {
                         ctx.wal().log(new PartitionMetaStateRecord(grp.groupId(), id, toState, 0));
                     }
@@ -592,6 +592,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             boolean update = this.state.compareAndSet(state, setPartState(state, toState));
 
             if (update) {
+                assert toState != EVICTED || reservations() == 0 : this;
+
                 if (log.isDebugEnabled())
                     log.debug("Partition changed state [grp=" + grp.cacheOrGroupName()
                         + ", p=" + id + ", prev=" + prevState + ", to=" + toState + "]");
