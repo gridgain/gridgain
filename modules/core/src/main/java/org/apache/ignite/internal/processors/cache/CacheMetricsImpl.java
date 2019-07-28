@@ -202,7 +202,9 @@ public class CacheMetricsImpl implements CacheMetrics {
 
         delegate = null;
 
-        MetricRegistry mreg = cctx.kernalContext().metric().registry(cacheMetricsRegistryName(cctx.name(), isNear));
+        String regName = cacheMetricsRegistryName(cctx.name(), isNear);
+
+        MetricRegistry mreg = new MetricRegistry(CACHE_METRICS, regName, cctx.logger(getClass()));
 
         reads = mreg.longMetric("CacheGets",
             "The total number of gets to the cache.");
@@ -310,6 +312,8 @@ public class CacheMetricsImpl implements CacheMetrics {
 
         rebalanceClearingPartitions = mreg.longMetric("RebalanceClearingPartitionsLeft",
             "Number of partitions need to be cleared before actual rebalance start.");
+
+        cctx.kernalContext().metric().add(mreg);
     }
 
     /**

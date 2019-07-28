@@ -502,7 +502,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
             }
         }
 
-        MetricRegistry mreg = cctx.kernalContext().metric().registry(PME_METRICS);
+        MetricRegistry mreg = cctx.kernalContext().metric().get(PME_METRICS);
 
         mreg.register(PME_DURATION,
             () -> currentPMEDuration(false),

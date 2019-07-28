@@ -18,25 +18,27 @@ package org.apache.ignite.internal.processors.metric.export;
 
 import java.util.Objects;
 
+import org.apache.ignite.internal.util.GridUnsafe;
 import org.jetbrains.annotations.NotNull;
 
-public class SchemaItem {
+public class MetricRegistrySchemaItem {
     private final String name;
-    private final byte type;
+    private final MetricType metricType;
 
-    public SchemaItem(@NotNull String name, byte type) {
+    public MetricRegistrySchemaItem(@NotNull String name, MetricType metricType) {
         this.name = name;
-        this.type = type;
+        this.metricType = metricType;
     }
 
     public String name() {
         return name;
     }
 
-    public byte type() {
-        return type;
+    public MetricType metricType() {
+        return metricType;
     }
 
+    /** {@inheritDoc} */
     @Override public boolean equals(Object o) {
         if (this == o)
             return true;
@@ -44,12 +46,13 @@ public class SchemaItem {
         if (o == null || getClass() != o.getClass())
             return false;
 
-        SchemaItem that = (SchemaItem) o;
+        MetricRegistrySchemaItem that = (MetricRegistrySchemaItem) o;
 
-        return type == that.type && name.equals(that.name);
+        return name.equals(that.name) && metricType == that.metricType;
     }
 
+    /** {@inheritDoc} */
     @Override public int hashCode() {
-        return Objects.hash(name, type);
+        return Objects.hash(name, metricType);
     }
 }

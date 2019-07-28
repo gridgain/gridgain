@@ -73,7 +73,7 @@ public class CacheGroupMetricsImpl {
     public CacheGroupMetricsImpl(CacheGroupContext ctx) {
         this.ctx = ctx;
 
-        MetricRegistry mreg = ctx.shared().kernalContext().metric().registry(metricGroupName());
+        MetricRegistry mreg = ctx.shared().kernalContext().metric().get(metricGroupName());
 
         mreg.register("Caches", this::getCaches, List.class, null);
 

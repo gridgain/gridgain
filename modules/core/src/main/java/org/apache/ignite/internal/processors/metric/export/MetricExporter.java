@@ -38,8 +38,17 @@ import static org.apache.ignite.internal.util.GridUnsafe.putDouble;
 import static org.apache.ignite.internal.util.GridUnsafe.putInt;
 import static org.apache.ignite.internal.util.GridUnsafe.putLong;
 
+/**
+ * header
+ * schema
+ * reg schemas idx
+ * reg schemas
+ * data
+ */
+
 public class MetricExporter {
-    private final Map<Integer, IgniteBiTuple<Schema, byte[]>> schemas = new HashMap<>();
+    private final Map<Integer, IgniteBiTuple<MetricSchema, byte[]>> schemas = new HashMap<>();
+    private final Map<String, IgniteBiTuple<MetricRegistrySchema, byte[]>> registrySchemas = new HashMap<>();
 
     public MetricResponse export(GridKernalContext ctx) {
         UUID clusterId = UUID.randomUUID(); //TODO: get real cluster ID
@@ -50,7 +59,7 @@ public class MetricExporter {
 
         String consistentId = (String)ctx.config().getConsistentId();
 
-        assert consistentId != null : "consistent ID i null";
+        assert consistentId != null : "consistent ID is null";
 
         return metricMessage(clusterId, userTag, consistentId, metrics);
     }
@@ -59,21 +68,24 @@ public class MetricExporter {
     MetricResponse metricMessage(UUID clusterId, String userTag, String consistentId, Map<String, MetricRegistry> metrics) {
         int ver = schemaVersion(metrics);
 
-        IgniteBiTuple<Schema, byte[]> tup = schemas.get(ver);
+        long ts = System.currentTimeMillis();
+
+        IgniteBiTuple<MetricSchema, byte[]> tup = schemas.get(ver);
 
         if (tup == null) {
             //TODO: remove obsolete versions
-            Schema schema = generateSchema(metrics);
+            MetricSchema schema = generateSchema(metrics);
 
             schemas.put(ver, tup = new IgniteBiTuple<>(schema, schema.toBytes()));
         }
 
-        Schema schema = tup.get1();
+        MetricSchema schema = tup.get1();
 
         byte[] schemaBytes = tup.get2();
 
         return new MetricResponse(
                 ver,
+                ts,
                 clusterId,
                 userTag,
                 consistentId,
@@ -84,38 +96,43 @@ public class MetricExporter {
         );
     }
 
-    private Schema generateSchema(Map<String, MetricRegistry> metrics) {
-        Schema.Builder bldr = Schema.Builder.newInstance();
+    private MetricSchema generateSchema(Map<String, MetricRegistry> metrics) {
+        MetricSchema.Builder bldr = MetricSchema.Builder.newInstance();
 
-        for (Map.Entry<String, MetricRegistry> r : metrics.entrySet()) {
-            String grpName = r.getValue().name();
+        for (MetricRegistry reg : metrics.values()) {
+            MetricRegistrySchema regSchema = generateOrGetRegistrySchema(reg);
 
-            for (Map.Entry<String, Metric> e : r.getValue().metrics().entrySet()) {
-                String name = grpName + '.' + e.getKey();
+            bldr.add(MetricRegistry.class, reg.name(), regSchema);
+        }
 
-                Metric m = e.getValue();
+        return bldr.build();
+    }
 
-                byte type;
+    private MetricRegistrySchema generateOrGetRegistrySchema(MetricRegistry reg) {
+        IgniteBiTuple<MetricRegistrySchema, byte[]> tup = registrySchemas.computeIfAbsent(
+                reg.type(),
+                type -> {
+                    MetricRegistrySchema schema = generateMetricRegistrySchema(reg);
 
-                //TODO: handle HistogramMetric
-                //TODO: handle HitRateMetric separately if needed
-                if (m instanceof BooleanMetric)
-                    type = 0;
-                else if (m instanceof IntMetric)
-                    type = 1;
-                else if (m instanceof LongMetric)
-                    type = 2;
-                else if (m instanceof DoubleMetric)
-                    type = 3;
-                else {
-                    // TODO: log error about incorrect type
-
-                    continue;
+                    return new IgniteBiTuple<>(schema, schema.toBytes());
                 }
+        );
 
-                //TODO: calculate version during adding
-                bldr.add(name, type);
-            }
+        return tup.get1();
+    }
+
+    private MetricRegistrySchema generateMetricRegistrySchema(MetricRegistry reg) {
+        MetricRegistrySchema.Builder bldr = MetricRegistrySchema.Builder.newInstance();
+
+        for (Map.Entry<String, Metric> e : reg.metrics().entrySet()) {
+            String name = e.getKey();
+
+            Metric m = e.getValue();
+
+            MetricType metricType = MetricType.findByClass(m.getClass());
+
+            if (metricType != null)
+                bldr.add(name, metricType);
         }
 
         return bldr.build();
@@ -127,7 +144,7 @@ public class MetricExporter {
     }
 
     private static void writeSchema(byte[] schemaBytes0, byte[] arr, Integer off) {
-        copyMemory(schemaBytes0, BYTE_ARR_OFF, arr, BYTE_ARR_OFF + off, arr.length);
+        copyMemory(schemaBytes0, BYTE_ARR_OFF, arr, BYTE_ARR_OFF + off, schemaBytes0.length);
     }
 
     private static void writeData(byte[] arr, int dataFrameOff, Map<String, MetricRegistry> metrics) {

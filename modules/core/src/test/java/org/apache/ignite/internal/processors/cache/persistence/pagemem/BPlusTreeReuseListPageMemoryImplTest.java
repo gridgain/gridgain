@@ -102,7 +102,7 @@ public class BPlusTreeReuseListPageMemoryImplTest extends BPlusTreeReuseSelfTest
                 }
             },
             () -> true,
-            new DataRegionMetricsImpl(new DataRegionConfiguration(), cctx.metric(), NO_OP_METRICS),
+            new DataRegionMetricsImpl(new DataRegionConfiguration(), cctx.metric(), NO_OP_METRICS, log),
             PageMemoryImpl.ThrottlingPolicy.DISABLED,
             Mockito.mock(CheckpointWriteProgressSupplier.class)
         );

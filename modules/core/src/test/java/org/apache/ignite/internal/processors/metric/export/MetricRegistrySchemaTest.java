@@ -18,23 +18,27 @@ package org.apache.ignite.internal.processors.metric.export;
 
 import org.junit.Test;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.apache.ignite.internal.processors.metric.export.MetricRegistrySchema.NAME_LEN_SIZE;
+import static org.apache.ignite.internal.processors.metric.export.MetricRegistrySchema.SCHEMA_LEN_SIZE;
+import static org.apache.ignite.internal.processors.metric.export.MetricRegistrySchema.VALUE_TYPE_SIZE;
 import static org.junit.Assert.assertEquals;
 
 
-public class SchemaTest {
+public class MetricRegistrySchemaTest {
     private static final String ITEM_NAME_PREF = "item.name.";
 
     private static final int CNT = 4;
 
-    private  static final String DISALLOWED = "disallowed";
+    private static final String DISALLOWED = "disallowed";
 
-    private  static final int ARR_EXPANDED_DELTA = 128;
+    private static final int ARR_EXPANDED_DELTA = 128;
 
     private static final int SCHEMA_OFF = 64;
 
     @Test
     public void testBuild() {
-        Schema.Builder bldr = Schema.Builder.newInstance();
+        MetricRegistrySchema.Builder bldr = MetricRegistrySchema.Builder.newInstance();
 
         int namesSize = 0;
 
@@ -43,16 +47,16 @@ public class SchemaTest {
         for (byte i = 0; i < CNT; i++) {
             String name = ITEM_NAME_PREF + i;
 
-            bldr.add(name, i);
+            bldr.add(name, MetricType.findByType(i));
 
-            namesSize += name.getBytes(Schema.UTF_8).length;
+            namesSize += name.getBytes(UTF_8).length;
 
-            dataSize += Schema.TYPE_SIZE[i];
+            dataSize += MetricType.findByType(i).size();
         }
 
-        Schema schema = bldr.build();
+        MetricRegistrySchema schema = bldr.build();
 
-        int exp = Byte.BYTES * CNT /* type fields */ + Integer.BYTES * CNT /* size fields */ + namesSize;
+        int exp = SCHEMA_LEN_SIZE + VALUE_TYPE_SIZE * CNT + NAME_LEN_SIZE * CNT + namesSize;
 
         assertEquals(exp, schema.length());
 
@@ -63,22 +67,22 @@ public class SchemaTest {
 
     @Test(expected = IllegalStateException.class)
     public void testAddAfterBuild() {
-        Schema.Builder bldr = Schema.Builder.newInstance();
+        MetricRegistrySchema.Builder bldr = MetricRegistrySchema.Builder.newInstance();
 
         for (byte i = 0; i < CNT; i++)
-            bldr.add(ITEM_NAME_PREF + i, i);
+            bldr.add(ITEM_NAME_PREF + i, MetricType.findByType(i));
 
         bldr.build();
 
-        bldr.add(DISALLOWED, (byte)0);
+        bldr.add(DISALLOWED, MetricType.findByType((byte)0));
     }
 
     @Test(expected = IllegalStateException.class)
     public void testBuildAfterBuild() {
-        Schema.Builder bldr = Schema.Builder.newInstance();
+        MetricRegistrySchema.Builder bldr = MetricRegistrySchema.Builder.newInstance();
 
         for (byte i = 0; i < CNT; i++)
-            bldr.add(ITEM_NAME_PREF + i, i);
+            bldr.add(ITEM_NAME_PREF + i, MetricType.findByType(i));
 
         bldr.build();
 
@@ -87,30 +91,30 @@ public class SchemaTest {
 
     @Test(expected = UnsupportedOperationException.class)
     public void testSchemaItemsImmutable() {
-        Schema.Builder bldr = Schema.Builder.newInstance();
+        MetricRegistrySchema.Builder bldr = MetricRegistrySchema.Builder.newInstance();
 
         for (byte i = 0; i < CNT; i++)
-            bldr.add(ITEM_NAME_PREF + i, i);
+            bldr.add(ITEM_NAME_PREF + i, MetricType.findByType(i));
 
-        Schema schema = bldr.build();
+        MetricRegistrySchema schema = bldr.build();
 
-        schema.items().add(new SchemaItem(DISALLOWED, (byte)0));
+        schema.items().add(new MetricRegistrySchemaItem(DISALLOWED, MetricType.findByType((byte)0)));
     }
 
     @Test
     public void testSchemaToBytesFromBytes() {
-        Schema.Builder bldr = Schema.Builder.newInstance();
+        MetricRegistrySchema.Builder bldr = MetricRegistrySchema.Builder.newInstance();
 
         for (byte i = 0; i < CNT; i++)
-            bldr.add(ITEM_NAME_PREF + i, i);
+            bldr.add(ITEM_NAME_PREF + i, MetricType.findByType(i));
 
-        Schema schema = bldr.build();
+        MetricRegistrySchema schema = bldr.build();
 
         byte[] arr = schema.toBytes();
 
         assertEquals(schema.length(), arr.length);
 
-        Schema schema1 = Schema.fromBytes(arr);
+        MetricRegistrySchema schema1 = MetricRegistrySchema.fromBytes(arr);
 
         assertEquals(schema.length(), schema1.length());
         assertEquals(schema.dataSize(), schema1.dataSize());
@@ -119,18 +123,18 @@ public class SchemaTest {
 
     @Test
     public void testSchemaToBytesFromBytesInPlace() {
-        Schema.Builder bldr = Schema.Builder.newInstance();
+        MetricRegistrySchema.Builder bldr = MetricRegistrySchema.Builder.newInstance();
 
         for (byte i = 0; i < CNT; i++)
-            bldr.add(ITEM_NAME_PREF + i, i);
+            bldr.add(ITEM_NAME_PREF + i, MetricType.findByType(i));
 
-        Schema schema = bldr.build();
+        MetricRegistrySchema schema = bldr.build();
 
         byte[] arr = new byte[schema.length() + ARR_EXPANDED_DELTA];
 
         schema.toBytes(arr, SCHEMA_OFF);
 
-        Schema schema1 = Schema.fromBytes(arr, SCHEMA_OFF, schema.length());
+        MetricRegistrySchema schema1 = MetricRegistrySchema.fromBytes(arr, SCHEMA_OFF, schema.length());
 
         assertEquals(schema.length(), schema1.length());
         assertEquals(schema.dataSize(), schema1.dataSize());
@@ -140,12 +144,12 @@ public class SchemaTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void testSchemaToBytesInPlaceBoundsViolated() {
-        Schema.Builder bldr = Schema.Builder.newInstance();
+        MetricRegistrySchema.Builder bldr = MetricRegistrySchema.Builder.newInstance();
 
         for (byte i = 0; i < CNT; i++)
-            bldr.add(ITEM_NAME_PREF + i, i);
+            bldr.add(ITEM_NAME_PREF + i, MetricType.findByType(i));
 
-        Schema schema = bldr.build();
+        MetricRegistrySchema schema = bldr.build();
 
         byte[] arr = new byte[schema.length() + ARR_EXPANDED_DELTA];
 
@@ -154,17 +158,17 @@ public class SchemaTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void testSchemaFromBytesInPlaceBoundsViolated() {
-        Schema.Builder bldr = Schema.Builder.newInstance();
+        MetricRegistrySchema.Builder bldr = MetricRegistrySchema.Builder.newInstance();
 
         for (byte i = 0; i < CNT; i++)
-            bldr.add(ITEM_NAME_PREF + i, i);
+            bldr.add(ITEM_NAME_PREF + i, MetricType.findByType(i));
 
-        Schema schema = bldr.build();
+        MetricRegistrySchema schema = bldr.build();
 
         byte[] arr = new byte[schema.length() + ARR_EXPANDED_DELTA];
 
         schema.toBytes(arr, SCHEMA_OFF);
 
-        Schema.fromBytes(arr, SCHEMA_OFF + ARR_EXPANDED_DELTA, schema.length());
+        MetricRegistrySchema.fromBytes(arr, SCHEMA_OFF + ARR_EXPANDED_DELTA, schema.length());
     }
 }

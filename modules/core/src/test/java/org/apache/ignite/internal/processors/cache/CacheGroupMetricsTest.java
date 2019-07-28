@@ -68,7 +68,7 @@ import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metr
  */
 public class CacheGroupMetricsTest extends GridCommonAbstractTest implements Serializable {
     /** */
-    protected boolean pds = false;
+    protected boolean pds;
 
     /** */
     private static class RoundRobinVariableSizeAffinityFunction implements AffinityFunction {
@@ -207,7 +207,7 @@ public class CacheGroupMetricsTest extends GridCommonAbstractTest implements Ser
 
         return new T2<>(
             MBeanServerInvocationHandler.newProxyInstance(mbeanSrv, mbeanName, CacheGroupMetricsMXBean.class, true),
-            grid(nodeIdx).context().metric().registry(metricName(CACHE_GROUP_METRICS_PREFIX, cacheOrGrpName))
+            grid(nodeIdx).context().metric().get(metricName(CACHE_GROUP_METRICS_PREFIX, cacheOrGrpName))
         );
     }
 
@@ -392,7 +392,7 @@ public class CacheGroupMetricsTest extends GridCommonAbstractTest implements Ser
 
         GridMetricManager mmgr = ignite.context().metric();
 
-        LongMetric totalPages = mmgr.registry(metricName(DATAREGION_METRICS_PREFIX, "default"))
+        LongMetric totalPages = mmgr.get(metricName(DATAREGION_METRICS_PREFIX, "default"))
             .findMetric("TotalAllocatedPages");
 
         assertEquals(totalPages.value(),
