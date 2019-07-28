@@ -69,7 +69,7 @@ public class MetricExporterTest {
 
         assertEquals(consistentId, msg.consistentId());
 
-        Schema schema = msg.schema();
+        MetricSchema schema = msg.schema();
 
         Map<String, Byte> map = new HashMap<>();
 
@@ -123,7 +123,7 @@ public class MetricExporterTest {
         for (int i = 0; i < 4; i++) {
             String grpName = grpPref + i;
 
-            MetricRegistry reg = new MetricRegistry(grpName, LOG);
+            MetricRegistry reg = new MetricRegistry(grpName, grpName, LOG);
 
             metrics.put(grpName, reg);
 

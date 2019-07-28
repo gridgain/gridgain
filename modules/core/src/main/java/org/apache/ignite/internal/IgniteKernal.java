@@ -4398,7 +4398,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     @Override public void resetMetrics(String registry) {
         assert registry != null;
 
-        MetricRegistry mreg = ctx.metric().registry(registry);
+        MetricRegistry mreg = ctx.metric().get(registry);
 
         if (mreg != null)
             mreg.reset();

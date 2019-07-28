@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.metric;
 
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
@@ -49,10 +50,10 @@ public class SqlStatisticsHolderMemoryQuotas {
      * @param memMgr Memory manager which tracks sql memory.
      * @param metricMgr registers and exports outside this class metrics.
      */
-    public SqlStatisticsHolderMemoryQuotas(QueryMemoryManager memMgr, GridMetricManager metricMgr) {
+    public SqlStatisticsHolderMemoryQuotas(QueryMemoryManager memMgr, GridMetricManager metricMgr, IgniteLogger log) {
         this.memMgr = memMgr;
 
-        MetricRegistry quotasMetrics = metricMgr.registry(SQL_QUOTAS_REG_NAME);
+        MetricRegistry quotasMetrics = new MetricRegistry(SQL_QUOTAS_REG_NAME, SQL_QUOTAS_REG_NAME, log);
         
         quotaRequestedCnt = quotasMetrics.longAdderMetric("requests",
             "How many times memory quota have been requested on this node by all the queries in total. " +
@@ -73,6 +74,8 @@ public class SqlStatisticsHolderMemoryQuotas {
 
         quotasMetrics.register(quotaMaxMem);
         quotasMetrics.register(quotaFreeMem);
+
+        metricMgr.add(quotasMetrics);
     }
 
     /**

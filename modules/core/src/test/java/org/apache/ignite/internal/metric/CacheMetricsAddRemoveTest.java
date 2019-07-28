@@ -109,13 +109,13 @@ public class CacheMetricsAddRemoveTest extends GridCommonAbstractTest {
         for (int i=0; i<2; i++) {
             GridMetricManager mmgr = metricManager(i);
 
-            MetricRegistry mreg = mmgr.registry(cachePrefix);
+            MetricRegistry mreg = mmgr.get(cachePrefix);
 
             assertNotNull(mreg.findMetric(CACHE_GETS));
             assertNotNull(mreg.findMetric(CACHE_PUTS));
 
             if (nearEnabled) {
-                mreg = mmgr.registry(cacheMetricsRegistryName(DEFAULT_CACHE_NAME, true));
+                mreg = mmgr.get(cacheMetricsRegistryName(DEFAULT_CACHE_NAME, true));
 
                 assertNotNull(mreg.findMetric(CACHE_GETS));
                 assertNotNull(mreg.findMetric(CACHE_PUTS));
@@ -128,13 +128,13 @@ public class CacheMetricsAddRemoveTest extends GridCommonAbstractTest {
         for (int i=0; i<3; i++) {
             GridMetricManager mmgr = metricManager(i);
 
-            MetricRegistry mreg = mmgr.registry(cachePrefix);
+            MetricRegistry mreg = mmgr.get(cachePrefix);
 
             assertNull(mreg.findMetric(metricName(cachePrefix, CACHE_GETS)));
             assertNull(mreg.findMetric(metricName(cachePrefix, CACHE_PUTS)));
 
             if (nearEnabled) {
-                mreg = mmgr.registry(cacheMetricsRegistryName(DEFAULT_CACHE_NAME, true));
+                mreg = mmgr.get(cacheMetricsRegistryName(DEFAULT_CACHE_NAME, true));
 
                 assertNull(mreg.findMetric(CACHE_GETS));
                 assertNull(mreg.findMetric(CACHE_PUTS));

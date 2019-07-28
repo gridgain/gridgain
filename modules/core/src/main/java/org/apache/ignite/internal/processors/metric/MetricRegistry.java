@@ -18,8 +18,8 @@ package org.apache.ignite.internal.processors.metric;
 
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 import java.util.function.IntSupplier;
@@ -41,6 +41,7 @@ import org.apache.ignite.internal.processors.metric.impl.LongGauge;
 import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
 import org.apache.ignite.internal.processors.metric.impl.ObjectGauge;
 import org.apache.ignite.internal.processors.metric.impl.ObjectMetricImpl;
+import org.apache.ignite.logger.NullLogger;
 import org.apache.ignite.spi.metric.BooleanMetric;
 import org.apache.ignite.spi.metric.IntMetric;
 import org.apache.ignite.spi.metric.LongMetric;
@@ -57,6 +58,10 @@ import static org.apache.ignite.internal.util.lang.GridFunc.nonThrowableSupplier
  * Represents named set of metrics produced by one metrics source.
  */
 public class MetricRegistry implements Iterable<Metric> {
+    public static final NullLogger NULL_LOG = new NullLogger();
+
+    private final String type;
+
     /** Registry name. */
     private final String grpName;
 
@@ -64,15 +69,24 @@ public class MetricRegistry implements Iterable<Metric> {
     private final IgniteLogger log;
 
     /** Registered metrics. */
-    private final Map<String, Metric> metrics = new TreeMap<>();
+    private final Map<String, Metric> metrics = new LinkedHashMap<>();
+
+    public MetricRegistry(String type, String grpName) {
+        this(type, grpName, NULL_LOG);
+    }
 
     /**
      * @param grpName Group name.
      * @param log Logger.
      */
-    public MetricRegistry(String grpName, IgniteLogger log) {
+    public MetricRegistry(String type, String grpName, IgniteLogger log) {
+        this.type = type;
         this.grpName = grpName;
         this.log = log;
+    }
+
+    public String type() {
+        return type;
     }
 
     /**

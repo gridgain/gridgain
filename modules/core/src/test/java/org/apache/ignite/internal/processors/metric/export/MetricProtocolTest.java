@@ -68,7 +68,9 @@ public class MetricProtocolTest extends GridCommonAbstractTest {
                 if (msg instanceof MetricResponse) {
                     MetricResponse res = (MetricResponse)msg;
 
-                    Schema schema = res.schema();
+                    log.info("Time: " + res.timestamp());
+
+                    MetricSchema schema = res.schema();
 
                     res.processData(schema, new MetricValueConsumer() {
                         @Override public void onBoolean(String name, boolean val) {

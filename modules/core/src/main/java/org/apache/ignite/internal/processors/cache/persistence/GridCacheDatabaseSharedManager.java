@@ -435,10 +435,11 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         lockWaitTime = persistenceCfg.getLockWaitTime();
 
         persStoreMetrics = new DataStorageMetricsImpl(
-            ctx.metric(),
-            persistenceCfg.isMetricsEnabled(),
-            persistenceCfg.getMetricsRateTimeInterval(),
-            persistenceCfg.getMetricsSubIntervalCount()
+                ctx.metric(),
+                persistenceCfg.isMetricsEnabled(),
+                persistenceCfg.getMetricsRateTimeInterval(),
+                persistenceCfg.getMetricsSubIntervalCount(),
+                log
         );
 
         ioFactory = persistenceCfg.getFileIOFactory();

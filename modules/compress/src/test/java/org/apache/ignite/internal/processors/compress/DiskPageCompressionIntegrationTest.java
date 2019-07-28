@@ -83,8 +83,7 @@ public class DiskPageCompressionIntegrationTest extends AbstractPageCompressionI
     /**
      * @throws Exception If failed.
      */
-    @Override
-    protected void doTestPageCompression() throws Exception {
+    @Override protected void doTestPageCompression() throws Exception {
         IgniteEx ignite = startGrid(0);
 
         ignite.cluster().active(true);
@@ -135,11 +134,11 @@ public class DiskPageCompressionIntegrationTest extends AbstractPageCompressionI
         GridCacheContext<?,?> cctx = ignite.cachex(cacheName).context();
 
         int cacheId = cctx.cacheId();
-        int groupId = cctx.groupId();
+        int grpId = cctx.groupId();
 
-        assertEquals(cacheId, groupId);
+        assertEquals(cacheId, grpId);
 
-        MetricRegistry mreg = ignite.context().metric().registry(
+        MetricRegistry mreg = ignite.context().metric().get(
             metricName(CACHE_GROUP_METRICS_PREFIX, cctx.group().cacheOrGroupName()));
 
         storeSize = mreg.<LongMetric>findMetric("StorageSize").value();
@@ -199,7 +198,7 @@ public class DiskPageCompressionIntegrationTest extends AbstractPageCompressionI
 
         IgniteInternalCache<Integer,TestVal> cache = ignite.cachex(cacheName);
 
-        MetricRegistry mreg = ignite.context().metric().registry(
+        MetricRegistry mreg = ignite.context().metric().get(
             metricName(CACHE_GROUP_METRICS_PREFIX, cacheName));
 
         GridCacheDatabaseSharedManager dbMgr = ((GridCacheDatabaseSharedManager)ignite.context()
