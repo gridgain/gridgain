@@ -516,8 +516,12 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             // Decrement reservations.
             if (this.state.compareAndSet(state, newState)) {
                 // If no more reservations try to continue delayed renting.
-                if (reservations == 0 && delayedRenting)
-                    rent(true);
+                if (reservations == 0) {
+                    if (delayedRenting)
+                        rent(true);
+                    else if (getPartState(state) == RENTING)
+                        tryContinueClearing();
+                }
 
                 return;
             }
@@ -851,7 +855,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
         // Some entries still might be present in partition cache maps due to concurrent updates on backup nodes,
         // but it's safe to finish eviction because no physical updates are possible.
-        if (state == EVICTED || (store.isEmpty() && state == RENTING && casState(state0, EVICTED)))
+        if (state == EVICTED ||
+                (store.isEmpty() && getReservations(state0) == 0 && state == RENTING && casState(state0, EVICTED)))
             updateSeqOnDestroy = updateSeq;
     }
 
