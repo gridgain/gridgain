@@ -18,7 +18,6 @@ package org.apache.ignite.sql;
 
 import java.util.Arrays;
 import java.util.List;
-import javax.cache.Cache;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.QueryEntity;
@@ -37,35 +36,48 @@ public class CalciteIndexingBasicTest extends GridCommonAbstractTest {
 
         CacheConfiguration ccfg = new CacheConfiguration<>(DEFAULT_CACHE_NAME);
 
-        QueryEntity qryEntity = new QueryEntity();
-        qryEntity.setKeyType(Integer.class.getName());
-        qryEntity.setKeyFieldName("id");
-        qryEntity.setValueType(Project.class.getName());
-        qryEntity.addQueryField("ver", Integer.class.getName(), null);
-        qryEntity.addQueryField("name", String.class.getName(), null);
-        qryEntity.addQueryField("id", Integer.class.getName(), null);
-        qryEntity.setTableName("ProjectTbl");
-        ccfg.setQueryEntities(Arrays.asList(qryEntity));
+        QueryEntity projEntity = new QueryEntity();
+        projEntity.setKeyType(Integer.class.getName());
+        projEntity.setKeyFieldName("id");
+        projEntity.setValueType(Project.class.getName());
+        projEntity.addQueryField("ver", Integer.class.getName(), null);
+        projEntity.addQueryField("name", String.class.getName(), null);
+        projEntity.addQueryField("id", Integer.class.getName(), null);
+        projEntity.setTableName("ProjectTbl");
+
+        QueryEntity devEntity = new QueryEntity();
+        devEntity.setKeyType(Integer.class.getName());
+        devEntity.setKeyFieldName("id");
+        devEntity.setValueType(Developer.class.getName());
+        devEntity.addQueryField("projectId", Integer.class.getName(), null);
+        devEntity.addQueryField("name", String.class.getName(), null);
+        devEntity.addQueryField("id", Integer.class.getName(), null);
+        devEntity.setTableName("DeveloperTbl");
+
+        ccfg.setQueryEntities(Arrays.asList(projEntity, devEntity));
 
         ccfg.setSqlSchema("PUBLIC");
 
-        IgniteCache<Integer, Project> cache = grid.createCache(ccfg);
+        IgniteCache cache = grid.createCache(ccfg);
 
 
         cache.put(1, new Project("Ignite", 3));
         cache.put(2, new Project("Calcite", 1));
-        cache.put(3, new Project("Gridgain", 9));
+        cache.put(3, new Project("GridGain", 9));
+
+        cache.put(4, new Developer("Aristotel", 1));
+        cache.put(5, new Developer("Newton", 3));
+        cache.put(6, new Developer("dAlamber", 9));
+        cache.put(7, new Developer("Euler", 3));
+        cache.put(8, new Developer("Laplas", 2));
+        cache.put(9, new Developer("Einstein", 1));
     }
 
     @Test
     public void testSelect() {
         IgniteCache<Integer, String> cache = grid(0).cache(DEFAULT_CACHE_NAME).withKeepBinary();
 
-        for (Cache.Entry entry : cache) {
-            System.out.println(entry);
-        }
-
-        List res = cache.query(new SqlFieldsQuery("SELECT * FROM ProjectTbl ")).getAll();
+        List res = cache.query(new SqlFieldsQuery("SELECT * FROM DeveloperTbl")).getAll();
 
 
         //List res = cache.query(new SqlFieldsQuery("SELECT id, name FROM ProjectTbl WHERE ver > 1 ORDER BY name")).getAll();
@@ -92,6 +104,23 @@ public class CalciteIndexingBasicTest extends GridCommonAbstractTest {
             return "Project{" +
                 "name='" + name + '\'' +
                 ", ver=" + ver +
+                '}';
+        }
+    }
+
+    private static class Developer {
+        String name;
+        int projectId;
+
+        public Developer(String name, int projectId) {
+            this.name = name;
+            this.projectId = projectId;
+        }
+
+        @Override public String toString() {
+            return "Developer{" +
+                "name='" + name + '\'' +
+                ", projectId=" + projectId +
                 '}';
         }
     }

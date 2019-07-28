@@ -29,7 +29,8 @@ import org.apache.calcite.schema.Statistic;
 import org.apache.calcite.schema.Statistics;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.calcite.util.ImmutableBitSet;
-import org.apache.ignite.cache.QueryEntity;
+import org.apache.ignite.internal.processors.query.QueryTypeCandidate;
+import org.apache.ignite.internal.processors.query.QueryTypeDescriptorImpl;
 import org.apache.ignite.internal.util.typedef.F;
 
 import static org.apache.ignite.internal.sql.calcite.CalciteUtils.classNameToSqlType;
@@ -48,21 +49,28 @@ public class IgniteTable extends AbstractTable implements ScannableTable/*, Proj
 
     final String cacheName;
 
-    public IgniteTable(QueryEntity entity, String cacheName) {
+    final int typeId;
+
+    public IgniteTable(QueryTypeCandidate cand, String cacheName) {
         this.cacheName = cacheName;
         keys = Collections.singletonList(ImmutableBitSet.builder().set(0).build()); // PK is at the 0 position.
-        cols = new ArrayList<>(entity.getFields().size() + 1); // Fields + _key;
-        cols.add(new Column(0, entity.getKeyFieldName(), classNameToSqlType(entity.getKeyType())));
+        typeId = cand.typeId().valueTypeId();
 
-        String keyName = entity.getKeyFieldName();
+        QueryTypeDescriptorImpl desc = cand.descriptor();
+
+        cols = new ArrayList<>(desc.fields().size() + 1); // Fields + _key;
+        cols.add(new Column(0, desc.keyFieldName(), classNameToSqlType(desc.keyClass().getName())));
+
+        String keyName = desc.keyFieldName();
 
         int colCnt = 0;
 
-        if (!F.isEmpty(entity.getFields())) {
-            for (Map.Entry<String, String> fld : entity.getFields().entrySet()) {
-                if (keyName.equals(fld.getKey()))
+        if (!F.isEmpty(desc.fields())) {
+            for (Map.Entry<String, Class<?>> fld : desc.fields().entrySet()) {
+                if (keyName.equalsIgnoreCase(fld.getKey()))
                     continue; // Skip key field.
-                cols.add(new Column(++colCnt, fld.getKey(), classNameToSqlType(fld.getValue())));
+
+                cols.add(new Column(++colCnt, fld.getKey(), classNameToSqlType(fld.getValue().getName())));
             }
         }
     }
@@ -95,6 +103,10 @@ public class IgniteTable extends AbstractTable implements ScannableTable/*, Proj
 
     public List<Column> columns() {
         return cols;
+    }
+
+    public int typeId() {
+        return typeId;
     }
 
     //    @Override public Enumerable<Object[]> scan(DataContext root, List<RexNode> filters, int[] projects) {

@@ -31,6 +31,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 import javax.cache.Cache;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCheckedException;
@@ -1660,7 +1661,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
     ) throws IgniteCheckedException {
         synchronized (stateMux) {
             if (idx != null)
-                idx.registerCache(cacheName, schemaName, cacheInfo);
+                idx.registerCache(cacheName, schemaName, cacheInfo, cands);
 
             try {
                 for (QueryTypeCandidate cand : cands) {

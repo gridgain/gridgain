@@ -198,7 +198,7 @@ public interface GridQueryIndexing {
      * @param cacheInfo Cache context info.
      * @throws IgniteCheckedException If failed.
      */
-    public void registerCache(String cacheName, String schemaName, GridCacheContextInfo<?, ?> cacheInfo)
+    public void registerCache(String cacheName, String schemaName, GridCacheContextInfo<?, ?> cacheInfo, Collection<QueryTypeCandidate> cands)
         throws IgniteCheckedException;
 
     /**

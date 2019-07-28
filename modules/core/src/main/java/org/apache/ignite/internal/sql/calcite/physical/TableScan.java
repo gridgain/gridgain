@@ -18,6 +18,7 @@ package org.apache.ignite.internal.sql.calcite.physical;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 import javax.cache.Cache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.binary.BinaryObject;
@@ -44,7 +45,7 @@ public class TableScan extends PhysicalOperator {
         try {
             Iterator<Cache.Entry<Object, BinaryObject>> it = cache.scanIterator(true, null);
 
-            return new TableScanIterator(it, tbl.columns()); // TODO: CODE: implement.
+            return new TableScanIterator(it, tbl.columns(), tbl.typeId()); // TODO: CODE: implement.
         }
         catch (IgniteCheckedException e) {
             throw U.convertException(e);
@@ -57,32 +58,61 @@ public class TableScan extends PhysicalOperator {
 
         final List<Column> cols;
 
-        private TableScanIterator(Iterator<Cache.Entry<Object, BinaryObject>> it, List<Column> cols) {
+        final int typeId;
+
+        List<?> next = null;
+
+        private TableScanIterator(Iterator<Cache.Entry<Object, BinaryObject>> it, List<Column> cols, int typeId) {
             this.it = it;
             this.cols = cols;
+            this.typeId = typeId;
         }
 
         @Override public boolean hasNext() {
-            return it.hasNext();
+            if (next == null)
+                next = findNext();
+
+            return next != null;
         }
 
         @Override public List<?> next() {
-            Cache.Entry<Object, BinaryObject> e = it.next();
+            if (next == null)
+                next = findNext();
 
-            Object key = e.getKey();
-            BinaryObject val = e.getValue();
+            if (next == null)
+                throw new NoSuchElementException();
 
-            List<Object> row = new ArrayList<>(cols.size());
+            List<?> res = next;
+            next = null;
 
-            row.add(key);
+            return res;
+        }
 
-            for (int i = 1; i < cols.size(); i++) { // Key is the first column, so skip it as we added it to the list before.
-                Column col = cols.get(i);
+        private List<?>  findNext() {
+            while (it.hasNext()) {
+                Cache.Entry<Object, BinaryObject> e = it.next();
 
-                row.add(val.field(col.name));
+                BinaryObject val = e.getValue();
+
+                if (val.type().typeId() != typeId)
+                    continue;
+
+                List<Object> row = new ArrayList<>(cols.size());
+
+                Object key = e.getKey();
+
+                row.add(key);
+
+                for (int i = 1; i < cols.size(); i++) { // Key is the first column, so skip it as we added it to the list before.
+                    Column col = cols.get(i);
+
+                    row.add(val.field(col.name));
+                }
+
+                return row;
             }
 
-            return row;
+            return null;
         }
     }
 
