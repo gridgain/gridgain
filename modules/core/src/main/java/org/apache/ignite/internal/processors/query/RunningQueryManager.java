@@ -28,6 +28,10 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryType;
+import org.apache.ignite.internal.processors.metric.MetricRegistry;
+import org.apache.ignite.internal.processors.metric.impl.LongAdderMetricImpl;
+import org.apache.ignite.internal.processors.metric.impl.LongGauge;
+import org.apache.ignite.internal.processors.metric.impl.LongMetricImpl;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.jetbrains.annotations.Nullable;
 
@@ -38,6 +42,8 @@ import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryTy
  * Keep information about all running queries.
  */
 public class RunningQueryManager {
+    private static final String SQL_USER_QUERIES_REG_NAME = "sql.queries.user";
+
     /** Keep registered user queries. */
     private final ConcurrentMap<Long, GridRunningQueryInfo> runs = new ConcurrentHashMap<>();
 
@@ -53,6 +59,18 @@ public class RunningQueryManager {
     /** Query history tracker. */
     private volatile QueryHistoryTracker qryHistTracker;
 
+    /** Number of successfully executed queries. */
+    private final LongAdderMetricImpl successQrsCnt;
+
+    /** Number of failed queries in total.*/
+    private final LongMetricImpl failedQrsCnt;
+
+    /**
+     * Number of canceled queries. Canceled queries a treated as failed and counting twice: here and in {@link
+     * #failedQrsCnt}.
+     */
+    private final LongMetricImpl canceledQrsCnt;
+
     /**
      * Constructor.
      *
@@ -64,6 +82,17 @@ public class RunningQueryManager {
         histSz = ctx.config().getSqlQueryHistorySize();
 
         qryHistTracker = new QueryHistoryTracker(histSz);
+
+        MetricRegistry userMetrics = ctx.metric().registry(SQL_USER_QUERIES_REG_NAME);
+
+        successQrsCnt = userMetrics.longAdderMetric("success",
+            "Number of successfully executed user queries that have been started on this node.");
+
+        failedQrsCnt = userMetrics.metric("failed", "Total number of failed by any reaseon (cancel, oom etc)" +
+            " queries that have been started on this node.");
+
+        canceledQrsCnt = userMetrics.metric("canceled", "Number of canceled queries that have been started " +
+            "on this node. This metric number included in the general 'failed' metric.");
     }
 
     /**
@@ -110,12 +139,26 @@ public class RunningQueryManager {
 
         GridRunningQueryInfo qry = runs.remove(qryId);
 
+        // TODO review: would 'assert qry != null' be better?
+        if (qry == null)
+            return;
+
         //We need to collect query history only for SQL queries.
-        if (qry != null && isSqlQuery(qry)) {
+        if (isSqlQuery(qry)) {
             qry.runningFuture().onDone();
 
             qryHistTracker.collectMetrics(qry, failed);
         }
+
+        if (!failed)
+            successQrsCnt.increment();
+        else {
+            failedQrsCnt.increment();
+
+            if (qry.isCanceled())
+                canceledQrsCnt.increment();
+        }
+
     }
 
     /**
