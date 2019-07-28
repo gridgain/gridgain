@@ -32,7 +32,7 @@ import org.junit.Test;
 //TODO: remove class
 public class MetricExporterMessageSizeTest {
 
-    public static final int CACHE_CNT = 5000;
+    public static final int CACHE_CNT = 10;
 
     @Test
     public void testMessageSize() throws IOException {
@@ -70,7 +70,7 @@ public class MetricExporterMessageSizeTest {
 
         System.out.println("Message size: " + msg.size());
 
-        System.out.println("Schema size: " + msg.schemaSize());
+        System.out.println("MetricRegistrySchema size: " + msg.schemaSize());
 
         System.out.println("Data size: " + msg.dataSize());
 
@@ -100,7 +100,7 @@ public class MetricExporterMessageSizeTest {
     MetricRegistry createMetricRegistry(String regName) {
         Random rnd = new Random();
 
-        MetricRegistry mreg = new MetricRegistry(regName, new NullLogger());
+        MetricRegistry mreg = new MetricRegistry(regName, regName, new NullLogger());
 
         mreg.longMetric("CacheGets",
                 "The total number of gets to the cache.").value((int)rnd.nextLong());

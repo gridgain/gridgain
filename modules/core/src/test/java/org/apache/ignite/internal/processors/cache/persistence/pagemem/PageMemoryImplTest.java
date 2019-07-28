@@ -542,7 +542,8 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
             },
             new DataRegionMetricsImpl(igniteCfg.getDataStorageConfiguration().getDefaultDataRegionConfiguration(),
                 kernalCtx.metric(),
-                NO_OP_METRICS),
+                NO_OP_METRICS,
+                log),
             throttlingPlc,
             noThrottle
         );

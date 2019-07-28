@@ -88,7 +88,7 @@ public class RunningQueryManager {
 
         qryHistTracker = new QueryHistoryTracker(histSz);
 
-        MetricRegistry userMetrics = ctx.metric().registry(SQL_USER_QUERIES_REG_NAME);
+        MetricRegistry userMetrics = ctx.metric().get(SQL_USER_QUERIES_REG_NAME);
 
         successQrsCnt = userMetrics.longAdderMetric("success",
             "Number of successfully executed user queries that have been started on this node.");

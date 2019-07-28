@@ -221,7 +221,13 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         heap.update(mem.getHeapMemoryUsage());
         nonHeap.update(mem.getNonHeapMemoryUsage());
 
-        MetricRegistry sysreg = registry(SYS_METRICS);
+        MetricRegistry sysreg = get(SYS_METRICS);
+
+        if (sysreg == null) {
+            sysreg = new MetricRegistry(SYS_METRICS, SYS_METRICS, log);
+
+            add(sysreg);
+        }
 
         gcCpuLoad = sysreg.doubleMetric(GC_CPU_LOAD, GC_CPU_LOAD_DESCRIPTION);
         cpuLoad = sysreg.doubleMetric(CPU_LOAD, CPU_LOAD_DESCRIPTION);
@@ -235,7 +241,7 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         sysreg.register("CurrentThreadCpuTime", threads::getCurrentThreadCpuTime, null);
         sysreg.register("CurrentThreadUserTime", threads::getCurrentThreadUserTime, null);
 
-        MetricRegistry pmeReg = registry(PME_METRICS);
+        MetricRegistry pmeReg = get(PME_METRICS);
 
         long[] pmeBounds = new long[] {500, 1000, 5000, 30000};
 
@@ -246,6 +252,8 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
             "Histogram of cache operations blocked PME durations in milliseconds.");
 
         registerTransactionMetrics();
+
+        //add(sysreg);
     }
 
     /** {@inheritDoc} */
@@ -289,20 +297,32 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         U.closeQuiet(metricsUpdateTask);
     }
 
-    /**
+/*
+    */
+/**
      * Gets or creates metric registry.
      *
      * @param name Group name.
      * @return Group of metrics.
-     */
+     *//*
+
+    //TODO: can be invoked twice in some cases (e.g. during start cache with near configuration). Must be fixed.
+
     public MetricRegistry registry(String name) {
-        return registries.computeIfAbsent(name, n -> {
-            MetricRegistry mreg = new MetricRegistry(name, log);
+        return registries.get(name);
+    }
+*/
 
-            notifyListeners(mreg, metricRegCreationLsnrs);
 
-            return mreg;
-        });
+    public void add(MetricRegistry reg) {
+        MetricRegistry old = registries.put(reg.name(), reg);
+
+        //TODO: can be invoked twice in some cases (e.g. during start cache with near configuration). Must be fixed.
+        //assert old == null;
+    }
+
+    public MetricRegistry get(String name) {
+        return registries.get(name);
     }
 
     public Map<String, MetricRegistry> registries() {
@@ -417,7 +437,7 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
      * @param execSvc Executor to register a bean for.
      */
     private void monitorExecutor(String name, ExecutorService execSvc) {
-        MetricRegistry mreg = registry(metricName(THREAD_POOLS, name));
+        MetricRegistry mreg = new MetricRegistry(THREAD_POOLS, metricName(THREAD_POOLS, name), log);
 
         if (execSvc instanceof ThreadPoolExecutor) {
             ThreadPoolExecutor exec = (ThreadPoolExecutor)execSvc;
@@ -461,6 +481,8 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
             mreg.objectMetric("RejectedExecutionHandlerClass", String.class, REJ_HND_DESC).value("");
             mreg.objectMetric("ThreadFactoryClass", String.class, THRD_FACTORY_DESC).value("");
         }
+
+        add(mreg);
     }
 
     /**
@@ -469,7 +491,9 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
      * @param svc Executor.
      */
     private void monitorStripedPool(StripedExecutor svc) {
-        MetricRegistry mreg = registry(metricName(THREAD_POOLS, "StripedExecutor"));
+        String name = metricName(THREAD_POOLS, "StripedExecutor");
+
+        MetricRegistry mreg = new MetricRegistry(name, name, log);
 
         mreg.register("DetectStarvation",
             svc::detectStarvation,
@@ -513,6 +537,8 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
             svc::stripesQueueSizes,
             int[].class,
             "Size of queue per stripe.");
+
+        add(mreg);
     }
 
     /**
@@ -683,12 +709,24 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
          * @param metricNamePrefix Metric name prefix.
          */
         public MemoryUsageMetrics(String group, String metricNamePrefix) {
-            MetricRegistry mreg = registry(group);
+            //MetricRegistry mreg = registry(group);
+
+            //MetricRegistry mreg = new MetricRegistry(SYS_METRICS, group, log);
+
+            MetricRegistry mreg = get(group);
+
+            if (mreg == null) {
+                mreg = new MetricRegistry(SYS_METRICS, group);
+
+                add(mreg);
+            }
 
             init = mreg.longMetric(metricName(metricNamePrefix, "init"), null);
             used = mreg.longMetric(metricName(metricNamePrefix, "used"), null);
             committed = mreg.longMetric(metricName(metricNamePrefix, "committed"), null);
             max = mreg.longMetric(metricName(metricNamePrefix, "max"), null);
+
+            // add(mreg);
         }
 
         /** Updates metric to the provided values. */

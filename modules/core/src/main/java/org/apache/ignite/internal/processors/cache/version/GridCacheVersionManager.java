@@ -97,7 +97,7 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
 
     /** {@inheritDoc} */
     @Override public void start0() throws IgniteCheckedException {
-        MetricRegistry sysreg = cctx.kernalContext().metric().registry(CACHE_METRICS);
+        MetricRegistry sysreg = cctx.kernalContext().metric().get(CACHE_METRICS);
 
         lastDataVer = sysreg.longMetric(LAST_DATA_VER, "The latest data version on the node.");
 
