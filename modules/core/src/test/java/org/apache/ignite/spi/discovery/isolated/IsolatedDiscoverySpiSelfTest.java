@@ -16,14 +16,19 @@
 
 package org.apache.ignite.spi.discovery.isolated;
 
+import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
+import javax.cache.Cache;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.Ignition;
+import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.failure.NoOpFailureHandler;
 import org.apache.ignite.spi.communication.isolated.IsolatedCommunicationSpi;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
@@ -58,11 +63,13 @@ public class IsolatedDiscoverySpiSelfTest extends GridCommonAbstractTest {
 
     /**
      * @param instanceName Instance name.
+     * @param consistentId Consistent ID.
      * @return Ignite isolated configuration.
      */
-    private IgniteConfiguration isolatedConfiguration(String instanceName) {
+    private IgniteConfiguration isolatedConfiguration(String instanceName, String consistentId) {
         return new IgniteConfiguration()
             .setIgniteInstanceName(instanceName)
+            .setConsistentId(consistentId)
             .setDiscoverySpi(new IsolatedDiscoverySpi())
             .setCommunicationSpi(new IsolatedCommunicationSpi())
             .setDataStorageConfiguration(
@@ -71,15 +78,16 @@ public class IsolatedDiscoverySpiSelfTest extends GridCommonAbstractTest {
                         new DataRegionConfiguration()
                             .setPersistenceEnabled(true)
                     )
-            );
+            )
+            .setFailureHandler(new NoOpFailureHandler());
     }
 
     /**
-     * Test that node starts and can execute cache operations.
+     * Test that isolated node can execute cache operations.
      */
     @Test
     public void testCacheOperations() {
-        Ignite ignite = Ignition.start(isolatedConfiguration("isolated-node"));
+        Ignite ignite = Ignition.start(isolatedConfiguration("isolated-node", "data"));
 
         ignite.cluster().active(true);
 
@@ -89,16 +97,18 @@ public class IsolatedDiscoverySpiSelfTest extends GridCommonAbstractTest {
             .setCacheMode(REPLICATED)
             .setAtomicityMode(TRANSACTIONAL);
 
-        IgniteCache<Object, Object> cache = ignite.getOrCreateCache(ccfg);
+        IgniteCache<Object, Object> c1 = ignite.getOrCreateCache(ccfg);
+
+        Pojo pojo = new Pojo(UUID.randomUUID(), "Test");
 
         try(Transaction tx = ignite.transactions().txStart(PESSIMISTIC, REPEATABLE_READ)) {
-            cache.put(1, 2);
-            cache.put(3, new Pojo(UUID.randomUUID(), "Test"));
+            c1.put(1, 2);
+            c1.put(2, pojo);
 
             tx.commit();
         }
 
-        assertEquals(2, cache.get(1));
+        assertEquals(2, c1.get(1));
 
         CacheConfiguration<Object, Object> ccfg2 = new CacheConfiguration<>()
             .setName("test2")
@@ -109,6 +119,15 @@ public class IsolatedDiscoverySpiSelfTest extends GridCommonAbstractTest {
         c2.put(1, 2);
 
         assertEquals(2, c2.get(1));
+
+        assertTrue(c1.remove(1));
+
+        List<Cache.Entry<Object, Object>> items = c1.query(new ScanQuery<>()).getAll();
+        assertEquals(1, items.size());
+
+        Cache.Entry<Object, Object> item = items.get(0);
+        assertEquals(2, item.getKey());
+        assertEquals(pojo, item.getValue());
     }
 
     /**
@@ -116,7 +135,7 @@ public class IsolatedDiscoverySpiSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRestart() {
-        Ignite ignite = Ignition.start(isolatedConfiguration("isolated-node"));
+        Ignite ignite = Ignition.start(isolatedConfiguration("isolated-node", "data"));
 
         ignite.cluster().active(true);
 
@@ -128,7 +147,7 @@ public class IsolatedDiscoverySpiSelfTest extends GridCommonAbstractTest {
 
         stopAllGrids();
 
-        ignite = Ignition.start(isolatedConfiguration("isolated-node"));
+        ignite = Ignition.start(isolatedConfiguration("isolated-node", "data"));
 
         cache = ignite.getOrCreateCache("test-restart");
 
@@ -137,14 +156,23 @@ public class IsolatedDiscoverySpiSelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Test that several isolated nodes do not see each other.
+     * Test that several isolated nodes.
      */
     @Test
     public void testSeveralIsolatedNodes() {
-        Ignite ignite1 = Ignition.start(isolatedConfiguration("isolated-node-1"));
+        Ignite ignite1 = Ignition.start(isolatedConfiguration("isolated-node-1", "data-1"));
         ignite1.cluster().active(true);
 
-        Ignite ignite2 = Ignition.start(isolatedConfiguration("isolated-node-2"));
+        try {
+            Ignition.start(isolatedConfiguration("isolated-node-2", "data-1"));
+
+            fail("Second isolated node shoud not start on same persistence");
+        }
+        catch (Throwable e) {
+            log.info("Expected exception: " + e.getMessage());
+        }
+
+        Ignite ignite2 = Ignition.start(isolatedConfiguration("isolated-node-2", "data-2"));
         ignite2.cluster().active(true);
 
         assertEquals(1, ignite1.cluster().currentBaselineTopology().size());
@@ -157,7 +185,7 @@ public class IsolatedDiscoverySpiSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testIsolatedNodeWithNormalNode() throws Exception {
-        Ignite ignite1 = Ignition.start(isolatedConfiguration("isolated-node"));
+        Ignite ignite1 = Ignition.start(isolatedConfiguration("isolated-node", "data"));
         ignite1.cluster().active(true);
 
         Ignite ignite2 = Ignition.start(getConfiguration("normal-node"));
@@ -196,6 +224,25 @@ public class IsolatedDiscoverySpiSelfTest extends GridCommonAbstractTest {
          */
         public String getName() {
             return name;
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean equals(Object o) {
+            if (this == o)
+                return true;
+
+            if (o == null || getClass() != o.getClass())
+                return false;
+
+            Pojo pojo = (Pojo)o;
+
+            return Objects.equals(id, pojo.id) &&
+                Objects.equals(name, pojo.name);
+        }
+
+        /** {@inheritDoc} */
+        @Override public int hashCode() {
+            return Objects.hash(id, name);
         }
     }
 }

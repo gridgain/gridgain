@@ -36,7 +36,10 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_NODE_CONSISTE
  */
 public class IsolatedNode implements IgniteClusterNode {
     /** */
-    private final UUID id = UUID.randomUUID();
+    private final UUID id;
+
+    /** */
+    private final IgniteProductVersion ver;
 
     /** Consistent ID. */
     private Object consistentId;
@@ -45,13 +48,21 @@ public class IsolatedNode implements IgniteClusterNode {
     private Map<String, Object> attrs;
 
     /** */
-    private IgniteProductVersion ver;
-
-    /** */
     private ClusterMetrics metrics = new ClusterMetricsSnapshot();
 
     /** */
     private Map<Integer, CacheMetrics> cacheMetrics = new HashMap<>();
+
+    /**
+     * @param id Node ID.
+     * @param attrs Node attributes.
+     * @param ver Node version.
+     */
+    public IsolatedNode(UUID id, Map<String, Object> attrs, IgniteProductVersion ver) {
+        this.id = id;
+        this.attrs = U.sealMap(attrs);
+        this.ver = ver;
+    }
 
     /** {@inheritDoc} */
     @Override public UUID id() {
@@ -78,13 +89,6 @@ public class IsolatedNode implements IgniteClusterNode {
         return attrs;
     }
 
-    /**
-     * @param attrs Node attributes.
-     */
-    public void attributes(Map<String, Object> attrs) {
-        this.attrs = U.sealMap(attrs);
-    }
-
     /** {@inheritDoc} */
     @Override public Collection<String> addresses() {
         return Collections.singleton("127.0.0.1");
@@ -103,13 +107,6 @@ public class IsolatedNode implements IgniteClusterNode {
     /** {@inheritDoc} */
     @Override public IgniteProductVersion version() {
         return ver;
-    }
-
-    /**
-     * @param ver Version.
-     */
-    public void version(IgniteProductVersion ver) {
-        this.ver = ver;
     }
 
     /** {@inheritDoc} */

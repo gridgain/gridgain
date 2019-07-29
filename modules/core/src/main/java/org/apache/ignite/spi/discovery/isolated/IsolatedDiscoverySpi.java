@@ -61,10 +61,10 @@ public class IsolatedDiscoverySpi extends IgniteSpiAdapter implements IgniteDisc
     private Serializable consistentId;
 
     /** */
-    private final IsolatedNode locNode = new IsolatedNode();
+    private final long startTime = System.currentTimeMillis();
 
     /** */
-    private final long startTime = System.currentTimeMillis();
+    private IsolatedNode locNode;
 
     /** */
     private DiscoverySpiListener lsnr;
@@ -107,8 +107,7 @@ public class IsolatedDiscoverySpi extends IgniteSpiAdapter implements IgniteDisc
 
     /** {@inheritDoc} */
     @Override public void setNodeAttributes(Map<String, Object> attrs, IgniteProductVersion ver) {
-        locNode.attributes(attrs);
-        locNode.version(ver);
+        locNode = new IsolatedNode(ignite.configuration().getNodeId(), attrs, ver);
     }
 
     /** {@inheritDoc} */
@@ -221,7 +220,7 @@ public class IsolatedDiscoverySpi extends IgniteSpiAdapter implements IgniteDisc
 
     /** {@inheritDoc} */
     @Override public boolean allNodesSupport(IgniteFeatures feature) {
-        return false;
+        return true;
     }
 
     /** {@inheritDoc} */

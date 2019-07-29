@@ -21,6 +21,7 @@
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
 
     <bean class="org.apache.ignite.configuration.IgniteConfiguration">
+        <property name="consistentId" value="we-console-data"/>
         <property name="metricsLogFrequency" value="0"/>
         <property name="queryThreadPoolSize" value="16"/>
         <property name="failureDetectionTimeout" value="10000"/>
