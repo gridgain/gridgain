@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.distributed.dht.preloader;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -88,6 +89,7 @@ import org.jetbrains.annotations.Nullable;
 
 import static java.lang.String.format;
 import static java.lang.System.currentTimeMillis;
+import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static java.util.Comparator.comparing;
 import static java.util.Objects.isNull;
@@ -1623,7 +1625,7 @@ public class GridDhtPartitionDemander {
         private volatile long msgSize;
 
         /** Received partitions */
-        private volatile List<PartitionInfoStatistics> parts;
+        private volatile List<PartitionInfoStatistics> parts = emptyList();
     }
 
     /** Received partition info */
