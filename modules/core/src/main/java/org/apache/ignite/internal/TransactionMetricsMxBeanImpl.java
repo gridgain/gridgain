@@ -24,6 +24,7 @@ import org.apache.ignite.mxbean.TransactionMetricsMxBean;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.transactions.TransactionMetrics;
 
+import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.EMPTY_HISTOGRAM_JSON;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.toJson;
 
 /**
@@ -32,9 +33,6 @@ import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.toJs
 public class TransactionMetricsMxBeanImpl implements TransactionMetricsMxBean {
     /** */
     private static final long serialVersionUID = 0L;
-
-    /** */
-    private static final String EMPTY_HISTOGRAM_JSON = "{}";
 
     /** */
     private final TransactionMetrics transactionMetrics;

@@ -19,6 +19,7 @@ import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.toJson;
+import static org.junit.Assert.assertEquals;
 
 /**
  *
@@ -33,10 +34,9 @@ public class MetricUtilsTest {
 
         String singleBucketJson = toJson(singleBucket);
 
-        System.out.println(singleBucketJson);
-
-        singleBucketJson.equals("{\"bounds\":[1],\"values\":" +
-            "[{\"fromExclusive\":0,\"toInclusive\":1,\"value\":1},{\"fromExclusive\":1,\"value\":0}]}"
+        assertEquals("{\"bounds\":[1],\"values\":" +
+            "[{\"fromExclusive\":0,\"toInclusive\":1,\"value\":1},{\"fromExclusive\":1,\"value\":0}]}",
+            singleBucketJson
         );
 
         HistogramMetric histo = new HistogramMetric("histo", "", new long[] { 1, 5, 10, 20, 50 });
@@ -49,15 +49,14 @@ public class MetricUtilsTest {
 
         String histoJson = toJson(histo);
 
-        System.out.println(histoJson);
-
-        histoJson.equals("{\"bounds\":[1,5,10,20,50],\"values\":" +
-            "[{\"fromExclusive\":0,\"toInclusive\":1,\"value\":1}, " +
-            "{\"fromExclusive\":1,\"toInclusive\":5,\"value\":0}, " +
-            "{\"fromExclusive\":5,\"toInclusive\":10,\"value\":0}, " +
-            "{\"fromExclusive\":10,\"toInclusive\":20,\"value\":2}, " +
-            "{\"fromExclusive\":20,\"toInclusive\":50,\"value\":1}, " +
-            "{\"fromExclusive\":50,\"value\":1}]}"
+        assertEquals("{\"bounds\":[1,5,10,20,50],\"values\":" +
+            "[{\"fromExclusive\":0,\"toInclusive\":1,\"value\":1}," +
+            "{\"fromExclusive\":1,\"toInclusive\":5,\"value\":0}," +
+            "{\"fromExclusive\":5,\"toInclusive\":10,\"value\":0}," +
+            "{\"fromExclusive\":10,\"toInclusive\":20,\"value\":2}," +
+            "{\"fromExclusive\":20,\"toInclusive\":50,\"value\":1}," +
+            "{\"fromExclusive\":50,\"value\":1}]}",
+            histoJson
         );
     }
 }

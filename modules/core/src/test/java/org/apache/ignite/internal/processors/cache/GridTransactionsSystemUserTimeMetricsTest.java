@@ -35,18 +35,25 @@ import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.MessageOrderLogListener;
+import org.apache.ignite.testframework.junits.SystemPropertiesList;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_LONG_TRANSACTION_TIME_DUMP_SAMPLE_LIMIT;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 
 /**
  *
  */
+@SystemPropertiesList(value = {
+    @WithSystemProperty(key = IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD, value = "1000"),
+    @WithSystemProperty(key = IGNITE_LONG_TRANSACTION_TIME_DUMP_SAMPLE_LIMIT, value = "1.0"),
+    @WithSystemProperty(key = IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT, value = "500")
+})
 public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstractTest {
     /** */
     private static final String CACHE_NAME = "test";
@@ -67,19 +74,7 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
     private static final long LONG_TRAN_TIMEOUT = Math.min(SYSTEM_DELAY, USER_DELAY);
 
     /** */
-    private static final long LONG_OP_TIMEOUT = 500;
-
-    /** */
     private final LogListener logLsnr = new MessageOrderLogListener("Long transaction detected.*");
-
-    /** */
-    private static String longTranTimeoutCommon;
-
-    /** */
-    private static String longTranSampleLimit;
-
-    /** */
-    private static String longOpTimeoutCommon;
 
     /** */
     private volatile boolean slowPrepare;
@@ -112,44 +107,6 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
         cfg.setCommunicationSpi(new TestCommunicationSpi());
 
         return cfg;
-    }
-
-    /**
-     * Setting long op timeout to small value to make this tests faster
-     */
-    @Override protected void beforeTestsStarted() throws Exception {
-        super.beforeTestsStarted();
-
-        longTranTimeoutCommon = System.getProperty(IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD);
-        longTranSampleLimit = System.getProperty(IGNITE_LONG_TRANSACTION_TIME_DUMP_SAMPLE_LIMIT);
-        longOpTimeoutCommon = System.getProperty(IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT);
-
-        System.setProperty(IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD, String.valueOf(LONG_TRAN_TIMEOUT));
-        System.setProperty(IGNITE_LONG_TRANSACTION_TIME_DUMP_SAMPLE_LIMIT, String.valueOf(1.0f));
-        System.setProperty(IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT, String.valueOf(LONG_OP_TIMEOUT));
-    }
-
-    /**
-     * Returning long operations timeout to its former value.
-     */
-    @Override protected void afterTestsStopped() throws Exception {
-        if (longTranTimeoutCommon != null)
-            System.setProperty(IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD, longTranTimeoutCommon);
-        else
-            System.clearProperty(IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD);
-
-        if (longTranSampleLimit != null)
-            System.setProperty(IGNITE_LONG_TRANSACTION_TIME_DUMP_SAMPLE_LIMIT, longTranSampleLimit);
-        else
-            System.clearProperty(IGNITE_LONG_TRANSACTION_TIME_DUMP_SAMPLE_LIMIT);
-
-        if (longOpTimeoutCommon != null)
-            System.setProperty(IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT, longOpTimeoutCommon);
-        else
-            System.clearProperty(IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT);
-
-
-        super.afterTestsStopped();
     }
 
     /** */

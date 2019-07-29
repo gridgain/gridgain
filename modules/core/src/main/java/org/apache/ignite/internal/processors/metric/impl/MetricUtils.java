@@ -32,6 +32,9 @@ public class MetricUtils {
     /** Metric name part separator. */
     public static final String SEPARATOR = ".";
 
+    /** */
+    public static final String EMPTY_HISTOGRAM_JSON = "{}";
+
     /**
      * Example - metric registry name - "io.statistics.PRIMARY_KEY_IDX".
      * root = io - JMX tree root.

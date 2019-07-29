@@ -225,9 +225,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
      */
     private final AtomicLong prepareStartTime = new AtomicLong(0);
 
-    /**
-     * Stores prepare step duration, or <code>0</code> if it has not finished yet.
-     */
+    /** Stores prepare step duration, or <code>0</code> if it has not finished yet. */
     private final AtomicLong prepareTime = new AtomicLong(0);
 
     /**
@@ -236,9 +234,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
      */
     private final AtomicLong commitOrRollbackStartTime = new AtomicLong(0);
 
-    /**
-     * Stores commit or rollback step duration, or <code>0</code> if it has not finished yet.
-     */
+    /** Stores commit or rollback step duration, or <code>0</code> if it has not finished yet. */
     private final AtomicLong commitOrRollbackTime = new AtomicLong(0);
 
     /** */
@@ -3828,7 +3824,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
             leaveSystemSection();
 
             //if commitOrRollbackTime != 0 it means that we already have written metrics and dumped it in log at least once
-            if (commitOrRollbackTime.compareAndSet(0, System.nanoTime() - commitOrRollbackStartTime.get()))
+            if (!commitOrRollbackTime.compareAndSet(0, System.nanoTime() - commitOrRollbackStartTime.get()))
                 return res;
 
             long systemTimeMillis = U.nanosToMillis(this.systemTime.get());
@@ -3857,9 +3853,6 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
      * @return Warning string.
      */
     private String longRunningTransactionWarning(TransactionState state, long systemTimeMillis, long userTimeMillis) {
-        DateFormat timeFormat = new SimpleDateFormat("HH:mm:ss.SSS");
-        timeFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
-
         long cacheOperationsTimeMillis =
             U.nanosToMillis(systemTime.get() - prepareTime.get() - commitOrRollbackTime.get());
 
@@ -3867,25 +3860,25 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
             //separate SimpleDateFormat for startTime
             .a(new SimpleDateFormat("HH:mm:ss.SSS").format(new Date(startTime)))
             .a(", totalTime=")
-            .a(timeFormat.format(new Date(systemTimeMillis + userTimeMillis)))
+            .a(systemTimeMillis + userTimeMillis)
             .a(", systemTime=")
-            .a(timeFormat.format(new Date(systemTimeMillis)))
+            .a(systemTimeMillis)
             .a(", userTime=")
-            .a(timeFormat.format(new Date(userTimeMillis)))
+            .a(userTimeMillis)
             .a(", cacheOperationsTime=")
-            .a(timeFormat.format(new Date(cacheOperationsTimeMillis)));
+            .a(cacheOperationsTimeMillis);
 
         if (state == COMMITTED) {
             warning
                 .a(", prepareTime=")
-                .a(timeFormat.format(new Date(timeMillis(prepareTime))))
+                .a(timeMillis(prepareTime))
                 .a(", commitTime=")
-                .a(timeFormat.format(new Date(timeMillis(commitOrRollbackTime))));
+                .a(timeMillis(commitOrRollbackTime));
         }
         else {
             warning
                 .a(", rollbackTime=")
-                .a(timeFormat.format(new Date(timeMillis(commitOrRollbackTime))));
+                .a(timeMillis(commitOrRollbackTime));
         }
 
         warning
@@ -3902,6 +3895,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
     public IgniteInternalFuture<?> prepareNearTxLocal() {
         enterSystemSection();
 
+        //we assume that prepare start time should be set only once for the transaction
         prepareStartTime.compareAndSet(0, System.nanoTime());
 
         GridNearTxPrepareFutureAdapter fut = (GridNearTxPrepareFutureAdapter)prepFut;
@@ -4002,6 +3996,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
             prepareFut.listen(new CI1<IgniteInternalFuture<?>>() {
                 @Override public void apply(IgniteInternalFuture<?> f) {
+                    //these values should not be changed after set once
                     prepareTime.compareAndSet(0, System.nanoTime() - prepareStartTime.get());
 
                     commitOrRollbackStartTime.compareAndSet(0, System.nanoTime());
