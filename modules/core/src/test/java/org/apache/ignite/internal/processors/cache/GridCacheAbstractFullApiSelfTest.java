@@ -94,7 +94,9 @@ import org.apache.ignite.resources.LoggerResource;
 import org.apache.ignite.resources.ServiceResource;
 import org.apache.ignite.services.Service;
 import org.apache.ignite.services.ServiceContext;
+import org.apache.ignite.spi.communication.isolated.IsolatedCommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
+import org.apache.ignite.spi.discovery.isolated.IsolatedDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.MvccFeatureChecker;
@@ -186,6 +188,9 @@ public abstract class GridCacheAbstractFullApiSelfTest extends GridCacheAbstract
     @Before
     public void beforeGridCacheAbstractFullApiSelfTest()  {
         Assume.assumeFalse("https://issues.apache.org/jira/browse/IGNITE-9543", MvccFeatureChecker.forcedMvcc());
+
+        // TODO GG-21108 Do not commit to master!!! This is temporary code just for testing IsolatedDiscoverySpi.
+        Assume.assumeTrue(gridCount() == 1);
     }
 
     /** {@inheritDoc} */
@@ -227,6 +232,11 @@ public abstract class GridCacheAbstractFullApiSelfTest extends GridCacheAbstract
 
             updatedEvtTypes[updatedEvtTypes.length - 1] = EventType.EVT_CACHE_OBJECT_READ;
         }
+
+        // TODO GG-21108 Do not commit to master!!! This is temporary code just for testing IsolatedDiscoverySpi.
+        cfg
+            .setDiscoverySpi(new IsolatedDiscoverySpi())
+            .setCommunicationSpi(new IsolatedCommunicationSpi());
 
         return cfg;
     }

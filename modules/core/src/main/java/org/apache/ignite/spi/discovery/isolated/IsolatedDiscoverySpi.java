@@ -42,6 +42,7 @@ import org.apache.ignite.spi.discovery.DiscoverySpiDataExchange;
 import org.apache.ignite.spi.discovery.DiscoverySpiHistorySupport;
 import org.apache.ignite.spi.discovery.DiscoverySpiListener;
 import org.apache.ignite.spi.discovery.DiscoverySpiNodeAuthenticator;
+import org.apache.ignite.spi.discovery.DiscoverySpiOrderSupport;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
@@ -56,6 +57,7 @@ import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
  */
 @IgniteSpiMultipleInstancesSupport(true)
 @DiscoverySpiHistorySupport(true)
+@DiscoverySpiOrderSupport(true)
 public class IsolatedDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscoverySpi {
     /** */
     private Serializable consistentId;
