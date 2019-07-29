@@ -184,6 +184,7 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
         );
 
         tmMxBean.setLongTransactionTimeDumpThreshold(0);
+        tmMxBean.setLongTransactionTimeDumpSampleLimit(0.0);
 
         doInTransaction(client2, () -> {
             Integer val = cache.get(1);

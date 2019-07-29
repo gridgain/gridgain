@@ -3835,9 +3835,10 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
             long longTransactionTimeDumpThreshold = cctx.tm().longTransactionTimeDumpThreshold();
 
-            if (longTransactionTimeDumpThreshold > 0
-                && totalTimeMillis > longTransactionTimeDumpThreshold
-                && RANDOM.nextDouble() <= cctx.tm().longTransactionTimeDumpSampleLimit())
+            double longTransactionTimeDumpSampleLimit = cctx.tm().longTransactionTimeDumpSampleLimit();
+
+            if ((longTransactionTimeDumpThreshold > 0 && totalTimeMillis > longTransactionTimeDumpThreshold)
+                || (longTransactionTimeDumpSampleLimit >= 0.0 && RANDOM.nextDouble() <= longTransactionTimeDumpSampleLimit))
                 log.warning(longRunningTransactionWarning(state, systemTimeMillis, userTimeMillis));
         }
 
