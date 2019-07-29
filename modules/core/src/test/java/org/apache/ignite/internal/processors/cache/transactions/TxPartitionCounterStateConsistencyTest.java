@@ -66,6 +66,7 @@ import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionRollbackException;
 import org.junit.Test;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_INSTANCE_NAME;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
@@ -384,6 +385,196 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
         assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
     }
+
+    /**
+     * Tests reproduces the problem: if node re-joins having MOVING partitions, they must be cleared to avoid desync.
+     *
+     * @throws Exception
+     */
+    @Test
+    public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_NodeRestartDuringRebalance() throws Exception {
+        backups = 2;
+
+        Ignite crd = startGridsMultiThreaded(SERVER_NODES);
+
+        int[] primaryParts = crd.affinity(DEFAULT_CACHE_NAME).primaryPartitions(crd.cluster().localNode());
+
+        IgniteCache<Object, Object> cache = crd.cache(DEFAULT_CACHE_NAME);
+
+        List<Integer> keys = partitionKeys(cache, primaryParts[0], 2, 0);
+
+        cache.put(keys.get(0), 0);
+        cache.put(keys.get(1), 0);
+
+        forceCheckpoint();
+
+        Ignite backup = backupNode(keys.get(0), DEFAULT_CACHE_NAME);
+
+        final String backupName = backup.name();
+
+        stopGrid(false, backupName);
+
+        cache.remove(keys.get(1));
+
+        TestRecordingCommunicationSpi spi = TestRecordingCommunicationSpi.spi(crd);
+
+        // Prevent rebalance completion.
+        spi.blockMessages((node, msg) -> {
+            String name = (String)node.attributes().get(ATTR_IGNITE_INSTANCE_NAME);
+
+            if (name.equals(backupName) && msg instanceof GridDhtPartitionSupplyMessage) {
+                GridDhtPartitionSupplyMessage msg0 = (GridDhtPartitionSupplyMessage)msg;
+
+                Map<Integer, CacheEntryInfoCollection> infos = U.field(msg0, "infos");
+
+                return infos.keySet().contains(primaryParts[0]);
+            }
+
+            return false;
+        });
+
+        startGrid(backupName);
+
+        spi.waitForBlocked();
+
+        doSleep(2000);
+
+        stopGrid(true, backupName); // Stop node in the middle of rebalance.
+
+        spi.stopBlock();
+
+        startGrid(backupName);
+
+        awaitPartitionMapExchange();
+
+        assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+    }
+
+    /**
+     * Tests reproduces the problem: if node re-joins having MOVING partitions, they must be cleared to avoid desync.
+     *
+     * @throws Exception
+     */
+    @Test
+    public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_NodeRestartDuringRebalance2() throws Exception {
+        backups = 2;
+
+        Ignite crd = startGridsMultiThreaded(SERVER_NODES);
+
+        int[] primaryParts = crd.affinity(DEFAULT_CACHE_NAME).primaryPartitions(crd.cluster().localNode());
+
+        IgniteCache<Object, Object> cache = crd.cache(DEFAULT_CACHE_NAME);
+
+        List<Integer> keys = partitionKeys(cache, primaryParts[0], 2, 0);
+
+        cache.put(keys.get(0), 0);
+        cache.put(keys.get(1), 0);
+
+        forceCheckpoint();
+
+        Ignite backup = backupNode(keys.get(0), DEFAULT_CACHE_NAME);
+
+        final String backupName = backup.name();
+
+        stopGrid(false, backupName);
+
+        cache.remove(keys.get(1));
+
+        TestRecordingCommunicationSpi spi = TestRecordingCommunicationSpi.spi(crd);
+
+        // Prevent rebalance completion.
+        spi.blockMessages((node, msg) -> {
+            String name = (String)node.attributes().get(ATTR_IGNITE_INSTANCE_NAME);
+
+            if (name.equals(backupName) && msg instanceof GridDhtPartitionSupplyMessage) {
+                GridDhtPartitionSupplyMessage msg0 = (GridDhtPartitionSupplyMessage)msg;
+
+                Map<Integer, CacheEntryInfoCollection> infos = U.field(msg0, "infos");
+
+                return infos.keySet().contains(primaryParts[0]);
+            }
+
+            return false;
+        });
+
+        startGrid(backupName);
+
+        spi.waitForBlocked();
+
+        // Trigger PME cancellation.
+        //crd.getOrCreateCache(cacheConfiguration(DEFAULT_CACHE_NAME + "2"));
+        startGrid(SERVER_NODES);
+
+        spi.stopBlock();
+
+        awaitPartitionMapExchange();
+
+        assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+    }
+
+    /**
+     * Tests reproduces the problem: if node re-joins having MOVING partitions, they must be cleared to avoid desync.
+     *
+     * @throws Exception
+     */
+    @Test
+    @WithSystemProperty(key = IGNITE_PDS_WAL_REBALANCE_THRESHOLD, value = "0")
+    public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_NodeRestartDuringRebalance3() throws Exception {
+        backups = 2;
+
+        Ignite crd = startGridsMultiThreaded(SERVER_NODES);
+
+        int[] primaryParts = crd.affinity(DEFAULT_CACHE_NAME).primaryPartitions(crd.cluster().localNode());
+
+        IgniteCache<Object, Object> cache = crd.cache(DEFAULT_CACHE_NAME);
+
+        List<Integer> keys = partitionKeys(cache, primaryParts[0], 2, 0);
+
+        cache.put(keys.get(0), 0);
+        cache.put(keys.get(1), 0);
+
+        forceCheckpoint();
+
+        Ignite backup = backupNode(keys.get(0), DEFAULT_CACHE_NAME);
+
+        final String backupName = backup.name();
+
+        stopGrid(false, backupName);
+
+        cache.remove(keys.get(1));
+
+        TestRecordingCommunicationSpi spi = TestRecordingCommunicationSpi.spi(crd);
+
+        // Prevent rebalance completion.
+        spi.blockMessages((node, msg) -> {
+            String name = (String)node.attributes().get(ATTR_IGNITE_INSTANCE_NAME);
+
+            if (name.equals(backupName) && msg instanceof GridDhtPartitionSupplyMessage) {
+                GridDhtPartitionSupplyMessage msg0 = (GridDhtPartitionSupplyMessage)msg;
+
+                Map<Integer, CacheEntryInfoCollection> infos = U.field(msg0, "infos");
+
+                return infos.keySet().contains(primaryParts[0]);
+            }
+
+            return false;
+        });
+
+        startGrid(backupName);
+
+        spi.waitForBlocked();
+
+        // Trigger PME cancellation.
+        assertNotNull(crd.getOrCreateCache(cacheConfiguration(DEFAULT_CACHE_NAME + "2")));
+        // startGrid(SERVER_NODES);
+
+        spi.stopBlock();
+
+        awaitPartitionMapExchange();
+
+        assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+    }
+
 
     /** */
     @Test
