@@ -43,7 +43,7 @@ public class CalciteIndexingBasicTest extends GridCommonAbstractTest {
         projEntity.addQueryField("ver", Integer.class.getName(), null);
         projEntity.addQueryField("name", String.class.getName(), null);
         projEntity.addQueryField("id", Integer.class.getName(), null);
-        projEntity.setTableName("ProjectTbl");
+        projEntity.setTableName("Project");
 
         QueryEntity devEntity = new QueryEntity();
         devEntity.setKeyType(Integer.class.getName());
@@ -52,7 +52,7 @@ public class CalciteIndexingBasicTest extends GridCommonAbstractTest {
         devEntity.addQueryField("projectId", Integer.class.getName(), null);
         devEntity.addQueryField("name", String.class.getName(), null);
         devEntity.addQueryField("id", Integer.class.getName(), null);
-        devEntity.setTableName("DeveloperTbl");
+        devEntity.setTableName("Developer");
 
         ccfg.setQueryEntities(Arrays.asList(projEntity, devEntity));
 
@@ -66,7 +66,7 @@ public class CalciteIndexingBasicTest extends GridCommonAbstractTest {
         cache.put(3, new Project("GridGain", 9));
 
         cache.put(4, new Developer("Aristotel", 1));
-        cache.put(5, new Developer("Newton", 3));
+        cache.put(5, new Developer("Newton", 2));
         cache.put(6, new Developer("dAlamber", 9));
         cache.put(7, new Developer("Euler", 3));
         cache.put(8, new Developer("Laplas", 2));
@@ -75,9 +75,12 @@ public class CalciteIndexingBasicTest extends GridCommonAbstractTest {
 
     @Test
     public void testSelect() {
-        IgniteCache<Integer, String> cache = grid(0).cache(DEFAULT_CACHE_NAME).withKeepBinary();
+        IgniteCache<Integer, String> cache = grid(0).cache(DEFAULT_CACHE_NAME);
 
-        List res = cache.query(new SqlFieldsQuery("SELECT * FROM DeveloperTbl")).getAll();
+        List res = cache.query(new SqlFieldsQuery("SELECT d.name, d.projectId, p.name, p.id " +
+            "FROM Developer d JOIN Project p " +
+            "ON d.projectId = p.id " +
+            "WHERE p.ver > 1")).getAll();
 
 
         //List res = cache.query(new SqlFieldsQuery("SELECT id, name FROM ProjectTbl WHERE ver > 1 ORDER BY name")).getAll();

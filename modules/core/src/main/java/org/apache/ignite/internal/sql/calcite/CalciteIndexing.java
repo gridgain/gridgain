@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Set;
 import org.apache.calcite.adapter.enumerable.EnumerableConvention;
 import org.apache.calcite.adapter.enumerable.EnumerableFilter;
+import org.apache.calcite.adapter.enumerable.EnumerableHashJoin;
 import org.apache.calcite.adapter.enumerable.EnumerableInterpreter;
 import org.apache.calcite.adapter.enumerable.EnumerableProject;
 import org.apache.calcite.adapter.enumerable.EnumerableTableScan;
@@ -37,6 +38,7 @@ import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.SchemaPlus;
@@ -49,6 +51,7 @@ import org.apache.calcite.tools.Frameworks;
 import org.apache.calcite.tools.Planner;
 import org.apache.calcite.tools.RelConversionException;
 import org.apache.calcite.tools.ValidationException;
+import org.apache.calcite.util.ImmutableIntList;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
@@ -82,6 +85,7 @@ import org.apache.ignite.internal.processors.query.SqlClientContext;
 import org.apache.ignite.internal.processors.query.UpdateSourceIterator;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitor;
 import org.apache.ignite.internal.sql.calcite.physical.Filter;
+import org.apache.ignite.internal.sql.calcite.physical.NestedLoopsJoin;
 import org.apache.ignite.internal.sql.calcite.physical.PhysicalOperator;
 import org.apache.ignite.internal.sql.calcite.physical.Project;
 import org.apache.ignite.internal.sql.calcite.physical.TableScan;
@@ -264,14 +268,31 @@ public class CalciteIndexing implements GridQueryIndexing {
             return convertToProject((EnumerableProject)plan);
         else if (plan instanceof EnumerableFilter)
             return convertToFilter((EnumerableFilter)plan);
+        else if (plan instanceof EnumerableHashJoin)
+            return convertToHashJoin((EnumerableHashJoin)plan);
 
         throw new IgniteException("Operation is not supported yet: " + plan);
+    }
+
+    private PhysicalOperator convertToHashJoin(EnumerableHashJoin plan) { // TODO why do we have HashJoin even for non-equi-joins?
+        PhysicalOperator leftSrc = convertToPhysical(plan.getInput(0));
+        PhysicalOperator rightSrc = convertToPhysical(plan.getInput(1));
+
+        ImmutableIntList leftJoinKeys = plan.getLeftKeys();
+        ImmutableIntList rightJoinKeys = plan.getRightKeys();
+
+        RexNode joinCond = plan.getCondition();
+
+        JoinRelType joinType = plan.getJoinType();
+
+
+        return new NestedLoopsJoin(leftSrc, rightSrc, leftJoinKeys, rightJoinKeys, joinCond, joinType);
     }
 
     private PhysicalOperator convertToFilter(EnumerableFilter plan) {
         PhysicalOperator rowsSrc = convertToPhysical(plan.getInput());
 
-        return new Filter(rowsSrc, plan.getCondition());  // TODO: implement.
+        return new Filter(rowsSrc, plan.getCondition());
     }
 
     private Project convertToProject(EnumerableProject plan) {
