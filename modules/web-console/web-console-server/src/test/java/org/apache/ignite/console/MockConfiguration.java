@@ -27,6 +27,8 @@ import org.apache.ignite.IgniteTransactions;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.console.repositories.AnnouncementRepository;
+import org.apache.ignite.console.web.socket.AgentsService;
+import org.apache.ignite.console.web.socket.TransitionService;
 import org.apache.ignite.internal.util.future.IgniteFinishedFutureImpl;
 import org.apache.ignite.lang.IgniteAsyncSupport;
 import org.apache.ignite.lang.IgniteFuture;
@@ -65,6 +67,18 @@ public class MockConfiguration {
     @Bean
     public AnnouncementRepository announcementRepository() {
         return mock(AnnouncementRepository.class);
+    }
+
+    /** Agents service mock. */
+    @Bean
+    public AgentsService agentsService() {
+        return mock(AgentsService.class);
+    }
+
+    /** Transition service mock. */
+    @Bean
+    public TransitionService transitionService() {
+        return mock(TransitionService.class);
     }
 
     /** Ignite mock. */

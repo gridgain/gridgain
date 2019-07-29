@@ -19,6 +19,7 @@ package org.apache.ignite.console.agent.handlers;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -65,7 +66,6 @@ import static org.apache.ignite.console.agent.AgentUtils.entry;
 import static org.apache.ignite.console.agent.AgentUtils.secured;
 import static org.apache.ignite.console.agent.AgentUtils.sslContextFactory;
 import static org.apache.ignite.console.agent.handlers.DemoClusterHandler.DEMO_CLUSTER_ID;
-import static org.apache.ignite.console.utils.Utils.extractErrorMessage;
 import static org.apache.ignite.console.utils.Utils.fromJson;
 import static org.apache.ignite.console.websocket.AgentHandshakeRequest.CURRENT_VER;
 import static org.apache.ignite.console.websocket.WebSocketEvents.AGENTS_PATH;
@@ -122,7 +122,7 @@ public class WebSocketRouter implements AutoCloseable {
     private AtomicInteger reconnectCnt = new AtomicInteger();
 
     /** Active tokens after handshake. */
-    private List<String> validTokens;
+    private Collection<String> validTokens;
 
     /** Connector pool. */
     private ExecutorService connectorPool = Executors.newSingleThreadExecutor(r -> new Thread(r, "Connect thread"));
@@ -236,7 +236,7 @@ public class WebSocketRouter implements AutoCloseable {
 
             httpClient.start();
             client.start();
-            client.connect(this, URI.create(cfg.serverUri()).resolve(AGENTS_PATH)).get(10L, TimeUnit.SECONDS);
+            client.connect(this, URI.create(cfg.serverUri()).resolve(AGENTS_PATH)).get(5L, TimeUnit.SECONDS);
 
             reconnectCnt.set(0);
         }
@@ -349,7 +349,7 @@ public class WebSocketRouter implements AutoCloseable {
             evt = fromJson(msg, WebSocketRequest.class);
 
             switch (evt.getEventType()) {
-                case AGENT_HANDSHAKE: {
+                case AGENT_HANDSHAKE:
                     AgentHandshakeResponse req0 = fromJson(evt.getPayload(), AgentHandshakeResponse.class);
 
                     processHandshakeResponse(req0);
@@ -357,51 +357,51 @@ public class WebSocketRouter implements AutoCloseable {
                     if (closeLatch.getCount() > 0)
                         watcher.startWatchTask(ses);
 
-                    return;
-                }
+                    break;
+
                 case AGENT_REVOKE_TOKEN:
                     processRevokeToken(evt.getPayload());
 
                     return;
 
                 case SCHEMA_IMPORT_DRIVERS:
-                    send(ses, evt.withPayload(dbHnd.collectJdbcDrivers()));
+                    send(ses, evt.response(dbHnd.collectJdbcDrivers()));
 
                     break;
 
                 case SCHEMA_IMPORT_SCHEMAS:
-                    send(ses, evt.withPayload(dbHnd.collectDbSchemas(evt)));
+                    send(ses, evt.response(dbHnd.collectDbSchemas(evt)));
 
                     break;
 
                 case SCHEMA_IMPORT_METADATA:
-                    send(ses, evt.withPayload(dbHnd.collectDbMetadata(evt)));
+                    send(ses, evt.response(dbHnd.collectDbMetadata(evt)));
 
                     break;
 
                 case NODE_REST:
-                case NODE_VISOR: {
+                case NODE_VISOR:
                     if (log.isDebugEnabled())
                         log.debug("Processing REST request: " + evt);
 
-                    RestRequest req0 = fromJson(evt.getPayload(), RestRequest.class);
+                    RestRequest reqRest = fromJson(evt.getPayload(), RestRequest.class);
 
-                    JsonObject params = req0.getParams();
+                    JsonObject params = reqRest.getParams();
 
                     RestResult res;
 
                     try {
-                        res = DEMO_CLUSTER_ID.equals(req0.getClusterId()) ?
+                        res = DEMO_CLUSTER_ID.equals(reqRest.getClusterId()) ?
                             demoClusterHnd.restCommand(params) : clusterHnd.restCommand(params);
                     }
                     catch (Throwable e) {
                         res = RestResult.fail(HTTP_INTERNAL_ERROR, e.getMessage());
                     }
 
-                    send(ses, evt.withPayload(res));
+                    send(ses, evt.response(res));
 
                     break;
-                }
+
                 default:
                     log.warning("Unknown event: " + evt);
             }
@@ -416,7 +416,7 @@ public class WebSocketRouter implements AutoCloseable {
             log.error("Failed to send response: " + evt, e);
 
             try {
-                send(ses, evt.withError(extractErrorMessage(ERROR_MSGS.get(evt.getEventType()), e)));
+                send(ses, evt.withError(ERROR_MSGS.get(evt.getEventType()), e));
             }
             catch (Exception ex) {
                 log.error("Failed to send response with error", e);

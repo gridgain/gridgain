@@ -16,11 +16,9 @@
 
 package org.apache.ignite.console.web.socket;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
-import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistration;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
 
 import static org.apache.ignite.console.websocket.WebSocketEvents.AGENTS_PATH;
@@ -33,37 +31,25 @@ import static org.apache.ignite.console.websocket.WebSocketEvents.BROWSERS_PATH;
 @EnableWebSocket
 public class WebSocketConfig implements WebSocketConfigurer {
     /** */
-    private final AgentsHandler agentsHnd;
+    private final AgentsService agentsSrvc;
 
     /** */
-    private final BrowsersHandler browsersHnd;
-
-    /** */
-    @Value("${websocket.cors.enabled:false}")
-    private boolean corsEnabled;
-
-    /** */
-    @Value("${websocket.allowed.origin:https://localhost}")
-    private String allowedOrigin;
+    private final BrowsersService browsersSrvc;
 
     /**
-     * @param agentsHnd Agents handler.
-     * @param browsersHnd Browsers handler.
+     * @param agentsSrvc Agents service.
+     * @param browsersSrvc Browsers service.
      */
-    public WebSocketConfig(AgentsHandler agentsHnd, BrowsersHandler browsersHnd) {
-        this.agentsHnd = agentsHnd;
-        this.browsersHnd = browsersHnd;
+    public WebSocketConfig(AgentsService agentsSrvc, BrowsersService browsersSrvc) {
+        this.agentsSrvc = agentsSrvc;
+        this.browsersSrvc = browsersSrvc;
     }
 
     /**
      * @param registry Registry.
      */
     @Override public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(agentsHnd, AGENTS_PATH);
-
-        WebSocketHandlerRegistration browsersReg = registry.addHandler(browsersHnd, BROWSERS_PATH);
-
-        if (corsEnabled)
-            browsersReg.setAllowedOrigins(allowedOrigin);
+        registry.addHandler(agentsSrvc, AGENTS_PATH);
+        registry.addHandler(browsersSrvc, BROWSERS_PATH);
     }
 }
