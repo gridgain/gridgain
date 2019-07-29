@@ -63,8 +63,6 @@ public class DefaultLearningEnvironmentBuilder implements LearningEnvironmentBui
         dataTtl = INFINITE_TTL;
     }
 
-
-
     /** {@inheritDoc} */
     @Override public LearningEnvironmentBuilder withRNGSeedDependency(IgniteFunction<Integer, Long> seed) {
         this.seed = seed;
