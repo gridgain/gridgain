@@ -1627,7 +1627,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
         /**
          * @param partId Partition.
-         * @param exists {@code True} if store for this index exists.
+         * @param exists {@code True} if store exists.
          */
         private GridCacheDataStore(int partId, boolean exists) {
             this.partId = partId;
@@ -1663,6 +1663,9 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         }
 
         /**
+         * @param checkExists If {@code true} data store won't be initialized if it doesn't exists
+         * (has non empty data file). This is an optimization for lazy store initialization on writes.
+         *
          * @return Store delegate.
          * @throws IgniteCheckedException If failed.
          */
