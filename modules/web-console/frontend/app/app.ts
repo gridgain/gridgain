@@ -152,6 +152,7 @@ import * as icons from '../public/images/icons';
 
 import uiRouter from '@uirouter/angularjs';
 import {upgradeModule} from '@uirouter/angular-hybrid';
+import stacktraceViewer from './components/stacktrace-viewer';
 
 export default angular
     .module('ignite-console', [
@@ -247,7 +248,8 @@ export default angular
         timedRedirection.name,
         signupConfirmation.name,
         noDataCmp.name,
-        globalProgressBar.name
+        globalProgressBar.name,
+        stacktraceViewer.name
     ])
     // Routing should wait until Angular loads. Angular app part will start it back using serviceBootstrap component.
     .config(['$urlServiceProvider', ($urlService) => $urlService.deferIntercept()])

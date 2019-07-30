@@ -25,7 +25,7 @@ import {CSV} from 'app/services/CSV';
 import paragraphRateTemplateUrl from 'views/sql/paragraph-rate.tpl.pug';
 import cacheMetadataTemplateUrl from 'views/sql/cache-metadata.tpl.pug';
 import chartSettingsTemplateUrl from 'views/sql/chart-settings.tpl.pug';
-import messageTemplateUrl from 'views/templates/message.tpl.pug';
+import messageTemplateUrl from 'views/templates/stacktrace-viewer.tpl.pug';
 
 import {default as Notebook} from '../../notebook.service';
 import {default as MessagesServiceFactory} from 'app/services/Messages.service';
@@ -2158,11 +2158,14 @@ export class NotebookCtrl {
                 scope.title = 'Error details';
                 scope.content = [];
 
-                const tab = '&nbsp;&nbsp;&nbsp;&nbsp;';
-
                 const addToTrace = (item) => {
                     if (nonNil(item)) {
-                        scope.content.push((scope.content.length > 0 ? tab : '') + errorParser.extractFullMessage(item));
+                        const content = {message: errorParser.extractFullMessage(item)};
+
+                        if (!_.isEmpty(item.stackTrace))
+                            content.stacktrace = _.map(item.stackTrace, (message) => ({ message }));
+
+                        scope.content.push(content);
 
                         addToTrace(item.cause);
 
