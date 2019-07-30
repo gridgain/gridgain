@@ -1677,13 +1677,24 @@ public class GridDhtPartitionDemander {
      * @param finish is finish rebalance
      * */
     private void printRebalanceStatistics(final boolean finish) {
+        log.info("Prepare print rebalance statistics");
+
         RebalanceFuture currRebFut = rebalanceFut;
 
         //collect all RebalanceFuture in current rebalance
         List<RebalanceFuture> rebFuts = !finish ? singletonList(currRebFut) : currentRebalanceFutures();
 
+        boolean printStat = isPrintRebalanceStatistics();
+
+        log.info(format(
+            "Print rebalance statistics [finish=%s, printStat=%s, rebFuts=%s]",
+            finish,
+            printStat,
+            rebFuts.size()
+        ));
+
         try {
-            if (!isPrintRebalanceStatistics())
+            if (!printStat)
                 return;
 
             AtomicInteger nodeCnt = new AtomicInteger();
@@ -1707,8 +1718,11 @@ public class GridDhtPartitionDemander {
             log.info(joiner.toString());
         }
         finally {
-            if (finish)
+            if (finish) {
                 rebFuts.forEach(future -> future.stat.partStat.clear());
+
+                log.info("Clear rebalance statistics");
+            }
         }
     }
 
