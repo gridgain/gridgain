@@ -42,7 +42,7 @@ import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryTy
  */
 public class RunningQueryManager {
     /** Name of the MetricRegistry which metrics measure stats of queries initiated by user. */
-    private static final String SQL_USER_QUERIES_REG_NAME = "sql.queries.user";
+    public static final String SQL_USER_QUERIES_REG_NAME = "sql.queries.user";
 
     /** Keep registered user queries. */
     private final ConcurrentMap<Long, GridRunningQueryInfo> runs = new ConcurrentHashMap<>();
