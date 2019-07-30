@@ -82,6 +82,7 @@ import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType
 import static org.apache.ignite.internal.GridTopic.TOPIC_INTERNAL_DIAGNOSTIC;
 import static org.apache.ignite.internal.GridTopic.TOPIC_METRICS;
 import static org.apache.ignite.internal.IgniteVersionUtils.VER_STR;
+import static org.apache.ignite.internal.util.IgniteUtils.isLocalNodeCoordinator;
 
 /**
  *
@@ -184,6 +185,20 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
             localClusterId = idAndTag.id();
             localClusterTag = idAndTag.tag();
         }
+
+        metastorage.listen(
+            (k) -> k.equals(CLUSTER_ID_TAG_KEY),
+            (String k, ClusterIdAndTag oldVal, ClusterIdAndTag newVal) -> {
+                if (log.isInfoEnabled())
+                    log.info(
+                        "Cluster tag will be set to new value: " +
+                            newVal != null ? newVal.tag() : "null" +
+                            ", previous value was: " +
+                            oldVal != null ? oldVal.tag() : "null");
+
+                cluster.setTag(newVal != null ? newVal.tag() : null);
+            }
+        );
     }
 
     /**
@@ -205,37 +220,24 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     /** {@inheritDoc} */
     @Override public void onReadyForWrite(DistributedMetaStorage metastorage) {
         this.metastorage = metastorage;
-
-        metastorage.listen(
-            (k) -> k.equals(CLUSTER_ID_TAG_KEY),
-            (String k, ClusterIdAndTag oldVal, ClusterIdAndTag newVal) -> {
-                if (log.isInfoEnabled())
-                    log.info(
-                        "Cluster tag will be set to new value: " +
-                            newVal != null ? newVal.tag() : "null" +
-                            ", previous value was: " +
-                            oldVal != null ? oldVal.tag() : "null");
-
-                cluster.setTag(newVal != null ? newVal.tag() : null);
-            }
-        );
-
         //TODO GG-21718 - implement optimization so only coordinator makes a write to metastorage.
-        ctx.closure().runLocalSafe(
-            () -> {
-                try {
-                    ClusterIdAndTag idAndTag = new ClusterIdAndTag(cluster.id(), cluster.tag());
+        if (isLocalNodeCoordinator(ctx.discovery())) {
+            ctx.closure().runLocalSafe(
+                () -> {
+                    try {
+                        ClusterIdAndTag idAndTag = new ClusterIdAndTag(cluster.id(), cluster.tag());
 
-                    if (log.isInfoEnabled())
-                        log.info("Writing cluster ID and tag to metastorage on ready for write " + idAndTag);
+                        if (log.isInfoEnabled())
+                            log.info("Writing cluster ID and tag to metastorage on ready for write " + idAndTag);
 
-                    metastorage.writeAsync(CLUSTER_ID_TAG_KEY, idAndTag);
+                        metastorage.writeAsync(CLUSTER_ID_TAG_KEY, idAndTag);
+                    }
+                    catch (IgniteCheckedException e) {
+                        ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
+                    }
                 }
-                catch (IgniteCheckedException e) {
-                    ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
-                }
-            }
-        );
+            );
+        }
     }
 
     /**
