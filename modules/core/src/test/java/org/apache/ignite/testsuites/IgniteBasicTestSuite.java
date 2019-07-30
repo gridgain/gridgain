@@ -28,6 +28,7 @@ import org.apache.ignite.failure.StopNodeOrHaltFailureHandlerTest;
 import org.apache.ignite.internal.ClassSetTest;
 import org.apache.ignite.internal.ClusterGroupHostsSelfTest;
 import org.apache.ignite.internal.ClusterGroupSelfTest;
+import org.apache.ignite.internal.ClusterProcessorCheckGlobalStateComputeRequestTest;
 import org.apache.ignite.internal.GridFailFastNodeFailureDetectionSelfTest;
 import org.apache.ignite.internal.GridLifecycleAwareSelfTest;
 import org.apache.ignite.internal.GridLifecycleBeanSelfTest;
@@ -145,7 +146,8 @@ public class IgniteBasicTestSuite {
         suite.addTest(new JUnit4TestAdapter(ClusterGroupHostsSelfTest.class));
         suite.addTest(new JUnit4TestAdapter(IgniteMessagingWithClientTest.class));
         suite.addTest(new JUnit4TestAdapter(IgniteMessagingSendAsyncTest.class));
-
+	    suite.addTest(new JUnit4TestAdapter(ClusterProcessorCheckGlobalStateComputeRequestTest.class));
+    
         GridTestUtils.addTestIfNeeded(suite, ClusterGroupSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridMessagingSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridMessagingNoPeerClassLoadingSelfTest.class, ignoredTests);

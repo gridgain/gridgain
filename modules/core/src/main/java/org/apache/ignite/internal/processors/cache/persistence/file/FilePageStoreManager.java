@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -78,7 +78,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.lang.IgniteOutClosure;
 import org.apache.ignite.marshaller.Marshaller;
-import org.apache.ignite.marshaller.jdk.JdkMarshaller;
+import org.apache.ignite.marshaller.MarshallerUtils;
 import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -128,7 +128,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
     public static final String META_STORAGE_NAME = "metastorage";
 
     /** Marshaller. */
-    private static final Marshaller marshaller = new JdkMarshaller();
+    private final Marshaller marshaller;
 
     /**
      * Executor to disallow running code that modifies data in idxCacheStores concurrently with cleanup of file page
@@ -188,6 +188,8 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
         this.dsCfg = dsCfg;
 
         pageStoreV1FileIoFactory = pageStoreFileIoFactory = dsCfg.getFileIOFactory();
+
+        marshaller =  MarshallerUtils.jdkMarshaller(ctx.igniteInstanceName());
     }
 
     /** {@inheritDoc} */

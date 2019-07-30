@@ -27,6 +27,7 @@ import org.apache.ignite.configuration.DataPageEvictionMode;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -37,11 +38,8 @@ import org.junit.runners.JUnit4;
  */
 @RunWith(JUnit4.class)
 public class PageEvictionPagesRecyclingAndReusingTest extends PageEvictionAbstractTest {
-    /** Test timeout. */
-    private static final long TEST_TIMEOUT = 10 * 60 * 1000;
-
     /** Number of small entries. */
-    private static final int SMALL_ENTRIES = ENTRIES * 10;
+    private static final int SMALL_ENTRIES = ENTRIES * GridTestUtils.SF.applyLB(10, 5);
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
@@ -51,11 +49,6 @@ public class PageEvictionPagesRecyclingAndReusingTest extends PageEvictionAbstra
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
-    }
-
-    /** {@inheritDoc} */
-    @Override protected long getTestTimeout() {
-        return TEST_TIMEOUT;
     }
 
     /**

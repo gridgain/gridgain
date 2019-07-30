@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,11 +22,11 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.PageMemory;
+import org.apache.ignite.internal.processors.cache.persistence.PageStoreWriter;
 import org.apache.ignite.internal.processors.cache.persistence.StorageException;
 import org.apache.ignite.internal.stat.IoStatisticsHolder;
 import org.apache.ignite.internal.util.GridMultiCollectionWrapper;
 import org.apache.ignite.lang.IgniteBiTuple;
-import org.jetbrains.annotations.Nullable;
 
 /**
  *
@@ -126,16 +126,22 @@ public interface PageMemoryEx extends PageMemory {
     public void finishCheckpoint();
 
     /**
-     * Gets page byte buffer for the checkpoint procedure.
+     * Prepare page for write during checkpoint.
+     *{@link PageStoreWriter} will be called when the page will be ready to write.
      *
      * @param pageId Page ID to get byte buffer for. The page ID must be present in the collection returned by
      *      the {@link #beginCheckpoint()} method call.
-     * @param outBuf Temporary buffer to write changes into.
+     * @param buf Temporary buffer to write changes into.
+     * @param pageWriter Checkpoint page write context.
      * @param tracker Checkpoint metrics tracker.
-     * @return {@code Partition generation} if data was read, {@code null} otherwise (data already saved to storage).
-     * @throws IgniteException If failed to obtain page data.
+     * @throws IgniteCheckedException If failed to obtain page data.
      */
-    @Nullable public Integer getForCheckpoint(FullPageId pageId, ByteBuffer outBuf, CheckpointMetricsTracker tracker);
+     public void checkpointWritePage(
+         FullPageId pageId,
+         ByteBuffer buf,
+         PageStoreWriter pageWriter,
+         CheckpointMetricsTracker tracker
+     ) throws IgniteCheckedException;
 
     /**
      * Marks partition as invalid / outdated.
