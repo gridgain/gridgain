@@ -76,6 +76,7 @@ import org.apache.ignite.internal.processors.cache.mvcc.msg.MvccRecoveryFinished
 import org.apache.ignite.internal.processors.cache.transactions.TxDeadlockDetection.TxDeadlockFuture;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.cluster.BaselineTopology;
+import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
 import org.apache.ignite.internal.transactions.IgniteTxOptimisticCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxTimeoutCheckedException;
@@ -239,6 +240,9 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
     /** Long operations dump timeout. */
     private long longOpsDumpTimeout = LONG_OPERATIONS_DUMP_TIMEOUT;
+
+    /** */
+    private HitRateMetric transactionDumpHitRateCounter = new HitRateMetric("transactionDumpHitRateCounter", null, 1000, 1);
 
     /**
      * Near version to DHT version map. Note that we initialize to 5K size from get go,
