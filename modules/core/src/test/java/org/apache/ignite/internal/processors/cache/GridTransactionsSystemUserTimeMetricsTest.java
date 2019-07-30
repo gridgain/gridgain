@@ -15,6 +15,7 @@
  */
 package org.apache.ignite.internal.processors.cache;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
@@ -41,7 +42,8 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_LONG_TRANSACTION_TIME_DUMP_SAMPLE_LIMIT;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_COEFFICIENT;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_PER_SECOND_LIMIT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
@@ -51,7 +53,8 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
  */
 @SystemPropertiesList(value = {
     @WithSystemProperty(key = IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD, value = "1000"),
-    @WithSystemProperty(key = IGNITE_LONG_TRANSACTION_TIME_DUMP_SAMPLE_LIMIT, value = "1.0"),
+    @WithSystemProperty(key = IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_COEFFICIENT, value = "1.0"),
+    @WithSystemProperty(key = IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_PER_SECOND_LIMIT, value = "5"),
     @WithSystemProperty(key = IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT, value = "500")
 })
 public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstractTest {
@@ -74,7 +77,13 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
     private static final long LONG_TRAN_TIMEOUT = Math.min(SYSTEM_DELAY, USER_DELAY);
 
     /** */
-    private final LogListener logLsnr = new MessageOrderLogListener("Long transaction detected.*");
+    private static final String TRANSACTION_TIME_DUMP_REGEX = ".*?ransaction time dump.*";
+
+    /** */
+    private final LogListener logLsnr = new MessageOrderLogListener(TRANSACTION_TIME_DUMP_REGEX);
+
+    /** */
+    private final TransactionDumpListener transactionDumpListener = new TransactionDumpListener();
 
     /** */
     private volatile boolean slowPrepare;
@@ -84,6 +93,7 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
         ListeningTestLogger testLog = new ListeningTestLogger(false, log());
 
         testLog.registerListener(logLsnr);
+        testLog.registerListener(transactionDumpListener);
 
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
@@ -184,7 +194,7 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
         );
 
         tmMxBean.setLongTransactionTimeDumpThreshold(0);
-        tmMxBean.setLongTransactionTimeDumpSampleLimit(0.0);
+        tmMxBean.setTransactionTimeDumpSamplesCoefficient(0.0);
 
         doInTransaction(client2, () -> {
             Integer val = cache.get(1);
@@ -195,6 +205,32 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
         });
 
         assertFalse(logLsnr.check());
+
+        //testing dumps limit
+
+        doSleep(1000);
+
+        transactionDumpListener.reset();
+
+        tmMxBean.setTransactionTimeDumpSamplesCoefficient(1.0);
+
+        int t = 4;
+
+        tmMxBean.setTransactionTimeDumpSamplesPerSecondLimit(t / 2);
+
+        slowPrepare = false;
+
+        for (int i = 0; i < t; i++) {
+            doInTransaction(client, () -> {
+                Integer val = cache.get(1);
+
+                cache.put(1, val + 1);
+
+                return null;
+            });
+        }
+
+        assertEquals(t / 2, transactionDumpListener.value());
 
         U.log(log, sysTimeHisto);
         U.log(log, userTimeHisto);
@@ -215,6 +251,35 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
             }
 
             super.sendMessage(node, msg, ackClosure);
+        }
+    }
+
+    /**
+     *
+     */
+    private static class TransactionDumpListener extends LogListener {
+        /** */
+        private final AtomicInteger counter = new AtomicInteger(0);
+
+        /** {@inheritDoc} */
+        @Override public boolean check() {
+            return true;
+        }
+
+        /** {@inheritDoc} */
+        @Override public void reset() {
+            counter.set(0);
+        }
+
+        /** {@inheritDoc} */
+        @Override public void accept(String s) {
+            if (s.matches(TRANSACTION_TIME_DUMP_REGEX))
+                counter.incrementAndGet();
+        }
+
+        /** */
+        int value() {
+            return counter.get();
         }
     }
 }

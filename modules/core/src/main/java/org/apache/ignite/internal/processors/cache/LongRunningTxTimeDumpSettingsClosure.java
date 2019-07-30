@@ -34,7 +34,10 @@ public class LongRunningTxTimeDumpSettingsClosure implements IgniteRunnable {
     private final Long timeoutThreshold;
 
     /** */
-    private final Double samplesPercentage;
+    private final Double samplesCoefficient;
+
+    /** */
+    private final Integer samplesPerSecondLimit;
 
     /**
      * Auto-inject Ignite instance
@@ -43,9 +46,14 @@ public class LongRunningTxTimeDumpSettingsClosure implements IgniteRunnable {
     private Ignite ignite;
 
     /** */
-    public LongRunningTxTimeDumpSettingsClosure(Long timeoutThreshold, Double samplesPercentage) {
+    public LongRunningTxTimeDumpSettingsClosure(
+        Long timeoutThreshold,
+        Double samplesCoefficient,
+        Integer samplesPerSecondLimit
+    ) {
         this.timeoutThreshold = timeoutThreshold;
-        this.samplesPercentage = samplesPercentage;
+        this.samplesCoefficient = samplesCoefficient;
+        this.samplesPerSecondLimit = samplesPerSecondLimit;
     }
 
     /** {@inheritDoc} */
@@ -60,7 +68,10 @@ public class LongRunningTxTimeDumpSettingsClosure implements IgniteRunnable {
         if (timeoutThreshold != null)
             tm.longTransactionTimeDumpThreshold(timeoutThreshold);
 
-        if (samplesPercentage != null)
-            tm.longTransactionTimeDumpSampleLimit(samplesPercentage);
+        if (samplesCoefficient != null)
+            tm.transactionTimeDumpSamplesCoefficient(samplesCoefficient);
+
+        if (samplesPerSecondLimit != null)
+            tm.transactionTimeDumpSamplesPerSecondLimit(samplesPerSecondLimit);
     }
 }

@@ -1293,11 +1293,19 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD = "IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD";
 
     /**
-     * The percentage of samples of long running transactions that will be dumped in log, if
-     * {@link #IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD} is set to non-zero value. Must be float value
+     * The coefficient for samples of completed transactions that will be dumped in log. Must be float value
      * between 0.0 and 1.0 inclusive.
      */
-    public static final String IGNITE_LONG_TRANSACTION_TIME_DUMP_SAMPLE_LIMIT = "IGNITE_LONG_TRANSACTION_TIME_DUMP_SAMPLE_LIMIT";
+    public static final String IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_COEFFICIENT =
+        "IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_COEFFICIENT";
+
+    /**
+     * The limit of samples of completed transactions that will be dumped in log per second, if
+     * {@link #IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_COEFFICIENT} is above <code>0.0</code>. Must be integer value
+     * greater than <code>0</code>.
+     */
+    public static final String IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_PER_SECOND_LIMIT =
+        "IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_PER_SECOND_LIMIT";
 
     /**
      * Enforces singleton.

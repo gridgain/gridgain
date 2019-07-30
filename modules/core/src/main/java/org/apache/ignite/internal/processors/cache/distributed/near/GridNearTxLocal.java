@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors.cache.distributed.near;
 
 import java.io.Externalizable;
-import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -82,6 +81,7 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
+import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetricImpl;
 import org.apache.ignite.internal.processors.query.EnlistOperation;
 import org.apache.ignite.internal.processors.query.UpdateSourceIterator;
@@ -163,6 +163,9 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
     public static final long[] METRIC_TIME_BUCKETS = new long[] { 1, 2, 4, 8, 16, 25, 50, 75, 100, 250, 500, 750, 1000, 3000};
 
     /** */
+    private static final SimpleDateFormat TIME_FORMAT = new SimpleDateFormat("HH:mm:ss.SSS");
+
+    /** */
     private static final ThreadLocalRandom RANDOM = ThreadLocalRandom.current();
 
     /** Prepare future updater. */
@@ -237,6 +240,9 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
     private final AtomicLong commitOrRollbackTime = new AtomicLong(0);
 
     /** */
+    private HitRateMetric transactionDumpHitRateCounter;
+
+    /** */
     @GridToStringExclude
     private TransactionProxyImpl proxy;
 
@@ -280,6 +286,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
      * @param txSize Transaction size.
      * @param subjId Subject ID.
      * @param taskNameHash Task name hash code.
+     * @param transactionDumpHitRateCounter Hit rate counter that is used for transaction dumps throttling.
      * @param lb Label.
      */
     public GridNearTxLocal(
@@ -296,7 +303,8 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
         int txSize,
         @Nullable UUID subjId,
         int taskNameHash,
-        @Nullable String lb
+        @Nullable String lb,
+        HitRateMetric transactionDumpHitRateCounter
     ) {
         super(
             ctx,
@@ -320,6 +328,8 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
         mappings = implicitSingle ? new IgniteTxMappingsSingleImpl() : new IgniteTxMappingsImpl();
 
         this.mvccOp = mvccOp;
+
+        this.transactionDumpHitRateCounter = transactionDumpHitRateCounter;
 
         initResult();
 
@@ -3832,13 +3842,23 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
             writeTxMetrics(systemTimeMillis, userTimeMillis);
 
-            long longTransactionTimeDumpThreshold = cctx.tm().longTransactionTimeDumpThreshold();
+            long transactionTimeDumpThreshold = cctx.tm().longTransactionTimeDumpThreshold();
 
-            double longTransactionTimeDumpSampleLimit = cctx.tm().longTransactionTimeDumpSampleLimit();
+            double transactionTimeDumpSamplesCoefficient = cctx.tm().transactionTimeDumpSamplesCoefficient();
 
-            if ((longTransactionTimeDumpThreshold > 0 && totalTimeMillis > longTransactionTimeDumpThreshold)
-                || (longTransactionTimeDumpSampleLimit >= 0.0 && RANDOM.nextDouble() <= longTransactionTimeDumpSampleLimit))
-                log.warning(longRunningTransactionWarning(state, systemTimeMillis, userTimeMillis));
+            boolean isLong = transactionTimeDumpThreshold > 0 && totalTimeMillis > transactionTimeDumpThreshold;
+
+            boolean randomlyChosen = transactionTimeDumpSamplesCoefficient >= 0.0
+                && RANDOM.nextDouble() <= transactionTimeDumpSamplesCoefficient
+                && transactionDumpHitRateCounter != null
+                && transactionDumpHitRateCounter.value() < cctx.tm().transactionTimeDumpSamplesPerSecondLimit();
+
+            if (randomlyChosen || isLong) {
+                log.warning(longRunningTransactionWarning(state, systemTimeMillis, userTimeMillis, isLong));
+
+                if (transactionDumpHitRateCounter != null)
+                    transactionDumpHitRateCounter.increment();
+            }
         }
 
         return res;
@@ -3848,17 +3868,23 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
      * Builds warning string for long running transaction.
      *
      * @param state Transaction state.
-     * @param systemTimeMillis system time in milliseconds.
-     * @param userTimeMillis user time in milliseconds.
+     * @param systemTimeMillis System time in milliseconds.
+     * @param userTimeMillis User time in milliseconds.
+     * @param isLong Whether the dumped transaction is long running or not.
      * @return Warning string.
      */
-    private String longRunningTransactionWarning(TransactionState state, long systemTimeMillis, long userTimeMillis) {
+    private String longRunningTransactionWarning(
+        TransactionState state,
+        long systemTimeMillis,
+        long userTimeMillis,
+        boolean isLong
+    ) {
         long cacheOperationsTimeMillis =
             U.nanosToMillis(systemTime.get() - prepareTime.get() - commitOrRollbackTime.get());
 
-        GridStringBuilder warning = new GridStringBuilder("Long transaction detected [startTime=")
-            //separate SimpleDateFormat for startTime
-            .a(new SimpleDateFormat("HH:mm:ss.SSS").format(new Date(startTime)))
+        GridStringBuilder warning = new GridStringBuilder(isLong ? "Long transaction time dump " : "Transaction time dump ")
+            .a("[startTime=")
+            .a(TIME_FORMAT.format(new Date(startTime)))
             .a(", totalTime=")
             .a(systemTimeMillis + userTimeMillis)
             .a(", systemTime=")

@@ -101,6 +101,7 @@ import org.jsr166.ConcurrentLinkedHashMap;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_BUFFER_SIZE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_TIMEOUT;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_PER_SECOND_LIMIT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_MAX_COMPLETED_TX_COUNT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SLOW_TX_WARN_TIMEOUT;
@@ -108,7 +109,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_TX_DEADLOCK_DETECT
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TX_OWNER_DUMP_REQUESTS_ALLOWED;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TX_SALVAGE_TIMEOUT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_WAL_LOG_TX_RECORDS;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_LONG_TRANSACTION_TIME_DUMP_SAMPLE_LIMIT;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_COEFFICIENT;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.events.EventType.EVT_TX_STARTED;
@@ -206,11 +207,18 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         IgniteSystemProperties.getLong(IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD, 0);
 
     /**
-     * The percentage of samples of long running transactions that will be dumped in log, if
-     * {@link #longTransactionTimeDumpThreshold} is set to non-zero value.
+     * The coefficient for samples of completed transactions that will be dumped in log.
      */
-    private volatile double longTransactionTimeDumpSampleLimit =
-            IgniteSystemProperties.getFloat(IGNITE_LONG_TRANSACTION_TIME_DUMP_SAMPLE_LIMIT, 0.0f);
+    private volatile double transactionTimeDumpSamplesCoefficient =
+        IgniteSystemProperties.getFloat(IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_COEFFICIENT, 0.0f);
+
+    /**
+     * The limit of samples of completed transactions that will be dumped in log per second, if
+     * {@link #transactionTimeDumpSamplesCoefficient} is above <code>0.0</code>. Must be integer value
+     * greater than <code>0</code>.
+     */
+    private volatile int longTransactionTimeDumpSamplesPerSecondLimit =
+        IgniteSystemProperties.getInteger(IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_PER_SECOND_LIMIT, 5);
 
     /** Committed local transactions. */
     private final GridBoundedConcurrentOrderedMap<GridCacheVersion, Boolean> completedVersSorted =
@@ -242,7 +250,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     private long longOpsDumpTimeout = LONG_OPERATIONS_DUMP_TIMEOUT;
 
     /** */
-    private HitRateMetric transactionDumpHitRateCounter = new HitRateMetric("transactionDumpHitRateCounter", null, 1000, 1);
+    private HitRateMetric transactionDumpHitRateCounter = new HitRateMetric("transactionDumpHitRateCounter", null, 1000, 2);
 
     /**
      * Near version to DHT version map. Note that we initialize to 5K size from get go,
@@ -496,22 +504,41 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     }
 
     /**
-     * The percentage of samples of long running transactions that will be dumped in log, if
-     * {@link #longTransactionTimeDumpThreshold} is set to non-zero value.
+     * The coefficient for samples of completed transactions that will be dumped in log.
      */
-    public double longTransactionTimeDumpSampleLimit() {
-        return longTransactionTimeDumpSampleLimit;
+    public double transactionTimeDumpSamplesCoefficient() {
+        return transactionTimeDumpSamplesCoefficient;
     }
 
     /**
-     * Sets the percentage of samples of long running transactions that will be dumped in log, if
-     * {@link #longTransactionTimeDumpThreshold} is set to non-zero value.
+     * Sets the coefficient for samples of completed transactions that will be dumped in log.
      */
-    public void longTransactionTimeDumpSampleLimit(double longTransactionTimeDumpSampleLimit) {
-        assert longTransactionTimeDumpSampleLimit >= 0.0 && longTransactionTimeDumpSampleLimit <= 1.0
-            : "longTransactionTimeDumpSampleLimit value must be between 0.0 and 1.0 inclusively.";
+    public void transactionTimeDumpSamplesCoefficient(double transactionTimeDumpSamplesCoefficient) {
+        assert transactionTimeDumpSamplesCoefficient >= 0.0 && transactionTimeDumpSamplesCoefficient <= 1.0
+            : "transactionTimeDumpSamplesCoefficient value must be between 0.0 and 1.0 inclusively.";
 
-        this.longTransactionTimeDumpSampleLimit = longTransactionTimeDumpSampleLimit;
+        this.transactionTimeDumpSamplesCoefficient = transactionTimeDumpSamplesCoefficient;
+    }
+
+    /**
+     * The limit of samples of completed transactions that will be dumped in log per second, if
+     * {@link #transactionTimeDumpSamplesCoefficient} is above <code>0.0</code>. Must be integer value
+     * greater than <code>0</code>.
+     */
+    public int transactionTimeDumpSamplesPerSecondLimit() {
+        return longTransactionTimeDumpSamplesPerSecondLimit;
+    }
+
+    /**
+     * Sets the limit of samples of completed transactions that will be dumped in log per second, if
+     * {@link #transactionTimeDumpSamplesCoefficient} is above <code>0.0</code>. Must be integer value
+     * greater than <code>0</code>.
+     */
+    public void transactionTimeDumpSamplesPerSecondLimit(int transactionTimeDumpSamplesPerSecondLimit) {
+        assert transactionTimeDumpSamplesPerSecondLimit > 0
+            : "transactionTimeDumpSamplesPerSecondLimit must be integer value greater than 0.";
+
+        this.longTransactionTimeDumpSamplesPerSecondLimit = transactionTimeDumpSamplesPerSecondLimit;
     }
 
     /**
@@ -645,7 +672,8 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             txSize,
             subjId,
             taskNameHash,
-            lb);
+            lb,
+            transactionDumpHitRateCounter);
 
         if (tx.system()) {
             AffinityTopologyVersion topVer = cctx.tm().lockedTopologyVersion(Thread.currentThread().getId(), tx);

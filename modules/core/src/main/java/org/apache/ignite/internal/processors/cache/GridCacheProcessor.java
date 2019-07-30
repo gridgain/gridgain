@@ -172,6 +172,7 @@ import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteProductVersion;
+import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.lifecycle.LifecycleAware;
 import org.apache.ignite.marshaller.Marshaller;
@@ -6044,31 +6045,57 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     public void longTransactionTimeDumpThreshold(long threshold) {
         assert threshold >= 0 : "Threshold timeout must be greater than or equal to 0.";
 
-        ClusterGroup grp = ctx.grid()
-                .cluster()
-                .forPredicate(node -> IgniteFeatures.nodeSupports(ctx, node, LRT_SYSTEM_USER_TIME_DUMP_SETTINGS));
-
-        IgniteCompute compute = ctx.grid().compute(grp);
-
-        compute.broadcast(new LongRunningTxTimeDumpSettingsClosure(threshold, null));
+        broadcastToNodesSupportingFeature(
+            new LongRunningTxTimeDumpSettingsClosure(threshold, null, null),
+            LRT_SYSTEM_USER_TIME_DUMP_SETTINGS
+        );
     }
 
     /**
-     * Sets the percentage of samples of long running transactions that will be dumped in log, if
+     * Sets the coefficient for samples of long running transactions that will be dumped in log, if
      * {@link #longTransactionTimeDumpThreshold} is set to non-zero value."
      *
-     * @param percentage Percentage, must be value between 0.0 and 1.0 inclusively.
+     * @param coefficient Coefficient, must be value between 0.0 and 1.0 inclusively.
      */
-    public void longTransactionTimeDumpSampleLimit(double percentage) {
-        assert percentage >= 0.0 && percentage <= 1.0 : "Percentage value must be between 0.0 and 1.0 inclusively.";
+    public void transactionTimeDumpSamplesCoefficient(double coefficient) {
+        assert coefficient >= 0.0 && coefficient <= 1.0 : "Percentage value must be between 0.0 and 1.0 inclusively.";
 
+        broadcastToNodesSupportingFeature(
+            new LongRunningTxTimeDumpSettingsClosure(null, coefficient, null),
+            LRT_SYSTEM_USER_TIME_DUMP_SETTINGS
+        );
+    }
+
+    /**
+     * Sets the limit of samples of completed transactions that will be dumped in log per second,
+     * if {@link #transactionTimeDumpSamplesCoefficient} is above <code>0.0</code>.
+     * Must be integer value greater than <code>0</code>.
+     *
+     * @param limit Limit value.
+     */
+    public void longTransactionTimeDumpSamplesPerSecondLimit(int limit) {
+        assert limit > 0 : "Limit value must be greater than 0.";
+
+        broadcastToNodesSupportingFeature(
+            new LongRunningTxTimeDumpSettingsClosure(null, null, limit),
+            LRT_SYSTEM_USER_TIME_DUMP_SETTINGS
+        );
+    }
+
+    /**
+     * Broadcasts given job to nodes that support ignite feature.
+     *
+     * @param job Ignite job.
+     * @param feature Ignite feature.
+     */
+    private void broadcastToNodesSupportingFeature(IgniteRunnable job, IgniteFeatures feature) {
         ClusterGroup grp = ctx.grid()
-                .cluster()
-                .forPredicate(node -> IgniteFeatures.nodeSupports(ctx, node, LRT_SYSTEM_USER_TIME_DUMP_SETTINGS));
+            .cluster()
+            .forPredicate(node -> IgniteFeatures.nodeSupports(ctx, node, feature));
 
         IgniteCompute compute = ctx.grid().compute(grp);
 
-        compute.broadcast(new LongRunningTxTimeDumpSettingsClosure(null, percentage));
+        compute.broadcast(job);
     }
 
     /**
