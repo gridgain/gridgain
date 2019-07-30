@@ -51,6 +51,7 @@ import org.apache.ignite.internal.processors.cache.CacheEntryInfoCollection;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLockRequest;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
@@ -65,6 +66,7 @@ import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionRollbackException;
 import org.junit.Test;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_INSTANCE_NAME;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
@@ -406,7 +408,9 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
         forceCheckpoint();
 
-        final String backupName = backupNode(keys.get(0), DEFAULT_CACHE_NAME).name();
+        Ignite backup = backupNode(keys.get(0), DEFAULT_CACHE_NAME);
+
+        final String backupName = backup.name();
 
         stopGrid(false, backupName);
 
@@ -445,9 +449,132 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
     }
 
     /**
-     * Test success scenario: under tx load topology changes which does not change primary nodes for some group do not
-     * break partition consistency or cause any assertions (for example LWM > HWM).
+     * Tests reproduces the problem: if node re-joins having MOVING partitions, they must be cleared to avoid desync.
+     *
+     * @throws Exception
      */
+    @Test
+    public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_NodeRestartDuringRebalance2() throws Exception {
+        backups = 2;
+
+        Ignite crd = startGridsMultiThreaded(SERVER_NODES);
+
+        int[] primaryParts = crd.affinity(DEFAULT_CACHE_NAME).primaryPartitions(crd.cluster().localNode());
+
+        IgniteCache<Object, Object> cache = crd.cache(DEFAULT_CACHE_NAME);
+
+        List<Integer> keys = partitionKeys(cache, primaryParts[0], 2, 0);
+
+        cache.put(keys.get(0), 0);
+        cache.put(keys.get(1), 0);
+
+        forceCheckpoint();
+
+        Ignite backup = backupNode(keys.get(0), DEFAULT_CACHE_NAME);
+
+        final String backupName = backup.name();
+
+        stopGrid(false, backupName);
+
+        cache.remove(keys.get(1));
+
+        TestRecordingCommunicationSpi spi = TestRecordingCommunicationSpi.spi(crd);
+
+        // Prevent rebalance completion.
+        spi.blockMessages((node, msg) -> {
+            String name = (String)node.attributes().get(ATTR_IGNITE_INSTANCE_NAME);
+
+            if (name.equals(backupName) && msg instanceof GridDhtPartitionSupplyMessage) {
+                GridDhtPartitionSupplyMessage msg0 = (GridDhtPartitionSupplyMessage)msg;
+
+                Map<Integer, CacheEntryInfoCollection> infos = U.field(msg0, "infos");
+
+                return infos.keySet().contains(primaryParts[0]);
+            }
+
+            return false;
+        });
+
+        startGrid(backupName);
+
+        spi.waitForBlocked();
+
+        // Trigger PME cancellation.
+        //crd.getOrCreateCache(cacheConfiguration(DEFAULT_CACHE_NAME + "2"));
+        startGrid(SERVER_NODES);
+
+        spi.stopBlock();
+
+        awaitPartitionMapExchange();
+
+        assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+    }
+
+    /**
+     * Tests reproduces the problem: if node re-joins having MOVING partitions, they must be cleared to avoid desync.
+     *
+     * @throws Exception
+     */
+    @Test
+    @WithSystemProperty(key = IGNITE_PDS_WAL_REBALANCE_THRESHOLD, value = "0")
+    public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_NodeRestartDuringRebalance3() throws Exception {
+        backups = 2;
+
+        Ignite crd = startGridsMultiThreaded(SERVER_NODES);
+
+        int[] primaryParts = crd.affinity(DEFAULT_CACHE_NAME).primaryPartitions(crd.cluster().localNode());
+
+        IgniteCache<Object, Object> cache = crd.cache(DEFAULT_CACHE_NAME);
+
+        List<Integer> keys = partitionKeys(cache, primaryParts[0], 2, 0);
+
+        cache.put(keys.get(0), 0);
+        cache.put(keys.get(1), 0);
+
+        forceCheckpoint();
+
+        Ignite backup = backupNode(keys.get(0), DEFAULT_CACHE_NAME);
+
+        final String backupName = backup.name();
+
+        stopGrid(false, backupName);
+
+        cache.remove(keys.get(1));
+
+        TestRecordingCommunicationSpi spi = TestRecordingCommunicationSpi.spi(crd);
+
+        // Prevent rebalance completion.
+        spi.blockMessages((node, msg) -> {
+            String name = (String)node.attributes().get(ATTR_IGNITE_INSTANCE_NAME);
+
+            if (name.equals(backupName) && msg instanceof GridDhtPartitionSupplyMessage) {
+                GridDhtPartitionSupplyMessage msg0 = (GridDhtPartitionSupplyMessage)msg;
+
+                Map<Integer, CacheEntryInfoCollection> infos = U.field(msg0, "infos");
+
+                return infos.keySet().contains(primaryParts[0]);
+            }
+
+            return false;
+        });
+
+        startGrid(backupName);
+
+        spi.waitForBlocked();
+
+        // Trigger PME cancellation.
+        assertNotNull(crd.getOrCreateCache(cacheConfiguration(DEFAULT_CACHE_NAME + "2")));
+        // startGrid(SERVER_NODES);
+
+        spi.stopBlock();
+
+        awaitPartitionMapExchange();
+
+        assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+    }
+
+
+    /** */
     @Test
     public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_SameAffinityPME() throws Exception {
         backups = 2;
@@ -495,7 +622,6 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
             }
         }, threads, "load-thread");
 
-        // Trigger constant topology changes caused by cache start/stop.
         IgniteInternalFuture fut2 = GridTestUtils.runAsync(() -> {
             U.awaitQuiet(sync);
 
@@ -523,6 +649,107 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         log.info("TX: puts=" + puts.sum() + ", restarts=" + restarts.sum() + ", size=" + cache.size());
 
         assertPartitionsSame(idleVerify(client));
+    }
+
+    /**
+     * Tests tx load concurrently with PME not changing tx topology.
+     */
+    @Test
+    public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_TxDuringPME() throws Exception {
+        backups = 2;
+
+        Ignite crd = startGrid(0);
+        startGrid(1);
+        startGrid(2);
+
+        crd.cluster().active(true);
+
+        Ignite client = startGrid("client");
+
+        IgniteCache<Object, Object> cache = client.cache(DEFAULT_CACHE_NAME);
+
+        // Put one key per partition.
+        for (int k = 0; k < PARTS_CNT; k++)
+            cache.put(k, 0);
+
+        Integer key0 = primaryKey(grid(1).cache(DEFAULT_CACHE_NAME));
+        Integer key = primaryKey(grid(0).cache(DEFAULT_CACHE_NAME));
+
+        TestRecordingCommunicationSpi spi = TestRecordingCommunicationSpi.spi(crd);
+
+        spi.blockMessages((node, message) -> {
+            if (message instanceof GridDhtPartitionsFullMessage) {
+                GridDhtPartitionsFullMessage tmp = (GridDhtPartitionsFullMessage)message;
+
+                return tmp.exchangeId() != null;
+            }
+
+            return false;
+        });
+
+        // Locks mapped wait.
+        CountDownLatch l = new CountDownLatch(1);
+
+        IgniteInternalFuture fut = GridTestUtils.runAsync(() -> {
+            U.awaitQuiet(l);
+
+            try {
+                startGrid(SERVER_NODES);
+            }
+            catch (Exception e) {
+                fail(X.getFullStackTrace(e));
+            }
+        });
+
+        TestRecordingCommunicationSpi cliSpi = TestRecordingCommunicationSpi.spi(client);
+        cliSpi.blockMessages((node, message) -> {
+            // Block second lock map req.
+            return message instanceof GridNearLockRequest && node.order() == crd.cluster().localNode().order();
+        });
+
+        IgniteInternalFuture txFut = GridTestUtils.runAsync(() -> {
+            try (Transaction tx = client.transactions().txStart()) {
+                Map<Integer, Integer> map = new LinkedHashMap<>();
+
+                map.put(key, key); // clientFirst=true in lockAll.
+                map.put(key0, key0); // clientFirst=false in lockAll.
+
+                cache.putAll(map);
+
+                tx.commit(); // Will start preparing in the middle of PME.
+            }
+        });
+
+        IgniteInternalFuture crdFut = GridTestUtils.runAsync(() -> {
+            try {
+                cliSpi.waitForBlocked(); // Delay first before PME.
+
+                l.countDown();
+
+                spi.waitForBlocked(); // Block PME after finish on crd and wait on others.
+
+                cliSpi.stopBlock(); // Start remote lock mapping.
+            }
+            catch (InterruptedException e) {
+                fail();
+            }
+        });
+
+        txFut.get();
+        crdFut.get();
+
+        spi.stopBlock();
+
+        fut.get();
+
+        awaitPartitionMapExchange();
+
+        assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+
+        // Expect correct reservation counters.
+        PartitionUpdateCounter cntr = counter(key, grid(0).name());
+        assertNotNull(cntr);
+        assertEquals(cntr.toString(), 2, cntr.reserved());
     }
 
     /**
