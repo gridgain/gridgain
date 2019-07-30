@@ -715,10 +715,6 @@ public class GridDhtPartitionDemander {
 
         final RebalanceFuture fut = rebalanceFut;
 
-        PartitionStatistics partStat = fut.stat.partStat.get(topicId).get(ctx.node(nodeId));
-
-        partStat.rcvMsgTime = currentTimeMillis();
-
         try {
             fut.cancelLock.readLock().lock();
 
@@ -738,6 +734,10 @@ public class GridDhtPartitionDemander {
 
                 return;
             }
+
+            PartitionStatistics partStat = fut.stat.partStat.get(topicId).get(ctx.node(nodeId));
+
+            partStat.rcvMsgTime = currentTimeMillis();
 
             if (log.isDebugEnabled())
                 log.debug("Received supply message [" + demandRoutineInfo(topicId, nodeId, supplyMsg) + "]");
