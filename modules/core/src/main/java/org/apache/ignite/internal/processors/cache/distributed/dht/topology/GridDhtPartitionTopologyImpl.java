@@ -796,7 +796,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                                     // After new full rebalance Node1 will only send k1 to Node2 causing lost removal.
                                     // NOTE: avoid calling clearAsync for partition twice per topology version.
                                     if (grp.persistenceEnabled() &&
-                                            (!exchFut.isHistoryPartition(grp, locPart.id()) || exchFut.localJoinExchange()) &&
+                                            exchFut.isClearingPartition(grp, locPart.id()) &&
                                             !locPart.isClearing() &&
                                             !locPart.isEmpty())
                                         locPart.clearAsync();
@@ -1616,7 +1616,10 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                             }
                         }
                         else if (state == MOVING) {
-                            rebalancePartition(p, partsToReload.contains(p), exchFut);
+                            GridDhtLocalPartition locPart = locParts.get(p);
+
+                            rebalancePartition(p, partsToReload.contains(p) ||
+                                locPart != null && locPart.state() == MOVING && exchFut.localJoinExchange(), exchFut);
 
                             changed = true;
                         }
@@ -2377,8 +2380,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
         if (part.state() != MOVING)
             part.moving();
 
-        if (!clear)
-            exchFut.addHistoryPartition(grp, part.id());
+        if (clear)
+            exchFut.addClearingPartition(grp, part.id());
 
         assert part.state() == MOVING : part;
 

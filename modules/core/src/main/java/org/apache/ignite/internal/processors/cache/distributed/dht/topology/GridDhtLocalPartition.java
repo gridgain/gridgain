@@ -1327,6 +1327,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             "reservations", reservations(),
             "empty", isEmpty(),
             "createTime", U.format(createTime),
+            "fullSize", fullSize(),
             "cntr", dataStore().partUpdateCounter());
     }
 
