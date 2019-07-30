@@ -605,7 +605,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
     }
 
     /** {@inheritDoc} */
-    public Integer getQueryTimeout() {
+    @Override public Integer getQueryTimeout() {
         return qryTimeout.value();
     }
 
@@ -615,7 +615,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
     }
 
     /** {@inheritDoc} */
-    public int getConnectionTimeout() {
+    @Override public int getConnectionTimeout() {
         return connTimeout.value();
     }
 
