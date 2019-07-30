@@ -16,7 +16,6 @@
 
 package org.apache.ignite.console.testsuites;
 
-import org.apache.ignite.console.configuration.WebConsoleConfigurationSelfTest;
 import org.apache.ignite.console.listener.NotificationEventListenerTest;
 import org.apache.ignite.console.repositories.AccountsRepositoryTest;
 import org.apache.ignite.console.db.TableSelfTest;
@@ -39,7 +38,6 @@ import org.junit.runners.Suite;
     ActivitiesServiceTest.class,
     AdminServiceTest.class,
     NotificationEventListenerTest.class,
-    WebConsoleConfigurationSelfTest.class,
     AccountsRepositoryTest.class,
     NotificationServiceTest.class
 })
