@@ -186,6 +186,41 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
             localClusterId = idAndTag.id();
             localClusterTag = idAndTag.tag();
         }
+
+        metastorage.listen(
+            (k) -> k.equals(CLUSTER_ID_TAG_KEY),
+            (String k, ClusterIdAndTag oldVal, ClusterIdAndTag newVal) -> {
+                if (log.isInfoEnabled())
+                    log.info(
+                        "Cluster tag will be set to new value: " +
+                            newVal != null ? newVal.tag() : "null" +
+                            ", previous value was: " +
+                            oldVal != null ? oldVal.tag() : "null");
+
+                if (oldVal != null && newVal != null) {
+                    if (ctx.event().isRecordable(EVT_CLUSTER_TAG_UPDATED)) {
+                        String msg = "Tag of cluster with id " +
+                            oldVal.id() +
+                            " has been updated to new value: " +
+                            newVal.tag() +
+                            ", previous value was " +
+                            oldVal.tag();
+
+                        ctx.closure().runLocalSafe(() -> ctx.event().record(
+                            new ClusterTagUpdatedEvent(
+                                ctx.discovery().localNode(),
+                                msg,
+                                oldVal.id(),
+                                oldVal.tag(),
+                                newVal.tag()
+                            )
+                        ));
+                    }
+                }
+
+                cluster.setTag(newVal != null ? newVal.tag() : null);
+            }
+        );
     }
 
     /**
@@ -207,20 +242,6 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     /** {@inheritDoc} */
     @Override public void onReadyForWrite(DistributedMetaStorage metastorage) {
         this.metastorage = metastorage;
-
-        metastorage.listen(
-            (k) -> k.equals(CLUSTER_ID_TAG_KEY),
-            (String k, ClusterIdAndTag oldVal, ClusterIdAndTag newVal) -> {
-                if (log.isInfoEnabled())
-                    log.info(
-                        "Cluster tag will be set to new value: " +
-                            newVal != null ? newVal.tag() : "null" +
-                            ", previous value was: " +
-                            oldVal != null ? oldVal.tag() : "null");
-
-                cluster.setTag(newVal != null ? newVal.tag() : null);
-            }
-        );
 
         //TODO GG-21718 - implement optimization so only coordinator makes a write to metastorage.
         ctx.closure().runLocalSafe(
@@ -254,23 +275,8 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
             throw new IgniteCheckedException("Cluster tag has been concurrently updated to different value: " +
                 concurrentValue.tag());
         }
-        else {
+        else
             cluster.setTag(newTag);
-
-            String msg = "Tag of cluster with id " +
-                    oldTag.id() +
-                    " has been updated to new value: " +
-                    newTag +
-                    ", previous value was " +
-                    oldTag.tag()
-                ;
-
-            if (ctx.event().isRecordable(EVT_CLUSTER_TAG_UPDATED)) {
-                ctx.closure().runLocalSafe(() -> ctx.event().record(
-                    new ClusterTagUpdatedEvent(ctx.discovery().localNode(), msg, oldTag.id(), oldTag.tag(), newTag)
-                ));
-            }
-        }
     }
 
     /**
