@@ -222,6 +222,8 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
                 msg.miniId(),
                 ctx.deploymentEnabled());
 
+            res.setResponseId(msg.messageId());
+
             GridDhtPartitionTopology top = ctx.topology();
 
             for (KeyCacheObject k : msg.keys()) {
@@ -1344,6 +1346,8 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
                     res.error(e);
                 }
 
+                res.setResponseId(req.messageId());
+
                 try {
                     ctx.io().send(nodeId, res, ctx.ioPolicy());
                 }
@@ -1392,6 +1396,8 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
                     req.miniId(),
                     req.version(),
                     req.deployInfo() != null);
+
+                res.setResponseId(req.messageId());
 
                 GridDhtFuture<Collection<GridCacheEntryInfo>> fut =
                     (GridDhtFuture<Collection<GridCacheEntryInfo>>)f;

@@ -30,11 +30,12 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+import org.apache.ignite.plugin.extensions.communication.TimeLoggableMessage;
 
 /**
  * DHT transaction finish response.
  */
-public class GridDhtTxFinishResponse extends GridDistributedTxFinishResponse {
+public class GridDhtTxFinishResponse extends GridDistributedTxFinishResponse implements TimeLoggableMessage {
     /** */
     private static final long serialVersionUID = 0L;
 

@@ -43,6 +43,7 @@ import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+import org.apache.ignite.plugin.extensions.communication.TimeLoggableMessage;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -50,7 +51,7 @@ import org.jetbrains.annotations.Nullable;
  *
  * One request per batch of entries is used.
  */
-public class GridNearTxEnlistRequest extends GridCacheIdMessage implements GridCacheDeployable {
+public class GridNearTxEnlistRequest extends GridCacheIdMessage implements GridCacheDeployable, TimeLoggableMessage {
     /** */
     private static final long serialVersionUID = 0L;
 

@@ -34,12 +34,13 @@ import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+import org.apache.ignite.plugin.extensions.communication.TimeLoggableMessage;
 
 /**
  * Force keys request. This message is sent by node while preloading to force
  * another node to put given keys into the next batch of transmitting entries.
  */
-public class GridDhtForceKeysRequest extends GridCacheIdMessage implements GridCacheDeployable {
+public class GridDhtForceKeysRequest extends GridCacheIdMessage implements GridCacheDeployable, TimeLoggableMessage {
     /** */
     private static final long serialVersionUID = 0L;
 

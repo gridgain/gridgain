@@ -36,7 +36,7 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.marshaller.Marshaller;
-import org.apache.ignite.plugin.extensions.communication.Message;
+import org.apache.ignite.plugin.extensions.communication.IdMessage;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.jetbrains.annotations.Nullable;
@@ -44,7 +44,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Parent of all cache messages.
  */
-public abstract class GridCacheMessage implements Message {
+public abstract class GridCacheMessage implements IdMessage {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -58,7 +58,10 @@ public abstract class GridCacheMessage implements Message {
     private static final AtomicInteger msgIdx = new AtomicInteger();
 
     /** Null message ID. */
-    private static final long NULL_MSG_ID = -1;
+    public static final long NULL_MSG_ID = -1;
+
+    /** Minimal valid message ID. */
+    public static final long MIN_MSG_ID = -NULL_MSG_ID + 1;
 
     /** ID of this message. */
     private long msgId = NULL_MSG_ID;
@@ -164,7 +167,7 @@ public abstract class GridCacheMessage implements Message {
     /**
      * @return Message ID.
      */
-    public long messageId() {
+    @Override public long messageId() {
         return msgId;
     }
 
@@ -176,6 +179,15 @@ public abstract class GridCacheMessage implements Message {
      */
     void messageId(long msgId) {
         this.msgId = msgId;
+    }
+
+    /**
+     * Sets response id based on corresponding reqiest id.
+     * @param reqId Request id.
+     */
+    public void setResponseId(long reqId) {
+        if (reqId > MIN_MSG_ID)
+            msgId = -reqId;
     }
 
     /**

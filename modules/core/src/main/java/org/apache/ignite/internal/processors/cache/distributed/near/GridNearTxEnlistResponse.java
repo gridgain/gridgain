@@ -35,12 +35,13 @@ import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+import org.apache.ignite.plugin.extensions.communication.TimeLoggableMessage;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * A response to {@link GridNearTxEnlistRequest}.
  */
-public class GridNearTxEnlistResponse extends GridCacheIdMessage implements ExceptionAware {
+public class GridNearTxEnlistResponse extends GridCacheIdMessage implements ExceptionAware, TimeLoggableMessage {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -91,6 +92,7 @@ public class GridNearTxEnlistResponse extends GridCacheIdMessage implements Exce
      * @param dhtVer Dht version.
      * @param dhtFutId Dht future id.
      * @param newDhtNodes New DHT nodes involved into transaction.
+     * @param reqId Id of request that triggered response createion.
      */
     public GridNearTxEnlistResponse(int cacheId,
         IgniteUuid futId,
@@ -99,7 +101,8 @@ public class GridNearTxEnlistResponse extends GridCacheIdMessage implements Exce
         GridCacheReturn res,
         GridCacheVersion dhtVer,
         IgniteUuid dhtFutId,
-        Set<UUID> newDhtNodes) {
+        Set<UUID> newDhtNodes,
+        long reqId) {
         this.cacheId = cacheId;
         this.futId = futId;
         this.miniId = miniId;
@@ -108,6 +111,7 @@ public class GridNearTxEnlistResponse extends GridCacheIdMessage implements Exce
         this.dhtVer = dhtVer;
         this.dhtFutId = dhtFutId;
         this.newDhtNodes = newDhtNodes;
+        setResponseId(reqId);
     }
 
     /**
@@ -118,14 +122,16 @@ public class GridNearTxEnlistResponse extends GridCacheIdMessage implements Exce
      * @param miniId Mini future id.
      * @param lockVer Lock version.
      * @param err Error.
+     * @param reqId Id of request that triggered response createion.
      */
     public GridNearTxEnlistResponse(int cacheId, IgniteUuid futId, int miniId, GridCacheVersion lockVer,
-        Throwable err) {
+        Throwable err, long reqId) {
         this.cacheId = cacheId;
         this.futId = futId;
         this.miniId = miniId;
         this.lockVer = lockVer;
         this.err = err;
+        setResponseId(reqId);
     }
 
     /**

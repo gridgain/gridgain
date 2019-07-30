@@ -114,6 +114,7 @@ public class GridNearTxPrepareResponse extends GridDistributedTxPrepareResponse 
      * @param err Error.
      * @param clientRemapVer Not {@code null} if client node should remap transaction.
      * @param addDepInfo Deployment info flag.
+     * @param reqId Id of request that triggered this response.
      */
     public GridNearTxPrepareResponse(
         int part,
@@ -126,7 +127,8 @@ public class GridNearTxPrepareResponse extends GridDistributedTxPrepareResponse 
         Throwable err,
         AffinityTopologyVersion clientRemapVer,
         boolean onePhaseCommit,
-        boolean addDepInfo
+        boolean addDepInfo,
+        long reqId
     ) {
         super(part, xid, err, addDepInfo);
 
@@ -142,6 +144,8 @@ public class GridNearTxPrepareResponse extends GridDistributedTxPrepareResponse 
 
         if (onePhaseCommit)
             flags |= NEAR_PREPARE_ONE_PHASE_COMMIT_FLAG_MASK;
+
+        setResponseId(reqId);
     }
 
     /**

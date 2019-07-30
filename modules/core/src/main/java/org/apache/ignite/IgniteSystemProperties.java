@@ -30,6 +30,7 @@ import org.apache.ignite.configuration.CheckpointWriteOrder;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.client.GridClient;
+import org.apache.ignite.internal.managers.communication.GridIoManager;
 import org.apache.ignite.internal.marshaller.optimized.OptimizedMarshaller;
 import org.apache.ignite.internal.processors.rest.GridRestCommand;
 import org.apache.ignite.internal.util.GridLogThrottle;
@@ -1176,6 +1177,25 @@ public final class IgniteSystemProperties {
      * Default value is minimum of <code>4</code> and processors count / 4, but always greater than <code>0</code>.
      */
     public static final String INDEX_REBUILDING_PARALLELISM = "INDEX_REBUILDING_PARALLELISM";
+
+    /**
+     * Enables logging time between request and response messages.
+     * {see {@link GridIoManager.ReqRespTimeStorage}}
+     */
+    public static final String IGNITE_ENABLE_MESSAGES_TIME_LOGGING = "IGNITE_ENABLE_MESSAGES_TIME_LOGGING";
+
+    /**
+     * Maximum time(in seconds) message data will be stored.
+     * Default: 300
+     * {see {@link GridIoManager.timestampMap}}
+     */
+    public static final String IGNITE_MESSAGES_INFO_STORE_TIME = "IGNITE_MESSAGES_INFO_STORE_TIME";
+
+    /**
+     * Bounds for histogram metrics.
+     * {see {@link GridIoManager.timestampMap}}
+     */
+    public static final String IGNITE_COMM_SPI_TIME_HIST_BOUNDS = "IGNITE_COMM_SPI_TIME_HIST_BOUNDS";
 
     /**
      * Enforces singleton.

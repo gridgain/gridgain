@@ -22,11 +22,12 @@ import org.apache.ignite.internal.processors.cache.GridCacheGroupIdMessage;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+import org.apache.ignite.plugin.extensions.communication.TimeLoggableMessage;
 
 /**
  * Affinity assignment request.
  */
-public class GridDhtAffinityAssignmentRequest extends GridCacheGroupIdMessage {
+public class GridDhtAffinityAssignmentRequest extends GridCacheGroupIdMessage implements TimeLoggableMessage {
     /** */
     private static final long serialVersionUID = 0L;
 

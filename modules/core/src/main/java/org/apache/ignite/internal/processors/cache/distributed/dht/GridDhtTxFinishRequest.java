@@ -34,6 +34,7 @@ import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+import org.apache.ignite.plugin.extensions.communication.TimeLoggableMessage;
 import org.apache.ignite.transactions.TransactionIsolation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -41,7 +42,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Near transaction finish request.
  */
-public class GridDhtTxFinishRequest extends GridDistributedTxFinishRequest {
+public class GridDhtTxFinishRequest extends GridDistributedTxFinishRequest implements TimeLoggableMessage {
     /** */
     private static final long serialVersionUID = 0L;
 

@@ -1710,6 +1710,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
             false,
             ctx.deploymentEnabled());
 
+        res.setResponseId(req.messageId());
+
         res.addFailedKeys(req.keys(), e);
 
         completionCb.apply(req, res);
@@ -1733,6 +1735,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
             req.partition(),
             false,
             ctx.deploymentEnabled());
+
+        res.setResponseId(req.messageId());
 
         assert !req.returnValue() || (req.operation() == TRANSFORM || req.size() == 1);
 
@@ -3278,6 +3282,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
             false,
             false);
 
+        res.setResponseId(checkReq.messageId());
+
         GridCacheReturn ret = new GridCacheReturn(false, true);
 
         res.returnValue(ret);
@@ -3439,6 +3445,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                     ctx.deploymentEnabled());
 
                 dhtRes.nearEvicted(nearEvicted);
+                dhtRes.setResponseId(req.messageId());
             }
         }
 
@@ -3471,12 +3478,14 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                 req.partition(),
                 req.futureId(),
                 ctx.deploymentEnabled());
+
+            dhtRes.setResponseId(req.messageId());
         }
 
         if (dhtRes != null)
             sendDhtPrimaryResponse(nodeId, req, dhtRes);
         else
-            sendDeferredUpdateResponse(req.partition(), nodeId, req.futureId());
+            sendDeferredUpdateResponse(req.partition(), nodeId, req.futureId(), req.messageId());
     }
 
     /**
@@ -3488,6 +3497,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         GridDhtAtomicAbstractUpdateRequest req,
         GridDhtAtomicUpdateResponse dhtRes) {
         try {
+            dhtRes.setResponseId(req.messageId());
+
             ctx.io().send(nodeId, dhtRes, ctx.ioPolicy());
 
             if (msgLog.isDebugEnabled()) {
@@ -3515,7 +3526,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
      * @param primaryId Primary ID.
      * @param futId Future ID.
      */
-    private void sendDeferredUpdateResponse(int part, UUID primaryId, long futId) {
+    private void sendDeferredUpdateResponse(int part, UUID primaryId, long futId, long reqId) {
         Map<UUID, GridDhtAtomicDeferredUpdateResponse> resMap = defRes.get();
 
         GridDhtAtomicDeferredUpdateResponse msg = resMap.get(primaryId);
@@ -3543,6 +3554,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
         if (futIds.size() >= DEFERRED_UPDATE_RESPONSE_BUFFER_SIZE) {
             resMap.remove(primaryId);
+
+            msg.setResponseId(reqId);
 
             sendDeferredUpdateResponse(primaryId, msg);
         }

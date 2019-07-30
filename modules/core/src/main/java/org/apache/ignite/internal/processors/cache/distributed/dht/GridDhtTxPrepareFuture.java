@@ -903,7 +903,8 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
             prepErr,
             null,
             tx.onePhaseCommit(),
-            tx.activeCachesDeploymentEnabled());
+            tx.activeCachesDeploymentEnabled(),
+            req.messageId());
 
         if (prepErr == null) {
             if (tx.needReturnValue() || tx.nearOnOriginatingNode() || tx.hasInterceptor())

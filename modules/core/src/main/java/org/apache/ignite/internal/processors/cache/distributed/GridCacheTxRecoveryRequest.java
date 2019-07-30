@@ -26,11 +26,12 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+import org.apache.ignite.plugin.extensions.communication.TimeLoggableMessage;
 
 /**
  * Message sent to check that transactions related to transaction were prepared on remote node.
  */
-public class GridCacheTxRecoveryRequest extends GridDistributedBaseMessage {
+public class GridCacheTxRecoveryRequest extends GridDistributedBaseMessage implements TimeLoggableMessage {
     /** */
     private static final long serialVersionUID = 0L;
 

@@ -530,6 +530,8 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
             e,
             ctx.deploymentEnabled());
 
+        res.setResponseId(req.messageId());
+
         try {
             ctx.io().send(nodeId, res, ctx.ioPolicy());
         }
@@ -623,6 +625,8 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
         if (res != null) {
             try {
                 // Reply back to sender.
+                res.setResponseId(req.messageId());
+
                 ctx.io().send(nodeId, res, ctx.ioPolicy());
 
                 if (txLockMsgLog.isDebugEnabled()) {
@@ -1353,6 +1357,8 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
             topVer,
             ctx.deploymentEnabled());
 
+        res.setResponseId(req.messageId());
+
         try {
             ctx.io().send(nearNode, res, ctx.ioPolicy());
         }
@@ -1398,6 +1404,8 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                 err,
                 null,
                 ctx.deploymentEnabled());
+
+            res.setResponseId(req.messageId());
 
             if (err == null) {
                 res.pending(localDhtPendingVersions(entries, mappedVer));
@@ -1500,7 +1508,7 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
             U.error(log, "Failed to get value for lock reply message for node [node=" +
                 U.toShortString(nearNode) + ", req=" + req + ']', e);
 
-            return new GridNearLockResponse(ctx.cacheId(),
+            GridNearLockResponse res =  new GridNearLockResponse(ctx.cacheId(),
                 req.version(),
                 req.futureId(),
                 req.miniId(),
@@ -1509,6 +1517,10 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                 e,
                 null,
                 ctx.deploymentEnabled());
+
+            res.setResponseId(req.messageId());
+
+            return res;
         }
     }
 
@@ -2037,7 +2049,8 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                 req.futureId(),
                 req.miniId(),
                 req.version(),
-                ex);
+                ex,
+                req.messageId());
 
             try {
                 ctx.io().send(nearNode, res, ctx.ioPolicy());
@@ -2069,6 +2082,8 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
             req.keepBinary());
 
         fut.listen(NearTxResultHandler.instance());
+
+        fut.reqId(req.messageId());
 
         fut.init();
     }
@@ -2305,6 +2320,8 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                 req.batchId(),
                 null);
 
+            res.setResponseId(req.messageId());
+
             try {
                 ctx.io().send(primary, res, ctx.ioPolicy());
             }
@@ -2318,6 +2335,8 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                 req.dhtFutureId(),
                 req.batchId(),
                 e);
+
+            res.setResponseId(req.messageId());
 
             try {
                 ctx.io().send(primary, res, ctx.ioPolicy());

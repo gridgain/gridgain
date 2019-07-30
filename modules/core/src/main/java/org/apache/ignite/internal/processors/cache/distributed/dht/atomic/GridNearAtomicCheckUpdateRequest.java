@@ -22,11 +22,12 @@ import org.apache.ignite.internal.processors.cache.GridCacheIdMessage;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+import org.apache.ignite.plugin.extensions.communication.TimeLoggableMessage;
 
 /**
  *
  */
-public class GridNearAtomicCheckUpdateRequest extends GridCacheIdMessage {
+public class GridNearAtomicCheckUpdateRequest extends GridCacheIdMessage implements TimeLoggableMessage {
     /** */
     private static final long serialVersionUID = 0L;
 

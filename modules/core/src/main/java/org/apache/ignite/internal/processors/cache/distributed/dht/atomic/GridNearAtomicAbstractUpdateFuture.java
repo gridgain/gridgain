@@ -467,6 +467,8 @@ public abstract class GridNearAtomicAbstractUpdateFuture extends GridCacheFuture
 
         e.retryReadyFuture(cctx.shared().nextAffinityReadyFuture(req.topologyVersion()));
 
+        res.setResponseId(req.messageId());
+
         res.addFailedKeys(req.keys(), e);
 
         return res;
@@ -484,6 +486,8 @@ public abstract class GridNearAtomicAbstractUpdateFuture extends GridCacheFuture
             e instanceof ClusterTopologyCheckedException,
             cctx.deploymentEnabled());
 
+        res.setResponseId(req.messageId());
+
         res.addFailedKeys(req.keys(), e);
 
         onPrimaryResponse(req.nodeId(), res, true);
@@ -500,6 +504,8 @@ public abstract class GridNearAtomicAbstractUpdateFuture extends GridCacheFuture
             req.partition(),
             e instanceof ClusterTopologyCheckedException,
             cctx.deploymentEnabled());
+
+        res.setResponseId(req.messageId());
 
         res.addFailedKeys(req.updateRequest().keys(), e);
 

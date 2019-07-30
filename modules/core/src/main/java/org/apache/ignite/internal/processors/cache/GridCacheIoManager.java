@@ -101,6 +101,8 @@ import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.GridTopic.TOPIC_CACHE;
+import static org.apache.ignite.internal.processors.cache.GridCacheMessage.MIN_MSG_ID;
+import static org.apache.ignite.internal.processors.cache.GridCacheMessage.NULL_MSG_ID;
 import static org.apache.ignite.internal.util.IgniteUtils.nl;
 
 /**
@@ -111,7 +113,7 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
     private static final String QUERY_TOPIC_PREFIX = "QUERY";
 
     /** Message ID generator. */
-    private static final AtomicLong idGen = new AtomicLong();
+    private static final AtomicLong idGen = new AtomicLong(MIN_MSG_ID);
 
     /** */
     private static final int MAX_STORED_PENDING_MESSAGES = 100;
@@ -419,6 +421,8 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                     false);
 
                 dhtRes.nearEvicted(nearEvicted);
+
+                dhtRes.setResponseId(req.messageId());
 
                 sendMessageForMissedHandler(cacheMsg,
                     nodeId,
@@ -759,6 +763,8 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                     0,
                     false);
 
+                res.setResponseId(req.messageId());
+
                 sendResponseOnFailedMessage(nodeId, res, cctx, plc);
             }
 
@@ -773,6 +779,8 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                     req.futureId(),
                     req.miniId(),
                     req.deployInfo() != null);
+
+                res.setResponseId(req.messageId());
 
                 res.error(req.classError());
 
@@ -789,6 +797,8 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                     req.partition(),
                     req.futureId(),
                     false);
+
+                res.setResponseId(req.messageId());
 
                 res.onError(req.classError());
 
@@ -820,6 +830,8 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                     false,
                     false);
 
+                res.setResponseId(req.messageId());
+
                 res.error(req.classError());
 
                 sendResponseOnFailedMessage(nodeId, res, cctx, plc);
@@ -837,6 +849,8 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                     false
                 );
 
+                res.setResponseId(req.messageId());
+
                 res.error(req.classError());
 
                 sendResponseOnFailedMessage(nodeId, res, cctx, plc);
@@ -853,6 +867,8 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                     req.miniId(),
                     req.version(),
                     req.deployInfo() != null);
+
+                res.setResponseId(req.messageId());
 
                 res.error(req.classError());
 
@@ -894,6 +910,8 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                     null,
                     false);
 
+                res.setResponseId(req.messageId());
+
                 sendResponseOnFailedMessage(nodeId, res, cctx, plc);
             }
 
@@ -913,7 +931,8 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                     null,
                     null,
                     false,
-                    req.deployInfo() != null);
+                    req.deployInfo() != null,
+                    req.messageId());
 
                 res.error(req.classError());
 
@@ -961,6 +980,8 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
 
                 res.error(req.classError());
 
+                res.setResponseId(req.messageId());
+
                 sendResponseOnFailedMessage(nodeId, res, cctx, plc);
             }
 
@@ -997,6 +1018,8 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                     false,
                     false);
 
+                res.setResponseId(req.messageId());
+
                 res.error(req.classError());
 
                 sendResponseOnFailedMessage(nodeId, res, cctx, plc);
@@ -1014,6 +1037,8 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                     req.partition(),
                     false,
                     false);
+
+                res.setResponseId(req.messageId());
 
                 res.error(req.classError());
 
@@ -1033,6 +1058,8 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                     false,
                     false);
 
+                res.setResponseId(req.messageId());
+
                 res.error(req.classError());
 
                 sendResponseOnFailedMessage(nodeId, res, cctx, plc);
@@ -1049,6 +1076,8 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                     req.miniId(),
                     req.version(),
                     req.classError());
+
+                res.setResponseId(req.messageId());
 
                 sendResponseOnFailedMessage(nodeId, res, cctx, plc);
 
@@ -1080,6 +1109,8 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                     req.batchId(),
                     req.classError());
 
+                res.setResponseId(req.messageId());
+
                 sendResponseOnFailedMessage(nodeId, res, cctx, plc);
 
                 break;
@@ -1093,7 +1124,8 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                     req.futureId(),
                     req.miniId(),
                     req.version(),
-                    req.classError());
+                    req.classError(),
+                    req.messageId());
 
                 sendResponseOnFailedMessage(nodeId, res, cctx, plc);
 
@@ -1108,6 +1140,8 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                     req.partition(),
                     req.futureId(),
                     false);
+
+                res.setResponseId(req.messageId());
 
                 res.onError(req.classError());
 
@@ -1204,7 +1238,7 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
         if (msg.error() != null && cctx.kernalContext().isStopping())
             return false;
 
-        if (msg.messageId() < 0)
+        if (msg.messageId() == NULL_MSG_ID)
             // Generate and set message ID.
             msg.messageId(idGen.incrementAndGet());
 
