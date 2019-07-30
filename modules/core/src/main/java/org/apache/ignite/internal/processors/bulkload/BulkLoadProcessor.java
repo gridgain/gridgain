@@ -106,7 +106,7 @@ public class BulkLoadProcessor implements AutoCloseable {
         if (isClosed)
             return;
 
-        boolean failed = false;
+        Exception failReason = null;
 
         try {
             isClosed = true;
@@ -114,12 +114,12 @@ public class BulkLoadProcessor implements AutoCloseable {
             outputStreamer.close();
         }
         catch (Exception e) {
-            failed = true;
+            failReason = e;
 
             throw e;
         }
         finally {
-            runningQryMgr.unregister(qryId, failed);
+            runningQryMgr.unregister(qryId, failReason);
         }
     }
 }

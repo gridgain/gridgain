@@ -468,7 +468,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 return tbl.luceneIndex().query(qry.toUpperCase(), filters);
             }
             finally {
-                runningQueryManager().unregister(qryId, false);
+                runningQueryManager().unregister(qryId, null);
             }
         }
 
@@ -670,7 +670,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         final Object[] args) throws IgniteCheckedException {
         Long qryId = runningQryMgr.register(qry, GridCacheQueryType.SQL_FIELDS, schemaName, true, null);
 
-        boolean fail = false;
+        Throwable failReason = null;
 
         try {
             UpdatePlan plan = dml.plan();
@@ -706,13 +706,13 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 return rows.size();
             }
         }
-        catch (IgniteCheckedException e) {
-            fail = true;
+        catch (Exception e) {
+            failReason = e;
 
             throw e;
         }
         finally {
-            runningQryMgr.unregister(qryId, fail);
+            runningQryMgr.unregister(qryId, failReason);
         }
     }
 
@@ -984,18 +984,22 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         CommandResult res = null;
 
+        IgniteCheckedException failReason = null;
+
         try {
             res = cmdProc.runCommand(qryDesc.sql(), cmdNative, cmdH2, qryParams, cliCtx, qryId);
 
             return res.cursor();
         }
         catch (IgniteCheckedException e) {
+            failReason = e;
+
             throw new IgniteSQLException("Failed to execute DDL statement [stmt=" + qryDesc.sql() +
                 ", err=" + e.getMessage() + ']', e);
         }
         finally {
             if (res == null || res.unregisterRunningQuery())
-                runningQryMgr.unregister(qryId, res == null);
+                runningQryMgr.unregister(qryId, failReason);
         }
     }
 
@@ -1144,7 +1148,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         Long qryId = registerRunningQuery(qryDesc, cancel);
 
-        boolean fail = false;
+        IgniteCheckedException failReason = null;
 
         try {
             if (!dml.mvccEnabled() && !updateInTxAllowed && ctx.cache().context().tm().inUserTx()) {
@@ -1181,13 +1185,13 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             }
         }
         catch (IgniteCheckedException e) {
-            fail = true;
+            failReason = e;
 
             throw new IgniteSQLException("Failed to execute DML statement [stmt=" + qryDesc.sql() +
                 ", params=" + Arrays.deepToString(qryParams.arguments()) + "]", e);
         }
         finally {
-            runningQryMgr.unregister(qryId, fail);
+            runningQryMgr.unregister(qryId, failReason);
         }
     }
 
@@ -1269,7 +1273,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             return singletonList(cursor);
         }
         catch (Exception e) {
-            runningQryMgr.unregister(qryId, true);
+            runningQryMgr.unregister(qryId, e);
 
             if (e instanceof IgniteCheckedException)
                 throw U.convertException((IgniteCheckedException)e);

@@ -30,7 +30,6 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryType;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetricImpl;
-import org.apache.ignite.internal.processors.metric.impl.LongGauge;
 import org.apache.ignite.internal.processors.metric.impl.LongMetricImpl;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.jetbrains.annotations.Nullable;
@@ -42,6 +41,7 @@ import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryTy
  * Keep information about all running queries.
  */
 public class RunningQueryManager {
+    /** Name of the MetricRegistry which metrics measure stats of queries initiated by user. */
     private static final String SQL_USER_QUERIES_REG_NAME = "sql.queries.user";
 
     /** Keep registered user queries. */
@@ -62,7 +62,7 @@ public class RunningQueryManager {
     /** Number of successfully executed queries. */
     private final LongAdderMetricImpl successQrsCnt;
 
-    /** Number of failed queries in total.*/
+    /** Number of failed queries in total by any reason. */
     private final LongMetricImpl failedQrsCnt;
 
     /**
@@ -70,6 +70,11 @@ public class RunningQueryManager {
      * #failedQrsCnt}.
      */
     private final LongMetricImpl canceledQrsCnt;
+
+    /**
+     * Number of queries, failed due to OOM protection. {@link #failedQrsCnt} metric includes this value.
+     */
+    private final LongMetricImpl oomQrsCnt;
 
     /**
      * Constructor.
@@ -93,6 +98,9 @@ public class RunningQueryManager {
 
         canceledQrsCnt = userMetrics.metric("canceled", "Number of canceled queries that have been started " +
             "on this node. This metric number included in the general 'failed' metric.");
+
+        oomQrsCnt = userMetrics.metric("failedByOOM", "Number of queries started on this node failed due to " +
+            "out of memory protection. This metric number included in the general 'failed' metric.");
     }
 
     /**
@@ -131,11 +139,13 @@ public class RunningQueryManager {
      * Unregister running query.
      *
      * @param qryId Query id.
-     * @param failed {@code true} In case query was failed.
+     * @param failReason exception that
      */
-    public void unregister(Long qryId, boolean failed) {
+    public void unregister(Long qryId, @Nullable Throwable failReason) {
         if (qryId == null)
             return;
+
+        boolean failed = failReason != null;
 
         GridRunningQueryInfo qry = runs.remove(qryId);
 
@@ -155,8 +165,17 @@ public class RunningQueryManager {
         else {
             failedQrsCnt.increment();
 
+            assert qry.isCanceled() == QueryUtils.wasCancelled(failReason);
+
             if (qry.isCanceled())
                 canceledQrsCnt.increment();
+
+            boolean oomFail = QueryUtils.isOomFailure(failReason);
+
+            assert !(qry.isCanceled() && oomFail) : "Query cant be canceled and failed by OOM at the same time";
+
+            if (oomFail)
+                oomQrsCnt.increment();
         }
 
     }
