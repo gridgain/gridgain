@@ -23,8 +23,6 @@ import org.apache.ignite.spi.discovery.AuthenticationRestartTest;
 import org.apache.ignite.spi.discovery.FilterDataForClientNodeDiscoveryTest;
 import org.apache.ignite.spi.discovery.IgniteDiscoveryCacheReuseSelfTest;
 import org.apache.ignite.spi.discovery.LongClientConnectToClusterTest;
-import org.apache.ignite.spi.discovery.isolated.IsolatedCacheFullApiSelfTest;
-import org.apache.ignite.spi.discovery.isolated.IsolatedDiscoverySpiSelfTest;
 import org.apache.ignite.spi.discovery.tcp.DiscoveryUnmarshalVulnerabilityTest;
 import org.apache.ignite.spi.discovery.tcp.IgniteClientConnectSslTest;
 import org.apache.ignite.spi.discovery.tcp.IgniteClientConnectTest;
@@ -158,11 +156,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_OVERRIDE_MCAST_GRP
 
     TcpDiscoveryPendingMessageDeliveryTest.class,
 
-    TcpDiscoveryReconnectUnstableTopologyTest.class,
-
-    // Isolated discovery tests.
-    IsolatedDiscoverySpiSelfTest.class,
-    IsolatedCacheFullApiSelfTest.class
+    TcpDiscoveryReconnectUnstableTopologyTest.class
 })
 public class IgniteSpiDiscoverySelfTestSuite {
     /** */

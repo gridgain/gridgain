@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.spi.discovery.isolated;
+package org.apache.ignite.console.discovery;
 
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.cache.GridCacheAbstractFullApiSelfTest;
-import org.apache.ignite.spi.communication.isolated.IsolatedCommunicationSpi;
 
 /**
  * Test сache API .

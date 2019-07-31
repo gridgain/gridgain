@@ -65,11 +65,11 @@
         </property>
 
         <property name="communicationSpi">
-            <bean class="org.apache.ignite.spi.communication.isolated.IsolatedCommunicationSpi"/>
+            <bean class="org.apache.ignite.console.discovery.IsolatedCommunicationSpi"/>
         </property>
 
         <property name="discoverySpi">
-            <bean class="org.apache.ignite.spi.discovery.isolated.IsolatedDiscoverySpi"/>
+            <bean class="org.apache.ignite.console.discovery.IsolatedDiscoverySpi"/>
         </property>
     </bean>
 </beans>
