@@ -153,29 +153,29 @@ public class RunningQueryManager {
         if (qry == null)
             return;
 
-        //We need to collect query history only for SQL queries.
+        //We need to collect query history and metrics only for SQL queries.
         if (isSqlQuery(qry)) {
             qry.runningFuture().onDone();
 
             qryHistTracker.collectMetrics(qry, failed);
-        }
 
-        if (!failed)
-            successQrsCnt.increment();
-        else {
-            failedQrsCnt.increment();
+            if (!failed)
+                successQrsCnt.increment();
+            else {
+                failedQrsCnt.increment();
 
-            assert qry.isCanceled() == QueryUtils.wasCancelled(failReason);
+                assert qry.isCanceled() == QueryUtils.wasCancelled(failReason);
 
-            if (qry.isCanceled())
-                canceledQrsCnt.increment();
+                if (qry.isCanceled())
+                    canceledQrsCnt.increment();
 
-            boolean oomFail = QueryUtils.isOomFailure(failReason);
+                boolean oomFail = QueryUtils.isOomFailure(failReason);
 
-            assert !(qry.isCanceled() && oomFail) : "Query cant be canceled and failed by OOM at the same time";
+                assert !(qry.isCanceled() && oomFail) : "Query cant be canceled and failed by OOM at the same time";
 
-            if (oomFail)
-                oomQrsCnt.increment();
+                if (oomFail)
+                    oomQrsCnt.increment();
+            }
         }
 
     }
