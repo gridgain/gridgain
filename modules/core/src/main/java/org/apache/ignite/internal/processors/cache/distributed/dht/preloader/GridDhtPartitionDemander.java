@@ -735,10 +735,6 @@ public class GridDhtPartitionDemander {
                 return;
             }
 
-            PartitionStatistics partStat = fut.stat.partStat.get(topicId).get(ctx.node(nodeId));
-
-            partStat.rcvMsgTime = currentTimeMillis();
-
             if (log.isDebugEnabled())
                 log.debug("Received supply message [" + demandRoutineInfo(topicId, nodeId, supplyMsg) + "]");
 
@@ -789,6 +785,11 @@ public class GridDhtPartitionDemander {
             }
 
             try {
+                PartitionStatistics partStat = fut.isDone() && !fut.get() ?
+                    new PartitionStatistics() : fut.stat.partStat.get(topicId).get(ctx.node(nodeId)) ;
+
+                partStat.rcvMsgTime = currentTimeMillis();
+
                 AffinityAssignment aff = grp.affinity().cachedAffinity(topVer);
 
                 partStat.msgSize = supplyMsg.messageSize();
