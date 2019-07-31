@@ -17,7 +17,10 @@
 package org.apache.ignite.internal.metric;
 
 import java.util.Collections;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteDataStreamer;
@@ -39,6 +42,16 @@ public class SqlStatisticsUserQueriesTest extends GridCommonAbstractTest {
      * Number of rows in the test table.
      */
     private static final int TABLE_SIZE = 10_000;
+
+    /** Short names of all tested metrics. */
+    private static final String[] ALL_METRICS = {"success", "failed", "canceled", "failedByOOM"};
+
+    /** By convention we start queries from node with this grid index. Reduce phase is performed here. */
+    private static final int REDUCER_IDX = 0;
+
+    /** The second node index. This node should execute only map parts of the queries. */
+    private static final int MAPPER_IDX = 1;
+
 
     /**
      * Start the cache with a test table and test data.
@@ -65,11 +78,19 @@ public class SqlStatisticsUserQueriesTest extends GridCommonAbstractTest {
         return cache;
     }
 
+    /**
+     *
+     */
     @After
     public void stopAll () {
         stopAllGrids();
     }
 
+    /**
+     * Check that after grid starts, counters are 0.
+     *
+     * @throws Exception on fail.
+     */
     @Test
     public void testInitialValuesAreZero() throws Exception {
         startGrids(2);
@@ -87,40 +108,116 @@ public class SqlStatisticsUserQueriesTest extends GridCommonAbstractTest {
         Assert.assertEquals(0, longMetricValue(1, "failedByOOM"));
     }
 
+    /**
+     * Check that one distributed query execution causes only success metric increment only on the reducer node.
+     * Various (not all) queries tested : native/h2 parsed; select, ddl, dml, fast delete, update with subselect.
+     */
     @Test
-    public void testIfDistributedQuerySucceededOnlyReducerSuccessMetricUpdated() throws Exception {
+    public void testIfDistributedQuerySucceededOnlySuccessReducerMetricUpdated() throws Exception {
         startGrids(2);
 
-        int qryReducerIdx = 0;
-        int qryMapperIdx = 0;
+        IgniteCache cache = createCacheFrom(grid(REDUCER_IDX));
 
-        IgniteCache cache = createCacheFrom(grid(qryReducerIdx));
+        assertOnlyOneMetricIncrementedOnReducer("success",
+            () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB")).getAll());
 
-        cache.query(new SqlFieldsQuery("SELECT * FROM TAB")).getAll();
+        assertOnlyOneMetricIncrementedOnReducer("success",
+            () -> cache.query(new SqlFieldsQuery("CREATE INDEX myidx ON TAB(ID)")).getAll());
 
-        cache.query(new SqlFieldsQuery("CREATE INDEX myidx ON TAB(ID)")).getAll();
-        cache.query(new SqlFieldsQuery("DROP INDEX myidx")).getAll();
+        assertOnlyOneMetricIncrementedOnReducer("success",
+            () -> cache.query(new SqlFieldsQuery("CREATE TABLE ANOTHER_TAB (ID INT PRIMARY KEY, VAL VARCHAR)")
+                .setSchema("PUBLIC")).getAll());
 
-        cache.query(new SqlFieldsQuery("SET STREAMING ON")).getAll();
-        cache.query(new SqlFieldsQuery("SET STREAMING OFF")).getAll();
+        assertOnlyOneMetricIncrementedOnReducer("success",
+            () -> cache.query(new SqlFieldsQuery("DROP INDEX myidx")).getAll());
 
-        cache.query(new SqlFieldsQuery("SET STREAMING OFF")).getAll();
+        assertOnlyOneMetricIncrementedOnReducer("success",
+            () -> cache.query(new SqlFieldsQuery("DELETE FROM TAB WHERE ID = 5")).getAll());
 
+        assertOnlyOneMetricIncrementedOnReducer("success",
+            () -> cache.query(new SqlFieldsQuery("DELETE FROM TAB WHERE ID > (SELECT AVG(ID) FROM TAB WHERE ID < 20)")).getAll());
 
+        assertOnlyOneMetricIncrementedOnReducer("success",
+            () -> cache.query(new SqlFieldsQuery("INSERT INTO TAB VALUES(5, 'Name')")).getAll());
+
+        assertOnlyOneMetricIncrementedOnReducer("success",
+            () -> cache.query(new SqlFieldsQuery("MERGE INTO TAB(ID, NAME) VALUES(5, 'NewerName')")).getAll());
+    }
+
+    @Test
+    public void testLocalQuery()  throws Exception {
 
     }
 
     @Test
-    public void testUnparseableQueriesAreNotCounted() {
+    public void testGeneralFailedQuery() throws Exception {
 
     }
 
     @Test
-    public void testUnregiserableQueriesAreNotCounted() {
+    public void testOomFailedQuery() throws Exception {
 
     }
 
+    @Test
+    public void testUnparseableQueriesAreNotCounted() throws Exception {
 
+    }
+
+    @Test
+    public void testUnregiserableQueriesAreNotCounted() throws Exception {
+
+    }
+
+    private void assertOnlyOneMetricIncrementedOnReducer(String metric, Runnable act) {
+        Map<String, Long> expValuesMapper = fetchAllMetrics(MAPPER_IDX);
+
+        Map<String, Long> expValuesReducer = fetchAllMetrics(REDUCER_IDX);
+
+        expValuesReducer.compute(metric, (name, val) -> val + 1);
+
+        assertMetricsAre(expValuesReducer, expValuesMapper,  act);
+    }
+
+    /**
+     * @param nodeIdx Node which metrics to fetch.
+     *
+     * @return metrics from specified node (metric name -> metric value)
+     */
+    private Map <String, Long> fetchAllMetrics(int nodeIdx) {
+        return Stream.of(ALL_METRICS).collect(
+            Collectors.toMap(
+                mName -> mName,
+                mName -> longMetricValue(nodeIdx, mName)
+            )
+        );
+    }
+
+    /**
+     * Verify that after specified action is performed, metrics on mapper and reducer have specified values.
+     *
+     * @param expMetricsReducer Expected metrics on reducer.
+     * @param expMetricsMapper Expected metrics on mapper.
+     * @param act callback to perform. Usually sql query execution.
+     */
+    private void assertMetricsAre(
+        Map<String, Long> expMetricsReducer,
+        Map<String, Long> expMetricsMapper,
+        Runnable act) {
+        act.run();
+
+        expMetricsReducer.forEach((mName, expVal) -> {
+            long actVal = longMetricValue(REDUCER_IDX, mName);
+
+            Assert.assertEquals("Unexpected value for metric " + mName, (long)expVal, actVal);
+        });
+
+        expMetricsMapper.forEach((mName, expVal) -> {
+            long actVal = longMetricValue(MAPPER_IDX, mName);
+
+            Assert.assertEquals("Unexpected value for metric " + mName, (long)expVal, actVal);
+        });
+    }
 
     /**
      * Finds LongMetric from sql user queries registry by specified metric name and returns it's value.
