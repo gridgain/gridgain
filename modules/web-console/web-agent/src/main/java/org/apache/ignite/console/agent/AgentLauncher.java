@@ -153,9 +153,7 @@ public class AgentLauncher {
                 return;
             }
 
-            EOFException eof = X.cause(e, EOFException.class);
-
-            if (eof != null) {
+            if (X.hasCause(e, EOFException.class)) {
                 log.error("Failed to receive response from server (connection lost).");
 
                 return;
