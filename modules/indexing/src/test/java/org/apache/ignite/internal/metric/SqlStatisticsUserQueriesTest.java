@@ -21,15 +21,19 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.cache.CacheException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cache.query.SqlQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
+import org.apache.ignite.internal.processors.query.RunningQueryManager;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.spi.metric.Metric;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.After;
 import org.junit.Assert;
@@ -37,6 +41,11 @@ import org.junit.Test;
 
 import static org.apache.ignite.internal.processors.query.RunningQueryManager.SQL_USER_QUERIES_REG_NAME;
 
+/**
+ * Tests for statistics of user initiated queries execution.
+ *
+ * @see RunningQueryManager
+ */
 public class SqlStatisticsUserQueriesTest extends GridCommonAbstractTest {
     /**
      * Number of rows in the test table.
@@ -58,7 +67,7 @@ public class SqlStatisticsUserQueriesTest extends GridCommonAbstractTest {
      */
     private IgniteCache createCacheFrom(Ignite node) {
         CacheConfiguration<Integer, String> ccfg = new CacheConfiguration<Integer, String>("TestCache")
-            .setSqlFunctionClasses(SqlStatisticsMemoryQuotaTest.SuspendQuerySqlFunctions.class)
+            .setSqlFunctionClasses(SuspendQuerySqlFunctions.class)
             .setQueryEntities(Collections.singleton(
                 new QueryEntity(Integer.class.getName(), String.class.getName())
                     .setTableName("TAB")
@@ -119,6 +128,9 @@ public class SqlStatisticsUserQueriesTest extends GridCommonAbstractTest {
         IgniteCache cache = createCacheFrom(grid(REDUCER_IDX));
 
         assertOnlyOneMetricIncrementedOnReducer("success",
+            () -> cache.query(new SqlQuery(String.class, "ID < 5")).getAll());
+
+        assertOnlyOneMetricIncrementedOnReducer("success",
             () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB")).getAll());
 
         assertOnlyOneMetricIncrementedOnReducer("success",
@@ -144,14 +156,32 @@ public class SqlStatisticsUserQueriesTest extends GridCommonAbstractTest {
             () -> cache.query(new SqlFieldsQuery("MERGE INTO TAB(ID, NAME) VALUES(5, 'NewerName')")).getAll());
     }
 
+    /**
+     * Local queries should also be counted.
+     *
+     * @throws Exception if failed.
+     */
     @Test
-    public void testLocalQuery()  throws Exception {
+    public void testIfLocalQuerySucceedsMetricIsUpdated()  throws Exception {
+        startGrids(2);
 
+        IgniteCache cache = createCacheFrom(grid(REDUCER_IDX));
+
+        assertOnlyOneMetricIncrementedOnReducer("success",
+            () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID < 100").setLocal(true)).getAll());
+
+        assertOnlyOneMetricIncrementedOnReducer("success",
+            () -> cache.query(new SqlQuery(String.class, "ID < 5").setLocal(true)).getAll());
     }
 
     @Test
-    public void testGeneralFailedQuery() throws Exception {
+    public void testIfQueryFailed() throws Exception {
+        startGrids(2);
 
+        IgniteCache cache = createCacheFrom(grid(REDUCER_IDX));
+
+        assertOnlyOneMetricIncrementedOnReducer("failed",
+            () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID = fail")).getAll());
     }
 
     @Test
@@ -159,9 +189,25 @@ public class SqlStatisticsUserQueriesTest extends GridCommonAbstractTest {
 
     }
 
+    /**
+     * Check that unparseable query doesn't affect any metric value.
+     *
+     * @throws Exception if failed.
+     */
     @Test
     public void testUnparseableQueriesAreNotCounted() throws Exception {
+        startGrids(2);
 
+        IgniteCache cache = createCacheFrom(grid(REDUCER_IDX));
+
+        assertMetricsRemainTheSame(() -> {
+            GridTestUtils.assertThrows(
+                log,
+                () -> cache.query(new SqlFieldsQuery("THIS IS NOT A SQL STATEMENT")).getAll(),
+                CacheException.class,
+                "Failed to parse query");
+
+        });
     }
 
     @Test
@@ -169,6 +215,21 @@ public class SqlStatisticsUserQueriesTest extends GridCommonAbstractTest {
 
     }
 
+    /**
+     * Verify that after specified action is performed, all metrics are left unchanged.
+     *
+     * @param act Action.
+     */
+    private void assertMetricsRemainTheSame(Runnable act) {
+        assertMetricsAre(fetchAllMetrics(REDUCER_IDX), fetchAllMetrics(MAPPER_IDX),  act);
+    }
+
+    /**
+     * Verify that after specified action is performed, specified metric is incremented.
+     *
+     * @param metric Metric.
+     * @param act Action.
+     */
     private void assertOnlyOneMetricIncrementedOnReducer(String metric, Runnable act) {
         Map<String, Long> expValuesMapper = fetchAllMetrics(MAPPER_IDX);
 

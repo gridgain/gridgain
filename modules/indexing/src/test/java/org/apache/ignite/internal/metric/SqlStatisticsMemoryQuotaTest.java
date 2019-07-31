@@ -18,13 +18,11 @@ package org.apache.ignite.internal.metric;
 
 import java.util.Collections;
 import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
@@ -39,22 +37,14 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE;
+import static org.apache.ignite.internal.metric.SuspendQuerySqlFunctions.TABLE_SIZE;
+import static org.apache.ignite.internal.metric.SuspendQuerySqlFunctions.WAIT_OP_TIMEOUT_SEC;
 
 /**
  * Tests for {@link SqlStatisticsHolderMemoryQuotas}. In this test we check that memory metrics reports plausible
  * values. Here we want to verify metrics based on the new framework work well, not {@link H2MemoryTracker}.
  */
 public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
-    /**
-     * Number of rows in the test table.
-     */
-    private static final int TABLE_SIZE = 10_000;
-
-    /**
-     * Timeout for each wait on sync operation in seconds.
-     */
-    public static final long WAIT_OP_TIMEOUT_SEC = 15;
-
     /**
      * This callback validates that some memory is reserved.
      */
@@ -174,7 +164,7 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Check that memory metric reports non-zero memery is reserved on both nodes when distributed query is executed and
+     * Check that memory metric reports non-zero memory is reserved on both nodes when distributed query is executed and
      * that memory is released when the query finishes.
      *
      * @throws Exception if failed.
@@ -207,7 +197,7 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Check that memory metric reports non-zero memery is reserved only on one node when local query is executed and
+     * Check that memory metric reports non-zero memory is reserved only on one node when local query is executed and
      * that memory is released when the query finishes. The other node should not reserve the memory at any moment.
      *
      * @throws Exception if failed.
@@ -378,91 +368,7 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
         return ((LongMetric)metric).value();
     }
 
-    /**
-     * This class exports function to the sql engine. Function implementation allows us to suspend query execution on
-     * test logic condition.
-     */
-    public static class SuspendQuerySqlFunctions {
-        /**
-         * How many rows should be processed (by all nodes in total)
-         */
-        private static final int PROCESS_ROWS_TO_SUSPEND = TABLE_SIZE / 2;
 
-        /**
-         * Latch to await till full scan query that uses this class function have done some job, so some memory is
-         * reserved.
-         */
-        public static volatile CountDownLatch qryIsInTheMiddle;
-
-        /**
-         * This latch is released when query should continue it's execution after stop in the middle.
-         */
-        private static volatile CountDownLatch resumeQryExec;
-
-        static {
-            refresh();
-        }
-
-        /**
-         * Refresh syncs.
-         */
-        public static void refresh() {
-            if (qryIsInTheMiddle != null) {
-                for (int i = 0; i < qryIsInTheMiddle.getCount(); i++)
-                    qryIsInTheMiddle.countDown();
-            }
-
-            if (resumeQryExec != null)
-                resumeQryExec.countDown();
-
-            qryIsInTheMiddle = new CountDownLatch(PROCESS_ROWS_TO_SUSPEND);
-
-            resumeQryExec = new CountDownLatch(1);
-        }
-
-        /**
-         * See {@link #qryIsInTheMiddle}.
-         */
-        public static void awaitQueryStopsInTheMiddle() throws InterruptedException {
-            boolean reached = qryIsInTheMiddle.await(WAIT_OP_TIMEOUT_SEC, TimeUnit.SECONDS);
-
-            if (!reached)
-                throw new IllegalStateException("Unable to wait when query starts. Test is broken.");
-        }
-
-        /**
-         * See {@link #resumeQryExec}.
-         */
-        public static void resumeQueryExecution() {
-            resumeQryExec.countDown();
-        }
-
-        /**
-         * Sql function used to suspend query when half of the table is processed. Should be used in full scan queries.
-         *
-         * @param ret number to return.
-         */
-        @QuerySqlFunction
-        public static long suspendHook(long ret) throws InterruptedException {
-            qryIsInTheMiddle.countDown();
-
-            if (qryIsInTheMiddle.getCount() == 0) {
-                boolean reached = resumeQryExec.await(WAIT_OP_TIMEOUT_SEC, TimeUnit.SECONDS);
-
-                if (!reached) {
-                    IllegalStateException exc =
-                        new IllegalStateException("Unable to wait when to continue the query. Test is broken.");
-
-                    // In some error cases exceptions from sql functions are ignored. Duplicate it in the log.
-                    log.error("Test error.", exc);
-
-                    throw exc;
-                }
-            }
-
-            return ret;
-        }
-    }
 
     /**
      * Functional interface to validate memory metrics values.
