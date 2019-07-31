@@ -5,6 +5,9 @@
  */
 package org.h2.expression.aggregate;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import org.h2.engine.Database;
 import org.h2.engine.Session;
 import org.h2.value.Value;
@@ -24,6 +27,11 @@ class AggregateDataCount extends AggregateData {
         this.all = all;
     }
 
+    private AggregateDataCount(boolean all, long count) {
+        this.all = all;
+        this.count = count;
+    }
+
     @Override
     void add(Session ses, Value v) {
         if (all || v != ValueNull.INSTANCE) {
@@ -38,5 +46,17 @@ class AggregateDataCount extends AggregateData {
 
     @Override public boolean hasFixedSizeInBytes() {
         return true;
+    }
+
+    @Override public void write(DataOutputStream out) throws IOException {
+        out.writeBoolean(all);
+        out.writeLong(count);
+    }
+
+    public static AggregateDataCount read(DataInputStream in) throws IOException {
+        boolean all = in.readBoolean();
+        long count = in.readLong();
+
+        return new AggregateDataCount(all, count);
     }
 }

@@ -69,7 +69,7 @@ public abstract class GroupByData {
 
     public abstract void remove();
 
-    abstract void onRowProcessed();
+    public abstract void onRowProcessed();
 
     protected static boolean canSpillToDisk(Object agg) {
         assert agg != null;

@@ -44,7 +44,7 @@ import static org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing.DI
  * Basic class for external result. Contains common methods for file IO.
  */
 @SuppressWarnings({"MissortedModifiers", "WeakerAccess", "ForLoopReplaceableByForEach"})
-public abstract class AbstractExternalResult implements ResultExternal {
+public abstract class AbstractExternalResult implements ResultExternal, ExternalRowStore {
     /** File name generator. */
     private static final AtomicLong idGen = new AtomicLong();
 
@@ -137,7 +137,7 @@ public abstract class AbstractExternalResult implements ResultExternal {
      *
      * @return Row.
      */
-    protected Value[] readRowFromFile(long addr) {
+    @Override public Value[] readRowFromFile(long addr) {
         setFilePosition(addr);
 
         return readRowFromFile();

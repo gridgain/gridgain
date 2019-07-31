@@ -25,7 +25,6 @@ import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.h2.value.Value;
 import org.h2.value.ValueRow;
 
 import static java.nio.file.StandardOpenOption.CREATE_NEW;
@@ -63,7 +62,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
     private FileIO fileIo;
 
     /** Row store. */
-    private final SortedExternalResult rowStore;
+    private final ExternalRowStore rowStore;
 
     /** Reusable byte buffer for reading and writing. We use this only instance just for prevention GC pressure. */
     private final ByteBuffer reusableBuff = ByteBuffer.allocate(Entry.ENTRY_BYTES);
@@ -79,7 +78,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
      * @param rowStore External result being indexed by this hash index.
      * @param initSize Init hash map size.
      */
-    ExternalResultHashIndex(GridKernalContext ctx, File spillFile, SortedExternalResult rowStore, long initSize) {
+    ExternalResultHashIndex(GridKernalContext ctx, File spillFile, ExternalRowStore rowStore, long initSize) {
         this.ctx = ctx;
         dir = spillFile.getParent();
         spillFileName = spillFile.getName();
@@ -203,7 +202,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
 
         while (!entry.isEmpty()) {
             if (hashCode == entry.hashCode()) { // 1. Check hashcode equals.
-                Value[] row = rowStore.readRowFromFile(entry.rowAddress());
+                Object[] row = rowStore.readRowFromFile(entry.rowAddress());
 
                 if (row != null) {
                     ValueRow keyFromDisk = rowStore.getRowKey(row);

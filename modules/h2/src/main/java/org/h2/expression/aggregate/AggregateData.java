@@ -5,6 +5,8 @@
  */
 package org.h2.expression.aggregate;
 
+import java.io.DataOutputStream;
+import java.io.IOException;
 import org.h2.engine.Constants;
 import org.h2.engine.Database;
 import org.h2.engine.Session;
@@ -100,4 +102,9 @@ public abstract class AggregateData {
     public boolean hasFixedSizeInBytes() {
         return false;
     }
+
+    public void write(DataOutputStream out) throws IOException {
+        throw new UnsupportedOperationException();
+    }
+
 }

@@ -158,7 +158,7 @@ public class QueryContext implements H2QueryContext {
     /** {@inheritDoc} */
     @Override public GroupByData newGroupByDataInstance(Session ses, ArrayList<Expression> expressions,
         boolean isGrpQry, int[] grpIdx) {
-        return isGrpQry ? new GroupedExternalGroupByData(ses, grpIdx) :
+        return isGrpQry ? new GroupedExternalGroupByData(ses, grpIdx) : // TODO check if offloading turned on.
             new PlainExternalGroupByData(ses);
     }
 

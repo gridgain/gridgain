@@ -397,20 +397,20 @@ public class SortedExternalResult extends AbstractExternalResult {
      * @param row Row.
      * @return Distinct key.
      */
-    ValueRow getRowKey(Value[] row) {
+    @Override public ValueRow getRowKey(Object[] row) {
         if (distinctIndexes != null) {
             int cnt = distinctIndexes.length;
 
             Value[] newValues = new Value[cnt];
 
             for (int i = 0; i < cnt; i++)
-                newValues[i] = row[distinctIndexes[i]];
+                newValues[i] = (Value)row[distinctIndexes[i]];
 
             row = newValues;
         } else if (row.length > visibleColCnt)
             row = Arrays.copyOf(row, visibleColCnt);
 
-        return ValueRow.get(row);
+        return ValueRow.get((Value[])row);
     }
 
     /**
