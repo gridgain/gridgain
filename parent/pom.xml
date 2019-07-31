@@ -140,7 +140,6 @@
         <zkclient.version>0.5</zkclient.version>
         <zookeeper.version>3.4.14</zookeeper.version>
         <zstd.version>1.3.7-2</zstd.version>
-        <web-console.ignite.version>8.7.5</web-console.ignite.version>
         <opencensus.version>0.22.0</opencensus.version>
 
 
@@ -1005,20 +1004,6 @@
                                         <exclude>modules/platforms/python/docs/conf.py</exclude><!--sphinx files: BSD license-->
                                         <exclude>modules/platforms/python/docs/**/*.rst</exclude><!--sphinx-apidoc generated files-->
                                         <exclude>modules/platforms/python/requirements/**/*.txt</exclude><!--plain text can not be commented-->
-                                        <!--web console-->
-                                        <exclude>**/web-console/**/.eslintrc</exclude>
-                                        <exclude>**/web-console/**/.babelrc</exclude>
-                                        <exclude>**/web-console/**/*.json</exclude>
-                                        <exclude>**/web-console/**/*.json.sample</exclude>
-                                        <exclude>**/web-console/**/*.crt</exclude>
-                                        <exclude>**/web-console/**/*.nopass.key</exclude>
-                                        <exclude>**/web-console/backend/build/**</exclude>
-                                        <exclude>**/web-console/backend/node_modules/**</exclude>
-                                        <exclude>**/web-console/e2e/testcafe/node_modules/**</exclude>
-                                        <exclude>**/web-console/frontend/build/**</exclude>
-                                        <exclude>**/web-console/frontend/node_modules/**</exclude>
-                                        <exclude>**/web-console/frontend/**/*.png</exclude>
-                                        <exclude>**/web-console/frontend/**/*.svg</exclude>
                                         <!-- H2 forked module. -->
                                         <exclude>**/org/h2/**</exclude>
                                         <exclude>src/docsrc/**</exclude>
