@@ -1056,6 +1056,17 @@ public class GridNioServer<T> {
         }
     }
 
+    private static boolean select(Selector selector) throws IOException {
+        try {
+            ((IgniteThread)Thread.currentThread()).idle(true);
+
+            return selector.select(2000) > 0;
+        }
+        finally {
+            ((IgniteThread)Thread.currentThread()).idle(false);
+        }
+    }
+
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(GridNioServer.class, this);
@@ -2165,7 +2176,7 @@ public class GridNioServer<T> {
                         updateHeartbeat();
 
                         // Wake up every 2 seconds to check if closed.
-                        if (selector.select(2000) > 0) {
+                        if (select(selector)) {
                             // Walk through the ready keys collection and process network events.
                             if (selectedKeys == null)
                                 processSelectedKeys(selector.selectedKeys());
@@ -2942,7 +2953,7 @@ public class GridNioServer<T> {
                     updateHeartbeat();
 
                     // Wake up every 2 seconds to check if closed.
-                    if (selector.select(2000) > 0)
+                    if (select(selector))
                         // Walk through the ready keys collection and process date requests.
                         processSelectedKeys(selector.selectedKeys());
                     else

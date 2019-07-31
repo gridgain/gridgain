@@ -137,6 +137,7 @@ public class GridFutureAdapter<R> implements IgniteInternalFuture<R> {
 
     /** {@inheritDoc} */
     @Override public R get() throws IgniteCheckedException {
+        ///System.err.println(this);
         return get0(ignoreInterrupts);
     }
 

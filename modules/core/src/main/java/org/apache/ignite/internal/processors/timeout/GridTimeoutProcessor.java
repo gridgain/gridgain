@@ -309,10 +309,14 @@ public class GridTimeoutProcessor extends GridProcessorAdapter {
                                 if (waitTime > 0) {
                                     blockingSectionBegin();
 
+                                    ((IgniteThread)Thread.currentThread()).idle(true);
+
                                     try {
                                         mux.wait(waitTime);
                                     }
                                     finally {
+                                        ((IgniteThread)Thread.currentThread()).idle(false);
+
                                         blockingSectionEnd();
                                     }
                                 }

@@ -29,6 +29,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.marshaller.Marshaller;
 import org.apache.ignite.spi.IgniteSpiThread;
 import org.apache.ignite.spi.checkpoint.CheckpointListener;
+import org.apache.ignite.thread.IgniteThread;
 
 /**
  * Implementation of {@link org.apache.ignite.spi.IgniteSpiThread} that takes care about outdated files.
@@ -95,7 +96,14 @@ class SharedFsTimeoutTask extends IgniteSpiThread {
                     }
 
                     while (delay > 0) {
-                        mux.wait(delay);
+                        idle(true);
+
+                        try {
+                            mux.wait(delay);
+                        }
+                        finally {
+                            idle(false);
+                        }
 
                         delay = nextTime - U.currentTimeMillis();
                     }

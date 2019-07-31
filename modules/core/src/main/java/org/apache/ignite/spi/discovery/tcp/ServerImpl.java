@@ -148,6 +148,7 @@ import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryRedirectToClient
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryRingLatencyCheckMessage;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryServerOnlyCustomEventMessage;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryStatusCheckMessage;
+import org.apache.ignite.thread.IgniteThread;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 import org.jetbrains.annotations.Nullable;
 
@@ -2130,7 +2131,15 @@ class ServerImpl extends TcpDiscoveryImpl {
                 log.debug("IP finder cleaner has been started.");
 
             while (!isInterrupted()) {
-                Thread.sleep(spi.ipFinderCleanFreq);
+                idle(true);
+
+                try {
+                    Thread.sleep(spi.ipFinderCleanFreq);
+                }
+                finally {
+                    idle(false);
+                }
+
 
                 if (spiStateCopy() != CONNECTED) {
                     if (log.isDebugEnabled())

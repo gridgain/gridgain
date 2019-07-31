@@ -24,6 +24,7 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteBiTuple;
+import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_JVM_PAUSE_DETECTOR_DISABLED;
@@ -113,7 +114,14 @@ public class LongJVMPauseDetector {
 
                 while (true) {
                     try {
-                        Thread.sleep(PRECISION);
+                        ((IgniteThread)Thread.currentThread()).idle(true);
+
+                        try {
+                            Thread.sleep(PRECISION);
+                        }
+                        finally {
+                            ((IgniteThread)Thread.currentThread()).idle(false);
+                        }
 
                         final long now = System.currentTimeMillis();
                         final long pause = now - PRECISION - lastWakeUpTime;

@@ -61,13 +61,19 @@ public class IgniteThread extends Thread {
     /** */
     private boolean forbiddenToRequestBinaryMetadata;
 
+    /** */
+    private volatile boolean idle = false;
+
+    /** */
+    private volatile String op;
+
     /**
      * Creates thread with given worker.
      *
      * @param worker Runnable to create thread with.
      */
     public IgniteThread(GridWorker worker) {
-        this(worker.igniteInstanceName(), worker.name(), worker, GRP_IDX_UNASSIGNED, -1, GridIoPolicy.UNDEFINED);
+        this(worker.igniteInstanceName(), worker.name(), worker, GRP_IDX_UNASSIGNED, -1, GridIoPolicy.UNDEFINED, false);
     }
 
     /**
@@ -78,20 +84,21 @@ public class IgniteThread extends Thread {
      * @param r Runnable to execute.
      */
     public IgniteThread(String igniteInstanceName, String threadName, Runnable r) {
-        this(igniteInstanceName, threadName, r, GRP_IDX_UNASSIGNED, -1, GridIoPolicy.UNDEFINED);
+        this(igniteInstanceName, threadName, r, GRP_IDX_UNASSIGNED, -1, GridIoPolicy.UNDEFINED, false);
     }
 
     /**
      * Creates grid thread with given name for a given Ignite instance with specified
      * thread group.
-     *
-     * @param igniteInstanceName Name of the Ignite instance this thread is created for.
+     *  @param igniteInstanceName Name of the Ignite instance this thread is created for.
      * @param threadName Name of thread.
      * @param r Runnable to execute.
      * @param grpIdx Thread index within a group.
      * @param stripe Non-negative stripe number if this thread is striped pool thread.
+     * @param idle
      */
-    public IgniteThread(String igniteInstanceName, String threadName, Runnable r, int grpIdx, int stripe, byte plc) {
+    public IgniteThread(String igniteInstanceName, String threadName, Runnable r, int grpIdx, int stripe, byte plc,
+        boolean idle) {
         super(DFLT_GRP, r, createName(cntr.incrementAndGet(), threadName, igniteInstanceName));
 
         A.ensure(grpIdx >= -1, "grpIdx >= -1");
@@ -100,6 +107,7 @@ public class IgniteThread extends Thread {
         this.compositeRwLockIdx = grpIdx;
         this.stripe = stripe;
         this.plc = plc;
+        this.idle = idle;
     }
 
     /**
@@ -226,6 +234,19 @@ public class IgniteThread extends Thread {
 
         return thread.getClass() == IgniteThread.class || thread instanceof IgniteThread ?
             ((IgniteThread)thread) : null;
+    }
+
+    public boolean idle() {
+        return idle;
+    }
+
+    /** */
+    public void idle(boolean isIdle) {
+        assert Thread.currentThread() == this;
+
+        assert idle != isIdle;
+
+        idle = isIdle;
     }
 
     /**

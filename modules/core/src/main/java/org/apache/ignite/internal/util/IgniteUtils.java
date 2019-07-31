@@ -256,6 +256,7 @@ import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
 import org.apache.ignite.spi.discovery.DiscoverySpiOrderSupport;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
+import org.apache.ignite.thread.IgniteThread;
 import org.apache.ignite.transactions.TransactionAlreadyCompletedException;
 import org.apache.ignite.transactions.TransactionDeadlockException;
 import org.apache.ignite.transactions.TransactionDuplicateKeyException;
@@ -1418,12 +1419,22 @@ public abstract class IgniteUtils {
         return rounded < 0.1 ? 0.1 : rounded;
     }
 
+
     /**
      * Performs thread dump and prints all available info to the given log.
      *
      * @param log Logger.
      */
     public static void dumpThreads(@Nullable IgniteLogger log) {
+        dumpThreads(log, false);
+    }
+
+    /**
+     * Performs thread dump and prints all available info to the given log.
+     *
+     * @param log Logger.
+     */
+    public static void dumpThreads(@Nullable IgniteLogger log, boolean dumpIdle) {
         ThreadMXBean mxBean = ManagementFactory.getThreadMXBean();
 
         final Set<Long> deadlockedThreadsIds = getDeadlockedThreadIds(mxBean);
@@ -1440,17 +1451,62 @@ public abstract class IgniteUtils {
         GridStringBuilder sb = new GridStringBuilder("Thread dump at ")
             .a(new SimpleDateFormat("yyyy/MM/dd HH:mm:ss z").format(new Date(U.currentTimeMillis()))).a(NL);
 
-        for (ThreadInfo info : threadInfos) {
-            printThreadInfo(info, sb, deadlockedThreadsIds);
+        ThreadGroup current = Thread.currentThread().getThreadGroup();
 
-            sb.a(NL);
+        ThreadGroup parent;
+        do {
+            parent = null;
+
+            try {
+                parent = current.getParent();
+            }
+            catch (SecurityException e) {
+
+            }
+
+            if (parent != null)
+                current = parent;
+        } while (parent != null);
+
+        Thread[] threads = new Thread[current.activeCount()];
+
+        int totalThreads = current.enumerate(threads);
+        int skippedIdleThreads = 0;
+
+        INFO: for (ThreadInfo info : threadInfos) {
+            if (!dumpIdle) {
+                boolean found = false;
+
+                for (int i = 0; i < totalThreads; i++) {
+                    if (threads[i].getId() == info.getThreadId()) {
+                        found = true;
+
+                        if (threads[i] instanceof IgniteThread && ((IgniteThread)threads[i]).idle()) {
+                            skippedIdleThreads++;
+
+                            sb.a("*** IDLE ***").a(NL);
+                            ///continue INFO;
+                        }
+                    }
+                }
+
+                if (!found)
+                    sb.a("*** ABSENT ***").a(NL);
+            }
+
+            printThreadInfo(info, sb, deadlockedThreadsIds);
 
             if (info.getLockedSynchronizers() != null && info.getLockedSynchronizers().length > 0) {
                 printSynchronizersInfo(info.getLockedSynchronizers(), sb);
 
                 sb.a(NL);
             }
+
+            sb.a(NL);
         }
+
+        if (skippedIdleThreads > 0)
+            sb.a("Skipped " + skippedIdleThreads + " Ignite idle threads");
 
         sb.a(NL);
 
@@ -11422,7 +11478,7 @@ public abstract class IgniteUtils {
     private static class WriteLockTracer extends ReentrantReadWriteLock.WriteLock {
         /** */
         private static final long serialVersionUID = 0L;
-        
+
         /** */
         public WriteLockTracer(ReentrantReadWriteLock lock) {
             super(lock);

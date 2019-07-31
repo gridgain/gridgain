@@ -90,6 +90,18 @@ public class IgniteThreadPoolExecutor extends ThreadPoolExecutor {
         );
     }
 
+    @Override protected void beforeExecute(Thread t, Runnable r) {
+        super.beforeExecute(t, r);
+
+        ((IgniteThread)t).idle(false);
+    }
+
+    @Override protected void afterExecute(Runnable r, Throwable t) {
+        ((IgniteThread)Thread.currentThread()).idle(true);
+
+        super.afterExecute(r, t);
+    }
+
     /**
      * Creates a new service with the given initial parameters.
      *
