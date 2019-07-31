@@ -24,8 +24,11 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.ClusterTagUpdatedEvent;
+import org.apache.ignite.events.Event;
 import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.lang.IgniteBiPredicate;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -321,6 +324,55 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
         ig.cluster().tag(CUSTOM_TAG_0);
 
         assertTrue(GridTestUtils.waitForCondition(evtFired::get, 10_000));
+
+        assertEquals(clusterId, clusterIdFromEvent.get());
+        assertEquals(generatedTag, oldTagFromEvent.get());
+        assertEquals(CUSTOM_TAG_0, newTagFromEvent.get());
+    }
+
+    /**
+     * Verifies that event about cluster tag update is fired on remote nodes as well.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testTagChangedEventMultinodeWithRemoteFilter() throws Exception {
+        IgniteEx ig0 = startGrid(0);
+
+        IgniteEx ig1 = startGrid(1);
+
+        UUID clusterId = ig0.cluster().id();
+        String generatedTag = ig0.cluster().tag();
+
+        AtomicReference<UUID> eventNodeId = new AtomicReference<>(null);
+
+        AtomicReference<UUID> clusterIdFromEvent = new AtomicReference<>(null);
+        AtomicReference<String> oldTagFromEvent = new AtomicReference<>(null);
+        AtomicReference<String> newTagFromEvent = new AtomicReference<>(null);
+
+        AtomicBoolean evtFired = new AtomicBoolean(false);
+
+        ig0.events(ig0.cluster().forRemotes()).remoteListen(
+            (IgniteBiPredicate<UUID, Event>)(uuid, event) -> {
+                eventNodeId.set(uuid);
+
+                evtFired.set(true);
+
+                ClusterTagUpdatedEvent tagUpdatedEvt = (ClusterTagUpdatedEvent)event;
+
+                clusterIdFromEvent.set(tagUpdatedEvt.clusterId());
+                oldTagFromEvent.set(tagUpdatedEvt.previousTag());
+                newTagFromEvent.set(tagUpdatedEvt.newTag());
+
+                return true;
+            },
+            (IgnitePredicate<Event>)event -> event.type() == EventType.EVT_CLUSTER_TAG_UPDATED);
+
+        ig0.cluster().tag(CUSTOM_TAG_0);
+
+        assertTrue(GridTestUtils.waitForCondition(evtFired::get, 10_000));
+
+        assertEquals(ig1.localNode().id(), eventNodeId.get());
 
         assertEquals(clusterId, clusterIdFromEvent.get());
         assertEquals(generatedTag, oldTagFromEvent.get());
