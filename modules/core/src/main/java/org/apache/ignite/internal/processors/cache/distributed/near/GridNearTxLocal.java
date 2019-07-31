@@ -212,7 +212,9 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
     /** */
     private boolean trackTimeout;
 
-    /** Counts how much time this transaction has spent on system calls, in nanoseconds. */
+    /**
+     * Counts how much time this transaction has spent on system calls, in nanoseconds.
+     */
     private final AtomicLong systemTime = new AtomicLong(0);
 
     /**
@@ -227,7 +229,9 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
      */
     private final AtomicLong prepareStartTime = new AtomicLong(0);
 
-    /** Stores prepare step duration, or <code>0</code> if it has not finished yet. */
+    /**
+     * Stores prepare step duration, or <code>0</code> if it has not finished yet.
+     */
     private final AtomicLong prepareTime = new AtomicLong(0);
 
     /**
