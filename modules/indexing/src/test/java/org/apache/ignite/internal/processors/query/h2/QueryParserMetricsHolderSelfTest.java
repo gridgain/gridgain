@@ -40,21 +40,12 @@ public class QueryParserMetricsHolderSelfTest extends GridCommonAbstractTest {
     /** Cache. */
     private static IgniteCache<Integer, Integer> cache;
 
-    /**
-     * Returns new cache configuration.
-     *
-     * @return Cache configuration.
-     */
-    private CacheConfiguration<Integer, Integer> createCacheCfg() {
-        return new CacheConfiguration<>(CACHE_NAME);
-    }
-
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
 
         ignite = (IgniteEx)startGrid();
-        cache = ignite.getOrCreateCache(createCacheCfg());
+        cache = ignite.getOrCreateCache(new CacheConfiguration<>(CACHE_NAME));
     }
 
     /**
