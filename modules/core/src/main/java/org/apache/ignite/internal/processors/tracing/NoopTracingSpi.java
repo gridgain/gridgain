@@ -12,11 +12,7 @@ public class NoopTracingSpi extends IgniteSpiAdapter implements TracingSpi {
             return this;
         }
 
-        @Override public Span addTag(String tagName, Long tagVal) {
-            return this;
-        }
-
-        @Override public Span addTag(String tagName, Integer tagVal) {
+        @Override public Span addTag(String tagName, long tagVal) {
             return this;
         }
 
@@ -34,6 +30,10 @@ public class NoopTracingSpi extends IgniteSpiAdapter implements TracingSpi {
 
         @Override public Span end() {
             return this;
+        }
+
+        @Override public boolean isEnded() {
+            return false;
         }
     };
 

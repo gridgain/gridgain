@@ -95,7 +95,7 @@ public class TracingMessagesProcessor {
         if (log.isDebugEnabled())
             log.debug("Processed traceable message: " + msg);
 
-        if (msg.trace().span() != null)
+        if (msg.trace().span() != null && !msg.trace().span().isEnded())
             msg.trace().span()
                 .addLog("Processed")
                 .end();

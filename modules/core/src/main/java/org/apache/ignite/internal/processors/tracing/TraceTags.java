@@ -18,9 +18,13 @@ public class TraceTags {
     /** */
     public static final String ID = "id";
     /** */
+    public static final String ORDER = "id";
+    /** */
     public static final String EVENT = "event";
     /** */
     public static final String NAME = "name";
+    /** */
+    public static final String TYPE = "type";
     /** */
     public static final String INITIAL = "initial";
     /** */

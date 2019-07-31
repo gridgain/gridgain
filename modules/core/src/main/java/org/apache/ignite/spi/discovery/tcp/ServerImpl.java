@@ -1070,7 +1070,6 @@ class ServerImpl extends TcpDiscoveryImpl {
                 .addTag(TraceTags.tag(TraceTags.EVENT_NODE, TraceTags.CONSISTENT_ID),
                     locNode.consistentId() != null ? locNode.consistentId().toString() : "")
                 .addLog("Created")
-                .end()
         );
 
         tracing.messages().beforeSend(joinReqMsg);
@@ -1199,6 +1198,11 @@ class ServerImpl extends TcpDiscoveryImpl {
 
         if (log.isDebugEnabled())
             log.debug("Discovery SPI has been connected to topology with order: " + locNode.internalOrder());
+
+        joinReqMsg.trace().span()
+            .addTag(TraceTags.tag(TraceTags.NODE, TraceTags.ORDER), locNode.order())
+            .addLog("Joined to ring")
+            .end();
     }
 
     /**
@@ -3085,10 +3089,7 @@ class ServerImpl extends TcpDiscoveryImpl {
             if (msg instanceof TraceableMessage) {
                 TraceableMessage tMsg = (TraceableMessage) msg;
 
-                if (msg instanceof TcpDiscoveryNodeLeftMessage && !msg.verified())
-                {
-
-                } else
+                if (tMsg.trace().span() == null)
                     tracing.messages().afterReceive(tMsg);
             }
 
@@ -3139,7 +3140,7 @@ class ServerImpl extends TcpDiscoveryImpl {
 
                     if (msg instanceof TraceableMessage)
                         ((TraceableMessage) msg).trace().span()
-                            .addLog("Local node orderd not initialized")
+                            .addLog("Local node order not initialized")
                             .setStatus(Status.ABORTED)
                             .end();
 
@@ -3216,12 +3217,11 @@ class ServerImpl extends TcpDiscoveryImpl {
             if (msg instanceof TraceableMessage &&
                 (msg instanceof TcpDiscoveryNodeAddedMessage
                     || msg instanceof TcpDiscoveryJoinRequestMessage
-                    || msg instanceof TcpDiscoveryNodeFailedMessage
-                    || msg instanceof TcpDiscoveryNodeLeftMessage
                     || notifiedDiscovery.get())) {
                 TraceableMessage tMsg = (TraceableMessage) msg;
 
-                tracing.messages().finishProcessing(tMsg);
+                if (!tMsg.trace().span().isEnded())
+                    tracing.messages().finishProcessing(tMsg);
             }
         }
 
@@ -4004,9 +4004,21 @@ class ServerImpl extends TcpDiscoveryImpl {
 
             final UUID locNodeId = getLocalNodeId();
 
+            if (node.id().toString().endsWith("3") && locNodeId.toString().endsWith("1"))
+                log.warning("Process join request.");
+
+            msg.trace().span()
+                .addTag(TraceTags.tag(TraceTags.EVENT_NODE, TraceTags.ID), node.id().toString())
+                .addTag(TraceTags.tag(TraceTags.EVENT_NODE, TraceTags.CONSISTENT_ID), node.consistentId().toString());
+
             if (locNodeId.equals(node.id())) {
                 if (log.isDebugEnabled())
                     log.debug("Received join request for local node, dropping: " + msg);
+
+                msg.trace().span()
+                    .addLog("Dropped")
+                    .setStatus(Status.ABORTED)
+                    .end();
 
                 return;
             }
@@ -4049,6 +4061,11 @@ class ServerImpl extends TcpDiscoveryImpl {
                     }
 
                     // Ignore join request.
+                    msg.trace().span()
+                        .addLog("Ignored")
+                        .setStatus(Status.ABORTED)
+                        .end();
+
                     return;
                 }
             }
@@ -4066,6 +4083,11 @@ class ServerImpl extends TcpDiscoveryImpl {
 
                             // Ignore this join request since existing node is about to fail
                             // and new node can continue.
+                            msg.trace().span()
+                                .addLog("Ignored")
+                                .setStatus(Status.ABORTED)
+                                .end();
+
                             return;
                         }
 
@@ -4087,6 +4109,11 @@ class ServerImpl extends TcpDiscoveryImpl {
                             ", existingNode=" + existingNode + ']');
 
                         // Ignore join request.
+                        msg.trace().span()
+                            .addLog("Ignored")
+                            .setStatus(Status.ABORTED)
+                            .end();
+
                         return;
                     }
 
@@ -4126,6 +4153,11 @@ class ServerImpl extends TcpDiscoveryImpl {
                     else if (log.isDebugEnabled())
                         log.debug("Ignoring join request message since node is already in topology: " + msg);
 
+                    msg.trace().span()
+                        .addLog("Ignored")
+                        .setStatus(Status.ABORTED)
+                        .end();
+
                     return;
                 }
                 else {
@@ -4142,6 +4174,11 @@ class ServerImpl extends TcpDiscoveryImpl {
 
                                 onException("Failed to send duplicate ID message to node: " + node, e);
                             }
+
+                            msg.trace().span()
+                                .addLog("Ignored")
+                                .setStatus(Status.ABORTED)
+                                .end();
 
                             return;
                         }
@@ -4181,6 +4218,11 @@ class ServerImpl extends TcpDiscoveryImpl {
                             }
 
                             // Ignore join request.
+                            msg.trace().span()
+                                .addLog("Ignored")
+                                .setStatus(Status.ABORTED)
+                                .end();
+
                             return;
                         }
                         else {
@@ -4216,6 +4258,11 @@ class ServerImpl extends TcpDiscoveryImpl {
                                 }
 
                                 // Ignore join request.
+                                msg.trace().span()
+                                    .addLog("Ignored")
+                                    .setStatus(Status.ABORTED)
+                                    .end();
+
                                 return;
                             }
 
@@ -4240,6 +4287,11 @@ class ServerImpl extends TcpDiscoveryImpl {
                             ", err=" + e + ']', e);
 
                         // Ignore join request.
+                        msg.trace().span()
+                            .addLog("Ignored")
+                            .setStatus(Status.ABORTED)
+                            .end();
+
                         return;
                     }
                 }
@@ -4308,6 +4360,11 @@ class ServerImpl extends TcpDiscoveryImpl {
                     );
 
                     // Ignore join request.
+                    msg.trace().span()
+                        .addLog("Ignored")
+                        .setStatus(Status.ABORTED)
+                        .end();
+
                     return;
                 }
 
@@ -4357,6 +4414,11 @@ class ServerImpl extends TcpDiscoveryImpl {
                     );
 
                     // Ignore join request.
+                    msg.trace().span()
+                        .addLog("Ignored")
+                        .setStatus(Status.ABORTED)
+                        .end();
+
                     return;
                 }
 
@@ -4403,6 +4465,11 @@ class ServerImpl extends TcpDiscoveryImpl {
                         });
 
                     // Ignore join request.
+                    msg.trace().span()
+                        .addLog("Ignored")
+                        .setStatus(Status.ABORTED)
+                        .end();
+
                     return;
                 }
 
@@ -4441,6 +4508,11 @@ class ServerImpl extends TcpDiscoveryImpl {
                         });
 
                     // Ignore join request.
+                    msg.trace().span()
+                        .addLog("Ignored")
+                        .setStatus(Status.ABORTED)
+                        .end();
+
                     return;
                 }
 
@@ -4483,6 +4555,11 @@ class ServerImpl extends TcpDiscoveryImpl {
                         });
 
                     // Ignore join request.
+                    msg.trace().span()
+                        .addLog("Ignored")
+                        .setStatus(Status.ABORTED)
+                        .end();
+
                     return;
                 }
 
@@ -4510,6 +4587,11 @@ class ServerImpl extends TcpDiscoveryImpl {
                     nodeCheckError(node, errMsg, sndMsg);
 
                     // Ignore join request.
+                    msg.trace().span()
+                        .addLog("Ignored")
+                        .setStatus(Status.ABORTED)
+                        .end();
+
                     return;
                 }
 
@@ -4552,6 +4634,11 @@ class ServerImpl extends TcpDiscoveryImpl {
                         });
 
                     // Ignore join request.
+                    msg.trace().span()
+                        .addLog("Ignored")
+                        .setStatus(Status.ABORTED)
+                        .end();
+
                     return;
                 }
 
@@ -4567,10 +4654,6 @@ class ServerImpl extends TcpDiscoveryImpl {
                     node, data, spi.gridStartTime);
 
                 nodeAddedMsg = tracing.messages().branch(nodeAddedMsg, msg);
-
-                nodeAddedMsg.trace().span()
-                    .addTag(TraceTags.tag(TraceTags.EVENT_NODE, TraceTags.ID), node.id().toString())
-                    .addTag(TraceTags.tag(TraceTags.EVENT_NODE, TraceTags.CONSISTENT_ID), node.consistentId().toString());
 
                 nodeAddedMsg.client(msg.client());
 
@@ -4743,6 +4826,10 @@ class ServerImpl extends TcpDiscoveryImpl {
 
             assert node != null;
 
+            msg.trace().span()
+                .addTag(TraceTags.tag(TraceTags.EVENT_NODE, TraceTags.ID), node.id().toString())
+                .addTag(TraceTags.tag(TraceTags.EVENT_NODE, TraceTags.CONSISTENT_ID), node.consistentId().toString());
+
             if (node.internalOrder() < locNode.internalOrder()) {
                 if (!locNode.id().equals(node.id())) {
                     U.warn(log, "Discarding node added message since local node's order is greater " +
@@ -4789,6 +4876,9 @@ class ServerImpl extends TcpDiscoveryImpl {
                 }
 
                 msg.verify(locNodeId);
+
+                msg.trace().span()
+                    .addLog("Verified");
             }
             else if (!locNodeId.equals(node.id()) && ring.node(node.id()) != null) {
                 // Local node already has node from message in local topology.
@@ -4808,6 +4898,11 @@ class ServerImpl extends TcpDiscoveryImpl {
                         + locNode + ", msg=" + msg + ']');
                 }
 
+                msg.trace().span()
+                    .addLog("Bypassed to crd")
+                    .setStatus(Status.OK)
+                    .end();
+
                 return;
             }
 
@@ -4815,6 +4910,11 @@ class ServerImpl extends TcpDiscoveryImpl {
                 if (!node.isClient() && !node.isDaemon() && nodesIdsHist.contains(node.id())) {
                     U.warn(log, "Discarding node added message since local node has already seen " +
                         "joining node in topology [node=" + node + ", locNode=" + locNode + ", msg=" + msg + ']');
+
+                    msg.trace().span()
+                        .addLog("Discarded")
+                        .setStatus(Status.ABORTED)
+                        .end();
 
                     return;
                 }
@@ -4829,6 +4929,11 @@ class ServerImpl extends TcpDiscoveryImpl {
                         debugLog(msg, "Discarding node added message since new node's order is less than " +
                             "max order in ring [ring=" + ring + ", node=" + node + ", locNode=" + locNode +
                             ", msg=" + msg + ']');
+
+                    msg.trace().span()
+                        .addLog("Discarded")
+                        .setStatus(Status.ABORTED)
+                        .end();
 
                     return;
                 }
@@ -5041,6 +5146,11 @@ class ServerImpl extends TcpDiscoveryImpl {
                             if (log.isDebugEnabled())
                                 log.debug("Discarding node added message with empty topology: " + msg);
 
+                            msg.trace().span()
+                                .addLog("Discarded")
+                                .setStatus(Status.ABORTED)
+                                .end();
+
                             return;
                         }
                     }
@@ -5050,6 +5160,11 @@ class ServerImpl extends TcpDiscoveryImpl {
                                 "[spiState=" + spiState +
                                 ", msg=" + msg +
                                 ", locNode=" + locNode + ']');
+
+                        msg.trace().span()
+                            .addLog("Discarded")
+                            .setStatus(Status.ABORTED)
+                            .end();
 
                         return;
                     }
@@ -5325,6 +5440,11 @@ class ServerImpl extends TcpDiscoveryImpl {
                 if (log.isDebugEnabled())
                     log.debug("Discarding node left message since node was not found: " + msg);
 
+                msg.trace().span()
+                    .addLog("Discarded")
+                    .setStatus(Status.ABORTED)
+                    .end();
+
                 return;
             }
 
@@ -5333,6 +5453,11 @@ class ServerImpl extends TcpDiscoveryImpl {
             if (locNodeCoord) {
                 if (msg.verified()) {
                     spi.stats.onRingMessageReceived(msg);
+
+                    msg.trace().span()
+                        .addLog("Ring failed")
+                        .setStatus(Status.ABORTED)
+                        .end();
 
                     addMessage(new TcpDiscoveryDiscardMessage(locNodeId, msg.id(), false));
 

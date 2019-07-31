@@ -111,6 +111,7 @@ import org.apache.ignite.internal.processors.query.schema.SchemaNodeLeaveExchang
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
 import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.processors.tracing.TraceTags;
+import org.apache.ignite.internal.processors.tracing.Traces;
 import org.apache.ignite.internal.util.GridListSet;
 import org.apache.ignite.internal.util.GridPartitionStateMap;
 import org.apache.ignite.internal.util.IgniteUtils;
@@ -628,9 +629,12 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
             // Event callback - without this callback future will never complete.
             exchFut.onEvent(exchId, evt, cache);
 
-            Span span = cctx.kernalContext().tracing().create("exchange.future", evt.getSpan());
+            Span span = cctx.kernalContext().tracing().create(Traces.Exchange.EXCHANGE_FUTURE, evt.getSpan());
 
             if (exchId != null) {
+                span.addTag(TraceTags.tag(TraceTags.EVENT_NODE, TraceTags.ID), evt.eventNode().id().toString());
+                span.addTag(TraceTags.tag(TraceTags.EVENT_NODE, TraceTags.CONSISTENT_ID), evt.eventNode().consistentId().toString());
+                span.addTag(TraceTags.tag(TraceTags.EVENT, TraceTags.TYPE), evt.type());
                 span.addTag(TraceTags.tag(TraceTags.EXCHANGE, TraceTags.ID), exchId.toString());
                 span.addTag(TraceTags.tag(TraceTags.INITIAL, TraceTags.TOPOLOGY_VERSION, TraceTags.MAJOR),
                     exchId.topologyVersion().topologyVersion());
