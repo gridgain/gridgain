@@ -41,7 +41,7 @@ public class GridCommandHandlerRUTest extends GridCommandHandlerAbstractTest {
     }
 
     /** {@inheritDoc} */
-    protected void addExtraArguments(List<String> args) {
+    @Override protected void addExtraArguments(List<String> args) {
         if (addExtraArguments)
             super.addExtraArguments(args);
     }

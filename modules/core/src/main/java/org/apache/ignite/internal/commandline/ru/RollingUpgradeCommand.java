@@ -103,18 +103,10 @@ public class RollingUpgradeCommand implements Command<RollingUpgradeArguments> {
                 RollingUpgradeCommandArg cmdArg = CommandArgUtils.of(
                     argIter.nextArg("Unknown parameter for enabling rolling upgrade"), RollingUpgradeCommandArg.class);
 
-                if (cmdArg == null)
+                if (RollingUpgradeCommandArg.FORCE != cmdArg)
                     throw new IllegalArgumentException("Unknown parameter for enabling rolling upgrade");
 
-                switch (cmdArg) {
-                    case FORCE:
-                        rollingUpgradeArgs.withForcedMode(true);
-
-                        break;
-
-                    default:
-                        throw new IllegalArgumentException("Unknown parameter for enabling rolling upgrade");
-                }
+                rollingUpgradeArgs.withForcedMode(true);
             }
         }
 
