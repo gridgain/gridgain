@@ -28,12 +28,11 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.continuous.GridContinuousProcessor;
-import org.apache.ignite.internal.util.typedef.PA;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
-import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
+import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.DFLT_ACK_SND_THRESHOLD;
 
 public class ContinuousQueryBufferCleanupTest extends GridCommonAbstractTest {
 
@@ -42,9 +41,6 @@ public class ContinuousQueryBufferCleanupTest extends GridCommonAbstractTest {
 
     /** */
     private final static int ACK_THRESHOLD = 100;
-
-    /** */
-    private final static int BUFFER_SIZE = 32;
 
     /** */
     private final static String REMOTE_ROUTINE_INFO_CLASS_NAME = "org.apache.ignite.internal.processors.continuous.GridContinuousProcessor$RemoteRoutineInfo";
@@ -62,28 +58,7 @@ public class ContinuousQueryBufferCleanupTest extends GridCommonAbstractTest {
      */
     @Test
     public void testSingleNode() throws Exception {
-        IgniteEx srv = startGrid("srv");
-
-        IgniteConfiguration clientCfg = optimize(getConfiguration("client").setClientMode(true));
-
-        Ignite client = startGrid(clientCfg);
-
-        CacheConfiguration<Integer, String> cacheCfg = new CacheConfiguration<>("testCache");
-
-        IgniteCache<Integer, String> cache = client.getOrCreateCache(cacheCfg);
-
-        ContinuousQuery<Integer, String> qry = new ContinuousQuery<>();
-
-        qry.setLocalListener((evts) -> evts.forEach(e -> System.out.println("key=" + e.getKey() + ", val=" + e.getValue())));
-
-        cache.query(qry);
-
-        for (int i = 0; i < RECORDS_CNT; i++)
-            cache.put(i, Integer.toString(i));
-
-        waitForCondition((PA)() -> false, 2000);
-
-        validateBuffer(srv);
+        testNodes(1, 0);
     }
 
     /**
@@ -91,16 +66,34 @@ public class ContinuousQueryBufferCleanupTest extends GridCommonAbstractTest {
      */
     @Test
     public void testMultipleNodes() throws Exception {
-        IgniteEx srv = startGrid("srv");
+        testNodes(2, 0);
+    }
 
-        IgniteEx srv2 = startGrid("srv2");
+    /**
+     * @throws Exception If fail.
+     */
+    @Test
+    public void testMultipleNodesWithBackups() throws Exception {
+        testNodes(2, 1);
+    }
+
+    /**
+     * @throws Exception If fail.
+     */
+    private void testNodes(int srvCnt, int backupsCnt) throws Exception {
+        System.setProperty("IGNITE_CONTINUOUS_QUERY_ACK_THRESHOLD", Integer.toString(ACK_THRESHOLD));
+
+        IgniteEx[] srvs = new IgniteEx[srvCnt];
+
+        for (int i = 0; i < srvCnt; i++)
+            srvs[i] = startGrid("srv" + i);
 
         IgniteConfiguration clientCfg = optimize(getConfiguration("client").setClientMode(true));
 
         Ignite client = startGrid(clientCfg);
 
         CacheConfiguration<Integer, String> cacheCfg = new CacheConfiguration<Integer, String>("testCache")
-            .setBackups(1)
+            .setBackups(backupsCnt)
             .setAffinity(new RendezvousAffinityFunction(32, null));
 
         IgniteCache<Integer, String> cache = client.getOrCreateCache(cacheCfg);
@@ -114,14 +107,16 @@ public class ContinuousQueryBufferCleanupTest extends GridCommonAbstractTest {
         for (int i = 0; i < RECORDS_CNT; i++)
             cache.put(i, Integer.toString(i));
 
-        waitForCondition((PA)() -> false, 2000);
+        Thread.sleep(2000);
 
-        validateBuffer(srv);
-
-        validateBuffer(srv2);
+        for (int i = 0; i < srvCnt; i++)
+            validateBuffer(srvs[i], backupsCnt);
     }
 
-    private void validateBuffer(IgniteEx srv) throws ClassNotFoundException {
+    /**
+     * @throws Exception If fail.
+     */
+    private void validateBuffer(IgniteEx srv, int backupsCnt) throws ClassNotFoundException {
         GridContinuousProcessor contProc = srv.context().continuous();
 
         ConcurrentMap<UUID, Object> rmtInfos = GridTestUtils.getFieldValue(contProc, GridContinuousProcessor.class, "rmtInfos");
@@ -148,6 +143,6 @@ public class ContinuousQueryBufferCleanupTest extends GridCommonAbstractTest {
             }
         }
 
-        assertTrue(notNullCnt < ACK_THRESHOLD + BUFFER_SIZE);
+        assertTrue(notNullCnt < ACK_THRESHOLD + (1 + backupsCnt) * DFLT_ACK_SND_THRESHOLD);
     }
 }
