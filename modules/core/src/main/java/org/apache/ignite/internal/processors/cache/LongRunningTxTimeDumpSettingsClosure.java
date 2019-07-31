@@ -59,11 +59,7 @@ public class LongRunningTxTimeDumpSettingsClosure implements IgniteRunnable {
     /** {@inheritDoc} */
     @Override
     public void run() {
-        IgniteTxManager tm = ((IgniteEx) ignite)
-                .context()
-                .cache()
-                .context()
-                .tm();
+        IgniteTxManager tm = ((IgniteEx) ignite).context().cache().context().tm();
 
         if (timeoutThreshold != null)
             tm.longTransactionTimeDumpThreshold(timeoutThreshold);

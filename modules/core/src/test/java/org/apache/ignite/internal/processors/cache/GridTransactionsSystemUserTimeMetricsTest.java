@@ -15,6 +15,7 @@
  */
 package org.apache.ignite.internal.processors.cache;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
@@ -74,16 +75,27 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
     private static final long SYSTEM_DELAY = 1000;
 
     /** */
+    private static final int TX_COUNT_FOR_LOG_THROTTLING_CHECK = 4;
+
+    /** */
     private static final long LONG_TRAN_TIMEOUT = Math.min(SYSTEM_DELAY, USER_DELAY);
 
     /** */
-    private static final String TRANSACTION_TIME_DUMP_REGEX = ".*?ransaction time dump.*";
+    private static final String TRANSACTION_TIME_DUMP_REGEX = ".*?ransaction time dump .*";
 
     /** */
-    private final LogListener logLsnr = new MessageOrderLogListener(TRANSACTION_TIME_DUMP_REGEX);
+    private static final String TRANSACTION_TIME_DUMPS_SKIPPED_REGEX =
+        "Transaction time dumps skipped because of log throttling: " + TX_COUNT_FOR_LOG_THROTTLING_CHECK / 2;
 
     /** */
-    private final TransactionDumpListener transactionDumpListener = new TransactionDumpListener();
+    private LogListener logTxDumpLsnr = new MessageOrderLogListener(TRANSACTION_TIME_DUMP_REGEX);
+
+    /** */
+    private final TransactionDumpListener transactionDumpLsnr = new TransactionDumpListener(TRANSACTION_TIME_DUMP_REGEX);
+
+    /** */
+    private final TransactionDumpListener transactionDumpsSkippedLsnr =
+        new TransactionDumpListener(TRANSACTION_TIME_DUMPS_SKIPPED_REGEX);
 
     /** */
     private volatile boolean slowPrepare;
@@ -92,8 +104,9 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         ListeningTestLogger testLog = new ListeningTestLogger(false, log());
 
-        testLog.registerListener(logLsnr);
-        testLog.registerListener(transactionDumpListener);
+        testLog.registerListener(logTxDumpLsnr);
+        testLog.registerListener(transactionDumpLsnr);
+        testLog.registerListener(transactionDumpsSkippedLsnr);
 
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
@@ -132,6 +145,14 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
 
         cache.put(1, 1);
 
+        Callable<Object> txCallable = () -> {
+            Integer val = cache.get(1);
+
+            cache.put(1, val + 1);
+
+            return null;
+        };
+
         TransactionMetricsMxBean tmMxMetricsBean = getMxBean(
             CLIENT,
             "TransactionMetrics",
@@ -160,13 +181,9 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
         //slow prepare
         slowPrepare = true;
 
-        doInTransaction(client, () -> {
-            Integer val = cache.get(1);
+        doInTransaction(client, txCallable);
 
-            cache.put(1, val + 1);
-
-            return null;
-        });
+        assertTrue(logTxDumpLsnr.check());
 
         assertEquals(3, cache.get(1).intValue());
 
@@ -181,7 +198,7 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
         assertTrue(!sysTimeHisto.isEmpty());
         assertTrue(!userTimeHisto.isEmpty());
 
-        logLsnr.reset();
+        logTxDumpLsnr.reset();
 
         //checking settings changing via JMX with second client
         Ignite client2 = startGrid(CLIENT_2);
@@ -196,41 +213,36 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
         tmMxBean.setLongTransactionTimeDumpThreshold(0);
         tmMxBean.setTransactionTimeDumpSamplesCoefficient(0.0);
 
-        doInTransaction(client2, () -> {
-            Integer val = cache.get(1);
+        doInTransaction(client2, txCallable);
 
-            cache.put(1, val + 1);
-
-            return null;
-        });
-
-        assertFalse(logLsnr.check());
+        assertFalse(logTxDumpLsnr.check());
 
         //testing dumps limit
 
         doSleep(1000);
 
-        transactionDumpListener.reset();
+        transactionDumpLsnr.reset();
+
+        transactionDumpsSkippedLsnr.reset();
 
         tmMxBean.setTransactionTimeDumpSamplesCoefficient(1.0);
 
-        int t = 4;
-
-        tmMxBean.setTransactionTimeDumpSamplesPerSecondLimit(t / 2);
+        tmMxBean.setTransactionTimeDumpSamplesPerSecondLimit(TX_COUNT_FOR_LOG_THROTTLING_CHECK / 2);
 
         slowPrepare = false;
 
-        for (int i = 0; i < t; i++) {
-            doInTransaction(client, () -> {
-                Integer val = cache.get(1);
+        for (int i = 0; i < TX_COUNT_FOR_LOG_THROTTLING_CHECK; i++)
+            doInTransaction(client, txCallable);
 
-                cache.put(1, val + 1);
+        assertEquals(TX_COUNT_FOR_LOG_THROTTLING_CHECK / 2, transactionDumpLsnr.value());
 
-                return null;
-            });
-        }
+        //testing skipped message in log
 
-        assertEquals(t / 2, transactionDumpListener.value());
+        doSleep(1000);
+
+        doInTransaction(client, txCallable);
+
+        assertTrue(transactionDumpsSkippedLsnr.check());
 
         U.log(log, sysTimeHisto);
         U.log(log, userTimeHisto);
@@ -261,9 +273,17 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
         /** */
         private final AtomicInteger counter = new AtomicInteger(0);
 
+        /** */
+        private final String regex;
+
+        /** */
+        private TransactionDumpListener(String regex) {
+            this.regex = regex;
+        }
+
         /** {@inheritDoc} */
         @Override public boolean check() {
-            return true;
+            return value() > 0;
         }
 
         /** {@inheritDoc} */
@@ -273,7 +293,7 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
 
         /** {@inheritDoc} */
         @Override public void accept(String s) {
-            if (s.matches(TRANSACTION_TIME_DUMP_REGEX))
+            if (s.matches(regex))
                 counter.incrementAndGet();
         }
 
