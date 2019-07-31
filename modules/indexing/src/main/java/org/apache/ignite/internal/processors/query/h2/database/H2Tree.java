@@ -206,7 +206,9 @@ public abstract class H2Tree extends BPlusTree<GridH2SearchRow, GridH2Row> {
             if (metaInfo.useUnwrappedPk())
                 throw new IgniteCheckedException("Unwrapped PK is not supported by current version");
 
-            this.inlineSize = metaInfo.inlineSize();
+            inlineSize = metaInfo.inlineSize();
+
+            this.inlineSize = inlineSize;
 
             setIos(
                 H2ExtrasInnerIO.getVersions(inlineSize, mvccEnabled),
@@ -248,7 +250,7 @@ public abstract class H2Tree extends BPlusTree<GridH2SearchRow, GridH2Row> {
             try {
                 if (H2TreeInlineObjectDetector.objectMayBeInlined(inlineSize, inlineIdxs)) {
                     H2TreeInlineObjectDetector inlineObjDetector = new H2TreeInlineObjectDetector(
-                        inlineSize, inlineIdxs);
+                        inlineSize, inlineIdxs, tblName, idxName, log);
 
                     findFirst(inlineObjDetector);
 
