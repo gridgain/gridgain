@@ -17,11 +17,11 @@
 package org.apache.ignite.internal.commandline.cache;
 
 import java.util.Set;
+import java.util.logging.Logger;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
-import org.apache.ignite.internal.commandline.CommandLogger;
 import org.apache.ignite.internal.commandline.cache.reset_lost_partitions.CacheResetLostPartitionsTask;
 import org.apache.ignite.internal.commandline.cache.reset_lost_partitions.CacheResetLostPartitionsTaskArg;
 import org.apache.ignite.internal.commandline.cache.reset_lost_partitions.CacheResetLostPartitionsTaskResult;
@@ -35,7 +35,7 @@ import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.RESE
  */
 public class ResetLostPartitions implements Command<Set<String>> {
     /** {@inheritDoc} */
-    @Override public void printUsage(CommandLogger logger) {
+    @Override public void printUsage(Logger logger) {
         String CACHES = "cacheName1,...,cacheNameN";
         String description = "Reset the state of lost partitions for the specified caches.";
 
@@ -53,7 +53,12 @@ public class ResetLostPartitions implements Command<Set<String>> {
     }
 
     /** {@inheritDoc} */
-    @Override public Object execute(GridClientConfiguration clientCfg, CommandLogger logger) throws Exception {
+    @Override public String argumentString() {
+        return "caches=" + caches;
+    }
+
+    /** {@inheritDoc} */
+    @Override public Object execute(GridClientConfiguration clientCfg, Logger logger) throws Exception {
         CacheResetLostPartitionsTaskArg taskArg = new CacheResetLostPartitionsTaskArg(caches);
 
         try (GridClient client = Command.startClient(clientCfg)) {
@@ -69,5 +74,10 @@ public class ResetLostPartitions implements Command<Set<String>> {
     /** {@inheritDoc} */
     @Override public void parseArguments(CommandArgIterator argIter) {
         caches = argIter.nextStringSet("Cache names");
+    }
+
+    /** {@inheritDoc} */
+    @Override public String name() {
+        return RESET_LOST_PARTITIONS.text().toUpperCase();
     }
 }

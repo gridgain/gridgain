@@ -37,6 +37,7 @@ import org.apache.ignite.internal.processors.cache.mvcc.txlog.TxLog;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.filename.PdsFoldersResolver;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Assert;
 import org.junit.Test;
@@ -166,7 +167,7 @@ public class IgniteNodeStoppedDuringDisableWALTest extends GridCommonAbstractTes
         try (IgniteDataStreamer<Integer, Integer> st = ig0.dataStreamer(DEFAULT_CACHE_NAME)) {
             st.allowOverwrite(true);
 
-            for (int i = 0; i < 10_000; i++)
+            for (int i = 0; i < GridTestUtils.SF.apply(10_000); i++)
                 st.addData(i, -i);
         }
 

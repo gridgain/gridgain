@@ -30,8 +30,6 @@ services:
     # Restart on crash.
     restart: always
     environment:
-      # Port for serving frontend API
-      - server_port=3000
       # Cookie session secret
       - server_sessionSecret=CHANGE ME
       # URL for mongodb connection

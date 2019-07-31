@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -1634,17 +1634,18 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
     @Override public void collectUpdateCounters(CachePartitionPartialCountersMap cntrMap) {
         assert cntrMap != null;
 
-        long now = U.currentTimeMillis();
+        long nowNanos = System.nanoTime();
 
         lock.writeLock().lock();
 
         try {
-            long acquired = U.currentTimeMillis();
+            long acquiredNanos = System.nanoTime();
 
-            if (acquired - now >= 100) {
+            if (acquiredNanos - nowNanos >= U.millisToNanos(100)) {
                 if (timeLog.isInfoEnabled())
                     timeLog.info("Waited too long to acquire topology write lock " +
-                        "[grp=" + grp.cacheOrGroupName() + ", waitTime=" + (acquired - now) + ']');
+                        "[grp=" + grp.cacheOrGroupName() + ", waitTime=" +
+                        U.nanosToMillis(acquiredNanos - nowNanos) + ']');
             }
 
             if (stopping)
@@ -1669,17 +1670,18 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
     /** {@inheritDoc} */
     @Override public void applyUpdateCounters() {
-        long now = U.currentTimeMillis();
+        long nowNanos = System.nanoTime();
 
         lock.writeLock().lock();
 
         try {
-            long acquired = U.currentTimeMillis();
+            long acquiredNanos = System.nanoTime();
 
-            if (acquired - now >= 100) {
+            if (acquiredNanos - nowNanos >= U.millisToNanos(100)) {
                 if (timeLog.isInfoEnabled())
                     timeLog.info("Waited too long to acquire topology write lock " +
-                        "[grp=" + grp.cacheOrGroupName() + ", waitTime=" + (acquired - now) + ']');
+                        "[grp=" + grp.cacheOrGroupName() + ", waitTime=" +
+                        U.nanosToMillis(acquiredNanos - nowNanos) + ']');
             }
 
             if (stopping)
@@ -2229,7 +2231,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                         GridDhtPartitionState state = partMap.get(part);
 
-                        if (state == null || state != OWNING)
+                        if (state != OWNING)
                             continue;
 
                         if (!newOwners.contains(remoteNodeId)) {
@@ -2267,7 +2269,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 }
 
                 node2part = new GridDhtPartitionFullMap(node2part, updateSeq.incrementAndGet());
-            } finally {
+            }
+            finally {
                 lock.writeLock().unlock();
             }
         }
@@ -2584,14 +2587,14 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
     @Override public void ownMoving(AffinityTopologyVersion rebFinishedTopVer) {
         lock.writeLock().lock();
 
-        AffinityTopologyVersion lastAffChangeVer = ctx.exchange().lastAffinityChangedTopologyVersion(lastTopChangeVer);
-
-        if (lastAffChangeVer.compareTo(rebFinishedTopVer) > 0)
-            log.info("Affinity topology changed, no MOVING partitions will be owned " +
-                "[rebFinishedTopVer=" + rebFinishedTopVer +
-                ", lastAffChangeVer=" + lastAffChangeVer + "]");
-
         try {
+            AffinityTopologyVersion lastAffChangeVer = ctx.exchange().lastAffinityChangedTopologyVersion(lastTopChangeVer);
+
+            if (lastAffChangeVer.compareTo(rebFinishedTopVer) > 0 && log.isInfoEnabled())
+                log.info("Affinity topology changed, no MOVING partitions will be owned " +
+                    "[rebFinishedTopVer=" + rebFinishedTopVer +
+                    ", lastAffChangeVer=" + lastAffChangeVer + "]");
+
             for (GridDhtLocalPartition locPart : grp.topology().currentLocalPartitions()) {
                 if (locPart.state() == MOVING) {
                     boolean reserved = locPart.reserve();

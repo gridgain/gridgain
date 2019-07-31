@@ -84,19 +84,6 @@ import org.apache.ignite.spi.IgniteNodeValidationResult;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicReference;
-
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType.STATE_PROC;
@@ -427,7 +414,8 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         DiscoveryDataClusterState state = globalState;
 
         if (msg.requestId().equals(state.transitionRequestId())) {
-            log.info("Received state change finish message: " + msg.clusterActive());
+            if (log.isInfoEnabled())
+                log.info("Received state change finish message: " + msg.clusterActive());
 
             globalState = state.finish(msg.success());
 
@@ -1125,14 +1113,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
         IgniteCompute comp = clusterGroupAdapter.compute();
 
-        return comp.callAsync(new IgniteCallable<Boolean>() {
-            @IgniteInstanceResource
-            private Ignite ig;
-
-            @Override public Boolean call() throws Exception {
-                return ig.active();
-            }
-        });
+        return comp.callAsync(new CheckGlobalStateComputeRequest());
     }
 
     /** {@inheritDoc} */
@@ -1553,6 +1534,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     /**
      *
      */
+    @GridInternal
     private static class CheckGlobalStateComputeRequest implements IgniteCallable<Boolean> {
         /** */
         private static final long serialVersionUID = 0L;

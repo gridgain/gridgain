@@ -23,6 +23,7 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.testframework.GridTestUtils.SF;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -41,7 +42,7 @@ public class IgnitePdsExchangeDuringCheckpointTest extends GridCommonAbstractTes
      */
     @Test
     public void testExchangeOnNodeLeft() throws Exception {
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < SF.applyLB(5, 2); i++) {
             startGrids(3);
             IgniteEx ignite = grid(1);
             ignite.active(true);
@@ -63,7 +64,7 @@ public class IgnitePdsExchangeDuringCheckpointTest extends GridCommonAbstractTes
      */
     @Test
     public void testExchangeOnNodeJoin() throws Exception {
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < SF.applyLB(5, 2); i++) {
             startGrids(2);
             IgniteEx ignite = grid(1);
             ignite.active(true);
@@ -79,8 +80,6 @@ public class IgnitePdsExchangeDuringCheckpointTest extends GridCommonAbstractTes
             afterTest();
         }
     }
-
-    /**
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {

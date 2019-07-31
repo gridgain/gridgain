@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,6 +19,7 @@ package org.apache.ignite.testsuites;
 import java.util.Set;
 import junit.framework.JUnit4TestAdapter;
 import junit.framework.TestSuite;
+import org.apache.ignite.ClassPathContentLoggingTest;
 import org.apache.ignite.GridSuppressedExceptionSelfTest;
 import org.apache.ignite.failure.FailureHandlerTriggeredTest;
 import org.apache.ignite.failure.OomFailureHandlerTest;
@@ -27,6 +28,7 @@ import org.apache.ignite.failure.StopNodeOrHaltFailureHandlerTest;
 import org.apache.ignite.internal.ClassSetTest;
 import org.apache.ignite.internal.ClusterGroupHostsSelfTest;
 import org.apache.ignite.internal.ClusterGroupSelfTest;
+import org.apache.ignite.internal.ClusterProcessorCheckGlobalStateComputeRequestTest;
 import org.apache.ignite.internal.GridFailFastNodeFailureDetectionSelfTest;
 import org.apache.ignite.internal.GridLifecycleAwareSelfTest;
 import org.apache.ignite.internal.GridLifecycleBeanSelfTest;
@@ -44,6 +46,8 @@ import org.apache.ignite.internal.MarshallerContextLockingSelfTest;
 import org.apache.ignite.internal.TransactionsMXBeanImplTest;
 import org.apache.ignite.internal.managers.IgniteDiagnosticMessagesMultipleConnectionsTest;
 import org.apache.ignite.internal.managers.IgniteDiagnosticMessagesTest;
+import org.apache.ignite.internal.managers.discovery.IncompleteDeserializationExceptionTest;
+import org.apache.ignite.internal.pagemem.wal.record.WALRecordTest;
 import org.apache.ignite.internal.processors.DeadLockOnNodeLeftExchangeTest;
 import org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentV2Test;
 import org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentV2TestNoOptimizations;
@@ -61,6 +65,7 @@ import org.apache.ignite.internal.processors.cache.IgniteMarshallerCacheFSRestor
 import org.apache.ignite.internal.processors.cache.RebalanceWithDifferentThreadPoolSizeTest;
 import org.apache.ignite.internal.processors.cache.SetTxTimeoutOnPartitionMapExchangeTest;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteRejectConnectOnNodeStopTest;
+import org.apache.ignite.internal.processors.cache.query.continuous.DiscoveryDataDeserializationFailureHanderTest;
 import org.apache.ignite.internal.processors.cache.transactions.AtomicOperationsInTxTest;
 import org.apache.ignite.internal.processors.cache.transactions.TransactionIntegrityWithSystemWorkerDeathTest;
 import org.apache.ignite.internal.processors.closure.GridClosureProcessorRemoteTest;
@@ -71,7 +76,7 @@ import org.apache.ignite.internal.processors.continuous.GridMessageListenSelfTes
 import org.apache.ignite.internal.processors.database.BPlusTreeFakeReuseSelfTest;
 import org.apache.ignite.internal.processors.database.BPlusTreeReuseSelfTest;
 import org.apache.ignite.internal.processors.database.BPlusTreeSelfTest;
-import org.apache.ignite.internal.processors.database.CacheFreeListImplSelfTest;
+import org.apache.ignite.internal.processors.database.CacheFreeListSelfTest;
 import org.apache.ignite.internal.processors.database.DataRegionMetricsSelfTest;
 import org.apache.ignite.internal.processors.database.IndexStorageSelfTest;
 import org.apache.ignite.internal.processors.database.SwapPathConstructionSelfTest;
@@ -93,6 +98,7 @@ import org.apache.ignite.plugin.security.SecurityPermissionSetBuilderTest;
 import org.apache.ignite.spi.GridSpiLocalHostInjectionTest;
 import org.apache.ignite.startup.properties.NotStringSystemPropertyTest;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.MessageOrderLogListenerTest;
 import org.apache.ignite.testframework.test.ConfigVariationsTestSuiteBuilderTest;
 import org.apache.ignite.testframework.test.ListeningTestLoggerTest;
 import org.apache.ignite.testframework.test.ParametersTest;
@@ -134,11 +140,14 @@ public class IgniteBasicTestSuite {
 
         suite.addTest(IgnitePlatformsTestSuite.suite());
 
+        suite.addTest(new JUnit4TestAdapter(SecurityTestSuite.class));
+
         suite.addTest(new JUnit4TestAdapter(GridSelfTest.class));
         suite.addTest(new JUnit4TestAdapter(ClusterGroupHostsSelfTest.class));
         suite.addTest(new JUnit4TestAdapter(IgniteMessagingWithClientTest.class));
         suite.addTest(new JUnit4TestAdapter(IgniteMessagingSendAsyncTest.class));
-
+	    suite.addTest(new JUnit4TestAdapter(ClusterProcessorCheckGlobalStateComputeRequestTest.class));
+    
         GridTestUtils.addTestIfNeeded(suite, ClusterGroupSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridMessagingSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridMessagingNoPeerClassLoadingSelfTest.class, ignoredTests);
@@ -175,6 +184,7 @@ public class IgniteBasicTestSuite {
         suite.addTest(new JUnit4TestAdapter(GridMBeansTest.class));
         suite.addTest(new JUnit4TestAdapter(TransactionsMXBeanImplTest.class));
         suite.addTest(new JUnit4TestAdapter(SetTxTimeoutOnPartitionMapExchangeTest.class));
+        suite.addTest(new JUnit4TestAdapter(DiscoveryDataDeserializationFailureHanderTest.class));
 
         suite.addTest(new JUnit4TestAdapter(IgniteExceptionInNioWorkerSelfTest.class));
         suite.addTest(new JUnit4TestAdapter(IgniteLocalNodeMapBeforeStartTest.class));
@@ -196,12 +206,14 @@ public class IgniteBasicTestSuite {
 
         suite.addTest(new JUnit4TestAdapter(AttributeNodeFilterSelfTest.class));
 
+        suite.addTest(new JUnit4TestAdapter(WALRecordTest.class));
+
         // Basic DB data structures.
         suite.addTest(new JUnit4TestAdapter(BPlusTreeSelfTest.class));
         suite.addTest(new JUnit4TestAdapter(BPlusTreeFakeReuseSelfTest.class));
         suite.addTest(new JUnit4TestAdapter(BPlusTreeReuseSelfTest.class));
         suite.addTest(new JUnit4TestAdapter(IndexStorageSelfTest.class));
-        suite.addTest(new JUnit4TestAdapter(CacheFreeListImplSelfTest.class));
+        suite.addTest(new JUnit4TestAdapter(CacheFreeListSelfTest.class));
         suite.addTest(new JUnit4TestAdapter(DataRegionMetricsSelfTest.class));
         suite.addTest(new JUnit4TestAdapter(SwapPathConstructionSelfTest.class));
         suite.addTest(new JUnit4TestAdapter(BitSetIntSetTest.class));
@@ -230,11 +242,17 @@ public class IgniteBasicTestSuite {
 
         suite.addTest(new JUnit4TestAdapter(RebalanceWithDifferentThreadPoolSizeTest.class));
 
+        suite.addTest(new JUnit4TestAdapter(MessageOrderLogListenerTest.class));
+
         suite.addTest(new JUnit4TestAdapter(ListeningTestLoggerTest.class));
 
         suite.addTest(new JUnit4TestAdapter(PluginNodeValidationTest.class));
 
         suite.addTest(new JUnit4TestAdapter(DeadLockOnNodeLeftExchangeTest.class));
+
+        suite.addTest(new JUnit4TestAdapter(ClassPathContentLoggingTest.class));
+
+        suite.addTest(new JUnit4TestAdapter(IncompleteDeserializationExceptionTest.class));
 
         return suite;
     }

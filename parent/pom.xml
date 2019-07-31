@@ -55,25 +55,24 @@
         <camel.version>2.22.0</camel.version>
         <commons.beanutils.bundle.version>1.9.2_1</commons.beanutils.bundle.version>
         <commons.beanutils.version>1.9.3</commons.beanutils.version>
-        <commons.codec.version>1.11</commons.codec.version>
+        <commons.codec.version>1.12</commons.codec.version>
         <commons.collections.version>3.2.2</commons.collections.version>
         <commons.lang.version>2.6</commons.lang.version>
         <cron4j.version>2.2.5</cron4j.version>
-        <curator.version>2.9.1</curator.version>
+        <curator.version>4.2.0</curator.version>
+        <!--Need this version to test ZooKeeper 3.4.x-->
+        <curator.test.version>2.9.1</curator.test.version>
         <easymock.version>3.4</easymock.version>
         <ezmorph.bundle.version>1.0.6_1</ezmorph.bundle.version>
         <ezmorph.version>1.0.6</ezmorph.version>
         <flume.ng.version>1.7.0</flume.ng.version>
         <guava.retrying.version>2.0.0</guava.retrying.version>
         <guava.version>25.1-jre</guava.version>
-        <guava14.version>14.0.1</guava14.version>
-        <guava16.version>16.0.1</guava16.version>
-        <h2.version>1.4.197</h2.version>
         <hadoop.version>2.9.1</hadoop.version>
         <hamcrest.version>1.2</hamcrest.version>
         <httpclient.version>4.5.1</httpclient.version>
         <httpcore.version>4.4.3</httpcore.version>
-        <jackson.version>2.9.6</jackson.version>
+        <jackson.version>2.9.9</jackson.version>
         <jackson1.version>1.9.13</jackson1.version>
         <jaxb.api.version>2.1</jaxb.api.version>
         <jaxb.impl.version>2.1.14</jaxb.impl.version>
@@ -83,7 +82,7 @@
         <javax.cache.version>1.0.0</javax.cache.version>
         <jboss.rmi.version>1.0.6.Final</jboss.rmi.version>
         <jetbrains.annotations.version>16.0.3</jetbrains.annotations.version>
-        <jetty.version>9.4.11.v20180605</jetty.version>
+        <jetty.version>9.4.18.v20190429</jetty.version>
         <jmh.version>1.13</jmh.version>
         <jms.spec.version>1.1.1</jms.spec.version>
         <jna.version>4.5.2</jna.version>
@@ -116,20 +115,20 @@
         <slf4j.version>1.7.7</slf4j.version>
         <slf4j16.version>1.6.4</slf4j16.version>
         <spark.hadoop.version>2.6.5</spark.hadoop.version>
-        <spark.version>2.3.0</spark.version>
+        <spark.version>2.3.3</spark.version>
         <spring.data.version>1.13.14.RELEASE</spring.data.version> <!-- don't forget to update spring version -->
         <spring.version>4.3.18.RELEASE</spring.version><!-- don't forget to update spring-data version -->
         <spring.data-2.0.version>2.0.9.RELEASE</spring.data-2.0.version> <!-- don't forget to update spring-5.0 version -->
         <spring-5.0.version>5.0.8.RELEASE</spring-5.0.version><!-- don't forget to update spring-data-2.0 version -->
         <spring41.osgi.feature.version>4.1.7.RELEASE_1</spring41.osgi.feature.version>
-        <storm.version>1.1.1</storm.version>
-        <tomcat.version>9.0.10</tomcat.version>
+        <storm.version>1.1.3</storm.version>
+        <tomcat.version>9.0.21</tomcat.version>
         <twitter.hbc.version>2.2.0</twitter.hbc.version>
         <yammer.metrics.annotation.version>2.2.0</yammer.metrics.annotation.version>
         <yammer.metrics.core.version>2.2.0</yammer.metrics.core.version>
         <yardstick.version>0.8.3</yardstick.version>
         <zkclient.version>0.5</zkclient.version>
-        <zookeeper.version>3.4.13</zookeeper.version>
+        <zookeeper.version>3.4.14</zookeeper.version>
 
         <!-- Maven plugins versions -->
         <maven.javadoc.plugin.version>2.10.4</maven.javadoc.plugin.version>
@@ -203,23 +202,6 @@
             <email>vozerov at gridgain dot com</email>
         </developer>
     </developers>
-
-    <repositories>
-        <repository>
-            <releases>
-                <enabled>false</enabled>
-            </releases>
-            <snapshots>
-                <enabled>true</enabled>
-                <updatePolicy>always</updatePolicy>
-                <checksumPolicy>ignore</checksumPolicy>
-            </snapshots>
-            <id>h2database.com</id>
-            <name>Snapshot repository on h2database.com</name>
-            <url>http://h2database.com/m2-repo</url>
-            <layout>default</layout>
-        </repository>
-    </repositories>
 
     <dependencyManagement>
         <dependencies>
@@ -321,7 +303,7 @@
                             <group>
                                 <title>Common Grid APIs</title>
                                 <packages>
-                                    org.gridgain:org.apache.ignite.cluster:org.apache.ignite.lifecycle:org.apache.ignite.configuration:org.apache.ignite.spi:org.apache.ignite.lang:org.apache.ignite.resources:org.apache.ignite.thread:org.apache.ignite.scheduler
+                                    org.apache.ignite:org.apache.ignite.cluster:org.apache.ignite.lifecycle:org.apache.ignite.configuration:org.apache.ignite.spi:org.apache.ignite.lang:org.apache.ignite.resources:org.apache.ignite.thread:org.apache.ignite.scheduler
                                 </packages>
                             </group>
                             <group>
@@ -866,7 +848,8 @@
                                         <exclude>**/books/*.txt</exclude><!--books examples-->
                                         <exclude>src/main/java/org/apache/ignite/examples/streaming/wordcount/*.txt</exclude><!--books examples-->
                                         <exclude>examples/src/main/java/org/apache/ignite/examples/streaming/wordcount/*.txt</exclude><!--books examples-->
-                                        <exclude>**/resources/datasets/**/*</exclude><!--KNN Datasets in ml module-->
+                                        <exclude>**/resources/datasets/**/*</exclude><!--Datasets in ml module-->
+                                        <exclude>**/resources/models/**/*</exclude><!--Pre-trained ml models-->
                                         <exclude>src/main/java/org/jetbrains/annotations/*.java</exclude><!--copyright-->
                                         <exclude>dev-tools/IGNITE-*.patch</exclude>
                                         <exclude>dev-tools/.gradle/**/*</exclude>
@@ -876,6 +859,7 @@
                                         <exclude>src/test/binaries/repo/org/apache/ignite/binary/test2/maven-metadata-local.xml</exclude>
                                         <exclude>src/test/binaries/repo/org/apache/ignite/binary/test1/1.1/test1-1.1.pom</exclude>
                                         <exclude>src/test/binaries/repo/org/apache/ignite/binary/test1/maven-metadata-local.xml</exclude>
+                                        <exclude>src/test/resources/org/apache/ignite/internal/managers/discovery/Wrapper.ser</exclude>
                                         <!--shmem-->
                                         <exclude>ipc/shmem/**/Makefile.in</exclude><!--auto generated files-->
                                         <exclude>ipc/shmem/**/Makefile</exclude><!--auto generated files-->
@@ -960,6 +944,10 @@
                                         <exclude>**/web-console/frontend/node_modules/**</exclude>
                                         <exclude>**/web-console/frontend/**/*.png</exclude>
                                         <exclude>**/web-console/frontend/**/*.svg</exclude>
+                                        <!-- H2 forked module. -->
+                                        <exclude>**/org/h2/**</exclude>
+                                        <exclude>src/test/tools/WEB-INF/console.html</exclude>
+                                        <exclude>src/test/tools/WEB-INF/web.xml</exclude>
                                         <!--Packaging -->
                                         <exclude>packaging/**</exclude>
                                     </excludes>

@@ -92,7 +92,11 @@
         <module>modules/rocketmq</module>
         <module>modules/sqlline</module>
         <module>modules/ml</module>
+        <module>modules/ml/spark-model-parser</module>
+        <module>modules/ml/xgboost-model-parser</module>
+        <module>modules/ml/tensorflow-model-parser</module>
         <module>modules/tensorflow</module>
+        <module>modules/h2</module>
     </modules>
 
     <profiles>
@@ -114,6 +118,7 @@
         <profile>
             <id>all-scala</id><!-- used to update project versions and check all modules compilation -->
             <modules><!-- sorted alphabetically -->
+                <module>modules/ml/mleap-model-parser</module>
                 <module>modules/scalar-2.10</module>
                 <module>modules/scalar</module>
                 <module>modules/spark</module>
@@ -389,15 +394,15 @@
                                             <include name="**/*.sh" />
                                         </fixcrlf>
 
-                                        <zip destfile="${basedir}/target/bin/${ignite.edition}-${project.version}-bin.zip" encoding="UTF-8">
-                                            <zipfileset dir="${basedir}/target/release-package-${ignite.edition}" prefix="${ignite.edition}-${project.version}-bin" filemode="755">
+                                        <zip destfile="${basedir}/target/bin/${ignite.edition}-${project.version}.zip" encoding="UTF-8">
+                                            <zipfileset dir="${basedir}/target/release-package-${ignite.edition}" prefix="${ignite.edition}-${project.version}" filemode="755">
                                                 <include name="**/*.sh" />
                                                 <include name="**/configure" />
                                                 <include name="**/install-sh" />
                                                 <include name="**/compile" />
                                                 <include name="**/missing" />
                                             </zipfileset>
-                                            <zipfileset dir="${basedir}/target/release-package-${ignite.edition}" prefix="${ignite.edition}-${project.version}-bin">
+                                            <zipfileset dir="${basedir}/target/release-package-${ignite.edition}" prefix="${ignite.edition}-${project.version}">
                                                 <exclude name="**/*.sh" />
                                                 <exclude name="**/configure" />
                                                 <exclude name="**/install-sh" />
@@ -531,6 +536,7 @@
             </activation>
 
             <modules>
+                <module>modules/ml/mleap-model-parser</module>
                 <module>modules/scalar</module>
                 <module>modules/spark</module>
                 <module>modules/visor-console</module>

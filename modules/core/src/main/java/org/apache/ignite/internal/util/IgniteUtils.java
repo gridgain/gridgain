@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,20 +16,6 @@
 
 package org.apache.ignite.internal.util;
 
-import javax.management.DynamicMBean;
-import javax.management.JMException;
-import javax.management.MBeanRegistrationException;
-import javax.management.MBeanServer;
-import javax.management.MalformedObjectNameException;
-import javax.management.ObjectName;
-import javax.naming.Context;
-import javax.naming.NamingException;
-import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSession;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
@@ -145,8 +131,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.jar.JarFile;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Handler;
@@ -159,6 +145,20 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
+import javax.management.DynamicMBean;
+import javax.management.JMException;
+import javax.management.MBeanRegistrationException;
+import javax.management.MBeanServer;
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
+import javax.naming.Context;
+import javax.naming.NamingException;
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteClientDisconnectedException;
@@ -225,6 +225,7 @@ import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.P1;
+import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.SB;
@@ -247,7 +248,6 @@ import org.apache.ignite.spi.IgniteSpi;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
 import org.apache.ignite.spi.discovery.DiscoverySpiOrderSupport;
-import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.transactions.TransactionAlreadyCompletedException;
 import org.apache.ignite.transactions.TransactionDeadlockException;
 import org.apache.ignite.transactions.TransactionDuplicateKeyException;
@@ -329,6 +329,9 @@ public abstract class IgniteUtils {
 
     /** Default user version. */
     public static final String DFLT_USER_VERSION = "0";
+
+    /** Lock hold message. */
+    public static final String LOCK_HOLD_MESSAGE = "ReadLock held the lock more than ";
 
     /** Cache for {@link GridPeerDeployAware} fields to speed up reflection. */
     private static final ConcurrentMap<String, IgniteBiTuple<Class<?>, Collection<Field>>> p2pFields =
@@ -1064,6 +1067,37 @@ public abstract class IgniteUtils {
      */
     public static long microTime() {
         return System.nanoTime() / 1000;
+    }
+
+    /**
+     * Convert milliseconds time interval to nanoseconds.
+     *
+     * @param millis Original time interval.
+     * @return Calculated time interval.
+     */
+    public static long millisToNanos(long millis) {
+        return TimeUnit.MILLISECONDS.toNanos(millis);
+    }
+
+    /**
+     * Convert nanoseconds time interval to milliseconds.
+     *
+     * @param nanos Original time interval.
+     * @return Calculated time interval.
+     */
+    public static long nanosToMillis(long nanos) {
+        return TimeUnit.NANOSECONDS.toMillis(nanos);
+    }
+
+    /**
+     * Returns number of milliseconds passed after the given nanos timestamp.
+     *
+     * @param nanos Nanos timestamp.
+     * @return Number of milliseconds passed after the given nanos timestamp.
+     * @see System#nanoTime()
+     */
+    public static long millisSinceNanos(long nanos) {
+        return nanosToMillis(System.nanoTime() - nanos);
     }
 
     /**
@@ -10559,17 +10593,45 @@ public abstract class IgniteUtils {
     }
 
     /**
-     * @param lock Lock.
+     * Puts additional text to thread name.
+     * Calls {@code enhanceThreadName(Thread.currentThread(), text)}.
+     * For details see {@link #enhanceThreadName(Thread, String)}.
+     *
+     * @param text Text to be set in thread name in square [] braces. Does nothing if cannot find suitable braces.
      */
-    public static ReentrantReadWriteLockTracer lockTracer(ReadWriteLock lock) {
-        return new ReentrantReadWriteLockTracer(lock);
+    public static void enhanceThreadName(String text) {
+        enhanceThreadName(Thread.currentThread(), text);
     }
 
     /**
-     * @param lock Lock.
+     * Puts additional text to thread name. It finds first square braces in thread name and
+     * sets required text in them. For example, thread has name "my-thread-[]-%gridname%". After
+     * calling {@code enhanceThreadName(thread, "myText")}, the name of the thread will
+     * be "my-thread-[myText]-%gridname%".<br>
+     * This allows to set additional mutable info to thread, like remote host IP address or so.
+     *
+     * @param thread Thread to be renamed, it must contain square braces in name []. Does nothing if {@code null}.
+     * @param text Text to be set in thread name in square [] braces. Does nothing if cannot find suitable braces.
      */
-    public static LockTracer lockTracer(Lock lock) {
-        return new LockTracer(lock);
+    public static void enhanceThreadName(@Nullable Thread thread, String text) {
+        if (thread == null)
+            return;
+
+        String threadName = thread.getName();
+
+        int idxStart = threadName.indexOf('[');
+        int idxEnd = threadName.indexOf(']');
+
+        if (idxStart < 0 || idxEnd < 0 || idxStart >= idxEnd)
+            return;
+
+        StringBuilder sb = new StringBuilder(threadName.length());
+
+        sb.append(threadName, 0, idxStart + 1);
+        sb.append(text);
+        sb.append(threadName, idxEnd, threadName.length());
+
+        thread.setName(sb.toString());
     }
 
     /**
@@ -11072,102 +11134,125 @@ public abstract class IgniteUtils {
         };
     }
 
-    /**
-     *
-     */
-    public static class ReentrantReadWriteLockTracer implements ReadWriteLock {
+    /** */
+    public static class ReentrantReadWriteLockTracer extends ReentrantReadWriteLock {
+        /** */
+        private static final long serialVersionUID = 0L;
+
         /** Read lock. */
-        private final LockTracer readLock;
+        private final ReadLockTracer readLock;
 
         /** Write lock. */
-        private final LockTracer writeLock;
+        private final WriteLockTracer writeLock;
+
+        /** Lock print threshold. */
+        private long readLockThreshold;
+
+        /** */
+        private IgniteLogger log;
 
         /**
-         * @param delegate Delegate.
+         * @param delegate RWLock delegate.
+         * @param kctx Kernal context.
+         * @param readLockThreshold ReadLock threshold timeout.
+         *
          */
-        public ReentrantReadWriteLockTracer(ReadWriteLock delegate) {
-            readLock = new LockTracer(delegate.readLock());
-            writeLock = new LockTracer(delegate.writeLock());
+        public ReentrantReadWriteLockTracer(ReentrantReadWriteLock delegate, GridKernalContext kctx, long readLockThreshold) {
+            log = kctx.cache().context().logger(getClass());
+
+            readLock = new ReadLockTracer(delegate, log, readLockThreshold);
+
+            writeLock = new WriteLockTracer(delegate);
+
+            this.readLockThreshold = readLockThreshold;
         }
 
         /** {@inheritDoc} */
-        @NotNull @Override public Lock readLock() {
+        @Override public ReadLock readLock() {
             return readLock;
         }
 
         /** {@inheritDoc} */
-        @NotNull @Override public Lock writeLock() {
+        @Override public WriteLock writeLock() {
             return writeLock;
         }
 
-        /**
-         *
-         */
-        public LockTracer getReadLock() {
-            return readLock;
-        }
-
-        /**
-         *
-         */
-        public LockTracer getWriteLock() {
-            return writeLock;
+        /** */
+        public long lockWaitThreshold() {
+            return readLockThreshold;
         }
     }
 
-    /**
-     *
-     */
-    public static class LockTracer implements Lock {
+    /** */
+    private static class ReadLockTracer extends ReentrantReadWriteLock.ReadLock {
+        /** */
+        private static final long serialVersionUID = 0L;
+
         /** Delegate. */
-        private final Lock delegate;
+        private final ReentrantReadWriteLock.ReadLock delegate;
 
-        private final AtomicLong cnt = new AtomicLong();
+        /** */
+        private static final ThreadLocal<T2<Integer, Long>> READ_LOCK_HOLDER_TS =
+            ThreadLocal.withInitial(() -> new T2<>(0, 0L));
 
-        /** Count. */
-        private final ConcurrentMap<String, AtomicLong> cntMap = new ConcurrentHashMap<>();
+        /** */
+        private IgniteLogger log;
 
-        /**
-         * @param delegate Delegate.
-         */
-        public LockTracer(Lock delegate) {
-            this.delegate = delegate;
+        /** */
+        private long readLockThreshold;
+
+        /** */
+        public ReadLockTracer(ReentrantReadWriteLock lock, IgniteLogger log, long readLockThreshold) {
+            super(lock);
+
+            delegate = lock.readLock();
+
+            this.log = log;
+
+            this.readLockThreshold = readLockThreshold;
         }
 
-        /**
-         *
-         */
-        private void inc(){
-            cnt.incrementAndGet();
+        /** */
+        private void inc() {
+            T2<Integer, Long> val = READ_LOCK_HOLDER_TS.get();
 
-            String name = Thread.currentThread().getName();
+            int cntr = val.get1();
 
-            AtomicLong cnt = cntMap.get(name);
+            if (cntr == 0)
+                val.set2(U.currentTimeMillis());
 
-            if (cnt == null) {
-                AtomicLong cnt0 = cntMap.putIfAbsent(name, cnt = new AtomicLong());
+            val.set1(++cntr);
 
-                if (cnt0 != null)
-                    cnt = cnt0;
+            READ_LOCK_HOLDER_TS.set(val);
+        }
+
+        /** */
+        private void dec() {
+            T2<Integer, Long> val = READ_LOCK_HOLDER_TS.get();
+
+            int cntr = val.get1();
+
+            if (--cntr == 0) {
+                long timeout = U.currentTimeMillis() - val.get2();
+
+                if (timeout > readLockThreshold) {
+                    GridStringBuilder sb = new GridStringBuilder();
+
+                    sb.a(LOCK_HOLD_MESSAGE + timeout + " ms." + nl());
+
+                    U.printStackTrace(Thread.currentThread().getId(), sb);
+
+                    U.warn(log, sb.toString());
+                }
             }
 
-            cnt.incrementAndGet();
-        }
+            val.set1(cntr);
 
-        /**
-         *
-         */
-        private void dec(){
-            cnt.decrementAndGet();
-
-            String name = Thread.currentThread().getName();
-
-            AtomicLong cnt = cntMap.get(name);
-
-            cnt.decrementAndGet();
+            READ_LOCK_HOLDER_TS.set(val);
         }
 
         /** {@inheritDoc} */
+        @SuppressWarnings("LockAcquiredButNotSafelyReleased")
         @Override public void lock() {
             delegate.lock();
 
@@ -11175,6 +11260,7 @@ public abstract class IgniteUtils {
         }
 
         /** {@inheritDoc} */
+        @SuppressWarnings("LockAcquiredButNotSafelyReleased")
         @Override public void lockInterruptibly() throws InterruptedException {
             delegate.lockInterruptibly();
 
@@ -11209,24 +11295,16 @@ public abstract class IgniteUtils {
 
             dec();
         }
+    }
 
-        /** {@inheritDoc} */
-        @NotNull @Override public Condition newCondition() {
-            return delegate.newCondition();
-        }
-
-        /**
-         *
-         */
-        public Map<String, AtomicLong> getLockUnlockCounters() {
-            return new HashMap<>(cntMap);
-        }
-
-        /**
-         *
-         */
-        public long getLockUnlockCounter() {
-            return cnt.get();
+    /** */
+    private static class WriteLockTracer extends ReentrantReadWriteLock.WriteLock {
+        /** */
+        private static final long serialVersionUID = 0L;
+        
+        /** */
+        public WriteLockTracer(ReentrantReadWriteLock lock) {
+            super(lock);
         }
     }
 
@@ -11252,5 +11330,17 @@ public abstract class IgniteUtils {
 
             totalWritten += written;
         }
+    }
+
+    /**
+     * @param stripes Number of stripes.
+     * @param grpId Group Id.
+     * @param partId Partition Id.
+     * @return Stripe idx.
+     */
+    public static int stripeIdx(int stripes, int grpId, int partId) {
+        assert partId >= 0;
+
+        return Math.abs((Math.abs(grpId) + partId)) % stripes;
     }
 }

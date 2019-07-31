@@ -26,11 +26,8 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
 
 /** Test for SQL min() and max() optimization */
-@RunWith(JUnit4.class)
 public class IgniteSqlQueryMinMaxTest extends AbstractIndexingCommonTest {
     /** Name of the cache for test */
     private static final String CACHE_NAME = "intCache";
@@ -48,6 +45,8 @@ public class IgniteSqlQueryMinMaxTest extends AbstractIndexingCommonTest {
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         super.afterTest();
+
+        awaitPartitionMapExchange(true, false, null);
 
         stopAllGrids();
     }

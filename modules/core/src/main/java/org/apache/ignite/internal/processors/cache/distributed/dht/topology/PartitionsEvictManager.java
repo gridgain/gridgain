@@ -59,8 +59,8 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
     /** */
     private final int confPermits = getInteger(IGNITE_EVICTION_PERMITS, -1);
 
-    /** Next time of show eviction progress. */
-    private long nextShowProgressTime;
+    /** Last time of show eviction progress. */
+    private long lastShowProgressTimeNanos = System.nanoTime() - U.millisToNanos(evictionProgressFreqMs);
 
     /** */
     private final Map<Integer, GroupEvictionContext> evictionGroupsMap = new ConcurrentHashMap<>();
@@ -212,7 +212,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
      * Shows progress of eviction.
      */
     private void showProgress() {
-        if (U.currentTimeMillis() >= nextShowProgressTime) {
+        if (U.millisSinceNanos(lastShowProgressTimeNanos) >= evictionProgressFreqMs) {
             int size = evictionQueue.size() + 1; // Queue size plus current partition.
 
             if (log.isInfoEnabled())
@@ -223,7 +223,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
             evictionGroupsMap.values().forEach(GroupEvictionContext::showProgress);
 
-            nextShowProgressTime = U.currentTimeMillis() + evictionProgressFreqMs;
+            lastShowProgressTimeNanos = System.nanoTime();
         }
     }
 
@@ -244,7 +244,8 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         if (threads == 0)
             threads = permits = 1;
 
-        log.info("Evict partition permits=" + permits);
+        if (log.isInfoEnabled())
+            log.info("Evict partition permits=" + permits);
 
         evictionQueue = new BucketQueue(threads);
     }
@@ -348,8 +349,9 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         private void awaitFinish(Integer part, IgniteInternalFuture<?> fut) {
             // Wait for last offered partition eviction completion
             try {
-                log.info("Await partition evict, grpName=" + grp.cacheOrGroupName() +
-                    ", grpId=" + grp.groupId() + ", partId=" + part);
+                if (log.isInfoEnabled())
+                    log.info("Await partition evict, grpName=" + grp.cacheOrGroupName() +
+                        ", grpId=" + grp.groupId() + ", partId=" + part);
 
                 fut.get();
             }

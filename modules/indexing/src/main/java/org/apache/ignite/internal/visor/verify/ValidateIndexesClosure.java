@@ -223,7 +223,7 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
             IgniteH2Indexing indexing = (IgniteH2Indexing)qry.getIndexing();
 
             for (GridCacheContext ctx : grpCtx.caches()) {
-                if (cacheNames.contains(ctx.name())) {
+                if (cacheNames == null || cacheNames.contains(ctx.name())) {
                     Collection<GridQueryTypeDescriptor> types = qry.types(ctx.name());
 
                     if (!F.isEmpty(types)) {
@@ -737,7 +737,16 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
             }
         }
 
-        String uniqueIdxName = "[cache=" + ctx.name() + ", idx=" + idx.getName() + "]";
+        CacheGroupContext group = ctx.group();
+
+        String uniqueIdxName = String.format(
+            "[cacheGroup=%s, cacheGroupId=%s, cache=%s, cacheId=%s, idx=%s]",
+            group.name(),
+            group.groupId(),
+            ctx.name(),
+            ctx.cacheId(),
+            idx.getName()
+        );
 
         processedIndexes.incrementAndGet();
 
