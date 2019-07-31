@@ -196,12 +196,6 @@ public class AgentLauncher {
 
                 System.exit(1);
             }
-
-            if ("504".equals(ioCause.getMessage())) {
-                log.error("Failed to establish connection to server (connection timeout).");
-
-                return;
-            }
         }
 
         onError.call(args);
