@@ -220,6 +220,7 @@ public class JdbcThinStatementTimeoutSelfTest extends JdbcThinAbstractSelfTest {
                 stmt.setQueryTimeout(1);
 
                 GridTestUtils.assertThrows(log, () -> {
+                    // This takes 10_000 ms.
                     stmt.executeQuery("select sleep_func(1) from Integer;");
 
                     return null;
@@ -250,6 +251,8 @@ public class JdbcThinStatementTimeoutSelfTest extends JdbcThinAbstractSelfTest {
 
             return null;
         }, SQLTimeoutException.class, "The query was cancelled while executing.");
+
+        stmt.executeQuery("select sleep_func(1) from Integer;");
     }
 
     /**

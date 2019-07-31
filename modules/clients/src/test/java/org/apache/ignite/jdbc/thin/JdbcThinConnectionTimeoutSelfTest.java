@@ -174,6 +174,7 @@ public class JdbcThinConnectionTimeoutSelfTest extends JdbcThinAbstractSelfTest 
             assertEquals(1000, conn.getNetworkTimeout());
 
             conn.setNetworkTimeout(EXECUTOR_STUB, 2000);
+
             assertEquals(2000, conn.getNetworkTimeout());
         }
     }
@@ -212,6 +213,7 @@ public class JdbcThinConnectionTimeoutSelfTest extends JdbcThinAbstractSelfTest 
                 GridTestUtils.assertThrows(log,
                     () -> {
                         stmt.execute("select sleep_func(2000)");
+
                         return null;
                     },
                     SQLException.class, "Connection timed out.");
@@ -219,6 +221,7 @@ public class JdbcThinConnectionTimeoutSelfTest extends JdbcThinAbstractSelfTest 
                 GridTestUtils.assertThrows(log,
                     () -> {
                         stmt.execute("select 1");
+
                         return null;
                     },
                     SQLException.class, "Statement is closed.");
@@ -249,8 +252,7 @@ public class JdbcThinConnectionTimeoutSelfTest extends JdbcThinAbstractSelfTest 
      */
     @Test
     public void testUrlQueryTimeoutProperty() throws Exception {
-        try (final Connection conn = DriverManager.getConnection(URL +
-            "?connectionTimeout=10000&queryTimeout=1")) {
+        try (final Connection conn = DriverManager.getConnection(URL + "?connectionTimeout=10000&queryTimeout=1")) {
             conn.setSchema('"' + DEFAULT_CACHE_NAME + '"');
 
             final Statement stmt = conn.createStatement();
@@ -282,6 +284,7 @@ public class JdbcThinConnectionTimeoutSelfTest extends JdbcThinAbstractSelfTest 
 
             GridTestUtils.assertThrows(log, () -> {
                 stmt.execute("select sleep_func(1000)");
+
                 return null;
             }, SQLException.class, "Connection timed out.");
         }
@@ -302,6 +305,7 @@ public class JdbcThinConnectionTimeoutSelfTest extends JdbcThinAbstractSelfTest 
                     GridTestUtils.assertThrows(log,
                         () -> {
                             stmt.cancel();
+
                             return null;
                         },
                         SQLException.class, "Statement is closed.");
