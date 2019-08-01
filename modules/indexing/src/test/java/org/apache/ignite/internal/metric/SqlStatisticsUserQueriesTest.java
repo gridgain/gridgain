@@ -16,14 +16,20 @@
 
 package org.apache.ignite.internal.metric;
 
+import java.util.Collection;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.query.QueryCancelledException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
+import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
+import org.apache.ignite.internal.processors.query.GridRunningQueryInfo;
 import org.apache.ignite.internal.processors.query.RunningQueryManager;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.spi.metric.Metric;
@@ -75,17 +81,17 @@ public class SqlStatisticsUserQueriesTest extends SqlStatisticsAbstractTest {
     public void testInitialValuesAreZero() throws Exception {
         startGrids(2);
 
-        createCacheFrom(grid(0));
+        createCacheFrom(grid(REDUCER_IDX));
 
-        Assert.assertEquals(0, longMetricValue(0, "success"));
-        Assert.assertEquals(0, longMetricValue(0, "failed"));
-        Assert.assertEquals(0, longMetricValue(0, "canceled"));
-        Assert.assertEquals(0, longMetricValue(0, "failedByOOM"));
+        Assert.assertEquals(0, longMetricValue(REDUCER_IDX, "success"));
+        Assert.assertEquals(0, longMetricValue(REDUCER_IDX, "failed"));
+        Assert.assertEquals(0, longMetricValue(REDUCER_IDX, "canceled"));
+        Assert.assertEquals(0, longMetricValue(REDUCER_IDX, "failedByOOM"));
 
-        Assert.assertEquals(0, longMetricValue(1, "success"));
-        Assert.assertEquals(0, longMetricValue(1, "failed"));
-        Assert.assertEquals(0, longMetricValue(1, "canceled"));
-        Assert.assertEquals(0, longMetricValue(1, "failedByOOM"));
+        Assert.assertEquals(0, longMetricValue(MAPPER_IDX, "success"));
+        Assert.assertEquals(0, longMetricValue(MAPPER_IDX, "failed"));
+        Assert.assertEquals(0, longMetricValue(MAPPER_IDX, "canceled"));
+        Assert.assertEquals(0, longMetricValue(MAPPER_IDX, "failedByOOM"));
     }
 
     /**
@@ -235,9 +241,44 @@ public class SqlStatisticsUserQueriesTest extends SqlStatisticsAbstractTest {
         });
     }
 
+    /**
+     * If query got canceled during execution, only general failure metric and cancel metric should be incremented only
+     * on reduce node.
+     */
     @Test
-    public void testUnregiserableQueriesAreNotCounted() throws Exception {
+    public void testIfQueryCanceledThenOnlyReducerMetricUpdated() throws Exception {
+        startGrids(2);
 
+        IgniteCache cache = createCacheFrom(grid(REDUCER_IDX));
+
+        assertNegativeMetricIncrementedOnReducer("canceled", () -> startAndKillQuery(cache));
+    }
+
+    /**
+     * Starts and kills query for sure.
+     *
+     * @param cache api entry point.
+     */
+    private void startAndKillQuery(IgniteCache cache) {
+        try {
+            IgniteInternalFuture qryCanceled = GridTestUtils.runAsync(() -> {
+                GridTestUtils.assertThrowsAnyCause(log,
+                    () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID <> suspendHook(ID)")).getAll(),
+                    QueryCancelledException.class,
+                    null);
+            });
+
+            SuspendQuerySqlFunctions.awaitQueryStopsInTheMiddle();
+
+            killAllQueriesOn(REDUCER_IDX);
+
+            SuspendQuerySqlFunctions.resumeQueryExecution();
+
+            qryCanceled.get(WAIT_OP_TIMEOUT_SEC, TimeUnit.SECONDS);
+        }
+        catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
@@ -343,5 +384,23 @@ public class SqlStatisticsUserQueriesTest extends SqlStatisticsAbstractTest {
         Assert.assertTrue("Expected long metric, but got "+ metric.getClass(),  metric instanceof LongMetric);
 
         return ((LongMetric)metric).value();
+    }
+
+    /**
+     * Cancel all the query on the node with the specified index.
+     *
+     * @param nodeIdx Node index.
+     */
+    private void killAllQueriesOn(int nodeIdx) {
+        IgniteEx node = grid(nodeIdx);
+
+        Collection<GridRunningQueryInfo> queries = node.context().query().getIndexing().runningQueries(-1);
+
+        for (GridRunningQueryInfo queryInfo : queries) {
+            String killId = queryInfo.globalQueryId();
+
+            node.context().query().querySqlFields(
+                new SqlFieldsQuery("KILL QUERY '" + killId + "'").setSchema("PUBLIC"), false);
+        }
     }
 }
