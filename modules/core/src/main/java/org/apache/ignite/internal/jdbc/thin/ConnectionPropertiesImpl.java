@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,9 +25,10 @@ import java.util.StringTokenizer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.ClientConnectorConfiguration;
 import org.apache.ignite.internal.processors.odbc.SqlStateCode;
-import org.apache.ignite.internal.util.HostAndPortRange;
 import org.apache.ignite.internal.processors.query.NestedTxMode;
+import org.apache.ignite.internal.util.HostAndPortRange;
 import org.apache.ignite.internal.util.typedef.F;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Holds JDBC connection properties.
@@ -182,6 +183,18 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
     private StringProperty passwd = new StringProperty(
         "password", "User's password", null, null, false, null);
 
+    /** Query timeout. */
+    private IntegerProperty qryTimeout = new IntegerProperty("queryTimeout",
+        "Sets the number of seconds the driver will wait for a <code>Statement</code> object to execute." +
+            " Zero means there is no limits.",
+        0, false, 0, Integer.MAX_VALUE);
+
+    /** JDBC connection timeout. */
+    private IntegerProperty connTimeout = new IntegerProperty("connectionTimeout",
+        "Sets the number of milliseconds JDBC client will waits for server to response." +
+            " Zero means there is no limits.",
+        0, false, 0, Integer.MAX_VALUE);
+
     /** Properties array. */
     private final ConnectionProperty [] propsArray = {
         distributedJoins, enforceJoinOrder, collocated, replicatedOnly, autoCloseServerCursor,
@@ -190,7 +203,9 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
         sslClientCertificateKeyStoreUrl, sslClientCertificateKeyStorePassword, sslClientCertificateKeyStoreType,
         sslTrustCertificateKeyStoreUrl, sslTrustCertificateKeyStorePassword, sslTrustCertificateKeyStoreType,
         sslTrustAll, sslFactory,
-        user, passwd
+        user, passwd,
+        qryTimeout,
+        connTimeout
     };
 
     /** {@inheritDoc} */
@@ -484,6 +499,26 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
     /** {@inheritDoc} */
     @Override public String getPassword() {
         return passwd.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override public Integer getQueryTimeout() {
+        return qryTimeout.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setQueryMaxMemory(@Nullable Integer timeout) throws SQLException {
+        qryTimeout.setValue(timeout);
+    }
+
+    /** {@inheritDoc} */
+    @Override public int getConnectionTimeout() {
+        return connTimeout.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setConnectionTimeout(@Nullable Integer timeout) throws SQLException {
+        connTimeout.setValue(timeout);
     }
 
     /**
@@ -993,7 +1028,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
         /** {@inheritDoc} */
         @Override void init(String str) throws SQLException {
             if (str == null)
-                val = (int)dfltVal;
+                val = (Number)dfltVal;
             else {
                 try {
                     setValue(parse(str));
