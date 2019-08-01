@@ -26,6 +26,7 @@ import javax.cache.CacheException;
 
 import org.apache.ignite.cache.query.Query;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.query.h2.H2ConnectionWrapper;
 import org.apache.ignite.internal.util.typedef.F;
 import org.h2.jdbc.JdbcConnection;
 import org.jetbrains.annotations.Nullable;
@@ -41,7 +42,7 @@ public class ReduceQueryRun {
     private CountDownLatch latch;
 
     /** */
-    private final JdbcConnection conn;
+    private final H2ConnectionWrapper conn;
 
     /** */
     private final int pageSize;
@@ -60,12 +61,12 @@ public class ReduceQueryRun {
      * @param dataPageScanEnabled If data page scan is enabled.
      */
     ReduceQueryRun(
-        Connection conn,
+        H2ConnectionWrapper conn,
         int idxsCnt,
         int pageSize,
         Boolean dataPageScanEnabled
     ) {
-        this.conn = (JdbcConnection)conn;
+        this.conn = conn;
 
         idxs = new ArrayList<>(idxsCnt);
 
@@ -146,7 +147,7 @@ public class ReduceQueryRun {
     /**
      * @return Connection.
      */
-    JdbcConnection connection() {
+    H2ConnectionWrapper connection() {
         return conn;
     }
 

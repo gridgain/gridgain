@@ -42,6 +42,7 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.util.GridCloseableIteratorAdapterEx;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T3;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.h2.table.Column;
 import org.jetbrains.annotations.Nullable;
@@ -621,7 +622,7 @@ public final class UpdatePlan {
         private final EnlistOperation op;
 
         /** */
-        private volatile ThreadLocalObjectPool<H2ConnectionWrapper>.Reusable conn;
+        private volatile H2ConnectionWrapper conn;
 
         /**
          * @param connMgr Connection manager.
@@ -646,20 +647,21 @@ public final class UpdatePlan {
 
         /** {@inheritDoc} */
         @Override public void beforeDetach() {
-            ThreadLocalObjectPool<H2ConnectionWrapper>.Reusable conn0 = conn = connMgr.detachThreadConnection();
+            // TODO: wrong!
+            H2ConnectionWrapper conn0 = conn = connMgr.connection();
 
             if (isClosed())
-                conn0.recycle();
+                conn0.close();
         }
 
         /** {@inheritDoc} */
         @Override protected void onClose() {
             cur.close();
 
-            ThreadLocalObjectPool<H2ConnectionWrapper>.Reusable conn0 = conn;
+            H2ConnectionWrapper conn0 = conn;
 
             if (conn0 != null)
-                conn0.recycle();
+                U.closeQuiet(conn0);
         }
 
         /** {@inheritDoc} */

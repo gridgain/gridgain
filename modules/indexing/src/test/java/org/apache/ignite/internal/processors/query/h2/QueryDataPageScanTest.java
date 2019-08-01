@@ -508,7 +508,7 @@ public class QueryDataPageScanTest extends GridCommonAbstractTest {
         /** {@inheritDoc} */
         @Override public ResultSet executeSqlQueryWithTimer(
             PreparedStatement stmt,
-            Connection conn,
+            H2ConnectionWrapper conn,
             String sql,
             @Nullable Collection<Object> params,
             int timeoutMillis,
