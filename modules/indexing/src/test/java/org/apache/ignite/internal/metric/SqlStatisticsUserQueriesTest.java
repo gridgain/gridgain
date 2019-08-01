@@ -16,25 +16,18 @@
 
 package org.apache.ignite.internal.metric;
 
-import java.util.Collections;
 import java.util.Map;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.cache.CacheException;
-import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteDataStreamer;
-import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
-import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.query.RunningQueryManager;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.spi.metric.Metric;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -46,12 +39,7 @@ import static org.apache.ignite.internal.processors.query.RunningQueryManager.SQ
  *
  * @see RunningQueryManager
  */
-public class SqlStatisticsUserQueriesTest extends GridCommonAbstractTest {
-    /**
-     * Number of rows in the test table.
-     */
-    private static final int TABLE_SIZE = 10_000;
-
+public class SqlStatisticsUserQueriesTest extends SqlStatisticsAbstractTest {
     /** Short names of all tested metrics. */
     private static final String[] ALL_METRICS = {"success", "failed", "canceled", "failedByOOM"};
 
@@ -61,31 +49,6 @@ public class SqlStatisticsUserQueriesTest extends GridCommonAbstractTest {
     /** The second node index. This node should execute only map parts of the queries. */
     private static final int MAPPER_IDX = 1;
 
-
-    /**
-     * Start the cache with a test table and test data.
-     */
-    private IgniteCache createCacheFrom(Ignite node) {
-        CacheConfiguration<Integer, String> ccfg = new CacheConfiguration<Integer, String>("TestCache")
-            .setSqlFunctionClasses(SuspendQuerySqlFunctions.class)
-            .setQueryEntities(Collections.singleton(
-                new QueryEntity(Integer.class.getName(), String.class.getName())
-                    .setTableName("TAB")
-                    .addQueryField("id", Integer.class.getName(), null)
-                    .addQueryField("name", String.class.getName(), null)
-                    .setKeyFieldName("id")
-                    .setValueFieldName("name")
-            ));
-
-        IgniteCache<Integer, String> cache = node.createCache(ccfg);
-
-        try (IgniteDataStreamer<Object, Object> ds = node.dataStreamer("TestCache")) {
-            for (int i = 0; i < TABLE_SIZE; i++)
-                ds.addData(i, UUID.randomUUID().toString());
-        }
-        
-        return cache;
-    }
 
     /**
      *

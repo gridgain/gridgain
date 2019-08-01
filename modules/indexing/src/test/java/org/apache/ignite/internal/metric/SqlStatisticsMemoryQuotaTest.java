@@ -16,35 +16,25 @@
 
 package org.apache.ignite.internal.metric;
 
-import java.util.Collections;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.spi.metric.Metric;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE;
-import static org.apache.ignite.internal.metric.SuspendQuerySqlFunctions.TABLE_SIZE;
-import static org.apache.ignite.internal.metric.SuspendQuerySqlFunctions.WAIT_OP_TIMEOUT_SEC;
-
 /**
  * Tests for {@link SqlStatisticsHolderMemoryQuotas}. In this test we check that memory metrics reports plausible
  * values. Here we want to verify metrics based on the new framework work well, not {@link H2MemoryTracker}.
  */
-public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
+public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
     /**
      * This callback validates that some memory is reserved.
      */
@@ -62,29 +52,6 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
     };
 
     /**
-     * Start the cache with a test table and test data.
-     */
-    private IgniteCache createCacheFrom(Ignite node) {
-        CacheConfiguration<Integer, String> ccfg = new CacheConfiguration<Integer, String>("TestCache")
-            .setSqlFunctionClasses(SuspendQuerySqlFunctions.class)
-            .setQueryEntities(Collections.singleton(
-                new QueryEntity(Integer.class.getName(), String.class.getName())
-                    .setTableName("TAB")
-                    .addQueryField("id", Integer.class.getName(), null)
-                    .addQueryField("name", String.class.getName(), null)
-                    .setKeyFieldName("id")
-                    .setValueFieldName("name")
-            ));
-
-        IgniteCache<Integer, String> cache = node.createCache(ccfg);
-
-        for (int i = 0; i < TABLE_SIZE; i++)
-            cache.put(i, UUID.randomUUID().toString());
-
-        return cache;
-    }
-
-    /**
      * Clean up.
      */
     @After
@@ -97,7 +64,7 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
      */
     @Before
     public void setup() {
-        SuspendQuerySqlFunctions.refresh();
+        SqlStatisticsAbstractTest.SuspendQuerySqlFunctions.refresh();
     }
 
 
@@ -183,12 +150,12 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
         IgniteInternalFuture distQryIsDone =
             runAsyncX(() -> cache.query(new SqlFieldsQuery(scanQry)).getAll());
 
-        SuspendQuerySqlFunctions.awaitQueryStopsInTheMiddle();
+        SqlStatisticsAbstractTest.SuspendQuerySqlFunctions.awaitQueryStopsInTheMiddle();
 
         validateMemoryUsageOn(connNodeIdx, MEMORY_IS_USED);
         validateMemoryUsageOn(otherNodeIdx, MEMORY_IS_USED);
 
-        SuspendQuerySqlFunctions.resumeQueryExecution();
+        SqlStatisticsAbstractTest.SuspendQuerySqlFunctions.resumeQueryExecution();
 
         distQryIsDone.get(WAIT_OP_TIMEOUT_SEC, TimeUnit.SECONDS);
 
@@ -216,12 +183,12 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
         IgniteInternalFuture locQryIsDone =
             runAsyncX(() -> cache.query(new SqlFieldsQuery(scanQry).setLocal(true)).getAll());
 
-        SuspendQuerySqlFunctions.awaitQueryStopsInTheMiddle();
+        SqlStatisticsAbstractTest.SuspendQuerySqlFunctions.awaitQueryStopsInTheMiddle();
 
         validateMemoryUsageOn(connNodeIdx, MEMORY_IS_USED);
         validateMemoryUsageOn(otherNodeIdx, MEMORY_IS_FREE);
 
-        SuspendQuerySqlFunctions.resumeQueryExecution();
+        SqlStatisticsAbstractTest.SuspendQuerySqlFunctions.resumeQueryExecution();
 
         locQryIsDone.get(WAIT_OP_TIMEOUT_SEC, TimeUnit.SECONDS);
 
@@ -279,7 +246,7 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
         IgniteInternalFuture distQryIsDone =
             runAsyncX(() -> cache.query(new SqlFieldsQuery(scanQry)).getAll());
 
-        SuspendQuerySqlFunctions.awaitQueryStopsInTheMiddle();
+        SqlStatisticsAbstractTest.SuspendQuerySqlFunctions.awaitQueryStopsInTheMiddle();
 
         validateMemoryUsageOn(connNodeIdx, quotaUnlim);
         validateMemoryUsageOn(otherNodeIdx, quotaUnlim);
@@ -287,7 +254,7 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
         assertEquals(0, longMetricValue(connNodeIdx, "requests"));
         assertEquals(0, longMetricValue(otherNodeIdx, "requests"));
 
-        SuspendQuerySqlFunctions.resumeQueryExecution();
+        SqlStatisticsAbstractTest.SuspendQuerySqlFunctions.resumeQueryExecution();
 
         distQryIsDone.get(WAIT_OP_TIMEOUT_SEC, TimeUnit.SECONDS);
 
@@ -296,23 +263,6 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
 
         assertEquals(0, longMetricValue(connNodeIdx, "requests"));
         assertEquals(0, longMetricValue(otherNodeIdx, "requests"));
-    }
-
-    /**
-     * Starts grid with specified global (max memory quota) value.
-     *
-     * @param nodeIdx test framework index to start node with.
-     * @param maxMem value of default global quota to set on node start; -1 for unlimited.
-     */
-    private void startGridWithMaxMem(int nodeIdx, long maxMem) throws Exception {
-        try {
-            System.setProperty(IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE, String.valueOf(maxMem));
-
-            startGrid(nodeIdx);
-        }
-        finally {
-            System.clearProperty(IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE);
-        }
     }
 
     /**
