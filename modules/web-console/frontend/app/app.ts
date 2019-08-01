@@ -124,6 +124,7 @@ import panelCollapsible from './components/panel-collapsible';
 import clusterSelector from './components/cluster-selector';
 import connectedClusters from './components/connected-clusters-badge';
 import connectedClustersDialog from './components/connected-clusters-dialog';
+import stacktraceViewerDialog from './components/stacktrace-viewer-dialog';
 import pageLanding from './components/page-landing';
 import passwordVisibility from './components/password-visibility';
 import progressLine from './components/progress-line';
@@ -152,7 +153,6 @@ import * as icons from '../public/images/icons';
 
 import uiRouter from '@uirouter/angularjs';
 import {upgradeModule} from '@uirouter/angular-hybrid';
-import stacktraceViewer from './components/stacktrace-viewer';
 
 export default angular
     .module('ignite-console', [
@@ -226,6 +226,7 @@ export default angular
         servicesModule.name,
         connectedClusters.name,
         connectedClustersDialog.name,
+        stacktraceViewerDialog.name,
         igniteListOfRegisteredUsers.name,
         dialogAdminCreateUser.name,
         pageLanding.name,
@@ -248,8 +249,7 @@ export default angular
         timedRedirection.name,
         signupConfirmation.name,
         noDataCmp.name,
-        globalProgressBar.name,
-        stacktraceViewer.name
+        globalProgressBar.name
     ])
     // Routing should wait until Angular loads. Angular app part will start it back using serviceBootstrap component.
     .config(['$urlServiceProvider', ($urlService) => $urlService.deferIntercept()])

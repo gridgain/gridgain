@@ -16,7 +16,7 @@
 .stacktrace-viewer__cause(
     ng-click='$ctrl.toggleProperty()'
 )
-    .stacktrace-viewer__cause_message(ng-style='{"padding-left": "30px"}')
+    .stacktrace-viewer__cause_message
         .stacktrace-viewer__expander
             div(ng-switch='$ctrl.cause.expanded')
                 svg(ng-switch-when='true' ignite-icon='collapse')
@@ -26,7 +26,7 @@
     ng-show='$ctrl.cause.expanded && $ctrl.cause.stacktrace'
     ng-repeat='trace in $ctrl.cause.stacktrace track by $index'
 )
-    .stacktrace-viewer__trace_message(ng-style='{"padding-left": "60px"}')
+    .stacktrace-viewer__trace_message
         span {{ trace.message }}
 .stacktrace-viewer__trace(ng-if='$ctrl.cause.expanded && !$ctrl.cause.stacktrace')
     .stacktrace-viewer__trace_message(ng-style='{"padding-left": "60px"}')

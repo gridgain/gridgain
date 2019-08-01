@@ -14,12 +14,14 @@
  * limitations under the License.
  */
 
-// import _ from 'lodash';
+import './style.scss';
+import template from './template.pug';
+import controller from './controller';
 
-export default class StacktraceViewer {
-    constructor() {}
-
-    $onInit() {
-        this.expanded = false;
+export default {
+    template,
+    controller,
+    bindings: {
+        items: '<'
     }
-}
+};

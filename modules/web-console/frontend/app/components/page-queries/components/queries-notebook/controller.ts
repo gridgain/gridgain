@@ -25,7 +25,6 @@ import {CSV} from 'app/services/CSV';
 import paragraphRateTemplateUrl from 'views/sql/paragraph-rate.tpl.pug';
 import cacheMetadataTemplateUrl from 'views/sql/cache-metadata.tpl.pug';
 import chartSettingsTemplateUrl from 'views/sql/chart-settings.tpl.pug';
-import messageTemplateUrl from 'views/templates/stacktrace-viewer.tpl.pug';
 
 import {default as Notebook} from '../../notebook.service';
 import {default as MessagesServiceFactory} from 'app/services/Messages.service';
@@ -290,16 +289,16 @@ class Paragraph {
 
 // Controller for SQL notebook screen.
 export class NotebookCtrl {
-    static $inject = ['Demo', 'IgniteInput', '$scope', '$http', '$q', '$timeout', '$transitions', '$interval', '$animate', '$location', '$anchorScroll', '$state', '$filter', '$modal', '$popover', '$window', 'IgniteLoading', 'IgniteLegacyUtils', 'IgniteMessages', 'IgniteConfirm', 'AgentManager', 'IgniteChartColors', 'IgniteNotebook', 'IgniteNodes', 'uiGridExporterConstants', 'IgniteVersion', 'IgniteActivitiesData', 'JavaTypes', 'IgniteCopyToClipboard', 'CSV', 'IgniteErrorParser', 'DemoInfo'];
+    static $inject = ['Demo', 'IgniteInput', '$scope', '$http', '$q', '$timeout', '$transitions', '$interval', '$animate', '$location', '$anchorScroll', '$state', '$filter', '$modal', '$popover', '$window', 'IgniteLoading', 'IgniteLegacyUtils', 'IgniteMessages', 'IgniteConfirm', 'AgentManager', 'IgniteChartColors', 'IgniteNotebook', 'IgniteNodes', 'uiGridExporterConstants', 'IgniteVersion', 'IgniteActivitiesData', 'JavaTypes', 'IgniteCopyToClipboard', 'CSV', 'IgniteErrorParser', 'DemoInfo', 'StacktraceViewerDialog'];
 
     /**
      * @param {CSV} CSV
      */
-    constructor(private Demo: DemoService, private IgniteInput: InputDialog, private $scope, $http, $q, $timeout, $transitions, $interval, $animate, $location, $anchorScroll, $state, $filter, $modal, $popover, $window, Loading, LegacyUtils, private Messages: ReturnType<typeof MessagesServiceFactory>, private Confirm: ReturnType<typeof LegacyConfirmServiceFactory>, agentMgr, IgniteChartColors, private Notebook: Notebook, Nodes, uiGridExporterConstants, Version, ActivitiesData, JavaTypes, IgniteCopyToClipboard, CSV, errorParser, DemoInfo) {
+    constructor(private Demo: DemoService, private IgniteInput: InputDialog, private $scope, $http, $q, $timeout, $transitions, $interval, $animate, $location, $anchorScroll, $state, $filter, $modal, $popover, $window, Loading, LegacyUtils, private Messages: ReturnType<typeof MessagesServiceFactory>, private Confirm: ReturnType<typeof LegacyConfirmServiceFactory>, agentMgr, IgniteChartColors, private Notebook: Notebook, Nodes, uiGridExporterConstants, Version, ActivitiesData, JavaTypes, IgniteCopyToClipboard, CSV, errorParser, DemoInfo, stacktraceViewerDialog) {
         const $ctrl = this;
 
         this.CSV = CSV;
-        Object.assign(this, { $scope, $http, $q, $timeout, $transitions, $interval, $animate, $location, $anchorScroll, $state, $filter, $modal, $popover, $window, Loading, LegacyUtils, Messages, Confirm, agentMgr, IgniteChartColors, Notebook, Nodes, uiGridExporterConstants, Version, ActivitiesData, JavaTypes, errorParser, DemoInfo });
+        Object.assign(this, { $scope, $http, $q, $timeout, $transitions, $interval, $animate, $location, $anchorScroll, $state, $filter, $modal, $popover, $window, Loading, LegacyUtils, Messages, Confirm, agentMgr, IgniteChartColors, Notebook, Nodes, uiGridExporterConstants, Version, ActivitiesData, JavaTypes, errorParser, DemoInfo, stacktraceViewerDialog });
 
         // Define template urls.
         $ctrl.paragraphRateTemplateUrl = paragraphRateTemplateUrl;
@@ -2151,12 +2150,9 @@ export class NotebookCtrl {
             }
         };
 
-        $scope.showStackTrace = function(paragraph) {
+        $scope.showStackTrace = (paragraph) => {
             if (!_.isNil(paragraph)) {
-                const scope = $scope.$new();
-
-                scope.title = 'Error details';
-                scope.content = [];
+                const stacktrace = [];
 
                 const addToTrace = (item) => {
                     if (nonNil(item)) {
@@ -2165,7 +2161,7 @@ export class NotebookCtrl {
                         if (!_.isEmpty(item.stackTrace))
                             content.stacktrace = _.map(item.stackTrace, (message) => ({ message }));
 
-                        scope.content.push(content);
+                        stacktrace.push(content);
 
                         addToTrace(item.cause);
 
@@ -2175,8 +2171,7 @@ export class NotebookCtrl {
 
                 addToTrace(paragraph.error.root);
 
-                // Show a basic modal from a controller
-                $modal({scope, templateUrl: messageTemplateUrl, show: true});
+                this.stacktraceViewerDialog.show('Error details', stacktrace);
             }
         };
 

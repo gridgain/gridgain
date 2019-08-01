@@ -14,7 +14,12 @@
  * limitations under the License.
  */
 
+import { Stacktrace } from 'app/types/index';
+
 export default class PropertyItem {
+    /** Stacktrace item to show. */
+    cause: Stacktrace;
+
     $onInit() {
         this.cause.expanded = false;
     }

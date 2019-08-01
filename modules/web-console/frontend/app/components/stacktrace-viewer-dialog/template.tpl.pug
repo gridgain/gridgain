@@ -21,10 +21,9 @@
                     svg(ignite-icon="cross")
                 h4.modal-title
                     svg(ignite-icon="attention")
-                    | {{title}}
-            .stacktrace-viewer-body(ng-show='content')
-                stacktrace-viewer(data-items="content")
+                    | {{$ctrl.title}}
+            .stacktrace-viewer-body
+                stacktrace-tree(data-items="$ctrl.stacktrace")
             .modal-footer
-                div(ng-show='meta') {{meta}}
                 div
-                    button.btn-ignite.btn-ignite--success(ng-click='$hide()') Ok
+                    button.btn-ignite.btn-ignite--success(ng-click='$hide()') OK

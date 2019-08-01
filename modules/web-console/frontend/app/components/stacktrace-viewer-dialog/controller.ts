@@ -14,12 +14,23 @@
  * limitations under the License.
  */
 
-import angular from 'angular';
+import { Stacktrace } from 'app/types/index';
 
-import stacktraceViewer from './component';
-import stacktraceItem from './components/stacktrace-item';
+export default class {
+    static $inject = ['title', 'stacktrace'];
 
-export default angular
-    .module('ignite-console.stacktrace-viewer', [])
-    .component('stacktraceItem', stacktraceItem)
-    .component('stacktraceViewer', stacktraceViewer);
+    /** Title of stacktrace view dialog. */
+    title: string;
+
+    /** Stacktrace elements to show. */
+    stacktrace: Stacktrace;
+
+    /**
+     * @param {string} title Title of stacktrace view dialog.
+     * @param {Stacktrace} stacktrace Stacktrace elements to show.
+     */
+    constructor(title: string, stacktrace: Stacktrace) {
+        this.title = title;
+        this.stacktrace = stacktrace;
+    }
+}
