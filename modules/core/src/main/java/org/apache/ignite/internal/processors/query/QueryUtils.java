@@ -1484,18 +1484,17 @@ public class QueryUtils {
     }
 
     /**
-     * Determines if exception happened due to OOM protection.
-     *
      * @param reason exception to check.
-     * @return {@code true} if provided exception is thrown when we failed to reserve memory, {@code false} otherwise.
+     * @return {@code true} if exception happened during local query or reduce step execution due to OOM protection,
+     * {@code false} otherwise.
      */
-    public static boolean isOomFailure(Throwable reason) {
+    public static boolean isLocalOrReduceOom(Throwable reason) {
         IgniteSQLException cause = X.cause(reason, IgniteSQLException.class);
 
-        if (cause == null)
+        if (cause == null || cause instanceof IgniteSQLMapStepException)
             return false;
 
-        return cause.statusCode() ==  IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY;
+        return cause.statusCode() == IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY;
     }
 
     /**

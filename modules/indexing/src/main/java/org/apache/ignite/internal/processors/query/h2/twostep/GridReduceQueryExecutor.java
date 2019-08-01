@@ -54,10 +54,10 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccQueryTracker;
 import org.apache.ignite.internal.processors.cache.query.GridCacheSqlQuery;
 import org.apache.ignite.internal.processors.cache.query.GridCacheTwoStepQuery;
-import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.GridQueryCacheObjectsIterator;
 import org.apache.ignite.internal.processors.query.GridQueryCancel;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
+import org.apache.ignite.internal.processors.query.IgniteSQLMapStepException;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.H2ConnectionWrapper;
 import org.apache.ignite.internal.processors.query.h2.H2FieldsIterator;
@@ -230,13 +230,9 @@ public class GridReduceQueryExecutor {
                 e = new CacheException(mapperFailedMsg, new QueryCancelledException());
             else if (failCode == GridQueryFailResponse.RETRY_QUERY)
                 e = new CacheException(mapperFailedMsg, new QueryRetryException(msg));
-            else if (sqlErrCode == IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY) {
-                // If map query failed due to OOM protection, reduce query should just fail, higing sqlErrCode.
-                e = new CacheException(mapperFailedMsg);
-            }
             else {
                 e = new CacheException(mapperFailedMsg, sqlErrCode > 0 ?
-                    new IgniteSQLException(msg, sqlErrCode) : null);
+                    new IgniteSQLMapStepException(msg, sqlErrCode) : null);
             }
 
             r.setStateOnException(nodeId, e);

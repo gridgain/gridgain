@@ -149,7 +149,7 @@ public class RunningQueryManager {
 
         GridRunningQueryInfo qry = runs.remove(qryId);
 
-        // TODO review: would 'assert qry != null' be better?
+        // Attempt to unregister query twice.
         if (qry == null)
             return;
 
@@ -169,7 +169,7 @@ public class RunningQueryManager {
                 if (qry.isCanceled())
                     canceledQrsCnt.increment();
 
-                boolean oomFail = QueryUtils.isOomFailure(failReason);
+                boolean oomFail = QueryUtils.isLocalOrReduceOom(failReason);
 
                 assert !(qry.isCanceled() && oomFail) : "Query cant be canceled and failed by OOM at the same time";
 
