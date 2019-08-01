@@ -624,8 +624,6 @@ public class GridReduceQueryExecutor {
                             if (QueryUtils.wasCancelled(err))
                                 throw new QueryCancelledException(); // Throw correct exception.
 
-
-
                             throw err;
                         }
                         else {
