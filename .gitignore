@@ -105,3 +105,6 @@ packages
 
 #NodeJs files
 /modules/platforms/nodejs/node_modules
+
+#Clover database
+**/.clover/clover.snapshot

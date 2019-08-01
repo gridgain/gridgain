@@ -16,18 +16,14 @@
 
 package org.apache.ignite.internal.jdbc.thin;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcRawBinarylizable;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.*;
 
 /**
  * Contains cache partitions distributions with corresponding set of cache ids.
@@ -54,8 +50,7 @@ public class JdbcThinAffinityAwarenessMappingGroup implements JdbcRawBinarylizab
      * @param partitionsMappings Partitions mappings.
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
-    public JdbcThinAffinityAwarenessMappingGroup(@NotNull Integer cacheId, Map<UUID,
-        @NotNull Set<Integer>> partitionsMappings) {
+    public JdbcThinAffinityAwarenessMappingGroup(@NotNull Integer cacheId, @NotNull Map<UUID, Set<Integer>> partitionsMappings) {
         cacheIds.add(cacheId);
         this.partitionsMappings = partitionsMappings;
     }

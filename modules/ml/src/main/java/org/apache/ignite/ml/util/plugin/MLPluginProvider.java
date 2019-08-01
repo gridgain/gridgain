@@ -16,8 +16,6 @@
 
 package org.apache.ignite.ml.util.plugin;
 
-import java.io.Serializable;
-import java.util.UUID;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -29,15 +27,11 @@ import org.apache.ignite.internal.processors.platform.client.ThinClientCustomQue
 import org.apache.ignite.ml.inference.storage.descriptor.ModelDescriptorStorageFactory;
 import org.apache.ignite.ml.inference.storage.model.ModelStorageFactory;
 import org.apache.ignite.ml.inference.storage.model.thinclient.ModelStorateThinClientProcessor;
-import org.apache.ignite.plugin.CachePluginContext;
-import org.apache.ignite.plugin.CachePluginProvider;
-import org.apache.ignite.plugin.ExtensionRegistry;
-import org.apache.ignite.plugin.IgnitePlugin;
-import org.apache.ignite.plugin.PluginConfiguration;
-import org.apache.ignite.plugin.PluginContext;
-import org.apache.ignite.plugin.PluginProvider;
-import org.apache.ignite.plugin.PluginValidationException;
+import org.apache.ignite.plugin.*;
 import org.jetbrains.annotations.Nullable;
+
+import java.io.Serializable;
+import java.util.UUID;
 
 /**
  * Machine learning inference plugin provider.
@@ -103,7 +97,7 @@ public class MLPluginProvider implements PluginProvider<MLPluginConfiguration> {
     }
 
     /** {@inheritDoc} */
-    @Override public <T> @Nullable T createComponent(PluginContext ctx, Class<T> cls) {
+    @Override @Nullable public <T> T createComponent(PluginContext ctx, Class<T> cls) {
         return null;
     }
 

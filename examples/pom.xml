@@ -272,7 +272,7 @@
                 <executions>
                     <execution>
                         <id>add-sources</id>
-                        <phase>generate-sources</phase>
+                        <phase>validate</phase>
                         <goals>
                             <goal>add-source</goal>
                         </goals>

@@ -18,51 +18,19 @@ package org.apache.ignite.testsuites;
 
 import org.apache.ignite.ClassPathContentLoggingTest;
 import org.apache.ignite.GridSuppressedExceptionSelfTest;
+import org.apache.ignite.OpenCloverOptimizer;
 import org.apache.ignite.failure.FailureHandlerTriggeredTest;
 import org.apache.ignite.failure.OomFailureHandlerTest;
 import org.apache.ignite.failure.StopNodeFailureHandlerTest;
 import org.apache.ignite.failure.StopNodeOrHaltFailureHandlerTest;
-import org.apache.ignite.internal.ClassSetTest;
-import org.apache.ignite.internal.ClusterGroupHostsSelfTest;
-import org.apache.ignite.internal.ClusterGroupSelfTest;
-import org.apache.ignite.internal.ClusterProcessorCheckGlobalStateComputeRequestTest;
-import org.apache.ignite.internal.ConsistentIdImplicitlyExplicitlyTest;
-import org.apache.ignite.internal.GridFailFastNodeFailureDetectionSelfTest;
-import org.apache.ignite.internal.GridLifecycleAwareSelfTest;
-import org.apache.ignite.internal.GridLifecycleBeanSelfTest;
-import org.apache.ignite.internal.GridMBeansTest;
-import org.apache.ignite.internal.GridNodeMetricsLogSelfTest;
-import org.apache.ignite.internal.GridProjectionForCachesSelfTest;
-import org.apache.ignite.internal.GridReduceSelfTest;
-import org.apache.ignite.internal.GridReleaseTypeSelfTest;
-import org.apache.ignite.internal.GridSelfTest;
-import org.apache.ignite.internal.GridStartStopSelfTest;
-import org.apache.ignite.internal.GridStopWithCancelSelfTest;
-import org.apache.ignite.internal.IgniteLocalNodeMapBeforeStartTest;
-import org.apache.ignite.internal.IgniteSlowClientDetectionSelfTest;
-import org.apache.ignite.internal.MarshallerContextLockingSelfTest;
-import org.apache.ignite.internal.TransactionsMXBeanImplTest;
+import org.apache.ignite.internal.*;
 import org.apache.ignite.internal.managers.IgniteDiagnosticMessagesMultipleConnectionsTest;
 import org.apache.ignite.internal.managers.IgniteDiagnosticMessagesTest;
-import org.apache.ignite.internal.pagemem.wal.record.WALRecordTest;
 import org.apache.ignite.internal.managers.discovery.IncompleteDeserializationExceptionTest;
+import org.apache.ignite.internal.pagemem.wal.record.WALRecordTest;
 import org.apache.ignite.internal.processors.DeadLockOnNodeLeftExchangeTest;
-import org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentV2Test;
-import org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentV2TestNoOptimizations;
-import org.apache.ignite.internal.processors.affinity.GridAffinityProcessorMemoryLeakTest;
-import org.apache.ignite.internal.processors.affinity.GridAffinityProcessorRendezvousSelfTest;
-import org.apache.ignite.internal.processors.affinity.GridHistoryAffinityAssignmentTest;
-import org.apache.ignite.internal.processors.affinity.GridHistoryAffinityAssignmentTestNoOptimization;
-import org.apache.ignite.internal.processors.cache.CacheLocalGetSerializationTest;
-import org.apache.ignite.internal.processors.cache.GridLocalIgniteSerializationTest;
-import org.apache.ignite.internal.processors.cache.GridProjectionForCachesOnDaemonNodeSelfTest;
-import org.apache.ignite.internal.processors.cache.IgniteDaemonNodeMarshallerCacheTest;
-import org.apache.ignite.internal.processors.cache.IgniteMarshallerCacheClassNameConflictTest;
-import org.apache.ignite.internal.processors.cache.IgniteMarshallerCacheClientRequestsMappingOnMissTest;
-import org.apache.ignite.internal.processors.cache.IgniteMarshallerCacheConcurrentReadWriteTest;
-import org.apache.ignite.internal.processors.cache.IgniteMarshallerCacheFSRestoreTest;
-import org.apache.ignite.internal.processors.cache.RebalanceWithDifferentThreadPoolSizeTest;
-import org.apache.ignite.internal.processors.cache.SetTxTimeoutOnPartitionMapExchangeTest;
+import org.apache.ignite.internal.processors.affinity.*;
+import org.apache.ignite.internal.processors.cache.*;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteRejectConnectOnNodeStopTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.DiscoveryDataDeserializationFailureHanderTest;
 import org.apache.ignite.internal.processors.cache.transactions.AtomicOperationsInTxTest;
@@ -74,13 +42,7 @@ import org.apache.ignite.internal.processors.cluster.BaselineAutoAdjustMXBeanTes
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedConfigurationInMemoryTest;
 import org.apache.ignite.internal.processors.continuous.GridEventConsumeSelfTest;
 import org.apache.ignite.internal.processors.continuous.GridMessageListenSelfTest;
-import org.apache.ignite.internal.processors.database.BPlusTreeFakeReuseSelfTest;
-import org.apache.ignite.internal.processors.database.BPlusTreeReuseSelfTest;
-import org.apache.ignite.internal.processors.database.BPlusTreeSelfTest;
-import org.apache.ignite.internal.processors.database.CacheFreeListSelfTest;
-import org.apache.ignite.internal.processors.database.DataRegionMetricsSelfTest;
-import org.apache.ignite.internal.processors.database.IndexStorageSelfTest;
-import org.apache.ignite.internal.processors.database.SwapPathConstructionSelfTest;
+import org.apache.ignite.internal.processors.database.*;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorageTest;
 import org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageHistoryCacheTest;
 import org.apache.ignite.internal.processors.odbc.OdbcConfigurationValidationSelfTest;
@@ -102,11 +64,7 @@ import org.apache.ignite.plugin.security.SecurityPermissionSetBuilderTest;
 import org.apache.ignite.spi.GridSpiLocalHostInjectionTest;
 import org.apache.ignite.startup.properties.NotStringSystemPropertyTest;
 import org.apache.ignite.testframework.MessageOrderLogListenerTest;
-import org.apache.ignite.testframework.test.ConfigVariationsExecutionTest;
-import org.apache.ignite.testframework.test.ConfigVariationsTestSuiteBuilderTest;
-import org.apache.ignite.testframework.test.ListeningTestLoggerTest;
-import org.apache.ignite.testframework.test.ParametersTest;
-import org.apache.ignite.testframework.test.VariationsIteratorTest;
+import org.apache.ignite.testframework.test.*;
 import org.apache.ignite.util.AttributeNodeFilterSelfTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
@@ -114,7 +72,7 @@ import org.junit.runners.Suite;
 /**
  * Basic test suite.
  */
-@RunWith(Suite.class)
+@RunWith(OpenCloverOptimizer.class)
 @Suite.SuiteClasses({
     IgniteMarshallerSelfTestSuite.class,
     IgniteLangSelfTestSuite.class,

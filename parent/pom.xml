@@ -143,6 +143,9 @@
         <web-console.ignite.version>8.7.5</web-console.ignite.version>
         <opencensus.version>0.22.0</opencensus.version>
 
+        <clover.version>4.3.1</clover.version>
+        <ant.version>1.9.4</ant.version>
+
 
         <!-- Maven plugins versions -->
         <maven.javadoc.plugin.version>2.10.4</maven.javadoc.plugin.version>
@@ -220,6 +223,11 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
+                <groupId>org.openclover</groupId>
+                <artifactId>clover</artifactId>
+                <version>${clover.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>log4j</groupId>
                 <artifactId>log4j</artifactId>
                 <version>1.2.17</version>
@@ -251,6 +259,13 @@
             <version>${javassist.version}</version>
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>org.apache.ant</groupId>
+            <artifactId>ant</artifactId>
+            <version>${ant.version}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <repositories>
@@ -275,16 +290,22 @@
                     </configuration>
                     <executions>
                         <execution>
-                            <id>scala-compile-first</id>
-                            <phase>process-resources</phase>
+                            <id>scala-add-sources</id>
+                            <phase>validate</phase>
                             <goals>
                                 <goal>add-source</goal>
+                            </goals>
+                        </execution>
+                        <execution>
+                            <id>scala-compile-first</id>
+                            <phase>process-sources</phase>
+                            <goals>
                                 <goal>compile</goal>
                             </goals>
                         </execution>
                         <execution>
                             <id>scala-test-compile</id>
-                            <phase>process-test-resources</phase>
+                            <phase>process-test-sources</phase>
                             <goals>
                                 <goal>testCompile</goal>
                             </goals>
@@ -612,10 +633,25 @@
                         </execution>
                     </executions>
                 </plugin>
+                <plugin>
+                    <groupId>org.openclover</groupId>
+                    <artifactId>clover-maven-plugin</artifactId>
+                    <version>${clover.version}</version>
+                    <configuration>
+                        <singleCloverDatabase>true</singleCloverDatabase>
+                        <cloverDatabase>${env.IGNITE_HOME}/.clover/clover.db</cloverDatabase>
+                        <snapshot>${env.IGNITE_HOME}/.clover/clover.snapshot</snapshot>
+                        <includesAllSourceRoots>true</includesAllSourceRoots>
+                    </configuration>
+                </plugin>
             </plugins>
         </pluginManagement>
 
         <plugins>
+            <plugin>
+                <groupId>org.openclover</groupId>
+                <artifactId>clover-maven-plugin</artifactId>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
@@ -789,6 +825,41 @@
     </build>
 
     <profiles>
+        <profile>
+            <id>clover-build</id>
+            <dependencies>
+                <dependency>
+                    <groupId>org.openclover</groupId>
+                    <artifactId>clover</artifactId>
+                </dependency>
+            </dependencies>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.openclover</groupId>
+                        <artifactId>clover-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>main</id>
+                                <phase>process-sources</phase>
+                                <goals>
+                                    <goal>setup</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>clover-run</id>
+            <dependencies>
+                <dependency>
+                    <groupId>org.openclover</groupId>
+                    <artifactId>clover</artifactId>
+                </dependency>
+            </dependencies>
+        </profile>
         <profile>
             <id>checkstyle</id>
             <build>

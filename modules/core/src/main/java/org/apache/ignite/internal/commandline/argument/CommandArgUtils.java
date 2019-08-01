@@ -29,7 +29,7 @@ public class CommandArgUtils {
      * @param <E>
      * @return Converted argument or {@code null} if convert failed.
      */
-    public static <E extends Enum<E> & CommandArg> @Nullable E of(String text, Class<E> enumClass) {
+    @Nullable public static <E extends Enum<E> & CommandArg> E of(String text, Class<E> enumClass) {
         for (E e : enumClass.getEnumConstants()) {
             if (e.argName().equalsIgnoreCase(text))
                 return e;
