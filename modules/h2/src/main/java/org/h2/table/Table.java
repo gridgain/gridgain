@@ -21,6 +21,7 @@ import org.h2.engine.Session;
 import org.h2.engine.UndoLogRecord;
 import org.h2.expression.Expression;
 import org.h2.expression.ExpressionVisitor;
+import org.h2.index.HashJoinIndex;
 import org.h2.index.Index;
 import org.h2.index.IndexType;
 import org.h2.message.DbException;
@@ -262,6 +263,11 @@ public abstract class Table extends SchemaObjectBase {
      */
     public Index getIndex(String indexName) {
         ArrayList<Index> indexes = getIndexes();
+
+        if (HashJoinIndex.HASH_JOIN_IDX.equalsIgnoreCase(indexName)) {
+            return new HashJoinIndex(this);
+        }
+
         if (indexes != null) {
             for (Index index : indexes) {
                 if (index.getName().equals(indexName)) {
@@ -708,7 +714,7 @@ public abstract class Table extends SchemaObjectBase {
      */
     public PlanItem getBestPlanItem(Session session, int[] masks,
             TableFilter[] filters, int filter, SortOrder sortOrder,
-            HashSet<Column> allColumnsSet) {
+            HashSet<Column> allColumnsSet, boolean isEquiJoined) {
         PlanItem item = new PlanItem();
         item.setIndex(getScanIndex(session));
         item.cost = item.getIndex().getCost(session, null, filters, filter, null, allColumnsSet);
@@ -717,8 +723,23 @@ public abstract class Table extends SchemaObjectBase {
             t.debug("Table      :     potential plan item cost {0} index {1}",
                     item.cost, item.getIndex().getPlanSQL());
         }
-        ArrayList<Index> indexes = getIndexes();
+
+        ArrayList<Index> indexes = getIndexes() == null ? null : new ArrayList<>(getIndexes());
         IndexHints indexHints = getIndexHints(filters, filter);
+
+        if (isEquiJoined) {
+            HashJoinIndex hjIdx = (HashJoinIndex)getIndex(HashJoinIndex.HASH_JOIN_IDX);
+
+            if (HashJoinIndex.isEnableByHint(indexHints)) {
+                double cost = hjIdx.getCost(session, masks, filters, filter,
+                    sortOrder, allColumnsSet);
+
+                item.cost = cost;
+                item.setIndex(hjIdx);
+
+                return item;
+            }
+        }
 
         if (indexes != null && masks != null) {
             for (int i = 1, size = indexes.size(); i < size; i++) {
@@ -1252,5 +1273,59 @@ public abstract class Table extends SchemaObjectBase {
 
     public boolean isTableExpression() {
         return tableExpression;
+    }
+
+
+    /**
+     * Return search row by table template.
+     * @param row Partial fill search row.
+     * @param columnId Column id to fill.
+     * @param v Value to
+     * @param max Max flag.
+     * @return Search row.
+     */
+    public SearchRow getSearchRow(SearchRow row, int columnId, Value v,
+        boolean max) {
+        if (row == null) {
+            row = getTemplateRow();
+        } else {
+            v = getMax(row.getValue(columnId), v, max);
+        }
+        if (columnId < 0) {
+            row.setKey(v.getLong());
+        } else {
+            row.setValue(columnId, v);
+        }
+        return row;
+    }
+
+    private Value getMax(Value a, Value b, boolean bigger) {
+        if (a == null) {
+            return b;
+        } else if (b == null) {
+            return a;
+        }
+        if (database.getSettings().optimizeIsNull) {
+            // IS NULL must be checked later
+            if (a == ValueNull.INSTANCE) {
+                return b;
+            } else if (b == ValueNull.INSTANCE) {
+                return a;
+            }
+        }
+        int comp = a.compareTo(b, database.getCompareMode());
+        if (comp == 0) {
+            return a;
+        }
+        if (a == ValueNull.INSTANCE || b == ValueNull.INSTANCE) {
+            if (database.getSettings().optimizeIsNull) {
+                // column IS NULL AND column <op> <not null> is always false
+                return null;
+            }
+        }
+        if (!bigger) {
+            comp = -comp;
+        }
+        return comp > 0 ? a : b;
     }
 }
