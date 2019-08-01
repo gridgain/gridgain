@@ -5600,10 +5600,11 @@ class ServerImpl extends TcpDiscoveryImpl {
                                         if (node == null)
                                             node = ring.node(msg0.creatorNodeId());
 
-                                        if (node != null && pingNode(node))
+                                        if (node != null && pingNode(node)) {
                                             // Node exists and accepts incoming connections.
                                             U.error(log, "Failed to respond to status check message [recipient=" +
                                                 msg0.creatorNodeId() + ", status=" + msg0.status() + ']', e);
+                                        }
                                         else if (log.isDebugEnabled()) {
                                             log.debug("Failed to respond to status check message (did the node stop?)" +
                                                 "[recipient=" + msg0.creatorNodeId() +
