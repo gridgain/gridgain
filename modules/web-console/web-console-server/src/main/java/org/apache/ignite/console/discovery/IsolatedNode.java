@@ -48,10 +48,10 @@ public class IsolatedNode implements IgniteClusterNode {
     private Map<String, Object> attrs;
 
     /** */
-    private ClusterMetrics metrics = new ClusterMetricsSnapshot();
+    private volatile ClusterMetrics metrics = new ClusterMetricsSnapshot();
 
     /** */
-    private Map<Integer, CacheMetrics> cacheMetrics = new HashMap<>();
+    private volatile Map<Integer, CacheMetrics> cacheMetrics = Collections.emptyMap();
 
     /**
      * @param id Node ID.
@@ -147,6 +147,6 @@ public class IsolatedNode implements IgniteClusterNode {
 
     /** {@inheritDoc} */
     @Override public void setCacheMetrics(Map<Integer, CacheMetrics> cacheMetrics) {
-        this.cacheMetrics = cacheMetrics;
+        this.cacheMetrics = cacheMetrics != null ? cacheMetrics : Collections.emptyMap();
     }
 }

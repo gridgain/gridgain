@@ -104,7 +104,7 @@ public class IsolatedDiscoverySpi extends IgniteSpiAdapter implements IgniteDisc
 
     /** {@inheritDoc} */
     @Override public boolean pingNode(UUID nodeId) {
-        return false;
+        return locNode.id().equals(nodeId);
     }
 
     /** {@inheritDoc} */

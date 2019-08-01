@@ -16,8 +16,8 @@
 
 package org.apache.ignite.console;
 
-import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Spliterators;
 import java.util.UUID;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
@@ -121,7 +121,7 @@ public class MockConfiguration {
             @Override public <K, V> IgniteCache<K, V> getOrCreateCache(CacheConfiguration<K, V> cacheCfg) {
                 IgniteCache<K, V> mockedCache = mock(IgniteCache.class);
 
-                when(mockedCache.spliterator()).thenReturn(new ArrayList().spliterator());
+                when(mockedCache.spliterator()).thenReturn(Spliterators.emptySpliterator());
 
                 return mockedCache;
             }
