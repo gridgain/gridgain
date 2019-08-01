@@ -2063,11 +2063,15 @@ class ClientImpl extends TcpDiscoveryImpl {
             if (spi.joinTimeout > 0) {
                 final int joinCnt0 = joinCnt;
 
-                timer.schedule(new TimerTask() {
-                    @Override public void run() {
-                        queue.add(new JoinTimeout(joinCnt0));
-                    }
-                }, spi.joinTimeout);
+                try {
+                    timer.schedule(new TimerTask() {
+                        @Override public void run() {
+                            queue.add(new JoinTimeout(joinCnt0));
+                        }
+                    }, spi.joinTimeout);
+                } catch (Exception e) {
+                    log.info("spi.joinTimeout = " + spi.joinTimeout);
+                }
             }
 
             sockReader.setSocket(joinRes.get1(), locNode.clientRouterNodeId());
