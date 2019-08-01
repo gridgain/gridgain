@@ -30,6 +30,7 @@ import org.apache.ignite.spi.metric.Metric;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.processors.query.RunningQueryManager.SQL_USER_QUERIES_REG_NAME;
@@ -49,9 +50,16 @@ public class SqlStatisticsUserQueriesTest extends SqlStatisticsAbstractTest {
     /** The second node index. This node should execute only map parts of the queries. */
     private static final int MAPPER_IDX = 1;
 
+    /**
+     * Setup.
+     */
+    @Before
+    public void refresh()  {
+        SuspendQuerySqlFunctions.refresh();
+    }
 
     /**
-     *
+     * Teardown.
      */
     @After
     public void stopAll () {
