@@ -94,6 +94,10 @@ public abstract class SelectGroups {
             currentGroupRowId++;
         }
 
+        @Override public ValueRow currGroupKey() {
+            return currentGroupsKey; // TODO: CODE: implement.
+        }
+
         @Override
         void updateCurrentGroupExprData() {
             // this can be null in lazy mode
@@ -147,6 +151,10 @@ public abstract class SelectGroups {
 
         Plain(Session session, ArrayList<Expression> expressions) {
             super(session, expressions);
+        }
+
+        @Override public ValueRow currGroupKey() {
+            return null; // TODO: CODE: implement.
         }
 
         @Override
@@ -252,6 +260,8 @@ public abstract class SelectGroups {
         this.session = session;
         this.expressions = expressions;
     }
+
+    public abstract ValueRow currGroupKey();
 
     /**
      * Is there currently a group-by active.

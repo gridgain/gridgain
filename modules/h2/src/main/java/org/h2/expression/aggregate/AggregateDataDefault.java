@@ -5,12 +5,17 @@
  */
 package org.h2.expression.aggregate;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import org.h2.engine.Database;
 import org.h2.engine.Session;
 import org.h2.message.DbException;
+import org.h2.store.Data;
 import org.h2.value.DataType;
 import org.h2.value.Value;
 import org.h2.value.ValueBoolean;
+import org.h2.value.ValueDecimal;
 import org.h2.value.ValueDouble;
 import org.h2.value.ValueLong;
 import org.h2.value.ValueNull;
@@ -35,6 +40,16 @@ class AggregateDataDefault extends AggregateData {
         this.dataType = dataType;
     }
 
+    private AggregateDataDefault(AggregateType aggregateType, int dataType, long count, double m2,
+        double mean, Value value) {
+        this.aggregateType = aggregateType;
+        this.dataType = dataType;
+        this.count = count;
+        this.value = value;
+        this.m2 = m2;
+        this.mean = mean;
+    }
+
     @Override
     void add(Session ses, Value v) {
         if (v == ValueNull.INSTANCE) {
@@ -42,82 +57,89 @@ class AggregateDataDefault extends AggregateData {
         }
         count++;
         switch (aggregateType) {
-        case SUM:
-            if (value == null) {
-                value = v.convertTo(dataType);
-            } else {
-                v = v.convertTo(value.getValueType());
-                value = value.add(v);
+            case SUM:
+                if (value == null) {
+                    value = v.convertTo(dataType);
+                }
+                else {
+                    v = v.convertTo(value.getValueType());
+                    value = value.add(v);
+                }
+                break;
+            case AVG:
+                if (value == null) {
+                    value = v.convertTo(DataType.getAddProofType(dataType));
+                }
+                else {
+                    v = v.convertTo(value.getValueType());
+                    value = value.add(v);
+                }
+                break;
+            case MIN:
+                if (value == null || ses.getDatabase().compare(v, value) < 0) {
+                    value = v;
+                }
+                break;
+            case MAX:
+                if (value == null || ses.getDatabase().compare(v, value) > 0) {
+                    value = v;
+                }
+                break;
+            case STDDEV_POP:
+            case STDDEV_SAMP:
+            case VAR_POP:
+            case VAR_SAMP: {
+                // Using Welford's method, see also
+                // http://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
+                // http://www.johndcook.com/standard_deviation.html
+                double x = v.getDouble();
+                if (count == 1) {
+                    mean = x;
+                    m2 = 0;
+                }
+                else {
+                    double delta = x - mean;
+                    mean += delta / count;
+                    m2 += delta * (x - mean);
+                }
+                break;
             }
-            break;
-        case AVG:
-            if (value == null) {
-                value = v.convertTo(DataType.getAddProofType(dataType));
-            } else {
-                v = v.convertTo(value.getValueType());
-                value = value.add(v);
-            }
-            break;
-        case MIN:
-            if (value == null || ses.getDatabase().compare(v, value) < 0) {
-                value = v;
-            }
-            break;
-        case MAX:
-            if (value == null || ses.getDatabase().compare(v, value) > 0) {
-                value = v;
-            }
-            break;
-        case STDDEV_POP:
-        case STDDEV_SAMP:
-        case VAR_POP:
-        case VAR_SAMP: {
-            // Using Welford's method, see also
-            // http://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
-            // http://www.johndcook.com/standard_deviation.html
-            double x = v.getDouble();
-            if (count == 1) {
-                mean = x;
-                m2 = 0;
-            } else {
-                double delta = x - mean;
-                mean += delta / count;
-                m2 += delta * (x - mean);
-            }
-            break;
-        }
-        case EVERY:
-            v = v.convertTo(Value.BOOLEAN);
-            if (value == null) {
-                value = v;
-            } else {
-                value = ValueBoolean.get(value.getBoolean() && v.getBoolean());
-            }
-            break;
-        case ANY:
-            v = v.convertTo(Value.BOOLEAN);
-            if (value == null) {
-                value = v;
-            } else {
-                value = ValueBoolean.get(value.getBoolean() || v.getBoolean());
-            }
-            break;
-        case BIT_AND:
-            if (value == null) {
-                value = v.convertTo(dataType);
-            } else {
-                value = ValueLong.get(value.getLong() & v.getLong()).convertTo(dataType);
-            }
-            break;
-        case BIT_OR:
-            if (value == null) {
-                value = v.convertTo(dataType);
-            } else {
-                value = ValueLong.get(value.getLong() | v.getLong()).convertTo(dataType);
-            }
-            break;
-        default:
-            DbException.throwInternalError("type=" + aggregateType);
+            case EVERY:
+                v = v.convertTo(Value.BOOLEAN);
+                if (value == null) {
+                    value = v;
+                }
+                else {
+                    value = ValueBoolean.get(value.getBoolean() && v.getBoolean());
+                }
+                break;
+            case ANY:
+                v = v.convertTo(Value.BOOLEAN);
+                if (value == null) {
+                    value = v;
+                }
+                else {
+                    value = ValueBoolean.get(value.getBoolean() || v.getBoolean());
+                }
+                break;
+            case BIT_AND:
+                if (value == null) {
+                    value = v.convertTo(dataType);
+                }
+                else {
+                    value = ValueLong.get(value.getLong() & v.getLong()).convertTo(dataType);
+                }
+                break;
+            case BIT_OR:
+                if (value == null) {
+                    value = v.convertTo(dataType);
+                }
+                else {
+                    value = ValueLong.get(value.getLong() | v.getLong()).convertTo(dataType);
+                }
+                break;
+            default:
+                DbException.throwInternalError("type=" + aggregateType);
         }
     }
 
@@ -125,50 +147,50 @@ class AggregateDataDefault extends AggregateData {
     Value getValue(Database database, int dataType) {
         Value v = null;
         switch (aggregateType) {
-        case SUM:
-        case MIN:
-        case MAX:
-        case BIT_OR:
-        case BIT_AND:
-        case ANY:
-        case EVERY:
-            v = value;
-            break;
-        case AVG:
-            if (value != null) {
-                v = divide(value, count);
+            case SUM:
+            case MIN:
+            case MAX:
+            case BIT_OR:
+            case BIT_AND:
+            case ANY:
+            case EVERY:
+                v = value;
+                break;
+            case AVG:
+                if (value != null) {
+                    v = divide(value, count);
+                }
+                break;
+            case STDDEV_POP: {
+                if (count < 1) {
+                    return ValueNull.INSTANCE;
+                }
+                v = ValueDouble.get(Math.sqrt(m2 / count));
+                break;
             }
-            break;
-        case STDDEV_POP: {
-            if (count < 1) {
-                return ValueNull.INSTANCE;
+            case STDDEV_SAMP: {
+                if (count < 2) {
+                    return ValueNull.INSTANCE;
+                }
+                v = ValueDouble.get(Math.sqrt(m2 / (count - 1)));
+                break;
             }
-            v = ValueDouble.get(Math.sqrt(m2 / count));
-            break;
-        }
-        case STDDEV_SAMP: {
-            if (count < 2) {
-                return ValueNull.INSTANCE;
+            case VAR_POP: {
+                if (count < 1) {
+                    return ValueNull.INSTANCE;
+                }
+                v = ValueDouble.get(m2 / count);
+                break;
             }
-            v = ValueDouble.get(Math.sqrt(m2 / (count - 1)));
-            break;
-        }
-        case VAR_POP: {
-            if (count < 1) {
-                return ValueNull.INSTANCE;
+            case VAR_SAMP: {
+                if (count < 2) {
+                    return ValueNull.INSTANCE;
+                }
+                v = ValueDouble.get(m2 / (count - 1));
+                break;
             }
-            v = ValueDouble.get(m2 / count);
-            break;
-        }
-        case VAR_SAMP: {
-            if (count < 2) {
-                return ValueNull.INSTANCE;
-            }
-            v = ValueDouble.get(m2 / (count - 1));
-            break;
-        }
-        default:
-            DbException.throwInternalError("type=" + aggregateType);
+            default:
+                DbException.throwInternalError("type=" + aggregateType);
         }
         return v == null ? ValueNull.INSTANCE : v.convertTo(dataType);
     }
@@ -185,5 +207,53 @@ class AggregateDataDefault extends AggregateData {
 
     @Override public boolean hasFixedSizeInBytes() {
         return value.hasFixedSizeInBytes();
+    }
+
+    @Override public void write(DataOutputStream out) throws IOException {
+//        private final AggregateType aggregateType;
+//        private final int dataType;
+//        private long count;
+//        private Value value;
+//        private double m2, mean; WriteBuffer
+
+        out.writeInt(aggregateType.ordinal());
+        out.writeInt(dataType);
+        out.writeLong(count);
+        out.writeDouble(m2);
+        out.writeDouble(mean);
+
+        int dataLen = value instanceof ValueDecimal ? 100 : value.getMemory() + 4;
+
+        Data data = Data.create(null, dataLen, false);
+
+        data.writeValue(value);
+
+        out.writeInt(dataLen);
+
+        out.write(data.getBytes(), 0, dataLen);
+
+    }
+
+    public static Object read(DataInputStream in) throws IOException {
+        int aggTypeOrdinal = in.readInt();
+        AggregateType aggType = AggregateType.values()[aggTypeOrdinal];
+
+        int dataType = in.readInt();
+        long cnt0 = in.readLong();
+        double m2 = in.readDouble();
+        double mean = in.readDouble();
+
+        int valLen = in.readInt();
+
+        byte[] valBytes = new byte[valLen];
+
+        in.read(valBytes, 0, valLen);
+
+        Data data = Data.create(null, valBytes, false);
+
+        Value val = data.readValue();
+
+        return new AggregateDataDefault(aggType, dataType, cnt0, m2, mean, val);  // TODO: implement.
+
     }
 }

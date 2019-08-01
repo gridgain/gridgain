@@ -38,6 +38,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.h2.expression.aggregate.AggregateSerializer;
 import org.h2.store.Data;
 import org.h2.value.ValueRow;
+import org.jetbrains.annotations.NotNull;
 
 import static java.nio.file.StandardOpenOption.CREATE_NEW;
 import static java.nio.file.StandardOpenOption.READ;
@@ -108,11 +109,16 @@ public class ExternalGroups implements ExternalRowStore, AutoCloseable {
 
     public void put(ValueRow key, Object[] grpData) {// keySize | keybytes | aggs number | aggs data
         try {
+            Long startPoint = idx.get(key);
+
+            if (startPoint == null)
+                startPoint = fileIo.size();
+
+            fileIo.position(startPoint);
+
             ByteOutputStream out = new ByteOutputStream();
 
             Data keyBuff = Data.create(null, (int)(ROW_HEADER_SIZE + H2Utils.rowSizeInBytes(key.getList()) * 2), true);
-
-           // System.out.println("write key=" + key);
 
             keyBuff.writeValue(key);
 
@@ -120,8 +126,6 @@ public class ExternalGroups implements ExternalRowStore, AutoCloseable {
 
             // 1. Write key size.
             dataOut.writeInt(keyBuff.length());
-
-           // System.out.println("write keyBuff.length()=" + keyBuff.length()  + ", bytes=" + Arrays.toString(keyBuff.getBytes()));
 
             // 2. Write key body.
             dataOut.write(keyBuff.getBytes(), 0, keyBuff.length());
@@ -139,19 +143,12 @@ public class ExternalGroups implements ExternalRowStore, AutoCloseable {
             headBuff.putInt(os);
             headBuff.flip();
 
-            //System.out.println("write on pos=" + fileIo.position() + ", size=" + os);
-
             // 0. Write total entry size.
             curDataPos += fileIo.write(headBuff);
 
             curDataPos += fileIo.write(out.getBytes(), 0, out.size());
-//
-//            System.out.println("write curDataPos=" + curDataPos);
-//            System.out.println("write header bytes=" + Arrays.toString(headBuff.array()));
-//            System.out.println("write body bytes=" + Arrays.toString(out.getBytes()));
 
-            System.out.println("put key addr=" + curDataPos + ", key="  + key);
-            idx.put(key, curDataPos);
+            idx.put(key, startPoint);
 
             size++;
         }
@@ -168,8 +165,6 @@ public class ExternalGroups implements ExternalRowStore, AutoCloseable {
         Long addr = idx.get(key);
 
 
-         System.out.println("get key addr=" + addr + ", idx=" + idx + ", key=" + key);
-
         if (addr == null)
             return null;
 
@@ -183,55 +178,7 @@ public class ExternalGroups implements ExternalRowStore, AutoCloseable {
         try {
             fileIo.position(addr);
 
-            // 0. Read total size
-            ByteBuffer header = ByteBuffer.allocate(ROW_HEADER_SIZE);
-
-            fileIo.readFully(header);
-
-            header.flip();
-
-            long rowSize = header.getInt();
-
-            //System.out.println("read  from pos=" + addr + ", size=" + rowSize);
-
-
-            ByteBuffer body = ByteBuffer.allocate((int)rowSize);
-
-            fileIo.readFully(body);
-
-            body.flip();
-//
-//            System.out.println("read curDataPos=" + addr);
-//            System.out.println("read header bytes=" + Arrays.toString(header.array()));
-//            System.out.println("read body bytes=" + Arrays.toString(body.array()));
-
-            //1. Read key size
-            int keySize = body.getInt();
-
-            Data keyBuff = Data.create(null, keySize + 1, true);
-
-            keyBuff.write(body.array(), 4, keySize);
-
-            //System.out.println("read keyBuff.length()=" + keyBuff.length()  + ", bytes=" + Arrays.toString(keyBuff.getBytes()));
-
-            keyBuff.reset();
-            //keyBuff.readInt();
-            ValueRow key = (ValueRow)keyBuff.readValue();
-
-            body.position(keySize + 4);
-
-            ByteInputStream in = new ByteInputStream(body.array(), keySize + 4 + 4, body.limit());
-
-            int aggsNum = body.getInt();
-
-            Object[] aggs = new Object[aggsNum + 1]; // Aggs + key.
-
-            aggs[0] = key;
-
-            for (int i = 1; i <= aggsNum; i++)
-                aggs[i] = AggregateSerializer.readAggregate(new DataInputStream(in));
-
-            System.out.println("read from addr=" + addr + ",  aggs=" + Arrays.toString(aggs));
+            Object[] aggs = readAggregate();
 
             return aggs;
         }
@@ -240,6 +187,48 @@ public class ExternalGroups implements ExternalRowStore, AutoCloseable {
 
             throw new IgniteException("Failed to spill aggregate to disk.", e);
         }
+    }
+
+    @NotNull private Object[] readAggregate() throws IOException {
+        // 0. Read total size
+        ByteBuffer header = ByteBuffer.allocate(ROW_HEADER_SIZE);
+
+        fileIo.readFully(header);
+
+        header.flip();
+
+        long rowSize = header.getInt();
+
+        ByteBuffer body = ByteBuffer.allocate((int)rowSize);
+
+        fileIo.readFully(body);
+
+        body.flip();
+
+        //1. Read key size
+        int keySize = body.getInt();
+
+        Data keyBuff = Data.create(null, keySize + 1, true);
+
+        keyBuff.write(body.array(), 4, keySize);
+
+        keyBuff.reset();
+        //keyBuff.readInt();
+        ValueRow key = (ValueRow)keyBuff.readValue();
+
+        body.position(keySize + 4);
+
+        ByteInputStream in = new ByteInputStream(body.array(), keySize + 4 + 4, body.limit());
+
+        int aggsNum = body.getInt();
+
+        Object[] aggs = new Object[aggsNum + 1]; // Aggs + key.
+
+        aggs[0] = key;
+
+        for (int i = 1; i <= aggsNum; i++)
+            aggs[i] = AggregateSerializer.readAggregate(new DataInputStream(in));
+        return aggs;
     }
 
     @Override public ValueRow getRowKey(Object[] row) {
@@ -252,13 +241,49 @@ public class ExternalGroups implements ExternalRowStore, AutoCloseable {
 
     @Override public void close() {
         U.closeQuiet(fileIo);
+        U.closeQuiet(idx);
         file.delete();
+
 
         if (log.isDebugEnabled())
             log.debug("Deleted groups spill file "+ file.getName());
     }
 
     public Iterator<T2<ValueRow, Object[]>> cursor() {
-        return null;  // TODO: implement.
+
+        try {
+            fileIo.position(0);
+
+            return new Iterator<T2<ValueRow, Object[]>>() {
+                @Override public boolean hasNext() {
+                    try {
+                        return fileIo.position() < fileIo.size(); // TODO: CODE: implement.
+                    }
+                    catch (IOException e) {
+                        close();
+
+                        throw new IgniteException("Failed to read aggregates from the disk.", e);
+                    }
+                }
+
+                @Override public T2<ValueRow, Object[]> next() {
+                    try {
+                        Object[] row = readAggregate();
+
+                        return new T2<>((ValueRow)row[0], Arrays.copyOfRange(row, 1, row.length));
+                    }
+                    catch (IOException e) {
+                        close();
+
+                        throw new IgniteException("Failed to read aggregates from the disk.", e);
+                    }
+                }
+            };
+        }
+        catch (IOException e) {
+            close();
+
+            throw new IgniteException("Failed to read aggregates from the disk.", e);
+        }
     }
 }

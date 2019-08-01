@@ -15,10 +15,13 @@
  */
 package org.apache.ignite.internal.processors.query.h2.disk;
 
+import java.nio.BufferUnderflowException;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.TreeMap;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
 import org.apache.ignite.internal.util.typedef.T2;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.h2.command.dml.GroupByData;
 import org.h2.engine.Session;
 import org.h2.value.ValueRow;
@@ -30,11 +33,9 @@ public class GroupedExternalGroupByData extends GroupByData {
 
     private final int[] grpIdx;
 
-    private ExternalGroups groupByData;
+    private ExternalGroups extGroupByData;
 
-
-    //private TreeMap<ValueRow, Object[]> groupByData;
-
+    private TreeMap<ValueRow, Object[]> groupByData;
 
     private ValueRow lastGrpKey;
     private Object[] lastGrpData;
@@ -43,12 +44,18 @@ public class GroupedExternalGroupByData extends GroupByData {
 
     Map.Entry<ValueRow, Object[]> curEntry;
 
+    private int size;
 
     public GroupedExternalGroupByData(Session ses, int[] grpIdx) {
         super(ses);
 
         this.grpIdx = grpIdx;
-        groupByData = new ExternalGroups(((QueryContext)ses.getQueryContext()).context(), ses.queryMemoryTracker()); //new TreeMap<>(ses.getDatabase().getCompareMode());
+
+        groupByData = new TreeMap<>(ses.getDatabase().getCompareMode());
+    }
+
+    private void createExternalGroupByData() {
+        extGroupByData = new ExternalGroups(((QueryContext)ses.getQueryContext()).context(), ses.queryMemoryTracker());
     }
 
     @Override public Object[] nextSource(ValueRow grpKey, int width) {
@@ -56,19 +63,34 @@ public class GroupedExternalGroupByData extends GroupByData {
 
         lastGrpData = groupByData.get(grpKey);
 
+        if (lastGrpData == null && extGroupByData != null) {
+            try {
+                lastGrpData = extGroupByData.get(grpKey);
+
+            }
+            catch (BufferUnderflowException e) {
+                extGroupByData.get(grpKey);
+            }
+
+//            if (lastGrpData != null)
+//                groupByData.put(grpKey, lastGrpData);
+        }
+
         if (lastGrpData == null) {
             lastGrpData = new Object[width];
 
-//            groupByData.put(grpKey, values);
-//
-//            onGroupChanged(grpKey, null, values);
+            groupByData.put(grpKey, lastGrpData);
+
+            onGroupChanged(grpKey, null, lastGrpData);
+
+            size++;
         }
 
         return lastGrpData;
     }
 
     @Override public long size() {
-        return groupByData.size();
+        return size;
     }
 
     @Override public boolean next() {
@@ -98,11 +120,20 @@ public class GroupedExternalGroupByData extends GroupByData {
     }
 
     @Override public void reset() {
+        if (extGroupByData != null) {
+            U.closeQuiet(extGroupByData);
+
+            extGroupByData = null;
+        }
+
         cursor = null;
-        groupByData = new ExternalGroups(((QueryContext)ses.getQueryContext()).context(), ses.queryMemoryTracker()); //new TreeMap<>(ses.getDatabase().getCompareMode());
+        extGroupByData = null;
+        groupByData = new TreeMap<>(ses.getDatabase().getCompareMode());
         lastGrpKey = null;
 
         curEntry = null;
+        tracker.released(memReserved);
+        memReserved = 0;
     }
 
     @Override public void remove() {
@@ -111,24 +142,81 @@ public class GroupedExternalGroupByData extends GroupByData {
         cursor.remove();
 
         onGroupChanged(curEntry.getKey(), curEntry.getValue(), null);
+
+        size--;
     }
 
-    @Override public void onRowProcessed() {
-        groupByData.put(lastGrpKey, lastGrpData);
+    @Override public void onRowProcessed() { // TODO exception for non-serializable aggregates.
+        Object[] old = groupByData.put(lastGrpKey, lastGrpData);
+
+        onGroupChanged(lastGrpKey, old, lastGrpData);
+
+        if (!tracker.reserved(0)) {
+            if (extGroupByData == null)
+                createExternalGroupByData();
+
+            spillGroupsToDisk();
+
+        }
+
+    }
+
+    private void spillGroupsToDisk() {
+        for (Map.Entry<ValueRow, Object[]> e : groupByData.entrySet()) {
+            extGroupByData.put(e.getKey(), e.getValue());
+        }
+
+        groupByData.clear();
+
+        tracker.released(memReserved); // TODO cleanup aggregates
+
+        memReserved = 0;
     }
 
     @Override public void updateCurrent(Object[] grpByExprData) {
-        groupByData.put(lastGrpKey, grpByExprData);
-//        Object[] old = groupByData.put(lastGrpKey, grpByExprData);
-//
-//        onGroupChanged(lastGrpKey, old, grpByExprData);
+        // Looks like group-by data size can be increased only on the very first group update.
+        // What is the sense of having groups with the different aggregate arrays sizes?
+        assert size == 1 : "size=" + size;
+        assert extGroupByData == null;
+
+        Object[] old = groupByData.put(lastGrpKey, grpByExprData);
+
+        onGroupChanged(lastGrpKey, old, grpByExprData);
     }
 
     @Override public void done(int width) {
-//        if (grpIdx == null && groupByData.isEmpty())
-//            groupByData.put(ValueRow.getEmpty(), new Object[width]); TODO Empty groups
+        if (grpIdx == null && extGroupByData == null && groupByData.isEmpty())
+            extGroupByData.put(ValueRow.getEmpty(), new Object[width]);
 
-        cursor = groupByData.cursor();
+        if (extGroupByData != null ) {
+            if (!groupByData.isEmpty())
+                spillGroupsToDisk();
+
+            cursor = extGroupByData.cursor();
+        }
+        else
+            cursor = new GroupsIterator(groupByData.entrySet().iterator());
+
+
+    }
+
+    private static class GroupsIterator implements Iterator<T2<ValueRow, Object[]>> {
+
+        private final Iterator<Map.Entry<ValueRow, Object[]>> it;
+
+        private GroupsIterator(Iterator<Map.Entry<ValueRow, Object[]>> it) {
+            this.it = it;
+        }
+
+        @Override public boolean hasNext() {
+            return it.hasNext();
+        }
+
+        @Override public T2<ValueRow, Object[]> next() {
+            Map.Entry<ValueRow, Object[]> row = it.next();
+
+            return new T2<>(row.getKey(), row.getValue());
+        }
     }
 
 }

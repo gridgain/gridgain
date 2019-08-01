@@ -49,7 +49,7 @@ import static org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing.DI
 @WithSystemProperty(key = "IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE", value = "2048")
 public class DiskSpillingAbstractTest extends GridCommonAbstractTest {
     /** */
-    private static final int PERS_CNT = 1000;
+    private static final int PERS_CNT = 1002;
 
     /** */
     private static final int DEPS_CNT = 100;
@@ -85,6 +85,8 @@ public class DiskSpillingAbstractTest extends GridCommonAbstractTest {
 
         return cfg;
     }
+
+
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
@@ -203,6 +205,8 @@ public class DiskSpillingAbstractTest extends GridCommonAbstractTest {
 
             dirEvts = watchKey.pollEvents();
 
+            //TODO check grouped files
+
             // Check files have been created but deleted later.
             assertFalse("Disk events is empty for on-disk query. ", dirEvts.isEmpty());
 
@@ -220,8 +224,8 @@ public class DiskSpillingAbstractTest extends GridCommonAbstractTest {
             if (log.isInfoEnabled())
                 log.info("In-memory time=" + (startOnDisk - startInMem) + ", on-disk time=" + (finish - startOnDisk));
 
-            if (log.isDebugEnabled())
-                log.debug("In-memory result:\n" + inMemRes + "\nOn disk result:\n" + onDiskRes);
+           // if (log.isDebugEnabled())
+                log.info("In-memory result:\n" + inMemRes + "\nOn disk result:\n" + onDiskRes);
 
             assertEqualsCollections(inMemRes, onDiskRes);
         }
