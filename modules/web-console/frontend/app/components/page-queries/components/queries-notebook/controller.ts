@@ -25,6 +25,7 @@ import {CSV} from 'app/services/CSV';
 import paragraphRateTemplateUrl from 'views/sql/paragraph-rate.tpl.pug';
 import cacheMetadataTemplateUrl from 'views/sql/cache-metadata.tpl.pug';
 import chartSettingsTemplateUrl from 'views/sql/chart-settings.tpl.pug';
+import messageTemplateUrl from 'views/templates/message.tpl.pug';
 
 import {default as Notebook} from '../../notebook.service';
 import {default as MessagesServiceFactory} from 'app/services/Messages.service';
