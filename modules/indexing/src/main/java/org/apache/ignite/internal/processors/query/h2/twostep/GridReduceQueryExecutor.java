@@ -56,7 +56,7 @@ import org.apache.ignite.internal.processors.cache.query.GridCacheTwoStepQuery;
 import org.apache.ignite.internal.processors.query.GridQueryCacheObjectsIterator;
 import org.apache.ignite.internal.processors.query.GridQueryCancel;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
-import org.apache.ignite.internal.processors.query.h2.H2ConnectionWrapper;
+import org.apache.ignite.internal.processors.query.h2.H2PooledConnection;
 import org.apache.ignite.internal.processors.query.h2.H2FieldsIterator;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
@@ -492,7 +492,7 @@ public class GridReduceQueryExecutor {
 
             final Collection<ClusterNode> finalNodes = nodes;
 
-            H2ConnectionWrapper conn = h2.connections().connection(schemaName);
+            H2PooledConnection conn = h2.connections().connection(schemaName);
 
             boolean retry = false;
 
@@ -965,7 +965,7 @@ public class GridReduceQueryExecutor {
      * @param idx Index of table.
      * @return Table.
      */
-    private ReduceTableWrapper fakeTable(H2ConnectionWrapper c, int idx) {
+    private ReduceTableWrapper fakeTable(H2PooledConnection c, int idx) {
         List<ReduceTableWrapper> tbls = fakeTbls;
 
         assert tbls.size() >= idx;
@@ -1000,7 +1000,7 @@ public class GridReduceQueryExecutor {
      * @return Cursor for plans.
      * @throws IgniteCheckedException if failed.
      */
-    private Iterator<List<?>> explainPlan(H2ConnectionWrapper c, GridCacheTwoStepQuery qry, Object[] params)
+    private Iterator<List<?>> explainPlan(H2PooledConnection c, GridCacheTwoStepQuery qry, Object[] params)
         throws IgniteCheckedException {
         List<List<?>> lists = new ArrayList<>();
 
@@ -1116,7 +1116,7 @@ public class GridReduceQueryExecutor {
      * @throws IgniteCheckedException If failed.
      */
     @SuppressWarnings("unchecked")
-    private ReduceTable createMergeTable(H2ConnectionWrapper conn, GridCacheSqlQuery qry, boolean explain)
+    private ReduceTable createMergeTable(H2PooledConnection conn, GridCacheSqlQuery qry, boolean explain)
         throws IgniteCheckedException {
         try {
             Session ses = H2Utils.session(conn);

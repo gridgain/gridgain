@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.query.h2.sql;
 
-import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -38,7 +37,7 @@ import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.cache.query.QueryTable;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryUtils;
-import org.apache.ignite.internal.processors.query.h2.H2ConnectionWrapper;
+import org.apache.ignite.internal.processors.query.h2.H2PooledConnection;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.affinity.PartitionExtractor;
@@ -194,7 +193,7 @@ public class GridSqlQuerySplitter {
      * @throws IgniteCheckedException If failed.
      */
     public static GridCacheTwoStepQuery split(
-        H2ConnectionWrapper conn,
+        H2PooledConnection conn,
         GridSqlQuery qry,
         String originalSql,
         boolean collocatedGrpBy,
@@ -239,7 +238,7 @@ public class GridSqlQuerySplitter {
      * @throws IgniteCheckedException If failed.
      */
     private static GridCacheTwoStepQuery split0(
-        H2ConnectionWrapper conn,
+        H2PooledConnection conn,
         GridSqlQuery qry,
         String originalSql,
         boolean collocatedGrpBy,
@@ -1771,7 +1770,7 @@ public class GridSqlQuerySplitter {
      * @return Optimized prepared command.
      * @throws SQLException If failed.
      */
-    public static Prepared prepare(H2ConnectionWrapper c, QueryContext qctx, String qry, boolean distributedJoins,
+    public static Prepared prepare(H2PooledConnection c, QueryContext qctx, String qry, boolean distributedJoins,
         boolean enforceJoinOrder) throws SQLException {
         H2Utils.setupConnection(c, qctx, distributedJoins, enforceJoinOrder);
 

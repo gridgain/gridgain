@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.query.h2.twostep;
 
-import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -26,9 +25,8 @@ import javax.cache.CacheException;
 
 import org.apache.ignite.cache.query.Query;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
-import org.apache.ignite.internal.processors.query.h2.H2ConnectionWrapper;
+import org.apache.ignite.internal.processors.query.h2.H2PooledConnection;
 import org.apache.ignite.internal.util.typedef.F;
-import org.h2.jdbc.JdbcConnection;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -42,7 +40,7 @@ public class ReduceQueryRun {
     private CountDownLatch latch;
 
     /** */
-    private final H2ConnectionWrapper conn;
+    private final H2PooledConnection conn;
 
     /** */
     private final int pageSize;
@@ -61,7 +59,7 @@ public class ReduceQueryRun {
      * @param dataPageScanEnabled If data page scan is enabled.
      */
     ReduceQueryRun(
-        H2ConnectionWrapper conn,
+        H2PooledConnection conn,
         int idxsCnt,
         int pageSize,
         Boolean dataPageScanEnabled
@@ -147,7 +145,7 @@ public class ReduceQueryRun {
     /**
      * @return Connection.
      */
-    H2ConnectionWrapper connection() {
+    H2PooledConnection connection() {
         return conn;
     }
 

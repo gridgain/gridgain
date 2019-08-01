@@ -29,7 +29,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.query.CacheQueryType;
 import org.apache.ignite.internal.processors.cache.query.GridCacheSqlQuery;
 import org.apache.ignite.internal.processors.cache.tree.CacheDataTree;
-import org.apache.ignite.internal.processors.query.h2.H2ConnectionWrapper;
+import org.apache.ignite.internal.processors.query.h2.H2PooledConnection;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
@@ -101,7 +101,7 @@ class MapQueryResult {
     private final Session ses;
 
     /** Detached connection. Used for lazy execution to prevent connection sharing. */
-    private H2ConnectionWrapper conn;
+    private H2PooledConnection conn;
 
     /** */
     private final ReentrantLock lock = new ReentrantLock();
@@ -116,7 +116,7 @@ class MapQueryResult {
      * @param log Logger.
      */
     MapQueryResult(IgniteH2Indexing h2, @Nullable GridCacheContext cctx,
-        UUID qrySrcNodeId, GridCacheSqlQuery qry, Object[] params, H2ConnectionWrapper conn, IgniteLogger log) {
+        UUID qrySrcNodeId, GridCacheSqlQuery qry, Object[] params, H2PooledConnection conn, IgniteLogger log) {
         this.h2 = h2;
         this.cctx = cctx;
         this.qry = qry;

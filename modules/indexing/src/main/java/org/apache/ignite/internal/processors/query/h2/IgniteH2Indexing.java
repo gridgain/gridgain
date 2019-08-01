@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors.query.h2;
 
 import java.sql.BatchUpdateException;
-import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -535,7 +534,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
             return new GridQueryFieldsResultAdapter(select.meta(), null) {
                 @Override public GridCloseableIterator<List<?>> iterator() throws IgniteCheckedException {
-                    H2ConnectionWrapper conn = connections().connection(qryDesc.schemaName());
+                    H2PooledConnection conn = connections().connection(qryDesc.schemaName());
 
                     try {
                         H2Utils.setupConnection(conn, qctx,
@@ -751,7 +750,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      * @return Prepared statement with set parameters.
      * @throws IgniteCheckedException If failed.
      */
-    public PreparedStatement preparedStatementWithParams(H2ConnectionWrapper conn, String sql, Collection<Object> params,
+    public PreparedStatement preparedStatementWithParams(H2PooledConnection conn, String sql, Collection<Object> params,
         boolean useStmtCache) throws IgniteCheckedException {
         final PreparedStatement stmt;
 
@@ -779,7 +778,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      * @return Result.
      * @throws IgniteCheckedException If failed.
      */
-    private ResultSet executeSqlQuery(final H2ConnectionWrapper conn, final PreparedStatement stmt,
+    private ResultSet executeSqlQuery(final H2PooledConnection conn, final PreparedStatement stmt,
         int timeoutMillis, @Nullable GridQueryCancel cancel) throws IgniteCheckedException  {
         if (cancel != null)
             cancel.set(() -> cancelStatement(stmt));
@@ -833,7 +832,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      * @throws IgniteCheckedException If failed.
      */
     public ResultSet executeSqlQueryWithTimer(
-        H2ConnectionWrapper conn,
+        H2PooledConnection conn,
         String sql,
         @Nullable Collection<Object> params,
         int timeoutMillis,
@@ -869,7 +868,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      */
     public ResultSet executeSqlQueryWithTimer(
         PreparedStatement stmt,
-        H2ConnectionWrapper conn,
+        H2PooledConnection conn,
         String sql,
         @Nullable Collection<Object> params,
         int timeoutMillis,

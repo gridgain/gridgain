@@ -34,8 +34,7 @@ import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.UpdateSourceIterator;
 import org.apache.ignite.internal.processors.query.h2.ConnectionManager;
-import org.apache.ignite.internal.processors.query.h2.H2ConnectionWrapper;
-import org.apache.ignite.internal.processors.query.h2.ThreadLocalObjectPool;
+import org.apache.ignite.internal.processors.query.h2.H2PooledConnection;
 import org.apache.ignite.internal.processors.query.h2.UpdateResult;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
@@ -622,7 +621,7 @@ public final class UpdatePlan {
         private final EnlistOperation op;
 
         /** */
-        private volatile H2ConnectionWrapper conn;
+        private volatile H2PooledConnection conn;
 
         /**
          * @param connMgr Connection manager.
@@ -648,7 +647,7 @@ public final class UpdatePlan {
         /** {@inheritDoc} */
         @Override public void beforeDetach() {
             // TODO: wrong!
-            H2ConnectionWrapper conn0 = conn = connMgr.connection();
+            H2PooledConnection conn0 = conn = connMgr.connection();
 
             if (isClosed())
                 conn0.close();
@@ -658,7 +657,7 @@ public final class UpdatePlan {
         @Override protected void onClose() {
             cur.close();
 
-            H2ConnectionWrapper conn0 = conn;
+            H2PooledConnection conn0 = conn;
 
             if (conn0 != null)
                 U.closeQuiet(conn0);

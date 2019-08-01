@@ -151,7 +151,7 @@ public class SchemaManager {
                 createSchema(schema, true);
             }
 
-            try (H2ConnectionWrapper c = connMgr.connection(QueryUtils.SCHEMA_SYS)) {
+            try (H2PooledConnection c = connMgr.connection(QueryUtils.SCHEMA_SYS)) {
                 SqlSystemTableEngine.registerView(c.connection(), view);
             }
         }
@@ -252,7 +252,7 @@ public class SchemaManager {
 
         H2Schema schema = schema(schemaName);
 
-        try(H2ConnectionWrapper conn = connMgr.connection(schema.schemaName())) {
+        try(H2PooledConnection conn = connMgr.connection(schema.schemaName())) {
             GridH2Table h2tbl = createTable(schema.schemaName(), schema, tblDesc, conn);
 
             schema.add(tblDesc);
@@ -454,7 +454,7 @@ public class SchemaManager {
      * @throws SQLException If failed to create db table.
      * @throws IgniteCheckedException If failed.
      */
-    private GridH2Table createTable(String schemaName, H2Schema schema, H2TableDescriptor tbl, H2ConnectionWrapper conn)
+    private GridH2Table createTable(String schemaName, H2Schema schema, H2TableDescriptor tbl, H2PooledConnection conn)
         throws SQLException, IgniteCheckedException {
         assert schema != null;
         assert tbl != null;
@@ -485,7 +485,7 @@ public class SchemaManager {
         if (log.isDebugEnabled())
             log.debug("Removing query index table: " + tbl.fullTableName());
 
-        try (H2ConnectionWrapper c = connMgr.connection(tbl.schemaName())) {
+        try (H2PooledConnection c = connMgr.connection(tbl.schemaName())) {
             Statement stmt = null;
 
             try {

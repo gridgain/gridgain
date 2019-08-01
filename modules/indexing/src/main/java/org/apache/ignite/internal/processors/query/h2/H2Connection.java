@@ -20,27 +20,25 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.concurrent.atomic.AtomicBoolean;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlQueryParser;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.h2.jdbc.JdbcStatement;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Wrapper to store connection with currently used schema and statement cache.
  */
-public class H2ConnectionWrapper implements AutoCloseable {
+class H2Connection implements AutoCloseable {
     /** */
     private static final int STATEMENT_CACHE_SIZE = 256;
 
     /** */
     private final Connection conn;
-
-    /** Connection manager. */
-    private final ConnectionManager connMgr;
 
     /** */
     private volatile String schema;
@@ -48,17 +46,16 @@ public class H2ConnectionWrapper implements AutoCloseable {
     /** */
     private volatile H2StatementCache statementCache;
 
-    /** Used flag. */
-    public AtomicBoolean used = new AtomicBoolean(true);
+    /** Logger. */
+    private IgniteLogger log;
 
     /**
      * @param conn Connection to use.
-     * @param connMgr Connection manager is use to recycle connection
-     *      (connection is closed or returned to connection pool).
+     * @param log Logger.
      */
-    H2ConnectionWrapper(Connection conn, ConnectionManager connMgr) {
+    H2Connection(Connection conn, IgniteLogger log) {
         this.conn = conn;
-        this.connMgr = connMgr;
+        this.log = log;
 
         initStatementCache();
     }
@@ -66,14 +63,14 @@ public class H2ConnectionWrapper implements AutoCloseable {
     /**
      * @return Schema name if schema is set, null otherwise.
      */
-    public String schema() {
+    String schema() {
         return schema;
     }
 
     /**
      * @param schema Schema name set on this connection.
      */
-    public void schema(@Nullable String schema) {
+    void schema(@Nullable String schema) {
         if (schema != null && !F.eq(this.schema, schema)) {
             try {
                 this.schema = schema;
@@ -90,28 +87,21 @@ public class H2ConnectionWrapper implements AutoCloseable {
     /**
      * @return Connection.
      */
-    public Connection connection() {
+    Connection connection() {
         return conn;
-    }
-
-    /**
-     * @return Statement cache corresponding to connection.
-     */
-    public H2StatementCache statementCache() {
-        return statementCache;
     }
 
     /**
      * Clears statement cache.
      */
-    public void clearStatementCache() {
+    void clearStatementCache() {
         initStatementCache();
     }
 
     /**
      * @return Statement cache size.
      */
-    public int statementCacheSize() {
+    int statementCacheSize() {
         return statementCache == null ? 0 : statementCache.size();
     }
 
@@ -130,7 +120,7 @@ public class H2ConnectionWrapper implements AutoCloseable {
      * @return Prepared statement.
      * @throws SQLException If failed.
      */
-    public PreparedStatement prepareStatement(String sql) throws SQLException {
+    PreparedStatement prepareStatement(String sql) throws SQLException {
         PreparedStatement stmt = cachedPreparedStatement(sql);
 
         if (stmt == null) {
@@ -151,7 +141,7 @@ public class H2ConnectionWrapper implements AutoCloseable {
      * @return Prepared statement or {@code null}.
      * @throws SQLException On error.
      */
-    @Nullable public PreparedStatement cachedPreparedStatement(String sql) throws SQLException {
+    private @Nullable PreparedStatement cachedPreparedStatement(String sql) throws SQLException {
         H2CachedStatementKey key = new H2CachedStatementKey(schema, sql);
 
         PreparedStatement stmt = statementCache.get(key);
@@ -181,7 +171,7 @@ public class H2ConnectionWrapper implements AutoCloseable {
      * @return Prepared statement.
      * @throws SQLException If failed.
      */
-    public PreparedStatement prepareStatementNoCache(String sql) throws SQLException {
+    PreparedStatement prepareStatementNoCache(String sql) throws SQLException {
         boolean insertHack = GridH2Table.insertHackRequired(sql);
 
         if (insertHack) {
@@ -198,34 +188,13 @@ public class H2ConnectionWrapper implements AutoCloseable {
             return conn.prepareStatement(sql, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
     }
 
-    /**
-     *
-     */
-    void use() {
-        if (!used.compareAndSet(false, true))
-            assert false : "Invalid connection state";
-    }
-
-    public volatile Exception oncreate;
-    public volatile Exception onclose;
-
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(H2ConnectionWrapper.class, this);
+        return S.toString(H2Connection.class, this);
     }
 
     /** Closes wrapped connection (return to pool or close). */
     @Override public void close() {
-        H2Utils.resetSession(this);
-
-        if (!used.compareAndSet(true, false)) {
-            oncreate.printStackTrace();
-            onclose.printStackTrace();
-            assert false : "Invalid connection state";
-        }
-
-        onclose = new Exception("onclose");
-
-        connMgr.recycle(this);
+        U.close(conn, log);
     }
 }

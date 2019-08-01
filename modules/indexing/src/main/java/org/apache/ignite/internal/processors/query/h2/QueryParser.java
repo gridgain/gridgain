@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
-import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Arrays;
@@ -270,7 +269,7 @@ public class QueryParser {
     @SuppressWarnings("IfMayBeConditional")
     private QueryParserResult parseH2(String schemaName, SqlFieldsQuery qry, boolean batched,
         boolean remainingAllowed) {
-        try (H2ConnectionWrapper c = connMgr.connection(schemaName)) {
+        try (H2PooledConnection c = connMgr.connection(schemaName)) {
             // For queries that are explicitly local, we rely on the flag specified in the query
             // because this parsing result will be cached and used for queries directly.
             // For other queries, we enforce join order at this stage to avoid premature optimizations

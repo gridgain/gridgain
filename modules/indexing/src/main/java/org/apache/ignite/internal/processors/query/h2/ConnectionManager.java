@@ -76,10 +76,10 @@ public class ConnectionManager {
     }
 
     /** Used connections set. */
-    private final Set<H2ConnectionWrapper> usedConns = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private final Set<H2Connection> usedConns = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     /** Connection pool. */
-    private volatile ArrayBlockingQueue<H2ConnectionWrapper> connPool = new ArrayBlockingQueue<>(CONNECTION_POOL_SIZE);
+    private volatile ArrayBlockingQueue<H2Connection> connPool = new ArrayBlockingQueue<>(CONNECTION_POOL_SIZE);
 
     /** Database URL. */
     private final String dbUrl;
@@ -129,7 +129,7 @@ public class ConnectionManager {
      * @throws IgniteCheckedException If failed.
      */
     public void executeStatement(String schema, String sql) throws IgniteCheckedException {
-        try (H2ConnectionWrapper conn = connection(schema)) {
+        try (H2PooledConnection conn = connection(schema)) {
             Connection c = conn.connection();
 
             try (Statement stmt = c.createStatement()) {
@@ -169,7 +169,7 @@ public class ConnectionManager {
      * Clear statement cache when cache is unregistered..
      */
     public void onCacheDestroyed() {
-        connPool.forEach(H2ConnectionWrapper::clearStatementCache);
+        connPool.forEach(H2Connection::clearStatementCache);
     }
 
     /**
@@ -216,7 +216,7 @@ public class ConnectionManager {
     private void cleanupStatements() {
         long now = U.currentTimeMillis();
 
-        connPool.forEach(c ->{
+        connPool.forEach(c -> {
             if (now - c.statementCache().lastUsage() > stmtTimeout)
                 c.clearStatementCache();
         });
@@ -226,8 +226,8 @@ public class ConnectionManager {
      * @param schema Schema name.
      * @return Connection with setup schema.
      */
-    public H2ConnectionWrapper connection(String schema) {
-        H2ConnectionWrapper conn = connection();
+    public H2PooledConnection connection(String schema) {
+        H2PooledConnection conn = connection();
 
         try {
             conn.schema(schema);
@@ -250,8 +250,8 @@ public class ConnectionManager {
         if (size <= 0)
             throw new IllegalArgumentException("Invalid connection pool size: " + size);
 
-        ArrayBlockingQueue<H2ConnectionWrapper> newPool = new ArrayBlockingQueue<>(size);
-        ArrayBlockingQueue<H2ConnectionWrapper> oldPool = connPool;
+        ArrayBlockingQueue<H2Connection> newPool = new ArrayBlockingQueue<>(size);
+        ArrayBlockingQueue<H2Connection> oldPool = connPool;
 
         connPool = newPool;
 
@@ -261,48 +261,44 @@ public class ConnectionManager {
     /**
      * @return H2 connection wrapper.
      */
-    public H2ConnectionWrapper connection() {
+    public H2PooledConnection connection() {
         try {
-            H2ConnectionWrapper conn = connPool.poll(0, TimeUnit.MILLISECONDS);
+            H2Connection conn =  connPool.poll(0, TimeUnit.MILLISECONDS);
 
             if (conn == null)
-                conn = newConnectionWrapper();
-            else
-                conn.use();
+                conn = newConnection();
 
+            H2PooledConnection connWrp = new H2PooledConnection(conn, this);
             usedConns.add(conn);
 
             assert !conn.connection().isClosed() : "Connection is closed [conn=" + conn + ']';
 
-            conn.oncreate = new Exception("on create");
-            conn.onclose = null;
+//            if (usedConns.size() % 50 == 0) {
+//                HashMap<String, AtomicLong> createPlace = new HashMap<>();
+//
+//                for (H2Connection c : usedConns) {
+//                    String trace = X.getFullStackTrace(c.oncreate);
+//
+//                    if (createPlace.containsKey(trace))
+//                        createPlace.get(trace).incrementAndGet();
+//                    else
+//                        createPlace.put(trace, new AtomicLong(1));
+//                }
+//
+//                long max = 0;
+//                String trace = "";
+//                for (HashMap.Entry<String, AtomicLong> e : createPlace.entrySet()) {
+//                    if (max < e.getValue().get()) {
+//                        trace = e.getKey();
+//                        max = e.getValue().get();
+//                    }
+//                }
+//
+//                if (max > 200)
+//                    log.info("+++ TOP LEAK cnt=" + max + " / " + usedConns.size() + ", create: " + trace);
+//            }
 
-            if (usedConns.size() % 50 == 0) {
-                HashMap<String, AtomicLong> createPlace = new HashMap<>();
-
-                for (H2ConnectionWrapper c : usedConns) {
-                    String trace = X.getFullStackTrace(c.oncreate);
-
-                    if (createPlace.containsKey(trace))
-                        createPlace.get(trace).incrementAndGet();
-                    else
-                        createPlace.put(trace, new AtomicLong(1));
-                }
-
-                long max = 0;
-                String trace = "";
-                for (HashMap.Entry<String, AtomicLong> e : createPlace.entrySet()) {
-                    if (max < e.getValue().get()) {
-                        trace = e.getKey();
-                        max = e.getValue().get();
-                    }
-                }
-
-                if (max > 200)
-                    log.info("+++ TOP LEAK cnt=" + max + " / " + usedConns.size() + ", create: " + trace);
-            }
-
-            return conn;
+            return connWrp;
         }
         catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -319,9 +315,9 @@ public class ConnectionManager {
      *
      * @return Connection wrapper.
      */
-    private H2ConnectionWrapper newConnectionWrapper() {
+    private H2Connection newConnection() {
         try {
-            return new H2ConnectionWrapper(DriverManager.getConnection(dbUrl), this);
+            return new H2Connection(DriverManager.getConnection(dbUrl), log);
         }
         catch (SQLException e) {
             throw new IgniteSQLException("Failed to initialize DB connection: " + dbUrl, e);
@@ -332,7 +328,7 @@ public class ConnectionManager {
      * Return connection to pool or close if the pool size is bigger then maximum.
      * @param conn Connection.
      */
-    void recycle(H2ConnectionWrapper conn) {
+    void recycle(H2Connection conn) {
         try {
             boolean rmv = usedConns.remove(conn);
 
@@ -341,7 +337,7 @@ public class ConnectionManager {
             assert rmv : "Connection isn't tracked [conn=" + conn + ']';
 
             if (!connPool.offer(conn, 0, TimeUnit.MILLISECONDS))
-                U.close(conn.connection(), log);
+                conn.close();
         }
         catch (InterruptedException e) {
             Thread.currentThread().interrupt();

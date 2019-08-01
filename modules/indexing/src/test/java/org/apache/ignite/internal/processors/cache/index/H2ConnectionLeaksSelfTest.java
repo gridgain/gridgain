@@ -23,7 +23,7 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.query.h2.ConnectionManager;
-import org.apache.ignite.internal.processors.query.h2.H2ConnectionWrapper;
+import org.apache.ignite.internal.processors.query.h2.H2PooledConnection;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -185,7 +185,7 @@ public class H2ConnectionLeaksSelfTest extends AbstractIndexingCommonTest {
 
         if (!notLeak) {
             for (int i = 0; i < NODE_CNT; i++) {
-                Set<H2ConnectionWrapper> usedConns = usedConnections(i);
+                Set<H2PooledConnection> usedConns = usedConnections(i);
 
                 if (!usedConnections(i).isEmpty())
                     log.error("Not closed connections: " + usedConns);
@@ -199,7 +199,7 @@ public class H2ConnectionLeaksSelfTest extends AbstractIndexingCommonTest {
      * @param i Node index.
      * @return Set of used connections.
      */
-    private Set<H2ConnectionWrapper> usedConnections(int i) {
+    private Set<H2PooledConnection> usedConnections(int i) {
         ConnectionManager connMgr = ((IgniteH2Indexing)grid(i).context().query().getIndexing()).connections();
 
         return  GridTestUtils.getFieldValue(connMgr, "usedConns");

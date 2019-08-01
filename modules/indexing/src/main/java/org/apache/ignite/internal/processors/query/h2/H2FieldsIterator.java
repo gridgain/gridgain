@@ -34,7 +34,7 @@ public class H2FieldsIterator extends H2ResultSetIterator<List<?>> {
     private transient MvccQueryTracker mvccTracker;
 
     /** Connection. */
-    private final H2ConnectionWrapper conn;
+    private final H2PooledConnection conn;
 
     /**
      * @param data Data.
@@ -43,7 +43,7 @@ public class H2FieldsIterator extends H2ResultSetIterator<List<?>> {
      * @throws IgniteCheckedException If failed.
      */
     public H2FieldsIterator(ResultSet data, MvccQueryTracker mvccTracker,
-        H2ConnectionWrapper conn)
+        H2PooledConnection conn)
         throws IgniteCheckedException {
         super(data);
 

@@ -36,9 +36,8 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.processors.query.h2.ConnectionManager;
-import org.apache.ignite.internal.processors.query.h2.H2ConnectionWrapper;
+import org.apache.ignite.internal.processors.query.h2.H2PooledConnection;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
-import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -806,14 +805,10 @@ public abstract class AbstractQueryTableLockAndConnectionPoolSelfTest extends Ab
 
         if (!notLeak) {
             for (int i = 0; i < nodeCnt; i++) {
-                Set<H2ConnectionWrapper> usedConns = usedConnections(i);
+                Set<H2PooledConnection> usedConns = usedConnections(i);
 
                 if (!usedConnections(i).isEmpty())
                     log.error("Not closed connections: " + usedConns);
-
-                for (H2ConnectionWrapper c : usedConnections(i)) {
-                    log.error("" + c, c.oncreate);
-                }
             }
 
             fail("H2 JDBC connections leak detected. See the log above.");
@@ -824,7 +819,7 @@ public abstract class AbstractQueryTableLockAndConnectionPoolSelfTest extends Ab
      * @param i Node index.
      * @return Set of used connections.
      */
-    private Set<H2ConnectionWrapper> usedConnections(int i) {
+    private Set<H2PooledConnection> usedConnections(int i) {
         ConnectionManager connMgr = ((IgniteH2Indexing)grid(i).context().query().getIndexing()).connections();
 
         return  GridTestUtils.getFieldValue(connMgr, "usedConns");
