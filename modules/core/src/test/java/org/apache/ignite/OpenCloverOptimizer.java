@@ -113,7 +113,7 @@ public class OpenCloverOptimizer extends Suite {
 
         /** */
         private String resolveCloverDatabase() {
-            return resolve("CLOVER_DATABASE", "target", "clover/clover.db");
+            return resolve("CLOVER_DATABASE", ".clover", "clover.db");
         }
 
         /** */
