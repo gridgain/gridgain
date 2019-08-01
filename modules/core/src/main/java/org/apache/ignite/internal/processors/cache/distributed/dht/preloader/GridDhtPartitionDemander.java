@@ -16,26 +16,31 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.dht.preloader;
 
-import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.ToLongFunction;
+import java.util.stream.Stream;
 
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheRebalanceMode;
@@ -58,7 +63,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheEntryInfo;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryRemovedException;
 import org.apache.ignite.internal.processors.cache.GridCacheMvccEntryInfo;
 import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
-import org.apache.ignite.internal.processors.cache.GridCachePreloader;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtInvalidPartitionException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
@@ -87,9 +91,12 @@ import org.jetbrains.annotations.Nullable;
 
 import static java.lang.String.format;
 import static java.lang.System.currentTimeMillis;
-import static java.util.Collections.emptyList;
+import static java.time.ZoneId.systemDefault;
+import static java.time.format.DateTimeFormatter.ofPattern;
 import static java.util.Collections.singletonList;
-import static java.util.Comparator.comparing;
+import static java.util.Collections.singletonMap;
+import static java.util.Comparator.comparingInt;
+import static java.util.Comparator.comparingLong;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static java.util.function.Function.identity;
@@ -115,6 +122,15 @@ import static org.apache.ignite.internal.processors.dr.GridDrType.DR_PRELOAD;
  * Thread pool for requesting partitions from other nodes and populating local cache.
  */
 public class GridDhtPartitionDemander {
+    /** DTF for print into statistic output */
+    private static final DateTimeFormatter REBALANCE_STATISTICS_DTF = ofPattern("YYYY-MM-dd HH:mm:ss,SSS");
+
+    /** Text for successful or not rebalances */
+    private static final String SUCCESSFUL_OR_NOT_REBALANCE_TEXT = "including successful and not rebalances";
+
+    /** Text successful rebalance */
+    private static final String SUCCESSFUL_REBALANCE_TEXT = "successful rebalance";
+
     /** */
     private final GridCacheSharedContext<?, ?> ctx;
 
@@ -144,8 +160,9 @@ public class GridDhtPartitionDemander {
     /** Cached rebalance topics. */
     private final Map<Integer, Object> rebalanceTopics;
 
-    /** Date format pattern for print date in rebalance statistics */
-    private static final String REBALANCE_DATE_FORMAT_PATTERN = "YYYY-MM-dd HH:mm:ss,SSS";
+    /** Futures involved in the last rebalance. For statistics. */
+    @GridToStringExclude
+    private final List<RebalanceFuture> lastStatFutures = new CopyOnWriteArrayList<>();
 
     /**
      * @param grp Ccahe group.
@@ -396,19 +413,17 @@ public class GridDhtPartitionDemander {
                 fut.listen(f -> {
                     fut.stat.endTime = currentTimeMillis();
 
+                    lastStatFutures.add(fut);
+
                     try {
-                        boolean success = f.get();
+                        if (f.get()) { //Rebalance success finish
+                            printRebalanceStatistics(false);
 
-                        if (nonNull(next) && success) { //Has next AND Not cancelled
-                            next.run();
-                            printRebalanceStatistics(false);
-                        } else if (isNull(next) && success) {//Has't next AND Not cancelled
-                            printRebalanceStatistics(false);
-                            printRebalanceStatistics(true);
+                            if (nonNull(next)) //Has next rebalance
+                                next.run();
+                            else
+                                printRebalanceStatistics(true);
                         }
-
-                        if (!success)
-                            currentRebalanceFutures().forEach(future -> future.stat.partStat.clear());
                     }
                     catch (IgniteCheckedException e) {
                         if (log.isDebugEnabled())
@@ -552,12 +567,9 @@ public class GridDhtPartitionDemander {
                             return;
 
                         try {
-                            PartitionStatistics partStatistics = new PartitionStatistics();
-                            partStatistics.sndMsgTime = currentTimeMillis();
-
-                            fut.stat.partStat
+                            fut.stat.msgStats
                                 .computeIfAbsent(topicId, integer -> new ConcurrentHashMap<>())
-                                .put(node, partStatistics);
+                                .put(node, new RebalanceMessageStatistics(currentTimeMillis()));
 
                             ctx.io().sendOrderedMessage(node, rebalanceTopics.get(topicId),
                                 demandMsg.convertIfNeeded(node.version()), grp.ioPolicy(), demandMsg.timeout());
@@ -785,22 +797,16 @@ public class GridDhtPartitionDemander {
             }
 
             try {
-                PartitionStatistics partStat = fut.isDone() && !fut.get() ?
-                    new PartitionStatistics() : fut.stat.partStat.get(topicId).get(ctx.node(nodeId)) ;
-
-                partStat.rcvMsgTime = currentTimeMillis();
-
-                AffinityAssignment aff = grp.affinity().cachedAffinity(topVer);
-
-                partStat.msgSize = supplyMsg.messageSize();
-
                 if (isPrintRebalanceStatistics()) {
-                    List<PartitionInfoStatistics> partInfos = supplyMsg.infos().entrySet().stream()
-                        .map(entry -> new PartitionInfoStatistics(entry.getKey(), entry.getValue().infos().size()))
+                    List<PartitionStatistics> partStats = supplyMsg.infos().entrySet().stream()
+                        .map(entry -> new PartitionStatistics(entry.getKey(), entry.getValue().infos().size()))
                         .collect(toList());
 
-                    partStat.parts = partInfos;
+                    fut.stat.msgStats.get(topicId).get(ctx.node(nodeId)).receivePartStats
+                        .add(new ReceivePartitionStatistics(currentTimeMillis(), supplyMsg.messageSize(), partStats));
                 }
+
+                AffinityAssignment aff = grp.affinity().cachedAffinity(topVer);
 
                 // Preload.
                 for (Map.Entry<Integer, CacheEntryInfoCollection> e : supplyMsg.infos().entrySet()) {
@@ -1289,7 +1295,7 @@ public class GridDhtPartitionDemander {
 
         /** Rebalance statistics */
         @GridToStringExclude
-        private final RebalanceStatistics stat = new RebalanceStatistics();
+        private final RebalanceFutureStatistics stat = new RebalanceFutureStatistics();
 
         /**
          * @param grp Cache group.
@@ -1600,42 +1606,76 @@ public class GridDhtPartitionDemander {
         }
     }
 
-    /** Rebalance statistics1 */
-    private static class RebalanceStatistics {
+    /** {@link RebalanceFuture} statistics */
+    private static class RebalanceFutureStatistics {
         /** Start rebalance time in mills */
-        private volatile long startTime = currentTimeMillis();
+        private final long startTime = currentTimeMillis();
 
         /** End rebalance time in mills */
-        private volatile long endTime = currentTimeMillis();
+        private volatile long endTime = startTime;
 
-        /** First key - topic id. Second key - supplier node id. */
-        private final Map<Integer, Map<ClusterNode, PartitionStatistics>> partStat = new ConcurrentHashMap<>();
+        /** First key - topic id. Second key - supplier node. */
+        private final Map<Integer, Map<ClusterNode, RebalanceMessageStatistics>> msgStats = new ConcurrentHashMap<>();
     }
 
-    /** Partition statistics */
-    private static class PartitionStatistics {
-        /** Time send message for partition in mills */
-        private volatile long sndMsgTime;
+    /** Rebalance messages statistics */
+    private static class RebalanceMessageStatistics {
+        /** Time send message in mills */
+        private final long sndMsgTime;
 
+        /** Statistics by received partitions */
+        private final List<ReceivePartitionStatistics> receivePartStats = new CopyOnWriteArrayList<>();
+
+        /**
+         * @param sndMsgTime time send demand message
+         * */
+        public RebalanceMessageStatistics(final long sndMsgTime) {
+            this.sndMsgTime = sndMsgTime;
+        }
+    }
+
+    /** Receive partition statistics */
+    private static class ReceivePartitionStatistics {
         /** Time receive message with partition in mills */
-        private volatile long rcvMsgTime;
+        private final long rcvMsgTime;
 
         /** Size receive message in bytes */
-        private volatile long msgSize;
+        private final long msgSize;
 
         /** Received partitions */
-        private volatile List<PartitionInfoStatistics> parts = emptyList();
+        private final List<PartitionStatistics> parts;
+
+        /**
+         * @param rcvMsgTime time receive message in mills
+         * @param msgSize message size in bytes
+         * @param parts received partitions require not null
+         * */
+        public ReceivePartitionStatistics(
+            final long rcvMsgTime,
+            final long msgSize,
+            final List<PartitionStatistics> parts
+        ) {
+            assert nonNull(parts);
+
+            this.rcvMsgTime = rcvMsgTime;
+            this.msgSize = msgSize;
+            this.parts = parts;
+        }
     }
 
     /** Received partition info */
-    private static class PartitionInfoStatistics {
+    private static class PartitionStatistics {
         /** Partition id */
         private final int id;
 
         /** Count entries in partitions */
         private final int entryCount;
 
-        public PartitionInfoStatistics(final int id, final int entryCount) {
+        /**
+         * @param id - partition id
+         * @param entryCount Count entries in partitions
+         * */
+        public PartitionStatistics(final int id, final int entryCount) {
             this.id = id;
             this.entryCount = entryCount;
         }
@@ -1652,45 +1692,37 @@ public class GridDhtPartitionDemander {
         return !getBoolean(IGNITE_QUIET, true) && getBoolean(IGNITE_WRITE_REBALANCE_STATISTICS, false);
     }
 
-    /** Return {@link RebalanceFuture}'s for current rebalance.  */
-    private List<RebalanceFuture> currentRebalanceFutures() {
-        RebalanceFuture currRebFut = rebalanceFut;
-
+    /** Return list demanders per cache groups */
+    private List<GridDhtPartitionDemander> demanders(){
         return ctx.cacheContexts().stream()
             .map(GridCacheContext::preloader)
-            .map(GridCachePreloader::rebalanceFuture)
-            .filter(RebalanceFuture.class::isInstance)
-            .map(RebalanceFuture.class::cast)
-            .filter(future -> Objects.equals(future.topVer, currRebFut.topVer))
+            .filter(GridDhtPreloader.class::isInstance)
+            .map(GridDhtPreloader.class::cast)
+            .map(GridDhtPreloader::demander)
             .collect(toList());
     }
 
     /**
-     * Print statistics for current rebalance into log.
+     * Print rebalance statistics into log.
      * Statistic will print if {@link #isPrintRebalanceStatistics()}.
      * <p/>
-     * If {@code finish} == true then print full statistics, else print statistics only for current cache group.
+     * If {@code finish} == true then print full statistics
+     * (include successful and not rebalances), else print
+     * statistics only for current success cache group.
      * <p/>
      * If {@code finish} == true then clears statistics when printed or not.
+     * <p/>
+     * Partition distribution only for last success rebalance, per cache group.
      *
      * @param finish is finish rebalance
      * */
     private void printRebalanceStatistics(final boolean finish) {
-        log.info("Prepare print rebalance statistics");
-
-        RebalanceFuture currRebFut = rebalanceFut;
-
-        //collect all RebalanceFuture in current rebalance
-        List<RebalanceFuture> rebFuts = !finish ? singletonList(currRebFut) : currentRebalanceFutures();
-
         boolean printStat = isPrintRebalanceStatistics();
 
-        log.info(format(
-            "Print rebalance statistics [finish=%s, printStat=%s, rebFuts=%s]",
-            finish,
-            printStat,
-            rebFuts.size()
-        ));
+        log.info(format("Print rebalance statistics [finish=%s, printStat=%s]", finish, printStat));
+
+        Map<CacheGroupContext, List<RebalanceFuture>> rebFuts = !finish ? singletonMap(grp, singletonList(rebalanceFut))
+            : demanders().stream().collect(toMap(demander -> demander.grp, demander -> demander.lastStatFutures));
 
         try {
             if (!printStat)
@@ -1698,8 +1730,8 @@ public class GridDhtPartitionDemander {
 
             AtomicInteger nodeCnt = new AtomicInteger();
 
-            Map<ClusterNode, Integer> nodeAliases = rebFuts.stream()
-                .flatMap(future -> future.stat.partStat.entrySet().stream())
+            Map<ClusterNode, Integer> nodeAliases = toRebalanceFutureStream(rebFuts)
+                .flatMap(future -> future.stat.msgStats.entrySet().stream())
                 .flatMap(entry -> entry.getValue().keySet().stream())
                 .distinct()
                 .collect(toMap(identity(), node -> nodeCnt.getAndIncrement()));
@@ -1710,7 +1742,7 @@ public class GridDhtPartitionDemander {
                 joiner.add(totalRebalanceStatistics(rebFuts, nodeAliases));
 
             joiner
-                .add(cacheGroupsRebalanceStatistics(rebFuts, nodeAliases))
+                .add(cacheGroupsRebalanceStatistics(rebFuts, nodeAliases, finish))
                 .add(aliasesRebalanceStatistics("p - partitions, e - entries, b - bytes, d - duration", nodeAliases))
                 .add(partitionsDistributionRebalanceStatistics(rebFuts, nodeAliases, nodeCnt));
 
@@ -1718,106 +1750,85 @@ public class GridDhtPartitionDemander {
         }
         finally {
             if (finish) {
-                rebFuts.forEach(future -> future.stat.partStat.clear());
+                demanders().forEach(demander -> {
+                    demander.rebalanceFut.stat.msgStats.clear();
+                    demander.lastStatFutures.clear();
+                });
 
-                log.info("Clear rebalance statistics");
+                log.info("Clear statistics");
             }
         }
     }
 
     /**
-     * Total statistics for current rebalance.
+     * Total statistics for rebalance.
+     * Parameters requires not null.
      *
-     * @param rebFuts {@link RebalanceFuture}'s in current rebalance
+     * @param rebFuts participating in successful and not rebalances
      * @param nodeAliases for print nodeId=1 instead long string
      * @return total statistics
      */
     private String totalRebalanceStatistics(
-        final List<RebalanceFuture> rebFuts,
+        final Map<CacheGroupContext, List<RebalanceFuture>> rebFuts,
         final Map<ClusterNode, Integer> nodeAliases
     ) {
         assert nonNull(rebFuts);
         assert nonNull(nodeAliases);
 
-        long minStartTime = rebFuts.stream()
-            .mapToLong(value -> value.stat.startTime)
-            .min().getAsLong();
+        long minStartTime = minStartTime(toRebalanceFutureStream(rebFuts));
+        long maxEndTime = maxEndTime(toRebalanceFutureStream(rebFuts));
 
-        long maxEndTime = rebFuts.stream()
-            .mapToLong(value -> value.stat.endTime)
-            .max().getAsLong();
+        Map<Integer, List<RebalanceMessageStatistics>> topicStat = toTopicStatistics(toRebalanceFutureStream(rebFuts));
+        Map<ClusterNode, List<RebalanceMessageStatistics>> supplierStat = toSupplierStatistics(toRebalanceFutureStream(rebFuts));
 
-        Map<Integer, Collection<PartitionStatistics>> topicStat =
-            rebFuts.stream().flatMap(future -> future.stat.partStat.entrySet().stream())
-                .collect(groupingBy(Map.Entry::getKey, mapping(entry -> entry.getValue().values(), of(ArrayList::new,
-                    (s1, s2) -> s1.addAll(s2), (s1, s2) -> {
-                        s1.addAll(s2);
-                        return s1;
-                    }))));
-
-        Map<ClusterNode, List<PartitionStatistics>> supplierStat = rebFuts.stream()
-            .flatMap(future -> future.stat.partStat.entrySet().stream())
-            .flatMap(entry -> entry.getValue().entrySet().stream())
-            .collect(groupingBy(Map.Entry::getKey, mapping(Map.Entry::getValue, toList())));
-
-        StringJoiner joiner = new StringJoiner(" ");
-
-        SimpleDateFormat dateFormat = new SimpleDateFormat(REBALANCE_DATE_FORMAT_PATTERN);
-
-        return joiner.add("Total information:")
-            .add(format(
-                "Time [start=%s, end=%s, d=%s ms]",
-                dateFormat.format(new Date(minStartTime)),
-                dateFormat.format(new Date(maxEndTime)),
-                maxEndTime - minStartTime
-            ))
+        return new StringJoiner(" ")
+            .add(format("Total information (%s):", SUCCESSFUL_OR_NOT_REBALANCE_TEXT))
+            .add(format("Time [%s]", toStartEndDuration(minStartTime, maxEndTime)))
             .add(topicRebalanceStatistics(topicStat))
             .add(supplierRebalanceStatistics(supplierStat, nodeAliases))
             .toString();
     }
 
     /**
-     * Statistics per cache group for current rebalance.
+     * Rebalance statistics per cache group.
+     * <p/>
+     * If {@code finish} == true then
+     * add {@link #SUCCESSFUL_OR_NOT_REBALANCE_TEXT}
+     * else add {@link #SUCCESSFUL_REBALANCE_TEXT}
+     * into header.
+     * Parameters requires not null.
      *
-     * @param rebFuts {@link RebalanceFuture}'s in current rebalance
+     * @param rebFuts participating in successful and not rebalances
      * @param nodeAliases for print nodeId=1 instead long string
+     * @param finish is finish rebalance
      * @return statistics per cache group
      */
     private String cacheGroupsRebalanceStatistics(
-        final List<RebalanceFuture> rebFuts,
-        final Map<ClusterNode, Integer> nodeAliases
+        final Map<CacheGroupContext, List<RebalanceFuture>> rebFuts,
+        final Map<ClusterNode, Integer> nodeAliases,
+        final boolean finish
     ) {
         assert nonNull(rebFuts);
         assert nonNull(nodeAliases);
 
         StringJoiner joiner = new StringJoiner(" ")
-            .add("Information per cache group:");
+            .add(format(
+                "Information per cache group (%s):",
+                finish ? SUCCESSFUL_OR_NOT_REBALANCE_TEXT : SUCCESSFUL_REBALANCE_TEXT
+            ));
 
-        SimpleDateFormat dateFormat = new SimpleDateFormat(REBALANCE_DATE_FORMAT_PATTERN);
+        rebFuts.forEach((context, futures) -> {
+            long minStartTime = minStartTime(futures.stream());
+            long maxEndTime = maxEndTime(futures.stream());
 
-        rebFuts.forEach(future -> {
-            RebalanceStatistics stat = future.stat;
-
-            Map<Integer, Collection<PartitionStatistics>> topicStat = stat.partStat.entrySet().stream()
-                .collect(groupingBy(Map.Entry::getKey, mapping(entry -> entry.getValue().values(), of(ArrayList::new,
-                    (s1, s2) -> s1.addAll(s2), (s1, s2) -> {
-                        s1.addAll(s2);
-                        return s1;
-                    }))));
-
-            Map<ClusterNode, List<PartitionStatistics>> supplierStat = stat.partStat.entrySet().stream()
-                .flatMap(entry -> entry.getValue().entrySet().stream())
-                .collect(groupingBy(Map.Entry::getKey, mapping(Map.Entry::getValue, toList())));
-
-            CacheGroupContext cacheGrpCtx = future.grp;
+            Map<Integer, List<RebalanceMessageStatistics>> topicStat = toTopicStatistics(futures.stream());
+            Map<ClusterNode, List<RebalanceMessageStatistics>> supplierStat = toSupplierStatistics(futures.stream());
 
             joiner.add(format(
-                "[id=%s, name=%s, start=%s, end=%s, d=%s ms]",
-                cacheGrpCtx.groupId(),
-                cacheGrpCtx.cacheOrGroupName(),
-                dateFormat.format(stat.startTime),
-                dateFormat.format(stat.endTime),
-                stat.endTime - stat.startTime
+                "[id=%s, name=%s, %s]",
+                context.groupId(),
+                context.cacheOrGroupName(),
+                toStartEndDuration(minStartTime, maxEndTime)
             ))
                 .add(topicRebalanceStatistics(topicStat))
                 .add(supplierRebalanceStatistics(supplierStat, nodeAliases));
@@ -1828,17 +1839,20 @@ public class GridDhtPartitionDemander {
 
     /**
      * Partitions distribution per cache group.
-     * Works if {@link IgniteSystemProperties#IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS} set true.
+     * Only for last success rebalance.
+     * Works if {@code IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS} set true.
+     * Parameters requires not null.
      *
-     * @param rebFuts {@link RebalanceFuture}'s in current rebalance
+     * @param rebFuts participating in successful and not rebalances
      * @param nodeAliases for print nodeId=1 instead long string
-     * @param nodeCnt partitions distribution
+     * @param nodeCnt for adding new nodes into {@code nodeAliases}
+     * @see IgniteSystemProperties#IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS
      */
     private String partitionsDistributionRebalanceStatistics(
-        final List<RebalanceFuture> rebFuts,
+        final Map<CacheGroupContext, List<RebalanceFuture>> rebFuts,
         final Map<ClusterNode, Integer> nodeAliases,
-        final AtomicInteger nodeCnt)
-    {
+        final AtomicInteger nodeCnt
+    ) {
         assert nonNull(rebFuts);
         assert nonNull(nodeAliases);
         assert nonNull(nodeCnt);
@@ -1847,78 +1861,75 @@ public class GridDhtPartitionDemander {
             return "";
 
         StringJoiner joiner = new StringJoiner(" ")
-            .add("Partitions distribution per cache group:");
+            .add(format("Partitions distribution per cache group (%s):", SUCCESSFUL_REBALANCE_TEXT));
 
-        rebFuts.forEach(future -> {
-            CacheGroupContext cacheGrpCtx = future.grp;
+        Comparator<RebalanceFuture> startTimeCmp = comparingLong(fut -> fut.stat.startTime);
 
-            joiner.add(format("[id=%s, name=%s]", cacheGrpCtx.groupId(), cacheGrpCtx.cacheOrGroupName()));
+        rebFuts.forEach((context, futures) -> {
+            joiner.add(format("[id=%s, name=%s]", context.groupId(), context.cacheOrGroupName()));
 
-            AffinityAssignment affinity = future.grp.affinity().cachedAffinity(future.topVer);
+            RebalanceFuture lastSuccessFuture = futures.stream()
+                .filter(GridFutureAdapter::isDone)
+                .filter(this::rebalanceFutureResult)
+                .sorted(startTimeCmp.reversed())
+                .findFirst()
+                .orElse(null);
+
+            if (isNull(lastSuccessFuture))
+                return;
+
+            AffinityAssignment affinity = lastSuccessFuture.grp.affinity().cachedAffinity(lastSuccessFuture.topVer);
 
             Map<ClusterNode, Set<Integer>> primaryParts = affinity.nodes().stream()
                 .collect(toMap(identity(), node -> affinity.primaryPartitions(node.id())));
 
-            future.stat.partStat.entrySet().stream()
+            lastSuccessFuture.stat.msgStats.entrySet().stream()
                 .flatMap(entry -> entry.getValue().entrySet().stream())
-                .flatMap(entry -> entry.getValue().parts.stream().map(partInfo -> new T2<>(entry.getKey(), partInfo)))
-                .sorted(comparing(t2 -> t2.get2().id))
+                .flatMap(entry -> entry.getValue().receivePartStats.stream()
+                    .flatMap(rps -> rps.parts.stream())
+                    .map(ps -> new T2<>(entry.getKey(), ps))
+                )
+                .sorted(comparingInt(t2 -> t2.get2().id))
                 .forEach(t2 -> {
                     ClusterNode supplierNode = t2.get1();
                     int partId = t2.get2().id;
 
                     String nodes = affinity.get(partId).stream()
                         .peek(node -> nodeAliases.computeIfAbsent(node, node1 -> nodeCnt.getAndIncrement()))
-                        .sorted(comparing(nodeAliases::get))
-                        .map(node -> { return "[" + nodeAliases.get(node) +
+                        .sorted(comparingInt(nodeAliases::get))
+                        .map(node -> "[" + nodeAliases.get(node) +
                             (primaryParts.get(node).contains(partId) ? ",pr" : ",bu") +
-                            (node.equals(supplierNode) ? ",su" : "") + "]";
-                        })
+                            (node.equals(supplierNode) ? ",su" : "") + "]"
+                        )
                         .collect(joining(","));
 
                     joiner.add(partId + " = " + nodes);
                 });
-
         });
 
-        joiner.add(aliasesRebalanceStatistics("pr - primary, bu - backup, su - supplier node", nodeAliases));
-
-        return joiner.toString();
+        return joiner.add(aliasesRebalanceStatistics("pr - primary, bu - backup, su - supplier node", nodeAliases))
+            .toString();
     }
 
     /**
      * Statistics per topic.
+     * Parameter requires not null.
      *
-     * @param topicStat statistics by topics
+     * @param topicStat statistics by topics (in successful and not rebalances)
      * @return statistics per topic
      */
-    private String topicRebalanceStatistics(final Map<Integer, Collection<PartitionStatistics>> topicStat) {
+    private String topicRebalanceStatistics(final Map<Integer, List<RebalanceMessageStatistics>> topicStat) {
         assert nonNull(topicStat);
 
         StringJoiner joiner = new StringJoiner(" ")
             .add("Topic statistics:");
 
-        topicStat.forEach((tipicId, stat) -> {
-            long partCnt = stat.stream()
-                .mapToLong(value -> value.parts.size())
-                .sum();
+        topicStat.forEach((topicId, msgStats) -> {
+            long partCnt = sum(msgStats, rps -> rps.parts.size());
+            long byteSum = sum(msgStats, rps -> rps.msgSize);
+            long entryCount = sum(msgStats, rps -> rps.parts.stream().mapToLong(ps -> ps.entryCount).sum());
 
-            long entryCount = stat.stream()
-                .flatMap(value -> value.parts.stream())
-                .mapToLong(value -> value.entryCount)
-                .sum();
-
-            long byteSum = stat.stream()
-                .mapToLong(value -> value.msgSize)
-                .sum();
-
-            joiner.add(format(
-                "[id=%s, p=%s, e=%s, b=%s]",
-                tipicId,
-                partCnt,
-                entryCount,
-                byteSum
-            ));
+            joiner.add(format("[id=%s, %s]",topicId, toPartitionsEntriesBytes(partCnt, entryCount, byteSum)));
         });
 
         return joiner.toString();
@@ -1926,44 +1937,37 @@ public class GridDhtPartitionDemander {
 
     /**
      * Stattistics per supplier node.
+     * Parameters requires not null.
      *
-     * @param supplierStat statistics by supplier node
+     * @param supplierStat statistics by supplier (in successful and not rebalances)
      * @param nodeAliases for print nodeId=1 instead long string
      * @return statistics per supplier node
      */
     private String supplierRebalanceStatistics(
-        final Map<ClusterNode, List<PartitionStatistics>> supplierStat,
+        final Map<ClusterNode, List<RebalanceMessageStatistics>> supplierStat,
         final Map<ClusterNode, Integer> nodeAliases
     ) {
         assert nonNull(supplierStat);
+        assert nonNull(nodeAliases);
 
         StringJoiner joiner = new StringJoiner(" ")
             .add("Supplier statistics:");
 
-        supplierStat.forEach((node, stat) -> {
-            long partCnt = stat.stream()
-                .mapToLong(value -> value.parts.size())
-                .sum();
+        supplierStat.forEach((supplierNode, msgStats) -> {
+            long partCnt = sum(msgStats, rps -> rps.parts.size());
+            long byteSum = sum(msgStats, rps -> rps.msgSize);
+            long entryCount = sum(msgStats, rps -> rps.parts.stream().mapToLong(ps -> ps.entryCount).sum());
 
-            long entryCount = stat.stream()
-                .flatMap(value -> value.parts.stream())
-                .mapToLong(value -> value.entryCount)
-                .sum();
-
-            long byteSum = stat.stream()
-                .mapToLong(value -> value.msgSize)
-                .sum();
-
-            long durationSum = stat.stream()
-                .mapToLong(value -> value.rcvMsgTime - value.sndMsgTime)
+            long durationSum = msgStats.stream()
+                .flatMapToLong(msgStat -> msgStat.receivePartStats.stream()
+                    .mapToLong(rps -> rps.rcvMsgTime - msgStat.sndMsgTime)
+                )
                 .sum();
 
             joiner.add(format(
-                "[nodeId=%s, p=%s, e=%s, b=%s, d=%s ms]",
-                nodeAliases.get(node),
-                partCnt,
-                entryCount,
-                byteSum,
+                "[nodeId=%s, %s, d=%s ms]",
+                nodeAliases.get(supplierNode),
+                toPartitionsEntriesBytes(partCnt, entryCount, byteSum),
                 durationSum
             ));
         });
@@ -1973,6 +1977,7 @@ public class GridDhtPartitionDemander {
 
     /**
      * Statistics aliases, for reducing output string.
+     * Parameters requires not null.
      *
      * @param nodeAliases for print nodeId=1 instead long string
      * @param abbreviations abbreviations ex. b - bytes
@@ -1986,10 +1991,130 @@ public class GridDhtPartitionDemander {
         assert nonNull(nodeAliases);
 
         String nodes = nodeAliases.entrySet().stream()
-            .sorted(comparing(Map.Entry::getValue))
+            .sorted(comparingInt(Map.Entry::getValue))
             .map(entry -> format("[%s=%s,%s]", entry.getValue(), entry.getKey().id(), entry.getKey().consistentId()))
             .collect(joining(", "));
 
         return "Aliases: " + abbreviations + ", nodeId mapping (nodeId=id,consistentId) " + nodes;
+    }
+
+    /**
+     * Wraps get future result as unchecked exception.
+     * Parameter requires not null.
+     *
+     * @param future requires not null
+     * @return result future
+     * */
+    private boolean rebalanceFutureResult(final RebalanceFuture future) {
+        assert nonNull(future);
+
+        try {
+            return future.get();
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteException(e);
+        }
+    }
+
+    /** Time in mills */
+    private LocalDateTime toLocalDateTime(final long time){
+        return new Date(time).toInstant().atZone(systemDefault()).toLocalDateTime();
+    }
+
+    /** Return min {@link RebalanceFutureStatistics#startTime}. Parameter requires not null. */
+    private long minStartTime(final Stream<RebalanceFuture> stream) {
+        assert nonNull(stream);
+
+        return stream.mapToLong(value -> value.stat.startTime).min().orElse(0);
+    }
+
+    /** Return max {@link RebalanceFutureStatistics#endTime}. Parameter requires not null. */
+    private long maxEndTime(final Stream<RebalanceFuture> stream) {
+        assert nonNull(stream);
+
+        return stream.mapToLong(value -> value.stat.endTime).max().orElse(0);
+    }
+
+    /** Return stream of futures. Parameter requires not null. */
+    private Stream<RebalanceFuture> toRebalanceFutureStream(
+        final Map<CacheGroupContext, List<RebalanceFuture>> rebFuts
+    ) {
+        assert nonNull(rebFuts);
+
+        return rebFuts.entrySet().stream().flatMap(entry -> entry.getValue().stream());
+    }
+
+    /** Statistics per topic. Parameter requires not null. */
+    private Map<Integer, List<RebalanceMessageStatistics>> toTopicStatistics(final Stream<RebalanceFuture> stream) {
+        assert nonNull(stream);
+
+        return stream.flatMap(future -> future.stat.msgStats.entrySet().stream())
+            .collect(groupingBy(
+                Map.Entry::getKey,
+                mapping(
+                    entry -> entry.getValue().values(),
+                    of(
+                        ArrayList::new,
+                        Collection::addAll,
+                        (ms1, ms2) -> {
+                            ms1.addAll(ms2);
+                            return ms1;
+                        }
+                    )
+                )
+            ));
+    }
+
+    /** Statistics per supplier. Parameter requires not null. */
+    private Map<ClusterNode, List<RebalanceMessageStatistics>> toSupplierStatistics(
+        final Stream<RebalanceFuture> stream
+    ) {
+        assert nonNull(stream);
+
+        return stream.flatMap(future -> future.stat.msgStats.entrySet().stream())
+            .flatMap(entry -> entry.getValue().entrySet().stream())
+            .collect(groupingBy(Map.Entry::getKey, mapping(Map.Entry::getValue, toList())));
+    }
+
+    /**
+     * To string like "start=2019-08-01 13:15:10,100, end=2019-08-01 13:15:10,200, d=100 ms"
+     *
+     * @param start in ms
+     * @param end in ms
+     * @return string like "start=2019-08-01 13:15:10,100, end=2019-08-01 13:15:10,200, d=100 ms"
+     * @see #REBALANCE_STATISTICS_DTF
+     * */
+    private String toStartEndDuration(final long start, final long end) {
+        return format(
+            "start=%s, end=%s, d=%s ms",
+            REBALANCE_STATISTICS_DTF.format(toLocalDateTime(start)),
+            REBALANCE_STATISTICS_DTF.format(toLocalDateTime(end)),
+            end - start
+        );
+    }
+
+    /**
+     * Calculate sum use {@code longExtractor}. Parameters requires not null.
+     *
+     * @param msgStats message statistics
+     * @param longExtractor long extractor
+     * @return sum
+     * */
+    private long sum(
+        final List<RebalanceMessageStatistics> msgStats,
+        final ToLongFunction<? super ReceivePartitionStatistics> longExtractor
+    ) {
+        assert nonNull(msgStats);
+        assert nonNull(longExtractor);
+
+        return msgStats.stream()
+            .flatMap(msgStat -> msgStat.receivePartStats.stream())
+            .mapToLong(longExtractor)
+            .sum();
+    }
+
+    /** To string like "p=1, e=10, b=1024" */
+    private String toPartitionsEntriesBytes(final long parts, final long entries, final long bytes) {
+        return format("p=%s, e=%s, b=%s", parts, entries, bytes);
     }
 }

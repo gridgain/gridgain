@@ -79,10 +79,10 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     private static final String[] DEFAULT_CACHE_NAMES = {"ch0", "ch1", "ch2", "ch3"};
 
     /** Total information text */
-    private static final String TOTAL_INFORMATION_TEXT = "Total information:";
+    private static final String TOTAL_INFORMATION_TEXT = "Total information";
 
     /** Partitions distribution text */
-    private static final String PARTITIONS_DISTRIBUTION_TEXT = "Partitions distribution per cache group:";
+    private static final String PARTITIONS_DISTRIBUTION_TEXT = "Partitions distribution per cache group";
 
     /** Topic statistics text */
     public static final String TOPIC_STATISTICS_TEXT = "Topic statistics:";
@@ -91,7 +91,7 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     public static final String SUPPLIER_STATISTICS_TEXT = "Supplier statistics:";
 
     /** Information per cache group text */
-    public static final String INFORMATION_PER_CACHE_GROUP_TEXT = "Information per cache group:";
+    public static final String INFORMATION_PER_CACHE_GROUP_TEXT = "Information per cache group";
 
     /** Name attribute */
     public static final String NAME_ATTRIBUTE = "name";
