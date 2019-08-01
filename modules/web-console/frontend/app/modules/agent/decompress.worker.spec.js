@@ -36,14 +36,15 @@ suite('Decompress worker', () => {
     });
 
     test('Big number in array', async() => {
-        const data = '{"array":["ok","sd 9223372036854775807dsds",12345678901234,0.123400000000000,9223372036854775807]}';
+        const data = '{"array":[9223372036854775807, "ok","sd 9223372036854775807dsds",12345678901234,0.123400000000000,9223372036854775807]}';
 
         const {array} = await pool.postMessage(data);
 
-        assert.isString(array[0], 'has str string');
-        assert.isString(array[1], 'has str_num string');
-        assert.isNumber(array[2], 'has small_num number');
-        assert.isNumber(array[3], 'has small_num_float number');
-        assert.isString(array[4], 'has big_num string');
+        assert.isString(array[0], 'has str big_num');
+        assert.isString(array[1], 'has str string');
+        assert.isString(array[2], 'has str_num string');
+        assert.isNumber(array[3], 'has small_num number');
+        assert.isNumber(array[4], 'has small_num_float number');
+        assert.isString(array[5], 'has big_num string');
     });
 });
