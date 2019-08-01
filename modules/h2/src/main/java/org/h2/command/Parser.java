@@ -133,6 +133,7 @@ import org.h2.expression.TableFunction;
 import org.h2.expression.ValueExpression;
 import org.h2.expression.Variable;
 import org.h2.expression.Wildcard;
+import org.h2.index.HashJoinIndex;
 import org.h2.index.Index;
 import org.h2.message.DbException;
 import org.h2.result.SortOrder;
@@ -1472,8 +1473,13 @@ public class Parser {
         if (!readIf(")")) {
             do {
                 String indexName = readIdentifierWithSchema();
-                Index index = table.getIndex(indexName);
-                indexNames.add(index.getName());
+                if (HashJoinIndex.HASH_JOIN_IDX.equalsIgnoreCase(indexName)) {
+                    indexNames.add(HashJoinIndex.HASH_JOIN_IDX);
+                }
+                else {
+                    Index index = table.getIndex(indexName);
+                    indexNames.add(index.getName());
+                }
             } while (readIfMore(true));
         }
         return IndexHints.createUseIndexHints(indexNames);

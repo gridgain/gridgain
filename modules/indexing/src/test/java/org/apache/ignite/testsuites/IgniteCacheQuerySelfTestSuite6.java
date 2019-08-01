@@ -38,6 +38,7 @@ import org.apache.ignite.internal.processors.cache.query.continuous.GridCacheCon
 import org.apache.ignite.internal.processors.cache.query.continuous.GridCacheContinuousQueryReplicatedAtomicOneNodeTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.GridCacheContinuousQueryReplicatedAtomicSelfTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.IgniteCacheContinuousQueryClientTest;
+import org.apache.ignite.internal.processors.query.HashJoinQueryTest;
 import org.apache.ignite.internal.processors.query.MemLeakOnSqlWithClientReconnectTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.AllTests;
@@ -76,6 +77,8 @@ public class IgniteCacheQuerySelfTestSuite6 {
         suite.addTest(new JUnit4TestAdapter(StaticCacheDdlTest.class));
         suite.addTest(new JUnit4TestAdapter(StaticCacheDdlKeepStaticConfigurationTest.class));
         suite.addTest(new JUnit4TestAdapter(MemLeakOnSqlWithClientReconnectTest.class));
+
+        suite.addTest(new JUnit4TestAdapter(HashJoinQueryTest.class));
 
         return suite;
     }
