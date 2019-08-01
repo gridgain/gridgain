@@ -2131,13 +2131,13 @@ class ServerImpl extends TcpDiscoveryImpl {
                 log.debug("IP finder cleaner has been started.");
 
             while (!isInterrupted()) {
-                idle(true);
+                IgniteThread.nowIdle();
 
                 try {
                     Thread.sleep(spi.ipFinderCleanFreq);
                 }
                 finally {
-                    idle(false);
+                    IgniteThread.nowBusy();
                 }
 
 
@@ -7740,7 +7740,17 @@ class ServerImpl extends TcpDiscoveryImpl {
                 if (beforeEachPoll != null)
                     beforeEachPoll.run();
 
-                T msg = queue.poll(pollingTimeout, TimeUnit.MILLISECONDS);
+
+                T msg;
+
+                IgniteThread.nowIdle();
+
+                try {
+                    msg = queue.poll(pollingTimeout, TimeUnit.MILLISECONDS);
+                }
+                finally {
+                    IgniteThread.nowBusy();
+                }
 
                 if (msg == null)
                     noMessageLoop();

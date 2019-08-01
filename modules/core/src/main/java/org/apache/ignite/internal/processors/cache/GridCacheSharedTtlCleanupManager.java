@@ -206,12 +206,13 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
                     updateHeartbeat();
 
                     if (!expiredRemains) {
-                        ((IgniteThread)Thread.currentThread()).idle(true);
+                        IgniteThread.nowIdle();
+
                         try {
                             U.sleep(CLEANUP_WORKER_SLEEP_INTERVAL);
                         }
                         finally {
-                            ((IgniteThread)Thread.currentThread()).idle(false);
+                            IgniteThread.nowBusy();
                         }
                     }
 

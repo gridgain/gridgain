@@ -768,8 +768,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
             exchCtx = new ExchangeContext(crdNode, this);
 
-            cctx.exchange().exchangerBlockingSectionBegin();
-
             assert state == null : state;
 
             if (crdNode)

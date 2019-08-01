@@ -866,6 +866,11 @@ public final class GridNearTxFinishFuture<K, V> extends GridCacheCompoundIdentit
             "super", super.toString());
     }
 
+    /** {@inheritDoc} */
+    @Override public String describe() {
+        return getClass().getSimpleName();
+    }
+
     /**
      * @param miniId Mini future ID.
      * @param waitRemoteTxs Wait for remote txs.

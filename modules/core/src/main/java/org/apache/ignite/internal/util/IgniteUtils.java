@@ -1474,17 +1474,25 @@ public abstract class IgniteUtils {
         int skippedIdleThreads = 0;
 
         INFO: for (ThreadInfo info : threadInfos) {
+            boolean idle = false;
+
+            Object op = null;
+
             if (!dumpIdle) {
                 boolean found = false;
 
                 for (int i = 0; i < totalThreads; i++) {
-                    if (threads[i].getId() == info.getThreadId()) {
+                    Thread thread = threads[i];
+
+                    if (thread.getId() == info.getThreadId()) {
                         found = true;
 
-                        if (threads[i] instanceof IgniteThread && ((IgniteThread)threads[i]).idle()) {
+                        op = IgniteThread.peekOp(thread.getId());
+
+                        if (thread instanceof IgniteThread && ((IgniteThread)thread).idle()) {
                             skippedIdleThreads++;
 
-                            sb.a("*** IDLE ***").a(NL);
+                            idle = true;
                             ///continue INFO;
                         }
                     }
@@ -1494,19 +1502,8 @@ public abstract class IgniteUtils {
                     sb.a("*** ABSENT ***").a(NL);
             }
 
-            printThreadInfo(info, sb, deadlockedThreadsIds);
-
-            if (info.getLockedSynchronizers() != null && info.getLockedSynchronizers().length > 0) {
-                printSynchronizersInfo(info.getLockedSynchronizers(), sb);
-
-                sb.a(NL);
-            }
-
-            sb.a(NL);
+            printThreadInfo(info, sb, deadlockedThreadsIds, op, idle, dumpIdle);
         }
-
-        if (skippedIdleThreads > 0)
-            sb.a("Skipped " + skippedIdleThreads + " Ignite idle threads");
 
         sb.a(NL);
 
@@ -1581,6 +1578,17 @@ public abstract class IgniteUtils {
      * @param sb Buffer.
      */
     private static void printThreadInfo(ThreadInfo threadInfo, GridStringBuilder sb, Set<Long> deadlockedIdSet) {
+        printThreadInfo(threadInfo, sb, deadlockedIdSet, null, false, true);
+    }
+
+    /**
+     * Prints single thread info to a buffer.
+     *
+     * @param threadInfo Thread info.
+     * @param sb Buffer.
+     */
+    private static void printThreadInfo(ThreadInfo threadInfo, GridStringBuilder sb, Set<Long> deadlockedIdSet,
+        Object op, boolean idle, boolean dumpIdle) {
         final long id = threadInfo.getThreadId();
 
         if (deadlockedIdSet.contains(id))
@@ -1588,29 +1596,45 @@ public abstract class IgniteUtils {
 
         sb.a("Thread [name=\"").a(threadInfo.getThreadName())
             .a("\", id=").a(threadInfo.getThreadId())
+            .a(", idle=").a(idle)
             .a(", state=").a(threadInfo.getThreadState())
             .a(", blockCnt=").a(threadInfo.getBlockedCount())
             .a(", waitCnt=").a(threadInfo.getWaitedCount()).a("]").a(NL);
 
-        LockInfo lockInfo = threadInfo.getLockInfo();
-
-        if (lockInfo != null) {
-            sb.a("    Lock [object=").a(lockInfo)
-                .a(", ownerName=").a(threadInfo.getLockOwnerName())
-                .a(", ownerId=").a(threadInfo.getLockOwnerId()).a("]").a(NL);
+        if (op != null) {
+            if (op instanceof IgniteInternalFuture)
+                sb.a(((IgniteInternalFuture)op).describe()).a(NL);
         }
 
-        MonitorInfo[] monitors = threadInfo.getLockedMonitors();
-        StackTraceElement[] elements = threadInfo.getStackTrace();
+        if (dumpIdle || !idle) {
+            LockInfo lockInfo = threadInfo.getLockInfo();
 
-        for (int i = 0; i < elements.length; i++) {
-            StackTraceElement e = elements[i];
+            if (lockInfo != null) {
+                sb.a("    Lock [object=").a(lockInfo)
+                    .a(", ownerName=").a(threadInfo.getLockOwnerName())
+                    .a(", ownerId=").a(threadInfo.getLockOwnerId()).a("]").a(NL);
+            }
 
-            sb.a("        at ").a(e.toString());
+            MonitorInfo[] monitors = threadInfo.getLockedMonitors();
+            StackTraceElement[] elements = threadInfo.getStackTrace();
 
-            for (MonitorInfo monitor : monitors) {
-                if (monitor.getLockedStackDepth() == i)
-                    sb.a(NL).a("        - locked ").a(monitor);
+            for (int i = 0; i < elements.length; i++) {
+                StackTraceElement e = elements[i];
+
+                sb.a("        at ").a(e.toString());
+
+                for (MonitorInfo monitor : monitors) {
+                    if (monitor.getLockedStackDepth() == i)
+                        sb.a(NL).a("        - locked ").a(monitor);
+                }
+
+                sb.a(NL);
+            }
+
+            if (threadInfo.getLockedSynchronizers() != null && threadInfo.getLockedSynchronizers().length > 0) {
+                printSynchronizersInfo(threadInfo.getLockedSynchronizers(), sb);
+
+                sb.a(NL);
             }
 
             sb.a(NL);

@@ -33,6 +33,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgniteInClosure;
+import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.Async;
 import org.jetbrains.annotations.Nullable;
 
@@ -137,7 +138,6 @@ public class GridFutureAdapter<R> implements IgniteInternalFuture<R> {
 
     /** {@inheritDoc} */
     @Override public R get() throws IgniteCheckedException {
-        ///System.err.println(this);
         return get0(ignoreInterrupts);
     }
 
@@ -175,7 +175,13 @@ public class GridFutureAdapter<R> implements IgniteInternalFuture<R> {
 
         try {
             while (true) {
+                IgniteThread.pushOp(this);
+
+                System.err.println(getClass().getCanonicalName());
+
                 LockSupport.park();
+
+                IgniteThread.popOp();
 
                 if (Thread.interrupted()) {
                     interrupted = true;
@@ -591,6 +597,11 @@ public class GridFutureAdapter<R> implements IgniteInternalFuture<R> {
         /** {@inheritDoc} */
         @Override public String toString() {
             return "ChainFuture [orig=" + fut + ", doneCb=" + doneCb + ']';
+        }
+
+        /** {@inheritDoc} */
+        @Override public String describe() {
+            return fut.describe();
         }
     }
 }

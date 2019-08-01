@@ -140,4 +140,11 @@ public interface IgniteInternalFuture<R> {
      * @return Result value if future has already been completed normally.
      */
     public R result();
+
+    /**
+     * @return Short string describing this future for stack traces decoration.
+     */
+    public default String describe() {
+        return getClass().getSimpleName();
+    }
 }

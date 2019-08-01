@@ -16,6 +16,8 @@
 
 package org.apache.ignite.thread;
 
+import java.lang.ref.WeakReference;
+import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.util.typedef.internal.A;
@@ -43,6 +45,9 @@ public class IgniteThread extends Thread {
     /** Number of all grid threads in the system. */
     private static final AtomicLong cntr = new AtomicLong();
 
+    /** Per thread current waiting operations */
+    private static final WeakHashMap<Long, WeakReference<Object>> curOp = new WeakHashMap<>();
+
     /** The name of the Ignite instance this thread belongs to. */
     protected final String igniteInstanceName;
 
@@ -63,9 +68,6 @@ public class IgniteThread extends Thread {
 
     /** */
     private volatile boolean idle = false;
-
-    /** */
-    private volatile String op;
 
     /**
      * Creates thread with given worker.
@@ -236,12 +238,36 @@ public class IgniteThread extends Thread {
             ((IgniteThread)thread) : null;
     }
 
+    /**
+     * Sets current thread state as idle for stack collection purposes.
+     *
+     * Note there is assertion that state is changed. Invoke this method in pair with {@link #nowBusy()}.
+     */
+    public static void nowIdle() {
+        IgniteThread current = current();
+
+        if (current != null)
+            current.idle(true);
+    }
+
+    /**
+     * Sets current thread state as busy for stack collection purposes.
+     *
+     * Note there is assertion that state is changed. Invoke this method in pair with {@link #nowIdle()}.
+     */
+    public static void nowBusy() {
+        IgniteThread current = current();
+
+        if (current != null)
+            current.idle(false);
+    }
+
     public boolean idle() {
         return idle;
     }
 
     /** */
-    public void idle(boolean isIdle) {
+    void idle(boolean isIdle) {
         assert Thread.currentThread() == this;
 
         assert idle != isIdle;
@@ -259,6 +285,19 @@ public class IgniteThread extends Thread {
      */
     protected static String createName(long num, String threadName, String igniteInstanceName) {
         return threadName + "-#" + num + (igniteInstanceName != null ? '%' + igniteInstanceName + '%' : "");
+    }
+
+    public static void pushOp(Object op) {
+        curOp.put(Thread.currentThread().getId(), new WeakReference<>(op));
+    }
+
+    public static void popOp() {
+        curOp.remove(Thread.currentThread().getId());
+    }
+
+    public static Object peekOp(long threadId) {
+        WeakReference<Object> ref = curOp.get(threadId);
+        return ref == null ? null : ref.get();
     }
 
     /** {@inheritDoc} */

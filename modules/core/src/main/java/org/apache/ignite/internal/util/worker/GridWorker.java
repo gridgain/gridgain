@@ -24,6 +24,7 @@ import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -281,12 +282,16 @@ public abstract class GridWorker implements Runnable {
      */
     public void blockingSectionBegin() {
         heartbeatTs = Long.MAX_VALUE;
+
+        IgniteThread.nowIdle();
     }
 
     /**
      * Closes the protection section previously opened by {@link #blockingSectionBegin()}.
      */
     public void blockingSectionEnd() {
+        IgniteThread.nowBusy();
+
         updateHeartbeat();
     }
 

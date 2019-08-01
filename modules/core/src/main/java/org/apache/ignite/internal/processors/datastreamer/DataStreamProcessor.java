@@ -106,7 +106,16 @@ public class DataStreamProcessor<K, V> extends GridProcessorAdapter {
         flusher = new IgniteThread(new GridWorker(ctx.igniteInstanceName(), "grid-data-loader-flusher", log) {
             @Override protected void body() throws InterruptedException {
                 while (!isCancelled()) {
-                    DataStreamerImpl<K, V> ldr = flushQ.take();
+                    DataStreamerImpl<K, V> ldr;
+
+                    IgniteThread.nowIdle();
+
+                    try {
+                        ldr = flushQ.take();
+                    }
+                    finally {
+                        IgniteThread.nowBusy();
+                    }
 
                     if (!busyLock.enterBusy())
                         return;
@@ -117,9 +126,13 @@ public class DataStreamProcessor<K, V> extends GridProcessorAdapter {
 
                         ldr.tryFlush();
 
+                        IgniteThread.nowIdle();
+
                         flushQ.offer(ldr);
                     }
                     finally {
+                        IgniteThread.nowBusy();
+
                         busyLock.leaveBusy();
                     }
                 }

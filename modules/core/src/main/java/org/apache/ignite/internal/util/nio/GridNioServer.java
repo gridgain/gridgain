@@ -1058,12 +1058,12 @@ public class GridNioServer<T> {
 
     private static boolean select(Selector selector) throws IOException {
         try {
-            ((IgniteThread)Thread.currentThread()).idle(true);
+            IgniteThread.nowIdle();
 
             return selector.select(2000) > 0;
         }
         finally {
-            ((IgniteThread)Thread.currentThread()).idle(false);
+            IgniteThread.nowBusy();
         }
     }
 

@@ -541,14 +541,10 @@ public class StripedExecutor implements ExecutorService {
                 try {
                     blockingSectionBegin();
 
-                    ((IgniteThread)Thread.currentThread()).idle(true);
-
                     try {
                         cmd = take();
                     }
                     finally {
-                        ((IgniteThread)Thread.currentThread()).idle(false);
-
                         blockingSectionEnd();
                     }
 
@@ -560,13 +556,9 @@ public class StripedExecutor implements ExecutorService {
                         updateHeartbeat();
 
                         try {
-                            ((IgniteThread)Thread.currentThread()).idle(false);
-
                             cmd.run();
                         }
                         finally {
-                            ((IgniteThread)Thread.currentThread()).idle(false);
-
                             active = false;
                             completedCnt++;
                         }

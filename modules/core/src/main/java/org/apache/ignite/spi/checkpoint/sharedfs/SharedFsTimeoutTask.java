@@ -96,13 +96,13 @@ class SharedFsTimeoutTask extends IgniteSpiThread {
                     }
 
                     while (delay > 0) {
-                        idle(true);
+                        IgniteThread.nowIdle();
 
                         try {
                             mux.wait(delay);
                         }
                         finally {
-                            idle(false);
+                            IgniteThread.nowBusy();
                         }
 
                         delay = nextTime - U.currentTimeMillis();

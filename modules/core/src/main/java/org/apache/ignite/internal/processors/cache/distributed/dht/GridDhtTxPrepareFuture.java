@@ -1984,6 +1984,13 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
         @Override public String toString() {
             return S.toString(MiniFuture.class, this, "done", isDone(), "cancelled", isCancelled(), "err", error());
         }
+
+        /** {@inheritDoc} */
+        @Override public String describe() {
+            return getClass().getSimpleName() + "[id=" + futId +
+                ", entries=" + (dhtMapping != null ? dhtMapping.entries().size() : nearMapping.entries().size()) +
+                ", node=" + U.id8(nodeId) + "]";
+        }
     }
 
     /**

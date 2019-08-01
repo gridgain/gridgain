@@ -93,11 +93,12 @@ public class IgniteThreadPoolExecutor extends ThreadPoolExecutor {
     @Override protected void beforeExecute(Thread t, Runnable r) {
         super.beforeExecute(t, r);
 
-        ((IgniteThread)t).idle(false);
+        if (t instanceof IgniteThread)
+            ((IgniteThread)t).idle(false);
     }
 
     @Override protected void afterExecute(Runnable r, Throwable t) {
-        ((IgniteThread)Thread.currentThread()).idle(true);
+        IgniteThread.nowIdle();
 
         super.afterExecute(r, t);
     }

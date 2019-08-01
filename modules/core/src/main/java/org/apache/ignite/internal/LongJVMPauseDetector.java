@@ -114,13 +114,13 @@ public class LongJVMPauseDetector {
 
                 while (true) {
                     try {
-                        ((IgniteThread)Thread.currentThread()).idle(true);
+                        IgniteThread.nowIdle();
 
                         try {
                             Thread.sleep(PRECISION);
                         }
                         finally {
-                            ((IgniteThread)Thread.currentThread()).idle(false);
+                            IgniteThread.nowBusy();
                         }
 
                         final long now = System.currentTimeMillis();
