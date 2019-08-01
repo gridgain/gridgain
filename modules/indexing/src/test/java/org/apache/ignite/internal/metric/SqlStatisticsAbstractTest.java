@@ -42,16 +42,30 @@ public class SqlStatisticsAbstractTest extends GridCommonAbstractTest {
     public static final int TABLE_SIZE = 10_000;
 
     /**
+     * Starts server node with max memory quota.
+     *
+     * @param nodeIdx test framework index to start node with.
+     * @param maxMem value of default global quota to set on node start; -1 forunlimited.
+     * @throws Exception on fail.
+     */
+    protected void startGridWithMaxMem(int nodeIdx, long maxMem) throws Exception {
+        startGridWithMaxMem(nodeIdx, maxMem, false);
+    }
+
+    /**
      * Starts grid with specified global (max memory quota) value.
      *
      * @param nodeIdx test framework index to start node with.
-     * @param maxMem value of default global quota to set on node start; -1 for unlimited.
+     * @param maxMem value of default global quota to set on node start; -1 forunlimited.
+     * @param client if we need to start client node.
      */
-    protected void startGridWithMaxMem(int nodeIdx, long maxMem) throws Exception {
+    protected void startGridWithMaxMem(int nodeIdx, long maxMem, boolean client) throws Exception {
         try {
             System.setProperty(IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE, String.valueOf(maxMem));
 
-            startGrid(nodeIdx);
+            String name = getTestIgniteInstanceName(nodeIdx);
+
+            startGrid(name, getConfiguration(name).setClientMode(client));
         }
         finally {
             System.clearProperty(IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE);

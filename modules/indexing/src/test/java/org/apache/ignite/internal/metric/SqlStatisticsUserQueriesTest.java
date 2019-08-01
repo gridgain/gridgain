@@ -157,9 +157,53 @@ public class SqlStatisticsUserQueriesTest extends SqlStatisticsAbstractTest {
         );
     }
 
+    /**
+     * Verify map phase failure affects only general fail metric, not OOM metric.
+     *
+     * @throws Exception on fail.
+     */
     @Test
-    public void testOomFailedQuery() throws Exception {
+    public void testIfMapPhaseFailedByOomThenOomMetricIsNotUpdated() throws Exception {
+        int strongMemQuota = 256 * 1024;
+        int memQuotaUnlimited = -1;
 
+        startGridWithMaxMem(MAPPER_IDX, strongMemQuota);
+        startGridWithMaxMem(REDUCER_IDX, memQuotaUnlimited);
+
+        IgniteCache cache = createCacheFrom(grid(REDUCER_IDX));
+
+        assertOnlyOneMetricIncrementedOnReducer("failed",
+            () -> GridTestUtils.assertThrows(
+                log,
+                () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB")).getAll(),
+                CacheException.class,
+                null)
+        );
+    }
+
+    /**
+     * If reduce part of the query failed due to OOM protection, only general failure metric and OOM metric should be
+     * incremented only on reduce node.
+     */
+    @Test
+    public void testIfReduceQueryOomThenOnlyReducerMetricsAreIncremented() throws Exception {
+        int strongMemQuota = 256 * 1024;
+        int memQuotaUnlimited = -1;
+
+        startGridWithMaxMem(MAPPER_IDX, memQuotaUnlimited);
+
+        // Since reduce node is client, it doesn't execute map queries, and reduce part fails.
+        startGridWithMaxMem(REDUCER_IDX, strongMemQuota, true);
+
+        IgniteCache cache = createCacheFrom(grid(REDUCER_IDX));
+
+        assertNegativeMetricIncrementedOnReducer("failedByOOM",
+            () -> GridTestUtils.assertThrows(
+                log,
+                () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB GROUP BY NAME")).getAll(),
+                CacheException.class,
+                null)
+        );
     }
 
     /**
@@ -196,6 +240,28 @@ public class SqlStatisticsUserQueriesTest extends SqlStatisticsAbstractTest {
     private void assertMetricsRemainTheSame(Runnable act) {
         assertMetricsAre(fetchAllMetrics(REDUCER_IDX), fetchAllMetrics(MAPPER_IDX),  act);
     }
+
+
+    /**
+     * Verify that after specified action is performed, specified 'negative' metric and general failure metric are
+     * incremented.
+     *
+     * @param metric Metric.
+     * @param act Action.
+     */
+    private void assertNegativeMetricIncrementedOnReducer(String metric, Runnable act) {
+        Map<String, Long> expValuesMapper = fetchAllMetrics(MAPPER_IDX);
+
+        Map<String, Long> expValuesReducer = fetchAllMetrics(REDUCER_IDX);
+
+        expValuesReducer.compute("failed", (name, val) -> val + 1);
+
+        expValuesReducer.compute(metric, (name, val) -> val + 1);
+
+        assertMetricsAre(expValuesReducer, expValuesMapper,  act);
+    }
+
+
 
     /**
      * Verify that after specified action is performed, specified metric is incremented.
