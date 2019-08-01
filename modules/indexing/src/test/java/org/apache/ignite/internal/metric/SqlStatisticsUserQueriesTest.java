@@ -174,14 +174,24 @@ public class SqlStatisticsUserQueriesTest extends GridCommonAbstractTest {
             () -> cache.query(new SqlQuery(String.class, "ID < 5").setLocal(true)).getAll());
     }
 
+    /**
+     * Verify that if query fails at runtime only appropriate reducer metric is updated.
+     *
+     * @throws Exception on fail.
+     */
     @Test
-    public void testIfQueryFailed() throws Exception {
+    public void testIfParsableQueryFailedOnlyReducerMetricIsUpdated() throws Exception {
         startGrids(2);
 
         IgniteCache cache = createCacheFrom(grid(REDUCER_IDX));
 
         assertOnlyOneMetricIncrementedOnReducer("failed",
-            () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID = fail")).getAll());
+            () -> GridTestUtils.assertThrows(
+                log,
+                () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID = failFunction()")).getAll(),
+                CacheException.class,
+                null)
+        );
     }
 
     @Test
