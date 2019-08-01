@@ -16,17 +16,22 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.lang.management.ManagementFactory;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.LongStream;
+import javax.management.MBeanServer;
+import javax.management.MBeanServerInvocationHandler;
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.managers.communication.GridIoManager;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxPrepareRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxQueryFirstEnlistRequest;
@@ -35,13 +40,14 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridNe
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLockRequest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxEnlistRequest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareRequest;
-import org.apache.ignite.internal.processors.metric.MetricRegistry;
-import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
+import org.apache.ignite.internal.processors.metric.HistogramMetric;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.IgniteSpiException;
+import org.apache.ignite.spi.communication.tcp.TcpCommunicationMetricsListener;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
+import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpiMBean;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
@@ -56,13 +62,12 @@ import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
 import static org.apache.ignite.internal.managers.communication.GridIoManager.DEFAULT_HIST_BOUNDS;
-import static org.apache.ignite.internal.managers.communication.GridIoManager.METRIC_REGISTRY_NAME;
-import static org.apache.ignite.internal.processors.cache.GridCacheMessage.MIN_MSG_ID;
+import static org.apache.ignite.spi.communication.tcp.TcpCommunicationMetricsListener.metricName;
 
 /**
  * Tests for CommunicationSpi time metrics.
  */
-public class CacheMessagesTimeLoggingTest  extends GridCommonAbstractTest {
+public class CacheMessagesTimeLoggingTest extends GridCommonAbstractTest {
     /** Grid count. */
     private static final int GRID_CNT = 3;
 
@@ -99,69 +104,107 @@ public class CacheMessagesTimeLoggingTest  extends GridCommonAbstractTest {
      *
      */
     @Test
-    public void testGridDhtTxPrepareRequestTimeLogging() {
+    public void testGridDhtTxPrepareRequestTimeLogging() throws MalformedObjectNameException {
         IgniteCache<Integer, Integer> cache = grid(0).cache(DEFAULT_CACHE_NAME);
 
         populateCache(cache);
 
-        checkEventsNum(GridDhtTxPrepareRequest.class);
+        checkOutcommingEventsNum(GridDhtTxPrepareRequest.class);
     }
 
     /**
      *
      */
     @Test
-    public void testGridNearAtomicUpdateLogging() {
-        IgniteCache<Integer, Integer> cache = grid(0).createCache(new CacheConfiguration<Integer, Integer>()
-                                                                            .setName("some_cache")
+    public void testGridNearAtomicUpdateLogging() throws MalformedObjectNameException {
+        IgniteCache<Integer, Integer> cache0 = grid(0).createCache(new CacheConfiguration<Integer, Integer>()
+                                                                            .setName("some_cache_0")
                                                                             .setAtomicityMode(ATOMIC));
 
-        populateCache(cache);
+        populateCache(cache0);
 
-        checkEventsNum(GridNearAtomicSingleUpdateRequest.class);
-        checkEventsNum(GridNearAtomicFullUpdateRequest.class);
+        checkOutcommingEventsNum(GridNearAtomicSingleUpdateRequest.class);
+        checkOutcommingEventsNum(GridNearAtomicFullUpdateRequest.class);
+
+        IgniteCache<Integer, Integer> cache1 = grid(1).createCache(new CacheConfiguration<Integer, Integer>()
+                                                                            .setName("some_cache_1")
+                                                                            .setAtomicityMode(ATOMIC));
+
+        populateCache(cache1);
+
+        checkIncommingEventsNum(GridNearAtomicSingleUpdateRequest.class);
+        checkIncommingEventsNum(GridNearAtomicFullUpdateRequest.class);
     }
 
     /**
      *
      */
     @Test
-    public void testTransactions() {
-        IgniteCache<Integer, Integer> cache = grid(0).createCache(new CacheConfiguration<Integer, Integer>()
-                                                                            .setName("some_cache")
+    public void testTransactions() throws MalformedObjectNameException {
+        IgniteCache<Integer, Integer> cache0 = grid(0).createCache(new CacheConfiguration<Integer, Integer>()
+                                                                            .setName("some_cache_0")
                                                                             .setBackups(1)
                                                                             .setAtomicityMode(TRANSACTIONAL));
 
 
         try (Transaction tx = grid(0).transactions().txStart(TransactionConcurrency.PESSIMISTIC, TransactionIsolation.READ_COMMITTED)) {
-            populateCache(cache);
+            populateCache(cache0);
 
             tx.commit();
         }
 
-        checkEventsNum(GridNearLockRequest.class);
-        checkEventsNum(GridNearTxPrepareRequest.class);
+        checkOutcommingEventsNum(GridNearLockRequest.class);
+        checkOutcommingEventsNum(GridNearTxPrepareRequest.class);
+
+        IgniteCache<Integer, Integer> cache1 = grid(1).createCache(new CacheConfiguration<Integer, Integer>()
+                                                                            .setName("some_cache_1")
+                                                                            .setBackups(1)
+                                                                            .setAtomicityMode(TRANSACTIONAL));
+
+
+        try (Transaction tx = grid(1).transactions().txStart(TransactionConcurrency.PESSIMISTIC, TransactionIsolation.READ_COMMITTED)) {
+            populateCache(cache1);
+
+            tx.commit();
+        }
+
+        checkIncommingEventsNum(GridNearLockRequest.class);
+        checkIncommingEventsNum(GridNearTxPrepareRequest.class);
     }
 
     /**
      *
      */
     @Test
-    public void testGridNearTxEnlistRequest() {
-        IgniteCache<Integer, Integer> cache = grid(0).createCache(new CacheConfiguration<Integer, Integer>()
-                                                                            .setName("some_cache")
+    public void testGridNearTxEnlistRequest() throws MalformedObjectNameException {
+        IgniteCache<Integer, Integer> cache0 = grid(0).createCache(new CacheConfiguration<Integer, Integer>()
+                                                                            .setName("some_cache_0")
                                                                             .setBackups(1)
                                                                             .setAtomicityMode(TRANSACTIONAL_SNAPSHOT));
 
         try (Transaction tx = grid(0).transactions().txStart(TransactionConcurrency.PESSIMISTIC, TransactionIsolation.READ_COMMITTED)) {
-            populateCache(cache);
+            populateCache(cache0);
 
             tx.commit();
         }
 
-        checkEventsNum(GridNearTxEnlistRequest.class);
-        checkEventsNum(GridNearTxPrepareRequest.class);
-        checkEventsNum(GridDhtTxQueryFirstEnlistRequest.class);
+        checkOutcommingEventsNum(GridNearTxEnlistRequest.class);
+        checkOutcommingEventsNum(GridNearTxPrepareRequest.class);
+        checkOutcommingEventsNum(GridDhtTxQueryFirstEnlistRequest.class);
+
+        IgniteCache<Integer, Integer> cache1 = grid(1).createCache(new CacheConfiguration<Integer, Integer>()
+                                                                            .setName("some_cache_1")
+                                                                            .setBackups(1)
+                                                                            .setAtomicityMode(TRANSACTIONAL_SNAPSHOT));
+
+        try (Transaction tx = grid(1).transactions().txStart(TransactionConcurrency.PESSIMISTIC, TransactionIsolation.READ_COMMITTED)) {
+            populateCache(cache1);
+
+            tx.commit();
+        }
+
+        checkIncommingEventsNum(GridNearTxEnlistRequest.class);
+        checkIncommingEventsNum(GridNearTxPrepareRequest.class);
     }
 
     /**
@@ -181,21 +224,28 @@ public class CacheMessagesTimeLoggingTest  extends GridCommonAbstractTest {
     /**
      *
      */
-    private void checkEventsNum(Class msgClass) {
-        checkEventsNum(grid(0), grid(1), msgClass);
+    private void checkOutcommingEventsNum(Class msgClass) throws MalformedObjectNameException {
+        checkEventsNum(0, grid(1), msgClass, true);
+    }
+
+    /**
+     *
+     */
+    private void checkIncommingEventsNum(Class msgClass) throws MalformedObjectNameException {
+        checkEventsNum(0, grid(1), msgClass, false);
     }
 
     /**
      * Compares sent events number with histogram entries number.
      * Fails if these numbers differ.
      */
-    private void checkEventsNum(IgniteEx source, IgniteEx target, Class msgClass) {
-        RecordingSpi spi = (RecordingSpi)source.configuration().getCommunicationSpi();
+    private void checkEventsNum(int sourceIdx, IgniteEx target, Class msgClass, boolean outcomming) throws MalformedObjectNameException {
+        RecordingSpi spi = (RecordingSpi)grid(sourceIdx).configuration().getCommunicationSpi();
 
-        HistogramMetric metric = getMetric(source, target, msgClass);
+        HistogramMetric metric = getMetric(sourceIdx, target, msgClass, outcomming);
         assertNotNull("HistogramMetric not found", metric);
 
-        String metricName = getTimeStorage(source).metricName(target.localNode().id(), msgClass);
+        String metricName = metricName(target.localNode().id(), msgClass);
 
         long sum = LongStream.of(metric.value()).sum();
 
@@ -212,44 +262,32 @@ public class CacheMessagesTimeLoggingTest  extends GridCommonAbstractTest {
     public void testEviction() throws InterruptedException {
         System.setProperty(IGNITE_MESSAGES_INFO_STORE_TIME, "1");
 
-        IgniteCache<Integer, Integer> cache = grid(0).cache(DEFAULT_CACHE_NAME);
+        Map<Long, Long> map = Collections.synchronizedMap(new TcpCommunicationMetricsListener.TimestampMap());
 
-        // Needed to create timestamp storage.
-        cache.put(1, 1);
-
-        GridIoManager.ReqRespTimeStorage timeStorage = getTimeStorage(grid(0));
-
-        Map<UUID, Map<Class<? extends Message>, Map<Long, Long>>> storage = U.field(timeStorage, "storage");
-        assertNotNull(storage);
-
-        Map<Long, Long> timestampMap = storage.get(grid(1).localNode().id()).get(GridDhtTxPrepareRequest.class);
-
-        final int entriesNum = 20;
-
-        for (long i = MIN_MSG_ID; i < MIN_MSG_ID + entriesNum; i++)
-            timestampMap.putIfAbsent(i, System.nanoTime());
+        map.put(10L, System.nanoTime());
+        map.putIfAbsent(20L, System.nanoTime());
 
         Thread.sleep(2000);
 
-        assertTrue("Unexpected map size before eviction: " + timestampMap.size(), timestampMap.size() == entriesNum);
+        assertTrue("Unexpected map size before eviction: " + map.size(), map.size() == 2);
 
-        timestampMap.putIfAbsent(MIN_MSG_ID + entriesNum + 1, System.nanoTime());
+        map.putIfAbsent(30L, System.nanoTime());
 
-        assertTrue("Unexpected map size after eviction: " + timestampMap.size(), timestampMap.size() == 1);
+        assertTrue("Unexpected map size after eviction: " + map.size(), map.size() == 1);
     }
 
     /**
      * Tests metrics disabling
      */
     @Test
-    public void testDisabledMetric() {
+    public void testDisabledMetric() throws MalformedObjectNameException {
         System.setProperty(IGNITE_ENABLE_MESSAGES_TIME_LOGGING, "not boolean value");
 
         IgniteCache<Integer, Integer> cache = grid(0).cache(DEFAULT_CACHE_NAME);
 
         cache.put(1, 1);
 
-        HistogramMetric metric = getMetric(grid(0), grid(1), GridDhtTxPrepareRequest.class);
+        HistogramMetric metric = getMetric(0, grid(1), GridDhtTxPrepareRequest.class, true);
 
         assertNull("Metrics unexpectedly enabled", metric);
     }
@@ -263,7 +301,7 @@ public class CacheMessagesTimeLoggingTest  extends GridCommonAbstractTest {
 
         cache.put(1, 1);
 
-        HistogramMetric metric = getMetric(grid(0), grid(1), GridDhtTxPrepareRequest.class);
+        HistogramMetric metric = getMetric(0, grid(1), GridDhtTxPrepareRequest.class, true);
 
         assertEquals(DEFAULT_HIST_BOUNDS.length + 1, metric.value().length);
 
@@ -278,7 +316,8 @@ public class CacheMessagesTimeLoggingTest  extends GridCommonAbstractTest {
 
         cache3.put(1, 1);
 
-        HistogramMetric metric3 = getMetric(grid3, grid(1), GridNearAtomicSingleUpdateRequest.class);
+        HistogramMetric metric3 = getMetric(GRID_CNT, grid(1), GridNearAtomicSingleUpdateRequest.class, true);
+        assertNotNull(metric3);
 
         assertEquals(4, metric3.value().length);
 
@@ -293,37 +332,52 @@ public class CacheMessagesTimeLoggingTest  extends GridCommonAbstractTest {
 
         cache4.put(1, 1);
 
-        HistogramMetric metric4 = getMetric(grid4, grid(1), GridNearAtomicSingleUpdateRequest.class);
+        HistogramMetric metric4 = getMetric(GRID_CNT + 1, grid(1), GridNearAtomicSingleUpdateRequest.class, true);
+        assertNotNull(metric4);
 
         assertEquals(DEFAULT_HIST_BOUNDS.length + 1, metric4.value().length);
     }
 
 
     /**
-     * @param sourceNode Node that stores metric.
+     * @param sourceNodeIdx Index of node that stores metric.
      * @param targetNode Node where requests are sent.
      * @param msgClass Metric request class.
      * @return {@code HistogramMetric} for {@code msgClass}.
      */
-    @Nullable private HistogramMetric getMetric(IgniteEx sourceNode, IgniteEx targetNode, Class msgClass) {
-        GridIoManager.ReqRespTimeStorage timeStorage = getTimeStorage(sourceNode);
+    @Nullable private HistogramMetric getMetric(int sourceNodeIdx, IgniteEx targetNode, Class msgClass, boolean outcomming) throws MalformedObjectNameException {
+        try {
+            TcpCommunicationSpiMBean mbean = mbean(sourceNodeIdx);
 
-        String metricName = timeStorage.metricName(targetNode.localNode().id(), msgClass);
+            Map<UUID, Map<Class<? extends Message>, HistogramMetric>> nodeMap = outcomming ? mbean.getOutMetricsByNodeByMsgClass() : mbean.getInMetricsByNodeByMsgClass();
 
-        MetricRegistry registry = sourceNode.context().metric().registry(METRIC_REGISTRY_NAME);
+            Map<Class<? extends Message>, HistogramMetric> classMap = nodeMap.get(targetNode.localNode().id());
 
-        return (HistogramMetric)registry.findMetric(metricName);
+            return classMap.get(msgClass);
+        } catch (NullPointerException e) {
+            return null;
+        }
     }
 
     /**
+     * Gets TcpCommunicationSpiMBean for given node.
      *
+     * @param nodeIdx Node index.
+     * @return MBean instance.
      */
-    private static GridIoManager.ReqRespTimeStorage getTimeStorage(IgniteEx igniteEx) {
-        GridIoManager.ReqRespTimeStorage timeStorage = U.field(igniteEx.context().io(), "timeStorage");
+    private TcpCommunicationSpiMBean mbean(int nodeIdx) throws MalformedObjectNameException {
+        ObjectName mbeanName = U.makeMBeanName(getTestIgniteInstanceName(nodeIdx), "SPIs",
+            RecordingSpi.class.getSimpleName());
 
-        assertNotNull(timeStorage);
+        MBeanServer mbeanServer = ManagementFactory.getPlatformMBeanServer();
 
-        return timeStorage;
+        if (mbeanServer.isRegistered(mbeanName))
+            return MBeanServerInvocationHandler.newProxyInstance(mbeanServer, mbeanName, TcpCommunicationSpiMBean.class,
+                true);
+        else
+            fail("MBean is not registered: " + mbeanName.getCanonicalName());
+
+        return null;
     }
 
     /**
@@ -358,9 +412,7 @@ public class CacheMessagesTimeLoggingTest  extends GridCommonAbstractTest {
                 if (msg instanceof GridIoMessage)
                     msg0 = ((GridIoMessage)msg).message();
 
-                GridIoManager.ReqRespTimeStorage timeStorage = getTimeStorage((IgniteEx)ignite);
-
-                classesMap.merge(timeStorage.metricName(node.id(), msg0.getClass()), 1, Integer::sum);
+                classesMap.merge(metricName(node.id(), msg0.getClass()), 1, Integer::sum);
             }
         }
     }

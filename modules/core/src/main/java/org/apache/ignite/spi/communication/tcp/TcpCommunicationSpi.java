@@ -74,6 +74,7 @@ import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.managers.eventstorage.HighPriorityListener;
+import org.apache.ignite.internal.processors.metric.HistogramMetric;
 import org.apache.ignite.internal.util.GridConcurrentFactory;
 import org.apache.ignite.internal.util.GridSpinReadWriteLock;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
@@ -1958,6 +1959,21 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
     public Map<UUID, Long> getSentMessagesByNode() {
         return metricsLsnr.sentMessagesByNode();
     }
+
+    /**
+     * @return Map containing histogram metrics for outcomming messages by node by message class.
+     */
+    public Map<UUID, Map<Class<? extends Message>, HistogramMetric>> getOutMetricsByNodeByMsgClass() {
+        return metricsLsnr.outMetricsByNodeByMsgClass();
+    }
+
+    /**
+     * @return Map containing histogram metrics for incomming messages by node by message class.
+     */
+    public Map<UUID, Map<Class<? extends Message>, HistogramMetric>> getInMetricsByNodeByMsgClass() {
+        return metricsLsnr.inMetricsByNodeByMsgClass();
+    }
+
 
     /** {@inheritDoc} */
     @Override public int getOutboundMessagesQueueSize() {
@@ -5107,6 +5123,18 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
         @Override public Map<UUID, Long> getSentMessagesByNode() {
             return TcpCommunicationSpi.this.getSentMessagesByNode();
         }
+
+        /** {@inheritDoc} */
+        @Override public Map<UUID, Map<Class<? extends Message>, HistogramMetric>> getOutMetricsByNodeByMsgClass() {
+            return TcpCommunicationSpi.this.getOutMetricsByNodeByMsgClass();
+        }
+
+        /** {@inheritDoc} */
+        @Override public Map<UUID, Map<Class<? extends Message>, HistogramMetric>> getInMetricsByNodeByMsgClass() {
+            return TcpCommunicationSpi.this.getInMetricsByNodeByMsgClass();
+        }
+
+
 
         /** {@inheritDoc} */
         @Override public int getOutboundMessagesQueueSize() {

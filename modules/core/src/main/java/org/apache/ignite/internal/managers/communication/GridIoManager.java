@@ -21,12 +21,9 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
 import java.util.Deque;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -53,7 +50,6 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
@@ -72,9 +68,6 @@ import org.apache.ignite.internal.managers.deployment.GridDeployment;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.cache.mvcc.msg.MvccMessage;
-import org.apache.ignite.internal.processors.metric.MetricRegistry;
-import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
-import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.internal.processors.platform.message.PlatformMessageFilter;
 import org.apache.ignite.internal.processors.pool.PoolProcessor;
 import org.apache.ignite.internal.processors.security.OperationSecurityContext;
@@ -98,24 +91,18 @@ import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.marshaller.Marshaller;
-import org.apache.ignite.plugin.extensions.communication.IdMessage;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageFactory;
 import org.apache.ignite.plugin.extensions.communication.MessageFormatter;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
-import org.apache.ignite.plugin.extensions.communication.TimeLoggableMessage;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.communication.CommunicationListener;
 import org.apache.ignite.spi.communication.CommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
-import org.apache.ignite.spi.metric.Metric;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_COMM_SPI_TIME_HIST_BOUNDS;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_MESSAGES_TIME_LOGGING;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_MESSAGES_INFO_STORE_TIME;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
@@ -156,9 +143,6 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
     /** Current IO policy. */
     private static final ThreadLocal<Byte> CUR_PLC = new ThreadLocal<>();
-
-    /** Metric registry name. */
-    public static final String METRIC_REGISTRY_NAME = "CommunicationSpi";
 
     /** Default history bounds in milliseconds. */
     public static final long[] DEFAULT_HIST_BOUNDS = new long[]{10, 20, 40, 80, 160, 320, 500, 1000, 2000, 4000};
@@ -227,12 +211,6 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
     /** */
     private final AtomicLong ioTestId = new AtomicLong();
 
-    /** Time storage. */
-    private final ReqRespTimeStorage timeStorage = new ReqRespTimeStorage();
-
-    /** Time logging metrics registry. */
-    private MetricRegistry mreg;
-
     /** No-op runnable. */
     private static final IgniteRunnable NOOP = () -> {};
 
@@ -254,8 +232,6 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         synchronized (sysLsnrsMux) {
             sysLsnrs = new GridMessageListener[GridTopic.values().length];
         }
-
-        mreg = ctx.metric().registry(METRIC_REGISTRY_NAME);
     }
 
     /**
@@ -951,8 +927,6 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
     private void onMessage0(UUID nodeId, GridIoMessage msg, IgniteRunnable msgC) {
         assert nodeId != null;
         assert msg != null;
-
-        timeStorage.addTimestamp(nodeId, msg.message());
 
         Lock busyLock0 = busyLock.readLock();
 
@@ -1687,8 +1661,6 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         else {
             if (topicOrd < 0)
                 ioMsg.topicBytes(U.marshal(marsh, topic));
-
-            timeStorage.addTimestamp(node.id(), msg);
 
             try {
                 if ((CommunicationSpi)getSpi() instanceof TcpCommunicationSpi)
@@ -3282,184 +3254,5 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         return null;
     }
 
-    /**
-     * Map with old entries eviction.
-     */
-    private class TimestampMap extends LinkedHashMap<Long, Long> {
-        /** */
-        private static final long serialVersionUID = 0L;
 
-        /** Max timestamp age in nanoseconds */
-        private final long maxTimestampAge = IgniteSystemProperties.getLong(IGNITE_MESSAGES_INFO_STORE_TIME, 300) * 1_000_000_000;
-
-        /** {@inheritDoc} */
-        @Override public Long putIfAbsent(Long k, Long v) {
-            evict();
-
-            return super.putIfAbsent(k, v);
-        }
-
-        /** {@inheritDoc} */
-        @Override public Long put(Long k, Long v) {
-            evict();
-
-            return super.put(k, v);
-        }
-
-        /**
-         * Evicts messages older then {@code MAX_TIMESTAMP_AGE}
-         */
-        private void evict() {
-            Iterator<Map.Entry<Long, Long>> iter = entrySet().iterator();
-
-            while (iter.hasNext() && System.nanoTime() - iter.next().getValue() > maxTimestampAge)
-                iter.remove();
-        }
-    }
-
-    /**
-     * Processes and stores {@link TimeLoggableMessage}
-     */
-    public class ReqRespTimeStorage {
-        /** */
-        public static final int NANOS_TO_MILLIS_COEF = 1_000_000;
-
-        /** */
-        public static final String BOUNDS_PARAM_DELIMITER = ",";
-
-        /** Storage map. Stores time latencies for each request class and each node*/
-        private Map<UUID, Map<Class<? extends Message>, TimestampMap>> storage
-            = Collections.synchronizedMap(new HashMap<>());
-
-        /** Histogram metric bounds in milliseconds. */
-        private final long[] histMetricBounds = obtainHistMetricBounds();
-
-        /**
-         * Adds information about message timestamp.
-         * Messages from local node are ignored.
-         * @param nodeId Node id.
-         * @param msg Message.
-         */
-        private void addTimestamp(UUID nodeId, @NotNull Message msg) {
-            if (!isEnabled() || !(msg instanceof TimeLoggableMessage) || nodeId.equals(locNodeId))
-                return;
-
-            IdMessage idmsg = (IdMessage)msg;
-
-            if (idmsg.messageId() > 0)
-                processRequest(nodeId, idmsg);
-            else
-                processResponse(nodeId, idmsg);
-        }
-
-        /**
-         * Processes request. Request id, node id and request system time are added to
-         * {@code timestampMap}
-         * @param nodeId Request sender node Id.
-         * @param req Request message.
-         */
-        private void processRequest(UUID nodeId, @NotNull IdMessage req) {
-            if (!storage.containsKey(nodeId)) {
-                // No requests were sent to or received from nodeId
-                Map<Class<? extends Message>, TimestampMap> nodeMap = new HashMap<>();
-
-                storage.put(nodeId, nodeMap);
-            }
-
-            Map<Class<? extends Message>, TimestampMap> nodeMap = storage.get(nodeId);
-
-            if (!nodeMap.containsKey(req.getClass())) {
-                // No message of certain class were sent to or received from nodeId
-                TimestampMap timestampMap = new TimestampMap();
-
-                nodeMap.put(req.getClass(), timestampMap);
-            }
-
-            TimestampMap reqResTimeMap = nodeMap.get(req.getClass());
-
-            reqResTimeMap.putIfAbsent(req.messageId(), System.nanoTime());
-        }
-
-        /**
-         * Processes response. If {@code timestampMap} contains corresponding request
-         * time difference between response and request is added to metric.
-         * @param nodeId Response sender id.
-         * @param resp Response message.
-         */
-        private void processResponse(UUID nodeId, @NotNull IdMessage resp) {
-            if (!storage.containsKey(nodeId))
-                return;
-
-            Map<Class<? extends Message>, TimestampMap> nodeMap = storage.get(nodeId);
-
-            // No message of certain class were sent to or received from nodeId
-            for (Map.Entry<Class<? extends Message>, TimestampMap> entry: nodeMap.entrySet()) {
-                TimestampMap reqResTimeMap = entry.getValue();
-
-                long reqId = -resp.messageId();
-
-                if (reqResTimeMap.containsKey(reqId)){
-                    HistogramMetric hm = getOrCreateMetric(metricName(nodeId, entry.getKey()));
-
-                    if (hm == null)
-                        return;
-
-                    Long reqTimestamp = reqResTimeMap.get(reqId);
-
-                    hm.value((System.nanoTime() - reqTimestamp)/ NANOS_TO_MILLIS_COEF);
-
-                    reqResTimeMap.remove(reqId);
-                }
-            }
-        }
-
-        /**
-         * @param metricName metric name.
-         * @return Existing or newly created HistogramMetric.
-         */
-        private HistogramMetric getOrCreateMetric(String metricName) {
-            Metric m = mreg.findMetric(metricName);
-
-            if (m == null)
-                return mreg.histogram(metricName, histMetricBounds, null);
-            else
-                return (HistogramMetric)mreg.findMetric(metricName);
-        }
-
-        /**
-         * @param nodeId Node Id.
-         * @param msgCls Message class.
-         * @return Metric name.
-         */
-        public String metricName(UUID nodeId, Class<? extends Message> msgCls) {
-            return MetricUtils.metricName(nodeId.toString(), msgCls.getSimpleName());
-        }
-
-        /**
-         * @return {@code true} if IGNITE_ENABLE_MESSAGES_TIME_LOGGING jvm option
-         * is set to {@code true}, {@code false} otherwise.
-         */
-        private boolean isEnabled() {
-            return IgniteSystemProperties.getBoolean(IGNITE_ENABLE_MESSAGES_TIME_LOGGING);
-        }
-
-        /**
-         * @return Metrics bounds in milliseconds.
-         */
-        private long[] obtainHistMetricBounds() {
-            String strBounds = IgniteSystemProperties.getString(IGNITE_COMM_SPI_TIME_HIST_BOUNDS);
-
-            if (strBounds == null)
-                return DEFAULT_HIST_BOUNDS;
-
-            try {
-                return Arrays.stream(strBounds.split(BOUNDS_PARAM_DELIMITER))
-                             .map(String::trim)
-                             .mapToLong(Long::valueOf)
-                             .toArray();
-            } catch (Exception e) {
-                return DEFAULT_HIST_BOUNDS;
-            }
-        }
-    }
 }
