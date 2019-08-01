@@ -99,6 +99,13 @@ class H2Connection implements AutoCloseable {
     }
 
     /**
+     * @return Statement cache.
+     */
+    H2StatementCache statementCache() {
+        return statementCache;
+    }
+
+    /**
      * @return Statement cache size.
      */
     int statementCacheSize() {
@@ -111,7 +118,6 @@ class H2Connection implements AutoCloseable {
     private void initStatementCache() {
         statementCache = new H2StatementCache(STATEMENT_CACHE_SIZE);
     }
-
 
     /**
      * Prepare statement caching it if needed.
