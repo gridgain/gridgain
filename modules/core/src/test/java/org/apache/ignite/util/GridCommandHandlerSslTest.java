@@ -37,18 +37,9 @@ import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 /**
  * Command line handler test with SSL.
  */
-public class GridCommandHandlerSslTest extends GridCommandHandlerAbstractTest {
+public class GridCommandHandlerSslTest extends GridCommandHandlerClusterPerMethodAbstractTest {
     /** */
     private volatile String[] cipherSuites;
-
-    /** {@inheritDoc} */
-    @Override protected void afterTest() throws Exception {
-        super.afterTest();
-
-        stopAllGrids();
-
-        cleanPersistenceDir();
-    }
 
     /**
      * @return SSL factory.

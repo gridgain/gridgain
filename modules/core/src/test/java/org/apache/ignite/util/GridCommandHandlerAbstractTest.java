@@ -66,7 +66,11 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXPERIMENTA
 import static org.apache.ignite.internal.processors.cache.verify.VerifyBackupPartitionsDumpTask.IDLE_DUMP_FILE_PREFIX;
 import static org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor.DEFAULT_TARGET_FOLDER;
 
-/** */
+/**
+ * In the case of creating a cluster for each test method,
+ * it is recommended to use {@link GridCommandHandlerClusterPerMethodAbstractTest}.
+ * In all other cases, use this class.
+ */
 @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_ENABLED, value = "false")
 @WithSystemProperty(key = IGNITE_ENABLE_EXPERIMENTAL_COMMAND, value = "true")
 public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
@@ -81,6 +85,7 @@ public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
 
     /** */
     protected static File defaultDiagnosticDir;
+
     /** */
     protected static File customDiagnosticDir;
 
@@ -141,13 +146,6 @@ public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override public String getTestIgniteInstanceName() {
         return "gridCommandHandlerTest";
-    }
-
-    /**
-     * @return True if system out was already injected on test initialization.
-     */
-    protected boolean isSystemOutAlreadyInjected() {
-        return false;
     }
 
     /**
@@ -225,9 +223,13 @@ public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
             for (Path path : files)
                 delete(path);
         }
+
+        cleanDiagnosticDir();
     }
 
     /**
+     * Before command executed {@link #testOut} reset.
+     *
      * @param args Arguments.
      * @return Result of execution.
      */
@@ -236,6 +238,8 @@ public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Before command executed {@link #testOut} reset.
+     *
      * @param args Arguments.
      * @return Result of execution
      */
@@ -244,6 +248,8 @@ public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Before command executed {@link #testOut} reset.
+     *
      * @param hnd Handler.
      * @param args Arguments.
      * @return Result of execution
@@ -252,10 +258,12 @@ public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
         return execute(hnd, new ArrayList<>(asList(args)));
     }
 
-    /** */
+    /** Before command executed {@link #testOut} reset. */
     protected int execute(CommandHandler hnd, List<String> args) {
         if (!F.isEmpty(args) && !"--help".equalsIgnoreCase(args.get(0)))
             addExtraArguments(args);
+
+        testOut.reset();
 
         int exitCode = hnd.execute(args);
 

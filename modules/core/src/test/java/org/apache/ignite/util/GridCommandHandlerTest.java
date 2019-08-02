@@ -20,6 +20,7 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteAtomicSequence;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterNode;
@@ -97,7 +98,7 @@ import java.util.stream.Collectors;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
-import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_ILLEGAL_SATE_ERROR;
+import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_ILLEGAL_STATE_ERROR;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_INVALID_ARGUMENTS;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_UNEXPECTED_ERROR;
@@ -113,23 +114,12 @@ import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED
  * You can use this class if you need create nodes for each test.
  * If you not necessary create nodes for each test you can try use {@link GridCommandHandlerClusterByClassTest}
  */
-public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
+public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAbstractTest {
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
         initDiagnosticDir();
-
-        cleanDiagnosticDir();
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTest() throws Exception {
-        super.afterTest();
-
-        stopAllGrids();
-
-        cleanPersistenceDir();
 
         cleanDiagnosticDir();
     }
@@ -230,8 +220,6 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         stopGrid(0);
 
-        testOut.reset();
-
         assertEquals(EXIT_CODE_OK, execute("--baseline", "--port", "11212"));
 
         crdStr = findCrdInfo();
@@ -241,8 +229,6 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         startGrid(0);
 
-        testOut.reset();
-
         assertEquals(EXIT_CODE_OK, execute("--baseline", "--port", "11212"));
 
         crdStr = findCrdInfo();
@@ -251,8 +237,6 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
             grid(1).cluster().localNode().consistentId() + ", Order=2)", crdStr);
 
         stopGrid(1);
-
-        testOut.reset();
 
         assertEquals(EXIT_CODE_OK, execute("--baseline", "--port", "11211"));
 
@@ -311,7 +295,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "add"));
 
-        assertEquals(EXIT_CODE_ILLEGAL_SATE_ERROR, execute("--baseline", "add", "non-existent-id"));
+        assertEquals(EXIT_CODE_ILLEGAL_STATE_ERROR, execute("--baseline", "add", "non-existent-id"));
 
         Ignite other = startGrid(2);
 
@@ -867,7 +851,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
                 getTestIgniteInstanceName(2) + "," +
                 getTestIgniteInstanceName(3);
 
-        assertEquals(EXIT_CODE_ILLEGAL_SATE_ERROR, execute("--baseline", "add", consistentIDs));
+        assertEquals(EXIT_CODE_ILLEGAL_STATE_ERROR, execute("--baseline", "add", consistentIDs));
 
         String testOutStr = testOut.toString();
 
@@ -1045,7 +1029,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
         String dumpFile = parts[1].split("\\.")[0] + ".txt";
 
         for (String line : Files.readAllLines(new File(dumpFile).toPath()))
-            System.out.println(line);
+            testOut.write(line.getBytes());
 
         String outputStr = testOut.toString();
 

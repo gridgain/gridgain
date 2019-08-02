@@ -60,20 +60,12 @@ import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 /**
  *
  */
-public class GridCommandHandlerIndexingTest extends GridCommandHandlerAbstractTest {
+public class GridCommandHandlerIndexingTest extends GridCommandHandlerClusterPerMethodAbstractTest {
     /** Test cache name. */
     protected static final String CACHE_NAME = "persons-cache-vi";
+
     /** Test group name. */
     protected static final String GROUP_NAME = "group1";
-
-    /** {@inheritDoc} */
-    @Override protected void afterTest() throws Exception {
-        super.afterTest();
-
-        stopAllGrids();
-
-        cleanPersistenceDir();
-    }
 
     /**
      * Tests that validation doesn't fail if nothing is broken.
@@ -357,7 +349,7 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerAbstractTe
                             U.invoke(rowStore.getClass(), rowStore, "removeRow", oldRow.link(), IoStatisticsHolderNoOp.INSTANCE);
                     }
                     catch (IgniteCheckedException e) {
-                        System.out.println("Failed to remove key skipping indexes: " + entry);
+                        log.error("Failed to remove key skipping indexes: " + entry);
 
                         e.printStackTrace();
                     }
@@ -367,7 +359,7 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerAbstractTe
                 }
             }
             else {
-                System.out.println("Early exit for index corruption, keys processed: " + i);
+                log.info("Early exit for index corruption, keys processed: " + i);
 
                 break;
             }
@@ -388,7 +380,7 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerAbstractTe
 
         for (int i = 0; i < 500; i++) {
             if (!it.hasNextX()) {
-                System.out.println("Early exit for index corruption, keys processed: " + i);
+                log.info("Early exit for index corruption, keys processed: " + i);
 
                 break;
             }
