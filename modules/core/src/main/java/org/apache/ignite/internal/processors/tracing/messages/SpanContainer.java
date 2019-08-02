@@ -25,6 +25,9 @@ import org.jetbrains.annotations.NotNull;
  * Container to store serialized span context and span that is created from this context.
  */
 public class SpanContainer implements Serializable {
+    /** Serial version uid. */
+    private static final long serialVersionUid = 0L;
+
     /** Serialized span bytes. */
     private byte[] serializedSpanBytes;
     /** Span. */
