@@ -19,19 +19,19 @@ package org.apache.ignite.opencensus.spi.tracing;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.internal.processors.tracing.Status;
+import org.apache.ignite.internal.processors.tracing.SpanStatus;
 
 /**
  * Table to match OpenCensus span statuses with declated on Tracing SPI.
  */
 public class StatusMatchTable {
     /** Table. */
-    private static final Map<Status, io.opencensus.trace.Status> table = new ConcurrentHashMap<>();
+    private static final Map<SpanStatus, io.opencensus.trace.Status> table = new ConcurrentHashMap<>();
 
     static {
-        table.put(Status.OK, io.opencensus.trace.Status.OK);
-        table.put(Status.CANCELLED, io.opencensus.trace.Status.CANCELLED);
-        table.put(Status.ABORTED, io.opencensus.trace.Status.ABORTED);
+        table.put(SpanStatus.OK, io.opencensus.trace.Status.OK);
+        table.put(SpanStatus.CANCELLED, io.opencensus.trace.Status.CANCELLED);
+        table.put(SpanStatus.ABORTED, io.opencensus.trace.Status.ABORTED);
     }
 
     /**
@@ -42,14 +42,14 @@ public class StatusMatchTable {
     }
 
     /**
-     * @param status Status.
+     * @param spanStatus SpanStatus.
      */
-    public static io.opencensus.trace.Status match(Status status) {
-        io.opencensus.trace.Status result = table.get(status);
+    public static io.opencensus.trace.Status match(SpanStatus spanStatus) {
+        io.opencensus.trace.Status res = table.get(spanStatus);
 
-        if (result == null)
-            throw new IgniteException("Unknown status (no matching with opencensus): " + status);
+        if (res == null)
+            throw new IgniteException("Unknown span status (no matching with OpenCensus): " + spanStatus);
 
-        return result;
+        return res;
     }
 }

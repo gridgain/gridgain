@@ -14,19 +14,20 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.opencensus.spi.tracing;
+package org.apache.ignite.opencensus.spi;
 
+import org.apache.ignite.opencensus.spi.metric.OpenCensusMetricExporterSpiTest;
+import org.apache.ignite.opencensus.spi.tracing.OpenCensusTracingSpiTest;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
+
+@RunWith(Suite.class)
+@Suite.SuiteClasses({
+    OpenCensusMetricExporterSpiTest.class,
+    OpenCensusTracingSpiTest.class
+})
 /**
- * Interface for OpenCensus trace exporters adopted for Ignite lifecycle.
+ * Suite to test OpenCensus integration.
  */
-public interface OpenCensusTraceExporter {
-    /**
-     * @param provider Tracing provider.
-     * @param igniteInstanceName Ignite instance name.
-     */
-    public void start(OpenCensusTracingProvider provider, String igniteInstanceName);
-    /**
-     * @param provider Tracing provider.
-     */
-    public void stop(OpenCensusTracingProvider provider);
+public class IgniteOpenCensusSuite {
 }

@@ -17,7 +17,7 @@
 package org.apache.ignite.spi.discovery.tcp.messages;
 
 import java.util.UUID;
-import org.apache.ignite.internal.processors.tracing.messages.TraceContainer;
+import org.apache.ignite.internal.processors.tracing.messages.SpanContainer;
 import org.apache.ignite.internal.processors.tracing.messages.TraceableMessage;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.jetbrains.annotations.NotNull;
@@ -42,7 +42,8 @@ public class TcpDiscoveryNodeFailedMessage extends TcpDiscoveryAbstractMessage i
     /** */
     private String warning;
 
-    private TraceContainer traceContainer = new TraceContainer();
+    /** Span container. */
+    private SpanContainer spanContainer = new SpanContainer();
 
     /**
      * Constructor.
@@ -96,7 +97,8 @@ public class TcpDiscoveryNodeFailedMessage extends TcpDiscoveryAbstractMessage i
         return S.toString(TcpDiscoveryNodeFailedMessage.class, this, "super", super.toString());
     }
 
-    @Override public @NotNull TraceContainer trace() {
-        return traceContainer;
+    /** {@inheritDoc} */
+    @Override public @NotNull SpanContainer spanContainer() {
+        return spanContainer;
     }
 }

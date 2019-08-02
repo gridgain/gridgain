@@ -104,7 +104,7 @@ import org.apache.ignite.internal.processors.cluster.DiscoveryDataClusterState;
 import org.apache.ignite.internal.processors.cluster.IgniteChangeGlobalStateSupport;
 import org.apache.ignite.internal.processors.service.GridServiceProcessor;
 import org.apache.ignite.internal.processors.tracing.Span;
-import org.apache.ignite.internal.processors.tracing.TraceTags;
+import org.apache.ignite.internal.processors.tracing.SpanTags;
 import org.apache.ignite.internal.processors.txdr.TransactionalDrProcessor;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.TimeBag;
@@ -408,10 +408,16 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             log.debug("Creating exchange future [localNode=" + cctx.localNodeId() + ", fut=" + this + ']');
     }
 
+    /**
+     * @param span Span.
+     */
     public void span(Span span) {
         this.span = span;
     }
 
+    /**
+     *
+     */
     public Span span() {
         return span;
     }
@@ -2199,14 +2205,14 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         assert res != null || err != null;
 
         if (res != null) {
-            span.addTag(TraceTags.tag(TraceTags.RESULT, TraceTags.TOPOLOGY_VERSION, TraceTags.MAJOR),
+            span.addTag(SpanTags.tag(SpanTags.RESULT, SpanTags.TOPOLOGY_VERSION, SpanTags.MAJOR),
                 res.topologyVersion());
-            span.addTag(TraceTags.tag(TraceTags.RESULT, TraceTags.TOPOLOGY_VERSION, TraceTags.MINOR),
+            span.addTag(SpanTags.tag(SpanTags.RESULT, SpanTags.TOPOLOGY_VERSION, SpanTags.MINOR),
                 res.minorTopologyVersion());
         }
 
         if (err != null)
-            span.addTag(TraceTags.ERROR, err.toString());
+            span.addTag(SpanTags.ERROR, err.toString());
 
         try {
             waitUntilNewCachesAreRegistered();

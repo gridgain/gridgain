@@ -69,8 +69,8 @@ import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.managers.discovery.CustomMessageWrapper;
 import org.apache.ignite.internal.managers.discovery.DiscoveryServerOnlyCustomMessage;
-import org.apache.ignite.internal.processors.tracing.TraceTags;
-import org.apache.ignite.internal.processors.tracing.messages.TraceContainer;
+import org.apache.ignite.internal.processors.tracing.SpanTags;
+import org.apache.ignite.internal.processors.tracing.messages.SpanContainer;
 import org.apache.ignite.internal.processors.tracing.messages.TraceableMessage;
 import org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesTable;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
@@ -755,10 +755,10 @@ class ClientImpl extends TcpDiscoveryImpl {
 
                     TcpDiscoveryJoinRequestMessage joinReqMsg = new TcpDiscoveryJoinRequestMessage(node, discoveryData);
 
-                    joinReqMsg.trace().span(
+                    joinReqMsg.spanContainer().span(
                         tracing.create(TraceableMessagesTable.traceName(joinReqMsg.getClass()))
-                            .addTag(TraceTags.tag(TraceTags.EVENT_NODE, TraceTags.ID), node.id().toString())
-                            .addTag(TraceTags.tag(TraceTags.EVENT_NODE, TraceTags.CONSISTENT_ID), node.consistentId().toString())
+                            .addTag(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID), node.id().toString())
+                            .addTag(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.CONSISTENT_ID), node.consistentId().toString())
                             .addLog("Created")
                             .end()
                     );
@@ -2268,7 +2268,7 @@ class ClientImpl extends TcpDiscoveryImpl {
 
                     Collection<ClusterNode> nodes = updateTopologyHistory(topVer, msg);
 
-                    notifyDiscovery(EVT_NODE_JOINED, topVer, locNode, nodes, msg.trace());
+                    notifyDiscovery(EVT_NODE_JOINED, topVer, locNode, nodes, msg.spanContainer());
 
                     boolean disconnected = disconnected();
 
@@ -2340,7 +2340,7 @@ class ClientImpl extends TcpDiscoveryImpl {
                     }
 
                     if (evt) {
-                        notifyDiscovery(EVT_NODE_JOINED, topVer, node, top, msg.trace());
+                        notifyDiscovery(EVT_NODE_JOINED, topVer, node, top, msg.spanContainer());
 
                         spi.stats.onNodeJoined();
                     }
@@ -2385,7 +2385,7 @@ class ClientImpl extends TcpDiscoveryImpl {
                         return;
                     }
 
-                    notifyDiscovery(EVT_NODE_LEFT, msg.topologyVersion(), node, top, msg.trace());
+                    notifyDiscovery(EVT_NODE_LEFT, msg.topologyVersion(), node, top, msg.spanContainer());
 
                     spi.stats.onNodeLeft();
                 }
@@ -2449,7 +2449,7 @@ class ClientImpl extends TcpDiscoveryImpl {
                             ", msg=" + msg.warning() + ']');
                     }
 
-                    notifyDiscovery(EVT_NODE_FAILED, msg.topologyVersion(), node, top, msg.trace());
+                    notifyDiscovery(EVT_NODE_FAILED, msg.topologyVersion(), node, top, msg.spanContainer());
 
                     spi.stats.onNodeFailed();
                 }
@@ -2557,7 +2557,7 @@ class ClientImpl extends TcpDiscoveryImpl {
                             DiscoverySpiCustomMessage msgObj = msg.message(spi.marshaller(),
                                 U.resolveClassLoader(spi.ignite().configuration()));
 
-                            notifyDiscovery(EVT_DISCOVERY_CUSTOM_EVT, topVer, node, allVisibleNodes(), msgObj, msg.trace());
+                            notifyDiscovery(EVT_DISCOVERY_CUSTOM_EVT, topVer, node, allVisibleNodes(), msgObj, msg.spanContainer());
                         }
                         catch (Throwable e) {
                             U.error(log, "Failed to unmarshal discovery custom message.", e);
@@ -2629,8 +2629,8 @@ class ClientImpl extends TcpDiscoveryImpl {
          * @param node Node.
          * @param top Topology snapshot.
          */
-        private void notifyDiscovery(int type, long topVer, ClusterNode node, Collection<ClusterNode> top, TraceContainer traceContainer) {
-            notifyDiscovery(type, topVer, node, top, null, traceContainer);
+        private void notifyDiscovery(int type, long topVer, ClusterNode node, Collection<ClusterNode> top, SpanContainer spanContainer) {
+            notifyDiscovery(type, topVer, node, top, null, spanContainer);
         }
 
         /**
@@ -2646,7 +2646,7 @@ class ClientImpl extends TcpDiscoveryImpl {
             ClusterNode node,
             Collection<ClusterNode> top,
             @Nullable DiscoverySpiCustomMessage data,
-            TraceContainer traceContainer
+            SpanContainer spanContainer
         ) {
             DiscoverySpiListener lsnr = spi.lsnr;
 
@@ -2658,7 +2658,7 @@ class ClientImpl extends TcpDiscoveryImpl {
                         ", topVer=" + topVer + ']');
 
                 lsnr.onDiscovery(
-                    new DiscoveryNotification(type, topVer, node, top, new TreeMap<>(topHist), data, traceContainer)
+                    new DiscoveryNotification(type, topVer, node, top, new TreeMap<>(topHist), data, spanContainer)
                 ).get();
             }
             else if (debugLog.isDebugEnabled())

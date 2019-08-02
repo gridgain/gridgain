@@ -2314,9 +2314,10 @@ public class IgniteConfiguration {
     }
 
     /**
+     * Gets fully configured instance of {@link TracingSpi}.
      *
-     * @param tracingSpi
-     * @return
+     * @param tracingSpi Fully configured instance of {@link TracingSpi}.
+     * @return {@code this} for chaining.
      */
     public IgniteConfiguration setTracingSpi(TracingSpi tracingSpi) {
         this.tracingSpi = tracingSpi;
@@ -2324,6 +2325,11 @@ public class IgniteConfiguration {
         return this;
     }
 
+    /**
+     * Gets fully configured tracing SPI implementation.
+     *
+     * @return Tracing SPI implementation.
+     */
     public TracingSpi getTracingSpi() {
         return tracingSpi;
     }

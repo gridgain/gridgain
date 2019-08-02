@@ -347,8 +347,7 @@ public class GridDhtTxLocal extends GridDhtTxLocalAdapter implements GridCacheMa
                 req.miniId(),
                 req.dhtVersions(),
                 req.last(),
-                needReturnValue(),
-                req.remoteSpan()))) {
+                needReturnValue()))) {
                 GridDhtTxPrepareFuture f = prepFut;
 
                 assert f.nearMiniId() == req.miniId() : "Wrong near mini id on existing future " +

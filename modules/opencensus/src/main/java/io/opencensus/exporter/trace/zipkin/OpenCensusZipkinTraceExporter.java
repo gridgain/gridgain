@@ -16,9 +16,9 @@
 
 package io.opencensus.exporter.trace.zipkin;
 
-import io.opencensus.trace.TraceComponent;
 import io.opencensus.trace.export.SpanExporter;
 import org.apache.ignite.opencensus.spi.tracing.OpenCensusTraceExporter;
+import org.apache.ignite.opencensus.spi.tracing.OpenCensusTracingProvider;
 import org.apache.ignite.spi.IgniteSpiException;
 import zipkin2.reporter.Sender;
 import zipkin2.reporter.urlconnection.URLConnectionSender;
@@ -38,21 +38,21 @@ public class OpenCensusZipkinTraceExporter implements OpenCensusTraceExporter {
     }
 
     /** {@inheritDoc} */
-    @Override public void start(TraceComponent traceComponent, String igniteInstanceName) {
+    @Override public void start(OpenCensusTracingProvider provider, String igniteInstanceName) {
         try {
             Sender snd = cfg.getSender();
             if (snd == null)
                 snd = URLConnectionSender.create(cfg.getV2Url());
 
             SpanExporter.Handler exporterHnd = new ZipkinExporterHandler(
-                traceComponent.getTracer(),
+                provider.getTracer(),
                 cfg.getEncoder(),
                 snd,
-                cfg.getServiceName(), //TODO: Maybe additionally attach consistentId to service?
+                cfg.getServiceName(), //TODO: Maybe additionally attach consistentId to service name?
                 cfg.getDeadline()
             );
 
-            traceComponent.getExportComponent().getSpanExporter().registerHandler(
+            provider.getExportComponent().getSpanExporter().registerHandler(
                 ZipkinTraceExporter.class.getName() + "-" + igniteInstanceName,
                 exporterHnd
             );
@@ -63,8 +63,8 @@ public class OpenCensusZipkinTraceExporter implements OpenCensusTraceExporter {
     }
 
     /** {@inheritDoc} */
-    @Override public void stop(TraceComponent traceComponent) {
-        traceComponent.getExportComponent().shutdown();
+    @Override public void stop(OpenCensusTracingProvider provider) {
+        provider.getExportComponent().shutdown();
     }
 
     /** {@inheritDoc} */

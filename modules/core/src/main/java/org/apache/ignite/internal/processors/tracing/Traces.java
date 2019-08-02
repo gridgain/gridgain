@@ -24,11 +24,6 @@ public class Traces {
      *
      */
     public static class Discovery {
-        /**
-         * Default constructor.
-         */
-        private Discovery() {}
-
         /** Node join request. */
         public static final String NODE_JOIN_REQUEST = "discovery.node.join.request";
         /** Node join add. */
@@ -41,19 +36,24 @@ public class Traces {
         public static final String NODE_LEFT = "discovery.node.left";
         /** Custom event. */
         public static final String CUSTOM_EVENT = "discovery.custom.event";
+
+        /**
+         * Default constructor.
+         */
+        private Discovery() {}
     }
 
     /**
      *
      */
     public static class Exchange {
+        /** Exchange future. */
+        public static final String EXCHANGE_FUTURE = "exchange.future";
+
         /**
          * Default constructor.
          */
         private Exchange() {}
-
-        /** Exchange future. */
-        public static final String EXCHANGE_FUTURE = "exchange.future";
     }
 
     /**

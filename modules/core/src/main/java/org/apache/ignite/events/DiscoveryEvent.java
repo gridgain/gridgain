@@ -79,6 +79,7 @@ public class DiscoveryEvent extends EventAdapter {
     /** Template to generate {@link #message()} lazily. Will be joined with {@link #eventNode()} converted to string. */
     private volatile String msgTemplate;
 
+    /** Span. */
     private transient Span span;
 
     /** {@inheritDoc} */
@@ -193,6 +194,20 @@ public class DiscoveryEvent extends EventAdapter {
         return msg;
     }
 
+    /**
+     *
+     */
+    public Span span() {
+        return span;
+    }
+
+    /**
+     * @param span Span.
+     */
+    public void span(Span span) {
+        this.span = span;
+    }
+
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(DiscoveryEvent.class, this,
@@ -200,13 +215,5 @@ public class DiscoveryEvent extends EventAdapter {
             "msg", message(),
             "type", name(),
             "tstamp", timestamp());
-    }
-
-    public Span getSpan() {
-        return span;
-    }
-
-    public void setSpan(Span span) {
-        this.span = span;
     }
 }
