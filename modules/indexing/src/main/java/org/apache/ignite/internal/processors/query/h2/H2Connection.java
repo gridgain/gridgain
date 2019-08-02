@@ -33,7 +33,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Wrapper to store connection with currently used schema and statement cache.
  */
-class H2Connection implements AutoCloseable {
+public class H2Connection implements AutoCloseable {
     /** */
     private static final int STATEMENT_CACHE_SIZE = 256;
 
@@ -108,7 +108,7 @@ class H2Connection implements AutoCloseable {
     /**
      * @return Statement cache size.
      */
-    int statementCacheSize() {
+    public int statementCacheSize() {
         return statementCache == null ? 0 : statementCache.size();
     }
 

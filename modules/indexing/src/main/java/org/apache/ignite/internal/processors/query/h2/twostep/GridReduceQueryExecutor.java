@@ -213,6 +213,7 @@ public class GridReduceQueryExecutor {
      * @param r Query run.
      * @param nodeId Failed node ID.
      * @param msg Error message.
+     * @param failCode Fail code.
      */
     private void fail(ReduceQueryRun r, UUID nodeId, String msg, byte failCode, int sqlErrCode) {
         if (r != null) {
@@ -495,6 +496,7 @@ public class GridReduceQueryExecutor {
             H2PooledConnection conn = h2.connections().connection(schemaName);
 
             boolean retry = false;
+            boolean release = true;
 
             try {
                 final ReduceQueryRun r = new ReduceQueryRun(
@@ -547,7 +549,7 @@ public class GridReduceQueryExecutor {
 
                 runs.put(qryReqId, r);
 
-                boolean release = true;
+                release = true;
 
                 try {
                     cancel.checkCancelled();
@@ -735,13 +737,11 @@ public class GridReduceQueryExecutor {
                             for (int i = 0, mapQrys = mapQueries.size(); i < mapQrys; i++)
                                 fakeTable(null, i).innerTable(null); // Drop all merge tables.
                         }
-
-                        U.close(conn, log);
                     }
                 }
             }
             finally {
-                if (retry)
+                if (retry || release)
                     U.close(conn, log);
             }
         }

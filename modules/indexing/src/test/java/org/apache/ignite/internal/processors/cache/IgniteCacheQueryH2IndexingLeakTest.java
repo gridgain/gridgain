@@ -26,6 +26,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
+import org.apache.ignite.internal.processors.query.h2.H2Connection;
 import org.apache.ignite.internal.processors.query.h2.H2PooledConnection;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
@@ -121,9 +122,9 @@ public class IgniteCacheQueryH2IndexingLeakTest extends GridCommonAbstractTest {
     private static int getStatementCacheSize(GridQueryProcessor qryProcessor) {
         IgniteH2Indexing h2Idx = (IgniteH2Indexing)qryProcessor.getIndexing();
 
-        BlockingQueue<H2PooledConnection> conns = GridTestUtils.getFieldValue(h2Idx.connections(), "connPool");
+        BlockingQueue<H2Connection> conns = GridTestUtils.getFieldValue(h2Idx.connections(), "connPool");
 
-        return conns.stream().mapToInt(H2PooledConnection::statementCacheSize).sum();
+        return conns.stream().mapToInt(H2Connection::statementCacheSize).sum();
     }
 
     /**
@@ -162,7 +163,7 @@ public class IgniteCacheQueryH2IndexingLeakTest extends GridCommonAbstractTest {
                         // is out there, are terminated and their statement caches are cleaned up.
                         return getStatementCacheSize(qryProc) >= THREAD_COUNT;
                     }
-                }, STMT_CACHE_CLEANUP_TIMEOUT));
+                }, STMT_CACHE_CLEANUP_TIMEOUT * 4));
             }
             finally {
                 stop.set(true);
