@@ -151,7 +151,7 @@ public class SchemaManager {
                 createSchema(schema, true);
             }
 
-            try (H2PooledConnection c = connMgr.connection(QueryUtils.SCHEMA_SYS)) {
+            try (H2PooledConnection c = connMgr.connection(schema)) {
                 SqlSystemTableEngine.registerView(c.connection(), view);
             }
         }
