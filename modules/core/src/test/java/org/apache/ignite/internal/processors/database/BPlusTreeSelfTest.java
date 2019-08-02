@@ -45,6 +45,7 @@ import java.util.concurrent.atomic.AtomicLongArray;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -2757,7 +2758,14 @@ public class BPlusTreeSelfTest extends GridCommonAbstractTest {
      */
     protected TestTree createTestTree(boolean canGetRow) throws IgniteCheckedException {
         TestTree tree = new TestTree(
-            reuseList, canGetRow, CACHE_ID, pageMem, allocateMetaPage().pageId(), lockTrackerManager);
+            reuseList,
+            canGetRow,
+            CACHE_ID,
+            pageMem,
+            allocateMetaPage().pageId(),
+            lockTrackerManager,
+            log
+        );
 
         assertEquals(0, tree.size());
         assertEquals(0, tree.rootLevel());
@@ -2794,7 +2802,8 @@ public class BPlusTreeSelfTest extends GridCommonAbstractTest {
             int cacheId,
             PageMemory pageMem,
             long metaPageId,
-            PageLockTrackerManager lockTrackerManager
+            PageLockTrackerManager lockTrackerManager,
+            IgniteLogger log
         ) throws IgniteCheckedException {
             super(
                 "test",
