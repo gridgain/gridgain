@@ -26,7 +26,7 @@ import org.jetbrains.annotations.NotNull;
  */
 public class SpanContainer implements Serializable {
     /** Serial version uid. */
-    private static final long serialVersionUid = 0L;
+    private static final long serialVersionUID = 0L;
 
     /** Serialized span bytes. */
     private byte[] serializedSpanBytes;
