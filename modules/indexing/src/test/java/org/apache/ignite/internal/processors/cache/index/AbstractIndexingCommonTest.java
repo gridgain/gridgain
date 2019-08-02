@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors.cache.index;
 
 import java.util.Set;
-import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.h2.engine.Session;
