@@ -304,15 +304,20 @@ public class IgnitePdsContinuousRestartTest extends GridCommonAbstractTest {
 
         Random rnd = ThreadLocalRandom.current();
 
+        log.error("RTF@start");
         while (System.currentTimeMillis() < end) {
             int idx = rnd.nextInt(GRID_CNT - 1) + 1;
 
+            log.error("RTF@stopGrid");
             stopGrid(idx, cancel);
 
+            log.error("RTF@restartDelayStop");
             U.sleep(restartDelay);
 
+            log.error("RTF@startGrid");
             startGrid(idx);
 
+            log.error("RTF@strtDelay");
             U.sleep(restartDelay);
         }
 
