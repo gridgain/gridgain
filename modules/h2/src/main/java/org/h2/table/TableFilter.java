@@ -19,6 +19,7 @@ import org.h2.expression.Comparison;
 import org.h2.expression.ConditionAndOr;
 import org.h2.expression.Expression;
 import org.h2.expression.ExpressionColumn;
+import org.h2.index.HashJoinIndex;
 import org.h2.index.Index;
 import org.h2.index.IndexCondition;
 import org.h2.index.IndexCursor;
@@ -207,21 +208,10 @@ public class TableFilter implements ColumnResolver {
             item1.cost = item1.getIndex().getCost(s, null, filters, filter,
                     sortOrder, allColumnsSet);
         }
-        int len = table.getColumns().length;
-        int[] masks = new int[len];
-        for (IndexCondition condition : indexConditions) {
-            if (condition.isEvaluatable()) {
-                if (condition.isAlwaysFalse()) {
-                    masks = null;
-                    break;
-                }
-                int id = condition.getColumn().getColumnId();
-                if (id >= 0) {
-                    masks[id] |= condition.getMask(indexConditions);
-                }
-            }
-        }
-        PlanItem item = table.getBestPlanItem(s, masks, filters, filter, sortOrder, allColumnsSet);
+
+        int[] masks = IndexCondition.createMasksForTable(table, indexConditions);
+
+        PlanItem item = table.getBestPlanItem(s, masks, filters, filter, sortOrder, allColumnsSet, isEquiJoined());
         item.setMasks(masks);
         // The more index conditions, the earlier the table.
         // This is to ensure joins without indexes run quickly:
@@ -250,6 +240,18 @@ public class TableFilter implements ColumnResolver {
             item.cost += item.cost * item.getJoinPlan().cost;
         }
         return item;
+    }
+
+    /**
+     * @return {@code true} if the filter is used in a EQUI-JOIN.
+     */
+    private boolean isEquiJoined() {
+        for (IndexCondition condition : indexConditions) {
+            if (HashJoinIndex.isEquiJoinCondition(condition))
+                return true;
+        }
+
+        return false;
     }
 
     /**
@@ -301,6 +303,9 @@ public class TableFilter implements ColumnResolver {
      * can not be used, and optimize the conditions.
      */
     public void prepare() {
+        if (index.getClass() == HashJoinIndex.class)
+            ((HashJoinIndex)index).prepare(session, indexConditions);
+
         // forget all unused index conditions
         // the indexConditions list may be modified here
         for (int i = 0; i < indexConditions.size(); i++) {

@@ -127,10 +127,10 @@ public class IndexCursor implements Cursor {
                     }
                 }
                 if (isStart) {
-                    start = getSearchRow(start, columnId, v, true);
+                    start = table.getSearchRow(start, columnId, v, true);
                 }
                 if (isEnd) {
-                    end = getSearchRow(end, columnId, v, false);
+                    end = table.getSearchRow(end, columnId, v, false);
                 }
                 if (isIntersects) {
                     intersects = getSpatialSearchRow(intersects, columnId, v);
@@ -217,51 +217,6 @@ public class IndexCursor implements Cursor {
             row.setValue(columnId, v);
         }
         return row;
-    }
-
-    private SearchRow getSearchRow(SearchRow row, int columnId, Value v,
-            boolean max) {
-        if (row == null) {
-            row = table.getTemplateRow();
-        } else {
-            v = getMax(row.getValue(columnId), v, max);
-        }
-        if (columnId < 0) {
-            row.setKey(v.getLong());
-        } else {
-            row.setValue(columnId, v);
-        }
-        return row;
-    }
-
-    private Value getMax(Value a, Value b, boolean bigger) {
-        if (a == null) {
-            return b;
-        } else if (b == null) {
-            return a;
-        }
-        if (session.getDatabase().getSettings().optimizeIsNull) {
-            // IS NULL must be checked later
-            if (a == ValueNull.INSTANCE) {
-                return b;
-            } else if (b == ValueNull.INSTANCE) {
-                return a;
-            }
-        }
-        int comp = a.compareTo(b, table.getDatabase().getCompareMode());
-        if (comp == 0) {
-            return a;
-        }
-        if (a == ValueNull.INSTANCE || b == ValueNull.INSTANCE) {
-            if (session.getDatabase().getSettings().optimizeIsNull) {
-                // column IS NULL AND column <op> <not null> is always false
-                return null;
-            }
-        }
-        if (!bigger) {
-            comp = -comp;
-        }
-        return comp > 0 ? a : b;
     }
 
     /**

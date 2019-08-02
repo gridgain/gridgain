@@ -262,6 +262,8 @@ public class JdbcThinTcpIo {
                 try {
                     sock.connect(addr, timeout);
 
+                    sock.setSoTimeout(connProps.getConnectionTimeout());
+
                     this.sock = sock;
                 }
                 catch (IOException e) {
