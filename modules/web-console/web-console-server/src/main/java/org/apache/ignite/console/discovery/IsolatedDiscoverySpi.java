@@ -152,7 +152,7 @@ public class IsolatedDiscoverySpi extends IgniteSpiAdapter implements IgniteDisc
                 null,
                 msg);
 
-            // Ack message must be created after initial message processed.
+            // Acknowledge message must be send after initial message processed.
             fut.listen((f) -> {
                 DiscoverySpiCustomMessage ack = msg.ackMessage();
 
