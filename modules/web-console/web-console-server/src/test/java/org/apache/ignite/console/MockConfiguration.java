@@ -16,24 +16,30 @@
 
 package org.apache.ignite.console;
 
+import java.util.Collections;
+import java.util.Spliterators;
 import java.util.UUID;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteTransactions;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.console.repositories.AnnouncementRepository;
 import org.apache.ignite.internal.util.future.IgniteFinishedFutureImpl;
 import org.apache.ignite.lang.IgniteAsyncSupport;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteUuid;
+import org.apache.ignite.testframework.GridTestNode;
 import org.apache.ignite.testframework.junits.IgniteMock;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
 import org.apache.ignite.transactions.TransactionState;
 import org.jetbrains.annotations.Nullable;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.event.ApplicationEventMulticaster;
 import org.springframework.context.event.SimpleApplicationEventMulticaster;
@@ -45,9 +51,9 @@ import static org.mockito.Mockito.when;
 /**
  * Test configuration with mocks.
  */
-@Configuration
+@TestConfiguration
 @Import(Application.class)
-public class TestConfiguration {
+public class MockConfiguration {
     /**
      * @return Application event multicaster.
      */
@@ -55,7 +61,6 @@ public class TestConfiguration {
     public ApplicationEventMulticaster simpleApplicationEventMulticaster() {
         return new SimpleApplicationEventMulticaster();
     }
-
     /** Announcement mock. */
     @Bean
     public AnnouncementRepository announcementRepository() {
@@ -76,13 +81,35 @@ public class TestConfiguration {
         when(txs.txStart())
             .thenReturn(new TransactionMock());
 
+        IgniteCluster cluster = mock(IgniteCluster.class);
+
+        when(cluster.nodes())
+            .thenReturn(Collections.singleton(new GridTestNode(UUID.randomUUID())));
+
         return new IgniteMock("testGrid", null, null, null, null, null, null) {
+            /** {@inheritDoc} */
             @Override public IgniteConfiguration configuration() {
                 return cfg;
             }
 
+            /** {@inheritDoc} */
             @Override public IgniteTransactions transactions() {
                 return txs;
+            }
+
+            /** {@inheritDoc} */
+            @Override public IgniteCluster cluster() {
+                return cluster;
+            }
+
+            /** {@inheritDoc} */
+            @SuppressWarnings("unchecked")
+            @Override public <K, V> IgniteCache<K, V> getOrCreateCache(CacheConfiguration<K, V> cacheCfg) {
+                IgniteCache<K, V> mockedCache = mock(IgniteCache.class);
+
+                when(mockedCache.spliterator()).thenReturn(Spliterators.emptySpliterator());
+
+                return mockedCache;
             }
         };
     }
