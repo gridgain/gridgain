@@ -18,6 +18,7 @@ package org.apache.ignite.thread;
 
 import java.lang.ref.WeakReference;
 import java.util.WeakHashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.util.typedef.internal.A;
@@ -46,7 +47,7 @@ public class IgniteThread extends Thread {
     private static final AtomicLong cntr = new AtomicLong();
 
     /** Per thread current waiting operations */
-    private static final WeakHashMap<Long, WeakReference<Object>> curOp = new WeakHashMap<>();
+    private static final ConcurrentHashMap<Long, OperationStackEntry> curOp = new ConcurrentHashMap<>();
 
     /** The name of the Ignite instance this thread belongs to. */
     protected final String igniteInstanceName;
@@ -66,8 +67,10 @@ public class IgniteThread extends Thread {
     /** */
     private boolean forbiddenToRequestBinaryMetadata;
 
-    /** */
-    private volatile boolean idle = false;
+    /**
+     * Idle state change timestamp. Negative if busy, positive if idle.
+     */
+    private volatile long idleTs = -1;
 
     /**
      * Creates thread with given worker.
@@ -109,7 +112,7 @@ public class IgniteThread extends Thread {
         this.compositeRwLockIdx = grpIdx;
         this.stripe = stripe;
         this.plc = plc;
-        this.idle = idle;
+        this.idleTs = idle ? 1 : -1;
     }
 
     /**
@@ -262,17 +265,17 @@ public class IgniteThread extends Thread {
             current.idle(false);
     }
 
-    public boolean idle() {
-        return idle;
+    public long idleTs() {
+        return idleTs;
     }
 
     /** */
     void idle(boolean isIdle) {
         assert Thread.currentThread() == this;
 
-        assert idle != isIdle;
+        assert isIdle ? idleTs < 0 : idleTs > 0;
 
-        idle = isIdle;
+        idleTs = isIdle ? System.currentTimeMillis() : -System.currentTimeMillis();
     }
 
     /**
@@ -288,20 +291,39 @@ public class IgniteThread extends Thread {
     }
 
     public static void pushOp(Object op) {
-        curOp.put(Thread.currentThread().getId(), new WeakReference<>(op));
+        curOp.compute(Thread.currentThread().getId(), (k, v) -> new OperationStackEntry(op, v));
     }
 
     public static void popOp() {
-        curOp.remove(Thread.currentThread().getId());
+        curOp.compute(Thread.currentThread().getId(), (k, v) -> v == null ? null : v.prev);
     }
 
-    public static Object peekOp(long threadId) {
-        WeakReference<Object> ref = curOp.get(threadId);
-        return ref == null ? null : ref.get();
+    public static OperationStackEntry peekOps(long threadId) {
+        return curOp.get(threadId);
     }
 
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(IgniteThread.class, this, "name", getName());
+    }
+
+    public static class OperationStackEntry {
+        private final WeakReference<Object> op;
+
+        private final OperationStackEntry prev;
+
+        private OperationStackEntry(Object op, OperationStackEntry prev) {
+            this.op = new WeakReference<>(op);
+
+            this.prev = prev;
+        }
+
+        public Object op() {
+            return op.get();
+        }
+
+        public OperationStackEntry prev() {
+            return prev;
+        }
     }
 }

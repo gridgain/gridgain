@@ -20,6 +20,7 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.cache.eviction.lru.LruEvictionPolicy;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteFutureTimeoutException;
@@ -90,13 +91,26 @@ public class GridCacheMultiNodeLoadTest extends GridCommonAbstractTest {
      */
     @Test
     public void testMany() throws Exception {
+        Thread t = new Thread(() -> {
+            while(true) {
+                try {
+                    Thread.sleep(1000);
+                }
+                catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+                IgniteUtils.dumpThreads(log);
+            }
+        });
+
+        t.start();
+
         IgniteFuture f = ignite1.compute().executeAsync(GridCacheLoadPopulationTask.class, null);
 
         while (true) {
             try {
-                U.dumpThreads(log);
-
-                f.get(1000);
+                f.get();
 
                 return;
             } catch (IgniteFutureTimeoutException ifte) {

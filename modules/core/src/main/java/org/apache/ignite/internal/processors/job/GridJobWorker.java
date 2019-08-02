@@ -63,6 +63,7 @@ import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.marshaller.Marshaller;
 import org.apache.ignite.marshaller.MarshallerUtils;
+import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.events.EventType.EVT_JOB_CANCELLED;
@@ -564,9 +565,13 @@ public class GridJobWorker extends GridWorker implements GridTimeoutObject {
                                 if (internal && ctx.config().isPeerClassLoadingEnabled())
                                     ctx.job().internal(true);
 
+                                IgniteThread.pushOp(job);
+
                                 return job.execute();
                             }
                             finally {
+                                IgniteThread.popOp();
+
                                 if (internal && ctx.config().isPeerClassLoadingEnabled())
                                     ctx.job().internal(false);
                             }

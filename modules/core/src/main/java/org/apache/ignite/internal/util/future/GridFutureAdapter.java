@@ -174,14 +174,10 @@ public class GridFutureAdapter<R> implements IgniteInternalFuture<R> {
         boolean interrupted = false;
 
         try {
+            IgniteThread.pushOp(this);
+
             while (true) {
-                IgniteThread.pushOp(this);
-
-                System.err.println(getClass().getCanonicalName());
-
                 LockSupport.park();
-
-                IgniteThread.popOp();
 
                 if (Thread.interrupted()) {
                     interrupted = true;
@@ -198,6 +194,8 @@ public class GridFutureAdapter<R> implements IgniteInternalFuture<R> {
             }
         }
         finally {
+            IgniteThread.popOp();
+
             if (interrupted)
                 Thread.currentThread().interrupt();
         }

@@ -868,7 +868,7 @@ public final class GridNearTxFinishFuture<K, V> extends GridCacheCompoundIdentit
 
     /** {@inheritDoc} */
     @Override public String describe() {
-        return getClass().getSimpleName();
+        return getClass().getSimpleName() + " [xidVer=" + tx.nearXidVersion() + "]";
     }
 
     /**

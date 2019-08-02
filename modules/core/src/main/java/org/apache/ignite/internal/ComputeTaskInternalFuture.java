@@ -270,4 +270,8 @@ public class ComputeTaskInternalFuture<R> extends GridFutureAdapter<R> {
             return ((ComputeTaskInternalFuture<R>)fut).getTaskSession();
         }
     }
+
+    @Override public String describe() {
+        return this.getClass().getSimpleName() + "[ses=" + ses.toString() + "]";
+    }
 }

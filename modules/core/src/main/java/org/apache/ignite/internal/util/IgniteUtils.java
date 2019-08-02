@@ -180,6 +180,7 @@ import org.apache.ignite.cluster.ClusterGroupEmptyException;
 import org.apache.ignite.cluster.ClusterMetrics;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterTopologyException;
+import org.apache.ignite.compute.ComputeJob;
 import org.apache.ignite.compute.ComputeTask;
 import org.apache.ignite.compute.ComputeTaskCancelledException;
 import org.apache.ignite.compute.ComputeTaskName;
@@ -210,7 +211,9 @@ import org.apache.ignite.internal.mxbean.IgniteStandardMXBean;
 import org.apache.ignite.internal.processors.cache.CacheClassLoaderMarker;
 import org.apache.ignite.internal.processors.cache.GridCacheAttributes;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.GridCacheFuture;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
+import org.apache.ignite.internal.processors.cache.distributed.GridDistributedBaseMessage;
 import org.apache.ignite.internal.processors.cluster.BaselineTopology;
 import org.apache.ignite.internal.transactions.IgniteTxAlreadyCompletedCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxDuplicateKeyCheckedException;
@@ -257,6 +260,7 @@ import org.apache.ignite.spi.discovery.DiscoverySpi;
 import org.apache.ignite.spi.discovery.DiscoverySpiOrderSupport;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.thread.IgniteThread;
+import org.apache.ignite.thread.IgniteThread.OperationStackEntry;
 import org.apache.ignite.transactions.TransactionAlreadyCompletedException;
 import org.apache.ignite.transactions.TransactionDeadlockException;
 import org.apache.ignite.transactions.TransactionDuplicateKeyException;
@@ -1435,6 +1439,8 @@ public abstract class IgniteUtils {
      * @param log Logger.
      */
     public static void dumpThreads(@Nullable IgniteLogger log, boolean dumpIdle) {
+        long startedTs = System.currentTimeMillis();
+
         ThreadMXBean mxBean = ManagementFactory.getThreadMXBean();
 
         final Set<Long> deadlockedThreadsIds = getDeadlockedThreadIds(mxBean);
@@ -1471,12 +1477,11 @@ public abstract class IgniteUtils {
         Thread[] threads = new Thread[current.activeCount()];
 
         int totalThreads = current.enumerate(threads);
-        int skippedIdleThreads = 0;
 
         INFO: for (ThreadInfo info : threadInfos) {
             boolean idle = false;
 
-            Object op = null;
+            OperationStackEntry op = null;
 
             if (!dumpIdle) {
                 boolean found = false;
@@ -1487,13 +1492,14 @@ public abstract class IgniteUtils {
                     if (thread.getId() == info.getThreadId()) {
                         found = true;
 
-                        op = IgniteThread.peekOp(thread.getId());
+                        op = IgniteThread.peekOps(thread.getId());
 
-                        if (thread instanceof IgniteThread && ((IgniteThread)thread).idle()) {
-                            skippedIdleThreads++;
+                        if (thread instanceof IgniteThread) {
+                            long idleTs = ((IgniteThread)thread).idleTs();
 
-                            idle = true;
-                            ///continue INFO;
+                            // Make sure thread became idle before we started taking thread dumps
+                            if (idleTs > 0 && idleTs < startedTs)
+                                idle = true;
                         }
                     }
                 }
@@ -1505,7 +1511,7 @@ public abstract class IgniteUtils {
             printThreadInfo(info, sb, deadlockedThreadsIds, op, idle, dumpIdle);
         }
 
-        sb.a(NL);
+        sb.a("Dumping thread took ").a(System.currentTimeMillis() - startedTs).a(" ms").a(NL);
 
         warn(log, sb.toString());
     }
@@ -1588,7 +1594,7 @@ public abstract class IgniteUtils {
      * @param sb Buffer.
      */
     private static void printThreadInfo(ThreadInfo threadInfo, GridStringBuilder sb, Set<Long> deadlockedIdSet,
-        Object op, boolean idle, boolean dumpIdle) {
+        OperationStackEntry ops, boolean idle, boolean dumpIdle) {
         final long id = threadInfo.getThreadId();
 
         if (deadlockedIdSet.contains(id))
@@ -1601,9 +1607,25 @@ public abstract class IgniteUtils {
             .a(", blockCnt=").a(threadInfo.getBlockedCount())
             .a(", waitCnt=").a(threadInfo.getWaitedCount()).a("]").a(NL);
 
-        if (op != null) {
-            if (op instanceof IgniteInternalFuture)
-                sb.a(((IgniteInternalFuture)op).describe()).a(NL);
+        while (ops != null) {
+            Object op = ops.op();
+
+            sb.a("    ");
+
+            if (op instanceof GridDistributedBaseMessage)
+                sb.a(op.getClass().getSimpleName()).a(" [xidVer=" + ((GridDistributedBaseMessage)op).version() + "]");
+            else if (op instanceof IgniteInternalFuture)
+                sb.a(((IgniteInternalFuture)op).describe());
+            else if (op instanceof UUID)
+                sb.a("Message [nodeId=" + op.toString() + "]");
+            else if (op instanceof ComputeJob)
+                sb.a(op);
+            else
+                sb.a(op.getClass().getCanonicalName());
+
+            sb.a(NL);
+
+            ops = ops.prev();
         }
 
         if (dumpIdle || !idle) {

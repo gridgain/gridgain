@@ -1138,6 +1138,8 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
      */
     private void processMessage(UUID nodeId, GridCacheMessage msg, IgniteBiInClosure<UUID, GridCacheMessage> c) {
         try {
+            IgniteThread.pushOp(msg);
+
             c.apply(nodeId, msg);
 
             if (log.isDebugEnabled())
@@ -1158,6 +1160,8 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
             throw e;
         }
         finally {
+            IgniteThread.popOp();
+
             onMessageProcessed(msg);
         }
     }

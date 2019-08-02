@@ -100,6 +100,7 @@ import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.communication.CommunicationListener;
 import org.apache.ignite.spi.communication.CommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
+import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -1085,6 +1086,8 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                 try {
                     threadProcessingMessage(true, msgC);
 
+                    IgniteThread.pushOp(nodeId);
+
                     processRegularMessage0(msg, nodeId);
                 }
                 catch (Throwable e) {
@@ -1092,6 +1095,8 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
                     throw e;
                 } finally {
+                    IgniteThread.popOp();
+
                     threadProcessingMessage(false, null);
 
                     msgC.run();
