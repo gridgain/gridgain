@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 import io.opencensus.trace.Annotation;
 import io.opencensus.trace.AttributeValue;
 import org.apache.ignite.internal.processors.tracing.Span;
-import org.apache.ignite.internal.processors.tracing.Status;
+import org.apache.ignite.internal.processors.tracing.SpanStatus;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
@@ -82,8 +82,8 @@ public class OpenCensusSpanAdapter implements Span {
     }
 
     /** {@inheritDoc} */
-    @Override public OpenCensusSpanAdapter setStatus(Status status) {
-        span.setStatus(StatusMatchTable.match(status));
+    @Override public OpenCensusSpanAdapter setStatus(SpanStatus spanStatus) {
+        span.setStatus(StatusMatchTable.match(spanStatus));
 
         return this;
     }

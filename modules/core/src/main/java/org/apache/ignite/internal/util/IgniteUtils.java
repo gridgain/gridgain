@@ -1509,6 +1509,9 @@ public abstract class IgniteUtils {
         printThreadInfo(threadInfo, sb, Collections.<Long>emptySet());
     }
 
+    /**
+     * @return Stacktrace of current thread as {@link String}.
+     */
     public static String stackTrace() {
         GridStringBuilder sb = new GridStringBuilder();
         long threadId = Thread.currentThread().getId();

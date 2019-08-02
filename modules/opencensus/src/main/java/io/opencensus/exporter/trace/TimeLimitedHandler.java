@@ -39,6 +39,8 @@ import io.opencensus.trace.export.SpanExporter.Handler;
 import io.opencensus.trace.samplers.Samplers;
 
 /**
+ * Copy-pasted from OpenCensus library handler to avoid package-private access.
+ *
  * An abstract class that allows different tracing services to export recorded data for sampled
  * spans in their own format within a given time frame. If export does not complete within the time
  * frame, spans will be dropped and no retries will be performed.
@@ -53,14 +55,23 @@ import io.opencensus.trace.samplers.Samplers;
  * @since 0.22
  */
 public abstract class TimeLimitedHandler extends SpanExporter.Handler {
-
+    /** Logger. */
     private static final Logger logger = Logger.getLogger(TimeLimitedHandler.class.getName());
+    /** Low probability sampler. */
     private static final Sampler lowProbabilitySampler = Samplers.probabilitySampler(0.0001);
 
+    /** Tracer. */
     private final Tracer tracer;
+    /** Deadline. */
     private final Duration deadline;
+    /** Export span name. */
     private final String exportSpanName;
 
+    /**
+     * @param tracer Tracer.
+     * @param deadline Deadline.
+     * @param exportSpanName Export span name.
+     */
     protected TimeLimitedHandler(Tracer tracer, Duration deadline, String exportSpanName) {
         this.tracer = tracer;
         this.deadline = deadline;
@@ -78,37 +89,47 @@ public abstract class TimeLimitedHandler extends SpanExporter.Handler {
      */
     public abstract void timeLimitedExport(Collection<SpanData> spanDataList) throws Exception;
 
-    @Override
-    public void export(final Collection<SpanData> spanDataList) {
+    /** {@inheritDoc} */
+    @Override public void export(final Collection<SpanData> spanDataList) {
         final Scope exportScope = newExportScope();
         try {
             TimeLimiter timeLimiter = SimpleTimeLimiter.create(Executors.newSingleThreadExecutor());
             timeLimiter.callWithTimeout(
                 new Callable<Void>() {
-                    @Override
-                    public Void call() throws Exception {
+                    @Override public Void call() throws Exception {
                         timeLimitedExport(spanDataList);
                         return null;
                     }
                 },
                 deadline.toMillis(),
                 TimeUnit.MILLISECONDS);
-        } catch (TimeoutException e) {
+        }
+        catch (TimeoutException e) {
             handleException(e, "Timeout when exporting traces: " + e);
-        } catch (InterruptedException e) {
+        }
+        catch (InterruptedException e) {
             handleException(e, "Interrupted when exporting traces: " + e);
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             handleException(e, "Failed to export traces: " + e);
-        } finally {
+        }
+        finally {
             exportScope.close();
         }
     }
 
+    /**
+     *
+     */
     @MustBeClosed
     private Scope newExportScope() {
         return tracer.spanBuilder(exportSpanName).setSampler(lowProbabilitySampler).startScopedSpan();
     }
 
+    /**
+     * @param e Exception.
+     * @param logMessage Logger message.
+     */
     private void handleException(Exception e, String logMessage) {
         Status status = e instanceof TimeoutException ? Status.DEADLINE_EXCEEDED : Status.UNKNOWN;
         tracer

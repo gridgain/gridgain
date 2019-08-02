@@ -1,3 +1,19 @@
+/*
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.ignite.opencensus.spi.tracing;
 
 import java.util.Collection;
@@ -10,7 +26,6 @@ import io.opencensus.trace.AttributeValue;
 import io.opencensus.trace.Span;
 import io.opencensus.trace.SpanId;
 import io.opencensus.trace.Status;
-import io.opencensus.trace.TraceComponent;
 import io.opencensus.trace.export.SpanData;
 import io.opencensus.trace.export.SpanExporter;
 import io.opencensus.trace.samplers.Samplers;
@@ -18,7 +33,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
-import org.apache.ignite.internal.processors.tracing.TraceTags;
+import org.apache.ignite.internal.processors.tracing.SpanTags;
 import org.apache.ignite.internal.processors.tracing.Traces;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -29,14 +44,14 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
- *
+ * Tests to check correctness of OpenCensus Tracing SPI implementation.
  */
 public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
     /** Grid count. */
     private static final int GRID_CNT = 3;
 
-    /** Shared trace component. */
-    private static TraceComponent traceComponent;
+    /** Shared tracing provider. */
+    private static OpenCensusTracingProvider provider = new OpenCensusTracingProvider();
 
     /** Exporter to check reported spans. */
     private TraceTestExporter exporter;
@@ -47,7 +62,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
 
         cfg.setConsistentId(igniteInstanceName);
 
-        cfg.setTracingSpi(new OpenCensusTracingSpi(traceComponent));
+        cfg.setTracingSpi(new OpenCensusTracingSpi(provider));
 
         return cfg;
     }
@@ -57,14 +72,6 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
      */
     @BeforeClass
     public static void beforeTests() {
-        /**
-         * There is no ability to create several OpenCensus trace components within one JVM.
-         * This hack with shared component resolves the problem
-         * with TracingSpi creation in case of multiple nodes in same JVM.
-         */
-        if (traceComponent == null)
-            traceComponent = OpenCensusTracingSpi.createTraceComponent(OpenCensusTracingSpi.class.getClassLoader());
-
         /* Uncomment following code to see visualisation on local Zipkin: */
 
         //OpenCensusZipkinTraceExporter zipkinExproter = new OpenCensusZipkinTraceExporter(
@@ -73,7 +80,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
         //        .setServiceName("ignite")
         //        .build()
         //);
-        //zipkinExproter.start(traceComponent, "all");
+        //zipkinExproter.start(provider, "all");
     }
 
     /**
@@ -85,7 +92,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
 
         exporter = new TraceTestExporter();
 
-        exporter.start(traceComponent, "all");
+        exporter.start(provider, "all");
 
         startGrids(GRID_CNT);
     }
@@ -120,9 +127,9 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
             .filter(span -> Traces.Discovery.NODE_JOIN_REQUEST.equals(span.getName()))
             .filter(span -> span.getStatus() == Status.OK)
             .filter(span -> AttributeValue.stringAttributeValue(joinedNodeId).equals(
-                span.getAttributes().getAttributeMap().get(TraceTags.tag(TraceTags.EVENT_NODE, TraceTags.ID))))
+                span.getAttributes().getAttributeMap().get(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID))))
             .collect(Collectors.toMap(
-                span -> span.getAttributes().getAttributeMap().get(TraceTags.tag(TraceTags.NODE, TraceTags.NAME)),
+                span -> span.getAttributes().getAttributeMap().get(SpanTags.tag(SpanTags.NODE, SpanTags.NAME)),
                 span -> span
                 ));
 
@@ -145,7 +152,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
                 .filter(span -> Traces.Discovery.NODE_JOIN_ADD.equals(span.getName()))
                 .filter(span -> span.getStatus() == Status.OK)
                 .filter(span -> AttributeValue.stringAttributeValue(joinedNodeId).equals(
-                    span.getAttributes().getAttributeMap().get(TraceTags.tag(TraceTags.EVENT_NODE, TraceTags.ID))))
+                    span.getAttributes().getAttributeMap().get(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID))))
                 .collect(Collectors.toList());
 
             Assert.assertTrue(
@@ -169,7 +176,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
                 Assert.assertEquals(
                     "Parent span is not related to joined node, parentSpan=" + parentSpan,
                     AttributeValue.stringAttributeValue(joinedNodeId),
-                    parentSpan.getAttributes().getAttributeMap().get(TraceTags.tag(TraceTags.EVENT_NODE, TraceTags.ID))
+                    parentSpan.getAttributes().getAttributeMap().get(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID))
                 );
             });
         }
@@ -180,7 +187,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
                 .filter(span -> Traces.Discovery.NODE_JOIN_FINISH.equals(span.getName()))
                 .filter(span -> span.getStatus() == Status.OK)
                 .filter(span -> AttributeValue.stringAttributeValue(joinedNodeId).equals(
-                    span.getAttributes().getAttributeMap().get(TraceTags.tag(TraceTags.EVENT_NODE, TraceTags.ID))))
+                    span.getAttributes().getAttributeMap().get(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID))))
                 .collect(Collectors.toList());
 
             Assert.assertTrue(
@@ -204,7 +211,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
                 Assert.assertEquals(
                     "Parent span is not related to joined node " + parentSpan,
                     AttributeValue.stringAttributeValue(joinedNodeId),
-                    parentSpan.getAttributes().getAttributeMap().get(TraceTags.tag(TraceTags.EVENT_NODE, TraceTags.ID))
+                    parentSpan.getAttributes().getAttributeMap().get(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID))
                 );
             });
         }
@@ -231,10 +238,10 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
         Map<AttributeValue, SpanData> nodeLeftSpans = exporter.hnd.allSpans()
             .filter(span -> Traces.Discovery.NODE_LEFT.equals(span.getName()))
             .filter(span -> AttributeValue.stringAttributeValue(leftNodeId).equals(
-                span.getAttributes().getAttributeMap().get(TraceTags.tag(TraceTags.EVENT_NODE, TraceTags.ID))))
+                span.getAttributes().getAttributeMap().get(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID))))
             .filter(span -> span.getStatus() == Status.OK)
             .collect(Collectors.toMap(
-                span -> span.getAttributes().getAttributeMap().get(TraceTags.tag(TraceTags.NODE, TraceTags.NAME)),
+                span -> span.getAttributes().getAttributeMap().get(SpanTags.tag(SpanTags.NODE, SpanTags.NAME)),
                 span -> span,
                 (span1, span2) -> {
                     throw new AssertionError(String.format(
@@ -267,15 +274,15 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
 
         exporter.flush();
 
-        // Check PME for NODE_LEFT on remaining nodes:
+        // Check PME for NODE_LEFT event on remaining nodes:
         for (int i = 0; i < GRID_CNT - 1; i++) {
             List<SpanData> exchFutSpans = exporter.hnd.spansReportedByNode(getTestIgniteInstanceName(i))
                 .filter(span -> Traces.Exchange.EXCHANGE_FUTURE.equals(span.getName()))
                 .filter(span -> span.getStatus() == Status.OK)
                 .filter(span -> AttributeValue.longAttributeValue(EventType.EVT_NODE_LEFT).equals(
-                    span.getAttributes().getAttributeMap().get(TraceTags.tag(TraceTags.EVENT, TraceTags.TYPE))))
+                    span.getAttributes().getAttributeMap().get(SpanTags.tag(SpanTags.EVENT, SpanTags.TYPE))))
                 .filter(span -> AttributeValue.stringAttributeValue(leftNodeId).equals(
-                    span.getAttributes().getAttributeMap().get(TraceTags.tag(TraceTags.EVENT_NODE, TraceTags.ID))))
+                    span.getAttributes().getAttributeMap().get(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID))))
                 .collect(Collectors.toList());
 
             Assert.assertTrue(
@@ -299,19 +306,19 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
                 Assert.assertEquals(
                     "Parent span is not related to joined node " + parentSpan,
                     AttributeValue.stringAttributeValue(leftNodeId),
-                    parentSpan.getAttributes().getAttributeMap().get(TraceTags.tag(TraceTags.EVENT_NODE, TraceTags.ID))
+                    parentSpan.getAttributes().getAttributeMap().get(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID))
                 );
                 Assert.assertEquals(
                     "Exchange future major topology version is invalid " + span,
                     AttributeValue.longAttributeValue(curTopVer + 1),
                     span.getAttributes().getAttributeMap().get(
-                        TraceTags.tag(TraceTags.RESULT, TraceTags.TOPOLOGY_VERSION, TraceTags.MAJOR))
+                        SpanTags.tag(SpanTags.RESULT, SpanTags.TOPOLOGY_VERSION, SpanTags.MAJOR))
                 );
                 Assert.assertEquals(
                     "Exchange future minor version is invalid " + span,
                     AttributeValue.longAttributeValue(0),
                     span.getAttributes().getAttributeMap().get(
-                        TraceTags.tag(TraceTags.RESULT, TraceTags.TOPOLOGY_VERSION, TraceTags.MINOR))
+                        SpanTags.tag(SpanTags.RESULT, SpanTags.TOPOLOGY_VERSION, SpanTags.MINOR))
                 );
             });
         }
@@ -328,13 +335,13 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
         private final TraceExporterTestHandler hnd = new TraceExporterTestHandler();
 
         /** {@inheritDoc} */
-        @Override public void start(TraceComponent traceComponent, String igniteInstanceName) {
-            traceComponent.getExportComponent().getSpanExporter().registerHandler(HANDLER_NAME, hnd);
+        @Override public void start(OpenCensusTracingProvider provider, String igniteInstanceName) {
+            provider.getExportComponent().getSpanExporter().registerHandler(HANDLER_NAME, hnd);
         }
 
         /** {@inheritDoc} */
-        @Override public void stop(TraceComponent traceComponent) {
-            traceComponent.getExportComponent().getSpanExporter().unregisterHandler(HANDLER_NAME);
+        @Override public void stop(OpenCensusTracingProvider provider) {
+            provider.getExportComponent().getSpanExporter().unregisterHandler(HANDLER_NAME);
         }
 
         /**
@@ -346,7 +353,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
             // There is no ability to change this behavior in Opencensus, so this hack is needed to "flush" real spans to exporter.
             // @see io.opencensus.implcore.trace.export.ExportComponentImpl.
             for (int i = 0; i < 32; i++) {
-                Span span = traceComponent.getTracer().spanBuilder("test-" + i).setSampler(Samplers.alwaysSample()).startSpan();
+                Span span = provider.getTracer().spanBuilder("test-" + i).setSampler(Samplers.alwaysSample()).startSpan();
 
                 U.sleep(10); // See same hack in OpenCensusSpanAdapter#end() method.
 

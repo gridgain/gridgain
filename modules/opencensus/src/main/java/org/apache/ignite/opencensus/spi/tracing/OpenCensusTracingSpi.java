@@ -16,14 +16,9 @@
 
 package org.apache.ignite.opencensus.spi.tracing;
 
-import io.opencensus.internal.DefaultVisibilityForTesting;
-import io.opencensus.internal.Provider;
-import io.opencensus.trace.TraceComponent;
-import io.opencensus.trace.propagation.SpanContextParseException;
+import java.util.Arrays;
 import io.opencensus.trace.samplers.Samplers;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.processors.tracing.Span;
-import org.apache.ignite.internal.processors.tracing.TraceTags;
 import org.apache.ignite.internal.processors.tracing.TracingSpi;
 import org.apache.ignite.spi.IgniteSpiAdapter;
 import org.apache.ignite.spi.IgniteSpiException;
@@ -34,11 +29,11 @@ import org.jetbrains.annotations.Nullable;
  * Tracing SPI implementation based on OpenCensus library.
  */
 public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi {
-    /** Exporter. */
-    private OpenCensusTraceExporter exporter;
+    /** Configured exporters. */
+    private OpenCensusTraceExporter[] exporters;
 
     /** Trace component. */
-    private TraceComponent traceComponent;
+    private OpenCensusTracingProvider provider;
 
     /**
      * Default constructor.
@@ -47,27 +42,19 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
     }
 
     /**
-     * @param traceComponent Trace component.
+     * @param provider Trace component.
      */
-    public OpenCensusTracingSpi(TraceComponent traceComponent) {
-        this.traceComponent = traceComponent;
+    public OpenCensusTracingSpi(OpenCensusTracingProvider provider) {
+        this.provider = provider;
     }
 
     /**
-     * @param exporter Exporter.
+     * @param exporters Exporter.
      */
-    public OpenCensusTracingSpi withExporter(OpenCensusTraceExporter exporter) {
-        this.exporter = exporter;
+    public OpenCensusTracingSpi withExporters(OpenCensusTraceExporter... exporters) {
+        this.exporters = exporters.clone();
 
         return this;
-    }
-
-    /**
-     *
-     */
-    @DefaultVisibilityForTesting
-    OpenCensusTraceExporter getExporter() {
-        return exporter;
     }
 
     /** {@inheritDoc} */
@@ -76,14 +63,17 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
             OpenCensusSpanAdapter spanAdapter = (OpenCensusSpanAdapter) parentSpan;
 
             return new OpenCensusSpanAdapter(
-                traceComponent.getTracer().spanBuilderWithExplicitParent(name, spanAdapter != null ? spanAdapter.impl() : null)
-                    .setSampler(Samplers.alwaysSample())
-                    .startSpan()
-            ).addTag(TraceTags.tag(TraceTags.NODE, TraceTags.NAME), igniteInstanceName);
-                //.addTag("stack_trace", U.stackTrace());
+                provider.getTracer().spanBuilderWithExplicitParent(
+                    name,
+                    spanAdapter != null ? spanAdapter.impl() : null
+                )
+                .setSampler(Samplers.alwaysSample())
+                .startSpan()
+            );
         }
         catch (Exception e) {
-            throw new IgniteException("Failed to create from parent", e);
+            throw new IgniteSpiException("Failed to create span from parent " +
+                "[spanName=" + name + ", parentSpan=" + parentSpan + "]", e);
         }
     }
 
@@ -91,17 +81,17 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
     @Override public OpenCensusSpanAdapter create(@NotNull String name, @Nullable byte[] serializedSpanBytes) {
         try {
             return new OpenCensusSpanAdapter(
-                traceComponent.getTracer().spanBuilderWithRemoteParent(
+                provider.getTracer().spanBuilderWithRemoteParent(
                     name,
-                    traceComponent.getPropagationComponent().getBinaryFormat().fromByteArray(serializedSpanBytes)
+                    provider.getPropagationComponent().getBinaryFormat().fromByteArray(serializedSpanBytes)
                 )
                 .setSampler(Samplers.alwaysSample())
                 .startSpan()
-            ).addTag(TraceTags.tag(TraceTags.NODE, TraceTags.NAME), igniteInstanceName);
-                //.addTag("stack_trace", U.stackTrace());
+            );
         }
-        catch (SpanContextParseException e) {
-            throw new IgniteException("Failed to create span from serialized value: " + name, e);
+        catch (Exception e) {
+            throw new IgniteSpiException("Failed to create span from serialized value " +
+                "[spanName=" + name + ", serializedValue=" + Arrays.toString(serializedSpanBytes) + "]", e);
         }
     }
 
@@ -109,7 +99,7 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
     @Override public byte[] serialize(@NotNull Span span) {
         OpenCensusSpanAdapter spanAdapter = (OpenCensusSpanAdapter) span;
 
-        return traceComponent.getPropagationComponent().getBinaryFormat().toByteArray(spanAdapter.impl().getContext());
+        return provider.getPropagationComponent().getBinaryFormat().toByteArray(spanAdapter.impl().getContext());
     }
 
     /** {@inheritDoc} */
@@ -119,55 +109,19 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
 
     /** {@inheritDoc} */
     @Override public void spiStart(String igniteInstanceName) throws IgniteSpiException {
-        if (traceComponent == null) {
-            traceComponent = createTraceComponent(getClass().getClassLoader());
+        if (provider == null) {
+            provider = new OpenCensusTracingProvider();
 
-            if (exporter != null)
-                exporter.start(traceComponent, igniteInstanceName);
+            if (exporters != null)
+                for (OpenCensusTraceExporter exporter : exporters)
+                    exporter.start(provider, igniteInstanceName);
         }
     }
 
     /** {@inheritDoc} */
     @Override public void spiStop() throws IgniteSpiException {
-        if (exporter != null)
-            exporter.stop(traceComponent);
-    }
-
-    /**
-     * Any provider that may be used for TraceComponent can be added here.
-     *
-     * @param classLoader Class loader.
-     */
-    public static TraceComponent createTraceComponent(@javax.annotation.Nullable ClassLoader classLoader) {
-        // Exception that contains possible causes of failed TraceComponent start.
-        IgniteSpiException startE;
-
-        try {
-            // Call Class.forName with literal string name of the class to help shading tools.
-            return Provider.createInstance(
-                Class.forName(
-                    "io.opencensus.impl.trace.TraceComponentImpl", /*initialize=*/ true, classLoader),
-                TraceComponent.class);
-        }
-        catch (Exception e) {
-            startE = new IgniteSpiException("Failed to start TraceComponent.");
-
-            startE.addSuppressed(e);
-        }
-
-        try {
-            // Call Class.forName with literal string name of the class to help shading tools.
-            return Provider.createInstance(
-                Class.forName(
-                    "io.opencensus.impllite.trace.TraceComponentImplLite",
-                    /*initialize=*/ true,
-                    classLoader),
-                TraceComponent.class);
-        }
-        catch (Exception e) {
-            startE.addSuppressed(e);
-        }
-
-        throw startE;
+        if (exporters != null)
+            for (OpenCensusTraceExporter exporter : exporters)
+                exporter.stop(provider);
     }
 }

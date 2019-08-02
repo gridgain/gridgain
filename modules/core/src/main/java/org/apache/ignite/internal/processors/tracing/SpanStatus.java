@@ -14,19 +14,16 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.opencensus.spi.tracing;
+package org.apache.ignite.internal.processors.tracing;
 
 /**
- * Interface for OpenCensus trace exporters adopted for Ignite lifecycle.
+ * Various statuses for Span execution.
  */
-public interface OpenCensusTraceExporter {
-    /**
-     * @param provider Tracing provider.
-     * @param igniteInstanceName Ignite instance name.
-     */
-    public void start(OpenCensusTracingProvider provider, String igniteInstanceName);
-    /**
-     * @param provider Tracing provider.
-     */
-    public void stop(OpenCensusTracingProvider provider);
+public enum SpanStatus {
+    /** Ok. */
+    OK,
+    /** Cancelled. */
+    CANCELLED,
+    /** Aborted. */
+    ABORTED
 }
