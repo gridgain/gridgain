@@ -43,6 +43,7 @@ import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.CacheInvokeEntry;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.EntryProcessorResourceInjectorProxy;
+import org.apache.ignite.internal.processors.cache.GridCacheAffinityManager;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryRemovedException;
@@ -94,6 +95,7 @@ import static org.apache.ignite.internal.processors.cache.GridCacheOperation.REL
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.TRANSFORM;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.UPDATE;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.LOST;
+import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.processors.dr.GridDrType.DR_NONE;
 import static org.apache.ignite.internal.processors.dr.GridDrType.DR_PRIMARY;
@@ -489,6 +491,15 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
                         int p = e.getKey();
 
                         GridDhtLocalPartition part = top.localPartition(p);
+
+                        if(part != null && part.state() == MOVING) {
+                            log.error("PMP@part:"+part);
+                            for (Map.Entry<String, GridCacheAffinityManager> entry : AffinityTestHolder.cacheAffinityManagers.entrySet()) {
+                                log.error("PMP@node:"+ entry.getKey()
+                                    + " affinity=["
+                                    + entry.getValue().nodesByPartition(part.id(), top.readyTopologyVersion())+"]");
+                            }
+                        }
 
                         // LOST state is possible if tx is started over LOST partition.
                         assert part != null && (part.state() == OWNING || part.state() == LOST):

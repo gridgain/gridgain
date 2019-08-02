@@ -31,6 +31,7 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.affinity.AffinityAssignment;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentCache;
+import org.apache.ignite.internal.processors.cache.transactions.AffinityTestHolder;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.typedef.F;
 import org.jetbrains.annotations.Nullable;
@@ -61,6 +62,8 @@ public class GridCacheAffinityManager extends GridCacheManagerAdapter {
         affMapper = cctx.config().getAffinityMapper();
 
         aff = cctx.group().affinity();
+
+        AffinityTestHolder.cacheAffinityManagers.put(cctx.igniteInstanceName(), this);
     }
 
     /** {@inheritDoc} */
@@ -73,6 +76,8 @@ public class GridCacheAffinityManager extends GridCacheManagerAdapter {
     /** {@inheritDoc} */
     @Override protected void stop0(boolean cancel, boolean destroy) {
         aff = null;
+
+        AffinityTestHolder.cacheAffinityManagers.remove(cctx.igniteInstanceName());
     }
 
     /**
