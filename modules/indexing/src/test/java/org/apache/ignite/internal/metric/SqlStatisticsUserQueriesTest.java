@@ -270,7 +270,9 @@ public class SqlStatisticsUserQueriesTest extends SqlStatisticsAbstractTest {
 
             SuspendQuerySqlFunctions.awaitQueryStopsInTheMiddle();
 
-            killAllQueriesOn(REDUCER_IDX);
+            killAsyncAllQueriesOn(REDUCER_IDX);
+
+            TimeUnit.SECONDS.sleep(1);
 
             SuspendQuerySqlFunctions.resumeQueryExecution();
 
@@ -391,7 +393,7 @@ public class SqlStatisticsUserQueriesTest extends SqlStatisticsAbstractTest {
      *
      * @param nodeIdx Node index.
      */
-    private void killAllQueriesOn(int nodeIdx) {
+    private void killAsyncAllQueriesOn(int nodeIdx) {
         IgniteEx node = grid(nodeIdx);
 
         Collection<GridRunningQueryInfo> queries = node.context().query().getIndexing().runningQueries(-1);
@@ -400,7 +402,7 @@ public class SqlStatisticsUserQueriesTest extends SqlStatisticsAbstractTest {
             String killId = queryInfo.globalQueryId();
 
             node.context().query().querySqlFields(
-                new SqlFieldsQuery("KILL QUERY '" + killId + "'").setSchema("PUBLIC"), false);
+                new SqlFieldsQuery("KILL QUERY ASYNC '" + killId + "'").setSchema("PUBLIC"), false);
         }
     }
 }
