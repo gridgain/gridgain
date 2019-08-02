@@ -62,7 +62,7 @@ public class SpanContainer implements Serializable {
     }
 
     /**
-     * Sets transient field span to default value.
+     * Restores span field to default value after deserialization.
      */
     public Object readResolve() {
         span = NoopSpan.INSTANCE;
