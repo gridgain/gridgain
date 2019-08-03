@@ -52,7 +52,7 @@ public class PageMemoryNoLoadSelfTest extends GridCommonAbstractTest {
     private static final int MAX_MEMORY_SIZE = 10 * 1024 * 1024;
 
     /** */
-    private static final PageIO PAGE_IO = new DummyPageIO();
+    private static final PageIO PAGE_IO = DummyPageIO.VERSIONS.latest();
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {

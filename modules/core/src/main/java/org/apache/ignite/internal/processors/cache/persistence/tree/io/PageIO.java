@@ -84,6 +84,9 @@ import org.apache.ignite.spi.encryption.EncryptionSpi;
  */
 public abstract class PageIO {
     /** */
+    private static PageIO testIO;
+
+    /** */
     private static BPlusInnerIO<?> innerTestIO;
 
     /** */
@@ -488,6 +491,15 @@ public abstract class PageIO {
     }
 
     /**
+     * Registers IO for testing.
+     *
+     * @param io Page IO.
+     */
+    public static void registerTest(PageIO io) {
+        testIO = io;
+    }
+
+    /**
      * @return Type.
      */
     public final int getType() {
@@ -573,6 +585,11 @@ public abstract class PageIO {
                 return (Q)SimpleDataPageIO.VERSIONS.forVersion(ver);
 
             default:
+                if (testIO != null) {
+                    if (testIO.type == type && testIO.ver == ver)
+                        return (Q)testIO;
+                }
+
                 return (Q)getBPlusIO(type, ver);
         }
     }
