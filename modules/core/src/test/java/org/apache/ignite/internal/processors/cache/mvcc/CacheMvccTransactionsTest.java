@@ -93,9 +93,6 @@ import org.apache.ignite.transactions.TransactionIsolation;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.junit.rules.TestRule;
-import org.junit.runner.Description;
-import org.junit.runners.model.Statement;
 
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
@@ -118,17 +115,6 @@ public class CacheMvccTransactionsTest extends CacheMvccAbstractTest {
     @Override protected CacheMode cacheMode() {
         return PARTITIONED;
     }
-
-//    @Rule
-    public TestRule skipRule = new TestRule() {
-        @Override public Statement apply(Statement base, Description description) {
-            return new Statement() {
-                @Override public void evaluate() throws Throwable {
-
-                }
-            };
-        }
-    };
 
     /**
      * @throws Exception if failed.
