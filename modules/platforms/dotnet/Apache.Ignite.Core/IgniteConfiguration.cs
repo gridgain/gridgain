@@ -1110,6 +1110,11 @@ namespace Apache.Ignite.Core
         public IMetricExporterSpi MetricExporterSpi { get; set; }
 
         /// <summary>
+        /// Gets or sets the TracingSpi.
+        /// </summary>
+        public ITracingSpi TracingSpi { get; set; }
+
+        /// <summary>
         /// Gets or sets a value indicating whether node should start in client mode.
         /// Client node cannot hold data in the caches.
         /// </summary>

@@ -106,5 +106,12 @@ namespace Apache.Ignite.Core.Transactions
         /// </summary>
         /// <returns>Collection of <see cref="ITransactionCollection"/></returns>
         ITransactionCollection GetLocalActiveTransactions();
+
+        /// <summary>
+        /// Returns instance of Ignite Transactions to enable tracing for a transaction.
+        /// </summary>
+        /// <param name="label"></param>
+        /// <returns><see cref="ITransactions"/></returns>
+        ITransactions WithTracing();
     }
 }
