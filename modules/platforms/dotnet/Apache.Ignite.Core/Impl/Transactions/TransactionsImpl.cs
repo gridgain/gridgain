@@ -179,6 +179,12 @@ namespace Apache.Ignite.Core.Impl.Transactions
             return _ignite.GetTransactionsWithLabel(label);
         }
 
+        /** <inhertiDoc /> */
+        public ITransactions WithTracing()
+        {
+            return this;
+        }
+
         /** <inheritDoc /> */
         public ITransactionCollection GetLocalActiveTransactions()
         {
