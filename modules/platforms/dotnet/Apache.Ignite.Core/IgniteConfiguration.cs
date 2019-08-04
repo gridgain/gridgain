@@ -53,6 +53,7 @@ namespace Apache.Ignite.Core
     using Apache.Ignite.Core.PersistentStore;
     using Apache.Ignite.Core.Plugin;
     using Apache.Ignite.Core.Ssl;
+    using Apache.Ignite.Core.Tracing;
     using Apache.Ignite.Core.Transactions;
     using BinaryReader = Apache.Ignite.Core.Impl.Binary.BinaryReader;
     using BinaryWriter = Apache.Ignite.Core.Impl.Binary.BinaryWriter;
