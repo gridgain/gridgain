@@ -330,7 +330,7 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
             long ptr = mem.writeLock(grpId, pageId, page);
 
             try {
-                new DummyPageIO().initNewPage(ptr, pageId, PAGE_SIZE);
+                DummyPageIO.VERSIONS.latest().initNewPage(ptr, pageId, PAGE_SIZE);
 
                 for (int i = PageIO.COMMON_HEADER_END; i < mem.pageSize(); i++)
                     PageUtils.putByte(ptr, i, val);

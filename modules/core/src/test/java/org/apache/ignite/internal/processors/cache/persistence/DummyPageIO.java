@@ -16,7 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.persistence;
 
-import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.IOVersions;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.util.GridStringBuilder;
 
@@ -25,13 +25,17 @@ import org.apache.ignite.internal.util.GridStringBuilder;
  */
 public class DummyPageIO extends PageIO {
     /** */
-    public DummyPageIO() {
+    public static final IOVersions<DummyPageIO> VERSIONS = new IOVersions<>(new DummyPageIO());
+
+    /** */
+    private DummyPageIO() {
         super(2 * Short.MAX_VALUE, 1);
+
+        PageIO.registerTest(this);
     }
 
     /** {@inheritDoc} */
-    @Override
-    protected void printPage(long addr, int pageSize, GridStringBuilder sb) throws IgniteCheckedException {
+    @Override protected void printPage(long addr, int pageSize, GridStringBuilder sb) {
         sb.a("DummyPageIO [\n");
         sb.a("addr=").a(addr).a(", ");
         sb.a("pageSize=").a(addr);

@@ -141,7 +141,7 @@ public class IgnitePdsRecoveryAfterFileCorruptionTest extends GridCommonAbstract
 
         PageMemory mem = sharedCtx.database().dataRegion(policyName).pageMemory();
 
-        DummyPageIO pageIO = new DummyPageIO();
+        DummyPageIO pageIO = DummyPageIO.VERSIONS.latest();
 
         int cacheId = sharedCtx.cache().cache(cacheName).context().cacheId();
 
