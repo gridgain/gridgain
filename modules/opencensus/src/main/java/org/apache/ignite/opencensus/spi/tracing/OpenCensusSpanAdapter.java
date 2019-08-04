@@ -28,20 +28,20 @@ import org.apache.ignite.internal.util.typedef.internal.U;
  * Span implementation based on OpenCensus library.
  */
 public class OpenCensusSpanAdapter implements Span {
-    /** Span. */
+    /** OpenCensus span delegate. */
     private final io.opencensus.trace.Span span;
 
-    /** Ended. */
+    /** Flag indicates that span is ended. */
     private volatile boolean ended;
 
     /**
-     * @param span Span.
+     * @param span OpenCensus span delegate.
      */
     public OpenCensusSpanAdapter(io.opencensus.trace.Span span) {
         this.span = span;
     }
 
-    /** {@inheritDoc} */
+    /** Implementation object. */
     public io.opencensus.trace.Span impl() {
         return span;
     }
