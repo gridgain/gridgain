@@ -77,11 +77,4 @@ public class GridQueryCancel {
         if (clo == CANCELLED)
             throw new QueryCancelledException();
     }
-
-    /**
-     * @return {@code true} if cancel closure have been executed, {@code false} otherwise.
-     */
-    public boolean isCanceled() {
-        return clo == CANCELLED;
-    }
 }

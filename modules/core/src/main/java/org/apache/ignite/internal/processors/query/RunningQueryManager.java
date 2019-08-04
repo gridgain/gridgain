@@ -164,16 +164,12 @@ public class RunningQueryManager {
             else {
                 failedQrsCnt.increment();
 
-                assert qry.isCanceled() == QueryUtils.wasCancelled(failReason);
-
-                if (qry.isCanceled())
+                // We measure cancel metric as "number of times user's queries ended up with query cancelled exception",
+                // not "how many user's KILL QUERY command succeeded". These may be not the same if cancel was issued
+                // right when query failed due to some other reason.
+                if (QueryUtils.wasCancelled(failReason))
                     canceledQrsCnt.increment();
-
-                boolean oomFail = QueryUtils.isLocalOrReduceOom(failReason);
-
-                assert !(qry.isCanceled() && oomFail) : "Query cant be canceled and failed by OOM at the same time";
-
-                if (oomFail)
+                else if (QueryUtils.isLocalOrReduceOom(failReason))
                     oomQrsCnt.increment();
             }
         }

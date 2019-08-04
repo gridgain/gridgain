@@ -156,13 +156,6 @@ public class GridRunningQueryInfo {
     }
 
     /**
-     * @return if query have been canceled. Always returns {@code false} for uncancellable queries.
-     */
-    public boolean isCanceled() {
-        return cancel != null && cancel.isCanceled();
-    }
-
-    /**
      * @return {@code true} if query is local.
      */
     public boolean local() {
