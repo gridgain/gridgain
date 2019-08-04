@@ -17,12 +17,15 @@
 package org.apache.ignite.internal.processors.tracing;
 
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesHandler;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import static org.apache.ignite.internal.processors.tracing.SpanTags.NODE;
 
 /**
  * Tracing sub-system implementation.
@@ -42,7 +45,7 @@ public class TracingProcessor extends GridProcessorAdapter implements Tracing {
 
         spi = ctx.config().getTracingSpi();
 
-        msgHnd = new TraceableMessagesHandler(ctx, this);
+        msgHnd = new TraceableMessagesHandler(this, ctx.log(TracingProcessor.class));
     }
 
     /** {@inheritDoc} */
@@ -74,16 +77,30 @@ public class TracingProcessor extends GridProcessorAdapter implements Tracing {
         spi.spiStop();
     }
 
+    /**
+     * Adds tags with information about local node to given {@code span}.
+     * @param span Span.
+     * @return Span enriched by local node information.
+     */
+    private Span enrichWithLocalNodeParameters(Span span) {
+        span.addTag(SpanTags.NODE_ID, ctx.localNodeId().toString());
+        span.addTag(SpanTags.tag(NODE, SpanTags.NAME), ctx.igniteInstanceName());
+
+        ClusterNode localNode = ctx.discovery().localNode();
+        if (localNode != null && localNode.consistentId() != null)
+            span.addTag(SpanTags.tag(NODE, SpanTags.CONSISTENT_ID), localNode.consistentId().toString());
+
+        return span;
+    }
+
     /** {@inheritDoc} */
     @Override public Span create(@NotNull String name, @Nullable Span parentSpan) {
-        return spi.create(name, parentSpan)
-                .addTag(SpanTags.tag(SpanTags.NODE, SpanTags.NAME), ctx.igniteInstanceName());
+        return enrichWithLocalNodeParameters(spi.create(name, parentSpan));
     }
 
     /** {@inheritDoc} */
     @Override public Span create(@NotNull String name, @Nullable byte[] serializedSpanBytes) {
-        return spi.create(name, serializedSpanBytes)
-                .addTag(SpanTags.tag(SpanTags.NODE, SpanTags.NAME), ctx.igniteInstanceName());
+        return enrichWithLocalNodeParameters(spi.create(name, serializedSpanBytes));
     }
 
     /** {@inheritDoc} */

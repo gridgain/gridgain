@@ -17,35 +17,27 @@
 package org.apache.ignite.internal.processors.tracing.messages;
 
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.tracing.NoopSpan;
 import org.apache.ignite.internal.processors.tracing.SpanManager;
 
-import static org.apache.ignite.internal.processors.tracing.SpanTags.CONSISTENT_ID;
-import static org.apache.ignite.internal.processors.tracing.SpanTags.NODE;
-import static org.apache.ignite.internal.processors.tracing.SpanTags.NODE_ID;
-import static org.apache.ignite.internal.processors.tracing.SpanTags.tag;
 import static org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesTable.traceName;
 
 /**
  * Helper to handle traceable messages.
  */
 public class TraceableMessagesHandler {
-    /** Context. */
-    private final GridKernalContext ctx;
-    /** Spi. */
+    /** Span manager. */
     private final SpanManager spanMgr;
     /** Logger. */
     private final IgniteLogger log;
 
     /**
-     * @param ctx Context.
      * @param spanMgr Span manager.
+     * @param log Logger.
      */
-    public TraceableMessagesHandler(GridKernalContext ctx, SpanManager spanMgr) {
-        this.ctx = ctx;
+    public TraceableMessagesHandler(SpanManager spanMgr, IgniteLogger log) {
         this.spanMgr = spanMgr;
-        this.log = ctx.log(TraceableMessagesHandler.class);
+        this.log = log;
     }
 
     /**
@@ -60,14 +52,11 @@ public class TraceableMessagesHandler {
         if (log.isDebugEnabled())
             log.debug("Received traceable message: " + msg);
 
-        if (msg.spanContainer().span() == NoopSpan.INSTANCE) {
-            if (msg.spanContainer().serializedSpanBytes() != null)
-                msg.spanContainer().span(
-                    spanMgr.create(traceName(msg.getClass()), msg.spanContainer().serializedSpanBytes())
-                        .addTag(NODE_ID, ctx.localNodeId().toString())
-                        .addTag(tag(NODE, CONSISTENT_ID), ctx.discovery().localNode().consistentId().toString())
-                        .addLog("Received")
-                );
+        if (msg.spanContainer().span() == NoopSpan.INSTANCE && msg.spanContainer().serializedSpanBytes() != null) {
+            msg.spanContainer().span(
+                spanMgr.create(traceName(msg.getClass()), msg.spanContainer().serializedSpanBytes())
+                    .addLog("Received")
+            );
         }
     }
 
@@ -99,7 +88,6 @@ public class TraceableMessagesHandler {
 
         msg.spanContainer().span(
             spanMgr.create(traceName(msg.getClass()), parent.spanContainer().span())
-                .addTag(NODE_ID, ctx.localNodeId().toString())
                 .addLog("Created")
         );
 
@@ -117,7 +105,5 @@ public class TraceableMessagesHandler {
             msg.spanContainer().span()
                 .addLog("Processed")
                 .end();
-        else
-            log.warning("There is no deserialized span in message after processing for: " + msg);
     }
 }
