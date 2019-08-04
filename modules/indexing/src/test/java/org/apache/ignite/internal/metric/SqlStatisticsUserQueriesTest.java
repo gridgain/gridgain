@@ -60,7 +60,7 @@ public class SqlStatisticsUserQueriesTest extends SqlStatisticsAbstractTest {
      * Setup.
      */
     @Before
-    public void refresh()  {
+    public void refresh() {
         SuspendQuerySqlFunctions.refresh();
     }
 
@@ -68,7 +68,7 @@ public class SqlStatisticsUserQueriesTest extends SqlStatisticsAbstractTest {
      * Teardown.
      */
     @After
-    public void stopAll () {
+    public void stopAll() {
         stopAllGrids();
     }
 
@@ -95,8 +95,8 @@ public class SqlStatisticsUserQueriesTest extends SqlStatisticsAbstractTest {
     }
 
     /**
-     * Check that one distributed query execution causes only success metric increment only on the reducer node.
-     * Various (not all) queries tested : native/h2 parsed; select, ddl, dml, fast delete, update with subselect.
+     * Check that one distributed query execution causes only success metric increment only on the reducer node. Various
+     * (not all) queries tested : native/h2 parsed; select, ddl, dml, fast delete, update with subselect.
      */
     @Test
     public void testIfDistributedQuerySucceededOnlySuccessReducerMetricUpdated() throws Exception {
@@ -104,33 +104,41 @@ public class SqlStatisticsUserQueriesTest extends SqlStatisticsAbstractTest {
 
         IgniteCache cache = createCacheFrom(grid(REDUCER_IDX));
 
-        assertOnlyOneMetricIncrementedOnReducer("success",
-            () -> cache.query(new SqlQuery(String.class, "ID < 5")).getAll());
+        assertMetricsIncrementedOnlyOnReducer(
+            () -> cache.query(new SqlQuery(String.class, "ID < 5")).getAll(),
+            "success");
 
-        assertOnlyOneMetricIncrementedOnReducer("success",
-            () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB")).getAll());
+        assertMetricsIncrementedOnlyOnReducer(
+            () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB")).getAll(),
+            "success");
 
-        assertOnlyOneMetricIncrementedOnReducer("success",
-            () -> cache.query(new SqlFieldsQuery("CREATE INDEX myidx ON TAB(ID)")).getAll());
+        assertMetricsIncrementedOnlyOnReducer(
+            () -> cache.query(new SqlFieldsQuery("CREATE INDEX myidx ON TAB(ID)")).getAll(),
+            "success");
 
-        assertOnlyOneMetricIncrementedOnReducer("success",
+        assertMetricsIncrementedOnlyOnReducer(
             () -> cache.query(new SqlFieldsQuery("CREATE TABLE ANOTHER_TAB (ID INT PRIMARY KEY, VAL VARCHAR)")
-                .setSchema("PUBLIC")).getAll());
+                .setSchema("PUBLIC")).getAll(), "success");
 
-        assertOnlyOneMetricIncrementedOnReducer("success",
-            () -> cache.query(new SqlFieldsQuery("DROP INDEX myidx")).getAll());
+        assertMetricsIncrementedOnlyOnReducer(
+            () -> cache.query(new SqlFieldsQuery("DROP INDEX myidx")).getAll(),
+            "success");
 
-        assertOnlyOneMetricIncrementedOnReducer("success",
-            () -> cache.query(new SqlFieldsQuery("DELETE FROM TAB WHERE ID = 5")).getAll());
+        assertMetricsIncrementedOnlyOnReducer(
+            () -> cache.query(new SqlFieldsQuery("DELETE FROM TAB WHERE ID = 5")).getAll(),
+            "success");
 
-        assertOnlyOneMetricIncrementedOnReducer("success",
-            () -> cache.query(new SqlFieldsQuery("DELETE FROM TAB WHERE ID > (SELECT AVG(ID) FROM TAB WHERE ID < 20)")).getAll());
+        assertMetricsIncrementedOnlyOnReducer(
+            () -> cache.query(new SqlFieldsQuery("DELETE FROM TAB WHERE ID > (SELECT AVG(ID) FROM TAB WHERE ID < 20)")).getAll(),
+            "success");
 
-        assertOnlyOneMetricIncrementedOnReducer("success",
-            () -> cache.query(new SqlFieldsQuery("INSERT INTO TAB VALUES(5, 'Name')")).getAll());
+        assertMetricsIncrementedOnlyOnReducer(
+            () -> cache.query(new SqlFieldsQuery("INSERT INTO TAB VALUES(5, 'Name')")).getAll(),
+            "success");
 
-        assertOnlyOneMetricIncrementedOnReducer("success",
-            () -> cache.query(new SqlFieldsQuery("MERGE INTO TAB(ID, NAME) VALUES(5, 'NewerName')")).getAll());
+        assertMetricsIncrementedOnlyOnReducer(
+            () -> cache.query(new SqlFieldsQuery("MERGE INTO TAB(ID, NAME) VALUES(5, 'NewerName')")).getAll(),
+            "success");
     }
 
     /**
@@ -139,16 +147,14 @@ public class SqlStatisticsUserQueriesTest extends SqlStatisticsAbstractTest {
      * @throws Exception if failed.
      */
     @Test
-    public void testIfLocalQuerySucceedsMetricIsUpdated()  throws Exception {
+    public void testIfLocalQuerySucceedsMetricIsUpdated() throws Exception {
         startGrids(2);
 
         IgniteCache cache = createCacheFrom(grid(REDUCER_IDX));
 
-        assertOnlyOneMetricIncrementedOnReducer("success",
-            () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID < 100").setLocal(true)).getAll());
+        assertMetricsIncrementedOnlyOnReducer(() -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID < 100").setLocal(true)).getAll(), "success");
 
-        assertOnlyOneMetricIncrementedOnReducer("success",
-            () -> cache.query(new SqlQuery(String.class, "ID < 5").setLocal(true)).getAll());
+        assertMetricsIncrementedOnlyOnReducer(() -> cache.query(new SqlQuery(String.class, "ID < 5").setLocal(true)).getAll(), "success");
     }
 
     /**
@@ -162,13 +168,11 @@ public class SqlStatisticsUserQueriesTest extends SqlStatisticsAbstractTest {
 
         IgniteCache cache = createCacheFrom(grid(REDUCER_IDX));
 
-        assertOnlyOneMetricIncrementedOnReducer("failed",
-            () -> GridTestUtils.assertThrows(
-                log,
-                () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID = failFunction()")).getAll(),
-                CacheException.class,
-                null)
-        );
+        assertMetricsIncrementedOnlyOnReducer(() -> GridTestUtils.assertThrows(
+            log,
+            () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID = failFunction()")).getAll(),
+            CacheException.class,
+            null), "failed");
     }
 
     /**
@@ -186,13 +190,11 @@ public class SqlStatisticsUserQueriesTest extends SqlStatisticsAbstractTest {
 
         IgniteCache cache = createCacheFrom(grid(REDUCER_IDX));
 
-        assertOnlyOneMetricIncrementedOnReducer("failed",
-            () -> GridTestUtils.assertThrows(
-                log,
-                () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB")).getAll(),
-                CacheException.class,
-                null)
-        );
+        assertMetricsIncrementedOnlyOnReducer(() -> GridTestUtils.assertThrows(
+            log,
+            () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB")).getAll(),
+            CacheException.class,
+            null), "failed");
     }
 
     /**
@@ -211,13 +213,11 @@ public class SqlStatisticsUserQueriesTest extends SqlStatisticsAbstractTest {
 
         IgniteCache cache = createCacheFrom(grid(REDUCER_IDX));
 
-        assertNegativeMetricIncrementedOnReducer("failedByOOM",
-            () -> GridTestUtils.assertThrows(
-                log,
-                () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB GROUP BY NAME")).getAll(),
-                CacheException.class,
-                null)
-        );
+        assertMetricsIncrementedOnlyOnReducer(() -> GridTestUtils.assertThrows(
+            log,
+            () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB GROUP BY NAME")).getAll(),
+            CacheException.class,
+            null), "failed", "failedByOOM");
     }
 
     /**
@@ -246,12 +246,15 @@ public class SqlStatisticsUserQueriesTest extends SqlStatisticsAbstractTest {
      * on reduce node.
      */
     @Test
-    public void testIfQueryCanceledThenOnlyReducerMetricUpdated() throws Exception {
+    public void testIfQueryCanceledThenOnlyReducerMetricsUpdated() throws Exception {
         startGrids(2);
 
         IgniteCache cache = createCacheFrom(grid(REDUCER_IDX));
 
-        assertNegativeMetricIncrementedOnReducer("canceled", () -> startAndKillQuery(cache));
+        assertMetricsIncrementedOnlyOnReducer(() -> startAndKillQuery(cache),
+            "success", // KILL QUERY succeeded
+            "failed",
+            "canceled");
     }
 
     /**
@@ -289,53 +292,32 @@ public class SqlStatisticsUserQueriesTest extends SqlStatisticsAbstractTest {
      * @param act Action.
      */
     private void assertMetricsRemainTheSame(Runnable act) {
-        assertMetricsAre(fetchAllMetrics(REDUCER_IDX), fetchAllMetrics(MAPPER_IDX),  act);
+        assertMetricsAre(fetchAllMetrics(REDUCER_IDX), fetchAllMetrics(MAPPER_IDX), act);
     }
 
-
     /**
-     * Verify that after specified action is performed, specified 'negative' metric and general failure metric are
-     * incremented.
+     * Verify that after action is performed, specified metrics gets incremented only on reducer node.
      *
-     * @param metric Metric.
-     * @param act Action.
+     * @param act action (callback) to perform.
+     * @param incrementedMetrics array of metrics to check.
      */
-    private void assertNegativeMetricIncrementedOnReducer(String metric, Runnable act) {
+    private void assertMetricsIncrementedOnlyOnReducer(Runnable act, String... incrementedMetrics) {
         Map<String, Long> expValuesMapper = fetchAllMetrics(MAPPER_IDX);
 
         Map<String, Long> expValuesReducer = fetchAllMetrics(REDUCER_IDX);
 
-        expValuesReducer.compute("failed", (name, val) -> val + 1);
+        for (String incMet : incrementedMetrics) {
+            expValuesReducer.compute(incMet, (name, val) -> val + 1);
+        }
 
-        expValuesReducer.compute(metric, (name, val) -> val + 1);
-
-        assertMetricsAre(expValuesReducer, expValuesMapper,  act);
-    }
-
-
-
-    /**
-     * Verify that after specified action is performed, specified metric is incremented.
-     *
-     * @param metric Metric.
-     * @param act Action.
-     */
-    private void assertOnlyOneMetricIncrementedOnReducer(String metric, Runnable act) {
-        Map<String, Long> expValuesMapper = fetchAllMetrics(MAPPER_IDX);
-
-        Map<String, Long> expValuesReducer = fetchAllMetrics(REDUCER_IDX);
-
-        expValuesReducer.compute(metric, (name, val) -> val + 1);
-
-        assertMetricsAre(expValuesReducer, expValuesMapper,  act);
+        assertMetricsAre(expValuesReducer, expValuesMapper, act);
     }
 
     /**
      * @param nodeIdx Node which metrics to fetch.
-     *
      * @return metrics from specified node (metric name -> metric value)
      */
-    private Map <String, Long> fetchAllMetrics(int nodeIdx) {
+    private Map<String, Long> fetchAllMetrics(int nodeIdx) {
         return Stream.of(ALL_METRICS).collect(
             Collectors.toMap(
                 mName -> mName,
@@ -383,7 +365,7 @@ public class SqlStatisticsUserQueriesTest extends SqlStatisticsAbstractTest {
 
         Assert.assertNotNull("Didn't find metric " + metricName, metric);
 
-        Assert.assertTrue("Expected long metric, but got "+ metric.getClass(),  metric instanceof LongMetric);
+        Assert.assertTrue("Expected long metric, but got " + metric.getClass(), metric instanceof LongMetric);
 
         return ((LongMetric)metric).value();
     }
