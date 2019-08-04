@@ -1000,7 +1000,7 @@ public class GridH2Table extends TableBase {
 
                     GridCacheContext cctx0 = cacheInfo.cacheContext();
 
-                    if (idx0 instanceof GridH2IndexBase) {
+                    if (cctx0 != null && idx0 instanceof GridH2IndexBase) {
                         cctx0.shared().database().checkpointReadLock();
 
                         try {
