@@ -56,6 +56,9 @@ public class SqlStatisticsUserQueriesTest extends SqlStatisticsAbstractTest {
     /** The second node index. This node should execute only map parts of the queries. */
     private static final int MAPPER_IDX = 1;
 
+    /** Sleep interval in seconds, we expect kill query do it's job. */
+    private static final int WAIT_FOR_KILL_SEC = 1;
+
     /**
      * Setup.
      */
@@ -273,9 +276,10 @@ public class SqlStatisticsUserQueriesTest extends SqlStatisticsAbstractTest {
 
             SuspendQuerySqlFunctions.awaitQueryStopsInTheMiddle();
 
+            // We perform async kill and hope it does it's job in some time.
             killAsyncAllQueriesOn(REDUCER_IDX);
 
-            TimeUnit.SECONDS.sleep(1);
+            TimeUnit.SECONDS.sleep(WAIT_FOR_KILL_SEC);
 
             SuspendQuerySqlFunctions.resumeQueryExecution();
 
@@ -306,9 +310,8 @@ public class SqlStatisticsUserQueriesTest extends SqlStatisticsAbstractTest {
 
         Map<String, Long> expValuesReducer = fetchAllMetrics(REDUCER_IDX);
 
-        for (String incMet : incrementedMetrics) {
+        for (String incMet : incrementedMetrics)
             expValuesReducer.compute(incMet, (name, val) -> val + 1);
-        }
 
         assertMetricsAre(expValuesReducer, expValuesMapper, act);
     }
