@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.query.h2.disk;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Collection;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -47,9 +48,6 @@ import static org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing.DI
 public abstract class AbstractExternalResult implements ResultExternal, ExternalRowStore {
     /** File name generator. */
     private static final AtomicLong idGen = new AtomicLong();
-
-    /** Initial rows byte buffer size. */
-    protected static final int INIT_BUF_SIZE = 512;
 
     /** Serialized row header size. */
     protected static final int ROW_HEADER_SIZE = 8; // 2 x int: row length in bytes + column count.
@@ -93,8 +91,6 @@ public abstract class AbstractExternalResult implements ResultExternal, External
                 DISK_SPILL_DIR,
                 false
             ), fileName);
-
-            file.deleteOnExit();
 
             FileIOFactory fileIOFactory = ctx.query().fileIOFactory();
 
@@ -211,10 +207,11 @@ public abstract class AbstractExternalResult implements ResultExternal, External
     }
 
     /**
+     * @param cap Buffer initial capacity.
      * @return New data buffer.
      */
-    @NotNull protected Data createDataBuffer() {
-        return Data.create(null, INIT_BUF_SIZE, true); // TODO init size
+    @NotNull protected Data createDataBuffer(int cap) {
+        return Data.create(null, cap, true);
     }
 
     /**
@@ -226,7 +223,7 @@ public abstract class AbstractExternalResult implements ResultExternal, External
     protected void addRowToBuffer(Value[] row, Data buff) {
         int initPos = buff.length();
 
-        buff.checkCapacity((int)(ROW_HEADER_SIZE + H2Utils.rowSizeInBytes(row) * 2));
+        buff.checkCapacity(rowSize(row));
 
         buff.writeInt(0); // Skip int position for row length in bytes.
         buff.writeInt(row.length); // Skip int position for columns count.
@@ -370,5 +367,26 @@ public abstract class AbstractExternalResult implements ResultExternal, External
 
         if (log.isDebugEnabled())
             log.debug("Deleted spill file "+ file.getName());
+    }
+
+    /**
+     * @param row Row.
+     * @return Row size in bytes.
+     */
+    public static int rowSize(Value[] row) {
+        return (int)(ROW_HEADER_SIZE + H2Utils.rowSizeInBytes(row));
+    }
+
+    /**
+     * @param rows Rows.
+     * @return Rows size in bytes.
+     */
+    public static int rowSize(Collection<Value[]> rows) {
+        int size = 0;
+
+        for (Value[] row : rows)
+            size += rowSize(row);
+
+        return size;
     }
 }

@@ -54,7 +54,7 @@ import static org.apache.ignite.internal.util.IgniteUtils.MB;
 /**
  * Query memory manager tests.
  */
-@WithSystemProperty(key = "IGNITE_SQL_FAIL_ON_QUERY_MEMORY_LIMIT_EXCEED", value = "true")
+@WithSystemProperty(key = "IGNITE_SQL_USE_DISK_OFFLOAD", value = "false")
 public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstractTest {
     /** Row count. */
     static final int SMALL_TABLE_SIZE = 1000;

@@ -58,7 +58,7 @@ public class PlainExternalResult extends AbstractExternalResult {
 
     /** {@inheritDoc} */
     @Override public int addRow(Value[] row) {
-        Data buff = createDataBuffer();
+        Data buff = createDataBuffer(rowSize(row));
 
         addRowToBuffer(row, buff);
 
@@ -72,7 +72,7 @@ public class PlainExternalResult extends AbstractExternalResult {
         if (rows.isEmpty())
             return size;
 
-        Data buff = createDataBuffer();
+        Data buff = createDataBuffer(rowSize(rows));
 
         for (Value[] row : rows)
             addRowToBuffer(row, buff);

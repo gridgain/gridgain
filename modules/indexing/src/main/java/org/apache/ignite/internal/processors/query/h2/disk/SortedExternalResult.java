@@ -69,7 +69,7 @@ public class SortedExternalResult extends AbstractExternalResult {
 
     /**
      * Hash index for fast lookup of the distinct rows.
-     * RowKey hashcode -> list of row addressed with the same hashcode.
+     * RowKey -> Row address in the row store.
      */
     private ExternalResultHashIndex hashIdx;
 
@@ -173,7 +173,7 @@ public class SortedExternalResult extends AbstractExternalResult {
      * @param row Row.
      * @return {@code True} if current result does not contain th given row.
      */
-    private boolean containsRowWithOrderCheck(Value[] row) { // TODO merge removeRow and getPreviousRow
+    private boolean containsRowWithOrderCheck(Value[] row) {
         Value[] previous = getPreviousRow(row);
 
         if (previous == null)
@@ -194,7 +194,7 @@ public class SortedExternalResult extends AbstractExternalResult {
      * @param row Row.
      * @return Previous row.
      */
-    @Nullable private Value[] getPreviousRow(Value[] row) { // TODO merge removeRow and getPreviousRow
+    @Nullable private Value[] getPreviousRow(Value[] row) {
         assert unsortedRowsBuf == null;
 
         ValueRow distKey = getRowKey(row);
@@ -220,6 +220,33 @@ public class SortedExternalResult extends AbstractExternalResult {
         return previous;
     }
 
+    /** {@inheritDoc} */
+    @Override public int removeRow(Value[] values) {
+        ValueRow key = getRowKey(values);
+
+        if (sortedRowsBuf != null) {
+            Object prev = sortedRowsBuf.remove(key);
+
+            if (prev != null)
+                return size--;
+        }
+
+        // Check on-disk
+        Long addr = hashIdx.remove(key);
+
+        if (addr == null)
+            return size;
+
+        Value[] res = readRowFromFile(addr);
+
+        if (res == null)
+            return size;
+
+        markRowRemoved(addr);
+
+        return size--;
+    }
+
     /**
      * @return {@code True} if it is need to spill rows to disk.
      */
@@ -232,6 +259,10 @@ public class SortedExternalResult extends AbstractExternalResult {
      * @param row Row.
      */
     private void addRowToBuffer(Value[] row) {
+        long delta = H2Utils.calculateMemoryDelta(null, null, row);
+
+        memTracker.reserved(delta);
+
         if (isAnyDistinct()) {
             assert unsortedRowsBuf == null;
 
@@ -250,10 +281,6 @@ public class SortedExternalResult extends AbstractExternalResult {
 
             unsortedRowsBuf.add(row);
         }
-
-        long delta = H2Utils.calculateMemoryDelta(null, null, row);
-
-        memTracker.reserved(delta);
     }
 
     /**
@@ -271,7 +298,7 @@ public class SortedExternalResult extends AbstractExternalResult {
         if (sort != null)
             sort.sort(rows);
 
-        Data buff = createDataBuffer();
+        Data buff = createDataBuffer(rowSize(rows));
 
         long initFilePos = lastWrittenPos;
 
@@ -347,33 +374,6 @@ public class SortedExternalResult extends AbstractExternalResult {
     }
 
     /** {@inheritDoc} */
-    @Override public int removeRow(Value[] values) { // TODO merge removeRow and getPreviousRow
-        ValueRow key = getRowKey(values);
-
-        if (sortedRowsBuf != null) {
-            Object prev = sortedRowsBuf.remove(key);
-
-            if (prev != null)
-                return size--;
-        }
-
-        // Check on-disk
-        Long addr = hashIdx.remove(key);
-
-        if (addr == null)
-            return size;
-
-        Value[] res = readRowFromFile(addr);
-
-        if (res == null)
-            return size;
-
-        markRowRemoved(addr);
-
-        return size--;
-    }
-
-    /** {@inheritDoc} */
     @Override public boolean contains(Value[] values) {
         return getPreviousRow(values) != null;
     }
@@ -444,7 +444,7 @@ public class SortedExternalResult extends AbstractExternalResult {
          */
         boolean next() {
             while (curPos < end) {
-                curRow = readRowFromFile(curPos); // TODO read multiple rows and cache it if possible.
+                curRow = readRowFromFile(curPos);
 
                 curPos = currentFilePosition();
 

@@ -67,7 +67,7 @@ public class QueryMemoryTracker extends H2MemoryTracker {
         assert maxMem > 0;
 
         // TODO GG-18629 - get from configuration.
-        failOnMemLimitExceed = Boolean.getBoolean(IgniteSystemProperties.IGNITE_SQL_FAIL_ON_QUERY_MEMORY_LIMIT_EXCEED);
+        failOnMemLimitExceed = !Boolean.getBoolean(IgniteSystemProperties.IGNITE_SQL_USE_DISK_OFFLOAD);
         this.parent = parent;
         this.maxMem = maxMem;
         this.blockSize = blockSize;
@@ -138,9 +138,7 @@ public class QueryMemoryTracker extends H2MemoryTracker {
                 throw new IllegalStateException("Try to free more memory that ever be reserved: [" +
                     "reserved=" + reserved + ", toFree=" + size + ']');
 
-            long reserved = this.reserved = res;
-
-            assert reserved >= 0;
+            reserved = res;
         }
     }
 
