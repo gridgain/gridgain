@@ -636,7 +636,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
     /**
      * Return demander.
      *
-     * @return demander.
+     * @return Demander.
      * */
     public GridDhtPartitionDemander demander() {
         return demander;

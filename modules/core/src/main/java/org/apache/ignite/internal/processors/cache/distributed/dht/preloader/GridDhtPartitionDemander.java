@@ -1702,7 +1702,7 @@ public class GridDhtPartitionDemander {
     /**
      * Return list demanders per cache groups. For print statisrics.
      *
-     * @return list demanders.
+     * @return List demanders.
      * */
     private List<GridDhtPartitionDemander> demanders(){
         return ctx.cacheContexts().stream()
@@ -1725,7 +1725,7 @@ public class GridDhtPartitionDemander {
      * <p/>
      * Partition distribution only for last success rebalance, per cache group.
      *
-     * @param finish is finish rebalance.
+     * @param finish Is finish rebalance.
      * */
     private void printRebalanceStatistics(final boolean finish) {
         boolean printStat = isPrintRebalanceStatistics();
@@ -1775,11 +1775,11 @@ public class GridDhtPartitionDemander {
     /**
      * Return total statistics for rebalance.
      *
-     * @param rebFutrs participating in successful and not rebalances,
-     *      require not null
-     * @param nodeAliases for print nodeId=1 instead long string,
-     *      require not null
-     * @return total statistics
+     * @param rebFutrs Participating in successful and not rebalances,
+     *      require not null.
+     * @param nodeAliases For print nodeId=1 instead long string,
+     *      require not null.
+     * @return Total statistics.
      */
     private String totalRebalanceStatistics(
         final Map<CacheGroupContext, List<RebalanceFuture>> rebFutrs,
@@ -1812,12 +1812,12 @@ public class GridDhtPartitionDemander {
      * add {@link #SUCCESSFUL_OR_NOT_REBALANCE_TEXT}
      * else add {@link #SUCCESSFUL_REBALANCE_TEXT} into header.
      *
-     * @param rebFutrs participating in successful and not rebalances,
+     * @param rebFutrs Participating in successful and not rebalances,
      *      require not null.
-     * @param nodeAliases for print nodeId=1 instead long string,
+     * @param nodeAliases For print nodeId=1 instead long string,
      *      require not null.
-     * @param finish is finish rebalance.
-     * @return statistics per cache group.
+     * @param finish Is finish rebalance.
+     * @return Statistics per cache group.
      */
     private String cacheGroupsRebalanceStatistics(
         final Map<CacheGroupContext, List<RebalanceFuture>> rebFutrs,
@@ -1858,13 +1858,13 @@ public class GridDhtPartitionDemander {
      * Only for last success rebalance.
      * Works if {@code IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS} set true.
      *
-     * @param rebFutrs participating in successful and not rebalances,
+     * @param rebFutrs Participating in successful and not rebalances,
      *      require not null.
-     * @param nodeAliases for print nodeId=1 instead long string,
+     * @param nodeAliases For print nodeId=1 instead long string,
      *      require not null.
-     * @param nodeCnt for adding new nodes into {@code nodeAliases},
+     * @param nodeCnt For adding new nodes into {@code nodeAliases},
      *      require not null.
-     * @return partitions distribution.
+     * @return Partitions distribution.
      * @see IgniteSystemProperties#IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS
      */
     private String partitionsDistributionRebalanceStatistics(
@@ -1933,9 +1933,9 @@ public class GridDhtPartitionDemander {
     /**
      * Return statistics per topic.
      *
-     * @param topicStat statistics by topics (in successful and not rebalances),
+     * @param topicStat Statistics by topics (in successful and not rebalances),
      *      require not null.
-     * @return statistics per topic.
+     * @return Statistics per topic.
      */
     private String topicRebalanceStatistics(final Map<Integer, List<RebalanceMessageStatistics>> topicStat) {
         assert nonNull(topicStat);
@@ -1957,11 +1957,11 @@ public class GridDhtPartitionDemander {
     /**
      * Return stattistics per supplier node.
      *
-     * @param supplierStat statistics by supplier (in successful and not
+     * @param supplierStat Statistics by supplier (in successful and not
      *      rebalances), require not null.
-     * @param nodeAliases for print nodeId=1 instead long string,
+     * @param nodeAliases For print nodeId=1 instead long string,
      *      require not null.
-     * @return statistics per supplier node.
+     * @return Statistics per supplier node.
      */
     private String supplierRebalanceStatistics(
         final Map<ClusterNode, List<RebalanceMessageStatistics>> supplierStat,
@@ -2000,8 +2000,8 @@ public class GridDhtPartitionDemander {
      *
      * @param nodeAliases for print nodeId=1 instead long string,
      *      require not null.
-     * @param abbreviations abbreviations ex. b - bytes, require not null.
-     * @return statistics aliases
+     * @param abbreviations Abbreviations ex. b - bytes, require not null.
+     * @return Statistics aliases
      */
     private String aliasesRebalanceStatistics(
         final String abbreviations,
@@ -2022,8 +2022,8 @@ public class GridDhtPartitionDemander {
      * Return the result of a rebalance future with wrapping
      * {@link IgniteCheckedException} into {@link IgniteException}.
      *
-     * @param future rebalance future, require not null.
-     * @return result future.
+     * @param future Rebalance future, require not null.
+     * @return Result future.
      * */
     private boolean rebalanceFutureResult(final RebalanceFuture future) {
         assert nonNull(future);
@@ -2039,8 +2039,8 @@ public class GridDhtPartitionDemander {
     /**
      * Return the local date-time of time in mills.
      *
-     * @param time time in mills.
-     * @return the local date-time.
+     * @param time Time in mills.
+     * @return The local date-time.
      * */
     private LocalDateTime toLocalDateTime(final long time){
         return new Date(time).toInstant().atZone(systemDefault()).toLocalDateTime();
@@ -2050,8 +2050,8 @@ public class GridDhtPartitionDemander {
      * Return min {@link RebalanceFutureStatistics#startTime}
      * in stream rebalance future's.
      *
-     * @param stream stream rebalance future, require not null.
-     * @return min start time.
+     * @param stream Stream rebalance future, require not null.
+     * @return Min start time.
      * */
     private long minStartTime(final Stream<RebalanceFuture> stream) {
         assert nonNull(stream);
@@ -2063,8 +2063,8 @@ public class GridDhtPartitionDemander {
      * Return max {@link RebalanceFutureStatistics#endTime}
      * in stream rebalance future's.
      *
-     * @param stream stream rebalance future's, require not null.
-     * @return max end time.
+     * @param stream Stream rebalance future's, require not null.
+     * @return Max end time.
      * */
     private long maxEndTime(final Stream<RebalanceFuture> stream) {
         assert nonNull(stream);
@@ -2075,8 +2075,8 @@ public class GridDhtPartitionDemander {
     /**
      * Return stream rebalance future's of each cache groups.
      *
-     * @param rebFutrs rebalance future's by cache groups, require not null.
-     * @return stream rebalance future's.
+     * @param rebFutrs Rebalance future's by cache groups, require not null.
+     * @return Stream rebalance future's.
      * */
     private Stream<RebalanceFuture> toRebalanceFutureStream(
         final Map<CacheGroupContext, List<RebalanceFuture>> rebFutrs
@@ -2089,8 +2089,8 @@ public class GridDhtPartitionDemander {
     /**
      * Returns statistics grouped by topic number.
      *
-     * @param stream stream rebalance future's, require not null.
-     * @return statistic by topics.
+     * @param stream Stream rebalance future's, require not null.
+     * @return Statistic by topics.
      * */
     private Map<Integer, List<RebalanceMessageStatistics>> toTopicStatistics(final Stream<RebalanceFuture> stream) {
         assert nonNull(stream);
@@ -2115,8 +2115,8 @@ public class GridDhtPartitionDemander {
     /**
      * Returns statistics grouped by supplier node.
      *
-     * @param stream stream rebalance future's, require not null.
-     * @return statistic by supplier.
+     * @param stream Stream rebalance future's, require not null.
+     * @return Statistic by supplier.
      * */
     private Map<ClusterNode, List<RebalanceMessageStatistics>> toSupplierStatistics(
         final Stream<RebalanceFuture> stream
@@ -2135,9 +2135,9 @@ public class GridDhtPartitionDemander {
      * the start and end in mills.
      * Example: "start=2019-08-01 13:15:10,100, end=2019-08-01 13:15:10,200, d=100 ms".
      *
-     * @param start start time in ms.
-     * @param end end time in ms.
-     * @return formatted string of rebalance time.
+     * @param start Start time in ms.
+     * @param end End time in ms.
+     * @return Formatted string of rebalance time.
      * @see #REBALANCE_STATISTICS_DTF
      * */
     private String toStartEndDuration(final long start, final long end) {
@@ -2152,9 +2152,9 @@ public class GridDhtPartitionDemander {
     /**
      * Return sum of long values that extracted from message statistics.
      *
-     * @param msgStats message statistics, require not null.
-     * @param longExtractor long extractor, require not null.
-     * @return sum of long values.
+     * @param msgStats Message statistics, require not null.
+     * @param longExtractor Long extractor, require not null.
+     * @return Sum of long values.
      * */
     private long sum(
         final List<RebalanceMessageStatistics> msgStats,
@@ -2173,10 +2173,10 @@ public class GridDhtPartitionDemander {
      * Return a formatted string to display the received rebalance partitions.
      * Format "p=%s, e=%s, b=%s". Example: "p=1, e=10, b=1024".
      *
-     * @param parts count received partitions.
-     * @param entries count received entries.
-     * @param bytes sum received bytes.
-     * @return formatted string of received rebalance partitions.
+     * @param parts Count received partitions.
+     * @param entries Count received entries.
+     * @param bytes Sum received bytes.
+     * @return Formatted string of received rebalance partitions.
      * */
     private String toPartitionsEntriesBytes(final long parts, final long entries, final long bytes) {
         return format("p=%s, e=%s, b=%s", parts, entries, bytes);

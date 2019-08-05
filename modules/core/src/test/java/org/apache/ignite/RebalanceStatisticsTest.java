@@ -126,10 +126,10 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     /**
      * Create cache configuration.
      *
-     * @param cacheName cache name.
-     * @param parts count of partitions.
-     * @param backups count backup.
-     * @return cache configuration.
+     * @param cacheName Cache name.
+     * @param parts Count of partitions.
+     * @param backups Count backup.
+     * @return Cache configuration.
      */
     private CacheConfiguration cacheConfiguration(final String cacheName, final int parts, final int backups) {
         CacheConfiguration<Object, Object> ccfg = new CacheConfiguration<>(cacheName);
@@ -285,8 +285,8 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     /**
      * Parsing and extract topic statistics string for each caches.
      *
-     * @param s string with statisctics for parsing, require not null.
-     * @return key - name cache, string topic statistics.
+     * @param s String with statisctics for parsing, require not null.
+     * @return key - Name cache, string topic statistics.
      */
     private Map<String, String> perCacheGroupTopicStatistics(final String s) {
         assert nonNull(s);
@@ -325,8 +325,8 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     /**
      * Return partition distribution per cache groups use internal api.
      *
-     * @param node require not null.
-     * @return partition distribution per cache groups
+     * @param node Require not null.
+     * @return Partition distribution per cache groups
      * */
     private Map<String, Integer> perCacheGroupPartitionDistribution(final IgniteEx node) {
         assert nonNull(node);
@@ -342,9 +342,9 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     /**
      * Create {@link #DEFAULT_CACHE_NAMES} cache configurations.
      *
-     * @param parts count of partitions.
-     * @param backups count backup.
-     * @return cache group configurations.
+     * @param parts Count of partitions.
+     * @param backups Count backup.
+     * @return Cache group configurations.
      * */
     private CacheConfiguration[] defaultCacheConfigurations(final int parts, final int backups) {
         return of(DEFAULT_CACHE_NAMES)
@@ -355,7 +355,7 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     /**
      * Add values to all {@link #DEFAULT_CACHE_NAMES}.
      *
-     * @param cnt - count of values.
+     * @param cnt - Count of values.
      */
     private void fillCaches(final int cnt) {
         for (CacheConfiguration cacheCfg : cacheCfgs) {
@@ -370,8 +370,8 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     /**
      * Create new node and check that {@code notContainsStr} not present in log output.
      *
-     * @param idx new node index.
-     * @param notContainsStr string for assertNotContains in log output.
+     * @param idx New node index.
+     * @param notContainsStr String for assertNotContains in log output.
      * @throws Exception
      */
     private void assertNotContainsAfterCreateNewNode(final int idx, final String notContainsStr) throws Exception {
@@ -387,9 +387,9 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     /**
      * Extract numbers and sum its.
      *
-     * @param s string of numbers, require not null.
-     * @param pattern number extractor, require not null.
-     * @return sum extracted numbers.
+     * @param s String of numbers, require not null.
+     * @param pattern Number extractor, require not null.
+     * @return Sum extracted numbers.
      */
     private int sumNum(final String s, final String pattern) {
         assert nonNull(s);
