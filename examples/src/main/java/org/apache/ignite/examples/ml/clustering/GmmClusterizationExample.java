@@ -81,7 +81,7 @@ public class GmmClusterizationExample {
                 ).build(seed++).asDataStream();
 
                 AtomicInteger keyGen = new AtomicInteger();
-                dataStream.fillCacheWithCustomKey(50000, dataCache, v -> keyGen.getAndIncrement());
+                dataStream.fillCacheWithCustomKey(5000, dataCache, v -> keyGen.getAndIncrement());
                 GmmTrainer trainer = new GmmTrainer(1);
 
                 GmmModel mdl = trainer
@@ -108,6 +108,8 @@ public class GmmClusterizationExample {
             } finally {
                 dataCache.destroy();
             }
+        } finally {
+            System.out.flush();
         }
     }
 }

@@ -53,6 +53,7 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.IgniteDataStreamer;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterNode;
@@ -89,7 +90,6 @@ import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
 import org.apache.ignite.internal.processors.cache.transactions.TransactionProxyImpl;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.datastructures.GridCacheInternalKeyImpl;
-import org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
@@ -130,7 +130,6 @@ import static org.apache.ignite.internal.commandline.OutputFormat.MULTI_LINE;
 import static org.apache.ignite.internal.commandline.OutputFormat.SINGLE_LINE;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.HELP;
 import static org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor.DEFAULT_TARGET_FOLDER;
-import static org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult.Result.FAIL;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
@@ -142,7 +141,6 @@ import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED
  * Command line handler test.
  */
 public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
-
     /** */
     @Rule public final TestRule methodRule = new SystemPropertiesRule();
 
@@ -190,6 +188,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
     @Override public String getTestIgniteInstanceName() {
         return "gridCommandHandlerTest";
     }
+
     /**
      * Test activation works via control.sh
      *
@@ -2730,55 +2729,6 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
     }
 
     /**
-     * Tests enabling/disabling rolling upgrade.
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testRollingUpgrade() throws Exception {
-        Ignite ignite = startGrid(0);
-
-        CommandHandler hnd = new CommandHandler();
-
-        // Apache Ignite does not support rolling upgrade from out of the box.
-        assertEquals(EXIT_CODE_OK, execute(hnd, "--rolling-upgrade", "on"));
-
-        RollingUpgradeModeChangeResult res = hnd.getLastOperationResult();
-
-        assertTrue("Enabling rolling upgrade should fail [res=" + res + ']', FAIL == res.result());
-        assertTrue(
-            "The cause of the failure should be UnsupportedOperationException [cause=" + res.cause() + ']',
-            X.hasCause(res.cause(), UnsupportedOperationException.class));
-
-        assertEquals(EXIT_CODE_OK, execute(hnd, "--rolling-upgrade", "off"));
-
-        res = hnd.getLastOperationResult();
-
-        assertTrue("Disabling rolling upgrade should fail [res=" + res + ']', FAIL == res.result());
-        assertTrue(
-            "The cause of the failure should be UnsupportedOperationException [cause=" + res.cause() + ']',
-            X.hasCause(res.cause(), UnsupportedOperationException.class));
-    }
-
-    /**
-     * Tests execution of '--rolling-upgrade state' command.
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testRollingUpgradeStatus() throws Exception {
-        Ignite ignite = startGrid(0);
-
-        injectTestSystemOut();
-
-        assertEquals(EXIT_CODE_OK, execute("--rolling-upgrade", "status"));
-
-        String out = testOut.toString();
-
-        assertContains(log, out, "Rolling upgrade is disabled");
-    }
-
-    /**
      * Test execution of --diagnostic command.
      *
      * @throws Exception if failed.
@@ -3085,5 +3035,25 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
             .peek(c -> testOut.reset())
             .peek(c -> assertEquals(EXIT_CODE_OK, execute(WAL.text(), c)))
             .forEach(c -> assertContains(log, testOut.toString(), warning));
+    }
+
+    /**
+     * Verify that in case of setting baseline topology with offline node among others
+     * {@link IgniteException} is thrown.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    public void setConsistenceIdsWithOfflineBaselineNode() throws Exception {
+        Ignite ignite = startGrids(2);
+
+        ignite.cluster().active(true);
+
+        ignite(0).createCache(defaultCacheConfiguration().setNodeFilter(
+            (IgnitePredicate<ClusterNode>)node -> node.attribute("some-attr") != null));
+
+        assertEquals(EXIT_CODE_UNEXPECTED_ERROR,
+            execute("--baseline", "set", "non-existing-node-id ," + consistentIds(ignite)));
     }
 }

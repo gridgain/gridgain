@@ -76,7 +76,7 @@ public class TensorFlowDistributedInferenceExample {
                 Objects.requireNonNull(IgniteUtils.resolveIgnitePath(MNIST_IMG_PATH)).getPath(),
                 Objects.requireNonNull(IgniteUtils.resolveIgnitePath(MNIST_LBL_PATH)).getPath(),
                 new Random(0),
-                10000
+                1000
             );
 
             long t0 = System.currentTimeMillis();
@@ -93,6 +93,8 @@ public class TensorFlowDistributedInferenceExample {
             long t1 = System.currentTimeMillis();
 
             System.out.println("Threaded model throughput: " + images.size() / ((t1 - t0) / 1000.0) + " req/sec");
+        } finally {
+            System.out.flush();
         }
     }
 }

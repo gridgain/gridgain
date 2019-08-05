@@ -73,7 +73,7 @@ public class TensorFlowThreadedInferenceExample {
             Objects.requireNonNull(IgniteUtils.resolveIgnitePath(MNIST_IMG_PATH)).getPath(),
             Objects.requireNonNull(IgniteUtils.resolveIgnitePath(MNIST_LBL_PATH)).getPath(),
             new Random(0),
-            10000
+            5000
         );
 
         long t0 = System.currentTimeMillis();
@@ -90,5 +90,6 @@ public class TensorFlowThreadedInferenceExample {
         long t1 = System.currentTimeMillis();
 
         System.out.println("Threaded model throughput: " + 1.0 * images.size() / ((t1 - t0) / 1000) + " req/sec");
+        System.out.flush();
     }
 }

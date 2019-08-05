@@ -23,13 +23,16 @@ import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.CommandLogger;
 import org.apache.ignite.internal.commandline.argument.CommandArgUtils;
 import org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult;
-import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
+import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.visor.ru.VisorRollingUpgradeChangeModeResult;
 import org.apache.ignite.internal.visor.ru.VisorRollingUpgradeChangeModeTask;
 import org.apache.ignite.internal.visor.ru.VisorRollingUpgradeChangeModeTaskArg;
 import org.apache.ignite.internal.visor.ru.VisorRollingUpgradeOperation;
+import org.apache.ignite.internal.visor.ru.VisorRollingUpgradeStatus;
 import org.apache.ignite.internal.visor.ru.VisorRollingUpgradeStatusResult;
 import org.apache.ignite.internal.visor.ru.VisorRollingUpgradeStatusTask;
 
+import static org.apache.ignite.internal.commandline.CommandArgIterator.isCommandOrOption;
 import static org.apache.ignite.internal.commandline.CommandList.ROLLING_UPGRADE;
 import static org.apache.ignite.internal.commandline.TaskExecutor.executeTask;
 import static org.apache.ignite.internal.commandline.ru.RollingUpgradeSubCommands.of;
@@ -56,7 +59,7 @@ public class RollingUpgradeCommand implements Command<RollingUpgradeArguments> {
                 return status;
             }
 
-            RollingUpgradeModeChangeResult res = executeTask(
+            VisorRollingUpgradeChangeModeResult res = executeTask(
                 client,
                 VisorRollingUpgradeChangeModeTask.class,
                 toVisorArguments(rollingUpgradeArgs),
@@ -96,11 +99,15 @@ public class RollingUpgradeCommand implements Command<RollingUpgradeArguments> {
         RollingUpgradeArguments.Builder rollingUpgradeArgs = new RollingUpgradeArguments.Builder(cmd);
 
         if (RollingUpgradeSubCommands.ENABLE == cmd) {
-            RollingUpgradeCommandArg cmdArg = CommandArgUtils.of(
-                argIter.nextArg("Unknown parameter for enabling rolling upgrade"), RollingUpgradeCommandArg.class);
+            if (argIter.peekNextArg() != null && !isCommandOrOption(argIter.peekNextArg())) {
+                RollingUpgradeCommandArg cmdArg = CommandArgUtils.of(
+                    argIter.nextArg("Unknown parameter for enabling rolling upgrade"), RollingUpgradeCommandArg.class);
 
-            if (RollingUpgradeCommandArg.FORCE == cmdArg)
+                if (RollingUpgradeCommandArg.FORCE != cmdArg)
+                    throw new IllegalArgumentException("Unknown parameter for enabling rolling upgrade");
+
                 rollingUpgradeArgs.withForcedMode(true);
+            }
         }
 
         this.rollingUpgradeArgs = rollingUpgradeArgs.build();
@@ -131,23 +138,23 @@ public class RollingUpgradeCommand implements Command<RollingUpgradeArguments> {
      * @param res Rolling upgrade status.
      */
     private void printRollingUpgradeStatus(Logger log, VisorRollingUpgradeStatusResult res) {
-        RollingUpgradeStatus status = res.status();
+        VisorRollingUpgradeStatus status = res.getStatus();
 
-        log.info("Rolling upgrade is " + (status.enabled()? "enabled" : "disabled"));
-        log.info("Initial version: " + status.initialVersion());
-        log.info("Target version: " + ((status.targetVersion() != null)? status.targetVersion(): "N/A"));
+        log.info("Rolling upgrade is " + (status.isEnabled()? "enabled" : "disabled"));
+        log.info("Initial version: " + status.getInitialVersion());
+        log.info("Target version: " + ((F.isEmpty(status.getTargetVersion()))? "N/A": status.getTargetVersion()));
 
-        if (status.forcedModeEnabled())
+        if (status.isForcedModeEnabled())
             log.info("Forced mode is enabled.");
 
-        if (status.enabled()) {
+        if (status.isEnabled()) {
             log.info("List of alive nodes in the cluster that are not updated yet:");
 
-            res.initialVerNodes().forEach(id -> log.info(CommandLogger.INDENT + id));
+            res.getInitialNodes().forEach(id -> log.info(CommandLogger.INDENT + id));
 
             log.info("List of alive nodes in the cluster that are updated:");
 
-            res.updateVerNodes().forEach(id -> log.info(CommandLogger.INDENT + id));
+            res.getUpdatedNodes().forEach(id -> log.info(CommandLogger.INDENT + id));
         }
     }
 
@@ -156,11 +163,11 @@ public class RollingUpgradeCommand implements Command<RollingUpgradeArguments> {
      *
      * @param res Mode change result.
      */
-    private void printRollingUpgradeChangeModeResult(Logger log, RollingUpgradeModeChangeResult res) {
-        if (RollingUpgradeModeChangeResult.Result.SUCCESS == res.result())
+    private void printRollingUpgradeChangeModeResult(Logger log, VisorRollingUpgradeChangeModeResult res) {
+        if (RollingUpgradeModeChangeResult.Result.SUCCESS == res.getResult())
             log.info("Rolling upgrade mode successfully " +
                 (RollingUpgradeSubCommands.ENABLE == rollingUpgradeArgs.command()? "enabled." : "disabled."));
         else
-            log.info("Rolling upgrade operation failed due to " + res.cause());
+            log.info("Rolling upgrade operation failed. " + res.getCause().getMessage());
     }
 }
