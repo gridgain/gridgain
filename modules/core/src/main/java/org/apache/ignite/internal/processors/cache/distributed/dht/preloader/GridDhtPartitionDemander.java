@@ -1732,7 +1732,7 @@ public class GridDhtPartitionDemander {
 
         log.info(format("Print rebalance statistics [finish=%s, printStat=%s]", finish, printStat));
 
-        Map<CacheGroupContext, List<RebalanceFuture>> rebFuts = !finish ?
+        Map<CacheGroupContext, List<RebalanceFuture>> rebFutrs = !finish ?
             singletonMap(grp, singletonList(rebalanceFut)) :
             demanders().stream().collect(toMap(demander -> demander.grp, demander -> demander.lastStatFutures));
 
@@ -1742,7 +1742,7 @@ public class GridDhtPartitionDemander {
 
             AtomicInteger nodeCnt = new AtomicInteger();
 
-            Map<ClusterNode, Integer> nodeAliases = toRebalanceFutureStream(rebFuts)
+            Map<ClusterNode, Integer> nodeAliases = toRebalanceFutureStream(rebFutrs)
                 .flatMap(future -> future.stat.msgStats.entrySet().stream())
                 .flatMap(entry -> entry.getValue().keySet().stream())
                 .distinct()
@@ -1751,12 +1751,12 @@ public class GridDhtPartitionDemander {
             StringJoiner joiner = new StringJoiner(" ");
 
             if (finish)
-                joiner.add(totalRebalanceStatistics(rebFuts, nodeAliases));
+                joiner.add(totalRebalanceStatistics(rebFutrs, nodeAliases));
 
             joiner
-                .add(cacheGroupsRebalanceStatistics(rebFuts, nodeAliases, finish))
+                .add(cacheGroupsRebalanceStatistics(rebFutrs, nodeAliases, finish))
                 .add(aliasesRebalanceStatistics("p - partitions, e - entries, b - bytes, d - duration", nodeAliases))
-                .add(partitionsDistributionRebalanceStatistics(rebFuts, nodeAliases, nodeCnt));
+                .add(partitionsDistributionRebalanceStatistics(rebFutrs, nodeAliases, nodeCnt));
 
             log.info(joiner.toString());
         }
@@ -1775,24 +1775,27 @@ public class GridDhtPartitionDemander {
     /**
      * Return total statistics for rebalance.
      *
-     * @param rebFuts participating in successful and not rebalances,
+     * @param rebFutrs participating in successful and not rebalances,
      *      require not null
      * @param nodeAliases for print nodeId=1 instead long string,
      *      require not null
      * @return total statistics
      */
     private String totalRebalanceStatistics(
-        final Map<CacheGroupContext, List<RebalanceFuture>> rebFuts,
+        final Map<CacheGroupContext, List<RebalanceFuture>> rebFutrs,
         final Map<ClusterNode, Integer> nodeAliases
     ) {
-        assert nonNull(rebFuts);
+        assert nonNull(rebFutrs);
         assert nonNull(nodeAliases);
 
-        long minStartTime = minStartTime(toRebalanceFutureStream(rebFuts));
-        long maxEndTime = maxEndTime(toRebalanceFutureStream(rebFuts));
+        long minStartTime = minStartTime(toRebalanceFutureStream(rebFutrs));
+        long maxEndTime = maxEndTime(toRebalanceFutureStream(rebFutrs));
 
-        Map<Integer, List<RebalanceMessageStatistics>> topicStat = toTopicStatistics(toRebalanceFutureStream(rebFuts));
-        Map<ClusterNode, List<RebalanceMessageStatistics>> supplierStat = toSupplierStatistics(toRebalanceFutureStream(rebFuts));
+        Map<Integer, List<RebalanceMessageStatistics>> topicStat =
+            toTopicStatistics(toRebalanceFutureStream(rebFutrs));
+
+        Map<ClusterNode, List<RebalanceMessageStatistics>> supplierStat =
+            toSupplierStatistics(toRebalanceFutureStream(rebFutrs));
 
         return new StringJoiner(" ")
             .add(format("Total information (%s):", SUCCESSFUL_OR_NOT_REBALANCE_TEXT))
@@ -1809,7 +1812,7 @@ public class GridDhtPartitionDemander {
      * add {@link #SUCCESSFUL_OR_NOT_REBALANCE_TEXT}
      * else add {@link #SUCCESSFUL_REBALANCE_TEXT} into header.
      *
-     * @param rebFuts participating in successful and not rebalances,
+     * @param rebFutrs participating in successful and not rebalances,
      *      require not null.
      * @param nodeAliases for print nodeId=1 instead long string,
      *      require not null.
@@ -1817,11 +1820,11 @@ public class GridDhtPartitionDemander {
      * @return statistics per cache group.
      */
     private String cacheGroupsRebalanceStatistics(
-        final Map<CacheGroupContext, List<RebalanceFuture>> rebFuts,
+        final Map<CacheGroupContext, List<RebalanceFuture>> rebFutrs,
         final Map<ClusterNode, Integer> nodeAliases,
         final boolean finish
     ) {
-        assert nonNull(rebFuts);
+        assert nonNull(rebFutrs);
         assert nonNull(nodeAliases);
 
         StringJoiner joiner = new StringJoiner(" ")
@@ -1830,7 +1833,7 @@ public class GridDhtPartitionDemander {
                 finish ? SUCCESSFUL_OR_NOT_REBALANCE_TEXT : SUCCESSFUL_REBALANCE_TEXT
             ));
 
-        rebFuts.forEach((context, futures) -> {
+        rebFutrs.forEach((context, futures) -> {
             long minStartTime = minStartTime(futures.stream());
             long maxEndTime = maxEndTime(futures.stream());
 
@@ -1855,7 +1858,7 @@ public class GridDhtPartitionDemander {
      * Only for last success rebalance.
      * Works if {@code IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS} set true.
      *
-     * @param rebFuts participating in successful and not rebalances,
+     * @param rebFutrs participating in successful and not rebalances,
      *      require not null.
      * @param nodeAliases for print nodeId=1 instead long string,
      *      require not null.
@@ -1865,11 +1868,11 @@ public class GridDhtPartitionDemander {
      * @see IgniteSystemProperties#IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS
      */
     private String partitionsDistributionRebalanceStatistics(
-        final Map<CacheGroupContext, List<RebalanceFuture>> rebFuts,
+        final Map<CacheGroupContext, List<RebalanceFuture>> rebFutrs,
         final Map<ClusterNode, Integer> nodeAliases,
         final AtomicInteger nodeCnt
     ) {
-        assert nonNull(rebFuts);
+        assert nonNull(rebFutrs);
         assert nonNull(nodeAliases);
         assert nonNull(nodeCnt);
 
@@ -1881,7 +1884,7 @@ public class GridDhtPartitionDemander {
 
         Comparator<RebalanceFuture> startTimeCmp = comparingLong(fut -> fut.stat.startTime);
 
-        rebFuts.forEach((context, futures) -> {
+        rebFutrs.forEach((context, futures) -> {
             joiner.add(format("[id=%s, name=%s]", context.groupId(), context.cacheOrGroupName()));
 
             RebalanceFuture lastSuccessFuture = futures.stream()
@@ -2072,15 +2075,15 @@ public class GridDhtPartitionDemander {
     /**
      * Return stream rebalance future's of each cache groups.
      *
-     * @param rebFuts rebalance future's by cache groups, require not null.
+     * @param rebFutrs rebalance future's by cache groups, require not null.
      * @return stream rebalance future's.
      * */
     private Stream<RebalanceFuture> toRebalanceFutureStream(
-        final Map<CacheGroupContext, List<RebalanceFuture>> rebFuts
+        final Map<CacheGroupContext, List<RebalanceFuture>> rebFutrs
     ) {
-        assert nonNull(rebFuts);
+        assert nonNull(rebFutrs);
 
-        return rebFuts.entrySet().stream().flatMap(entry -> entry.getValue().stream());
+        return rebFutrs.entrySet().stream().flatMap(entry -> entry.getValue().stream());
     }
 
     /**
