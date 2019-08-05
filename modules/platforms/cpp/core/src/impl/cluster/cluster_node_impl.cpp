@@ -29,7 +29,7 @@ namespace ignite
         namespace cluster
         {
             ClusterNodeImpl::ClusterNodeImpl(SharedPointer<InteropMemory> mem) :
-                mem(mem), addrsOffset(0), attrs(new std::map<std::string, int32_t>), hostsOffset(0),
+                mem(mem), addrs(new std::vector<std::string>), attrs(new std::map<std::string, int32_t>), hosts(new std::vector<std::string>),
                 isClient(false), isDaemon(false), isLocal(false), consistentIdOffset(0)
             {
                 InteropInputStream stream(mem.Get());
@@ -57,16 +57,12 @@ namespace ignite
 
             std::vector<std::string> ClusterNodeImpl::GetAddresses()
             {
-                InteropInputStream stream(mem.Get());
-                BinaryReaderImpl reader(&stream);
-                stream.Position(addrsOffset);
+                return *addrs.Get();
+            }
 
-                std::vector<std::string> ret;
-                std::back_insert_iterator<std::vector<std::string> > iter(ret);
-
-                reader.ReadCollection<std::string>(iter);
-
-                return ret;
+            bool ClusterNodeImpl::IsAttributeSet(std::string name)
+            {
+                return attrs.Get()->find(name) != attrs.Get()->end() ? true : false;
             }
 
             std::vector<std::string> ClusterNodeImpl::GetAttributes()
@@ -82,16 +78,7 @@ namespace ignite
 
             std::vector<std::string> ClusterNodeImpl::GetHostNames()
             {
-                InteropInputStream stream(mem.Get());
-                BinaryReaderImpl reader(&stream);
-                stream.Position(hostsOffset);
-
-                std::vector<std::string> ret;
-                std::back_insert_iterator<std::vector<std::string> > iter(ret);
-
-                reader.ReadCollection<std::string>(iter);
-
-                return ret;
+                return *hosts.Get();
             }
 
             Guid ClusterNodeImpl::GetId()
@@ -119,15 +106,16 @@ namespace ignite
                 return order;
             }
 
-            IgniteProductVersion ClusterNodeImpl::GetVersion()
+            const IgniteProductVersion& ClusterNodeImpl::GetVersion()
             {
                 return *ver.Get();
             }
 
             void ClusterNodeImpl::ReadAddresses(BinaryReaderImpl& reader)
             {
-                addrsOffset = reader.GetStream()->Position();
-                reader.Skip();
+                std::back_insert_iterator<std::vector<std::string> > iter(*addrs.Get());
+
+                reader.ReadCollection<std::string>(iter);
             }
 
             void ClusterNodeImpl::ReadAttributes(BinaryReaderImpl& reader)
@@ -144,8 +132,9 @@ namespace ignite
 
             void ClusterNodeImpl::ReadHosts(BinaryReaderImpl& reader)
             {
-                hostsOffset = reader.GetStream()->Position();
-                reader.Skip();
+                std::back_insert_iterator<std::vector<std::string> > iter(*hosts.Get());
+
+                reader.ReadCollection<std::string>(iter);
             }
 
             void ClusterNodeImpl::ReadConsistentId(BinaryReaderImpl& reader)

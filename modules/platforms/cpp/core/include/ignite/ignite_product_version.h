@@ -61,10 +61,7 @@ namespace ignite
         IgniteProductVersion(int8_t majorNumber, int8_t minorNumber, int8_t maintenance, std::string stage, int64_t releaseDate, std::vector<int8_t> revHash) :
             majorNumber(majorNumber), minorNumber(minorNumber), maintenance(maintenance), stage(stage), releaseDate(releaseDate), revHash(revHash)
         {
-            if (revHash.size() != SHA1_LENGTH)
-            {
-                throw new IgniteError(IgniteError::IGNITE_ERR_ILLEGAL_ARGUMENT, "Invalid length for SHA1 hash (must be 20): " + revHash.size());
-            }
+            assert(revHash.size() == SHA1_LENGTH);
         }
     };
 }

@@ -50,6 +50,14 @@ namespace ignite
             std::vector<std::string> GetAddresses();
 
             /**
+             * Check if node attribute is set.
+             *
+             * @param name Node attribute name.
+             * @return True if set.
+             */
+            bool IsAttributeSet(std::string name);
+
+            /**
              * Get a node attribute.
              *
              * @param name Node attribute name.
@@ -129,7 +137,7 @@ namespace ignite
              *
              * @return Prodcut version.
              */
-            IgniteProductVersion GetVersion();
+            const IgniteProductVersion& GetVersion();
 
         private:
             common::concurrent::SharedPointer<ignite::impl::cluster::ClusterNodeImpl> impl;

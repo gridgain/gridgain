@@ -98,24 +98,30 @@ BOOST_AUTO_TEST_CASE(IgniteGetAttribute)
     BOOST_REQUIRE(nodes.size() == 2);
 
     const std::string ATTR_BUILD_DATE = "org.apache.ignite.build.date";
+    BOOST_REQUIRE(nodes[0].IsAttributeSet(ATTR_BUILD_DATE));
     std::string date = nodes[0].GetAttribute<std::string>(ATTR_BUILD_DATE);
     BOOST_REQUIRE(!date.empty());
 
     const std::string ATTR_BUILD_VER = "org.apache.ignite.build.ver";
+    BOOST_REQUIRE(nodes[0].IsAttributeSet(ATTR_BUILD_VER));
     std::string ver = nodes[0].GetAttribute<std::string>(ATTR_BUILD_VER);
     BOOST_REQUIRE(!ver.empty());
 
     const std::string ATTR_CLIENT_MODE = "org.apache.ignite.cache.client";
+    BOOST_REQUIRE(nodes[0].IsAttributeSet(ATTR_CLIENT_MODE));
+    BOOST_REQUIRE(nodes[1].IsAttributeSet(ATTR_CLIENT_MODE));
     bool isClient0 = nodes[0].GetAttribute<bool>(ATTR_CLIENT_MODE);
     bool isClient1 = nodes[1].GetAttribute<bool>(ATTR_CLIENT_MODE);
     BOOST_REQUIRE(!isClient0 && isClient1);
 
     const std::string ATTR_GRID_NAME = "org.apache.ignite.ignite.name";
+    BOOST_REQUIRE(nodes[0].IsAttributeSet(ATTR_GRID_NAME));
     std::string gridName = nodes[0].GetAttribute<std::string>(ATTR_GRID_NAME);
     BOOST_REQUIRE(!gridName.empty());
 
 
     const std::string ATTR_PHY_RAM = "org.apache.ignite.phy.ram";
+    BOOST_REQUIRE(nodes[0].IsAttributeSet(ATTR_PHY_RAM));
     int64_t phyRam = nodes[0].GetAttribute<int64_t>(ATTR_PHY_RAM);
     BOOST_REQUIRE(phyRam > 0);
 }

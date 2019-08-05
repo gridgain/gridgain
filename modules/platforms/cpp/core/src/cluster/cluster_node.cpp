@@ -39,6 +39,11 @@ namespace ignite
             return impl.Get()->GetHostNames();
         }
 
+        bool ClusterNode::IsAttributeSet(std::string name)
+        {
+            return impl.Get()->IsAttributeSet(name);
+        }
+
         std::vector<std::string> ClusterNode::GetAttributes()
         {
             return impl.Get()->GetAttributes();
@@ -69,7 +74,7 @@ namespace ignite
             return impl.Get()->GetOrder();
         }
 
-        IgniteProductVersion ClusterNode::GetVersion()
+        const IgniteProductVersion& ClusterNode::GetVersion()
         {
             return impl.Get()->GetVersion();
         }

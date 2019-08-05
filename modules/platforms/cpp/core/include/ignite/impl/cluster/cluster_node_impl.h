@@ -62,6 +62,14 @@ namespace ignite
                 std::vector<std::string> GetAddresses();
 
                 /**
+                 * Check if node attribute is set.
+                 *
+                 * @param name Node attribute name.
+                 * @return True if set.
+                 */
+                bool IsAttributeSet(std::string name);
+
+                /**
                  * Get a node attribute.
                  *
                  * @param name Node attribute name.
@@ -75,7 +83,7 @@ namespace ignite
                 {
                     if (attrs.Get()->find(name) == attrs.Get()->end())
                     {
-                        const char* msg = "The is no Cluster Node attribute with name requested";
+                        const char* msg = "There is no Cluster Node attribute with name requested";
                         throw IgniteError(IgniteError::IGNITE_ERR_ILLEGAL_ARGUMENT, msg);
                     }
 
@@ -156,7 +164,7 @@ namespace ignite
                  *
                  * @return Prodcut version.
                  */
-                IgniteProductVersion GetVersion();
+                const IgniteProductVersion& GetVersion();
 
             private:
                 IGNITE_NO_COPY_ASSIGNMENT(ClusterNodeImpl);
@@ -200,13 +208,13 @@ namespace ignite
                 common::concurrent::SharedPointer<interop::InteropMemory> mem;
 
                 /** Addresses. */
-                int32_t addrsOffset;
+                common::concurrent::SharedPointer<std::vector<std::string> > addrs;
 
                 /** Attributes. */
                 common::concurrent::SharedPointer<std::map<std::string, int32_t> > attrs;
 
                 /** Hosts. */
-                int32_t hostsOffset;
+                common::concurrent::SharedPointer<std::vector<std::string> > hosts;
 
                 /** Node ID. */
                 Guid id;
