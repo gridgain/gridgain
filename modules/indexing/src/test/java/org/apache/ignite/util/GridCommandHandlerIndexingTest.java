@@ -36,7 +36,7 @@ import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.GROUP_NAME;
 
 /**
  * If you not necessary create nodes for each test you can try use
- * {@link GridCommandHandlerIndexingClusterByClassTest}
+ * {@link GridCommandHandlerIndexingClusterByClassTest}.
  */
 public class GridCommandHandlerIndexingTest extends GridCommandHandlerClusterPerMethodAbstractTest {
     /** */
@@ -111,7 +111,9 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerClusterPer
     }
 
     /**
+     * Create and fill nodes.
      *
+     * @throws Exception
      */
     private Ignite prepareGridForTest() throws Exception{
         Ignite ignite = startGrids(2);

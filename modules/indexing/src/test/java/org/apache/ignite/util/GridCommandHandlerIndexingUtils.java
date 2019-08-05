@@ -69,6 +69,8 @@ public class GridCommandHandlerIndexingUtils {
     }
 
     /**
+     * Create query entity.
+     *
      * @param idxName Index name.
      * @param idxOrgId Index org id.
      */

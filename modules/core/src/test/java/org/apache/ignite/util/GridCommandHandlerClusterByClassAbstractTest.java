@@ -33,13 +33,13 @@ import static org.apache.ignite.internal.processors.cache.CacheType.cacheType;
  * {@link GridCommandHandlerClusterPerMethodAbstractTest}
  * */
 public abstract class GridCommandHandlerClusterByClassAbstractTest extends GridCommandHandlerAbstractTest {
-    /** */
+    /** Number of server nodes. */
     protected static final int SERVER_NODE_CNT = 2;
 
-    /** */
+    /** Coordinator. */
     protected static IgniteEx crd;
 
-    /** */
+    /** Client node. */
     protected static IgniteEx client;
 
     /** {@inheritDoc} */

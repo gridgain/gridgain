@@ -19,16 +19,18 @@ package org.apache.ignite.util;
 import java.io.Serializable;
 
 /**
- *
+ * Simple class for tests.
  */
 class Person implements Serializable {
-    /** */
+    /** Id organization. */
     int orgId;
 
-    /** */
+    /** Name organization. */
     String name;
 
     /**
+     * Constructor.
+     *
      * @param orgId Organization ID.
      * @param name Name.
      */

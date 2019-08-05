@@ -46,7 +46,7 @@ import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.GROUP_NAME;
  * You can use this class if you don't need create nodes for each test because
  * here create {@link #SERVER_NODE_CNT} server and 1 client nodes at before all
  * tests. If you need create nodes for each test you can use
- * {@link GridCommandHandlerIndexingTest}
+ * {@link GridCommandHandlerIndexingTest}.
  */
 public class GridCommandHandlerIndexingClusterByClassTest extends GridCommandHandlerClusterByClassAbstractTest {
     /** {@inheritDoc} */
