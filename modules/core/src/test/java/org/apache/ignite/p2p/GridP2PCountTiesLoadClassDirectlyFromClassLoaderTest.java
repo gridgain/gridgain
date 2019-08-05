@@ -62,7 +62,7 @@ public class GridP2PCountTiesLoadClassDirectlyFromClassLoaderTest extends GridCo
 
             String path = GridTestProperties.getProperty(CLS_PATH_PROPERTY);
 
-            ClassLoader urlClsLdr = new URLClassLoader(new URL[] {new URL(path)});
+            ClassLoader urlClsLdr = new URLClassLoader(new URL[] {new URL(path)}, testCountLdr);
 
             Ignite ignite = startGrids(2);
 
