@@ -581,15 +581,16 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
      * Takes into account only server nodes, clients are ignored.
      *
      * @param timeout Await timeout.
+     * @param nodeSet Optional nodes set.
      * @throws IgniteException If waiting failed.
      */
-    private void awaitTopologyChanged(long timeout) throws IgniteException {
+    private void awaitTopologyChanged(long timeout, @Nullable Collection<ClusterNode> nodeSet) throws IgniteException {
         if (isMultiJvm())
             return;
 
         List<IgniteEx> allNodes0 = G.allGrids().stream()
             .map(i -> (IgniteEx)i)
-            .filter(i -> isServer(i.localNode()))
+            .filter(i -> isServer(i.localNode()) && (nodeSet == null || nodeSet.contains(i.localNode())))
             .collect(toList());
 
         Set<ClusterNode> nodes0 = allNodes0.stream()
@@ -606,7 +607,7 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
 
                 Collection<ClusterNode> nodes = disc.nodes(topVer)
                     .stream()
-                    .filter(GridCommonAbstractTest::isServer)
+                    .filter(i -> isServer(i) && (nodeSet == null || nodeSet.contains(i)))
                     .collect(Collectors.toSet());
 
                 if (System.currentTimeMillis() > endTime) {
@@ -669,7 +670,7 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
     ) throws InterruptedException {
         long timeout = getPartitionMapExchangeTimeout();
 
-        awaitTopologyChanged(timeout);
+        awaitTopologyChanged(timeout, nodes);
 
         long startTime = -1;
 
