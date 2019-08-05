@@ -16,7 +16,6 @@
 
 package org.apache.ignite.p2p;
 
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import org.apache.ignite.Ignite;
@@ -34,28 +33,13 @@ import org.junit.Test;
  */
 @GridCommonTest(group = "P2P")
 public class GridP2PCountTiesLoadClassDirectlyFromClassLoaderTest extends GridCommonAbstractTest {
-    /**
-     *
-     */
-    private static final ClassLoader urlClsLdr1;
-
+    /** P2P class path property. */
+    public static final String CLS_PATH_PROPERTY = "p2p.uri.cls";
     /** Compute task name. */
     private static String COMPUTE_TASK_NAME = "org.apache.ignite.tests.p2p.compute.ExternalCallable";
 
     /** Deployment mode. */
     private DeploymentMode depMode;
-
-    /** */
-    static {
-        String path = GridTestProperties.getProperty("p2p.uri.cls");
-
-        try {
-            urlClsLdr1 = new URLClassLoader(new URL[] {new URL(path)});
-        }
-        catch (MalformedURLException e) {
-            throw new RuntimeException("Failed to create URL: " + path, e);
-        }
-    }
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -76,18 +60,22 @@ public class GridP2PCountTiesLoadClassDirectlyFromClassLoaderTest extends GridCo
 
             Thread.currentThread().setContextClassLoader(testCountLdr);
 
+            String path = GridTestProperties.getProperty(CLS_PATH_PROPERTY);
+
+            ClassLoader urlClsLdr = new URLClassLoader(new URL[] {new URL(path)});
+
             Ignite ignite = startGrids(2);
 
-            ignite.compute(ignite.cluster().forRemotes()).call((IgniteCallable)urlClsLdr1.loadClass(COMPUTE_TASK_NAME)
+            ignite.compute(ignite.cluster().forRemotes()).call((IgniteCallable)urlClsLdr.loadClass(COMPUTE_TASK_NAME)
                 .newInstance());
 
             int count = testCountLdr.count;
 
-            ignite.compute(ignite.cluster().forRemotes()).call((IgniteCallable)urlClsLdr1.loadClass(COMPUTE_TASK_NAME)
+            ignite.compute(ignite.cluster().forRemotes()).call((IgniteCallable)urlClsLdr.loadClass(COMPUTE_TASK_NAME)
                 .newInstance());
-            ignite.compute(ignite.cluster().forRemotes()).call((IgniteCallable)urlClsLdr1.loadClass(COMPUTE_TASK_NAME)
+            ignite.compute(ignite.cluster().forRemotes()).call((IgniteCallable)urlClsLdr.loadClass(COMPUTE_TASK_NAME)
                 .newInstance());
-            ignite.compute(ignite.cluster().forRemotes()).call((IgniteCallable)urlClsLdr1.loadClass(COMPUTE_TASK_NAME)
+            ignite.compute(ignite.cluster().forRemotes()).call((IgniteCallable)urlClsLdr.loadClass(COMPUTE_TASK_NAME)
                 .newInstance());
 
             assertEquals(count, testCountLdr.count);
