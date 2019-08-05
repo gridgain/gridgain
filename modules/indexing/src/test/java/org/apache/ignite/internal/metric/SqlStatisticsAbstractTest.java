@@ -30,6 +30,9 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE;
 
+/**
+ * Abstract test for sql metrics tests.
+ */
 public class SqlStatisticsAbstractTest extends GridCommonAbstractTest {
     /**
      * Timeout for each wait on sync operation in seconds.
