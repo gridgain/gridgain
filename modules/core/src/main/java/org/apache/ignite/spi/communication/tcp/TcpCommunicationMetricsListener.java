@@ -22,6 +22,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
+import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetricImpl;
 import org.apache.ignite.plugin.extensions.communication.Message;
@@ -30,23 +31,27 @@ import static org.apache.ignite.internal.util.nio.GridNioServer.RECEIVED_BYTES_M
 import static org.apache.ignite.internal.util.nio.GridNioServer.RECEIVED_BYTES_METRIC_NAME;
 import static org.apache.ignite.internal.util.nio.GridNioServer.SENT_BYTES_METRIC_DESC;
 import static org.apache.ignite.internal.util.nio.GridNioServer.SENT_BYTES_METRIC_NAME;
+import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.COMMUNICATION_METRICS_GROUP_NAME;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.RECEIVED_MESSAGES_BY_NODE_ID_METRIC_DESC;
+import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.RECEIVED_MESSAGES_BY_NODE_ID_METRIC_NAME;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.RECEIVED_MESSAGES_BY_TYPE_METRIC_DESC;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.RECEIVED_MESSAGES_METRIC_DESC;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.RECEIVED_MESSAGES_METRIC_NAME;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.SENT_MESSAGES_BY_NODE_ID_METRIC_DESC;
+import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.SENT_MESSAGES_BY_NODE_ID_METRIC_NAME;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.SENT_MESSAGES_BY_TYPE_METRIC_DESC;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.SENT_MESSAGES_METRIC_DESC;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.SENT_MESSAGES_METRIC_NAME;
-import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.receivedMessagesByNodeIdMetricName;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.receivedMessagesByTypeMetricName;
-import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.sentMessagesByNodeIdMetricName;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.sentMessagesByTypeMetricName;
 
 /**
  * Statistics for {@link org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi}.
  */
 class TcpCommunicationMetricsListener {
+    /** Metrics manager. */
+    private final GridMetricManager mmgr;
+
     /** Metrics registry. */
     private final MetricRegistry mreg;
 
@@ -94,8 +99,10 @@ class TcpCommunicationMetricsListener {
 
 
     /** */
-    public TcpCommunicationMetricsListener(MetricRegistry mreg) {
-        this.mreg = mreg;
+    public TcpCommunicationMetricsListener(GridMetricManager mmgr) {
+        this.mmgr = mmgr;
+
+        mreg = mmgr.registry(COMMUNICATION_METRICS_GROUP_NAME);
 
         sentMsgsCntByTypeMetricFactory = directType -> mreg.longAdderMetric(
             sentMessagesByTypeMetricName(directType),
@@ -106,14 +113,17 @@ class TcpCommunicationMetricsListener {
             RECEIVED_MESSAGES_BY_TYPE_METRIC_DESC
         );
 
-        sentMsgsCntByNodeIdMetricFactory = nodeId -> mreg.longAdderMetric(
-            sentMessagesByNodeIdMetricName(nodeId),
-            SENT_MESSAGES_BY_NODE_ID_METRIC_DESC
-        );
-        rcvdMsgsCntByNodeIdMetricFactory = nodeId -> mreg.longAdderMetric(
-            receivedMessagesByNodeIdMetricName(nodeId),
-            RECEIVED_MESSAGES_BY_NODE_ID_METRIC_DESC
-        );
+        sentMsgsCntByNodeIdMetricFactory = nodeId -> mmgr.registry(COMMUNICATION_METRICS_GROUP_NAME + "." + nodeId)
+            .longAdderMetric(
+                SENT_MESSAGES_BY_NODE_ID_METRIC_NAME,
+                SENT_MESSAGES_BY_NODE_ID_METRIC_DESC
+            );
+
+        rcvdMsgsCntByNodeIdMetricFactory = nodeId -> mmgr.registry(COMMUNICATION_METRICS_GROUP_NAME + "." + nodeId)
+            .longAdderMetric(
+                RECEIVED_MESSAGES_BY_NODE_ID_METRIC_NAME,
+                RECEIVED_MESSAGES_BY_NODE_ID_METRIC_DESC
+            );
 
         sentBytesMetric = mreg.longAdderMetric(SENT_BYTES_METRIC_NAME, SENT_BYTES_METRIC_DESC);
         rcvdBytesMetric = mreg.longAdderMetric(RECEIVED_BYTES_METRIC_NAME, RECEIVED_BYTES_METRIC_DESC);
@@ -298,9 +308,10 @@ class TcpCommunicationMetricsListener {
 
     /** */
     public void onNodeLeft(UUID nodeId) {
-        mreg.remove(sentMessagesByNodeIdMetricName(nodeId));
+        sentMsgsMetricsByNodeId.remove(nodeId);
+        rcvdMsgsMetricsByNodeId.remove(nodeId);
 
-        mreg.remove(receivedMessagesByNodeIdMetricName(nodeId));
+        mmgr.remove(COMMUNICATION_METRICS_GROUP_NAME + "." + nodeId);
     }
 
     /**

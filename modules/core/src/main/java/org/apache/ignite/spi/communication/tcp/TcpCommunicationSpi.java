@@ -422,17 +422,13 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
     public static final String RECEIVED_MESSAGES_BY_TYPE_METRIC_DESC = "Total number of messages with given type received by current node";
 
     /** */
-    public static String sentMessagesByNodeIdMetricName(UUID nodeId) {
-        return "sentMessagesToNode." + nodeId;
-    }
+    public static final String SENT_MESSAGES_BY_NODE_ID_METRIC_NAME = "sentMessagesToNode";
 
     /** */
     public static final String SENT_MESSAGES_BY_NODE_ID_METRIC_DESC = "Total number of messages sent by current node to the given node";
 
     /** */
-    public static String receivedMessagesByNodeIdMetricName(UUID nodeId) {
-        return "receivedMessagesFromNode." + nodeId;
-    }
+    public static final String RECEIVED_MESSAGES_BY_NODE_ID_METRIC_NAME = "receivedMessagesFromNode";
 
     /** */
     public static final String RECEIVED_MESSAGES_BY_NODE_ID_METRIC_DESC = "Total number of messages received by current node from the given node";
@@ -1320,7 +1316,7 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
 
                 GridMetricManager mmgr = igniteEx.context().metric();
 
-                metricsLsnr = new TcpCommunicationMetricsListener(mmgr.registry(COMMUNICATION_METRICS_GROUP_NAME));
+                metricsLsnr = new TcpCommunicationMetricsListener(mmgr);
             }
         }
     }
