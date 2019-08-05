@@ -13,24 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.testsuites;
 
-import org.apache.ignite.IgniteSystemProperties;
-import org.junit.BeforeClass;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+package org.apache.ignite.console.discovery;
+
+import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.processors.cache.GridCacheAbstractFullApiSelfTest;
 
 /**
- * Mvcc version of {@link IgnitePdsTestSuite3}.
+ * Test сache API .
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses(IgnitePdsTestSuite3.class)
-public class IgnitePdsMvccTestSuite3 {
-    /**
-     * Enforce MVCC
-     */
-    @BeforeClass
-    public static void enforceMvcc() {
-        System.setProperty(IgniteSystemProperties.IGNITE_FORCE_MVCC_MODE_IN_TESTS, "true");
+public class IsolatedCacheFullApiSelfTest extends GridCacheAbstractFullApiSelfTest {
+    /** {@inheritDoc} */
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
+        cfg
+            .setDiscoverySpi(new IsolatedDiscoverySpi())
+            .setCommunicationSpi(new IsolatedCommunicationSpi());
+
+        return cfg;
     }
 }
