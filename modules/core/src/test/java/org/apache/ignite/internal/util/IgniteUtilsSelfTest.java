@@ -952,45 +952,27 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
         assertEquals(1 << 26, U.ceilPow2Long((1 << 26) - 100));
         assertEquals(1 << 26, U.ceilPow2Long(1 << 26));
         assertEquals(1 << 27, U.ceilPow2Long((1 << 26) + 100));
-
         assertEquals(1L << 61, U.ceilPow2Long((1L << 61) - 100));
         assertEquals(1L << 61, U.ceilPow2Long(1L << 61));
         assertEquals(1L << 62, U.ceilPow2Long((1L << 61) + 100));
-
         assertEquals(1L << 62, U.ceilPow2Long((1L << 62) - 1));
         assertEquals(1L << 62, U.ceilPow2Long(1L << 62));
 
+        assertCeilPow2LongThrows((1L << 62) + 1);
+        assertCeilPow2LongThrows(-1);
+        assertCeilPow2LongThrows((-1L << 62) + 1);
+        assertCeilPow2LongThrows((-1L << 62) - 1);
+        assertCeilPow2LongThrows((-1L << 63) + 1);
+        assertCeilPow2LongThrows(-1L << 63);
+        assertCeilPow2LongThrows(-1L << 32);
+    }
+
+    /** */
+    private void assertCeilPow2LongThrows(long l) {
         try {
-            U.ceilPow2Long((1L << 62) + 1);
+            U.ceilPow2Long(l);
 
-            fail();
-        }
-        catch (IllegalArgumentException ignore) {
-            // No-op.
-        }
-
-        try {
-            U.ceilPow2Long(-1);
-
-            fail();
-        }
-        catch (IllegalArgumentException ignore) {
-            // No-op.
-        }
-
-        try {
-            U.ceilPow2Long((1L << 62) + 1);
-
-            fail();
-        }
-        catch (IllegalArgumentException ignore) {
-            // No-op.
-        }
-
-        try {
-            U.ceilPow2Long(-1L << 32);
-
-            fail();
+            fail("Exception not thrown.");
         }
         catch (IllegalArgumentException ignore) {
             // No-op.

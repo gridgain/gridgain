@@ -2004,7 +2004,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             U.delete(spillDir);
         }
         catch (Exception e) {
-            log.debug("Failed to delete spill directory.", X.getFullStackTrace(e));
+            log.warning("Failed to cleanup the temporary directory for intermediate " +
+                "SQL query results from the previous node run.", e);
         }
     }
 

@@ -45,7 +45,7 @@ import static org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing.DI
 /**
  * Base class for disk spilling tests.
  */
-@WithSystemProperty(key = "IGNITE_SQL_FAIL_ON_QUERY_MEMORY_LIMIT_EXCEED", value = "false")
+@WithSystemProperty(key = "IGNITE_SQL_USE_DISK_OFFLOAD", value = "true")
 @WithSystemProperty(key = "IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE", value = "2048")
 public class DiskSpillingAbstractTest extends GridCommonAbstractTest {
     /** */

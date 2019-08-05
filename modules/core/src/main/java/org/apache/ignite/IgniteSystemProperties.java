@@ -1225,14 +1225,14 @@ public final class IgniteSystemProperties {
     /**
      * Defines an action that occurs when the memory limit is exceeded. Possible variants:
      * <ul>
-     *     <li>{@code true} - exception will be thrown.</li>
-     *     <li>{@code false} - intermediate query results will be spilled to the disk.</li>
+     *     <li>{@code false} - exception will be thrown.</li>
+     *     <li>{@code true} - intermediate query results will be spilled to the disk.</li>
      * </ul>
      *
      * Default: false.
      */
     // TODO: GG-18629: Move to memory quotas configuration.
-    public static final String IGNITE_SQL_FAIL_ON_QUERY_MEMORY_LIMIT_EXCEED = "IGNITE_SQL_FAIL_ON_QUERY_MEMORY_LIMIT_EXCEED";
+    public static final String IGNITE_SQL_USE_DISK_OFFLOAD = "IGNITE_SQL_USE_DISK_OFFLOAD";
 
     /**
      * Page lock tracker type.

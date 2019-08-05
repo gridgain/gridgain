@@ -110,7 +110,7 @@ public class QueryMemoryManager extends H2MemoryTracker {
         this.blockSize = Long.getLong(IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE, DFLT_MEMORY_RESERVATION_BLOCK_SIZE);
         this.globalQuota = globalQuota;
         // TODO GG-18629 - get from configuration.
-        this.failOnMemLimitExceed = Boolean.getBoolean(IgniteSystemProperties.IGNITE_SQL_FAIL_ON_QUERY_MEMORY_LIMIT_EXCEED);
+        this.failOnMemLimitExceed = !Boolean.getBoolean(IgniteSystemProperties.IGNITE_SQL_USE_DISK_OFFLOAD);
 
         this.dfltSqlQryMemoryLimit = dfltMemLimit;
 
