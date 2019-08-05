@@ -270,31 +270,6 @@ public class ConnectionManager {
 
             assert !conn.connection().isClosed() : "Connection is closed [conn=" + conn + ']';
 
-//            if (usedConns.size() % 50 == 0) {
-//                HashMap<String, AtomicLong> createPlace = new HashMap<>();
-//
-//                for (H2Connection c : usedConns) {
-//                    String trace = X.getFullStackTrace(c.oncreate);
-//
-//                    if (createPlace.containsKey(trace))
-//                        createPlace.get(trace).incrementAndGet();
-//                    else
-//                        createPlace.put(trace, new AtomicLong(1));
-//                }
-//
-//                long max = 0;
-//                String trace = "";
-//                for (HashMap.Entry<String, AtomicLong> e : createPlace.entrySet()) {
-//                    if (max < e.getValue().get()) {
-//                        trace = e.getKey();
-//                        max = e.getValue().get();
-//                    }
-//                }
-//
-//                if (max > 200)
-//                    log.info("+++ TOP LEAK cnt=" + max + " / " + usedConns.size() + ", create: " + trace);
-//            }
-
             return connWrp;
         }
         catch (InterruptedException e) {
