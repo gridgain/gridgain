@@ -68,6 +68,7 @@ public class IgniteClientReconnectMassiveShutdownTest extends GridCommonAbstract
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         cfg.setClientMode(clientMode);
+        cfg.setFailureDetectionTimeout(5_000);
 
         return cfg;
     }
@@ -290,6 +291,13 @@ public class IgniteClientReconnectMassiveShutdownTest extends GridCommonAbstract
 
                     return true;
                 }, 15_000));
+            }
+
+            // Clean up ignite instance from static map in IgnitionEx.grids
+            if (stopType == StopType.SIMULATE_FAIL){
+                for (int i = 0; i < srvsToKill; i++) {
+                    grid(i).close();
+                }
             }
 
             awaitPartitionMapExchange();
