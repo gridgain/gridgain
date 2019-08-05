@@ -493,10 +493,13 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
                         GridDhtLocalPartition part = top.localPartition(p);
 
                         if(part != null && part.state() == MOVING) {
-                            log.error("PMP@part:"+part);
+                            String session = UUID.randomUUID().toString();
+                            log.error("PMP@session: "+session+", part:"+part + " size: " + AffinityTestHolder.cacheAffinityManagers.size());
                             for (Map.Entry<String, GridCacheAffinityManager> entry : AffinityTestHolder.cacheAffinityManagers.entrySet()) {
-                                log.error("PMP@node:"+ entry.getKey()
-                                    + " affinity=["
+                                log.error("PMP@session: "+session+"," +
+                                    " node:"+ entry.getKey()
+                                    + ", top:" + top.readyTopologyVersion()
+                                    + ", affinity=["
                                     + entry.getValue().nodesByPartition(part.id(), top.readyTopologyVersion())+"]");
                             }
                         }
