@@ -5595,12 +5595,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                                             "[recipient=" + msg0.creatorNodeId() + ", status=" + msg0.status() + ']', e);
                                     }
                                     else if (!spi.isNodeStopping0()) {
-                                        TcpDiscoveryNode node = msg0.creatorNode();
-
-                                        if (node == null)
-                                            node = ring.node(msg0.creatorNodeId());
-
-                                        if (node != null && pingNode(node)) {
+                                        if (pingNode(msg0.creatorNodeId())) {
                                             // Node exists and accepts incoming connections.
                                             U.error(log, "Failed to respond to status check message [recipient=" +
                                                 msg0.creatorNodeId() + ", status=" + msg0.status() + ']', e);
