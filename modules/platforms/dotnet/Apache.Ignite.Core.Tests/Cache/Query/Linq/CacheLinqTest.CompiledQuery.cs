@@ -236,6 +236,17 @@ namespace Apache.Ignite.Core.Tests.Cache.Query.Linq
         }
 
         [Test]
+        public void TestNonCompiledQueryStringEqualsNull()
+        {
+            // TODO: Move to other file.
+            // Why does this work but not the Compiled?
+            var roles = GetRoleCache().AsCacheQueryable();
+
+            Assert.AreEqual(1, roles.Count(x => x.Value.Name == null));
+            Assert.AreEqual(RoleCount - 1, roles.Count(x => x.Value.Name != null));
+        }
+
+        [Test]
         public void TestCompiledQueryStringNotEquals()
         {
             var persons = GetPersonCache().AsCacheQueryable();
