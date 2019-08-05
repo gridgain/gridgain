@@ -17,7 +17,7 @@
 package org.apache.ignite.internal.processors.query;
 
 import java.sql.SQLException;
-import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
+import org.apache.ignite.IgniteException;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -25,7 +25,7 @@ import org.jetbrains.annotations.Nullable;
  *
  * @see IgniteSQLException
  */
-public class IgniteSQLMapStepException extends IgniteSQLException {
+public class IgniteSQLMapStepException extends IgniteException {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -55,38 +55,5 @@ public class IgniteSQLMapStepException extends IgniteSQLException {
      */
     public IgniteSQLMapStepException(String msg, @Nullable Throwable cause) {
         super(msg, cause);
-    }
-
-    /**
-     * Constructor.
-     *
-     * @param msg Exception message.
-     * @param statusCode Ignite specific error code.
-     * @param cause Cause to throw this exception.
-     * @see IgniteQueryErrorCode
-     */
-    public IgniteSQLMapStepException(String msg, int statusCode, @Nullable Throwable cause) {
-        super(msg, statusCode, cause);
-    }
-
-    /**
-     * Constructor.
-     * @param msg Exception message.
-     * @param statusCode Ignite specific error code.
-     * @see IgniteQueryErrorCode
-     */
-    public IgniteSQLMapStepException(String msg, int statusCode) {
-        super(msg, statusCode);
-    }
-
-    /**
-     * Constructor.
-     * @param msg Exception message.
-     * @param statusCode Ignite specific error code.
-     * @param sqlState SQLSTATE standard code.
-     * @see IgniteQueryErrorCode
-     */
-    public IgniteSQLMapStepException(String msg, int statusCode, String sqlState) {
-        super(msg, statusCode, sqlState);
     }
 }

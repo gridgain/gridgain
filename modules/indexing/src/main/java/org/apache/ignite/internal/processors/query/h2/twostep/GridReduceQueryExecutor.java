@@ -231,8 +231,11 @@ public class GridReduceQueryExecutor {
             else if (failCode == GridQueryFailResponse.RETRY_QUERY)
                 e = new CacheException(mapperFailedMsg, new QueryRetryException(msg));
             else {
-                e = new CacheException(mapperFailedMsg, sqlErrCode > 0 ?
-                    new IgniteSQLMapStepException(msg, sqlErrCode) : null);
+                Throwable mapExc = sqlErrCode > 0
+                    ? new IgniteSQLMapStepException(mapperFailedMsg, new IgniteSQLException(msg, sqlErrCode))
+                    : null;
+
+                e = new CacheException(mapperFailedMsg, mapExc);
             }
 
             r.setStateOnException(nodeId, e);

@@ -1489,12 +1489,14 @@ public class QueryUtils {
      * {@code false} otherwise.
      */
     public static boolean isLocalOrReduceOom(Throwable reason) {
-        IgniteSQLException cause = X.cause(reason, IgniteSQLException.class);
+        boolean isRemoteFail = X.cause(reason, IgniteSQLMapStepException.class) != null;
 
-        if (cause == null || cause instanceof IgniteSQLMapStepException)
+        if (isRemoteFail)
             return false;
 
-        return cause.statusCode() == IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY;
+        IgniteSQLException cause = X.cause(reason, IgniteSQLException.class);
+
+        return cause != null && cause.statusCode() == IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY;
     }
 
     /**
