@@ -16,11 +16,11 @@
 
 package org.apache.ignite.testsuites;
 
+import org.apache.ignite.internal.metric.SqlStatisticsMemoryQuotaTest;
 import org.apache.ignite.internal.processors.cache.CacheScanPartitionQueryFallbackSelfTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheCrossCacheJoinRandomTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheObjectKeyIndexingSelfTest;
 import org.apache.ignite.internal.processors.cache.IgniteCachePartitionedQueryMultiThreadedSelfTest;
-import org.apache.ignite.internal.processors.cache.IgniteCacheQueriesLoadTest1;
 import org.apache.ignite.internal.processors.cache.IgniteCacheQueryEvictsMultiThreadedSelfTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheQueryMultiThreadedSelfTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheSqlQueryMultiThreadedSelfTest;
@@ -136,8 +136,6 @@ import org.junit.runners.Suite;
 
     TableViewSubquerySelfTest.class,
 
-    IgniteCacheQueriesLoadTest1.class,
-
     SqlLocalQueryConnectionAndStatementTest.class,
 
     NoneOrSinglePartitionsQueryOptimizationsTest.class,
@@ -150,6 +148,9 @@ import org.junit.runners.Suite;
 
     LocalQueryMemoryTrackerSelfTest.class,
     LocalQueryMemoryTrackerWithQueryParallelismSelfTest.class,
+
+    SqlStatisticsMemoryQuotaTest.class,
+
     QueryMemoryTrackerSelfTest.class,
 
     DmlBatchSizeDeadlockTest.class,
