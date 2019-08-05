@@ -975,6 +975,7 @@ class ServerImpl extends TcpDiscoveryImpl {
 
             Span rootSpan = tracing.create(TraceableMessagesTable.traceName(msg.getClass()))
                 .addTag(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID), getLocalNodeId().toString())
+                .addTag(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.CONSISTENT_ID), locNode.consistentId().toString())
                 .addLog("Created");
 
             // This root span will be parent both from local and remote nodes.
@@ -1067,8 +1068,7 @@ class ServerImpl extends TcpDiscoveryImpl {
         joinReqMsg.spanContainer().span(
             tracing.create(TraceableMessagesTable.traceName(joinReqMsg.getClass()))
                 .addTag(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID), locNode.id().toString())
-                .addTag(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.CONSISTENT_ID),
-                    locNode.consistentId() != null ? locNode.consistentId().toString() : "")
+                .addTag(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.CONSISTENT_ID), locNode.consistentId().toString())
                 .addLog("Created")
         );
 
@@ -2987,7 +2987,6 @@ class ServerImpl extends TcpDiscoveryImpl {
                 else { // If we're going to send this message.
                     if (!msg.verified() && tMsg.spanContainer().serializedSpanBytes() == null) {
                         Span rootSpan = tracing.create(TraceableMessagesTable.traceName(tMsg.getClass()))
-                            .addTag(SpanTags.NODE_ID, getLocalNodeId().toString())
                             .end();
 
                         // This root span will be parent both from local and remote nodes.
@@ -3232,8 +3231,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                     || notifiedDiscovery.get())) {
                 TraceableMessage tMsg = (TraceableMessage) msg;
 
-                if (!tMsg.spanContainer().span().isEnded())
-                    tracing.messages().finishProcessing(tMsg);
+                tracing.messages().finishProcessing(tMsg);
             }
         }
 
