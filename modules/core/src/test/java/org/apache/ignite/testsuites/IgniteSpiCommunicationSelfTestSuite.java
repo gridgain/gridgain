@@ -18,7 +18,8 @@ package org.apache.ignite.testsuites;
 
 import junit.framework.JUnit4TestAdapter;
 import junit.framework.TestSuite;
-import org.apache.ignite.internal.processors.cache.CacheMessagesTimeLoggingTest;
+import org.apache.ignite.internal.processors.cache.msgtimelogging.CacheMessagesTimeLoggingTest;
+import org.apache.ignite.internal.processors.cache.msgtimelogging.DisableMetricTest;
 import org.apache.ignite.spi.communication.tcp.GridTcpCommunicationSpiConcurrentConnectSelfTest;
 import org.apache.ignite.spi.communication.tcp.GridTcpCommunicationSpiConcurrentConnectSslSelfTest;
 import org.apache.ignite.spi.communication.tcp.GridTcpCommunicationSpiConfigSelfTest;
@@ -95,6 +96,7 @@ public class IgniteSpiCommunicationSelfTestSuite {
 
         suite.addTest(new JUnit4TestAdapter(TcpCommunicationStatisticsTest.class));
         suite.addTest(new JUnit4TestAdapter(CacheMessagesTimeLoggingTest.class));
+        suite.addTest(new JUnit4TestAdapter(DisableMetricTest.class));
 
         suite.addTest(new JUnit4TestAdapter(IgniteTcpCommunicationHandshakeWaitTest.class));
         suite.addTest(new JUnit4TestAdapter(IgniteTcpCommunicationHandshakeWaitSslTest.class));

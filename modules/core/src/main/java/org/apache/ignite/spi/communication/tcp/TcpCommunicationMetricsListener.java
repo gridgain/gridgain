@@ -444,6 +444,9 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
         /** Stores sent requests' timestamps that did't get response for each request class and each node */
         private final Map<UUID, Map<Class<? extends Message>, Map<Long, Long>>> inTimestamps = Collections.synchronizedMap(new HashMap<>());
 
+        /** Is time logging enabled. */
+        private final boolean isTimeLoggingEnabled = IgniteSystemProperties.getBoolean(IGNITE_ENABLE_MESSAGES_TIME_LOGGING);
+
         /**
          * Collects statistics for message sent by SPI.
          *
@@ -513,7 +516,7 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
          * @param msg Message.
          */
         private void addTimestamp(UUID nodeId, @NotNull Message msg, boolean outcomming) {
-            if (!isEnabled() || !(msg instanceof TimeLoggableMessage))
+            if (!isTimeLoggingEnabled || !(msg instanceof TimeLoggableMessage))
                 return;
 
             IdMessage idmsg = (IdMessage)msg;
@@ -610,14 +613,6 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
             } catch (Exception e) {
                 return DEFAULT_HIST_BOUNDS;
             }
-        }
-
-        /**
-         * @return {@code true} if IGNITE_ENABLE_MESSAGES_TIME_LOGGING jvm option is set to {@code true}, {@code false}
-         * otherwise.
-         */
-        private boolean isEnabled() {
-            return IgniteSystemProperties.getBoolean(IGNITE_ENABLE_MESSAGES_TIME_LOGGING);
         }
 
         /**
