@@ -16,10 +16,10 @@
 
 package org.apache.ignite.plugin.extensions.communication;
 
-import org.apache.ignite.internal.managers.communication.GridIoManager;
+import org.apache.ignite.spi.communication.tcp.TcpCommunicationMetricsListener;
 
 /**
- * Common interface for messages which can be registered in {@link GridIoManager.ReqRespTimeStorage}
+ * Common interface for messages which can be registered in {@link TcpCommunicationMetricsListener}
  */
 public interface TimeLoggableMessage extends IdMessage{
 }

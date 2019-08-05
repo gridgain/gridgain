@@ -79,12 +79,16 @@ public class HistogramMetric {
         holder = new HistogramHolder(bounds);
     }
 
-    /** {@inheritDoc} */
+    /**
+     * Resets histogram.
+     */
     public void reset() {
         reset(holder.bounds);
     }
 
-    /** {@inheritDoc} */
+    /**
+     * @return Histogram values.
+     */
     public long[] value() {
         HistogramHolder h = holder;
 
@@ -94,11 +98,6 @@ public class HistogramMetric {
             res[i] = h.measurements.get(i);
 
         return res;
-    }
-
-    /** {@inheritDoc} */
-    public Class<long[]> type() {
-        return long[].class;
     }
 
     /**
