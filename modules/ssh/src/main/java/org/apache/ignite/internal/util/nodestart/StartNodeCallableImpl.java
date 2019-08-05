@@ -285,6 +285,8 @@ public class StartNodeCallableImpl implements StartNodeCallable {
                 findSuccess = "grep \"" + SUCCESSFUL_START_MSG + "\" " + scriptOutputPath;
             }
 
+            StringBuilder sb = new StringBuilder();
+
             for (int i = 0; i < NODE_START_CHECK_LIMIT; ++i) {
                 Thread.sleep(NODE_START_CHECK_PERIOD);
 
@@ -294,10 +296,13 @@ public class StartNodeCallableImpl implements StartNodeCallable {
 
                 if (res != null && res.contains(SUCCESSFUL_START_MSG))
                     return new ClusterStartNodeResultImpl(spec.host(), true, null);
+                else if (res != null) {
+                    sb.append("NodeIdx=").append(i).append("out=").append(res).append("\n");
+                }
             }
 
             return new ClusterStartNodeResultImpl(spec.host(), false, "Remote node could not start. " +
-                "See log for details: " + scriptOutputPath);
+                "See log for details: " + scriptOutputPath + ",\n" + sb);
         }
         catch (IgniteInterruptedCheckedException e) {
             return new ClusterStartNodeResultImpl(spec.host(), false, e.getMessage());
