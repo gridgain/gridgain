@@ -75,6 +75,7 @@ import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.managers.eventstorage.HighPriorityListener;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
+import org.apache.ignite.internal.resources.MetricManagerResource;
 import org.apache.ignite.internal.util.GridConcurrentFactory;
 import org.apache.ignite.internal.util.GridSpinReadWriteLock;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
@@ -1310,15 +1311,13 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
         if (ignite != null) {
             setAddressResolver(ignite.configuration().getAddressResolver());
             setLocalAddress(ignite.configuration().getLocalHost());
-
-            if (ignite instanceof IgniteEx) {
-                IgniteEx igniteEx = (IgniteEx)ignite;
-
-                GridMetricManager mmgr = igniteEx.context().metric();
-
-                metricsLsnr = new TcpCommunicationMetricsListener(mmgr);
-            }
         }
+    }
+
+    /** */
+    @MetricManagerResource
+    private void injectMetricManager(GridMetricManager mmgr) {
+        metricsLsnr = new TcpCommunicationMetricsListener(mmgr);
     }
 
     /**

@@ -18,7 +18,6 @@ package org.apache.ignite.testframework.junits;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
-import java.lang.reflect.Constructor;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -31,8 +30,8 @@ import org.apache.ignite.internal.SensitiveInfoTestLoggerProxy;
 import org.apache.ignite.internal.binary.BinaryCachingMetadataHandler;
 import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
-import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.resource.GridResourceProcessor;
+import org.apache.ignite.internal.resources.MetricManagerResource;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.logger.NullLogger;
@@ -40,13 +39,9 @@ import org.apache.ignite.marshaller.Marshaller;
 import org.apache.ignite.marshaller.MarshallerContextTestImpl;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
-import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
-import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.logger.GridTestLog4jLogger;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 import org.jetbrains.annotations.Nullable;
-
-import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.COMMUNICATION_METRICS_GROUP_NAME;
 
 /**
  * Test resources for injection.
@@ -198,45 +193,7 @@ public class IgniteTestResources {
         rsrcProc.injectBasicResource(target, LoggerResource.class, getLogger().getLogger(target.getClass()));
         rsrcProc.injectBasicResource(target, IgniteInstanceResource.class,
             new IgniteMock(null, locHost, nodeId, getMarshaller(), jmx, home, cfg));
-
-        if (target instanceof TcpCommunicationSpi) {
-            TcpCommunicationSpi commSpi = (TcpCommunicationSpi)target;
-
-            // I know it's shit, please suggest better solution.
-            // The problem is that here we inject mock instance that is not IgniteEx as TcpCommunicationSpi expects.
-            //
-            // It would be cool to have MetricRegistry injected like
-            // @MetricRegistryResource(COMMUNICATION_METRICS_GROUP_NAME)
-            // private void injectMetricRegistry(MetricRegistry mreg) {
-            //     // initialization of metrics.
-            // }
-            //
-            // BUT it requires changing current injection framework a little bit. Parameterized annotations are
-            // not supported.
-            // Another option is to inject GridMetricManager, this is much easier to implement actually.
-            GridTestUtils.setFieldValue(commSpi, "metricsLsnr", tcpCommunicationMetricsListener());
-        }
-    }
-
-    /** */
-    private Object tcpCommunicationMetricsListener() throws IgniteCheckedException {
-        try {
-            Class<?> metricsLsnrCls = Class.forName(
-                "org.apache.ignite.spi.communication.tcp.TcpCommunicationMetricsListener"
-            );
-
-            MetricRegistry mreg = ctx.metric().registry(COMMUNICATION_METRICS_GROUP_NAME);
-
-            @SuppressWarnings("JavaReflectionMemberAccess")
-            Constructor<?> ctor = metricsLsnrCls.getDeclaredConstructor(MetricRegistry.class);
-
-            ctor.setAccessible(true);
-
-            return ctor.newInstance(mreg);
-        }
-        catch (Exception e) {
-            throw new IgniteCheckedException(e);
-        }
+        rsrcProc.injectBasicResource(target, MetricManagerResource.class, ctx.metric());
     }
 
     /**
