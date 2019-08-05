@@ -16,26 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.IdentityHashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.ListIterator;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
-import javax.management.MBeanServer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteCompute;
 import org.apache.ignite.IgniteException;
@@ -54,12 +34,7 @@ import org.apache.ignite.configuration.DeploymentMode;
 import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.configuration.TransactionConfiguration;
 import org.apache.ignite.events.EventType;
-import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.IgniteClientDisconnectedCheckedException;
-import org.apache.ignite.internal.IgniteFeatures;
-import org.apache.ignite.internal.IgniteInternalFuture;
-import org.apache.ignite.internal.IgniteInterruptedCheckedException;
-import org.apache.ignite.internal.IgniteTransactionsEx;
+import org.apache.ignite.internal.*;
 import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.binary.GridBinaryMarshaller;
@@ -88,12 +63,7 @@ import org.apache.ignite.internal.processors.cache.dr.GridCacheDrManager;
 import org.apache.ignite.internal.processors.cache.jta.CacheJtaManagerAdapter;
 import org.apache.ignite.internal.processors.cache.mvcc.DeadlockDetectionManager;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccCachingManager;
-import org.apache.ignite.internal.processors.cache.persistence.CheckpointFuture;
-import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
-import org.apache.ignite.internal.processors.cache.persistence.DatabaseLifecycleListener;
-import org.apache.ignite.internal.processors.cache.persistence.DbCheckpointListener;
-import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
-import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.persistence.*;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.FreeList;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetaStorage;
@@ -144,12 +114,7 @@ import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgniteBiTuple;
-import org.apache.ignite.lang.IgniteClosure;
-import org.apache.ignite.lang.IgniteFuture;
-import org.apache.ignite.lang.IgniteInClosure;
-import org.apache.ignite.lang.IgnitePredicate;
-import org.apache.ignite.lang.IgniteUuid;
+import org.apache.ignite.lang.*;
 import org.apache.ignite.lifecycle.LifecycleAware;
 import org.apache.ignite.marshaller.Marshaller;
 import org.apache.ignite.marshaller.MarshallerUtils;
@@ -164,9 +129,17 @@ import org.apache.ignite.spi.discovery.DiscoveryDataBag.JoiningNodeDiscoveryData
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_CACHE_REMOVED_ENTRIES_TTL;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_SKIP_CONFIGURATION_CONSISTENCY_CHECK;
-import static org.apache.ignite.IgniteSystemProperties.getBoolean;
+import javax.management.MBeanServer;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+
+import static org.apache.ignite.IgniteSystemProperties.*;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
@@ -408,228 +381,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         else
             U.warn(log, "Unsupported custom exchange task: " + task);
     }
-
-    /**
-     * @param c Ignite configuration.
-     * @param cc Configuration to validate.
-     * @param cacheType Cache type.
-     * @param cfgStore Cache store.
-     * @throws IgniteCheckedException If failed.
-     */
-    private void validate(IgniteConfiguration c,
-        CacheConfiguration cc,
-        CacheType cacheType,
-        @Nullable CacheStore cfgStore) throws IgniteCheckedException {
-        assertParameter(cc.getName() != null && !cc.getName().isEmpty(), "name is null or empty");
-
-        if (cc.getCacheMode() == REPLICATED) {
-            if (cc.getNearConfiguration() != null &&
-                ctx.discovery().cacheAffinityNode(ctx.discovery().localNode(), cc.getName())) {
-                U.warn(log, "Near cache cannot be used with REPLICATED cache, " +
-                    "will be ignored [cacheName=" + U.maskName(cc.getName()) + ']');
-
-                cc.setNearConfiguration(null);
-            }
-        }
-
-        if (cc.getAffinity().partitions() > CacheConfiguration.MAX_PARTITIONS_COUNT)
-            throw new IgniteCheckedException("Cannot have more than " + CacheConfiguration.MAX_PARTITIONS_COUNT +
-                " partitions [cacheName=" + cc.getName() + ", partitions=" + cc.getAffinity().partitions() + ']');
-
-        if (cc.getRebalanceMode() != CacheRebalanceMode.NONE) {
-            assertParameter(cc.getRebalanceBatchSize() > 0, "rebalanceBatchSize > 0");
-            assertParameter(cc.getRebalanceTimeout() >= 0, "rebalanceTimeout >= 0");
-            assertParameter(cc.getRebalanceThrottle() >= 0, "rebalanceThrottle >= 0");
-            assertParameter(cc.getRebalanceBatchesPrefetchCount() > 0, "rebalanceBatchesPrefetchCount > 0");
-        }
-
-        if (cc.getCacheMode() == PARTITIONED || cc.getCacheMode() == REPLICATED) {
-            if (cc.getAtomicityMode() == ATOMIC && cc.getWriteSynchronizationMode() == FULL_ASYNC)
-                U.warn(log, "Cache write synchronization mode is set to FULL_ASYNC. All single-key 'put' and " +
-                    "'remove' operations will return 'null', all 'putx' and 'removex' operations will return" +
-                    " 'true' [cacheName=" + U.maskName(cc.getName()) + ']');
-        }
-
-        DeploymentMode depMode = c.getDeploymentMode();
-
-        if (c.isPeerClassLoadingEnabled() && (depMode == PRIVATE || depMode == ISOLATED) &&
-            !CU.isSystemCache(cc.getName()) && !(c.getMarshaller() instanceof BinaryMarshaller))
-            throw new IgniteCheckedException("Cache can be started in PRIVATE or ISOLATED deployment mode only when" +
-                " BinaryMarshaller is used [depMode=" + ctx.config().getDeploymentMode() + ", marshaller=" +
-                c.getMarshaller().getClass().getName() + ']');
-
-        if (cc.getAffinity().partitions() > CacheConfiguration.MAX_PARTITIONS_COUNT)
-            throw new IgniteCheckedException("Affinity function must return at most " +
-                CacheConfiguration.MAX_PARTITIONS_COUNT + " partitions [actual=" + cc.getAffinity().partitions() +
-                ", affFunction=" + cc.getAffinity() + ", cacheName=" + cc.getName() + ']');
-
-        if (cc.getAtomicityMode() == TRANSACTIONAL_SNAPSHOT) {
-            assertParameter(cc.getNearConfiguration() == null,
-                "near cache cannot be used with TRANSACTIONAL_SNAPSHOT atomicity mode");
-
-            assertParameter(!cc.isReadThrough(),
-                "readThrough cannot be used with TRANSACTIONAL_SNAPSHOT atomicity mode");
-
-            assertParameter(!cc.isWriteThrough(),
-                "writeThrough cannot be used with TRANSACTIONAL_SNAPSHOT atomicity mode");
-
-            assertParameter(!cc.isWriteBehindEnabled(),
-                "writeBehindEnabled cannot be used with TRANSACTIONAL_SNAPSHOT atomicity mode");
-
-            assertParameter(cc.getRebalanceMode() != NONE,
-                "Rebalance mode NONE cannot be used with TRANSACTIONAL_SNAPSHOT atomicity mode");
-
-            ExpiryPolicy expPlc = null;
-
-            if (cc.getExpiryPolicyFactory() instanceof FactoryBuilder.SingletonFactory)
-                expPlc = (ExpiryPolicy)cc.getExpiryPolicyFactory().create();
-
-            if (!(expPlc instanceof EternalExpiryPolicy)) {
-                assertParameter(cc.getExpiryPolicyFactory() == null,
-                    "expiry policy cannot be used with TRANSACTIONAL_SNAPSHOT atomicity mode");
-            }
-
-            assertParameter(cc.getInterceptor() == null,
-                "interceptor cannot be used with TRANSACTIONAL_SNAPSHOT atomicity mode");
-
-            // Disable in-memory evictions for mvcc cache. TODO IGNITE-10738
-            String memPlcName = cc.getDataRegionName();
-            DataRegion dataRegion = sharedCtx.database().dataRegion(memPlcName);
-
-            if (dataRegion != null && !dataRegion.config().isPersistenceEnabled() &&
-                dataRegion.config().getPageEvictionMode() != DataPageEvictionMode.DISABLED) {
-                throw new IgniteCheckedException("Data pages evictions cannot be used with TRANSACTIONAL_SNAPSHOT " +
-                    "cache atomicity mode for in-memory regions. Please, either disable evictions or enable " +
-                    "persistence for data regions with TRANSACTIONAL_SNAPSHOT caches. [cacheName=" + cc.getName() +
-                    ", dataRegionName=" + memPlcName + ", pageEvictionMode=" +
-                    dataRegion.config().getPageEvictionMode() + ']');
-            }
-
-            IndexingSpi idxSpi = ctx.config().getIndexingSpi();
-
-            assertParameter(idxSpi == null || idxSpi instanceof NoopIndexingSpi,
-                "Custom IndexingSpi cannot be used with TRANSACTIONAL_SNAPSHOT atomicity mode");
-        }
-
-        if (cc.isWriteBehindEnabled() && ctx.discovery().cacheAffinityNode(ctx.discovery().localNode(), cc.getName())) {
-            if (cfgStore == null)
-                throw new IgniteCheckedException("Cannot enable write-behind (writer or store is not provided) " +
-                    "for cache: " + U.maskName(cc.getName()));
-
-            assertParameter(cc.getWriteBehindBatchSize() > 0, "writeBehindBatchSize > 0");
-            assertParameter(cc.getWriteBehindFlushSize() >= 0, "writeBehindFlushSize >= 0");
-            assertParameter(cc.getWriteBehindFlushFrequency() >= 0, "writeBehindFlushFrequency >= 0");
-            assertParameter(cc.getWriteBehindFlushThreadCount() > 0, "writeBehindFlushThreadCount > 0");
-
-            if (cc.getWriteBehindFlushSize() == 0 && cc.getWriteBehindFlushFrequency() == 0)
-                throw new IgniteCheckedException("Cannot set both 'writeBehindFlushFrequency' and " +
-                    "'writeBehindFlushSize' parameters to 0 for cache: " + U.maskName(cc.getName()));
-        }
-
-        if (cc.isReadThrough() && cfgStore == null
-            && ctx.discovery().cacheAffinityNode(ctx.discovery().localNode(), cc.getName()))
-            throw new IgniteCheckedException("Cannot enable read-through (loader or store is not provided) " +
-                "for cache: " + U.maskName(cc.getName()));
-
-        if (cc.isWriteThrough() && cfgStore == null
-            && ctx.discovery().cacheAffinityNode(ctx.discovery().localNode(), cc.getName()))
-            throw new IgniteCheckedException("Cannot enable write-through (writer or store is not provided) " +
-                "for cache: " + U.maskName(cc.getName()));
-
-        long delay = cc.getRebalanceDelay();
-
-        if (delay != 0) {
-            if (cc.getCacheMode() != PARTITIONED)
-                U.warn(log, "Rebalance delay is supported only for partitioned caches (will ignore): " + (cc.getName()));
-            else if (cc.getRebalanceMode() == SYNC) {
-                if (delay < 0) {
-                    U.warn(log, "Ignoring SYNC rebalance mode with manual rebalance start (node will not wait for " +
-                        "rebalancing to be finished): " + U.maskName(cc.getName()));
-                }
-                else {
-                    U.warn(log, "Using SYNC rebalance mode with rebalance delay (node will wait until rebalancing is " +
-                        "initiated for " + delay + "ms) for cache: " + U.maskName(cc.getName()));
-                }
-            }
-        }
-
-        ctx.coordinators().validateCacheConfiguration(cc);
-
-        if (cc.getAtomicityMode() == ATOMIC)
-            assertParameter(cc.getTransactionManagerLookupClassName() == null,
-                "transaction manager can not be used with ATOMIC cache");
-
-        if ((cc.getEvictionPolicyFactory() != null || cc.getEvictionPolicy() != null) && !cc.isOnheapCacheEnabled())
-            throw new IgniteCheckedException("Onheap cache must be enabled if eviction policy is configured [cacheName="
-                + U.maskName(cc.getName()) + "]");
-
-        if (cacheType != CacheType.DATA_STRUCTURES && DataStructuresProcessor.isDataStructureCache(cc.getName()))
-            throw new IgniteCheckedException("Using cache names reserved for datastructures is not allowed for " +
-                "other cache types [cacheName=" + cc.getName() + ", cacheType=" + cacheType + "]");
-
-        if (cacheType != CacheType.DATA_STRUCTURES && DataStructuresProcessor.isReservedGroup(cc.getGroupName()))
-            throw new IgniteCheckedException("Using cache group names reserved for datastructures is not allowed for " +
-                "other cache types [cacheName=" + cc.getName() + ", groupName=" + cc.getGroupName() +
-                ", cacheType=" + cacheType + "]");
-
-        // Make sure we do not use sql schema for system views.
-        if (ctx.query().moduleEnabled()) {
-            String schema = QueryUtils.normalizeSchemaName(cc.getName(), cc.getSqlSchema());
-
-            if (F.eq(schema, QueryUtils.SCHEMA_SYS)) {
-                if (cc.getSqlSchema() == null) {
-                    // Conflict on cache name.
-                    throw new IgniteCheckedException("SQL schema name derived from cache name is reserved (" +
-                        "please set explicit SQL schema name through CacheConfiguration.setSqlSchema() or choose " +
-                        "another cache name) [cacheName=" + cc.getName() + ", schemaName=" + cc.getSqlSchema() + "]");
-                }
-                else {
-                    // Conflict on schema name.
-                    throw new IgniteCheckedException("SQL schema name is reserved (please choose another one) [" +
-                        "cacheName=" + cc.getName() + ", schemaName=" + cc.getSqlSchema() + ']');
-                }
-            }
-        }
-
-        if (cc.isEncryptionEnabled() && !ctx.clientNode()) {
-            StringBuilder cacheSpec = new StringBuilder("[cacheName=").append(cc.getName())
-                .append(", groupName=").append(cc.getGroupName())
-                .append(", cacheType=").append(cacheType)
-                .append(']');
-
-            if (!CU.isPersistentCache(cc, c.getDataStorageConfiguration())) {
-                throw new IgniteCheckedException("Using encryption is not allowed" +
-                    " for not persistent cache " + cacheSpec.toString());
-            }
-
-            EncryptionSpi encSpi = c.getEncryptionSpi();
-
-            if (encSpi == null) {
-                throw new IgniteCheckedException("EncryptionSpi should be configured to use encrypted cache " +
-                    cacheSpec.toString());
-            }
-
-            if (cc.getDiskPageCompression() != DiskPageCompression.DISABLED)
-                throw new IgniteCheckedException("Encryption cannot be used with disk page compression " +
-                    cacheSpec.toString());
-        }
-
-        Collection<QueryEntity> ents = cc.getQueryEntities();
-
-        if (ctx.discovery().discoCache() != null) {
-            boolean nonDfltPrecScaleExists = ents.stream().anyMatch(
-                e -> !F.isEmpty(e.getFieldsPrecision()) || !F.isEmpty(e.getFieldsScale()));
-
-            if (nonDfltPrecScaleExists) {
-                ClusterNode oldestNode = F.nonNull(ctx.discovery().discoCache().oldestServerNode());
-
-                if (PRECISION_SCALE_SINCE_VER.compareTo(oldestNode.version()) > 0) {
-                    throw new IgniteCheckedException("Non default precision and scale is supported since version 2.7. " +
-                        "The node with oldest version [node=" + oldestNode + ']');
-                }
-            }
-        }
-   }
 
     /**
      * @param ctx Context.

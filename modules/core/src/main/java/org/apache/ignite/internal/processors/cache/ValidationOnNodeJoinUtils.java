@@ -16,19 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.function.BiFunction;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import javax.cache.configuration.FactoryBuilder;
-import javax.cache.expiry.EternalExpiryPolicy;
-import javax.cache.expiry.ExpiryPolicy;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.CacheRebalanceMode;
@@ -36,15 +23,7 @@ import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.store.CacheStore;
 import org.apache.ignite.cluster.ClusterNode;
-import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.configuration.DataPageEvictionMode;
-import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
-import org.apache.ignite.configuration.DeploymentMode;
-import org.apache.ignite.configuration.DiskPageCompression;
-import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.configuration.MemoryConfiguration;
-import org.apache.ignite.configuration.TransactionConfiguration;
+import org.apache.ignite.configuration.*;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteNodeAttributes;
@@ -69,10 +48,18 @@ import org.apache.ignite.spi.indexing.IndexingSpi;
 import org.apache.ignite.spi.indexing.noop.NoopIndexingSpi;
 import org.jetbrains.annotations.Nullable;
 
+import javax.cache.configuration.FactoryBuilder;
+import javax.cache.expiry.EternalExpiryPolicy;
+import javax.cache.expiry.ExpiryPolicy;
+import java.util.*;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SKIP_CONFIGURATION_CONSISTENCY_CHECK;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
-import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
 import static org.apache.ignite.cache.CacheRebalanceMode.NONE;
@@ -240,10 +227,6 @@ public class ValidationOnNodeJoinUtils {
             throw new IgniteCheckedException("DataRegion for client caches must be explicitly configured " +
                 "on client node startup. Use DataStorageConfiguration to configure DataRegion.");
 
-        if (cc.getCacheMode() == LOCAL && !cc.getAffinity().getClass().equals(GridCacheProcessor.LocalAffinityFunction.class))
-            U.warn(log, "AffinityFunction configuration parameter will be ignored for local cache [cacheName=" +
-                U.maskName(cc.getName()) + ']');
-
         if (cc.getAffinity().partitions() > CacheConfiguration.MAX_PARTITIONS_COUNT)
             throw new IgniteCheckedException("Cannot have more than " + CacheConfiguration.MAX_PARTITIONS_COUNT +
                 " partitions [cacheName=" + cc.getName() + ", partitions=" + cc.getAffinity().partitions() + ']');
@@ -276,9 +259,6 @@ public class ValidationOnNodeJoinUtils {
                 ", affFunction=" + cc.getAffinity() + ", cacheName=" + cc.getName() + ']');
 
         if (cc.getAtomicityMode() == TRANSACTIONAL_SNAPSHOT) {
-            apply(assertParam, cc.getCacheMode() != LOCAL,
-                "LOCAL cache mode cannot be used with TRANSACTIONAL_SNAPSHOT atomicity mode");
-
             apply(assertParam, cc.getNearConfiguration() == null,
                 "near cache cannot be used with TRANSACTIONAL_SNAPSHOT atomicity mode");
 
@@ -546,15 +526,8 @@ public class ValidationOnNodeJoinUtils {
      * @return {@code true} if cache is starting on client node and this node is affinity node for the cache.
      */
     private static boolean storesLocallyOnClient(IgniteConfiguration c, CacheConfiguration cc, GridKernalContext ctx) {
-        if (c.isClientMode() && c.getDataStorageConfiguration() == null) {
-            if (cc.getCacheMode() == LOCAL)
-                return true;
-
-            return ctx.discovery().cacheAffinityNode(ctx.discovery().localNode(), cc.getName());
-
-        }
-        else
-            return false;
+        return c.isClientMode() && c.getDataStorageConfiguration() == null &&
+                ctx.discovery().cacheAffinityNode(ctx.discovery().localNode(), cc.getName());
     }
 
     /**

@@ -45,14 +45,6 @@ public class CacheLockCandidatesThreadTest extends GridCommonAbstractTest {
      * @throws Exception if failed.
      */
     @Test
-    public void testLockCandidatesThreadForLocalMode() throws Exception {
-        lockThreadOfCandidates(CacheMode.LOCAL);
-    }
-
-    /**
-     * @throws Exception if failed.
-     */
-    @Test
     public void testLockCandidatesThreadForReplicatedMode() throws Exception {
         lockThreadOfCandidates(CacheMode.REPLICATED);
     }
