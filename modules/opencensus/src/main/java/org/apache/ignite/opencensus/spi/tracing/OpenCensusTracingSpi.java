@@ -32,7 +32,7 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
     /** Configured exporters. */
     private OpenCensusTraceExporter[] exporters;
 
-    /** Trace component. */
+    /** Tracing provider. */
     private OpenCensusTracingProvider provider;
 
     /**
@@ -42,14 +42,18 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
     }
 
     /**
-     * @param provider Trace component.
+     * If environment already uses a OpenCensus tracing.
+     * In this case configured exporters will not start and traces from node
+     * will go through already configured exporters in external provider.
+     *
+     * @param provider Tracing provider.
      */
     public OpenCensusTracingSpi(OpenCensusTracingProvider provider) {
         this.provider = provider;
     }
 
     /**
-     * @param exporters Exporter.
+     * @param exporters Exporters.
      */
     public OpenCensusTracingSpi withExporters(OpenCensusTraceExporter... exporters) {
         this.exporters = exporters.clone();
