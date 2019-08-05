@@ -3163,10 +3163,10 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             boolean res = transactionHitRateCntr.value() >= transactionTimeDumpSamplesPerSecondLimit();
 
             if (!res) {
-                int skipped = skippedTxCntr.get();
+                int skipped = skippedTxCntr.getAndSet(0);
 
                 //we should not log info about skipped dumps if skippedTxCounter was reset concurrently
-                if (skipped > 0 && skippedTxCntr.compareAndSet(skipped, 0))
+                if (skipped > 0)
                     log.info("Transaction time dumps skipped because of log throttling: " + skipped);
             }
 

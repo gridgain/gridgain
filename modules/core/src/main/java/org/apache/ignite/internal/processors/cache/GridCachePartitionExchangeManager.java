@@ -2065,7 +2065,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
             warning.a(", systemTime=")
                 .a(sysTimeCurr)
                 .a(", userTime=")
-                .a(System.currentTimeMillis() - tx.startTime() - sysTimeCurr);
+                .a(curTime - tx.startTime() - sysTimeCurr);
         }
 
         warning.a(", tx=")

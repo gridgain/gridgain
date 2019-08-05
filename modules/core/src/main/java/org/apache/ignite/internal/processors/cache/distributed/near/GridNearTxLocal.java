@@ -160,13 +160,8 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
     public static final String METRIC_USER_TIME_HISTOGRAM = "NodeUserTimeHistogram";
 
     /** Histogram buckets for metrics of system and user time. */
-    public static final long[] METRIC_TIME_BUCKETS = new long[] { 1, 2, 4, 8, 16, 25, 50, 75, 100, 250, 500, 750, 1000, 3000};
-
-    /** */
-    private static final SimpleDateFormat TIME_FORMAT = new SimpleDateFormat("HH:mm:ss.SSS");
-
-    /** */
-    private static final ThreadLocalRandom RANDOM = ThreadLocalRandom.current();
+    public static final long[] METRIC_TIME_BUCKETS =
+        new long[] { 1, 2, 4, 8, 16, 25, 50, 75, 100, 250, 500, 750, 1000, 3000, 5000, 10000, 25000, 60000};
 
     /** Prepare future updater. */
     private static final AtomicReferenceFieldUpdater<GridNearTxLocal, IgniteInternalFuture> PREP_FUT_UPD =
@@ -3856,7 +3851,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                 boolean isLong = transactionTimeDumpThreshold > 0 && totalTimeMillis > transactionTimeDumpThreshold;
 
                 boolean randomlyChosen = transactionTimeDumpSamplesCoefficient >= 0.0
-                    && RANDOM.nextDouble() <= transactionTimeDumpSamplesCoefficient;
+                    && ThreadLocalRandom.current().nextDouble() <= transactionTimeDumpSamplesCoefficient;
 
                 if (randomlyChosen || isLong) {
                     String txDump = completedTransactionDump(state, systemTimeMillis, userTimeMillis, isLong);
@@ -3896,7 +3891,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
         GridStringBuilder warning = new GridStringBuilder(isLong ? "Long transaction time dump " : "Transaction time dump ")
             .a("[startTime=")
-            .a(TIME_FORMAT.format(new Date(startTime)))
+            .a(new SimpleDateFormat("HH:mm:ss.SSS").format(new Date(startTime)))
             .a(", totalTime=")
             .a(systemTimeMillis + userTimeMillis)
             .a(", systemTime=")
