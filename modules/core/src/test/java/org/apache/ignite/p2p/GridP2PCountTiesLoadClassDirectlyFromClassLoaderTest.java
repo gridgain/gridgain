@@ -69,7 +69,8 @@ public class GridP2PCountTiesLoadClassDirectlyFromClassLoaderTest extends GridCo
      */
     public void executeP2PTask(DeploymentMode depMode) throws Exception {
         try {
-            CountTriesClassLoader testCountLdr = new CountTriesClassLoader();
+            CountTriesClassLoader testCountLdr = new CountTriesClassLoader(Thread.currentThread()
+                .getContextClassLoader());
 
             this.depMode = depMode;
 
@@ -77,13 +78,17 @@ public class GridP2PCountTiesLoadClassDirectlyFromClassLoaderTest extends GridCo
 
             Ignite ignite = startGrids(2);
 
-            ignite.compute(ignite.cluster().forRemotes()).call((IgniteCallable)urlClsLdr1.loadClass(COMPUTE_TASK_NAME).newInstance());
+            ignite.compute(ignite.cluster().forRemotes()).call((IgniteCallable)urlClsLdr1.loadClass(COMPUTE_TASK_NAME)
+                .newInstance());
 
             int count = testCountLdr.count;
 
-            ignite.compute(ignite.cluster().forRemotes()).call((IgniteCallable)urlClsLdr1.loadClass(COMPUTE_TASK_NAME).newInstance());
-            ignite.compute(ignite.cluster().forRemotes()).call((IgniteCallable)urlClsLdr1.loadClass(COMPUTE_TASK_NAME).newInstance());
-            ignite.compute(ignite.cluster().forRemotes()).call((IgniteCallable)urlClsLdr1.loadClass(COMPUTE_TASK_NAME).newInstance());
+            ignite.compute(ignite.cluster().forRemotes()).call((IgniteCallable)urlClsLdr1.loadClass(COMPUTE_TASK_NAME)
+                .newInstance());
+            ignite.compute(ignite.cluster().forRemotes()).call((IgniteCallable)urlClsLdr1.loadClass(COMPUTE_TASK_NAME)
+                .newInstance());
+            ignite.compute(ignite.cluster().forRemotes()).call((IgniteCallable)urlClsLdr1.loadClass(COMPUTE_TASK_NAME)
+                .newInstance());
 
             assertEquals(count, testCountLdr.count);
         }
@@ -130,6 +135,13 @@ public class GridP2PCountTiesLoadClassDirectlyFromClassLoaderTest extends GridCo
     private static class CountTriesClassLoader extends ClassLoader {
         /** Count of tries. */
         int count = 0;
+
+        /**
+         * @param parent Parent class loader.
+         */
+        public CountTriesClassLoader(ClassLoader parent) {
+            super(parent);
+        }
 
         /** {@inheritDoc} */
         @Override protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
