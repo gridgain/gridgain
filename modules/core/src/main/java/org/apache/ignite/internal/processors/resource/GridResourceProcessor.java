@@ -73,7 +73,7 @@ public class GridResourceProcessor extends GridProcessorAdapter {
         injectorByAnnotation[GridResourceIoc.ResourceAnnotation.IGNITE_INSTANCE.ordinal()] =
             new GridResourceBasicInjector<>(ctx.grid());
         injectorByAnnotation[GridResourceIoc.ResourceAnnotation.METRIC_MANAGER.ordinal()] =
-            new GridResourceBasicInjector<>(ctx.metric());
+            new GridResourceSupplierInjector<>(ctx::metric);
     }
 
     /** {@inheritDoc} */
