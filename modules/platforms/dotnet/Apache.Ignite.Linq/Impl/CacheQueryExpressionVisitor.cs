@@ -181,31 +181,15 @@ namespace Apache.Ignite.Linq.Impl
             {
                 case ExpressionType.Equal:
                 {
-                    var rightConst = expression.Right as ConstantExpression;
+                    ResultBuilder.Append(" IS NOT DISTINCT FROM ");
 
-                    if (rightConst != null && rightConst.Value == null)
-                    {
-                        // Special case for nulls, since "= null" does not work in SQL
-                        ResultBuilder.Append(" is null)");
-                        return expression;
-                    }
-
-                    ResultBuilder.Append(" = ");
                     break;
                 }
 
                 case ExpressionType.NotEqual:
                 {
-                    var rightConst = expression.Right as ConstantExpression;
+                    ResultBuilder.Append(" IS DISTINCT FROM ");
 
-                    if (rightConst != null && rightConst.Value == null)
-                    {
-                        // Special case for nulls, since "<> null" does not work in SQL
-                        ResultBuilder.Append(" is not null)");
-                        return expression;
-                    }
-
-                    ResultBuilder.Append(" <> ");
                     break;
                 }
 
