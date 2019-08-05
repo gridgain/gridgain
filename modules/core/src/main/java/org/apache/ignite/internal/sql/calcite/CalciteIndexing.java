@@ -17,44 +17,15 @@
 package org.apache.ignite.internal.sql.calcite;
 
 import java.sql.SQLException;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import org.apache.calcite.adapter.enumerable.EnumerableConvention;
-import org.apache.calcite.adapter.enumerable.EnumerableFilter;
-import org.apache.calcite.adapter.enumerable.EnumerableHashJoin;
-import org.apache.calcite.adapter.enumerable.EnumerableInterpreter;
-import org.apache.calcite.adapter.enumerable.EnumerableProject;
-import org.apache.calcite.adapter.enumerable.EnumerableTableScan;
-import org.apache.calcite.interpreter.Bindables;
-import org.apache.calcite.plan.ConventionTraitDef;
-import org.apache.calcite.plan.RelOptCluster;
-import org.apache.calcite.plan.RelOptPlanner;
-import org.apache.calcite.plan.RelOptUtil;
-import org.apache.calcite.plan.RelTraitDef;
-import org.apache.calcite.plan.RelTraitSet;
-import org.apache.calcite.rel.RelCollation;
-import org.apache.calcite.rel.RelCollationTraitDef;
-import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.core.JoinRelType;
-import org.apache.calcite.rel.core.Sort;
-import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.impl.AbstractSchema;
-import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.parser.SqlParseException;
-import org.apache.calcite.sql.parser.SqlParser;
-import org.apache.calcite.tools.FrameworkConfig;
 import org.apache.calcite.tools.Frameworks;
-import org.apache.calcite.tools.Planner;
-import org.apache.calcite.tools.RelConversionException;
-import org.apache.calcite.tools.ValidationException;
-import org.apache.calcite.util.ImmutableIntList;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
@@ -84,22 +55,14 @@ import org.apache.ignite.internal.processors.query.QueryTypeCandidate;
 import org.apache.ignite.internal.processors.query.SqlClientContext;
 import org.apache.ignite.internal.processors.query.UpdateSourceIterator;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitor;
-import org.apache.ignite.internal.sql.calcite.physical.Filter;
-import org.apache.ignite.internal.sql.calcite.physical.NestedLoopsJoin;
 import org.apache.ignite.internal.sql.calcite.physical.PhysicalOperator;
-import org.apache.ignite.internal.sql.calcite.physical.Project;
-import org.apache.ignite.internal.sql.calcite.physical.TableScan;
 import org.apache.ignite.internal.util.GridAtomicLong;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
-import org.apache.ignite.internal.util.TimeBag;
 import org.apache.ignite.internal.util.lang.GridCloseableIterator;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.spi.indexing.IndexingQueryFilter;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import static org.apache.calcite.tools.Programs.ofRules;
 
 /**
  * TODO: Add class description.
@@ -110,16 +73,7 @@ public class CalciteIndexing implements GridQueryIndexing {
 
     private final SchemaPlus rootSchema = Frameworks.createRootSchema(true);
 
-    private static final List<RelTraitDef> TRAITS = Collections
-        .unmodifiableList(Arrays.asList(ConventionTraitDef.INSTANCE,
-            RelCollationTraitDef.INSTANCE)); // TODO ??????????
 
-    private static final SqlParser.Config CALCITE_PARSER_CONFIG
-        = SqlParser.configBuilder(SqlParser.Config.DEFAULT)
-        .setCaseSensitive(false)
-        //.setConformance(SqlConformanceEnum.MYSQL_5)
-        //.setQuoting(Quoting.BACK_TICK)
-        .build();
 
     /** {@inheritDoc} */
     @Override public void start(GridKernalContext ctx, GridSpinBusyLock busyLock) throws IgniteCheckedException {
@@ -174,150 +128,14 @@ public class CalciteIndexing implements GridQueryIndexing {
     /** {@inheritDoc} */
     @Override public List<FieldsQueryCursor<List<?>>> querySqlFields(String schemaName, SqlFieldsQuery qry,
         SqlClientContext cliCtx, boolean keepBinary, boolean failOnMultipleStmts, GridQueryCancel cancel) {
-        try {
-            System.out.println("CalciteIndexing.querySqlFields");
 
-            TimeBag timeBag = new TimeBag();
+        CalcitePlanner planner = new CalcitePlanner(rootSchema.getSubSchema(schemaName), rootSchema, ctx);
 
-            Planner planner = getPlanner(schemaName);
+        PhysicalOperator physicalOperator = planner.createPlan(qry.getSql());
 
-            timeBag.finishGlobalStage("Planner created");
-
-            // 1. Parsing
-            SqlNode sqlAst = planner.parse(qry.getSql());
-
-            timeBag.finishGlobalStage("Query parsed");
-
-            // 2. Validating
-            sqlAst = planner.validate(sqlAst);
-
-            timeBag.finishGlobalStage("Query validated");
-
-            // 3. Converting AST to RelTree
-            RelNode logicalPlan = planner.rel(sqlAst).project();
-
-            System.out.println("Initial logical plan:\n" + RelOptUtil.toString(logicalPlan));
-
-            timeBag.finishGlobalStage("Logical planning finished");
-
-            RelOptCluster cluster = logicalPlan.getCluster();
-
-            final RelOptPlanner optPlanner = cluster.getPlanner();
-
-            RelTraitSet desiredTraits
-                = cluster.traitSet()
-                .replace(EnumerableConvention.INSTANCE);
-
-            final RelCollation collation
-                = logicalPlan instanceof Sort
-                ? ((Sort)logicalPlan).collation
-                : null;
-
-            if (collation != null) {
-                desiredTraits = desiredTraits.replace(collation);
-            }
-
-            final RelNode newRoot = optPlanner.changeTraits(logicalPlan, desiredTraits);
-            optPlanner.setRoot(newRoot);
-
-            timeBag.finishGlobalStage("Planner prepared");
-
-            RelNode bestPlan = optPlanner.findBestExp();
-
-            timeBag.finishGlobalStage("Best plan found");
-
-            System.out.println("Optimal plan:\n" + RelOptUtil.toString(bestPlan));
-            System.out.println("Planning timings=" + timeBag.stagesTimings());
-
-            PhysicalOperator physicalOperator = convertToPhysical(bestPlan);
-
-            return Collections.singletonList(new QueryCursorImpl<>(physicalOperator));
-
-        }
-        catch (SqlParseException | ValidationException | RelConversionException e) {
-            throw new IgniteException("Parsing error.", e);
-        }
+        return Collections.singletonList(new QueryCursorImpl<>(physicalOperator));
     }
 
-
-
-    @NotNull private Planner getPlanner(String schemaName) {
-        SchemaPlus schema = rootSchema.getSubSchema(schemaName);
-
-        if (schema == null)
-            throw new IgniteException("No schema: " + schemaName);
-
-        final FrameworkConfig config = Frameworks.newConfigBuilder()
-            .parserConfig(CALCITE_PARSER_CONFIG)
-            .defaultSchema(schema)
-            .traitDefs(TRAITS)
-            .programs(ofRules(CalciteUtils.RULE_SET)) // TODO add rules
-            .build();
-
-        return Frameworks.getPlanner(config);
-    }
-
-    private PhysicalOperator convertToPhysical(RelNode plan) {
-        if (plan instanceof Bindables.BindableTableScan)
-            return convertToTableScan((Bindables.BindableTableScan)plan);
-        if (plan instanceof EnumerableTableScan)
-            return convertToTableScan((EnumerableTableScan)plan); // TODO how to control which scan is used?
-        else if (plan instanceof EnumerableInterpreter)
-            return convertToPhysical(plan.getInput(0)); // EnumerableInterpreter is just an adapter between conventions.
-        else if (plan instanceof EnumerableProject)
-            return convertToProject((EnumerableProject)plan);
-        else if (plan instanceof EnumerableFilter)
-            return convertToFilter((EnumerableFilter)plan);
-        else if (plan instanceof EnumerableHashJoin)
-            return convertToHashJoin((EnumerableHashJoin)plan);
-
-        throw new IgniteException("Operation is not supported yet: " + plan);
-    }
-
-    private PhysicalOperator convertToHashJoin(EnumerableHashJoin plan) { // TODO why do we have HashJoin even for non-equi-joins?
-        PhysicalOperator leftSrc = convertToPhysical(plan.getInput(0));
-        PhysicalOperator rightSrc = convertToPhysical(plan.getInput(1));
-
-        ImmutableIntList leftJoinKeys = plan.getLeftKeys();
-        ImmutableIntList rightJoinKeys = plan.getRightKeys();
-
-        RexNode joinCond = plan.getCondition();
-
-        JoinRelType joinType = plan.getJoinType();
-
-
-        return new NestedLoopsJoin(leftSrc, rightSrc, leftJoinKeys, rightJoinKeys, joinCond, joinType);
-    }
-
-    private PhysicalOperator convertToFilter(EnumerableFilter plan) {
-        PhysicalOperator rowsSrc = convertToPhysical(plan.getInput());
-
-        return new Filter(rowsSrc, plan.getCondition());
-    }
-
-    private Project convertToProject(EnumerableProject plan) {
-        PhysicalOperator rowsSrc = convertToPhysical(plan.getInput());
-
-        List<RexNode> projects = plan.getProjects();
-
-        return new Project(rowsSrc, projects);
-    }
-
-    @NotNull private TableScan convertToTableScan(EnumerableTableScan plan) {
-        List<String> tblName = plan.getTable().getQualifiedName(); // Schema + tblName
-
-        IgniteTable tbl = (IgniteTable)rootSchema.getSubSchema(tblName.get(0)).getTable(tblName.get(1));
-
-        return new TableScan(tbl, ctx.cache().cache(tbl.cacheName()));
-    }
-
-    @NotNull private TableScan convertToTableScan(Bindables.BindableTableScan plan) {
-        List<String> tblName = plan.getTable().getQualifiedName(); // Schema + tblName
-
-        IgniteTable tbl = (IgniteTable)rootSchema.getSubSchema(tblName.get(0)).getTable(tblName.get(1));
-
-        return new TableScan(tbl, ctx.cache().cache(tbl.cacheName()));
-    }
 
     /** {@inheritDoc} */
     @Override
