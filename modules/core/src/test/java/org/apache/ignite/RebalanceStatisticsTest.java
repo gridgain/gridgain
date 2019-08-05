@@ -1,21 +1,4 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
@@ -30,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.ignite;
 
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -71,50 +55,51 @@ import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
 @WithSystemProperty(key = IGNITE_QUIET, value = "false")
 @WithSystemProperty(key = IGNITE_WRITE_REBALANCE_STATISTICS, value = "true")
 @WithSystemProperty(key = IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS, value = "true")
+/** For testing of rebalance statistics. */
 public class RebalanceStatisticsTest extends GridCommonAbstractTest {
-    /** Class rule */
+    /** Class rule. */
     @ClassRule public static final TestRule classRule = new SystemPropertiesRule();
 
-    /** Cache names */
+    /** Cache names. */
     private static final String[] DEFAULT_CACHE_NAMES = {"ch0", "ch1", "ch2", "ch3"};
 
-    /** Total information text */
+    /** Total information text. */
     private static final String TOTAL_INFORMATION_TEXT = "Total information";
 
-    /** Partitions distribution text */
+    /** Partitions distribution text. */
     private static final String PARTITIONS_DISTRIBUTION_TEXT = "Partitions distribution per cache group";
 
-    /** Topic statistics text */
+    /** Topic statistics text. */
     public static final String TOPIC_STATISTICS_TEXT = "Topic statistics:";
 
-    /** Supplier statistics text */
+    /** Supplier statistics text. */
     public static final String SUPPLIER_STATISTICS_TEXT = "Supplier statistics:";
 
-    /** Information per cache group text */
+    /** Information per cache group text. */
     public static final String INFORMATION_PER_CACHE_GROUP_TEXT = "Information per cache group";
 
-    /** Name attribute */
+    /** Name attribute. */
     public static final String NAME_ATTRIBUTE = "name";
 
-    /** Multi jvm */
-    private boolean multiJvm = false;
+    /** Multi jvm. */
+    private boolean multiJvm;
 
-    /** Node count */
+    /** Node count. */
     private static final int DEFAULT_NODE_CNT = 3;
 
-    /** Logger for listen messages */
+    /** Logger for listen messages. */
     private final ListeningTestLogger log = new ListeningTestLogger(false, super.log);
 
-    /** For remember messages from {@link #log} */
+    /** For remember messages from standard output. */
     private final ByteArrayOutputStream baos = new ByteArrayOutputStream(32 * 1024);
 
-    /** For write messages from {@link #log} */
+    /** For write messages from standard output. */
     private final PrintWriter pw = new PrintWriter(baos);
 
-    /** Caches configuration */
+    /** Caches configurations. */
     private CacheConfiguration[] cacheCfgs;
 
-    /** Coordinator */
+    /** Coordinator. */
     private IgniteEx crd;
 
     /** {@inheritDoc} */
@@ -139,12 +124,12 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Create {@link CacheConfiguration}.
+     * Create cache configuration.
      *
-     * @param cacheName cache name
-     * @param parts count of partitions
-     * @param backups count backup
-     * @return cache group configuration
+     * @param cacheName cache name.
+     * @param parts count of partitions.
+     * @param backups count backup.
+     * @return cache configuration.
      */
     private CacheConfiguration cacheConfiguration(final String cacheName, final int parts, final int backups) {
         CacheConfiguration<Object, Object> ccfg = new CacheConfiguration<>(cacheName);
@@ -156,7 +141,8 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Test check that not present statistics in log output, if we not set system properties {@code IGNITE_QUIET},
+     * Test check that not present statistics in log output, if we not set
+     * system properties {@code IGNITE_QUIET},
      * {@code IGNITE_WRITE_REBALANCE_STATISTICS}.
      *
      * @throws Exception
@@ -185,8 +171,9 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Test check that not present partition distribution in log output, if we not set system properties {@code
-     * IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS}.
+     * Test check that not present partition distribution in log output,
+     * if we not set system properties
+     * {@code IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS}.
      *
      * @throws Exception
      * @see IgniteSystemProperties#IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS
@@ -205,7 +192,11 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
         assertNotContainsAfterCreateNewNode(DEFAULT_NODE_CNT, PARTITIONS_DISTRIBUTION_TEXT);
     }
 
-    /** The test checks the correctness of the output rebalance statistics */
+    /**
+     * The test checks the correctness of the output rebalance statistics.
+     *
+     * @throws Exception
+     * */
     @Test
     public void testPrintCorrectStatistic() throws Exception {
         cacheCfgs = defaultCacheConfigurations(10,2);
@@ -240,7 +231,12 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
         partDistribution.forEach((cacheName, partCnt) -> assertEquals(partCnt, topicStats.get(cacheName)));
     }
 
-    /** The test checks the correctness of the output rebalance statistics in multi jvm */
+    /**
+     * The test checks the correctness of the output rebalance statistics
+     * in multi jvm mode.
+     *
+     * @throws Exception
+     * */
     @Test
     public void testPrintCorrectStatisticInMultiJvm() throws Exception{
         multiJvm = true;
@@ -287,10 +283,10 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Extract topic statistics for each caches.
+     * Parsing and extract topic statistics string for each caches.
      *
-     * @param s text
-     * @return key - name cache, value topic statistics
+     * @param s string with statisctics for parsing, require not null.
+     * @return key - name cache, string topic statistics.
      */
     private Map<String, String> perCacheGroupTopicStatistics(final String s) {
         assert nonNull(s);
@@ -326,8 +322,15 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
         return perCacheGroupTopicStatistics;
     }
 
-    /** Extract topic statistics for each caches. */
+    /**
+     * Return partition distribution per cache groups use internal api.
+     *
+     * @param node require not null.
+     * @return partition distribution per cache groups
+     * */
     private Map<String, Integer> perCacheGroupPartitionDistribution(final IgniteEx node) {
+        assert nonNull(node);
+
         ClusterNode localNode = node.localNode();
 
         return node.context().cache().cacheGroups().stream()
@@ -336,11 +339,12 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
             .collect(toMap(identity(), cacheName -> node.affinity(cacheName).allPartitions(localNode).length));
     }
 
-    /** Create default {@link CacheConfiguration}'s
+    /**
+     * Create {@link #DEFAULT_CACHE_NAMES} cache configurations.
      *
-     * @param parts count of partitions
-     * @param backups count backup
-     * @return cache group configurations
+     * @param parts count of partitions.
+     * @param backups count backup.
+     * @return cache group configurations.
      * */
     private CacheConfiguration[] defaultCacheConfigurations(final int parts, final int backups) {
         return of(DEFAULT_CACHE_NAMES)
@@ -349,9 +353,9 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Fill all {@link #DEFAULT_CACHE_NAMES}.
+     * Add values to all {@link #DEFAULT_CACHE_NAMES}.
      *
-     * @param cnt - count of additions
+     * @param cnt - count of values.
      */
     private void fillCaches(final int cnt) {
         for (CacheConfiguration cacheCfg : cacheCfgs) {
@@ -366,8 +370,8 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     /**
      * Create new node and check that {@code notContainsStr} not present in log output.
      *
-     * @param idx new node index
-     * @param notContainsStr string for assertNotContains in log output
+     * @param idx new node index.
+     * @param notContainsStr string for assertNotContains in log output.
      * @throws Exception
      */
     private void assertNotContainsAfterCreateNewNode(final int idx, final String notContainsStr) throws Exception {
@@ -381,13 +385,16 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Extract numbers and sum.
+     * Extract numbers and sum its.
      *
-     * @param s string of numbers
-     * @param pattern number extractor
-     * @return sum extracted numbers
-     * */
-    private int sumNum(final String s, final String pattern){
+     * @param s string of numbers, require not null.
+     * @param pattern number extractor, require not null.
+     * @return sum extracted numbers.
+     */
+    private int sumNum(final String s, final String pattern) {
+        assert nonNull(s);
+        assert nonNull(pattern);
+
         Matcher matcher = compile(pattern).matcher(s);
 
         int num = 0;

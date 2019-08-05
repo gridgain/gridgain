@@ -122,13 +122,13 @@ import static org.apache.ignite.internal.processors.dr.GridDrType.DR_PRELOAD;
  * Thread pool for requesting partitions from other nodes and populating local cache.
  */
 public class GridDhtPartitionDemander {
-    /** DTF for print into statistic output */
+    /** DTF for print into statistic output. */
     private static final DateTimeFormatter REBALANCE_STATISTICS_DTF = ofPattern("YYYY-MM-dd HH:mm:ss,SSS");
 
-    /** Text for successful or not rebalances */
+    /** Text for successful or not rebalances. */
     private static final String SUCCESSFUL_OR_NOT_REBALANCE_TEXT = "including successful and not rebalances";
 
-    /** Text successful rebalance */
+    /** Text successful rebalance. */
     private static final String SUCCESSFUL_REBALANCE_TEXT = "successful rebalance";
 
     /** */
@@ -1606,49 +1606,53 @@ public class GridDhtPartitionDemander {
         }
     }
 
-    /** {@link RebalanceFuture} statistics */
+    /** Rebalance future statistics. */
     private static class RebalanceFutureStatistics {
-        /** Start rebalance time in mills */
+        /** Start rebalance time in mills. */
         private final long startTime = currentTimeMillis();
 
-        /** End rebalance time in mills */
+        /** End rebalance time in mills. */
         private volatile long endTime = startTime;
 
         /** First key - topic id. Second key - supplier node. */
         private final Map<Integer, Map<ClusterNode, RebalanceMessageStatistics>> msgStats = new ConcurrentHashMap<>();
     }
 
-    /** Rebalance messages statistics */
+    /** Rebalance messages statistics. */
     private static class RebalanceMessageStatistics {
-        /** Time send message in mills */
+        /** Time send demand message in mills. */
         private final long sndMsgTime;
 
-        /** Statistics by received partitions */
+        /** Statistics by received partitions. */
         private final List<ReceivePartitionStatistics> receivePartStats = new CopyOnWriteArrayList<>();
 
         /**
-         * @param sndMsgTime time send demand message
+         * Constructor.
+         *
+         * @param sndMsgTime time send demand message.
          * */
         public RebalanceMessageStatistics(final long sndMsgTime) {
             this.sndMsgTime = sndMsgTime;
         }
     }
 
-    /** Receive partition statistics */
+    /** Receive partition statistics. */
     private static class ReceivePartitionStatistics {
-        /** Time receive message with partition in mills */
+        /** Time receive message(on demand message) with partition in mills. */
         private final long rcvMsgTime;
 
-        /** Size receive message in bytes */
+        /** Size receive message in bytes. */
         private final long msgSize;
 
-        /** Received partitions */
+        /** Received partitions. */
         private final List<PartitionStatistics> parts;
 
         /**
-         * @param rcvMsgTime time receive message in mills
-         * @param msgSize message size in bytes
-         * @param parts received partitions require not null
+         * Constructor.
+         *
+         * @param rcvMsgTime time receive message in mills.
+         * @param msgSize message size in bytes.
+         * @param parts received partitions, require not null.
          * */
         public ReceivePartitionStatistics(
             final long rcvMsgTime,
@@ -1663,17 +1667,19 @@ public class GridDhtPartitionDemander {
         }
     }
 
-    /** Received partition info */
+    /** Received partition info. */
     private static class PartitionStatistics {
-        /** Partition id */
+        /** Partition id. */
         private final int id;
 
-        /** Count entries in partitions */
+        /** Count entries in partition. */
         private final int entryCount;
 
         /**
-         * @param id - partition id
-         * @param entryCount Count entries in partitions
+         * Constructor.
+         *
+         * @param id partition id.
+         * @param entryCount count entries in partitions.
          * */
         public PartitionStatistics(final int id, final int entryCount) {
             this.id = id;
@@ -1682,9 +1688,10 @@ public class GridDhtPartitionDemander {
     }
 
     /**
-     * Is enable print statistics or not by {@code IGNITE_QUIET}, {@code IGNITE_WRITE_REBALANCE_STATISTICS}.
+     * Is enable print statistics or not by {@code IGNITE_QUIET},
+     * {@code IGNITE_WRITE_REBALANCE_STATISTICS}.
      *
-     * @return is enable print statisctics or not
+     * @return is enable print statisctics or not.
      * @see IgniteSystemProperties#IGNITE_QUIET
      * @see IgniteSystemProperties#IGNITE_WRITE_REBALANCE_STATISTICS
      */
@@ -1692,7 +1699,11 @@ public class GridDhtPartitionDemander {
         return !getBoolean(IGNITE_QUIET, true) && getBoolean(IGNITE_WRITE_REBALANCE_STATISTICS, false);
     }
 
-    /** Return list demanders per cache groups */
+    /**
+     * Return list demanders per cache groups. For print statisrics.
+     *
+     * @return list demanders.
+     * */
     private List<GridDhtPartitionDemander> demanders(){
         return ctx.cacheContexts().stream()
             .map(GridCacheContext::preloader)
@@ -1714,15 +1725,16 @@ public class GridDhtPartitionDemander {
      * <p/>
      * Partition distribution only for last success rebalance, per cache group.
      *
-     * @param finish is finish rebalance
+     * @param finish is finish rebalance.
      * */
     private void printRebalanceStatistics(final boolean finish) {
         boolean printStat = isPrintRebalanceStatistics();
 
         log.info(format("Print rebalance statistics [finish=%s, printStat=%s]", finish, printStat));
 
-        Map<CacheGroupContext, List<RebalanceFuture>> rebFuts = !finish ? singletonMap(grp, singletonList(rebalanceFut))
-            : demanders().stream().collect(toMap(demander -> demander.grp, demander -> demander.lastStatFutures));
+        Map<CacheGroupContext, List<RebalanceFuture>> rebFuts = !finish ?
+            singletonMap(grp, singletonList(rebalanceFut)) :
+            demanders().stream().collect(toMap(demander -> demander.grp, demander -> demander.lastStatFutures));
 
         try {
             if (!printStat)
@@ -1761,11 +1773,12 @@ public class GridDhtPartitionDemander {
     }
 
     /**
-     * Total statistics for rebalance.
-     * Parameters requires not null.
+     * Return total statistics for rebalance.
      *
-     * @param rebFuts participating in successful and not rebalances
-     * @param nodeAliases for print nodeId=1 instead long string
+     * @param rebFuts participating in successful and not rebalances,
+     *      require not null
+     * @param nodeAliases for print nodeId=1 instead long string,
+     *      require not null
      * @return total statistics
      */
     private String totalRebalanceStatistics(
@@ -1790,18 +1803,18 @@ public class GridDhtPartitionDemander {
     }
 
     /**
-     * Rebalance statistics per cache group.
+     * Return rebalance statistics per cache group.
      * <p/>
      * If {@code finish} == true then
      * add {@link #SUCCESSFUL_OR_NOT_REBALANCE_TEXT}
-     * else add {@link #SUCCESSFUL_REBALANCE_TEXT}
-     * into header.
-     * Parameters requires not null.
+     * else add {@link #SUCCESSFUL_REBALANCE_TEXT} into header.
      *
-     * @param rebFuts participating in successful and not rebalances
-     * @param nodeAliases for print nodeId=1 instead long string
-     * @param finish is finish rebalance
-     * @return statistics per cache group
+     * @param rebFuts participating in successful and not rebalances,
+     *      require not null.
+     * @param nodeAliases for print nodeId=1 instead long string,
+     *      require not null.
+     * @param finish is finish rebalance.
+     * @return statistics per cache group.
      */
     private String cacheGroupsRebalanceStatistics(
         final Map<CacheGroupContext, List<RebalanceFuture>> rebFuts,
@@ -1838,14 +1851,17 @@ public class GridDhtPartitionDemander {
     }
 
     /**
-     * Partitions distribution per cache group.
+     * Return partitions distribution per cache group.
      * Only for last success rebalance.
      * Works if {@code IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS} set true.
-     * Parameters requires not null.
      *
-     * @param rebFuts participating in successful and not rebalances
-     * @param nodeAliases for print nodeId=1 instead long string
-     * @param nodeCnt for adding new nodes into {@code nodeAliases}
+     * @param rebFuts participating in successful and not rebalances,
+     *      require not null.
+     * @param nodeAliases for print nodeId=1 instead long string,
+     *      require not null.
+     * @param nodeCnt for adding new nodes into {@code nodeAliases},
+     *      require not null.
+     * @return partitions distribution.
      * @see IgniteSystemProperties#IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS
      */
     private String partitionsDistributionRebalanceStatistics(
@@ -1912,11 +1928,11 @@ public class GridDhtPartitionDemander {
     }
 
     /**
-     * Statistics per topic.
-     * Parameter requires not null.
+     * Return statistics per topic.
      *
-     * @param topicStat statistics by topics (in successful and not rebalances)
-     * @return statistics per topic
+     * @param topicStat statistics by topics (in successful and not rebalances),
+     *      require not null.
+     * @return statistics per topic.
      */
     private String topicRebalanceStatistics(final Map<Integer, List<RebalanceMessageStatistics>> topicStat) {
         assert nonNull(topicStat);
@@ -1936,12 +1952,13 @@ public class GridDhtPartitionDemander {
     }
 
     /**
-     * Stattistics per supplier node.
-     * Parameters requires not null.
+     * Return stattistics per supplier node.
      *
-     * @param supplierStat statistics by supplier (in successful and not rebalances)
-     * @param nodeAliases for print nodeId=1 instead long string
-     * @return statistics per supplier node
+     * @param supplierStat statistics by supplier (in successful and not
+     *      rebalances), require not null.
+     * @param nodeAliases for print nodeId=1 instead long string,
+     *      require not null.
+     * @return statistics per supplier node.
      */
     private String supplierRebalanceStatistics(
         final Map<ClusterNode, List<RebalanceMessageStatistics>> supplierStat,
@@ -1976,12 +1993,12 @@ public class GridDhtPartitionDemander {
     }
 
     /**
-     * Statistics aliases, for reducing output string.
-     * Parameters requires not null.
+     * Return statistics aliases, for reducing output string.
      *
-     * @param nodeAliases for print nodeId=1 instead long string
-     * @param abbreviations abbreviations ex. b - bytes
-     * @return aliases
+     * @param nodeAliases for print nodeId=1 instead long string,
+     *      require not null.
+     * @param abbreviations abbreviations ex. b - bytes, require not null.
+     * @return statistics aliases
      */
     private String aliasesRebalanceStatistics(
         final String abbreviations,
@@ -1999,11 +2016,11 @@ public class GridDhtPartitionDemander {
     }
 
     /**
-     * Wraps get future result as unchecked exception.
-     * Parameter requires not null.
+     * Return the result of a rebalance future with wrapping
+     * {@link IgniteCheckedException} into {@link IgniteException}.
      *
-     * @param future requires not null
-     * @return result future
+     * @param future rebalance future, require not null.
+     * @return result future.
      * */
     private boolean rebalanceFutureResult(final RebalanceFuture future) {
         assert nonNull(future);
@@ -2016,26 +2033,48 @@ public class GridDhtPartitionDemander {
         }
     }
 
-    /** Time in mills */
+    /**
+     * Return the local date-time of time in mills.
+     *
+     * @param time time in mills.
+     * @return the local date-time.
+     * */
     private LocalDateTime toLocalDateTime(final long time){
         return new Date(time).toInstant().atZone(systemDefault()).toLocalDateTime();
     }
 
-    /** Return min {@link RebalanceFutureStatistics#startTime}. Parameter requires not null. */
+    /**
+     * Return min {@link RebalanceFutureStatistics#startTime}
+     * in stream rebalance future's.
+     *
+     * @param stream stream rebalance future, require not null.
+     * @return min start time.
+     * */
     private long minStartTime(final Stream<RebalanceFuture> stream) {
         assert nonNull(stream);
 
         return stream.mapToLong(value -> value.stat.startTime).min().orElse(0);
     }
 
-    /** Return max {@link RebalanceFutureStatistics#endTime}. Parameter requires not null. */
+    /**
+     * Return max {@link RebalanceFutureStatistics#endTime}
+     * in stream rebalance future's.
+     *
+     * @param stream stream rebalance future's, require not null.
+     * @return max end time.
+     * */
     private long maxEndTime(final Stream<RebalanceFuture> stream) {
         assert nonNull(stream);
 
         return stream.mapToLong(value -> value.stat.endTime).max().orElse(0);
     }
 
-    /** Return stream of futures. Parameter requires not null. */
+    /**
+     * Return stream rebalance future's of each cache groups.
+     *
+     * @param rebFuts rebalance future's by cache groups, require not null.
+     * @return stream rebalance future's.
+     * */
     private Stream<RebalanceFuture> toRebalanceFutureStream(
         final Map<CacheGroupContext, List<RebalanceFuture>> rebFuts
     ) {
@@ -2044,7 +2083,12 @@ public class GridDhtPartitionDemander {
         return rebFuts.entrySet().stream().flatMap(entry -> entry.getValue().stream());
     }
 
-    /** Statistics per topic. Parameter requires not null. */
+    /**
+     * Returns statistics grouped by topic number.
+     *
+     * @param stream stream rebalance future's, require not null.
+     * @return statistic by topics.
+     * */
     private Map<Integer, List<RebalanceMessageStatistics>> toTopicStatistics(final Stream<RebalanceFuture> stream) {
         assert nonNull(stream);
 
@@ -2065,7 +2109,12 @@ public class GridDhtPartitionDemander {
             ));
     }
 
-    /** Statistics per supplier. Parameter requires not null. */
+    /**
+     * Returns statistics grouped by supplier node.
+     *
+     * @param stream stream rebalance future's, require not null.
+     * @return statistic by supplier.
+     * */
     private Map<ClusterNode, List<RebalanceMessageStatistics>> toSupplierStatistics(
         final Stream<RebalanceFuture> stream
     ) {
@@ -2077,11 +2126,15 @@ public class GridDhtPartitionDemander {
     }
 
     /**
-     * To string like "start=2019-08-01 13:15:10,100, end=2019-08-01 13:15:10,200, d=100 ms"
+     * Return a formatted string to display the rebalance time.
+     * Format "start=%s, end=%s, d=%s ms" where start, end use
+     * {@code REBALANCE_STATISTICS_DTF} and d is the duration between
+     * the start and end in mills.
+     * Example: "start=2019-08-01 13:15:10,100, end=2019-08-01 13:15:10,200, d=100 ms".
      *
-     * @param start in ms
-     * @param end in ms
-     * @return string like "start=2019-08-01 13:15:10,100, end=2019-08-01 13:15:10,200, d=100 ms"
+     * @param start start time in ms.
+     * @param end end time in ms.
+     * @return formatted string of rebalance time.
      * @see #REBALANCE_STATISTICS_DTF
      * */
     private String toStartEndDuration(final long start, final long end) {
@@ -2094,11 +2147,11 @@ public class GridDhtPartitionDemander {
     }
 
     /**
-     * Calculate sum use {@code longExtractor}. Parameters requires not null.
+     * Return sum of long values that extracted from message statistics.
      *
-     * @param msgStats message statistics
-     * @param longExtractor long extractor
-     * @return sum
+     * @param msgStats message statistics, require not null.
+     * @param longExtractor long extractor, require not null.
+     * @return sum of long values.
      * */
     private long sum(
         final List<RebalanceMessageStatistics> msgStats,
@@ -2113,7 +2166,15 @@ public class GridDhtPartitionDemander {
             .sum();
     }
 
-    /** To string like "p=1, e=10, b=1024" */
+    /**
+     * Return a formatted string to display the received rebalance partitions.
+     * Format "p=%s, e=%s, b=%s". Example: "p=1, e=10, b=1024".
+     *
+     * @param parts count received partitions.
+     * @param entries count received entries.
+     * @param bytes sum received bytes.
+     * @return formatted string of received rebalance partitions.
+     * */
     private String toPartitionsEntriesBytes(final long parts, final long entries, final long bytes) {
         return format("p=%s, e=%s, b=%s", parts, entries, bytes);
     }
