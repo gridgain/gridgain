@@ -34,7 +34,7 @@ public class TracingProcessor extends GridProcessorAdapter implements Tracing {
     /** Spi. */
     private TracingSpi spi;
 
-    /** Message process. */
+    /** Traceable messages handler. */
     private final TraceableMessagesHandler msgHnd;
 
     /**

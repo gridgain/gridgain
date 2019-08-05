@@ -72,7 +72,7 @@ public class TraceableMessagesHandler {
     }
 
     /**
-     * Create a child span in given T msg that from span of {@code parent} msg.
+     * Injects a sub-span to {@code msg} as child span contained in given {@code parent}.
      *
      * @param msg Branched message.
      * @param parent Parent message.
