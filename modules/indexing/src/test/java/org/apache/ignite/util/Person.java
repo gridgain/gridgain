@@ -16,18 +16,24 @@
 
 package org.apache.ignite.util;
 
+import java.io.Serializable;
+
 /**
- * It is recommended to extends from this class in case of creating a cluster
- * for each test method. Otherwise, use
- * {@link GridCommandHandlerClusterByClassAbstractTest}
- * */
-public abstract class GridCommandHandlerClusterPerMethodAbstractTest extends GridCommandHandlerAbstractTest {
-    /** {@inheritDoc} */
-    @Override protected void afterTest() throws Exception {
-        super.afterTest();
+ *
+ */
+class Person implements Serializable {
+    /** */
+    int orgId;
 
-        stopAllGrids();
+    /** */
+    String name;
 
-        cleanPersistenceDir();
+    /**
+     * @param orgId Organization ID.
+     * @param name Name.
+     */
+    public Person(int orgId, String name) {
+        this.orgId = orgId;
+        this.name = name;
     }
 }

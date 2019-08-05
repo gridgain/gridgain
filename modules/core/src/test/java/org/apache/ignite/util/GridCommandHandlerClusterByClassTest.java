@@ -76,7 +76,6 @@ import java.util.regex.Pattern;
 
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toSet;
 import static java.util.stream.Stream.of;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXPERIMENTAL_COMMAND;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
@@ -97,57 +96,18 @@ import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED
 
 /**
  * Command line handler test.
- * You can use this class if you don't need create nodes for test because here create {@link #SERVER_NODE_CNT} server
- * and 1 client nodes at before all tests. If you need create nodes for test you can use {@link GridCommandHandlerTest}
+ * You can use this class if you don't need create nodes for each test because
+ * here create {@link #SERVER_NODE_CNT} server and 1 client nodes at before all
+ * tests. If you need create nodes for each test you can use
+ * {@link GridCommandHandlerTest}
  */
-public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerAbstractTest {
-    /** */
-    private static final int SERVER_NODE_CNT = 2;
-
-    /** */
-    protected static IgniteEx crd;
-
-    /** */
-    private static IgniteEx client;
-
+public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClusterByClassAbstractTest {
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
 
-        crd = startGrids(SERVER_NODE_CNT);
-        client = startGrid(CLIENT_NODE_NAME_PREFIX);
-
-        crd.cluster().active(true);
-
         initDiagnosticDir();
         cleanDiagnosticDir();
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTestsStopped() throws Exception {
-        super.afterTestsStopped();
-
-        stopAllGrids();
-
-        cleanPersistenceDir();
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTest() throws Exception {
-        super.afterTest();
-
-        Set<String> cfgCacheNames = of(crd.configuration().getCacheConfiguration())
-            .map(CacheConfiguration::getName)
-            .collect(toSet());
-
-        Set<String> rmvCacheNames = new HashSet<>(crd.cacheNames());
-        rmvCacheNames.removeAll(cfgCacheNames);
-
-        crd.destroyCaches(rmvCacheNames);
-
-        cfgCacheNames.stream()
-            .map(crd::cache)
-            .forEach(IgniteCache::removeAll);
     }
 
     /**
