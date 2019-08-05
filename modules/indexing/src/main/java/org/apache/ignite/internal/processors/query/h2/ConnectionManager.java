@@ -52,7 +52,7 @@ public class ConnectionManager {
         ";DEFAULT_TABLE_ENGINE=" + GridH2DefaultTableEngine.class.getName();
 
     /** Default maximum size of connection pool. */
-    private static final int CONNECTION_POOL_SIZE = 10;
+    private static final int CONNECTION_POOL_SIZE = 100;
 
     /** The period of clean up the statement cache. */
     @SuppressWarnings("FieldCanBeLocal")
