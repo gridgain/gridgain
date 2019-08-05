@@ -181,6 +181,8 @@ namespace Apache.Ignite.Linq.Impl
             {
                 case ExpressionType.Equal:
                 {
+                    // Use `IS [NOT] DISTINCT FROM` for correct null comparison semantics.
+                    // E.g. when user says `.Where(x => x == null)`, it should work, but with `=` it does not.
                     ResultBuilder.Append(" IS NOT DISTINCT FROM ");
 
                     break;
