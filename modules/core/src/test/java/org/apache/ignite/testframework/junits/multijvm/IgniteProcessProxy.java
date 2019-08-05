@@ -196,8 +196,17 @@ public class IgniteProcessProxy implements IgniteEx {
             System.getProperty("surefire.test.class.path")
         );
 
-        if (locJvmGrid != null)
-            assert rmtNodeStartedLatch.await(30, TimeUnit.SECONDS): "Remote node has not joined [id=" + id + ']';
+        if (locJvmGrid != null) {
+            try {
+                boolean res = rmtNodeStartedLatch.await(30, TimeUnit.SECONDS);
+
+                if (!res)
+                    throw new AssertionError("Remote node has not joined [id=" + id + ']');
+            }
+            finally {
+                proc.kill();
+            }
+        }
 
         IgniteProcessProxy prevVal = gridProxies.putIfAbsent(cfg.getIgniteInstanceName(), this);
 
