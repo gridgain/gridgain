@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.internal.sql.calcite.physical;
+package org.apache.ignite.internal.sql.calcite.ops;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -26,12 +26,12 @@ import org.jetbrains.annotations.NotNull;
 /**
  * TODO: Add class description.
  */
-public class Project extends PhysicalOperator {
+public class ProjectOp extends PhysicalOperator {
 
     private final PhysicalOperator rowsSrc;
     private final List<RexNode> projects;
 
-    public Project(PhysicalOperator rowsSrc, List<RexNode> projects) {
+    public ProjectOp(PhysicalOperator rowsSrc, List<RexNode> projects) {
         this.rowsSrc = rowsSrc;
         this.projects = projects;
     }

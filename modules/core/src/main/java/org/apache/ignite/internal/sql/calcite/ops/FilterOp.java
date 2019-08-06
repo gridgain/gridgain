@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.internal.sql.calcite.physical;
+package org.apache.ignite.internal.sql.calcite.ops;
 
 import java.util.Iterator;
 import java.util.List;
@@ -26,11 +26,11 @@ import static org.apache.ignite.internal.sql.calcite.expressions.Condition.build
 /**
  * TODO: Add class description.
  */
-public class Filter extends PhysicalOperator {
+public class FilterOp extends PhysicalOperator {
     private final PhysicalOperator rowsSrc;
     private final Condition filterCondition;
 
-    public Filter(PhysicalOperator rowsSrc, RexNode expression) {
+    public FilterOp(PhysicalOperator rowsSrc, RexNode expression) {
         this.rowsSrc = rowsSrc;
         filterCondition = (Condition)buildFilterCondition(expression);
     }

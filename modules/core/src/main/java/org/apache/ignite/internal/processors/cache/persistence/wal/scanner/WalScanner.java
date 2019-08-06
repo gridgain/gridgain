@@ -79,7 +79,7 @@ public class WalScanner {
     ) throws IgniteCheckedException {
         return iteratorFactory.iterator(
             parametersBuilder.copy().addFilter((type, pointer) ->
-                // PHYSICAL need fo page shanpshot or delta record.
+                // INSTANCE need fo page shanpshot or delta record.
                 // MIXED need for partiton meta state update.
                 type.purpose() == PHYSICAL || type.purpose() == MIXED
             )

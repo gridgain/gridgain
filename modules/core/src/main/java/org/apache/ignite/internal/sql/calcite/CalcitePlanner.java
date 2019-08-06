@@ -21,18 +21,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 import org.apache.calcite.adapter.enumerable.EnumerableConvention;
-import org.apache.calcite.adapter.enumerable.EnumerableFilter;
-import org.apache.calcite.adapter.enumerable.EnumerableHashJoin;
-import org.apache.calcite.adapter.enumerable.EnumerableInterpreter;
-import org.apache.calcite.adapter.enumerable.EnumerableProject;
-import org.apache.calcite.adapter.enumerable.EnumerableRules;
-import org.apache.calcite.adapter.enumerable.EnumerableTableScan;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionConfigImpl;
 import org.apache.calcite.config.CalciteConnectionProperty;
 import org.apache.calcite.config.CalciteSystemProperty;
-import org.apache.calcite.interpreter.Bindables;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.plan.Contexts;
@@ -105,11 +98,15 @@ import org.apache.calcite.sql2rel.StandardConvertletTable;
 import org.apache.calcite.util.ImmutableIntList;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.sql.calcite.physical.Filter;
-import org.apache.ignite.internal.sql.calcite.physical.NestedLoopsJoin;
-import org.apache.ignite.internal.sql.calcite.physical.PhysicalOperator;
-import org.apache.ignite.internal.sql.calcite.physical.Project;
-import org.apache.ignite.internal.sql.calcite.physical.TableScan;
+import org.apache.ignite.internal.sql.calcite.ops.FilterOp;
+import org.apache.ignite.internal.sql.calcite.ops.NestedLoopsJoinOp;
+import org.apache.ignite.internal.sql.calcite.ops.PhysicalOperator;
+import org.apache.ignite.internal.sql.calcite.ops.ProjectOp;
+import org.apache.ignite.internal.sql.calcite.ops.TableScanOp;
+import org.apache.ignite.internal.sql.calcite.physical.FilterRel;
+import org.apache.ignite.internal.sql.calcite.physical.JoinNestedLoopsRel;
+import org.apache.ignite.internal.sql.calcite.physical.ProjectRel;
+import org.apache.ignite.internal.sql.calcite.physical.TableScanRel;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -197,29 +194,11 @@ public class CalcitePlanner {
         DateRangeRules.FILTER_INSTANCE,
         IntersectToDistinctRule.INSTANCE,
 
-        // enumerable - TODO remove later!
-
-        EnumerableRules.ENUMERABLE_JOIN_RULE,
-        EnumerableRules.ENUMERABLE_MERGE_JOIN_RULE,
-        EnumerableRules.ENUMERABLE_SEMI_JOIN_RULE,
-        EnumerableRules.ENUMERABLE_CORRELATE_RULE,
-        EnumerableRules.ENUMERABLE_PROJECT_RULE,
-        EnumerableRules.ENUMERABLE_FILTER_RULE,
-        EnumerableRules.ENUMERABLE_AGGREGATE_RULE,
-        EnumerableRules.ENUMERABLE_SORT_RULE,
-        EnumerableRules.ENUMERABLE_LIMIT_RULE,
-        EnumerableRules.ENUMERABLE_COLLECT_RULE,
-        EnumerableRules.ENUMERABLE_UNCOLLECT_RULE,
-        EnumerableRules.ENUMERABLE_UNION_RULE,
-        EnumerableRules.ENUMERABLE_REPEAT_UNION_RULE,
-        EnumerableRules.ENUMERABLE_TABLE_SPOOL_RULE,
-        EnumerableRules.ENUMERABLE_INTERSECT_RULE,
-        EnumerableRules.ENUMERABLE_MINUS_RULE,
-        EnumerableRules.ENUMERABLE_TABLE_MODIFICATION_RULE,
-        EnumerableRules.ENUMERABLE_VALUES_RULE,
-        EnumerableRules.ENUMERABLE_WINDOW_RULE,
-        EnumerableRules.ENUMERABLE_TABLE_SCAN_RULE,
-        EnumerableRules.ENUMERABLE_TABLE_FUNCTION_SCAN_RULE
+        // Ignite convention converters
+        CalciteUtils.FILTER_RULE,
+        CalciteUtils.JOIN_RULE,
+        CalciteUtils.PROJECT_RULE,
+        CalciteUtils.TABLE_SCAN_RULE
     );
 
     private final SchemaPlus rootSchema;
@@ -246,7 +225,6 @@ public class CalcitePlanner {
 
     }
 
-
     public PhysicalOperator createPlan(String sql) {
         SqlNode sqlAst = parse(sql);
 
@@ -260,7 +238,6 @@ public class CalcitePlanner {
 
         RelNode optimalPlan = optimizePlan(rewrittenPlan);
         System.out.println("Optimal plan:\n" + RelOptUtil.toString(optimalPlan));
-
 
         // TODO replace with a visitor
         PhysicalOperator physicalOperator = convertToPhysical(optimalPlan);
@@ -280,16 +257,17 @@ public class CalcitePlanner {
     private RelNode optimizePlan(RelNode plan) {
         //cboPlanner.setNoneConventionHasInfiniteCost(false);EnumerableConvention.INSTANCE)
         RelTraitSet desiredTraits
-                = plan.getCluster().traitSet()
-                .replace(EnumerableConvention.INSTANCE);
+            = plan.getCluster().traitSet()
+            .replace(EnumerableConvention.INSTANCE)
+            .replace(IgniteConvention.INSTANCE);
 
         final RelCollation collation
-                = plan instanceof Sort
-                ? ((Sort)plan).collation
-                : null;
+            = plan instanceof Sort
+            ? ((Sort)plan).collation
+            : null;
 
-            if (collation != null)
-                desiredTraits = desiredTraits.replace(collation);
+        if (collation != null)
+            desiredTraits = desiredTraits.replace(collation);
 
         RelNode newRoot = cboPlanner.changeTraits(plan, desiredTraits);
 
@@ -306,7 +284,7 @@ public class CalcitePlanner {
         try {
             SqlParser parser = SqlParser.create(sql, CALCITE_PARSER_CONFIG);
 
-            return  parser.parseStmt();
+            return parser.parseStmt();
         }
         catch (SqlParseException e) {
             throw new IgniteException(e);
@@ -343,9 +321,8 @@ public class CalcitePlanner {
         return planner;
     }
 
-
-
-    private SqlValidator getValidator(JavaTypeFactory typeFactory, CalciteCatalogReader catalogReader, CalciteConnectionConfig connCfg) {
+    private SqlValidator getValidator(JavaTypeFactory typeFactory, CalciteCatalogReader catalogReader,
+        CalciteConnectionConfig connCfg) {
         // TODO add operators to SqlStdOperatorTable
         return new IgniteValidator(SqlStdOperatorTable.instance(), catalogReader, typeFactory,
             connCfg.conformance());
@@ -361,7 +338,8 @@ public class CalcitePlanner {
         return new CalciteConnectionConfigImpl(props);
     }
 
-    private CalciteCatalogReader getCatalogReader(SchemaPlus schema, JavaTypeFactory typeFactory, CalciteConnectionConfig connCfg) {
+    private CalciteCatalogReader getCatalogReader(SchemaPlus schema, JavaTypeFactory typeFactory,
+        CalciteConnectionConfig connCfg) {
         final SchemaPlus rootSchema = rootSchema(schema);
 
         return new CalciteCatalogReader(
@@ -371,7 +349,7 @@ public class CalcitePlanner {
     }
 
     private static SchemaPlus rootSchema(SchemaPlus schema) {
-        while (true){
+        while (true) {
             if (schema.getParentSchema() == null)
                 return schema;
 
@@ -401,25 +379,21 @@ public class CalcitePlanner {
         );
     }
 
-
     private PhysicalOperator convertToPhysical(RelNode plan) {
-        if (plan instanceof Bindables.BindableTableScan)
-            return convertToTableScan((Bindables.BindableTableScan)plan);
-        if (plan instanceof EnumerableTableScan)
-            return convertToTableScan((EnumerableTableScan)plan); // TODO how to control which scan is used?
-        else if (plan instanceof EnumerableInterpreter)
-            return convertToPhysical(plan.getInput(0)); // EnumerableInterpreter is just an adapter between conventions.
-        else if (plan instanceof EnumerableProject)
-            return convertToProject((EnumerableProject)plan);
-        else if (plan instanceof EnumerableFilter)
-            return convertToFilter((EnumerableFilter)plan);
-        else if (plan instanceof EnumerableHashJoin)
-            return convertToHashJoin((EnumerableHashJoin)plan);
+        if (plan instanceof TableScanRel)
+            return convertToTableScan((TableScanRel)plan);
+        else if (plan instanceof ProjectRel)
+            return convertToProject((ProjectRel)plan);
+        else if (plan instanceof FilterRel)
+            return convertToFilter((FilterRel)plan);
+        else if (plan instanceof JoinNestedLoopsRel)
+            return convertToHashJoin((JoinNestedLoopsRel)plan);
 
         throw new IgniteException("Operation is not supported yet: " + plan);
     }
 
-    private PhysicalOperator convertToHashJoin(EnumerableHashJoin plan) { // TODO why do we have HashJoin even for non-equi-joins?
+    private PhysicalOperator convertToHashJoin(
+        JoinNestedLoopsRel plan) { // TODO why do we have HashJoin even for non-equi-joins?
         PhysicalOperator leftSrc = convertToPhysical(plan.getInput(0));
         PhysicalOperator rightSrc = convertToPhysical(plan.getInput(1));
 
@@ -430,37 +404,28 @@ public class CalcitePlanner {
 
         JoinRelType joinType = plan.getJoinType();
 
-
-        return new NestedLoopsJoin(leftSrc, rightSrc, leftJoinKeys, rightJoinKeys, joinCond, joinType);
+        return new NestedLoopsJoinOp(leftSrc, rightSrc, leftJoinKeys, rightJoinKeys, joinCond, joinType);
     }
 
-    private PhysicalOperator convertToFilter(EnumerableFilter plan) {
+    private PhysicalOperator convertToFilter(FilterRel plan) {
         PhysicalOperator rowsSrc = convertToPhysical(plan.getInput());
 
-        return new Filter(rowsSrc, plan.getCondition());
+        return new FilterOp(rowsSrc, plan.getCondition());
     }
 
-    private Project convertToProject(EnumerableProject plan) {
+    private ProjectOp convertToProject(ProjectRel plan) {
         PhysicalOperator rowsSrc = convertToPhysical(plan.getInput());
 
         List<RexNode> projects = plan.getProjects();
 
-        return new Project(rowsSrc, projects);
+        return new ProjectOp(rowsSrc, projects);
     }
 
-    @NotNull private TableScan convertToTableScan(EnumerableTableScan plan) {
+    @NotNull private TableScanOp convertToTableScan(TableScanRel plan) {
         List<String> tblName = plan.getTable().getQualifiedName(); // Schema + tblName
 
         IgniteTable tbl = (IgniteTable)rootSchema.getSubSchema(tblName.get(0)).getTable(tblName.get(1));
 
-        return new TableScan(tbl, ctx.cache().cache(tbl.cacheName()));
-    }
-
-    @NotNull private TableScan convertToTableScan(Bindables.BindableTableScan plan) {
-        List<String> tblName = plan.getTable().getQualifiedName(); // Schema + tblName
-
-        IgniteTable tbl = (IgniteTable)rootSchema.getSubSchema(tblName.get(0)).getTable(tblName.get(1));
-
-        return new TableScan(tbl, ctx.cache().cache(tbl.cacheName()));
+        return new TableScanOp(tbl, ctx.cache().cache(tbl.cacheName()));
     }
 }

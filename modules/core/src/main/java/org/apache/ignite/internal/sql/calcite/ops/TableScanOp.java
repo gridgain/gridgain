@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.internal.sql.calcite.physical;
+package org.apache.ignite.internal.sql.calcite.ops;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -30,13 +30,13 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 /**
  * TODO: Add class description.
  */
-public class TableScan extends PhysicalOperator {
+public class TableScanOp extends PhysicalOperator {
 
     final IgniteTable tbl;
 
     final IgniteInternalCache cache;
 
-    public TableScan(IgniteTable tbl, IgniteInternalCache cache) {
+    public TableScanOp(IgniteTable tbl, IgniteInternalCache cache) {
         this.tbl = tbl;
         this.cache = cache;
     }

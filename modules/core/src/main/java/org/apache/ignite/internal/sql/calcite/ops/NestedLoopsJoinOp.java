@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.internal.sql.calcite.physical;
+package org.apache.ignite.internal.sql.calcite.ops;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -31,7 +31,7 @@ import static org.apache.ignite.internal.sql.calcite.expressions.Condition.build
 /**
  * TODO: Add class description.
  */
-public class NestedLoopsJoin extends PhysicalOperator {
+public class NestedLoopsJoinOp extends PhysicalOperator {
     private final PhysicalOperator leftSrc;
     private final PhysicalOperator rightSrc;
     private final ImmutableIntList leftJoinKeys;
@@ -39,7 +39,7 @@ public class NestedLoopsJoin extends PhysicalOperator {
     private final Condition joinCond;
     private final JoinRelType joinType;
 
-    public NestedLoopsJoin(PhysicalOperator leftSrc,
+    public NestedLoopsJoinOp(PhysicalOperator leftSrc,
         PhysicalOperator rightSrc,
         ImmutableIntList leftJoinKeys,
         ImmutableIntList rightJoinKeys,
