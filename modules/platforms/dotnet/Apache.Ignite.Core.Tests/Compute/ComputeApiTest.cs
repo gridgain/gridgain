@@ -807,6 +807,19 @@ namespace Apache.Ignite.Core.Tests.Compute
         }
 
         /// <summary>
+        /// Tests custom executors.
+        /// </summary>
+        [Test]
+        public void TestWithExecutor()
+        {
+            // TODO
+            var compute = _grid1.GetCompute();
+            var computeWithExecutor = compute.WithExecutor("foo");
+
+            Assert.AreNotSame(compute, computeWithExecutor);
+        }
+
+        /// <summary>
         /// Create configuration.
         /// </summary>
         /// <param name="path">XML config path.</param>
