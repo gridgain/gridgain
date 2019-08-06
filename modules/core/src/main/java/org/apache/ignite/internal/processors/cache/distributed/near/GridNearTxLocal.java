@@ -163,6 +163,10 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
     public static final long[] METRIC_TIME_BUCKETS =
         new long[] { 1, 2, 4, 8, 16, 25, 50, 75, 100, 250, 500, 750, 1000, 3000, 5000, 10000, 25000, 60000};
 
+    /** */
+    private static final ThreadLocal<SimpleDateFormat> TIME_FORMAT =
+        ThreadLocal.withInitial(() -> new SimpleDateFormat("HH:mm:ss.SSS"));
+
     /** Prepare future updater. */
     private static final AtomicReferenceFieldUpdater<GridNearTxLocal, IgniteInternalFuture> PREP_FUT_UPD =
         AtomicReferenceFieldUpdater.newUpdater(GridNearTxLocal.class, IgniteInternalFuture.class, "prepFut");
@@ -3891,7 +3895,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
         GridStringBuilder warning = new GridStringBuilder(isLong ? "Long transaction time dump " : "Transaction time dump ")
             .a("[startTime=")
-            .a(new SimpleDateFormat("HH:mm:ss.SSS").format(new Date(startTime)))
+            .a(TIME_FORMAT.get().format(new Date(startTime)))
             .a(", totalTime=")
             .a(systemTimeMillis + userTimeMillis)
             .a(", systemTime=")
