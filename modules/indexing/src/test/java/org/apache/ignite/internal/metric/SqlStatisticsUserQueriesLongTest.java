@@ -103,14 +103,14 @@ public class SqlStatisticsUserQueriesLongTest extends UserQueriesTestBase {
 
         assertMetricsIncrementedOnlyOnReducer(() ->
             startAndKillQuery(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID < 200 AND suspendHook(ID) <> 5 ")),
-            "failed");
+            "success", "failed", "canceled");
     }
 
     /**
      * Verify that error metrics are updated if that error happened on reduce step.
      */
     @Test
-    public void testFailMetricsOnReduceStep() throws Exception {
+    public void testMetricsOnRemoteReduceStepFail() throws Exception {
         int strongMemQuota = 1024 * 1024;
         int memQuotaUnlimited = -1;
 
