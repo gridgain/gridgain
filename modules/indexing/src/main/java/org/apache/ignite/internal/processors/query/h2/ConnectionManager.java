@@ -23,7 +23,6 @@ import java.sql.Statement;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
@@ -34,6 +33,7 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridH2DefaultTableEngi
 import org.apache.ignite.internal.processors.query.h2.opt.H2PlainRowFactory;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.jsr166.ConcurrentLinkedDeque8;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_H2_INDEXING_CACHE_CLEANUP_PERIOD;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_H2_INDEXING_CACHE_THREAD_USAGE_TIMEOUT;
@@ -74,8 +74,7 @@ public class ConnectionManager {
     private final Set<H2Connection> usedConns = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     /** Connection pool. */
-//    private volatile ArrayBlockingQueue<H2Connection> connPool = new ArrayBlockingQueue<>(CONNECTION_POOL_SIZE);
-    private volatile ConcurrentLinkedQueue<H2Connection> connPool = new ConcurrentLinkedQueue<>();
+    private volatile ConcurrentLinkedDeque8<H2Connection> connPool = new ConcurrentLinkedDeque8<>();
 
     /** Connection pool max size. */
     private volatile int poolMaxSize = CONNECTION_POOL_SIZE;
@@ -252,9 +251,6 @@ public class ConnectionManager {
         poolMaxSize = size;
     }
 
-    /** Thread local connection. */
-    private ThreadLocal<H2Connection> threadLocalConn = new ThreadLocal<>();
-
     /**
      * @return H2 connection wrapper.
      */
@@ -262,16 +258,10 @@ public class ConnectionManager {
         try {
             H2Connection conn = null;
 
-            conn = threadLocalConn.get();
+           conn = connPool.poll();
 
-            if (conn != null)
-                threadLocalConn.remove();
-            else {
-               conn = connPool.poll();
-
-                if (conn == null)
-                    conn = newConnection();
-            }
+            if (conn == null)
+                conn = newConnection();
 
             H2PooledConnection connWrp = new H2PooledConnection(conn, this);
 
@@ -311,16 +301,9 @@ public class ConnectionManager {
 
         assert rmv : "Connection isn't tracked [conn=" + conn + ']';
 
-        if (threadLocalConn.get() == null) {
-            assert threadLocalConn.get() != conn;
-
-            threadLocalConn.set(conn);
-        }
-        else {
-            if (connPool.size() < poolMaxSize)
-                connPool.offer(conn);
-            else
-                conn.close();
-        }
+        if (connPool.size() < poolMaxSize)
+            connPool.push(conn);
+        else
+            conn.close();
     }
 }
