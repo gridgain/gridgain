@@ -102,18 +102,8 @@ import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED
  * {@link GridCommandHandlerTest}
  */
 public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClusterByClassAbstractTest {
-    /** {@inheritDoc} */
-    @Override protected void beforeTestsStarted() throws Exception {
-        super.beforeTestsStarted();
-
-        initDiagnosticDir();
-        cleanDiagnosticDir();
-    }
-
     /**
      * Very basic tests for running the command in different enviroment which other command are running in.
-     *
-     * @throws Exception If failed.
      */
     @Test
     public void testFindAndDeleteGarbage() {
@@ -142,8 +132,6 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
     /**
      * Test that baseline auto_adjustment settings update works via control.sh
-     *
-     * @throws Exception If failed.
      */
     @Test
     public void testBaselineAutoAdjustmentSettings() {
@@ -184,8 +172,6 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
     /**
      * Test that if baseline auto_adjustment is enable, control.sh can not change a state manual.
-     *
-     * @throws Exception If failed.
      */
     @Test
     public void shouldReturnErrorCodeForManualSetInBaselineAutoAdjustmentEnable() {
@@ -396,9 +382,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         assertContains(log, testOutStr, "Control utility has completed execution at: ");
     }
 
-    /**
-     * @throws Exception If failed.
-     */
+    /** */
     @Test
     public void testCacheIdleVerify() {
         IgniteEx ignite = crd;
@@ -420,9 +404,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         assertContains(log, testOut.toString(), "conflict partitions");
     }
 
-    /**
-     * @throws Exception If failed.
-     */
+    /** */
     @Test
     public void testCacheIdleVerifyNodeFilter() {
         IgniteEx ignite = crd;
@@ -448,8 +430,6 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
     /**
      * Tests that both update counter and hash conflicts are detected.
-     *
-     * @throws Exception If failed.
      */
     @Test
     public void testCacheIdleVerifyTwoConflictTypes() {
@@ -587,8 +567,6 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
     /**
      * Common method for idle_verify tests with multiple options.
-     *
-     * @throws Exception if failed
      */
     @Test
     public void testCacheIdleVerifyMultipleCacheFilterOptions()
@@ -1307,8 +1285,6 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
     /**
      * Test execution of --wal print command.
-     *
-     * @throws Exception if failed.
      */
     @Test
     public void testUnusedWalPrint() {
@@ -1341,8 +1317,6 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
     /**
      * Test execution of --wal delete command.
-     *
-     * @throws Exception if failed.
      */
     @Test
     public void testUnusedWalDelete() {

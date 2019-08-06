@@ -48,7 +48,7 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerClusterPer
 
         AtomicBoolean stopFlag = new AtomicBoolean();
 
-        IgniteCache<Integer, Person> cache = ignite.cache(CACHE_NAME);
+        IgniteCache<Integer, GridCommandHandlerIndexingUtils.Person> cache = ignite.cache(CACHE_NAME);
 
         Thread loadThread = new Thread(() -> {
             ThreadLocalRandom rnd = ThreadLocalRandom.current();
@@ -56,7 +56,7 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerClusterPer
             while (!stopFlag.get()) {
                 int id = rnd.nextInt();
 
-                cache.put(id, new Person(id, "name" + id));
+                cache.put(id, new GridCommandHandlerIndexingUtils.Person(id, "name" + id));
 
                 if (Thread.interrupted())
                     break;

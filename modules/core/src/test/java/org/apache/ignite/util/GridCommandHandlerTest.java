@@ -96,12 +96,14 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static java.io.File.separatorChar;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_ILLEGAL_STATE_ERROR;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_INVALID_ARGUMENTS;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_UNEXPECTED_ERROR;
+import static org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor.DEFAULT_TARGET_FOLDER;
 import static org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult.Result.FAIL;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
@@ -115,6 +117,12 @@ import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED
  * If you not necessary create nodes for each test you can try use {@link GridCommandHandlerClusterByClassTest}
  */
 public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAbstractTest {
+    /** */
+    protected static File defaultDiagnosticDir;
+
+    /** */
+    protected static File customDiagnosticDir;
+
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
@@ -122,6 +130,32 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         initDiagnosticDir();
 
         cleanDiagnosticDir();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void cleanPersistenceDir() throws Exception {
+        super.cleanPersistenceDir();
+
+        cleanDiagnosticDir();
+    }
+
+    /**
+     * @throws IgniteCheckedException If failed.
+     */
+    protected void initDiagnosticDir() throws IgniteCheckedException {
+        defaultDiagnosticDir = new File(U.defaultWorkDirectory()
+            + separatorChar + DEFAULT_TARGET_FOLDER + separatorChar);
+
+        customDiagnosticDir = new File(U.defaultWorkDirectory()
+            + separatorChar + "diagnostic_test_dir" + separatorChar);
+    }
+
+    /**
+     * Clean diagnostic directories.
+     */
+    protected void cleanDiagnosticDir() {
+        U.delete(defaultDiagnosticDir);
+        U.delete(customDiagnosticDir);
     }
 
     /**
@@ -299,7 +333,6 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         Ignite other = startGrid(2);
 
-        assertEquals(EXIT_CODE_OK, execute("--baseline", "add", consistentIds(other)));
         assertEquals(EXIT_CODE_OK, execute("--baseline", "add", consistentIds(other)));
 
         assertEquals(2, ignite.cluster().currentBaselineTopology().size());

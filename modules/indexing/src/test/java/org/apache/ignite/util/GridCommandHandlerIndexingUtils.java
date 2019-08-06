@@ -26,11 +26,18 @@ import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.util.typedef.F;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.io.Serializable;
 import java.util.concurrent.ThreadLocalRandom;
 
-/** Utility class for tests. */
+import static java.lang.String.valueOf;
+import static java.util.Arrays.asList;
+import static java.util.Objects.nonNull;
+import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
+import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
+
+/**
+ * Utility class for tests.
+ */
 public class GridCommandHandlerIndexingUtils {
     /** Test cache name. */
     public static final String CACHE_NAME = "persons-cache-vi";
@@ -44,61 +51,100 @@ public class GridCommandHandlerIndexingUtils {
     }
 
     /**
-     * Create and fill cache.
+     * Create and fill cache. Key - integer, value - {@code Person}.
+     * <br/>
+     * <table class="doctable">
+     * <th>Cache parameter</th>
+     * <th>Value</th>
+     * <tr>
+     *     <td>Synchronization mode</td>
+     *     <td>{@link CacheWriteSynchronizationMode#FULL_SYNC FULL_SYNC}</td>
+     * </tr>
+     * <tr>
+     *     <td>Atomicity mode</td>
+     *     <td>{@link CacheAtomicityMode#ATOMIC ATOMIC}</td>
+     * </tr>
+     * <tr>
+     *     <td>Number of backup</td>
+     *     <td>1</td>
+     * </tr>
+     * <tr>
+     *     <td>Query entities</td>
+     *     <td>{@link #personEntity()}</td>
+     * </tr>
+     * <tr>
+     *     <td>Affinity</td>
+     *     <td>{@link RendezvousAffinityFunction} with exclNeighbors = false, parts = 32</td>
+     * </tr>
+     * </table>
      *
-     * @param ignite node
-     * @param cacheName cache name
-     * @param grpName group name
+     *
+     * @param ignite Node.
+     * @param cacheName Cache name.
+     * @param grpName Group name.
+     * @see Person
      * */
     public static void createAndFillCache(final Ignite ignite, final String cacheName, final String grpName) {
+        assert nonNull(ignite);
+        assert nonNull(cacheName);
+        assert nonNull(grpName);
+
         ignite.createCache(new CacheConfiguration<Integer, Person>()
             .setName(cacheName)
             .setGroupName(grpName)
-            .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC)
-            .setAtomicityMode(CacheAtomicityMode.ATOMIC)
+            .setWriteSynchronizationMode(FULL_SYNC)
+            .setAtomicityMode(ATOMIC)
             .setBackups(1)
-            .setQueryEntities(F.asList(personEntity(true, true)))
+            .setQueryEntities(F.asList(personEntity()))
             .setAffinity(new RendezvousAffinityFunction(false, 32)));
 
         ThreadLocalRandom rand = ThreadLocalRandom.current();
 
         try (IgniteDataStreamer<Integer, Person> streamer = ignite.dataStreamer(cacheName)) {
             for (int i = 0; i < 10_000; i++)
-                streamer.addData(i, new Person(rand.nextInt(), String.valueOf(rand.nextLong())));
+                streamer.addData(i, new Person(rand.nextInt(), valueOf(rand.nextLong())));
         }
     }
 
     /**
      * Create query entity.
-     *
-     * @param idxName Index name.
-     * @param idxOrgId Index org id.
      */
-    private static QueryEntity personEntity(boolean idxName, boolean idxOrgId) {
+    private static QueryEntity personEntity() {
         QueryEntity entity = new QueryEntity();
 
         entity.setKeyType(Integer.class.getName());
         entity.setValueType(Person.class.getName());
 
-        entity.addQueryField("orgId", Integer.class.getName(), null);
-        entity.addQueryField("name", String.class.getName(), null);
+        String orgIdField = "orgId";
+        String nameField = "name";
 
-        List<QueryIndex> idxs = new ArrayList<>();
+        entity.addQueryField(orgIdField, Integer.class.getName(), null);
+        entity.addQueryField(nameField, String.class.getName(), null);
 
-        if (idxName) {
-            QueryIndex idx = new QueryIndex("name");
-
-            idxs.add(idx);
-        }
-
-        if (idxOrgId) {
-            QueryIndex idx = new QueryIndex("orgId");
-
-            idxs.add(idx);
-        }
-
-        entity.setIndexes(idxs);
+        entity.setIndexes(asList(new QueryIndex(nameField), new QueryIndex(orgIdField)));
 
         return entity;
+    }
+
+    /**
+     * Simple class for tests.
+     */
+    static class Person implements Serializable {
+        /** Id organization. */
+        int orgId;
+
+        /** Name organization. */
+        String name;
+
+        /**
+         * Constructor.
+         *
+         * @param orgId Organization ID.
+         * @param name Name.
+         */
+        public Person(int orgId, String name) {
+            this.orgId = orgId;
+            this.name = name;
+        }
     }
 }
