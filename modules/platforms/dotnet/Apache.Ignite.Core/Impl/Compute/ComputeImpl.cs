@@ -67,6 +67,9 @@ namespace Apache.Ignite.Core.Impl.Compute
         /** */
         private const int OpWithNoResultCache = 9;
 
+        /** */
+        private const int OpWithExecutor = 10;
+
         /** Underlying projection. */
         private readonly ClusterGroupImpl _prj;
 
