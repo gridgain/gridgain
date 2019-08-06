@@ -22,11 +22,9 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Collections;
 import java.util.Set;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteInterruptedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.GridKernalContext;
@@ -52,7 +50,7 @@ public class ConnectionManager {
         ";DEFAULT_TABLE_ENGINE=" + GridH2DefaultTableEngine.class.getName();
 
     /** Default maximum size of connection pool. */
-    private static final int CONNECTION_POOL_SIZE = 100;
+    private static final int CONNECTION_POOL_SIZE = 256;
 
     /** The period of clean up the statement cache. */
     @SuppressWarnings("FieldCanBeLocal")
@@ -76,7 +74,11 @@ public class ConnectionManager {
     private final Set<H2Connection> usedConns = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     /** Connection pool. */
-    private volatile ArrayBlockingQueue<H2Connection> connPool = new ArrayBlockingQueue<>(CONNECTION_POOL_SIZE);
+//    private volatile ArrayBlockingQueue<H2Connection> connPool = new ArrayBlockingQueue<>(CONNECTION_POOL_SIZE);
+    private volatile ConcurrentLinkedQueue<H2Connection> connPool = new ConcurrentLinkedQueue<>();
+
+    /** Connection pool max size. */
+    private volatile int poolMaxSize = CONNECTION_POOL_SIZE;
 
     /** Database URL. */
     private final String dbUrl;
@@ -247,12 +249,7 @@ public class ConnectionManager {
         if (size <= 0)
             throw new IllegalArgumentException("Invalid connection pool size: " + size);
 
-        ArrayBlockingQueue<H2Connection> newPool = new ArrayBlockingQueue<>(size);
-        ArrayBlockingQueue<H2Connection> oldPool = connPool;
-
-        connPool = newPool;
-
-        oldPool.forEach(c -> U.close(c.connection(), log));
+        poolMaxSize = size;
     }
 
     /**
@@ -260,22 +257,18 @@ public class ConnectionManager {
      */
     public H2PooledConnection connection() {
         try {
-            H2Connection conn =  connPool.poll(0, TimeUnit.MILLISECONDS);
+            H2Connection conn = connPool.poll();
 
             if (conn == null)
                 conn = newConnection();
 
             H2PooledConnection connWrp = new H2PooledConnection(conn, this);
+
             usedConns.add(conn);
 
             assert !conn.connection().isClosed() : "Connection is closed [conn=" + conn + ']';
 
             return connWrp;
-        }
-        catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-
-            throw new IgniteInterruptedException(e);
         }
         catch (SQLException e) {
             throw new IgniteSQLException("Failed to initialize DB connection: " + dbUrl, e);
@@ -301,20 +294,15 @@ public class ConnectionManager {
      * @param conn Connection.
      */
     void recycle(H2Connection conn) {
-        try {
-            boolean rmv = usedConns.remove(conn);
+        boolean rmv = usedConns.remove(conn);
 
-            assert !connPool.contains(conn) : "Connection is already recycled [conn=" + conn + ']';
+        assert !connPool.contains(conn) : "Connection is already recycled [conn=" + conn + ']';
 
-            assert rmv : "Connection isn't tracked [conn=" + conn + ']';
+        assert rmv : "Connection isn't tracked [conn=" + conn + ']';
 
-            if (!connPool.offer(conn, 0, TimeUnit.MILLISECONDS))
-                conn.close();
-        }
-        catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-
-            throw new IgniteInterruptedException(e);
-        }
+        if (connPool.size() < poolMaxSize)
+            connPool.offer(conn);
+        else
+            conn.close();
     }
 }

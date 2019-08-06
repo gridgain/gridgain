@@ -19,6 +19,9 @@ package org.apache.ignite.internal.processors.query.h2;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import org.apache.ignite.internal.processors.cache.QueryCursorImpl;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.jetbrains.annotations.Nullable;
 
@@ -31,6 +34,9 @@ public class H2PooledConnection implements AutoCloseable {
 
     /** Connection manager. */
     private final ConnectionManager connMgr;
+
+    /** Closed (recycled) flag. */
+    private final AtomicBoolean closed = new AtomicBoolean();
 
     /**
      * @param conn Connection to use.
@@ -101,10 +107,12 @@ public class H2PooledConnection implements AutoCloseable {
     @Override public void close() {
         assert delegate != null;
 
-        H2Utils.resetSession(this);
+        if (closed.compareAndSet(false, true)) {
+            H2Utils.resetSession(this);
 
-        connMgr.recycle(delegate);
+            connMgr.recycle(delegate);
 
-        delegate = null;
+            delegate = null;
+        }
     }
 }
