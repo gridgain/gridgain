@@ -292,11 +292,11 @@ public class StartNodeCallableImpl implements StartNodeCallable {
 
                 String res = exec(ses, findSuccess, win ? WINDOWS_ENCODING : null);
 
-                info("Find result: " + res, spec.logger(), log);
+                info("Find result: " + res + " nodeIdx=" + i, spec.logger(), log);
 
                 if (res != null && res.contains(SUCCESSFUL_START_MSG))
                     return new ClusterStartNodeResultImpl(spec.host(), true, null);
-                else if (res != null) {
+                else {
                     sb.append("NodeIdx=").append(i).append("out=").append(res).append("\n");
                 }
             }
