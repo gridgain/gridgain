@@ -155,9 +155,11 @@ BOOST_AUTO_TEST_CASE(IgniteGetConsistentId)
 
     BOOST_REQUIRE(nodes.size() == 2);
 
-    std::string consistentId = nodes[0].GetConsistentId<std::string>();
+    std::string consistentId0 = nodes[0].GetConsistentId();
+    std::string consistentId1 = nodes[1].GetConsistentId();
 
-    BOOST_REQUIRE(!consistentId.empty());
+    BOOST_REQUIRE(!consistentId0.empty());
+    BOOST_REQUIRE(!consistentId1.empty());
 }
 
 BOOST_AUTO_TEST_CASE(IgniteGetHostNames)

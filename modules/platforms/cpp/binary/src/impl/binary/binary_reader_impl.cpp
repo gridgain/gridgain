@@ -32,33 +32,6 @@ using namespace ignite::binary;
 
 namespace ignite
 {
-    namespace binary
-    {
-        struct EmptyReader
-        {
-            EmptyReader(BinaryReaderImpl* r)
-            {
-                // No-op.
-            }
-        };
-
-        struct EmptyType {};
-
-        template<>
-        struct BinaryType<EmptyType> : BinaryTypeDefaultAll<EmptyType>
-        {
-            static void GetTypeName(std::string& dst)
-            {
-                // No-op.
-            }
-
-            static void Read(EmptyReader& reader, EmptyType& dst)
-            {
-                // No-op.
-            }
-        };
-    }
-
     namespace impl
     {
         namespace binary
@@ -830,34 +803,34 @@ namespace ignite
                 case IGNITE_TYPE_OPTM_MARSH:
                 {
                     int32_t realLen = stream->ReadInt32();
-                    stream->Shift(realLen);
+                    stream->Ignore(realLen);
                     return;
                 }
 
                 case IGNITE_TYPE_BYTE:
                 case IGNITE_TYPE_BOOL:
-                    stream->Shift(1);
+                    stream->Ignore(1);
                     return;
 
                 case IGNITE_TYPE_SHORT:
                 case IGNITE_TYPE_CHAR:
-                    stream->Shift(2);
+                    stream->Ignore(2);
                     return;
 
                 case IGNITE_TYPE_INT:
                 case IGNITE_TYPE_FLOAT:
-                    stream->Shift(4);
+                    stream->Ignore(4);
                     return;
 
                 case IGNITE_TYPE_LONG:
                 case IGNITE_TYPE_DOUBLE:
                 case IGNITE_TYPE_DATE:
                 case IGNITE_TYPE_TIME:
-                    stream->Shift(8);
+                    stream->Ignore(8);
                     return;
 
                 case IGNITE_TYPE_UUID:
-                    stream->Shift(16);
+                    stream->Ignore(16);
                     return;
 
                 case IGNITE_TYPE_STRING:
@@ -866,7 +839,7 @@ namespace ignite
                 {
                     int32_t realLen = stream->ReadInt32();
                     if (realLen > 0)
-                        stream->Shift(realLen);
+                        stream->Ignore(realLen);
 
                     return;
                 }
@@ -876,7 +849,7 @@ namespace ignite
                 {
                     int32_t realLen = stream->ReadInt32();
                     if (realLen > 0)
-                        stream->Shift(realLen * 2);
+                        stream->Ignore(realLen * 2);
 
                     return;
                 }
@@ -886,7 +859,7 @@ namespace ignite
                 {
                     int32_t realLen = stream->ReadInt32();
                     if (realLen > 0)
-                        stream->Shift(realLen * 4);
+                        stream->Ignore(realLen * 4);
 
                     return;
                 }
@@ -896,7 +869,7 @@ namespace ignite
                 {
                     int32_t realLen = stream->ReadInt32();
                     if (realLen > 0)
-                        stream->Shift(realLen * 8);
+                        stream->Ignore(realLen * 8);
 
                     return;
                 }
@@ -920,7 +893,7 @@ namespace ignite
                     int32_t cnt = stream->ReadInt32();
 
                     // Collection type ID.
-                    stream->Shift(1);
+                    stream->Ignore(1);
 
                     for (int32_t i = 0; i < cnt; i++)
                         Skip();
@@ -933,7 +906,7 @@ namespace ignite
                     int32_t cnt = stream->ReadInt32();
 
                     // Map type ID.
-                    stream->Shift(1);
+                    stream->Ignore(1);
 
                     for (int32_t i = 0; i < cnt; i++)
                     {
@@ -945,15 +918,17 @@ namespace ignite
                 }
 
                 case IGNITE_TYPE_TIMESTAMP:
-                    stream->Shift(12);
+                    stream->Ignore(12);
                     return;
 
                 case IGNITE_HDR_FULL:
-                    // Get position back to IGNITE_HDR_FULL
-                    stream->Position(stream->Position() - 1);
-                    EmptyType val;
-                    ReadTopObject0<EmptyReader, EmptyType>(val);
+                {
+                    int32_t pos = stream->Position() - 1;
+                    int32_t len = stream->ReadInt32(stream->Position() + IGNITE_OFFSET_LEN - 1);
+                    stream->Position(pos);
+                    stream->Ignore(len);
                     return;
+                }
 
                 case IGNITE_HDR_NULL:
                     return;
@@ -961,24 +936,8 @@ namespace ignite
                 default:
                 {
                     int32_t pos = stream->Position() - 1;
-
-                    switch (typeId)
-                    {
-                    case IGNITE_TYPE_MAP_ENTRY:
-                    case IGNITE_TYPE_BINARY:
-                    case IGNITE_TYPE_ENUM:
-                    case IGNITE_TYPE_ARRAY_ENUM:
-                    case IGNITE_TYPE_DECIMAL:
-                    case IGNITE_TYPE_ARRAY_DECIMAL:
-                    case IGNITE_TYPE_CLASS:
-                    case IGNITE_TYPE_PROXY:
-                    case IGNITE_TYPE_BINARY_ENUM:
-                        IGNITE_ERROR_FORMATTED_2(IgniteError::IGNITE_ERR_BINARY, "Invalid header", "position", pos,
-                            "unsupported type", static_cast<int>(typeId))
-                    default:
-                        IGNITE_ERROR_FORMATTED_2(IgniteError::IGNITE_ERR_BINARY, "Invalid header", "position", pos,
-                            "invalid type", static_cast<int>(typeId))
-                    }
+                    IGNITE_ERROR_FORMATTED_2(IgniteError::IGNITE_ERR_BINARY, "Invalid header", "position", pos,
+                        "unsupported type", static_cast<int>(typeId));
                 }
                 }
             }

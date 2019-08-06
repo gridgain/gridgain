@@ -34,6 +34,11 @@ namespace ignite
             return impl.Get()->GetAddresses();
         }
 
+        std::string ClusterNode::GetConsistentId()
+        {
+            return impl.Get()->GetConsistentId();
+        }
+
         std::vector<std::string> ClusterNode::GetHostNames()
         {
             return impl.Get()->GetHostNames();

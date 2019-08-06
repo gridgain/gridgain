@@ -107,15 +107,7 @@ namespace ignite
                  *
                  * @return Cluster Node consistent ID.
                  */
-                template<typename T>
-                T GetConsistentId()
-                {
-                    interop::InteropInputStream stream(mem.Get());
-                    binary::BinaryReaderImpl reader(&stream);
-                    stream.Position(consistentIdOffset);
-
-                    return reader.ReadObject<T>();
-                }
+                std::string GetConsistentId();
 
                 /**
                  * Get collection of host names this node is known by.
@@ -232,7 +224,7 @@ namespace ignite
                 long order;
 
                 /** Consistent ID */
-                int32_t consistentIdOffset;
+                common::concurrent::SharedPointer<std::string> consistentId;
 
                 /** Product version. */
                 common::concurrent::SharedPointer<IgniteProductVersion> ver;

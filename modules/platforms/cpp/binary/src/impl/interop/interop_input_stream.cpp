@@ -38,7 +38,7 @@
 }
 
 namespace ignite
-{    
+{
     namespace impl
     {
         namespace interop 
@@ -94,7 +94,7 @@ namespace ignite
                 for (int i = 0; i < len; i++)
                     *(res + i) = ReadBool();
             }
-                
+
             int16_t InteropInputStream::ReadInt16()
             {
                 IGNITE_INTEROP_IN_READ(int16_t, 2);
@@ -182,7 +182,7 @@ namespace ignite
             {
                 IGNITE_INTEROP_IN_READ_ARRAY(len, 3);
             }
-                
+
             int32_t InteropInputStream::Remaining() const
             {
                 return len - pos;
@@ -203,9 +203,9 @@ namespace ignite
                 }
             }
 
-            void InteropInputStream::Shift(int32_t cnt)
+            void InteropInputStream::Ignore(int32_t cnt)
             {
-                pos += cnt;
+                Shift(cnt);
             }
 
             void InteropInputStream::Synchronize()
@@ -232,6 +232,11 @@ namespace ignite
 
                 Shift(cnt);
             }
+
+            inline void InteropInputStream::Shift(int32_t cnt)
+            {
+                pos += cnt;
+            }
         }
     }
-}        
+}

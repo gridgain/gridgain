@@ -30,7 +30,7 @@ namespace ignite
         {
             ClusterNodeImpl::ClusterNodeImpl(SharedPointer<InteropMemory> mem) :
                 mem(mem), addrs(new std::vector<std::string>), attrs(new std::map<std::string, int32_t>), hosts(new std::vector<std::string>),
-                isClient(false), isDaemon(false), isLocal(false), consistentIdOffset(0)
+                isClient(false), isDaemon(false), isLocal(false), consistentId(new std::string)
             {
                 InteropInputStream stream(mem.Get());
                 BinaryReaderImpl reader(&stream);
@@ -74,6 +74,11 @@ namespace ignite
                     ret.push_back(it->first);
 
                 return ret;
+            }
+
+            std::string ClusterNodeImpl::GetConsistentId()
+            {
+                return *consistentId.Get();
             }
 
             std::vector<std::string> ClusterNodeImpl::GetHostNames()
@@ -139,8 +144,17 @@ namespace ignite
 
             void ClusterNodeImpl::ReadConsistentId(BinaryReaderImpl& reader)
             {
-                consistentIdOffset = reader.GetStream()->Position();
-                reader.Skip();
+                int8_t typeId = reader.ReadInt8();
+                reader.GetStream()->Position(reader.GetStream()->Position() - 1);
+                if (typeId == IGNITE_TYPE_STRING)
+                {
+                    reader.ReadString(*consistentId.Get());
+                    return;
+                }
+
+                std::stringstream ss;
+                ss << reader.ReadGuid();
+                *consistentId.Get() = ss.str();
             }
 
             void ClusterNodeImpl::ReadProductVersion(BinaryReaderImpl& reader)

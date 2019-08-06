@@ -84,11 +84,7 @@ namespace ignite
              *
              * @return Cluster Node consistent ID.
              */
-            template<typename T>
-            T GetConsistentId()
-            {
-                return impl.Get()->GetConsistentId<T>();
-            }
+            std::string GetConsistentId();
 
             /**
              * Get collection of host names this node is known by.
