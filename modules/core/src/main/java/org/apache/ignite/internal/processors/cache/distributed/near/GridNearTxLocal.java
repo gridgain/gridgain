@@ -3854,7 +3854,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
                 boolean isLong = transactionTimeDumpThreshold > 0 && totalTimeMillis > transactionTimeDumpThreshold;
 
-                boolean randomlyChosen = transactionTimeDumpSamplesCoefficient >= 0.0
+                boolean randomlyChosen = transactionTimeDumpSamplesCoefficient > 0.0
                     && ThreadLocalRandom.current().nextDouble() <= transactionTimeDumpSamplesCoefficient;
 
                 if (randomlyChosen || isLong) {
@@ -5098,7 +5098,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
     /** */
     private void writeTxMetrics(MetricRegistry registry, String monotonicMetricName, String histoMetricName, long val) {
-        if (registry == null || val == 0)
+        if (registry == null || val <= 0)
             return;
 
         LongAdderMetricImpl monotonic = (LongAdderMetricImpl)registry.findMetric(monotonicMetricName);
