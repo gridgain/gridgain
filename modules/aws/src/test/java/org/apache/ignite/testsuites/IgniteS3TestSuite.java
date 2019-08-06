@@ -91,7 +91,7 @@ public class IgniteS3TestSuite {
     private static String getRequiredEnvVar(String name) {
         String key = System.getenv(name);
 
-        assert key != null : String.format("Environment variable '%s' is not set\nenvs=%s\nsys=%s", name, System.getenv(), System.getProperties());
+        assert key != null : String.format("Environment variable '%s' is not set", name);
 
         return key;
     }
