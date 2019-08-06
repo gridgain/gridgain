@@ -192,7 +192,6 @@ public class ConnectionManager {
      */
     private void closeConnections() {
         for (ConcurrentLinkedDeque8<H2Connection> connPool : stripedConnPools) {
-            log.info("+++ CLEAR " + connPool.size());
             connPool.forEach(c -> U.close(c.connection(), log));
             connPool.clear();
         }
