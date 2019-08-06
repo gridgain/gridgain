@@ -61,7 +61,6 @@ public class SqlStatisticsUserQueriesLongTest extends UserQueriesTestBase {
         Assert.assertEquals(0, longMetricValue(MAPPER_IDX, "failedByOOM"));
     }
 
-
     /**
      * Verify map phase failure affects only general fail metric, not OOM metric.
      *
@@ -89,7 +88,7 @@ public class SqlStatisticsUserQueriesLongTest extends UserQueriesTestBase {
      * incremented only on reduce node.
      */
     @Test
-    public void testIfReduceQueryOomThenOnlyReducerMetricsAreIncremented() throws Exception {
+    public void testFailMetricsOnReduceStep() throws Exception {
         int strongMemQuota = 256 * 1024;
         int memQuotaUnlimited = -1;
 
@@ -100,10 +99,26 @@ public class SqlStatisticsUserQueriesLongTest extends UserQueriesTestBase {
 
         IgniteCache cache = createCacheFrom(grid(REDUCER_IDX));
 
+        final String rdcFailMsg = "Failed to run reduce query locally";
+
+        // general failure
+        assertMetricsIncrementedOnlyOnReducer(() -> {
+            GridTestUtils.assertThrows(
+                log,
+                () -> cache.query(new SqlFieldsQuery(
+                    "SELECT id, failFunction(count(id)) FROM TAB WHERE ID < 5 GROUP BY NAME HAVING ID < 5")).getAll(),
+                CacheException.class,
+                rdcFailMsg);
+        }, "failed");
+
+        // OOM failure
         assertMetricsIncrementedOnlyOnReducer(() -> GridTestUtils.assertThrows(
             log,
             () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB GROUP BY NAME")).getAll(),
             CacheException.class,
-            null), "failed", "failedByOOM");
+            rdcFailMsg),
+            "failed", "failedByOOM");
+
+        // TODO: suspend.
     }
 }

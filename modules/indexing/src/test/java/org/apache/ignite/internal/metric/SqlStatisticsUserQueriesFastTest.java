@@ -16,16 +16,10 @@
 
 package org.apache.ignite.internal.metric;
 
-import java.util.Collection;
-import java.util.concurrent.TimeUnit;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.cache.query.QueryCancelledException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
-import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.IgniteInternalFuture;
-import org.apache.ignite.internal.processors.query.GridRunningQueryInfo;
 import org.apache.ignite.internal.processors.query.RunningQueryManager;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
@@ -36,9 +30,6 @@ import org.junit.Test;
  * @see RunningQueryManager
  */
 public class SqlStatisticsUserQueriesFastTest extends UserQueriesTestBase {
-    /** Sleep interval in seconds, we expect kill query do it's job. */
-    private static final int WAIT_FOR_KILL_SEC = 1;
-
     /** Cache with a tested table, created and filled only once. */
     private static IgniteCache cache;
 
@@ -149,6 +140,44 @@ public class SqlStatisticsUserQueriesFastTest extends UserQueriesTestBase {
     }
 
     /**
+     * Local queries should also be counted.
+     *
+     */
+    @Test
+    public void testLocalSelectSuccess() {
+        assertMetricsIncrementedOnlyOnReducer(
+            () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID < 100").setLocal(true)).getAll(),
+            "success");
+    }
+
+    /**
+     * Local select failure count.
+     *
+     */
+    @Test
+    public void testLocalSelectFailed() {
+        assertMetricsIncrementedOnlyOnReducer(() -> GridTestUtils.assertThrows(
+            log,
+            () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID = failFunction()").setLocal(true)).getAll(),
+            CacheException.class,
+            null),
+            "failed");
+    }
+
+    /**
+     * Local select cancellation should be counted.
+     *
+     */
+    @Test
+    public void testLocalSelectCanceled() {
+        assertMetricsIncrementedOnlyOnReducer(() ->
+                startAndKillQuery(cache),
+            "success",
+            "failed",
+            "canceled");
+    }
+
+    /**
      * If query got canceled during execution, only general failure metric and cancel metric should be incremented only
      * on reduce node.
      */
@@ -158,53 +187,5 @@ public class SqlStatisticsUserQueriesFastTest extends UserQueriesTestBase {
             "success", // KILL QUERY succeeded
             "failed",
             "canceled");
-    }
-
-    /**
-     * Starts and kills query for sure.
-     *
-     * @param cache api entry point.
-     */
-    private void startAndKillQuery(IgniteCache cache) {
-        try {
-            IgniteInternalFuture qryCanceled = GridTestUtils.runAsync(() -> {
-                GridTestUtils.assertThrowsAnyCause(log,
-                    () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID <> suspendHook(ID)")).getAll(),
-                    QueryCancelledException.class,
-                    null);
-            });
-
-            SuspendQuerySqlFunctions.awaitQueryStopsInTheMiddle();
-
-            // We perform async kill and hope it does it's job in some time.
-            killAsyncAllQueriesOn(REDUCER_IDX);
-
-            TimeUnit.SECONDS.sleep(WAIT_FOR_KILL_SEC);
-
-            SuspendQuerySqlFunctions.resumeQueryExecution();
-
-            qryCanceled.get(WAIT_OP_TIMEOUT_SEC, TimeUnit.SECONDS);
-        }
-        catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    /**
-     * Cancel all the query on the node with the specified index.
-     *
-     * @param nodeIdx Node index.
-     */
-    private void killAsyncAllQueriesOn(int nodeIdx) {
-        IgniteEx node = grid(nodeIdx);
-
-        Collection<GridRunningQueryInfo> queries = node.context().query().getIndexing().runningQueries(-1);
-
-        for (GridRunningQueryInfo queryInfo : queries) {
-            String killId = queryInfo.globalQueryId();
-
-            node.context().query().querySqlFields(
-                new SqlFieldsQuery("KILL QUERY ASYNC '" + killId + "'").setSchema("PUBLIC"), false);
-        }
     }
 }

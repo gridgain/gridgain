@@ -192,5 +192,15 @@ public class SqlStatisticsAbstractTest extends GridCommonAbstractTest {
         public static long failFunction() {
             throw new RuntimeException("Fail the query.");
         }
+
+        /**
+         * Function to fail the query.
+         *
+         * @param dummy ignored parameter, required only for correct sql function signature.
+         */
+        @QuerySqlFunction
+        public static long failFunction(long dummy) {
+            throw new RuntimeException("Fail the query.");
+        }
     }
 }

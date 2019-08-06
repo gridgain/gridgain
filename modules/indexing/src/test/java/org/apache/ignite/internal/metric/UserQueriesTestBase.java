@@ -16,12 +16,21 @@
 
 package org.apache.ignite.internal.metric;
 
+import java.util.Collection;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.query.QueryCancelledException;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
+import org.apache.ignite.internal.processors.query.GridRunningQueryInfo;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.spi.metric.Metric;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Assert;
 
 import static org.apache.ignite.internal.processors.query.RunningQueryManager.SQL_USER_QUERIES_REG_NAME;
@@ -31,6 +40,9 @@ import static org.apache.ignite.internal.processors.query.RunningQueryManager.SQ
  * require grid restart.
  */
 public class UserQueriesTestBase extends SqlStatisticsAbstractTest {
+    /** Sleep interval in seconds, we expect kill query does it's job. */
+    private static final int WAIT_FOR_KILL_SEC = 1;
+
     /** Short names of all tested metrics. */
     private static final String[] ALL_METRICS = {"success", "failed", "canceled", "failedByOOM"};
 
@@ -121,5 +133,53 @@ public class UserQueriesTestBase extends SqlStatisticsAbstractTest {
         Assert.assertTrue("Expected long metric, but got " + metric.getClass(), metric instanceof LongMetric);
 
         return ((LongMetric)metric).value();
+    }
+
+    /**
+     * Starts and kills query for sure.
+     *
+     * @param cache api entry point.
+     */
+    protected void startAndKillQuery(IgniteCache cache) {
+        try {
+            IgniteInternalFuture qryCanceled = GridTestUtils.runAsync(() -> {
+                GridTestUtils.assertThrowsAnyCause(log,
+                    () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID <> suspendHook(ID)")).getAll(),
+                    QueryCancelledException.class,
+                    null);
+            });
+
+            SuspendQuerySqlFunctions.awaitQueryStopsInTheMiddle();
+
+            // We perform async kill and hope it does it's job in some time.
+            killAsyncAllQueriesOn(REDUCER_IDX);
+
+            TimeUnit.SECONDS.sleep(WAIT_FOR_KILL_SEC);
+
+            SuspendQuerySqlFunctions.resumeQueryExecution();
+
+            qryCanceled.get(WAIT_OP_TIMEOUT_SEC, TimeUnit.SECONDS);
+        }
+        catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Cancel all the query on the node with the specified index.
+     *
+     * @param nodeIdx Node index.
+     */
+    private void killAsyncAllQueriesOn(int nodeIdx) {
+        IgniteEx node = grid(nodeIdx);
+
+        Collection<GridRunningQueryInfo> queries = node.context().query().getIndexing().runningQueries(-1);
+
+        for (GridRunningQueryInfo queryInfo : queries) {
+            String killId = queryInfo.globalQueryId();
+
+            node.context().query().querySqlFields(
+                new SqlFieldsQuery("KILL QUERY ASYNC '" + killId + "'").setSchema("PUBLIC"), false);
+        }
     }
 }
