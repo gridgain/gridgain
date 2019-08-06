@@ -9306,9 +9306,8 @@ public abstract class IgniteUtils {
             workDir = new File(userIgniteHome, "work");
         else {
             throw new IgniteCheckedException(
-                "Unable to resolve the working directory. One of the following settings should be installed explicitly: "
-                    + "system variables - '" + IGNITE_HOME + "', '" + IGNITE_WORK_DIR
-                    + "' or configuration parameter - 'workDirectory'"
+                "Failed to resolve Ignite work directory. Either IgniteConfiguration.setWorkDirectory or " +
+                    "one of the system properties (" + IGNITE_HOME + ", " + IGNITE_WORK_DIR + ") must be explicitly set"
             );
         }
 

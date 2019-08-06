@@ -98,7 +98,7 @@ public class GridStartupWithUndefinedIgniteHomeSelfTest {
                 fail("Starting should fail due to working directory is not defined");
             }
             catch (IgniteException e) {
-                assertTrue(e.getMessage().contains("Unable to resolve the working directory"));
+                assertTrue(e.getMessage().contains("Failed to resolve Ignite work directory"));
             }
         }
     }
