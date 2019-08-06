@@ -50,14 +50,10 @@ public class ConnectionManager {
         ";DEFAULT_TABLE_ENGINE=" + GridH2DefaultTableEngine.class.getName();
 
     /** Default maximum size of connection pool. */
-    private static final int CONNECTION_POOL_SIZE = 100;
+    private static final int CONNECTION_POOL_SIZE = 32;
 
-    /** The period of clean up the statement cache. */
-    @SuppressWarnings("FieldCanBeLocal")
-    private final Long stmtCleanupPeriod = Long.getLong(IGNITE_H2_INDEXING_CACHE_CLEANUP_PERIOD, 10_000);
-
-    /** The timeout to remove entry from the statement cache if the thread doesn't perform any queries. */
-    private final Long stmtTimeout = Long.getLong(IGNITE_H2_INDEXING_CACHE_THREAD_USAGE_TIMEOUT, 600 * 1000);
+    /** Stripes count. */
+    private static final int STRIPES_COUNT = 16;
 
     /*
      * Initialize system properties for H2.
@@ -70,14 +66,12 @@ public class ConnectionManager {
         System.setProperty("h2.dropRestrict", "false"); // Drop schema with cascade semantics.
     }
 
-    /** Used connections set. */
-    private final Set<H2Connection> usedConns = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    /** The period of clean up the statement cache. */
+    @SuppressWarnings("FieldCanBeLocal")
+    private final Long stmtCleanupPeriod = Long.getLong(IGNITE_H2_INDEXING_CACHE_CLEANUP_PERIOD, 10_000);
 
-    /** Connection pool. */
-    private volatile ConcurrentLinkedDeque8<H2Connection> connPool = new ConcurrentLinkedDeque8<>();
-
-    /** Connection pool max size. */
-    private volatile int poolMaxSize = CONNECTION_POOL_SIZE;
+    /** The timeout to remove entry from the statement cache if the thread doesn't perform any queries. */
+    private final Long stmtTimeout = Long.getLong(IGNITE_H2_INDEXING_CACHE_THREAD_USAGE_TIMEOUT, 600 * 1000);
 
     /** Database URL. */
     private final String dbUrl;
@@ -85,11 +79,29 @@ public class ConnectionManager {
     /** Statement cleanup task. */
     private final GridTimeoutProcessor.CancelableTask stmtCleanupTask;
 
+    /** Logger. */
+    private final IgniteLogger log;
+
+//    /** Used connections set. */
+    private final Set<H2Connection> usedConns = Collections.newSetFromMap(new ConcurrentHashMap<>());
+//
+//    /** Connection pool. */
+//    private final ConcurrentLinkedDeque8<H2Connection> connPool = new ConcurrentLinkedDeque8<>();
+
+    private final ConcurrentLinkedDeque8<H2Connection>[] stripedConnPools = new ConcurrentLinkedDeque8[STRIPES_COUNT];
+
+    /** Connection pool max size. */
+    private volatile int poolMaxSize = CONNECTION_POOL_SIZE;
+
     /** H2 connection for INFORMATION_SCHEMA. Holds H2 open until node is stopped. */
     private volatile Connection sysConn;
 
-    /** Logger. */
-    private final IgniteLogger log;
+    /** Stripe index. */
+    private static ThreadLocal<Integer> stripeIdx = new ThreadLocal<Integer>() {
+        @Override protected Integer initialValue() {
+            return (int)(Thread.currentThread().getId() % STRIPES_COUNT);
+        }
+    };
 
     /**
      * Constructor.
@@ -101,7 +113,7 @@ public class ConnectionManager {
             IgniteSystemProperties.IGNITE_H2_LOCAL_RESULT_FACTORY, H2LocalResultFactory.class.getName());
 
         dbUrl = "jdbc:h2:mem:" + ctx.localNodeId() + DEFAULT_DB_OPTIONS +
-            ";LOCAL_RESULT_FACTORY=\""+ localResultFactoryClass +"\"";
+            ";LOCAL_RESULT_FACTORY=\"" + localResultFactoryClass + "\"";
 
         log = ctx.log(ConnectionManager.class);
 
@@ -114,6 +126,10 @@ public class ConnectionManager {
         }
         catch (SQLException e) {
             throw new IgniteSQLException("Failed to initialize DB connection: " + dbUrl, e);
+        }
+
+        for (int i = 0; i < STRIPES_COUNT; ++i) {
+            stripedConnPools[i] = new ConcurrentLinkedDeque8<>();
         }
 
         stmtCleanupTask = ctx.timeout().schedule(this::cleanupStatements, stmtCleanupPeriod, stmtCleanupPeriod);
@@ -167,15 +183,19 @@ public class ConnectionManager {
      * Clear statement cache when cache is unregistered..
      */
     public void onCacheDestroyed() {
-        connPool.forEach(H2Connection::clearStatementCache);
+        for (ConcurrentLinkedDeque8<H2Connection> connPool : stripedConnPools)
+            connPool.forEach(H2Connection::clearStatementCache);
     }
 
     /**
      * Close all connections.
      */
     private void closeConnections() {
-        connPool.forEach(c -> U.close(c.connection(), log));
-        connPool.clear();
+        for (ConcurrentLinkedDeque8<H2Connection> connPool : stripedConnPools) {
+            log.info("+++ CLEAR " + connPool.size());
+            connPool.forEach(c -> U.close(c.connection(), log));
+            connPool.clear();
+        }
 
         usedConns.forEach(c -> U.close(c.connection(), log));
         usedConns.clear();
@@ -214,10 +234,12 @@ public class ConnectionManager {
     private void cleanupStatements() {
         long now = U.currentTimeMillis();
 
-        connPool.forEach(c -> {
-            if (now - c.statementCache().lastUsage() > stmtTimeout)
-                c.clearStatementCache();
-        });
+        for (ConcurrentLinkedDeque8<H2Connection> connPool : stripedConnPools) {
+            connPool.forEach(c -> {
+                if (now - c.statementCache().lastUsage() > stmtTimeout)
+                    c.clearStatementCache();
+            });
+        }
     }
 
     /**
@@ -256,9 +278,9 @@ public class ConnectionManager {
      */
     public H2PooledConnection connection() {
         try {
-            H2Connection conn = null;
+            ConcurrentLinkedDeque8<H2Connection> connPool = stripedConnPools[stripeIdx.get()];
 
-           conn = connPool.poll();
+            H2Connection conn = connPool.poll();
 
             if (conn == null)
                 conn = newConnection();
@@ -292,14 +314,17 @@ public class ConnectionManager {
 
     /**
      * Return connection to pool or close if the pool size is bigger then maximum.
+     *
      * @param conn Connection.
      */
     void recycle(H2Connection conn) {
+        ConcurrentLinkedDeque8<H2Connection> connPool = stripedConnPools[stripeIdx.get()];
+
         boolean rmv = usedConns.remove(conn);
 
-        assert !connPool.contains(conn) : "Connection is already recycled [conn=" + conn + ']';
-
         assert rmv : "Connection isn't tracked [conn=" + conn + ']';
+
+        assert !connPool.contains(conn) : "Connection is already recycled [conn=" + conn + ']';
 
         if (connPool.size() < poolMaxSize)
             connPool.push(conn);
