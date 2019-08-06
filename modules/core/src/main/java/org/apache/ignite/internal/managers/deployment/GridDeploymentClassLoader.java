@@ -599,11 +599,13 @@ class GridDeploymentClassLoader extends ClassLoader implements GridDeploymentInf
 
             try {
                 GridDeploymentResponse res = null;
+                boolean timeout = false;
 
                 try {
                     res = comm.sendResourceRequest(path, ldrId, node, endTime);
                 }
                 catch (TimeoutException ignore) {
+                    timeout = true;
                 }
 
                 if (res == null) {
@@ -629,9 +631,11 @@ class GridDeploymentClassLoader extends ClassLoader implements GridDeploymentInf
                     log.debug("Failed to find class on remote node [class=" + name + ", nodeId=" + node.id() +
                         ", clsLdrId=" + ldrId + ", reason=" + res.errorMessage() + ']');
 
-                synchronized (mux) {
-                    if (missedRsrcs != null)
-                        missedRsrcs.add(path);
+                if (!timeout) {
+                    synchronized (mux) {
+                        if (missedRsrcs != null)
+                            missedRsrcs.add(path);
+                    }
                 }
 
                 throw new ClassNotFoundException("Failed to peer load class [class=" + name + ", nodeClsLdrs=" +
