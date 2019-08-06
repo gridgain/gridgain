@@ -582,8 +582,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                         ctx.kernalContext().failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
                     }
 
-                    if (log.isDebugEnabled())
-                        log.debug("Partition changed state [grp=" + grp.cacheOrGroupName()
+                    log.info("Partition changed state [grp=" + grp.cacheOrGroupName()
                             + ", p=" + id + ", prev=" + prevState + ", to=" + toState + "]");
                 }
 
@@ -598,8 +597,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             if (update) {
                 assert toState != EVICTED || reservations() == 0 : this;
 
-                if (log.isDebugEnabled())
-                    log.debug("Partition changed state [grp=" + grp.cacheOrGroupName()
+                log.info("Partition changed state [grp=" + grp.cacheOrGroupName()
                         + ", p=" + id + ", prev=" + prevState + ", to=" + toState + "]");
             }
 
