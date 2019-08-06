@@ -20,8 +20,8 @@ import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.managers.checkpoint.GridCheckpointManagerAbstractSelfTest;
-import org.apache.ignite.testsuites.IgniteIgnore;
 import org.apache.ignite.testsuites.IgniteS3TestSuite;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -54,7 +54,7 @@ public class S3CheckpointManagerSelfTest extends GridCheckpointManagerAbstractSe
     /**
      * @throws Exception Thrown if any exception occurs.
      */
-    @IgniteIgnore("https://issues.apache.org/jira/browse/IGNITE-2420")
+    @Ignore("https://issues.apache.org/jira/browse/IGNITE-2420")
     @Test
     public void testS3Based() throws Exception {
         retries = 6;
@@ -65,7 +65,7 @@ public class S3CheckpointManagerSelfTest extends GridCheckpointManagerAbstractSe
     /**
      * @throws Exception Thrown if any exception occurs.
      */
-    @IgniteIgnore("https://issues.apache.org/jira/browse/IGNITE-2420")
+    @Ignore("https://issues.apache.org/jira/browse/IGNITE-2420")
     @Test
     public void testMultiNodeS3Based() throws Exception {
         retries = 6;
