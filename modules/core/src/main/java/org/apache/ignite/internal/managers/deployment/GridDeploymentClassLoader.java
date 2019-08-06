@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeoutException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
@@ -597,7 +598,13 @@ class GridDeploymentClassLoader extends ClassLoader implements GridDeploymentInf
             }
 
             try {
-                GridDeploymentResponse res = comm.sendResourceRequest(path, ldrId, node, endTime);
+                GridDeploymentResponse res = null;
+
+                try {
+                    res = comm.sendResourceRequest(path, ldrId, node, endTime);
+                }
+                catch (TimeoutException ignore) {
+                }
 
                 if (res == null) {
                     String msg = "Failed to send class-loading request to node (is node alive?) [node=" +
@@ -662,6 +669,16 @@ class GridDeploymentClassLoader extends ClassLoader implements GridDeploymentInf
 
     /** {@inheritDoc} */
     @Nullable @Override public InputStream getResourceAsStream(String name) {
+        try {
+            return getResourceAsStreamEx(name);
+        }
+        catch (TimeoutException ignore) {
+            return null;
+        }
+    }
+
+    /** */
+    @Nullable public InputStream getResourceAsStreamEx(String name) throws TimeoutException {
         assert !Thread.holdsLock(mux);
 
         if (byteMap != null && name.endsWith(".class")) {
@@ -701,7 +718,7 @@ class GridDeploymentClassLoader extends ClassLoader implements GridDeploymentInf
      * @param name Resource name.
      * @return InputStream for resource or {@code null} if resource could not be found.
      */
-    @Nullable private InputStream sendResourceRequest(String name) {
+    @Nullable private InputStream sendResourceRequest(String name) throws TimeoutException {
         assert !Thread.holdsLock(mux);
 
         long endTime = computeEndTime(p2pTimeout);

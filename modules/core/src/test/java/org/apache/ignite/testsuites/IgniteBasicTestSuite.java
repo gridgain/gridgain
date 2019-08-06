@@ -32,6 +32,7 @@ import org.apache.ignite.internal.GridLifecycleAwareSelfTest;
 import org.apache.ignite.internal.GridLifecycleBeanSelfTest;
 import org.apache.ignite.internal.GridMBeansTest;
 import org.apache.ignite.internal.GridNodeMetricsLogSelfTest;
+import org.apache.ignite.internal.GridPeerDeploymentRetryTest;
 import org.apache.ignite.internal.GridProjectionForCachesSelfTest;
 import org.apache.ignite.internal.GridReduceSelfTest;
 import org.apache.ignite.internal.GridReleaseTypeSelfTest;
@@ -44,8 +45,8 @@ import org.apache.ignite.internal.MarshallerContextLockingSelfTest;
 import org.apache.ignite.internal.TransactionsMXBeanImplTest;
 import org.apache.ignite.internal.managers.IgniteDiagnosticMessagesMultipleConnectionsTest;
 import org.apache.ignite.internal.managers.IgniteDiagnosticMessagesTest;
-import org.apache.ignite.internal.pagemem.wal.record.WALRecordTest;
 import org.apache.ignite.internal.managers.discovery.IncompleteDeserializationExceptionTest;
+import org.apache.ignite.internal.pagemem.wal.record.WALRecordTest;
 import org.apache.ignite.internal.processors.DeadLockOnNodeLeftExchangeTest;
 import org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentV2Test;
 import org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentV2TestNoOptimizations;
@@ -192,6 +193,8 @@ import org.junit.runners.Suite;
     AttributeNodeFilterSelfTest.class,
 
     WALRecordTest.class,
+
+    GridPeerDeploymentRetryTest.class,
 
     // Basic DB data structures.
     BPlusTreeSelfTest.class,

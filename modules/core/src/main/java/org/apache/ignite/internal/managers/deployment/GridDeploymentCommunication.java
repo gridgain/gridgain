@@ -21,6 +21,7 @@ import java.io.InputStream;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.UUID;
+import java.util.concurrent.TimeoutException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
@@ -353,7 +354,7 @@ class GridDeploymentCommunication {
      * @throws IgniteCheckedException Thrown if there is no connection with remote node.
      */
     GridDeploymentResponse sendResourceRequest(final String rsrcName, IgniteUuid clsLdrId,
-        final ClusterNode dstNode, long threshold) throws IgniteCheckedException {
+        final ClusterNode dstNode, long threshold) throws IgniteCheckedException, TimeoutException {
         assert rsrcName != null;
         assert dstNode != null;
         assert clsLdrId != null;
@@ -470,6 +471,9 @@ class GridDeploymentCommunication {
 
                         timeout = threshold - U.currentTimeMillis();
                     }
+
+                    if (timeout <= 0)
+                        throw new TimeoutException();
                 }
                 catch (InterruptedException e) {
                     // Interrupt again to get it in the users code.
