@@ -21,7 +21,7 @@ import java.io.IOException;
 import org.h2.value.Value;
 
 /**
- * TODO: Add class description.
+ * TODO: REMOVE IT
  */
 public class AggregateSerializer {
     private static final int NULL = 0;
@@ -34,45 +34,45 @@ public class AggregateSerializer {
     public static void writeAggregate(Object agg, DataOutputStream out) throws IOException {
         if (!canSpillToDisk(agg))
             throw new RuntimeException("Aggregate can not be serialized." + agg.getClass());
-
-        if (agg == null) {
-            out.writeInt(NULL);
-        }
-        else if (agg instanceof AggregateDataCount) {
-            AggregateDataCount aggCnt = (AggregateDataCount)agg;
-
-            out.writeInt(COUNT);
-
-            aggCnt.write(out);
-        }
-        else if (agg instanceof AggregateDataDefault) {
-            AggregateDataDefault aggDflt = (AggregateDataDefault)agg;
-
-            out.writeInt(DEFAULT);
-
-            aggDflt.write(out);
-        }
-        else
-            throw new UnsupportedOperationException("Can not serialize aggregate: " + agg);
+//
+//        if (agg == null) {
+//            out.writeInt(NULL);
+//        }
+//        else if (agg instanceof AggregateDataCount) {
+//            AggregateDataCount aggCnt = (AggregateDataCount)agg;
+//
+//            out.writeInt(COUNT);
+//
+//            aggCnt.toBytes(out);
+//        }
+//        else if (agg instanceof AggregateDataDefault) {
+//            AggregateDataDefault aggDflt = (AggregateDataDefault)agg;
+//
+//            out.writeInt(DEFAULT);
+//
+//            aggDflt.toBytes(out);
+//        }
+//        else
+//            throw new UnsupportedOperationException("Can not serialize aggregate: " + agg);
 
     }
 
     public static Object readAggregate(DataInputStream in) throws IOException {
-        int type = in.readInt();
-
-        switch (type) {
-            case NULL:
-                return null;
-
-            case COUNT:
-                return AggregateDataCount.read(in);
-
-            case DEFAULT:
-                return AggregateDataDefault.read(in);
-
-            default:
-                throw new UnsupportedOperationException("Unknown aggregate type: " + type);
-        }
+//        int type = in.readInt();
+//
+//        switch (type) {
+//            case NULL:
+//                return null;
+//
+//            case COUNT:
+//                return AggregateDataCount.read(in);
+//
+//            case DEFAULT:
+//                return AggregateDataDefault.read(in);
+//
+//            default:
+                throw new UnsupportedOperationException();
+//        }
 
     }
 

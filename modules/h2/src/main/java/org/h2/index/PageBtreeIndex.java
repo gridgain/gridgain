@@ -362,7 +362,7 @@ public class PageBtreeIndex extends PageIndex {
             row.setKey(key);
             for (Column col : columns) {
                 int idx = col.getColumnId();
-                row.setValue(idx, data.readValue());
+                row.setValue(idx, (Value)data.readValue());
             }
             return row;
         }

@@ -49,6 +49,11 @@ class AggregateDataSelectivity extends AggregateData {
     }
 
     @Override
+    void mergeAggregate(Session ses, AggregateData agg) {
+        throw new UnsupportedOperationException("https://ggsystems.atlassian.net/browse/GG-22406");
+    }
+
+    @Override
     Value getValue(Database database, int dataType) {
         if (distinct) {
             count = 0;

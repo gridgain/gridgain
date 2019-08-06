@@ -211,7 +211,7 @@ public abstract class AbstractExternalResult implements ResultExternal, External
      * @return New data buffer.
      */
     @NotNull protected Data createDataBuffer(int cap) {
-        return Data.create(null, cap, true);
+        return Data.create(null, cap, true); // TODO use org.h2.store.Data.getValueLen(org.h2.value.Value)
     }
 
     /**

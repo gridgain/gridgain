@@ -5,8 +5,6 @@
  */
 package org.h2.expression.aggregate;
 
-import java.io.DataOutputStream;
-import java.io.IOException;
 import org.h2.engine.Constants;
 import org.h2.engine.Database;
 import org.h2.engine.Session;
@@ -85,6 +83,14 @@ public abstract class AggregateData {
     abstract void add(Session ses, Value v);
 
     /**
+     * Merges two aggregates.
+     *
+     * @param ses Session.
+     * @param agg Aggregate to be merged.
+     */
+    abstract void mergeAggregate(Session ses, AggregateData agg);
+
+    /**
      * Get the aggregate result.
      *
      * @param database the database
@@ -101,10 +107,6 @@ public abstract class AggregateData {
 
     public boolean hasFixedSizeInBytes() {
         return false;
-    }
-
-    public void write(DataOutputStream out) throws IOException {
-        throw new UnsupportedOperationException();
     }
 
 }

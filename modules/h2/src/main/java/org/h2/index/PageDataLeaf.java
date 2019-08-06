@@ -616,7 +616,7 @@ public class PageDataLeaf extends PageData {
         synchronized (data) {
             data.setPos(pos);
             for (int i = 0; i < columnCount; i++) {
-                values[i] = data.readValue();
+                values[i] = (Value)data.readValue();
             }
         }
         return index.getDatabase().createRow(values, Row.MEMORY_CALCULATE);

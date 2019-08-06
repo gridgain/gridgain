@@ -173,7 +173,7 @@ public class RowList implements AutoCloseable {
             if (buff.readByte() == 0) {
                 v = null;
             } else {
-                v = buff.readValue();
+                v = (Value)buff.readValue();
                 if (v.isLinkedToTable()) {
                     // the table id is 0 if it was linked when writing
                     // a temporary entry

@@ -70,6 +70,10 @@ class AggregateDataCollecting extends AggregateData implements Iterable<Value> {
         }
     }
 
+    @Override void mergeAggregate(Session ses, AggregateData agg) {
+        throw new UnsupportedOperationException("https://ggsystems.atlassian.net/browse/GG-22406");
+    }
+
     @Override
     Value getValue(Database database, int dataType) {
         return null;

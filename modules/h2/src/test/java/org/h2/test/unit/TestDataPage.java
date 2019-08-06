@@ -232,7 +232,7 @@ public class TestDataPage extends TestBase implements DataHandler {
         data.writeValue(v);
         data.writeInt(123);
         data.reset();
-        Value v2 = data.readValue();
+        Value v2 = (Value)data.readValue();
         assertEquals(v.getValueType(), v2.getValueType());
         assertEquals(0, v.compareTo(v2, null, compareMode));
         assertEquals(123, data.readInt());
@@ -266,10 +266,10 @@ public class TestDataPage extends TestBase implements DataHandler {
 
         trace(page.readString());
         trace(page.readString());
-        trace(page.readValue().getInt());
-        trace(page.readValue().getString());
-        trace("" + page.readValue().getFloat());
-        trace("" + page.readValue().getDouble());
+        trace(((Value)page.readValue()).getInt());
+        trace(((Value)page.readValue()).getString());
+        trace("" + ((Value)page.readValue()).getFloat());
+        trace("" + ((Value)page.readValue()).getDouble());
         trace(page.readValue().toString());
         page.reset();
 
