@@ -171,7 +171,7 @@ public class SqlStatisticsUserQueriesFastTest extends UserQueriesTestBase {
     @Test
     public void testLocalSelectCanceled() {
         assertMetricsIncrementedOnlyOnReducer(() ->
-                startAndKillQuery(cache),
+                startAndKillQuery(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID <> suspendHook(ID)").setLocal(true)),
             "success",
             "failed",
             "canceled");
@@ -183,7 +183,8 @@ public class SqlStatisticsUserQueriesFastTest extends UserQueriesTestBase {
      */
     @Test
     public void testIfQueryCanceledThenOnlyReducerMetricsUpdated() throws Exception {
-        assertMetricsIncrementedOnlyOnReducer(() -> startAndKillQuery(cache),
+        assertMetricsIncrementedOnlyOnReducer(() ->
+                startAndKillQuery(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID <> suspendHook(ID)")),
             "success", // KILL QUERY succeeded
             "failed",
             "canceled");

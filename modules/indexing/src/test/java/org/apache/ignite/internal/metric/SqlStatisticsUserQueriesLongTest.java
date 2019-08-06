@@ -84,12 +84,11 @@ public class SqlStatisticsUserQueriesLongTest extends UserQueriesTestBase {
     }
 
     /**
-     * If reduce part of the query failed due to OOM protection, only general failure metric and OOM metric should be
-     * incremented only on reduce node.
+     * Verify that error metrics are updated if that error happened on reduce step.
      */
     @Test
     public void testFailMetricsOnReduceStep() throws Exception {
-        int strongMemQuota = 256 * 1024;
+        int strongMemQuota = 1024 * 1024;
         int memQuotaUnlimited = -1;
 
         startGridWithMaxMem(MAPPER_IDX, memQuotaUnlimited);
@@ -102,6 +101,8 @@ public class SqlStatisticsUserQueriesLongTest extends UserQueriesTestBase {
         final String rdcFailMsg = "Failed to run reduce query locally";
 
         // general failure
+        SuspendQuerySqlFunctions.refresh();
+
         assertMetricsIncrementedOnlyOnReducer(() -> {
             GridTestUtils.assertThrows(
                 log,
@@ -111,7 +112,7 @@ public class SqlStatisticsUserQueriesLongTest extends UserQueriesTestBase {
                 rdcFailMsg);
         }, "failed");
 
-        // OOM failure
+        // OOM protection
         assertMetricsIncrementedOnlyOnReducer(() -> GridTestUtils.assertThrows(
             log,
             () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB GROUP BY NAME")).getAll(),
@@ -119,6 +120,6 @@ public class SqlStatisticsUserQueriesLongTest extends UserQueriesTestBase {
             rdcFailMsg),
             "failed", "failedByOOM");
 
-        // TODO: suspend.
+        // Cancel is hard to test in reducer phase.
     }
 }

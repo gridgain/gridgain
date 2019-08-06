@@ -79,7 +79,7 @@ public class SqlStatisticsAbstractTest extends GridCommonAbstractTest {
      * Start the cache with a test table and test data.
      */
     protected IgniteCache createCacheFrom(Ignite node) {
-        CacheConfiguration<Integer, String> ccfg = new CacheConfiguration<Integer, String>("TestCache")
+        CacheConfiguration<Integer, String> ccfg = new CacheConfiguration<Integer, String>(DEFAULT_CACHE_NAME)
             .setSqlFunctionClasses(SuspendQuerySqlFunctions.class)
             .setQueryEntities(Collections.singleton(
                 new QueryEntity(Integer.class.getName(), String.class.getName())
@@ -92,7 +92,7 @@ public class SqlStatisticsAbstractTest extends GridCommonAbstractTest {
 
         IgniteCache<Integer, String> cache = node.createCache(ccfg);
 
-        try (IgniteDataStreamer<Object, Object> ds = node.dataStreamer("TestCache")) {
+        try (IgniteDataStreamer<Object, Object> ds = node.dataStreamer(DEFAULT_CACHE_NAME)) {
             for (int i = 0; i < TABLE_SIZE; i++)
                 ds.addData(i, UUID.randomUUID().toString());
         }
@@ -108,7 +108,7 @@ public class SqlStatisticsAbstractTest extends GridCommonAbstractTest {
         /**
          * How many rows should be processed (by all nodes in total)
          */
-        private static final int PROCESS_ROWS_TO_SUSPEND = TABLE_SIZE / 2;
+        private static final int DFLT_PROCESS_ROWS_TO_SUSPEND = TABLE_SIZE / 2;
 
         /**
          * Latch to await till full scan query that uses this class function have done some job, so some memory is
@@ -137,7 +137,7 @@ public class SqlStatisticsAbstractTest extends GridCommonAbstractTest {
             if (resumeQryExec != null)
                 resumeQryExec.countDown();
 
-            qryIsInTheMiddle = new CountDownLatch(PROCESS_ROWS_TO_SUSPEND);
+            qryIsInTheMiddle = new CountDownLatch(DFLT_PROCESS_ROWS_TO_SUSPEND);
 
             resumeQryExec = new CountDownLatch(1);
         }
@@ -157,6 +157,13 @@ public class SqlStatisticsAbstractTest extends GridCommonAbstractTest {
          */
         public static void resumeQueryExecution() {
             resumeQryExec.countDown();
+        }
+
+        /**
+         * Override process rows threshhold: after that number of rows are processed, query is suspended.
+         */
+        public static void setProcessRowsToSuspend(int rows) {
+            qryIsInTheMiddle = new CountDownLatch(rows);
         }
 
         /**

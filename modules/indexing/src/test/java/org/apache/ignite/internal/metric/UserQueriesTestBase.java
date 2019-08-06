@@ -21,7 +21,6 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.query.QueryCancelledException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
@@ -138,13 +137,14 @@ public class UserQueriesTestBase extends SqlStatisticsAbstractTest {
     /**
      * Starts and kills query for sure.
      *
-     * @param cache api entry point.
+     * @param query query to execute. This query should use {@link SuspendQuerySqlFunctions#suspendHook(long)} sql
+     * function.
      */
-    protected void startAndKillQuery(IgniteCache cache) {
+    protected void startAndKillQuery(SqlFieldsQuery query) {
         try {
             IgniteInternalFuture qryCanceled = GridTestUtils.runAsync(() -> {
                 GridTestUtils.assertThrowsAnyCause(log,
-                    () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID <> suspendHook(ID)")).getAll(),
+                    () -> jcache(REDUCER_IDX).query(query).getAll(),
                     QueryCancelledException.class,
                     null);
             });
