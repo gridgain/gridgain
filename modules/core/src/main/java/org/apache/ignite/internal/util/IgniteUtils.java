@@ -9307,7 +9307,8 @@ public abstract class IgniteUtils {
         else {
             throw new IgniteCheckedException(
                 "Failed to resolve Ignite work directory. Either IgniteConfiguration.setWorkDirectory or " +
-                    "one of the system properties (" + IGNITE_HOME + ", " + IGNITE_WORK_DIR + ") must be explicitly set"
+                    "one of the system properties (" + IGNITE_HOME + ", " +
+                    IgniteSystemProperties.IGNITE_WORK_DIR + ") must be explicitly set."
             );
         }
 
