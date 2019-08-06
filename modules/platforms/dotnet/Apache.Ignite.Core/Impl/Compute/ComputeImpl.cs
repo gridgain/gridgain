@@ -141,6 +141,18 @@ namespace Apache.Ignite.Core.Impl.Compute
         }
 
         /// <summary>
+        /// Returns a new <see cref="ComputeImpl"/> instance associated with a specified executor.
+        /// </summary>
+        /// <param name="executorName">Executor name.</param>
+        /// <returns>New <see cref="ComputeImpl"/> instance associated with a specified executor.</returns>
+        public ComputeImpl WithExecutor(string executorName)
+        {
+            var target = DoOutOpObject(OpWithExecutor, w => w.WriteString(executorName));
+
+            return new ComputeImpl(target, _prj, _keepBinary.Value);
+        }
+
+        /// <summary>
         /// Executes given Java task on the grid projection. If task for given name has not been deployed yet,
         /// then 'taskName' will be used as task class name to auto-deploy the task.
         /// </summary>

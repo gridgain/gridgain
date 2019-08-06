@@ -1683,5 +1683,10 @@ namespace Apache.Ignite.Core
         /// </summary>
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
         public ICollection<string> SqlSchemas { get; set; }
+
+        /// <summary>
+        /// TODO
+        /// </summary>
+        public object ExecutorConfiguration { get; set; }
     }
 }
