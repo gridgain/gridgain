@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -78,7 +78,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.lang.IgniteOutClosure;
 import org.apache.ignite.marshaller.Marshaller;
-import org.apache.ignite.marshaller.jdk.JdkMarshaller;
+import org.apache.ignite.marshaller.MarshallerUtils;
 import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -128,7 +128,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
     public static final String META_STORAGE_NAME = "metastorage";
 
     /** Marshaller. */
-    private static final Marshaller marshaller = new JdkMarshaller();
+    private final Marshaller marshaller;
 
     /**
      * Executor to disallow running code that modifies data in idxCacheStores concurrently with cleanup of file page
@@ -188,6 +188,8 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
         this.dsCfg = dsCfg;
 
         pageStoreV1FileIoFactory = pageStoreFileIoFactory = dsCfg.getFileIOFactory();
+
+        marshaller =  MarshallerUtils.jdkMarshaller(ctx.igniteInstanceName());
     }
 
     /** {@inheritDoc} */
@@ -474,7 +476,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
     }
 
     /** {@inheritDoc} */
-    @Override public void onPartitionCreated(int grpId, int partId) throws IgniteCheckedException {
+    @Override public void onPartitionCreated(int grpId, int partId) {
         // No-op.
     }
 
@@ -577,7 +579,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
      *
      */
     public Path getPath(boolean isSharedGroup, String cacheOrGroupName, int partId) {
-        return getPartitionFile(cacheWorkDir(isSharedGroup, cacheOrGroupName), partId).toPath();
+        return getPartitionFilePath(cacheWorkDir(isSharedGroup, cacheOrGroupName), partId);
     }
 
     /**
@@ -653,7 +655,8 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
             FileVersionCheckingFactory pageStoreFactory = new FileVersionCheckingFactory(
                 pageStoreFileIoFactory,
                 pageStoreV1FileIoFactory,
-                igniteCfg.getDataStorageConfiguration());
+                igniteCfg.getDataStorageConfiguration()
+            );
 
             if (encrypted) {
                 int headerSize = pageStoreFactory.headerSize(pageStoreFactory.latestVersion());
@@ -671,10 +674,12 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
             PageStore[] partStores = new PageStore[partitions];
 
             for (int partId = 0; partId < partStores.length; partId++) {
+                final int p = partId;
+
                 PageStore partStore =
                     pageStoreFactory.createPageStore(
                         PageMemory.FLAG_DATA,
-                        getPartitionFile(cacheWorkDir, partId),
+                        () -> getPartitionFilePath(cacheWorkDir, p),
                         allocatedTracker);
 
                     partStores[partId] = partStore;
@@ -694,8 +699,8 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
      * @param cacheWorkDir Cache work directory.
      * @param partId Partition id.
      */
-    @NotNull private File getPartitionFile(File cacheWorkDir, int partId) {
-        return new File(cacheWorkDir, format(PART_FILE_TEMPLATE, partId));
+    @NotNull private Path getPartitionFilePath(File cacheWorkDir, int partId) {
+        return new File(cacheWorkDir, String.format(PART_FILE_TEMPLATE, partId)).toPath();
     }
 
     /** {@inheritDoc} */

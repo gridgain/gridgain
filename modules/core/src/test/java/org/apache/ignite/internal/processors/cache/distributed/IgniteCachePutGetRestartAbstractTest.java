@@ -99,11 +99,6 @@ public abstract class IgniteCachePutGetRestartAbstractTest extends IgniteCacheAb
         return cfg;
     }
 
-    /** {@inheritDoc} */
-    @Override protected long getTestTimeout() {
-        return 5 * 60_000;
-    }
-
     /**
      * @throws Exception If failed.
      */
@@ -175,7 +170,7 @@ public abstract class IgniteCachePutGetRestartAbstractTest extends IgniteCacheAb
             }
         });
 
-        long endTime = System.currentTimeMillis() + 2 * 60_000;
+        long endTime = System.currentTimeMillis() + GridTestUtils.SF.applyUB(40 * 1000, 2 * 60_000);
 
         try {
             int iter = 0;

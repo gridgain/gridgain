@@ -19,7 +19,9 @@ namespace Apache.Ignite.Core.Tests.Cache
     using System;
     using System.IO;
     using System.Linq;
+    using Apache.Ignite.Core.Cache.Affinity.Rendezvous;
     using Apache.Ignite.Core.Cache.Configuration;
+    using Apache.Ignite.Core.Cache.Store;
     using Apache.Ignite.Core.Common;
     using Apache.Ignite.Core.Configuration;
     using NUnit.Framework;
@@ -62,7 +64,9 @@ namespace Apache.Ignite.Core.Tests.Cache
         /// Tests that cache data survives node restart.
         /// </summary>
         [Test]
-        public void TestCacheDataSurvivesNodeRestart()
+        public void TestCacheDataSurvivesNodeRestart(
+            [Values(true, false)] bool withCacheStore,
+            [Values(true, false)] bool withCustomAffinity)
         {
             var cfg = new IgniteConfiguration(TestUtils.GetTestConfiguration())
             {
@@ -98,7 +102,12 @@ namespace Apache.Ignite.Core.Tests.Cache
                 ignite.GetCluster().SetActive(true);
 
                 // Create cache with default region (persistence enabled), add data.
-                var cache = ignite.CreateCache<int, int>(cacheName);
+                var cache = ignite.CreateCache<int, int>(new CacheConfiguration
+                {
+                    Name = cacheName,
+                    CacheStoreFactory = withCacheStore ? new CustomStoreFactory() : null,
+                    AffinityFunction = withCustomAffinity ? new CustomAffinityFunction() : null
+                });
                 cache[1] = 1;
 
                 // Check some metrics.
@@ -237,27 +246,29 @@ namespace Apache.Ignite.Core.Tests.Cache
                 var ex = Assert.Throws<IgniteException>(() => cluster.SetBaselineTopology(2));
                 Assert.AreEqual("Changing BaselineTopology on inactive cluster is not allowed.", ex.Message);
 
-                // Set with version.
                 cluster.SetActive(true);
-                cluster.SetBaselineTopology(2);
 
-                var res = cluster.GetBaselineTopology();
-                CollectionAssert.AreEquivalent(new[] {"node1", "node2"}, res.Select(x => x.ConsistentId));
+                // Can not set baseline with offline node.
+                ex = Assert.Throws<IgniteException>(() => cluster.SetBaselineTopology(2));
+                Assert.AreEqual("Check arguments. Node with consistent ID [node2] not found in server nodes.",
+                  ex.Message);
 
                 cluster.SetBaselineTopology(1);
                 Assert.AreEqual("node1", cluster.GetBaselineTopology().Single().ConsistentId);
 
-                // Set with nodes.
-                cluster.SetBaselineTopology(res);
-                
-                res = cluster.GetBaselineTopology();
-                CollectionAssert.AreEquivalent(new[] { "node1", "node2" }, res.Select(x => x.ConsistentId));
+                // Set with node.
+                cluster.SetBaselineTopology(cluster.GetBaselineTopology());
+
+                var res = cluster.GetBaselineTopology();
+                CollectionAssert.AreEquivalent(new[] { "node1"}, res.Select(x => x.ConsistentId));
 
                 cluster.SetBaselineTopology(cluster.GetTopology(1));
                 Assert.AreEqual("node1", cluster.GetBaselineTopology().Single().ConsistentId);
 
-                // Set to two nodes.
-                cluster.SetBaselineTopology(cluster.GetTopology(2));
+                // Can not set baseline with offline node.
+                ex = Assert.Throws<IgniteException>(() => cluster.SetBaselineTopology(cluster.GetTopology(2)));
+                Assert.AreEqual("Check arguments. Node with consistent ID [node2] not found in server nodes.",
+                  ex.Message);
             }
 
             // Check auto activation on cluster restart.
@@ -266,9 +277,9 @@ namespace Apache.Ignite.Core.Tests.Cache
             {
                 var cluster = ignite.GetCluster();
                 Assert.IsTrue(cluster.IsActive());
-                
+
                 var res = cluster.GetBaselineTopology();
-                CollectionAssert.AreEquivalent(new[] { "node1", "node2" }, res.Select(x => x.ConsistentId));
+                CollectionAssert.AreEquivalent(new[] { "node1"}, res.Select(x => x.ConsistentId));
             }
         }
 
@@ -346,6 +357,41 @@ namespace Apache.Ignite.Core.Tests.Cache
                     }
                 }
             };
+        }
+
+        private class CustomStoreFactory : IFactory<ICacheStore>
+        {
+            public ICacheStore CreateInstance()
+            {
+                return new CustomStore();
+            }
+        }
+
+        private class CustomStore : CacheStoreAdapter<object, object>
+        {
+            public override object Load(object key)
+            {
+                return null;
+            }
+
+            public override void Write(object key, object val)
+            {
+                // No-op.
+            }
+
+            public override void Delete(object key)
+            {
+                // No-op.
+            }
+        }
+
+        private class CustomAffinityFunction : RendezvousAffinityFunction
+        {
+            public override int Partitions
+            {
+                get { return 10; }
+                set { throw new NotSupportedException(); }
+            }
         }
     }
 }

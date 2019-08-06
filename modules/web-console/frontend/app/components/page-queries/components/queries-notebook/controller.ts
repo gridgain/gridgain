@@ -912,7 +912,7 @@ export class NotebookCtrl {
                 renderer.setOption('fontFamily', 'monospace');
                 renderer.setOption('fontSize', '14px');
                 renderer.setOption('minLines', '5');
-                renderer.setOption('maxLines', '15');
+                renderer.setOption('maxLines', '50');
 
                 editor.setTheme('ace/theme/chrome');
 

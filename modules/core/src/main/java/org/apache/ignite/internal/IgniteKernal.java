@@ -163,6 +163,9 @@ import org.apache.ignite.internal.processors.resource.GridResourceProcessor;
 import org.apache.ignite.internal.processors.resource.GridSpringResourceContext;
 import org.apache.ignite.internal.processors.rest.GridRestProcessor;
 import org.apache.ignite.internal.processors.security.GridSecurityProcessor;
+import org.apache.ignite.internal.processors.security.IgniteSecurity;
+import org.apache.ignite.internal.processors.security.IgniteSecurityProcessor;
+import org.apache.ignite.internal.processors.security.NoOpIgniteSecurityProcessor;
 import org.apache.ignite.internal.processors.segmentation.GridSegmentationProcessor;
 import org.apache.ignite.internal.processors.service.GridServiceProcessor;
 import org.apache.ignite.internal.processors.session.GridTaskSessionProcessor;
@@ -173,6 +176,7 @@ import org.apache.ignite.internal.suggestions.GridPerformanceSuggestions;
 import org.apache.ignite.internal.suggestions.JvmConfigurationSuggestions;
 import org.apache.ignite.internal.suggestions.OsConfigurationSuggestions;
 import org.apache.ignite.internal.util.StripedExecutor;
+import org.apache.ignite.internal.util.TimeBag;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
@@ -894,7 +898,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         @Nullable final Map<String, ? extends ExecutorService> customExecSvcs,
         GridAbsClosure errHnd,
         WorkersRegistry workerRegistry,
-        Thread.UncaughtExceptionHandler hnd
+        Thread.UncaughtExceptionHandler hnd,
+        TimeBag startTimer
     )
         throws IgniteCheckedException {
         gw.compareAndSet(null, new GridKernalGatewayImpl(cfg.getIgniteInstanceName()));
@@ -1084,7 +1089,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             startProcessor(new GridTimeoutProcessor(ctx));
 
             // Start security processors.
-            startProcessor(createComponent(GridSecurityProcessor.class, ctx));
+            startProcessor(securityProcessor());
 
             // Start SPI managers.
             // NOTE: that order matters as there are dependencies between managers.
@@ -1115,7 +1120,13 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 startProcessor(createComponent(DiscoveryNodeValidationProcessor.class, ctx));
                 startProcessor(new GridAffinityProcessor(ctx));
                 startProcessor(createComponent(GridSegmentationProcessor.class, ctx));
+
+                startTimer.finishGlobalStage("Start managers");
+
                 startProcessor(createComponent(IgniteCacheObjectProcessor.class, ctx));
+
+                startTimer.finishGlobalStage("Configure binary metadata");
+
                 startProcessor(createComponent(IGridClusterStateProcessor.class, ctx));
                 startProcessor(new IgniteAuthenticationProcessor(ctx));
                 startProcessor(new GridCacheProcessor(ctx));
@@ -1135,11 +1146,15 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 startProcessor(createComponent(PlatformProcessor.class, ctx));
                 startProcessor(new GridMarshallerMappingProcessor(ctx));
 
+                startTimer.finishGlobalStage("Start processors");
+
                 // Start plugins.
                 for (PluginProvider provider : ctx.plugins().allProviders()) {
                     ctx.add(new GridPluginComponent(provider));
 
                     provider.start(ctx.plugins().pluginContextForProvider(provider));
+
+                    startTimer.finishGlobalStage("Start '"+ provider.name() + "' plugin");
                 }
 
                 // Start platform plugins.
@@ -1152,9 +1167,11 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
                 ctx.cache().context().database().notifyMetaStorageSubscribersOnReadyForRead();
 
-                ctx.cache().context().database().startMemoryRestore(ctx);
+                ctx.cache().context().database().startMemoryRestore(ctx, startTimer);
 
                 ctx.recoveryMode(false);
+
+                startTimer.finishGlobalStage("Finish recovery");
             }
             catch (Throwable e) {
                 U.error(
@@ -1177,6 +1194,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             finally {
                 gw.writeUnlock();
             }
+
+            startTimer.finishGlobalStage("Join topology");
 
             // Check whether physical RAM is not exceeded.
             checkPhysicalRam();
@@ -1214,6 +1233,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             }
             else
                 active = joinData.active();
+
+            startTimer.finishGlobalStage("Await transition");
 
             boolean recon = false;
 
@@ -1392,6 +1413,19 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         if (!isDaemon())
             ctx.discovery().ackTopology(ctx.discovery().localJoin().joinTopologyVersion().topologyVersion(),
                 EventType.EVT_NODE_JOINED, localNode());
+
+        startTimer.finishGlobalStage("Await exchange");
+    }
+
+    /**
+     * @return GridProcessor that implements {@link IgniteSecurity}
+     */
+    private GridProcessor securityProcessor() throws IgniteCheckedException {
+        GridSecurityProcessor prc = createComponent(GridSecurityProcessor.class, ctx);
+
+        return prc != null && prc.enabled()
+            ? new IgniteSecurityProcessor(ctx, prc)
+            : new NoOpIgniteSecurityProcessor(ctx, prc);
     }
 
     /**
@@ -3719,6 +3753,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         Ignition.stop(igniteInstanceName, true);
     }
 
+    /** {@inheritDoc} */
     @Override public <K> Affinity<K> affinity(String cacheName) {
         CU.validateCacheName(cacheName);
         checkClusterState();
@@ -4238,6 +4273,9 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
         if (cls.equals(IGridClusterStateProcessor.class))
             return (T)new GridClusterStateProcessor(ctx);
+
+        if(cls.equals(GridSecurityProcessor.class))
+            return null;
 
         Class<T> implCls = null;
 

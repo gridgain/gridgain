@@ -81,6 +81,8 @@ public class DiscreteNaiveBayesTrainerExample {
             } finally {
                 dataCache.destroy();
             }
+        } finally {
+            System.out.flush();
         }
     }
 

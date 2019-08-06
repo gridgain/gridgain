@@ -114,6 +114,8 @@ public class RandomForestClassificationExample {
             } finally {
                 dataCache.destroy();
             }
+        } finally {
+            System.out.flush();
         }
     }
 }

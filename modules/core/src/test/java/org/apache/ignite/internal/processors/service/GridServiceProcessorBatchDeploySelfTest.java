@@ -35,6 +35,7 @@ import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.services.ServiceConfiguration;
 import org.apache.ignite.services.ServiceDeploymentException;
 import org.apache.ignite.services.ServiceDescriptor;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -179,7 +180,7 @@ public class GridServiceProcessorBatchDeploySelfTest extends GridCommonAbstractT
         IgniteInternalFuture<Object> topChangeFut = runTopChanger(finished);
 
         try {
-            int numServices = 200;
+            int numServices = GridTestUtils.SF.apply(200);
             int batchSize = 5;
 
             CountDownLatch latch = new CountDownLatch(numServices);

@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.wal.WALIterator;
@@ -180,6 +181,8 @@ public class WalScannerTest {
 
         IgniteLogger log = mock(IgniteLogger.class);
 
+        when(log.isInfoEnabled()).thenReturn(true);
+
         ArgumentCaptor<String> valCapture = ArgumentCaptor.forClass(String.class);
         doNothing().when(log).info(valCapture.capture());
 
@@ -249,12 +252,12 @@ public class WalScannerTest {
             targetFile.delete();
         }
 
-        // then: Should be find only expected value from file.
-        assertEquals(3, actualRecords.size());
+        // then: Should be find only expected value from file. PageSnapshot string representation is 11 lines long.
+        assertEquals(13, actualRecords.size());
 
         assertTrue(actualRecords.get(0), actualRecords.get(0).contains("PageSnapshot ["));
-        assertTrue(actualRecords.get(1), actualRecords.get(1).contains("CheckpointRecord ["));
-        assertTrue(actualRecords.get(2), actualRecords.get(2).contains("FixCountRecord ["));
+        assertTrue(actualRecords.get(11), actualRecords.get(11).contains("CheckpointRecord ["));
+        assertTrue(actualRecords.get(12), actualRecords.get(12).contains("FixCountRecord ["));
     }
 
     /**
@@ -269,6 +272,8 @@ public class WalScannerTest {
         int grpId = 123;
 
         IgniteLogger log = mock(IgniteLogger.class);
+
+        when(log.isInfoEnabled()).thenReturn(true);
 
         ArgumentCaptor<String> valCapture = ArgumentCaptor.forClass(String.class);
         doNothing().when(log).info(valCapture.capture());
@@ -299,6 +304,10 @@ public class WalScannerTest {
         finally {
             targetFile.delete();
         }
+
+        actualFileRecords = actualFileRecords.stream()
+            .filter(it -> it.startsWith("Next WAL record ::"))
+            .collect(Collectors.toList());
 
         // then: Should be find only expected value from file.
         assertEquals(actualFileRecords.size(), 3);
@@ -342,7 +351,7 @@ public class WalScannerTest {
     public static byte[] dummyPage(int pageSize, long pageId) {
         ByteBuffer pageBuf = ByteBuffer.allocateDirect(pageSize);
 
-        new DummyPageIO().initNewPage(GridUnsafe.bufferAddress(pageBuf), pageId, pageSize);
+        DummyPageIO.VERSIONS.latest().initNewPage(GridUnsafe.bufferAddress(pageBuf), pageId, pageSize);
 
         byte[] pageData = new byte[pageSize];
 

@@ -28,6 +28,7 @@ import org.apache.ignite.failure.StopNodeOrHaltFailureHandlerTest;
 import org.apache.ignite.internal.ClassSetTest;
 import org.apache.ignite.internal.ClusterGroupHostsSelfTest;
 import org.apache.ignite.internal.ClusterGroupSelfTest;
+import org.apache.ignite.internal.ClusterProcessorCheckGlobalStateComputeRequestTest;
 import org.apache.ignite.internal.GridFailFastNodeFailureDetectionSelfTest;
 import org.apache.ignite.internal.GridLifecycleAwareSelfTest;
 import org.apache.ignite.internal.GridLifecycleBeanSelfTest;
@@ -45,6 +46,8 @@ import org.apache.ignite.internal.MarshallerContextLockingSelfTest;
 import org.apache.ignite.internal.TransactionsMXBeanImplTest;
 import org.apache.ignite.internal.managers.IgniteDiagnosticMessagesMultipleConnectionsTest;
 import org.apache.ignite.internal.managers.IgniteDiagnosticMessagesTest;
+import org.apache.ignite.internal.managers.discovery.IncompleteDeserializationExceptionTest;
+import org.apache.ignite.internal.pagemem.wal.record.WALRecordTest;
 import org.apache.ignite.internal.processors.DeadLockOnNodeLeftExchangeTest;
 import org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentV2Test;
 import org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentV2TestNoOptimizations;
@@ -62,6 +65,7 @@ import org.apache.ignite.internal.processors.cache.IgniteMarshallerCacheFSRestor
 import org.apache.ignite.internal.processors.cache.RebalanceWithDifferentThreadPoolSizeTest;
 import org.apache.ignite.internal.processors.cache.SetTxTimeoutOnPartitionMapExchangeTest;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteRejectConnectOnNodeStopTest;
+import org.apache.ignite.internal.processors.cache.query.continuous.DiscoveryDataDeserializationFailureHanderTest;
 import org.apache.ignite.internal.processors.cache.transactions.AtomicOperationsInTxTest;
 import org.apache.ignite.internal.processors.cache.transactions.TransactionIntegrityWithSystemWorkerDeathTest;
 import org.apache.ignite.internal.processors.closure.GridClosureProcessorRemoteTest;
@@ -93,8 +97,8 @@ import org.apache.ignite.plugin.PluginNodeValidationTest;
 import org.apache.ignite.plugin.security.SecurityPermissionSetBuilderTest;
 import org.apache.ignite.spi.GridSpiLocalHostInjectionTest;
 import org.apache.ignite.startup.properties.NotStringSystemPropertyTest;
-import org.apache.ignite.testframework.MessageOrderLogListenerTest;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.MessageOrderLogListenerTest;
 import org.apache.ignite.testframework.test.ConfigVariationsTestSuiteBuilderTest;
 import org.apache.ignite.testframework.test.ListeningTestLoggerTest;
 import org.apache.ignite.testframework.test.ParametersTest;
@@ -136,11 +140,14 @@ public class IgniteBasicTestSuite {
 
         suite.addTest(IgnitePlatformsTestSuite.suite());
 
+        suite.addTest(new JUnit4TestAdapter(SecurityTestSuite.class));
+
         suite.addTest(new JUnit4TestAdapter(GridSelfTest.class));
         suite.addTest(new JUnit4TestAdapter(ClusterGroupHostsSelfTest.class));
         suite.addTest(new JUnit4TestAdapter(IgniteMessagingWithClientTest.class));
         suite.addTest(new JUnit4TestAdapter(IgniteMessagingSendAsyncTest.class));
-
+	    suite.addTest(new JUnit4TestAdapter(ClusterProcessorCheckGlobalStateComputeRequestTest.class));
+    
         GridTestUtils.addTestIfNeeded(suite, ClusterGroupSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridMessagingSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridMessagingNoPeerClassLoadingSelfTest.class, ignoredTests);
@@ -177,6 +184,7 @@ public class IgniteBasicTestSuite {
         suite.addTest(new JUnit4TestAdapter(GridMBeansTest.class));
         suite.addTest(new JUnit4TestAdapter(TransactionsMXBeanImplTest.class));
         suite.addTest(new JUnit4TestAdapter(SetTxTimeoutOnPartitionMapExchangeTest.class));
+        suite.addTest(new JUnit4TestAdapter(DiscoveryDataDeserializationFailureHanderTest.class));
 
         suite.addTest(new JUnit4TestAdapter(IgniteExceptionInNioWorkerSelfTest.class));
         suite.addTest(new JUnit4TestAdapter(IgniteLocalNodeMapBeforeStartTest.class));
@@ -197,6 +205,8 @@ public class IgniteBasicTestSuite {
         suite.addTest(new JUnit4TestAdapter(SecurityPermissionSetBuilderTest.class));
 
         suite.addTest(new JUnit4TestAdapter(AttributeNodeFilterSelfTest.class));
+
+        suite.addTest(new JUnit4TestAdapter(WALRecordTest.class));
 
         // Basic DB data structures.
         suite.addTest(new JUnit4TestAdapter(BPlusTreeSelfTest.class));
@@ -241,6 +251,8 @@ public class IgniteBasicTestSuite {
         suite.addTest(new JUnit4TestAdapter(DeadLockOnNodeLeftExchangeTest.class));
 
         suite.addTest(new JUnit4TestAdapter(ClassPathContentLoggingTest.class));
+
+        suite.addTest(new JUnit4TestAdapter(IncompleteDeserializationExceptionTest.class));
 
         return suite;
     }

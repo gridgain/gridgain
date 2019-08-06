@@ -291,7 +291,7 @@ class ClientImpl extends TcpDiscoveryImpl {
         sockReader = new SocketReader();
         sockReader.start();
 
-        if (spi.ipFinder.isShared())
+        if (spi.ipFinder.isShared() && spi.isForceServerMode())
             registerLocalNodeAddress();
 
         msgWorker = new MessageWorker(log);
@@ -2196,7 +2196,8 @@ class ClientImpl extends TcpDiscoveryImpl {
             if (log.isInfoEnabled()) {
                 for (ClusterNode node : getRemoteNodes()) {
                     if (node.id().equals(locNode.clientRouterNodeId())) {
-                        log.info("Router node: " + node);
+                        if (log.isInfoEnabled())
+                            log.info("Router node: " + node);
 
                         break;
                     }

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -30,6 +30,7 @@ import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
@@ -256,7 +257,11 @@ public class CachesRegistry {
         if (cachesToPersist.isEmpty())
             return cachesConfPersistFuture = new GridFinishedFuture<>();
 
-        return cachesConfPersistFuture = persistCacheConfigurations(cachesToPersist);
+        List<StoredCacheData> cacheConfigsToPersist = cacheDescriptors.stream()
+            .map(desc -> desc.toStoredData(cctx.cache().splitter()))
+            .collect(Collectors.toList());
+
+        return cachesConfPersistFuture = persistCacheConfigurations(cacheConfigsToPersist);
     }
 
     /**
@@ -272,16 +277,12 @@ public class CachesRegistry {
     }
 
     /**
-     * Persists cache configurations from given {@code cacheDescriptors}.
+     * Persists cache configurations.
      *
-     * @param cacheDescriptors Cache descriptors to retrieve cache configurations.
+     * @param cacheConfigsToPersist Cache configurations to persist.
      * @return Future that will be completed when all cache configurations will be persisted to cache work directory.
      */
-    private IgniteInternalFuture<?> persistCacheConfigurations(List<DynamicCacheDescriptor> cacheDescriptors) {
-        List<StoredCacheData> cacheConfigsToPersist = cacheDescriptors.stream()
-            .map(desc -> desc.toStoredData(cctx.cache().splitter()))
-            .collect(Collectors.toList());
-
+    private IgniteInternalFuture<?> persistCacheConfigurations(List<StoredCacheData> cacheConfigsToPersist) {
         // Pre-create cache work directories if they don't exist.
         for (StoredCacheData data : cacheConfigsToPersist) {
             try {
@@ -296,13 +297,15 @@ public class CachesRegistry {
             }
         }
 
-        return cctx.kernalContext().closure().runLocalSafe(() -> {
-            try {
-                for (StoredCacheData data : cacheConfigsToPersist)
-                    cctx.pageStore().storeCacheData(data, false);
-            }
-            catch (IgniteCheckedException e) {
-                U.error(log, "Error while saving cache configurations on disk", e);
+        return cctx.kernalContext().closure().runLocalSafe(new GridPlainRunnable() {
+            @Override public void run() {
+                try {
+                    for (StoredCacheData data : cacheConfigsToPersist)
+                        cctx.cache().saveCacheConfiguration(data, false);
+                }
+                catch (IgniteCheckedException e) {
+                    U.error(log, "Error while saving cache configurations on disk", e);
+                }
             }
         });
     }

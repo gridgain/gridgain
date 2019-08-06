@@ -914,6 +914,13 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_THRESHOLD_WAL_ARCHIVE_SIZE_PERCENTAGE = "IGNITE_THRESHOLD_WAL_ARCHIVE_SIZE_PERCENTAGE";
 
     /**
+     * Threshold time (in millis) to print warning to log if waiting for next wal segment took longer than the threshold.
+     *
+     * Default value is 1000 ms.
+     */
+    public static final String IGNITE_THRESHOLD_WAIT_TIME_NEXT_WAL_SEGMENT = "IGNITE_THRESHOLD_WAIT_TIME_NEXT_WAL_SEGMENT";
+
+    /**
      * Count of WAL compressor worker threads. Default value is 4.
      */
     public static final String IGNITE_WAL_COMPRESSOR_WORKER_THREAD_CNT = "IGNITE_WAL_COMPRESSOR_WORKER_THREAD_CNT";
@@ -1168,6 +1175,14 @@ public final class IgniteSystemProperties {
      * Scan the classpath on startup and log all the files containing in it.
      */
     public static final String IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP = "IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP";
+
+    /**
+     * Index rebuilding parallelism level. If specified, sets the count of threads that are used for index rebuilding
+     * and can only be greater than <code>0</code>, otherwise default value will be used. Maximum count of threads
+     * can't be greater than total available processors count.
+     * Default value is minimum of <code>4</code> and processors count / 4, but always greater than <code>0</code>.
+     */
+    public static final String INDEX_REBUILDING_PARALLELISM = "INDEX_REBUILDING_PARALLELISM";
 
     /**
      * Enforces singleton.

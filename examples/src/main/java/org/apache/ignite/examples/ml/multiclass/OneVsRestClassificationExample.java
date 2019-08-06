@@ -160,6 +160,8 @@ public class OneVsRestClassificationExample {
             } finally {
                 dataCache.destroy();
             }
+        } finally {
+            System.out.flush();
         }
     }
 }

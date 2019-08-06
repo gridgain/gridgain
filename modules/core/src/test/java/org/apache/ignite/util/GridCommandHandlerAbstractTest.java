@@ -101,17 +101,24 @@ public class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
         checkpointFreq = DataStorageConfiguration.DFLT_CHECKPOINT_FREQ;
     }
 
+    /**
+     * @return True if system out was already injected on test initialization.
+     */
+    protected boolean isSystemOutAlreadyInjected() {
+        return false;
+    }
+
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         log.info("Test output for " + currentTestMethod());
         log.info("----------------------------------------");
 
+        System.setOut(sysOut);
+
         if (testOut != null)
             System.out.println(testOut.toString());
 
         testOut = null;
-
-        System.setOut(sysOut);
 
         stopAllGrids();
 

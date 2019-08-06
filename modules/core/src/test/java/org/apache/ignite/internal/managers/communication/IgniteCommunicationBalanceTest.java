@@ -139,7 +139,7 @@ public class IgniteCommunicationBalanceTest extends GridCommonAbstractTest {
 
             int prevNodeIdx = -1;
 
-            for (int iter = 0; iter < 10; iter++) {
+            for (int iter = 0; iter < GridTestUtils.SF.applyLB(10, 4); iter++) {
                 int nodeIdx = rnd.nextInt(SRVS);
 
                 while (prevNodeIdx == nodeIdx)
@@ -154,25 +154,23 @@ public class IgniteCommunicationBalanceTest extends GridCommonAbstractTest {
 
                 final int nodeIdx0 = nodeIdx;
 
-                GridTestUtils.waitForCondition(new GridAbsPredicate() {
-                    @Override public boolean apply() {
-                        byte[] data = new byte[100_000];
+                GridTestUtils.waitForCondition(() -> {
+                    byte[] data = new byte[100_000];
 
-                        for (int j = 0; j < 10; j++) {
-                            for (int i = 0; i < SRVS; i++) {
-                                ClusterNode node = client.cluster().node(ignite(i).cluster().localNode().id());
+                    for (int j = 0; j < 10; j++) {
+                        for (int i = 0; i < SRVS; i++) {
+                            ClusterNode node = client.cluster().node(ignite(i).cluster().localNode().id());
 
-                                IgniteCompute compute = client.compute(client.cluster().forNode(node));
+                            IgniteCompute compute = client.compute(client.cluster().forNode(node));
 
-                                compute.call(new DummyCallable(i == nodeIdx0 ? data : null));
-                            }
+                            compute.call(new DummyCallable(i == nodeIdx0 ? data : null));
                         }
-
-                        if (usePairedConnections())
-                            return srv.readerMoveCount() > readMoveCnt && srv.writerMoveCount() > writeMoveCnt;
-                        else
-                            return srv.readerMoveCount() > readMoveCnt || srv.writerMoveCount() > writeMoveCnt;
                     }
+
+                    if (usePairedConnections())
+                        return srv.readerMoveCount() > readMoveCnt && srv.writerMoveCount() > writeMoveCnt;
+                    else
+                        return srv.readerMoveCount() > readMoveCnt || srv.writerMoveCount() > writeMoveCnt;
                 }, 30_000);
 
                 waitNioBalanceStop(Collections.singletonList(client), 30_000);
@@ -324,7 +322,7 @@ public class IgniteCommunicationBalanceTest extends GridCommonAbstractTest {
 
             startGridsMultiThreaded(NODES);
 
-            final long stopTime = System.currentTimeMillis() + 60_000;
+            final long stopTime = System.currentTimeMillis() + GridTestUtils.SF.applyLB(60_000, 20_000);
 
             GridTestUtils.runMultiThreaded(new Callable<Object>() {
                 @Override public Object call() throws Exception {

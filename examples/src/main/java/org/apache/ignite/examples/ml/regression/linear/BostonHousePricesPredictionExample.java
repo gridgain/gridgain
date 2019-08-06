@@ -86,6 +86,8 @@ public class BostonHousePricesPredictionExample {
             } finally {
                 dataCache.destroy();
             }
+        } finally {
+            System.out.flush();
         }
     }
 

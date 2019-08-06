@@ -109,6 +109,8 @@ public class BaggedLogisticRegressionSGDTrainerExample {
             } finally {
                 dataCache.destroy();
             }
+        } finally {
+            System.out.flush();
         }
     }
 }

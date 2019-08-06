@@ -286,7 +286,7 @@ public class CacheGroupContext {
      * @return {@code True} if cacheId should be stored in data pages.
      */
     public boolean storeCacheIdInDataPage() {
-        return storeCacheId || sharedGroup();
+        return storeCacheId;
     }
 
     /**
@@ -1230,8 +1230,9 @@ public class CacheGroupContext {
      */
     public void globalWalEnabled(boolean enabled) {
         if (globalWalEnabled != enabled) {
-            log.info("Global WAL state for group=" + cacheOrGroupName() +
-                " changed from " + globalWalEnabled + " to " + enabled);
+            if (log.isInfoEnabled())
+                log.info("Global WAL state for group=" + cacheOrGroupName() +
+                    " changed from " + globalWalEnabled + " to " + enabled);
 
             persistGlobalWalState(enabled);
 
@@ -1241,13 +1242,16 @@ public class CacheGroupContext {
 
     /**
      * @param enabled Local WAL enabled flag.
+     * @param persist If {@code true} then flag state will be persisted into metastorage.
      */
-    public void localWalEnabled(boolean enabled) {
+    public void localWalEnabled(boolean enabled, boolean persist) {
         if (localWalEnabled != enabled){
-            log.info("Local WAL state for group=" + cacheOrGroupName() +
-                " changed from " + localWalEnabled + " to " + enabled);
+            if (log.isInfoEnabled())
+                log.info("Local WAL state for group=" + cacheOrGroupName() +
+                    " changed from " + localWalEnabled + " to " + enabled);
 
-            persistLocalWalState(enabled);
+            if (persist)
+                persistLocalWalState(enabled);
 
             localWalEnabled = enabled;
         }

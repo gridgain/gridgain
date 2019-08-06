@@ -86,6 +86,8 @@ public class FraudDetectionExample {
             finally {
                 dataCache.destroy();
             }
+        } finally {
+            System.out.flush();
         }
     }
 

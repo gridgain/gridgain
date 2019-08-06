@@ -91,8 +91,8 @@ public class GridThreadLocalTable extends Table {
 
     /** {@inheritDoc} */
     @Override public PlanItem getBestPlanItem(Session session, int[] masks, TableFilter[] filters, int filter,
-        SortOrder sortOrder, HashSet<Column> cols) {
-        return innerTable().getBestPlanItem(session, masks, filters, filter, sortOrder, cols);
+        SortOrder sortOrder, HashSet<Column> cols, boolean isEquiJoined) {
+        return innerTable().getBestPlanItem(session, masks, filters, filter, sortOrder, cols, isEquiJoined);
     }
 
     /** {@inheritDoc} */
