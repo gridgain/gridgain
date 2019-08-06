@@ -1291,7 +1291,7 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
      * @return List of keys.
      */
     protected final List<Integer> movingKeysAfterJoin(Ignite ign, String cacheName, int size) {
-        return movingKeysAfterJoin(ign, cacheName, size, null);
+        return movingKeysAfterJoin(ign, cacheName, size, null, null);
     }
 
     /**
@@ -1302,11 +1302,13 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
      * @param cacheName Cache name.
      * @param size Number of keys.
      * @param nodeInitializer Node initializer closure.
+     * @param joiningNodeConsistentId Joining node consistent id.
      * @return List of keys.
      */
     protected final List<Integer> movingKeysAfterJoin(Ignite ign, String cacheName, int size,
-        @Nullable IgniteInClosure<ClusterNode> nodeInitializer) {
-        assertEquals("Expected consistentId is set to node name", ign.name(), ign.cluster().localNode().consistentId());
+        @Nullable IgniteInClosure<ClusterNode> nodeInitializer, @Nullable String joiningNodeConsistentId) {
+        if (joiningNodeConsistentId == null)
+            assertEquals("Expected consistentId is set to node name", ign.name(), ign.cluster().localNode().consistentId());
 
         ArrayList<ClusterNode> nodes = new ArrayList<>(ign.cluster().nodes());
 
@@ -1317,7 +1319,8 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
         if (nodeInitializer != null)
             nodeInitializer.apply(fakeNode);
 
-        fakeNode.consistentId(getTestIgniteInstanceName(nodes.size()));
+        fakeNode.consistentId(joiningNodeConsistentId == null ? getTestIgniteInstanceName(nodes.size()) :
+            joiningNodeConsistentId);
 
         nodes.add(fakeNode);
 
