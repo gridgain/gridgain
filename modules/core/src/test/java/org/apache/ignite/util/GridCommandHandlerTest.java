@@ -104,7 +104,6 @@ import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_IN
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_UNEXPECTED_ERROR;
 import static org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor.DEFAULT_TARGET_FOLDER;
-import static org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult.Result.FAIL;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
@@ -1559,37 +1558,6 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         }
     }
 
-    /**
-     * Tests enabling/disabling rolling upgrade.
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testRollingUpgrade() throws Exception {
-        startGrid(0);
-
-        CommandHandler hnd = new CommandHandler();
-
-        // Apache Ignite does not support rolling upgrade from out of the box.
-        assertEquals(EXIT_CODE_OK, execute(hnd, "--rolling-upgrade", "on"));
-
-        VisorRollingUpgradeChangeModeResult res = hnd.getLastOperationResult();
-
-        assertTrue("Enabling rolling upgrade should fail [res=" + res + ']', FAIL == res.getResult());
-        assertEquals(
-            "The cause of the failure should be UnsupportedOperationException [cause=" + res.getCause() + ']',
-            res.getCause().getClassName(), UnsupportedOperationException.class.getName());
-
-        assertEquals(EXIT_CODE_OK, execute(hnd, "--rolling-upgrade", "off"));
-
-        res = hnd.getLastOperationResult();
-
-        assertTrue("Disabling rolling upgrade should fail [res=" + res + ']', FAIL == res.getResult());
-        assertEquals(
-            "The cause of the failure should be UnsupportedOperationException [cause=" + res.getCause() + ']',
-            res.getCause().getClassName(), UnsupportedOperationException.class.getName());
-    }
-
     /** */
     @Test
     public void testKillHangingLocalTransactions() throws Exception {
@@ -1656,24 +1624,6 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         nearFinFut.get();
 
         checkUserFutures();
-    }
-
-    /**
-     * Tests execution of '--rolling-upgrade state' command.
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testRollingUpgradeStatus() throws Exception {
-        startGrid(0);
-
-        injectTestSystemOut();
-
-        assertEquals(EXIT_CODE_OK, execute("--rolling-upgrade", "status"));
-
-        String out = testOut.toString();
-
-        assertContains(log, out, "Rolling upgrade is disabled");
     }
 
     /**
