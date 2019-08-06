@@ -166,6 +166,8 @@ struct CacheNativePersistenceTestSuiteFixture
         grid0 = Ignite();
 
         Ignition::StopAll(true);
+
+        ignite_test::ClearLfs();
     }
 };
 
