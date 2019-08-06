@@ -62,25 +62,48 @@ public class SqlStatisticsUserQueriesLongTest extends UserQueriesTestBase {
     }
 
     /**
-     * Verify map phase failure affects only general fail metric, not OOM metric.
+     * Verify that error metrics are updated if that error happened on remote map step.
      *
      * @throws Exception on fail.
      */
     @Test
-    public void testIfMapPhaseFailedByOomThenOomMetricIsNotUpdated() throws Exception {
-        int strongMemQuota = 256 * 1024;
+    public void testMetricsOnRemoteMapFail() throws Exception {
+        int strongMemQuota = 1024 * 1024;
         int memQuotaUnlimited = -1;
 
         startGridWithMaxMem(MAPPER_IDX, strongMemQuota);
-        startGridWithMaxMem(REDUCER_IDX, memQuotaUnlimited);
+        startGridWithMaxMem(REDUCER_IDX, memQuotaUnlimited, true);
 
         IgniteCache cache = createCacheFrom(grid(REDUCER_IDX));
 
+        final String mapFailMsg = "Failed to execute map query on remote node";
+
+        // map phase failure affects only general fail metric, not OOM metric.
         assertMetricsIncrementedOnlyOnReducer(() -> GridTestUtils.assertThrows(
             log,
             () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB")).getAll(),
             CacheException.class,
-            null), "failed");
+            mapFailMsg),
+            "failed");
+
+        SuspendQuerySqlFunctions.refresh();
+
+        SuspendQuerySqlFunctions.setProcessRowsToSuspend(1);
+
+        assertMetricsIncrementedOnlyOnReducer(() -> GridTestUtils.assertThrows(
+            log,
+            () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID < 200 AND failFunction() = 5")).getAll(),
+            CacheException.class,
+            mapFailMsg), "failed");
+
+
+        SuspendQuerySqlFunctions.refresh();
+
+        SuspendQuerySqlFunctions.setProcessRowsToSuspend(1);
+
+        assertMetricsIncrementedOnlyOnReducer(() ->
+            startAndKillQuery(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID < 200 AND suspendHook(ID) <> 5 ")),
+            "failed");
     }
 
     /**
