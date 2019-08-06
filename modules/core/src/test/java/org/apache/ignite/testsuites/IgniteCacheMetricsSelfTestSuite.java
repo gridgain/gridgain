@@ -40,7 +40,6 @@ import org.apache.ignite.internal.processors.cache.local.GridCacheAtomicLocalMet
 import org.apache.ignite.internal.processors.cache.local.GridCacheAtomicLocalTckMetricsSelfTestImpl;
 import org.apache.ignite.internal.processors.cache.local.GridCacheLocalAtomicMetricsNoReadThroughSelfTest;
 import org.apache.ignite.internal.processors.cache.local.GridCacheLocalMetricsSelfTest;
-import org.apache.ignite.internal.processors.metrics.impl.MetricUtilsTest;
 import org.apache.ignite.testframework.GridTestUtils;
 
 /**
@@ -82,8 +81,6 @@ public class IgniteCacheMetricsSelfTestSuite {
         GridTestUtils.addTestIfNeeded(suite, TransactionMetricsMxBeanImplTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, GridEvictionPolicyMBeansTest.class, ignoredTests);
-
-        GridTestUtils.addTestIfNeeded(suite, MetricUtilsTest.class, ignoredTests);
 
         return suite;
     }

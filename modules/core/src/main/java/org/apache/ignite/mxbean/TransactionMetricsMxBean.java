@@ -82,28 +82,6 @@ public interface TransactionMetricsMxBean extends TransactionMetrics {
     @MXBeanDescription("The number of active transactions for which this node is the initiator.")
     @Override public long getOwnerTransactionsNumber();
 
-    @MXBeanDescription(
-        "Shows total transactions system time in milliseconds on this node (i.e. time that transactions " +
-        "spent waiting for obtaining locks, preparing, commiting, etc.). This is a monotonic metric."
-    )
-    public long getTotalNodeSystemTime();
-
-    @MXBeanDescription(
-        "Shows total transactions user time in milliseconds on this node (i.e. time that transactions spent while " +
-        "being hold by initiator and not waiting for completion of any system operations). This is a monotonic metric."
-    )
-    public long getTotalNodeUserTime();
-
-    @MXBeanDescription(
-        "Returns histogram represented as json, with transaction system time divided by buckets."
-    )
-    public String getNodeSystemTimeHistogram();
-
-    @MXBeanDescription(
-        "Returns histogram represented as json, with transaction user time divided by buckets."
-    )
-    public String getNodeUserTimeHistogram();
-
     /**
      * The last time, when transaction was commited.
      *

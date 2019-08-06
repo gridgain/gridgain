@@ -17,6 +17,7 @@ package org.apache.ignite.internal.processors.cache;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
+import javax.management.DynamicMBean;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
@@ -24,18 +25,17 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.TransactionMetricsMxBeanImpl;
 import org.apache.ignite.internal.TransactionsMXBeanImpl;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareRequest;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxAdapter;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
-import org.apache.ignite.mxbean.TransactionMetricsMxBean;
 import org.apache.ignite.mxbean.TransactionsMXBean;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
+import org.apache.ignite.spi.metric.jmx.JmxExporterSpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
@@ -51,6 +51,11 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_TRANSACTION_TIME_D
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_PER_SECOND_LIMIT;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
+import static org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal.METRIC_SYSTEM_TIME_HISTOGRAM;
+import static org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal.METRIC_TOTAL_SYSTEM_TIME;
+import static org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal.METRIC_TOTAL_USER_TIME;
+import static org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal.METRIC_USER_TIME_HISTOGRAM;
+import static org.apache.ignite.internal.processors.metric.GridMetricManager.TRANSACTION_METRICS;
 
 /**
  *
@@ -128,6 +133,7 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
 
             cfg.setCacheConfiguration(ccfg);
 
+            cfg.setMetricExporterSpi(new JmxExporterSpi());
         }
 
         cfg.setCommunicationSpi(new TestCommunicationSpi());
@@ -168,12 +174,7 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
                 return null;
             };
 
-            TransactionMetricsMxBean tmMxMetricsBean = getMxBean(
-                CLIENT,
-                "TransactionMetrics",
-                TransactionMetricsMxBean.class,
-                TransactionMetricsMxBeanImpl.class
-            );
+            DynamicMBean tranMBean = metricSet(CLIENT, null, TRANSACTION_METRICS);
 
             //slow user
             slowPrepare = false;
@@ -190,8 +191,8 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
 
             assertEquals(2, cache.get(1).intValue());
 
-            assertTrue(tmMxMetricsBean.getTotalNodeUserTime() >= USER_DELAY);
-            assertTrue(tmMxMetricsBean.getTotalNodeSystemTime() < LONG_TRAN_TIMEOUT);
+            assertTrue((Long)tranMBean.getAttribute(METRIC_TOTAL_USER_TIME) >= USER_DELAY);
+            assertTrue((Long)tranMBean.getAttribute(METRIC_TOTAL_SYSTEM_TIME) < LONG_TRAN_TIMEOUT);
 
             //slow prepare
             slowPrepare = true;
@@ -202,16 +203,16 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
 
             assertEquals(3, cache.get(1).intValue());
 
-            assertTrue(tmMxMetricsBean.getTotalNodeSystemTime() >= SYSTEM_DELAY);
+            assertTrue((Long)tranMBean.getAttribute(METRIC_TOTAL_SYSTEM_TIME) >= SYSTEM_DELAY);
 
-            String sysTimeHisto = tmMxMetricsBean.getNodeSystemTimeHistogram();
-            String userTimeHisto = tmMxMetricsBean.getNodeUserTimeHistogram();
+            long[] sysTimeHisto = (long[])tranMBean.getAttribute(METRIC_SYSTEM_TIME_HISTOGRAM);
+            long[] userTimeHisto = (long[])tranMBean.getAttribute(METRIC_USER_TIME_HISTOGRAM);
 
             assertNotNull(sysTimeHisto);
             assertNotNull(userTimeHisto);
 
-            assertTrue(!sysTimeHisto.isEmpty());
-            assertTrue(!userTimeHisto.isEmpty());
+            assertTrue(sysTimeHisto != null && sysTimeHisto.length > 0);
+            assertTrue(userTimeHisto != null && userTimeHisto.length > 0);
 
             logTxDumpLsnr.reset();
 

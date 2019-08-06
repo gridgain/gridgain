@@ -501,7 +501,7 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
 
     /** */
     private void registerTransactionMetrics() {
-        MetricRegistry reg = registry(metricName(TRANSACTION_METRICS));
+        MetricRegistry reg = registry(TRANSACTION_METRICS);
 
         reg.longAdderMetric(GridNearTxLocal.METRIC_TOTAL_SYSTEM_TIME, "Total transactions system time on node.");
         reg.longAdderMetric(GridNearTxLocal.METRIC_TOTAL_USER_TIME, "Total transactions user time on node.");

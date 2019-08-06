@@ -130,10 +130,7 @@ public class IgniteMBeansManager {
         registerMBean("Kernal", metricsBean.getClass().getSimpleName(), metricsBean, ClusterMetricsMXBean.class);
 
         // Transaction metrics
-        TransactionMetricsMxBean txMetricsMXBean = new TransactionMetricsMxBeanImpl(
-            ctx.cache().transactions().metrics(),
-            ctx.metric().registry(GridMetricManager.TRANSACTION_METRICS)
-        );
+        TransactionMetricsMxBean txMetricsMXBean = new TransactionMetricsMxBeanImpl(ctx.cache().transactions().metrics());
         registerMBean("TransactionMetrics", txMetricsMXBean.getClass().getSimpleName(), txMetricsMXBean, TransactionMetricsMxBean.class);
 
         // Transactions
