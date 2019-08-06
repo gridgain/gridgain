@@ -50,7 +50,7 @@ public class ConnectionManager {
         ";DEFAULT_TABLE_ENGINE=" + GridH2DefaultTableEngine.class.getName();
 
     /** Default maximum size of connection pool. */
-    private static final int CONNECTION_POOL_SIZE = 256;
+    private static final int CONNECTION_POOL_SIZE = 100;
 
     /** The period of clean up the statement cache. */
     @SuppressWarnings("FieldCanBeLocal")
@@ -252,15 +252,26 @@ public class ConnectionManager {
         poolMaxSize = size;
     }
 
+    /** Thread local connection. */
+    private ThreadLocal<H2Connection> threadLocalConn = new ThreadLocal<>();
+
     /**
      * @return H2 connection wrapper.
      */
     public H2PooledConnection connection() {
         try {
-            H2Connection conn = connPool.poll();
+            H2Connection conn = null;
 
-            if (conn == null)
-                conn = newConnection();
+            conn = threadLocalConn.get();
+
+            if (conn != null)
+                threadLocalConn.remove();
+            else {
+               conn = connPool.poll();
+
+                if (conn == null)
+                    conn = newConnection();
+            }
 
             H2PooledConnection connWrp = new H2PooledConnection(conn, this);
 
@@ -300,9 +311,16 @@ public class ConnectionManager {
 
         assert rmv : "Connection isn't tracked [conn=" + conn + ']';
 
-        if (connPool.size() < poolMaxSize)
-            connPool.offer(conn);
-        else
-            conn.close();
+        if (threadLocalConn.get() == null) {
+            assert threadLocalConn.get() != conn;
+
+            threadLocalConn.set(conn);
+        }
+        else {
+            if (connPool.size() < poolMaxSize)
+                connPool.offer(conn);
+            else
+                conn.close();
+        }
     }
 }
