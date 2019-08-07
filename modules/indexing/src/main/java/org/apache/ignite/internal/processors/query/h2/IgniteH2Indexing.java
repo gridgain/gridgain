@@ -984,14 +984,14 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         CommandResult res = null;
 
-        IgniteCheckedException failReason = null;
+        Exception failReason = null;
 
         try {
             res = cmdProc.runCommand(qryDesc.sql(), cmdNative, cmdH2, qryParams, cliCtx, qryId);
 
             return res.cursor();
         }
-        catch (IgniteCheckedException e) {
+        catch (Exception e) {
             failReason = e;
 
             throw new IgniteSQLException("Failed to execute DDL statement [stmt=" + qryDesc.sql() +
@@ -1148,7 +1148,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         Long qryId = registerRunningQuery(qryDesc, cancel);
 
-        IgniteCheckedException failReason = null;
+        Exception failReason = null;
 
         try {
             if (!dml.mvccEnabled() && !updateInTxAllowed && ctx.cache().context().tm().inUserTx()) {
@@ -1184,7 +1184,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 }, cancel));
             }
         }
-        catch (IgniteCheckedException e) {
+        catch (Exception e) {
             failReason = e;
 
             throw new IgniteSQLException("Failed to execute DML statement [stmt=" + qryDesc.sql() +

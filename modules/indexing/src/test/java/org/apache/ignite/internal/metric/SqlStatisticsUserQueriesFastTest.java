@@ -22,6 +22,7 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
 import org.apache.ignite.internal.processors.query.RunningQueryManager;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.transactions.TransactionDuplicateKeyException;
 import org.junit.Test;
 
 /**
@@ -54,7 +55,7 @@ public class SqlStatisticsUserQueriesFastTest extends UserQueriesTestBase {
      * (not all) queries tested : native/h2 parsed; select, ddl, dml, fast delete, update with subselect.
      */
     @Test
-    public void testIfDistributedQuerySucceededOnlySuccessReducerMetricUpdated() throws Exception {
+    public void testSmokeDdlDml() throws Exception {
         assertMetricsIncrementedOnlyOnReducer(
             () -> cache.query(new SqlQuery(String.class, "ID < 5")).getAll(),
             "success");
@@ -67,13 +68,30 @@ public class SqlStatisticsUserQueriesFastTest extends UserQueriesTestBase {
             () -> cache.query(new SqlFieldsQuery("CREATE INDEX myidx ON TAB(ID)")).getAll(),
             "success");
 
-        assertMetricsIncrementedOnlyOnReducer(
-            () -> cache.query(new SqlFieldsQuery("CREATE TABLE ANOTHER_TAB (ID INT PRIMARY KEY, VAL VARCHAR)")
-                .setSchema("PUBLIC")).getAll(), "success");
+        assertMetricsIncrementedOnlyOnReducer(() -> GridTestUtils.assertThrows(
+            log,
+            () -> cache.query(new SqlFieldsQuery("CREATE INDEX myidx ON TAB(ID)")).getAll(),
+            CacheException.class,
+            "Index already exists"),
+            "failed");
 
         assertMetricsIncrementedOnlyOnReducer(
             () -> cache.query(new SqlFieldsQuery("DROP INDEX myidx")).getAll(),
             "success");
+
+
+        assertMetricsIncrementedOnlyOnReducer(
+            () -> cache.query(new SqlFieldsQuery("CREATE TABLE ANOTHER_TAB (ID INT PRIMARY KEY, VAL VARCHAR)")
+                .setSchema("PUBLIC")).getAll(), "success");
+
+        assertMetricsIncrementedOnlyOnReducer(() -> GridTestUtils.assertThrows(
+            log,
+            () -> cache.query(new SqlFieldsQuery("CREATE TABLE ANOTHER_TAB (ID INT PRIMARY KEY, VAL VARCHAR)")
+                .setSchema("PUBLIC")).getAll(),
+            CacheException.class,
+            "Table already exists"),
+            "failed");
+
 
         assertMetricsIncrementedOnlyOnReducer(
             () -> cache.query(new SqlFieldsQuery("DELETE FROM TAB WHERE ID = 5")).getAll(),
@@ -90,6 +108,13 @@ public class SqlStatisticsUserQueriesFastTest extends UserQueriesTestBase {
         assertMetricsIncrementedOnlyOnReducer(
             () -> cache.query(new SqlFieldsQuery("MERGE INTO TAB(ID, NAME) VALUES(5, 'NewerName')")).getAll(),
             "success");
+
+        assertMetricsIncrementedOnlyOnReducer(() -> GridTestUtils.assertThrowsAnyCause(
+            log,
+            () -> cache.query(new SqlFieldsQuery("INSERT INTO TAB VALUES(5, 'I wont be inserted')")).getAll(),
+            TransactionDuplicateKeyException.class,
+            "Duplicate key during INSERT"),
+            "failed");
     }
 
     /**
@@ -106,20 +131,6 @@ public class SqlStatisticsUserQueriesFastTest extends UserQueriesTestBase {
         assertMetricsIncrementedOnlyOnReducer(
             () -> cache.query(new SqlQuery(String.class, "ID < 5").setLocal(true)).getAll(),
             "success");
-    }
-
-    /**
-     * Verify that if query fails at runtime only appropriate reducer metric is updated.
-     *
-     * @throws Exception on fail.
-     */
-    @Test
-    public void testIfParsableQueryFailedOnlyReducerMetricIsUpdated() throws Exception {
-        assertMetricsIncrementedOnlyOnReducer(() -> GridTestUtils.assertThrows(
-            log,
-            () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID = failFunction()")).getAll(),
-            CacheException.class,
-            null), "failed");
     }
 
     /**
@@ -140,7 +151,7 @@ public class SqlStatisticsUserQueriesFastTest extends UserQueriesTestBase {
     }
 
     /**
-     * Local queries should also be counted.
+     * Check success metric in case of local select.
      *
      */
     @Test
@@ -151,7 +162,7 @@ public class SqlStatisticsUserQueriesFastTest extends UserQueriesTestBase {
     }
 
     /**
-     * Local select failure count.
+     * Check general failure metric if local select failed.
      *
      */
     @Test
@@ -165,7 +176,7 @@ public class SqlStatisticsUserQueriesFastTest extends UserQueriesTestBase {
     }
 
     /**
-     * Local select cancellation should be counted.
+     * Check cancel metric if local select cancelled.
      *
      */
     @Test
@@ -173,19 +184,6 @@ public class SqlStatisticsUserQueriesFastTest extends UserQueriesTestBase {
         assertMetricsIncrementedOnlyOnReducer(() ->
                 startAndKillQuery(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID <> suspendHook(ID)").setLocal(true)),
             "success",
-            "failed",
-            "canceled");
-    }
-
-    /**
-     * If query got canceled during execution, only general failure metric and cancel metric should be incremented only
-     * on reduce node.
-     */
-    @Test
-    public void testIfQueryCanceledThenOnlyReducerMetricsUpdated() throws Exception {
-        assertMetricsIncrementedOnlyOnReducer(() ->
-                startAndKillQuery(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID <> suspendHook(ID)")),
-            "success", // KILL QUERY succeeded
             "failed",
             "canceled");
     }
