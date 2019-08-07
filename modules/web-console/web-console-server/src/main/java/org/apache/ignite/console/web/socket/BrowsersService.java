@@ -137,7 +137,7 @@ public class BrowsersService extends AbstractSocketHandler {
      * @param key Key.
      * @param evt Event.
      */
-    private void sendToAgent(AgentKey key, WebSocketRequest evt) {
+    protected void sendToAgent(AgentKey key, WebSocketRequest evt) {
         ignite.message(ignite.cluster().forLocal())
             .send(SEND_TO_AGENT, new AgentRequest(ignite.cluster().localNode().id(), key, evt));
     }
@@ -320,7 +320,7 @@ public class BrowsersService extends AbstractSocketHandler {
      *
      * @param payload Task event.
      */
-    private JsonObject fillVisorGatawayTaskParams(JsonObject payload) {
+    protected JsonObject fillVisorGatawayTaskParams(JsonObject payload) {
         JsonObject params = payload.getJsonObject("params");
 
         String taskId = params.getString("taskId");
