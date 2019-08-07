@@ -200,4 +200,26 @@ public class SqlStatisticsUserQueriesLongTest extends UserQueriesTestBase {
 
         // Cancel is hard to test in reducer phase.
     }
+
+    /**
+     * Test failByOOM metric if OOM protection interrupted local select.
+     */
+    @Test
+    public void testLocalSelectFailedByOOM() throws Exception {
+        int strongMemQuota = 1024 * 1024;
+        int memQuotaUnlimited = -1;
+
+        startGridWithMaxMem(REDUCER_IDX, strongMemQuota);
+        startGridWithMaxMem(MAPPER_IDX, memQuotaUnlimited, true);
+
+        IgniteCache cache = createCacheFrom(grid(REDUCER_IDX));
+
+        assertMetricsIncrementedOnlyOnReducer(() -> GridTestUtils.assertThrows(
+            log,
+            () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB").setLocal(true)).getAll(),
+            CacheException.class,
+            null),
+            "failed", "failedByOOM");
+    }
+
 }
