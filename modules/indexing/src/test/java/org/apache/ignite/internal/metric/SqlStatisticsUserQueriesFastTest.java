@@ -51,19 +51,24 @@ public class SqlStatisticsUserQueriesFastTest extends UserQueriesTestBase {
     }
 
     /**
-     * Check that one distributed query execution causes only success metric increment only on the reducer node. Various
-     * (not all) queries tested : native/h2 parsed; select, ddl, dml, fast delete, update with subselect.
+     * Sanity check for selects.
      */
     @Test
-    public void testSmokeDdlDml() throws Exception {
-        assertMetricsIncrementedOnlyOnReducer(
-            () -> cache.query(new SqlQuery(String.class, "ID < 5")).getAll(),
-            "success");
-
+    public void testSanitySelectSuccess() {
         assertMetricsIncrementedOnlyOnReducer(
             () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB")).getAll(),
             "success");
 
+        assertMetricsIncrementedOnlyOnReducer(
+            () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID = (SELECT AVG(ID) FROM TAB WHERE ID < 20)")).getAll(),
+            "success");
+    }
+
+    /**
+     * Check that metrics work for DDL statements.
+     */
+    @Test
+    public void testDdlSuccess() {
         assertMetricsIncrementedOnlyOnReducer(
             () -> cache.query(new SqlFieldsQuery("CREATE INDEX myidx ON TAB(ID)")).getAll(),
             "success");
@@ -79,7 +84,6 @@ public class SqlStatisticsUserQueriesFastTest extends UserQueriesTestBase {
             () -> cache.query(new SqlFieldsQuery("DROP INDEX myidx")).getAll(),
             "success");
 
-
         assertMetricsIncrementedOnlyOnReducer(
             () -> cache.query(new SqlFieldsQuery("CREATE TABLE ANOTHER_TAB (ID INT PRIMARY KEY, VAL VARCHAR)")
                 .setSchema("PUBLIC")).getAll(), "success");
@@ -91,8 +95,13 @@ public class SqlStatisticsUserQueriesFastTest extends UserQueriesTestBase {
             CacheException.class,
             "Table already exists"),
             "failed");
+    }
 
-
+    /**
+     * Check that metrics work for DML statements.
+     */
+    @Test
+    public void testDmlSuccess() {
         assertMetricsIncrementedOnlyOnReducer(
             () -> cache.query(new SqlFieldsQuery("DELETE FROM TAB WHERE ID = 5")).getAll(),
             "success");
@@ -111,21 +120,21 @@ public class SqlStatisticsUserQueriesFastTest extends UserQueriesTestBase {
 
         assertMetricsIncrementedOnlyOnReducer(() -> GridTestUtils.assertThrowsAnyCause(
             log,
-            () -> cache.query(new SqlFieldsQuery("INSERT INTO TAB VALUES(5, 'I wont be inserted')")).getAll(),
+            () -> cache.query(new SqlFieldsQuery("INSERT INTO TAB VALUES(5, 'I will NOT be inserted')")).getAll(),
             TransactionDuplicateKeyException.class,
             "Duplicate key during INSERT"),
             "failed");
     }
 
     /**
-     * Local queries should also be counted.
+     * Sanity test for deprecated, but still supported by metrics, sql queries.
      *
      * @throws Exception if failed.
      */
     @Test
-    public void testIfLocalQuerySucceedsMetricIsUpdated() throws Exception {
+    public void testSanityDeprecatedSqlQueryMetrics() throws Exception {
         assertMetricsIncrementedOnlyOnReducer(
-            () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID < 100").setLocal(true)).getAll(),
+            () -> cache.query(new SqlQuery(String.class, "ID < 5").setLocal(false)).getAll(),
             "success");
 
         assertMetricsIncrementedOnlyOnReducer(
