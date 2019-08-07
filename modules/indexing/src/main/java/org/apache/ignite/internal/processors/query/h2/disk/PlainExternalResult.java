@@ -28,7 +28,7 @@ import org.h2.value.ValueRow;
  * TODO: Add in-memory buffer with memory tracker.
  * This class is intended for spilling to the disk (disk offloading) unsorted intermediate query results.
  */
-public class PlainExternalResult extends AbstractExternalResult {
+public class PlainExternalResult extends AbstractExternalResult<Value> {
     /**
      * @param ctx Kernal context.
      * @param memTracker Memory tracker.
@@ -42,6 +42,11 @@ public class PlainExternalResult extends AbstractExternalResult {
      */
     private PlainExternalResult(AbstractExternalResult parent) {
         super(parent);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected Value[] createEmptyArray(int colCnt) {
+        return new Value[colCnt];
     }
 
     /** {@inheritDoc} */

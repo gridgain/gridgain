@@ -15,16 +15,18 @@
  */
 package org.apache.ignite.internal.processors.query.h2.disk;
 
-import java.nio.BufferUnderflowException;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.TreeMap;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
 import org.apache.ignite.internal.util.typedef.T2;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.h2.command.dml.GroupByData;
 import org.h2.engine.Session;
+import org.h2.expression.aggregate.AggregateData;
+import org.h2.value.CompareMode;
 import org.h2.value.ValueRow;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * TODO: Add class description.
@@ -33,7 +35,7 @@ public class GroupedExternalGroupByData extends GroupByData {
 
     private final int[] grpIdx;
 
-    private ExternalGroups extGroupByData;
+    private SortedExternalResult sortedExtRes;
 
     private TreeMap<ValueRow, Object[]> groupByData;
 
@@ -54,27 +56,15 @@ public class GroupedExternalGroupByData extends GroupByData {
         groupByData = new TreeMap<>(ses.getDatabase().getCompareMode());
     }
 
-    private void createExternalGroupByData() {
-        extGroupByData = new ExternalGroups(((QueryContext)ses.getQueryContext()).context(), ses.queryMemoryTracker());
+    private void createExtGroupByData() {
+        sortedExtRes = new SortedExternalResult(((QueryContext)ses.getQueryContext()).context(), ses,
+            false, new int[] {0}, 0, null, tracker,  groupByData.size());
     }
 
     @Override public Object[] nextSource(ValueRow grpKey, int width) {
         lastGrpKey = grpKey;
 
         lastGrpData = groupByData.get(grpKey);
-
-        if (lastGrpData == null && extGroupByData != null) {
-            try {
-                lastGrpData = extGroupByData.get(grpKey);
-
-            }
-            catch (BufferUnderflowException e) {
-                extGroupByData.get(grpKey);
-            }
-
-//            if (lastGrpData != null)
-//                groupByData.put(grpKey, lastGrpData);
-        }
 
         if (lastGrpData == null) {
             lastGrpData = new Object[width];
@@ -120,14 +110,14 @@ public class GroupedExternalGroupByData extends GroupByData {
     }
 
     @Override public void reset() {
-        if (extGroupByData != null) {
-            U.closeQuiet(extGroupByData);
+        if (sortedExtRes != null) {
+            sortedExtRes.close();
 
-            extGroupByData = null;
+            sortedExtRes = null;
         }
 
         cursor = null;
-        extGroupByData = null;
+        sortedExtRes = null;
         groupByData = new TreeMap<>(ses.getDatabase().getCompareMode());
         lastGrpKey = null;
 
@@ -152,8 +142,8 @@ public class GroupedExternalGroupByData extends GroupByData {
         onGroupChanged(lastGrpKey, old, lastGrpData);
 
         if (!tracker.reserved(0)) {
-            if (extGroupByData == null)
-                createExternalGroupByData();
+            if (sortedExtRes == null)
+                createExtGroupByData();
 
             spillGroupsToDisk();
 
@@ -163,7 +153,13 @@ public class GroupedExternalGroupByData extends GroupByData {
 
     private void spillGroupsToDisk() {
         for (Map.Entry<ValueRow, Object[]> e : groupByData.entrySet()) {
-            extGroupByData.put(e.getKey(), e.getValue());
+            ValueRow key = e.getKey();
+            Object[] aggs = e.getValue();
+
+            Object[] newRow = getObjectsArray(key, aggs);
+
+            throw new RuntimeException("!!!");
+            //sortedExtRes.addRow(newRow); TODO!!!!
         }
 
         groupByData.clear();
@@ -173,11 +169,20 @@ public class GroupedExternalGroupByData extends GroupByData {
         memReserved = 0;
     }
 
+    @NotNull private Object[] getObjectsArray(ValueRow key, Object[] aggs) {
+        Object[] newRow = new Object[aggs.length + 1];
+
+        newRow[0] = key;
+
+        System.arraycopy(aggs, 0, newRow, 1, aggs.length);
+        return newRow;
+    }
+
     @Override public void updateCurrent(Object[] grpByExprData) {
         // Looks like group-by data size can be increased only on the very first group update.
         // What is the sense of having groups with the different aggregate arrays sizes?
         assert size == 1 : "size=" + size;
-        assert extGroupByData == null;
+        assert sortedExtRes == null;
 
         Object[] old = groupByData.put(lastGrpKey, grpByExprData);
 
@@ -185,19 +190,17 @@ public class GroupedExternalGroupByData extends GroupByData {
     }
 
     @Override public void done(int width) {
-        if (grpIdx == null && extGroupByData == null && groupByData.isEmpty())
-            extGroupByData.put(ValueRow.getEmpty(), new Object[width]);
+        if (grpIdx == null && sortedExtRes == null && groupByData.isEmpty())
+            groupByData.put(ValueRow.getEmpty(), new Object[width]);
 
-        if (extGroupByData != null ) {
+        if (sortedExtRes != null ) {
             if (!groupByData.isEmpty())
                 spillGroupsToDisk();
 
-            cursor = extGroupByData.cursor();
+            cursor = new ExternalGroupsIterator(sortedExtRes, ses);
         }
         else
             cursor = new GroupsIterator(groupByData.entrySet().iterator());
-
-
     }
 
     private static class GroupsIterator implements Iterator<T2<ValueRow, Object[]>> {
@@ -217,6 +220,96 @@ public class GroupedExternalGroupByData extends GroupByData {
 
             return new T2<>(row.getKey(), row.getValue());
         }
+    }
+
+    private static class ExternalGroupsIterator implements Iterator<T2<ValueRow, Object[]>> {
+        private final SortedExternalResult sortedExtRes;
+        private final CompareMode cmp;
+        private final Session ses;
+        private int extSize;
+        private T2<ValueRow, Object[]> cur;
+        private T2<ValueRow, Object[]> next;
+
+
+        private ExternalGroupsIterator(SortedExternalResult res, Session ses) {
+            sortedExtRes = res;
+            this.ses = ses;
+            this.cmp = ses.getDatabase().getCompareMode();
+            extSize = sortedExtRes.size();
+            advance();
+        }
+
+        @Override public boolean hasNext() {
+            return cur != null;
+        }
+
+        @Override public T2<ValueRow, Object[]> next() {
+            if (cur == null)
+                throw new NoSuchElementException();
+
+            T2<ValueRow, Object[]> res = cur;
+            cur = next;
+            next = null;
+            advance();
+
+            return res;
+        }
+
+        private void advance() {
+            assert next == null;
+
+            while (extSize-- > 0) {
+                Object[] row = sortedExtRes.next();
+
+                if (cur == null) {
+                    cur = getEntry(row);
+
+                    continue;
+                }
+
+                if (cur.getKey().compareTypeSafe((ValueRow)row[0], cmp) == 0) {
+                    Object[] curAggs = cur.getValue();
+
+                    for (int i = 0; i < curAggs.length; i++) {
+                        Object newAgg = row[i + 1];
+                        Object curAgg = curAggs[i];
+
+                        assert (newAgg == null) == (curAgg == null) : "newAgg=" + newAgg + ", curAgg=" + curAgg;
+
+                        if (newAgg == null)
+                            continue;
+
+                        assert newAgg.getClass() == curAgg.getClass() : "newAgg=" + newAgg + ", curAgg=" + curAgg;
+
+                        if (newAgg instanceof AggregateData)
+                            ((AggregateData)curAgg).mergeAggregate(ses, (AggregateData)newAgg);
+                        else
+                            throw new UnsupportedOperationException("Unsupported aggregate:" + curAgg.getClass());
+                    }
+
+                    // merge aggs
+                }
+                else {
+                    next = getEntry(row);
+
+                    break;
+                }
+
+            }
+
+
+            // TODO: implement.
+        }
+
+        T2<ValueRow, Object[]> getEntry(Object[] row) {
+            Object[] aggs = new Object[row.length - 1];
+
+            System.arraycopy(row, 1, aggs, 0, aggs.length);
+
+            return new T2<>((ValueRow)row[0], row);
+        }
+
+
     }
 
 }

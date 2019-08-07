@@ -88,7 +88,7 @@ public abstract class AggregateData {
      * @param ses Session.
      * @param agg Aggregate to be merged.
      */
-    abstract void mergeAggregate(Session ses, AggregateData agg);
+    public abstract void mergeAggregate(Session ses, AggregateData agg);
 
     /**
      * Get the aggregate result.

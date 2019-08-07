@@ -1126,14 +1126,20 @@ public class H2Utils {
      * @param row Data row.
      * @return Row size in bytes.
      */
-    public static long rowSizeInBytes(Value[] row) {
+    public static long rowSizeInBytes(Object[] row) {
         if (row == null)
             return 0;
 
         long rowSize = Constants.MEMORY_ARRAY + row.length * Constants.MEMORY_POINTER;
 
-        for (int i = 0; i < row.length; i++)
-            rowSize += row[i].getMemory();
+        for (int i = 0; i < row.length; i++) {
+            Object o = row[i];
+
+            if (o instanceof Value)
+                rowSize += ((Value)row[i]).getMemory();
+            else
+                rowSize += Constants.MEMORY_ROW; // TODO assess aggs size.
+        }
 
         return rowSize;
     }
@@ -1146,7 +1152,7 @@ public class H2Utils {
      * @param newRow New row.
      * @return Memory delta.
      */
-    public static long calculateMemoryDelta(ValueRow distinctRowKey, Value[] oldRow, Value[] newRow) {
+    public static long calculateMemoryDelta(ValueRow distinctRowKey, Object[] oldRow, Object[] newRow) {
         long oldRowSize = rowSizeInBytes(oldRow);
         long newRowSize = rowSizeInBytes(newRow);
 

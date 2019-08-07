@@ -138,7 +138,7 @@ public class AggregateDataDefault extends AggregateData {
         }
     }
 
-    @Override void mergeAggregate(Session ses, AggregateData agg) {
+    @Override public void mergeAggregate(Session ses, AggregateData agg) {
         assert agg != null;
         assert agg instanceof AggregateDataDefault : agg.getClass();
         assert ((AggregateDataDefault)agg).aggregateType == aggregateType : "this=" + aggregateType +

@@ -42,7 +42,7 @@ import org.jetbrains.annotations.Nullable;
  * This class is intended for spilling to the disk (disk offloading) sorted intermediate query results.
  */
 @SuppressWarnings("MissortedModifiers")
-public class SortedExternalResult extends AbstractExternalResult {
+public class SortedExternalResult extends AbstractExternalResult<Value> {
     /** Distinct flag. */
     private final boolean distinct;
 
@@ -364,7 +364,10 @@ public class SortedExternalResult extends AbstractExternalResult {
         }
     }
 
-
+    /** {@inheritDoc} */
+    @Override protected Value[] createEmptyArray(int colCnt) {
+        return new Value[colCnt];
+    }
 
     /** {@inheritDoc} */
     @Override protected void onClose() {

@@ -33,7 +33,6 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.h2.result.ResultExternal;
 import org.h2.result.ResultInterface;
 import org.h2.store.Data;
-import org.h2.value.Value;
 import org.jetbrains.annotations.NotNull;
 
 import static java.nio.file.StandardOpenOption.CREATE_NEW;
@@ -45,7 +44,7 @@ import static org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing.DI
  * Basic class for external result. Contains common methods for file IO.
  */
 @SuppressWarnings({"MissortedModifiers", "WeakerAccess", "ForLoopReplaceableByForEach"})
-public abstract class AbstractExternalResult implements ResultExternal, ExternalRowStore {
+public abstract class AbstractExternalResult<T> implements ResultExternal, ExternalRowStore {
     /** File name generator. */
     private static final AtomicLong idGen = new AtomicLong();
 
@@ -133,7 +132,7 @@ public abstract class AbstractExternalResult implements ResultExternal, External
      *
      * @return Row.
      */
-    @Override public Value[] readRowFromFile(long addr) {
+    @Override public T[] readRowFromFile(long addr) {
         setFilePosition(addr);
 
         return readRowFromFile();
@@ -144,7 +143,7 @@ public abstract class AbstractExternalResult implements ResultExternal, External
      *
      * @return Row.
      */
-    protected Value[] readRowFromFile() {
+    protected T[] readRowFromFile() {
         ByteBuffer hdr = readRowHeaderFromFile();
 
         int rowLen = hdr.getInt();
@@ -160,14 +159,15 @@ public abstract class AbstractExternalResult implements ResultExternal, External
 
         Data buff = Data.create(null, rowBytes.array(), true);
 
-        Value[] row = new Value[colCnt];
+        T[] row = createEmptyArray(colCnt);
 
         for (int i = 0; i < colCnt; i++)
-            row[i] = buff.readValue();
+            row[i] = (T) buff.readValue();
 
         return row;
     }
 
+    protected abstract T[] createEmptyArray(int colCnt);
     /**
      * Reads row header starting from the current position.
      *
@@ -220,7 +220,7 @@ public abstract class AbstractExternalResult implements ResultExternal, External
      * @param row Row.
      * @param buff Buffer.
      */
-    protected void addRowToBuffer(Value[] row, Data buff) {
+    protected void addRowToBuffer(T[] row, Data buff) {
         int initPos = buff.length();
 
         buff.checkCapacity(rowSize(row));
@@ -373,7 +373,7 @@ public abstract class AbstractExternalResult implements ResultExternal, External
      * @param row Row.
      * @return Row size in bytes.
      */
-    public static int rowSize(Value[] row) {
+    public static <T> int rowSize(T[] row) {
         return (int)(ROW_HEADER_SIZE + H2Utils.rowSizeInBytes(row));
     }
 
@@ -381,12 +381,16 @@ public abstract class AbstractExternalResult implements ResultExternal, External
      * @param rows Rows.
      * @return Rows size in bytes.
      */
-    public static int rowSize(Collection<Value[]> rows) {
+    public static <T> int rowSize(Collection<T[]> rows) {
         int size = 0;
 
-        for (Value[] row : rows)
+        for (Object[] row : rows)
             size += rowSize(row);
 
+        return size;
+    }
+
+    public int size() {
         return size;
     }
 }
