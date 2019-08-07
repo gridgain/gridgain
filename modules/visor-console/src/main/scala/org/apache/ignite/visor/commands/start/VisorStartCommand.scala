@@ -297,13 +297,13 @@ class VisorStartCommand extends VisorConsoleCommand {
 
                 val ue = "java.lang.UnsupportedOperationException: "
 
-//                res.filter(!_.ok).groupBy(r => r).foreach {
-//                    case (r, _) if r.errMsg.lines.next().startsWith(ue)  =>
-//                        errT += (r.host, r.errMsg.lines.next().replace(ue, ""))
-//
-//                    case (r, _) =>
-//                        errT += (r.host, r.errMsg.replace("\t", " ").split(U.nl()).toSeq)
-//                }
+                res.filter(!_.ok).groupBy(r => r).foreach {
+                    case (r, _) if r.errMsg.lines.next().startsWith(ue)  =>
+                        errT += (r.host, r.errMsg.lines.next().replace(ue, ""))
+
+                    case (r, _) =>
+                        errT += (r.host, r.errMsg.replace("\t", " ").split(U.nl()).toSeq)
+                }
 
                 errT.render()
             }

@@ -49,7 +49,7 @@ import static org.gridgain.agent.StompDestinationsUtils.buildClusterAddDest;
 import static org.gridgain.agent.StompDestinationsUtils.buildMetricsPullTopic;
 
 /**
- * GMC Agent.
+ * Management Agent.
  */
 public class Agent extends ManagementConsoleProcessor {
     /** Gmc url meta storage prefix. */
