@@ -248,26 +248,7 @@ public class FoldersReuseCompatibilityTest extends IgnitePersistenceCompatibilit
         }
 
         assertTrue("Directory " + Arrays.asList(subFolderNames).toString()
-            + " is expected to exist [" + path + "]" + debugInfo(subFolderNames), curFolder.exists() && curFolder.isDirectory());
+            + " is expected to exist [" + path + "]", curFolder.exists() && curFolder.isDirectory());
     }
 
-    private String debugInfo(String[] subFolderNames) throws IgniteCheckedException {
-        StringBuilder sb = new StringBuilder();
-
-        File curFolder = new File(U.defaultWorkDirectory());
-        sb.append("\npath=").append(curFolder.getAbsolutePath())
-            .append(", exists=").append(curFolder.exists())
-            .append(", dir=").append(curFolder.isDirectory())
-            .append(", list=").append(Arrays.toString(curFolder.list()));
-
-        for (String name : subFolderNames) {
-            curFolder = new File(curFolder, name);
-            sb.append("\npath=").append(curFolder.getAbsolutePath())
-                .append(", exists=").append(curFolder.exists())
-                .append(", dir=").append(curFolder.isDirectory())
-                .append(", list=").append(Arrays.toString(curFolder.list()));
-        }
-
-        return sb.toString();
-    }
 }
