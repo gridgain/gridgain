@@ -705,8 +705,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
                 return rows.size();
             }
-        }
-        catch (Exception e) {
+        } // Todo: add catch other exception
+        catch (IgniteCheckedException e) {
             failReason = e;
 
             throw e;
@@ -991,7 +991,12 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
             return res.cursor();
         }
-        catch (Exception e) {
+        catch (IgniteException e) {
+            failReason = e;
+
+            throw e;
+        }
+        catch (IgniteCheckedException e) {
             failReason = e;
 
             throw new IgniteSQLException("Failed to execute DDL statement [stmt=" + qryDesc.sql() +
@@ -1184,7 +1189,12 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 }, cancel));
             }
         }
-        catch (Exception e) {
+        catch (IgniteException e) {
+            failReason = e;
+
+            throw e;
+        }
+        catch (IgniteCheckedException e) {
             failReason = e;
 
             throw new IgniteSQLException("Failed to execute DML statement [stmt=" + qryDesc.sql() +

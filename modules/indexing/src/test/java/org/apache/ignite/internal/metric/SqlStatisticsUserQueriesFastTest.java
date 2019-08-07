@@ -155,7 +155,6 @@ public class SqlStatisticsUserQueriesFastTest extends UserQueriesTestBase {
                 () -> cache.query(new SqlFieldsQuery("THIS IS NOT A SQL STATEMENT")).getAll(),
                 CacheException.class,
                 "Failed to parse query");
-
         });
     }
 
@@ -186,7 +185,6 @@ public class SqlStatisticsUserQueriesFastTest extends UserQueriesTestBase {
 
     /**
      * Check cancel metric if local select cancelled.
-     *
      */
     @Test
     public void testLocalSelectCanceled() {

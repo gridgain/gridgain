@@ -221,5 +221,4 @@ public class SqlStatisticsUserQueriesLongTest extends UserQueriesTestBase {
             null),
             "failed", "failedByOOM");
     }
-
 }

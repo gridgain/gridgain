@@ -1489,7 +1489,7 @@ public class QueryUtils {
      * {@code false} otherwise.
      */
     public static boolean isLocalOrReduceOom(Throwable reason) {
-        boolean isRemoteFail = X.cause(reason, IgniteSQLMapStepException.class) != null;
+        boolean isRemoteFail = X.hasCause(reason, IgniteSQLMapStepException.class);
 
         if (isRemoteFail)
             return false;
