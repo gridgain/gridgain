@@ -62,7 +62,10 @@ public class SqlStatisticsUserQueriesLongTest extends UserQueriesTestBase {
     }
 
     /**
-     * Verify that error metrics are updated if that error happened on remote map step.
+     * Verify that each fail metric is updated properly if error happened on remote map step.
+     *
+     * To achive that, we start one server + one client. Queries are started from client, so map step is only on server,
+     * and reduce phase is only on client.
      *
      * @throws Exception on fail.
      */
@@ -107,7 +110,59 @@ public class SqlStatisticsUserQueriesLongTest extends UserQueriesTestBase {
     }
 
     /**
+     * Verify that each fail metric is updated properly if error happened on local map step.
+     *
+     * To check this we start one server node, which is used to perform the query. Secondary clinent node should not
+     * participate the query execution.
+     *
+     * @throws Exception on fail.
+     */
+    @Test
+    public void testMetricsOnLocalMapFail() throws Exception {
+        int strongMemQuota = 1024 * 1024;
+        int memQuotaUnlimited = -1;
+
+        startGridWithMaxMem(REDUCER_IDX, strongMemQuota);
+        startGridWithMaxMem(MAPPER_IDX, memQuotaUnlimited, true);
+
+        IgniteCache cache = createCacheFrom(grid(REDUCER_IDX));
+
+        final String mapFailMsg = "Failed to execute map query on remote node";
+
+        // map phase failure affects only general fail metric, not OOM metric.
+        assertMetricsIncrementedOnlyOnReducer(() -> GridTestUtils.assertThrows(
+            log,
+            () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB")).getAll(),
+            CacheException.class,
+            mapFailMsg),
+            "failed");
+
+        SuspendQuerySqlFunctions.refresh();
+
+        SuspendQuerySqlFunctions.setProcessRowsToSuspend(1);
+
+        assertMetricsIncrementedOnlyOnReducer(() -> GridTestUtils.assertThrows(
+            log,
+            () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID < 200 AND failFunction() = 5")).getAll(),
+            CacheException.class,
+            mapFailMsg), "failed");
+
+
+        SuspendQuerySqlFunctions.refresh();
+
+        SuspendQuerySqlFunctions.setProcessRowsToSuspend(1);
+
+        assertMetricsIncrementedOnlyOnReducer(() ->
+                startAndKillQuery(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID < 200 AND suspendHook(ID) <> 5 ")),
+            "success", "failed", "canceled");
+    }
+
+    /**
      * Verify that error metrics are updated if that error happened on reduce step.
+     *
+     * To achive that, we start one server + one client. Queries are started from client, so map step is only on server,
+     * and reduce phase is only on client.
+     *
      */
     @Test
     public void testMetricsOnRemoteReduceStepFail() throws Exception {
