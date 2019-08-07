@@ -69,6 +69,7 @@ import org.apache.ignite.transactions.TransactionRollbackException;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_INSTANCE_NAME;
+import static org.apache.ignite.testframework.GridTestUtils.SF;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
 
@@ -160,7 +161,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
         List<Integer> primaryKeys = primaryKeys(prim.cache(DEFAULT_CACHE_NAME), 10_000);
 
-        long stop = U.currentTimeMillis() + 60_000;
+        long stop = U.currentTimeMillis() + SF.applyUB(20_000, 60_000);
 
         Random r = new Random();
 
@@ -212,7 +213,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
         assertFalse(backups.contains(prim));
 
-        long stop = U.currentTimeMillis() + 60_000;
+        long stop = U.currentTimeMillis() + SF.applyUB(20_000, 60_000);
 
         long seed = System.nanoTime();
 
@@ -224,7 +225,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
         IgniteInternalFuture<?> fut = multithreadedAsync(() -> {
             while (U.currentTimeMillis() < stop) {
-                doSleep(5_000);
+                doSleep(3_000);
 
                 Ignite restartNode = grid(1 + r.nextInt(backups.size()));
 
@@ -237,7 +238,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
                 try {
                     waitForTopology(SERVER_NODES);
 
-                    doSleep(15_000);
+                    doSleep(5_000);
 
                     startGrid(name);
 
@@ -585,7 +586,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
             }
         });
 
-        doSleep(60_000);
+        doSleep(SF.applyUB(20_000, 60_000));
 
         done.set(true);
 
