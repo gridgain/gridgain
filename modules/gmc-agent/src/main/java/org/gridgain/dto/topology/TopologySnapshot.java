@@ -22,6 +22,7 @@ import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
+import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.toList;
 
 /**
@@ -32,7 +33,7 @@ public class TopologySnapshot {
     private long topVer;
 
     /***/
-    private List<Node> nodes;
+    private List<Node> nodes = emptyList();
 
     /**
      * @param topVer Topology version.
@@ -40,10 +41,8 @@ public class TopologySnapshot {
      * @return Topology snapshot.
      */
     public static TopologySnapshot topology(long topVer, Collection<ClusterNode> nodes) {
-        return new TopologySnapshot(topVer, nodes
-            .stream()
-            .map(Node::new)
-            .collect(toList()));
+        List<Node> clusterNodes = nodes != null ? nodes.stream().map(Node::new).collect(toList()) : emptyList();
+        return new TopologySnapshot(topVer, clusterNodes);
     }
 
     /**
@@ -52,10 +51,8 @@ public class TopologySnapshot {
      * @return Baseline snapshot.
      */
     public static TopologySnapshot baseline(long topVer, Collection<BaselineNode> nodes) {
-        return new TopologySnapshot(topVer, nodes
-            .stream()
-            .map(Node::new)
-            .collect(toList()));
+        List<Node> baseLineNodes = nodes != null ? nodes.stream().map(Node::new).collect(toList()) : emptyList();
+        return new TopologySnapshot(topVer, baseLineNodes);
     }
 
     /**

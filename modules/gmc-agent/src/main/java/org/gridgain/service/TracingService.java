@@ -75,6 +75,9 @@ public class TracingService {
      * Register span exporter handler.
      */
     public void registerHandler() {
+        if (ctx.config().getTracingSpi().getTraceComponent() == null)
+            return;
+
         hnd = getTraceHandler();
         ctx.config().getTracingSpi().getTraceComponent().getExportComponent().getSpanExporter().registerHandler("gmc", hnd);
     }
@@ -83,6 +86,9 @@ public class TracingService {
      * Force send buffered spans.
      */
     public void flushBuffer() {
+        if (hnd == null)
+            return;
+
         hnd.export(Collections.emptyList());
     }
 

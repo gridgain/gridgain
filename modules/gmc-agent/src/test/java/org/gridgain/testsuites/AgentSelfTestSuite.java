@@ -16,20 +16,16 @@
 
 package org.gridgain.testsuites;
 
-import org.gridgain.service.MetricsServiceTest;
-import org.gridgain.service.TopologyServiceTest;
-import org.gridgain.service.TracingServiceTest;
+import org.gridgain.agent.AgentSelfTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
 /**
- * GridGain on-premise GMC test suite.
+ * GridGain on-premise GMC self test suite.
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-    TopologyServiceTest.class,
-    TracingServiceTest.class,
-    MetricsServiceTest.class
+    AgentSelfTest.class,
 })
-public class AgentTestSuite {
+public class AgentSelfTestSuite {
 }

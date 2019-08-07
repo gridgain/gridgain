@@ -99,7 +99,7 @@ public class TopologyService implements AutoCloseable {
 
                 sendBaseline();
             }
-        }, 5, 5, TimeUnit.SECONDS);
+        }, 2, 5, TimeUnit.SECONDS);
     }
 
     /** {@inheritDoc} */

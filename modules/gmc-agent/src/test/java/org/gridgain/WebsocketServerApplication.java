@@ -14,22 +14,20 @@
  * limitations under the License.
  */
 
-package org.gridgain.testsuites;
+package org.gridgain;
 
-import org.gridgain.service.MetricsServiceTest;
-import org.gridgain.service.TopologyServiceTest;
-import org.gridgain.service.TracingServiceTest;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /**
- * GridGain on-premise GMC test suite.
+ * Web socket server console launcher.
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-    TopologyServiceTest.class,
-    TracingServiceTest.class,
-    MetricsServiceTest.class
-})
-public class AgentTestSuite {
+@SpringBootApplication
+public class WebsocketServerApplication {
+    /**
+     * @param args Args.
+     */
+    public static void main(String[] args) {
+        SpringApplication.run(WebsocketServerApplication.class, args);
+    }
 }
