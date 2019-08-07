@@ -141,14 +141,14 @@ public class UserQueriesTestBase extends SqlStatisticsAbstractTest {
      * function.
      */
     protected void startAndKillQuery(SqlFieldsQuery query) {
-        try {
-            IgniteInternalFuture qryCanceled = GridTestUtils.runAsync(() -> {
-                GridTestUtils.assertThrowsAnyCause(log,
-                    () -> jcache(REDUCER_IDX).query(query).getAll(),
-                    QueryCancelledException.class,
-                    null);
-            });
+        IgniteInternalFuture qryCanceled = runAsyncX(() -> GridTestUtils.assertThrowsAnyCause(
+            log,
+            () -> jcache(REDUCER_IDX).query(query).getAll(),
+            QueryCancelledException.class,
+            null)
+        );
 
+        try {
             SuspendQuerySqlFunctions.awaitQueryStopsInTheMiddle();
 
             // We perform async kill and hope it does it's job in some time.

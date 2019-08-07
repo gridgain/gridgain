@@ -24,7 +24,6 @@ import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.spi.metric.Metric;
-import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -263,23 +262,6 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
 
         assertEquals(0, longMetricValue(connNodeIdx, "requests"));
         assertEquals(0, longMetricValue(otherNodeIdx, "requests"));
-    }
-
-    /**
-     * Run async action and log if exception occured.
-     *
-     * @param act action to perform on other thread.
-     * @return future object to "action complited" event.
-     */
-    private IgniteInternalFuture runAsyncX(Runnable act) {
-        return GridTestUtils.runAsync(() -> {
-            try {
-                act.run();
-            }
-            catch (Throwable th) {
-                log.error("Failed to perform async action. Probably test is broken.", th);
-            }
-        });
     }
 
     /**

@@ -26,6 +26,8 @@ import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE;
@@ -101,6 +103,23 @@ public class SqlStatisticsAbstractTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Run async action and log if exception occured.
+     *
+     * @param act action to perform on other thread.
+     * @return future object to "action complited" event.
+     */
+    protected IgniteInternalFuture runAsyncX(Runnable act) {
+        return GridTestUtils.runAsync(() -> {
+            try {
+                act.run();
+            }
+            catch (Throwable th) {
+                log.error("Failed to perform async action. Probably test is broken.", th);
+            }
+        });
+    }
+
+    /**
      * This class exports function to the sql engine. Function implementation allows us to suspend query execution on test
      * logic condition.
      */
@@ -108,7 +127,7 @@ public class SqlStatisticsAbstractTest extends GridCommonAbstractTest {
         /**
          * How many rows should be processed (by all nodes in total)
          */
-        private static final int DFLT_PROCESS_ROWS_TO_SUSPEND = TABLE_SIZE / 2;
+        private static final int DFLT_PROCESS_ROWS_TO_SUSPEND = TABLE_SIZE / 4;
 
         /**
          * Latch to await till full scan query that uses this class function have done some job, so some memory is
@@ -167,7 +186,7 @@ public class SqlStatisticsAbstractTest extends GridCommonAbstractTest {
         }
 
         /**
-         * Sql function used to suspend query when half of the table is processed. Should be used in full scan queries.
+         * Sql function used to suspend query when quarter of the table is processed. Should be used in full scan queries.
          *
          * @param ret number to return.
          */
