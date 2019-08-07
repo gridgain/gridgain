@@ -16,6 +16,11 @@
 
 package org.apache.ignite.internal.metric;
 
+import java.sql.BatchUpdateException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.Statement;
+import java.util.Objects;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
@@ -24,6 +29,8 @@ import org.apache.ignite.internal.processors.query.RunningQueryManager;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.transactions.TransactionDuplicateKeyException;
 import org.junit.Test;
+
+import static org.apache.ignite.internal.util.IgniteUtils.resolveIgnitePath;
 
 /**
  * Tests for statistics of user initiated queries execution, that can be runned without grid restart.
@@ -107,7 +114,7 @@ public class SqlStatisticsUserQueriesFastTest extends UserQueriesTestBase {
             "success");
 
         assertMetricsIncrementedOnlyOnReducer(
-            () -> cache.query(new SqlFieldsQuery("DELETE FROM TAB WHERE ID > (SELECT AVG(ID) FROM TAB WHERE ID < 20)")).getAll(),
+            () -> cache.query(new SqlFieldsQuery("DELETE FROM TAB WHERE ID < (SELECT AVG(ID) FROM TAB WHERE ID < 20)")).getAll(),
             "success");
 
         assertMetricsIncrementedOnlyOnReducer(
@@ -125,6 +132,56 @@ public class SqlStatisticsUserQueriesFastTest extends UserQueriesTestBase {
             "Duplicate key during INSERT"),
             "failed");
     }
+
+    /**
+     * Check that metrics work for DML statements.
+     */
+    @Test
+    public void testStreaming() {
+        final Integer okId = 42;
+        final Integer badId = null;
+
+        cache.query(new SqlFieldsQuery("DELETE FROM TAB WHERE ID = ?").setArgs(okId)).getAll();
+
+        assertMetricsIncrementedOnlyOnReducer(
+            () -> insertWithStreaming(okId, "Succesfully inserted name"),
+            "success", "success");
+
+        assertMetricsIncrementedOnlyOnReducer(() -> GridTestUtils.assertThrowsAnyCause(
+            log,
+            () -> insertWithStreaming(badId, "I will NOT be inserted"),
+            BatchUpdateException.class,
+            "Null value is not allowed for column"),
+            "success", "failed");
+    }
+
+    /**
+     * Insert row using streaming mode of the Thin JDBC client.
+     *
+     * @param id Id.
+     * @param name Name.
+     * @return update count.
+     */
+    private int insertWithStreaming(Integer id, String name) {
+        try (Connection conn= GridTestUtils.connect(grid(REDUCER_IDX), null)) {
+            conn.setSchema('"' + DEFAULT_CACHE_NAME + '"');
+
+            try (Statement stat = conn.createStatement()) {
+                stat.execute("SET STREAMING ON ALLOW_OVERWRITE OFF");
+
+                try (PreparedStatement ins = conn.prepareStatement("INSERT INTO TAB VALUES(?, ?)")) {
+                    ins.setObject(1, id);
+                    ins.setString(2, name);
+
+                    return ins.executeUpdate();
+                }
+            }
+        }
+        catch (Exception e) {
+            throw new RuntimeException("Streaming upload failed", e);
+        }
+    }
+
 
     /**
      * Sanity test for deprecated, but still supported by metrics, sql queries.

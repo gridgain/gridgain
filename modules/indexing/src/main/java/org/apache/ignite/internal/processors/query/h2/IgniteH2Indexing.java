@@ -705,8 +705,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
                 return rows.size();
             }
-        } // Todo: add catch other exception
-        catch (IgniteCheckedException e) {
+        }
+        catch (IgniteException | IgniteCheckedException e) {
             failReason = e;
 
             throw e;
