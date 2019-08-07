@@ -56,7 +56,7 @@ public class ManagementCommands implements Command<ManagementArguments> {
         Command.usage(log, "Enable management:", MANAGEMENT, ManagementCommandList.ENABLE.text());
         Command.usage(log, "Disable management:", MANAGEMENT, ManagementCommandList.DISABLE.text());
         Command.usage(log, "Change management URI:", MANAGEMENT, getUrlOptions());
-        Command.usage(log, "Change management URI:", MANAGEMENT, ManagementCommandList.STATUS.text());
+        Command.usage(log, "Get management status:", MANAGEMENT, ManagementCommandList.STATUS.text());
     }
 
     /** */
@@ -167,7 +167,7 @@ public class ManagementCommands implements Command<ManagementArguments> {
                             break;
                         }
                         case TRUSTSTORE_PASSWORD:
-                            managementArgs.setTrustStorePassword(argIter.nextArg("trust store path"));
+                            managementArgs.setTrustStorePassword(argIter.nextArg("trust store password"));
 
                             break;
                         case CIPHER_SUITES:
@@ -231,8 +231,8 @@ public class ManagementCommands implements Command<ManagementArguments> {
             optional("--management-cipher-suites", "MANAGEMENT_CIPHER_1[, MANAGEMENT_CIPHER_2, ..., MANAGEMENT_CIPHER_N]"),
             optional("--management-keystore", "MANAGEMENT_KEYSTORE_PATH"),
             optional("--management-keystore-password", "MANAGEMENT_KEYSTORE_PASSWORD"),
-            optional("--management-keystore", "MANAGEMENT_TRUSTSTORE_PATH"),
-            optional("--management-keystore-password", "MANAGEMENT_TRUSTSTORE_PASSWORD")
+            optional("--management-truststore", "MANAGEMENT_TRUSTSTORE_PATH"),
+            optional("--management-truststore-password", "MANAGEMENT_TRUSTSTORE_PASSWORD")
         ).toArray(String[]::new);
     }
 
