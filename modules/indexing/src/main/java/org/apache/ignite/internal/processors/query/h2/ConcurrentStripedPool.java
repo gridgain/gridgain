@@ -16,15 +16,20 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
+import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Concurrent pool of object based on ConcurrentLinkedDeque.
  */
-public class ConcurrentStripedPool<E> {
+public class ConcurrentStripedPool<E> implements Iterable<E> {
     /** Stripe pools. */
     private final ConcurrentLinkedDeque<E>[] stripePools;
 
@@ -121,7 +126,7 @@ public class ConcurrentStripedPool<E> {
      * @throws NullPointerException if the specified action is null
      * @since 1.8
      */
-    void forEach(Consumer<? super E> action) {
+    public void forEach(Consumer<? super E> action) {
         Objects.requireNonNull(action);
 
         for (int i = 0; i < stripes; ++i)
@@ -134,5 +139,53 @@ public class ConcurrentStripedPool<E> {
     public void clear() {
         for (int i = 0; i < stripes; ++i)
             stripePools[i].clear();
+    }
+
+    /** {@inheritDoc} */
+    @Override public @NotNull Iterator<E> iterator() {
+        return new Iterator<E>() {
+            int idx = 0;
+            Iterator<E> it = stripePools[idx].iterator();
+
+            @Override public boolean hasNext() {
+                if (it.hasNext())
+                    return true;
+
+                idx++;
+
+                if (idx < stripes) {
+                    it = stripePools[idx].iterator();
+
+                    return it.hasNext();
+                }
+                else
+                    return false;
+            }
+
+            @Override public E next() {
+                if (it.hasNext())
+                    return it.next();
+
+                idx++;
+
+                if (idx < stripes) {
+                    it = stripePools[idx].iterator();
+
+                    return it.next();
+                }
+                else
+                    throw new NoSuchElementException();
+            }
+        };
+    }
+
+    /**
+     * Returns a sequential {@code Stream} with this collection as its source.
+     *
+     * @return a sequential {@code Stream} over the elements in this collection
+     * @since 1.8
+     */
+    public Stream<E> stream() {
+        return StreamSupport.stream(spliterator(), false);
     }
 }

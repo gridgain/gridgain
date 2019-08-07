@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache;
 
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.IgniteCache;
@@ -26,6 +25,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
+import org.apache.ignite.internal.processors.query.h2.ConcurrentStripedPool;
 import org.apache.ignite.internal.processors.query.h2.H2Connection;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
@@ -121,7 +121,7 @@ public class IgniteCacheQueryH2IndexingLeakTest extends GridCommonAbstractTest {
     private static int getStatementCacheSize(GridQueryProcessor qryProcessor) {
         IgniteH2Indexing h2Idx = (IgniteH2Indexing)qryProcessor.getIndexing();
 
-        BlockingQueue<H2Connection> conns = GridTestUtils.getFieldValue(h2Idx.connections(), "connPool");
+        ConcurrentStripedPool<H2Connection> conns = GridTestUtils.getFieldValue(h2Idx.connections(), "connPool");
 
         return conns.stream().mapToInt(H2Connection::statementCacheSize).sum();
     }
