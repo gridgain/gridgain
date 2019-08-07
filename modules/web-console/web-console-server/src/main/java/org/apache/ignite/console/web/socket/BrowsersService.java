@@ -360,7 +360,7 @@ public class BrowsersService extends AbstractSocketHandler {
     /**
      * @param evt Event.
      */
-    void sendResponseToBrowser(WebSocketEvent evt) {
+    protected void sendResponseToBrowser(WebSocketEvent evt) {
         WebSocketSession ses = locRequests.remove(evt.getRequestId());
 
         if (ses == null) {
