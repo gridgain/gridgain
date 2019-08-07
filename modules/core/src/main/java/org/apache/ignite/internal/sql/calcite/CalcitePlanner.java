@@ -20,7 +20,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
-import org.apache.calcite.adapter.enumerable.EnumerableConvention;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionConfigImpl;
@@ -104,6 +103,8 @@ import org.apache.ignite.internal.sql.calcite.ops.PhysicalOperator;
 import org.apache.ignite.internal.sql.calcite.ops.ProjectOp;
 import org.apache.ignite.internal.sql.calcite.ops.TableScanOp;
 import org.apache.ignite.internal.sql.calcite.physical.FilterRel;
+import org.apache.ignite.internal.sql.calcite.physical.IgniteDistributionTrait;
+import org.apache.ignite.internal.sql.calcite.physical.IgniteDistributionTraitDef;
 import org.apache.ignite.internal.sql.calcite.physical.JoinNestedLoopsRel;
 import org.apache.ignite.internal.sql.calcite.physical.ProjectRel;
 import org.apache.ignite.internal.sql.calcite.physical.TableScanRel;
@@ -114,9 +115,11 @@ import org.jetbrains.annotations.NotNull;
  */
 public class CalcitePlanner {
 
-    private static final List<RelTraitDef> TRAIT_DEFS = Collections
-        .unmodifiableList(Arrays.asList(ConventionTraitDef.INSTANCE,
-            RelCollationTraitDef.INSTANCE)); // TODO distribution trait
+    private static final List<RelTraitDef> TRAIT_DEFS = Collections.unmodifiableList(Arrays.asList(
+        ConventionTraitDef.INSTANCE,
+        RelCollationTraitDef.INSTANCE,
+        IgniteDistributionTraitDef.INSTANCE)
+    );
 
     private static final SqlParser.Config CALCITE_PARSER_CONFIG
         = SqlParser.configBuilder(SqlParser.Config.DEFAULT)
@@ -198,7 +201,8 @@ public class CalcitePlanner {
         CalciteUtils.FILTER_RULE,
         CalciteUtils.JOIN_RULE,
         CalciteUtils.PROJECT_RULE,
-        CalciteUtils.TABLE_SCAN_RULE
+        CalciteUtils.TABLE_SCAN_RULE//,
+       // CalciteUtils.EXCHANGE_RULE
     );
 
     private final SchemaPlus rootSchema;
@@ -258,10 +262,10 @@ public class CalcitePlanner {
         //cboPlanner.setNoneConventionHasInfiniteCost(false);EnumerableConvention.INSTANCE)
         RelTraitSet desiredTraits
             = plan.getCluster().traitSet()
-            .replace(EnumerableConvention.INSTANCE)
+            .replace(IgniteDistributionTrait.SINGLETON)
             .replace(IgniteConvention.INSTANCE);
 
-        final RelCollation collation
+        final RelCollation collation // TODO collation
             = plan instanceof Sort
             ? ((Sort)plan).collation
             : null;
@@ -272,6 +276,8 @@ public class CalcitePlanner {
         RelNode newRoot = cboPlanner.changeTraits(plan, desiredTraits);
 
         cboPlanner.setRoot(newRoot);
+
+        cboPlanner.setNoneConventionHasInfiniteCost(false);
 
         return cboPlanner.findBestExp();
     }

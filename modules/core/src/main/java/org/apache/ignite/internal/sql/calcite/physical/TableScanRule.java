@@ -43,7 +43,7 @@ public class TableScanRule extends ConverterRule {
         System.out.println("TableScanRule table=" + table);
 
         return new TableScanRel(scan.getCluster(),
-            scan.getTraitSet().replace(IgniteConvention.INSTANCE),
+            scan.getTraitSet().replace(IgniteConvention.INSTANCE).replace(IgniteDistributionTrait.HASH_DISTRIBUTED),
             relOptTable);
     }
 }
