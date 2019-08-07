@@ -19,6 +19,7 @@ package org.apache.ignite.internal.metric;
 import java.sql.BatchUpdateException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Objects;
 import javax.cache.CacheException;
@@ -38,7 +39,23 @@ import static org.apache.ignite.internal.util.IgniteUtils.resolveIgnitePath;
  * @see RunningQueryManager
  */
 public class SqlStatisticsUserQueriesFastTest extends UserQueriesTestBase {
-    /** Cache with a tested table, created and filled only once. */
+    /** Subdirectory with CSV files */
+    private static final String CSV_FILE_SUBDIR = "/modules/indexing/src/test/resources/";
+
+    /**
+     * A CSV file with two records, that could NOT be inserted to the test table, because it have been generated for
+     * different table.
+     */
+    private static final String COPY_CMD_BAD_FORMATED_FILE =
+        Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload_bad.csv")).getAbsolutePath();
+
+    /**
+     * A CSV file with two records, that could be upload to the test table.
+     */
+    private static final String COPY_CMD_OK_FORMATED_FILE =
+        Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload_ok.csv")).getAbsolutePath();
+
+    /** Cache with a tested table, created and populated only once. */
     private static IgniteCache cache;
 
     /**
@@ -134,7 +151,7 @@ public class SqlStatisticsUserQueriesFastTest extends UserQueriesTestBase {
     }
 
     /**
-     * Check that metrics work for DML statements.
+     * Check that metrics work for statements in streaming mode.
      */
     @Test
     public void testStreaming() {
@@ -182,6 +199,42 @@ public class SqlStatisticsUserQueriesFastTest extends UserQueriesTestBase {
         }
     }
 
+    /**
+     * Check that metrics work for COPY statement.
+     */
+    @Test
+    public void testCopyComand() {
+        cache.query(new SqlFieldsQuery("DELETE FROM TAB WHERE ID = 1 or ID = 2 ")).getAll();
+
+        assertMetricsIncrementedOnlyOnReducer(
+            () -> doCopyCommand(COPY_CMD_OK_FORMATED_FILE),
+            "success");
+
+        assertMetricsIncrementedOnlyOnReducer(() -> GridTestUtils.assertThrowsAnyCause(
+            log,
+            () -> doCopyCommand(COPY_CMD_BAD_FORMATED_FILE),
+            SQLException.class,
+            "Value conversion failed"),
+            "failed");
+    }
+
+    /**
+     * Perform copy command: upload file using thin jdbc client.
+     *
+     * @param pathToCsv Path to csv file to upload.
+     */
+    private int doCopyCommand(String pathToCsv) {
+        try (Connection conn= GridTestUtils.connect(grid(REDUCER_IDX), null)) {
+            conn.setSchema('"' + DEFAULT_CACHE_NAME + '"');
+
+            try (Statement copy = conn.createStatement()) {
+                return copy.executeUpdate("copy from '" + pathToCsv + "' into TAB (ID, NAME) format csv");
+            }
+        }
+        catch (Exception e) {
+            throw new RuntimeException("COPY upload from " + pathToCsv + " failed", e);
+        }
+    }
 
     /**
      * Sanity test for deprecated, but still supported by metrics, sql queries.
