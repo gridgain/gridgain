@@ -28,6 +28,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.stream.Collectors;
@@ -46,6 +47,7 @@ import org.apache.ignite.internal.processors.affinity.AffinityAssignment;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.ExchangeDiscoveryEvents;
+import org.apache.ignite.internal.processors.cache.GridCacheAffinityManager;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheEntry;
@@ -56,6 +58,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionFullMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
+import org.apache.ignite.internal.processors.cache.transactions.AffinityTestHolder;
 import org.apache.ignite.internal.util.F0;
 import org.apache.ignite.internal.util.GridAtomicLong;
 import org.apache.ignite.internal.util.GridLongList;
@@ -2269,6 +2272,20 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                     }
                 }
 
+                AtomicBoolean aBoolean = AffinityTestHolder.printer.get(ctx.localNode().consistentId().toString());
+
+                if (aBoolean != null && aBoolean.get()) {
+                    String session = UUID.randomUUID().toString();
+                    log.error("PMP@session: " + session + " affinity.");
+                    for (Map.Entry<String, GridCacheAffinityManager> entry : AffinityTestHolder.cacheAffinityManagers.entrySet()) {
+                        log.error("PMP@session: " + session + "," +
+                            " node:" + entry.getKey()
+                            + ", top:" + entry.getValue().affinityTopologyVersion()
+                            + ", affinity=["
+                            + entry.getValue().nodesByPartition(AffinityTestHolder.movingPartitionId.get(), exchFut.topologyVersion()) + "]");
+                    }
+                }
+
                 // Then process remote partitions.
                 for (Map.Entry<Integer, Set<UUID>> entry : ownersByUpdCounters.entrySet()) {
                     int part = entry.getKey();
@@ -2373,8 +2390,17 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             }
         }
 
-        if (part.state() != MOVING)
+        if (part.state() != MOVING) {
+            log.info("PMP@MOVING: p:" + p + " clear: " + clear + " exchFut: " + exchFut);
+
             part.moving();
+
+            AffinityTestHolder.movingPartitionId.set(p);
+
+            AffinityTestHolder.printer
+                .computeIfAbsent(ctx.localNode().consistentId().toString(), k -> new AtomicBoolean(true))
+                .set(true);
+        }
 
         if (!clear)
             exchFut.addHistoryPartition(grp, part.id());

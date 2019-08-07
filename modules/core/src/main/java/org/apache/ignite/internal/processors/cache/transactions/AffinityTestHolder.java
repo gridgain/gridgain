@@ -18,8 +18,16 @@ package org.apache.ignite.internal.processors.cache.transactions;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.internal.processors.cache.GridCacheAffinityManager;
 
 public class AffinityTestHolder {
     public static ConcurrentMap<String, GridCacheAffinityManager> cacheAffinityManagers = new ConcurrentHashMap<>();
+
+    public static ConcurrentMap<String, AtomicBoolean> printer = new ConcurrentHashMap<>();
+
+    public static AtomicReference<Integer> movingPartitionId = new AtomicReference<>();
+
+
 }

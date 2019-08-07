@@ -494,11 +494,11 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
 
                         if(part != null && part.state() == MOVING) {
                             String session = UUID.randomUUID().toString();
-                            log.error("PMP@session: "+session+", part:"+part + " size: " + AffinityTestHolder.cacheAffinityManagers.size());
+                            log.error("PMP@session: "+session+", part:"+part + " size: " + AffinityTestHolder.cacheAffinityManagers.size() + " top: " + top.readyTopologyVersion());
                             for (Map.Entry<String, GridCacheAffinityManager> entry : AffinityTestHolder.cacheAffinityManagers.entrySet()) {
                                 log.error("PMP@session: "+session+"," +
                                     " node:"+ entry.getKey()
-                                    + ", top:" + top.readyTopologyVersion()
+                                    + ", top:" + entry.getValue().affinityTopologyVersion()
                                     + ", affinity=["
                                     + entry.getValue().nodesByPartition(part.id(), top.readyTopologyVersion())+"]");
                             }
