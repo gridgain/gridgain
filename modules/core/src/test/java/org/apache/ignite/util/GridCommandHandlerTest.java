@@ -205,6 +205,13 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
         assertTrue(ignite.cluster().active());
     }
 
+    @Test
+    public void testClusterIdAndTag() throws Exception {
+        Ignite ignite = startGrid(0);
+
+        execute("--id-and-tag", "print");
+    }
+
     /**
      * Test deactivation works via control.sh
      *

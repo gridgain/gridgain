@@ -21,6 +21,8 @@ import java.util.logging.Logger;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.client.GridClientNode;
+import org.apache.ignite.internal.visor.id_and_tag.VisorIdAndTagTask;
+import org.apache.ignite.internal.visor.id_and_tag.VisorIdAndTagTaskArg;
 
 /**
  *
@@ -33,6 +35,14 @@ public class ClusterIdAndTagCommand implements Command<Void> {
                 .min(Comparator.comparingLong(GridClientNode::order))
                 .map(GridClientNode::nodeId)
                 .orElse(null);
+
+            TaskExecutor.executeTaskByNameOnNode(
+                client,
+                VisorIdAndTagTask.class.getName(),
+                toVisorArguments(),
+                coordinatorId,
+                clientCfg
+            );
         }
 
         return null;
@@ -49,7 +59,16 @@ public class ClusterIdAndTagCommand implements Command<Void> {
     }
 
     /** {@inheritDoc} */
+    @Override public void parseArguments(CommandArgIterator argIterator) {
+
+    }
+
+    /** {@inheritDoc} */
     @Override public String name() {
+        return null;
+    }
+
+    private VisorIdAndTagTaskArg toVisorArguments() {
         return null;
     }
 }
