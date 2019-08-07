@@ -796,12 +796,8 @@ public abstract class AbstractQueryTableLockAndConnectionPoolSelfTest extends Ab
     private void checkConnectionLeaks(int nodeCnt) throws Exception {
         boolean notLeak = GridTestUtils.waitForCondition(() -> {
             for (int i = 0; i < nodeCnt; i++) {
-                boolean thereAreNotThreadedUsed = usedConnections(i).stream()
-                    .filter(c -> !(c instanceof H2PooledConnection.H2ThreadedConnection))
-                    .findAny()
-                    .isPresent();
-
-                return !thereAreNotThreadedUsed;
+                if (!usedConnections(i).isEmpty())
+                    return false;
             }
 
             return true;
@@ -811,12 +807,7 @@ public abstract class AbstractQueryTableLockAndConnectionPoolSelfTest extends Ab
             for (int i = 0; i < nodeCnt; i++) {
                 Set<H2PooledConnection> usedConns = usedConnections(i);
 
-                boolean thereAreNotThreadedUsed = usedConnections(i).stream()
-                    .filter(c -> !(c instanceof H2PooledConnection.H2ThreadedConnection))
-                    .findAny()
-                    .isPresent();
-
-                if (thereAreNotThreadedUsed)
+                if (!usedConnections(i).isEmpty())
                     log.error("Not closed connections: " + usedConns);
             }
 

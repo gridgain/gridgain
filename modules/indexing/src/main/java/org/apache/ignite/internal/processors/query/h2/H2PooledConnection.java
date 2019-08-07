@@ -28,13 +28,13 @@ import org.jetbrains.annotations.Nullable;
  */
 public class H2PooledConnection implements AutoCloseable {
     /** */
-    protected volatile H2Connection delegate;
+    private volatile H2Connection delegate;
 
     /** Connection manager. */
-    protected final ConnectionManager connMgr;
+    private final ConnectionManager connMgr;
 
     /** Closed (recycled) flag. */
-    protected final AtomicBoolean closed = new AtomicBoolean();
+    private final AtomicBoolean closed = new AtomicBoolean();
 
     /**
      * @param conn Connection to use.
@@ -42,8 +42,6 @@ public class H2PooledConnection implements AutoCloseable {
      *      (connection is closed or returned to connection pool).
      */
     H2PooledConnection(H2Connection conn, ConnectionManager connMgr) {
-        assert conn != null;
-
         this.delegate = conn;
         this.connMgr = connMgr;
     }
@@ -107,59 +105,12 @@ public class H2PooledConnection implements AutoCloseable {
     @Override public void close() {
         assert delegate != null;
 
-        H2Utils.resetSession(this);
-
         if (closed.compareAndSet(false, true)) {
             H2Utils.resetSession(this);
 
-            connMgr.recycle(this);
+            connMgr.recycle(delegate);
 
             delegate = null;
-        }
-    }
-
-    /**
-     *
-     */
-    public static class H2ThreadedConnection extends H2PooledConnection {
-        /** Thread uses connection. */
-        final Thread thread = Thread.currentThread();
-        /**
-         * @param conn Used connection to create threaded connection.
-         */
-        H2ThreadedConnection(H2PooledConnection conn) {
-            super(conn.delegate, conn.connMgr);
-        }
-
-        /**
-         * Open connection.
-         */
-        void open() {
-            assert closed.compareAndSet(false, true) : "Invalid threaded connection state on open";
-        }
-
-        /**
-         * Close connection.
-         */
-        void closeThreaded() {
-            assert closed.compareAndSet(true, false) : "Invalid threaded connection state on close";
-        }
-
-        /**
-         * Close connection.
-         */
-        void closePooled() {
-            super.close();
-        }
-
-        /** {@inheritDoc} */
-        @Override public void close() {
-            H2Utils.resetSession(this);
-
-            if (!Thread.currentThread().equals(thread))
-                closePooled();
-            else
-                connMgr.recycleThreaded(this);
         }
     }
 }

@@ -75,20 +75,14 @@ public class ConnectionManager {
     /** Statement cleanup task. */
     private final GridTimeoutProcessor.CancelableTask stmtCleanupTask;
 
-    /** Threaded connection recycle task. */
-    private final GridTimeoutProcessor.CancelableTask threadedConnRecycleTask;
-
     /** Logger. */
     private final IgniteLogger log;
 
     /** Used connections set. */
-    private final Set<H2PooledConnection> usedConns = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private final Set<H2Connection> usedConns = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
-    /** Striped connection pools. */
-    private final ConcurrentLinkedDeque8<H2Connection>[] stripedConnPools = new ConcurrentLinkedDeque8[STRIPES_COUNT];
-
-    /** Thread connection. */
-    private final ThreadLocal<H2PooledConnection.H2ThreadedConnection> threadConn = new ThreadLocal<>();
+    /** Connection pool. */
+    private ConcurrentStripedPool<H2Connection> connPool;
 
     /** Connection pool max size. */
     private volatile int poolMaxSize = CONNECTION_POOL_SIZE;
@@ -123,12 +117,7 @@ public class ConnectionManager {
             throw new IgniteSQLException("Failed to initialize DB connection: " + dbUrl, e);
         }
 
-        for (int i = 0; i < STRIPES_COUNT; ++i)
-            stripedConnPools[i] = new ConcurrentLinkedDeque8<>();
-
         stmtCleanupTask = ctx.timeout().schedule(this::cleanupStatements, stmtCleanupPeriod, stmtCleanupPeriod);
-        threadedConnRecycleTask = ctx.timeout().schedule(this::recycleThreadedConnections,
-            RECYCLE_THREADED_CONNS_TIMEOUT, RECYCLE_THREADED_CONNS_TIMEOUT);
     }
 
     /**
@@ -207,9 +196,6 @@ public class ConnectionManager {
         if (stmtCleanupTask != null)
             stmtCleanupTask.close();
 
-        if (threadedConnRecycleTask != null)
-            threadedConnRecycleTask.close();
-
         // Needs to be released before SHUTDOWN.
         closeConnections();
 
@@ -233,21 +219,6 @@ public class ConnectionManager {
             if (now - c.statementCache().lastUsage() > stmtTimeout)
                 c.clearStatementCache();
         });
-    }
-
-
-    /**
-     * Called periodically to clean up the statement cache.
-     */
-    private void recycleThreadedConnections() {
-        usedConns.stream()
-            .filter(c -> c instanceof H2PooledConnection.H2ThreadedConnection)
-            .forEach(c -> {
-                H2PooledConnection.H2ThreadedConnection thConn = (H2PooledConnection.H2ThreadedConnection)c;
-
-                if (thConn.thread.getState() == Thread.State.TERMINATED)
-                    thConn.closePooled();
-            });
     }
 
     /**
@@ -285,16 +256,6 @@ public class ConnectionManager {
      * @return H2 connection wrapper.
      */
     public H2PooledConnection connection() {
-        H2PooledConnection.H2ThreadedConnection threaded = threadConn.get();
-
-        if (threaded != null) {
-            threadConn.remove();
-
-            threaded.open();
-
-            return threaded;
-        }
-
         try {
             H2Connection conn = connPool.poll();
 
@@ -303,7 +264,7 @@ public class ConnectionManager {
 
             H2PooledConnection connWrp = new H2PooledConnection(conn, this);
 
-            usedConns.add(connWrp);
+            usedConns.add(conn);
 
             assert !conn.connection().isClosed() : "Connection is closed [conn=" + conn + ']';
 
@@ -333,40 +294,14 @@ public class ConnectionManager {
      *
      * @param conn Connection.
      */
-    void recycle(H2PooledConnection conn) {
-        ConcurrentLinkedDeque8<H2Connection> connPool = stripedConnPools[stripeIdx.get()];
-
+    void recycle(H2Connection conn) {
         boolean rmv = usedConns.remove(conn);
 
         assert rmv : "Connection isn't tracked [conn=" + conn + ']';
 
-        assert !connPool.contains(conn.delegate) : "Connection is already recycled [conn=" + conn + ']';
-
-        if(threadConn.get() == null) {
-            H2PooledConnection.H2ThreadedConnection threaded = new H2PooledConnection.H2ThreadedConnection(conn);
-
-            usedConns.add(threaded);
-
-            threadConn.set(threaded);
-        }
-        else {
-            if (connPool.size() < poolMaxSize)
-                connPool.push(conn.delegate);
-            else
-                conn.delegate.close();
-        }
-    }
-
-    /**
-     * @param conn Threaded connection to recycle.
-     */
-    void recycleThreaded(H2PooledConnection.H2ThreadedConnection conn) {
-        if(threadConn.get() == null) {
-            conn.closeThreaded();
-
-            threadConn.set(conn);
-        }
+        if (connPool.size() < poolMaxSize)
+            connPool.push(conn);
         else
-            conn.closePooled();
+            conn.close();
     }
 }
