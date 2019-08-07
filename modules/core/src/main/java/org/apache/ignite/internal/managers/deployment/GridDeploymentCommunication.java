@@ -479,8 +479,13 @@ class GridDeploymentCommunication {
                     // Interrupt again to get it in the users code.
                     Thread.currentThread().interrupt();
 
-                    throw new IgniteCheckedException("Got interrupted while waiting for response from node: " +
-                        dstNode.id(), e);
+                    TimeoutException te = new TimeoutException(
+                        "Got interrupted while waiting for response from node: " + dstNode.id()
+                    );
+
+                    te.initCause(e);
+
+                    throw te;
                 }
             }
 

@@ -22,9 +22,11 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeTask;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DeploymentMode;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.managers.deployment.GridDeploymentResponse;
+import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.testframework.GridTestExternalClassLoader;
 import org.apache.ignite.testframework.config.GridTestProperties;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -33,9 +35,9 @@ import org.junit.Test;
 /**
  * Tests affinity and affinity mapper P2P loading.
  */
-public class GridPeerDeploymentRetryTest extends GridCommonAbstractTest {
+public class GridPeerDeploymentRetryModifiedTest extends GridCommonAbstractTest {
     /** */
-    private static final String EXT_TASK_CLASS_NAME = "org.apache.ignite.tests.p2p.CacheDeploymentTestTask2";
+    private static final String EXT_TASK_CLASS_NAME = "org.apache.ignite.tests.p2p.CacheDeploymentTestTask4";
 
     /** URL of classes. */
     private static final URL[] URLS;
@@ -62,13 +64,15 @@ public class GridPeerDeploymentRetryTest extends GridCommonAbstractTest {
         cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
         cfg.setDeploymentMode(depMode);
 
+        cfg.setCacheConfiguration(new CacheConfiguration().setName(DEFAULT_CACHE_NAME));
+
         return cfg;
     }
 
     /**
      *
      */
-    public GridPeerDeploymentRetryTest() {
+    public GridPeerDeploymentRetryModifiedTest() {
         super(false);
     }
 
@@ -123,32 +127,46 @@ public class GridPeerDeploymentRetryTest extends GridCommonAbstractTest {
     /** @throws Exception If failed. */
     private void deploymentTest() throws Exception {
         Ignite g1 = startGrid(1);
-        Ignite g2 = startGrid(2);
+        IgniteEx g2 = startGrid(2);
 
         try {
             GridTestExternalClassLoader ldr = new GridTestExternalClassLoader(URLS);
 
+            ClusterNode node = g1.cluster().node(g2.cluster().localNode().id());
+
+            g1.compute(g1.cluster().forRemotes()).execute(
+                (ComputeTask<Object, T2>)ldr.loadClass(EXT_TASK_CLASS_NAME).newInstance(),
+                new T2<>(node, null)
+            );
+
             TestRecordingCommunicationSpi rec1 =
                 (TestRecordingCommunicationSpi)g1.configuration().getCommunicationSpi();
 
-            rec1.blockMessages((node, message) -> message instanceof GridDeploymentResponse);
+            rec1.blockMessages((n, message) -> message instanceof GridDeploymentResponse);
 
-            ComputeTask<Object, ?> task = (ComputeTask<Object, ?>)ldr.loadClass(EXT_TASK_CLASS_NAME).newInstance();
-
-            ClusterNode node = g1.cluster().node(g2.cluster().localNode().id());
+            ComputeTask<Object, T2> task = (ComputeTask<Object, T2>)ldr.loadClass(EXT_TASK_CLASS_NAME).newInstance();
 
             try {
-                g1.compute(g1.cluster().forRemotes()).execute(task, node);
+                g1.compute(g1.cluster().forRemotes()).withTimeout(2000).execute(task, new T2<>(node, "foo"));
 
                 fail("Exception should be thrown");
             }
             catch (IgniteException ignore) {
                 // Expected exception.
+                //ignore.printStackTrace();
             }
 
             rec1.stopBlock(false, null, true, true);
 
-            g1.compute(g1.cluster().forRemotes()).execute(task, node);
+            try {
+                g1.compute(g1.cluster().forRemotes()).execute(task, new T2<>(node, "bar"));
+            }
+            catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+
+            assertFalse(g2.cache(DEFAULT_CACHE_NAME).containsKey("foo"));
+            assertTrue(g2.cache(DEFAULT_CACHE_NAME).containsKey("bar"));
         }
         finally {
             stopAllGrids(true);
