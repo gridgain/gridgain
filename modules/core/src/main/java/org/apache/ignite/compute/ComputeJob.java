@@ -19,6 +19,7 @@ package org.apache.ignite.compute;
 import java.io.Serializable;
 import java.util.List;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteDescribe;
 import org.apache.ignite.IgniteException;
 
 /**
@@ -133,7 +134,7 @@ import org.apache.ignite.IgniteException;
  * from scratch. Throughout it's execution job should periodically save its
  * intermediate state to avoid starting from scratch in case of a failure.
  */
-public interface ComputeJob extends Serializable {
+public interface ComputeJob extends Serializable, IgniteDescribe {
     /**
      * This method is called when system detects that completion of this
      * job can no longer alter the overall outcome (for example, when parent task
@@ -159,4 +160,8 @@ public interface ComputeJob extends Serializable {
      *      it will be wrapped into {@link IgniteCheckedException}.
      */
     public Object execute() throws IgniteException;
+
+    @Override default String describe() {
+        return toString();
+    }
 }

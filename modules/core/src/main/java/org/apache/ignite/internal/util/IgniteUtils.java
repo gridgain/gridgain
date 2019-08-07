@@ -169,6 +169,7 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteClientDisconnectedException;
 import org.apache.ignite.IgniteDeploymentException;
+import org.apache.ignite.IgniteDescribe;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteIllegalStateException;
 import org.apache.ignite.IgniteInterruptedException;
@@ -1556,6 +1557,30 @@ public abstract class IgniteUtils {
         return deadlockedThreadsIds;
     }
 
+    /** */
+    public static String[] collectOperations() {
+        OperationStackEntry op = IgniteThread.peekOps(Thread.currentThread().getId());
+
+        if (op == null)
+            return new String[0];
+
+        int len = 1;
+
+        OperationStackEntry prevOp = op.prev();
+        while (prevOp != null) {
+            len++;
+
+            prevOp = op.prev();
+        }
+
+        String[] res = new String[len];
+
+        for (int i = 0; i < len; i++)
+            res[i] = describeOperation(op.op());
+
+        return res;
+    }
+
     /**
      * @param threadId Thread ID.
      * @param sb Builder.
@@ -1612,16 +1637,7 @@ public abstract class IgniteUtils {
 
             sb.a("    ");
 
-            if (op instanceof GridDistributedBaseMessage)
-                sb.a(op.getClass().getSimpleName()).a(" [xidVer=" + ((GridDistributedBaseMessage)op).version() + "]");
-            else if (op instanceof IgniteInternalFuture)
-                sb.a(((IgniteInternalFuture)op).describe());
-            else if (op instanceof UUID)
-                sb.a("Message [nodeId=" + op.toString() + "]");
-            else if (op instanceof ComputeJob)
-                sb.a(op);
-            else
-                sb.a(op.getClass().getCanonicalName());
+            sb.a(describeOperation(op));
 
             sb.a(NL);
 
@@ -1661,6 +1677,16 @@ public abstract class IgniteUtils {
 
             sb.a(NL);
         }
+    }
+
+    private static String describeOperation(Object op) {
+        if (op instanceof IgniteDescribe)
+            return ((IgniteDescribe)op).describe();
+
+        if (op instanceof UUID)
+            return "Message [nodeId=" + op.toString() + "]";
+
+        return "!" + op.getClass().getCanonicalName();
     }
 
     /**

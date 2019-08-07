@@ -17,7 +17,9 @@
 package org.apache.ignite.internal;
 
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.spi.collision.fifoqueue.FifoQueueCollisionSpi;
@@ -40,6 +42,7 @@ public class IgniteComputeJobOneThreadTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         startGrid(0);
+        startGrid(1);
     }
 
     /** {@inheritDoc} */
@@ -57,14 +60,38 @@ public class IgniteComputeJobOneThreadTest extends GridCommonAbstractTest {
      */
     @Test
     public void testNoTimeout() throws Exception {
+        Thread t = new Thread(() -> {
+            while(true) {
+                try {
+                    Thread.sleep(1000);
+                }
+                catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+                IgniteUtils.dumpThreads(log);
+            }
+        });
+
+        t.start();
+
         Ignite ignite = ignite(0);
+
+        Ignite runner = ignite(1);
 
         IgniteFuture fut = null;
 
         for (int i = 0; i < 10000; i++) {
-            fut =  ignite.compute().runAsync(new IgniteRunnable() {
+            fut =  ignite.compute(ignite.cluster().forNodeId(runner.cluster().localNode().id()))
+                .runAsync(new IgniteRunnable() {
                 @Override public void run() {
-
+                    try {
+                        Thread.sleep(100);
+                        throw new IgniteException();
+                    }
+                    catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
             });
         }

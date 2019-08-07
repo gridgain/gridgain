@@ -30,6 +30,7 @@ import org.apache.ignite.compute.ComputeTaskFuture;
 import org.apache.ignite.compute.ComputeTaskSession;
 import org.apache.ignite.compute.ComputeTaskSessionAttributeListener;
 import org.apache.ignite.compute.ComputeTaskSessionScope;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.future.IgniteFinishedFutureImpl;
 import org.apache.ignite.internal.util.future.IgniteFutureImpl;
@@ -272,6 +273,6 @@ public class ComputeTaskInternalFuture<R> extends GridFutureAdapter<R> {
     }
 
     @Override public String describe() {
-        return this.getClass().getSimpleName() + "[ses=" + ses.toString() + "]";
+        return ses.describe();
     }
 }

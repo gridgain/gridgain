@@ -565,7 +565,7 @@ public class GridJobWorker extends GridWorker implements GridTimeoutObject {
                                 if (internal && ctx.config().isPeerClassLoadingEnabled())
                                     ctx.job().internal(true);
 
-                                IgniteThread.pushOp(job);
+                                IgniteThread.pushOp(ses);
 
                                 return job.execute();
                             }

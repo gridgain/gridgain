@@ -20,6 +20,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteDescribe;
 import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.jetbrains.annotations.Async;
@@ -30,7 +31,7 @@ import org.jetbrains.annotations.Async;
  * callback.
  * @param <R> Type of the result for the future.
  */
-public interface IgniteInternalFuture<R> {
+public interface IgniteInternalFuture<R> extends IgniteDescribe {
     /**
      * Synchronously waits for completion of the computation and
      * returns computation result.
@@ -140,11 +141,4 @@ public interface IgniteInternalFuture<R> {
      * @return Result value if future has already been completed normally.
      */
     public R result();
-
-    /**
-     * @return Short string describing this future for stack traces decoration.
-     */
-    public default String describe() {
-        return getClass().getSimpleName();
-    }
 }

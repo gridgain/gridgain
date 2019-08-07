@@ -20,7 +20,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.apache.ignite.IgniteDescribe;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteUuid;
 
@@ -98,7 +100,7 @@ import org.apache.ignite.lang.IgniteUuid;
  * </pre>
  * <h1 class="header">Example</h1>
  */
-public interface ComputeTaskSession {
+public interface ComputeTaskSession extends IgniteDescribe {
     /**
      * Gets task name of the task this session belongs to.
      *
@@ -438,4 +440,11 @@ public interface ComputeTaskSession {
      * @return Future that will be completed when task "<tt>map</tt>" step has completed.
      */
     public IgniteFuture<?> mapFuture();
+
+    @Override public default String describe() {
+        return getClass().getSimpleName() + " [taskName=" + getTaskName() +
+            ", sesId=" + getId().shortString() + ", startTime=" + getStartTime() +
+            (getEndTime() == Long.MAX_VALUE ? "" : (", endTime=" + getEndTime())) +
+            ", taskNodeId8=" + IgniteUtils.id8(getTaskNodeId()) + "]";
+    }
 }

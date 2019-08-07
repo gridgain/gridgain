@@ -16,7 +16,9 @@
 
 package org.apache.ignite;
 
+import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -26,6 +28,9 @@ import org.jetbrains.annotations.Nullable;
 public class IgniteException extends RuntimeException {
     /** */
     private static final long serialVersionUID = 0L;
+
+    /** */
+    private final String[] ops = U.collectOperations();
 
     /**
      * Create empty exception.
@@ -87,6 +92,13 @@ public class IgniteException extends RuntimeException {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return getClass() + ": " + getMessage();
+        GridStringBuilder sb = new GridStringBuilder();
+
+        sb.a(getClass()).a(": ").a(getMessage());
+
+        for (String op : ops)
+            sb.a("\n").a("  ").a(op);
+
+        return sb.toString();
     }
 }

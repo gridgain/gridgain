@@ -20,6 +20,7 @@ import java.io.Externalizable;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Collections;
+import org.apache.ignite.IgniteDescribe;
 import org.apache.ignite.internal.GridDirectCollection;
 import org.apache.ignite.internal.GridDirectTransient;
 import org.apache.ignite.internal.processors.cache.GridCacheDeployable;
@@ -37,7 +38,7 @@ import org.apache.ignite.plugin.extensions.communication.MessageWriter;
  * Base for all messages in replicated cache.
  */
 public abstract class GridDistributedBaseMessage extends GridCacheIdMessage implements GridCacheDeployable,
-    GridCacheVersionable {
+    GridCacheVersionable, IgniteDescribe {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -240,5 +241,9 @@ public abstract class GridDistributedBaseMessage extends GridCacheIdMessage impl
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(GridDistributedBaseMessage.class, this, "super", super.toString());
+    }
+
+    @Override public String describe() {
+        return getClass().getSimpleName() + " [xidVer=" + version() + "]";
     }
 }
