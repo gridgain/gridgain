@@ -1458,7 +1458,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
                 }
                 catch (GridCacheEntryRemovedException e) {
                     log.error("Got removed exception on entry with dht local candidate. Transaction will be " +
-                        "rollbacked. Entry: " + entry + " tx: " + tx, e);
+                        "rollbacked. Entry: " + entry + " tx: " + CU.txDump(tx), e);
 
                     // Entry was unlocked by concurrent rollback.
                     onError(tx.rollbackException());
@@ -1484,7 +1484,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
                     }
                     catch (GridCacheEntryRemovedException e) {
                         log.error("Got removed exception on entry with dht local candidate. Transaction will be " +
-                            "rollbacked. Entry: " + entry + " tx: " + tx, e);
+                            "rollbacked. Entry: " + entry + " tx: " + CU.txDump(tx), e);
 
                         // Entry was unlocked by concurrent rollback.
                         onError(tx.rollbackException());
@@ -1565,7 +1565,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
                         }
                         catch (GridCacheEntryRemovedException e) {
                             log.error("Got removed exception on entry with dht local candidate. Transaction will be " +
-                                "rollbacked. Entry: " + entry + " tx: " + tx, e);
+                                "rollbacked. Entry: " + entry + " tx: " + CU.txDump(tx), e);
 
                             // Entry was unlocked by concurrent rollback.
                             onError(tx.rollbackException());
