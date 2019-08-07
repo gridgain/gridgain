@@ -2636,7 +2636,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      *
      * @param igniteInstanceName Ignite instance name.
      * @param grp Name of the group.
-     * @param metrics Metric prefix.
+     * @param metrics Metrics.
      * @return MX bean.
      * @throws Exception If failed.
      */

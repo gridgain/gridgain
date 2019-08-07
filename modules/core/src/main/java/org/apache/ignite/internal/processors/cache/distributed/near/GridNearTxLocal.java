@@ -3841,7 +3841,9 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
             long systemTimeMillis = U.nanosToMillis(this.systemTime.get());
             long totalTimeMillis = System.currentTimeMillis() - startTime();
-            long userTimeMillis = totalTimeMillis - systemTimeMillis;
+
+            //in some cases totalTimeMillis can be less than systemTimeMillis, as they are calculated with different precision
+            long userTimeMillis = (totalTimeMillis > systemTimeMillis) ? (totalTimeMillis - systemTimeMillis) : 0;
 
             writeTxMetrics(systemTimeMillis, userTimeMillis);
 
