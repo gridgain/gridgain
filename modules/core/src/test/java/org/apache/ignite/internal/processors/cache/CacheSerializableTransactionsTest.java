@@ -3950,7 +3950,96 @@ public class CacheSerializableTransactionsTest extends GridCommonAbstractTest {
      */
     @Test
     public void testGetRemoveTxNearCache2() throws Exception {
-        getRemoveTx(true, true);
+        long stopTime = U.currentTimeMillis() + SF.apply((int)getTestTimeout() - 30_000);
+
+        final Ignite ignite0 = ignite(0);
+
+        CacheConfiguration<Integer, Integer> ccfg = cacheConfiguration(PARTITIONED, FULL_SYNC, 0, true, false);
+
+        final List<Ignite> clients = clients();
+
+        final String cacheName = ignite0.createCache(ccfg).getName();
+
+        try {
+            final List<IgniteCache<Integer, Integer>> caches = new ArrayList<>();
+
+            for (Ignite client : clients)
+                caches.add(client.createNearCache(cacheName, new NearCacheConfiguration<Integer, Integer>()));
+
+            for (int i = 0; i < SF.apply(100); i++) {
+                if (U.currentTimeMillis() > stopTime)
+                    break;
+
+                final AtomicInteger cntr = new AtomicInteger();
+
+                final Integer key = i;
+
+                final AtomicInteger threadIdx = new AtomicInteger();
+
+                final int THREADS = SF.applyLB(2, 1);
+
+                final CyclicBarrier barrier = new CyclicBarrier(THREADS);
+
+                final IgniteInternalFuture<?> updateFut = GridTestUtils.runMultiThreadedAsync(new Callable<Void>() {
+                    @Override public Void call() throws Exception {
+                        int thread = threadIdx.getAndIncrement();
+
+                        int idx = thread % caches.size();
+
+                        IgniteCache<Integer, Integer> cache = caches.get(idx);
+
+                        Ignite ignite = cache.unwrap(Ignite.class);
+
+                        IgniteTransactions txs = ignite.transactions();
+
+                        log.info("Started update thread: " + ignite.name());
+
+                        Thread.currentThread().setName("update-thread-" + ignite.name() + "-" + thread);
+
+                        barrier.await();
+
+                        for (int i = 0; i < SF.apply(2); i++) {
+                            while (true) {
+                                try {
+                                    ThreadLocalRandom rnd = ThreadLocalRandom.current();
+
+                                    boolean rmv = rnd.nextInt(3) == 0;
+
+                                    Integer val;
+
+                                    try (Transaction tx = txs.txStart(OPTIMISTIC, SERIALIZABLE)) {
+                                        val = cache.get(key);
+
+                                        cache.put(key, val == null ? 1 : val + 1);
+
+                                        tx.commit();
+
+                                        if (rmv) {
+                                            if (val != null)
+                                                cntr.getAndUpdate(x -> x - val);
+                                        }
+                                        else
+                                            cntr.incrementAndGet();
+                                    }
+
+                                    break;
+                                }
+                                catch (TransactionOptimisticException ignore) {
+                                    // Retry.
+                                }
+                            }
+                        }
+
+                        return null;
+                    }
+                }, THREADS, "update-thread");
+
+                updateFut.get();
+            }
+        }
+        finally {
+            destroyCache(cacheName);
+        }
     }
 
     /**
