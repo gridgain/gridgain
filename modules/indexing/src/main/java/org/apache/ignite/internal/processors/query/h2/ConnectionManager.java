@@ -33,7 +33,6 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridH2DefaultTableEngi
 import org.apache.ignite.internal.processors.query.h2.opt.H2PlainRowFactory;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.jsr166.ConcurrentLinkedDeque8;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_H2_INDEXING_CACHE_CLEANUP_PERIOD;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_H2_INDEXING_CACHE_THREAD_USAGE_TIMEOUT;
@@ -51,12 +50,6 @@ public class ConnectionManager {
 
     /** Default maximum size of connection pool. */
     private static final int CONNECTION_POOL_SIZE = 32;
-
-    /** Stripes count. */
-    private static final int STRIPES_COUNT = 16;
-
-    /** Recycle threaded connections timeout. */
-    private static final int RECYCLE_THREADED_CONNS_TIMEOUT = 10_000;
 
     /*
      * Initialize system properties for H2.
@@ -103,13 +96,6 @@ public class ConnectionManager {
     /** H2 connection for INFORMATION_SCHEMA. Holds H2 open until node is stopped. */
     private volatile Connection sysConn;
 
-    /** Stripe index. */
-    private static ThreadLocal<Integer> stripeIdx = new ThreadLocal<Integer>() {
-        @Override protected Integer initialValue() {
-            return (int)(Thread.currentThread().getId() % STRIPES_COUNT);
-        }
-    };
-
     /**
      * Constructor.
      *
@@ -118,6 +104,8 @@ public class ConnectionManager {
     public ConnectionManager(GridKernalContext ctx) {
         String localResultFactoryClass = System.getProperty(
             IgniteSystemProperties.IGNITE_H2_LOCAL_RESULT_FACTORY, H2LocalResultFactory.class.getName());
+
+        connPool = new ConcurrentStripedPool<>(ctx.config().getQueryThreadPoolSize());
 
         dbUrl = "jdbc:h2:mem:" + ctx.localNodeId() + DEFAULT_DB_OPTIONS +
             ";LOCAL_RESULT_FACTORY=\"" + localResultFactoryClass + "\"";
@@ -191,18 +179,15 @@ public class ConnectionManager {
      * Clear statement cache when cache is unregistered..
      */
     public void onCacheDestroyed() {
-        for (ConcurrentLinkedDeque8<H2Connection> connPool : stripedConnPools)
-            connPool.forEach(H2Connection::clearStatementCache);
+        connPool.forEach(H2Connection::clearStatementCache);
     }
 
     /**
      * Close all connections.
      */
     private void closeConnections() {
-        for (ConcurrentLinkedDeque8<H2Connection> connPool : stripedConnPools) {
-            connPool.forEach(c -> U.close(c.connection(), log));
-            connPool.clear();
-        }
+        connPool.forEach(c -> U.close(c.connection(), log));
+        connPool.clear();
 
         usedConns.forEach(c -> U.close(c.connection(), log));
         usedConns.clear();
@@ -244,12 +229,10 @@ public class ConnectionManager {
     private void cleanupStatements() {
         long now = U.currentTimeMillis();
 
-        for (ConcurrentLinkedDeque8<H2Connection> connPool : stripedConnPools) {
-            connPool.forEach(c -> {
-                if (now - c.statementCache().lastUsage() > stmtTimeout)
-                    c.clearStatementCache();
-            });
-        }
+        connPool.forEach(c -> {
+            if (now - c.statementCache().lastUsage() > stmtTimeout)
+                c.clearStatementCache();
+        });
     }
 
 
@@ -313,8 +296,6 @@ public class ConnectionManager {
         }
 
         try {
-            ConcurrentLinkedDeque8<H2Connection> connPool = stripedConnPools[stripeIdx.get()];
-
             H2Connection conn = connPool.poll();
 
             if (conn == null)

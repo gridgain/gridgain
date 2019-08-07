@@ -756,16 +756,14 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         try {
             stmt = useStmtCache ? conn.prepareStatement(sql) : conn.prepareStatementNoCache(sql);
+
+            H2Utils.bindParameters(stmt, params);
+
+            return stmt;
         }
         catch (SQLException e) {
-            H2Utils.resetSession(conn);
-
             throw new IgniteCheckedException("Failed to parse SQL query: " + sql, e);
         }
-
-        H2Utils.bindParameters(stmt, params);
-
-        return stmt;
     }
 
     /**
@@ -890,14 +888,12 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             return rs;
         }
         catch (Throwable e) {
-            H2Utils.resetSession(conn);
-
             if (qryInfo != null && qryInfo.time() > longRunningQryMgr.getTimeout()) {
                 qryInfo.printLogMessage(log, "Long running query is finished with error: "
                     + e.getMessage());
             }
 
-            throw  e;
+            throw e;
         }
         finally {
             CacheDataTree.setDataPageScanEnabled(false);

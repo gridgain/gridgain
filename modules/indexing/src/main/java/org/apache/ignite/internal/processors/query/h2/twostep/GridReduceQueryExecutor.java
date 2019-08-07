@@ -1186,7 +1186,6 @@ public class GridReduceQueryExecutor {
             return tbl;
         }
         catch (Exception e) {
-            H2Utils.resetSession(conn);
             U.closeQuiet(conn);
 
             throw new IgniteCheckedException(e);
