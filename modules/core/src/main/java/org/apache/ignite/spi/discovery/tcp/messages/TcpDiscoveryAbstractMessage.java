@@ -57,6 +57,7 @@ public abstract class TcpDiscoveryAbstractMessage implements Serializable {
     protected static final int COMPRESS_DATA_PACKET = 9;
 
     /** Sender of the message (transient). */
+    @GridToStringInclude
     private transient UUID sndNodeId;
 
     /** Message ID. */
@@ -69,9 +70,11 @@ public abstract class TcpDiscoveryAbstractMessage implements Serializable {
      * left message are processed by other nodes only after coordinator
      * verification.
      */
+    @GridToStringInclude
     private UUID verifierNodeId;
 
     /** Topology version. */
+    @GridToStringInclude
     private long topVer;
 
     /** Flags. */

@@ -2082,6 +2082,12 @@ class ClientImpl extends TcpDiscoveryImpl {
 
             spi.stats.onMessageProcessingStarted(msg);
 
+            System.out.println(
+                "Recieved -> LocalNodeConstId=" + locNode.consistentId() + ", " +
+                    "LocalNodeId=" + locNode.id() + ", " +
+                    "isClient=" + locNode.isClient() + ", " +
+                    "msg=" + msg);
+
             if (msg instanceof TcpDiscoveryNodeAddedMessage)
                 processNodeAddedMessage((TcpDiscoveryNodeAddedMessage)msg);
             else if (msg instanceof TcpDiscoveryNodeAddFinishedMessage)

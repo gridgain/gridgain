@@ -3007,6 +3007,12 @@ class ServerImpl extends TcpDiscoveryImpl {
 
             spi.startMessageProcess(msg);
 
+            System.out.println(
+                "Recieved -> LocalNodeConstId=" + locNode.consistentId() + ", " +
+                    "LocalNodeId=" + locNode.id() + ", " +
+                    "isClient=" + locNode.isClient() + ", " +
+                    "msg=" + msg);
+
             sendMetricsUpdateMessage();
 
             synchronized (mux) {
@@ -7435,6 +7441,13 @@ class ServerImpl extends TcpDiscoveryImpl {
             boolean success = false;
 
             TcpDiscoveryAbstractMessage msg = msgT.get1();
+
+            System.out.println(
+                "Send -> LocalNodeConstId=" + locNode.consistentId() + ", " +
+                    "LocalNodeId=" + locNode.id() + ", " +
+                    "isClient=" + locNode.isClient() + ", " +
+                    "clientNodeId=" + clientNodeId + ", " +
+                    "msg=" + msg);
 
             try {
                 assert msg.verified() : msg;
