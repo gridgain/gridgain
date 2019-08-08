@@ -18,6 +18,7 @@ package org.apache.ignite.internal.commandline;
 
 import org.apache.ignite.internal.commandline.cache.CacheCommands;
 import org.apache.ignite.internal.commandline.diagnostic.DiagnosticCommand;
+import org.apache.ignite.internal.commandline.management.ManagementCommands;
 import org.apache.ignite.internal.commandline.ru.RollingUpgradeCommand;
 
 /**
@@ -49,7 +50,10 @@ public enum CommandList {
     DIAGNOSTIC("--diagnostic", new DiagnosticCommand()),
 
     /** */
-    ROLLING_UPGRADE("--rolling-upgrade", new RollingUpgradeCommand());
+    ROLLING_UPGRADE("--rolling-upgrade", new RollingUpgradeCommand()),
+
+    /** */
+    MANAGEMENT("--management", new ManagementCommands());
 
     /** Private values copy so there's no need in cloning it every time. */
     private static final CommandList[] VALUES = CommandList.values();
