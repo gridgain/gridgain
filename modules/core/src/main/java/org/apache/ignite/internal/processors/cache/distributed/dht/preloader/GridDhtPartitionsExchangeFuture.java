@@ -40,6 +40,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.cache.expiry.EternalExpiryPolicy;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -3795,13 +3796,16 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
                     // Do not validate read or write through caches or caches with disabled rebalance
                     // or ExpiryPolicy is set or validation is disabled.
+                    boolean eternalExpiryPolicy = grpCtx != null && grpCtx.config().getExpiryPolicyFactory() != null
+                    && (grpCtx.config().getExpiryPolicyFactory().create() instanceof EternalExpiryPolicy);
+
                     if (grpCtx == null
                         || grpCtx.config().isReadThrough()
                         || grpCtx.config().isWriteThrough()
                         || grpCtx.config().getCacheStoreFactory() != null
                         || grpCtx.config().getRebalanceDelay() == -1
                         || grpCtx.config().getRebalanceMode() == CacheRebalanceMode.NONE
-                        || grpCtx.config().getExpiryPolicyFactory() == null
+                        || !eternalExpiryPolicy
                         || SKIP_PARTITION_SIZE_VALIDATION)
                         return null;
 

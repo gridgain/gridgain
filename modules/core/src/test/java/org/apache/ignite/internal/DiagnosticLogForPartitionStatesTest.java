@@ -18,6 +18,9 @@ package org.apache.ignite.internal;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import javax.cache.expiry.AccessedExpiryPolicy;
+import javax.cache.expiry.Duration;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -65,8 +68,29 @@ public class DiagnosticLogForPartitionStatesTest extends GridCommonAbstractTest 
      */
     @Test
     public void shouldPrintMessageIfPartitionHasOtherCounter() throws Exception {
+        doTest(new CacheConfiguration<>(CACHE_1).setBackups(1), true);
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void shouldNotPrintMessageIfPartitionHasOtherCounterButHasCustomExpiryPolicy() throws Exception {
+        doTest(
+            new CacheConfiguration<>(CACHE_1)
+                .setBackups(1)
+                .setExpiryPolicyFactory(AccessedExpiryPolicy.factoryOf(new Duration(TimeUnit.SECONDS, 1))),
+            false
+        );
+    }
+
+    /**
+     * @param cacheCfg Cache config.
+     * @param msgExp Message expected.
+     */
+    private void doTest(CacheConfiguration<Object, Object> cacheCfg, boolean msgExp) throws Exception {
         LogListener lsnr = LogListener.matches(s -> s.startsWith("Partition states validation has failed for group: " + CACHE_1 + "."))
-            .times(1).build();
+            .times(msgExp ? 1 : 0).build();
 
         log.registerListener(lsnr);
 
@@ -76,7 +100,7 @@ public class DiagnosticLogForPartitionStatesTest extends GridCommonAbstractTest 
 
         node1.cluster().active(true);
 
-        IgniteCache<Object, Object> cache = node1.getOrCreateCache(new CacheConfiguration<>(CACHE_1).setBackups(1));
+        IgniteCache<Object, Object> cache = node1.getOrCreateCache(cacheCfg);
 
         Set<Integer> clearKeys = new HashSet<>();
 
@@ -96,5 +120,4 @@ public class DiagnosticLogForPartitionStatesTest extends GridCommonAbstractTest 
 
         assertTrue(lsnr.check());
     }
-
 }
