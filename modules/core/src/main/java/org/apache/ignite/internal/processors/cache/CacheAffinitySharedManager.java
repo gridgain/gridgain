@@ -299,7 +299,14 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                 if (rebalanced) {
                     waitInfo.waitGrps.remove(checkGrpId);
 
+                    log.error("PMP@REMOVE@checkGrpId: " +checkGrpId + ", lateAff: "+ lastAffVer);
+
                     if (waitInfo.waitGrps.isEmpty()) {
+
+                        GridDhtPartitionFullMap field = U.field(top, "node2part");
+
+                        log.error("PMP@RF@node2Part: " + field.toFullString() + ", lateAff: " +lastAffVer+ ", checkGrpId: " + checkGrpId);
+
                         msg = affinityChangeMessage(waitInfo);
 
                         waitInfo = null;
@@ -2952,6 +2959,8 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
             deploymentIds.putIfAbsent(grpId, cachesRegistry.group(grpId).deploymentId());
 
             waitGrps.computeIfAbsent(grpId, k -> new HashMap<>()).put(part, waitNode);
+
+            log.error("PMP@WAIT@partId: " +part + ", grpId: "+ grpId + ", " + waitNode);
 
             if (assignment != null)
                 assignments.computeIfAbsent(grpId, k -> new HashMap<>()).put(part, assignment);
