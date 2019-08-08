@@ -58,20 +58,11 @@ public class ConcurrentStripedPool<E> implements Iterable<E> {
     }
 
     /**
-     * Pushes an element onto the stack represented by this deque (in other
-     * words, at the head of this deque) if it is possible to do so
-     * immediately without violating capacity restrictions, throwing an
-     * {@code IllegalStateException} if no space is currently available.
+     * Pushes an element onto the pool.
      *
      * @param e the element to push
-     * @throws IllegalStateException if the element cannot be added at this
-     *         time due to capacity restrictions
-     * @throws ClassCastException if the class of the specified element
-     *         prevents it from being added to this deque
      * @throws NullPointerException if the specified element is null and this
      *         deque does not permit null elements
-     * @throws IllegalArgumentException if some property of the specified
-     *         element prevents it from being added to this deque
      */
     public void push(E e) {
         int idx = (int)(Thread.currentThread().getId() % stripes);
@@ -82,12 +73,9 @@ public class ConcurrentStripedPool<E> implements Iterable<E> {
     }
 
     /**
-     * Retrieves and removes the head of the queue represented by this deque
-     * (in other words, the first element of this deque), or returns
-     * {@code null} if this deque is empty.
+     * Retrieves element from pool, or returns {@code null} if the pool is empty.
      *
-     * @return the first element of this deque, or {@code null} if
-     *         this deque is empty
+     * @return the  element of the pool, or {@code null} if the pool is empty.
      */
     public E poll() {
         int idx = (int)(Thread.currentThread().getId() % stripes);
@@ -108,23 +96,13 @@ public class ConcurrentStripedPool<E> implements Iterable<E> {
     }
 
     /**
-     * Performs the given action for each element of the {@code Iterable}
+     * Performs the given action for each element of the pool
      * until all elements have been processed or the action throws an
-     * exception.  Unless otherwise specified by the implementing class,
-     * actions are performed in the order of iteration (if an iteration order
-     * is specified).  Exceptions thrown by the action are relayed to the
+     * exception. Exceptions thrown by the action are relayed to the
      * caller.
-     *
-     * @implSpec
-     * <p>The default implementation behaves as if:
-     * <pre>{@code
-     *     for (T t : this)
-     *         action.accept(t);
-     * }</pre>
      *
      * @param action The action to be performed for each element
      * @throws NullPointerException if the specified action is null
-     * @since 1.8
      */
     public void forEach(Consumer<? super E> action) {
         Objects.requireNonNull(action);
@@ -134,7 +112,7 @@ public class ConcurrentStripedPool<E> implements Iterable<E> {
     }
 
     /**
-     * Removes all of the elements from this deque.
+     * Removes all of the elements from the pool..
      */
     public void clear() {
         for (int i = 0; i < stripes; ++i)
@@ -180,10 +158,9 @@ public class ConcurrentStripedPool<E> implements Iterable<E> {
     }
 
     /**
-     * Returns a sequential {@code Stream} with this collection as its source.
+     * Returns a sequential {@code Stream} of the pool.
      *
-     * @return a sequential {@code Stream} over the elements in this collection
-     * @since 1.8
+     * @return a sequential {@code Stream} over the elements iof the pool.
      */
     public Stream<E> stream() {
         return StreamSupport.stream(spliterator(), false);
