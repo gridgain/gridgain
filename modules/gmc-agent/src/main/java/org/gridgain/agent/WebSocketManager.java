@@ -16,17 +16,17 @@
 
 package org.gridgain.agent;
 
-import java.net.ConnectException;
+import java.io.ByteArrayInputStream;
 import java.net.InetSocketAddress;
 import java.net.ProxySelector;
 import java.net.URI;
+import java.security.KeyStore;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.processors.gmc.ManagementConfiguration;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.eclipse.jetty.client.HttpClient;
@@ -35,9 +35,7 @@ import org.eclipse.jetty.client.Origin;
 import org.eclipse.jetty.client.ProxyConfiguration;
 import org.eclipse.jetty.client.Socks4Proxy;
 import org.eclipse.jetty.client.util.BasicAuthentication;
-import org.eclipse.jetty.io.EofException;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
-import org.eclipse.jetty.websocket.api.UpgradeException;
 import org.eclipse.jetty.websocket.client.WebSocketClient;
 import org.springframework.messaging.converter.CompositeMessageConverter;
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
@@ -51,6 +49,7 @@ import org.springframework.web.socket.messaging.WebSocketStompClient;
 
 import static java.net.Proxy.NO_PROXY;
 import static java.net.Proxy.Type.SOCKS;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
 import static org.eclipse.jetty.client.api.Authentication.ANY_REALM;
@@ -78,17 +77,8 @@ public class WebSocketManager implements AutoCloseable {
     /** Context. */
     private GridKernalContext ctx;
 
-    /** Config. */
-    private AgentConfiguration cfg;
-
     /** Logger. */
     private IgniteLogger log;
-
-    /** Url. */
-    private URI url;
-
-    /** Session handler. */
-    private StompSessionHandler sesHnd;
 
     /** Client. */
     private WebSocketStompClient client;
@@ -104,28 +94,34 @@ public class WebSocketManager implements AutoCloseable {
 
     /**
      * @param ctx Context.
-     * @param cfg Config.
      */
-    public WebSocketManager(GridKernalContext ctx, AgentConfiguration cfg) {
+    public WebSocketManager(GridKernalContext ctx) {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> isStopped = true));
 
         this.ctx = ctx;
-        this.cfg = cfg;
         this.log = ctx.log(WebSocketManager.class);
     }
 
     /**
-     * @param url Url.
+     * @param cfg Url.
      * @param sesHnd Session handler.
      */
-    public URI connect(URI url, StompSessionHandler sesHnd) throws IgniteCheckedException, InterruptedException {
+    public void connect(URI uri, ManagementConfiguration cfg, StompSessionHandler sesHnd) throws Exception {
         if (isStopped)
             throw new IgniteCheckedException("Web socket manager was stopped.");
 
-        this.url = url;
-        this.sesHnd = sesHnd;
+        if (client != null)
+            client.stop();
 
-        WebSocketClient webSockClient = new WebSocketClient(createHttpClient());
+        if (reconnectCnt == -1)
+            log.info("Connecting to server: " + uri);
+
+        if (reconnectCnt < MAX_SLEEP_TIME_SECONDS)
+            reconnectCnt++;
+
+        Thread.sleep(reconnectCnt * 1000);
+
+        WebSocketClient webSockClient = new WebSocketClient(createHttpClient(uri, cfg));
         webSockClient.setMaxTextMessageBufferSize(WS_MAX_BUFFER_SIZE);
         webSockClient.setMaxBinaryMessageBufferSize(WS_MAX_BUFFER_SIZE);
 
@@ -133,47 +129,8 @@ public class WebSocketManager implements AutoCloseable {
         client.setMessageConverter(getMessageConverter());
         client.start();
 
-        try {
-            ses = client.connect(url, getHandshakeHeaders(), getConnectHeaders(), sesHnd).get(10L, SECONDS);
-            reconnectCnt = -1;
-
-            return url;
-        }
-        catch (TimeoutException ex) {
-            return reconnect();
-        } catch (ExecutionException ex) {
-            if (ifReconnectException(ex.getCause())) {
-                if (reconnectCnt == 0)
-                    log.error("Failed to establish websocket connection with server: " + this.url);
-
-                return reconnect();
-            }
-            else {
-                log.error("Failed to establish websocket connection with server: " + this.url, ex);
-
-                throw new IgniteCheckedException(ex.getCause());
-            }
-        }
-    }
-
-    /**
-     * Reconnect.
-     */
-    public URI reconnect() throws IgniteCheckedException, InterruptedException {
-        if (isStopped)
-            throw new IgniteCheckedException("Web socket manager was stopped.");
-
-        client.stop();
-
-        if (reconnectCnt == -1)
-            log.info("Connecting to server: " + url);
-
-        if (reconnectCnt < MAX_SLEEP_TIME_SECONDS)
-            reconnectCnt++;
-
-        Thread.sleep(reconnectCnt * 1000);
-
-        return connect(url, sesHnd);
+        ses = client.connect(uri, getHandshakeHeaders(), getConnectHeaders(), sesHnd).get(10L, SECONDS);
+        reconnectCnt = -1;
     }
 
     /**
@@ -181,6 +138,19 @@ public class WebSocketManager implements AutoCloseable {
      */
     public StompSession getSession() {
         return ses;
+    }
+
+    /**
+     * @param dest Destination.
+     * @param payload Payload.
+     */
+    public boolean send(String dest, Object payload) {
+        boolean connected = ses != null && ses.isConnected();
+
+        if (connected)
+            ses.send(dest, payload);
+
+        return connected;
     }
 
     /** {@inheritDoc} */
@@ -224,19 +194,12 @@ public class WebSocketManager implements AutoCloseable {
     }
 
     /**
-     * @param ex Ex.
-     */
-    private boolean ifReconnectException(Throwable ex) {
-        return ex instanceof ConnectException || ex instanceof UpgradeException || ex instanceof EofException;
-    }
-
-    /**
      * @return Jetty http client.
      */
-    private HttpClient createHttpClient() throws IgniteCheckedException {
+    private HttpClient createHttpClient(URI uri, ManagementConfiguration cfg) throws IgniteCheckedException {
         HttpClient httpClient = new HttpClient(createServerSslFactory(log, cfg));
         // TODO GG-18379 Investigate how to establish native websocket connection with proxy.
-        configureProxy(log, httpClient, url);
+        configureProxy(log, httpClient, uri);
 
         try {
             httpClient.start();
@@ -252,29 +215,41 @@ public class WebSocketManager implements AutoCloseable {
      * @param log Logger.
      * @param cfg Config.
      */
-    private SslContextFactory createServerSslFactory(IgniteLogger log, AgentConfiguration cfg) {
+    private SslContextFactory createServerSslFactory(IgniteLogger log, ManagementConfiguration cfg) {
         boolean trustAll = Boolean.getBoolean("trust.all");
 
-        if (trustAll && !F.isEmpty(cfg.serverTrustStore())) {
+        if (trustAll && !F.isEmpty(cfg.getServerTrustStore())) {
             log.warning("Options contains both '--server-trust-store' and '-Dtrust.all=true'. " +
                     "Option '-Dtrust.all=true' will be ignored on connect to Web server.");
 
             trustAll = false;
         }
 
-        boolean ssl = trustAll || !F.isEmpty(cfg.serverTrustStore()) || !F.isEmpty(cfg.serverKeyStore());
+        boolean ssl = trustAll || !F.isEmpty(cfg.getServerTrustStore()) || !F.isEmpty(cfg.getServerKeyStore());
 
         if (!ssl)
             return null;
 
         return sslContextFactory(
-                cfg.serverKeyStore(),
-                cfg.serverKeyStorePassword(),
+                cfg.getServerKeyStore(),
+                cfg.getServerKeyStorePassword(),
                 trustAll,
-                cfg.serverTrustStore(),
-                cfg.serverTrustStorePassword(),
-                cfg.cipherSuites()
+                cfg.getServerTrustStore(),
+                cfg.getServerTrustStorePassword(),
+                cfg.getCipherSuites()
         );
+    }
+
+    /**
+     * @param content Key store content.
+     * @param pwd Password.
+     */
+    private KeyStore keyStore(String content, String pwd) throws Exception {
+        KeyStore keyStore = KeyStore.getInstance("JKS");
+
+        keyStore.load(new ByteArrayInputStream(content.getBytes(UTF_8)), pwd != null ? pwd.toCharArray() : null);
+
+        return keyStore;
     }
 
     /**
@@ -299,10 +274,12 @@ public class WebSocketManager implements AutoCloseable {
         SslContextFactory sslCtxFactory = new SslContextFactory();
 
         if (!F.isEmpty(keyStore)) {
-            sslCtxFactory.setKeyStorePath(keyStore);
-
-            if (!F.isEmpty(keyStorePwd))
-                sslCtxFactory.setKeyStorePassword(keyStorePwd);
+            try {
+                sslCtxFactory.setKeyStore(keyStore(keyStore, keyStorePwd));
+            }
+            catch (Exception e) {
+                log.warning("Failed to load server keyStore", e);
+            }
         }
 
         if (trustAll) {
@@ -310,10 +287,12 @@ public class WebSocketManager implements AutoCloseable {
             // Available in Jetty >= 9.4.15.x sslCtxFactory.setHostnameVerifier((hostname, session) -> true);
         }
         else if (!F.isEmpty(trustStore)) {
-            sslCtxFactory.setTrustStorePath(trustStore);
-
-            if (!F.isEmpty(trustStorePwd))
-                sslCtxFactory.setTrustStorePassword(trustStorePwd);
+            try {
+                sslCtxFactory.setKeyStore(keyStore(trustStore, trustStorePwd));
+            }
+            catch (Exception e) {
+                log.warning("Failed to load server keyStore", e);
+            }
         }
 
         if (!F.isEmpty(ciphers))

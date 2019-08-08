@@ -42,12 +42,15 @@ import static org.gridgain.agent.StompDestinationsUtils.buildSaveSpanDest;
 /**
  * Tracing service.
  */
-public class TracingService {
+public class TracingService implements AutoCloseable {
     /** Status code. */
     private static final String STATUS_CODE = "census.status_code";
 
     /** Status description. */
     private static final String STATUS_DESCRIPTION = "census.status_description";
+
+    /** Status description. */
+    private static final String HANDLER_NAME = "gmc";
 
     /** Context. */
     private GridKernalContext ctx;
@@ -69,6 +72,8 @@ public class TracingService {
         this.ctx = ctx;
         this.mgr = mgr;
         this.log = ctx.log(TracingService.class);
+
+        hnd = getTraceHandler();
     }
 
     /**
@@ -78,18 +83,23 @@ public class TracingService {
         if (ctx.config().getTracingSpi().getTraceComponent() == null)
             return;
 
-        hnd = getTraceHandler();
-        ctx.config().getTracingSpi().getTraceComponent().getExportComponent().getSpanExporter().registerHandler("gmc", hnd);
+        ctx.config().getTracingSpi()
+            .getTraceComponent().getExportComponent().getSpanExporter()
+            .registerHandler(HANDLER_NAME, hnd);
     }
 
     /**
-     * Force send buffered spans.
+     * Send buffered spans.
      */
-    public void flushBuffer() {
-        if (hnd == null)
-            return;
-
+    public void sendInitialState() {
         hnd.export(Collections.emptyList());
+    }
+
+    /** {@inheritDoc} */
+    @Override public void close() {
+        ctx.config().getTracingSpi()
+            .getTraceComponent().getExportComponent().getSpanExporter()
+            .unregisterHandler(HANDLER_NAME);
     }
 
     /**
@@ -106,10 +116,8 @@ public class TracingService {
                 if (log.isDebugEnabled())
                     buf.forEach((s) -> log.debug("Sending span to GMC: " + s));
 
-                if (mgr.getSession() != null && mgr.getSession().isConnected()) {
-                    mgr.getSession().send(buildSaveSpanDest(ctx.cluster().get().id()), Lists.newArrayList(buf));
+                if (mgr.send(buildSaveSpanDest(ctx.cluster().get().id()), Lists.newArrayList(buf)))
                     buf.clear();
-                }
             }
         };
     }

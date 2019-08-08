@@ -16,14 +16,20 @@
 
 package org.gridgain.service;
 
-import java.util.UUID;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.cluster.IgniteClusterImpl;
+import org.apache.ignite.internal.managers.discovery.DiscoCache;
+import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cluster.ClusterProcessor;
+import org.apache.ignite.testframework.GridTestNode;
 import org.gridgain.agent.WebSocketManager;
 import org.springframework.messaging.simp.stomp.StompSession;
+
+import java.util.Arrays;
+import java.util.UUID;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
@@ -67,6 +73,14 @@ public abstract class AbstractServiceTest {
         when(ctx.cluster()).thenReturn(clusterProcessor);
         when(grid.cluster()).thenReturn(cluster);
         when(clusterProcessor.get()).thenReturn(cluster);
+
+        GridDiscoveryManager disco = mock(GridDiscoveryManager.class);
+        DiscoCache discoCache = mock(DiscoCache.class);
+
+        when(discoCache.version()).thenReturn(new AffinityTopologyVersion(1L));
+        when(discoCache.allNodes()).thenReturn(Arrays.asList(new GridTestNode(UUID.fromString("b-b-b-b-b"))));
+        when(disco.discoCache()).thenReturn(discoCache);
+        when(ctx.discovery()).thenReturn(disco);
 
         return ctx;
     }

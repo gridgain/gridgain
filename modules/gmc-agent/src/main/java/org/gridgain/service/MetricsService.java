@@ -16,8 +16,6 @@
 
 package org.gridgain.service;
 
-import java.util.Collection;
-import java.util.UUID;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
@@ -27,6 +25,9 @@ import org.gridgain.agent.WebSocketManager;
 import org.springframework.messaging.simp.stomp.StompHeaders;
 import org.springframework.util.MimeTypeUtils;
 
+import java.util.Collection;
+import java.util.UUID;
+
 import static org.apache.ignite.internal.GridTopic.TOPIC_METRICS;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYSTEM_POOL;
 import static org.gridgain.agent.StompDestinationsUtils.buildMetricsDest;
@@ -34,7 +35,7 @@ import static org.gridgain.agent.StompDestinationsUtils.buildMetricsDest;
 /**
  * Metric service.
  */
-public class MetricsService {
+public class MetricsService implements AutoCloseable {
     /** Context. */
     private GridKernalContext ctx;
 
@@ -104,5 +105,10 @@ public class MetricsService {
         catch (Throwable e) {
             log.error("Failed to broadcast pull metrics request", e);
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void close() {
+        ctx.io().removeMessageListener(TOPIC_METRICS, this::onNodeMetrics);
     }
 }

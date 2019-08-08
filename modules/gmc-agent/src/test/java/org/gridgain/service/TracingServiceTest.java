@@ -86,7 +86,7 @@ public class TracingServiceTest extends AbstractServiceTest {
      * Should send buffered spans after session reconnect.
      */
     @Test
-    public void flushBuffer() {
+    public void sendInitialState() {
         isSesConnected = false;
 
         TracingService srvc = new TracingService(getMockContext(), getMockWebSocketManager());
@@ -95,7 +95,7 @@ public class TracingServiceTest extends AbstractServiceTest {
         spanExporter.exportSpans(getSpanData());
         isSesConnected = true;
 
-        srvc.flushBuffer();
+        srvc.sendInitialState();
 
         ArgumentCaptor<String> destCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);

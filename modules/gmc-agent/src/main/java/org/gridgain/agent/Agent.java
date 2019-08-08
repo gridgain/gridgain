@@ -17,20 +17,26 @@
 package org.gridgain.agent;
 
 import java.lang.reflect.Type;
+import java.net.ConnectException;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeoutException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.cluster.IgniteClusterImpl;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
-import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetaStorage;
+import org.apache.ignite.internal.processors.gmc.ManagementConfiguration;
 import org.apache.ignite.internal.processors.gmc.ManagementConsoleProcessor;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.eclipse.jetty.io.EofException;
+import org.eclipse.jetty.websocket.api.UpgradeException;
 import org.gridgain.dto.ClusterInfo;
 import org.gridgain.service.MetricsService;
 import org.gridgain.service.TopologyService;
@@ -43,8 +49,8 @@ import org.springframework.messaging.simp.stomp.StompSessionHandlerAdapter;
 
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
-import static org.gridgain.agent.AgentUtils.getWsUri;
 import static org.gridgain.agent.AgentUtils.monitoringUri;
+import static org.gridgain.agent.AgentUtils.toWsUri;
 import static org.gridgain.agent.StompDestinationsUtils.buildClusterAddDest;
 import static org.gridgain.agent.StompDestinationsUtils.buildMetricsPullTopic;
 
@@ -52,11 +58,11 @@ import static org.gridgain.agent.StompDestinationsUtils.buildMetricsPullTopic;
  * Management Agent.
  */
 public class Agent extends ManagementConsoleProcessor {
-    /** Gmc url meta storage prefix. */
-    private static final String MANAGMENT_CFG_META_STORAGE_PREFIX = "gmc-cfg";
+    /** GMC configuration meta storage prefix. */
+    private static final String MANAGEMENT_CFG_META_STORAGE_PREFIX = "gmc-cfg";
 
-    /** Agent configuration. */
-    private AgentConfiguration cfg;
+    /** Discovery event on restart agent. */
+    private static final int[] EVTS_DISCOVERY = new int[] {EVT_NODE_FAILED, EVT_NODE_LEFT};
 
     /** Websocket manager. */
     private WebSocketManager mgr;
@@ -71,13 +77,16 @@ public class Agent extends ManagementConsoleProcessor {
     private MetricsService metricSrvc;
 
     /** Execute service. */
-    private ScheduledExecutorService execSrvc = Executors.newScheduledThreadPool(Runtime.getRuntime().availableProcessors());
-
-    /** Connection execute service. */
-    private ExecutorService connExecSrvc = Executors.newSingleThreadExecutor();
+    private ExecutorService execSrvc = Executors.newSingleThreadExecutor();
 
     /** Meta storage. */
     private MetaStorage metaStorage;
+
+    /** Active server uri. */
+    private String curSrvUri;
+
+    /** If first connection error after successful connection. */
+    private boolean firstConnError = true;
 
     /**
      * @param ctx Kernal context.
@@ -88,59 +97,101 @@ public class Agent extends ManagementConsoleProcessor {
 
     /** {@inheritDoc} */
     @Override public void onKernalStart(boolean active) {
-        GridEventStorageManager evtMgr = ctx.event();
-        DiscoCache discoCache = ctx.discovery().discoCache();
         metaStorage = ctx.cache().context().database().metaStorage();
 
-        startAgentOnCoordinator(discoCache);
+        startAgent(null, ctx.discovery().discoCache());
 
         // Listener for coordinator changed.
-        evtMgr.addDiscoveryEventListener(
-            (evt, dc) -> execSrvc.submit(() -> startAgentOnCoordinator(dc)),
-            EVT_NODE_FAILED, EVT_NODE_LEFT
-        );
+        ctx.event().addDiscoveryEventListener(this::startAgent, EVTS_DISCOVERY);
     }
 
     /** {@inheritDoc} */
     @Override public void onKernalStop(boolean cancel) {
         U.quietAndInfo(log, "Stopping GMC agent...");
 
-        connExecSrvc.shutdown();
-        U.closeQuiet(mgr);
+        ctx.event().removeDiscoveryEventListener(this::startAgent, EVTS_DISCOVERY);
+
+        U.shutdownNow(this.getClass(), execSrvc, log);
+
+        U.closeQuiet(metricSrvc);
+        U.closeQuiet(tracingSrvc);
         U.closeQuiet(topSrvc);
-        execSrvc.shutdown();
+        U.closeQuiet(mgr);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void configuration(ManagementConfiguration cfg) {
+        ManagementConfiguration oldCfg = configuration();
+
+        writeToMetaStorage(cfg);
+
+        super.configuration(cfg);
+
+        if (!oldCfg.equals(cfg))
+            connect();
     }
 
     /**
-     * @param discoCache Discovery cache.
+     * Start agent on local node if this is coordinator node.
      */
-    private void startAgentOnCoordinator(DiscoCache discoCache) {
+    private void startAgent(DiscoveryEvent evt, DiscoCache discoCache) {
         if (ctx.clientNode())
             return;
 
-        List<ClusterNode> srvNodes = discoCache.serverNodes();
-        ClusterNode crdNode = F.isEmpty(srvNodes) ? null : srvNodes.get(0);
+        ClusterNode crdNode = F.first(discoCache.serverNodes());
 
         if (crdNode != null && crdNode.isLocal()) {
-            log.info("Starting GMC agent on coordinator");
-
-            cfg = loadAgentConfiguration();
-
-            // TODO GG-21824 Use control script to change GMC url.
-            String srvUri = System.getenv().get("GMC_ADDRESS");
-            if (!F.isEmpty(srvUri)) {
-                cfg.serverUri(srvUri);
-                return;
-            }
-
-            mgr = new WebSocketManager(ctx, cfg);
-            topSrvc = new TopologyService(ctx, mgr);
-            tracingSrvc = new TracingService(ctx, mgr);
-            metricSrvc = new MetricsService(ctx, mgr);
-
-            tracingSrvc.registerHandler();
+            cfg = readFromMetaStorage();
 
             connect();
+        }
+    }
+
+    /**
+     * @param uris GMC Server URIs.
+     */
+    private String nextUri(List<String> uris, String cur) {
+        int idx = uris.indexOf(cur);
+
+        if (idx >= 0)
+            return uris.get(uris.size() % idx + 1);
+
+        return F.first(uris);
+    }
+
+    // TODO: GG-21357 implement CLUSTER_ACTION.
+
+    /**
+     * Connect to backend in same thread.
+     */
+    private void connect0() {
+        curSrvUri = nextUri(cfg.getServerUris(), curSrvUri);
+
+        try {
+            mgr.connect(toWsUri(curSrvUri), cfg, new AfterConnectedSessionHandler());
+
+            firstConnError = true;
+        }
+        catch (InterruptedException ignored) {
+            // No-op.
+        }
+        catch (TimeoutException ignored) {
+            connect0();
+        }
+        catch (ExecutionException e) {
+            if (X.hasCause(e, ConnectException.class, UpgradeException.class, EofException.class)) {
+                if (firstConnError)
+                    log.error("Failed to establish websocket connection with GMC server: " + curSrvUri);
+
+                firstConnError = false;
+
+                connect0();
+            }
+            else
+                log.error("Failed to establish websocket connection with GMC server: " + curSrvUri, e);
+        }
+        catch (Exception e) {
+            log.error("Failed to establish websocket connection with GMC server: " + curSrvUri, e);
         }
     }
 
@@ -148,51 +199,66 @@ public class Agent extends ManagementConsoleProcessor {
      * Connect to backend.
      */
     private void connect() {
-        connExecSrvc.submit(() -> {
-            try {
-                String srvUri = cfg.lastSuccessConnectedServerUri() != null
-                        ? cfg.lastSuccessConnectedServerUri()
-                        : cfg.serverUri();
+        log.info("Starting GMC agent on coordinator");
 
-                mgr.connect(getWsUri(srvUri), new AfterConnectedSessionHandler());
+        U.closeQuiet(metricSrvc);
+        U.closeQuiet(tracingSrvc);
+        U.closeQuiet(topSrvc);
+        U.closeQuiet(mgr);
 
-                if (cfg.lastSuccessConnectedServerUri() == null)
-                    saveAgentConfiguration(cfg.lastSuccessConnectedServerUri(srvUri));
-            }
-            catch (InterruptedException | IgniteCheckedException ex) {
-                log.error("Can't connect to GMC server!", ex);
-            }
-        });
+        if (!cfg.isEnable()) {
+            log.info("Skip start GMC agent on coordinator, because it was disabled in configuration");
+
+            return;
+        }
+
+        mgr = new WebSocketManager(ctx);
+        topSrvc = new TopologyService(ctx, mgr);
+        tracingSrvc = new TracingService(ctx, mgr);
+        metricSrvc = new MetricsService(ctx, mgr);
+
+        tracingSrvc.registerHandler();
+
+        execSrvc.submit(this::connect0);
     }
-
-    // TODO: GG-21357 implement CLUSTER_ACTION.
-
 
     /**
      * @return Agent configuration.
      */
-    private AgentConfiguration loadAgentConfiguration() {
-        AgentConfiguration cfg = null;
+    private ManagementConfiguration readFromMetaStorage() {
+        ManagementConfiguration cfg = null;
+
+        ctx.cache().context().database().checkpointReadLock();
 
         try {
-            cfg = (AgentConfiguration) metaStorage.read(MANAGMENT_CFG_META_STORAGE_PREFIX);
+            cfg = (ManagementConfiguration) metaStorage.read(MANAGEMENT_CFG_META_STORAGE_PREFIX);
         }
         catch (IgniteCheckedException e) {
             log.warning("Can't read agent configuration from meta storage!");
         }
+        finally {
+            ctx.cache().context().database().checkpointReadUnlock();
+        }
 
-        return cfg != null ? cfg : new AgentConfiguration();
+        return cfg != null ? cfg : new ManagementConfiguration();
     }
 
     /**
      * @param cfg Agent configuration.
      */
-    private void saveAgentConfiguration(AgentConfiguration cfg) {
+    private void writeToMetaStorage(ManagementConfiguration cfg) {
+        ctx.cache().context().database().checkpointReadLock();
+
         try {
-            metaStorage.write(MANAGMENT_CFG_META_STORAGE_PREFIX, cfg);
+            metaStorage.write(MANAGEMENT_CFG_META_STORAGE_PREFIX, cfg);
         }
         catch (IgniteCheckedException e) {
-            log.warning("Can't save agent configuration to meta storage!");
+            log.warning("Can't save management configuration to meta storage!");
+
+            throw U.convertException(e);
+        }
+        finally {
+            ctx.cache().context().database().checkpointReadUnlock();
         }
     }
 
@@ -201,27 +267,24 @@ public class Agent extends ManagementConsoleProcessor {
      */
     private class AfterConnectedSessionHandler extends StompSessionHandlerAdapter {
         /** {@inheritDoc} */
-        @Override public void afterConnected(StompSession stompSes, StompHeaders stompHeaders) {
+        @Override public void afterConnected(StompSession ses, StompHeaders stompHeaders) {
             IgniteClusterImpl cluster = ctx.cluster().get();
 
             U.quietAndInfo(log, "");
-            U.quietAndInfo(log, "Found GMC server that can be used to monitor your cluster: " + cfg.serverUri());
+            U.quietAndInfo(log, "Found GMC server that can be used to monitor your cluster: " + curSrvUri);
 
             U.quietAndInfo(log, "");
             U.quietAndInfo(log, "Open link in browser to monitor your cluster in GMC: " +
-                    monitoringUri(cfg.serverUri(), cluster.id()));
+                    monitoringUri(curSrvUri, cluster.id()));
 
             U.quietAndInfo(log, "If you already using GMC, you can add cluster manually by it's ID: " + cluster.id());
 
-            stompSes.send(buildClusterAddDest(), new ClusterInfo(cluster.id(), cluster.tag()));
+            ses.send(buildClusterAddDest(), new ClusterInfo(cluster.id(), cluster.tag()));
 
-            topSrvc.sendTopologyUpdate();
-            topSrvc.sendClusterActiveState();
-            topSrvc.sendBaseline();
+            topSrvc.sendInitialState();
+            tracingSrvc.sendInitialState();
 
-            tracingSrvc.flushBuffer();
-
-            stompSes.subscribe(buildMetricsPullTopic(), new StompFrameHandler() {
+            ses.subscribe(buildMetricsPullTopic(), new StompFrameHandler() {
                 @Override public Type getPayloadType(StompHeaders headers) {
                     return String.class;
                 }
@@ -235,14 +298,9 @@ public class Agent extends ManagementConsoleProcessor {
         /** {@inheritDoc} */
         @Override public void handleTransportError(StompSession stompSes, Throwable e) {
             if (e instanceof ConnectionLostException) {
-                log.error("Lost websocket connection with server: " + cfg.serverUri());
+                log.error("Lost websocket connection with server: " + curSrvUri);
 
-                try {
-                    mgr.reconnect();
-                }
-                catch (InterruptedException | IgniteCheckedException ex) {
-                    log.error("Can't recconect to GMC server!", ex);
-                }
+                connect();
             }
         }
     }

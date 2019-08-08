@@ -16,10 +16,6 @@
 
 package org.gridgain.service;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
 import com.google.common.collect.Lists;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteNodeAttributes;
@@ -32,6 +28,11 @@ import org.gridgain.dto.topology.TopologySnapshot;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 import static org.gridgain.agent.StompDestinationsUtils.buildBaselineTopologyDest;
 import static org.gridgain.agent.StompDestinationsUtils.buildClusterActiveStateDest;
@@ -52,7 +53,7 @@ public class TopologyServiceTest extends AbstractServiceTest {
     public void sendTopologyUpdate() {
         TopologyService srvc = new TopologyService(getMockContext(), getMockWebSocketManager());
 
-        srvc.sendTopologyUpdate();
+        srvc.sendTopologyUpdate(null, null);
 
         ArgumentCaptor<String> destCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
@@ -98,7 +99,7 @@ public class TopologyServiceTest extends AbstractServiceTest {
     public void sendClusterActiveState() {
         TopologyService srvc = new TopologyService(getMockContext(), getMockWebSocketManager());
 
-        srvc.sendClusterActiveState();
+        srvc.sendClusterActiveState(null);
 
         ArgumentCaptor<String> destCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);

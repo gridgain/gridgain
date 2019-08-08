@@ -30,6 +30,7 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.TransactionConfiguration;
 import org.apache.ignite.failure.NoOpFailureHandler;
+import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.testframework.junits.IgniteTestResources;
@@ -104,19 +105,11 @@ public class AgentSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void shouldSendChangedClusterTopology() throws Exception {
-        Ignite ignite_1 = startGrid(0);
+        IgniteClusterEx cluster = startGrid(0).cluster();
 
-        IgniteCluster cluster = ignite_1.cluster();
         cluster.active(true);
 
-        assertWithPoll(
-            () -> {
-                TopologySnapshot top = interceptor.getPayload(buildClusterTopologyDest(cluster.id()), TopologySnapshot.class);
-                return top.getNodes().size() == 1;
-            }
-        );
-
-        Ignite ignite_2 = startGrid(1);
+        startGrid(1);
 
         assertWithPoll(
             () -> {
