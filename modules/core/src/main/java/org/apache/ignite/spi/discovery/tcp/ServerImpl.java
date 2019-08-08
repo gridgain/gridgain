@@ -2977,7 +2977,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                 return;
             }
 
-            //TODO: Extract this logic to separate method.
+            //TODO: https://ggsystems.atlassian.net/browse/GG-22502
             if (msg instanceof TraceableMessage) {
                 TraceableMessage tMsg = (TraceableMessage) msg;
 
@@ -3098,6 +3098,7 @@ class ServerImpl extends TcpDiscoveryImpl {
 
             notifiedDiscovery.set(false);
 
+            // TODO: https://ggsystems.atlassian.net/browse/GG-22502
             if (msg instanceof TraceableMessage) {
                 TraceableMessage tMsg = (TraceableMessage) msg;
 
@@ -3225,6 +3226,7 @@ class ServerImpl extends TcpDiscoveryImpl {
 
             spi.stats.onMessageProcessingFinished(msg);
 
+            // TODO: https://ggsystems.atlassian.net/browse/GG-22502
             if (msg instanceof TraceableMessage &&
                 (msg instanceof TcpDiscoveryNodeAddedMessage
                     || msg instanceof TcpDiscoveryJoinRequestMessage
@@ -3332,7 +3334,7 @@ class ServerImpl extends TcpDiscoveryImpl {
             for (IgniteInClosure<TcpDiscoveryAbstractMessage> msgLsnr : spi.sndMsgLsnrs)
                 msgLsnr.apply(msg);
 
-            // TODO: Maybe put this interceptor to spi.sndMsgLsnrs ?
+            // TODO: https://ggsystems.atlassian.net/browse/GG-22502
             if (msg instanceof TraceableMessage)
                 tracing.messages().beforeSend((TraceableMessage) msg);
 
