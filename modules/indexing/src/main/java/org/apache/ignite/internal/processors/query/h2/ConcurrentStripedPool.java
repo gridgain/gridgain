@@ -20,7 +20,7 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -34,7 +34,7 @@ public class ConcurrentStripedPool<E> implements Iterable<E> {
     private final ConcurrentLinkedDeque<E>[] stripePools;
 
     /** Stripe pools size (calculates fast, optimistic and approximate). */
-    private AtomicInteger[] stripeSize;
+    private LongAdder[] stripeSize;
 
     /** Stripes count. */
     private final int stripes;
@@ -49,11 +49,11 @@ public class ConcurrentStripedPool<E> implements Iterable<E> {
         this.stripes = stripes;
 
         stripePools = new ConcurrentLinkedDeque[stripes];
-        stripeSize = new AtomicInteger[stripes];
+        stripeSize = new LongAdder[stripes];
 
         for (int i = 0; i < stripes; ++i) {
             stripePools[i] = new ConcurrentLinkedDeque<>();
-            stripeSize[i] = new AtomicInteger();
+            stripeSize[i] = new LongAdder();
         }
     }
 
@@ -69,7 +69,7 @@ public class ConcurrentStripedPool<E> implements Iterable<E> {
 
         stripePools[idx].push(e);
 
-        stripeSize[idx].incrementAndGet();
+        stripeSize[idx].increment();
     }
 
     /**
@@ -83,7 +83,7 @@ public class ConcurrentStripedPool<E> implements Iterable<E> {
         E r = stripePools[idx].poll();
 
         if (r != null)
-         stripeSize[idx].decrementAndGet();
+         stripeSize[idx].decrement();
 
         return r;
     }
@@ -92,7 +92,7 @@ public class ConcurrentStripedPool<E> implements Iterable<E> {
      * @return Approximate size of pool (faster than ConcurrentLinkedDeque#size()).
      */
     public int size() {
-        return stripeSize[(int)(Thread.currentThread().getId() % stripes)].get();
+        return stripeSize[(int)(Thread.currentThread().getId() % stripes)].intValue();
     }
 
     /**
