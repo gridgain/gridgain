@@ -582,8 +582,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                         ctx.kernalContext().failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
                     }
 
-                    log.info("Partition changed state [grp=" + grp.cacheOrGroupName()
-                            + ", p=" + id + ", prev=" + prevState + ", to=" + toState + "]");
+                  /*  log.info("Partition changed state [grp=" + grp.cacheOrGroupName()
+                            + ", p=" + id + ", prev=" + prevState + ", to=" + toState + "]");*/
                 }
 
                 return update;
@@ -597,8 +597,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             if (update) {
                 assert toState != EVICTED || reservations() == 0 : this;
 
-                log.info("Partition changed state [grp=" + grp.cacheOrGroupName()
-                        + ", p=" + id + ", prev=" + prevState + ", to=" + toState + "]");
+              /*  log.info("Partition changed state [grp=" + grp.cacheOrGroupName()
+                        + ", p=" + id + ", prev=" + prevState + ", to=" + toState + "]");*/
             }
 
             return update;
