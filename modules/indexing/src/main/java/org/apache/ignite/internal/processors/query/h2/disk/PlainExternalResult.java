@@ -22,13 +22,12 @@ import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.h2.result.ResultExternal;
 import org.h2.store.Data;
 import org.h2.value.Value;
-import org.h2.value.ValueRow;
 
 /**
  * TODO: Add in-memory buffer with memory tracker.
  * This class is intended for spilling to the disk (disk offloading) unsorted intermediate query results.
  */
-public class PlainExternalResult extends AbstractExternalResult<Value> {
+public class PlainExternalResult extends AbstractExternalResult<Value> implements ResultExternal  {
     /**
      * @param ctx Kernal context.
      * @param memTracker Memory tracker.
@@ -102,9 +101,5 @@ public class PlainExternalResult extends AbstractExternalResult<Value> {
         onChildCreated();
 
         return new PlainExternalResult(this);
-    }
-
-    @Override public ValueRow getRowKey(Object[] row) {
-        throw new UnsupportedOperationException(); // Supported only by sorted result.
     }
 }

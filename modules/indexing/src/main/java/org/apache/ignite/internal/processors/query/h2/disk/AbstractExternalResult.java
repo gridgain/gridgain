@@ -30,7 +30,6 @@ import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactor
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.h2.result.ResultExternal;
 import org.h2.result.ResultInterface;
 import org.h2.store.Data;
 import org.jetbrains.annotations.NotNull;
@@ -44,7 +43,7 @@ import static org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing.DI
  * Basic class for external result. Contains common methods for file IO.
  */
 @SuppressWarnings({"MissortedModifiers", "WeakerAccess", "ForLoopReplaceableByForEach"})
-public abstract class AbstractExternalResult<T> implements ResultExternal, ExternalRowStore {
+public abstract class AbstractExternalResult<T> implements AutoCloseable{
     /** File name generator. */
     private static final AtomicLong idGen = new AtomicLong();
 
@@ -132,7 +131,7 @@ public abstract class AbstractExternalResult<T> implements ResultExternal, Exter
      *
      * @return Row.
      */
-    @Override public T[] readRowFromFile(long addr) {
+    public T[] readRowFromFile(long addr) {
         setFilePosition(addr);
 
         return readRowFromFile();
@@ -225,15 +224,26 @@ public abstract class AbstractExternalResult<T> implements ResultExternal, Exter
 
         buff.checkCapacity(rowSize(row));
 
-        buff.writeInt(0); // Skip int position for row length in bytes.
-        buff.writeInt(row.length); // Skip int position for columns count.
+        int arrLen = nonNullsLength(row);
 
-        for (int i = 0; i < row.length; i++)
+        buff.writeInt(0); // Skip int position for row length in bytes.
+        buff.writeInt(arrLen); // Skip int position for columns count.
+
+        for (int i = 0; i < arrLen; i++)
             buff.writeValue(row[i]);
 
         int len = buff.length() - initPos - ROW_HEADER_SIZE;
 
         buff.setInt(initPos, len);
+    }
+
+    private int nonNullsLength(T[] row) {
+        for (int i = 0; i < row.length; i++) {
+            if (row[i] == null)
+                return i;
+        }
+
+        return row.length;
     }
 
     /**

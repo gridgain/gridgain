@@ -35,7 +35,7 @@ public class GroupedExternalGroupByData extends GroupByData {
 
     private final int[] grpIdx;
 
-    private SortedExternalResult sortedExtRes;
+    private SortedExternalGroupByResult sortedExtRes;
 
     private TreeMap<ValueRow, Object[]> groupByData;
 
@@ -57,8 +57,8 @@ public class GroupedExternalGroupByData extends GroupByData {
     }
 
     private void createExtGroupByData() {
-        sortedExtRes = new SortedExternalResult(((QueryContext)ses.getQueryContext()).context(), ses,
-            false, new int[] {0}, 0, null, tracker,  groupByData.size());
+        sortedExtRes = new SortedExternalGroupByResult(((QueryContext)ses.getQueryContext()).context(), ses,
+             tracker,  groupByData.size());
     }
 
     @Override public Object[] nextSource(ValueRow grpKey, int width) {
@@ -158,8 +158,8 @@ public class GroupedExternalGroupByData extends GroupByData {
 
             Object[] newRow = getObjectsArray(key, aggs);
 
-            throw new RuntimeException("!!!");
-            //sortedExtRes.addRow(newRow); TODO!!!!
+            //throw new RuntimeException("!!!");
+            sortedExtRes.addRow(newRow);
         }
 
         groupByData.clear();
@@ -193,9 +193,13 @@ public class GroupedExternalGroupByData extends GroupByData {
         if (grpIdx == null && sortedExtRes == null && groupByData.isEmpty())
             groupByData.put(ValueRow.getEmpty(), new Object[width]);
 
+
         if (sortedExtRes != null ) {
+
             if (!groupByData.isEmpty())
                 spillGroupsToDisk();
+
+            sortedExtRes.reset();
 
             cursor = new ExternalGroupsIterator(sortedExtRes, ses);
         }
@@ -223,7 +227,7 @@ public class GroupedExternalGroupByData extends GroupByData {
     }
 
     private static class ExternalGroupsIterator implements Iterator<T2<ValueRow, Object[]>> {
-        private final SortedExternalResult sortedExtRes;
+        private final SortedExternalGroupByResult sortedExtRes;
         private final CompareMode cmp;
         private final Session ses;
         private int extSize;
@@ -231,7 +235,7 @@ public class GroupedExternalGroupByData extends GroupByData {
         private T2<ValueRow, Object[]> next;
 
 
-        private ExternalGroupsIterator(SortedExternalResult res, Session ses) {
+        private ExternalGroupsIterator(SortedExternalGroupByResult res, Session ses) {
             sortedExtRes = res;
             this.ses = ses;
             this.cmp = ses.getDatabase().getCompareMode();
@@ -306,7 +310,7 @@ public class GroupedExternalGroupByData extends GroupByData {
 
             System.arraycopy(row, 1, aggs, 0, aggs.length);
 
-            return new T2<>((ValueRow)row[0], row);
+            return new T2<>((ValueRow)row[0], aggs);
         }
 
 
