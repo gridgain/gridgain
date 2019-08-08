@@ -3796,8 +3796,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
                     // Do not validate read or write through caches or caches with disabled rebalance
                     // or ExpiryPolicy is set or validation is disabled.
-                    boolean eternalExpiryPolicy = grpCtx != null && grpCtx.config().getExpiryPolicyFactory() != null
-                    && (grpCtx.config().getExpiryPolicyFactory().create() instanceof EternalExpiryPolicy);
+                    boolean eternalExpiryPolicy = grpCtx != null && (grpCtx.config().getExpiryPolicyFactory() == null
+                        || grpCtx.config().getExpiryPolicyFactory().create() instanceof EternalExpiryPolicy);
 
                     if (grpCtx == null
                         || grpCtx.config().isReadThrough()
