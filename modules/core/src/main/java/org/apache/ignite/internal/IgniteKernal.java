@@ -1333,6 +1333,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 private long lastCompletedCntSys;
 
                 @Override public void run() {
+                    U.dumpThreads(log);
+
                     if (execSvc instanceof ThreadPoolExecutor) {
                         ThreadPoolExecutor exec = (ThreadPoolExecutor)execSvc;
 

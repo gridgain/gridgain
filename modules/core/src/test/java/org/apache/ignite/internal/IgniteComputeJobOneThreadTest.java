@@ -60,21 +60,6 @@ public class IgniteComputeJobOneThreadTest extends GridCommonAbstractTest {
      */
     @Test
     public void testNoTimeout() throws Exception {
-        Thread t = new Thread(() -> {
-            while(true) {
-                try {
-                    Thread.sleep(1000);
-                }
-                catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-
-                IgniteUtils.dumpThreads(log);
-            }
-        });
-
-        t.start();
-
         Ignite ignite = ignite(0);
 
         Ignite runner = ignite(1);

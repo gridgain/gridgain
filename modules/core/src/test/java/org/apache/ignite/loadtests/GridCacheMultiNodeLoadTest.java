@@ -91,21 +91,6 @@ public class GridCacheMultiNodeLoadTest extends GridCommonAbstractTest {
      */
     @Test
     public void testMany() throws Exception {
-        Thread t = new Thread(() -> {
-            while(true) {
-                try {
-                    Thread.sleep(1000);
-                }
-                catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-
-                IgniteUtils.dumpThreads(log);
-            }
-        });
-
-        t.start();
-
         IgniteFuture f = ignite1.compute().executeAsync(GridCacheLoadPopulationTask.class, null);
 
         while (true) {
