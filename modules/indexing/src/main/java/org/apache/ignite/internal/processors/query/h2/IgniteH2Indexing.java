@@ -670,7 +670,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         final Object[] args) throws IgniteCheckedException {
         Long qryId = runningQryMgr.register(qry, GridCacheQueryType.SQL_FIELDS, schemaName, true, null);
 
-        Throwable failReason = null;
+        Exception failReason = null;
 
         try {
             UpdatePlan plan = dml.plan();
