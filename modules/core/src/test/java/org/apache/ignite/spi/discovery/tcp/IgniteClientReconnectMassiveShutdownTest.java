@@ -33,6 +33,7 @@ import org.apache.ignite.IgniteClientDisconnectedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteIllegalStateException;
 import org.apache.ignite.IgniteTransactions;
+import org.apache.ignite.cache.affinity.Affinity;
 import org.apache.ignite.cluster.ClusterTopologyException;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -312,8 +313,10 @@ public class IgniteClientReconnectMassiveShutdownTest extends GridCommonAbstract
 
                 Object val = cache.get(key);
 
+                IgniteCache<String, ?> igniteCache = null;
+
                 for (int i = srvsToKill; i < GRID_CNT; i++)
-                    values.add(ignite(i).cache(DEFAULT_CACHE_NAME).get(key));
+                    values.add((igniteCache = ignite(i).cache(DEFAULT_CACHE_NAME)).get(key));
 
                 for (Object val0 : values) {
                     if (val == null && val0 == null)
@@ -324,7 +327,7 @@ public class IgniteClientReconnectMassiveShutdownTest extends GridCommonAbstract
 
                         sb.a("\nExp:").a(val);
 
-                        sb.a("\nActual:");
+                        sb.a("\nActual:\n");
 
                         for (int i = 0; i < values.size(); i++) {
                             sb.a("[grid=")
@@ -333,6 +336,24 @@ public class IgniteClientReconnectMassiveShutdownTest extends GridCommonAbstract
                                 .a(values.get(i))
                                 .a("]\n");
                         }
+
+                        Affinity<String> aff = affinity(igniteCache);
+
+                        SB sb0 = new SB();
+
+                        sb0.a("[");
+
+                        aff.mapKeyToPrimaryAndBackups(key).forEach(n -> {
+                            sb0.a("nodeId=").a(n.id())
+                                .a(" constId=").a(n.consistentId())
+                                .a(" ");
+                        });
+
+                        sb0.a("]");
+
+                        System.out.println("key=" + key + " val=" + val0 + " " + sb0);
+
+                        printPartitionState(DEFAULT_CACHE_NAME, aff.partitions());
 
                         fail(sb.toString());
                     }
