@@ -79,7 +79,6 @@ import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.jetbrains.annotations.Nullable;
 
-import static java.lang.String.format;
 import static java.lang.System.currentTimeMillis;
 import static java.util.Collections.singletonList;
 import static java.util.Collections.singletonMap;
@@ -1631,65 +1630,6 @@ public class GridDhtPartitionDemander {
                 demander.rebalanceFut.stat.clear();
                 demander.lastStatFutures.clear();
             });
-        }
-    }
-
-    /**
-     * Print rebalance statistics into log.
-     * Statistic will print if {@code isPrintRebalanceStatistics()} == true.
-     * For the full statistics to work correctly, you need to call this method
-     * after complete {@link RebalanceFuture} whether it is successful or not.
-     * <p/>
-     * If {@code finish} == true then print full statistics
-     * (include successful and not rebalances), else print
-     * statistics only for current success cache group. <br/>
-     * If {@code finish} == true then clears statistics when printed or not.
-     * <p/>
-     * Use {@code rebalanceStatistics} for create rebalance statistics.
-     *
-     * @param finish Is finish rebalance.
-     * @throws IgniteCheckedException
-     * @see RebalanceStatisticsUtils#isPrintRebalanceStatistics
-     * @see RebalanceStatisticsUtils#rebalanceStatistics(boolean, Map)
-     * */
-    private void printRebalanceStatistics(final boolean finish) throws IgniteCheckedException {
-        if (!isPrintRebalanceStatistics())
-            return;
-
-        if (log.isDebugEnabled())
-            log.debug(format("Print rebalance statistics [finish=%s]", finish));
-
-        if (!finish) {
-            RebalanceFuture lastStatFuture = rebalanceFut;
-
-            lastStatFuture.stat.endTime(currentTimeMillis());
-            lastStatFutures.add(lastStatFuture);
-
-            if (!lastStatFuture.get()){
-                if (log.isDebugEnabled())
-                    log.debug("Skip print rebalance statistics, result future == false.");
-
-                return;
-            }
-        }
-
-        try {
-            Map<CacheGroupContext, Collection<RebalanceFuture>> rebFutrs = !finish ?
-                singletonMap(grp, singletonList(rebalanceFut)) :
-                demanders().stream().collect(toMap(demander -> demander.grp, demander -> demander.lastStatFutures));
-
-            log.info(rebalanceStatistics(finish, rebFutrs));
-        }
-        finally {
-            if (finish) {
-                demanders().forEach(demander -> {
-                    demander.rebalanceFut.stat.clear();
-                    demander.lastStatFutures.clear();
-                });
-
-                if (log.isDebugEnabled())
-                    log.debug("Clear statistics");
-            }
         }
     }
 }
