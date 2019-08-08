@@ -26,6 +26,7 @@ import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+import org.jetbrains.annotations.NotNull;
 
 /** */
 public class PartitionCountersNeighborcastRequest extends GridCacheIdMessage {
@@ -50,7 +51,7 @@ public class PartitionCountersNeighborcastRequest extends GridCacheIdMessage {
     public PartitionCountersNeighborcastRequest(
         Collection<PartitionUpdateCountersMessage> updCntrs,
         IgniteUuid futId,
-        AffinityTopologyVersion topVer
+        @NotNull AffinityTopologyVersion topVer
     ) {
         this.updCntrs = updCntrs;
         this.futId = futId;
