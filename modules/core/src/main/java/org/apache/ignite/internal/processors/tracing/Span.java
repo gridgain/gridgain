@@ -19,7 +19,11 @@ package org.apache.ignite.internal.processors.tracing;
 import java.util.Map;
 
 /**
- * Logical piece of a trace.
+ * Logical piece of a trace that represents a single operation.
+ * Each unit work is called a Span in a trace.
+ * Spans include metadata about the work, including the time spent in the step (latency),
+ * status, time events, attributes, links.
+ * You can use tracing to debug errors and latency issues in your applications.
  */
 public interface Span {
     /**
@@ -37,7 +41,7 @@ public interface Span {
      */
     public Span addTag(String tagName, long tagVal);
     /**
-     * Adds log to span.
+     * Logs work to span.
      *
      * @param logDesc Log description.
      */
