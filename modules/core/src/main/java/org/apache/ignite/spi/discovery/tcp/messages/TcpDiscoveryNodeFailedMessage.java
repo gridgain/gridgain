@@ -98,7 +98,7 @@ public class TcpDiscoveryNodeFailedMessage extends TcpDiscoveryAbstractMessage i
     }
 
     /** {@inheritDoc} */
-    @Override public @NotNull SpanContainer spanContainer() {
+    @Override public SpanContainer spanContainer() {
         return spanContainer;
     }
 }

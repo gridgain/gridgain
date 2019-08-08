@@ -83,49 +83,49 @@ public class DiscoveryNotification {
     }
 
     /**
-     *
+     * @return Event type.
      */
     public int type() {
         return eventType;
     }
 
     /**
-     *
+     * @return Topology version.
      */
     public long getTopVer() {
         return topVer;
     }
 
     /**
-     *
+     * @return Cluster node.
      */
     public ClusterNode getNode() {
         return node;
     }
 
     /**
-     *
+     * @return Topology snapshot.
      */
     public Collection<ClusterNode> getTopSnapshot() {
         return topSnapshot;
     }
 
     /**
-     *
+     * @return Topology history.
      */
     public Map<Long, Collection<ClusterNode>> getTopHist() {
         return topHist;
     }
 
     /**
-     *
+     * @return Custom message data.
      */
     public DiscoverySpiCustomMessage getCustomMsgData() {
         return customMsgData;
     }
 
     /**
-     *
+     * @return Span container.
      */
     public SpanContainer getSpanContainer() {
         return spanContainer;

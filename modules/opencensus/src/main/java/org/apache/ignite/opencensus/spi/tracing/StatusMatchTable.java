@@ -22,7 +22,7 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.processors.tracing.SpanStatus;
 
 /**
- * Table to match OpenCensus span statuses with declated on Tracing SPI.
+ * Table to match OpenCensus span statuses with declared in Tracing SPI.
  */
 public class StatusMatchTable {
     /** Table. */
@@ -41,7 +41,7 @@ public class StatusMatchTable {
     }
 
     /**
-     * @param spanStatus SpanStatus.
+     * @param spanStatus Span status.
      */
     public static io.opencensus.trace.Status match(SpanStatus spanStatus) {
         io.opencensus.trace.Status res = table.get(spanStatus);

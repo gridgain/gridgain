@@ -52,12 +52,11 @@ public class TraceableMessagesHandler {
         if (log.isDebugEnabled())
             log.debug("Received traceable message: " + msg);
 
-        if (msg.spanContainer().span() == NoopSpan.INSTANCE && msg.spanContainer().serializedSpanBytes() != null) {
+        if (msg.spanContainer().span() == NoopSpan.INSTANCE && msg.spanContainer().serializedSpanBytes() != null)
             msg.spanContainer().span(
                 spanMgr.create(traceName(msg.getClass()), msg.spanContainer().serializedSpanBytes())
                     .addLog("Received")
             );
-        }
     }
 
     /**

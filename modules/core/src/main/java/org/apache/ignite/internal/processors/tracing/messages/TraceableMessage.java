@@ -16,8 +16,6 @@
 
 package org.apache.ignite.internal.processors.tracing.messages;
 
-import org.jetbrains.annotations.NotNull;
-
 /**
  * Interface for messages that contain trace context for an operation.
  */
@@ -25,5 +23,5 @@ public interface TraceableMessage {
     /**
      * @return Span Container.
      */
-    public @NotNull SpanContainer spanContainer();
+    public SpanContainer spanContainer();
 }

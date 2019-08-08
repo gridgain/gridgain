@@ -136,7 +136,7 @@ public class TcpDiscoveryCustomEventMessage extends TcpDiscoveryAbstractMessage 
     }
 
     /** {@inheritDoc} */
-    @Override public @NotNull SpanContainer spanContainer() {
+    @Override public SpanContainer spanContainer() {
         return spanContainer;
     }
 }

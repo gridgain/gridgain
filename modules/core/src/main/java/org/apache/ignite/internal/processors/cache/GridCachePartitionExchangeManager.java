@@ -633,7 +633,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
             if (exchId != null) {
                 span.addTag(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID), evt.eventNode().id().toString());
-                span.addTag(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.CONSISTENT_ID), evt.eventNode().consistentId().toString());
+                span.addTag(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.CONSISTENT_ID),
+                    evt.eventNode().consistentId().toString());
                 span.addTag(SpanTags.tag(SpanTags.EVENT, SpanTags.TYPE), evt.type());
                 span.addTag(SpanTags.tag(SpanTags.EXCHANGE, SpanTags.ID), exchId.toString());
                 span.addTag(SpanTags.tag(SpanTags.INITIAL, SpanTags.TOPOLOGY_VERSION, SpanTags.MAJOR),

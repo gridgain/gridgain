@@ -17,7 +17,7 @@
 package org.apache.ignite.internal.processors.tracing;
 
 /**
- * Various statuses for Span execution.
+ * Various statuses for Spans execution.
  */
 public enum SpanStatus {
     /** Ok. */

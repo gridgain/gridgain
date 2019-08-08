@@ -318,6 +318,7 @@ public class StandaloneGridKernalContext implements GridKernalContext {
         return null;
     }
 
+    /** {@inheritDoc} */
     @Override public Tracing tracing() {
         return new NoopTracing();
     }

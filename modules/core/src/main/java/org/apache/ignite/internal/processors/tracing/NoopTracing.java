@@ -30,22 +30,22 @@ public class NoopTracing implements Tracing {
     /** */
     private static final TraceableMessagesHandler MSG_HND = new TraceableMessagesHandler(NOOP_SPI, new NullLogger());
 
-    /** */
+    /** {@inheritDoc} */
     @Override public TraceableMessagesHandler messages() {
         return MSG_HND;
     }
 
-    /** */
+    /** {@inheritDoc} */
     @Override public Span create(@NotNull String name, @Nullable Span parentSpan) {
         return NOOP_SPI.create(name, parentSpan);
     }
 
-    /** */
+    /** {@inheritDoc} */
     @Override public Span create(@NotNull String name, @Nullable byte[] serializedSpanBytes) {
         return NOOP_SPI.create(name, serializedSpanBytes);
     }
 
-    /** */
+    /** {@inheritDoc} */
     @Override public byte[] serialize(@NotNull Span span) {
         return NOOP_SPI.serialize(span);
     }

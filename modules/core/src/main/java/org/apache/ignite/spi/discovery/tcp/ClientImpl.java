@@ -493,7 +493,7 @@ class ClientImpl extends TcpDiscoveryImpl {
                     new DiscoveryNotification(
                         EVT_NODE_FAILED, topVer, n, top, new TreeMap<>(topHist), null, null
                     )
-                    ).get();
+                ).get();
             }
         }
 
@@ -758,7 +758,8 @@ class ClientImpl extends TcpDiscoveryImpl {
                     joinReqMsg.spanContainer().span(
                         tracing.create(TraceableMessagesTable.traceName(joinReqMsg.getClass()))
                             .addTag(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID), node.id().toString())
-                            .addTag(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.CONSISTENT_ID), node.consistentId().toString())
+                            .addTag(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.CONSISTENT_ID),
+                                node.consistentId().toString())
                             .addLog("Created")
                             .end()
                     );
@@ -1738,7 +1739,8 @@ class ClientImpl extends TcpDiscoveryImpl {
 
                                 state = SEGMENTED;
 
-                                notifyDiscovery(EVT_NODE_SEGMENTED, topVer, locNode, allVisibleNodes(), null);
+                                notifyDiscovery(
+                                    EVT_NODE_SEGMENTED, topVer, locNode, allVisibleNodes(), null);
                             }
                         }
                     }
@@ -1864,7 +1866,8 @@ class ClientImpl extends TcpDiscoveryImpl {
 
                                 state = SEGMENTED;
 
-                                notifyDiscovery(EVT_NODE_SEGMENTED, topVer, locNode, allVisibleNodes(), null);
+                                notifyDiscovery(
+                                    EVT_NODE_SEGMENTED, topVer, locNode, allVisibleNodes(), null);
                             }
                         }
                         else {
@@ -1940,7 +1943,8 @@ class ClientImpl extends TcpDiscoveryImpl {
 
                                     state = SEGMENTED;
 
-                                    notifyDiscovery(EVT_NODE_SEGMENTED, topVer, locNode, allVisibleNodes(), null);
+                                    notifyDiscovery(
+                                        EVT_NODE_SEGMENTED, topVer, locNode, allVisibleNodes(), null);
                                 }
                                 else
                                     joinError(err);
@@ -2557,7 +2561,8 @@ class ClientImpl extends TcpDiscoveryImpl {
                             DiscoverySpiCustomMessage msgObj = msg.message(spi.marshaller(),
                                 U.resolveClassLoader(spi.ignite().configuration()));
 
-                            notifyDiscovery(EVT_DISCOVERY_CUSTOM_EVT, topVer, node, allVisibleNodes(), msgObj, msg.spanContainer());
+                            notifyDiscovery(
+                                EVT_DISCOVERY_CUSTOM_EVT, topVer, node, allVisibleNodes(), msgObj, msg.spanContainer());
                         }
                         catch (Throwable e) {
                             U.error(log, "Failed to unmarshal discovery custom message.", e);
@@ -2628,8 +2633,15 @@ class ClientImpl extends TcpDiscoveryImpl {
          * @param topVer Topology version.
          * @param node Node.
          * @param top Topology snapshot.
+         * @param spanContainer Span container.
          */
-        private void notifyDiscovery(int type, long topVer, ClusterNode node, Collection<ClusterNode> top, SpanContainer spanContainer) {
+        private void notifyDiscovery(
+            int type,
+            long topVer,
+            ClusterNode node,
+            Collection<ClusterNode> top,
+            SpanContainer spanContainer
+        ) {
             notifyDiscovery(type, topVer, node, top, null, spanContainer);
         }
 

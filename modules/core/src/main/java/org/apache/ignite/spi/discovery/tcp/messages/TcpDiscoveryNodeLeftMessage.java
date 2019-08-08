@@ -20,7 +20,6 @@ import java.util.UUID;
 import org.apache.ignite.internal.processors.tracing.messages.SpanContainer;
 import org.apache.ignite.internal.processors.tracing.messages.TraceableMessage;
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.jetbrains.annotations.NotNull;
 
 /**
  * Sent by node that is stopping to coordinator across the ring,
@@ -50,7 +49,7 @@ public class TcpDiscoveryNodeLeftMessage extends TcpDiscoveryAbstractMessage imp
     }
 
     /** {@inheritDoc} */
-    @Override public @NotNull SpanContainer spanContainer() {
+    @Override public SpanContainer spanContainer() {
         return spanContainer;
     }
 }

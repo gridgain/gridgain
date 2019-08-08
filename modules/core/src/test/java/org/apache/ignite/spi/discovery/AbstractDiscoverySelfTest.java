@@ -417,7 +417,8 @@ public abstract class AbstractDiscoverySelfTest<T extends IgniteSpi> extends Gri
                     @Override public IgniteFuture<?> onDiscovery(
                         DiscoveryNotification notification
                     ) {
-                        info("Discovery event [type=" + notification.type() + ", node=" + notification.getNode() + ']');
+                        info("Discovery event [type="
+                            + notification.type() + ", node=" + notification.getNode() + ']');
 
                         synchronized (mux) {
                             mux.notifyAll();

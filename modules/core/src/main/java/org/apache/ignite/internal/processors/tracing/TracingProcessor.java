@@ -79,6 +79,7 @@ public class TracingProcessor extends GridProcessorAdapter implements Tracing {
 
     /**
      * Adds tags with information about local node to given {@code span}.
+     *
      * @param span Span.
      * @return Span enriched by local node information.
      */

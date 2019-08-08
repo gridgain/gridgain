@@ -501,9 +501,8 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                 }
             }
 
-            @Override public IgniteFuture<?> onDiscovery(
-                DiscoveryNotification notification
-            ) {
+            /** {@inheritDoc} */
+            @Override public IgniteFuture<?> onDiscovery(DiscoveryNotification notification) {
                 GridFutureAdapter<?> notificationFut = new GridFutureAdapter<>();
 
                 discoNtfWrk.submit(notificationFut, () -> {
@@ -531,9 +530,10 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                 return fut;
             }
 
-            private void onDiscovery0(
-                DiscoveryNotification notification
-            ) {
+            /**
+             * @param notification Notification.
+             */
+            private void onDiscovery0(DiscoveryNotification notification) {
                 int type = notification.type();
                 ClusterNode node = notification.getNode();
                 long topVer = notification.getTopVer();
@@ -810,7 +810,13 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
                                 discoWrk.addEvent(
                                     new NotificationEvent(
-                                        EVT_CLIENT_NODE_RECONNECTED, nextTopVer, node, discoCache0, notification.getTopSnapshot(), null, notification.getSpanContainer()
+                                        EVT_CLIENT_NODE_RECONNECTED,
+                                        nextTopVer,
+                                        node,
+                                        discoCache0,
+                                        notification.getTopSnapshot(),
+                                        null,
+                                        notification.getSpanContainer()
                                     )
                                 );
                             }
@@ -825,12 +831,27 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
                 if (type == EVT_CLIENT_NODE_DISCONNECTED || type == EVT_NODE_SEGMENTED || !ctx.clientDisconnected())
                     discoWrk.addEvent(
-                        new NotificationEvent(type, nextTopVer, node, discoCache, notification.getTopSnapshot(), customMsg, notification.getSpanContainer())
+                        new NotificationEvent(
+                            type,
+                            nextTopVer,
+                            node, discoCache,
+                            notification.getTopSnapshot(),
+                            customMsg,
+                            notification.getSpanContainer()
+                        )
                     );
 
                 if (stateFinishMsg != null)
                     discoWrk.addEvent(
-                        new NotificationEvent(EVT_DISCOVERY_CUSTOM_EVT, nextTopVer, node, discoCache, notification.getTopSnapshot(), stateFinishMsg, notification.getSpanContainer())
+                        new NotificationEvent(
+                            EVT_DISCOVERY_CUSTOM_EVT,
+                            nextTopVer,
+                            node,
+                            discoCache,
+                            notification.getTopSnapshot(),
+                            stateFinishMsg,
+                            notification.getSpanContainer()
+                        )
                     );
             }
         });
@@ -2153,8 +2174,10 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
     }
 
     /**
-     * @param discoCache
-     * @param node
+     * Adds metrics update event to discovery worker queue.
+     *
+     * @param discoCache Discovery cache.
+     * @param node Event node.
      */
     public void metricsUpdateEvent(DiscoCache discoCache, ClusterNode node) {
         discoWrk.addEvent(

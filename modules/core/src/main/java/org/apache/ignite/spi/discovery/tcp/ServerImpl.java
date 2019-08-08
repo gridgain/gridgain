@@ -4873,7 +4873,8 @@ class ServerImpl extends TcpDiscoveryImpl {
 
                     addFinishMsg.spanContainer().span()
                         .addTag(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID), node.id().toString())
-                        .addTag(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.CONSISTENT_ID), node.consistentId().toString());
+                        .addTag(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.CONSISTENT_ID),
+                            node.consistentId().toString());
 
                     processNodeAddFinishedMessage(addFinishMsg);
 

@@ -21,7 +21,7 @@ package org.apache.ignite.internal.processors.tracing;
  */
 public class Traces {
     /**
-     *
+     * Discovery traces.
      */
     public static class Discovery {
         /** Node join request. */
@@ -44,7 +44,7 @@ public class Traces {
     }
 
     /**
-     *
+     * Exchange traces.
      */
     public static class Exchange {
         /** Exchange future. */

@@ -195,13 +195,17 @@ public class DiscoveryEvent extends EventAdapter {
     }
 
     /**
+     * Gets span instance.
      *
+     * @return Span.
      */
     public Span span() {
         return span;
     }
 
     /**
+     * Set span.
+     *
      * @param span Span.
      */
     public void span(Span span) {

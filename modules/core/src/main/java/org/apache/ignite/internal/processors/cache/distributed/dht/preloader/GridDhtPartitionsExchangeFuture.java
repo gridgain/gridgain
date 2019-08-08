@@ -410,6 +410,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     }
 
     /**
+     * Set span.
+     *
      * @param span Span.
      */
     public void span(Span span) {
@@ -417,7 +419,9 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     }
 
     /**
+     * Gets span instance.
      *
+     * @return Span.
      */
     public Span span() {
         return span;

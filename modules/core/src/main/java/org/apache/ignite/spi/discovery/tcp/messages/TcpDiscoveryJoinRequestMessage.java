@@ -38,7 +38,7 @@ public class TcpDiscoveryJoinRequestMessage extends TcpDiscoveryAbstractMessage 
     /** Discovery data container. */
     private final DiscoveryDataPacket dataPacket;
 
-    /** SpanContainer. */
+    /** Span container. */
     private SpanContainer spanContainer = new SpanContainer();
 
     /**
@@ -103,7 +103,7 @@ public class TcpDiscoveryJoinRequestMessage extends TcpDiscoveryAbstractMessage 
     }
 
     /** {@inheritDoc} */
-    @Override public @NotNull SpanContainer spanContainer() {
+    @Override public SpanContainer spanContainer() {
         return spanContainer;
     }
 }

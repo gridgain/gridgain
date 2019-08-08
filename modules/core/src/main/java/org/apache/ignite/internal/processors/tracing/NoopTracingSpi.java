@@ -48,11 +48,11 @@ public class NoopTracingSpi extends IgniteSpiAdapter implements TracingSpi {
 
     /** {@inheritDoc} */
     @Override public void spiStart(String igniteInstanceName) throws IgniteSpiException {
-        // Do nothing.
+        // No-op.
     }
 
     /** {@inheritDoc} */
     @Override public void spiStop() throws IgniteSpiException {
-        // Do nothing.
+        // No-op.
     }
 }

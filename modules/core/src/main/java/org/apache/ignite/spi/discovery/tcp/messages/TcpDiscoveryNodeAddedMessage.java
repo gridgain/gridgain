@@ -255,7 +255,7 @@ public class TcpDiscoveryNodeAddedMessage extends TcpDiscoveryAbstractMessage im
     }
 
     /** {@inheritDoc} */
-    @Override public @NotNull SpanContainer spanContainer() {
+    @Override public SpanContainer spanContainer() {
         return spanContainer;
     }
 }
