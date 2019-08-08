@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.cache;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -97,6 +96,7 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiInClosure;
 import org.apache.ignite.lang.IgniteUuid;
+import org.apache.ignite.plugin.extensions.communication.TimeLoggableResponse;
 import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.Nullable;
 
@@ -1241,6 +1241,10 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
         if (msg.messageId() == NULL_MSG_ID)
             // Generate and set message ID.
             msg.messageId(idGen.incrementAndGet());
+
+        if (msg instanceof TimeLoggableResponse && msg.messageId() >= NULL_MSG_ID)
+            log.warning("Unexpected msgId for TimeLoggableResponse " + msg.getClass().getSimpleName() + ". " +
+                        "Target node: " + destNodeId);
 
         if (destNodeId == null || !cctx.localNodeId().equals(destNodeId)) {
             msg.prepareMarshal(cctx);

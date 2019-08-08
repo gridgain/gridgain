@@ -334,7 +334,6 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
             UUID nodeId = entry.getKey();
             Map<Class<? extends Message>, HistogramMetric> classMetrics = entry.getValue();
 
-
             if (!total.containsKey(nodeId))
                 total.put(nodeId, classMetrics);
             else {
@@ -350,8 +349,6 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
                         totalClsMetrics.get(msgClass).addValues(histMetric);
                 }
             }
-
-
         }
     }
 
@@ -445,6 +442,9 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
 
         /** Is time logging enabled. */
         private final boolean isTimeLoggingEnabled = IgniteSystemProperties.getBoolean(IGNITE_ENABLE_MESSAGES_TIME_LOGGING);
+
+        /** Metric bounds. */
+        private final long[] metricBounds = obtainHistMetricBounds();
 
         /**
          * Collects statistics for message sent by SPI.
@@ -552,8 +552,8 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
                 nodeMap.put(req.getClass(), new TimestampMap());
 
                 metricsMap.get(nodeId).put(req.getClass(), new HistogramMetric(metricName(nodeId, req.getClass()),
-                                                                         "",
-                                                                               obtainHistMetricBounds()));
+                                                                               "",
+                                                                               metricBounds));
             }
 
             Map<Long, Long> reqResTimeMap = nodeMap.get(req.getClass());

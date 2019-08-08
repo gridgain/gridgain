@@ -39,13 +39,13 @@ import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
-import org.apache.ignite.plugin.extensions.communication.TimeLoggableMessage;
+import org.apache.ignite.plugin.extensions.communication.TimeLoggableResponse;
 import org.jetbrains.annotations.NotNull;
 
 /**
  * Get response.
  */
-public class GridNearGetResponse extends GridCacheIdMessage implements GridCacheDeployable, TimeLoggableMessage,
+public class GridNearGetResponse extends GridCacheIdMessage implements GridCacheDeployable, TimeLoggableResponse,
     GridCacheVersionable {
     /** */
     private static final long serialVersionUID = 0L;

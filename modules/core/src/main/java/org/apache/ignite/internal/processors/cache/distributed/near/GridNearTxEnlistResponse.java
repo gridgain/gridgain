@@ -35,13 +35,13 @@ import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
-import org.apache.ignite.plugin.extensions.communication.TimeLoggableMessage;
+import org.apache.ignite.plugin.extensions.communication.TimeLoggableResponse;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * A response to {@link GridNearTxEnlistRequest}.
  */
-public class GridNearTxEnlistResponse extends GridCacheIdMessage implements ExceptionAware, TimeLoggableMessage {
+public class GridNearTxEnlistResponse extends GridCacheIdMessage implements ExceptionAware, TimeLoggableResponse {
     /** */
     private static final long serialVersionUID = 0L;
 

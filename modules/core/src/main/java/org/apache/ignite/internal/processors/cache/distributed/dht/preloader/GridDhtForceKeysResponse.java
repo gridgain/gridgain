@@ -38,12 +38,12 @@ import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
-import org.apache.ignite.plugin.extensions.communication.TimeLoggableMessage;
+import org.apache.ignite.plugin.extensions.communication.TimeLoggableResponse;
 
 /**
  * Force keys response. Contains absent keys.
  */
-public class GridDhtForceKeysResponse extends GridCacheIdMessage implements GridCacheDeployable, TimeLoggableMessage {
+public class GridDhtForceKeysResponse extends GridCacheIdMessage implements GridCacheDeployable, TimeLoggableResponse {
     /** */
     private static final long serialVersionUID = 0L;
 

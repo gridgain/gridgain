@@ -40,13 +40,13 @@ import org.apache.ignite.marshaller.Marshaller;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
-import org.apache.ignite.plugin.extensions.communication.TimeLoggableMessage;
+import org.apache.ignite.plugin.extensions.communication.TimeLoggableResponse;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Query request.
  */
-public class GridCacheQueryResponse extends GridCacheIdMessage implements GridCacheDeployable, TimeLoggableMessage {
+public class GridCacheQueryResponse extends GridCacheIdMessage implements GridCacheDeployable, TimeLoggableResponse {
     /** */
     private static final long serialVersionUID = 0L;
 

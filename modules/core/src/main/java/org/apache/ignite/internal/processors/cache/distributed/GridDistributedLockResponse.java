@@ -35,13 +35,13 @@ import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.MessageCollectionItemType;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
-import org.apache.ignite.plugin.extensions.communication.TimeLoggableMessage;
+import org.apache.ignite.plugin.extensions.communication.TimeLoggableResponse;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Lock response message.
  */
-public class GridDistributedLockResponse extends GridDistributedBaseMessage implements TimeLoggableMessage {
+public class GridDistributedLockResponse extends GridDistributedBaseMessage implements TimeLoggableResponse {
     /** */
     private static final long serialVersionUID = 0L;
 

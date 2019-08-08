@@ -203,6 +203,8 @@ public class CacheMessagesTimeLoggingTest extends GridCacheMessagesTimeLoggingAb
 
         HistogramMetric metric = getMetric(0, grid(1), GridDhtTxPrepareRequest.class, true);
 
+        assertNotNull(metric);
+
         assertEquals(DEFAULT_HIST_BOUNDS.length + 1, metric.value().length);
 
         // Checking custom metrics bound.

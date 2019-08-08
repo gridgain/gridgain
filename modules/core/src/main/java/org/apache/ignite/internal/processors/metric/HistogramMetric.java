@@ -101,6 +101,13 @@ public class HistogramMetric {
     }
 
     /**
+     * @return Histogram bounds.
+     */
+    public long[] bounds() {
+        return holder.bounds;
+    }
+
+    /**
      * Adds all values from {@code other} to this HistogramMetric.
      * Works inplace.
      * @param other Other.
@@ -108,10 +115,10 @@ public class HistogramMetric {
     public void addValues(@NotNull HistogramMetric other) {
         HistogramHolder h = holder;
 
-        if (Arrays.equals(h.bounds, other.holder.bounds)) {
-            for (int i = 0; i < h.bounds.length; i++)
-                h.measurements.set(i, h.measurements.get(i) + other.holder.measurements.get(i));
-        }
+        assert Arrays.equals(h.bounds, other.holder.bounds) : "Adding values with different bounds";
+
+        for (int i = 0; i < h.bounds.length; i++)
+            h.measurements.set(i, h.measurements.get(i) + other.holder.measurements.get(i));
     }
 
     /** Histogram holder. */
