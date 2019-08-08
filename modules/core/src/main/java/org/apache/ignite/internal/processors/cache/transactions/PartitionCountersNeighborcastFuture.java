@@ -23,6 +23,8 @@ import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.processors.cache.GridCacheCompoundIdentityFuture;
@@ -86,6 +88,14 @@ public class PartitionCountersNeighborcastFuture extends GridCacheCompoundIdenti
 
             if (F.isEmpty(cntrs))
                 continue;
+
+            ClusterNode n = cctx.discovery().node(tx.topologyVersionSnapshot(), peer);
+
+            assert n != null : "Failed to find a node within locked tx topology [tx=" + CU.txString(tx) +
+                ", nodeId=" + peer + ']';
+
+            if (!IgniteFeatures.nodeSupports(n, IgniteFeatures.TX_TRACKING_UPDATE_COUNTER))
+                continue; // Skip old version node.
 
             MiniFuture miniFut = new MiniFuture(peer);
 
