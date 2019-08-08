@@ -20,6 +20,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.affinity.AffinityAssignment;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemander.RebalanceFuture;
@@ -263,9 +264,10 @@ class RebalanceStatisticsUtils {
      * {@link #isPrintRebalanceStatistics()} == true.
      * <p/>
      * Flag {@code finish} means finished or not rebalance. <br/>
-     * If {@code finish} == true then {@code rebFutrs} contains success or not
-     * {@code RebalanceFuture} per cache group, else {@code rebFutrs} contains
-     * only one success {@code RebalanceFuture} for one cache group. <br/>
+     * If {@code finish} == true then expected {@code rebFutrs} contains
+     * success or not {@code RebalanceFuture} per cache group, else expected
+     * {@code rebFutrs} contains only one success {@code RebalanceFuture}
+     * for one cache group. <br/>
      * If {@code finish} == true then print total statistics.
      * <p/>
      * Partition distribution only for last success rebalance, per cache group.
@@ -273,6 +275,7 @@ class RebalanceStatisticsUtils {
      * @param finish Is finish rebalance.
      * @param rebFutrs Involved in rebalance.
      * @return Rebalance statistics string.
+     * @see RebalanceFuture RebalanceFuture
      */
     public static String rebalanceStatistics(
         final boolean finish,
@@ -412,7 +415,7 @@ class RebalanceStatisticsUtils {
 
             RebalanceFuture lastSuccessFuture = futures.stream()
                 .filter(GridFutureAdapter::isDone)
-                .filter(RebalanceStatisticsUtils::rebalanceFutureResult)
+                .filter(RebalanceStatisticsUtils::result)
                 .sorted(startTimeCmp.reversed())
                 .findFirst()
                 .orElse(null);
@@ -550,7 +553,7 @@ class RebalanceStatisticsUtils {
      * @param future Rebalance future, require not null.
      * @return Result future.
      */
-    private static boolean rebalanceFutureResult(final RebalanceFuture future) {
+    public static boolean result(final IgniteInternalFuture<Boolean> future) {
         assert nonNull(future);
 
         try {
