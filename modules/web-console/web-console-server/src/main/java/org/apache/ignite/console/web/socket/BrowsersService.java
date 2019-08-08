@@ -181,7 +181,7 @@ public class BrowsersService extends AbstractSocketHandler {
         catch (IllegalStateException e) {
             log.warn(e.toString());
 
-            sendMessageQuiet(ses, evt.withError("Failed to send event to agent: " + evt.getPayload(), e));
+            sendMessageQuiet(ses, evt.withError("Failed to send event to agent: ", e));
         }
         catch (Throwable e) {
             String errMsg = "Failed to send event to agent: " + evt.getPayload();
