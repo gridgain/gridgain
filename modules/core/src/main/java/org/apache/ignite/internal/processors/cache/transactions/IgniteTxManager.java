@@ -29,7 +29,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.LongAdder;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteClientDisconnectedException;
 import org.apache.ignite.IgniteException;
@@ -3179,7 +3179,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      */
     public class TxDumpsThrottling {
         /** */
-        private AtomicInteger skippedTxCntr = new AtomicInteger();
+        private LongAdder skippedTxCntr = new LongAdder();
 
         /** */
         private HitRateMetric transactionHitRateCntr = new HitRateMetric("transactionHitRateCounter", null, 1000, 2);
@@ -3191,7 +3191,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             boolean res = transactionHitRateCntr.value() >= transactionTimeDumpSamplesPerSecondLimit();
 
             if (!res) {
-                int skipped = skippedTxCntr.getAndSet(0);
+                long skipped = skippedTxCntr.sumThenReset();
 
                 //we should not log info about skipped dumps if skippedTxCounter was reset concurrently
                 if (skipped > 0)
@@ -3212,7 +3212,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
          * Should be called when we skip transaction which we could dump to log because of throttling.
          */
         public void skip() {
-            skippedTxCntr.incrementAndGet();
+            skippedTxCntr.increment();
         }
     }
 }
