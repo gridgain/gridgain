@@ -279,7 +279,7 @@ public class IdleVerifyResultV2 extends VisorDataTransferObject {
             printer.accept("Verification was skipped for " + map.size() + " " + partitionState + " partitions:\n");
 
             for (Map.Entry<PartitionKeyV2, List<PartitionHashRecordV2>> entry : map.entrySet()) {
-                printer.accept("Rebalancing partition: " + entry.getKey() + "\n");
+                printer.accept("Skipped partition: " + entry.getKey() + "\n");
 
                 printer.accept("Partition instances: " + entry.getValue() + "\n");
             }
