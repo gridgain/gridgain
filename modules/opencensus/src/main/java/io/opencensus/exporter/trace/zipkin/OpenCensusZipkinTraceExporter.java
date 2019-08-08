@@ -30,6 +30,9 @@ public class OpenCensusZipkinTraceExporter implements OpenCensusTraceExporter {
     /** Config. */
     private final ZipkinExporterConfiguration cfg;
 
+    /** Trace exporter handler name. */
+    private String hndName;
+
     /**
      * @param cfg Config.
      */
@@ -44,18 +47,17 @@ public class OpenCensusZipkinTraceExporter implements OpenCensusTraceExporter {
             if (snd == null)
                 snd = URLConnectionSender.create(cfg.getV2Url());
 
-            SpanExporter.Handler exporterHnd = new ZipkinExporterHandler(
+            SpanExporter.Handler hnd = new ZipkinExporterHandler(
                 provider.getTracer(),
                 cfg.getEncoder(),
                 snd,
-                cfg.getServiceName(), //TODO: Maybe additionally attach consistentId to service name?
+                cfg.getServiceName(), //TODO: https://ggsystems.atlassian.net/browse/GG-22505
                 cfg.getDeadline()
             );
 
-            provider.getExportComponent().getSpanExporter().registerHandler(
-                ZipkinTraceExporter.class.getName() + "-" + igniteInstanceName,
-                exporterHnd
-            );
+            hndName = ZipkinTraceExporter.class.getName() + "-" + igniteInstanceName;
+
+            provider.getExportComponent().getSpanExporter().registerHandler(hndName, hnd);
         }
         catch (Exception e) {
             throw new IgniteSpiException("Failed to start trace exporter", e);
@@ -64,7 +66,7 @@ public class OpenCensusZipkinTraceExporter implements OpenCensusTraceExporter {
 
     /** {@inheritDoc} */
     @Override public void stop(OpenCensusTracingProvider provider) {
-        provider.getExportComponent().shutdown();
+        provider.getExportComponent().getSpanExporter().unregisterHandler(hndName);
     }
 
     /** {@inheritDoc} */
