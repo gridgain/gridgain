@@ -257,7 +257,7 @@ public class ConnectionManager {
      */
     public H2PooledConnection connection() {
         try {
-            H2Connection conn = connPool.poll();
+            H2Connection conn = connPool.borrow();
 
             if (conn == null)
                 conn = newConnection();
@@ -300,7 +300,7 @@ public class ConnectionManager {
         assert rmv : "Connection isn't tracked [conn=" + conn + ']';
 
         if (connPool.size() < poolMaxSize)
-            connPool.push(conn);
+            connPool.recycle(conn);
         else
             conn.close();
     }

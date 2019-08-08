@@ -20,6 +20,7 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -31,7 +32,7 @@ import org.jetbrains.annotations.NotNull;
  */
 public class ConcurrentStripedPool<E> implements Iterable<E> {
     /** Stripe pools. */
-    private final ConcurrentLinkedDeque<E>[] stripePools;
+    private final ConcurrentLinkedQueue<E>[] stripePools;
 
     /** Stripe pools size (calculates fast, optimistic and approximate). */
     private LongAdder[] stripeSize;
@@ -48,11 +49,11 @@ public class ConcurrentStripedPool<E> implements Iterable<E> {
     public ConcurrentStripedPool(int stripes) {
         this.stripes = stripes;
 
-        stripePools = new ConcurrentLinkedDeque[stripes];
+        stripePools = new ConcurrentLinkedQueue[stripes];
         stripeSize = new LongAdder[stripes];
 
         for (int i = 0; i < stripes; ++i) {
-            stripePools[i] = new ConcurrentLinkedDeque<>();
+            stripePools[i] = new ConcurrentLinkedQueue<>();
             stripeSize[i] = new LongAdder();
         }
     }
@@ -64,10 +65,10 @@ public class ConcurrentStripedPool<E> implements Iterable<E> {
      * @throws NullPointerException if the specified element is null and this
      *         deque does not permit null elements
      */
-    public void push(E e) {
+    public void recycle(E e) {
         int idx = (int)(Thread.currentThread().getId() % stripes);
 
-        stripePools[idx].push(e);
+        stripePools[idx].add(e);
 
         stripeSize[idx].increment();
     }
@@ -77,7 +78,7 @@ public class ConcurrentStripedPool<E> implements Iterable<E> {
      *
      * @return the  element of the pool, or {@code null} if the pool is empty.
      */
-    public E poll() {
+    public E borrow() {
         int idx = (int)(Thread.currentThread().getId() % stripes);
 
         E r = stripePools[idx].poll();
@@ -104,7 +105,7 @@ public class ConcurrentStripedPool<E> implements Iterable<E> {
      * @param action The action to be performed for each element
      * @throws NullPointerException if the specified action is null
      */
-    public void forEach(Consumer<? super E> action) {
+    @Override public void forEach(Consumer<? super E> action) {
         Objects.requireNonNull(action);
 
         for (int i = 0; i < stripes; ++i)
