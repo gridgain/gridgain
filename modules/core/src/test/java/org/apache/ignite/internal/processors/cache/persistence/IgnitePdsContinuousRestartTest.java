@@ -49,6 +49,7 @@ import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.TransactionRollbackException;
 import org.junit.Assume;
+import org.apache.ignite.transactions.TransactionRollbackException;
 import org.junit.Test;
 
 /**
