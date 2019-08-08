@@ -2272,20 +2272,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                     }
                 }
 
-                AtomicBoolean aBoolean = AffinityTestHolder.printer.get(ctx.localNode().consistentId().toString());
-
-                if (aBoolean != null && aBoolean.get()) {
-                    String session = UUID.randomUUID().toString();
-                    log.error("PMP@session: " + session + " affinity.");
-                    for (Map.Entry<String, GridCacheAffinityManager> entry : AffinityTestHolder.cacheAffinityManagers.entrySet()) {
-                        log.error("PMP@session: " + session + "," +
-                            " node:" + entry.getKey()
-                            + ", top:" + entry.getValue().affinityTopologyVersion()
-                            + ", affinity=["
-                            + entry.getValue().nodesByPartition(AffinityTestHolder.movingPartitionId.get(), exchFut.topologyVersion()) + "]");
-                    }
-                }
-
                 // Then process remote partitions.
                 for (Map.Entry<Integer, Set<UUID>> entry : ownersByUpdCounters.entrySet()) {
                     int part = entry.getKey();
@@ -2390,17 +2376,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             }
         }
 
-        if (part.state() != MOVING) {
-            log.info("PMP@MOVING: p:" + p + " clear: " + clear + " exchFut: " + exchFut);
-
+        if (part.state() != MOVING)
             part.moving();
-
-            AffinityTestHolder.movingPartitionId.set(p);
-
-            AffinityTestHolder.printer
-                .computeIfAbsent(ctx.localNode().consistentId().toString(), k -> new AtomicBoolean(true))
-                .set(true);
-        }
 
         if (!clear)
             exchFut.addHistoryPartition(grp, part.id());
