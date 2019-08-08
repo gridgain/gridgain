@@ -38,7 +38,6 @@ public class StatusMatchTable {
      * Default constructor.
      */
     private StatusMatchTable() {
-        //
     }
 
     /**

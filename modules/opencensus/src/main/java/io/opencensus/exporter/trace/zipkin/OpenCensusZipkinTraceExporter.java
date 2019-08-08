@@ -16,9 +16,9 @@
 
 package io.opencensus.exporter.trace.zipkin;
 
+import io.opencensus.trace.Tracing;
 import io.opencensus.trace.export.SpanExporter;
 import org.apache.ignite.opencensus.spi.tracing.OpenCensusTraceExporter;
-import org.apache.ignite.opencensus.spi.tracing.OpenCensusTracingProvider;
 import org.apache.ignite.spi.IgniteSpiException;
 import zipkin2.reporter.Sender;
 import zipkin2.reporter.urlconnection.URLConnectionSender;
@@ -41,14 +41,13 @@ public class OpenCensusZipkinTraceExporter implements OpenCensusTraceExporter {
     }
 
     /** {@inheritDoc} */
-    @Override public void start(OpenCensusTracingProvider provider, String igniteInstanceName) {
+    @Override public void start(String igniteInstanceName) {
         try {
             Sender snd = cfg.getSender();
             if (snd == null)
                 snd = URLConnectionSender.create(cfg.getV2Url());
 
             SpanExporter.Handler hnd = new ZipkinExporterHandler(
-                provider.getTracer(),
                 cfg.getEncoder(),
                 snd,
                 cfg.getServiceName(), //TODO: https://ggsystems.atlassian.net/browse/GG-22505
@@ -57,7 +56,7 @@ public class OpenCensusZipkinTraceExporter implements OpenCensusTraceExporter {
 
             hndName = ZipkinTraceExporter.class.getName() + "-" + igniteInstanceName;
 
-            provider.getExportComponent().getSpanExporter().registerHandler(hndName, hnd);
+            Tracing.getExportComponent().getSpanExporter().registerHandler(hndName, hnd);
         }
         catch (Exception e) {
             throw new IgniteSpiException("Failed to start trace exporter", e);
@@ -65,8 +64,8 @@ public class OpenCensusZipkinTraceExporter implements OpenCensusTraceExporter {
     }
 
     /** {@inheritDoc} */
-    @Override public void stop(OpenCensusTracingProvider provider) {
-        provider.getExportComponent().getSpanExporter().unregisterHandler(hndName);
+    @Override public void stop() {
+        Tracing.getExportComponent().getSpanExporter().unregisterHandler(hndName);
     }
 
     /** {@inheritDoc} */

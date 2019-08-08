@@ -26,6 +26,7 @@ import io.opencensus.trace.AttributeValue;
 import io.opencensus.trace.Span;
 import io.opencensus.trace.SpanId;
 import io.opencensus.trace.Status;
+import io.opencensus.trace.Tracing;
 import io.opencensus.trace.export.SpanData;
 import io.opencensus.trace.export.SpanExporter;
 import io.opencensus.trace.samplers.Samplers;
@@ -50,9 +51,6 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
     /** Grid count. */
     private static final int GRID_CNT = 3;
 
-    /** Shared tracing provider. */
-    private static OpenCensusTracingProvider provider = new OpenCensusTracingProvider();
-
     /** Exporter to check reported spans. */
     private TraceTestExporter exporter;
 
@@ -62,7 +60,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
 
         cfg.setConsistentId(igniteInstanceName);
 
-        cfg.setTracingSpi(new OpenCensusTracingSpi(provider));
+        cfg.setTracingSpi(new OpenCensusTracingSpi());
 
         return cfg;
     }
@@ -92,7 +90,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
 
         exporter = new TraceTestExporter();
 
-        exporter.start(provider, "all");
+        exporter.start("all");
 
         startGrids(GRID_CNT);
     }
@@ -335,13 +333,13 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
         private final TraceExporterTestHandler hnd = new TraceExporterTestHandler();
 
         /** {@inheritDoc} */
-        @Override public void start(OpenCensusTracingProvider provider, String igniteInstanceName) {
-            provider.getExportComponent().getSpanExporter().registerHandler(HANDLER_NAME, hnd);
+        @Override public void start(String igniteInstanceName) {
+            Tracing.getExportComponent().getSpanExporter().registerHandler(HANDLER_NAME, hnd);
         }
 
         /** {@inheritDoc} */
-        @Override public void stop(OpenCensusTracingProvider provider) {
-            provider.getExportComponent().getSpanExporter().unregisterHandler(HANDLER_NAME);
+        @Override public void stop() {
+            Tracing.getExportComponent().getSpanExporter().unregisterHandler(HANDLER_NAME);
         }
 
         /**
@@ -353,7 +351,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
             // There is no ability to change this behavior in Opencensus, so this hack is needed to "flush" real spans to exporter.
             // @see io.opencensus.implcore.trace.export.ExportComponentImpl.
             for (int i = 0; i < 32; i++) {
-                Span span = provider.getTracer().spanBuilder("test-" + i).setSampler(Samplers.alwaysSample()).startSpan();
+                Span span = Tracing.getTracer().spanBuilder("test-" + i).setSampler(Samplers.alwaysSample()).startSpan();
 
                 U.sleep(10); // See same hack in OpenCensusSpanAdapter#end() method.
 

@@ -21,12 +21,13 @@ package org.apache.ignite.opencensus.spi.tracing;
  */
 public interface OpenCensusTraceExporter {
     /**
-     * @param provider Tracing provider.
-     * @param igniteInstanceName Ignite instance name.
+     * Starts trace exporter on given node with name {@code igniteInstanceName}.
+     *
+     * @param igniteInstanceName Name of ignite instance.
      */
-    public void start(OpenCensusTracingProvider provider, String igniteInstanceName);
+    public void start(String igniteInstanceName);
     /**
-     * @param provider Tracing provider.
+     * Stops trace exporter.
      */
-    public void stop(OpenCensusTracingProvider provider);
+    public void stop();
 }

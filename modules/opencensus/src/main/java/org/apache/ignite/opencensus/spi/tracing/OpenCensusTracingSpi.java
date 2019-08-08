@@ -17,6 +17,7 @@
 package org.apache.ignite.opencensus.spi.tracing;
 
 import java.util.Arrays;
+import io.opencensus.trace.Tracing;
 import io.opencensus.trace.samplers.Samplers;
 import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.processors.tracing.TracingSpi;
@@ -27,38 +28,51 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Tracing SPI implementation based on OpenCensus library.
+ *
+ * If you have OpenCensus Tracing in your environment use the following code for configuration:
+ * <code>
+ *     IgniteConfiguration cfg;
+ *
+ *     cfg.setTracingSpi(new OpenCensusTracingSpi());
+ * </code>
+ * If you don't have OpenCensus Tracing:
+ * <code>
+ *     IgniteConfigiration cfg;
+ *
+ *     cfg.setTracingSpi(new OpenCensusTracingSpi(new OpenCensusZipkinTraceExporter(...)));
+ * </code>
+ *
+ * See constructors description for detailed explanation.
  */
 public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi {
     /** Configured exporters. */
-    private OpenCensusTraceExporter[] exporters;
+    private final OpenCensusTraceExporter[] exporters;
 
-    /** Tracing provider. */
-    private OpenCensusTracingProvider provider;
+    /** Flag indicates that external Tracing is used in environment. In this case no exporters will be started. */
+    private final boolean externalProvider;
 
     /**
-     * Default constructor.
+     * This constructor is used if environment (JVM) already has OpenCensus tracing.
+     * In this case traces from the node will go trough externally registered exporters by an user himself.
+     *
+     * @see Tracing#getExportComponent()
      */
     public OpenCensusTracingSpi() {
+        exporters = null;
+
+        externalProvider = true;
     }
 
     /**
-     * If environment already uses a OpenCensus tracing.
-     * In this case configured exporters will not start and traces from node
-     * will go through already configured exporters in external provider.
+     * This constructor is used if environment (JVM) hasn't OpenCensus tracing.
+     * In this case provided exporters will start and traces from the node will go through it.
      *
-     * @param provider Tracing provider.
-     */
-    public OpenCensusTracingSpi(OpenCensusTracingProvider provider) {
-        this.provider = provider;
-    }
-
-    /**
      * @param exporters Exporters.
      */
-    public OpenCensusTracingSpi withExporters(OpenCensusTraceExporter... exporters) {
+    public OpenCensusTracingSpi(OpenCensusTraceExporter... exporters) {
         this.exporters = exporters.clone();
 
-        return this;
+        externalProvider = false;
     }
 
     /** {@inheritDoc} */
@@ -67,7 +81,7 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
             OpenCensusSpanAdapter spanAdapter = (OpenCensusSpanAdapter) parentSpan;
 
             return new OpenCensusSpanAdapter(
-                provider.getTracer().spanBuilderWithExplicitParent(
+                Tracing.getTracer().spanBuilderWithExplicitParent(
                     name,
                     spanAdapter != null ? spanAdapter.impl() : null
                 )
@@ -85,9 +99,9 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
     @Override public OpenCensusSpanAdapter create(@NotNull String name, @Nullable byte[] serializedSpanBytes) {
         try {
             return new OpenCensusSpanAdapter(
-                provider.getTracer().spanBuilderWithRemoteParent(
+                Tracing.getTracer().spanBuilderWithRemoteParent(
                     name,
-                    provider.getPropagationComponent().getBinaryFormat().fromByteArray(serializedSpanBytes)
+                    Tracing.getPropagationComponent().getBinaryFormat().fromByteArray(serializedSpanBytes)
                 )
                 .setSampler(Samplers.alwaysSample())
                 .startSpan()
@@ -103,7 +117,7 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
     @Override public byte[] serialize(@NotNull Span span) {
         OpenCensusSpanAdapter spanAdapter = (OpenCensusSpanAdapter) span;
 
-        return provider.getPropagationComponent().getBinaryFormat().toByteArray(spanAdapter.impl().getContext());
+        return Tracing.getPropagationComponent().getBinaryFormat().toByteArray(spanAdapter.impl().getContext());
     }
 
     /** {@inheritDoc} */
@@ -113,19 +127,15 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
 
     /** {@inheritDoc} */
     @Override public void spiStart(String igniteInstanceName) throws IgniteSpiException {
-        if (provider == null) {
-            provider = new OpenCensusTracingProvider();
-
-            if (exporters != null)
-                for (OpenCensusTraceExporter exporter : exporters)
-                    exporter.start(provider, igniteInstanceName);
-        }
+        if (!externalProvider && exporters != null)
+            for (OpenCensusTraceExporter exporter : exporters)
+                exporter.start(igniteInstanceName);
     }
 
     /** {@inheritDoc} */
     @Override public void spiStop() throws IgniteSpiException {
-        if (exporters != null)
+        if (!externalProvider && exporters != null)
             for (OpenCensusTraceExporter exporter : exporters)
-                exporter.stop(provider);
+                exporter.stop();
     }
 }
