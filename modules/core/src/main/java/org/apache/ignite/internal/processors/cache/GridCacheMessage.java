@@ -36,7 +36,7 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.marshaller.Marshaller;
-import org.apache.ignite.plugin.extensions.communication.IdMessage;
+import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.jetbrains.annotations.Nullable;
@@ -44,7 +44,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Parent of all cache messages.
  */
-public abstract class GridCacheMessage implements IdMessage {
+public abstract class GridCacheMessage implements Message {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -167,7 +167,7 @@ public abstract class GridCacheMessage implements IdMessage {
     /**
      * @return Message ID.
      */
-    @Override public long messageId() {
+    public long messageId() {
         return msgId;
     }
 
@@ -182,7 +182,7 @@ public abstract class GridCacheMessage implements IdMessage {
     }
 
     /**
-     * Sets response id based on corresponding reqiest id.
+     * Sets response id based on corresponding request id.
      * @param reqId Request id.
      */
     public void setResponseId(long reqId) {

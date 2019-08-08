@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.msgtimelogging;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import javax.management.MalformedObjectNameException;
@@ -58,7 +57,7 @@ public class CacheMessagesTimeLoggingTest extends GridCacheMessagesTimeLoggingAb
 
         populateCache(cache);
 
-        checkOutcommingEventsNum(GridDhtTxPrepareRequest.class);
+        checkOutcomingEventsNum(GridDhtTxPrepareRequest.class);
     }
 
     /**
@@ -72,8 +71,8 @@ public class CacheMessagesTimeLoggingTest extends GridCacheMessagesTimeLoggingAb
 
         populateCache(cache0);
 
-        checkOutcommingEventsNum(GridNearAtomicSingleUpdateRequest.class);
-        checkOutcommingEventsNum(GridNearAtomicFullUpdateRequest.class);
+        checkOutcomingEventsNum(GridNearAtomicSingleUpdateRequest.class);
+        checkOutcomingEventsNum(GridNearAtomicFullUpdateRequest.class);
 
         IgniteCache<Integer, Integer> cache1 = grid(1).createCache(new CacheConfiguration<Integer, Integer>()
                                                                             .setName("some_cache_1")
@@ -81,8 +80,8 @@ public class CacheMessagesTimeLoggingTest extends GridCacheMessagesTimeLoggingAb
 
         populateCache(cache1);
 
-        checkIncommingEventsNum(GridNearAtomicSingleUpdateRequest.class);
-        checkIncommingEventsNum(GridNearAtomicFullUpdateRequest.class);
+        checkIncomingEventsNum(GridNearAtomicSingleUpdateRequest.class);
+        checkIncomingEventsNum(GridNearAtomicFullUpdateRequest.class);
     }
 
     /**
@@ -102,8 +101,8 @@ public class CacheMessagesTimeLoggingTest extends GridCacheMessagesTimeLoggingAb
             tx.commit();
         }
 
-        checkOutcommingEventsNum(GridNearLockRequest.class);
-        checkOutcommingEventsNum(GridNearTxPrepareRequest.class);
+        checkOutcomingEventsNum(GridNearLockRequest.class);
+        checkOutcomingEventsNum(GridNearTxPrepareRequest.class);
 
         IgniteCache<Integer, Integer> cache1 = grid(1).createCache(new CacheConfiguration<Integer, Integer>()
                                                                             .setName("some_cache_1")
@@ -117,8 +116,8 @@ public class CacheMessagesTimeLoggingTest extends GridCacheMessagesTimeLoggingAb
             tx.commit();
         }
 
-        checkIncommingEventsNum(GridNearLockRequest.class);
-        checkIncommingEventsNum(GridNearTxPrepareRequest.class);
+        checkIncomingEventsNum(GridNearLockRequest.class);
+        checkIncomingEventsNum(GridNearTxPrepareRequest.class);
     }
 
     /**
@@ -137,9 +136,9 @@ public class CacheMessagesTimeLoggingTest extends GridCacheMessagesTimeLoggingAb
             tx.commit();
         }
 
-        checkOutcommingEventsNum(GridNearTxEnlistRequest.class);
-        checkOutcommingEventsNum(GridNearTxPrepareRequest.class);
-        checkOutcommingEventsNum(GridDhtTxQueryFirstEnlistRequest.class);
+        checkOutcomingEventsNum(GridNearTxEnlistRequest.class);
+        checkOutcomingEventsNum(GridNearTxPrepareRequest.class);
+        checkOutcomingEventsNum(GridDhtTxQueryFirstEnlistRequest.class);
 
         IgniteCache<Integer, Integer> cache1 = grid(1).createCache(new CacheConfiguration<Integer, Integer>()
                                                                             .setName("some_cache_1")
@@ -152,8 +151,8 @@ public class CacheMessagesTimeLoggingTest extends GridCacheMessagesTimeLoggingAb
             tx.commit();
         }
 
-        checkIncommingEventsNum(GridNearTxEnlistRequest.class);
-        checkIncommingEventsNum(GridNearTxPrepareRequest.class);
+        checkIncomingEventsNum(GridNearTxEnlistRequest.class);
+        checkIncomingEventsNum(GridNearTxPrepareRequest.class);
     }
 
     /**
@@ -179,7 +178,7 @@ public class CacheMessagesTimeLoggingTest extends GridCacheMessagesTimeLoggingAb
     public void testEviction() throws InterruptedException {
         System.setProperty(IGNITE_MESSAGES_INFO_STORE_TIME, "1");
 
-        Map<Long, Long> map = Collections.synchronizedMap(new TcpCommunicationMetricsListener.TimestampMap());
+        Map<Long, Long> map = new TcpCommunicationMetricsListener.TimestampMap();
 
         map.put(10L, System.nanoTime());
         map.putIfAbsent(20L, System.nanoTime());

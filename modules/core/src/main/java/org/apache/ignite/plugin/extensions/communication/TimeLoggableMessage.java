@@ -21,5 +21,9 @@ import org.apache.ignite.spi.communication.tcp.TcpCommunicationMetricsListener;
 /**
  * Common interface for messages which can be registered in {@link TcpCommunicationMetricsListener}
  */
-public interface TimeLoggableMessage extends IdMessage{
+public interface TimeLoggableMessage extends Message{
+    /**
+     * @return Message unique id.
+     */
+    long messageId();
 }

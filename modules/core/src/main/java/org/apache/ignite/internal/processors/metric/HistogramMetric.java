@@ -29,7 +29,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public class HistogramMetric {
     /** Holder of measurements. */
-    private volatile HistogramHolder holder;
+    private HistogramHolder holder;
 
     /** */
     private String name;

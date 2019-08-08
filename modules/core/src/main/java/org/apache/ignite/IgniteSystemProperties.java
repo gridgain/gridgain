@@ -1180,6 +1180,7 @@ public final class IgniteSystemProperties {
 
     /**
      * Enables logging time between request and response messages.
+     * Default: {@code false}
      * {see {@link TcpCommunicationMetricsListener}}
      */
     public static final String IGNITE_ENABLE_MESSAGES_TIME_LOGGING = "IGNITE_ENABLE_MESSAGES_TIME_LOGGING";
@@ -1192,7 +1193,8 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_MESSAGES_INFO_STORE_TIME = "IGNITE_MESSAGES_INFO_STORE_TIME";
 
     /**
-     * Bounds for histogram metrics.
+     * Bounds for histogram metrics in milliseconds.
+     * Default: {10, 20, 40, 80, 160, 320, 500, 1000, 2000, 4000}
      * {see {@link TcpCommunicationMetricsListener}}
      */
     public static final String IGNITE_COMM_SPI_TIME_HIST_BOUNDS = "IGNITE_COMM_SPI_TIME_HIST_BOUNDS";

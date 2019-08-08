@@ -32,9 +32,6 @@ import static org.apache.ignite.spi.communication.tcp.TcpCommunicationMetricsLis
  *
  */
 public abstract class GridCacheMessagesTimeLoggingAbstractTest extends GridCommonAbstractTest {
-    /** Grid count. */
-    protected static final int GRID_CNT = 3;
-
     /**
      *
      */
@@ -72,14 +69,14 @@ public abstract class GridCacheMessagesTimeLoggingAbstractTest extends GridCommo
     /**
      *
      */
-    protected void checkOutcommingEventsNum(Class msgClass) throws MalformedObjectNameException {
+    protected void checkOutcomingEventsNum(Class msgClass) throws MalformedObjectNameException {
         checkEventsNum(0, grid(1), msgClass, true);
     }
 
     /**
      *
      */
-    protected void checkIncommingEventsNum(Class msgClass) throws MalformedObjectNameException {
+    protected void checkIncomingEventsNum(Class msgClass) throws MalformedObjectNameException {
         checkEventsNum(0, grid(1), msgClass, false);
     }
 
@@ -87,10 +84,10 @@ public abstract class GridCacheMessagesTimeLoggingAbstractTest extends GridCommo
      * Compares sent events number with histogram entries number.
      * Fails if these numbers differ.
      */
-    private void checkEventsNum(int sourceIdx, IgniteEx target, Class msgClass, boolean outcomming) throws MalformedObjectNameException {
+    private void checkEventsNum(int sourceIdx, IgniteEx target, Class msgClass, boolean outcoming) throws MalformedObjectNameException {
         RecordingSpi spi = (RecordingSpi)grid(sourceIdx).configuration().getCommunicationSpi();
 
-        HistogramMetric metric = getMetric(sourceIdx, target, msgClass, outcomming);
+        HistogramMetric metric = getMetric(sourceIdx, target, msgClass, outcoming);
         assertNotNull("HistogramMetric not found", metric);
 
         String metricName = metricName(target.localNode().id(), msgClass);
@@ -109,11 +106,11 @@ public abstract class GridCacheMessagesTimeLoggingAbstractTest extends GridCommo
      * @param msgClass Metric request class.
      * @return {@code HistogramMetric} for {@code msgClass}.
      */
-    @Nullable public HistogramMetric getMetric(int sourceNodeIdx, IgniteEx targetNode, Class msgClass, boolean outcomming) throws MalformedObjectNameException {
+    @Nullable public HistogramMetric getMetric(int sourceNodeIdx, IgniteEx targetNode, Class msgClass, boolean outcoming) throws MalformedObjectNameException {
         try {
             TcpCommunicationSpiMBean mbean = mbean(sourceNodeIdx);
 
-            Map<UUID, Map<Class<? extends Message>, HistogramMetric>> nodeMap = outcomming ? mbean.getOutMetricsByNodeByMsgClass() : mbean.getInMetricsByNodeByMsgClass();
+            Map<UUID, Map<Class<? extends Message>, HistogramMetric>> nodeMap = outcoming ? mbean.getOutMetricsByNodeByMsgClass() : mbean.getInMetricsByNodeByMsgClass();
 
             Map<Class<? extends Message>, HistogramMetric> classMap = nodeMap.get(targetNode.localNode().id());
 

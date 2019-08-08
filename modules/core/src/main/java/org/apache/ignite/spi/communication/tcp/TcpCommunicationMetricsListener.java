@@ -20,7 +20,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -32,10 +31,10 @@ import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.processors.metric.HistogramMetric;
 import org.apache.ignite.internal.util.nio.GridNioMetricsListener;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.plugin.extensions.communication.IdMessage;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.TimeLoggableMessage;
 import org.jetbrains.annotations.NotNull;
+import org.jsr166.ConcurrentLinkedHashMap;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_COMM_SPI_TIME_HIST_BOUNDS;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_MESSAGES_TIME_LOGGING;
@@ -275,7 +274,7 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
     }
 
     /**
-     * @return Map containing histogram metrics for outcomming messages by node by message class.
+     * @return Map containing histogram metrics for outcoming messages by node by message class.
      */
     public Map<UUID, Map<Class<? extends Message>, HistogramMetric>> outMetricsByNodeByMsgClass() {
         Map<UUID, Map<Class<? extends Message>, HistogramMetric>> res = new HashMap<>();
@@ -287,7 +286,7 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
     }
 
     /**
-     * @return Map containing histogram metrics for incomming messages by node by message class.
+     * @return Map containing histogram metrics for incoming messages by node by message class.
      */
     public Map<UUID, Map<Class<? extends Message>, HistogramMetric>> inMetricsByNodeByMsgClass() {
         Map<UUID, Map<Class<? extends Message>, HistogramMetric>> res = new HashMap<>();
@@ -515,16 +514,16 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
          * @param nodeId Node id.
          * @param msg Message.
          */
-        private void addTimestamp(UUID nodeId, @NotNull Message msg, boolean outcomming) {
+        private void addTimestamp(UUID nodeId, @NotNull Message msg, boolean outcoming) {
             if (!isTimeLoggingEnabled || !(msg instanceof TimeLoggableMessage))
                 return;
 
-            IdMessage idmsg = (IdMessage)msg;
+            TimeLoggableMessage tlmsg = (TimeLoggableMessage)msg;
 
-            if (idmsg.messageId() > 0)
-                processRequest(nodeId, idmsg, outcomming);
+            if (tlmsg.messageId() > 0)
+                processRequest(nodeId, tlmsg, outcoming);
             else
-                processResponse(nodeId, idmsg, !outcomming);
+                processResponse(nodeId, tlmsg, !outcoming);
         }
 
         /**
@@ -532,10 +531,10 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
          *
          * @param nodeId Request sender node Id.
          * @param req Request message.
-         * @param thisNodeSender {@code true} for outcomming requests and incomming responses.
-         *  {@code false} for incomming requests and outcomming responses.
+         * @param thisNodeSender {@code true} for outcoming requests and incoming responses.
+         *  {@code false} for incoming requests and outcoming responses.
          */
-        private void processRequest(UUID nodeId, @NotNull IdMessage req, boolean thisNodeSender) {
+        private void processRequest(UUID nodeId, @NotNull TimeLoggableMessage req, boolean thisNodeSender) {
             Map<UUID, Map<Class<? extends Message>, Map<Long, Long>>> reqTimestamps = timestampMap(thisNodeSender);
             Map<UUID, Map<Class<? extends Message>, HistogramMetric>> metricsMap    = metricsMap(thisNodeSender);
 
@@ -550,7 +549,7 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
 
             if (!nodeMap.containsKey(req.getClass())) {
                 // No message of certain class were sent to or received from nodeId
-                nodeMap.put(req.getClass(), Collections.synchronizedMap(new TimestampMap()));
+                nodeMap.put(req.getClass(), new TimestampMap());
 
                 metricsMap.get(nodeId).put(req.getClass(), new HistogramMetric(metricName(nodeId, req.getClass()),
                                                                          "",
@@ -569,9 +568,9 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
          * @param nodeId Response sender id.
          * @param resp Response message.
          */
-        private void processResponse(UUID nodeId, @NotNull IdMessage resp, boolean outcomming) {
-            Map<UUID, Map<Class<? extends Message>, Map<Long, Long>>> reqTimestamps = timestampMap(outcomming);
-            Map<UUID, Map<Class<? extends Message>, HistogramMetric>> metricsMap    = metricsMap(outcomming);
+        private void processResponse(UUID nodeId, @NotNull TimeLoggableMessage resp, boolean outcoming) {
+            Map<UUID, Map<Class<? extends Message>, Map<Long, Long>>> reqTimestamps = timestampMap(outcoming);
+            Map<UUID, Map<Class<? extends Message>, HistogramMetric>> metricsMap    = metricsMap(outcoming);
 
             if (!reqTimestamps.containsKey(nodeId))
                 return;
@@ -633,7 +632,7 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
     /**
      * Map with old entries eviction.
      */
-    public static class TimestampMap extends LinkedHashMap<Long, Long> {
+    public static class TimestampMap extends ConcurrentLinkedHashMap<Long, Long> {
         /** */
         private static final long serialVersionUID = 0L;
 

@@ -12,9 +12,6 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_MESSAGES_TI
  *
  */
 public class DisableMetricTest extends GridCacheMessagesTimeLoggingAbstractTest {
-    /** Grid count. */
-    protected static final int GRID_CNT = 3;
-
     /** {@inheritDoc} */
     @Override void setEnabledParam() {
         System.setProperty(IGNITE_ENABLE_MESSAGES_TIME_LOGGING, "not boolean value");
