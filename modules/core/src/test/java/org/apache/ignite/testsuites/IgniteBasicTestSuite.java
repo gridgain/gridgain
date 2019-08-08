@@ -34,6 +34,8 @@ import org.apache.ignite.internal.GridLifecycleAwareSelfTest;
 import org.apache.ignite.internal.GridLifecycleBeanSelfTest;
 import org.apache.ignite.internal.GridMBeansTest;
 import org.apache.ignite.internal.GridNodeMetricsLogSelfTest;
+import org.apache.ignite.internal.GridPeerDeploymentRetryModifiedTest;
+import org.apache.ignite.internal.GridPeerDeploymentRetryTest;
 import org.apache.ignite.internal.GridProjectionForCachesSelfTest;
 import org.apache.ignite.internal.GridReduceSelfTest;
 import org.apache.ignite.internal.GridReleaseTypeSelfTest;
@@ -147,7 +149,7 @@ public class IgniteBasicTestSuite {
         suite.addTest(new JUnit4TestAdapter(IgniteMessagingWithClientTest.class));
         suite.addTest(new JUnit4TestAdapter(IgniteMessagingSendAsyncTest.class));
 	    suite.addTest(new JUnit4TestAdapter(ClusterProcessorCheckGlobalStateComputeRequestTest.class));
-    
+
         GridTestUtils.addTestIfNeeded(suite, ClusterGroupSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridMessagingSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridMessagingNoPeerClassLoadingSelfTest.class, ignoredTests);
@@ -207,6 +209,9 @@ public class IgniteBasicTestSuite {
         suite.addTest(new JUnit4TestAdapter(AttributeNodeFilterSelfTest.class));
 
         suite.addTest(new JUnit4TestAdapter(WALRecordTest.class));
+
+        suite.addTest(new JUnit4TestAdapter(GridPeerDeploymentRetryTest.class));
+        suite.addTest(new JUnit4TestAdapter(GridPeerDeploymentRetryModifiedTest.class));
 
         // Basic DB data structures.
         suite.addTest(new JUnit4TestAdapter(BPlusTreeSelfTest.class));
