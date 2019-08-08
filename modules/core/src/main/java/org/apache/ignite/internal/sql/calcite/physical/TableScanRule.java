@@ -18,12 +18,14 @@ package org.apache.ignite.internal.sql.calcite.physical;
 import java.util.function.Predicate;
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptTable;
+import org.apache.calcite.plan.RelTrait;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
 import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.logical.LogicalTableScan;
 import org.apache.calcite.schema.Table;
 import org.apache.ignite.internal.sql.calcite.IgniteConvention;
+import org.apache.ignite.internal.sql.calcite.IgniteTable;
 
 /**
  * TODO: Add class description.
@@ -39,11 +41,17 @@ public class TableScanRule extends ConverterRule {
     @Override public RelNode convert(RelNode rel) {
         LogicalTableScan scan = (LogicalTableScan) rel;
         final RelOptTable relOptTable = scan.getTable();
-        final Table table = relOptTable.unwrap(Table.class); // TODO use this to change the distribution trait
+        final Table table = relOptTable.unwrap(Table.class); // TODO use this to change the distribution distTrait
         System.out.println("TableScanRule table=" + table);
 
+        IgniteTable tbl = (IgniteTable)table;
+
+        RelTrait distTrait = tbl.partitioned() ? IgniteDistributionTrait.HASH_DISTRIBUTED : IgniteDistributionTrait.BROADCAST_DISTRIBUTED;
+
+        System.out.println("TableScanRule distTrait=" + distTrait);
+
         return new TableScanRel(scan.getCluster(),
-            scan.getTraitSet().replace(IgniteConvention.INSTANCE).replace(IgniteDistributionTrait.HASH_DISTRIBUTED),
+            scan.getTraitSet().replace(IgniteConvention.INSTANCE).replace(distTrait),
             relOptTable);
     }
 }

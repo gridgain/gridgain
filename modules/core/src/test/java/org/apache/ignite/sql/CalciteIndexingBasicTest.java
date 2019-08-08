@@ -83,7 +83,10 @@ public class CalciteIndexingBasicTest extends GridCommonAbstractTest {
             "WHERE p.ver > 1")).getAll();
 
 
-//        List res = cache.query(new SqlFieldsQuery("SELECT id, name FROM Project WHERE ver > 1")).getAll();
+        //List res = cache.query(new SqlFieldsQuery("SELECT id, name FROM Project WHERE ver > 1")).getAll();
+
+//        List res = cache.query(new SqlFieldsQuery("SELECT id, name, ver FROM Project " +
+//            "WHERE ver = (SELECT MAX(projectId) FROM Developer)")).getAll();
 
         System.out.println("res="  + res);
 //        for(int i = 0; i < 1000; i++)

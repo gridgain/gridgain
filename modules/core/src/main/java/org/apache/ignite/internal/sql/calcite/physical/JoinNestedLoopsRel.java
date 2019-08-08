@@ -19,6 +19,7 @@ import java.util.Set;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.core.EquiJoin;
 import org.apache.calcite.rel.core.Join;
@@ -40,5 +41,10 @@ public class JoinNestedLoopsRel extends EquiJoin implements IgniteRel {
     public Join copy(RelTraitSet traitSet, RexNode conditionExpr, RelNode left, RelNode right, JoinRelType joinType,
         boolean semiJoinDone) {
         return new JoinNestedLoopsRel(getCluster(), traitSet, left, right, condition, getVariablesSet(), joinType);
+    }
+
+    @Override public RelWriter explainTerms(RelWriter pw) {
+        return super.explainTerms(pw)
+            .item("dist", getTraitSet().getTrait(IgniteDistributionTraitDef.INSTANCE));
     }
 }

@@ -56,7 +56,7 @@ public class JoinRule extends ConverterRule {
         final JoinInfo info = JoinInfo.of(left, right, join.getCondition()); // TODO take condition from info? See EnumerableJoinRule
 
         return new JoinNestedLoopsRel(join.getCluster(),
-            rel.getTraitSet().replace(IgniteConvention.INSTANCE),
+            rel.getTraitSet().replace(IgniteConvention.INSTANCE).replace(IgniteDistributionTrait.RANDOM_DISTRIBUTED), // TODO distribution?
             left,
             right,
             join.getCondition(),

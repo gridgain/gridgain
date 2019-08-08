@@ -71,9 +71,9 @@ public class IgniteDistributionTraitDef extends RelTraitDef<IgniteDistributionTr
 
             // UnionExchange, HashToRandomExchange, OrderedPartitionExchange and BroadcastExchange destroy the ordering property,
             // therefore RelCollation is set to default, which is EMPTY.
+
             case SINGLETON:
                 return new UnionExchangeRel(rel.getCluster(), planner.emptyTraitSet().plus(toDist).plus(IgniteConvention.INSTANCE), rel);
-            //return new UnionExchangePrel(rel.getCluster(), planner.emptyTraitSet().plus(Prel.DRILL_PHYSICAL).plus(toDist), rel);
 
             default:
                 return null;

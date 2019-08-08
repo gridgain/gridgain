@@ -87,6 +87,7 @@ import org.apache.calcite.rel.rules.UnionToDistinctRule;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.sql.SqlExplainLevel;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParseException;
@@ -241,7 +242,7 @@ public class CalcitePlanner {
         System.out.println("Rewritten logical plan:\n" + RelOptUtil.toString(rewrittenPlan));
 
         RelNode optimalPlan = optimizePlan(rewrittenPlan);
-        System.out.println("Optimal plan:\n" + RelOptUtil.toString(optimalPlan));
+        System.out.println("Optimal plan:\n" + RelOptUtil.toString(optimalPlan, SqlExplainLevel.NON_COST_ATTRIBUTES));
 
         // TODO replace with a visitor
         PhysicalOperator physicalOperator = convertToPhysical(optimalPlan);
@@ -277,7 +278,7 @@ public class CalcitePlanner {
 
         cboPlanner.setRoot(newRoot);
 
-        cboPlanner.setNoneConventionHasInfiniteCost(false);
+        cboPlanner.setNoneConventionHasInfiniteCost(true);
 
         return cboPlanner.findBestExp();
     }
@@ -300,7 +301,7 @@ public class CalcitePlanner {
     private RelNode convertToRel(SqlNode node) {
         RelRoot root = sqlToRelConverter.convertQuery(node, false, true);
 
-        return root.project();
+        return root.rel;
     }
 
     private HepPlanner getHepPlanner() {

@@ -19,6 +19,7 @@ import java.util.List;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.SingleRel;
 
 /**
@@ -42,4 +43,9 @@ public class UnionExchangeRel extends SingleRel implements IgniteRel {
         return new UnionExchangeRel(getCluster(), traitSet, sole(inputs));
     }
 
+    @Override public RelWriter explainTerms(RelWriter pw) {
+        return super.explainTerms(pw)
+            .item("from", getInput().getTraitSet().getTrait(IgniteDistributionTraitDef.INSTANCE))
+            .item("to", IgniteDistributionTrait.SINGLETON);
+    }
 }

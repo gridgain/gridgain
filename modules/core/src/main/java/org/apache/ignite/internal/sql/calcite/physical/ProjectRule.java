@@ -15,33 +15,77 @@
  */
 package org.apache.ignite.internal.sql.calcite.physical;
 
-import java.util.function.Predicate;
-import org.apache.calcite.plan.Convention;
-import org.apache.calcite.plan.RelOptUtil;
+import org.apache.calcite.plan.RelOptRuleCall;
+import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.plan.volcano.RelSubset;
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.convert.ConverterRule;
-import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.ignite.internal.sql.calcite.IgniteConvention;
 
 /**
  * TODO: Add class description.
  */
-public class ProjectRule extends ConverterRule {
+public class ProjectRule extends IgniteRule {
     public ProjectRule() {
-        super(LogicalProject.class,
-            (Predicate<LogicalProject>) RelOptUtil::containsMultisetOrWindowedAgg, // TODO why should we filter it?
-            Convention.NONE, IgniteConvention.INSTANCE,
-            RelFactories.LOGICAL_BUILDER, "IgniteProjectRule");
+        super(operand(LogicalProject.class, operand(RelNode.class, any())), "IgniteProjectRule");
     }
 
-    @Override public RelNode convert(RelNode rel) {
-        LogicalProject proj = (LogicalProject)rel;
+    @Override public void onMatch(RelOptRuleCall call) {
+        final LogicalProject proj = call.rel(0);
 
-        return new ProjectRel(rel.getCluster(),
-            rel.getTraitSet().replace(IgniteConvention.INSTANCE),
-            convert(proj.getInput(), proj.getInput().getTraitSet().replace(IgniteConvention.INSTANCE)),
-            proj.getProjects(),
-            proj.getRowType());
+        final RelNode input = proj.getInput();
+        RelTraitSet traits = input.getTraitSet().replace(IgniteConvention.INSTANCE);
+
+        RelNode convertedInput = convert(input, traits);
+
+        if (convertedInput instanceof RelSubset) {
+            RelSubset subset = (RelSubset) convertedInput;
+            for (RelNode rel : subset.getRelList()) {
+                if (!rel.getTraitSet().getTrait(IgniteDistributionTraitDef.INSTANCE).equals(IgniteDistributionTrait.ANY)) {
+                    IgniteDistributionTrait childDist = rel.getTraitSet().getTrait(IgniteDistributionTraitDef.INSTANCE);
+                    //RelCollation childCollation = rel.getTraitSet().getTrait(RelCollationTraitDef.INSTANCE);
+
+
+                    IgniteDistributionTrait newDist = convertDist(childDist); //TODO precise distribution handling see Drill's ProjectPrule
+                    //RelCollation newCollation = convertRelCollation(childCollation, inToOut);
+
+                    call.transformTo(new ProjectRel(proj.getCluster(), proj.getTraitSet().plus(newDist).plus(IgniteConvention.INSTANCE),
+                        rel, proj.getProjects(), proj.getRowType()));
+                }
+            }
+
+
+//            RelSubset subset = (RelSubset) convertedInput;
+//
+//            RelNode bestRel = subset.getBest();
+//
+//            if (bestRel != null) {
+//                call.transformTo(new ProjectRel(proj.getCluster(), bestRel.getTraitSet(), convertedInput,proj.getProjects(), proj.getRowType()));
+//
+//                return;
+//            }
+        }
+        else
+            call.transformTo(new ProjectRel(proj.getCluster(),
+                traits.simplify(),
+                convertedInput,
+                proj.getProjects(),
+                proj.getRowType()));
+
+
     }
+
+    private IgniteDistributionTrait convertDist(IgniteDistributionTrait dist) {
+        return dist;
+    }
+
+//    @Override public RelNode convert(RelNode rel) {
+//        LogicalProject proj = (LogicalProject)rel;
+//
+//        return new ProjectRel(rel.getCluster(),
+//            rel.getTraitSet().replace(IgniteConvention.INSTANCE),
+//            convert(proj.getInput(), proj.getInput().getTraitSet().replace(IgniteConvention.INSTANCE)),
+//            proj.getProjects(),
+//            proj.getRowType());
+//    }
 }

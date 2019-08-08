@@ -26,7 +26,7 @@ public class IgniteDistributionTrait implements RelTrait {
 
     public static final IgniteDistributionTrait SINGLETON = new IgniteDistributionTrait(DistributionType.SINGLETON);
     public static final IgniteDistributionTrait HASH_DISTRIBUTED = new IgniteDistributionTrait(DistributionType.HASH_DISTRIBUTED);
-    public static final IgniteDistributionTrait RANGE_DISTRIBUTED = new IgniteDistributionTrait(DistributionType.RANGE_DISTRIBUTED);
+    public static final IgniteDistributionTrait RANDOM_DISTRIBUTED = new IgniteDistributionTrait(DistributionType.RANDOM_DISTRIBUTED);
     public static final IgniteDistributionTrait BROADCAST_DISTRIBUTED = new IgniteDistributionTrait(DistributionType.BROADCAST_DISTRIBUTED);
     public static final IgniteDistributionTrait ANY = new IgniteDistributionTrait(DistributionType.ANY);
 
@@ -51,6 +51,13 @@ public class IgniteDistributionTrait implements RelTrait {
 
             if (targetType == IgniteDistributionTrait.DistributionType.ANY)
                 return true;
+
+            if (this.distType == DistributionType.HASH_DISTRIBUTED) {
+                // TODO hash distribution with different keys
+                if (targetType == DistributionType.RANDOM_DISTRIBUTED) {
+                    return true; // hash distribution subsumes random distribution and ANY distribution
+                }
+            }
         }
 
         return this.equals(trait);
@@ -68,7 +75,7 @@ public class IgniteDistributionTrait implements RelTrait {
     public enum DistributionType {
         SINGLETON,
         HASH_DISTRIBUTED,
-        RANGE_DISTRIBUTED,
+        RANDOM_DISTRIBUTED,
         BROADCAST_DISTRIBUTED,
         ANY};
 }

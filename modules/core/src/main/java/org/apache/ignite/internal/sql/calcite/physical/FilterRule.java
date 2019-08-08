@@ -15,31 +15,87 @@
  */
 package org.apache.ignite.internal.sql.calcite.physical;
 
-import org.apache.calcite.plan.Convention;
+import org.apache.calcite.plan.RelOptRule;
+import org.apache.calcite.plan.RelOptRuleCall;
+import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.plan.volcano.RelSubset;
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.convert.ConverterRule;
 import org.apache.calcite.rel.logical.LogicalFilter;
 import org.apache.ignite.internal.sql.calcite.IgniteConvention;
 
 /**
  * TODO: Add class description.
  */
-public class FilterRule extends ConverterRule {
+public class FilterRule extends IgniteRule {
 
     public FilterRule() {
-        super(LogicalFilter.class,
-            Convention.NONE,
-            IgniteConvention.INSTANCE,
-            "IgniteFilterRule");
+        super(operand(LogicalFilter.class, operand(RelNode.class, RelOptRule.any())), "IgniteFilterRule");
     }
 
-    @Override public RelNode convert(RelNode rel) {
-        final LogicalFilter filter = (LogicalFilter) rel;
+    @Override public void onMatch(RelOptRuleCall call) {
+        final LogicalFilter filter = call.rel(0);
 
-        return new FilterRel(rel.getCluster(),
-            rel.getTraitSet().replace(IgniteConvention.INSTANCE),
-            convert(filter.getInput(),
-                filter.getInput().getTraitSet().replace(IgniteConvention.INSTANCE)), // TODO why do we need to replace a child's convention?
-            filter.getCondition());
+        final RelNode input = filter.getInput();
+        RelTraitSet traits = input.getTraitSet().replace(IgniteConvention.INSTANCE);
+
+        RelNode convertedInput = convert(input, traits);
+
+        if (convertedInput instanceof RelSubset) {
+            RelSubset subset = (RelSubset) convertedInput;
+
+            RelNode bestRel = subset.getBest();
+
+            if (bestRel != null) {
+                call.transformTo(new FilterRel(filter.getCluster(), bestRel.getTraitSet(), convertedInput, filter.getCondition()));
+
+                return;
+            }
+        }
+
+        call.transformTo(new FilterRel(filter.getCluster(),
+            traits.simplify(),
+            convertedInput,
+            filter.getCondition()));
     }
+
+//    @Override public RelNode convert(RelNode rel) {
+//
+////        inal DrillFilterRel  filter = (DrillFilterRel) call.rel(0);
+////        final RelNode input = filter.getChild();
+////
+////        RelTraitSet traits = input.getTraitSet().plus(Prel.DRILL_PHYSICAL);
+////        RelNode convertedInput = convert(input, traits);
+////        boolean transform = false;
+////
+////        if (convertedInput instanceof RelSubset) {
+////            RelSubset subset = (RelSubset) convertedInput;
+////            RelNode bestRel = null;
+////            if ((bestRel = subset.getBest()) != null) {
+////                call.transformTo(new FilterPrel(filter.getCluster(), bestRel.getTraitSet(), convertedInput, filter.getCondition()));
+////                transform = true;
+////            }
+////        }
+////        if (!transform) {
+////            call.transformTo(new FilterPrel(filter.getCluster(), convertedInput.getTraitSet(), convertedInput, filter.getCondition()));
+////        }
+////    }
+//
+//        final LogicalFilter filter = (LogicalFilter) rel;
+//        final RelNode input = filter.getInput();
+//
+//        RelTraitSet traits = input.getTraitSet().replace(IgniteConvention.INSTANCE);
+//        RelNode convertedInput = RelOptRule.convert(rel, traits.simplify());
+//
+//        if (input instanceof RelSubset) {
+//            RelSubset subset = (RelSubset) input;
+//            RelNode bestRel = subset.getBest();
+//            if (bestRel != null)
+//                return new FilterRel(filter.getCluster(), bestRel.getTraitSet(), convertedInput, filter.getCondition());
+//        }
+//
+//        return new FilterRel(rel.getCluster(),
+//            traits.simplify(),
+//            convertedInput, // TODO why do we need to replace a child's convention?
+//            filter.getCondition());
+//    }
 }

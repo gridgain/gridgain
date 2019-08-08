@@ -51,7 +51,11 @@ public class IgniteTable extends AbstractTable implements ScannableTable/*, Proj
 
     final int typeId;
 
-    public IgniteTable(QueryTypeCandidate cand, String cacheName) {
+    final String tblName;
+
+
+    public IgniteTable(QueryTypeCandidate cand, String cacheName, String tblName) {
+        this.tblName = tblName;
         this.cacheName = cacheName;
         keys = Collections.singletonList(ImmutableBitSet.builder().set(0).build()); // PK is at the 0 position.
         typeId = cand.typeId().valueTypeId();
@@ -115,5 +119,9 @@ public class IgniteTable extends AbstractTable implements ScannableTable/*, Proj
 
     @Override public Enumerable<Object[]> scan(DataContext root) {
         throw new UnsupportedOperationException();
+    }
+
+    public boolean partitioned() {
+        return "Developer".equalsIgnoreCase(tblName);
     }
 }

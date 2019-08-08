@@ -18,6 +18,7 @@ package org.apache.ignite.internal.sql.calcite.physical;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.core.TableScan;
 
 /**
@@ -28,5 +29,10 @@ public class TableScanRel extends TableScan implements IgniteRel {
     protected TableScanRel(RelOptCluster cluster, RelTraitSet traitSet,
         RelOptTable table) {
         super(cluster, traitSet, table);
+    }
+
+    @Override public RelWriter explainTerms(RelWriter pw) {
+        return super.explainTerms(pw)
+            .item("dist", getTraitSet().getTrait(IgniteDistributionTraitDef.INSTANCE));
     }
 }
