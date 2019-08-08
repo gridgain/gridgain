@@ -16,6 +16,8 @@
 
 package org.apache.ignite;
 
+import java.io.PrintStream;
+import java.io.PrintWriter;
 import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -31,6 +33,9 @@ public class IgniteCheckedException extends Exception {
 
     /** */
     private final String[] ops = U.collectOperations();
+
+    /** */
+    private transient boolean verboseToString = false;
 
     /**
      * Create empty exception.
@@ -102,14 +107,34 @@ public class IgniteCheckedException extends Exception {
         return X.cause(this, cls);
     }
 
+    /** */
+    @Override public void printStackTrace(PrintStream s) {
+        verboseToString = true;
+
+        super.printStackTrace(s);
+
+        verboseToString = false;
+    }
+
+    /** */
+    @Override public void printStackTrace(PrintWriter s) {
+        verboseToString = true;
+
+        super.printStackTrace(s);
+
+        verboseToString = false;
+    }
+
     /** {@inheritDoc} */
     @Override public String toString() {
         GridStringBuilder sb = new GridStringBuilder();
 
         sb.a(getClass()).a(": ").a(getMessage());
 
-        for (String op : ops)
-            sb.a("\n").a("  ").a(op);
+        if (verboseToString) {
+            for (String op : ops)
+                sb.a("\n").a("  ").a(op);
+        }
 
         return sb.toString();
     }
