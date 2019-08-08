@@ -1203,15 +1203,6 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_DEFAULT_SQL_QUERY_MEMORY_LIMIT = "IGNITE_DEFAULT_SQL_QUERY_MEMORY_LIMIT";
 
     /**
-     * Defines memory pool size available for sql queries on node (global quota).
-     * Note: Negative value disables global memory quota for SQL, but it doesn't affects query quota.
-     *
-     * Default: 60% MaxHeapSize.
-     */
-
-    public static final String IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE = "IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE";
-
-    /**
      * Defines default memory reservation block size.
      *
      * Default: 512K.

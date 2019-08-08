@@ -32,7 +32,6 @@ import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.yardstick.IgniteAbstractBenchmark;
 import org.yardstickframework.BenchmarkConfiguration;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE;
 import static org.yardstickframework.BenchmarkUtils.println;
 
@@ -51,6 +50,9 @@ public class IgniteSqlMemTrackerBenchmark extends IgniteAbstractBenchmark {
 
     /** Query quota. */
     private long qryQuota;
+
+    /** Query quota. */
+    private long sqlGlobalQuota;
 
     {
         qrys.put("SQL_LIMIT",
@@ -100,12 +102,13 @@ public class IgniteSqlMemTrackerBenchmark extends IgniteAbstractBenchmark {
 
         initStep = args.getBooleanParameter("init", false);
         qryQuota = args.getLongParameter("qryQuota", 0);
+        sqlGlobalQuota = args.getLongParameter("qryGlobalQuota", 0);
 
         println("Benchmark parameter:");
         println("    SQL: " + sql);
         println("    Init: " + initStep);
         println("    Query quota: " + qryQuota);
-        println("    Global quota: " + Long.getLong(IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE));
+        println("    Global quota: " + sqlGlobalQuota);
         println("    Reservation block size: " + Long.getLong(IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE));
 
         if (initStep)

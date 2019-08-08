@@ -26,6 +26,7 @@ import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
@@ -37,8 +38,6 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE;
 
 /**
  * Tests for {@link SqlStatisticsHolderMemoryQuotas}. In this test we check that memory metrics reports plausible
@@ -71,6 +70,9 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
             fail(String.format("Expected no memory reserved: [freeMem=%d, maxMem=%d]", freeMem, maxMem));
     };
 
+    /** */
+    private long sqlGlobalQuota;
+
     /**
      * Start the cache with a test table and test data.
      */
@@ -92,6 +94,13 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
             cache.put(i, UUID.randomUUID().toString());
 
         return cache;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+        return super.getConfiguration(igniteInstanceName)
+            .setSqlMemoryPoolSize(sqlGlobalQuota);
     }
 
     /**
@@ -315,14 +324,9 @@ public class SqlStatisticsMemoryQuotaTest extends GridCommonAbstractTest {
      * @param maxMem value of default global quota to set on node start; -1 for unlimited.
      */
     private void startGridWithMaxMem(int nodeIdx, long maxMem) throws Exception {
-        try {
-            System.setProperty(IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE, String.valueOf(maxMem));
+        sqlGlobalQuota = maxMem;
 
-            startGrid(nodeIdx);
-        }
-        finally {
-            System.clearProperty(IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE);
-        }
+        startGrid(nodeIdx);
     }
 
     /**

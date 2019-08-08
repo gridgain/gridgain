@@ -513,6 +513,9 @@ public class IgniteConfiguration {
     /** Page memory configuration. */
     private DataStorageConfiguration dsCfg;
 
+    /** Heap memory size available for SQL queries. */
+    private long sqlMemoryPoolSize;
+
     /** Active on start flag. */
     private boolean activeOnStart = DFLT_ACTIVE_ON_START;
 
@@ -651,6 +654,7 @@ public class IgniteConfiguration {
         sndRetryCnt = cfg.getNetworkSendRetryCount();
         sndRetryDelay = cfg.getNetworkSendRetryDelay();
         sqlConnCfg = cfg.getSqlConnectorConfiguration();
+        sqlMemoryPoolSize = cfg.getSqlMemoryPoolSize();
         sqlQryHistSize = cfg.getSqlQueryHistorySize();
         sqlSchemas = cfg.getSqlSchemas();
         sslCtxFactory = cfg.getSslContextFactory();
@@ -3158,6 +3162,34 @@ public class IgniteConfiguration {
     @Deprecated
     public SqlConnectorConfiguration getSqlConnectorConfiguration() {
         return sqlConnCfg;
+    }
+
+    /**
+     * Sets memory pool size available for sql queries on node (global quota).
+     * Sql will be forcibly stopped if quota is exceeded.
+     *
+     * Note: Negative value means unlimited. Zero value means default value will be used.
+     *
+     * Default: 60% MaxHeapSize.
+     *
+     * @param sqlMemoryPoolSize Memory available for sql queries in bytes.
+     * @return {@code this} for chaining.
+     */
+    public IgniteConfiguration setSqlMemoryPoolSize(long sqlMemoryPoolSize) {
+        this.sqlMemoryPoolSize = sqlMemoryPoolSize;
+
+        return this;
+    }
+
+    /**
+     * Get configured memory pool size.
+     *
+     * Note: Negative value means unlimited. Zero value means default value will be used.
+     *
+     * @return Memory available for sql queries in bytes.
+     */
+    public long getSqlMemoryPoolSize() {
+        return sqlMemoryPoolSize;
     }
 
     /**

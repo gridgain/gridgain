@@ -27,6 +27,7 @@ import java.util.List;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
+import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.oom.QueryMemoryTrackerSelfTest;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -47,6 +48,10 @@ public class JdbcThinQueryMemoryTrackerSelfTest extends QueryMemoryTrackerSelfTe
     /** {@inheritDoc} */
     @Test
     @Override public void testGlobalQuota() throws Exception {
+        IgniteH2Indexing h2 = (IgniteH2Indexing)grid(0).context().query().getIndexing();
+
+        assertEquals(10L * MB, h2.memoryManager().maxMemory());
+
         maxMem = 8 * MB;
 
         final List<ResultSet> results = Collections.synchronizedList(new ArrayList<>());
@@ -54,7 +59,7 @@ public class JdbcThinQueryMemoryTrackerSelfTest extends QueryMemoryTrackerSelfTe
         final List<IgniteInternalFuture> futs = new ArrayList<>();
 
         try {
-            for (int i = 0; i < 10; i++) {
+            for (int i = 0; i < 20; i++) {
                 futs.add(GridTestUtils.runAsync(() -> {
                         Connection conn = createConnection(true);
                         Statement stmt = conn.createStatement();

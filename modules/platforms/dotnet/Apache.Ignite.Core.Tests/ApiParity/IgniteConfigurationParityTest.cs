@@ -84,7 +84,8 @@ namespace Apache.Ignite.Core.Tests.ApiParity
             "TimeServerPortRange",
             "IncludeProperties",
             "isAutoActivationEnabled",  // IGNITE-7301
-            "NetworkCompressionLevel"
+            "NetworkCompressionLevel",
+            "SqlMemoryPoolSize" //GG-22627
         };
 
         /// <summary>

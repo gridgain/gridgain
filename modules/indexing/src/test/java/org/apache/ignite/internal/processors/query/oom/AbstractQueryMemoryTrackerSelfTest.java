@@ -75,7 +75,6 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         super.beforeTestsStarted();
 
         System.setProperty(IgniteSystemProperties.IGNITE_H2_LOCAL_RESULT_FACTORY, TestH2LocalResultFactory.class.getName());
-        System.setProperty(IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE, Long.toString(10L * MB));
         System.setProperty(IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE, Long.toString(KB));
 
         startGrid(0);
@@ -96,7 +95,6 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         stopAllGrids();
 
         System.clearProperty(IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE);
-        System.clearProperty(IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE);
         System.clearProperty(IgniteSystemProperties.IGNITE_H2_LOCAL_RESULT_FACTORY);
     }
 
@@ -166,6 +164,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
+            .setSqlMemoryPoolSize(10 * MB)
             .setClientMode(client);
     }
 

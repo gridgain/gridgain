@@ -200,6 +200,10 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
     @Override public void testGlobalQuota() throws Exception {
         final List<QueryCursor> cursors = new ArrayList<>();
 
+        IgniteH2Indexing h2 = (IgniteH2Indexing)grid(1).context().query().getIndexing();
+
+        assertEquals(10L * MB, h2.memoryManager().maxMemory());
+
         try {
             CacheException ex = (CacheException)GridTestUtils.assertThrows(log, () -> {
                 for (int i = 0; i < 100; i++) {
@@ -223,8 +227,6 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
 
             assertEquals(61, localResults.size());
             assertEquals(21, cursors.size());
-
-            IgniteH2Indexing h2 = (IgniteH2Indexing)grid(1).context().query().getIndexing();
 
             long globalAllocated = h2.memoryManager().memoryReserved();
 

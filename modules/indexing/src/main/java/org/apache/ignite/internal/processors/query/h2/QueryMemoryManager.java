@@ -90,25 +90,27 @@ public class QueryMemoryManager extends H2MemoryTracker {
         if (Runtime.getRuntime().maxMemory() <= globalQuota)
             throw new IllegalStateException("Sql memory pool size can't be more than heap memory max size.");
 
-        if (globalQuota == 0) {
-            globalQuota = Long.getLong(IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE,
-                (long)(Runtime.getRuntime().maxMemory() * 0.6d));
-        }
+        this.log = ctx.log(QueryMemoryManager.class);
+
+        if (globalQuota == 0)
+            globalQuota = (long)(Runtime.getRuntime().maxMemory() * 0.6d);
 
         long dfltMemLimit = Long.getLong(IgniteSystemProperties.IGNITE_DEFAULT_SQL_QUERY_MEMORY_LIMIT, 0);
 
-        if (dfltMemLimit == 0)
+        if (dfltMemLimit <= 0)
             dfltMemLimit = globalQuota > 0 ? globalQuota / IgniteConfiguration.DFLT_QUERY_THREAD_POOL_SIZE : -1;
+        else if (globalQuota > 0 && dfltMemLimit > globalQuota) {
+            U.warn(log, "Max query memory can't exceeds SQL memory pool size. Will be reduced down to: " + globalQuota);
+
+            dfltMemLimit = globalQuota;
+        }
 
         this.blockSize = Long.getLong(IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE, DFLT_MEMORY_RESERVATION_BLOCK_SIZE);
         this.globalQuota = globalQuota;
         this.dfltSqlQryMemoryLimit = dfltMemLimit;
 
         this.reserveOp = new ReservationOp(globalQuota);
-
-        this.log = ctx.log(QueryMemoryManager.class);
-
-        metrics = new SqlStatisticsHolderMemoryQuotas(this, ctx.metric());
+        this.metrics = new SqlStatisticsHolderMemoryQuotas(this, ctx.metric());
     }
 
     /** {@inheritDoc} */
@@ -148,7 +150,7 @@ public class QueryMemoryManager extends H2MemoryTracker {
         if (maxQueryMemory == 0)
             maxQueryMemory = dfltSqlQryMemoryLimit;
 
-        if (dfltSqlQryMemoryLimit < 0)
+        if (maxQueryMemory < 0)
             return null;
 
         if (globalQuota > 0 && globalQuota < maxQueryMemory) {
