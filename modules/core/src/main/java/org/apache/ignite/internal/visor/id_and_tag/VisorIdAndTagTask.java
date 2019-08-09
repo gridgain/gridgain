@@ -41,7 +41,12 @@ public class VisorIdAndTagTask extends VisorOneNodeTask<VisorIdAndTagTaskArg, Vi
         return new VisorIdAndTagJob(arg, debug);
     }
 
+    /**
+     * 
+     */
     private static class VisorIdAndTagJob extends VisorJob<VisorIdAndTagTaskArg, VisorIdAndTagTaskResult> {
+        /** */
+        private static final long serialVersionUID = 0L;
 
         /**
          * Create job with specified argument.
