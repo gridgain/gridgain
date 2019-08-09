@@ -166,7 +166,7 @@ public class BrowsersService extends AbstractSocketHandler {
                         throw new IllegalStateException(messages.getMessage("err.missing-cluster-id-param"));
 
                     if (evt.getEventType().equals(NODE_VISOR))
-                        evt.setPayload(toJson(fillVisorGatawayTaskParams(payload)));
+                        evt.setPayload(toJson(fillVisorGatewayTaskParams(payload)));
 
                     sendToAgent(new AgentKey(accId, clusterId), evt);
 
@@ -320,7 +320,7 @@ public class BrowsersService extends AbstractSocketHandler {
      *
      * @param payload Task event.
      */
-    protected JsonObject fillVisorGatawayTaskParams(JsonObject payload) {
+    protected JsonObject fillVisorGatewayTaskParams(JsonObject payload) {
         JsonObject params = payload.getJsonObject("params");
 
         String taskId = params.getString("taskId");
