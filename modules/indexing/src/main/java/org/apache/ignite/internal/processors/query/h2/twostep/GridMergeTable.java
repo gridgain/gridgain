@@ -34,6 +34,8 @@ import org.h2.table.TableBase;
 import org.h2.table.TableFilter;
 import org.h2.table.TableType;
 
+import static org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex.getTreeIndexCost;
+
 /**
  * Merge table for distributed queries.
  */
@@ -194,7 +196,7 @@ public class GridMergeTable extends TableBase {
             SortOrder sortOrder, HashSet<Column> allColumnsSet) {
             long rows = getRowCountApproximation();
 
-            return getCostRangeIndex(masks, rows, filters, filter, sortOrder, true, allColumnsSet);
+            return getTreeIndexCost(this, masks, rows, filters, filter, sortOrder, true, allColumnsSet);
         }
     }
 }
