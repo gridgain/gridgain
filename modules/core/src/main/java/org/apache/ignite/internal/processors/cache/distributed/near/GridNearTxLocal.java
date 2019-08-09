@@ -293,6 +293,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
      * @param taskNameHash Task name hash code.
      * @param txDumpsThrottling Log throttling information.
      * @param lb Label.
+     * @param tracingEnabled {@code true} if the transaction should be traced.
      */
     public GridNearTxLocal(
         GridCacheSharedContext ctx,
@@ -309,6 +310,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
         @Nullable UUID subjId,
         int taskNameHash,
         @Nullable String lb,
+        boolean tracingEnabled,
         @Nullable IgniteTxManager.TxDumpsThrottling txDumpsThrottling
     ) {
         super(
