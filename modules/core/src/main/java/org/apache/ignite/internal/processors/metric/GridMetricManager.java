@@ -116,6 +116,9 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
     /** System metrics prefix. */
     public static final String SYS_METRICS = "sys";
 
+    /** System metrics prefix. */
+    public static final String DIAGNOSTIC_METRICS = "diagnostic";
+
     /** GC CPU load metric name. */
     public static final String GC_CPU_LOAD = "GcCpuLoad";
 
@@ -138,7 +141,7 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
     public static final String DAEMON_THREAD_CNT = "DaemonThreadCount";
 
     /** Metric registry name for transaction metrics. */
-    public static final String TRANSACTION_METRICS = "Transactions";
+    public static final String TRANSACTION_METRICS = "transactions";
 
     /** JVM interface to memory consumption info */
     private static final MemoryMXBean mem = ManagementFactory.getMemoryMXBean();
@@ -501,7 +504,7 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
 
     /** */
     private void registerTransactionMetrics() {
-        MetricRegistry reg = registry(TRANSACTION_METRICS);
+        MetricRegistry reg = registry(metricName(DIAGNOSTIC_METRICS, TRANSACTION_METRICS));
 
         reg.longAdderMetric(GridNearTxLocal.METRIC_TOTAL_SYSTEM_TIME, "Total transactions system time on node.");
         reg.longAdderMetric(GridNearTxLocal.METRIC_TOTAL_USER_TIME, "Total transactions user time on node.");

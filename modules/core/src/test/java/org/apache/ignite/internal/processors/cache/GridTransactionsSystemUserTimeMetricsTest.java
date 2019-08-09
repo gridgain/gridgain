@@ -55,6 +55,7 @@ import static org.apache.ignite.internal.processors.cache.distributed.near.GridN
 import static org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal.METRIC_TOTAL_SYSTEM_TIME;
 import static org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal.METRIC_TOTAL_USER_TIME;
 import static org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal.METRIC_USER_TIME_HISTOGRAM;
+import static org.apache.ignite.internal.processors.metric.GridMetricManager.DIAGNOSTIC_METRICS;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.TRANSACTION_METRICS;
 
 /**
@@ -174,7 +175,7 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
                 return null;
             };
 
-            DynamicMBean tranMBean = metricSet(CLIENT, null, TRANSACTION_METRICS);
+            DynamicMBean tranMBean = metricSet(CLIENT, DIAGNOSTIC_METRICS, TRANSACTION_METRICS);
 
             //slow user
             slowPrepare = false;

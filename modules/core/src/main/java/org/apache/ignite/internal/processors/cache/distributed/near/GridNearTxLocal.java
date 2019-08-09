@@ -79,7 +79,6 @@ import org.apache.ignite.internal.processors.cache.transactions.TransactionProxy
 import org.apache.ignite.internal.processors.cache.transactions.TransactionProxyImpl;
 import org.apache.ignite.internal.processors.cache.transactions.TransactionProxyRollbackOnlyImpl;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
-import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetricImpl;
@@ -128,6 +127,9 @@ import static org.apache.ignite.internal.processors.cache.GridCacheOperation.TRA
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.UPDATE;
 import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry.SER_READ_EMPTY_ENTRY_VER;
 import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry.SER_READ_NOT_EMPTY_VER;
+import static org.apache.ignite.internal.processors.metric.GridMetricManager.DIAGNOSTIC_METRICS;
+import static org.apache.ignite.internal.processors.metric.GridMetricManager.TRANSACTION_METRICS;
+import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
 import static org.apache.ignite.transactions.TransactionState.ACTIVE;
 import static org.apache.ignite.transactions.TransactionState.COMMITTED;
 import static org.apache.ignite.transactions.TransactionState.COMMITTING;
@@ -148,16 +150,16 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
     private static final long serialVersionUID = 0L;
 
     /** Metric name for total system time on node. */
-    public static final String METRIC_TOTAL_SYSTEM_TIME = "TotalNodeSystemTime";
+    public static final String METRIC_TOTAL_SYSTEM_TIME = "totalNodeSystemTime";
 
     /** Metric name system time histogram on node. */
-    public static final String METRIC_SYSTEM_TIME_HISTOGRAM = "NodeSystemTimeHistogram";
+    public static final String METRIC_SYSTEM_TIME_HISTOGRAM = "nodeSystemTimeHistogram";
 
     /** Metric name for total user time on node. */
-    public static final String METRIC_TOTAL_USER_TIME = "TotalNodeUserTime";
+    public static final String METRIC_TOTAL_USER_TIME = "totalNodeUserTime";
 
     /** Metric name user time histogram on node. */
-    public static final String METRIC_USER_TIME_HISTOGRAM = "NodeUserTimeHistogram";
+    public static final String METRIC_USER_TIME_HISTOGRAM = "nodeUserTimeHistogram";
 
     /** Histogram buckets for metrics of system and user time. */
     public static final long[] METRIC_TIME_BUCKETS =
@@ -5092,7 +5094,8 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
      * @param userTime User time.
      */
     private void writeTxMetrics(long systemTime, long userTime) {
-        MetricRegistry txMetricRegistry = cctx.kernalContext().metric().registry(GridMetricManager.TRANSACTION_METRICS);
+        MetricRegistry txMetricRegistry = cctx.kernalContext().metric()
+            .registry(metricName(DIAGNOSTIC_METRICS, TRANSACTION_METRICS));
 
         writeTxMetrics(txMetricRegistry, METRIC_TOTAL_SYSTEM_TIME, METRIC_SYSTEM_TIME_HISTOGRAM, systemTime);
         writeTxMetrics(txMetricRegistry, METRIC_TOTAL_USER_TIME, METRIC_USER_TIME_HISTOGRAM, userTime);
