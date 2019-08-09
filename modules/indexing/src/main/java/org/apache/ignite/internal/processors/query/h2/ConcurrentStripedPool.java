@@ -20,7 +20,7 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.LongAdder;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -33,27 +33,32 @@ public class ConcurrentStripedPool<E> implements Iterable<E> {
     /** Stripe pools. */
     private final ConcurrentLinkedQueue<E>[] stripePools;
 
-    /** Stripe pools size (calculates fast, optimistic and approximate). */
-    private LongAdder[] stripeSize;
-
     /** Stripes count. */
     private final int stripes;
+
+    /** Stripe pools size (calculates fast, optimistic and approximate). */
+    private AtomicInteger[] stripeSize;
+
+    /** Max pool size. */
+    private int maxPoolSize;
 
     /**
      * Constructor.
      *
      * @param stripes Count of stripes.
+     * @param maxPoolSize Max pool size.
      */
     @SuppressWarnings("unchecked")
-    public ConcurrentStripedPool(int stripes) {
+    public ConcurrentStripedPool(int stripes, int maxPoolSize) {
         this.stripes = stripes;
+        this.maxPoolSize = maxPoolSize;
 
         stripePools = new ConcurrentLinkedQueue[stripes];
-        stripeSize = new LongAdder[stripes];
+        stripeSize = new AtomicInteger[stripes];
 
         for (int i = 0; i < stripes; ++i) {
             stripePools[i] = new ConcurrentLinkedQueue<>();
-            stripeSize[i] = new LongAdder();
+            stripeSize[i] = new AtomicInteger();
         }
     }
 
@@ -61,15 +66,20 @@ public class ConcurrentStripedPool<E> implements Iterable<E> {
      * Pushes an element onto the pool.
      *
      * @param e the element to push
-     * @throws NullPointerException if the specified element is null and this
-     *         deque does not permit null elements
+     * @throws NullPointerException if the specified element is null and this deque does not permit null elements
+     * @return {@code true} if the element is returned to the pool, {@code false} if the is no space at the pool.
      */
-    public void recycle(E e) {
+    public boolean recycle(E e) {
+        if (stripeSize[(int)(Thread.currentThread().getId() % stripes)].get() > maxPoolSize)
+            return false;
+
         int idx = (int)(Thread.currentThread().getId() % stripes);
 
         stripePools[idx].add(e);
 
-        stripeSize[idx].increment();
+        stripeSize[idx].incrementAndGet();
+
+        return true;
     }
 
     /**
@@ -83,23 +93,21 @@ public class ConcurrentStripedPool<E> implements Iterable<E> {
         E r = stripePools[idx].poll();
 
         if (r != null)
-         stripeSize[idx].decrement();
+            stripeSize[idx].decrementAndGet();
 
         return r;
     }
 
-    /**
-     * @return Approximate size of pool (faster than ConcurrentLinkedDeque#size()).
-     */
-    public int size() {
-        return stripeSize[(int)(Thread.currentThread().getId() % stripes)].intValue();
-    }
+//    /**
+//     * @return Approximate size of pool (faster than ConcurrentLinkedDeque#size()).
+//     */
+//    private int size() {
+//        return ;
+//    }
 
     /**
-     * Performs the given action for each element of the pool
-     * until all elements have been processed or the action throws an
-     * exception. Exceptions thrown by the action are relayed to the
-     * caller.
+     * Performs the given action for each element of the pool until all elements have been processed or the action
+     * throws an exception. Exceptions thrown by the action are relayed to the caller.
      *
      * @param action The action to be performed for each element
      * @throws NullPointerException if the specified action is null
@@ -164,5 +172,12 @@ public class ConcurrentStripedPool<E> implements Iterable<E> {
      */
     public Stream<E> stream() {
         return StreamSupport.stream(spliterator(), false);
+    }
+
+    /**
+     * @param size New max pool size.
+     */
+    public void resize(int size) {
+        maxPoolSize = size;
     }
 }

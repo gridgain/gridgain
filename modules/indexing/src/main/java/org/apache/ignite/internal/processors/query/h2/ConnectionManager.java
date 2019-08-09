@@ -49,7 +49,7 @@ public class ConnectionManager {
         ";DEFAULT_TABLE_ENGINE=" + GridH2DefaultTableEngine.class.getName();
 
     /** Default maximum size of connection pool. */
-    private static final int CONNECTION_POOL_SIZE = 32;
+    private static final int DFLT_CONNECTION_POOL_SIZE = 32;
 
     /*
      * Initialize system properties for H2.
@@ -84,9 +84,6 @@ public class ConnectionManager {
     /** Connection pool. */
     private ConcurrentStripedPool<H2Connection> connPool;
 
-    /** Connection pool max size. */
-    private volatile int poolMaxSize = CONNECTION_POOL_SIZE;
-
     /** H2 connection for INFORMATION_SCHEMA. Holds H2 open until node is stopped. */
     private volatile Connection sysConn;
 
@@ -99,7 +96,7 @@ public class ConnectionManager {
         String localResultFactoryClass = System.getProperty(
             IgniteSystemProperties.IGNITE_H2_LOCAL_RESULT_FACTORY, H2LocalResultFactory.class.getName());
 
-        connPool = new ConcurrentStripedPool<>(ctx.config().getQueryThreadPoolSize());
+        connPool = new ConcurrentStripedPool<>(ctx.config().getQueryThreadPoolSize(), DFLT_CONNECTION_POOL_SIZE);
 
         dbUrl = "jdbc:h2:mem:" + ctx.localNodeId() + DEFAULT_DB_OPTIONS +
             ";LOCAL_RESULT_FACTORY=\"" + localResultFactoryClass + "\"";
@@ -249,7 +246,7 @@ public class ConnectionManager {
         if (size <= 0)
             throw new IllegalArgumentException("Invalid connection pool size: " + size);
 
-        poolMaxSize = size;
+        connPool.resize(size);
     }
 
     /**
@@ -299,9 +296,7 @@ public class ConnectionManager {
 
         assert rmv : "Connection isn't tracked [conn=" + conn + ']';
 
-        if (connPool.size() < poolMaxSize)
-            connPool.recycle(conn);
-        else
+        if (!connPool.recycle(conn))
             conn.close();
     }
 }

@@ -506,7 +506,7 @@ public class GridH2Table extends TableBase {
     /**
      * @param ses H2 session.
      */
-    public void readLockInternal(Session ses) {
+    private void readLockInternal(Session ses) {
         SessionLock sesLock = sessions.get(ses);
 
         assert sesLock != null && !sesLock.isExclusive()
@@ -524,7 +524,7 @@ public class GridH2Table extends TableBase {
      *
      * @param ses H2 session.
      */
-    public void unlockReadInternal(Session ses) {
+    private void unlockReadInternal(Session ses) {
         SessionLock sesLock = sessions.get(ses);
 
         assert sesLock != null && !sesLock.isExclusive()
@@ -1548,8 +1548,6 @@ public class GridH2Table extends TableBase {
         /** Locked by current thread flag. */
         boolean locked;
 
-        public Exception onlock;
-
         /**
          * Constructor for shared lock.
          *
@@ -1558,7 +1556,6 @@ public class GridH2Table extends TableBase {
         private SessionLock(long ver) {
             this.ver = ver;
             locked = true;
-//            onlock = new Exception("onlock");
         }
 
         /**

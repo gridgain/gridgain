@@ -60,11 +60,6 @@ public abstract class AbstractQueryTableLockAndConnectionPoolSelfTest extends Ab
     private static final long TEST_DUR = 10_000L;
 
     /** {@inheritDoc} */
-    @Override protected long getTestTimeout() {
-        return Long.MAX_VALUE;
-    }
-
-    /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
     }

@@ -302,16 +302,8 @@ class MapQueryResult {
 
     /** */
     public void unlockTables() {
-        if (!closed && ses.isLazyQueryExecution()) {
-//            if (!conn.used.get() && ses.getLocks().length != 0) {
-//                log.error("+++ Already closed " + conn + ", locked tables=" + Arrays.toString(ses.getLocks()),
-//                    conn.onclose);
-//
-//                assert conn.used.get() : "Invalid connection state state " + conn;
-//            }
-
+        if (!closed && ses.isLazyQueryExecution())
             GridH2Table.unlockTables(ses);
-        }
     }
 
     /**
