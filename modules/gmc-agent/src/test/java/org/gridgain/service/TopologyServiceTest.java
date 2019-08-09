@@ -51,13 +51,13 @@ public class TopologyServiceTest extends AbstractServiceTest {
      */
     @Test
     public void sendTopologyUpdate() {
-        TopologyService srvc = new TopologyService(getMockContext(), getMockWebSocketManager());
+        TopologyService srvc = new TopologyService(getMockContext(), mgr);
 
         srvc.sendTopologyUpdate(null, null);
 
         ArgumentCaptor<String> destCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
-        verify(ses, times(1)).send(destCaptor.capture(), payloadCaptor.capture());
+        verify(mgr, times(1)).send(destCaptor.capture(), payloadCaptor.capture());
 
         TopologySnapshot actualTop = (TopologySnapshot) payloadCaptor.getValue();
 
@@ -74,13 +74,13 @@ public class TopologyServiceTest extends AbstractServiceTest {
      */
     @Test
     public void sendBaseline() {
-        TopologyService srvc = new TopologyService(getMockContext(), getMockWebSocketManager());
+        TopologyService srvc = new TopologyService(getMockContext(), mgr);
 
         srvc.sendBaseline();
 
         ArgumentCaptor<String> destCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
-        verify(ses, times(1)).send(destCaptor.capture(), payloadCaptor.capture());
+        verify(mgr, times(1)).send(destCaptor.capture(), payloadCaptor.capture());
 
         TopologySnapshot actualTop = (TopologySnapshot) payloadCaptor.getValue();
 
@@ -97,13 +97,13 @@ public class TopologyServiceTest extends AbstractServiceTest {
      */
     @Test
     public void sendClusterActiveState() {
-        TopologyService srvc = new TopologyService(getMockContext(), getMockWebSocketManager());
+        TopologyService srvc = new TopologyService(getMockContext(), mgr);
 
         srvc.sendClusterActiveState(null);
 
         ArgumentCaptor<String> destCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
-        verify(ses, times(1)).send(destCaptor.capture(), payloadCaptor.capture());
+        verify(mgr, times(1)).send(destCaptor.capture(), payloadCaptor.capture());
 
         Boolean activeState = (Boolean) payloadCaptor.getValue();
 

@@ -45,6 +45,9 @@ public abstract class AbstractServiceTest {
     /** Session. */
     protected StompSession ses = mock(StompSession.class);
 
+    /** Websocket manager. */
+    protected WebSocketManager mgr = getMockWebSocketManager();
+
     /**
      * @return Mocked web socket manager.
      */

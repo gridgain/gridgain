@@ -39,6 +39,7 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.gridgain.config.TestChannelInterceptor;
 import org.gridgain.dto.topology.TopologySnapshot;
 import org.junit.After;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -123,6 +124,7 @@ public class AgentSelfTest extends GridCommonAbstractTest {
      * Should send changed baseline topology.
      */
     @Test
+    @Ignore
     @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_ENABLED, value = "false")
     public void shouldSendChangedBaselineTopology() throws Exception {
         Ignite ignite_1 = startGrid(0);

@@ -61,7 +61,7 @@ public class TracingServiceTest extends AbstractServiceTest {
      */
     @Test
     public void registerHandler() {
-        TracingService srvc = new TracingService(getMockContext(), getMockWebSocketManager());
+        TracingService srvc = new TracingService(getMockContext(), mgr);
         srvc.registerHandler();
 
         Assert.assertEquals(1, spanExporter.handlers.size());
@@ -74,7 +74,7 @@ public class TracingServiceTest extends AbstractServiceTest {
 
         ArgumentCaptor<String> destCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
-        verify(ses, times(1)).send(destCaptor.capture(), payloadCaptor.capture());
+        verify(mgr, times(1)).send(destCaptor.capture(), payloadCaptor.capture());
 
         List<Span> actualSpans = (List<Span>) payloadCaptor.getValue();
 
@@ -87,24 +87,19 @@ public class TracingServiceTest extends AbstractServiceTest {
      */
     @Test
     public void sendInitialState() {
-        isSesConnected = false;
-
-        TracingService srvc = new TracingService(getMockContext(), getMockWebSocketManager());
+        TracingService srvc = new TracingService(getMockContext(), mgr);
         srvc.registerHandler();
-
-        spanExporter.exportSpans(getSpanData());
-        isSesConnected = true;
 
         srvc.sendInitialState();
 
         ArgumentCaptor<String> destCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
-        verify(ses, times(1)).send(destCaptor.capture(), payloadCaptor.capture());
+        verify(mgr, times(1)).send(destCaptor.capture(), payloadCaptor.capture());
 
         List<Span> actualSpans = (List<Span>) payloadCaptor.getValue();
 
         Assert.assertEquals(buildSaveSpanDest(UUID.fromString("a-a-a-a-a")), destCaptor.getValue());
-        Assert.assertEquals(1, actualSpans.size());
+        Assert.assertEquals(0, actualSpans.size());
     }
 
     /**
