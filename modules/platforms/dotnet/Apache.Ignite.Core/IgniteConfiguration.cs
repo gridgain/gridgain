@@ -1685,8 +1685,8 @@ namespace Apache.Ignite.Core
         public ICollection<string> SqlSchemas { get; set; }
 
         /// <summary>
-        /// TODO
+        /// Gets or sets custom executor configuration for compute tasks.
         /// </summary>
-        public object ExecutorConfiguration { get; set; }
+        public ICollection<ExecutorConfiguration> ExecutorConfiguration { get; set; }
     }
 }

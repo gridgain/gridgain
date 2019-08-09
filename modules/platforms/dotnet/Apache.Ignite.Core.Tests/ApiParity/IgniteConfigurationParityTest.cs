@@ -61,7 +61,6 @@ namespace Apache.Ignite.Core.Tests.ApiParity
             "ClassLoader",
             "CacheStoreSessionListenerFactories",
             "PlatformConfiguration",
-            "ExecutorConfiguration",
             "CommunicationFailureResolver",
             "EncryptionSpi"
         };
