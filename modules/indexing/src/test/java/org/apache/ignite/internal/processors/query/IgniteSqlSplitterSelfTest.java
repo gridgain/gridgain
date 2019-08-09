@@ -484,7 +484,6 @@ public class IgniteSqlSplitterSelfTest extends AbstractIndexingCommonTest {
                 "select count(1) from Person2 q where q.orgId = p.orgId " +
                 "from Person2 p order by name desc")).getAll();
 
-            System.out.println("rs=" + rs);
             assertEquals(2, rs.size());
             assertEquals("Vasya", rs.get(0).get(0));
             assertEquals(2L, rs.get(0).get(1));

@@ -64,7 +64,7 @@ public class SortedExternalGroupByResult extends AbstractExternalResult<Object> 
         Session ses,
         H2MemoryTracker memTracker,
         long initSize) {
-        super(ctx, memTracker);
+        super(ctx, memTracker, "sortedGroupBy");
 
         chunks = new ArrayList<>();
         cmp = ses.getDatabase().getCompareMode();

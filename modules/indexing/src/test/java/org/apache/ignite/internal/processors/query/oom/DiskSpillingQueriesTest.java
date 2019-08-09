@@ -26,6 +26,13 @@ import org.junit.runners.Parameterized;
 /**
  * Test for the intermediate query results disk offloading (disk spilling).
  * TODO: Tests with indexes on fields
+ * TODO: Group by tests for all kinds of aggregates:See removed AggregateSerializer
+ * TODO: check is thrown exception for user aggregates
+ * TODO: add groupings to all possible tests
+ * TODO: check that group-by spill files were actually created.
+ * TODO: remove hasFixedSizeInBytes
+ * TODO: aggretates merged in the right way. Especially variance and stdDev
+ * TODO: accomplish PlainExternalGroupByData and tests for it
  *
  */
 @RunWith(Parameterized.class)

@@ -101,7 +101,7 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
         SortOrder sort,
         H2MemoryTracker memTracker,
         long initSize) {
-        super(ctx, memTracker);
+        super(ctx, memTracker, "sorted");
 
         this.distinct = distinct;
         this.distinctIndexes = distinctIndexes;

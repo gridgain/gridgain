@@ -78,11 +78,11 @@ public abstract class AbstractExternalResult<T> implements AutoCloseable{
      * @param ctx Kernal context.
      * @param memTracker Memory tracker
      */
-    protected AbstractExternalResult(GridKernalContext ctx, H2MemoryTracker memTracker) {
+    protected AbstractExternalResult(GridKernalContext ctx, H2MemoryTracker memTracker, String type) {
         this.log = ctx.log(AbstractExternalResult.class);
 
         try {
-            String fileName = "spill_" + ctx.localNodeId() + "_" + idGen.incrementAndGet();
+            String fileName = "spill_" + type + "_" + ctx.localNodeId() + "_" + idGen.incrementAndGet();
 
             file = new File(U.resolveWorkDirectory(
                 ctx.config().getWorkDirectory(),
