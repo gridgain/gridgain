@@ -270,6 +270,9 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
             if (waitInfo == null || !waitInfo.topVer.equals(lastAffVer))
                 return;
 
+            IgniteInternalFuture<AffinityTopologyVersion> future = cctx.exchange().affinityReadyFuture(lastAffVer);
+            assert  future.isDone() : "^^^ASSERT" + future;
+
             Map<Integer, UUID> partWait = waitInfo.waitGrps.get(checkGrpId);
 
             boolean rebalanced = true;
