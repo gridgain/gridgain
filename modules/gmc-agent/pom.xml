@@ -151,7 +151,7 @@
             <groupId>org.gridgain</groupId>
             <artifactId>ignite-spring</artifactId>
             <version>${project.version}</version>
-            <scope>test</scope>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
