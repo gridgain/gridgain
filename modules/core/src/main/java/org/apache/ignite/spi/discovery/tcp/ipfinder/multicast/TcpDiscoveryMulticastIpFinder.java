@@ -48,6 +48,7 @@ import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.IgniteSpiThread;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
+import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_OVERRIDE_MCAST_GRP;
@@ -886,24 +887,31 @@ public class TcpDiscoveryMulticastIpFinder extends TcpDiscoveryVmIpFinder {
                             sock = createSocket();
                     }
 
-                    sock.receive(pckt);
-
-                    if (!U.bytesEqual(U.IGNITE_HEADER, 0, reqData, 0, U.IGNITE_HEADER.length)) {
-                        U.error(log, "Failed to verify message header.");
-
-                        continue;
-                    }
+                    IgniteThread.nowIdle();
 
                     try {
-                        sock.send(new DatagramPacket(res.data(), res.data().length, pckt.getAddress(), pckt.getPort()));
-                    }
-                    catch (IOException e) {
-                        if (e.getMessage().contains("Operation not permitted")) {
-                            if (log.isDebugEnabled())
-                                log.debug("Got 'operation not permitted' error, ignoring: " + e);
+                        sock.receive(pckt);
+
+                        if (!U.bytesEqual(U.IGNITE_HEADER, 0, reqData, 0, U.IGNITE_HEADER.length)) {
+                            U.error(log, "Failed to verify message header.");
+
+                            continue;
                         }
-                        else
-                            throw e;
+
+                        try {
+                            sock.send(new DatagramPacket(res.data(), res.data().length, pckt.getAddress(), pckt.getPort()));
+                        }
+                        catch (IOException e) {
+                            if (e.getMessage().contains("Operation not permitted")) {
+                                if (log.isDebugEnabled())
+                                    log.debug("Got 'operation not permitted' error, ignoring: " + e);
+                            }
+                            else
+                                throw e;
+                        }
+                    }
+                    finally {
+                        IgniteThread.nowBusy();
                     }
                 }
                 catch (IOException e) {
