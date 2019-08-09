@@ -151,6 +151,8 @@ struct CacheNativePersistenceTestSuiteFixture
      */
     CacheNativePersistenceTestSuiteFixture()
     {
+        ignite_test::ClearLfs();
+
 #ifdef IGNITE_TESTS_32
         grid0 = ignite_test::StartNode("cache-native-persistence-test-32.xml", "grid-0");
 #else
