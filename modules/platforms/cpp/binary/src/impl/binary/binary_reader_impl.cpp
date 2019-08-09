@@ -923,10 +923,9 @@ namespace ignite
 
                 case IGNITE_HDR_FULL:
                 {
-                    int32_t pos = stream->Position() - 1;
-                    int32_t len = stream->ReadInt32(stream->Position() + IGNITE_OFFSET_LEN - 1);
-                    stream->Position(pos);
-                    stream->Ignore(len);
+                    int32_t objectBegin = stream->Position() - 1;
+                    int32_t len = stream->ReadInt32(objectBegin + IGNITE_OFFSET_LEN);
+                    stream->Position(objectBegin + len);
                     return;
                 }
 
