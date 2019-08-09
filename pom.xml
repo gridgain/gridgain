@@ -98,6 +98,7 @@
         <module>modules/tensorflow</module>
         <module>modules/opencensus</module>
         <module>modules/h2</module>
+        <module>modules/gmc-agent</module>
     </modules>
 
     <profiles>
@@ -113,6 +114,7 @@
                 <module>modules/hibernate-5.3</module>
                 <module>modules/schedule</module>
                 <module>modules/yardstick</module>
+                <module>modules/gmc-agent</module>
             </modules>
         </profile>
 
