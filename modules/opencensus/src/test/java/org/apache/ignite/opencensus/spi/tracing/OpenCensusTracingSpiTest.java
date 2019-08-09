@@ -51,8 +51,11 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
     /** Grid count. */
     private static final int GRID_CNT = 3;
 
-    /** Exporter to check reported spans. */
-    private TraceTestExporter exporter;
+    /** Test test exporter handler. */
+    private TraceExporterTestHandler hnd;
+
+    /** Wrapper of test exporter handler. */
+    private OpenCensusTraceExporter exporter;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -88,9 +91,11 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
     public void before() throws Exception {
         stopAllGrids();
 
-        exporter = new TraceTestExporter();
+        hnd = new TraceExporterTestHandler();
 
-        exporter.start("all");
+        exporter = new OpenCensusTraceExporter(hnd);
+
+        exporter.start("test");
 
         startGrids(GRID_CNT);
     }
@@ -100,6 +105,8 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
      */
     @After
     public void after() {
+        exporter.stop();
+
         stopAllGrids();
     }
 
@@ -116,12 +123,12 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
         List<String> clusterNodeNames = grid(0).cluster().nodes()
             .stream().map(node -> (String) node.consistentId()).collect(Collectors.toList());
 
-        exporter.flush();
+        hnd.flush();
 
         String joinedNodeId = joinedNode.localNode().id().toString();
 
         // Check existence of Traces.Discovery.NODE_JOIN_REQUEST spans with OK status on all nodes:
-        Map<AttributeValue, SpanData> nodeJoinReqSpans = exporter.hnd.allSpans()
+        Map<AttributeValue, SpanData> nodeJoinReqSpans = hnd.allSpans()
             .filter(span -> Traces.Discovery.NODE_JOIN_REQUEST.equals(span.getName()))
             .filter(span -> span.getStatus() == Status.OK)
             .filter(span -> AttributeValue.stringAttributeValue(joinedNodeId).equals(
@@ -146,7 +153,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
 
         // Check existence of Traces.Discovery.NODE_JOIN_ADD spans with OK status on all nodes:
         for (int i = 0; i <= GRID_CNT; i++) {
-            List<SpanData> nodeJoinAddSpans = exporter.hnd.spansReportedByNode(getTestIgniteInstanceName(i))
+            List<SpanData> nodeJoinAddSpans = hnd.spansReportedByNode(getTestIgniteInstanceName(i))
                 .filter(span -> Traces.Discovery.NODE_JOIN_ADD.equals(span.getName()))
                 .filter(span -> span.getStatus() == Status.OK)
                 .filter(span -> AttributeValue.stringAttributeValue(joinedNodeId).equals(
@@ -160,7 +167,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
             );
 
             nodeJoinAddSpans.forEach(spanData -> {
-                SpanData parentSpan = exporter.hnd.spanById(spanData.getParentSpanId());
+                SpanData parentSpan = hnd.spanById(spanData.getParentSpanId());
 
                 Assert.assertNotNull(
                     "Parent span doesn't exist for " + spanData,
@@ -181,7 +188,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
 
         // Check existence of Traces.Discovery.NODE_JOIN_FINISH spans with OK status on all nodes:
         for (int i = 0; i <= GRID_CNT; i++) {
-            List<SpanData> nodeJoinAddSpans = exporter.hnd.spansReportedByNode(getTestIgniteInstanceName(i))
+            List<SpanData> nodeJoinAddSpans = hnd.spansReportedByNode(getTestIgniteInstanceName(i))
                 .filter(span -> Traces.Discovery.NODE_JOIN_FINISH.equals(span.getName()))
                 .filter(span -> span.getStatus() == Status.OK)
                 .filter(span -> AttributeValue.stringAttributeValue(joinedNodeId).equals(
@@ -195,7 +202,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
             );
 
             nodeJoinAddSpans.forEach(spanData -> {
-                SpanData parentSpan = exporter.hnd.spanById(spanData.getParentSpanId());
+                SpanData parentSpan = hnd.spanById(spanData.getParentSpanId());
 
                 Assert.assertNotNull(
                     "Parent span doesn't exist for " + spanData,
@@ -230,10 +237,10 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
 
         awaitPartitionMapExchange();
 
-        exporter.flush();
+        hnd.flush();
 
         // Check existence of Traces.Discovery.NODE_LEFT spans with OK status on all nodes:
-        Map<AttributeValue, SpanData> nodeLeftSpans = exporter.hnd.allSpans()
+        Map<AttributeValue, SpanData> nodeLeftSpans = hnd.allSpans()
             .filter(span -> Traces.Discovery.NODE_LEFT.equals(span.getName()))
             .filter(span -> AttributeValue.stringAttributeValue(leftNodeId).equals(
                 span.getAttributes().getAttributeMap().get(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID))))
@@ -270,11 +277,11 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
 
         awaitPartitionMapExchange();
 
-        exporter.flush();
+        hnd.flush();
 
         // Check PME for NODE_LEFT event on remaining nodes:
         for (int i = 0; i < GRID_CNT - 1; i++) {
-            List<SpanData> exchFutSpans = exporter.hnd.spansReportedByNode(getTestIgniteInstanceName(i))
+            List<SpanData> exchFutSpans = hnd.spansReportedByNode(getTestIgniteInstanceName(i))
                 .filter(span -> Traces.Exchange.EXCHANGE_FUTURE.equals(span.getName()))
                 .filter(span -> span.getStatus() == Status.OK)
                 .filter(span -> AttributeValue.longAttributeValue(EventType.EVT_NODE_LEFT).equals(
@@ -290,7 +297,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
             );
 
             exchFutSpans.forEach(span -> {
-                SpanData parentSpan = exporter.hnd.spanById(span.getParentSpanId());
+                SpanData parentSpan = hnd.spanById(span.getParentSpanId());
 
                 Assert.assertNotNull(
                     "Parent span doesn't exist for " + span,
@@ -319,44 +326,6 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
                         SpanTags.tag(SpanTags.RESULT, SpanTags.TOPOLOGY_VERSION, SpanTags.MINOR))
                 );
             });
-        }
-    }
-
-    /**
-     * Test span exporter.
-     */
-    static class TraceTestExporter implements OpenCensusTraceExporter {
-        /** Handler name. */
-        private static final String HANDLER_NAME = "test";
-
-        /** Handler. */
-        private final TraceExporterTestHandler hnd = new TraceExporterTestHandler();
-
-        /** {@inheritDoc} */
-        @Override public void start(String igniteInstanceName) {
-            Tracing.getExportComponent().getSpanExporter().registerHandler(HANDLER_NAME, hnd);
-        }
-
-        /** {@inheritDoc} */
-        @Override public void stop() {
-            Tracing.getExportComponent().getSpanExporter().unregisterHandler(HANDLER_NAME);
-        }
-
-        /**
-         * Forces to flush ended spans that not passed to exporter yet.
-         */
-        public void flush() throws IgniteInterruptedCheckedException {
-            // There is hardcoded invariant, that ended spans will be passed to exporter in 2 cases:
-            // By 5 seconds timeout and if buffer size exceeds 32 spans.
-            // There is no ability to change this behavior in Opencensus, so this hack is needed to "flush" real spans to exporter.
-            // @see io.opencensus.implcore.trace.export.ExportComponentImpl.
-            for (int i = 0; i < 32; i++) {
-                Span span = Tracing.getTracer().spanBuilder("test-" + i).setSampler(Samplers.alwaysSample()).startSpan();
-
-                U.sleep(10); // See same hack in OpenCensusSpanAdapter#end() method.
-
-                span.end();
-            }
         }
     }
 
@@ -396,6 +365,23 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
             return collectedSpans.values().stream()
                     .filter(spanData -> AttributeValue.stringAttributeValue(igniteInstanceName)
                         .equals(spanData.getAttributes().getAttributeMap().get("node.name")));
+        }
+
+        /**
+         * Forces to flush ended spans that not passed to exporter yet.
+         */
+        public void flush() throws IgniteInterruptedCheckedException {
+            // There is hardcoded invariant, that ended spans will be passed to exporter in 2 cases:
+            // By 5 seconds timeout and if buffer size exceeds 32 spans.
+            // There is no ability to change this behavior in Opencensus, so this hack is needed to "flush" real spans to exporter.
+            // @see io.opencensus.implcore.trace.export.ExportComponentImpl.
+            for (int i = 0; i < 32; i++) {
+                Span span = Tracing.getTracer().spanBuilder("test-" + i).setSampler(Samplers.alwaysSample()).startSpan();
+
+                U.sleep(10); // See same hack in OpenCensusSpanAdapter#end() method.
+
+                span.end();
+            }
         }
     }
 }

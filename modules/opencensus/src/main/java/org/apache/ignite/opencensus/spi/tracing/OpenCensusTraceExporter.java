@@ -16,18 +16,52 @@
 
 package org.apache.ignite.opencensus.spi.tracing;
 
+import io.opencensus.trace.Tracing;
+import io.opencensus.trace.export.SpanExporter;
+import org.apache.ignite.spi.IgniteSpiException;
+
 /**
- * Interface for OpenCensus trace exporters adopted for Ignite lifecycle.
+ * Wrapper of OpenCensus trace exporters adopted for Ignite lifecycle.
  */
-public interface OpenCensusTraceExporter {
+public class OpenCensusTraceExporter {
+    /** Span exporter handler. */
+    private final SpanExporter.Handler hnd;
+
+    /** Trace exporter handler name. */
+    private String hndName;
+
+    /**
+     * @param hnd Span exporter handler.
+     */
+    public OpenCensusTraceExporter(SpanExporter.Handler hnd) {
+        this.hnd = hnd;
+    }
+
     /**
      * Starts trace exporter on given node with name {@code igniteInstanceName}.
      *
      * @param igniteInstanceName Name of ignite instance.
      */
-    public void start(String igniteInstanceName);
+    public void start(String igniteInstanceName) {
+        try {
+            hndName = hnd.getClass().getName() + "-" + igniteInstanceName;
+
+            Tracing.getExportComponent().getSpanExporter().registerHandler(hndName, hnd);
+        }
+        catch (Exception e) {
+            throw new IgniteSpiException("Failed to start " + this, e);
+        }
+    }
+
     /**
      * Stops trace exporter.
      */
-    public void stop();
+    public void stop() {
+        Tracing.getExportComponent().getSpanExporter().unregisterHandler(hndName);
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return "OpenCensus trace exporter [hndName=" + hndName + ", hnd=" + hnd + "]";
+    }
 }

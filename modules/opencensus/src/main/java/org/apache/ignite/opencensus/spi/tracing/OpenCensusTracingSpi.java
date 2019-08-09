@@ -17,7 +17,10 @@
 package org.apache.ignite.opencensus.spi.tracing;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 import io.opencensus.trace.Tracing;
+import io.opencensus.trace.export.SpanExporter;
 import io.opencensus.trace.samplers.Samplers;
 import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.processors.tracing.TracingSpi;
@@ -39,14 +42,14 @@ import org.jetbrains.annotations.Nullable;
  * <code>
  *     IgniteConfigiration cfg;
  *
- *     cfg.setTracingSpi(new OpenCensusTracingSpi(new OpenCensusZipkinTraceExporter(...)));
+ *     cfg.setTracingSpi(new OpenCensusTracingSpi(new ZipkinExporterHandler(...)));
  * </code>
  *
  * See constructors description for detailed explanation.
  */
 public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi {
     /** Configured exporters. */
-    private final OpenCensusTraceExporter[] exporters;
+    private final List<OpenCensusTraceExporter> exporters;
 
     /** Flag indicates that external Tracing is used in environment. In this case no exporters will be started. */
     private final boolean externalProvider;
@@ -69,8 +72,8 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
      *
      * @param exporters Exporters.
      */
-    public OpenCensusTracingSpi(OpenCensusTraceExporter... exporters) {
-        this.exporters = exporters.clone();
+    public OpenCensusTracingSpi(SpanExporter.Handler... exporters) {
+        this.exporters = Arrays.stream(exporters).map(OpenCensusTraceExporter::new).collect(Collectors.toList());
 
         externalProvider = false;
     }
