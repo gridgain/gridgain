@@ -20,6 +20,7 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.VisorDataTransferObject;
+import org.jetbrains.annotations.Nullable;
 
 /**
  *
@@ -31,12 +32,39 @@ public class VisorIdAndTagTaskArg extends VisorDataTransferObject {
     /** */
     private VisorIdAndTagOperation op;
 
-    @Override protected void writeExternalData(ObjectOutput out) throws IOException {
-        U.writeEnum(out, op);
+    /** */
+    private String newTag;
+
+    /** */
+    public VisorIdAndTagTaskArg() {
+        // No-op.
     }
 
-    @Override
-    protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
+    /** */
+    public VisorIdAndTagTaskArg(VisorIdAndTagOperation op, @Nullable String newTag) {
+        this.op = op;
+        this.newTag = newTag;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void writeExternalData(ObjectOutput out) throws IOException {
+        U.writeEnum(out, op);
+        out.writeObject(newTag);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
         op = VisorIdAndTagOperation.fromOrdinal(in.readByte());
+        newTag = (String)in.readObject();
+    }
+
+    /** */
+    public VisorIdAndTagOperation operation() {
+        return op;
+    }
+
+    /** */
+    public String newTag() {
+        return newTag;
     }
 }

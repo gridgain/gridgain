@@ -22,17 +22,38 @@ import org.apache.ignite.internal.visor.id_and_tag.VisorIdAndTagOperation;
  */
 public enum ClusterIdAndTagSubcommands {
     /** */
-    VIEW("view", VisorIdAndTagOperation.PRINT),
+    VIEW("view", VisorIdAndTagOperation.VIEW),
 
     /** */
-    UPDATE_TAG("update_tag", VisorIdAndTagOperation.UPDATE_TAG);
+    CHANGE_TAG("change-tag", VisorIdAndTagOperation.CHANGE_TAG);
 
+    /** */
     private String name;
 
+    /** */
     private VisorIdAndTagOperation op;
 
+    /**
+     * @param name Name.
+     * @param op Op.
+     */
     ClusterIdAndTagSubcommands(String name, VisorIdAndTagOperation op) {
         this.name = name;
         this.op = op;
+    }
+
+    /** */
+    public static ClusterIdAndTagSubcommands of(String name) {
+        for (ClusterIdAndTagSubcommands subCmd : ClusterIdAndTagSubcommands.values()) {
+            if (subCmd.name.equalsIgnoreCase(name))
+                return subCmd;
+        }
+
+        return null;
+    }
+
+    /** */
+    public VisorIdAndTagOperation operation() {
+        return op;
     }
 }

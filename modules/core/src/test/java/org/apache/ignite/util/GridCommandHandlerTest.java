@@ -205,11 +205,66 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
         assertTrue(ignite.cluster().active());
     }
 
+    /**
+     * Verifies view action of Cluster ID and tag command.
+     */
     @Test
-    public void testClusterIdAndTag() throws Exception {
-        Ignite ignite = startGrid(0);
+    public void testClusterIdAndTagView() throws Exception {
+        final String newTag = "new_tag";
 
-        execute("--id-and-tag", "print");
+        IgniteEx ig = startGrid(0);
+
+        injectTestSystemOut();
+
+        //default action for Cluster ID and tag command is view action
+        assertEquals(EXIT_CODE_OK, execute("--id-and-tag"));
+
+        UUID clID = ig.cluster().id();
+        String clTag = ig.cluster().tag();
+
+        String out = testOut.toString();
+
+        assertTrue(out.contains("Cluster ID: " + clID));
+        assertTrue(out.contains("Cluster tag: " + clTag));
+
+        ig.cluster().active(true);
+
+        ig.cluster().tag(newTag);
+
+        assertEquals(EXIT_CODE_OK, execute("--id-and-tag", "view"));
+
+        out = testOut.toString();
+
+        assertTrue(out.contains("Cluster tag: " + newTag));
+    }
+
+    /**
+     * Verifies that update-tag action obeys its specification: doesn't allow updating tag on inactive cluster,
+     *
+     */
+    @Test
+    public void testClusterIdAndTagUpdate() throws Exception {
+        final String newTag = "new_tag";
+
+        IgniteEx cl = startGrid(0);
+
+        injectTestSystemOut();
+
+        assertEquals(EXIT_CODE_OK, execute("--id-and-tag", "change-tag", newTag));
+
+        String out = testOut.toString();
+
+        //because cluster is inactive
+        assertTrue(out.contains("Error has occurred during tag update:"));
+
+        cl.cluster().active(true);
+
+        //because new tag should be non-empty string
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--id-and-tag", "change-tag", ""));
+
+        assertEquals(EXIT_CODE_OK, execute("--id-and-tag", "change-tag", newTag));
+
+        assertEquals(newTag, cl.cluster().tag());
     }
 
     /**

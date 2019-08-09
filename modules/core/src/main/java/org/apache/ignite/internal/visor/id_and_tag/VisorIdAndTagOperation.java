@@ -22,16 +22,16 @@ import org.jetbrains.annotations.Nullable;
  */
 public enum VisorIdAndTagOperation {
     /** Print cluster ID and tag. */
-    PRINT,
+    VIEW,
 
-    /** Update cluster tag. */
-    UPDATE_TAG;
+    /** Change cluster tag. */
+    CHANGE_TAG;
 
     /** */
     private static final VisorIdAndTagOperation[] VALS = values();
 
     /** */
-    @Nullable public static VisorIdAndTagOperation fromOrdinal(int ord) {
+    public static @Nullable VisorIdAndTagOperation fromOrdinal(int ord) {
         return ord >= 0 && ord < VALS.length ? VALS[ord] : null;
     }
 }
