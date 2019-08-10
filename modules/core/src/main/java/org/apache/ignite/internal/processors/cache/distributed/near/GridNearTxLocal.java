@@ -309,7 +309,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
         int txSize,
         @Nullable UUID subjId,
         int taskNameHash,
-        String lb,
+        @Nullable String lb,
         boolean tracingEnabled,
         IgniteTxManager.TxDumpsThrottling txDumpsThrottling
     ) {
