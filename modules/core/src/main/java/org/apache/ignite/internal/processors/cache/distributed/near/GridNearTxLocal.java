@@ -291,9 +291,9 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
      * @param txSize Transaction size.
      * @param subjId Subject ID.
      * @param taskNameHash Task name hash code.
-     * @param txDumpsThrottling Log throttling information.
      * @param lb Label.
      * @param tracingEnabled {@code true} if the transaction should be traced.
+     * @param txDumpsThrottling Log throttling information.
      */
     public GridNearTxLocal(
         GridCacheSharedContext ctx,
