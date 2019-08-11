@@ -159,7 +159,7 @@ public abstract class PageIO {
     /* All the page types. */
 
     /** */
-    public static final short T_DATA = 3;
+    public static final short T_DATA = 4;
 
     /** */
     public static final short T_BPLUS_META = 2;
