@@ -618,12 +618,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             if (partState == OWNING)
                 return true;
 
-            // Note what partition can be owned while clearing.
-            // This is possible if no owners are left other than current node.
-            assert !group().topology().initialized() ||
-                    group().topology().owners(id).isEmpty() ||
-                    clearFuture.isDone() : this;
-
             assert partState == MOVING || partState == LOST;
 
             if (casState(state, OWNING))
@@ -717,26 +711,57 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         if (!reinitialized)
             return;
 
+        // Make sure current rebalance future finishes before start clearing
+        // to avoid clearing currently rebalancing partition (except "initial" dummy rebalance).
+        GridDhtPartitionDemander.RebalanceFuture rebFut =
+                (GridDhtPartitionDemander.RebalanceFuture)grp.preloader().rebalanceFuture();
+
+        if (clearingRequested && !rebFut.isInitial() && !rebFut.isDone()) {
+            rebFut.listen(new IgniteInClosure<IgniteInternalFuture<Boolean>>() {
+                @Override public void apply(IgniteInternalFuture<Boolean> fut) {
+                    if (fut.error() == null && state() == MOVING) {
+                        if (freeAndEmpty(state) && !grp.queriesEnabled() && !groupReserved()) {
+                            fastEvict(updateSeq);
+
+                            return;
+                        }
+
+                        ctx.evict().evictPartitionAsync(grp, GridDhtLocalPartition.this);
+                    }
+                }
+            });
+
+            return;
+        }
+
         // Try fast eviction.
         if (freeAndEmpty(state) && !grp.queriesEnabled() && !groupReserved()) {
             if (partState == RENTING && casState(state, EVICTED) || clearingRequested) {
-                clearFuture.finish();
-
-                if (state() == EVICTED && markForDestroy()) {
-                    updateSeqOnDestroy = updateSeq;
-
-                    destroy();
-                }
-
-                if (log.isDebugEnabled())
-                    log.debug("Partition has been fast evicted [grp=" + grp.cacheOrGroupName()
-                        + ", p=" + id + ", state=" + state() + "]");
+                fastEvict(updateSeq);
 
                 return;
             }
         }
 
         ctx.evict().evictPartitionAsync(grp, this);
+    }
+
+    /**
+     * @param updateSeq Update sequence.
+     */
+    private void fastEvict(boolean updateSeq) {
+        clearFuture.finish();
+
+        if (state() == EVICTED && markForDestroy()) {
+            updateSeqOnDestroy = updateSeq;
+
+            destroy();
+        }
+
+        if (log.isDebugEnabled())
+            log.debug("Partition has been fast evicted [grp=" + grp.cacheOrGroupName()
+                    + ", p=" + id + ", state=" + state() + "]");
+
     }
 
     /**
@@ -751,20 +776,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
         if (state0 != MOVING && state0 != RENTING)
             return;
-
-        GridDhtPartitionDemander.RebalanceFuture rebFut =
-            (GridDhtPartitionDemander.RebalanceFuture)grp.preloader().rebalanceFuture();
-
-        // Make sure current rebalance future finishes before start clearing
-        // to avoid clearing currently rebalancing partition (except "initial" dummy rebalance).
-        if (!rebFut.isInitial() && !rebFut.isDone()) {
-            try {
-                rebFut.get(); // Safe to wait synchronously here.
-            }
-            catch (IgniteCheckedException e) {
-                throw new IgniteException(e); // Trigger FH.
-            }
-        }
 
         clearAsync0(false);
     }
