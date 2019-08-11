@@ -17,10 +17,15 @@ package org.apache.ignite.internal.sql.calcite.physical;
 
 import java.util.List;
 import org.apache.calcite.plan.RelOptCluster;
+import org.apache.calcite.plan.RelOptCost;
+import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.rel.RelDistributionTraitDef;
+import org.apache.calcite.rel.RelDistributions;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.SingleRel;
+import org.apache.calcite.rel.metadata.RelMetadataQuery;
 
 /**
  * TODO: Add class description.
@@ -45,7 +50,12 @@ public class UnionExchangeRel extends SingleRel implements IgniteRel {
 
     @Override public RelWriter explainTerms(RelWriter pw) {
         return super.explainTerms(pw)
-            .item("from", getInput().getTraitSet().getTrait(IgniteDistributionTraitDef.INSTANCE))
-            .item("to", IgniteDistributionTrait.SINGLETON);
+            .item("from", getInput().getTraitSet().getTrait(RelDistributionTraitDef.INSTANCE))
+            .item("to", RelDistributions.SINGLETON);
     }
+
+    @Override public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {
+        return super.computeSelfCost(planner, mq).multiplyBy(20);
+    }
+
 }

@@ -17,35 +17,46 @@ package org.apache.ignite.internal.sql.calcite.physical;
 
 import java.util.List;
 import org.apache.calcite.plan.RelOptCluster;
-import org.apache.calcite.plan.RelOptCost;
-import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.rel.RelDistribution;
 import org.apache.calcite.rel.RelDistributionTraitDef;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
-import org.apache.calcite.rel.core.Project;
-import org.apache.calcite.rel.metadata.RelMetadataQuery;
-import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rel.SingleRel;
 
 /**
- *
+ * TODO: Add class description.
  */
-public class ProjectRel extends Project implements IgniteRel {
+public class RehashingExchange extends SingleRel implements IgniteRel {
 
-    protected ProjectRel(RelOptCluster cluster, RelTraitSet traits,
-        RelNode input, List<? extends RexNode> projects, RelDataType rowType) {
-        super(cluster, traits, input, projects, rowType);
+    private final RelDistribution hashDist;
+
+    /**
+     * Creates a <code>SingleRel</code>.
+     *
+     * @param cluster Cluster this relational expression belongs to
+     * @param traits
+     * @param input Input relational expression
+     */
+    protected RehashingExchange(RelDistribution hashDist, RelOptCluster cluster, RelTraitSet traits,
+        RelNode input) {
+        super(cluster, traits, input);
+        this.hashDist = hashDist;
     }
 
-    @Override public Project copy(RelTraitSet traitSet, RelNode input, List<RexNode> projects, RelDataType rowType) {
-        return new ProjectRel(getCluster(), getTraitSet(), input, projects, rowType);
+    @Override
+    public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
+        return new UnionExchangeRel(getCluster(), traitSet, sole(inputs));
     }
 
     @Override public RelWriter explainTerms(RelWriter pw) {
         return super.explainTerms(pw)
-            .item("dist", getTraitSet().getTrait(RelDistributionTraitDef.INSTANCE));
+            .item("from", getInput().getTraitSet().getTrait(RelDistributionTraitDef.INSTANCE))
+            .item("to", hashDist);
     }
 
-
+//    @Override public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {
+//        return super.computeSelfCost(planner, mq).multiplyBy(10);
+//    }
 }
+

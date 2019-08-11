@@ -19,6 +19,7 @@ package org.apache.ignite.internal.sql.calcite;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.ignite.internal.jdbc2.JdbcUtils;
+import org.apache.ignite.internal.sql.calcite.physical.ExchangeRule;
 import org.apache.ignite.internal.sql.calcite.physical.FilterRule;
 import org.apache.ignite.internal.sql.calcite.physical.JoinRule;
 import org.apache.ignite.internal.sql.calcite.physical.ProjectRule;
@@ -28,6 +29,7 @@ import org.apache.ignite.internal.sql.calcite.physical.TableScanRule;
  * TODO: Add class description.
  */
 public class CalciteUtils {
+
 
     private CalciteUtils() {
     }
@@ -39,6 +41,9 @@ public class CalciteUtils {
     public static final RelOptRule PROJECT_RULE = new ProjectRule();
 
     public static final RelOptRule TABLE_SCAN_RULE = new TableScanRule();
+
+    public static final RelOptRule EXCHANGE_RULE = new ExchangeRule();
+
 
 
 

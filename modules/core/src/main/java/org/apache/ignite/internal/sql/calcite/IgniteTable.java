@@ -90,7 +90,7 @@ public class IgniteTable extends AbstractTable implements ScannableTable/*, Proj
     }
 
     @Override public Statistic getStatistic() {
-        return Statistics.of(rowCnt, keys);
+        return Statistics.of(rowCnt + 10 , keys);
     }
 
     public void incrementRowCount() {
@@ -122,6 +122,6 @@ public class IgniteTable extends AbstractTable implements ScannableTable/*, Proj
     }
 
     public boolean partitioned() {
-        return "Developer".equalsIgnoreCase(tblName);
+        return true;//"Developer".equalsIgnoreCase(tblName);
     }
 }

@@ -36,7 +36,7 @@ public class FilterRule extends IgniteRule {
         final LogicalFilter filter = call.rel(0);
 
         final RelNode input = filter.getInput();
-        RelTraitSet traits = input.getTraitSet().replace(IgniteConvention.INSTANCE);
+        RelTraitSet traits = filter.getTraitSet().plus(IgniteConvention.INSTANCE);
 
         RelNode convertedInput = convert(input, traits);
 

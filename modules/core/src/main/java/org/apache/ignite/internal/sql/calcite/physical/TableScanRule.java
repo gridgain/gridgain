@@ -15,10 +15,13 @@
  */
 package org.apache.ignite.internal.sql.calcite.physical;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.function.Predicate;
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelTrait;
+import org.apache.calcite.rel.RelDistributions;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
 import org.apache.calcite.rel.core.RelFactories;
@@ -31,6 +34,7 @@ import org.apache.ignite.internal.sql.calcite.IgniteTable;
  * TODO: Add class description.
  */
 public class TableScanRule extends ConverterRule {
+    private static final List<Integer> DIST_KEYS = Collections.singletonList(0);
 
     public TableScanRule() {
         super(LogicalTableScan.class, (Predicate<RelNode>) r -> true,
@@ -46,7 +50,7 @@ public class TableScanRule extends ConverterRule {
 
         IgniteTable tbl = (IgniteTable)table;
 
-        RelTrait distTrait = tbl.partitioned() ? IgniteDistributionTrait.HASH_DISTRIBUTED : IgniteDistributionTrait.BROADCAST_DISTRIBUTED;
+        RelTrait distTrait = tbl.partitioned() ? RelDistributions.hash(DIST_KEYS) : RelDistributions.BROADCAST_DISTRIBUTED;
 
         System.out.println("TableScanRule distTrait=" + distTrait);
 

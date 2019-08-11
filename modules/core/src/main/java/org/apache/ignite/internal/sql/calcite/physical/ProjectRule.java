@@ -18,6 +18,9 @@ package org.apache.ignite.internal.sql.calcite.physical;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.plan.volcano.RelSubset;
+import org.apache.calcite.rel.RelDistribution;
+import org.apache.calcite.rel.RelDistributionTraitDef;
+import org.apache.calcite.rel.RelDistributions;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.ignite.internal.sql.calcite.IgniteConvention;
@@ -41,12 +44,12 @@ public class ProjectRule extends IgniteRule {
         if (convertedInput instanceof RelSubset) {
             RelSubset subset = (RelSubset) convertedInput;
             for (RelNode rel : subset.getRelList()) {
-                if (!rel.getTraitSet().getTrait(IgniteDistributionTraitDef.INSTANCE).equals(IgniteDistributionTrait.ANY)) {
-                    IgniteDistributionTrait childDist = rel.getTraitSet().getTrait(IgniteDistributionTraitDef.INSTANCE);
+                if (!rel.getTraitSet().getTrait(RelDistributionTraitDef.INSTANCE).equals(RelDistributions.ANY)) {
+                    RelDistribution childDist = rel.getTraitSet().getTrait(RelDistributionTraitDef.INSTANCE);
                     //RelCollation childCollation = rel.getTraitSet().getTrait(RelCollationTraitDef.INSTANCE);
 
 
-                    IgniteDistributionTrait newDist = convertDist(childDist); //TODO precise distribution handling see Drill's ProjectPrule
+                    RelDistribution newDist = convertDist(childDist); //TODO precise distribution handling see Drill's ProjectPrule
                     //RelCollation newCollation = convertRelCollation(childCollation, inToOut);
 
                     call.transformTo(new ProjectRel(proj.getCluster(), proj.getTraitSet().plus(newDist).plus(IgniteConvention.INSTANCE),
@@ -75,7 +78,7 @@ public class ProjectRule extends IgniteRule {
 
     }
 
-    private IgniteDistributionTrait convertDist(IgniteDistributionTrait dist) {
+    private RelDistribution convertDist(RelDistribution dist) {
         return dist;
     }
 

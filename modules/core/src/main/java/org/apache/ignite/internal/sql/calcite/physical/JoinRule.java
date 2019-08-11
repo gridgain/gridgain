@@ -15,13 +15,13 @@
  */
 package org.apache.ignite.internal.sql.calcite.physical;
 
-import java.util.ArrayList;
-import java.util.List;
 import org.apache.calcite.plan.Convention;
+import org.apache.calcite.rel.RelDistributions;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
 import org.apache.calcite.rel.core.JoinInfo;
 import org.apache.calcite.rel.logical.LogicalJoin;
+import org.apache.calcite.util.ImmutableIntList;
 import org.apache.ignite.internal.sql.calcite.IgniteConvention;
 
 /**
@@ -39,28 +39,27 @@ public class JoinRule extends ConverterRule {
     @Override public RelNode convert(RelNode rel) {
         LogicalJoin join = (LogicalJoin) rel;
 
-        List<RelNode> newInputs = new ArrayList<>();
+        final JoinInfo info = JoinInfo.of(join.getLeft(), join.getRight(), join.getCondition()); // TODO take condition from info? See EnumerableJoinRule
 
-        for (RelNode input : join.getInputs()) {
-            if (!(input.getConvention() instanceof IgniteConvention)) {
-                input =
-                    convert(
-                        input,
-                        input.getTraitSet()
-                            .replace(IgniteConvention.INSTANCE));
-            }
-            newInputs.add(input);
-        }
-        final RelNode left = newInputs.get(0);
-        final RelNode right = newInputs.get(1);
-        final JoinInfo info = JoinInfo.of(left, right, join.getCondition()); // TODO take condition from info? See EnumerableJoinRule
+        System.out.println("info.leftKeys=" + info.leftKeys + ", info.rightKeys=" + info.rightKeys);
+        final RelNode left = convertInput(join.getInputs().get(0), info.leftKeys);;
+        final RelNode right = convertInput(join.getInputs().get(1), info.rightKeys);
 
         return new JoinNestedLoopsRel(join.getCluster(),
-            rel.getTraitSet().replace(IgniteConvention.INSTANCE).replace(IgniteDistributionTrait.RANDOM_DISTRIBUTED), // TODO distribution?
+            rel.getTraitSet().replace(IgniteConvention.INSTANCE).replace(RelDistributions.RANDOM_DISTRIBUTED), // TODO distribution?
             left,
             right,
             join.getCondition(),
             join.getVariablesSet(),
             join.getJoinType());
+    }
+
+    private RelNode convertInput(RelNode input, ImmutableIntList joinKeys) {
+        //if (!(input.getConvention() instanceof IgniteConvention)) {
+            input = convert(input,
+                    input.getTraitSet().replace(IgniteConvention.INSTANCE).replace(RelDistributions.hash(joinKeys)));
+        //}
+
+        return input;
     }
 }

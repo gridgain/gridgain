@@ -43,6 +43,8 @@ import org.apache.calcite.prepare.PlannerImpl;
 import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelCollationTraitDef;
+import org.apache.calcite.rel.RelDistributionTraitDef;
+import org.apache.calcite.rel.RelDistributions;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.core.JoinRelType;
@@ -104,8 +106,6 @@ import org.apache.ignite.internal.sql.calcite.ops.PhysicalOperator;
 import org.apache.ignite.internal.sql.calcite.ops.ProjectOp;
 import org.apache.ignite.internal.sql.calcite.ops.TableScanOp;
 import org.apache.ignite.internal.sql.calcite.physical.FilterRel;
-import org.apache.ignite.internal.sql.calcite.physical.IgniteDistributionTrait;
-import org.apache.ignite.internal.sql.calcite.physical.IgniteDistributionTraitDef;
 import org.apache.ignite.internal.sql.calcite.physical.JoinNestedLoopsRel;
 import org.apache.ignite.internal.sql.calcite.physical.ProjectRel;
 import org.apache.ignite.internal.sql.calcite.physical.TableScanRel;
@@ -119,7 +119,7 @@ public class CalcitePlanner {
     private static final List<RelTraitDef> TRAIT_DEFS = Collections.unmodifiableList(Arrays.asList(
         ConventionTraitDef.INSTANCE,
         RelCollationTraitDef.INSTANCE,
-        IgniteDistributionTraitDef.INSTANCE)
+        RelDistributionTraitDef.INSTANCE)
     );
 
     private static final SqlParser.Config CALCITE_PARSER_CONFIG
@@ -202,8 +202,8 @@ public class CalcitePlanner {
         CalciteUtils.FILTER_RULE,
         CalciteUtils.JOIN_RULE,
         CalciteUtils.PROJECT_RULE,
-        CalciteUtils.TABLE_SCAN_RULE//,
-       // CalciteUtils.EXCHANGE_RULE
+        CalciteUtils.TABLE_SCAN_RULE,
+        CalciteUtils.EXCHANGE_RULE
     );
 
     private final SchemaPlus rootSchema;
@@ -242,7 +242,7 @@ public class CalcitePlanner {
         System.out.println("Rewritten logical plan:\n" + RelOptUtil.toString(rewrittenPlan));
 
         RelNode optimalPlan = optimizePlan(rewrittenPlan);
-        System.out.println("Optimal plan:\n" + RelOptUtil.toString(optimalPlan, SqlExplainLevel.NON_COST_ATTRIBUTES));
+        System.out.println("Optimal plan:\n" + RelOptUtil.toString(optimalPlan, SqlExplainLevel.ALL_ATTRIBUTES));
 
         // TODO replace with a visitor
         PhysicalOperator physicalOperator = convertToPhysical(optimalPlan);
@@ -263,7 +263,7 @@ public class CalcitePlanner {
         //cboPlanner.setNoneConventionHasInfiniteCost(false);EnumerableConvention.INSTANCE)
         RelTraitSet desiredTraits
             = plan.getCluster().traitSet()
-            .replace(IgniteDistributionTrait.SINGLETON)
+            .replace(RelDistributions.SINGLETON)
             .replace(IgniteConvention.INSTANCE);
 
         final RelCollation collation // TODO collation

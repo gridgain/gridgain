@@ -17,6 +17,7 @@ package org.apache.ignite.internal.sql.calcite.physical;
 
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.rel.RelDistributionTraitDef;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.core.Filter;
@@ -38,6 +39,6 @@ public class FilterRel extends Filter implements IgniteRel {
 
     @Override public RelWriter explainTerms(RelWriter pw) {
         return super.explainTerms(pw)
-            .item("dist", getTraitSet().getTrait(IgniteDistributionTraitDef.INSTANCE));
+            .item("dist", getTraitSet().getTrait(RelDistributionTraitDef.INSTANCE));
     }
 }

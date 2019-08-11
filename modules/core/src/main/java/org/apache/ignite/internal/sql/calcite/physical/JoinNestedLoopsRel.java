@@ -17,13 +17,17 @@ package org.apache.ignite.internal.sql.calcite.physical;
 
 import java.util.Set;
 import org.apache.calcite.plan.RelOptCluster;
+import org.apache.calcite.plan.RelOptCost;
+import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.rel.RelDistributionTraitDef;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.core.EquiJoin;
 import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.JoinRelType;
+import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rex.RexNode;
 
 /**
@@ -45,6 +49,10 @@ public class JoinNestedLoopsRel extends EquiJoin implements IgniteRel {
 
     @Override public RelWriter explainTerms(RelWriter pw) {
         return super.explainTerms(pw)
-            .item("dist", getTraitSet().getTrait(IgniteDistributionTraitDef.INSTANCE));
+            .item("dist", getTraitSet().getTrait(RelDistributionTraitDef.INSTANCE));
+    }
+
+    @Override public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {
+        return super.computeSelfCost(planner, mq).multiplyBy(10); // TODO: CODE: implement.
     }
 }
