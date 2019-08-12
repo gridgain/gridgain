@@ -260,11 +260,10 @@ class RebalanceStatisticsUtils {
      * Return rebalance statistics. Required to call this method if
      * {@link #isPrintRebalanceStatistics()} == true.
      * <p/>
-     * Flag {@code finish} means finished or not rebalance. <br/>
+     * Flag {@code finish} means finished or not full rebalance. <br/>
      * If {@code finish} == true then expected {@code rebFutrs} contains
      * success or not {@code RebalanceFuture} per cache group, else expected
-     * {@code rebFutrs} contains only one success {@code RebalanceFuture}
-     * for one cache group. <br/>
+     * {@code rebFutrs} contains only one success {@code RebalanceFuture}. <br/>
      * If {@code finish} == true then print total statistics.
      * <p/>
      * Partition distribution only for last success rebalance, per cache group.
