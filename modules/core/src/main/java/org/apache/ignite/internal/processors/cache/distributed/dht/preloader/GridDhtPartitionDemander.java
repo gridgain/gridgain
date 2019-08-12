@@ -1557,7 +1557,7 @@ public class GridDhtPartitionDemander {
     }
 
     /**
-     * Return list demanders per cache groups. For print statistics.
+     * Collect demander per cache groups. For print statistics.
      *
      * @return List demanders.
      * */
@@ -1575,15 +1575,15 @@ public class GridDhtPartitionDemander {
      * Statistic will print if
      * {@link RebalanceStatisticsUtils#isPrintRebalanceStatistics()
      * isPrintRebalanceStatistics()} == true.
-     * For to work correctly, you need to call this method after complete
+     * For correctly work, you need to call this method after done
      * {@code RebalanceFuture} once whether it is successful or not.
      * <p/>
-     * For {@link #rebalanceFut} update statistics and if successful complete,
-     * prints statistics for the cache group.
+     * If {@link #rebalanceFut} done successful, prints statistics
+     * for cache group.
      * <p/>
      * If the rebalance is over, print statistics for all cache groups.
-     * The end of the rebalance is determined by the successful completion
-     * of {@code RebalanceFuture} for each cache group.
+     * The end of the rebalance is determined by the successful done all
+     * {@code RebalanceFuture}'s.
      *
      * @throws IgniteCheckedException when get result {@code RebalanceFuture}
      * @see RebalanceFuture RebalanceFuture
