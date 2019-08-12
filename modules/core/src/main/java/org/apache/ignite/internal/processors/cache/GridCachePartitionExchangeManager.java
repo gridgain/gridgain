@@ -2086,10 +2086,13 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
             long sysTimeCurr = nearTxLoc.systemTimeCurrent();
 
+            //in some cases totalTimeMillis can be less than systemTimeMillis, as they are calculated with different precision
+            long userTime = Math.max(curTime - nearTxLoc.startTime() - sysTimeCurr, 0);
+
             warning.a(", systemTime=")
                 .a(sysTimeCurr)
                 .a(", userTime=")
-                .a(nearTxLoc.calcUserTime(curTime - nearTxLoc.startTime(), sysTimeCurr));
+                .a(userTime);
         }
 
         warning.a(", tx=")
