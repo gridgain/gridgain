@@ -44,6 +44,7 @@ import java.util.function.ToLongFunction;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
+import static java.lang.String.valueOf;
 import static java.lang.System.currentTimeMillis;
 import static java.time.ZoneId.systemDefault;
 import static java.time.format.DateTimeFormatter.ofPattern;
@@ -282,9 +283,7 @@ class RebalanceStatisticsUtils {
         final Map<CacheGroupContext, Collection<RebalanceFuture>> rebFutrs
     ) {
         assert nonNull(rebFutrs);
-
-        if (!isPrintRebalanceStatistics())
-            return "";
+        assert isPrintRebalanceStatistics() : "Can't print statistics";
 
         AtomicInteger nodeCnt = new AtomicInteger();
 
@@ -331,8 +330,8 @@ class RebalanceStatisticsUtils {
         Map<ClusterNode, List<RebalanceMessageStatistics>> supplierStat =
             toSupplierStatistics(toRebalanceFutureStream(rebFutrs));
 
-        joiner.add(format("Total information (%s):", SUCCESSFUL_OR_NOT_REBALANCE_TEXT))
-            .add(format("Time [%s]", toStartEndDuration(minStartTime, maxEndTime)));
+        joiner.add("Total information (" + SUCCESSFUL_OR_NOT_REBALANCE_TEXT + "):")
+            .add("Time").add("[" + toStartEndDuration(minStartTime, maxEndTime) + "]");
 
         topicRebalanceStatistics(topicStat, joiner);
         supplierRebalanceStatistics(supplierStat, nodeAliases, joiner);
@@ -359,10 +358,8 @@ class RebalanceStatisticsUtils {
         assert nonNull(nodeAliases);
         assert nonNull(joiner);
 
-        joiner.add(format(
-            "Information per cache group (%s):",
-            finish ? SUCCESSFUL_OR_NOT_REBALANCE_TEXT : SUCCESSFUL_REBALANCE_TEXT
-        ));
+        joiner.add("Information per cache group (" +
+            (finish ? SUCCESSFUL_OR_NOT_REBALANCE_TEXT : SUCCESSFUL_REBALANCE_TEXT) + "):");
 
         rebFutrs.forEach((context, futures) -> {
             long minStartTime = minStartTime(futures.stream());
@@ -371,12 +368,9 @@ class RebalanceStatisticsUtils {
             Map<Integer, List<RebalanceMessageStatistics>> topicStat = toTopicStatistics(futures.stream());
             Map<ClusterNode, List<RebalanceMessageStatistics>> supplierStat = toSupplierStatistics(futures.stream());
 
-            joiner.add(format(
-                "[id=%s, name=%s, %s]",
-                context.groupId(),
-                context.cacheOrGroupName(),
-                toStartEndDuration(minStartTime, maxEndTime)
-            ));
+            joiner.add("[id=" + context.groupId() + ",")
+                .add("name=" + context.cacheOrGroupName() + ",")
+                .add(toStartEndDuration(minStartTime, maxEndTime) + "]");
 
             topicRebalanceStatistics(topicStat, joiner);
             supplierRebalanceStatistics(supplierStat, nodeAliases, joiner);
@@ -406,12 +400,13 @@ class RebalanceStatisticsUtils {
         if (!isPrintPartitionsDistribution())
             return;
 
-        joiner.add(format("Partitions distribution per cache group (%s):", SUCCESSFUL_REBALANCE_TEXT));
+        joiner.add("Partitions distribution per cache group (" + SUCCESSFUL_REBALANCE_TEXT + "):");
 
         Comparator<RebalanceFuture> startTimeCmp = comparingLong(fut -> fut.stat.startTime);
 
         rebFutrs.forEach((context, futures) -> {
-            joiner.add(format("[id=%s, name=%s]", context.groupId(), context.cacheOrGroupName()));
+            joiner.add("[id=" + context.groupId() + ",")
+                .add("name=" + context.cacheOrGroupName() + "]");
 
             RebalanceFuture lastSuccessFuture = futures.stream()
                 .filter(GridFutureAdapter::isDone)
@@ -453,7 +448,7 @@ class RebalanceStatisticsUtils {
                         )
                         .collect(joining(","));
 
-                    joiner.add(partId + " = " + nodes);
+                    joiner.add(valueOf(partId)).add("=").add(nodes);
                 });
         });
 
@@ -480,7 +475,8 @@ class RebalanceStatisticsUtils {
             long byteSum = sum(msgStats, rps -> rps.msgSize);
             long entryCount = sum(msgStats, rps -> rps.parts.stream().mapToLong(ps -> ps.entryCount).sum());
 
-            joiner.add(format("[id=%s, %s]", topicId, toPartitionsEntriesBytes(partCnt, entryCount, byteSum)));
+            joiner.add("[id=" + topicId + ",")
+                .add(toPartitionsEntriesBytes(partCnt, entryCount, byteSum) + "]");
         });
     }
 
@@ -513,12 +509,9 @@ class RebalanceStatisticsUtils {
                 )
                 .sum();
 
-            joiner.add(format(
-                "[nodeId=%s, %s, d=%s ms]",
-                nodeAliases.get(supplierNode),
-                toPartitionsEntriesBytes(partCnt, entryCount, byteSum),
-                durationSum
-            ));
+            joiner.add("[nodeId=" + nodeAliases.get(supplierNode) + ",")
+                .add(toPartitionsEntriesBytes(partCnt, entryCount, byteSum) + ",")
+                .add("d=" + durationSum + " ms]");
         });
     }
 
@@ -540,10 +533,10 @@ class RebalanceStatisticsUtils {
 
         String nodes = nodeAliases.entrySet().stream()
             .sorted(comparingInt(Map.Entry::getValue))
-            .map(entry -> format("[%s=%s,%s]", entry.getValue(), entry.getKey().id(), entry.getKey().consistentId()))
+            .map(entry -> "[" + entry.getValue() + "=" + entry.getKey().id() + "," + entry.getKey().consistentId() + "]")
             .collect(joining(", "));
 
-        joiner.add("Aliases: " + abbreviations + ", nodeId mapping (nodeId=id,consistentId) " + nodes);
+        joiner.add("Aliases:").add(abbreviations + ",").add("nodeId mapping (nodeId=id,consistentId)").add(nodes);
     }
 
     /**
@@ -666,12 +659,8 @@ class RebalanceStatisticsUtils {
      * @see #REBALANCE_STATISTICS_DTF
      */
     private static String toStartEndDuration(final long start, final long end) {
-        return format(
-            "start=%s, end=%s, d=%s ms",
-            REBALANCE_STATISTICS_DTF.format(toLocalDateTime(start)),
-            REBALANCE_STATISTICS_DTF.format(toLocalDateTime(end)),
-            end - start
-        );
+        return "start=" + REBALANCE_STATISTICS_DTF.format(toLocalDateTime(start)) + ", end=" +
+            REBALANCE_STATISTICS_DTF.format(toLocalDateTime(end)) + ", d=" + (end - start) + " ms";
     }
 
     /**
@@ -704,6 +693,6 @@ class RebalanceStatisticsUtils {
      * @return Formatted string of received rebalance partitions.
      */
     private static String toPartitionsEntriesBytes(final long parts, final long entries, final long bytes) {
-        return format("p=%s, e=%s, b=%s", parts, entries, bytes);
+        return "p=" + parts + ", e=" + entries + ", b=" + bytes;
     }
 }
