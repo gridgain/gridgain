@@ -29,6 +29,7 @@ import org.apache.ignite.internal.ClassSetTest;
 import org.apache.ignite.internal.ClusterGroupHostsSelfTest;
 import org.apache.ignite.internal.ClusterGroupSelfTest;
 import org.apache.ignite.internal.ClusterProcessorCheckGlobalStateComputeRequestTest;
+import org.apache.ignite.internal.DiagnosticLogForPartitionStatesTest;
 import org.apache.ignite.internal.GridFailFastNodeFailureDetectionSelfTest;
 import org.apache.ignite.internal.GridLifecycleAwareSelfTest;
 import org.apache.ignite.internal.GridLifecycleBeanSelfTest;
@@ -262,6 +263,8 @@ public class IgniteBasicTestSuite {
         suite.addTest(new JUnit4TestAdapter(DeadLockOnNodeLeftExchangeTest.class));
 
         suite.addTest(new JUnit4TestAdapter(ClassPathContentLoggingTest.class));
+
+        suite.addTest(new JUnit4TestAdapter(DiagnosticLogForPartitionStatesTest.class));
 
         suite.addTest(new JUnit4TestAdapter(IncompleteDeserializationExceptionTest.class));
 
