@@ -1017,7 +1017,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         long time = System.currentTimeMillis();
 
         try {
-            log.info("Starting binary memory restore for: " + cctx.cache().cacheGroupDescriptors().keySet());
+            if (log.isInfoEnabled())
+                log.info("Starting binary memory restore for: " + cctx.cache().cacheGroupDescriptors().keySet());
 
             for (DatabaseLifecycleListener lsnr : getDatabaseListeners(cctx.kernalContext()))
                 lsnr.beforeBinaryMemoryRestore(this);
@@ -5617,8 +5618,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                 // We roll memory up until we find a checkpoint start record registered in the status.
                 if (F.eq(cpRec.checkpointId(), status.cpStartId)) {
-                    log.info("Found last checkpoint marker [cpId=" + cpRec.checkpointId() +
-                        ", pos=" + rec.position() + ']');
+                    if (log.isInfoEnabled())
+                        log.info("Found last checkpoint marker [cpId=" + cpRec.checkpointId() +
+                            ", pos=" + rec.position() + ']');
 
                     needApplyBinaryUpdates = false;
                 }
