@@ -711,14 +711,16 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         if (!reinitialized)
             return;
 
-        // Make sure current rebalance future finishes before start clearing
+        // Make sure current rebalance future is finished before start clearing
         // to avoid clearing currently rebalancing partition (except "initial" dummy rebalance).
-        GridDhtPartitionDemander.RebalanceFuture rebFut =
+        if (clearingRequested) {
+            GridDhtPartitionDemander.RebalanceFuture rebFut =
                 (GridDhtPartitionDemander.RebalanceFuture)grp.preloader().rebalanceFuture();
 
-        if (clearingRequested && !rebFut.isInitial() && !rebFut.isDone()) {
-            rebFut.listen(new IgniteInClosure<IgniteInternalFuture<Boolean>>() {
-                @Override public void apply(IgniteInternalFuture<Boolean> fut) {
+            if (!rebFut.isInitial() && !rebFut.isDone()) {
+                rebFut.listen(fut -> {
+                    // Partition could be owned after rebalance future is done. Skip clearing in such case.
+                    // Overwise continue clearing.
                     if (fut.error() == null && state() == MOVING) {
                         if (freeAndEmpty(state) && !grp.queriesEnabled() && !groupReserved()) {
                             fastEvict(updateSeq);
@@ -728,8 +730,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
                         ctx.evict().evictPartitionAsync(grp, GridDhtLocalPartition.this);
                     }
-                }
-            });
+                });
+            }
 
             return;
         }
