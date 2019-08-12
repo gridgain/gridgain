@@ -36,6 +36,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
+import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -129,6 +130,78 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
      */
     protected int gridCount() {
         return gridCount;
+    }
+
+    /** */
+    @Test
+    public void testDifferentFieldsSequenceIndex() throws Exception {
+        runIndexWithDifferentFldsReqAllFldsInIdx("IDX2", "IDX3");
+
+        runIndexWithDifferentFldsReqAllFldsInIdx("IDX3", "IDX2");
+    }
+
+    /** */
+    private void runIndexWithDifferentFldsReqAllFldsInIdx(String idx1, String idx2) throws Exception {
+        inlineSize = 10;
+
+        IgniteEx ig0 = startGrids(gridCount());
+
+        GridQueryProcessor qryProc = ig0.context().query();
+
+        populateTable(qryProc, "TEST_TBL_NAME", 2, "FIRST_NAME", "LAST_NAME",
+            "ADDRESS", "LANG");
+
+        String sqlIdx1 = String.format("create index \"%s\" on %s(FIRST_NAME)", idx1, "TEST_TBL_NAME");
+        String sqlIdx2 = String.format("create index \"%s\" on %s(LAST_NAME, FIRST_NAME)", idx2, "TEST_TBL_NAME");
+
+        qryProc.querySqlFields(new SqlFieldsQuery(sqlIdx1), true).getAll();
+        qryProc.querySqlFields(new SqlFieldsQuery(sqlIdx2), true).getAll();
+
+        String sql = "explain select * from " + "TEST_TBL_NAME" + " where " +
+            "LAST_NAME = 2 and FIRST_NAME >= 1 and FIRST_NAME <= 5 and ADDRESS in (1, 2, 3)";
+
+        String plan = qryProc.querySqlFields(new SqlFieldsQuery(sql), true)
+            .getAll().get(0).get(0).toString().toUpperCase();
+
+        assertTrue("plan=" + plan, plan.contains(idx2));
+
+        stopAllGrids();
+
+        cleanPersistenceDir();
+    }
+
+    /** */
+    private void populateTable(GridQueryProcessor qryProc, String tblName, int consPkFldsNum, String... reqFlds) {
+        assert consPkFldsNum <= reqFlds.length;
+
+        String sql = "CREATE TABLE " + tblName + " (";
+        String sqlIns = "INSERT INTO " + tblName + " (";
+
+        for (int i = 0; i < reqFlds.length; ++i) {
+            sql += reqFlds[i] + " VARCHAR, ";
+
+            sqlIns += reqFlds[i] + ((i < reqFlds.length - 1) ? ", " : ") values (");
+        }
+
+        if (consPkFldsNum > 0) {
+            sql += " CONSTRAINT PK_PERSON PRIMARY KEY (";
+
+            for (int i = 0; i < consPkFldsNum; ++i)
+                sql += reqFlds[i] + ((i < consPkFldsNum - 1) ? ", " : "))");
+        }
+        else
+            sql += ")";
+
+        qryProc.querySqlFields(new SqlFieldsQuery(sql), true);
+
+        for (int i = 0; i < 10; ++i) {
+            String s0 = sqlIns;
+
+            for (int f = 0; f < reqFlds.length; ++f)
+                s0 += i + ((f < reqFlds.length - 1) ? ", " : ")");
+
+            qryProc.querySqlFields(new SqlFieldsQuery(s0), true).getAll();
+        }
     }
 
     /** */
