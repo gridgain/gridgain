@@ -23,6 +23,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.TopologyValidator;
+import org.apache.ignite.internal.cluster.ClusterReadOnlyModeCheckedException;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
@@ -101,9 +102,9 @@ public abstract class GridDhtTopologyFutureAdapter extends GridFutureAdapter<Aff
         PartitionLossPolicy lossPlc = grp.config().getPartitionLossPolicy();
 
         if (cctx.shared().readOnlyMode() && opType == WRITE && !isSystemCache(cctx.name())
-                && cctx.group().groupId() != CU.cacheId(DEFAULT_VOLATILE_DS_GROUP_NAME)) {
-            return new IgniteClusterReadOnlyException("Failed to perform cache operation (cluster is in read only mode) " +
-                    "[cacheGrp=" + cctx.group().name() + ", cache=" + cctx.name() + ']');
+            && cctx.group().groupId() != CU.cacheId(DEFAULT_VOLATILE_DS_GROUP_NAME)) {
+            return new ClusterReadOnlyModeCheckedException("Failed to perform cache operation (cluster is in " +
+                "read-only mode) [cacheGrp=" + cctx.group().name() + ", cache=" + cctx.name() + ']');
         }
 
         if (grp.needsRecovery() && !recovery) {

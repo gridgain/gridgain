@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
  namespace Apache.Ignite.Core.Tests.ApiParity
 {
     using Apache.Ignite.Core.Cluster;
@@ -36,7 +36,8 @@
             "baselineAutoAdjustEnabled",
             "baselineAutoAdjustTimeout",
             "baselineAutoAdjustStatus",
-            "clientReconnectFuture"
+            "clientReconnectFuture",
+            "readOnly"
         };
 
         /** Members that are missing on .NET side and should be added in future. */
