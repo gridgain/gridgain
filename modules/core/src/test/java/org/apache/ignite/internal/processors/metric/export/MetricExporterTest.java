@@ -132,7 +132,7 @@ public class MetricExporterTest {
 
                 reg.intMetric(namePref + "int." + j++, "description");
 
-                reg.metric(namePref + "long." + j++, "description");
+                reg.longMetric(namePref + "long." + j++, "description");
 
                 reg.doubleMetric(namePref + "double." + j++, "description");
             }

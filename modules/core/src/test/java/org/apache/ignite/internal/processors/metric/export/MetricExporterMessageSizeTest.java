@@ -102,96 +102,96 @@ public class MetricExporterMessageSizeTest {
 
         MetricRegistry mreg = new MetricRegistry(regName, new NullLogger());
 
-        mreg.metric("CacheGets",
+        mreg.longMetric("CacheGets",
                 "The total number of gets to the cache.").value((int)rnd.nextLong());
 
-        mreg.metric("EntryProcessorPuts",
+        mreg.longMetric("EntryProcessorPuts",
                 "The total number of cache invocations, caused update.").value((int)rnd.nextLong());
 
-        mreg.metric("EntryProcessorRemovals",
+        mreg.longMetric("EntryProcessorRemovals",
                 "The total number of cache invocations, caused removals.").value((int)rnd.nextLong());
 
-        mreg.metric("EntryProcessorReadOnlyInvocations",
+        mreg.longMetric("EntryProcessorReadOnlyInvocations",
                 "The total number of cache invocations, caused no updates.").value((int)rnd.nextLong());
 
-        mreg.metric("EntryProcessorInvokeTimeNanos",
+        mreg.longMetric("EntryProcessorInvokeTimeNanos",
                 "The total time of cache invocations, in nanoseconds.").value((int)rnd.nextLong());
 
-        mreg.metric("EntryProcessorMinInvocationTime",
+        mreg.longMetric("EntryProcessorMinInvocationTime",
                 "So far, the minimum time to execute cache invokes.").value((int)rnd.nextLong());
 
-        mreg.metric("EntryProcessorMaxInvocationTime",
+        mreg.longMetric("EntryProcessorMaxInvocationTime",
                 "So far, the maximum time to execute cache invokes.").value((int)rnd.nextLong());
 
-        mreg.metric("EntryProcessorHits",
+        mreg.longMetric("EntryProcessorHits",
                 "The total number of invocations on keys, which exist in cache.").value((int)rnd.nextLong());
 
-        mreg.metric("EntryProcessorMisses",
+        mreg.longMetric("EntryProcessorMisses",
                 "The total number of invocations on keys, which don't exist in cache.").value((int)rnd.nextLong());
 
-        mreg.metric("CachePuts",
+        mreg.longMetric("CachePuts",
                 "The total number of puts to the cache.").value((int)rnd.nextLong());
 
-        mreg.metric("CacheHits",
+        mreg.longMetric("CacheHits",
                 "The number of get requests that were satisfied by the cache.").value((int)rnd.nextLong());
 
-        mreg.metric("CacheMisses",
+        mreg.longMetric("CacheMisses",
                 "A miss is a get request that is not satisfied.").value((int)rnd.nextLong());
 
-        mreg.metric("CacheTxCommits",
+        mreg.longMetric("CacheTxCommits",
                 "Total number of transaction commits.").value((int)rnd.nextLong());
 
-        mreg.metric("CacheTxRollbacks",
+        mreg.longMetric("CacheTxRollbacks",
                 "Total number of transaction rollbacks.").value((int)rnd.nextLong());
 
-        mreg.metric("CacheEvictions",
+        mreg.longMetric("CacheEvictions",
                 "The total number of evictions from the cache.").value((int)rnd.nextLong());
 
-        mreg.metric("CacheRemovals", "The total number of removals from the cache.").value((int)rnd.nextLong());
+        mreg.longMetric("CacheRemovals", "The total number of removals from the cache.").value((int)rnd.nextLong());
 
-        mreg.metric("PutTime",
+        mreg.longMetric("PutTime",
                 "The total time of cache puts, in nanoseconds.").value((int)rnd.nextLong());
 
-        mreg.metric("GetTime",
+        mreg.longMetric("GetTime",
                 "The total time of cache gets, in nanoseconds.").value((int)rnd.nextLong());
 
-        mreg.metric("RemovalTime",
+        mreg.longMetric("RemovalTime",
                 "The total time of cache removal, in nanoseconds.").value((int)rnd.nextLong());
 
-        mreg.metric("CommitTime",
+        mreg.longMetric("CommitTime",
                 "The total time of commit, in nanoseconds.").value((int)rnd.nextLong());
 
-        mreg.metric("RollbackTime",
+        mreg.longMetric("RollbackTime",
                 "The total time of rollback, in nanoseconds.").value((int)rnd.nextLong());
 
-        mreg.metric("OffHeapGets",
+        mreg.longMetric("OffHeapGets",
                 "The total number of get requests to the off-heap memory.").value((int)rnd.nextLong());
 
-        mreg.metric("OffHeapPuts",
+        mreg.longMetric("OffHeapPuts",
                 "The total number of put requests to the off-heap memory.").value((int)rnd.nextLong());
 
-        mreg.metric("OffHeapRemovals",
+        mreg.longMetric("OffHeapRemovals",
                 "The total number of removals from the off-heap memory.").value((int)rnd.nextLong());
 
-        mreg.metric("OffHeapEvictions",
+        mreg.longMetric("OffHeapEvictions",
                 "The total number of evictions from the off-heap memory.").value((int)rnd.nextLong());
 
-        mreg.metric("OffHeapHits",
+        mreg.longMetric("OffHeapHits",
                 "The number of get requests that were satisfied by the off-heap memory.").value((int)rnd.nextLong());
 
-        mreg.metric("OffHeapMisses",
+        mreg.longMetric("OffHeapMisses",
                 "A miss is a get request that is not satisfied by off-heap memory.").value((int)rnd.nextLong());
 
-        mreg.metric("RebalancedKeys",
+        mreg.longMetric("RebalancedKeys",
                 "Number of already rebalanced keys.").value((int)rnd.nextLong());
 
-        mreg.metric("TotalRebalancedBytes",
+        mreg.longMetric("TotalRebalancedBytes",
                 "Number of already rebalanced bytes.").value((int)rnd.nextLong());
 
-        mreg.metric("RebalanceStartTime",
+        mreg.longMetric("RebalanceStartTime",
                 "Rebalance start time").value((int)rnd.nextLong());
 
-        mreg.metric("EstimatedRebalancingKeys",
+        mreg.longMetric("EstimatedRebalancingKeys",
                 "Number estimated to rebalance keys.").value((int)rnd.nextLong());
 
 /*
@@ -208,7 +208,7 @@ public class MetricExporterMessageSizeTest {
                 20);
 */
 
-        mreg.metric("RebalanceClearingPartitionsLeft",
+        mreg.longMetric("RebalanceClearingPartitionsLeft",
                 "Number of partitions need to be cleared before actual rebalance start.").value((int)rnd.nextLong());
 
         return mreg;
