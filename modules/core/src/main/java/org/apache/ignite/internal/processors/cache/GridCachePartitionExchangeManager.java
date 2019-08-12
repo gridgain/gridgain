@@ -2082,12 +2082,14 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
             .a(formatTime(curTime));
 
         if (tx instanceof GridNearTxLocal) {
-            long sysTimeCurr = ((GridNearTxLocal) tx).systemTimeCurrent();
+            GridNearTxLocal nearTxLoc = (GridNearTxLocal)tx;
+
+            long sysTimeCurr = nearTxLoc.systemTimeCurrent();
 
             warning.a(", systemTime=")
                 .a(sysTimeCurr)
                 .a(", userTime=")
-                .a(curTime - tx.startTime() - sysTimeCurr);
+                .a(nearTxLoc.calcUserTime(curTime - nearTxLoc.startTime(), sysTimeCurr));
         }
 
         warning.a(", tx=")

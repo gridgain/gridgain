@@ -3832,6 +3832,18 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
         return U.nanosToMillis(systemTime0 + t);
     }
 
+    /**
+     * Calculates user time.
+     *
+     * @param totalTimeMillis Total transaction execution time in milliseconds.
+     * @param systemTimeMillis System time in milliseconds.
+     * @return User time in milliseconds.
+     */
+    public long calcUserTime(long totalTimeMillis, long systemTimeMillis) {
+        //in some cases totalTimeMillis can be less than systemTimeMillis, as they are calculated with different precision
+        return (totalTimeMillis > systemTimeMillis) ? (totalTimeMillis - systemTimeMillis) : 0;
+    }
+
     /** {@inheritDoc} */
     @Override public boolean state(TransactionState state) {
         boolean res = super.state(state);
@@ -3846,8 +3858,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
             long systemTimeMillis = U.nanosToMillis(this.systemTime.get());
             long totalTimeMillis = System.currentTimeMillis() - startTime();
 
-            //in some cases totalTimeMillis can be less than systemTimeMillis, as they are calculated with different precision
-            long userTimeMillis = (totalTimeMillis > systemTimeMillis) ? (totalTimeMillis - systemTimeMillis) : 0;
+            long userTimeMillis = calcUserTime(totalTimeMillis, systemTimeMillis);
 
             writeTxMetrics(systemTimeMillis, userTimeMillis);
 
