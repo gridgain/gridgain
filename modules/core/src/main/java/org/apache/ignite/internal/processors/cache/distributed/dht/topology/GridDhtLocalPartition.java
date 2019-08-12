@@ -723,7 +723,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                     // Otherwise continue clearing.
                     if (fut.error() == null && state() == MOVING) {
                         if (freeAndEmpty(state) && !grp.queriesEnabled() && !groupReserved()) {
-                            fastEvict(updateSeq);
+                            clearFuture.finish();
 
                             return;
                         }
@@ -739,31 +739,23 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         // Try fast eviction.
         if (freeAndEmpty(state) && !grp.queriesEnabled() && !groupReserved()) {
             if (partState == RENTING && casState(state, EVICTED) || clearingRequested) {
-                fastEvict(updateSeq);
+                clearFuture.finish();
+
+                if (state() == EVICTED && markForDestroy()) {
+                    updateSeqOnDestroy = updateSeq;
+
+                    destroy();
+                }
+
+                if (log.isDebugEnabled() && evictionRequested)
+                    log.debug("Partition has been fast evicted [grp=" + grp.cacheOrGroupName()
+                        + ", p=" + id + ", state=" + state() + "]");
 
                 return;
             }
         }
 
         ctx.evict().evictPartitionAsync(grp, this);
-    }
-
-    /**
-     * @param updateSeq Update sequence.
-     */
-    private void fastEvict(boolean updateSeq) {
-        clearFuture.finish();
-
-        if (state() == EVICTED && markForDestroy()) {
-            updateSeqOnDestroy = updateSeq;
-
-            destroy();
-        }
-
-        if (log.isDebugEnabled())
-            log.debug("Partition has been fast evicted [grp=" + grp.cacheOrGroupName()
-                    + ", p=" + id + ", state=" + state() + "]");
-
     }
 
     /**
