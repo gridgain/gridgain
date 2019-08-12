@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.util.lang.GridCloseableIterator;
 
@@ -46,6 +47,21 @@ public interface IgniteRebalanceIterator extends GridCloseableIterator<CacheData
      * @param partId Partition ID.
      */
     public void setPartitionMissing(int partId);
+
+    /**
+     * Add iterator by partiotn specified.
+     * @param partId Partition ID.
+     * @param partIterator Partition iterartor.
+     */
+    public void addPartIterator(int partId, GridCloseableIterator<CacheDataRow> partIterator);
+
+    /**
+     * Close iterator for specific partition.
+     * @param partId Prtition ID.
+     *
+     * @throws IgniteCheckedException In case of error.
+     */
+    public void closeForPart(int partId) throws IgniteCheckedException;
 
     /**
      * Return next element without moving iterator cursor to the next one.

@@ -18,8 +18,8 @@ package org.apache.ignite.internal.processors.cache.distributed.dht.preloader;
 
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.NavigableMap;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import org.apache.ignite.IgniteCheckedException;
@@ -37,7 +37,7 @@ public class IgniteRebalanceIteratorImpl implements IgniteRebalanceIterator {
     private static final long serialVersionUID = 0L;
 
     /** Iterators for full preloading, ordered by partition ID. */
-    @Nullable private final NavigableMap<Integer, GridCloseableIterator<CacheDataRow>> fullIterators;
+    @Nullable private final LinkedHashMap<Integer, GridCloseableIterator<CacheDataRow>> fullIterators;
 
     /** Iterator for historical preloading. */
     @Nullable private final IgniteHistoricalIterator historicalIterator;
@@ -57,6 +57,9 @@ public class IgniteRebalanceIteratorImpl implements IgniteRebalanceIterator {
     /** */
     private boolean closed;
 
+    /** Set of loaded partiotns. */
+    private HashSet<Integer> doneParts;
+
     /**
      *
      * @param fullIterators
@@ -64,10 +67,11 @@ public class IgniteRebalanceIteratorImpl implements IgniteRebalanceIterator {
      * @throws IgniteCheckedException
      */
     public IgniteRebalanceIteratorImpl(
-        NavigableMap<Integer, GridCloseableIterator<CacheDataRow>> fullIterators,
+        LinkedHashMap<Integer, GridCloseableIterator<CacheDataRow>> fullIterators,
         IgniteHistoricalIterator historicalIterator) throws IgniteCheckedException {
         this.fullIterators = fullIterators;
         this.historicalIterator = historicalIterator;
+        this.doneParts = new HashSet<>();
 
         advance();
     }
@@ -79,9 +83,30 @@ public class IgniteRebalanceIteratorImpl implements IgniteRebalanceIterator {
 
         while (!reachedEnd && (current == null || !current.getValue().hasNextX() || missingParts.contains(current.getKey()))) {
             if (current == null)
-                current = fullIterators.firstEntry();
+                current = fullIterators.entrySet().iterator().next();
             else {
-                current = fullIterators.ceilingEntry(current.getKey() + 1);
+                boolean found = false;
+
+                doneParts.add(current.getKey());
+
+                Iterator<Map.Entry<Integer, GridCloseableIterator<CacheDataRow>>> iterator = fullIterators.entrySet().iterator();
+
+                while (iterator.hasNext()) {
+                    Map.Entry<Integer, GridCloseableIterator<CacheDataRow>> entry = iterator.next();
+
+                    if (current == entry && iterator.hasNext()) {
+                        current = iterator.next();
+
+                        break;
+                    }
+                    else if (!iterator.hasNext()) {
+                        assert current == entry;
+
+                        current = null;
+
+                        break;
+                    }
+                }
 
                 if (current == null)
                     reachedEnd = true;
@@ -104,10 +129,7 @@ public class IgniteRebalanceIteratorImpl implements IgniteRebalanceIterator {
         if (historical(partId))
             return historicalIterator.isDone(partId);
 
-        if (cached != null)
-            return cached.partition() > partId;
-
-        return current == null || current.getKey() > partId;
+        return doneParts.contains(partId);
     }
 
     /** {@inheritDoc} */
@@ -126,6 +148,25 @@ public class IgniteRebalanceIteratorImpl implements IgniteRebalanceIterator {
             return true;
 
         return current != null && current.getValue().hasNextX();
+    }
+
+    /** {@inheritDoc} */
+    @Override public synchronized void addPartIterator(int partId, GridCloseableIterator<CacheDataRow> partIterator) {
+        fullIterators.put(partId, partIterator);
+    }
+
+    /** {@inheritDoc} */
+    @Override public synchronized void closeForPart(int partId) throws IgniteCheckedException {
+        GridCloseableIterator<CacheDataRow> partIterator = fullIterators.get(partId);
+
+        if (partIterator != null) {
+            if (current != null) {
+                if (current.getValue() == partIterator)
+                    advance();
+            }
+
+            fullIterators.remove(partId).close();
+        }
     }
 
     /** {@inheritDoc} */
