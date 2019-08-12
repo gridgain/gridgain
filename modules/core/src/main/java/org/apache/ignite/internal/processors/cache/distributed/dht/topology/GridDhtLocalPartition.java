@@ -731,9 +731,9 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                         ctx.evict().evictPartitionAsync(grp, GridDhtLocalPartition.this);
                     }
                 });
-            }
 
-            return;
+                return;
+            }
         }
 
         // Try fast eviction.
