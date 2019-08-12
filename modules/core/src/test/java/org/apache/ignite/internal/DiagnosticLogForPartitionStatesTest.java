@@ -33,12 +33,17 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.After;
 import org.junit.Test;
 
+import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture.PARTITION_STATE_FAILED_MSG;
+
 /**
  * Checks diagnostic messages at PME.
  */
 public class DiagnosticLogForPartitionStatesTest extends GridCommonAbstractTest {
     /** Cache 1. */
     private static final String CACHE_1 = "cache-1";
+
+    /** Any message. */
+    private static final String ANY_MSG = "";
 
     /** Test logger. */
     private final ListeningTestLogger log = new ListeningTestLogger(false, GridAbstractTest.log);
@@ -89,7 +94,7 @@ public class DiagnosticLogForPartitionStatesTest extends GridCommonAbstractTest 
      * @param msgExp Message expected.
      */
     private void doTest(CacheConfiguration<Object, Object> cacheCfg, boolean msgExp) throws Exception {
-        LogListener lsnr = LogListener.matches(s -> s.startsWith("Partition states validation has failed for group: " + CACHE_1 + "."))
+        LogListener lsnr = LogListener.matches(s -> s.startsWith(String.format(PARTITION_STATE_FAILED_MSG, CACHE_1, ANY_MSG)))
             .times(msgExp ? 1 : 0).build();
 
         log.registerListener(lsnr);
