@@ -720,7 +720,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             if (!rebFut.isInitial() && !rebFut.isDone()) {
                 rebFut.listen(fut -> {
                     // Partition could be owned after rebalance future is done. Skip clearing in such case.
-                    // Overwise continue clearing.
+                    // Otherwise continue clearing.
                     if (fut.error() == null && state() == MOVING) {
                         if (freeAndEmpty(state) && !grp.queriesEnabled() && !groupReserved()) {
                             fastEvict(updateSeq);
