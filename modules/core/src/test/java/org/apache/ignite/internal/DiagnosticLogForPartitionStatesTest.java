@@ -46,7 +46,7 @@ public class DiagnosticLogForPartitionStatesTest extends GridCommonAbstractTest 
     private static final String ANY_MSG = "";
 
     /** Test logger. */
-    private final ListeningTestLogger log = new ListeningTestLogger(false, GridAbstractTest.log);
+    private final ListeningTestLogger log = new ListeningTestLogger(false, log());
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
