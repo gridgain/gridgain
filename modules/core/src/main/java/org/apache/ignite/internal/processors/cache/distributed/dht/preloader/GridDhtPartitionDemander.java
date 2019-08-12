@@ -52,7 +52,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheEntryInfo;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryRemovedException;
 import org.apache.ignite.internal.processors.cache.GridCacheMvccEntryInfo;
 import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
-import org.apache.ignite.internal.processors.cache.GridCachePreloader;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.RebalanceStatisticsUtils.RebalanceFutureStatistics;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtInvalidPartitionException;
@@ -90,7 +89,6 @@ import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_PART_LOADED
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_STARTED;
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_STOPPED;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.RebalanceStatisticsUtils.isPrintRebalanceStatistics;
-import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.RebalanceStatisticsUtils.result;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.RebalanceStatisticsUtils.rebalanceStatistics;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
 import static org.apache.ignite.internal.processors.dr.GridDrType.DR_NONE;
@@ -1559,7 +1557,7 @@ public class GridDhtPartitionDemander {
     }
 
     /**
-     * Return list demanders per cache groups. For print statisrics.
+     * Return list demanders per cache groups. For print statistics.
      *
      * @return List demanders.
      * */
@@ -1586,9 +1584,6 @@ public class GridDhtPartitionDemander {
      * If the rebalance is over, print statistics for all cache groups.
      * The end of the rebalance is determined by the successful completion
      * of {@code RebalanceFuture} for each cache group.
-     * <p/>
-     * Use {@link RebalanceStatisticsUtils#rebalanceStatistics(boolean, Map)
-     * rebalanceStatistics(boolean, Map)} for create rebalance statistics.
      *
      * @throws IgniteCheckedException when get result {@code RebalanceFuture}
      * @see RebalanceFuture RebalanceFuture
@@ -1603,19 +1598,17 @@ public class GridDhtPartitionDemander {
         currRebFut.stat.endTime(currentTimeMillis());
         lastStatFutures.add(currRebFut);
 
-        if (currRebFut.get())
+        if (currRebFut.get()) //Success rebalance for current cache group
             log.info(rebalanceStatistics(false, singletonMap(grp, singletonList(currRebFut))));
         else
             return;
 
-        boolean rebalanceNotFinish = ctx.cacheContexts().stream()
-            .map(GridCacheContext::group)
-            .map(CacheGroupContext::preloader)
-            .map(GridCachePreloader::rebalanceFuture)
-            .anyMatch(future -> !future.isDone() || !result(future));
+        for (GridCacheContext gridCacheContext : ctx.cacheContexts()) {
+            IgniteInternalFuture<Boolean> rebalanceFuture = gridCacheContext.preloader().rebalanceFuture();
 
-        if (rebalanceNotFinish)
-            return;
+            if (!rebalanceFuture.isDone() || !rebalanceFuture.get()) //Rebalance not done or not success
+                return;
+        }
 
         List<GridDhtPartitionDemander> demanders = demanders();
 
