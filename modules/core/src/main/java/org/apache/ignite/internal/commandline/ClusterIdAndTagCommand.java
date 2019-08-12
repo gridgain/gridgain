@@ -28,10 +28,11 @@ import org.apache.ignite.internal.visor.id_and_tag.VisorIdAndTagTaskResult;
 
 import static org.apache.ignite.internal.commandline.CommandList.ID_AND_TAG;
 import static org.apache.ignite.internal.commandline.TaskExecutor.executeTaskByNameOnNode;
+import static org.apache.ignite.internal.visor.id_and_tag.VisorIdAndTagOperation.CHANGE_TAG;
 import static org.apache.ignite.internal.visor.id_and_tag.VisorIdAndTagOperation.VIEW;
 
 /**
- *
+ * Command to access cluster ID and tag functionality.
  */
 public class ClusterIdAndTagCommand implements Command<String> {
     /** */
@@ -86,6 +87,8 @@ public class ClusterIdAndTagCommand implements Command<String> {
         catch (Throwable e) {
             logger.severe("Failed to execute Cluster ID and tag command: ");
             logger.severe(CommandLogger.errorMessage(e));
+
+            throw e;
         }
 
         return null;
@@ -98,7 +101,9 @@ public class ClusterIdAndTagCommand implements Command<String> {
 
     /** {@inheritDoc} */
     @Override public void printUsage(Logger logger) {
-
+        Command.usage(logger, "Print current cluster ID and tag (default action):", ID_AND_TAG);
+        Command.usage(logger, "Print current cluster ID and tag:", ID_AND_TAG, ClusterIdAndTagSubcommands.VIEW.text());
+        Command.usage(logger, "Changes tag to a new value:", ID_AND_TAG, ClusterIdAndTagSubcommands.CHANGE_TAG.text());
     }
 
     /** {@inheritDoc} */

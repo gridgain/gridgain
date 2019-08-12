@@ -26,6 +26,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import javax.management.JMException;
+import javax.management.ObjectName;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
@@ -68,6 +70,7 @@ import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.marshaller.jdk.JdkMarshaller;
+import org.apache.ignite.mxbean.IgniteClusterMXBean;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag.GridDiscoveryData;
 import org.apache.ignite.spi.discovery.DiscoveryMetricsProvider;
@@ -95,6 +98,9 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     /** */
     private static final String CLUSTER_ID_TAG_KEY =
         DistributedMetaStorage.IGNITE_INTERNAL_KEY_PREFIX + "cluster.id.tag";
+
+    /** */
+    private static final String M_BEAN_NAME = "IgniteCluster";
 
     /** Periodic version check delay. */
     private static final long PERIODIC_VER_CHECK_DELAY = 1000 * 60 * 60; // Every hour.
@@ -136,13 +142,16 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     private boolean sndMetrics;
 
     /** Cluster ID is stored in local variable before activation when it goes to distributed metastorage. */
-    private volatile UUID localClusterId;
+    private volatile UUID locClusterId;
 
     /** Cluster tag is stored in local variable before activation when it goes to distributed metastorage. */
-    private volatile String localClusterTag;
+    private volatile String locClusterTag;
 
     /** */
     private volatile DistributedMetaStorage metastorage;
+
+    /** */
+    private ObjectName mBean;
 
     /**
      * @param ctx Kernal context.
@@ -183,8 +192,8 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
             log.info("Cluster ID and tag has been read from metastorage: " + idAndTag);
 
         if (idAndTag != null) {
-            localClusterId = idAndTag.id();
-            localClusterTag = idAndTag.tag();
+            locClusterId = idAndTag.id();
+            locClusterTag = idAndTag.tag();
         }
 
         metastorage.listen(
@@ -291,9 +300,9 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
      * </ul>
      */
     public void onLocalJoin() {
-        cluster.setId(localClusterId != null ? localClusterId : UUID.randomUUID());
+        cluster.setId(locClusterId != null ? locClusterId : UUID.randomUUID());
 
-        cluster.setTag(localClusterTag != null ? localClusterTag :
+        cluster.setTag(locClusterTag != null ? locClusterTag :
             ClusterTagGenerator.generateTag());
     }
 
@@ -301,8 +310,8 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     @Override public void onDisconnected(IgniteFuture<?> reconnectFut) {
         assert ctx.clientNode();
 
-        localClusterId = null;
-        localClusterTag = null;
+        locClusterId = null;
+        locClusterTag = null;
 
         cluster.setId(null);
         cluster.setTag(null);
@@ -312,8 +321,8 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     @Override public IgniteInternalFuture<?> onReconnected(boolean clusterRestarted) {
         assert ctx.clientNode();
 
-        cluster.setId(localClusterId);
-        cluster.setTag(localClusterTag);
+        cluster.setId(locClusterId);
+        cluster.setTag(locClusterTag);
 
         return null;
     }
@@ -510,20 +519,20 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
             Serializable remoteClusterId = commonData.id();
 
             if (remoteClusterId != null) {
-                if (localClusterId != null && !localClusterId.equals(remoteClusterId)) {
+                if (locClusterId != null && !locClusterId.equals(remoteClusterId)) {
                     log.warning("Received cluster ID differs from locally stored cluster ID " +
                         "and will be rewritten. " +
                         "Received cluster ID: " + remoteClusterId +
-                        ", local cluster ID: " + localClusterId);
+                        ", local cluster ID: " + locClusterId);
                 }
 
-                localClusterId = (UUID)remoteClusterId;
+                locClusterId = (UUID)remoteClusterId;
             }
 
             String remoteClusterTag = commonData.tag();
 
             if (remoteClusterTag != null)
-                localClusterTag = remoteClusterTag;
+                locClusterTag = remoteClusterTag;
         }
     }
 
@@ -570,6 +579,55 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
             long updateFreq = ctx.config().getMetricsUpdateFrequency();
 
             ctx.timeout().addTimeoutObject(new MetricsUpdateTimeoutObject(updateFreq));
+        }
+
+        IgniteClusterMXBeanImpl mxBeanImpl = new IgniteClusterMXBeanImpl(cluster);
+
+        if (!U.IGNITE_MBEANS_DISABLED) {
+            try {
+                mBean = U.registerMBean(
+                    ctx.config().getMBeanServer(),
+                    ctx.igniteInstanceName(),
+                    M_BEAN_NAME,
+                    mxBeanImpl.getClass().getSimpleName(),
+                    mxBeanImpl,
+                    IgniteClusterMXBean.class);
+
+                if (log.isDebugEnabled())
+                    log.debug("Registered " + M_BEAN_NAME + " MBean: " + mBean);
+            }
+            catch (Throwable e) {
+                U.error(log, "Failed to register MBean for cluster: ", e);
+            }
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onKernalStop(boolean cancel) {
+        unregisterMBean();
+    }
+
+    /**
+     * Unregister IgniteCluster MBean.
+     */
+    private void unregisterMBean() {
+        ObjectName mBeanName = mBean;
+
+        if (mBeanName == null)
+            return;
+
+        assert !U.IGNITE_MBEANS_DISABLED;
+
+        try {
+            ctx.config().getMBeanServer().unregisterMBean(mBeanName);
+
+            mBean = null;
+
+            if (log.isDebugEnabled())
+                log.debug("Unregistered " + M_BEAN_NAME + " MBean: " + mBeanName);
+        }
+        catch (JMException e) {
+            U.error(log, "Failed to unregister " + M_BEAN_NAME + " MBean: " + mBeanName, e);
         }
     }
 

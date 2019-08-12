@@ -53,6 +53,11 @@ public enum ClusterIdAndTagSubcommands {
     }
 
     /** */
+    public String text() {
+        return name;
+    }
+
+    /** */
     public VisorIdAndTagOperation operation() {
         return op;
     }

@@ -20,6 +20,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -233,6 +234,58 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
 
         //tag set from client is applied on other client nodes
         assertEquals(CLIENT_CUSTOM_TAG_1, cl0.cluster().tag());
+    }
+
+    /**
+     * Verifies restrictions for new tag provided for {@link IgniteCluster#tag(String)} method:
+     * <ol>
+     *     <li>Not null.</li>
+     *     <li>Non-empty.</li>
+     *     <li>Below 280 symbols (max tag length).</li>
+     * </ol>
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testChangeTagExceptions() throws Exception {
+        IgniteEx ig0 = startGrid(0);
+
+        boolean expectedExceptionThrown = false;
+        try {
+            ig0.cluster().tag(null);
+        }
+        catch (IgniteCheckedException e) {
+            if (e.getMessage().contains("cannot be null"))
+                expectedExceptionThrown = true;
+        }
+
+        assertTrue(expectedExceptionThrown);
+
+        expectedExceptionThrown = false;
+
+        try {
+            ig0.cluster().tag("");
+        }
+        catch (IgniteCheckedException e) {
+            if (e.getMessage().contains("should not be empty"))
+                expectedExceptionThrown = true;
+        }
+
+        assertTrue(expectedExceptionThrown);
+
+        String longString = new String(new char[281]);
+
+        expectedExceptionThrown = false;
+
+        try {
+            ig0.cluster().tag(longString);
+        }
+        catch (IgniteCheckedException e) {
+            if (e.getMessage().contains("Maximum tag length is exceeded"))
+            expectedExceptionThrown = true;
+        }
+
+        assertTrue(expectedExceptionThrown);
     }
 
     /**
