@@ -20,7 +20,7 @@ import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.managers.discovery.CustomMessageWrapper;
 import org.apache.ignite.internal.managers.discovery.IncompleteDeserializationException;
-import org.apache.ignite.internal.processors.tracing.messages.TraceContainer;
+import org.apache.ignite.internal.processors.tracing.messages.SpanContainer;
 import org.apache.ignite.internal.processors.tracing.messages.TraceableMessage;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -45,7 +45,8 @@ public class TcpDiscoveryCustomEventMessage extends TcpDiscoveryAbstractMessage 
     /** */
     private byte[] msgBytes;
 
-    private TraceContainer traceContainer = new TraceContainer();
+    /** Span container. */
+    private SpanContainer spanContainer = new SpanContainer();
 
     /**
      * @param creatorNodeId Creator node id.
@@ -69,7 +70,7 @@ public class TcpDiscoveryCustomEventMessage extends TcpDiscoveryAbstractMessage 
 
         this.msgBytes = msg.msgBytes;
         this.msg = msg.msg;
-        this.traceContainer = msg.traceContainer;
+        this.spanContainer = msg.spanContainer;
     }
 
     /**
@@ -134,11 +135,8 @@ public class TcpDiscoveryCustomEventMessage extends TcpDiscoveryAbstractMessage 
         return S.toString(TcpDiscoveryCustomEventMessage.class, this, "super", super.toString());
     }
 
-    @Override public @NotNull TraceContainer trace() {
-        return traceContainer;
-    }
-
-    @Override public String traceName() {
-        return "discovery.custom.event";
+    /** {@inheritDoc} */
+    @Override public SpanContainer spanContainer() {
+        return spanContainer;
     }
 }

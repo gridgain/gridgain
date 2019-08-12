@@ -16,43 +16,37 @@
 
 package org.apache.ignite.internal.processors.tracing;
 
-import org.apache.ignite.spi.IgniteSpiAdapter;
-import org.apache.ignite.spi.IgniteSpiException;
+import org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesHandler;
+import org.apache.ignite.logger.NullLogger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Noop and null-safe implementation of Tracing SPI.
+ * Noop implementation of {@link Tracing}.
  */
-public class NoopTracingSpi extends IgniteSpiAdapter implements TracingSpi {
-    /** Noop span. */
-    private static final Span NOOP_SPAN = new NoopSpan();
+public class NoopTracing implements Tracing {
+    /** */
+    private static final TracingSpi NOOP_SPI = new NoopTracingSpi();
+    /** */
+    private static final TraceableMessagesHandler MSG_HND = new TraceableMessagesHandler(NOOP_SPI, new NullLogger());
 
-    /** Noop serialized span. */
-    private static final byte[] NOOP_SERIALIZED_SPAN = new byte[0];
+    /** {@inheritDoc} */
+    @Override public TraceableMessagesHandler messages() {
+        return MSG_HND;
+    }
 
     /** {@inheritDoc} */
     @Override public Span create(@NotNull String name, @Nullable Span parentSpan) {
-        return NOOP_SPAN;
+        return NOOP_SPI.create(name, parentSpan);
     }
 
     /** {@inheritDoc} */
     @Override public Span create(@NotNull String name, @Nullable byte[] serializedSpanBytes) {
-        return NOOP_SPAN;
+        return NOOP_SPI.create(name, serializedSpanBytes);
     }
 
     /** {@inheritDoc} */
     @Override public byte[] serialize(@NotNull Span span) {
-        return NOOP_SERIALIZED_SPAN;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void spiStart(String igniteInstanceName) throws IgniteSpiException {
-        // No-op.
-    }
-
-    /** {@inheritDoc} */
-    @Override public void spiStop() throws IgniteSpiException {
-        // No-op.
+        return NOOP_SPI.serialize(span);
     }
 }

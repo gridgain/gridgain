@@ -132,14 +132,9 @@ public class TracingServiceTest extends AbstractServiceTest {
 
         IgniteConfiguration cfg = mock(IgniteConfiguration.class);
         TracingSpi tracingSpi = mock(TracingSpi.class);
-        TraceComponent traceComponent = mock(TraceComponent.class);
-        ExportComponent exportComponent = mock(ExportComponent.class);
 
         when(ctx.config()).thenReturn(cfg);
         when(cfg.getTracingSpi()).thenReturn(tracingSpi);
-        when(tracingSpi.getTraceComponent()).thenReturn(traceComponent);
-        when(traceComponent.getExportComponent()).thenReturn(exportComponent);
-        when(exportComponent.getSpanExporter()).thenReturn(spanExporter);
 
         return ctx;
     }

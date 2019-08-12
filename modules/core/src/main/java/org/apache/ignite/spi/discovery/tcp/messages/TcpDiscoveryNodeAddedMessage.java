@@ -20,14 +20,13 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.cluster.ClusterNode;
-import org.apache.ignite.internal.processors.tracing.messages.TraceContainer;
+import org.apache.ignite.internal.processors.tracing.messages.SpanContainer;
 import org.apache.ignite.internal.processors.tracing.messages.TraceableMessage;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.spi.discovery.tcp.internal.DiscoveryDataPacket;
 import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -70,7 +69,8 @@ public class TcpDiscoveryNodeAddedMessage extends TcpDiscoveryAbstractMessage im
     /** Start time of the first grid node. */
     private final long gridStartTime;
 
-    private TraceContainer traceContainer = new TraceContainer();
+    /** Span container. */
+    private SpanContainer spanContainer = new SpanContainer();
 
     /**
      * Constructor.
@@ -110,7 +110,7 @@ public class TcpDiscoveryNodeAddedMessage extends TcpDiscoveryAbstractMessage im
         this.topHist = msg.topHist;
         this.dataPacket = msg.dataPacket;
         this.gridStartTime = msg.gridStartTime;
-        this.traceContainer = msg.traceContainer;
+        this.spanContainer = msg.spanContainer;
     }
 
     /**
@@ -253,11 +253,8 @@ public class TcpDiscoveryNodeAddedMessage extends TcpDiscoveryAbstractMessage im
         return S.toString(TcpDiscoveryNodeAddedMessage.class, this, "super", super.toString());
     }
 
-    @Override public @NotNull TraceContainer trace() {
-        return traceContainer;
-    }
-
-    @Override public String traceName() {
-        return "node.join.add";
+    /** {@inheritDoc} */
+    @Override public SpanContainer spanContainer() {
+        return spanContainer;
     }
 }

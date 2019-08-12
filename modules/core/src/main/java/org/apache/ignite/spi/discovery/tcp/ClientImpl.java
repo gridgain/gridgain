@@ -69,8 +69,10 @@ import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.managers.discovery.CustomMessageWrapper;
 import org.apache.ignite.internal.managers.discovery.DiscoveryServerOnlyCustomMessage;
-import org.apache.ignite.internal.processors.tracing.messages.TraceContainer;
+import org.apache.ignite.internal.processors.tracing.SpanTags;
+import org.apache.ignite.internal.processors.tracing.messages.SpanContainer;
 import org.apache.ignite.internal.processors.tracing.messages.TraceableMessage;
+import org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesTable;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.F;
@@ -491,7 +493,7 @@ class ClientImpl extends TcpDiscoveryImpl {
                     new DiscoveryNotification(
                         EVT_NODE_FAILED, topVer, n, top, new TreeMap<>(topHist), null, null
                     )
-                    ).get();
+                ).get();
             }
         }
 
@@ -751,17 +753,18 @@ class ClientImpl extends TcpDiscoveryImpl {
                     if (discoveryData == null)
                         discoveryData = spi.collectExchangeData(new DiscoveryDataPacket(getLocalNodeId()));
 
-                    TcpDiscoveryJoinRequestMessage joinMsg = new TcpDiscoveryJoinRequestMessage(node, discoveryData);
+                    TcpDiscoveryJoinRequestMessage joinReqMsg = new TcpDiscoveryJoinRequestMessage(node, discoveryData);
 
-                    joinMsg.trace().span(
-                        tracing.create(joinMsg.traceName())
-                            .addTag("event.node.id", node.id().toString())
-                            .addTag("event.node.consistent.id", node.consistentId().toString())
+                    joinReqMsg.spanContainer().span(
+                        tracing.create(TraceableMessagesTable.traceName(joinReqMsg.getClass()))
+                            .addTag(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID), node.id().toString())
+                            .addTag(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.CONSISTENT_ID),
+                                node.consistentId().toString())
                             .addLog("Created")
                             .end()
                     );
 
-                    msg = joinMsg;
+                    msg = joinReqMsg;
 
                     // During marshalling, SPI didn't know whether all nodes support compression as we didn't join yet.
                     // The only way to know is passing flag directly with handshake response.
@@ -1736,7 +1739,8 @@ class ClientImpl extends TcpDiscoveryImpl {
 
                                 state = SEGMENTED;
 
-                                notifyDiscovery(EVT_NODE_SEGMENTED, topVer, locNode, allVisibleNodes(), null);
+                                notifyDiscovery(
+                                    EVT_NODE_SEGMENTED, topVer, locNode, allVisibleNodes(), null);
                             }
                         }
                     }
@@ -1862,7 +1866,8 @@ class ClientImpl extends TcpDiscoveryImpl {
 
                                 state = SEGMENTED;
 
-                                notifyDiscovery(EVT_NODE_SEGMENTED, topVer, locNode, allVisibleNodes(), null);
+                                notifyDiscovery(
+                                    EVT_NODE_SEGMENTED, topVer, locNode, allVisibleNodes(), null);
                             }
                         }
                         else {
@@ -1938,7 +1943,8 @@ class ClientImpl extends TcpDiscoveryImpl {
 
                                     state = SEGMENTED;
 
-                                    notifyDiscovery(EVT_NODE_SEGMENTED, topVer, locNode, allVisibleNodes(), null);
+                                    notifyDiscovery(
+                                        EVT_NODE_SEGMENTED, topVer, locNode, allVisibleNodes(), null);
                                 }
                                 else
                                     joinError(err);
@@ -2266,7 +2272,7 @@ class ClientImpl extends TcpDiscoveryImpl {
 
                     Collection<ClusterNode> nodes = updateTopologyHistory(topVer, msg);
 
-                    notifyDiscovery(EVT_NODE_JOINED, topVer, locNode, nodes, msg.trace());
+                    notifyDiscovery(EVT_NODE_JOINED, topVer, locNode, nodes, msg.spanContainer());
 
                     boolean disconnected = disconnected();
 
@@ -2338,7 +2344,7 @@ class ClientImpl extends TcpDiscoveryImpl {
                     }
 
                     if (evt) {
-                        notifyDiscovery(EVT_NODE_JOINED, topVer, node, top, msg.trace());
+                        notifyDiscovery(EVT_NODE_JOINED, topVer, node, top, msg.spanContainer());
 
                         spi.stats.onNodeJoined();
                     }
@@ -2383,7 +2389,7 @@ class ClientImpl extends TcpDiscoveryImpl {
                         return;
                     }
 
-                    notifyDiscovery(EVT_NODE_LEFT, msg.topologyVersion(), node, top, msg.trace());
+                    notifyDiscovery(EVT_NODE_LEFT, msg.topologyVersion(), node, top, msg.spanContainer());
 
                     spi.stats.onNodeLeft();
                 }
@@ -2447,7 +2453,7 @@ class ClientImpl extends TcpDiscoveryImpl {
                             ", msg=" + msg.warning() + ']');
                     }
 
-                    notifyDiscovery(EVT_NODE_FAILED, msg.topologyVersion(), node, top, msg.trace());
+                    notifyDiscovery(EVT_NODE_FAILED, msg.topologyVersion(), node, top, msg.spanContainer());
 
                     spi.stats.onNodeFailed();
                 }
@@ -2555,7 +2561,8 @@ class ClientImpl extends TcpDiscoveryImpl {
                             DiscoverySpiCustomMessage msgObj = msg.message(spi.marshaller(),
                                 U.resolveClassLoader(spi.ignite().configuration()));
 
-                            notifyDiscovery(EVT_DISCOVERY_CUSTOM_EVT, topVer, node, allVisibleNodes(), msgObj, msg.trace());
+                            notifyDiscovery(
+                                EVT_DISCOVERY_CUSTOM_EVT, topVer, node, allVisibleNodes(), msgObj, msg.spanContainer());
                         }
                         catch (Throwable e) {
                             U.error(log, "Failed to unmarshal discovery custom message.", e);
@@ -2626,9 +2633,16 @@ class ClientImpl extends TcpDiscoveryImpl {
          * @param topVer Topology version.
          * @param node Node.
          * @param top Topology snapshot.
+         * @param spanContainer Span container.
          */
-        private void notifyDiscovery(int type, long topVer, ClusterNode node, Collection<ClusterNode> top, TraceContainer traceContainer) {
-            notifyDiscovery(type, topVer, node, top, null, traceContainer);
+        private void notifyDiscovery(
+            int type,
+            long topVer,
+            ClusterNode node,
+            Collection<ClusterNode> top,
+            SpanContainer spanContainer
+        ) {
+            notifyDiscovery(type, topVer, node, top, null, spanContainer);
         }
 
         /**
@@ -2644,7 +2658,7 @@ class ClientImpl extends TcpDiscoveryImpl {
             ClusterNode node,
             Collection<ClusterNode> top,
             @Nullable DiscoverySpiCustomMessage data,
-            TraceContainer traceContainer
+            SpanContainer spanContainer
         ) {
             DiscoverySpiListener lsnr = spi.lsnr;
 
@@ -2656,7 +2670,7 @@ class ClientImpl extends TcpDiscoveryImpl {
                         ", topVer=" + topVer + ']');
 
                 lsnr.onDiscovery(
-                    new DiscoveryNotification(type, topVer, node, top, new TreeMap<>(topHist), data, traceContainer)
+                    new DiscoveryNotification(type, topVer, node, top, new TreeMap<>(topHist), data, spanContainer)
                 ).get();
             }
             else if (debugLog.isDebugEnabled())

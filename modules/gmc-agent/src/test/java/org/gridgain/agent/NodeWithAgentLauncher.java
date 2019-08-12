@@ -60,6 +60,7 @@ public class NodeWithAgentLauncher {
      */
     private static IgniteConfiguration getConfiguration() {
         return new IgniteConfiguration()
+            .setIgniteInstanceName("node-with-gmc-agent")
             .setAuthenticationEnabled(false)
             .setMetricsLogFrequency(0)
             .setQueryThreadPoolSize(16)

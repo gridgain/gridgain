@@ -14,14 +14,12 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.tracing.messages;
+#pragma warning disable 1587   // invalid XML comment
 
-/**
- * Interface for messages that contain trace context for an operation.
- */
-public interface TraceableMessage {
-    /**
-     * @return Span Container.
-     */
-    public SpanContainer spanContainer();
+/// <summary>
+/// Tracig API.
+/// </summary>
+namespace Apache.Ignite.Core.Tracing
+{
+    // No-op.
 }

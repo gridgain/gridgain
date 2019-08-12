@@ -22,16 +22,20 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import com.google.common.collect.Lists;
+import io.opencensus.common.Duration;
 import io.opencensus.common.Function;
 import io.opencensus.common.Functions;
 import io.opencensus.common.Timestamp;
+import io.opencensus.exporter.trace.TimeLimitedHandler;
 import io.opencensus.trace.AttributeValue;
 import io.opencensus.trace.SpanContext;
 import io.opencensus.trace.Status;
+import io.opencensus.trace.Tracing;
 import io.opencensus.trace.export.SpanData;
 import io.opencensus.trace.export.SpanExporter;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.opencensus.spi.tracing.OpenCensusTraceExporter;
 import org.gridgain.agent.WebSocketManager;
 import org.gridgain.dto.Span;
 
@@ -64,6 +68,9 @@ public class TracingService implements AutoCloseable {
     /** Handler. */
     private SpanExporter.Handler hnd;
 
+    /** Exporter. */
+    private OpenCensusTraceExporter exporter;
+
     /**
      * @param ctx Context.
      * @param mgr Manager.
@@ -80,12 +87,10 @@ public class TracingService implements AutoCloseable {
      * Register span exporter handler.
      */
     public void registerHandler() {
-        if (ctx.config().getTracingSpi().getTraceComponent() == null)
-            return;
-
-        ctx.config().getTracingSpi()
-            .getTraceComponent().getExportComponent().getSpanExporter()
-            .registerHandler(HANDLER_NAME, hnd);
+        if (ctx.config().getTracingSpi() != null) {
+            exporter = new OpenCensusTraceExporter(hnd);
+            exporter.start(ctx.igniteInstanceName());
+        }
     }
 
     /**
@@ -97,20 +102,19 @@ public class TracingService implements AutoCloseable {
 
     /** {@inheritDoc} */
     @Override public void close() {
-        ctx.config().getTracingSpi()
-            .getTraceComponent().getExportComponent().getSpanExporter()
-            .unregisterHandler(HANDLER_NAME);
+        if (ctx.config().getTracingSpi() != null)
+            exporter.stop();
     }
 
     /**
      * @return Span exporter handler.
      */
-    private SpanExporter.Handler getTraceHandler() {
-        return new SpanExporter.Handler() {
+    private TimeLimitedHandler getTraceHandler() {
+        return new TimeLimitedHandler(Tracing.getTracer(), Duration.create(10, 0), "SendGmcSpans") {
             /** Buffer. */
             private final List<Span> buf = Collections.synchronizedList(new ArrayList<>());
 
-            @Override public void export(Collection<SpanData> spanDataList) {
+            @Override public void timeLimitedExport(Collection<SpanData> spanDataList) throws Exception {
                 spanDataList.forEach(s -> buf.add(fromSpanDataToSpan(s)));
 
                 if (log.isDebugEnabled())

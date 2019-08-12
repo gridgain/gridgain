@@ -14,14 +14,16 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.tracing.messages;
+namespace Apache.Ignite.Core.Tracing
+{
+    using System.Diagnostics.CodeAnalysis;
 
-/**
- * Interface for messages that contain trace context for an operation.
- */
-public interface TraceableMessage {
-    /**
-     * @return Span Container.
-     */
-    public SpanContainer spanContainer();
+    /// <summary>
+    /// Tracing SPI.
+    /// </summary>
+    [SuppressMessage("Microsoft.Design", "CA1040:AvoidEmptyInterfaces")]
+    public interface ITracingSpi
+    {
+        // No-op.
+    }
 }

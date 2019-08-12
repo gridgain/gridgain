@@ -25,12 +25,9 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSystemProperties;
-import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -52,7 +49,6 @@ import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.apache.ignite.transactions.Transaction;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -85,7 +81,6 @@ public class PartitionsExchangeCoordinatorFailoverTest extends GridCommonAbstrac
 
         cfg.setCacheConfiguration(
                 new CacheConfiguration(CACHE_NAME)
-                    .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
                     .setBackups(2)
                     .setAffinity(new RendezvousAffinityFunction(false, 32))
         );
@@ -102,10 +97,6 @@ public class PartitionsExchangeCoordinatorFailoverTest extends GridCommonAbstrac
             );
         }
 
-        cfg.setDataStorageConfiguration(new DataStorageConfiguration()
-            .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
-            .setMaxSize(128 * 1024 * 1024)));
-
         cfg.setClientMode(client);
 
         return cfg;
@@ -120,7 +111,7 @@ public class PartitionsExchangeCoordinatorFailoverTest extends GridCommonAbstrac
 
     /** {@inheritDoc} */
     @Override protected long getTestTimeout() {
-        return 100500 * 1000L;
+        return 60 * 1000L;
     }
 
     /**
@@ -465,40 +456,6 @@ public class PartitionsExchangeCoordinatorFailoverTest extends GridCommonAbstrac
         newCrdJoinFut.get();
 
         awaitPartitionMapExchange();
-    }
-
-    @Test
-    public void testSimple() throws Exception {
-        newCaches = false;
-
-        IgniteEx ignite = startGrid(0);
-
-        startGrid(1);
-
-        startGrid(2);
-
-        for (int it = 0; it < 10; it++) {
-            try (Transaction tx = ignite.transactions().withTracing().txStart()) {
-                for (int k = it; k < it + 3; k++)
-                    ignite.cache(CACHE_NAME).put(k, k);
-
-                tx.commit();
-            }
-        }
-
-        U.sleep(2000);
-
-        stopGrid(2);
-
-        U.sleep(2000);
-
-        stopGrid(1);
-
-        U.sleep(2000);
-
-        stopGrid(0);
-
-        U.sleep(2000);
     }
 
     /**

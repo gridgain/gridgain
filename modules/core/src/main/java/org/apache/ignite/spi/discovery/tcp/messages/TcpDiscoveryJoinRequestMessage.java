@@ -16,13 +16,12 @@
 
 package org.apache.ignite.spi.discovery.tcp.messages;
 
-import org.apache.ignite.internal.processors.tracing.messages.TraceContainer;
+import org.apache.ignite.internal.processors.tracing.messages.SpanContainer;
 import org.apache.ignite.internal.processors.tracing.messages.TraceableMessage;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.spi.discovery.tcp.internal.DiscoveryDataPacket;
 import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
-import org.jetbrains.annotations.NotNull;
 
 /**
  * Initial message sent by a node that wants to enter topology.
@@ -38,8 +37,8 @@ public class TcpDiscoveryJoinRequestMessage extends TcpDiscoveryAbstractMessage 
     /** Discovery data container. */
     private final DiscoveryDataPacket dataPacket;
 
-    /** TraceContainer. */
-    private TraceContainer traceContainer = new TraceContainer();
+    /** Span container. */
+    private SpanContainer spanContainer = new SpanContainer();
 
     /**
      * Constructor.
@@ -102,11 +101,8 @@ public class TcpDiscoveryJoinRequestMessage extends TcpDiscoveryAbstractMessage 
         return S.toString(TcpDiscoveryJoinRequestMessage.class, this, "super", super.toString());
     }
 
-    @Override public @NotNull TraceContainer trace() {
-        return traceContainer;
-    }
-
-    @Override public String traceName() {
-        return "node.join";
+    /** {@inheritDoc} */
+    @Override public SpanContainer spanContainer() {
+        return spanContainer;
     }
 }

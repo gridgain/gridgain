@@ -17,10 +17,9 @@
 package org.apache.ignite.spi.discovery.tcp.messages;
 
 import java.util.UUID;
-import org.apache.ignite.internal.processors.tracing.messages.TraceContainer;
+import org.apache.ignite.internal.processors.tracing.messages.SpanContainer;
 import org.apache.ignite.internal.processors.tracing.messages.TraceableMessage;
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.jetbrains.annotations.NotNull;
 
 /**
  * Sent by node that is stopping to coordinator across the ring,
@@ -32,7 +31,8 @@ public class TcpDiscoveryNodeLeftMessage extends TcpDiscoveryAbstractMessage imp
     /** */
     private static final long serialVersionUID = 0L;
 
-    private final TraceContainer traceContainer = new TraceContainer();
+    /** Span container. */
+    private final SpanContainer spanContainer = new SpanContainer();
 
     /**
      * Constructor.
@@ -48,11 +48,8 @@ public class TcpDiscoveryNodeLeftMessage extends TcpDiscoveryAbstractMessage imp
         return S.toString(TcpDiscoveryNodeLeftMessage.class, this, "super", super.toString());
     }
 
-    @Override public @NotNull TraceContainer trace() {
-        return traceContainer;
-    }
-
-    @Override public String traceName() {
-        return "node.left";
+    /** {@inheritDoc} */
+    @Override public SpanContainer spanContainer() {
+        return spanContainer;
     }
 }

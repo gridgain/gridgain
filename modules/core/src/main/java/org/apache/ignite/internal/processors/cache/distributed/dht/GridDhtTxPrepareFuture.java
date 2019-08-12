@@ -61,7 +61,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheVersionedFuture;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedTxMapping;
-import org.apache.ignite.internal.processors.cache.distributed.SerializedSpanMessage;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareRequest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareResponse;
@@ -76,8 +75,6 @@ import org.apache.ignite.internal.processors.cache.transactions.TxCounters;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.dr.GridDrType;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
-import org.apache.ignite.internal.processors.tracing.Span;
-import org.apache.ignite.internal.processors.tracing.Status;
 import org.apache.ignite.internal.transactions.IgniteTxOptimisticCheckedException;
 import org.apache.ignite.internal.util.GridLeanSet;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
@@ -221,9 +218,6 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
     /** */
     private CountDownLatch timeoutAddedLatch;
 
-    /** */
-    private Span dhtPrepareSpan;
-
     /**
      * @param cctx Context.
      * @param tx Transaction.
@@ -240,8 +234,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
         int nearMiniId,
         Map<IgniteTxKey, GridCacheVersion> dhtVerMap,
         boolean last,
-        boolean retVal,
-        SerializedSpanMessage rmtSpanMsg
+        boolean retVal
     ) {
         super(REDUCER);
 
@@ -271,9 +264,6 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
 
         if (tx.onePhaseCommit())
             timeoutAddedLatch = new CountDownLatch(1);
-
-        if (rmtSpanMsg != null)
-            dhtPrepareSpan = cctx.kernalContext().tracing().create("primary.prepare", rmtSpanMsg.serializedSpanBytes());
     }
 
     /** {@inheritDoc} */
@@ -1023,9 +1013,6 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
 
             if (timeoutObj != null)
                 cctx.time().removeTimeoutObject(timeoutObj);
-
-            if (dhtPrepareSpan != null)
-                dhtPrepareSpan.setStatus(err == null ? Status.OK : Status.ABORTED).end();
 
             return true;
         }

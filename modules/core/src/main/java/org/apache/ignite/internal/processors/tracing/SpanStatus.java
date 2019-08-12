@@ -14,14 +14,16 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.tracing.messages;
+package org.apache.ignite.internal.processors.tracing;
 
 /**
- * Interface for messages that contain trace context for an operation.
+ * Various statuses for Spans execution.
  */
-public interface TraceableMessage {
-    /**
-     * @return Span Container.
-     */
-    public SpanContainer spanContainer();
+public enum SpanStatus {
+    /** Ok. */
+    OK,
+    /** Cancelled. */
+    CANCELLED,
+    /** Aborted. */
+    ABORTED
 }
