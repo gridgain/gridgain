@@ -165,7 +165,7 @@ public class IsolatedDiscoverySpiSelfTest extends GridCommonAbstractTest {
         try {
             Ignition.start(isolatedConfiguration("isolated-node-2", "data-1"));
 
-            fail("Second isolated node shoud not start on same persistence");
+            fail("Second isolated node should not start on same persistence");
         }
         catch (Throwable e) {
             log.info("Expected exception: " + e.getMessage());

@@ -16,7 +16,7 @@
 
 package org.apache.ignite.console.services;
 
-import org.apache.ignite.console.TestConfiguration;
+import org.apache.ignite.console.MockConfiguration;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.notification.Notification;
 import org.apache.ignite.console.notification.NotificationDescriptor;
@@ -34,7 +34,7 @@ import org.springframework.test.context.junit4.SpringRunner;
  * Test for notification service.
  */
 @RunWith(SpringRunner.class)
-@SpringBootTest(classes = {TestConfiguration.class})
+@SpringBootTest(classes = {MockConfiguration.class})
 public class NotificationServiceTest {
     /** Mail service. */
     @MockBean
