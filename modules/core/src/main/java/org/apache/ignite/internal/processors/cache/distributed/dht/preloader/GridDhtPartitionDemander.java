@@ -1297,7 +1297,7 @@ public class GridDhtPartitionDemander {
         /**
          * @return Is initial (created at demander creation).
          */
-        private boolean isInitial() {
+        public boolean isInitial() {
             return topVer == null;
         }
 
