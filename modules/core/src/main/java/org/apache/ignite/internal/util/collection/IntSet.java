@@ -14,25 +14,23 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.query.continuous;
+package org.apache.ignite.internal.util.collection;
 
-import org.apache.ignite.cache.CacheMode;
-import org.apache.ignite.configuration.NearCacheConfiguration;
-
-import static org.apache.ignite.cache.CacheMode.PARTITIONED;
+import java.util.Set;
 
 /**
  *
  */
-public class CacheContinuousQueryFailoverAtomicNearEnabledSelfSelfTest
-    extends CacheContinuousQueryFailoverAtomicSelfTest {
-    /** {@inheritDoc} */
-    @Override protected CacheMode cacheMode() {
-        return PARTITIONED;
-    }
+public interface IntSet extends Set<Integer> {
+    /** Returns <tt>true</tt> if this set contains the specified element. */
+    boolean contains(int element);
 
-    /** {@inheritDoc} */
-    @Override protected NearCacheConfiguration nearCacheConfiguration() {
-        return super.nearCacheConfiguration();
-    }
+    /** Adds the specified element to this set. */
+    boolean add(int element);
+
+    /** Removes the specified element from this set. */
+    boolean remove(int element);
+
+    /** Returns array with primitive types **/
+    int[] toIntArray();
 }
