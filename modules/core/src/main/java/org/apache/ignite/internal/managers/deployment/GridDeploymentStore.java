@@ -58,8 +58,10 @@ public interface GridDeploymentStore {
     @Nullable public GridDeployment getDeployment(GridDeploymentMetadata meta);
 
     /**
-     * @param meta Deployment meatdata.
-     * @return Grid deployment instance if it was finded in cache, {@code null} otherwise.
+     * Searches deployment with provided metadata amond cached deployments.
+     *
+     * @param meta Deployment metadata.
+     * @return Grid deployment instance if it was found in the cache, {@code null} otherwise.
      */
     @Nullable public GridDeployment searchDeploymentCache(GridDeploymentMetadata meta);
 
