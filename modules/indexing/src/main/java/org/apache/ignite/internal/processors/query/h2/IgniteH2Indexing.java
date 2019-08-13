@@ -812,7 +812,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     @SuppressWarnings("unchecked")
     GridQueryFieldsResult queryLocalSqlFields(final String schemaName, String qry,
         @Nullable final Collection<Object> params, final IndexingQueryFilter filter, boolean enforceJoinOrder,
-        boolean startTx, int qryTimeout, boolean lazy, final GridQueryCancel cancel,
+        boolean startTx, int qryTimeout, final boolean lazy, final GridQueryCancel cancel,
         MvccQueryTracker mvccTracker) throws IgniteCheckedException {
 
         GridNearTxLocal tx = null;
@@ -927,7 +927,14 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
             return new GridQueryFieldsResultAdapter(meta, null) {
                 @Override public GridCloseableIterator<List<?>> iterator() throws IgniteCheckedException {
-                    assert GridH2QueryContext.get() == null;
+                    // TODO: HOT FIX: must be fixed by GG-21372
+                    // assert GridH2QueryContext.get() == null;
+                    if (GridH2QueryContext.get() != null) {
+                        log.warning("Query context is reset for local query. The result may be invalid " +
+                            "if the explicit partitions are specified. [oldQctx=" + GridH2QueryContext.get() + ']');
+
+                        GridH2QueryContext.clearThreadLocal();
+                    }
 
                     GridH2QueryContext.set(ctx);
 
@@ -994,7 +1001,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                         }
 
                         return new H2FieldsIterator(rs, mvccTracker0, sfuFut0 != null,
-                            detachedConn);
+                            detachedConn, lazy);
                     }
                     catch (IgniteCheckedException | RuntimeException | Error e) {
                         try {
@@ -1008,7 +1015,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                         throw e;
                     }
                     finally {
-                        GridH2QueryContext.clearThreadLocal();
+                        if (!lazy)
+                            GridH2QueryContext.clearThreadLocal();
 
                         runs.remove(run.id());
                     }
