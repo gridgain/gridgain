@@ -299,6 +299,9 @@ class TcpCommunicationMetricsListener {
         rcvdMsgsMetric.reset();
         sentMsgsMetric.reset();
 
+        sentBytesCnt.reset();
+        rcvdBytesCnt.reset();
+
         for (LongAdderMetricImpl metric : sentMsgsMetricsByType.values())
             metric.reset();
 
