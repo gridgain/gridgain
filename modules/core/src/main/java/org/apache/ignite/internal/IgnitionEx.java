@@ -2155,8 +2155,7 @@ public class IgnitionEx {
             myCfg.setGridLogger(cfgLog);
 
             if(F.isEmpty(userProvidedWorkDir) && F.isEmpty(U.IGNITE_WORK_DIR))
-                log.warning("Working directory wasn't provided by user. " +
-                    "It was resolved automatically to directory : " + workDir);
+                log.warning("Ignite work directory is not provided, automatically resolved to: " + workDir);
 
             // Check Ignite home folder (after log is available).
             if (ggHome != null) {

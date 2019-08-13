@@ -9329,8 +9329,6 @@ public abstract class IgniteUtils {
                         IgniteSystemProperties.IGNITE_WORK_DIR + ") must be explicitly set."
                 );
 
-
-
             workDir = new File(userDir, DEFAULT_WORK_DIR);
         }
 
