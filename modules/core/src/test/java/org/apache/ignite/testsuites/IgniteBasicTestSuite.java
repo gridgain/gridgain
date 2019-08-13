@@ -27,6 +27,7 @@ import org.apache.ignite.internal.ClusterGroupHostsSelfTest;
 import org.apache.ignite.internal.ClusterGroupSelfTest;
 import org.apache.ignite.internal.ClusterProcessorCheckGlobalStateComputeRequestTest;
 import org.apache.ignite.internal.ConsistentIdImplicitlyExplicitlyTest;
+import org.apache.ignite.internal.DiagnosticLogForPartitionStatesTest;
 import org.apache.ignite.internal.GridFailFastNodeFailureDetectionSelfTest;
 import org.apache.ignite.internal.GridLifecycleAwareSelfTest;
 import org.apache.ignite.internal.GridLifecycleBeanSelfTest;
@@ -90,8 +91,11 @@ import org.apache.ignite.internal.processors.odbc.OdbcEscapeSequenceSelfTest;
 import org.apache.ignite.internal.processors.odbc.SqlListenerUtilsTest;
 import org.apache.ignite.internal.product.GridProductVersionSelfTest;
 import org.apache.ignite.internal.product.IndexingFeatureIsNotAvailableTest;
-import org.apache.ignite.internal.util.BitSetIntSetTest;
+import org.apache.ignite.internal.util.collection.BitSetIntSetTest;
+import org.apache.ignite.internal.util.collection.ImmutableIntSetTest;
 import org.apache.ignite.internal.util.GridCleanerTest;
+import org.apache.ignite.internal.util.collection.IntHashMapTest;
+import org.apache.ignite.internal.util.collection.IntRWHashMapTest;
 import org.apache.ignite.internal.util.nio.IgniteExceptionInNioWorkerSelfTest;
 import org.apache.ignite.marshaller.DynamicProxySerializationMultiJvmSelfTest;
 import org.apache.ignite.marshaller.MarshallerContextSelfTest;
@@ -207,6 +211,9 @@ import org.junit.runners.Suite;
     DataRegionMetricsSelfTest.class,
     SwapPathConstructionSelfTest.class,
     BitSetIntSetTest.class,
+    ImmutableIntSetTest.class,
+    IntHashMapTest.class,
+    IntRWHashMapTest.class,
 
     IgniteMarshallerCacheFSRestoreTest.class,
     IgniteMarshallerCacheClassNameConflictTest.class,
@@ -247,6 +254,7 @@ import org.junit.runners.Suite;
     BaselineAutoAdjustMXBeanTest.class,
 
     ConsistentIdImplicitlyExplicitlyTest.class,
+    DiagnosticLogForPartitionStatesTest.class,
 
     // Tests against configuration variations framework.
     ParametersTest.class,
