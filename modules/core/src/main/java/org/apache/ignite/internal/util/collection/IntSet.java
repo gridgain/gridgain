@@ -14,19 +14,23 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.persistence;
+package org.apache.ignite.internal.util.collection;
+
+import java.util.Set;
 
 /**
- * Tracks allocated pages.
+ *
  */
-public interface AllocatedPageTracker {
-    /** No-op instance. */
-    public AllocatedPageTracker NO_OP = delta -> {};
+public interface IntSet extends Set<Integer> {
+    /** Returns <tt>true</tt> if this set contains the specified element. */
+    boolean contains(int element);
 
-    /**
-     * Updates totalAllocatedPages counter.
-     *
-     * @param delta Value to increment by.
-     */
-    public void updateTotalAllocatedPages(long delta);
+    /** Adds the specified element to this set. */
+    boolean add(int element);
+
+    /** Removes the specified element from this set. */
+    boolean remove(int element);
+
+    /** Returns array with primitive types **/
+    int[] toIntArray();
 }

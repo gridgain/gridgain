@@ -14,16 +14,14 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache;
+package org.apache.ignite.internal.util.collection;
 
 /**
- * Cache group metrics.
+ * Base scenarios for read-write map.
  */
-public interface CacheGroupMetrics {
-    /**
-     * @return Number of partitions need processed for finished indexes create or rebuilding.
-     * It is calculated as the number of local partition minus the processed.
-     * A value of 0 indicates that the index is built.
-     */
-    public long getIndexBuildCountPartitionsLeft();
+public class IntRWHashMapTest extends AbstractBaseIntMapTest {
+    /** {@inheritDoc} */
+    @Override protected IntMap<String> instantiateMap() {
+        return new IntRWHashMap<>();
+    }
 }

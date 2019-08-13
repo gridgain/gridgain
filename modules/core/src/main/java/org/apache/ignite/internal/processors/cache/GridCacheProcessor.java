@@ -511,6 +511,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             }
         }
 
+        grp.metrics().remove();
+
         cachesInfo.cleanupRemovedGroup(grp.groupId());
     }
 
@@ -2401,7 +2403,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         if (!grp.systemCache() && !U.IGNITE_MBEANS_DISABLED) {
             try {
                 U.registerMBean(ctx.config().getMBeanServer(), ctx.igniteInstanceName(), CACHE_GRP_METRICS_MBEAN_GRP,
-                    grp.cacheOrGroupName(), grp.mxBean(), CacheGroupMetricsMXBean.class);
+                    grp.cacheOrGroupName(), new CacheGroupMetricsMXBeanImpl(grp), CacheGroupMetricsMXBean.class);
             }
             catch (Throwable e) {
                 U.error(log, "Failed to register MBean for cache group: " + grp.name(), e);
@@ -4072,29 +4074,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     }
 
     /**
-     * @return Last data version.
-     */
-    public long lastDataVersion() {
-        long max = 0;
-
-        for (GridCacheAdapter<?, ?> cache : caches.values()) {
-            GridCacheContext<?, ?> ctx = cache.context();
-
-            if (ctx.versions().last().order() > max)
-                max = ctx.versions().last().order();
-
-            if (ctx.isNear()) {
-                ctx = ctx.near().dht().context();
-
-                if (ctx.versions().last().order() > max)
-                    max = ctx.versions().last().order();
-            }
-        }
-
-        return max;
-    }
-
-    /**
      * @return Keep static cache configuration flag. If {@code true}, static cache configuration will override
      * configuration persisted on disk.
      */
@@ -4331,10 +4310,13 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     }
 
     /**
-     * Get configuration for the given cache.
+     * Get configuration for the given cache. Fails if cache does not exist or restarting.
      *
      * @param name Cache name.
      * @return Cache configuration.
+     * @throws org.apache.ignite.IgniteCacheRestartingException If the cache with the given name
+     *      is currently restarting.
+     * @throws IllegalStateException If the cache with the given name does not exist.
      */
     public CacheConfiguration cacheConfiguration(String name) {
         assert name != null;
@@ -4357,6 +4339,20 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         }
         else
             return desc.cacheConfiguration();
+    }
+
+    /**
+     * Get configuration for the given cache. If a cache with the given name does not exist, will return {@code null}.
+     *
+     * @param name Cache name.
+     * @return Cache configuration or {@code null}.
+     */
+    public CacheConfiguration cacheConfigurationNoProxyCheck(String name) {
+        assert name != null;
+
+        DynamicCacheDescriptor desc = cacheDescriptor(name);
+
+        return desc == null ? null : desc.cacheConfiguration();
     }
 
     /**
