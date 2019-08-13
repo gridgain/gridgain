@@ -187,26 +187,7 @@ public class AggregateDataDefault extends AggregateData {
             case STDDEV_SAMP:
             case VAR_POP:
             case VAR_SAMP: {
-                // Using Parallel algorithm, see also
-                // https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Parallel_algorithm
-                double avgA = mean;
-                double avgB = a.mean;
-                long cntA = count - a.count;
-                long cntB = a.count;
-                double mA = m2;
-                double mB = a.m2;
-
-                if (count == 1) {
-                    mean = avgB;
-                    m2 = 0;
-                }
-                else {
-                    mean = (avgA * cntA + avgB * cntB) / (cntA + cntB);
-                    double delta = avgB - avgA;
-                    m2 = mA + mB + delta * delta * cntA * cntB / (cntA + cntB);
-                }
-
-                break;
+                throw DbException.throwInternalError(" aggregate merging is not supported: type=" + aggregateType);
             }
             case EVERY:
                 v = v.convertTo(Value.BOOLEAN);
@@ -243,7 +224,7 @@ public class AggregateDataDefault extends AggregateData {
                 }
                 break;
             default:
-                DbException.throwInternalError("type=" + aggregateType);
+                throw DbException.throwInternalError("type=" + aggregateType);
         }
     }
 

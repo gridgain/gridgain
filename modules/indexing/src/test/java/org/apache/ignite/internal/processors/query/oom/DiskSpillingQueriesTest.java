@@ -33,6 +33,10 @@ import org.junit.runners.Parameterized;
  * TODO: remove hasFixedSizeInBytes
  * TODO: aggretates merged in the right way. Especially variance and stdDev
  * TODO: accomplish PlainExternalGroupByData and tests for it
+ * TODO: Meaningful renaming.
+ * TODO: distinct aggregates
+ * TODO: check all children of AggregateData
+ * TODO: check all variants of AggregateDataDefault
  *
  */
 @RunWith(Parameterized.class)
@@ -340,14 +344,40 @@ public class DiskSpillingQueriesTest extends DiskSpillingAbstractTest {
     /** */
     @Test
     public void simpleGroupBy() {
+        checkGroupsSpilled = true;
+
         assertInMemoryAndOnDiskSameResults(false,
-            "SELECT depId, COUNT(*) FROM person GROUP BY depId");
+            "SELECT depId, COUNT(*), MAX(salary), MIN(salary), AVG(salary), SUM(salary) " +
+                "FROM person GROUP BY depId");
     }
 
     /** */
     @Test
     public void simpleGroupByLazy() {
+        checkGroupsSpilled = true;
+
         assertInMemoryAndOnDiskSameResults(true,
             "SELECT depId, COUNT(*), SUM(salary) FROM person GROUP BY depId");
+    }
+
+    /** */
+    @Test
+    public void groupByWithUnion() {
+        checkGroupsSpilled = true;
+
+        assertInMemoryAndOnDiskSameResults(true,
+            "SELECT code, COUNT(*), AVG(salary) FROM person GROUP BY code " +
+                "UNION " +
+                "SELECT name, SUM(age), MIN(salary) FROM person GROUP BY name");
+    }
+
+    /** */
+    @Test
+    public void simpleGroupByStatsAggregates() {
+        checkGroupsSpilled = true;
+
+        assertInMemoryAndOnDiskSameResults(false, //  EVERY(salary > 0), ANY(male)
+            "SELECT depId,  MODE(id) FROM person GROUP BY depId"
+             /*   " FROM person GROUP BY depId"*/);
     }
 }

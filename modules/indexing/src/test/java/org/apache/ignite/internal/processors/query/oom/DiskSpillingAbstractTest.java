@@ -63,6 +63,9 @@ public class DiskSpillingAbstractTest extends GridCommonAbstractTest {
     /** */
     protected boolean checkSortOrder;
 
+    /** */
+    protected boolean checkGroupsSpilled;
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
@@ -145,6 +148,7 @@ public class DiskSpillingAbstractTest extends GridCommonAbstractTest {
         super.beforeTest();
 
         checkSortOrder = false;
+        checkGroupsSpilled = false;
     }
 
 
@@ -209,6 +213,11 @@ public class DiskSpillingAbstractTest extends GridCommonAbstractTest {
 
             // Check files have been created but deleted later.
             assertFalse("Disk events is empty for on-disk query. ", dirEvts.isEmpty());
+
+            if (checkGroupsSpilled) {
+                assertTrue("No external groups were created.",
+                    dirEvts.stream().anyMatch(e -> e.context().toString().contains("GroupBy")));
+            }
 
             assertWorkDirClean();
 
