@@ -85,8 +85,6 @@ public class IgniteRebalanceIteratorImpl implements IgniteRebalanceIterator {
             if (current == null)
                 current = fullIterators.entrySet().iterator().next();
             else {
-                boolean found = false;
-
                 doneParts.add(current.getKey());
 
                 Iterator<Map.Entry<Integer, GridCloseableIterator<CacheDataRow>>> iterator = fullIterators.entrySet().iterator();
@@ -157,16 +155,13 @@ public class IgniteRebalanceIteratorImpl implements IgniteRebalanceIterator {
 
     /** {@inheritDoc} */
     @Override public synchronized void closeForPart(int partId) throws IgniteCheckedException {
-        GridCloseableIterator<CacheDataRow> partIterator = fullIterators.get(partId);
+        if (current != null && current.getKey() == partId)
+            advance();
 
-        if (partIterator != null) {
-            if (current != null) {
-                if (current.getValue() == partIterator)
-                    advance();
-            }
+        GridCloseableIterator<CacheDataRow> partIterator = fullIterators.remove(partId);
 
-            fullIterators.remove(partId).close();
-        }
+        if (partIterator != null)
+            partIterator.close();
     }
 
     /** {@inheritDoc} */
