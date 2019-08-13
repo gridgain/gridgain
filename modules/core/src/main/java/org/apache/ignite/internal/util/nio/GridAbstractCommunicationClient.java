@@ -18,7 +18,7 @@ package org.apache.ignite.internal.util.nio;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
-import org.apache.ignite.internal.processors.metric.impl.LongAdderMetricImpl;
+import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
@@ -42,10 +42,10 @@ public abstract class GridAbstractCommunicationClient implements GridCommunicati
     private final int connIdx;
 
     /** Received bytes count metric. */
-    @Nullable protected final LongAdderMetricImpl rcvdBytesCntMetric;
+    @Nullable protected final LongAdderMetric rcvdBytesCntMetric;
 
     /** Sent bytes count metric. */
-    @Nullable protected final LongAdderMetricImpl sentBytesCntMetric;
+    @Nullable protected final LongAdderMetric sentBytesCntMetric;
 
     /**
      * @param connIdx Connection index.

@@ -55,7 +55,7 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
-import org.apache.ignite.internal.processors.metric.impl.LongAdderMetricImpl;
+import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
@@ -236,10 +236,10 @@ public class GridNioServer<T> {
     @Nullable private final MetricRegistry mreg;
 
     /** Received bytes count metric. */
-    @Nullable private final LongAdderMetricImpl rcvdBytesCntMetric;
+    @Nullable private final LongAdderMetric rcvdBytesCntMetric;
 
     /** Sent bytes count metric. */
-    @Nullable private final LongAdderMetricImpl sentBytesCntMetric;
+    @Nullable private final LongAdderMetric sentBytesCntMetric;
 
 
     /** Sessions. */

@@ -26,7 +26,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
-import org.apache.ignite.internal.processors.metric.impl.LongAdderMetricImpl;
+import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.util.nio.GridNioFilter;
 import org.apache.ignite.internal.util.nio.GridNioFilterAdapter;
 import org.apache.ignite.internal.util.nio.GridNioFilterChain;
@@ -69,10 +69,10 @@ public class IpcToNioAdapter<T> {
     private final ByteBuffer writeBuf;
 
     /** Received bytes count metric. */
-    private final LongAdderMetricImpl rcvdBytesCntMetric;
+    private final LongAdderMetric rcvdBytesCntMetric;
 
     /** Sent bytes count metric. */
-    private final LongAdderMetricImpl sentBytesCntMetric;
+    private final LongAdderMetric sentBytesCntMetric;
 
     /** */
     private final GridNioMessageWriterFactory writerFactory;

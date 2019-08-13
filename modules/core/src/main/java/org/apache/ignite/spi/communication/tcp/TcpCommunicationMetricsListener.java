@@ -24,7 +24,7 @@ import java.util.function.Function;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
-import org.apache.ignite.internal.processors.metric.impl.LongAdderMetricImpl;
+import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.plugin.extensions.communication.Message;
 
 import static org.apache.ignite.internal.util.nio.GridNioServer.RECEIVED_BYTES_METRIC_DESC;
@@ -56,40 +56,40 @@ class TcpCommunicationMetricsListener {
     private final MetricRegistry mreg;
 
     /** */
-    private final Function<Short, LongAdderMetricImpl> sentMsgsCntByTypeMetricFactory;
+    private final Function<Short, LongAdderMetric> sentMsgsCntByTypeMetricFactory;
 
     /** */
-    private final Function<Short, LongAdderMetricImpl> rcvdMsgsCntByTypeMetricFactory;
+    private final Function<Short, LongAdderMetric> rcvdMsgsCntByTypeMetricFactory;
 
     /** */
-    private final Function<UUID, LongAdderMetricImpl> sentMsgsCntByNodeIdMetricFactory;
+    private final Function<UUID, LongAdderMetric> sentMsgsCntByNodeIdMetricFactory;
 
     /** */
-    private final Function<UUID, LongAdderMetricImpl> rcvdMsgsCntByNodeIdMetricFactory;
+    private final Function<UUID, LongAdderMetric> rcvdMsgsCntByNodeIdMetricFactory;
 
     /** Sent bytes count metric.*/
-    private final LongAdderMetricImpl sentBytesMetric;
+    private final LongAdderMetric sentBytesMetric;
 
     /** Received bytes count metric. */
-    private final LongAdderMetricImpl rcvdBytesMetric;
+    private final LongAdderMetric rcvdBytesMetric;
 
     /** Sent messages count metric. */
-    private final LongAdderMetricImpl sentMsgsMetric;
+    private final LongAdderMetric sentMsgsMetric;
 
     /** Received messages count metric. */
-    private final LongAdderMetricImpl rcvdMsgsMetric;
+    private final LongAdderMetric rcvdMsgsMetric;
 
     /** Sent messages count metrics grouped by message type. */
-    ConcurrentHashMap<Short, LongAdderMetricImpl> sentMsgsMetricsByType = new ConcurrentHashMap<>();
+    ConcurrentHashMap<Short, LongAdderMetric> sentMsgsMetricsByType = new ConcurrentHashMap<>();
 
     /** Received messages count metrics grouped by message type. */
-    ConcurrentHashMap<Short, LongAdderMetricImpl> rcvdMsgsMetricsByType = new ConcurrentHashMap<>();
+    ConcurrentHashMap<Short, LongAdderMetric> rcvdMsgsMetricsByType = new ConcurrentHashMap<>();
 
     /** Sent messages count metrics grouped by message node id. */
-    ConcurrentHashMap<UUID, LongAdderMetricImpl> sentMsgsMetricsByNodeId = new ConcurrentHashMap<>();
+    ConcurrentHashMap<UUID, LongAdderMetric> sentMsgsMetricsByNodeId = new ConcurrentHashMap<>();
 
     /** Received messages metrics count grouped by message node id. */
-    ConcurrentHashMap<UUID, LongAdderMetricImpl> rcvdMsgsMetricsByNodeId = new ConcurrentHashMap<>();
+    ConcurrentHashMap<UUID, LongAdderMetric> rcvdMsgsMetricsByNodeId = new ConcurrentHashMap<>();
 
     /** Method to synchronize access to message type map. */
     private final Object msgTypMapMux = new Object();
@@ -229,13 +229,13 @@ class TcpCommunicationMetricsListener {
      * @param input Input map.
      * @return Result map.
      */
-    private Map<String, Long> convertMessageTypes(Map<Short, LongAdderMetricImpl> input) {
+    private Map<String, Long> convertMessageTypes(Map<Short, LongAdderMetric> input) {
         Map<String, Long> res = new HashMap<>(input.size());
 
         Map<Short, String> msgTypMap0 = msgTypMap;
 
         if (msgTypMap0 != null) {
-            for (Map.Entry<Short, LongAdderMetricImpl> inputEntry : input.entrySet()) {
+            for (Map.Entry<Short, LongAdderMetric> inputEntry : input.entrySet()) {
                 String typeName = msgTypMap0.get(inputEntry.getKey());
 
                 if (typeName != null)
@@ -263,7 +263,7 @@ class TcpCommunicationMetricsListener {
     public Map<UUID, Long> receivedMessagesByNode() {
         Map<UUID, Long> res = new HashMap<>();
 
-        for (Map.Entry<UUID, LongAdderMetricImpl> entry : rcvdMsgsMetricsByNodeId.entrySet())
+        for (Map.Entry<UUID, LongAdderMetric> entry : rcvdMsgsMetricsByNodeId.entrySet())
             res.put(entry.getKey(), entry.getValue().longValue());
 
         return res;
@@ -286,7 +286,7 @@ class TcpCommunicationMetricsListener {
     public Map<UUID, Long> sentMessagesByNode() {
         Map<UUID, Long> res = new HashMap<>();
 
-        for (Map.Entry<UUID, LongAdderMetricImpl> entry : sentMsgsMetricsByNodeId.entrySet())
+        for (Map.Entry<UUID, LongAdderMetric> entry : sentMsgsMetricsByNodeId.entrySet())
             res.put(entry.getKey(), entry.getValue().longValue());
 
         return res;
@@ -299,13 +299,19 @@ class TcpCommunicationMetricsListener {
         rcvdMsgsMetric.reset();
         sentMsgsMetric.reset();
 
-        sentBytesCnt.reset();
-        rcvdBytesCnt.reset();
+        sentBytesMetric.reset();
+        rcvdBytesMetric.reset();
 
-        for (LongAdderMetricImpl metric : sentMsgsMetricsByType.values())
+        for (LongAdderMetric metric : sentMsgsMetricsByType.values())
             metric.reset();
 
-        for (LongAdderMetricImpl metric : rcvdMsgsMetricsByType.values())
+        for (LongAdderMetric metric : rcvdMsgsMetricsByType.values())
+            metric.reset();
+
+        for (LongAdderMetric metric : sentMsgsMetricsByNodeId.values())
+            metric.reset();
+
+        for (LongAdderMetric metric : rcvdMsgsMetricsByNodeId.values())
             metric.reset();
     }
 
