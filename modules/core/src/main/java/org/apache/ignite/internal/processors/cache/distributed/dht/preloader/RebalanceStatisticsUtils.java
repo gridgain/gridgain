@@ -91,12 +91,12 @@ class RebalanceStatisticsUtils {
         /** First key - topic id. Second key - supplier node. */
         private final Map<Integer, Map<ClusterNode, RebalanceMessageStatistics>> msgStats = new ConcurrentHashMap<>();
 
-        /** Is print rebalance statistics. */
-        private final boolean printRebalanceStatistics = isPrintRebalanceStatistics();
+        /** Is needed or not to print rebalance statistics. */
+        private final boolean printRebalanceStatistics = printRebalanceStatistics();
 
         /**
          * Add new message statistics.
-         * Requires invoke before send demand message.
+         * Requires to be invoked before demand message sending.
          * This method required for {@code addReceivePartitionStatistics}.
          * This method add new message statistics if
          * {@link #printRebalanceStatistics} == true.
@@ -236,43 +236,46 @@ class RebalanceStatisticsUtils {
     }
 
     /**
-     * Finds out if statistics can be printed by
+     * Finds out if statistics can be printed regarding
      * {@link IgniteSystemProperties#IGNITE_QUIET},
      * {@link IgniteSystemProperties#IGNITE_WRITE_REBALANCE_STATISTICS}.
      *
-     * @return Is enable print statistics.
+     * @return Is print statistics enabled.
      */
-    public static boolean isPrintRebalanceStatistics() {
+    public static boolean printRebalanceStatistics() {
         return !getBoolean(IGNITE_QUIET, true) && getBoolean(IGNITE_WRITE_REBALANCE_STATISTICS, false);
     }
 
     /**
-     * Finds out if statistics can be printed by partitions distribution use
+     * Finds out if partitions distribution can be printed regarding
      * {@link IgniteSystemProperties#IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS}.
      *
-     * @return Is enable print partitions distribution.
+     * @return Is print partitions distribution enabled.
      */
-    public static boolean isPrintPartitionsDistribution() {
+    public static boolean printPartitionsDistribution() {
         return getBoolean(IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS, false);
     }
 
     /**
      * Return rebalance statistics. Required to call this method if
-     * {@link #isPrintRebalanceStatistics()} == true.
+     * {@link #printRebalanceStatistics()} == true.
      * <p/>
-     * Flag {@code finish} means finished or not full rebalance. <br/>
+     * Flag {@code finish} should reflect was full rebalance finished or not.
+     * <br/>
      * If {@code finish} == true then expected {@code rebFutrs} contains
-     * success or not {@code RebalanceFuture} per cache group, else expected
-     * {@code rebFutrs} contains only one success {@code RebalanceFuture}. <br/>
+     * successful or not {@code RebalanceFuture} per cache group, else expected
+     * {@code rebFutrs} contains only one successful {@code RebalanceFuture}.
+     * <br/>
      * If {@code finish} == true then print total statistics.
      * <p/>
-     * Partition distribution only for last success rebalance, per cache group.
+     * Partition distribution is printed only for last success rebalance,
+     * per cache group.
      *
-     * @param finish Is finish rebalance.
+     * @param finish Is the whole rebalance finished or not.
      * @param rebFutrs Involved in rebalance, require not null.
-     * @return Rebalance statistics string.
-     * @throws IgniteCheckedException When get result of
-     *      {@code RebalanceFuture}
+     * @return String with printed rebalance statistics.
+     * @throws IgniteCheckedException Could be thrown while getting result of
+     *      {@code RebalanceFuture}.
      * @see RebalanceFuture RebalanceFuture
      */
     public static String rebalanceStatistics(
@@ -280,7 +283,7 @@ class RebalanceStatisticsUtils {
         final Map<CacheGroupContext, Collection<RebalanceFuture>> rebFutrs
     ) throws IgniteCheckedException {
         assert nonNull(rebFutrs);
-        assert isPrintRebalanceStatistics() : "Can't print statistics";
+        assert printRebalanceStatistics() : "Can't print statistics";
 
         AtomicInteger nodeCnt = new AtomicInteger();
 
@@ -293,9 +296,9 @@ class RebalanceStatisticsUtils {
         StringJoiner joiner = new StringJoiner(" ");
 
         if (finish)
-            totalRebalanceStatistics(rebFutrs, nodeAliases, joiner);
+            writeTotalRebalanceStatistics(rebFutrs, nodeAliases, joiner);
 
-        cacheGroupsRebalanceStatistics(rebFutrs, nodeAliases, finish, joiner);
+        writeCacheGroupsRebalanceStatistics(rebFutrs, nodeAliases, finish, joiner);
         writeAliasesRebalanceStatistics("p - partitions, e - entries, b - bytes, d - duration", nodeAliases, joiner);
         writePartitionsDistributionRebalanceStatistics(rebFutrs, nodeAliases, nodeCnt, joiner);
 
@@ -309,7 +312,7 @@ class RebalanceStatisticsUtils {
      * @param nodeAliases For print nodeId=1 instead long string, require not null.
      * @param joiner For write statistics, require not null.
      */
-    private static void totalRebalanceStatistics(
+    private static void writeTotalRebalanceStatistics(
         final Map<CacheGroupContext, Collection<RebalanceFuture>> rebFutrs,
         final Map<ClusterNode, Integer> nodeAliases,
         final StringJoiner joiner
@@ -321,16 +324,15 @@ class RebalanceStatisticsUtils {
         long minStartTime = minStartTime(toRebalanceFutureStream(rebFutrs));
         long maxEndTime = maxEndTime(toRebalanceFutureStream(rebFutrs));
 
-        Map<Integer, List<RebalanceMessageStatistics>> topicStat =
-            toTopicStatistics(toRebalanceFutureStream(rebFutrs));
-
-        Map<ClusterNode, List<RebalanceMessageStatistics>> supplierStat =
-            toSupplierStatistics(toRebalanceFutureStream(rebFutrs));
-
         joiner.add("Total information (" + SUCCESSFUL_OR_NOT_REBALANCE_TEXT + "):")
             .add("Time").add("[" + toStartEndDuration(minStartTime, maxEndTime) + "]");
 
+        Map<Integer, List<RebalanceMessageStatistics>> topicStat =
+            toTopicStatistics(toRebalanceFutureStream(rebFutrs));
         writeTopicRebalanceStatistics(topicStat, joiner);
+
+        Map<ClusterNode, List<RebalanceMessageStatistics>> supplierStat =
+            toSupplierStatistics(toRebalanceFutureStream(rebFutrs));
         writeSupplierRebalanceStatistics(supplierStat, nodeAliases, joiner);
     }
 
@@ -345,7 +347,7 @@ class RebalanceStatisticsUtils {
      * @param joiner For write statistics, require not null.
      * @param finish Is finish rebalance.
      */
-    private static void cacheGroupsRebalanceStatistics(
+    private static void writeCacheGroupsRebalanceStatistics(
         final Map<CacheGroupContext, Collection<RebalanceFuture>> rebFutrs,
         final Map<ClusterNode, Integer> nodeAliases,
         final boolean finish,
@@ -362,21 +364,21 @@ class RebalanceStatisticsUtils {
             long minStartTime = minStartTime(futures.stream());
             long maxEndTime = maxEndTime(futures.stream());
 
-            Map<Integer, List<RebalanceMessageStatistics>> topicStat = toTopicStatistics(futures.stream());
-            Map<ClusterNode, List<RebalanceMessageStatistics>> supplierStat = toSupplierStatistics(futures.stream());
-
             joiner.add("[id=" + context.groupId() + ",")
                 .add("name=" + context.cacheOrGroupName() + ",")
                 .add(toStartEndDuration(minStartTime, maxEndTime) + "]");
 
+            Map<Integer, List<RebalanceMessageStatistics>> topicStat = toTopicStatistics(futures.stream());
             writeTopicRebalanceStatistics(topicStat, joiner);
+
+            Map<ClusterNode, List<RebalanceMessageStatistics>> supplierStat = toSupplierStatistics(futures.stream());
             writeSupplierRebalanceStatistics(supplierStat, nodeAliases, joiner);
         });
     }
 
     /**
      * Write partitions distribution per cache group. Only for last success rebalance.
-     * Works if {@link #isPrintPartitionsDistribution()} return true.
+     * Works if {@link #printPartitionsDistribution()} return true.
      *
      * @param rebFutrs Participating in successful and not rebalances, require not null.
      * @param nodeAliases For print nodeId=1 instead long string, require not null.
@@ -396,7 +398,7 @@ class RebalanceStatisticsUtils {
         assert nonNull(nodeCnt);
         assert nonNull(joiner);
 
-        if (!isPrintPartitionsDistribution())
+        if (!printPartitionsDistribution())
             return;
 
         joiner.add("Partitions distribution per cache group (" + SUCCESSFUL_REBALANCE_TEXT + "):");

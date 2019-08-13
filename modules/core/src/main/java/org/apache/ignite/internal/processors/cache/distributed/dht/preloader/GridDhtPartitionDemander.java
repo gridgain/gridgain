@@ -88,7 +88,6 @@ import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_OBJECT_LOAD
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_PART_LOADED;
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_STARTED;
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_STOPPED;
-import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.RebalanceStatisticsUtils.isPrintRebalanceStatistics;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.RebalanceStatisticsUtils.rebalanceStatistics;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
 import static org.apache.ignite.internal.processors.dr.GridDrType.DR_NONE;
@@ -1573,15 +1572,15 @@ public class GridDhtPartitionDemander {
     /**
      * Print rebalance statistics into log.
      * Statistic will print if
-     * {@link RebalanceStatisticsUtils#isPrintRebalanceStatistics()
-     * isPrintRebalanceStatistics()} == true.
-     * For correctly work, you need to call this method after done
-     * {@code RebalanceFuture} once whether it is successful or not.
+     * {@link RebalanceStatisticsUtils#printRebalanceStatistics()
+     * printRebalanceStatistics()} == true.
+     * To use correctly you need to call this method exactly once right after
+     * {@code RebalanceFuture} was completed (successfully or not).
      * <p/>
-     * If {@link #rebalanceFut} done successful, prints statistics
+     * If {@link #rebalanceFut} was done successfully, prints statistics
      * for cache group.
      * <p/>
-     * If the rebalance is over, print statistics for all cache groups.
+     * If the whole rebalance is over, print statistics for all cache groups.
      * The end of the rebalance is determined by the successful done all
      * {@code RebalanceFuture}'s.
      *
@@ -1589,7 +1588,7 @@ public class GridDhtPartitionDemander {
      * @see RebalanceFuture RebalanceFuture
      */
     private void printRebalanceStatistics() throws IgniteCheckedException {
-        if (!isPrintRebalanceStatistics())
+        if (!RebalanceStatisticsUtils.printRebalanceStatistics())
             return;
 
         RebalanceFuture currRebFut = rebalanceFut;
