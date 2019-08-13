@@ -28,7 +28,6 @@ import org.apache.ignite.internal.visor.id_and_tag.VisorIdAndTagTaskResult;
 
 import static org.apache.ignite.internal.commandline.CommandList.ID_AND_TAG;
 import static org.apache.ignite.internal.commandline.TaskExecutor.executeTaskByNameOnNode;
-import static org.apache.ignite.internal.visor.id_and_tag.VisorIdAndTagOperation.CHANGE_TAG;
 import static org.apache.ignite.internal.visor.id_and_tag.VisorIdAndTagOperation.VIEW;
 
 /**

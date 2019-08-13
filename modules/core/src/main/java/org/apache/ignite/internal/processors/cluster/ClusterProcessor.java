@@ -278,6 +278,10 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     public void updateTag(String newTag) throws IgniteCheckedException {
         ClusterIdAndTag oldTag = metastorage.read(CLUSTER_ID_TAG_KEY);
 
+        if (oldTag == null)
+            throw new IgniteCheckedException("Cannot change tag as default tag has not been set yet. " +
+                "Please try again later.");
+
         if (!metastorage.compareAndSet(CLUSTER_ID_TAG_KEY, oldTag, new ClusterIdAndTag(oldTag.id(), newTag))) {
             ClusterIdAndTag concurrentValue = metastorage.read(CLUSTER_ID_TAG_KEY);
 

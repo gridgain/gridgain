@@ -231,7 +231,18 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         ig.cluster().active(true);
 
-        ig.cluster().tag(newTag);
+        boolean tagUpdated = GridTestUtils.waitForCondition(() -> {
+            try {
+                ig.cluster().tag(newTag);
+            }
+            catch (IgniteCheckedException e) {
+                return false;
+            }
+
+            return true;
+        }, 10_000);
+
+        assertTrue("Tag has not been updated in 10 seconds.", tagUpdated);
 
         assertEquals(EXIT_CODE_OK, execute("--id-and-tag", "view"));
 
