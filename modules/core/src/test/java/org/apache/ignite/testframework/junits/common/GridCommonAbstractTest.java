@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -70,6 +71,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.IgniteKernal;
+import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.affinity.GridAffinityFunctionContextImpl;
 import org.apache.ignite.internal.processors.cache.CacheGroupDescriptor;
@@ -105,6 +107,7 @@ import org.apache.ignite.internal.util.typedef.T3;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
+import org.apache.ignite.internal.visor.verify.CacheFilterEnum;
 import org.apache.ignite.internal.visor.verify.VisorIdleVerifyTaskArg;
 import org.apache.ignite.internal.visor.verify.VisorIdleVerifyTaskV2;
 import org.apache.ignite.lang.IgniteBiInClosure;
@@ -125,6 +128,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.cache.CacheMode.LOCAL;
@@ -573,6 +577,91 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
     }
 
     /**
+     * Awaits that all nodes have seen latest topology change.
+     *
+     * Takes into account only server nodes, clients are ignored.
+     *
+     * @param timeout Await timeout.
+     * @throws IgniteException If waiting failed.
+     */
+    private void awaitTopologyChanged(long timeout) throws IgniteException {
+        if (isMultiJvm())
+            return;
+
+        List<IgniteEx> allNodes0 = G.allGrids().stream()
+            .map(i -> (IgniteEx)i)
+            .filter(i -> isServer(i.localNode()))
+            .collect(toList());
+
+        Set<ClusterNode> nodes0 = allNodes0.stream()
+            .map(IgniteEx::localNode)
+            .collect(toSet());
+
+        long endTime = System.currentTimeMillis() + timeout;
+
+        for (IgniteEx ig : allNodes0) {
+            GridDiscoveryManager disc = ig.context().discovery();
+
+            while (true) {
+                AffinityTopologyVersion topVer = disc.topologyVersionEx();
+
+                Collection<ClusterNode> nodes = disc.nodes(topVer)
+                    .stream()
+                    .filter(GridCommonAbstractTest::isServer)
+                    .collect(Collectors.toSet());
+
+                if (System.currentTimeMillis() > endTime) {
+                    StringBuilder exp = new StringBuilder();
+
+                    nodes0.stream()
+                        .sorted(Comparator.comparing(n -> n.consistentId().toString()))
+                        .forEach(n -> {
+                            exp.append("(")
+                                .append(n.id().toString())
+                                .append(", ")
+                                .append(n.consistentId().toString())
+                                .append(", client=")
+                                .append(n.isClient())
+                                .append(")\n");
+                        });
+
+                    StringBuilder actl = new StringBuilder();
+
+                    nodes.stream()
+                        .sorted(Comparator.comparing(n -> n.consistentId().toString()))
+                        .forEach(n -> {
+                            actl.append("(")
+                                .append(n.id().toString())
+                                .append(", ")
+                                .append(n.consistentId().toString())
+                                .append(", client=")
+                                .append(n.isClient())
+                                .append(")\n");
+                        });
+
+                    throw new IgniteException("Timeout of waiting topology localNode=("
+                        + ig.cluster().localNode().id() + "," + ig.cluster().localNode().consistentId() + ") "
+                        + " topVer=" + topVer + "\n" + "expected:\n" + exp + "actual:\n" + actl
+                    );
+                }
+
+                if (!nodes0.equals(new HashSet<>(nodes)))
+                    doSleep(50);
+                else
+                    break;
+            }
+        }
+    }
+
+    /**
+     * @param node Cluster node.
+     * @return {@code True} If node is a server. {@False} if not.
+     */
+    private static boolean isServer(ClusterNode node){
+        return !node.isClient() && !node.isDaemon();
+    }
+
+    /**
      * @param waitEvicts If {@code true} will wait for evictions finished.
      * @param waitNode2PartUpdate If {@code true} will wait for nodes node2part info update finished.
      * @param nodes Optional nodes. If {@code null} method will wait for all nodes, for non null collection nodes will
@@ -589,6 +678,8 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
     ) throws InterruptedException {
         long timeout = getPartitionMapExchangeTimeout();
 
+        awaitTopologyChanged(timeout * 2);
+
         long startTime = -1;
 
         Set<String> names = new HashSet<>();
@@ -599,11 +690,11 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
             if (nodes != null) {
                 Set<UUID> gClusterNodeIds = g.cluster().nodes().stream()
                     .map(ClusterNode::id)
-                    .collect(Collectors.toSet());
+                    .collect(toSet());
 
                 Set<UUID> awaitPmeNodeIds = nodes.stream()
                     .map(ClusterNode::id)
-                    .collect(Collectors.toSet());
+                    .collect(toSet());
 
                 gClusterNodeIds.retainAll(awaitPmeNodeIds);
 
@@ -2132,7 +2223,7 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
         if (node == null)
             throw new IgniteException("None server node for verification.");
 
-        VisorIdleVerifyTaskArg taskArg = new VisorIdleVerifyTaskArg(cacheNames);
+        VisorIdleVerifyTaskArg taskArg = new VisorIdleVerifyTaskArg(cacheNames, null, false, CacheFilterEnum.ALL, false);
 
         return ig.compute().execute(
             VisorIdleVerifyTaskV2.class.getName(),
