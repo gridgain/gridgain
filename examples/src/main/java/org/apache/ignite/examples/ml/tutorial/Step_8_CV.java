@@ -126,15 +126,16 @@ public class Step_8_CV {
                         CrossValidation<DecisionTreeNode, Double, Integer, Vector> scoreCalculator
                             = new CrossValidation<>();
 
-                        double[] scores = scoreCalculator.score(
-                            trainer,
-                            new Accuracy<>(),
-                            ignite,
-                            dataCache,
-                            split.getTrainFilter(),
-                            normalizationPreprocessor,
-                            3
-                        );
+                        double[] scores = scoreCalculator
+                            .withIgnite(ignite)
+                            .withUpstreamCache(dataCache)
+                            .withTrainer(trainer)
+                            .withMetric(new Accuracy<>())
+                            .withFilter(split.getTrainFilter())
+                            .withPreprocessor(normalizationPreprocessor)
+                            .withAmountOfFolds(3)
+                            .isRunningOnPipeline(false)
+                            .scoreByFolds();
 
                         System.out.println("Scores are: " + Arrays.toString(scores));
 

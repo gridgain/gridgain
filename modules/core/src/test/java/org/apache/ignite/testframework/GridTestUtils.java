@@ -105,6 +105,7 @@ import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.plugin.extensions.communication.Message;
+import org.apache.ignite.spi.discovery.DiscoveryNotification;
 import org.apache.ignite.spi.discovery.DiscoverySpiCustomMessage;
 import org.apache.ignite.spi.discovery.DiscoverySpiListener;
 import org.apache.ignite.ssl.SslContextFactory;
@@ -169,10 +170,10 @@ public final class GridTestUtils {
         }
 
         /** {@inheritDoc} */
-        @Override public IgniteFuture<?> onDiscovery(int type, long topVer, ClusterNode node, Collection<ClusterNode> topSnapshot, @Nullable Map<Long, Collection<ClusterNode>> topHist, @Nullable DiscoverySpiCustomMessage spiCustomMsg) {
-            hook.handleDiscoveryMessage(spiCustomMsg);
+        @Override public IgniteFuture<?> onDiscovery(DiscoveryNotification notification) {
+            hook.handleDiscoveryMessage(notification.getCustomMsgData());
 
-            return delegate.onDiscovery(type, topVer, node, topSnapshot, topHist, spiCustomMsg);
+            return delegate.onDiscovery(notification);
         }
 
         /** {@inheritDoc} */
@@ -377,6 +378,29 @@ public final class GridTestUtils {
 
             throw e;
         }
+    }
+
+    /**
+     * Checks whether runnable throws expected exception or not.
+     *
+     * @param log Logger (optional).
+     * @param run Runnable.
+     * @param cls Exception class.
+     * @param msg Exception message (optional). If provided exception message
+     *      and this message should be equal.
+     * @return Thrown throwable.
+     */
+    public static Throwable assertThrows(
+        @Nullable IgniteLogger log,
+        RunnableX run,
+        Class<? extends Throwable> cls,
+        @Nullable String msg
+    ) {
+        return assertThrows(log, () -> {
+            run.run();
+
+            return null;
+        }, cls, msg);
     }
 
     /**

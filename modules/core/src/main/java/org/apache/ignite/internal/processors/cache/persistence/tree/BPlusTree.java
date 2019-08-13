@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.tree;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -97,6 +98,9 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
     /** Wrapper for tree pages operations. Noop by default. Override for test purposes. */
     public static volatile PageHandlerWrapper<Result> pageHndWrapper = (tree, hnd) -> hnd;
+
+    /** Destroy msg. */
+    public static final String CONC_DESTROY_MSG = "Tree is being concurrently destroyed: ";
 
     /** */
     private static volatile boolean interrupted;
@@ -1001,7 +1005,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      */
     protected final void checkDestroyed() {
         if (destroyed.get())
-            throw new IllegalStateException("Tree is being concurrently destroyed: " + getName());
+            throw new IllegalStateException(CONC_DESTROY_MSG + getName());
     }
 
     /** {@inheritDoc} */
@@ -1039,6 +1043,9 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             throw new IgniteCheckedException("Runtime failure on bounds: [lower=" + lower + ", upper=" + upper + "]", e);
         }
         catch (RuntimeException | AssertionError e) {
+            if (e.getCause() instanceof SQLException)
+                throw e;
+
             long[] pageIds = pages(
                 lower == null || cursor == null || cursor.getCursor == null,
                 () -> new long[]{cursor.getCursor.pageId}
