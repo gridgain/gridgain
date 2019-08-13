@@ -375,14 +375,14 @@ public class GridDeploymentPerVersionStore extends GridDeploymentStoreAdapter {
                     return null;
                 }
 
-                List<SharedDeployment> deps = cache.get(meta.userVersion());
+                dep = (SharedDeployment)searchDeploymentCache(meta);
 
-                if (deps != null) {
-                    assert !deps.isEmpty();
+                if (dep == null) {
+                    List<SharedDeployment> deps = cache.get(meta.userVersion());
 
-                    dep  = (SharedDeployment)searchDeploymentCache(meta);
+                    if (deps != null) {
+                        assert !deps.isEmpty();
 
-                    if (dep == null) {
                         checkRedeploy(meta);
 
                         // Find existing deployments that need to be checked
@@ -424,12 +424,12 @@ public class GridDeploymentPerVersionStore extends GridDeploymentStoreAdapter {
                             deps.add(dep);
                         }
                     }
-                }
-                else {
-                    checkRedeploy(meta);
+                    else {
+                        checkRedeploy(meta);
 
-                    // Create peer class loader.
-                    dep = createNewDeployment(meta, true);
+                        // Create peer class loader.
+                        dep = createNewDeployment(meta, true);
+                    }
                 }
             }
 
