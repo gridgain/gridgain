@@ -1636,7 +1636,7 @@ public class BinaryUtils {
         Class cls;
 
         if (typeId != GridBinaryMarshaller.UNREGISTERED_TYPE_ID)
-            cls = ctx.descriptorForTypeId(true, typeId, ldr, true).describedClass();
+            cls = ctx.descriptorForTypeId(true, typeId, ldr, false).describedClass();
         else {
             String clsName = doReadClassName(in);
 
@@ -1647,8 +1647,7 @@ public class BinaryUtils {
                 throw new BinaryInvalidTypeException("Failed to load the class: " + clsName, e);
             }
 
-            // forces registering of class by type id, at least locally
-            ctx.descriptorForClass(cls, true, false);
+            ctx.registerClass(cls, false, false);
         }
 
         return cls;
@@ -1664,11 +1663,11 @@ public class BinaryUtils {
      * @return Resovled class.
      */
     public static Class resolveClass(BinaryContext ctx, int typeId, @Nullable String clsName,
-        @Nullable ClassLoader ldr, boolean deserialize) {
+        @Nullable ClassLoader ldr, boolean registerMeta) {
         Class cls;
 
         if (typeId != GridBinaryMarshaller.UNREGISTERED_TYPE_ID)
-            cls = ctx.descriptorForTypeId(true, typeId, ldr, deserialize).describedClass();
+            cls = ctx.descriptorForTypeId(true, typeId, ldr, registerMeta).describedClass();
         else {
             try {
                 cls = U.forName(clsName, ldr);
@@ -1677,8 +1676,7 @@ public class BinaryUtils {
                 throw new BinaryInvalidTypeException("Failed to load the class: " + clsName, e);
             }
 
-            // forces registering of class by type id, at least locally
-            ctx.descriptorForClass(cls, true, false);
+            ctx.registerClass(cls, false, false);
         }
 
         return cls;
