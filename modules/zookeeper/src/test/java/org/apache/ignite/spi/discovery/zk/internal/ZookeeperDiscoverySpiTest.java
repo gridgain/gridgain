@@ -4462,11 +4462,11 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
     public void testReconnectServersRestart_4() throws Exception {
         startGrid(0);
 
-        helper.clientMode(true);
+        clientMode(true);
 
         IgniteEx client = startGrid(1);
 
-        helper.clientMode(false);
+        clientMode(false);
 
         CountDownLatch latch = new CountDownLatch(1);
 
