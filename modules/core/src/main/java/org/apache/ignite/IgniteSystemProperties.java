@@ -18,7 +18,6 @@ package org.apache.ignite;
 
 import java.io.Serializable;
 import java.lang.management.RuntimeMXBean;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
@@ -26,9 +25,7 @@ import javax.net.ssl.HostnameVerifier;
 import org.apache.ignite.cache.CacheEntryProcessor;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.configuration.CheckpointWriteOrder;
 import org.apache.ignite.configuration.DataStorageConfiguration;
-import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.marshaller.optimized.OptimizedMarshaller;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
@@ -95,6 +92,11 @@ public final class IgniteSystemProperties {
      * available for download.
      */
     public static final String IGNITE_UPDATE_NOTIFIER = "IGNITE_UPDATE_NOTIFIER";
+
+    /**
+     * Url of updates service.
+     */
+    public static final String GRIDGAIN_UPDATE_URL = "GRIDGAIN_UPDATE_URL";
 
     /**
      * This system property defines interval in milliseconds in which Ignite will check
