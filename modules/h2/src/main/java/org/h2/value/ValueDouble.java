@@ -184,11 +184,6 @@ public class ValueDouble extends Value {
         return (ValueDouble) Value.cache(new ValueDouble(d));
     }
 
-    /** {@inheritDoc} */
-    @Override public boolean hasFixedSizeInBytes() {
-        return true;
-    }
-
     @Override
     public boolean equals(Object other) {
         if (!(other instanceof ValueDouble)) {

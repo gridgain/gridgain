@@ -112,9 +112,4 @@ public class ValueBoolean extends Value {
         // there are only ever two instances, so the instance must match
         return this == other;
     }
-
-    /** {@inheritDoc} */
-    @Override public boolean hasFixedSizeInBytes() {
-        return true;
-    }
 }

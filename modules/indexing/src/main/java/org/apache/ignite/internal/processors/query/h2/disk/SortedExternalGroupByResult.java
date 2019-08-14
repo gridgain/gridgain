@@ -50,11 +50,6 @@ public class SortedExternalGroupByResult extends AbstractExternalResult<Object> 
     private Queue<Chunk> resQueue;
 
     /**
-     * Comparator for {@code sortedRowsBuf}.
-     */
-    private Comparator<Value> cmp;
-
-    /**
      * @param ses Session.
      * @param ctx Kernal context.
      * @param memTracker MemoryTracker.
@@ -64,10 +59,9 @@ public class SortedExternalGroupByResult extends AbstractExternalResult<Object> 
         Session ses,
         H2MemoryTracker memTracker,
         long initSize) {
-        super(ctx, memTracker, "sortedGroupBy");
+        super(ctx, memTracker, ses.getDatabase().getCompareMode(),  "sortedGroupBy");
 
         chunks = new ArrayList<>();
-        cmp = ses.getDatabase().getCompareMode();
     }
 
 
@@ -175,7 +169,13 @@ public class SortedExternalGroupByResult extends AbstractExternalResult<Object> 
         else {
             resQueue =  new PriorityQueue<>(new Comparator<Chunk>() {
                 @Override public int compare(Chunk o1, Chunk o2) {
-                    return cmp.compare((Value)o1.currentRow()[0], (Value)o2.currentRow()[0]);
+                    int c = cmp.compare((Value)o1.currentRow()[0], (Value)o2.currentRow()[0]);
+
+                    if (c != 0)
+                        return c;
+
+                    // Compare batches to ensure they emit rows in the arriving order.
+                    return Long.compare(o1.start, o2.start);
                 }
             });
         }

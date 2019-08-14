@@ -224,9 +224,4 @@ public class ValueUuid extends Value {
     public long getLow() {
         return low;
     }
-
-    /** {@inheritDoc} */
-    @Override public boolean hasFixedSizeInBytes() {
-        return true;
-    }
 }

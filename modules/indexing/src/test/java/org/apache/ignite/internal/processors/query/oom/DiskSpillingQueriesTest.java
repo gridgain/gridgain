@@ -30,13 +30,16 @@ import org.junit.runners.Parameterized;
  * TODO: check is thrown exception for user aggregates
  * TODO: add groupings to all possible tests
  * TODO: check that group-by spill files were actually created.
- * TODO: remove hasFixedSizeInBytes
  * TODO: aggretates merged in the right way. Especially variance and stdDev
  * TODO: accomplish PlainExternalGroupByData and tests for it
  * TODO: Meaningful renaming.
  * TODO: distinct aggregates
  * TODO: check all children of AggregateData
  * TODO: check all variants of AggregateDataDefault
+ * TODO: cleanup aggregates memory before spilling them
+ * TODO use org.h2.store.Data.getValueLen(org.h2.value.Value)
+ * TODO resolve GG-22406 - aggregates
+ * TODO: add null fields to dataset
  *
  */
 @RunWith(Parameterized.class)
@@ -377,7 +380,7 @@ public class DiskSpillingQueriesTest extends DiskSpillingAbstractTest {
         checkGroupsSpilled = true;
 
         assertInMemoryAndOnDiskSameResults(false, //  EVERY(salary > 0), ANY(male)
-            "SELECT depId,  MODE(id) FROM person GROUP BY depId"
+            "SELECT depId,  LISTAGG(id) FROM person GROUP BY depId"
              /*   " FROM person GROUP BY depId"*/);
     }
 }

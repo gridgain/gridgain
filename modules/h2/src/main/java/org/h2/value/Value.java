@@ -1663,8 +1663,4 @@ public abstract class Value extends VersionedValue {
     protected DataHandler getDataHandler() {
         return null;
     }
-
-    public boolean hasFixedSizeInBytes() {
-        return false;
-    }
 }

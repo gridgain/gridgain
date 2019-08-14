@@ -79,11 +79,6 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
     private Queue<Chunk> resQueue;
 
     /**
-     * Comparator for {@code sortedRowsBuf}.
-     */
-    private Comparator<Value> cmp;
-
-    /**
      * @param ses Session.
      * @param ctx Kernal context.
      * @param distinct Distinct flag.
@@ -101,13 +96,12 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
         SortOrder sort,
         H2MemoryTracker memTracker,
         long initSize) {
-        super(ctx, memTracker, "sorted");
+        super(ctx, memTracker, ses.getDatabase().getCompareMode(), "sorted");
 
         this.distinct = distinct;
         this.distinctIndexes = distinctIndexes;
         this.visibleColCnt = visibleColCnt;
         this.sort = sort;
-        cmp = ses.getDatabase().getCompareMode();
         chunks = new ArrayList<>();
 
         if (isAnyDistinct())
@@ -124,7 +118,6 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
         distinctIndexes = parent.distinctIndexes;
         visibleColCnt = parent.visibleColCnt;
         sort = parent.sort;
-        cmp = parent.cmp;
         hashIdx = parent.hashIdx;
         chunks = parent.chunks;
     }
@@ -352,7 +345,13 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
         else {
             resQueue = sort == null ? new LinkedList<>() : new PriorityQueue<>(new Comparator<Chunk>() {
                 @Override public int compare(Chunk o1, Chunk o2) {
-                    return sort.compare(o1.currentRow(), o2.currentRow());
+                    int c = sort.compare(o1.currentRow(), o2.currentRow());
+
+                    if (c != 0)
+                        return c;
+
+                    // Compare batches to ensure they emit rows in the arriving order.
+                    return Long.compare(o1.start, o2.start);
                 }
             });
         }

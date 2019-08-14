@@ -184,8 +184,4 @@ public class ValueInt extends Value {
         return other instanceof ValueInt && value == ((ValueInt) other).value;
     }
 
-    /** {@inheritDoc} */
-    @Override public boolean hasFixedSizeInBytes() {
-        return true;
-    }
 }

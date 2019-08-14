@@ -32,6 +32,7 @@ import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.h2.result.ResultInterface;
 import org.h2.store.Data;
+import org.h2.value.CompareMode;
 import org.jetbrains.annotations.NotNull;
 
 import static java.nio.file.StandardOpenOption.CREATE_NEW;
@@ -68,6 +69,9 @@ public abstract class AbstractExternalResult<T> implements AutoCloseable{
     /** Parent result. */
     protected final AbstractExternalResult parent;
 
+    /** Comparator for {@code sortedRowsBuf}. */
+    protected final CompareMode cmp;
+
     /** Child results count. Parent result is closed only when all children are closed. */
     private int childCnt;
 
@@ -78,8 +82,9 @@ public abstract class AbstractExternalResult<T> implements AutoCloseable{
      * @param ctx Kernal context.
      * @param memTracker Memory tracker
      */
-    protected AbstractExternalResult(GridKernalContext ctx, H2MemoryTracker memTracker, String type) {
+    protected AbstractExternalResult(GridKernalContext ctx, H2MemoryTracker memTracker, CompareMode cmp,  String type) {
         this.log = ctx.log(AbstractExternalResult.class);
+        this.cmp = cmp;
 
         try {
             String fileName = "spill_" + type + "_" + ctx.localNodeId() + "_" + idGen.incrementAndGet();
@@ -120,6 +125,7 @@ public abstract class AbstractExternalResult<T> implements AutoCloseable{
         fileIo = parent.fileIo;
         this.parent = parent;
         memTracker = parent.memTracker;
+        cmp = parent.cmp;
 
         if (memTracker != null)
             memTracker.registerCloseListener(this::close);
@@ -157,6 +163,7 @@ public abstract class AbstractExternalResult<T> implements AutoCloseable{
         ByteBuffer rowBytes = readDataFromFile(rowLen);
 
         Data buff = Data.create(null, rowBytes.array(), true);
+        buff.setCompareMode(cmp);
 
         T[] row = createEmptyArray(colCnt);
 
@@ -210,7 +217,11 @@ public abstract class AbstractExternalResult<T> implements AutoCloseable{
      * @return New data buffer.
      */
     @NotNull protected Data createDataBuffer(int cap) {
-        return Data.create(null, cap, true); // TODO use org.h2.store.Data.getValueLen(org.h2.value.Value)
+        Data data = Data.create(null, cap, true); // TODO use org.h2.store.Data.getValueLen(org.h2.value.Value)
+
+        data.setCompareMode(cmp);
+
+        return data;
     }
 
     /**

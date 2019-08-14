@@ -48,10 +48,6 @@ public class AggregateDataCount extends AggregateData {
         return ValueLong.get(count).convertTo(dataType);
     }
 
-    @Override public boolean hasFixedSizeInBytes() {
-        return true;
-    }
-
     public boolean isAll() {
         return all;
     }

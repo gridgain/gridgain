@@ -196,9 +196,4 @@ public class ValueFloat extends Value {
         }
         return compareTypeSafe((ValueFloat) other, null) == 0;
     }
-
-    /** {@inheritDoc} */
-    @Override public boolean hasFixedSizeInBytes() {
-        return true;
-    }
 }

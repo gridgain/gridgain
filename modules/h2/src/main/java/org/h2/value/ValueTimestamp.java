@@ -278,9 +278,4 @@ public class ValueTimestamp extends Value {
         long d2 = DateTimeUtils.absoluteDayFromDateValue(t.dateValue);
         return DateTimeUtils.normalizeTimestamp(d1 - d2, timeNanos - t.timeNanos);
     }
-
-    /** {@inheritDoc} */
-    @Override public boolean hasFixedSizeInBytes() {
-        return true;
-    }
 }

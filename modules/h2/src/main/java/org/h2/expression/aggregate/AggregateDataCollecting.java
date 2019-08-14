@@ -30,7 +30,7 @@ import org.h2.value.ValueNull;
  * class instead.
  * </p>
  */
-class AggregateDataCollecting extends AggregateData implements Iterable<Value> {
+public class AggregateDataCollecting extends AggregateData implements Iterable<Value> {
 
     private final boolean distinct;
 
@@ -47,6 +47,17 @@ class AggregateDataCollecting extends AggregateData implements Iterable<Value> {
      */
     AggregateDataCollecting(boolean distinct) {
         this.distinct = distinct;
+    }
+
+    /**
+     * @param distinct if distinct is used
+     * @param values Collected values.
+     * @param shared Shared value.
+     */
+    private AggregateDataCollecting(boolean distinct, Collection<Value> values, Value shared) {
+        this.distinct = distinct;
+        this.values = values;
+        this.shared = shared;
     }
 
     @Override
@@ -71,8 +82,17 @@ class AggregateDataCollecting extends AggregateData implements Iterable<Value> {
     }
 
     @Override public void mergeAggregate(Session ses, AggregateData agg) {
-        // TODO https://ggsystems.atlassian.net/browse/GG-22406
-        throw new UnsupportedOperationException();
+        assert agg != null;
+        assert agg instanceof AggregateDataCollecting : agg.getClass();
+
+        AggregateDataCollecting a = (AggregateDataCollecting)agg;
+        assert distinct == a.distinct;
+        assert shared == shared;
+
+        if (values == null)
+            values = a.values;
+        else
+            values.addAll(a.values);
     }
 
     @Override
@@ -126,7 +146,7 @@ class AggregateDataCollecting extends AggregateData implements Iterable<Value> {
      *
      * @return value of a shared argument
      */
-    Value getSharedArgument() {
+    public Value getSharedArgument() {
         return shared;
     }
 
@@ -138,5 +158,17 @@ class AggregateDataCollecting extends AggregateData implements Iterable<Value> {
 
             memTracker.released(memReserved);
         }
+    }
+
+    public boolean isDistinct() {
+        return distinct;
+    }
+
+    public Collection<Value> values() {
+        return values;
+    }
+
+    public static AggregateDataCollecting from(boolean distinct, Collection<Value> values, Value shared) {
+        return new AggregateDataCollecting(distinct, values, shared);
     }
 }

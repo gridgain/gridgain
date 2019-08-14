@@ -104,9 +104,4 @@ public abstract class AggregateData {
      * @param ses Session.
      */
     public void cleanup(Session ses) {}
-
-    public boolean hasFixedSizeInBytes() {
-        return false;
-    }
-
 }

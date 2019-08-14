@@ -290,10 +290,6 @@ public class AggregateDataDefault extends AggregateData {
         return a;
     }
 
-    @Override public boolean hasFixedSizeInBytes() {
-        return value.hasFixedSizeInBytes();
-    }
-
     public AggregateType aggregateType() {
         return aggregateType;
     }
@@ -322,52 +318,4 @@ public class AggregateDataDefault extends AggregateData {
         double mean, Value value) {
         return new AggregateDataDefault(aggregateType, dataType, count, m2, mean, value);
     }
-
-    //    @Override public void toBytes(DataOutputStream out) throws IOException {
-////        private final AggregateType aggregateType;
-////        private final int dataType;
-////        private long count;
-////        private Value value;
-////        private double m2, mean; WriteBuffer
-//
-//        out.writeInt(aggregateType.ordinal());
-//        out.writeInt(dataType);
-//        out.writeLong(count);
-//        out.writeDouble(m2);
-//        out.writeDouble(mean);
-//
-//        int dataLen = value instanceof ValueDecimal ? 100 : value.getMemory() + 4;
-//
-//        Data data = Data.create(null, dataLen, false);
-//
-//        data.writeValue(value);
-//
-//        out.writeInt(dataLen);
-//
-//        out.write(data.getBytes(), 0, dataLen);
-//
-//    }
-
-//    public static Object read(DataInputStream in) throws IOException {
-//        int aggTypeOrdinal = in.readInt();
-//        AggregateType aggType = AggregateType.values()[aggTypeOrdinal];
-//
-//        int dataType = in.readInt();
-//        long cnt0 = in.readLong();
-//        double m2 = in.readDouble();
-//        double mean = in.readDouble();
-//
-//        int valLen = in.readInt();
-//
-//        byte[] valBytes = new byte[valLen];
-//
-//        in.read(valBytes, 0, valLen);
-//
-//        Data data = Data.create(null, valBytes, false);
-//
-//        Value val = data.readValue();
-//
-//        return new AggregateDataDefault(aggType, dataType, cnt0, m2, mean, val);  // TODO: implement.
-//
-//    }
 }

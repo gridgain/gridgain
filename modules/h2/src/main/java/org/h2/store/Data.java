@@ -14,10 +14,14 @@ import java.io.Reader;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.TreeSet;
 import org.h2.api.ErrorCode;
 import org.h2.api.IntervalQualifier;
 import org.h2.engine.Constants;
+import org.h2.expression.aggregate.AggregateDataCollecting;
 import org.h2.expression.aggregate.AggregateDataCount;
 import org.h2.expression.aggregate.AggregateDataDefault;
 import org.h2.expression.aggregate.AggregateType;
@@ -29,6 +33,7 @@ import org.h2.util.DateTimeUtils;
 import org.h2.util.JdbcUtils;
 import org.h2.util.MathUtils;
 import org.h2.util.Utils;
+import org.h2.value.CompareMode;
 import org.h2.value.TypeInfo;
 import org.h2.value.Value;
 import org.h2.value.ValueArray;
@@ -125,6 +130,7 @@ public class Data {
     // Aggregates.
     private static final byte AGG_DATA_COUNT = 101;
     private static final byte AGG_DATA_DEFAULT = 102;
+    private static final byte AGG_DATA_COLLECTION = 103;
 
     private static final long MILLIS_PER_MINUTE = 1000 * 60;
 
@@ -145,10 +151,20 @@ public class Data {
 
     private final boolean storeLocalTime;
 
+    private CompareMode cmp;
+
     private Data(DataHandler handler, byte[] data, boolean storeLocalTime) {
         this.handler = handler;
         this.data = data;
         this.storeLocalTime = storeLocalTime;
+    }
+
+    /**
+     * Some aggregates require comparator for being created. This method is intended for this purpose.
+     * @param cmp Comparator.
+     */
+    public void setCompareMode(CompareMode cmp) {
+        this.cmp = cmp;
     }
 
     /**
@@ -814,6 +830,16 @@ public class Data {
             writeLong(Double.doubleToLongBits(a.mean()));
             writeLong(Double.doubleToLongBits(a.m2()));
         }
+        else if (o instanceof AggregateDataCollecting) {
+            AggregateDataCollecting a = (AggregateDataCollecting)o;
+            writeByte(AGG_DATA_COLLECTION);
+            writeByte(a.isDistinct() ? BOOLEAN_TRUE : BOOLEAN_FALSE);
+            writeValue(a.getSharedArgument() == null ? ValueNull.INSTANCE : a.getSharedArgument());
+            Collection<Value> values = a.values();
+            writeInt(values.size());
+            for (Value v : values)
+                writeValue(v);
+        }
         else
             throw DbException.throwInternalError("unknown type=" + o.getClass());
     }
@@ -1024,6 +1050,18 @@ public class Data {
             double mean = Double.longBitsToDouble(readLong());
             double m2 = Double.longBitsToDouble(readLong());
             return AggregateDataDefault.from(aggType, dataType, cnt,  mean, m2, val);
+        }
+        case AGG_DATA_COLLECTION: {
+            boolean distinct = readByte() == BOOLEAN_TRUE;
+            Value shared = (Value)readValue();
+            if (shared == ValueNull.INSTANCE)
+                shared = null;
+            assert !distinct || cmp != null;
+            Collection<Value> values = distinct ? new TreeSet<>(cmp) : new ArrayList<Value>();
+            int size = readInt();
+            for (int i = 0; i < size; i++)
+                values.add((Value)readValue());
+            return AggregateDataCollecting.from(distinct, values, shared);
         }
         default:
             if (type >= INT_0_15 && type < INT_0_15 + 16) {

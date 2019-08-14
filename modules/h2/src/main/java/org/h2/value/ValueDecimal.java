@@ -261,8 +261,4 @@ public class ValueDecimal extends Value {
         }
         return bd.setScale(scale, RoundingMode.HALF_UP);
     }
-
-    @Override public boolean hasFixedSizeInBytes() {
-        return value.scale() < 64; // TODO: CODE: implement.
-    }
 }

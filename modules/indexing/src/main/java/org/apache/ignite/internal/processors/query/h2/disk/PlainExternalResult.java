@@ -33,7 +33,7 @@ public class PlainExternalResult extends AbstractExternalResult<Value> implement
      * @param memTracker Memory tracker.
      */
     public PlainExternalResult(GridKernalContext ctx, H2MemoryTracker memTracker) {
-        super(ctx, memTracker, "plain");
+        super(ctx, memTracker, null, "plain");
     }
 
     /**
