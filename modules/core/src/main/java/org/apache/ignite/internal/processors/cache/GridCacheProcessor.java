@@ -509,6 +509,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             }
         }
 
+        grp.metrics().remove();
+
         cachesInfo.cleanupRemovedGroup(grp.groupId());
     }
 
@@ -2399,7 +2401,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         if (!grp.systemCache() && !U.IGNITE_MBEANS_DISABLED) {
             try {
                 U.registerMBean(ctx.config().getMBeanServer(), ctx.igniteInstanceName(), CACHE_GRP_METRICS_MBEAN_GRP,
-                    grp.cacheOrGroupName(), grp.mxBean(), CacheGroupMetricsMXBean.class);
+                    grp.cacheOrGroupName(), new CacheGroupMetricsMXBeanImpl(grp), CacheGroupMetricsMXBean.class);
             }
             catch (Throwable e) {
                 U.error(log, "Failed to register MBean for cache group: " + grp.name(), e);
@@ -4067,29 +4069,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      */
     private GridCacheQueryManager queryManager(CacheConfiguration cfg) {
         return cfg.getCacheMode() == LOCAL ? new GridCacheLocalQueryManager() : new GridCacheDistributedQueryManager();
-    }
-
-    /**
-     * @return Last data version.
-     */
-    public long lastDataVersion() {
-        long max = 0;
-
-        for (GridCacheAdapter<?, ?> cache : caches.values()) {
-            GridCacheContext<?, ?> ctx = cache.context();
-
-            if (ctx.versions().last().order() > max)
-                max = ctx.versions().last().order();
-
-            if (ctx.isNear()) {
-                ctx = ctx.near().dht().context();
-
-                if (ctx.versions().last().order() > max)
-                    max = ctx.versions().last().order();
-            }
-        }
-
-        return max;
     }
 
     /**
