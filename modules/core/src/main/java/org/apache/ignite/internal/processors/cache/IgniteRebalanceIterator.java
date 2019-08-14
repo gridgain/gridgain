@@ -16,7 +16,9 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.util.Set;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.IgniteHistoricalIterator;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.util.lang.GridCloseableIterator;
 
@@ -62,6 +64,19 @@ public interface IgniteRebalanceIterator extends GridCloseableIterator<CacheData
      * @throws IgniteCheckedException In case of error.
      */
     public void closeForPart(int partId) throws IgniteCheckedException;
+
+    /**
+     * Partitions which will be full iterated.
+     * @return Set of partiotns.
+     */
+    public Set<Integer> fullParts();
+
+    /**
+     * Replace historical data iterate.
+     *
+     * @throws IgniteCheckedException In case of error.
+     */
+    public void replaceHistorical(IgniteHistoricalIterator historicalIterator) throws IgniteCheckedException;
 
     /**
      * Return next element without moving iterator cursor to the next one.

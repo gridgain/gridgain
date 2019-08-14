@@ -40,7 +40,7 @@ public class IgniteRebalanceIteratorImpl implements IgniteRebalanceIterator {
     @Nullable private final LinkedHashMap<Integer, GridCloseableIterator<CacheDataRow>> fullIterators;
 
     /** Iterator for historical preloading. */
-    @Nullable private final IgniteHistoricalIterator historicalIterator;
+    @Nullable private IgniteHistoricalIterator historicalIterator;
 
     /** Partitions marked as missing. */
     private final Set<Integer> missingParts = new HashSet<>();
@@ -162,6 +162,19 @@ public class IgniteRebalanceIteratorImpl implements IgniteRebalanceIterator {
 
         if (partIterator != null)
             partIterator.close();
+    }
+
+    /** {@inheritDoc} */
+    @Override public synchronized Set<Integer> fullParts() {
+        return fullIterators.keySet();
+    }
+
+    /** {@inheritDoc} */
+    @Override public synchronized void replaceHistorical(IgniteHistoricalIterator historicalIterator) throws IgniteCheckedException {
+        if (this.historicalIterator != null)
+            this.historicalIterator.close();
+
+        this.historicalIterator = historicalIterator;
     }
 
     /** {@inheritDoc} */

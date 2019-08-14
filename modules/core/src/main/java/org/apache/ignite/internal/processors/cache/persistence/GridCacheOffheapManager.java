@@ -992,7 +992,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     }
 
     /** {@inheritDoc} */
-    @Override @Nullable protected IgniteHistoricalIterator historicalIterator(
+    @Override @Nullable public IgniteHistoricalIterator historicalIterator(
         CachePartitionPartialCountersMap partCntrs, Set<Integer> missing) throws IgniteCheckedException {
         if (partCntrs == null || partCntrs.isEmpty())
             return null;

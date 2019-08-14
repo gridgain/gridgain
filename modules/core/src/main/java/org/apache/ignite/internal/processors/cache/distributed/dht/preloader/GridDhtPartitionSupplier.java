@@ -45,6 +45,7 @@ import org.apache.ignite.internal.processors.cache.mvcc.MvccUtils;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccVersionAware;
 import org.apache.ignite.internal.processors.cache.mvcc.txlog.TxState;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
+import org.apache.ignite.internal.util.lang.GridCloseableIterator;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.T3;
 import org.apache.ignite.internal.util.typedef.internal.LT;
@@ -196,11 +197,60 @@ class GridDhtPartitionSupplier {
                 SupplyContext sctx = scMap.get(contextId);
 
                 if (sctx != null && sctx.rebalanceId == -demandMsg.rebalanceId()) {
-                    clearContext(scMap.remove(contextId), log);
+                    if (demandMsg.partitions().isEmpty()) {
+                        clearContext(scMap.remove(contextId), log);
 
-                    if (log.isDebugEnabled())
-                        log.debug("Supply context cleaned [" + supplyRoutineInfo(topicId, nodeId, demandMsg)
-                            + ", supplyContext=" + sctx + "]");
+                        if (log.isDebugEnabled())
+                            log.debug("Supply context cleaned [" + supplyRoutineInfo(topicId, nodeId, demandMsg)
+                                + ", supplyContext=" + sctx + "]");
+                    }
+                    else {
+                        Set<Integer> missing = new HashSet<>();
+
+                        for (int partId : demandMsg.partitions().fullSet()) {
+                            if (!sctx.iterator.fullParts().contains(partId)) {
+                                try {
+                                    GridCloseableIterator<CacheDataRow> partIter = grp.offheap().reservedIterator(partId,
+                                        demandMsg.topologyVersion());
+
+                                    if (partIter == null) {
+                                        missing.add(partId);
+
+                                        continue;
+                                    }
+
+                                    sctx.iterator.addPartIterator(partId, partIter);
+                                }
+                                catch (IgniteCheckedException e) {
+                                    U.error(log, "Faile to get rebalance iterator for partition: "
+                                        + partId + ".", e);
+                                }
+                            }
+                        }
+
+                        for (int partId : sctx.iterator.fullParts()) {
+                            if (!demandMsg.partitions().hasFull(partId)) {
+                                try {
+                                    sctx.iterator.closeForPart(partId);
+                                }
+                                catch (IgniteCheckedException e) {
+                                    U.error(log, "Iterator close failed for partition: " + partId + ".", e);
+                                }
+                            }
+                        }
+
+                        IgniteHistoricalIterator historicalIterator = null;
+
+                        try {
+                            if (demandMsg.partitions().hasHistorical())
+                                historicalIterator = grp.offheap().historicalIterator(demandMsg.partitions().historicalMap(), missing);
+
+                            sctx.iterator.replaceHistorical(historicalIterator);
+                        }
+                        catch (IgniteCheckedException e) {
+                            U.error(log, "Can not replace historical iterator.", e);
+                        }
+                    }
                 }
                 else {
                     if (log.isDebugEnabled())
