@@ -33,13 +33,20 @@ fixture('Help menu')
     });
 
 test.page(resolveUrl('/'))('Help menu items', async(t) => {
+    const links = [
+        {label: 'Documentation', href: 'https://docs.gridgain.com/docs/web-console'},
+        {label: 'Forms', href: 'https://forums.gridgain.com/home'},
+        {label: 'Support', href: 'https://gridgain.freshdesk.com/support/login'},
+        {label: 'Webinars', href: 'https://www.gridgain.com/resources/webinars'},
+        {label: 'Whitepapers', href: 'https://www.gridgain.com/resources/literature/white-papers'}
+    ];
+    await t.hover(helpMenu.trigger);
+    for await (const link of links) {
+        await t
+            .expect(helpMenu.item(link.label).getAttribute('href')).eql(link.href)
+            .expect(helpMenu.item(link.label).getAttribute('target')).eql('_blank');
+    }
     await t
-        .hover(helpMenu.trigger)
-        .expect(helpMenu.item('Documentation').getAttribute('href')).eql('https://docs.gridgain.com/docs/web-console')
-        .expect(helpMenu.item('Forms').getAttribute('href')).eql('https://forums.gridgain.com/home')
-        .expect(helpMenu.item('Support').getAttribute('href')).eql('https://gridgain.freshdesk.com/support/login')
-        .expect(helpMenu.item('Webinars').getAttribute('href')).eql('https://www.gridgain.com/resources/webinars')
-        .expect(helpMenu.item('Whitepapers').getAttribute('href')).eql('https://www.gridgain.com/resources/literature/white-papers')
         .click(helpMenu.item('Getting Started'))
         .expect(gettingStarted.dialog.exists).ok()
         .click(gettingStarted.closeButton);
