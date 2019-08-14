@@ -81,7 +81,7 @@ import org.apache.ignite.internal.processors.cache.transactions.TransactionProxy
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
-import org.apache.ignite.internal.processors.metric.impl.LongAdderMetricImpl;
+import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.processors.query.EnlistOperation;
 import org.apache.ignite.internal.processors.query.UpdateSourceIterator;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
@@ -5106,12 +5106,12 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
         if (registry == null || val <= 0)
             return;
 
-        LongAdderMetricImpl monotonic = (LongAdderMetricImpl)registry.findMetric(monotonicMetricName);
+        LongAdderMetric monotonic = registry.findMetric(monotonicMetricName);
 
         if (monotonic != null)
             monotonic.add(val);
 
-        HistogramMetric histo = (HistogramMetric)registry.findMetric(histoMetricName);
+        HistogramMetric histo = registry.findMetric(histoMetricName);
 
         if (histo != null)
             histo.value(val);
