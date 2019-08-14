@@ -26,14 +26,21 @@ import org.jetbrains.annotations.Nullable;
  */
 interface DistributedMetaStorageBridge {
     /**
-     * Get data by key.
+     * Get unmarshalled data by key.
      *
      * @param globalKey The key.
-     * @param unmarshal Whether the value should be unmarshalled or not.
      * @return Value associated with the key.
-     * @throws IgniteCheckedException If reading or unmarshalling failed.
+     * @throws IgniteCheckedException If unmarshalling failed.
      */
-    Serializable read(String globalKey, boolean unmarshal) throws IgniteCheckedException;
+    Serializable read(String globalKey) throws IgniteCheckedException;
+
+    /**
+     * Get raw data by key.
+     *
+     * @param globalKey The key.
+     * @return Value associated with the key.
+     */
+    byte[] readMarshalled(String globalKey);
 
     /**
      * Iterate over all values corresponding to the keys with given prefix. It is guaranteed that iteration will be
@@ -41,12 +48,11 @@ interface DistributedMetaStorageBridge {
      *
      * @param globalKeyPrefix Prefix for the keys that will be iterated.
      * @param cb Callback that will be applied to all {@code <key, value>} pairs.
-     * @throws IgniteCheckedException If reading or unmarshalling failed.
+     * @throws IgniteCheckedException If unmarshalling failed.
      */
     void iterate(
         String globalKeyPrefix,
-        BiConsumer<String, ? super Serializable> cb,
-        boolean unmarshal
+        BiConsumer<String, ? super Serializable> cb
     ) throws IgniteCheckedException;
 
     /**
@@ -59,28 +65,10 @@ interface DistributedMetaStorageBridge {
     void write(String globalKey, @Nullable byte[] valBytes) throws IgniteCheckedException;
 
     /**
-     * Invoked when update message was received. Prepares storage to the writing of new value and notifies listeners
-     * (optionally).
-     *
-     * @param histItem Update data.
-     * @throws IgniteCheckedException If some IO or unmarshalling errors occured.
-     */
-    void onUpdateMessage(
-        DistributedMetaStorageHistoryItem histItem
-    ) throws IgniteCheckedException;
-
-    /**
-     * Remove information about the specific update from the history.
-     *
-     * @param ver Specific version for which the update information should be deleted.
-     * @throws IgniteCheckedException If some IO error occured.
-     */
-    void removeHistoryItem(long ver) throws IgniteCheckedException;
-
-    /**
      * Returns all {@code <key, value>} pairs currently stored in distributed metastorage. Values are not unmarshalled.
+     * All keys are sorted in ascending order.
      *
      * @return Array of all keys and values.
      */
-    DistributedMetaStorageKeyValuePair[] localFullData() throws IgniteCheckedException;
+    DistributedMetaStorageKeyValuePair[] localFullData();
 }

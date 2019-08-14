@@ -22,15 +22,19 @@ import java.util.function.BiConsumer;
 /** */
 class NotAvailableDistributedMetaStorageBridge implements DistributedMetaStorageBridge {
     /** {@inheritDoc} */
-    @Override public Serializable read(String globalKey, boolean unmarshal) {
+    @Override public Serializable read(String globalKey) {
         throw new UnsupportedOperationException("read");
+    }
+
+    /** {@inheritDoc} */
+    @Override public byte[] readMarshalled(String globalKey) {
+        throw new UnsupportedOperationException("readMarshalled");
     }
 
     /** {@inheritDoc} */
     @Override public void iterate(
         String globalKeyPre,
-        BiConsumer<String, ? super Serializable> cb,
-        boolean unmarshal
+        BiConsumer<String, ? super Serializable> cb
     ) {
         throw new UnsupportedOperationException("iterate");
     }
@@ -38,16 +42,6 @@ class NotAvailableDistributedMetaStorageBridge implements DistributedMetaStorage
     /** {@inheritDoc} */
     @Override public void write(String globalKey, byte[] valBytes) {
         throw new UnsupportedOperationException("write");
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onUpdateMessage(DistributedMetaStorageHistoryItem histItem) {
-        throw new UnsupportedOperationException("onUpdateMessage");
-    }
-
-    /** {@inheritDoc} */
-    @Override public void removeHistoryItem(long ver) {
-        throw new UnsupportedOperationException("removeHistoryItem");
     }
 
     /** {@inheritDoc} */

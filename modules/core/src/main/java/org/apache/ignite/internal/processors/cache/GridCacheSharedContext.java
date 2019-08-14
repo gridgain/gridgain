@@ -288,8 +288,6 @@ public class GridCacheSharedContext<K, V> {
 
         if (msgLog.isInfoEnabled())
             msgLog.info("Components activation performed in " + (System.currentTimeMillis() - time) + " ms.");
-
-        ((DistributedMetaStorageImpl)kernalCtx.distributedMetastorage()).inMemoryReadyForWrite();
     }
 
     /**

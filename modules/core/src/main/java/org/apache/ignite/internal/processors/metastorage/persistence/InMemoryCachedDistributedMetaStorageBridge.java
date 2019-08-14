@@ -18,42 +18,54 @@ package org.apache.ignite.internal.processors.metastorage.persistence;
 
 import java.io.Serializable;
 import java.util.Map;
-import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.function.BiConsumer;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadOnlyMetastorage;
+import org.apache.ignite.marshaller.jdk.JdkMarshaller;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageUtil.cleanupGuardKey;
+import static org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageUtil.globalKey;
+import static org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageUtil.historyItemKey;
+import static org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageUtil.localKeyPrefix;
 import static org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageUtil.unmarshal;
+import static org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageUtil.versionKey;
 
 /** */
 class InMemoryCachedDistributedMetaStorageBridge implements DistributedMetaStorageBridge {
     /** */
-    private DistributedMetaStorageImpl dms;
+    private final JdkMarshaller marshaller;
 
     /** */
-    private final Map<String, byte[]> cache = new ConcurrentSkipListMap<>();
+    private final SortedMap<String, byte[]> cache = new TreeMap<>();
 
     /** */
-    public InMemoryCachedDistributedMetaStorageBridge(DistributedMetaStorageImpl dms) {
-        this.dms = dms;
+    public InMemoryCachedDistributedMetaStorageBridge(JdkMarshaller marshaller) {
+        this.marshaller = marshaller;
     }
 
     /** {@inheritDoc} */
-    @Override public Serializable read(String globalKey, boolean unmarshal) throws IgniteCheckedException {
-        byte[] valBytes = cache.get(globalKey);
+    @Override public Serializable read(String globalKey) throws IgniteCheckedException {
+        return unmarshal(marshaller, readMarshalled(globalKey));
+    }
 
-        return unmarshal ? unmarshal(dms.marshaller, valBytes) : valBytes;
+    /** {@inheritDoc} */
+    @Override public byte[] readMarshalled(String globalKey) {
+        return cache.get(globalKey);
     }
 
     /** {@inheritDoc} */
     @Override public void iterate(
         String globalKeyPrefix,
-        BiConsumer<String, ? super Serializable> cb,
-        boolean unmarshal
+        BiConsumer<String, ? super Serializable> cb
     ) throws IgniteCheckedException {
-        for (Map.Entry<String, byte[]> entry : cache.entrySet()) {
-            if (entry.getKey().startsWith(globalKeyPrefix))
-                cb.accept(entry.getKey(), unmarshal ? unmarshal(dms.marshaller, entry.getValue()) : entry.getValue());
+        for (Map.Entry<String, byte[]> entry : cache.tailMap(globalKeyPrefix).entrySet()) {
+            if (!entry.getKey().startsWith(globalKeyPrefix))
+                break;
+
+            cb.accept(entry.getKey(), unmarshal(marshaller, entry.getValue()));
         }
     }
 
@@ -66,15 +78,6 @@ class InMemoryCachedDistributedMetaStorageBridge implements DistributedMetaStora
     }
 
     /** {@inheritDoc} */
-    @Override public void onUpdateMessage(DistributedMetaStorageHistoryItem histItem) {
-        dms.setVer(dms.getVer().nextVersion(histItem));
-    }
-
-    /** {@inheritDoc} */
-    @Override public void removeHistoryItem(long ver) {
-    }
-
-    /** {@inheritDoc} */
     @Override public DistributedMetaStorageKeyValuePair[] localFullData() {
         return cache.entrySet().stream().map(
             entry -> new DistributedMetaStorageKeyValuePair(entry.getKey(), entry.getValue())
@@ -82,20 +85,63 @@ class InMemoryCachedDistributedMetaStorageBridge implements DistributedMetaStora
     }
 
     /** */
-    public void restore(StartupExtras startupExtras) {
-        if (startupExtras.fullNodeData != null) {
-            DistributedMetaStorageClusterNodeData fullNodeData = startupExtras.fullNodeData;
+    public void writeFullNodeData(DistributedMetaStorageClusterNodeData fullNodeData) {
+        assert fullNodeData.fullData != null;
 
-            dms.setVer(fullNodeData.ver);
+        cache.clear();
 
-            for (DistributedMetaStorageKeyValuePair item : fullNodeData.fullData)
-                cache.put(item.key, item.valBytes);
+        for (DistributedMetaStorageKeyValuePair item : fullNodeData.fullData)
+            cache.put(item.key, item.valBytes);
+    }
 
-            for (int i = 0, len = fullNodeData.hist.length; i < len; i++) {
-                DistributedMetaStorageHistoryItem histItem = fullNodeData.hist[i];
+    /** */
+    public DistributedMetaStorageVersion readInitialData(
+        ReadOnlyMetastorage metastorage
+    ) throws IgniteCheckedException {
+        if (metastorage.readRaw(cleanupGuardKey()) != null)
+            return DistributedMetaStorageVersion.INITIAL_VERSION;
 
-                dms.addToHistoryCache(dms.getVer().id + i + 1 - len, histItem);
+        DistributedMetaStorageVersion storedVer =
+            (DistributedMetaStorageVersion)metastorage.read(versionKey());
+
+        if (storedVer == null)
+            return DistributedMetaStorageVersion.INITIAL_VERSION;
+        else {
+            DistributedMetaStorageVersion ver = storedVer;
+
+            DistributedMetaStorageHistoryItem lastHistItem;
+
+            DistributedMetaStorageHistoryItem histItem =
+                (DistributedMetaStorageHistoryItem)metastorage.read(historyItemKey(storedVer.id + 1));
+
+            if (histItem != null) {
+                lastHistItem = histItem;
+
+                ver = storedVer.nextVersion(histItem);
             }
+            else
+                lastHistItem = (DistributedMetaStorageHistoryItem)metastorage.read(historyItemKey(storedVer.id));
+
+            metastorage.iterate(
+                localKeyPrefix(),
+                (key, val) -> cache.put(globalKey(key), (byte[])val),
+                false
+            );
+
+            // Last item rollover.
+            if (lastHistItem != null) {
+                for (int i = 0, len = lastHistItem.keys.length; i < len; i++) {
+                    String key = lastHistItem.keys[i];
+                    byte[] valBytes = lastHistItem.valBytesArray[i];
+
+                    if (valBytes == null)
+                        cache.remove(key);
+                    else
+                        cache.put(key, valBytes);
+                }
+            }
+
+            return ver;
         }
     }
 }
