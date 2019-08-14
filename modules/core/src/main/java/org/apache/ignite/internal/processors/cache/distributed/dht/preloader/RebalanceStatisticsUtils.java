@@ -22,7 +22,6 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.processors.affinity.AffinityAssignment;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemander.RebalanceFuture;
-import org.apache.ignite.internal.util.typedef.T2;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -34,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.StringJoiner;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -405,7 +405,7 @@ class RebalanceStatisticsUtils {
         Comparator<RebalanceFuture> startTimeCmp = comparingLong(fut -> fut.stat.startTime);
         Comparator<RebalanceFuture> startTimeCmpReversed = startTimeCmp.reversed();
 
-        Comparator<T2<ClusterNode, PartitionStatistics>> partIdCmp = comparingInt(t2 -> t2.get2().id);
+        Comparator<PartitionStatistics> partIdCmp = comparingInt(value -> value.id);
         Comparator<ClusterNode> nodeAliasesCmp = comparingInt(nodeAliases::get);
 
         for (Entry<CacheGroupContext, Collection<RebalanceFuture>> rebFutrsEntry : rebFutrs.entrySet()) {
@@ -430,30 +430,28 @@ class RebalanceStatisticsUtils {
 
             AffinityAssignment affinity = cacheGrpCtx.affinity().cachedAffinity(lastSuccessFuture.topologyVersion());
 
-            List<T2<ClusterNode, PartitionStatistics>> supplierNodeRcvParts = new ArrayList<>();
+            Map<PartitionStatistics, ClusterNode> supplierNodeRcvParts = new TreeMap<>(partIdCmp);
 
             for (Entry<Integer, Map<ClusterNode, RebalanceMessageStatistics>> topicStatEntry : lastSuccessFuture.stat
                 .msgStats.entrySet()) {
                 for (Entry<ClusterNode, RebalanceMessageStatistics> supplierStatEntry : topicStatEntry.getValue().entrySet()) {
                     for (ReceivePartitionStatistics receivePartStat : supplierStatEntry.getValue().receivePartStats) {
                         for (PartitionStatistics partStat : receivePartStat.parts)
-                            supplierNodeRcvParts.add(new T2<>(supplierStatEntry.getKey(), partStat));
+                            supplierNodeRcvParts.put(partStat, supplierStatEntry.getKey());
                     }
                 }
             }
 
-            supplierNodeRcvParts.sort(partIdCmp);
-
             affinity.nodes().forEach(node -> nodeAliases.computeIfAbsent(node, node1 -> nodeCnt.getAndIncrement()));
 
-            for (T2<ClusterNode, PartitionStatistics> supplierNodeRcvPart : supplierNodeRcvParts) {
-                int partId = supplierNodeRcvPart.get2().id;
+            for (Entry<PartitionStatistics, ClusterNode> supplierNodeRcvPart : supplierNodeRcvParts.entrySet()) {
+                int partId = supplierNodeRcvPart.getKey().id;
 
                 String nodes = affinity.get(partId).stream()
                     .sorted(nodeAliasesCmp)
                     .map(node -> "[" + nodeAliases.get(node) +
                         (affinity.primaryPartitions(node.id()).contains(partId) ? ",pr" : ",bu") +
-                        (node.equals(supplierNodeRcvPart.get1()) ? ",su" : "") + "]"
+                        (node.equals(supplierNodeRcvPart.getValue()) ? ",su" : "") + "]"
                     )
                     .collect(joining(","));
 
