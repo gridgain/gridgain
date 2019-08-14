@@ -24,9 +24,10 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.pagemem.PageIdAllocator;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.processors.cache.persistence.CorruptedPersistenceException;
+import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
-import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.Arrays.asList;
@@ -48,7 +49,26 @@ public class CorruptedTreeException extends IgniteCheckedException implements Co
      * @param pageIds Potentially corrupted pages.
      */
     public CorruptedTreeException(String msg, @Nullable Throwable cause, int grpId, long... pageIds) {
-        this(msg, cause, toPagesArray(grpId, pageIds));
+        this(msg, null, null, cause, toPagesArray(grpId, pageIds));
+    }
+
+    /**
+     * @param msg Message.
+     * @param cause Cause.
+     * @param grpId Group id of potentially corrupted pages.
+     * @param cacheName Cache name.
+     * @param indexName Index name.
+     * @param pageIds Potentially corrupted pages.
+     */
+    public CorruptedTreeException(
+        String msg,
+        @Nullable Throwable cause,
+        int grpId,
+        String cacheName,
+        String indexName,
+        long... pageIds
+    ) {
+        this(msg, cacheName, indexName, cause, toPagesArray(grpId, pageIds));
     }
 
     /**
@@ -56,8 +76,14 @@ public class CorruptedTreeException extends IgniteCheckedException implements Co
      * @param cause Cause.
      * @param pages (groupId, pageId) pairs for pages that might be corrupted.
      */
-    public CorruptedTreeException(String msg, @Nullable Throwable cause, T2<Integer, Long>... pages) {
-        super(getMsg(msg, pages), cause);
+    public CorruptedTreeException(
+        String msg,
+        String cacheName,
+        String indexName,
+        @Nullable Throwable cause,
+        T2<Integer, Long>... pages
+    ) {
+        super(getMsg(msg, cacheName, indexName, pages), cause);
 
         this.pages = expandPagesArray(pages, cause);
     }
@@ -98,11 +124,22 @@ public class CorruptedTreeException extends IgniteCheckedException implements Co
     }
 
     /** */
-    private static String getMsg(String msg, T2<Integer, Long>... pages) {
-        return S.toString("B+Tree is corrupted",
-            "pages(groupId, pageId)", Arrays.toString(pages), false,
-            "msg", msg, false
-        );
+    private static String getMsg(String msg, String cacheName, String indexName, T2<Integer, Long>... pages) {
+        GridStringBuilder stringBuilder = new GridStringBuilder("B+Tree is corrupted [")
+            .a("pages(groupId, pageId)=").a(Arrays.toString(pages));
+
+        if (cacheName != null) {
+            stringBuilder
+                .a(", cacheId=").a(CU.cacheId(cacheName))
+                .a(", cacheName=").a(cacheName);
+        }
+
+        if (indexName != null)
+            stringBuilder.a(", indexName=").a(indexName);
+
+        stringBuilder.a(", msg=").a(msg).a("]");
+
+        return stringBuilder.toString();
     }
 
     /**
