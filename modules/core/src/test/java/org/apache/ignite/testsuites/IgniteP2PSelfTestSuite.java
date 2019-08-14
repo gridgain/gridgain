@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -29,6 +29,7 @@ import org.apache.ignite.p2p.GridP2PDifferentClassLoaderSelfTest;
 import org.apache.ignite.p2p.GridP2PDoubleDeploymentSelfTest;
 import org.apache.ignite.p2p.GridP2PHotRedeploymentSelfTest;
 import org.apache.ignite.p2p.GridP2PJobClassLoaderSelfTest;
+import org.apache.ignite.p2p.GridP2PCountTiesLoadClassDirectlyFromClassLoaderTest;
 import org.apache.ignite.p2p.GridP2PLocalDeploymentSelfTest;
 import org.apache.ignite.p2p.GridP2PMissedResourceCacheSizeSelfTest;
 import org.apache.ignite.p2p.GridP2PNodeLeftSelfTest;
@@ -84,6 +85,7 @@ public class IgniteP2PSelfTestSuite {
         suite.addTest(new JUnit4TestAdapter(SharedDeploymentTest.class));
         suite.addTest(new JUnit4TestAdapter(P2PScanQueryUndeployTest.class));
         suite.addTest(new JUnit4TestAdapter(GridP2PComputeWithNestedEntryProcessorTest.class));
+        suite.addTest(new JUnit4TestAdapter(GridP2PCountTiesLoadClassDirectlyFromClassLoaderTest.class));
         GridTestUtils.addTestIfNeeded(suite, GridDeploymentMessageCountSelfTest.class, ignoredTests);
 
         return suite;
