@@ -490,11 +490,18 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
 
                         GridDhtLocalPartition part = top.localPartition(p);
 
+                        // Verify primary tx mapping.
                         // LOST state is possible if tx is started over LOST partition.
-                        assert part != null && (part.state() == OWNING || part.state() == LOST):
-                            part == null ?
-                                "map=" + top.partitionMap(false) + ", lost=" + top.lostPartitions() :
-                                "part=" + part.toString();
+                        boolean valid = part != null &&
+                            (part.state() == OWNING || part.state() == LOST) &&
+                            part.primary(top.readyTopologyVersion());
+
+                        if (!valid) {
+                            throw new AssertionError("Invalid primary mapping [tx=" + CU.txString(this) +
+                                ", readyTopVer=" + top.readyTopologyVersion() +
+                                ", lostParts=" + top.lostPartitions() +
+                                ", part=" + (part == null ? "NULL" : part.toString()) + ']');
+                        }
 
                         msg.add(p, part.getAndIncrementUpdateCounter(cntr), cntr);
                     }
