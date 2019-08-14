@@ -33,7 +33,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.StringJoiner;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -431,10 +430,6 @@ class RebalanceStatisticsUtils {
 
             AffinityAssignment affinity = cacheGrpCtx.affinity().cachedAffinity(lastSuccessFuture.topologyVersion());
 
-            Map<ClusterNode, Set<Integer>> primaryParts = affinity.nodes().stream()
-                .peek(node -> nodeAliases.computeIfAbsent(node, node1 -> nodeCnt.getAndIncrement()))
-                .collect(toMap(identity(), node -> affinity.primaryPartitions(node.id())));
-
             List<T2<ClusterNode, PartitionStatistics>> supplierNodeRcvParts = new ArrayList<>();
 
             for (Entry<Integer, Map<ClusterNode, RebalanceMessageStatistics>> topicStatEntry : lastSuccessFuture.stat
@@ -449,13 +444,15 @@ class RebalanceStatisticsUtils {
 
             supplierNodeRcvParts.sort(partIdCmp);
 
+            affinity.nodes().forEach(node -> nodeAliases.computeIfAbsent(node, node1 -> nodeCnt.getAndIncrement()));
+
             for (T2<ClusterNode, PartitionStatistics> supplierNodeRcvPart : supplierNodeRcvParts) {
                 int partId = supplierNodeRcvPart.get2().id;
 
                 String nodes = affinity.get(partId).stream()
                     .sorted(nodeAliasesCmp)
                     .map(node -> "[" + nodeAliases.get(node) +
-                        (primaryParts.get(node).contains(partId) ? ",pr" : ",bu") +
+                        (affinity.primaryPartitions(node.id()).contains(partId) ? ",pr" : ",bu") +
                         (node.equals(supplierNodeRcvPart.get1()) ? ",su" : "") + "]"
                     )
                     .collect(joining(","));
