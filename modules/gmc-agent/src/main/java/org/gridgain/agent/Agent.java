@@ -153,10 +153,7 @@ public class Agent extends ManagementConsoleProcessor {
     private String nextUri(List<String> uris, String cur) {
         int idx = uris.indexOf(cur);
 
-        if (idx >= 0)
-            return uris.get(uris.size() % idx + 1);
-
-        return F.first(uris);
+        return uris.get((idx + 1) % uris.size());
     }
 
     // TODO: GG-21357 implement CLUSTER_ACTION.
@@ -180,10 +177,11 @@ public class Agent extends ManagementConsoleProcessor {
         }
         catch (ExecutionException e) {
             if (X.hasCause(e, ConnectException.class, UpgradeException.class, EofException.class)) {
-                if (firstConnError)
+                if (firstConnError) {
                     log.error("Failed to establish websocket connection with GMC server: " + curSrvUri);
 
-                firstConnError = false;
+                    firstConnError = false;
+                }
 
                 connect0();
             }
@@ -298,9 +296,13 @@ public class Agent extends ManagementConsoleProcessor {
         /** {@inheritDoc} */
         @Override public void handleTransportError(StompSession stompSes, Throwable e) {
             if (e instanceof ConnectionLostException) {
-                log.error("Lost websocket connection with server: " + curSrvUri);
+                if (firstConnError) {
+                    log.error("Lost websocket connection with server: " + curSrvUri);
 
-                connect();
+                    firstConnError = false;
+
+                    execSrvc.submit(Agent.this::connect0);
+                }
             }
         }
     }
