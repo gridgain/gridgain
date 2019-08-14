@@ -15,48 +15,67 @@
  */
 package org.apache.ignite.internal.sql.calcite.physical;
 
-import org.apache.calcite.plan.RelOptRule;
-import org.apache.calcite.plan.RelOptRuleCall;
-import org.apache.calcite.plan.RelTraitSet;
-import org.apache.calcite.plan.volcano.RelSubset;
+import org.apache.calcite.plan.Convention;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.convert.ConverterRule;
 import org.apache.calcite.rel.logical.LogicalFilter;
 import org.apache.ignite.internal.sql.calcite.IgniteConvention;
 
 /**
  * TODO: Add class description.
  */
-public class FilterRule extends IgniteRule {
+/**
+ * TODO: Add class description.
+ */
+public class FilterRule extends ConverterRule {
 
     public FilterRule() {
-        super(operand(LogicalFilter.class, operand(RelNode.class, RelOptRule.any())), "IgniteFilterRule");
+        super(LogicalFilter.class,
+            Convention.NONE,
+            IgniteConvention.INSTANCE,
+            "IgniteFilterRule");
     }
 
-    @Override public void onMatch(RelOptRuleCall call) {
-        final LogicalFilter filter = call.rel(0);
+    @Override public RelNode convert(RelNode rel) {
+        final LogicalFilter filter = (LogicalFilter) rel;
 
-        final RelNode input = filter.getInput();
-        RelTraitSet traits = filter.getTraitSet().plus(IgniteConvention.INSTANCE);
-
-        RelNode convertedInput = convert(input, traits);
-
-        if (convertedInput instanceof RelSubset) {
-            RelSubset subset = (RelSubset) convertedInput;
-
-            RelNode bestRel = subset.getBest();
-
-            if (bestRel != null) {
-                call.transformTo(new FilterRel(filter.getCluster(), bestRel.getTraitSet(), convertedInput, filter.getCondition()));
-
-                return;
-            }
-        }
-
-        call.transformTo(new FilterRel(filter.getCluster(),
-            traits.simplify(),
-            convertedInput,
-            filter.getCondition()));
+        return new FilterRel(rel.getCluster(),
+            rel.getTraitSet().replace(IgniteConvention.INSTANCE),
+            convert(filter.getInput(),
+                filter.getInput().getTraitSet().replace(IgniteConvention.INSTANCE)), // TODO why do we need to replace a child's convention?
+            filter.getCondition());
     }
+}
+
+//    public FilterRule() {
+//        super(operand(LogicalFilter.class, operand(RelNode.class, RelOptRule.any())), "IgniteFilterRule");
+//    }
+//
+//    @Override public void onMatch(RelOptRuleCall call) {
+//        final LogicalFilter filter = call.rel(0);
+//
+//        final RelNode input = filter.getInput();
+//        RelTraitSet traits = filter.getTraitSet().plus(IgniteConvention.INSTANCE);
+//
+//        RelNode convertedInput = convert(input, traits);
+//
+//        if (convertedInput instanceof RelSubset) {
+//            RelSubset subset = (RelSubset) convertedInput;
+//
+//            RelNode bestRel = subset.getBest();
+//
+//            if (bestRel != null) {
+//                call.transformTo(new FilterRel(filter.getCluster(), bestRel.getTraitSet(), convertedInput, filter.getCondition()));
+//
+//                return;
+//            }
+//        }
+//
+//        call.transformTo(new FilterRel(filter.getCluster(),
+//            traits.simplify(),
+//            convertedInput,
+//            filter.getCondition()));
+//    }
 
 //    @Override public RelNode convert(RelNode rel) {
 //
@@ -98,4 +117,4 @@ public class FilterRule extends IgniteRule {
 //            convertedInput, // TODO why do we need to replace a child's convention?
 //            filter.getCondition());
 //    }
-}
+//}
