@@ -50,7 +50,7 @@ public class GridUpdateNotifierSelfTest extends GridCommonAbstractTest {
     /** Server nodes count. */
     public static final int SERVER_NODES = 3;
     /** */
-    private String updateStatusParams;
+    private static String updateStatusParams;
 
     /** {@inheritDoc} */
     @Override protected long getTestTimeout() {

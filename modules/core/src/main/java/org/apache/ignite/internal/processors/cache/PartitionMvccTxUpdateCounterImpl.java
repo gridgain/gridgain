@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,25 +14,19 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.query.continuous;
-
-import org.apache.ignite.cache.CacheMode;
-import org.apache.ignite.configuration.NearCacheConfiguration;
-
-import static org.apache.ignite.cache.CacheMode.PARTITIONED;
+package org.apache.ignite.internal.processors.cache;
 
 /**
- *
+ * Update counter implementation for MVCC mode.
  */
-public class CacheContinuousQueryFailoverAtomicNearEnabledSelfSelfTest
-    extends CacheContinuousQueryFailoverAtomicSelfTest {
+public class PartitionMvccTxUpdateCounterImpl extends PartitionTxUpdateCounterImpl {
     /** {@inheritDoc} */
-    @Override protected CacheMode cacheMode() {
-        return PARTITIONED;
+    @Override public long reserve(long delta) {
+        return next(delta);
     }
 
     /** {@inheritDoc} */
-    @Override protected NearCacheConfiguration nearCacheConfiguration() {
-        return super.nearCacheConfiguration();
+    @Override public long reserved() {
+        return get();
     }
 }

@@ -565,7 +565,7 @@ public class IgnitePdsCheckpointSimulationWithRealCpDisabledTest extends GridCom
 
         FullPageId[] pageIds = new FullPageId[100];
 
-        DummyPageIO pageIO = new DummyPageIO();
+        DummyPageIO pageIO = DummyPageIO.VERSIONS.latest();
 
         ig.context().cache().context().database().checkpointReadLock();
 
@@ -792,7 +792,7 @@ public class IgnitePdsCheckpointSimulationWithRealCpDisabledTest extends GridCom
 
         IgniteCacheDatabaseSharedManager db = ig.context().cache().context().database();
 
-        PageIO pageIO = new DummyPageIO();
+        PageIO pageIO = DummyPageIO.VERSIONS.latest();
 
         for (int i = 0; i < TOTAL_PAGES; i++) {
             FullPageId  fullId;

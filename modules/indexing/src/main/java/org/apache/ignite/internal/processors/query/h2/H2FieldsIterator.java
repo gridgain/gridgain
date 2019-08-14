@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.List;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccQueryTracker;
+import org.apache.ignite.internal.processors.query.h2.opt.GridH2QueryContext;
 
 /**
  * Special field set iterator based on database result set.
@@ -36,20 +37,25 @@ public class H2FieldsIterator extends H2ResultSetIterator<List<?>> {
     /** Detached connection. */
     private final ThreadLocalObjectPool<H2ConnectionWrapper>.Reusable detachedConn;
 
+    /** Lazy flag. */
+    private final boolean lazy;
+
     /**
      * @param data Data.
      * @param mvccTracker Mvcc tracker.
      * @param forUpdate {@code SELECT FOR UPDATE} flag.
      * @param detachedConn Detached connection.
+     * @param lazy Lazy flag.
      * @throws IgniteCheckedException If failed.
      */
     public H2FieldsIterator(ResultSet data, MvccQueryTracker mvccTracker, boolean forUpdate,
-        ThreadLocalObjectPool<H2ConnectionWrapper>.Reusable detachedConn)
+        ThreadLocalObjectPool<H2ConnectionWrapper>.Reusable detachedConn, boolean lazy)
         throws IgniteCheckedException {
         super(data, forUpdate);
 
         this.mvccTracker = mvccTracker;
         this.detachedConn = detachedConn;
+        this.lazy = lazy;
     }
 
     /** {@inheritDoc} */
@@ -67,6 +73,9 @@ public class H2FieldsIterator extends H2ResultSetIterator<List<?>> {
             super.onClose();
         }
         finally {
+            if (lazy && GridH2QueryContext.get() != null)
+                GridH2QueryContext.clearThreadLocal();
+
             if (detachedConn != null)
                 detachedConn.recycle();
 

@@ -971,7 +971,7 @@ public class GridReduceQueryExecutor {
                                 cancel,
                                 qryInfo);
 
-                            resIter = new H2FieldsIterator(res, mvccTracker, false, null);
+                            resIter = new H2FieldsIterator(res, mvccTracker, false, null, false);
 
                             mvccTracker = null; // To prevent callback inside finally block;
                         }

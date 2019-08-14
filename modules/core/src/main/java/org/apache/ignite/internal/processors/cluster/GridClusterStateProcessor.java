@@ -45,6 +45,8 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.IgniteNodeAttributes;
+import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.cluster.ClusterGroupAdapter;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
@@ -329,7 +331,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         GridChangeGlobalStateFuture fut = this.stateChangeFut.get();
 
         if (fut != null)
-            fut.onDone(new IgniteCheckedException("Failed to wait for cluster state change, node is stopping."));
+            fut.onDone(new NodeStoppingException("Failed to wait for cluster state change, node is stopping."));
 
         super.onKernalStop(cancel);
     }
@@ -950,6 +952,12 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     @Nullable @Override public IgniteNodeValidationResult validateNode(ClusterNode node, DiscoveryDataBag.JoiningNodeDiscoveryData discoData) {
         if (node.isClient() || node.isDaemon())
             return null;
+
+        Boolean locPoolFlag = ctx.discovery().localNode().attribute("USE_POOL_FOR_LAZY");
+        Boolean rmtPoolFlag = node.attribute("USE_POOL_FOR_LAZY");
+
+        if (!F.eq(locPoolFlag, rmtPoolFlag))
+            log.warning("Local USE_POOL_FOR_LAZY flag differs from remote nodeId=" + node.id());
 
         if (discoData.joiningNodeData() == null) {
             if (globalState.baselineTopology() != null) {

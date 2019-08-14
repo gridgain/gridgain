@@ -29,11 +29,14 @@ import org.apache.ignite.internal.ClassSetTest;
 import org.apache.ignite.internal.ClusterGroupHostsSelfTest;
 import org.apache.ignite.internal.ClusterGroupSelfTest;
 import org.apache.ignite.internal.ClusterProcessorCheckGlobalStateComputeRequestTest;
+import org.apache.ignite.internal.DiagnosticLogForPartitionStatesTest;
 import org.apache.ignite.internal.GridFailFastNodeFailureDetectionSelfTest;
 import org.apache.ignite.internal.GridLifecycleAwareSelfTest;
 import org.apache.ignite.internal.GridLifecycleBeanSelfTest;
 import org.apache.ignite.internal.GridMBeansTest;
 import org.apache.ignite.internal.GridNodeMetricsLogSelfTest;
+import org.apache.ignite.internal.GridPeerDeploymentRetryModifiedTest;
+import org.apache.ignite.internal.GridPeerDeploymentRetryTest;
 import org.apache.ignite.internal.GridProjectionForCachesSelfTest;
 import org.apache.ignite.internal.GridReduceSelfTest;
 import org.apache.ignite.internal.GridReleaseTypeSelfTest;
@@ -84,8 +87,11 @@ import org.apache.ignite.internal.processors.odbc.OdbcConfigurationValidationSel
 import org.apache.ignite.internal.processors.odbc.OdbcEscapeSequenceSelfTest;
 import org.apache.ignite.internal.processors.service.ClosureServiceClientsNodesTest;
 import org.apache.ignite.internal.product.GridProductVersionSelfTest;
-import org.apache.ignite.internal.util.BitSetIntSetTest;
 import org.apache.ignite.internal.util.GridCleanerTest;
+import org.apache.ignite.internal.util.collection.BitSetIntSetTest;
+import org.apache.ignite.internal.util.collection.ImmutableIntSetTest;
+import org.apache.ignite.internal.util.collection.IntHashMapTest;
+import org.apache.ignite.internal.util.collection.IntRWHashMapTest;
 import org.apache.ignite.internal.util.nio.IgniteExceptionInNioWorkerSelfTest;
 import org.apache.ignite.marshaller.DynamicProxySerializationMultiJvmSelfTest;
 import org.apache.ignite.marshaller.MarshallerContextSelfTest;
@@ -147,7 +153,7 @@ public class IgniteBasicTestSuite {
         suite.addTest(new JUnit4TestAdapter(IgniteMessagingWithClientTest.class));
         suite.addTest(new JUnit4TestAdapter(IgniteMessagingSendAsyncTest.class));
 	    suite.addTest(new JUnit4TestAdapter(ClusterProcessorCheckGlobalStateComputeRequestTest.class));
-    
+
         GridTestUtils.addTestIfNeeded(suite, ClusterGroupSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridMessagingSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridMessagingNoPeerClassLoadingSelfTest.class, ignoredTests);
@@ -208,6 +214,9 @@ public class IgniteBasicTestSuite {
 
         suite.addTest(new JUnit4TestAdapter(WALRecordTest.class));
 
+        suite.addTest(new JUnit4TestAdapter(GridPeerDeploymentRetryTest.class));
+        suite.addTest(new JUnit4TestAdapter(GridPeerDeploymentRetryModifiedTest.class));
+
         // Basic DB data structures.
         suite.addTest(new JUnit4TestAdapter(BPlusTreeSelfTest.class));
         suite.addTest(new JUnit4TestAdapter(BPlusTreeFakeReuseSelfTest.class));
@@ -217,6 +226,9 @@ public class IgniteBasicTestSuite {
         suite.addTest(new JUnit4TestAdapter(DataRegionMetricsSelfTest.class));
         suite.addTest(new JUnit4TestAdapter(SwapPathConstructionSelfTest.class));
         suite.addTest(new JUnit4TestAdapter(BitSetIntSetTest.class));
+        suite.addTest(new JUnit4TestAdapter(ImmutableIntSetTest.class));
+        suite.addTest(new JUnit4TestAdapter(IntHashMapTest.class));
+        suite.addTest(new JUnit4TestAdapter(IntRWHashMapTest.class));
 
         suite.addTest(new JUnit4TestAdapter(IgniteMarshallerCacheFSRestoreTest.class));
         suite.addTest(new JUnit4TestAdapter(IgniteMarshallerCacheClassNameConflictTest.class));
@@ -251,6 +263,8 @@ public class IgniteBasicTestSuite {
         suite.addTest(new JUnit4TestAdapter(DeadLockOnNodeLeftExchangeTest.class));
 
         suite.addTest(new JUnit4TestAdapter(ClassPathContentLoggingTest.class));
+
+        suite.addTest(new JUnit4TestAdapter(DiagnosticLogForPartitionStatesTest.class));
 
         suite.addTest(new JUnit4TestAdapter(IncompleteDeserializationExceptionTest.class));
 

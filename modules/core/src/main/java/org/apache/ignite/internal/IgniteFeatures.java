@@ -60,6 +60,9 @@ public enum IgniteFeatures {
     /** Command which allow to detect and cleanup garbage which could left after destroying caches in shared groups */
     FIND_AND_DELETE_GARBAGE_COMMAND(8),
 
+    /** Supports tracking update counter for transactions. */
+    TX_TRACKING_UPDATE_COUNTER(12),
+    
     /** Distributed metastorage. */
     IGNITE_SECURITY_PROCESSOR(13),
 
