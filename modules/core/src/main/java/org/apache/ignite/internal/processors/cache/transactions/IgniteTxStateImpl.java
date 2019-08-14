@@ -45,7 +45,6 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
-import org.jsr166.ConcurrentLinkedHashMap;
 
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_ASYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
@@ -383,19 +382,29 @@ public class IgniteTxStateImpl extends IgniteTxLocalStateAdapter {
         if (!cacheIds.isEmpty()) {
             Collection<CacheStoreManager> stores = new ArrayList<>(cacheIds.size());
 
+            Boolean writeToStoreFromDht = null;
+
             for (int i = 0; i < cacheIds.size(); i++) {
                 int cacheId = cacheIds.get(i);
 
                 CacheStoreManager store = cctx.cacheContext(cacheId).store();
 
-                if (store.configured())
+                if (store.configured()) {
+                    // Transaction must be committed to store either on originating node,
+                    // or on primary nodes (write-behind). Mixed stores are not allowed.
+                    if (writeToStoreFromDht == null)
+                        writeToStoreFromDht = store.isWriteToStoreFromDht();
+                    else
+                        assert writeToStoreFromDht == store.isWriteToStoreFromDht();
+
                     stores.add(store);
+                }
             }
 
             return stores;
         }
 
-        return null;
+        return Collections.emptyList();
     }
 
     /** {@inheritDoc} */
@@ -414,7 +423,7 @@ public class IgniteTxStateImpl extends IgniteTxLocalStateAdapter {
     /** {@inheritDoc} */
     @Override public boolean init(int txSize) {
         if (txMap == null) {
-            txMap = new ConcurrentLinkedHashMap<>(U.capacity(txSize > 0 ? txSize : 16));
+            txMap = U.newLinkedHashMap(txSize > 0 ? txSize : 16);
 
             readView = new IgniteTxMap(txMap, CU.reads());
             writeView = new IgniteTxMap(txMap, CU.writes());
