@@ -342,7 +342,7 @@ public class CacheGroupsMetricsRebalanceTest extends GridCommonAbstractTest {
             @Override public boolean apply() {
                 return ig2.cache(CACHE1).localMetrics().getKeysToRebalanceLeft() == 0;
             }
-        }, timeLeft + 12_000L);
+        }, timeLeft + 20_000L);
 
         assertTrue("Some keys aren't rebalanced.", allKeysRebalanced);
 
