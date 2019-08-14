@@ -310,7 +310,7 @@ public abstract class CacheContinuousQueryFailoverAbstractSelfTest extends GridC
      */
     @Test
     public void testRebalance() throws Exception {
-        for (int iter = 0; iter < 5; iter++) {
+        for (int iter = 0; iter < 2; iter++) {
             log.info("Iteration: " + iter);
 
             final IgniteEx ignite = startGrid(1);
@@ -460,7 +460,7 @@ public abstract class CacheContinuousQueryFailoverAbstractSelfTest extends GridC
 
         int killedNode = rnd.nextInt(SRV_NODES);
 
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 2; i++) {
             List<Integer> keys = testKeys(grid(0).cache(DEFAULT_CACHE_NAME), 10);
 
             for (Integer key : keys) {
@@ -1330,7 +1330,7 @@ public abstract class CacheContinuousQueryFailoverAbstractSelfTest extends GridC
 
         int[] nodeParts = aff.primaryPartitions(node);
 
-        final int KEYS_PER_PART = 50;
+        final int KEYS_PER_PART = 10;//50;
 
         for (int i = 0; i < parts; i++) {
             int part = nodeParts[i];
@@ -1617,7 +1617,7 @@ public abstract class CacheContinuousQueryFailoverAbstractSelfTest extends GridC
 
         QueryCursor<?> cur = qryClnCache.query(qry);
 
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 2; i++) {
             final int idx = i % (SRV_NODES - 1);
 
             log.info("Stop node: " + idx);
@@ -1730,7 +1730,7 @@ public abstract class CacheContinuousQueryFailoverAbstractSelfTest extends GridC
         final List<T3<Object, Object, Object>> expEvtsLsnr = new ArrayList<>();
 
         try {
-            long stopTime = System.currentTimeMillis() + 60_000;
+            long stopTime = System.currentTimeMillis() + 10_000;
 
             // Start new filter each 5 sec.
             long startFilterTime = System.currentTimeMillis() + 5_000;
@@ -2051,7 +2051,7 @@ public abstract class CacheContinuousQueryFailoverAbstractSelfTest extends GridC
             }
         });
 
-        final long stopTime = System.currentTimeMillis() + 60_000;
+        final long stopTime = System.currentTimeMillis() + 10_000;
 
         final AtomicInteger valCntr = new AtomicInteger(0);
 
@@ -2327,7 +2327,7 @@ public abstract class CacheContinuousQueryFailoverAbstractSelfTest extends GridC
     public void testNoEventLossOnTopologyChange() throws Exception {
         final int batchLoadSize = 2000;
 
-        final int restartCycles = 5;
+        final int restartCycles = 2;
 
         Ignite qryClient = startGrid(0);
 
