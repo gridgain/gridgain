@@ -50,7 +50,7 @@ public class RecommendationTrainer {
     private int batchSize = 1000;
 
     /** Regularizer. */
-    private double regularizer = 0.01;
+    private double regularizer = 0.0;
 
     /** Learning rate. */
     private double learningRate = 10.0;
