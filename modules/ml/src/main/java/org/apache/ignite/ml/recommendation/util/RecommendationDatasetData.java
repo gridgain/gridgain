@@ -85,25 +85,6 @@ public class RecommendationDatasetData<O extends Serializable, S extends Seriali
         for (Map.Entry<S, Vector> e : subjGrads.entrySet())
             e.setValue(e.getValue().divide(rows.length));
 
-        // Calculate loss function.
-        for (Map.Entry<O, Vector> objMatrixRow : objMatrix.entrySet()) {
-            Vector gradient = objGrads.get(objMatrixRow.getKey());
-            if (gradient != null)
-                objMatrixRow.setValue(objMatrixRow.getValue().minus(gradient));
-        }
-
-        for (Map.Entry<S, Vector> subj : subjMatrix.entrySet()) {
-            Vector gradient = subjGrads.get(subj.getKey());
-            if (gradient != null)
-                subj.setValue(subj.getValue().minus(gradient));
-        }
-
-        double loss = 0;
-        for (ObjectSubjectRatingTriplet<O, S> triplet : ratings)
-            loss += Math.pow(triplet.getRating() - objMatrix.get(triplet.getObj()).dot(subjMatrix.get(triplet.getSubj())), 2);
-        loss /= ratings.size();
-        System.out.println("Loss: " + loss);
-
         return new MatrixFactorizationGradient<>(objGrads, subjGrads);
     }
 
