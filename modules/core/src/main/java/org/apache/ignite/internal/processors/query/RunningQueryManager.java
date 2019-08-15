@@ -93,13 +93,13 @@ public class RunningQueryManager {
         successQrsCnt = userMetrics.longAdderMetric("success",
             "Number of successfully executed user queries that have been started on this node.");
 
-        failedQrsCnt = userMetrics.metric("failed", "Total number of failed by any reason (cancel, oom etc)" +
+        failedQrsCnt = userMetrics.longMetric("failed", "Total number of failed by any reason (cancel, oom etc)" +
             " queries that have been started on this node.");
 
-        canceledQrsCnt = userMetrics.metric("canceled", "Number of canceled queries that have been started " +
+        canceledQrsCnt = userMetrics.longMetric("canceled", "Number of canceled queries that have been started " +
             "on this node. This metric number included in the general 'failed' metric.");
 
-        oomQrsCnt = userMetrics.metric("failedByOOM", "Number of queries started on this node failed due to " +
+        oomQrsCnt = userMetrics.longMetric("failedByOOM", "Number of queries started on this node failed due to " +
             "out of memory protection. This metric number included in the general 'failed' metric.");
     }
 
