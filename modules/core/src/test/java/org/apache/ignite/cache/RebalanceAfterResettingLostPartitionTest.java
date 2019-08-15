@@ -40,7 +40,7 @@ public class RebalanceAfterResettingLostPartitionTest extends GridCommonAbstract
     private static final String CACHE_NAME = "cache" + UUID.randomUUID().toString();
 
     /** Cache size */
-    public static final int CACHE_SIZE = GridTestUtils.SF.applyLB(100_000, 10_000);;
+    public static final int CACHE_SIZE = GridTestUtils.SF.applyLB(100_000, 10_000);
 
     /** Stop all grids and cleanup persistence directory. */
     @Before
