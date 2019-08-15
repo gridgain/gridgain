@@ -55,7 +55,7 @@ public class HttpIgniteUpdatesChecker {
         conn.setDoOutput(true);
         conn.setRequestProperty("Accept-Charset", charset);
         conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded;charset=" + charset);
-        conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.95 Safari/537.11");
+        conn.setRequestProperty("user-agent", "");
 
         conn.setConnectTimeout(5000);
         conn.setReadTimeout(5000);
