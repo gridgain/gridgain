@@ -68,6 +68,7 @@ import org.apache.ignite.internal.processors.query.h2.twostep.RetryCauseMessageS
 import org.apache.ignite.internal.processors.query.h2.twostep.TableViewSubquerySelfTest;
 import org.apache.ignite.internal.processors.query.oom.DiskSpillingBasicTest;
 import org.apache.ignite.internal.processors.query.oom.DiskSpillingGlobalQuotaTest;
+import org.apache.ignite.internal.processors.query.oom.DiskSpillingMultipleIndexesTest;
 import org.apache.ignite.internal.processors.query.oom.DiskSpillingMultipleNodesTest;
 import org.apache.ignite.internal.processors.query.oom.DiskSpillingPersistenceTest;
 import org.apache.ignite.internal.processors.query.oom.DiskSpillingQueriesTest;
@@ -167,6 +168,7 @@ import org.junit.runners.Suite;
     DiskSpillingMultipleNodesTest.class,
     DiskSpillingPersistenceTest.class,
     DiskSpillingQueryParallelismTest.class,
+    DiskSpillingMultipleIndexesTest.class,
 
     GridCachePartitionedTxMultiNodeSelfTest.class,
     GridCacheReplicatedTxMultiNodeBasicTest.class

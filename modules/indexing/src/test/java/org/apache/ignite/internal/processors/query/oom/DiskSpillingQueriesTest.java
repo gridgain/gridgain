@@ -25,21 +25,16 @@ import org.junit.runners.Parameterized;
 
 /**
  * Test for the intermediate query results disk offloading (disk spilling).
- * TODO: Tests with indexes on fields
+ *
  * TODO: Group by tests for all kinds of aggregates:See removed AggregateSerializer
  * TODO: check is thrown exception for user aggregates
- * TODO: add groupings to all possible tests
- * TODO: check that group-by spill files were actually created.
- * TODO: aggretates merged in the right way. Especially variance and stdDev
- * TODO: accomplish PlainExternalGroupByData and tests for it
- * TODO: Meaningful renaming.
- * TODO: distinct aggregates
- * TODO: check all children of AggregateData
- * TODO: check all variants of AggregateDataDefault
- * TODO: cleanup aggregates memory before spilling them
  * TODO use org.h2.store.Data.getValueLen(org.h2.value.Value)
+ *
+ * TODO: Strange memory tracking results. Do I handle tracking properly? cleanup aggregates memory before spilling them
+ *
+ * Later:
  * TODO resolve GG-22406 - aggregates
- * TODO: add null fields to dataset
+ * TODO: Cleanup code.
  *
  */
 @RunWith(Parameterized.class)
@@ -328,7 +323,9 @@ public class DiskSpillingQueriesTest extends DiskSpillingAbstractTest {
                 "UNION ALL " +
                 "SELECT DISTINCT id FROM person WHERE age < (SELECT SUM(id) FROM department WHERE id > 3)  " +
                 "UNION " +
-                "SELECT DISTINCT salary FROM person p JOIN department d ON p.age=d.id OR p.weight < 60");
+                "SELECT DISTINCT salary FROM person p JOIN department d ON p.age=d.id OR p.weight < 60 " +
+                "UNION " +
+                "SELECT MAX(salary) FROM person WHERE age > 10  GROUP BY temperature");
     }
 
     /** */
@@ -350,8 +347,8 @@ public class DiskSpillingQueriesTest extends DiskSpillingAbstractTest {
         checkGroupsSpilled = true;
 
         assertInMemoryAndOnDiskSameResults(false,
-            "SELECT depId, COUNT(*), MAX(salary), MIN(salary), AVG(salary), SUM(salary) " +
-                "FROM person GROUP BY depId");
+            "SELECT age, depId, COUNT(*), MAX(salary), MIN(salary), AVG(salary), SUM(salary) " +
+                "FROM person GROUP BY age, depId");
     }
 
     /** */
@@ -360,7 +357,8 @@ public class DiskSpillingQueriesTest extends DiskSpillingAbstractTest {
         checkGroupsSpilled = true;
 
         assertInMemoryAndOnDiskSameResults(true,
-            "SELECT depId, COUNT(*), SUM(salary) FROM person GROUP BY depId");
+            "SELECT depId, code, age, COUNT(*), SUM(salary)  LISTAGG(uuid) " +
+                "FROM person GROUP BY age, depId, code ");
     }
 
     /** */
@@ -369,18 +367,88 @@ public class DiskSpillingQueriesTest extends DiskSpillingAbstractTest {
         checkGroupsSpilled = true;
 
         assertInMemoryAndOnDiskSameResults(true,
-            "SELECT code, COUNT(*), AVG(salary) FROM person GROUP BY code " +
+            "SELECT age, code, COUNT(*), AVG(salary) FROM person GROUP BY code, age " +
                 "UNION " +
-                "SELECT name, SUM(age), MIN(salary) FROM person GROUP BY name");
+                "SELECT age, name, SUM(age), MIN(salary) FROM person GROUP BY name, age");
     }
 
     /** */
     @Test
-    public void simpleGroupByStatsAggregates() {
+    public void simpleGroupByAllSupportedAggregates() {
         checkGroupsSpilled = true;
 
-        assertInMemoryAndOnDiskSameResults(false, //  EVERY(salary > 0), ANY(male)
-            "SELECT depId,  LISTAGG(id) FROM person GROUP BY depId"
-             /*   " FROM person GROUP BY depId"*/);
+        assertInMemoryAndOnDiskSameResults(false,
+            "SELECT code, age, COUNT(*), COUNT(temperature), AVG(temperature), SUM(temperature), MAX(temperature), " +
+                "MIN(temperature), LISTAGG(temperature)  " +
+                "FROM person GROUP BY age, code"
+            );
+    }
+
+    /** */
+    @Test
+    public void simpleGroupByNullableAggregates() {
+        checkGroupsSpilled = true;
+
+        assertInMemoryAndOnDiskSameResults(false,
+            "SELECT age, code, COUNT(nulls), COUNT(temperature), AVG(nulls), SUM(temperature), MAX(nulls), " +
+                "LISTAGG(temperature) " +
+                "FROM person GROUP BY age, code"
+        );
+    }
+
+    /** */
+    @Test
+    public void groupByNullableAggregatesBigGroups() {
+        checkGroupsSpilled = true;
+
+        assertInMemoryAndOnDiskSameResults(false,
+            "SELECT male, COUNT(nulls), COUNT(temperature), AVG(nulls), LISTAGG(temperature) " +
+                "FROM person GROUP BY male"
+        );
+    }
+
+    /** */
+    @Test
+    public void groupByNullableAggregatesManySmallGroups() {
+        checkGroupsSpilled = true;
+
+        assertInMemoryAndOnDiskSameResults(false,
+            "SELECT weight, age, COUNT(nulls), COUNT(temperature), AVG(temperature), SUM(temperature),  LISTAGG(name) " +
+                "FROM person GROUP BY age, weight"
+        );
+    }
+
+    /** */
+    @Test
+    public void groupBySNullsAggregates() {
+        checkGroupsSpilled = true;
+
+        assertInMemoryAndOnDiskSameResults(false,
+            "SELECT depId, age, COUNT(nulls), AVG(nulls), LISTAGG(nulls) " +
+                "FROM person GROUP BY age, depId");
+    }
+
+    /** */
+    @Test
+    public void simpleGroupByAllSupportedDistinctAggregates() {
+        checkGroupsSpilled = true;
+
+        assertInMemoryAndOnDiskSameResults(false,
+            "SELECT code, age, AVG(DISTINCT temperature), SUM(DISTINCT temperature), MAX(DISTINCT temperature), " +
+                "MIN(DISTINCT temperature)  " +
+                "FROM person GROUP BY age, code"
+        );
+    }
+
+    /** */
+    @Test
+    public void simpleGroupByNullableDistinctAggregates() {
+        checkGroupsSpilled = true;
+
+        assertInMemoryAndOnDiskSameResults(false,
+            "SELECT age, code, COUNT(DISTINCT nulls), COUNT(DISTINCT temperature), AVG(DISTINCT nulls), " +
+                "SUM(DISTINCT temperature), MAX(DISTINCT nulls), LISTAGG(temperature) " +
+                "FROM person GROUP BY age, code"
+        );
     }
 }

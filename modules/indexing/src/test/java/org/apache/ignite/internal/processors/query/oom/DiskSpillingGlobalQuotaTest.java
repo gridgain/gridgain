@@ -41,6 +41,20 @@ public class DiskSpillingGlobalQuotaTest extends DiskSpillingAbstractTest {
             "FROM person p, department d " +
             " WHERE p.depId = d.id";
 
+        checkGlobalQuota(qry);
+    }
+
+    /** */
+    @Test
+    public void testGlobalQuotaCauseDiskSpillingForGroups() throws IOException {
+        String qry = "SELECT weight, MAX(temperature), AVG(temperature), SUM(temperature) " +
+            "FROM person p GROUP BY weight ";
+
+        checkGlobalQuota(qry);
+    }
+
+
+    private void checkGlobalQuota(String qry) throws IOException {
         Path workDir = getWorkDir();
 
         WatchService watchSvc = FileSystems.getDefault().newWatchService();

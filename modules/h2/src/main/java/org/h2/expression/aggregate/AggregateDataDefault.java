@@ -5,6 +5,7 @@
  */
 package org.h2.expression.aggregate;
 
+import org.h2.engine.Constants;
 import org.h2.engine.Database;
 import org.h2.engine.Session;
 import org.h2.message.DbException;
@@ -317,5 +318,9 @@ public class AggregateDataDefault extends AggregateData {
     public static AggregateDataDefault from(AggregateType aggregateType, int dataType, long count, double m2,
         double mean, Value value) {
         return new AggregateDataDefault(aggregateType, dataType, count, m2, mean, value);
+    }
+
+    @Override public long getMemory() {
+        return Constants.MEMORY_OBJECT + (value == null ? 0 : value.getMemory()) + 4 + 4 * 8;
     }
 }

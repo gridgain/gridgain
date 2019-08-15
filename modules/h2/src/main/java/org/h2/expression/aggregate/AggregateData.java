@@ -104,4 +104,6 @@ public abstract class AggregateData {
      * @param ses Session.
      */
     public void cleanup(Session ses) {}
+
+    public abstract long getMemory();
 }

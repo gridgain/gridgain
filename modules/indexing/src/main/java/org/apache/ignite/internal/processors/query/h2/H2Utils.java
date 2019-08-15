@@ -75,6 +75,7 @@ import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.h2.engine.Constants;
 import org.h2.engine.Session;
+import org.h2.expression.aggregate.AggregateData;
 import org.h2.jdbc.JdbcConnection;
 import org.h2.result.Row;
 import org.h2.result.SortOrder;
@@ -1137,8 +1138,10 @@ public class H2Utils {
 
             if (o instanceof Value)
                 rowSize += ((Value)row[i]).getMemory();
+            else if (o instanceof AggregateData)
+                rowSize += ((AggregateData)row[i]).getMemory();
             else
-                rowSize += Constants.MEMORY_ROW; // TODO assess aggs size.
+                rowSize += Constants.MEMORY_ROW;
         }
 
         return rowSize;

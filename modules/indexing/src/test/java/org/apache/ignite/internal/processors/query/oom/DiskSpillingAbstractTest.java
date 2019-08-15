@@ -296,8 +296,8 @@ public class DiskSpillingAbstractTest extends GridCommonAbstractTest {
                 150 + (i % 50),             // height
                 50000 + i,                  // salary
                 i / 1000d,       // tax
-                50d + i % 50.0,             // weight
-                36.6,                       // temperature
+                50d + i % (PERS_CNT / 2),             // weight
+                (i % 10 == 0) ? null : (36.6 + i % 5),   // temperature_nullable
                 "20:00:" + i % 60,          // time
                 "2019-04-" + (i % 29 + 1),  // date
                 "2019-04-04 04:20:08." + i % 900, // timestamp
@@ -327,7 +327,7 @@ public class DiskSpillingAbstractTest extends GridCommonAbstractTest {
     }
 
     /** */
-    private List<List<?>> runDdlDml(String sql, Object... args) {
+    protected List<List<?>> runDdlDml(String sql, Object... args) {
         return grid(0)
             .cache(DEFAULT_CACHE_NAME)
             .query(new SqlFieldsQueryEx(sql, null)

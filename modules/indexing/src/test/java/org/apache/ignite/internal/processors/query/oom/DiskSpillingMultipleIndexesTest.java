@@ -16,16 +16,18 @@
 package org.apache.ignite.internal.processors.query.oom;
 
 /**
- * Test case for query parallelism.
+ * TODO: Add class description.
  */
-public class DiskSpillingQueryParallelismTest extends DiskSpillingMultipleIndexesTest {
-    /** {@inheritDoc} */
-    @Override protected int queryParallelism() {
-        return 2;
-    }
+public class DiskSpillingMultipleIndexesTest extends DiskSpillingQueriesTest {
 
     /** {@inheritDoc} */
-    @Override protected int nodeCount() {
-        return 3;
+    @Override protected void beforeTestsStarted() throws Exception {
+        super.beforeTestsStarted();
+
+        runDdlDml("CREATE INDEX pers_name ON person(name)");
+        runDdlDml("CREATE INDEX pers_weight ON person(weight)");
+        runDdlDml("CREATE INDEX pers_code ON person(code)");
+        runDdlDml("CREATE INDEX pers_depId ON person(depId)");
+        runDdlDml("CREATE INDEX pers_temperature ON person(temperature)");
     }
 }

@@ -35,7 +35,7 @@ public class GroupedExternalGroupByData extends GroupByData {
 
     private final int[] grpIdx;
 
-    private SortedExternalGroupByResult sortedExtRes;
+    private GroupedExternalResult sortedExtRes;
 
     private TreeMap<ValueRow, Object[]> groupByData;
 
@@ -57,7 +57,7 @@ public class GroupedExternalGroupByData extends GroupByData {
     }
 
     private void createExtGroupByData() {
-        sortedExtRes = new SortedExternalGroupByResult(((QueryContext)ses.getQueryContext()).context(), ses,
+        sortedExtRes = new GroupedExternalResult(((QueryContext)ses.getQueryContext()).context(), ses,
              tracker,  groupByData.size());
     }
 
@@ -160,6 +160,8 @@ public class GroupedExternalGroupByData extends GroupByData {
 
             //throw new RuntimeException("!!!");
             sortedExtRes.addRow(newRow);
+
+
         }
 
         groupByData.clear();
@@ -227,7 +229,7 @@ public class GroupedExternalGroupByData extends GroupByData {
     }
 
     private static class ExternalGroupsIterator implements Iterator<T2<ValueRow, Object[]>> {
-        private final SortedExternalGroupByResult sortedExtRes;
+        private final GroupedExternalResult sortedExtRes;
         private final CompareMode cmp;
         private final Session ses;
         private int extSize;
@@ -235,7 +237,7 @@ public class GroupedExternalGroupByData extends GroupByData {
         private T2<ValueRow, Object[]> next;
 
 
-        private ExternalGroupsIterator(SortedExternalGroupByResult res, Session ses) {
+        private ExternalGroupsIterator(GroupedExternalResult res, Session ses) {
             sortedExtRes = res;
             this.ses = ses;
             this.cmp = ses.getDatabase().getCompareMode();

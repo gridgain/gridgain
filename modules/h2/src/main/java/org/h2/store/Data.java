@@ -826,7 +826,7 @@ public class Data {
             writeInt(a.aggregateType().ordinal());
             writeInt(a.dataType());
             writeLong(a.count());
-            writeValue(a.value());
+            writeValue(a.value() == null ? ValueNull.INSTANCE : a.value());
             writeLong(Double.doubleToLongBits(a.mean()));
             writeLong(Double.doubleToLongBits(a.m2()));
         }
@@ -836,9 +836,14 @@ public class Data {
             writeByte(a.isDistinct() ? BOOLEAN_TRUE : BOOLEAN_FALSE);
             writeValue(a.getSharedArgument() == null ? ValueNull.INSTANCE : a.getSharedArgument());
             Collection<Value> values = a.values();
-            writeInt(values.size());
-            for (Value v : values)
-                writeValue(v);
+            if (values == null)
+                writeInt(0);
+            else {
+                writeInt(values.size());
+                for (Value v : values)
+                    writeValue(v);
+            }
+
         }
         else
             throw DbException.throwInternalError("unknown type=" + o.getClass());
@@ -1047,6 +1052,8 @@ public class Data {
             int dataType = readInt();
             long cnt = readLong();
             Value val = (Value)readValue();
+            if (val == ValueNull.INSTANCE)
+                val = null;
             double mean = Double.longBitsToDouble(readLong());
             double m2 = Double.longBitsToDouble(readLong());
             return AggregateDataDefault.from(aggType, dataType, cnt,  mean, m2, val);
@@ -1057,8 +1064,10 @@ public class Data {
             if (shared == ValueNull.INSTANCE)
                 shared = null;
             assert !distinct || cmp != null;
-            Collection<Value> values = distinct ? new TreeSet<>(cmp) : new ArrayList<Value>();
+            Collection<Value> values = null;
             int size = readInt();
+            if (size != 0)
+                values = distinct ? new TreeSet<>(cmp) : new ArrayList<Value>(size);
             for (int i = 0; i < size; i++)
                 values.add((Value)readValue());
             return AggregateDataCollecting.from(distinct, values, shared);

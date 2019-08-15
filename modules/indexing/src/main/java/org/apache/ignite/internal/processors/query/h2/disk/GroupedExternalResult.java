@@ -31,10 +31,12 @@ import org.h2.store.Data;
 import org.h2.value.Value;
 import org.h2.value.ValueRow;
 
+import static org.h2.command.dml.SelectGroups.cleanupAggregates;
+
 /**
  * TODO: Add class description.
  */
-public class SortedExternalGroupByResult extends AbstractExternalResult<Object>  {
+public class GroupedExternalResult extends AbstractExternalResult<Object>  {
     /** Last written to file position. */
     private long lastWrittenPos;
 
@@ -49,18 +51,21 @@ public class SortedExternalGroupByResult extends AbstractExternalResult<Object> 
      */
     private Queue<Chunk> resQueue;
 
+    private final Session ses;
+
     /**
      * @param ses Session.
      * @param ctx Kernal context.
      * @param memTracker MemoryTracker.
      * @param initSize Initial size;
      */
-    public SortedExternalGroupByResult(GridKernalContext ctx,
+    public GroupedExternalResult(GridKernalContext ctx,
         Session ses,
         H2MemoryTracker memTracker,
         long initSize) {
         super(ctx, memTracker, ses.getDatabase().getCompareMode(),  "sortedGroupBy");
 
+        this.ses = ses;
         chunks = new ArrayList<>();
     }
 
@@ -132,6 +137,8 @@ public class SortedExternalGroupByResult extends AbstractExternalResult<Object> 
 
         ArrayList<Object[]> rows =  new ArrayList<>(sortedRowsBuf.values());
 
+        System.out.println("spillRowsBufferToDisk size=" + sortedRowsBuf.size());
+
         sortedRowsBuf = null;
 
         Data buff = createDataBuffer(rowSize(rows));
@@ -153,6 +160,8 @@ public class SortedExternalGroupByResult extends AbstractExternalResult<Object> 
             long delta = H2Utils.calculateMemoryDelta(null, row, null);
 
             memTracker.released(-delta);
+
+            cleanupAggregates(row, ses);
         }
     }
 

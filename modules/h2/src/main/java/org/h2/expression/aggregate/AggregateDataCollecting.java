@@ -87,11 +87,11 @@ public class AggregateDataCollecting extends AggregateData implements Iterable<V
 
         AggregateDataCollecting a = (AggregateDataCollecting)agg;
         assert distinct == a.distinct;
-        assert shared == shared;
+        assert shared == a.shared;
 
         if (values == null)
             values = a.values;
-        else
+        else if (a.values != null)
             values.addAll(a.values);
     }
 
@@ -158,6 +158,10 @@ public class AggregateDataCollecting extends AggregateData implements Iterable<V
 
             memTracker.released(memReserved);
         }
+    }
+
+    @Override public long getMemory() {
+        return memReserved;
     }
 
     public boolean isDistinct() {

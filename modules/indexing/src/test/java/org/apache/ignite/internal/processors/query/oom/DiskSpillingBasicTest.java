@@ -30,7 +30,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerArray;
 import java.util.concurrent.atomic.AtomicReference;
-import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.util.typedef.X;
 import org.junit.Test;
@@ -61,7 +60,9 @@ public class DiskSpillingBasicTest extends DiskSpillingAbstractTest {
                 " WHERE p.depId > d.id",
 
             "SELECT  code, depId, salary, id  " +
-                "FROM person ORDER BY code, salary, id"
+                "FROM person ORDER BY code, salary, id",
+
+            "SELECT code, SUM(temperature), AVG(salary) FROM person WHERE age > 5 GROUP BY code"
         };
 
         final int qrysSize = qrys.length;
@@ -69,7 +70,8 @@ public class DiskSpillingBasicTest extends DiskSpillingAbstractTest {
         final List<List> results = new ArrayList<>(qrysSize);
 
         for (int i = 0; i < qrysSize; i++)
-            results.add(i, grid(0).cache(DEFAULT_CACHE_NAME).query(new SqlFieldsQuery(qrys[i])).getAll());
+            results.add(i, grid(0).cache(DEFAULT_CACHE_NAME)
+                .query(new SqlFieldsQueryEx(qrys[i], true).setMaxMemory(16384)).getAll());
 
         final AtomicReference<Throwable> err = new AtomicReference<>();
 

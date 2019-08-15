@@ -5,6 +5,7 @@
  */
 package org.h2.expression.aggregate;
 
+import org.h2.engine.Constants;
 import org.h2.engine.Database;
 import org.h2.engine.Session;
 import org.h2.value.Value;
@@ -60,20 +61,7 @@ public class AggregateDataCount extends AggregateData {
         return new AggregateDataCount(all, count);
     }
 
-//    @Override public byte[] toBytes() throws IOException {
-//        byte[] bytes = new byte[9];
-//        bytes[0] =
-//        out.writeBoolean(all);
-//        out.writeLong(count);
-//    }
-
-//    public static AggregateDataCount read(DataInputStream in) throws IOException {
-//
-//        byte[] arr;
-//
-//        boolean all = in.readBoolean();
-//        long count = in.readLong();
-//
-//        return new AggregateDataCount(all, count);
-//    }
+    @Override public long getMemory() {
+        return Constants.MEMORY_OBJECT + /*long*/8 + /*bool*/1 ;
+    }
 }

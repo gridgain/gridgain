@@ -76,4 +76,7 @@ class AggregateDataEnvelope extends AggregateData {
         return ValueGeometry.fromEnvelope(envelope);
     }
 
+    @Override public long getMemory() {
+        throw new UnsupportedOperationException();
+    }
 }
