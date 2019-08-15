@@ -34,34 +34,32 @@ import static org.apache.ignite.internal.processors.metastorage.persistence.Dist
 import static org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageUtil.historyItemKey;
 import static org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageUtil.localKey;
 import static org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageUtil.versionKey;
-import static org.apache.ignite.internal.processors.metastorage.persistence.DmsDataWriterWorker.WorkerStatus.CANCEL;
-import static org.apache.ignite.internal.processors.metastorage.persistence.DmsDataWriterWorker.WorkerStatus.CONTINUE;
-import static org.apache.ignite.internal.processors.metastorage.persistence.DmsDataWriterWorker.WorkerStatus.HALT;
+import static org.apache.ignite.internal.processors.metastorage.persistence.DmsWorkerStatus.CANCEL;
+import static org.apache.ignite.internal.processors.metastorage.persistence.DmsWorkerStatus.CONTINUE;
+import static org.apache.ignite.internal.processors.metastorage.persistence.DmsWorkerStatus.HALT;
 
 /** */
 class DmsDataWriterWorker extends GridWorker {
     /** */
     public static final byte[] DUMMY_VALUE = {};
 
-    public enum WorkerStatus {
-        CONTINUE,
-        CANCEL,
-        HALT;
-    }
-
     /** */
     private final LinkedBlockingQueue<Object> updateQueue = new LinkedBlockingQueue<>();
+
+    /** */
     private final DmsLocalMetaStorageLock lock;
-    private final Consumer<Throwable> errorHandler;
+
+    /** */
+    private final Consumer<Throwable> errorHnd;
 
     /** */
     @TestOnly
-    public WorkerStatus status() {
+    public DmsWorkerStatus status() {
         return status;
     }
 
     /** */
-    private volatile WorkerStatus status = CONTINUE;
+    private volatile DmsWorkerStatus status = CONTINUE;
 
     /** */
     private DistributedMetaStorageVersion workerDmsVer;
@@ -81,20 +79,12 @@ class DmsDataWriterWorker extends GridWorker {
     ) {
         super(igniteInstanceName, "dms-writer", log);
         this.lock = lock;
-        this.errorHandler = errorHnd;
+        this.errorHnd = errorHnd;
     }
 
     /** */
-    public void cancel(boolean halt) throws InterruptedException {
-        if (halt)
-            updateQueue.clear();
-
-        updateQueue.offer(status = halt ? HALT : CANCEL);
-
-        Thread runner = runner();
-
-        if (runner != null)
-            runner.join();
+    public void setMetaStorage(ReadWriteMetastorage metastorage) {
+        this.metastorage = metastorage;
     }
 
     /** */
@@ -115,6 +105,19 @@ class DmsDataWriterWorker extends GridWorker {
     /** */
     public void removeHistItem(long ver) {
         updateQueue.offer(ver);
+    }
+
+    /** */
+    public void cancel(boolean halt) throws InterruptedException {
+        if (halt)
+            updateQueue.clear();
+
+        updateQueue.offer(status = halt ? HALT : CANCEL);
+
+        Thread runner = runner();
+
+        if (runner != null)
+            runner.join();
     }
 
     /** {@inheritDoc} */
@@ -140,8 +143,6 @@ class DmsDataWriterWorker extends GridWorker {
 
                 try {
                     update = updateQueue.take();
-
-//                    log.info("<#> update: " + update + "\nqueue: " + updateQueue);
                 }
                 catch (InterruptedException ignore) {
                 }
@@ -180,7 +181,7 @@ class DmsDataWriterWorker extends GridWorker {
                         metastorage.remove(historyItemKey(ver));
                     }
                     else {
-                        assert update instanceof WorkerStatus : update;
+                        assert update instanceof DmsWorkerStatus : update;
 
                         break;
                     }
@@ -191,7 +192,7 @@ class DmsDataWriterWorker extends GridWorker {
             }
         }
         catch (Throwable t) {
-            errorHandler.accept(t);
+            errorHnd.accept(t);
         }
     }
 
@@ -278,9 +279,5 @@ class DmsDataWriterWorker extends GridWorker {
             metastorage.remove(localKey(key));
         else
             metastorage.writeRaw(localKey(key), valBytes);
-    }
-
-    public void setMetaStorage(ReadWriteMetastorage metastorage) {
-        this.metastorage = metastorage;
     }
 }

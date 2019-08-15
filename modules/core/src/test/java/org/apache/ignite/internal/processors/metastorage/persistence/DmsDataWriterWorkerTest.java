@@ -45,12 +45,16 @@ public class DmsDataWriterWorkerTest {
     /** */
     private static IgniteLogger log = new GridTestLog4jLogger(true).getLogger(DmsDataWriterWorkerTest.class);
 
+    /** */
     private Thread testThread;
 
+    /** */
     private MockDmsLocalMetaStorageLock lock;
 
+    /** */
     private MyReadWriteMetaStorageMock metastorage;
 
+    /** */
     private DmsDataWriterWorker worker;
 
     /** */
@@ -107,6 +111,7 @@ public class DmsDataWriterWorkerTest {
     /** */
     @Test
     public void testUpdateSimple() throws Exception {
+        System.out.println("<$> ClassLoader = " + DistributedMetaStorageVersion.class.getClassLoader());
         startWorker();
 
         write("key1", "val1");
@@ -293,7 +298,7 @@ public class DmsDataWriterWorkerTest {
                     if (await.get())
                         latch.countDown();
 
-                    while (worker.status() != DmsDataWriterWorker.WorkerStatus.HALT) {
+                    while (worker.status() != DmsWorkerStatus.HALT) {
                         //noinspection BusyWait
                         Thread.sleep(0);
                     }
@@ -328,16 +333,19 @@ public class DmsDataWriterWorkerTest {
         assertEquals("val1", metastorage.read(localKey("key1")));
     }
 
+    /** */
     private DistributedMetaStorageKeyValuePair toKeyValuePair(DistributedMetaStorageHistoryItem histItem) {
         assertEquals(1, histItem.keys.length);
 
         return new DistributedMetaStorageKeyValuePair(histItem.keys[0], histItem.valBytesArray[0]);
     }
 
+    /** */
     private void write(String key, String val) throws IgniteCheckedException {
         worker.update(histItem(key, val));
     }
 
+    /** */
     private DistributedMetaStorageHistoryItem histItem(String key, String val) throws IgniteCheckedException {
         return new DistributedMetaStorageHistoryItem(key, JdkMarshaller.DEFAULT.marshal(val));
     }
