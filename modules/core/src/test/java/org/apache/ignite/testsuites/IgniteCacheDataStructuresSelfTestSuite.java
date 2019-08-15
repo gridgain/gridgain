@@ -16,6 +16,7 @@
 
 package org.apache.ignite.testsuites;
 
+import org.apache.ignite.RebalanceStatisticsTest;
 import org.apache.ignite.internal.processors.cache.AtomicCacheAffinityConfigurationTest;
 import org.apache.ignite.internal.processors.cache.datastructures.GridCacheQueueCleanupSelfTest;
 import org.apache.ignite.internal.processors.cache.datastructures.GridCacheQueueClientDisconnectTest;
@@ -185,7 +186,8 @@ import org.junit.runners.Suite;
 
     AtomicCacheAffinityConfigurationTest.class,
 
-    IgniteCacheDataStructuresBinarySelfTestSuite.class
+    IgniteCacheDataStructuresBinarySelfTestSuite.class,
+    RebalanceStatisticsTest.class
 })
 public class IgniteCacheDataStructuresSelfTestSuite {
 }
