@@ -503,7 +503,6 @@ public class GridReduceQueryExecutor {
 
             try {
                 final ReduceQueryRun r = new ReduceQueryRun(
-                    conn,
                     mapQueries.size(),
                     pageSize,
                     dataPageScanEnabled
@@ -527,7 +526,7 @@ public class GridReduceQueryExecutor {
                         fakeTable(conn, tblIdx++).innerTable(tbl);
                     }
                     else
-                        idx = ReduceIndexUnsorted.createDummy(ctx, fakeTable(r.connection(), tblIdx++));
+                        idx = ReduceIndexUnsorted.createDummy(ctx, fakeTable(conn, tblIdx++));
 
                     // If the query has only replicated tables, we have to run it on a single node only.
                     if (!mapQry.isPartitioned()) {
@@ -692,7 +691,7 @@ public class GridReduceQueryExecutor {
 
                             resIter = new H2FieldsIterator(res, mvccTracker, conn);
 
-                            release = false;
+                            conn = null;
 
                             mvccTracker = null; // To prevent callback inside finally block;
                         }
@@ -744,7 +743,7 @@ public class GridReduceQueryExecutor {
                 }
             }
             finally {
-                if (retry || release)
+                if (conn != null && (retry || release))
                     U.close(conn, log);
             }
         }
@@ -1179,8 +1178,6 @@ public class GridReduceQueryExecutor {
             return tbl;
         }
         catch (Exception e) {
-            U.closeQuiet(conn);
-
             throw new IgniteCheckedException(e);
         }
     }

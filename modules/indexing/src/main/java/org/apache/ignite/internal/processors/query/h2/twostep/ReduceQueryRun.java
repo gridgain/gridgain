@@ -40,9 +40,6 @@ public class ReduceQueryRun {
     private CountDownLatch latch;
 
     /** */
-    private final H2PooledConnection conn;
-
-    /** */
     private final int pageSize;
 
     /** */
@@ -53,19 +50,15 @@ public class ReduceQueryRun {
 
     /**
      * Constructor.
-     * @param conn Connection.
      * @param idxsCnt Number of indexes.
      * @param pageSize Page size.
      * @param dataPageScanEnabled If data page scan is enabled.
      */
     ReduceQueryRun(
-        H2PooledConnection conn,
         int idxsCnt,
         int pageSize,
         Boolean dataPageScanEnabled
     ) {
-        this.conn = conn;
-
         idxs = new ArrayList<>(idxsCnt);
 
         this.pageSize = pageSize > 0 ? pageSize : Query.DFLT_PAGE_SIZE;
@@ -140,13 +133,6 @@ public class ReduceQueryRun {
      */
     int pageSize() {
         return pageSize;
-    }
-
-    /**
-     * @return Connection.
-     */
-    H2PooledConnection connection() {
-        return conn;
     }
 
     /** */
