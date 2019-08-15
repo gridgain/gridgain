@@ -51,7 +51,7 @@
                                 fastutil,h2,ignite-shmem,annotations,arpack_combined_all,
                                 cache-api,commons-math3,commons-rng-client-api,commons-rng-core,
                                 commons-rng-simple,core,ignite-ml,ignite-h2,ignite-core,SparseBitSet,jts-core,
-                                spring-context,spring-aop,spring-beans,spring-core,spring-expression
+                                spring-context,spring-aop,spring-beans,spring-core,spring-expression,jetty,guava
                             </excludeArtifactIds>
                             <excludeGroupIds>com.github.fommil.netlib</excludeGroupIds>
                         </configuration>
@@ -71,13 +71,13 @@
         <dependency>
             <groupId>org.apache.parquet</groupId>
             <artifactId>parquet-hadoop</artifactId>
-            <version>1.10.0</version>
+            <version>1.10.1</version>
         </dependency>
 
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-common</artifactId>
-            <version>2.9.1</version>
+            <version>3.2.0</version>
         </dependency>
     </dependencies>
 
