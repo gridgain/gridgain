@@ -2668,6 +2668,8 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
                 }
             }
         }
+
+        metricsLsnr.clearNodeMetrics(nodeId);
     }
 
     /** {@inheritDoc} */
@@ -5133,8 +5135,6 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
         @Override public Map<UUID, Map<Class<? extends Message>, HistogramMetric>> getInMetricsByNodeByMsgClass() {
             return TcpCommunicationSpi.this.getInMetricsByNodeByMsgClass();
         }
-
-
 
         /** {@inheritDoc} */
         @Override public int getOutboundMessagesQueueSize() {

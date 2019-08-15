@@ -130,9 +130,6 @@ import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_REA
  * Super class for all common tests.
  */
 public abstract class GridCommonAbstractTest extends GridAbstractTest {
-    /** Grid count. */
-    protected static final int GRID_CNT = 3;
-
     /** Cache peek modes array that consist of only ONHEAP mode. */
     protected static final CachePeekMode[] ONHEAP_PEEK_MODES = new CachePeekMode[] {CachePeekMode.ONHEAP};
 

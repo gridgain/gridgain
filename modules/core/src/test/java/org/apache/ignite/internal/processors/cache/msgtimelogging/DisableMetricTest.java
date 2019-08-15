@@ -26,7 +26,7 @@ public class DisableMetricTest extends GridCacheMessagesTimeLoggingAbstractTest 
 
         cache.put(1, 1);
 
-        HistogramMetric metric = getMetric(0, grid(1), GridDhtTxPrepareRequest.class, true);
+        HistogramMetric metric = getMetric(0, 1, GridDhtTxPrepareRequest.class, true);
 
         assertNull("Metrics unexpectedly enabled", metric);
     }

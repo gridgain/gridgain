@@ -31,6 +31,7 @@ import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.processors.metric.HistogramMetric;
 import org.apache.ignite.internal.util.nio.GridNioMetricsListener;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.TimeLoggableMessage;
 import org.jetbrains.annotations.NotNull;
@@ -46,9 +47,6 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_MESSAGES_INFO_STOR
 public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
     /** Default history bounds in milliseconds. */
     public static final long[] DEFAULT_HIST_BOUNDS = new long[]{10, 20, 40, 80, 160, 320, 500, 1000, 2000, 4000};
-
-    /** */
-    public static final int NANOS_TO_MILLIS_COEF = 1_000_000;
 
     /** */
     public static final String BOUNDS_PARAM_DELIMITER = ",";
@@ -305,6 +303,11 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
             metrics.reset();
     }
 
+    public void clearNodeMetrics(UUID nodeId) {
+        for (ThreadMetrics metrics : allMetrics)
+            metrics.clearNodeMetrics(nodeId);
+    }
+
     /**
      * Add single metrics to the total.
      *
@@ -330,26 +333,21 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
      */
     private void addHistMetrics(Map<UUID, Map<Class<? extends Message>, HistogramMetric>> total,
                                 Map<UUID, Map<Class<? extends Message>, HistogramMetric>> current) {
-        for (Map.Entry<UUID, Map<Class<? extends Message>, HistogramMetric>> entry: current.entrySet()) {
-            UUID nodeId = entry.getKey();
-            Map<Class<? extends Message>, HistogramMetric> classMetrics = entry.getValue();
 
+        current.forEach((nodeId, classMetrics) -> {
             if (!total.containsKey(nodeId))
                 total.put(nodeId, classMetrics);
             else {
                 Map<Class<? extends Message>, HistogramMetric> totalClsMetrics = total.get(nodeId);
 
-                for (Map.Entry<Class<? extends Message>, HistogramMetric> entry1: classMetrics.entrySet()) {
-                    Class<? extends Message> msgClass = entry1.getKey();
-                    HistogramMetric histMetric = entry1.getValue();
-
+                classMetrics.forEach((msgClass, histMetric) -> {
                     if (!totalClsMetrics.containsKey(msgClass))
                         totalClsMetrics.put(msgClass, histMetric);
                     else
                         totalClsMetrics.get(msgClass).addValues(histMetric);
-                }
+                });
             }
-        }
+        });
     }
 
     /**
@@ -382,13 +380,6 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
                 }
             }
         }
-    }
-
-    /**
-     *
-     */
-    public static String metricName(UUID nodeId, Class msgClass) {
-        return nodeId + "." + msgClass.getSimpleName();
     }
 
     /**
@@ -429,16 +420,16 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
         private final HashMap<UUID, LongHolder> sentMsgsCntByNode = new HashMap<>();
 
         /** Stores time latencies for each sent request class and each node */
-        private final Map<UUID, Map<Class<? extends Message>, HistogramMetric>> outMetricsMap = Collections.synchronizedMap(new HashMap<>());
+        private final Map<UUID, Map<Class<? extends Message>, HistogramMetric>> outMetricsMap = new ConcurrentHashMap<>();
 
         /** Stores sent requests' timestamps that did't get response for each request class and each node */
-        private final Map<UUID, Map<Class<? extends Message>, Map<Long, Long>>> outTimestamps = Collections.synchronizedMap(new HashMap<>());
+        private final Map<UUID, Map<Class<? extends Message>, Map<Long, Long>>> outTimestamps = new ConcurrentHashMap<>();
 
         /** Stores time latencies for each sent request class and each node */
-        private final Map<UUID, Map<Class<? extends Message>, HistogramMetric>> inMetricsMap = Collections.synchronizedMap(new HashMap<>());
+        private final Map<UUID, Map<Class<? extends Message>, HistogramMetric>> inMetricsMap = new ConcurrentHashMap<>();
 
         /** Stores sent requests' timestamps that did't get response for each request class and each node */
-        private final Map<UUID, Map<Class<? extends Message>, Map<Long, Long>>> inTimestamps = Collections.synchronizedMap(new HashMap<>());
+        private final Map<UUID, Map<Class<? extends Message>, Map<Long, Long>>> inTimestamps = new ConcurrentHashMap<>();
 
         /** Is time logging enabled. */
         private final boolean isTimeLoggingEnabled = IgniteSystemProperties.getBoolean(IGNITE_ENABLE_MESSAGES_TIME_LOGGING);
@@ -509,6 +500,17 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
         }
 
         /**
+         * Removes metrics data corresponding to {@code nodeId}
+         */
+        private void clearNodeMetrics(UUID nodeId) {
+            inMetricsMap.remove(nodeId);
+            inTimestamps.remove(nodeId);
+
+            outMetricsMap.remove(nodeId);
+            outTimestamps.remove(nodeId);
+        }
+
+        /**
          * Adds information about message timestamp. Messages from local node are ignored.
          *
          * @param nodeId Node id.
@@ -551,9 +553,7 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
                 // No message of certain class were sent to or received from nodeId
                 nodeMap.put(req.getClass(), new TimestampMap());
 
-                metricsMap.get(nodeId).put(req.getClass(), new HistogramMetric(metricName(nodeId, req.getClass()),
-                                                                               "",
-                                                                               metricBounds));
+                metricsMap.get(nodeId).put(req.getClass(), new HistogramMetric(metricBounds));
             }
 
             Map<Long, Long> reqResTimeMap = nodeMap.get(req.getClass());
@@ -586,7 +586,7 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
                 if (reqResTimeMap.containsKey(reqId)) {
                     Long reqTimestamp = reqResTimeMap.get(reqId);
 
-                    metricsMap.get(nodeId).get(entry.getKey()).value((System.nanoTime() - reqTimestamp) / NANOS_TO_MILLIS_COEF);
+                    metricsMap.get(nodeId).get(entry.getKey()).value((U.nanosToMillis(System.nanoTime() - reqTimestamp)));
 
                     reqResTimeMap.remove(reqId);
 
@@ -607,9 +607,10 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
             try {
                 return Arrays.stream(strBounds.split(BOUNDS_PARAM_DELIMITER))
                     .map(String::trim)
-                    .mapToLong(Long::valueOf)
+                    .mapToLong(Long::parseLong)
                     .toArray();
-            } catch (Exception e) {
+            }
+            catch (Exception e) {
                 return DEFAULT_HIST_BOUNDS;
             }
         }

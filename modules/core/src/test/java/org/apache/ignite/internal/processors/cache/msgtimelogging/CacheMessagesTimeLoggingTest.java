@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache.msgtimelogging;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import javax.management.MalformedObjectNameException;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -31,9 +32,8 @@ import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxEn
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareRequest;
 import org.apache.ignite.internal.processors.metric.HistogramMetric;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationMetricsListener;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.transactions.Transaction;
-import org.apache.ignite.transactions.TransactionConcurrency;
-import org.apache.ignite.transactions.TransactionIsolation;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_COMM_SPI_TIME_HIST_BOUNDS;
@@ -42,7 +42,9 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_MESSAGES_INFO_STOR
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
-import static org.apache.ignite.internal.managers.communication.GridIoManager.DEFAULT_HIST_BOUNDS;
+import static org.apache.ignite.spi.communication.tcp.TcpCommunicationMetricsListener.DEFAULT_HIST_BOUNDS;
+import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
+import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED;
 
 /**
  * Tests for CommunicationSpi time metrics.
@@ -94,8 +96,7 @@ public class CacheMessagesTimeLoggingTest extends GridCacheMessagesTimeLoggingAb
                                                                             .setBackups(1)
                                                                             .setAtomicityMode(TRANSACTIONAL));
 
-
-        try (Transaction tx = grid(0).transactions().txStart(TransactionConcurrency.PESSIMISTIC, TransactionIsolation.READ_COMMITTED)) {
+            try (Transaction tx = grid(0).transactions().txStart(PESSIMISTIC, READ_COMMITTED)) {
             populateCache(cache0);
 
             tx.commit();
@@ -109,8 +110,7 @@ public class CacheMessagesTimeLoggingTest extends GridCacheMessagesTimeLoggingAb
                                                                             .setBackups(1)
                                                                             .setAtomicityMode(TRANSACTIONAL));
 
-
-        try (Transaction tx = grid(1).transactions().txStart(TransactionConcurrency.PESSIMISTIC, TransactionIsolation.READ_COMMITTED)) {
+        try (Transaction tx = grid(1).transactions().txStart(PESSIMISTIC, READ_COMMITTED)) {
             populateCache(cache1);
 
             tx.commit();
@@ -130,7 +130,7 @@ public class CacheMessagesTimeLoggingTest extends GridCacheMessagesTimeLoggingAb
                                                                             .setBackups(1)
                                                                             .setAtomicityMode(TRANSACTIONAL_SNAPSHOT));
 
-        try (Transaction tx = grid(0).transactions().txStart(TransactionConcurrency.PESSIMISTIC, TransactionIsolation.READ_COMMITTED)) {
+        try (Transaction tx = grid(0).transactions().txStart(PESSIMISTIC, READ_COMMITTED)) {
             populateCache(cache0);
 
             tx.commit();
@@ -145,7 +145,7 @@ public class CacheMessagesTimeLoggingTest extends GridCacheMessagesTimeLoggingAb
                                                                             .setBackups(1)
                                                                             .setAtomicityMode(TRANSACTIONAL_SNAPSHOT));
 
-        try (Transaction tx = grid(1).transactions().txStart(TransactionConcurrency.PESSIMISTIC, TransactionIsolation.READ_COMMITTED)) {
+        try (Transaction tx = grid(1).transactions().txStart(PESSIMISTIC, READ_COMMITTED)) {
             populateCache(cache1);
 
             tx.commit();
@@ -169,15 +169,12 @@ public class CacheMessagesTimeLoggingTest extends GridCacheMessagesTimeLoggingAb
         cache.putAll(map);
     }
 
-
-
     /**
      * @throws InterruptedException if {@code Thread#sleep} failed.
      */
+    @WithSystemProperty(key = IGNITE_MESSAGES_INFO_STORE_TIME, value = "1")
     @Test
     public void testEviction() throws InterruptedException {
-        System.setProperty(IGNITE_MESSAGES_INFO_STORE_TIME, "1");
-
         Map<Long, Long> map = new TcpCommunicationMetricsListener.TimestampMap();
 
         map.put(10L, System.nanoTime());
@@ -201,7 +198,7 @@ public class CacheMessagesTimeLoggingTest extends GridCacheMessagesTimeLoggingAb
 
         cache.put(1, 1);
 
-        HistogramMetric metric = getMetric(0, grid(1), GridDhtTxPrepareRequest.class, true);
+        HistogramMetric metric = getMetric(0, 1, GridDhtTxPrepareRequest.class, true);
 
         assertNotNull(metric);
 
@@ -218,7 +215,7 @@ public class CacheMessagesTimeLoggingTest extends GridCacheMessagesTimeLoggingAb
 
         cache3.put(1, 1);
 
-        HistogramMetric metric3 = getMetric(GRID_CNT, grid(1), GridNearAtomicSingleUpdateRequest.class, true);
+        HistogramMetric metric3 = getMetric(GRID_CNT, 1, GridNearAtomicSingleUpdateRequest.class, true);
         assertNotNull(metric3);
 
         assertEquals(4, metric3.value().length);
@@ -234,10 +231,35 @@ public class CacheMessagesTimeLoggingTest extends GridCacheMessagesTimeLoggingAb
 
         cache4.put(1, 1);
 
-        HistogramMetric metric4 = getMetric(GRID_CNT + 1, grid(1), GridNearAtomicSingleUpdateRequest.class, true);
+        HistogramMetric metric4 = getMetric(GRID_CNT + 1, 1, GridNearAtomicSingleUpdateRequest.class, true);
         assertNotNull(metric4);
 
         assertEquals(DEFAULT_HIST_BOUNDS.length + 1, metric4.value().length);
+    }
+
+    /**
+     * @throws Exception if test failed.
+     */
+    @Test
+    public void testMetricClearOnNodeLeaving() throws Exception {
+        IgniteCache<Integer, Integer> cache = grid(0).cache(DEFAULT_CACHE_NAME);
+
+        cache.put(1, 1);
+
+        UUID leavingNodeId = grid(1).localNode().id();
+
+        HistogramMetric metric = getMetric(0, leavingNodeId, GridDhtTxPrepareRequest.class, true);
+
+        assertNotNull(metric);
+
+        stopGrid(1);
+
+        awaitPartitionMapExchange();
+
+        HistogramMetric metricAfterNodeStop = getMetric(0, leavingNodeId, GridDhtTxPrepareRequest.class, true);
+
+        assertNull(metricAfterNodeStop);
+
     }
 
     /** {@inheritDoc} */

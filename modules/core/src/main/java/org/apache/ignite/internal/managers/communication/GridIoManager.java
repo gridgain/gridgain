@@ -144,9 +144,6 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
     /** Current IO policy. */
     private static final ThreadLocal<Byte> CUR_PLC = new ThreadLocal<>();
 
-    /** Default history bounds in milliseconds. */
-    public static final long[] DEFAULT_HIST_BOUNDS = new long[]{10, 20, 40, 80, 160, 320, 500, 1000, 2000, 4000};
-
     /** Listeners by topic. */
     private final ConcurrentMap<Object, GridMessageListener> lsnrMap = new ConcurrentHashMap<>();
 

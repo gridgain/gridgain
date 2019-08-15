@@ -20,7 +20,6 @@ import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLongArray;
 import org.apache.ignite.internal.util.typedef.F;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Histogram metric that will calculate counts of measurements that gets into each bounds interval.
@@ -31,20 +30,10 @@ public class HistogramMetric {
     /** Holder of measurements. */
     private HistogramHolder holder;
 
-    /** */
-    private String name;
-
-    /** */
-    private String desc;
-
     /**
-     * @param name Name.
-     * @param desc Description.
      * @param bounds Bounds.
      */
-    public HistogramMetric(String name, @Nullable String desc, long[] bounds) {
-        this.name = name;
-        this.desc = desc;
+    public HistogramMetric(long[] bounds) {
         holder = new HistogramHolder(bounds);
     }
 
@@ -118,7 +107,7 @@ public class HistogramMetric {
         assert Arrays.equals(h.bounds, other.holder.bounds) : "Adding values with different bounds";
 
         for (int i = 0; i < h.bounds.length; i++)
-            h.measurements.set(i, h.measurements.get(i) + other.holder.measurements.get(i));
+            h.measurements.getAndSet(i, h.measurements.get(i) + other.holder.measurements.get(i));
     }
 
     /** Histogram holder. */

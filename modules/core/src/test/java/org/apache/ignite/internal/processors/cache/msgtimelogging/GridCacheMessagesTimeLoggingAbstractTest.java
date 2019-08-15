@@ -13,7 +13,6 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.processors.metric.HistogramMetric;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -25,13 +24,16 @@ import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpiMBean;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_MESSAGES_TIME_LOGGING;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
-import static org.apache.ignite.spi.communication.tcp.TcpCommunicationMetricsListener.metricName;
 
 /**
  *
  */
 public abstract class GridCacheMessagesTimeLoggingAbstractTest extends GridCommonAbstractTest {
+    /** Grid count. */
+    protected static final int GRID_CNT = 3;
+
     /**
      *
      */
@@ -64,60 +66,97 @@ public abstract class GridCacheMessagesTimeLoggingAbstractTest extends GridCommo
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
+
+        System.clearProperty(IGNITE_ENABLE_MESSAGES_TIME_LOGGING);
     }
 
     /**
      *
      */
     protected void checkOutcomingEventsNum(Class msgClass) throws MalformedObjectNameException {
-        checkEventsNum(0, grid(1), msgClass, true);
+        checkEventsNum(0, 1, msgClass, true);
     }
 
     /**
      *
      */
     protected void checkIncomingEventsNum(Class msgClass) throws MalformedObjectNameException {
-        checkEventsNum(0, grid(1), msgClass, false);
+        checkEventsNum(0, 1, msgClass, false);
     }
 
     /**
      * Compares sent events number with histogram entries number.
      * Fails if these numbers differ.
      */
-    private void checkEventsNum(int sourceIdx, IgniteEx target, Class msgClass, boolean outcoming) throws MalformedObjectNameException {
+    private void checkEventsNum(int sourceIdx,
+        int targetIdx,
+        Class msgClass,
+        boolean outcoming
+    )
+        throws MalformedObjectNameException
+    {
         RecordingSpi spi = (RecordingSpi)grid(sourceIdx).configuration().getCommunicationSpi();
 
-        HistogramMetric metric = getMetric(sourceIdx, target, msgClass, outcoming);
+        HistogramMetric metric = getMetric(sourceIdx, targetIdx, msgClass, outcoming);
         assertNotNull("HistogramMetric not found", metric);
 
-        String metricName = metricName(target.localNode().id(), msgClass);
+        String metricName = metricName(grid(targetIdx).localNode().id(), msgClass);
 
         long sum = LongStream.of(metric.value()).sum();
 
         Integer eventsNum = spi.classesMap.get(metricName);
         assertNotNull("Value " + metricName + " not found in classesMap", eventsNum);
 
-        assertTrue("Unexpected metric data amount for " + msgClass + ": " + sum + ". Events num: " + eventsNum, sum == eventsNum);
+        assertTrue("Unexpected metric data amount for " + msgClass + ": " + sum +
+                   ". Events num: " + eventsNum, sum == eventsNum);
     }
 
     /**
      * @param sourceNodeIdx Index of node that stores metric.
-     * @param targetNode Node where requests are sent.
+     * @param targetNodeIdx Index of node where requests are sent.
      * @param msgClass Metric request class.
      * @return {@code HistogramMetric} for {@code msgClass}.
      */
-    @Nullable public HistogramMetric getMetric(int sourceNodeIdx, IgniteEx targetNode, Class msgClass, boolean outcoming) throws MalformedObjectNameException {
-        try {
-            TcpCommunicationSpiMBean mbean = mbean(sourceNodeIdx);
+    @Nullable public HistogramMetric getMetric(
+        int sourceNodeIdx,
+        int targetNodeIdx,
+        Class msgClass,
+        boolean outcoming
+    )
+        throws MalformedObjectNameException
+    {
+        return getMetric(sourceNodeIdx, grid(targetNodeIdx).localNode().id(), msgClass, outcoming);
+    }
 
-            Map<UUID, Map<Class<? extends Message>, HistogramMetric>> nodeMap = outcoming ? mbean.getOutMetricsByNodeByMsgClass() : mbean.getInMetricsByNodeByMsgClass();
+    /**
+     * @param sourceNodeIdx Index of node that stores metric.
+     * @param targetNodeId Id of node where requests are sent.
+     * @param msgClass Metric request class.
+     * @return {@code HistogramMetric} for {@code msgClass}.
+     */
+    @Nullable public HistogramMetric getMetric(int sourceNodeIdx,
+        UUID targetNodeId,
+        Class msgClass,
+        boolean outcoming
+    )
+        throws MalformedObjectNameException
+    {
+        TcpCommunicationSpiMBean mbean = mbean(sourceNodeIdx);
 
-            Map<Class<? extends Message>, HistogramMetric> classMap = nodeMap.get(targetNode.localNode().id());
-
-            return classMap.get(msgClass);
-        } catch (NullPointerException e) {
+        if (mbean == null)
             return null;
-        }
+
+        Map<UUID, Map<Class<? extends Message>, HistogramMetric>> nodeMap =
+            outcoming ? mbean.getOutMetricsByNodeByMsgClass() : mbean.getInMetricsByNodeByMsgClass();
+
+        assertNotNull(nodeMap);
+
+        Map<Class<? extends Message>, HistogramMetric> classMap = nodeMap.get(targetNodeId);
+
+        if (classMap == null)
+            return null;
+
+        return classMap.get(msgClass);
     }
 
     /**
@@ -139,6 +178,13 @@ public abstract class GridCacheMessagesTimeLoggingAbstractTest extends GridCommo
             fail("MBean is not registered: " + mbeanName.getCanonicalName());
 
         return null;
+    }
+
+    /**
+     *
+     */
+    private static String metricName(UUID nodeId, Class msgClass) {
+        return nodeId + "." + msgClass.getSimpleName();
     }
 
     /**
