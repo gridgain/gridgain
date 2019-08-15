@@ -47,17 +47,16 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import static io.opencensus.trace.AttributeValue.stringAttributeValue;
 import static org.apache.ignite.internal.processors.tracing.MTC.startChildSpan;
+import static org.apache.ignite.internal.processors.tracing.Traces.Communication.JOB_EXECUTE_REQUEST;
+import static org.apache.ignite.internal.processors.tracing.Traces.Communication.JOB_EXECUTE_RESPONSE;
 import static org.apache.ignite.internal.processors.tracing.Traces.Communication.REGULAR_PROCESS;
 import static org.apache.ignite.internal.processors.tracing.Traces.Communication.SOCKET_READ;
 import static org.apache.ignite.internal.processors.tracing.Traces.Communication.SOCKET_WRITE;
 
 /**
  * Tests to check correctness of OpenCensus Tracing SPI implementation.
- */
-
-/**
- *
  */
 public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
     /** Grid count. */
@@ -142,7 +141,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
         Map<AttributeValue, SpanData> nodeJoinReqSpans = hnd.allSpans()
             .filter(span -> Traces.Discovery.NODE_JOIN_REQUEST.equals(span.getName()))
             .filter(span -> span.getStatus() == Status.OK)
-            .filter(span -> AttributeValue.stringAttributeValue(joinedNodeId).equals(
+            .filter(span -> stringAttributeValue(joinedNodeId).equals(
                 span.getAttributes().getAttributeMap().get(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID))))
             .collect(Collectors.toMap(
                 span -> span.getAttributes().getAttributeMap().get(SpanTags.tag(SpanTags.NODE, SpanTags.NAME)),
@@ -159,7 +158,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
                 String.format(
                     "%s not found on node with name=%s, nodeJoinReqSpans=%s",
                     Traces.Discovery.NODE_JOIN_REQUEST, nodeName, nodeJoinReqSpans),
-                nodeJoinReqSpans.containsKey(AttributeValue.stringAttributeValue(nodeName)))
+                nodeJoinReqSpans.containsKey(stringAttributeValue(nodeName)))
         );
 
         // Check existence of Traces.Discovery.NODE_JOIN_ADD spans with OK status on all nodes:
@@ -167,7 +166,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
             List<SpanData> nodeJoinAddSpans = hnd.spansReportedByNode(getTestIgniteInstanceName(i))
                 .filter(span -> Traces.Discovery.NODE_JOIN_ADD.equals(span.getName()))
                 .filter(span -> span.getStatus() == Status.OK)
-                .filter(span -> AttributeValue.stringAttributeValue(joinedNodeId).equals(
+                .filter(span -> stringAttributeValue(joinedNodeId).equals(
                     span.getAttributes().getAttributeMap().get(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID))))
                 .collect(Collectors.toList());
 
@@ -191,7 +190,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
                 );
                 Assert.assertEquals(
                     "Parent span is not related to joined node, parentSpan=" + parentSpan,
-                    AttributeValue.stringAttributeValue(joinedNodeId),
+                    stringAttributeValue(joinedNodeId),
                     parentSpan.getAttributes().getAttributeMap().get(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID))
                 );
             });
@@ -202,7 +201,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
             List<SpanData> nodeJoinAddSpans = hnd.spansReportedByNode(getTestIgniteInstanceName(i))
                 .filter(span -> Traces.Discovery.NODE_JOIN_FINISH.equals(span.getName()))
                 .filter(span -> span.getStatus() == Status.OK)
-                .filter(span -> AttributeValue.stringAttributeValue(joinedNodeId).equals(
+                .filter(span -> stringAttributeValue(joinedNodeId).equals(
                     span.getAttributes().getAttributeMap().get(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID))))
                 .collect(Collectors.toList());
 
@@ -226,7 +225,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
                 );
                 Assert.assertEquals(
                     "Parent span is not related to joined node " + parentSpan,
-                    AttributeValue.stringAttributeValue(joinedNodeId),
+                    stringAttributeValue(joinedNodeId),
                     parentSpan.getAttributes().getAttributeMap().get(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID))
                 );
             });
@@ -253,7 +252,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
         // Check existence of Traces.Discovery.NODE_LEFT spans with OK status on all nodes:
         Map<AttributeValue, SpanData> nodeLeftSpans = hnd.allSpans()
             .filter(span -> Traces.Discovery.NODE_LEFT.equals(span.getName()))
-            .filter(span -> AttributeValue.stringAttributeValue(leftNodeId).equals(
+            .filter(span -> stringAttributeValue(leftNodeId).equals(
                 span.getAttributes().getAttributeMap().get(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID))))
             .filter(span -> span.getStatus() == Status.OK)
             .collect(Collectors.toMap(
@@ -271,7 +270,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
         clusterNodeNames.forEach(nodeName ->
             Assert.assertTrue(
                 "Span " + Traces.Discovery.NODE_LEFT + " doesn't exist on node with name=" + nodeName,
-                nodeLeftSpans.containsKey(AttributeValue.stringAttributeValue(nodeName)))
+                nodeLeftSpans.containsKey(stringAttributeValue(nodeName)))
         );
     }
 
@@ -297,7 +296,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
                 .filter(span -> span.getStatus() == Status.OK)
                 .filter(span -> AttributeValue.longAttributeValue(EventType.EVT_NODE_LEFT).equals(
                     span.getAttributes().getAttributeMap().get(SpanTags.tag(SpanTags.EVENT, SpanTags.TYPE))))
-                .filter(span -> AttributeValue.stringAttributeValue(leftNodeId).equals(
+                .filter(span -> stringAttributeValue(leftNodeId).equals(
                     span.getAttributes().getAttributeMap().get(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID))))
                 .collect(Collectors.toList());
 
@@ -321,7 +320,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
                 );
                 Assert.assertEquals(
                     "Parent span is not related to joined node " + parentSpan,
-                    AttributeValue.stringAttributeValue(leftNodeId),
+                    stringAttributeValue(leftNodeId),
                     parentSpan.getAttributes().getAttributeMap().get(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID))
                 );
                 Assert.assertEquals(
@@ -359,6 +358,12 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
         SpanData jobSpan = hnd.spanByName(customParentSpan);
 
         List<SpanData> data = hnd.unrollByParent(jobSpan);
+
+        List<AttributeValue> nodejobMsgTags = data.stream()
+            .filter(it -> it.getAttributes().getAttributeMap().containsKey(SpanTags.MESSAGE))
+            .map(it -> it.getAttributes().getAttributeMap().get(SpanTags.MESSAGE))
+            .collect(Collectors.toList());
+
         List<String> nodejobTraces = data.stream()
             .map(SpanData::getName)
             .collect(Collectors.toList());
@@ -367,12 +372,15 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
 
         assertEquals(1, nodejobTraces.stream().filter(it -> it.contains(customParentSpan)).count());
 
-        assertEquals(2, nodejobTraces.stream().filter(it -> it.contains(SOCKET_WRITE)).count());//request + response
-        assertEquals(2, nodejobTraces.stream().filter(it -> it.contains(SOCKET_READ)).count());//request + response
-        assertEquals(2, nodejobTraces.stream().filter(it -> it.contains(REGULAR_PROCESS)).count());//request + response
-//        assertTrue(nodejobTraces.contains(JOB_EXECUTE_RESPONSE + DELIMITER + SOCKET_WRITE));
-//        assertTrue(nodejobTraces.contains(JOB_EXECUTE_RESPONSE + DELIMITER + SOCKET_READ));
-//        assertTrue(nodejobTraces.contains(JOB_EXECUTE_RESPONSE + DELIMITER + REGULAR_PROCESS));
+        //request + response
+        assertEquals(2, nodejobTraces.stream().filter(it -> it.contains(SOCKET_WRITE)).count());
+        //request + response
+        assertEquals(2, nodejobTraces.stream().filter(it -> it.contains(SOCKET_READ)).count());
+        //request + response
+        assertEquals(2, nodejobTraces.stream().filter(it -> it.contains(REGULAR_PROCESS)).count());
+
+        assertTrue(nodejobMsgTags.stream().anyMatch(it -> it.equals(stringAttributeValue(JOB_EXECUTE_REQUEST))));
+        assertTrue(nodejobMsgTags.stream().anyMatch(it -> it.equals(stringAttributeValue(JOB_EXECUTE_RESPONSE))));
     }
 
     /**
@@ -458,7 +466,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
 
         public Stream<SpanData> spansReportedByNode(String igniteInstanceName) {
             return collectedSpans.values().stream()
-                .filter(spanData -> AttributeValue.stringAttributeValue(igniteInstanceName)
+                .filter(spanData -> stringAttributeValue(igniteInstanceName)
                     .equals(spanData.getAttributes().getAttributeMap().get("node.name")));
         }
 

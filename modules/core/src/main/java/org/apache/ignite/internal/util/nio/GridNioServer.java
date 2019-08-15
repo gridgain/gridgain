@@ -1237,15 +1237,17 @@ public class GridNioServer<T> {
                 }
 
                 if (!skipWrite) {
-                    int cnt = sockCh.write(buf);
+                    try (TraceSurroundings ignore = tracing.startChild(SOCKET_WRITE, req.span())) {
+                        int cnt = sockCh.write(buf);
 
-                    if (log.isTraceEnabled())
-                        log.trace("Bytes sent [sockCh=" + sockCh + ", cnt=" + cnt + ']');
+                        if (log.isTraceEnabled())
+                            log.trace("Bytes sent [sockCh=" + sockCh + ", cnt=" + cnt + ']');
 
-                    if (sentBytesCntMetric != null)
-                        sentBytesCntMetric.add(cnt);
+                        if (sentBytesCntMetric != null)
+                            sentBytesCntMetric.add(cnt);
 
-                    ses.bytesSent(cnt);
+                        ses.bytesSent(cnt);
+                    }
                 }
                 else {
                     // For test purposes only (skipWrite is set to true in tests only).
@@ -1568,7 +1570,7 @@ public class GridNioServer<T> {
             boolean finished;
             msg = (Message)req.message();
 
-            try(TraceSurroundings ignore = tracing.startChild(SOCKET_WRITE, req.span())) {
+            try (TraceSurroundings ignore = tracing.startChild(SOCKET_WRITE, req.span())) {
                 traceTag(SpanTags.MESSAGE, traceName(msg));
 
                 assert msg != null;
@@ -1747,7 +1749,7 @@ public class GridNioServer<T> {
 
             assert msg != null : req;
 
-            try(TraceSurroundings ignore = tracing.startChild(SOCKET_WRITE, req.span())) {
+            try (TraceSurroundings ignore = tracing.startChild(SOCKET_WRITE, req.span())) {
                 traceTag(SpanTags.MESSAGE, traceName(msg));
 
                 if (writer != null)
