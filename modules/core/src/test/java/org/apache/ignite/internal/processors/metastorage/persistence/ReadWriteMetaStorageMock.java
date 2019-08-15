@@ -57,7 +57,7 @@ class ReadWriteMetaStorageMock implements ReadWriteMetastorage {
 
         byte[] bytes = readRaw(key);
 
-        return bytes == null ? null : JdkMarshaller.DEFAULT.unmarshal(bytes, ClassLoader.getSystemClassLoader());
+        return bytes == null ? null : JdkMarshaller.DEFAULT.unmarshal(bytes, getClass().getClassLoader());
     }
 
     /** {@inheritDoc} */
