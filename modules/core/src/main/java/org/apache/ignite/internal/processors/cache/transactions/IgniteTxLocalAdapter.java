@@ -452,7 +452,7 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
      * pair (init, delta) values, where init - initial update counter, and delta - updates count made
      * by current transaction for a given partition.
      */
-    public void calculatePartitionUpdateCounters() {
+    public void calculatePartitionUpdateCounters() throws IgniteTxRollbackCheckedException {
         TxCounters counters = txCounters(false);
 
         if (counters != null && F.isEmpty(counters.updateCounters())) {
@@ -497,6 +497,22 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
                             part.primary(top.readyTopologyVersion());
 
                         if (!valid) {
+                            // Local node is no longer primary for the partition, need to rollback a transaction.
+                            if (part != null &&
+                                !part.primary(top.readyTopologyVersion()) &&
+                                part.primary(topologyVersionSnapshot()) &&
+                                top.readyTopologyVersion().after(topologyVersionSnapshot())
+                                ) {
+                                log.warning("Failed to prepare a transaction on outdated topology, rolling back " +
+                                    "[tx=" + CU.txString(this) +
+                                    ", readyTopVer=" + top.readyTopologyVersion() +
+                                    ", lostParts=" + top.lostPartitions() +
+                                    ", part=" + part.toString() + ']');
+
+                                throw new IgniteTxRollbackCheckedException("Failed to prepare a transaction on outdated " +
+                                    "topology, please try again [timeout=" + timeout() + ", tx=" + CU.txString(this) + ']');
+                            }
+
                             throw new AssertionError("Invalid primary mapping [tx=" + CU.txString(this) +
                                 ", readyTopVer=" + top.readyTopologyVersion() +
                                 ", lostParts=" + top.lostPartitions() +
