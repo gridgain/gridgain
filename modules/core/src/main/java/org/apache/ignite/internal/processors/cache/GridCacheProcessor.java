@@ -225,11 +225,14 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     /** Map of proxies. */
     private final ConcurrentHashMap<String, IgniteCacheProxyImpl<?, ?>> jCacheProxies;
 
+    /** Futures that are completed when corresponding cache proxy is initialized. */
+    private final ConcurrentHashMap<String, DynamicCacheStartFuture> proxyStartFutures = new ConcurrentHashMap<>();
+
     /** Transaction interface implementation. */
     private IgniteTransactionsImpl transactions;
 
     /** Pending cache starts. */
-    private ConcurrentMap<UUID, IgniteInternalFuture> pendingFuts = new ConcurrentHashMap<>();
+    private ConcurrentMap<UUID, DynamicCacheStartFuture> pendingFuts = new ConcurrentHashMap<>();
 
     /** Template configuration add futures. */
     private ConcurrentMap<String, IgniteInternalFuture> pendingTemplateFuts = new ConcurrentHashMap<>();
@@ -273,6 +276,9 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
     /** Cache configuration enricher. */
     private CacheConfigurationEnricher enricher;
+
+    /** Caches configured on local node but not presented in a cluster during node local join. */
+    private volatile List<CacheData> freshCaches = Collections.emptyList();
 
     /**
      * @param ctx Kernal context.
@@ -617,7 +623,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
             ctx.query().onCacheKernalStart();
 
-            sharedCtx.exchange().onKernalStart(active, false);
+            awaitCachesStarted(active);
         }
         finally {
             cacheStartedLatch.countDown();
@@ -655,6 +661,120 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         for (int i = 0, size = syncFuts.size(); i < size; i++)
             syncFuts.get(i).get();
+    }
+
+    /**
+     * Await node local join and fresh caches (configured on node but not presented in cluster) start.
+     *
+     * @param active {@code True} if cluster is active.
+     * @throws IgniteCheckedException If await has failed.
+     */
+    private void awaitCachesStarted(boolean active) throws IgniteCheckedException {
+        List<DynamicCacheChangeRequest> cacheStartReqs = prepareStartRequests(freshCaches);
+
+        IgniteInternalFuture<?> cacheStartFut = startFreshCaches(cacheStartReqs);
+
+        // Start exchanger and wait for local join.
+        sharedCtx.exchange().onKernalStart(active, false);
+
+        // Wait till fresh caches are started.
+        submitStartFreshCaches(cacheStartFut, cacheStartReqs).get();
+    }
+
+    /**
+     * Converts list of given {@link CacheData} {@code freshCaches} to cache start requests.
+     *
+     * @param freshCaches Node fresh caches.
+     * @return List of start requests for given {@code freshCaches}.
+     * @throws IgniteCheckedException If preparing has failed.
+     */
+    private List<DynamicCacheChangeRequest> prepareStartRequests(
+        List<CacheData> freshCaches
+    ) throws IgniteCheckedException {
+        if (freshCaches.isEmpty())
+            return Collections.emptyList();
+
+        List<DynamicCacheChangeRequest> cacheStartReqs = new ArrayList<>();
+
+        for (CacheData cacheData : freshCaches) {
+            // Shouldn't throw exception because failIfExists = false.
+            DynamicCacheChangeRequest req = ctx.cache().prepareCacheChangeRequest(
+                cacheData.cacheConfiguration(),
+                cacheData.cacheConfiguration().getName(),
+                cacheData.cacheConfiguration().getNearConfiguration(),
+                cacheData.cacheType(),
+                cacheData.sql(),
+                false,
+                false,
+                null,
+                false,
+                cacheData.schema().entities(),
+                null
+            );
+
+            // It's possible that descriptor for that cache is available
+            // if another joining node spawned discovery event of the same cache start in the same time.
+            req.clientStartOnly(false);
+
+            cacheStartReqs.add(req);
+        }
+
+        return cacheStartReqs;
+    }
+
+    /**
+     * Creates future indicates that node fresh caches have started.
+     *
+     * @param cacheStartReqs Fresh caches start requests.
+     * @return Future that will be completed when node fresh cashes have started.
+     */
+    private IgniteInternalFuture<?> startFreshCaches(List<DynamicCacheChangeRequest> cacheStartReqs) {
+        if (cacheStartReqs.isEmpty())
+            return new GridFinishedFuture<>();
+
+        GridCompoundFuture<Boolean, ?> awaitStartNewCaches = new GridCompoundFuture<>();
+
+        // Exchange manager is not running, no cache start processes are running at the moment
+        // It's safe to register callback on future cache start.
+        for (DynamicCacheChangeRequest req : cacheStartReqs) {
+            DynamicCacheStartFuture fut = new DynamicCacheStartFuture(req.requestId());
+
+            proxyStartFutures.put(req.cacheName(), fut);
+
+            awaitStartNewCaches.add(fut);
+        }
+
+        awaitStartNewCaches.markInitialized();
+
+        return awaitStartNewCaches;
+    }
+
+    /**
+     * Sends discovery event for fresh caches start.
+     * If sending is failed returning future will be failed with corresponding exception.
+     *
+     * @param startFreshCaches Fresh caches start future.
+     * @param cacheStartReqs Fresh caches start requests.
+     * @return Future that will be completed when node fresh cashes have started.
+     */
+    private IgniteInternalFuture<?> submitStartFreshCaches(
+        IgniteInternalFuture<?> startFreshCaches,
+        List<DynamicCacheChangeRequest> cacheStartReqs
+    ) {
+        if (cacheStartReqs.isEmpty())
+            return startFreshCaches;
+
+        ctx.closure().runLocalSafe(() -> {
+            try {
+                ctx.discovery().sendCustomEvent(new DynamicCacheChangeBatch(cacheStartReqs));
+            }
+            catch (IgniteCheckedException e) {
+                ((GridFutureAdapter)startFreshCaches).onDone(
+                    new IgniteCheckedException("Failed to initiate caches start process: " + cacheStartReqs, e));
+            }
+        }, GridIoPolicy.SYSTEM_POOL);
+
+        return startFreshCaches;
     }
 
     /**
@@ -782,8 +902,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             ctx.cluster().clientReconnectFuture(),
             "Failed to execute dynamic cache change request, client node disconnected.");
 
-        for (IgniteInternalFuture fut : pendingFuts.values())
-            ((GridFutureAdapter)fut).onDone(err);
+        for (DynamicCacheStartFuture fut : pendingFuts.values())
+            fut.onDone(err);
 
         for (IgniteInternalFuture fut : pendingTemplateFuts.values())
             ((GridFutureAdapter)fut).onDone(err);
@@ -887,10 +1007,20 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         for (GridCacheAdapter cache : reconnected)
             cache.context().gate().reconnected(false);
 
-        if (!stoppedCaches.isEmpty())
-            return sharedCtx.exchange().deferStopCachesOnClientReconnect(stoppedCaches);
+        GridCompoundFuture cachesReconnectFut = new GridCompoundFuture();
 
-        return null;
+        if (!stoppedCaches.isEmpty())
+            cachesReconnectFut.add(sharedCtx.exchange().deferStopCachesOnClientReconnect(stoppedCaches));
+
+        List<DynamicCacheChangeRequest> cacheStartReqs = prepareStartRequests(freshCaches);
+
+        IgniteInternalFuture<?> freshCachesStartFut = startFreshCaches(cacheStartReqs);
+
+        cachesReconnectFut.add(submitStartFreshCaches(freshCachesStartFut, cacheStartReqs));
+
+        cachesReconnectFut.markInitialized();
+
+        return cachesReconnectFut;
     }
 
     /**
@@ -1590,9 +1720,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @return Caches to be started when this node starts.
      */
     @Nullable public LocalJoinCachesContext localJoinCachesContext() {
-        if (ctx.discovery().localNode().order() == 1 && alreadyFiltered.compareAndSet(false, true)) {
+        if (ctx.discovery().localNode().order() == 1 && alreadyFiltered.compareAndSet(false, true))
             cachesInfo.filterDynamicCacheDescriptors(locCfgMgr.localCachesOnStart());
-        }
 
         return cachesInfo.localJoinCachesContext();
     }
@@ -1636,36 +1765,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             log.info("Starting caches on local join performed in " + (U.currentTimeMillis() - time) + " ms.");
 
         return res;
-    }
-
-    /**
-     * @param node Joined node.
-     * @return {@code True} if there are new caches received from joined node.
-     */
-    public boolean hasCachesReceivedFromJoin(ClusterNode node) {
-        return cachesInfo.hasCachesReceivedFromJoin(node.id());
-    }
-
-    /**
-     * Starts statically configured caches received from remote nodes during exchange.
-     *
-     * @param nodeId Joining node ID.
-     * @param exchTopVer Current exchange version.
-     * @return Started caches descriptors.
-     * @throws IgniteCheckedException If failed.
-     */
-    public Collection<DynamicCacheDescriptor> startReceivedCaches(UUID nodeId, AffinityTopologyVersion exchTopVer)
-        throws IgniteCheckedException {
-        List<DynamicCacheDescriptor> receivedCaches = cachesInfo.cachesReceivedFromJoin(nodeId);
-
-        List<StartCacheInfo> startCacheInfos = receivedCaches.stream()
-            .filter(desc -> isLocalAffinity(desc.groupDescriptor().config()))
-            .map(desc -> new StartCacheInfo(desc, null, exchTopVer, false))
-            .collect(Collectors.toList());
-
-        prepareStartCaches(startCacheInfos);
-
-        return receivedCaches;
     }
 
     /**
@@ -2821,7 +2920,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      */
     void completeCacheStartFuture(DynamicCacheChangeRequest req, boolean success, @Nullable Throwable err) {
         if (ctx.localNodeId().equals(req.initiatingNodeId())) {
-            DynamicCacheStartFuture fut = (DynamicCacheStartFuture)pendingFuts.get(req.requestId());
+            DynamicCacheStartFuture fut = pendingFuts.get(req.requestId());
 
             if (fut != null)
                 fut.onDone(success, err);
@@ -2833,7 +2932,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @param err Error if any.
      */
     void completeClientCacheChangeFuture(UUID reqId, @Nullable Exception err) {
-        DynamicCacheStartFuture fut = (DynamicCacheStartFuture)pendingFuts.get(reqId);
+        DynamicCacheStartFuture fut = pendingFuts.get(reqId);
 
         if (fut != null)
             fut.onDone(false, err);
@@ -2950,7 +3049,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
     /** {@inheritDoc} */
     @Override public void onGridDataReceived(GridDiscoveryData data) {
-        cachesInfo.onGridDataReceived(data);
+        freshCaches = cachesInfo.onGridDataReceived(data);
 
         sharedCtx.walState().onCachesInfoCollected();
     }
@@ -3471,7 +3570,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         DynamicCacheStartFuture fut = new DynamicCacheStartFuture(UUID.randomUUID());
 
-        IgniteInternalFuture old = pendingFuts.put(fut.id, fut);
+        DynamicCacheStartFuture old = pendingFuts.put(fut.id, fut);
 
         assert old == null : old;
 
@@ -3872,8 +3971,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                 if (fut.isDone())
                     continue;
 
-                DynamicCacheStartFuture old = (DynamicCacheStartFuture)pendingFuts.putIfAbsent(
-                    req.requestId(), fut);
+                DynamicCacheStartFuture old = pendingFuts.putIfAbsent(req.requestId(), fut);
 
                 assert old == null;
 
@@ -4158,6 +4256,11 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
                 proxyInitLatch.countDown();
             }
+
+            DynamicCacheStartFuture proxyStartFut = proxyStartFutures.remove(name);
+
+            if (proxyStartFut != null)
+                proxyStartFut.onDone(true, null);
         }
         else {
             if (log.isInfoEnabled())
@@ -4574,8 +4677,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         Exception err = new IgniteCheckedException("Operation has been cancelled (node is stopping).");
 
-        for (IgniteInternalFuture fut : pendingFuts.values())
-            ((GridFutureAdapter)fut).onDone(err);
+        for (DynamicCacheStartFuture fut : pendingFuts.values())
+            fut.onDone(err);
 
         for (IgniteInternalFuture fut : pendingTemplateFuts.values())
             ((GridFutureAdapter)fut).onDone(err);
@@ -4867,7 +4970,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @throws IgniteCheckedException if some of pre-checks failed
      * @throws CacheExistsException if cache exists and failIfExists flag is {@code true}
      */
-    private DynamicCacheChangeRequest prepareCacheChangeRequest(
+    public DynamicCacheChangeRequest prepareCacheChangeRequest(
         @Nullable CacheConfiguration ccfg,
         String cacheName,
         @Nullable NearCacheConfiguration nearCfg,

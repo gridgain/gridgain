@@ -2591,13 +2591,6 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                         break;
                     }
 
-                    if (evt.type() == EVT_NODE_JOINED && cctx.cache().hasCachesReceivedFromJoin(node)) {
-                        if (log.isInfoEnabled())
-                            log.info("Stop merge, received caches from node: " + node);
-
-                        break;
-                    }
-
                     if (log.isInfoEnabled()) {
                         log.info("Merge exchange future [curFut=" + curFut.initialVersion() +
                             ", mergedFut=" + fut.initialVersion() +

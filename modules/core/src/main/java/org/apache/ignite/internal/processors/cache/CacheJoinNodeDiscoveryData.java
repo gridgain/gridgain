@@ -65,7 +65,8 @@ public class CacheJoinNodeDiscoveryData implements Serializable {
     }
 
     /**
-     * @return {@code True} if required to start all caches on joining node.
+     *
+     * @return {@code True} if required to start all caches on joining node if it's client.
      */
     boolean startCaches() {
         return startCaches;
