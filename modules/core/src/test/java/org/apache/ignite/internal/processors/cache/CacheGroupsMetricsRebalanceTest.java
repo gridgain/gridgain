@@ -69,7 +69,7 @@ public class CacheGroupsMetricsRebalanceTest extends GridCommonAbstractTest {
     private static final String GROUP = "group1";
 
     /** Acceptable time inaccuracy for testRebalanceEstimateFinishTime() */
-    public static final long ACCEPTABLE_TIME_INACCURACY = 20_000L;
+    public static final long ACCEPTABLE_TIME_INACCURACY = 25_000L;
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
