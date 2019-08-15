@@ -25,8 +25,8 @@ import org.apache.ignite.internal.processors.cache.CacheGroupMetricsMXBeanImpl.G
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
-import org.apache.ignite.internal.processors.metric.impl.LongAdderMetricImpl;
-import org.apache.ignite.internal.processors.metric.impl.LongMetricImpl;
+import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
+import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
@@ -46,7 +46,7 @@ public class DataRegionMetricsImpl implements DataRegionMetrics, AllocatedPageTr
     private final DataRegionMetricsProvider dataRegionMetricsProvider;
 
     /** */
-    private final LongAdderMetricImpl totalAllocatedPages;
+    private final LongAdderMetric totalAllocatedPages;
 
     /** */
     private final ConcurrentMap<Integer, GroupAllocationTracker> grpAllocationTrackers = new ConcurrentHashMap<>();
@@ -54,25 +54,25 @@ public class DataRegionMetricsImpl implements DataRegionMetrics, AllocatedPageTr
     /**
      * Counter for number of pages occupied by large entries (one entry is larger than one page).
      */
-    private final LongAdderMetricImpl largeEntriesPages;
+    private final LongAdderMetric largeEntriesPages;
 
     /** Counter for number of dirty pages. */
-    private final LongAdderMetricImpl dirtyPages;
+    private final LongAdderMetric dirtyPages;
 
     /** */
-    private final LongAdderMetricImpl readPages;
+    private final LongAdderMetric readPages;
 
     /** */
-    private final LongAdderMetricImpl writtenPages;
+    private final LongAdderMetric writtenPages;
 
     /** */
-    private final LongAdderMetricImpl replacedPages;
+    private final LongAdderMetric replacedPages;
 
     /** */
-    private final LongMetricImpl offHeapSize;
+    private final AtomicLongMetric offHeapSize;
 
     /** */
-    private final LongMetricImpl checkpointBufferSize;
+    private final AtomicLongMetric checkpointBufferSize;
 
     /** */
     private volatile boolean metricsEnabled;
@@ -132,14 +132,14 @@ public class DataRegionMetricsImpl implements DataRegionMetrics, AllocatedPageTr
 
         subInts = memPlcCfg.getMetricsSubIntervalCount();
 
-        this.totalAllocatedPages = new LongAdderMetricImpl("NO_OP", null);
-        this.largeEntriesPages = new LongAdderMetricImpl("NO_OP", null);
-        this.dirtyPages = new LongAdderMetricImpl("NO_OP", null);
-        this.readPages = new LongAdderMetricImpl("NO_OP", null);
-        this.writtenPages = new LongAdderMetricImpl("NO_OP", null);
-        this.replacedPages = new LongAdderMetricImpl("NO_OP", null);
-        this.offHeapSize = new LongMetricImpl("NO_OP", null);
-        this.checkpointBufferSize = new LongMetricImpl("NO_OP", null);
+        this.totalAllocatedPages = new LongAdderMetric("NO_OP", null);
+        this.largeEntriesPages = new LongAdderMetric("NO_OP", null);
+        this.dirtyPages = new LongAdderMetric("NO_OP", null);
+        this.readPages = new LongAdderMetric("NO_OP", null);
+        this.writtenPages = new LongAdderMetric("NO_OP", null);
+        this.replacedPages = new LongAdderMetric("NO_OP", null);
+        this.offHeapSize = new AtomicLongMetric("NO_OP", null);
+        this.checkpointBufferSize = new AtomicLongMetric("NO_OP", null);
         this.allocRate = new HitRateMetric("NO_OP", null, 60_000, 5);
         this.evictRate = new HitRateMetric("NO_OP", null, 60_000, 5);
         this.pageReplaceRate = new HitRateMetric("NO_OP", null, 60_000, 5);

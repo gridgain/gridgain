@@ -21,7 +21,7 @@ import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
-import org.apache.ignite.internal.processors.metric.impl.LongMetricImpl;
+import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteOutClosure;
@@ -50,28 +50,28 @@ public class DataStorageMetricsImpl implements DataStorageMetricsMXBean {
     private final HitRateMetric walBuffPollSpinsNum;
 
     /** */
-    private final LongMetricImpl lastCpLockWaitDuration;
+    private final AtomicLongMetric lastCpLockWaitDuration;
 
     /** */
-    private final LongMetricImpl lastCpMarkDuration;
+    private final AtomicLongMetric lastCpMarkDuration;
 
     /** */
-    private final LongMetricImpl lastCpPagesWriteDuration;
+    private final AtomicLongMetric lastCpPagesWriteDuration;
 
     /** */
-    private final LongMetricImpl lastCpDuration;
+    private final AtomicLongMetric lastCpDuration;
 
     /** */
-    private final LongMetricImpl lastCpFsyncDuration;
+    private final AtomicLongMetric lastCpFsyncDuration;
 
     /** */
-    private final LongMetricImpl lastCpTotalPages;
+    private final AtomicLongMetric lastCpTotalPages;
 
     /** */
-    private final LongMetricImpl lastCpDataPages;
+    private final AtomicLongMetric lastCpDataPages;
 
     /** */
-    private final LongMetricImpl lastCpCowPages;
+    private final AtomicLongMetric lastCpCowPages;
 
     /** */
     private volatile long rateTimeInterval;
@@ -89,19 +89,19 @@ public class DataStorageMetricsImpl implements DataStorageMetricsMXBean {
     private volatile IgniteOutClosure<Long> walSizeProvider;
 
     /** */
-    private final LongMetricImpl lastWalSegmentRollOverTime;
+    private final AtomicLongMetric lastWalSegmentRollOverTime;
 
     /** */
-    private final LongMetricImpl totalCheckpointTime;
+    private final AtomicLongMetric totalCheckpointTime;
 
     /** */
     private volatile Collection<DataRegionMetrics> regionMetrics;
 
     /** */
-    private final LongMetricImpl storageSize;
+    private final AtomicLongMetric storageSize;
 
     /** */
-    private final LongMetricImpl sparseStorageSize;
+    private final AtomicLongMetric sparseStorageSize;
 
     /**
      * @param mmgr Metrics manager.

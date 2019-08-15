@@ -28,8 +28,8 @@ import org.apache.ignite.internal.processors.metric.impl.BooleanMetricImpl;
 import org.apache.ignite.internal.processors.metric.impl.DoubleMetricImpl;
 import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
 import org.apache.ignite.internal.processors.metric.impl.IntMetricImpl;
-import org.apache.ignite.internal.processors.metric.impl.LongAdderMetricImpl;
-import org.apache.ignite.internal.processors.metric.impl.LongMetricImpl;
+import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
+import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
 import org.apache.ignite.spi.metric.BooleanMetric;
 import org.apache.ignite.spi.metric.DoubleMetric;
 import org.apache.ignite.spi.metric.IntMetric;
@@ -62,7 +62,7 @@ public class MetricsSelfTest {
     /** */
     @Test
     public void testLongCounter() throws Exception {
-        LongMetricImpl l = mreg.metric("ltest", "test");
+        AtomicLongMetric l = mreg.metric("ltest", "test");
 
         run(l::increment, 100);
 
@@ -76,7 +76,7 @@ public class MetricsSelfTest {
     /** */
     @Test
     public void testLongAdderCounter() throws Exception {
-        LongAdderMetricImpl l = mreg.longAdderMetric("latest", "test");
+        LongAdderMetric l = mreg.longAdderMetric("latest", "test");
 
         run(l::increment, 100);
 
@@ -118,7 +118,7 @@ public class MetricsSelfTest {
     /** */
     @Test
     public void testRegister() throws Exception {
-        LongMetricImpl l = new LongMetricImpl("rtest", "test");
+        AtomicLongMetric l = new AtomicLongMetric("rtest", "test");
 
         mreg.register(l);
 
@@ -289,8 +289,8 @@ public class MetricsSelfTest {
     public void testRemove() throws Exception {
         MetricRegistry mreg = new MetricRegistry("group", null);
 
-        LongMetricImpl cntr = mreg.metric("my.name", null);
-        LongMetricImpl cntr2 = mreg.metric("my.name.x", null);
+        AtomicLongMetric cntr = mreg.metric("my.name", null);
+        AtomicLongMetric cntr2 = mreg.metric("my.name.x", null);
 
         assertNotNull(cntr);
         assertNotNull(cntr2);

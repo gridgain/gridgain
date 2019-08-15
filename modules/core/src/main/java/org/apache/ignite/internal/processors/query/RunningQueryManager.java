@@ -29,8 +29,8 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryType;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
-import org.apache.ignite.internal.processors.metric.impl.LongAdderMetricImpl;
-import org.apache.ignite.internal.processors.metric.impl.LongMetricImpl;
+import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
+import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.jetbrains.annotations.Nullable;
 
@@ -60,21 +60,21 @@ public class RunningQueryManager {
     private volatile QueryHistoryTracker qryHistTracker;
 
     /** Number of successfully executed queries. */
-    private final LongAdderMetricImpl successQrsCnt;
+    private final LongAdderMetric successQrsCnt;
 
     /** Number of failed queries in total by any reason. */
-    private final LongMetricImpl failedQrsCnt;
+    private final AtomicLongMetric failedQrsCnt;
 
     /**
      * Number of canceled queries. Canceled queries a treated as failed and counting twice: here and in {@link
      * #failedQrsCnt}.
      */
-    private final LongMetricImpl canceledQrsCnt;
+    private final AtomicLongMetric canceledQrsCnt;
 
     /**
      * Number of queries, failed due to OOM protection. {@link #failedQrsCnt} metric includes this value.
      */
-    private final LongMetricImpl oomQrsCnt;
+    private final AtomicLongMetric oomQrsCnt;
 
     /**
      * Constructor.

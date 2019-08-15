@@ -27,7 +27,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.store.GridCacheWriteBehindStore;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
-import org.apache.ignite.internal.processors.metric.impl.LongMetricImpl;
+import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.internal.util.collection.ImmutableIntSet;
 import org.apache.ignite.internal.util.collection.IntSet;
@@ -60,97 +60,97 @@ public class CacheMetricsImpl implements CacheMetrics {
     public static final String CACHE_METRICS = "cache";
 
     /** Number of reads. */
-    private final LongMetricImpl reads;
+    private final AtomicLongMetric reads;
 
     /** Number of invocations caused update. */
-    private final LongMetricImpl entryProcessorPuts;
+    private final AtomicLongMetric entryProcessorPuts;
 
     /** Number of invocations caused removal. */
-    private final LongMetricImpl entryProcessorRemovals;
+    private final AtomicLongMetric entryProcessorRemovals;
 
     /** Number of invocations caused update. */
-    private final LongMetricImpl entryProcessorReadOnlyInvocations;
+    private final AtomicLongMetric entryProcessorReadOnlyInvocations;
 
     /** Entry processor invoke time taken nanos. */
-    private final LongMetricImpl entryProcessorInvokeTimeNanos;
+    private final AtomicLongMetric entryProcessorInvokeTimeNanos;
 
     /** So far, the minimum time to execute cache invokes. */
-    private final LongMetricImpl entryProcessorMinInvocationTime;
+    private final AtomicLongMetric entryProcessorMinInvocationTime;
 
     /** So far, the maximum time to execute cache invokes. */
-    private final LongMetricImpl entryProcessorMaxInvocationTime;
+    private final AtomicLongMetric entryProcessorMaxInvocationTime;
 
     /** Number of entry processor invokes on keys, which exist in cache. */
-    private final LongMetricImpl entryProcessorHits;
+    private final AtomicLongMetric entryProcessorHits;
 
     /** Number of entry processor invokes on keys, which don't exist in cache. */
-    private final LongMetricImpl entryProcessorMisses;
+    private final AtomicLongMetric entryProcessorMisses;
 
     /** Number of writes. */
-    private final LongMetricImpl writes;
+    private final AtomicLongMetric writes;
 
     /** Number of hits. */
-    private final LongMetricImpl hits;
+    private final AtomicLongMetric hits;
 
     /** Number of misses. */
-    private final LongMetricImpl misses;
+    private final AtomicLongMetric misses;
 
     /** Number of transaction commits. */
-    private final LongMetricImpl txCommits;
+    private final AtomicLongMetric txCommits;
 
     /** Number of transaction rollbacks. */
-    private final LongMetricImpl txRollbacks;
+    private final AtomicLongMetric txRollbacks;
 
     /** Number of evictions. */
-    private final LongMetricImpl evictCnt;
+    private final AtomicLongMetric evictCnt;
 
     /** Number of removed entries. */
-    private final LongMetricImpl rmCnt;
+    private final AtomicLongMetric rmCnt;
 
     /** Put time taken nanos. */
-    private final LongMetricImpl putTimeNanos;
+    private final AtomicLongMetric putTimeNanos;
 
     /** Get time taken nanos. */
-    private final LongMetricImpl getTimeNanos;
+    private final AtomicLongMetric getTimeNanos;
 
     /** Remove time taken nanos. */
-    private final LongMetricImpl rmvTimeNanos;
+    private final AtomicLongMetric rmvTimeNanos;
 
     /** Commit transaction time taken nanos. */
-    private final LongMetricImpl commitTimeNanos;
+    private final AtomicLongMetric commitTimeNanos;
 
     /** Commit transaction time taken nanos. */
-    private final LongMetricImpl rollbackTimeNanos;
+    private final AtomicLongMetric rollbackTimeNanos;
 
     /** Number of reads from off-heap memory. */
-    private final LongMetricImpl offHeapGets;
+    private final AtomicLongMetric offHeapGets;
 
     /** Number of writes to off-heap memory. */
-    private final LongMetricImpl offHeapPuts;
+    private final AtomicLongMetric offHeapPuts;
 
     /** Number of removed entries from off-heap memory. */
-    private final LongMetricImpl offHeapRemoves;
+    private final AtomicLongMetric offHeapRemoves;
 
     /** Number of evictions from off-heap memory. */
-    private final LongMetricImpl offHeapEvicts;
+    private final AtomicLongMetric offHeapEvicts;
 
     /** Number of off-heap hits. */
-    private final LongMetricImpl offHeapHits;
+    private final AtomicLongMetric offHeapHits;
 
     /** Number of off-heap misses. */
-    private final LongMetricImpl offHeapMisses;
+    private final AtomicLongMetric offHeapMisses;
 
     /** Rebalanced keys count. */
-    private final LongMetricImpl rebalancedKeys;
+    private final AtomicLongMetric rebalancedKeys;
 
     /** Total rebalanced bytes count. */
-    private final LongMetricImpl totalRebalancedBytes;
+    private final AtomicLongMetric totalRebalancedBytes;
 
     /** Rebalanced start time. */
-    private final LongMetricImpl rebalanceStartTime;
+    private final AtomicLongMetric rebalanceStartTime;
 
     /** Estimated rebalancing keys count. */
-    private final LongMetricImpl estimatedRebalancingKeys;
+    private final AtomicLongMetric estimatedRebalancingKeys;
 
     /** Rebalancing rate in keys. */
     private final HitRateMetric rebalancingKeysRate;
@@ -159,7 +159,7 @@ public class CacheMetricsImpl implements CacheMetrics {
     private final HitRateMetric rebalancingBytesRate;
 
     /** Number of currently clearing partitions for rebalancing. */
-    private final LongMetricImpl rebalanceClearingPartitions;
+    private final AtomicLongMetric rebalanceClearingPartitions;
 
     /** Cache metrics. */
     @GridToStringExclude
