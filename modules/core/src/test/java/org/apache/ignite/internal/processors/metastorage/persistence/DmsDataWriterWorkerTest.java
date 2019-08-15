@@ -111,7 +111,6 @@ public class DmsDataWriterWorkerTest {
     /** */
     @Test
     public void testUpdateSimple() throws Exception {
-        System.out.println("<$> ClassLoader = " + DistributedMetaStorageVersion.class.getClassLoader());
         startWorker();
 
         write("key1", "val1");
