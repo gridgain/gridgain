@@ -20,6 +20,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.After;
 import org.junit.Before;
@@ -42,7 +43,7 @@ public class RebalanceAfterResettingLostPartitionTest extends GridCommonAbstract
     private static final String CACHE_NAME = "cache" + UUID.randomUUID().toString();
 
     /** Cache size */
-    public static final int CACHE_SIZE = 30_000;
+    public static final int CACHE_SIZE = GridTestUtils.SF.applyLB(100_000, 10_000);
 
     /** Stop all grids and cleanup persistence directory. */
     @Before
