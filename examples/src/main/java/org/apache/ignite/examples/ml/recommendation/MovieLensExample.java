@@ -16,7 +16,7 @@
 
 package org.apache.ignite.examples.ml.recommendation;
 
-import java.util.Scanner;
+import java.io.IOException;
 import javax.cache.Cache;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
@@ -30,6 +30,8 @@ import org.apache.ignite.ml.environment.LearningEnvironmentBuilder;
 import org.apache.ignite.ml.recommendation.ObjectSubjectRatingTriplet;
 import org.apache.ignite.ml.recommendation.RecommendationModel;
 import org.apache.ignite.ml.recommendation.RecommendationTrainer;
+import org.apache.ignite.ml.util.MLSandboxDatasets;
+import org.apache.ignite.ml.util.SandboxMLCache;
 
 /**
  * Example of recommendation system based on MovieLens dataset (see https://grouplens.org/datasets/movielens/).
@@ -39,11 +41,8 @@ import org.apache.ignite.ml.recommendation.RecommendationTrainer;
  * When model is ready we calculate R2 score.
  */
 public class MovieLensExample {
-    /** Path to MovieLens dataset (ratings). */
-    private static final String MOVIELENS_DATASET = "datasets/ratings.csv";
-
     /** Run example. */
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         System.out.println();
         System.out.println(">>> Recommendation system over cache based dataset usage example started.");
         // Start ignite grid.
@@ -100,20 +99,18 @@ public class MovieLensExample {
      * @param ignite Ignite instance.
      * @param cnt Number of rating point to be loaded.
      * @return Ignite cache with loaded MovieLens dataset.
+     * @throws IOException If dataset not found.
      */
-    private static IgniteCache<Integer, RatingPoint> loadMovieLensDataset(Ignite ignite, int cnt) {
+    private static IgniteCache<Integer, RatingPoint> loadMovieLensDataset(Ignite ignite, int cnt) throws IOException {
         CacheConfiguration<Integer, RatingPoint> cacheConfiguration = new CacheConfiguration<>();
         cacheConfiguration.setAffinity(new RendezvousAffinityFunction(false, 10));
         cacheConfiguration.setName("MOVIELENS");
 
         IgniteCache<Integer, RatingPoint> dataCache = ignite.createCache(cacheConfiguration);
 
-        Scanner scanner = new Scanner(MovieLensExample.class.getClassLoader()
-            .getResourceAsStream(MOVIELENS_DATASET));
-        scanner.nextLine(); // Skip header.
         int seq = 0;
-        while (scanner.hasNextLine()) {
-            String[] line = scanner.nextLine().split(",");
+        for (String s : new SandboxMLCache(ignite).loadDataset(MLSandboxDatasets.MOVIELENS)) {
+            String[] line = s.split(",");
             int userId = Integer.valueOf(line[0]);
             int movieId = Integer.valueOf(line[1]);
             double rating = Double.valueOf(line[2]);
