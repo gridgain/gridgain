@@ -443,8 +443,11 @@ public class GridMapQueryExecutor {
 
                         assert rs instanceof JdbcResultSet : rs.getClass();
 
-                        if (qryResults.cancelled())
+                        if (qryResults.cancelled()) {
+                            rs.close();
+
                             throw new QueryCancelledException();
+                        }
 
                         res.openResult(rs);
 
