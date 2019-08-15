@@ -13,9 +13,10 @@ import org.junit.Test;
 
 public class NodeJoinWithNewCachesTest extends GridCommonAbstractTest {
     /** Caches. */
-    private int caches = 5;
+    private int caches = 2;
 
-    private boolean client = false;
+    /** Client. */
+    private boolean client;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -26,11 +27,11 @@ public class NodeJoinWithNewCachesTest extends GridCommonAbstractTest {
         cfg.setDataStorageConfiguration(
             new DataStorageConfiguration()
                 .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
-                    .setMaxSize(256 * 1024 * 1024))
+                    .setMaxSize(256 * 1024 * 1024)
+                    .setPersistenceEnabled(false))
         );
 
         cfg.setCacheConfiguration(cacheConfiguration("cache-", caches));
-
 
         cfg.setClientMode(client);
 
@@ -74,15 +75,13 @@ public class NodeJoinWithNewCachesTest extends GridCommonAbstractTest {
 
         awaitPartitionMapExchange();
 
-        caches = 7;
+        caches = 3;
 
-        IgniteEx grid = startGrid(2);
+        startGrid(2);
 
-        grid.cache("cache-6").get(0);
-
-        awaitPartitionMapExchange();
-
-        int k = 2;
+        for (int nodeIdx = 2; nodeIdx >= 0; nodeIdx--)
+            for (int i = caches - 1; i >= 0; i--)
+                grid(nodeIdx).cache("cache-" + i).get(0);
     }
 
     @Test(timeout = 10005000L)
@@ -93,12 +92,13 @@ public class NodeJoinWithNewCachesTest extends GridCommonAbstractTest {
 
         awaitPartitionMapExchange();
 
-        caches = 7;
+        caches = 3;
 
-        IgniteEx grid = (IgniteEx) startGridsMultiThreaded(2, 3);
+        startGridsMultiThreaded(2, 3);
 
-        for (int i = 2; i < 2 + 3; i++)
-            grid(i).cache("cache-6").get(0);
+        for (int nodeIdx = 4; nodeIdx >= 0; nodeIdx--)
+            for (int i = caches - 1; i >= 0; i--)
+                grid(nodeIdx).cache("cache-" + i).get(0);
     }
 
     @Test(timeout = 10005000L)
@@ -109,13 +109,14 @@ public class NodeJoinWithNewCachesTest extends GridCommonAbstractTest {
 
         awaitPartitionMapExchange();
 
-        caches = 7;
+        caches = 3;
 
         client = true;
 
         startGridsMultiThreaded(2, 3);
 
-        for (int i = 2; i < 2 + 3; i++)
-            grid(i).cache("cache-6").get(0);
+        for (int nodeIdx = 4; nodeIdx >= 0; nodeIdx--)
+            for (int i = caches - 1; i >= 0; i--)
+                grid(nodeIdx).cache("cache-" + i).get(0);
     }
 }
