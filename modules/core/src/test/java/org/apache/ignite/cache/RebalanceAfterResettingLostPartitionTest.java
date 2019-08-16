@@ -21,6 +21,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
+import org.apache.ignite.internal.processors.cache.GridCacheGroupIdMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -121,7 +122,7 @@ public class RebalanceAfterResettingLostPartitionTest extends GridCommonAbstract
         TestRecordingCommunicationSpi.spi(ignite(0)).blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
             @Override public boolean apply(ClusterNode clusterNode, Message msg) {
                 if (msg instanceof GridDhtPartitionSupplyMessage &&
-                    ((GridDhtPartitionSupplyMessage) msg).groupId() == CU.cacheId(CACHE_NAME)) {
+                    ((GridCacheGroupIdMessage)msg).groupId() == CU.cacheId(CACHE_NAME)) {
                     if (msgCntr.get() > 3)
                         return true;
                     else
