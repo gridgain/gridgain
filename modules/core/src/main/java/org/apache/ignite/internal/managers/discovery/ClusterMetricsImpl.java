@@ -528,7 +528,7 @@ public class ClusterMetricsImpl implements ClusterMetrics {
 
     /** {@inheritDoc} */
     @Override public int getOutboundMessagesQueueSize() {
-        return outboundMsgCnt.value();
+        return outboundMsgCnt != null ? outboundMsgCnt.value() : 0;
     }
 
     /** {@inheritDoc} */
@@ -538,7 +538,7 @@ public class ClusterMetricsImpl implements ClusterMetrics {
 
     /** {@inheritDoc} */
     @Override public long getCurrentPmeDuration() {
-        return pmeDuration.value();
+        return pmeDuration != null ? pmeDuration.value() : 0;
     }
 
     /**
