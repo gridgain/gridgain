@@ -97,6 +97,11 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_UPDATE_NOTIFIER = "IGNITE_UPDATE_NOTIFIER";
 
     /**
+     * Url of updates service.
+     */
+    public static final String GRIDGAIN_UPDATE_URL = "GRIDGAIN_UPDATE_URL";
+
+    /**
      * This system property defines interval in milliseconds in which Ignite will check
      * thread pool state for starvation. Zero value will disable this checker.
      */
@@ -1290,6 +1295,13 @@ public final class IgniteSystemProperties {
      * Default value is minimum of <code>4</code> and processors count / 4, but always greater than <code>0</code>.
      */
     public static final String INDEX_REBUILDING_PARALLELISM = "INDEX_REBUILDING_PARALLELISM";
+
+    /** Enable write rebalnce statistics into log. Default: false */
+    public static final String IGNITE_WRITE_REBALANCE_STATISTICS = "IGNITE_WRITE_REBALANCE_STATISTICS";
+
+    /**  Enable write rebalnce statistics by partitions into log. Default: false */
+    public static final String IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS =
+        "IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS";
 
     /**
      * Threshold timeout for long transactions, if transaction exceeds it, it will be dumped in log with
