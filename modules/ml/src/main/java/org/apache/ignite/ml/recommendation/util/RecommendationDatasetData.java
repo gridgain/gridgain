@@ -55,12 +55,12 @@ public class RecommendationDatasetData<O extends Serializable, S extends Seriali
      * @param subjMatrix Subject matrix obtained as a result of factorization of rating matrix.
      * @param batchSize Batch size of stochastic gradient descent. The size of a dataset used on each step of SGD.
      * @param seed Seed (required to make randomized part behaviour repeatable).
-     * @param regularizer Regularizer.
+     * @param regParam Regularization parameter.
      * @param learningRate Learning rate.
      * @return Gradient of matrix factorization loss function.
      */
     public MatrixFactorizationGradient<O, S> calculateGradient(Map<O, Vector> objMatrix, Map<S, Vector> subjMatrix,
-        int batchSize, int seed, double regularizer, double learningRate) {
+        int batchSize, int seed, double regParam, double learningRate) {
         Map<O, Vector> objGrads = new HashMap<>();
         Map<S, Vector> subjGrads = new HashMap<>();
 
@@ -72,8 +72,8 @@ public class RecommendationDatasetData<O extends Serializable, S extends Seriali
 
             double error = calculateError(objVector, subjVector, triplet.getRating());
 
-            Vector objGrad = (subjVector.times(error).plus(objVector.times(regularizer))).times(learningRate);
-            Vector subjGrad = (objVector.times(error).plus(subjVector.times(regularizer))).times(learningRate);
+            Vector objGrad = (subjVector.times(error).plus(objVector.times(regParam))).times(learningRate);
+            Vector subjGrad = (objVector.times(error).plus(subjVector.times(regParam))).times(learningRate);
 
             objGrads.put(triplet.getObj(), objGrad);
             subjGrads.put(triplet.getSubj(), subjGrad);

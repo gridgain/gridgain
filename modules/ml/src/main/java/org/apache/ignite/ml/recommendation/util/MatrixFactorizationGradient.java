@@ -49,6 +49,27 @@ public class MatrixFactorizationGradient<O extends Serializable, S extends Seria
     }
 
     /**
+     * Applies given gradient to recommendation model (object matrix and subject matrix) and updates this model
+     * correspondingly.
+     *
+     * @param objMatrix Object of recommendation matrix.
+     * @param subjMatrix Subject of recommendation matrix.
+     */
+    public void applyGradient(Map<O, Vector> objMatrix, Map<S, Vector> subjMatrix) {
+        // Apply object gradient on object matrix.
+        for (Map.Entry<O, Vector> e : objGrad.entrySet()) {
+            Vector vector = objMatrix.get(e.getKey());
+            objMatrix.put(e.getKey(), vector.minus(e.getValue()));
+        }
+
+        // Apply subject gradient on subject matrix.
+        for (Map.Entry<S, Vector> e : subjGrad.entrySet()) {
+            Vector vector = subjMatrix.get(e.getKey());
+            subjMatrix.put(e.getKey(), vector.minus(e.getValue()));
+        }
+    }
+
+    /**
      * Returns gradient of object of recommendation matrix (unmodifiable).
      *
      * @return Gradient of object of recommendation matrix.

@@ -49,8 +49,8 @@ public class RecommendationTrainer {
     /** Batch size of stochastic gradient descent. The size of a dataset used on each step of SGD. */
     private int batchSize = 1000;
 
-    /** Regularizer. */
-    private double regularizer = 0.0;
+    /** Regularization parameter. */
+    private double regParam = 0.0;
 
     /** Learning rate. */
     private double learningRate = 10.0;
@@ -87,6 +87,7 @@ public class RecommendationTrainer {
             Map<S, Vector> subjMatrix = generateRandomVectorForEach(subjects, trainerEnvironment.randomNumbersGenerator());
 
             // SGD steps.
+            // TODO: GG-22916 Add convergence check into recommendation system SGD
             for (int i = 0; i < maxIterations; i++) {
                 int seed = i;
 
@@ -97,14 +98,14 @@ public class RecommendationTrainer {
                         subjMatrix,
                         batchSize,
                         seed ^ env.partition(),
-                        regularizer,
+                        regParam,
                         learningRate
                     ),
                     RecommendationTrainer::sum
                 );
 
                 // Apply aggregated gradient.
-                applyGradient(objMatrix, subjMatrix, grad);
+                grad.applyGradient(objMatrix, subjMatrix);
             }
 
             return new RecommendationModel<>(objMatrix, subjMatrix);
@@ -185,13 +186,13 @@ public class RecommendationTrainer {
     }
 
     /**
-     * Set up regularizer parameter.
+     * Set up regularization parameter.
      *
-     * @param regularizer Regularizer.
+     * @param regParam Regularization parameter.
      * @return This object.
      */
-    public RecommendationTrainer withRegularizer(double regularizer) {
-        this.regularizer = regularizer;
+    public RecommendationTrainer withRegularizer(double regParam) {
+        this.regParam = regParam;
 
         return this;
     }
@@ -230,31 +231,6 @@ public class RecommendationTrainer {
         this.k = k;
 
         return this;
-    }
-
-    /**
-     * Applies given gradient to recommendation model (object matrix and subject matrix) and updates this model
-     * correspondingly.
-     *
-     * @param objMatrix Object of recommendation matrix.
-     * @param subjMatrix Subject of recommendation matrix.
-     * @param grad Matrix factorization loss function gradient.
-     * @param <O> Type of an object of recommendation.
-     * @param <S> Type of a subject of recommendation.
-     */
-    private <O extends Serializable, S extends Serializable> void applyGradient(Map<O, Vector> objMatrix,
-        Map<S, Vector> subjMatrix, MatrixFactorizationGradient<O, S> grad) {
-        // Apply object gradient on object matrix.
-        for (Map.Entry<O, Vector> e : grad.getObjGrad().entrySet()) {
-            Vector vector = objMatrix.get(e.getKey());
-            objMatrix.put(e.getKey(), vector.minus(e.getValue()));
-        }
-
-        // Apply subject gradient on subject matrix.
-        for (Map.Entry<S, Vector> e : grad.getSubjGrad().entrySet()) {
-            Vector vector = subjMatrix.get(e.getKey());
-            subjMatrix.put(e.getKey(), vector.minus(e.getValue()));
-        }
     }
 
     /**
