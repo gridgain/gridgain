@@ -49,7 +49,8 @@ public class RecommendationDatasetData<O extends Serializable, S extends Seriali
     }
 
     /**
-     * Calculates gradient of the loss function of recommendation system SGD training.
+     * Calculates gradient of the loss function of recommendation system SGD training. The details about gradient
+     * calculation could be found here: https://tinyurl.com/y6cku9hr.
      *
      * @param objMatrix Object matrix obtained as a result of factorization of rating matrix.
      * @param subjMatrix Subject matrix obtained as a result of factorization of rating matrix.
