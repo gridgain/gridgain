@@ -803,4 +803,5 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
         processFailure(FailureType.CRITICAL_ERROR, e);
 
         return e;
-    }}
+    }
+}
