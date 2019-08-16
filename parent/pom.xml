@@ -1092,6 +1092,10 @@
                                 <groupId>jdk.tools</groupId>
                                 <artifactId>jdk.tools</artifactId>
                             </exclusion>
+                            <exclusion>
+                                <groupId>com.google.guava</groupId>
+                                <artifactId>guava</artifactId>
+                            </exclusion>
                         </exclusions>
                     </dependency>
                     <dependency>
@@ -1103,6 +1107,10 @@
                                 <!-- This dependency is not available with java 9.-->
                                 <groupId>jdk.tools</groupId>
                                 <artifactId>jdk.tools</artifactId>
+                            </exclusion>
+                            <exclusion>
+                                <groupId>com.google.guava</groupId>
+                                <artifactId>guava</artifactId>
                             </exclusion>
                         </exclusions>
                     </dependency>
