@@ -21,6 +21,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
+import org.apache.ignite.internal.processors.cache.GridCacheGroupIdMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -30,6 +31,8 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 import java.util.Collections;
 import java.util.Objects;
@@ -39,6 +42,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  *
  */
+@RunWith(JUnit4.class)
 public class RebalanceAfterResettingLostPartitionTest extends GridCommonAbstractTest {
     /** Cache name. */
     private static final String CACHE_NAME = "cache" + UUID.randomUUID().toString();
@@ -118,7 +122,7 @@ public class RebalanceAfterResettingLostPartitionTest extends GridCommonAbstract
         TestRecordingCommunicationSpi.spi(ignite(0)).blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
             @Override public boolean apply(ClusterNode clusterNode, Message msg) {
                 if (msg instanceof GridDhtPartitionSupplyMessage &&
-                    ((GridDhtPartitionSupplyMessage) msg).groupId() == CU.cacheId(CACHE_NAME)) {
+                    ((GridCacheGroupIdMessage)msg).groupId() == CU.cacheId(CACHE_NAME)) {
                     if (msgCntr.get() > 3)
                         return true;
                     else
@@ -172,4 +176,3 @@ public class RebalanceAfterResettingLostPartitionTest extends GridCommonAbstract
             assertEquals("Value" + i, grid(1).cache(CACHE_NAME).get(i));
     }
 }
-
