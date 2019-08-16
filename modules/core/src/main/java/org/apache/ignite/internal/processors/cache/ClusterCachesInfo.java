@@ -1512,10 +1512,6 @@ class ClusterCachesInfo {
                 grpData.cacheConfigurationEnrichment()
             );
 
-            // Do not register cache group if it was spawned by local node.
-            if (grpData.receivedFrom().equals(ctx.localNodeId()))
-                continue;
-
             if (locCacheGrps.containsKey(grpDesc.groupId())) {
                 CacheGroupDescriptor locGrpCfg = locCacheGrps.get(grpDesc.groupId());
 
@@ -1966,9 +1962,11 @@ class ClusterCachesInfo {
                     continue;
                 }
 
-                // Register new cache only in case of local join.
-                // New caches from other joining nodes will be started by theirselves after join exchange.
-                if (locJoin)
+                /*  Register new cache only in case of local join (first node in cluster)
+                    or in case of inactive cluster (these caches will be started during activation).
+                    In other cases new caches from joining nodes will be started by separate dynamic cache start event
+                    after their local join exchange is finished. */
+                if (locJoin || !active)
                     registerNewCache(joinData, nodeId, cacheInfo);
             }
             else if (!active && isMergeConfigSupport) {
@@ -1996,17 +1994,12 @@ class ClusterCachesInfo {
                     saveCacheConfiguration(entry.getKey());
             }
 
-        if (joinData.startCaches()) {
-            ClusterNode node = ctx.discovery().node(nodeId);
-
-            assert node != null && node.isClient() : "Cluster node is null or not client " + node;
-
+        if (joinData.startCaches())
             for (DynamicCacheDescriptor desc : registeredCaches.values()) {
                 ctx.discovery().addClientNode(desc.cacheName(),
                     nodeId,
                     desc.cacheConfiguration().getNearConfiguration() != null);
             }
-        }
 
         return null;
     }

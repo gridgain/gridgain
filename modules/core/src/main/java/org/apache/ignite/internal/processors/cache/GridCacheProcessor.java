@@ -782,6 +782,14 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     }
 
     /**
+     * Cancels starting fresh caches.
+     * Invoked during deactivation.
+     */
+    public void cancelStartFreshCaches() {
+        proxyStartFutures.forEach((name, fut) -> fut.onDone(false, null));
+    }
+
+    /**
      * @param timeout Cleanup timeout.
      */
     private void addRemovedItemsCleanupTask(long timeout) {
@@ -898,6 +906,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                 onKernalStop(entry.getValue(), cancel);
             }
         }
+
+        cancelStartFreshCaches();
     }
 
     /** {@inheritDoc} */

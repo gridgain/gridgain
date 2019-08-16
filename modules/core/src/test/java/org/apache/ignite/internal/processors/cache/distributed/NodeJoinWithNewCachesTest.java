@@ -12,8 +12,11 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class NodeJoinWithNewCachesTest extends GridCommonAbstractTest {
+    /** Initial nodes. */
+    private static final int INITIAL_NODES = 2;
+
     /** Caches. */
-    private int caches = 2;
+    private boolean spawnNewCaches;
 
     /** Client. */
     private boolean client;
@@ -31,9 +34,16 @@ public class NodeJoinWithNewCachesTest extends GridCommonAbstractTest {
                     .setPersistenceEnabled(false))
         );
 
-        cfg.setCacheConfiguration(cacheConfiguration("cache-", caches));
+        int cachesCnt = INITIAL_NODES;
+
+        if (spawnNewCaches)
+            cachesCnt += getTestIgniteInstanceIndex(igniteInstanceName) + 1;
+
+        cfg.setCacheConfiguration(cacheConfiguration("cache-", cachesCnt));
 
         cfg.setClientMode(client);
+
+        cfg.setActiveOnStart(false);
 
         return cfg;
     }
@@ -69,54 +79,60 @@ public class NodeJoinWithNewCachesTest extends GridCommonAbstractTest {
 
     @Test(timeout = 10005000L)
     public void testNodeJoin() throws Exception {
-        IgniteEx crd = startGrids(2);
+        IgniteEx crd = (IgniteEx) startGridsMultiThreaded(INITIAL_NODES);
 
         crd.cluster().active(true);
 
         awaitPartitionMapExchange();
 
-        caches = 3;
+        spawnNewCaches = true;
 
         startGrid(2);
 
-        for (int nodeIdx = 2; nodeIdx >= 0; nodeIdx--)
-            for (int i = caches - 1; i >= 0; i--)
-                grid(nodeIdx).cache("cache-" + i).get(0);
+        int ALL_NODES = INITIAL_NODES + 1;
+
+        for (int nodeIdx = ALL_NODES - 1; nodeIdx >= 0; nodeIdx--)
+            for (int cacheId = INITIAL_NODES + ALL_NODES - 1; cacheId >= 0; cacheId--)
+                grid(nodeIdx).cache("cache-" + cacheId).get(0);
     }
 
     @Test(timeout = 10005000L)
     public void testMultipleNodeJoin() throws Exception {
-        IgniteEx crd = startGrids(2);
+        IgniteEx crd = (IgniteEx) startGridsMultiThreaded(INITIAL_NODES);
 
         crd.cluster().active(true);
 
         awaitPartitionMapExchange();
 
-        caches = 3;
+        spawnNewCaches = true;
 
-        startGridsMultiThreaded(2, 3);
+        startGridsMultiThreaded(INITIAL_NODES, 3);
 
-        for (int nodeIdx = 4; nodeIdx >= 0; nodeIdx--)
-            for (int i = caches - 1; i >= 0; i--)
-                grid(nodeIdx).cache("cache-" + i).get(0);
+        int ALL_NODES = INITIAL_NODES + 3;
+
+        for (int nodeIdx = ALL_NODES - 1; nodeIdx >= 0; nodeIdx--)
+            for (int cacheId = INITIAL_NODES + ALL_NODES - 1; cacheId >= 0; cacheId--)
+                grid(nodeIdx).cache("cache-" + cacheId).get(0);
     }
 
     @Test(timeout = 10005000L)
     public void testMultipleNodeJoinClient() throws Exception {
-        IgniteEx crd = startGrids(2);
+        IgniteEx crd = (IgniteEx) startGridsMultiThreaded(INITIAL_NODES);
 
         crd.cluster().active(true);
 
         awaitPartitionMapExchange();
 
-        caches = 3;
+        spawnNewCaches = true;
 
         client = true;
 
-        startGridsMultiThreaded(2, 3);
+        startGridsMultiThreaded(INITIAL_NODES, 3);
 
-        for (int nodeIdx = 4; nodeIdx >= 0; nodeIdx--)
-            for (int i = caches - 1; i >= 0; i--)
-                grid(nodeIdx).cache("cache-" + i).get(0);
+        int ALL_NODES = INITIAL_NODES + 3;
+
+        for (int nodeIdx = ALL_NODES - 1; nodeIdx >= 0; nodeIdx--)
+            for (int cacheId = INITIAL_NODES + ALL_NODES - 1; cacheId >= 0; cacheId--)
+                grid(nodeIdx).cache("cache-" + cacheId).get(0);
     }
 }

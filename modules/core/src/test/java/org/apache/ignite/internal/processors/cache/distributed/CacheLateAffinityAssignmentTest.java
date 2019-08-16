@@ -286,15 +286,14 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
      *
      * @throws Exception If failed.
      */
-    @Test
-    public void testAffinitySimpleSequentialStart() throws Exception {
+    private void testAffinitySimpleSequentialStart0(boolean secondSrvHasNewCaches) throws Exception {
         startServer(0, 1);
 
         startServer(1, 2);
 
         checkAffinity(2, topVer(2, 0), false);
 
-        checkAffinity(2, topVer(2, 1), true);
+        checkAffinity(2, topVer(2, 1 + (secondSrvHasNewCaches ? 1 : 0)), true);
 
         startServer(2, 3);
 
@@ -303,6 +302,16 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
         checkAffinity(3, topVer(3, 1), true);
 
         awaitPartitionMapExchange();
+    }
+
+    /**
+     * Simple test, node join.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testAffinitySimpleSequentialStart() throws Exception {
+        testAffinitySimpleSequentialStart0(false);
     }
 
     /**
@@ -321,7 +330,8 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
 
         cacheNodeFilter = new TestCacheNodeExcludingFilter(F.asList(getTestIgniteInstanceName(0)));
 
-        testAffinitySimpleSequentialStart();
+        // Coordinator has no caches, second server has.
+        testAffinitySimpleSequentialStart0(true);
 
         assertNull(((IgniteKernal)ignite(0)).context().cache().internalCache(CACHE_NAME1));
     }
@@ -481,11 +491,11 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
 
             startServer(nodes++, topVer);
 
-            checkAffinity(nodes, topVer(topVer, 1), true);
+            checkAffinity(nodes, topVer(topVer, i == 0 ? 2 : 1), true);
 
             ignite0.cache(CACHE_NAME1);
 
-            checkAffinity(nodes, topVer(topVer, 1), true);
+            checkAffinity(nodes, topVer(topVer, i == 0 ? 2 : 1), true);
 
             topVer++;
 
@@ -1684,9 +1694,9 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
 
         startServer(2, 3);
 
-        checkAffinity(3, topVer(3, 0), false);
+        checkAffinity(3, topVer(3, 1), false);
 
-        checkAffinity(3, topVer(3, 1), true);
+        checkAffinity(3, topVer(3, 2), true);
 
         cacheC = s -> {
             CacheConfiguration ccfg = cacheConfiguration();
@@ -1698,7 +1708,7 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
 
         startClient(3, 4);
 
-        checkAffinity(4, topVer(4, 0), true);
+        checkAffinity(4, topVer(4, 1), true);
     }
 
     /**
@@ -2029,7 +2039,7 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
                 checkAffinity(NODES, topVer(NODES, 0), false);
             }
             else
-                checkAffinity(NODES, topVer(NODES, 1), true);
+                checkAffinity(NODES, topVer(NODES, 3), true);
 
             if (i < ITERATIONS - 1) {
                 checkCaches();
