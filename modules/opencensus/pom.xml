@@ -74,6 +74,26 @@
             <version>${opencensus.version}</version>
         </dependency>
 
+
+<!--        TODO: Temporary fix for transitive deps.-->
+        <dependency>
+            <groupId>io.opencensus</groupId>
+            <artifactId>opencensus-impl-core</artifactId>
+            <version>${opencensus.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.lmax</groupId>
+            <artifactId>disruptor</artifactId>
+            <version>3.4.2</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>26.0-android</version>
+        </dependency>
+
         <dependency>
             <groupId>io.opencensus</groupId>
             <artifactId>opencensus-exporter-trace-zipkin</artifactId>
