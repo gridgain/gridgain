@@ -18,8 +18,6 @@ package org.apache.ignite.spi.discovery.tcp.messages;
 
 import java.util.Map;
 import java.util.UUID;
-import org.apache.ignite.internal.processors.tracing.messages.SpanContainer;
-import org.apache.ignite.internal.processors.tracing.messages.TraceableMessage;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.spi.discovery.tcp.internal.DiscoveryDataPacket;
@@ -29,7 +27,7 @@ import org.apache.ignite.spi.discovery.tcp.internal.DiscoveryDataPacket;
  */
 @TcpDiscoveryEnsureDelivery
 @TcpDiscoveryRedirectToClient
-public class TcpDiscoveryNodeAddFinishedMessage extends TcpDiscoveryAbstractMessage implements TraceableMessage {
+public class TcpDiscoveryNodeAddFinishedMessage extends TcpDiscoveryAbstractTraceableMessage {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -46,9 +44,6 @@ public class TcpDiscoveryNodeAddFinishedMessage extends TcpDiscoveryAbstractMess
     /** */
     @GridToStringExclude
     private Map<String, Object> clientNodeAttrs;
-
-    /** Span container. */
-    private SpanContainer spanContainer = new SpanContainer();
 
     /**
      * Constructor.
@@ -71,7 +66,6 @@ public class TcpDiscoveryNodeAddFinishedMessage extends TcpDiscoveryAbstractMess
         nodeId = msg.nodeId;
         clientDiscoData = msg.clientDiscoData;
         clientNodeAttrs = msg.clientNodeAttrs;
-        spanContainer = msg.spanContainer;
     }
 
     /**
@@ -111,11 +105,6 @@ public class TcpDiscoveryNodeAddFinishedMessage extends TcpDiscoveryAbstractMess
      */
     public void clientNodeAttributes(Map<String, Object> clientNodeAttrs) {
         this.clientNodeAttrs = clientNodeAttrs;
-    }
-
-    /** {@inheritDoc} */
-    @Override public SpanContainer spanContainer() {
-        return spanContainer;
     }
 
     /** {@inheritDoc} */

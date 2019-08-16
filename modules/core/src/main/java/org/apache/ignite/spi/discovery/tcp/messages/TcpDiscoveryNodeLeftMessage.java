@@ -17,8 +17,6 @@
 package org.apache.ignite.spi.discovery.tcp.messages;
 
 import java.util.UUID;
-import org.apache.ignite.internal.processors.tracing.messages.SpanContainer;
-import org.apache.ignite.internal.processors.tracing.messages.TraceableMessage;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
@@ -27,12 +25,9 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  */
 @TcpDiscoveryEnsureDelivery
 @TcpDiscoveryRedirectToClient
-public class TcpDiscoveryNodeLeftMessage extends TcpDiscoveryAbstractMessage implements TraceableMessage {
+public class TcpDiscoveryNodeLeftMessage extends TcpDiscoveryAbstractTraceableMessage {
     /** */
     private static final long serialVersionUID = 0L;
-
-    /** Span container. */
-    private final SpanContainer spanContainer = new SpanContainer();
 
     /**
      * Constructor.
@@ -46,10 +41,5 @@ public class TcpDiscoveryNodeLeftMessage extends TcpDiscoveryAbstractMessage imp
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(TcpDiscoveryNodeLeftMessage.class, this, "super", super.toString());
-    }
-
-    /** {@inheritDoc} */
-    @Override public SpanContainer spanContainer() {
-        return spanContainer;
     }
 }
