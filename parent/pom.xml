@@ -44,6 +44,8 @@
         <javadoc.opts>-Xdoclint:none</javadoc.opts>
         <update.notifier.enabled.by.default>true</update.notifier.enabled.by.default>
 
+        <protobuf.version>3.9.0</protobuf.version>
+
         <!-- Dependency versions -->
         <activemq.version>5.12.0</activemq.version>
         <aopalliance.bundle.version>1.0_6</aopalliance.bundle.version>
@@ -62,6 +64,7 @@
         <commons.io.version>2.6</commons.io.version>
         <cron4j.version>2.2.5</cron4j.version>
         <curator.version>4.2.0</curator.version>
+
         <!--Need this version to test ZooKeeper 3.4.x-->
         <curator.test.version>2.9.1</curator.test.version>
         <easymock.version>3.4</easymock.version>

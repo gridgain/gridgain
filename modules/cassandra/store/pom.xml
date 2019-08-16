@@ -34,7 +34,6 @@
     <url>http://ignite.apache.org</url>
 
     <properties>
-        <commons-beanutils.version>1.9.2</commons-beanutils.version>
         <cassandra-driver.version>3.2.0</cassandra-driver.version>
         <cassandra-all.version>3.11.3</cassandra-all.version>
         <netty.version>4.1.27.Final</netty.version>
@@ -46,7 +45,7 @@
         <dependency>
             <groupId>commons-beanutils</groupId>
             <artifactId>commons-beanutils</artifactId>
-            <version>${commons-beanutils.version}</version>
+            <version>${commons.beanutils.version}</version>
         </dependency>
 
         <!-- Ignite -->
