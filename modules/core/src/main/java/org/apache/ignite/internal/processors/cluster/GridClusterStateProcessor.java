@@ -1152,7 +1152,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         if (node.isClient() || node.isDaemon())
             return null;
 
-        if (globalState.readOnly() && !IgniteFeatures.nodeSupports(node, IgniteFeatures.CLUSTER_READ_ONLY_MODE)) {
+        if (globalState.readOnly() && !IgniteFeatures.nodeSupports(ctx, node, IgniteFeatures.CLUSTER_READ_ONLY_MODE)) {
             String msg = "Node not supporting cluster read-only mode is not allowed to join the cluster with enabled" +
                 " read-only mode";
 
