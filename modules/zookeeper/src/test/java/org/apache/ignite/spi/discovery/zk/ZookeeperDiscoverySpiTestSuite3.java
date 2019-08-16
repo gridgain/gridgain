@@ -25,6 +25,8 @@ import org.apache.ignite.internal.processors.cache.datastructures.replicated.Gri
 import org.apache.ignite.internal.processors.cache.distributed.replicated.GridCacheReplicatedNodeRestartSelfTest;
 import org.apache.ignite.internal.processors.cache.multijvm.GridCacheAtomicMultiJvmFullApiSelfTest;
 import org.apache.ignite.internal.processors.cache.multijvm.GridCachePartitionedMultiJvmFullApiSelfTest;
+import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryLongP2PTest;
+import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryOperationP2PTest;
 import org.apache.ignite.internal.processors.continuous.GridEventConsumeSelfTest;
 import org.apache.ignite.p2p.GridP2PContinuousDeploymentSelfTest;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.zk.curator.TestingCluster;
@@ -56,6 +58,8 @@ public class ZookeeperDiscoverySpiTestSuite3 extends ZookeeperDiscoverySpiAbstra
         suite.addTest(new JUnit4TestAdapter(GridCacheAtomicMultiJvmFullApiSelfTest.class));
         suite.addTest(new JUnit4TestAdapter(GridCachePartitionedMultiJvmFullApiSelfTest.class));
         suite.addTest(new JUnit4TestAdapter(GridP2PContinuousDeploymentSelfTest.class));
+        suite.addTest(new JUnit4TestAdapter(CacheContinuousQueryOperationP2PTest.class));
+        suite.addTest(new JUnit4TestAdapter(CacheContinuousQueryLongP2PTest.class));
 
         return suite;
     }

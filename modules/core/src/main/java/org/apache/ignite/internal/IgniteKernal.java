@@ -291,8 +291,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     /** */
     private static final long serialVersionUID = 0L;
 
-    /** Ignite site that is shown in log messages. */
-    public static final String SITE = "ignite.apache.org";
+    /** GridGain site that is shown in log messages. */
+    public static final String SITE = "gridgain.com";
 
     /** System line separator. */
     private static final String NL = U.nl();
@@ -1606,7 +1606,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     private void fillNodeAttributes(boolean notifyEnabled) throws IgniteCheckedException {
         ctx.addNodeAttribute(ATTR_REBALANCE_POOL_SIZE, configuration().getRebalanceThreadPoolSize());
         ctx.addNodeAttribute(ATTR_DATA_STREAMER_POOL_SIZE, configuration().getDataStreamerThreadPoolSize());
-        ctx.addNodeAttribute("USE_POOL_FOR_LAZY", IgniteSystemProperties.getBoolean("USE_POOL_FOR_LAZY"));
+        ctx.addNodeAttribute("USE_POOL_FOR_LAZY_ATTR", IgniteSystemProperties.getBoolean("USE_POOL_FOR_LAZY"));
 
         final String[] incProps = cfg.getIncludeProperties();
 
