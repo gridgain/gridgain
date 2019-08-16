@@ -25,16 +25,13 @@ import org.junit.runners.Parameterized;
 
 /**
  * Test for the intermediate query results disk offloading (disk spilling).
- *
- * TODO: Group by tests for all kinds of aggregates:See removed AggregateSerializer
- * TODO: check is thrown exception for user aggregates
- * TODO use org.h2.store.Data.getValueLen(org.h2.value.Value)
- *
+ * TODO Fix big decimal
+ * TODO: Cleanup code.
  * TODO: Strange memory tracking results. Do I handle tracking properly? cleanup aggregates memory before spilling them
  *
  * Later:
  * TODO resolve GG-22406 - aggregates
- * TODO: Cleanup code.
+ *
  *
  */
 @RunWith(Parameterized.class)
@@ -430,7 +427,7 @@ public class DiskSpillingQueriesTest extends DiskSpillingAbstractTest {
 
     /** */
     @Test
-    public void simpleGroupByAllSupportedDistinctAggregates() {
+    public void groupByAllSupportedDistinctAggregates() {
         checkGroupsSpilled = true;
 
         assertInMemoryAndOnDiskSameResults(false,
@@ -442,13 +439,24 @@ public class DiskSpillingQueriesTest extends DiskSpillingAbstractTest {
 
     /** */
     @Test
-    public void simpleGroupByNullableDistinctAggregates() {
+    public void groupByNullableDistinctAggregates() {
         checkGroupsSpilled = true;
 
         assertInMemoryAndOnDiskSameResults(false,
             "SELECT age, code, COUNT(DISTINCT nulls), COUNT(DISTINCT temperature), AVG(DISTINCT nulls), " +
                 "SUM(DISTINCT temperature), MAX(DISTINCT nulls), LISTAGG(temperature) " +
                 "FROM person GROUP BY age, code"
+        );
+    }
+
+    /** */
+    @Test
+    public void groupByValuesWithHaving() {
+        checkGroupsSpilled = true;
+
+        assertInMemoryAndOnDiskSameResults(false,
+            "SELECT temperature, count(*), LISTAGG(name) " +
+                "FROM person GROUP BY temperature HAVING temperature > 38"
         );
     }
 }

@@ -25,6 +25,7 @@ import org.h2.command.dml.GroupByData;
 import org.h2.engine.Session;
 import org.h2.expression.aggregate.AggregateData;
 import org.h2.value.CompareMode;
+import org.h2.value.Value;
 import org.h2.value.ValueRow;
 import org.jetbrains.annotations.NotNull;
 
@@ -289,11 +290,10 @@ public class GroupedExternalGroupByData extends GroupByData {
 
                         if (newAgg instanceof AggregateData)
                             ((AggregateData)curAgg).mergeAggregate(ses, (AggregateData)newAgg);
-                        else
-                            throw new UnsupportedOperationException("Unsupported aggregate:" + curAgg.getClass());
+                        else if (!(newAgg instanceof Value)) // Aggregation means no-op for Value.
+                            throw new UnsupportedOperationException("Unsupported aggregate:" +
+                                newAgg.getClass() + ", curAgg=" + curAgg.getClass());
                     }
-
-                    // merge aggs
                 }
                 else {
                     next = getEntry(row);
