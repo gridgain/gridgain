@@ -212,7 +212,7 @@ public abstract class JdbcThinStreamingAbstractSelfTest extends JdbcStreamingSel
     }
 
     /** {@inheritDoc} */
-    @Ignore("https://issues.apache.org/jira/browse/IGNITE-11795")
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-17406")
     @Test
     @Override public void testStreamedInsertFailsOnReadOnlyMode() throws Exception {
         super.testStreamedInsertFailsOnReadOnlyMode();
