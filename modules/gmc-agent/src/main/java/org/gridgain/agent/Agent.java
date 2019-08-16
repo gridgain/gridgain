@@ -86,7 +86,7 @@ public class Agent extends ManagementConsoleProcessor {
     private String curSrvUri;
 
     /** If first connection error after successful connection. */
-    private boolean firstConnError = true;
+    private volatile boolean firstConnError = true;
 
     /**
      * @param ctx Kernal context.
@@ -127,8 +127,12 @@ public class Agent extends ManagementConsoleProcessor {
 
         super.configuration(cfg);
 
-        if (!oldCfg.equals(cfg))
+        if (!oldCfg.equals(cfg)) {
+            // Set to false for disable submiting reconnect task when websocket manager will be closed in connect().
+            firstConnError = false;
+
             connect();
+        }
     }
 
     /**

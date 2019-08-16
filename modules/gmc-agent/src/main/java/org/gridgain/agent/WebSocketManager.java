@@ -134,10 +134,16 @@ public class WebSocketManager implements AutoCloseable {
     }
 
     /**
-     * @return Stomp session.
+     * @param headers Stomp headers.
+     * @param payload Payload.
      */
-    public StompSession getSession() {
-        return ses;
+    public boolean send(StompHeaders headers, Object payload) {
+        boolean connected = ses != null && ses.isConnected();
+
+        if (connected)
+            ses.send(headers, payload);
+
+        return connected;
     }
 
     /**

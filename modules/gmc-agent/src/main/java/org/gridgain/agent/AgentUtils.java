@@ -16,44 +16,16 @@
 
 package org.gridgain.agent;
 
-import java.net.InetSocketAddress;
-import java.net.ProxySelector;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.AbstractMap;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
-import io.opencensus.common.Function;
-import io.opencensus.common.Functions;
-import io.opencensus.common.Timestamp;
-import io.opencensus.trace.Annotation;
-import io.opencensus.trace.AttributeValue;
-import io.opencensus.trace.MessageEvent;
-import io.opencensus.trace.SpanContext;
-import io.opencensus.trace.Status;
-import io.opencensus.trace.export.SpanData;
-import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.eclipse.jetty.client.HttpClient;
-import org.eclipse.jetty.client.HttpProxy;
-import org.eclipse.jetty.client.Origin;
-import org.eclipse.jetty.client.ProxyConfiguration;
-import org.eclipse.jetty.client.Socks4Proxy;
-import org.eclipse.jetty.client.util.BasicAuthentication;
-import org.eclipse.jetty.util.ssl.SslContextFactory;
-import org.gridgain.dto.Span;
-
-import static java.net.Proxy.NO_PROXY;
-import static java.net.Proxy.Type.SOCKS;
-import static java.util.concurrent.TimeUnit.*;
-import static java.util.concurrent.TimeUnit.NANOSECONDS;
-import static java.util.stream.Collectors.toList;
-import static org.eclipse.jetty.client.api.Authentication.ANY_REALM;
 
 /**
  * Utility methods.

@@ -54,7 +54,6 @@ public abstract class AbstractServiceTest {
     protected WebSocketManager getMockWebSocketManager() {
         WebSocketManager mgr = mock(WebSocketManager.class);
         when(ses.isConnected()).thenAnswer(i -> isSesConnected);
-        when(mgr.getSession()).thenReturn(ses);
 
         return mgr;
     }

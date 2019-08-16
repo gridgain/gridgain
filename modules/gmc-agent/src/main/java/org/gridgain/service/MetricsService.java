@@ -19,6 +19,7 @@ package org.gridgain.service;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.managers.communication.GridMessageListener;
 import org.apache.ignite.internal.processors.metric.export.MetricRequest;
 import org.apache.ignite.internal.processors.metric.export.MetricResponse;
 import org.gridgain.agent.WebSocketManager;
@@ -45,6 +46,8 @@ public class MetricsService implements AutoCloseable {
     /** Logger. */
     private IgniteLogger log;
 
+    private GridMessageListener lsnr = this::onNodeMetrics;
+
     /**
      * @param ctx Context.
      * @param mgr Manager.
@@ -55,7 +58,7 @@ public class MetricsService implements AutoCloseable {
         this.log = ctx.log(MetricsService.class);
 
         // Listener for collecting metrics event.
-        ctx.io().addMessageListener(TOPIC_METRICS, this::onNodeMetrics);
+        ctx.io().addMessageListener(TOPIC_METRICS, lsnr);
     }
 
     /**
@@ -80,7 +83,7 @@ public class MetricsService implements AutoCloseable {
                 headers.setContentType(MimeTypeUtils.APPLICATION_OCTET_STREAM);
                 headers.setDestination(buildMetricsDest(res.clusterId()));
 
-                mgr.getSession().send(headers, res.body());
+                mgr.send(headers, res.body());
             }
             catch (Throwable e) {
                 log.error("Failed to send metrics to GMC", e);
@@ -109,6 +112,6 @@ public class MetricsService implements AutoCloseable {
 
     /** {@inheritDoc} */
     @Override public void close() {
-        ctx.io().removeMessageListener(TOPIC_METRICS, this::onNodeMetrics);
+        ctx.io().removeMessageListener(TOPIC_METRICS, lsnr);
     }
 }
