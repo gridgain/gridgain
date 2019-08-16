@@ -840,16 +840,11 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         assert ctx.database() instanceof GridCacheDatabaseSharedManager
             : "Destroying cache data store when persistence is not enabled: " + ctx.database();
 
+        assert ctx.database().checkpointLockIsHeldByThread();
+
         int partId = store.partId();
 
-        ctx.database().checkpointReadLock();
-
-        try {
-            saveStoreMetadata(store, null, true, false);
-        }
-        finally {
-            ctx.database().checkpointReadUnlock();
-        }
+        saveStoreMetadata(store, null, true, false);
 
         ((GridCacheDatabaseSharedManager)ctx.database()).schedulePartitionDestroy(grp.groupId(), partId);
     }
