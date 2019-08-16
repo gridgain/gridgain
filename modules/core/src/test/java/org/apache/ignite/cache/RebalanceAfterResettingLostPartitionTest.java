@@ -16,11 +16,16 @@
 
 package org.apache.ignite.cache;
 
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.TestRecordingCommunicationSpi;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
-import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.lang.IgniteBiPredicate;
+import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.After;
 import org.junit.Before;
@@ -29,8 +34,7 @@ import org.junit.Test;
 import java.util.Collections;
 import java.util.Objects;
 import java.util.UUID;
-
-import static org.apache.ignite.configuration.WALMode.LOG_ONLY;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  *
@@ -40,7 +44,7 @@ public class RebalanceAfterResettingLostPartitionTest extends GridCommonAbstract
     private static final String CACHE_NAME = "cache" + UUID.randomUUID().toString();
 
     /** Cache size */
-    public static final int CACHE_SIZE = GridTestUtils.SF.applyLB(100_000, 10_000);
+    public static final int CACHE_SIZE = 10_000;
 
     /** Stop all grids and cleanup persistence directory. */
     @Before
@@ -62,11 +66,13 @@ public class RebalanceAfterResettingLostPartitionTest extends GridCommonAbstract
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
+        cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
+
+        cfg.setRebalanceBatchSize(100);
+
         cfg.setConsistentId(igniteInstanceName);
 
         DataStorageConfiguration storageCfg = new DataStorageConfiguration();
-
-        storageCfg.setPageSize(1024).setWalMode(LOG_ONLY).setWalSegmentSize(8 * 1024 * 1024);
 
         storageCfg.getDefaultDataRegionConfiguration()
             .setPersistenceEnabled(true)
@@ -74,16 +80,12 @@ public class RebalanceAfterResettingLostPartitionTest extends GridCommonAbstract
 
         cfg.setDataStorageConfiguration(storageCfg);
 
-        cfg.setRebalanceBatchSize(100);
-
         cfg.setCacheConfiguration(new CacheConfiguration()
             .setName(CACHE_NAME)
             .setCacheMode(CacheMode.PARTITIONED)
             .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
-            .setRebalanceMode(CacheRebalanceMode.ASYNC)
             .setBackups(1)
-            .setPartitionLossPolicy(PartitionLossPolicy.READ_ONLY_SAFE)
-            .setStatisticsEnabled(true));
+            .setPartitionLossPolicy(PartitionLossPolicy.READ_ONLY_SAFE));
 
         return cfg;
     }
@@ -111,8 +113,27 @@ public class RebalanceAfterResettingLostPartitionTest extends GridCommonAbstract
         // Cleaning the persistence for second node.
         cleanPersistenceDir(g1Name);
 
+        AtomicInteger msgCntr = new AtomicInteger();
+
+        TestRecordingCommunicationSpi.spi(ignite(0)).blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
+            @Override public boolean apply(ClusterNode clusterNode, Message msg) {
+                if (msg instanceof GridDhtPartitionSupplyMessage &&
+                    ((GridDhtPartitionSupplyMessage) msg).groupId() == CU.cacheId(CACHE_NAME)) {
+                    if (msgCntr.get() > 3)
+                        return true;
+                    else
+                        msgCntr.incrementAndGet();
+                }
+
+                return false;
+            }
+        });
+
         // Starting second node again(with the same consistent id).
         startGrid(1);
+
+        // Waitting for rebalance.
+        TestRecordingCommunicationSpi.spi(ignite(0)).waitForBlocked();
 
         // Killing the first node at the moment of rebalancing.
         stopGrid(0);
