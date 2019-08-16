@@ -498,11 +498,7 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
 
                         if (!valid) {
                             // Local node is no longer primary for the partition, need to rollback a transaction.
-                            if (part != null &&
-                                !part.primary(top.readyTopologyVersion()) &&
-                                part.primary(topologyVersionSnapshot()) &&
-                                top.readyTopologyVersion().after(topologyVersionSnapshot())
-                                ) {
+                            if (part != null && !part.primary(top.readyTopologyVersion())) {
                                 log.warning("Failed to prepare a transaction on outdated topology, rolling back " +
                                     "[tx=" + CU.txString(this) +
                                     ", readyTopVer=" + top.readyTopologyVersion() +
@@ -513,6 +509,7 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
                                     "topology, please try again [timeout=" + timeout() + ", tx=" + CU.txString(this) + ']');
                             }
 
+                            // Trigger error.
                             throw new AssertionError("Invalid primary mapping [tx=" + CU.txString(this) +
                                 ", readyTopVer=" + top.readyTopologyVersion() +
                                 ", lostParts=" + top.lostPartitions() +
