@@ -278,10 +278,11 @@ public class GridTopologyCommandHandler extends GridRestCommandHandlerAdapter {
             metricsBean.setTotalRejectedJobs(metrics.getTotalRejectedJobs());
             metricsBean.setTotalStartedThreadCount(metrics.getTotalStartedThreadCount());
             metricsBean.setTotalExecutedTasks(metrics.getTotalExecutedTasks());
-            metricsBean.setSentMessagesCount(metrics.getSentMessagesCount());
-            metricsBean.setSentBytesCount(metrics.getSentBytesCount());
-            metricsBean.setReceivedMessagesCount(metrics.getReceivedMessagesCount());
-            metricsBean.setReceivedBytesCount(metrics.getReceivedBytesCount());
+            //TODO: GMC dirty hach remove before merge.
+//            metricsBean.setSentMessagesCount(metrics.getSentMessagesCount());
+//            metricsBean.setSentBytesCount(metrics.getSentBytesCount());
+//            metricsBean.setReceivedMessagesCount(metrics.getReceivedMessagesCount());
+//            metricsBean.setReceivedBytesCount(metrics.getReceivedBytesCount());
             metricsBean.setUpTime(metrics.getUpTime());
 
             nodeBean.setMetrics(metricsBean);
