@@ -261,7 +261,7 @@ public class DiskSpillingQueriesTest extends DiskSpillingAbstractTest {
     public void simpleSelectOffset() {
         checkSortOrder = true;
 
-        assertInMemoryAndOnDiskSameResults(false, "SELECT * FROM person ORDER BY name DESC OFFSET 300");
+        assertInMemoryAndOnDiskSameResults(false, "SELECT * FROM person ORDER BY name DESC OFFSET 50");
     }
 
     /** */
@@ -270,7 +270,7 @@ public class DiskSpillingQueriesTest extends DiskSpillingAbstractTest {
         checkSortOrder = true;
 
         assertInMemoryAndOnDiskSameResults(true, "SELECT code, male, age, height, salary, tax, weight, " +
-            "temperature, time, date, timestamp, uuid FROM person ORDER BY name DESC OFFSET 300");
+            "temperature, time, date, timestamp, uuid FROM person ORDER BY name DESC OFFSET 50");
     }
 
     /** */

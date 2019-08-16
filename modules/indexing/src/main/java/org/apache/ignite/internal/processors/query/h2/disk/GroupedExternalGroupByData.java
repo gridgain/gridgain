@@ -28,6 +28,8 @@ import org.h2.value.CompareMode;
 import org.h2.value.Value;
 import org.h2.value.ValueRow;
 
+import static org.h2.command.dml.SelectGroups.cleanupAggregates;
+
 /**
  * TODO: Add class description.
  */
@@ -153,21 +155,14 @@ public class GroupedExternalGroupByData extends GroupByData {
     private void spillGroupsToDisk() {
         sortedExtRes.spillGroupsToDisk(groupByData);
 
-//        for (Map.Entry<ValueRow, Object[]> row : groupByData.entrySet()) {
-//            long delta = H2Utils.calculateMemoryDelta(row.getKey(), row.getValue(), null);
-//
-//            tracker.released(-delta);
-//
-//            cleanupAggregates(row.getValue(), ses);
-//        }
+        for (Map.Entry<ValueRow, Object[]> row : groupByData.entrySet())
+            cleanupAggregates(row.getValue(), ses);
 
         groupByData.clear();
 
-        tracker.released(memReserved); // TODO cleanup aggregates
+        tracker.released(memReserved);
 
         memReserved = 0;
-
-
     }
 
     @Override public void updateCurrent(Object[] grpByExprData) {

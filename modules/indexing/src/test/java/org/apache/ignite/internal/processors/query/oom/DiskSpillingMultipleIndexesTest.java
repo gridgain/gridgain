@@ -29,4 +29,14 @@ public class DiskSpillingMultipleIndexesTest extends DiskSpillingQueriesTest {
         runDdlDml("CREATE INDEX pers_code ON person(code)");
         runDdlDml("CREATE INDEX pers_depId ON person(depId)");
     }
+
+    /** {@inheritDoc} */
+    @Override protected int queryParallelism() {
+        return 4;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected int nodeCount() {
+        return 4;
+    }
 }

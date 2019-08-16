@@ -83,8 +83,6 @@ public class QueryMemoryTracker extends H2MemoryTracker {
 
             reserved += size;
 
-            System.out.println("reserved=" + reserved);
-
             if (reserved >= maxMem) {
                 if (failOnMemLimitExceed)
                     throw new IgniteSQLException("SQL query run out of memory: Query quota exceeded.",
