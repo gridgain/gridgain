@@ -508,22 +508,22 @@ public class ClusterMetricsImpl implements ClusterMetrics {
 
     /** {@inheritDoc} */
     @Override public int getSentMessagesCount() {
-        return sentMsgsCnt.value();
+        return sentMsgsCnt != null ? sentMsgsCnt.value() : 0;
     }
 
     /** {@inheritDoc} */
     @Override public long getSentBytesCount() {
-        return sentBytesCnt.value();
+        return sentBytesCnt != null ? sentBytesCnt.value() : 0;
     }
 
     /** {@inheritDoc} */
     @Override public int getReceivedMessagesCount() {
-        return rcvdMsgsCnt.value();
+        return rcvdMsgsCnt != null ? rcvdMsgsCnt.value() : 0;
     }
 
     /** {@inheritDoc} */
     @Override public long getReceivedBytesCount() {
-        return rcvdBytesCnt.value();
+        return rcvdBytesCnt != null ? rcvdBytesCnt.value() : 0;
     }
 
     /** {@inheritDoc} */
