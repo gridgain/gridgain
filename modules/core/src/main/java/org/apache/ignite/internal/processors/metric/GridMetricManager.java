@@ -40,8 +40,9 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.managers.GridManagerAdapter;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
+import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
 import org.apache.ignite.internal.processors.metric.impl.DoubleMetricImpl;
-import org.apache.ignite.internal.processors.metric.impl.LongMetricImpl;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.util.StripedExecutor;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -115,6 +116,15 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
     /** System metrics prefix. */
     public static final String SYS_METRICS = "sys";
 
+    /** System metrics prefix. */
+    public static final String DIAGNOSTIC_METRICS = "diagnostic";
+
+    /** Partition map exchange metrics prefix. */
+    public static final String PME_METRICS = "pme";
+
+    /** Transaction metrics prefix. */
+    public static final String TX_METRICS = "tx";
+
     /** GC CPU load metric name. */
     public static final String GC_CPU_LOAD = "GcCpuLoad";
 
@@ -135,6 +145,21 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
 
     /** Daemon thread count metric name. */
     public static final String DAEMON_THREAD_CNT = "DaemonThreadCount";
+
+    /** Metric registry name for transaction metrics. */
+    public static final String TRANSACTION_METRICS = "transactions";
+
+    /** PME duration metric name. */
+    public static final String PME_DURATION = "Duration";
+
+    /** PME cache operations blocked duration metric name. */
+    public static final String PME_OPS_BLOCKED_DURATION = "CacheOperationsBlockedDuration";
+
+    /** Histogram of PME durations metric name. */
+    public static final String PME_DURATION_HISTOGRAM = "DurationHistogram";
+
+    /** Histogram of blocking PME durations metric name. */
+    public static final String PME_OPS_BLOCKED_DURATION_HISTOGRAM = "CacheOperationsBlockedDurationHistogram";
 
     /** JVM interface to memory consumption info */
     private static final MemoryMXBean mem = ManagementFactory.getMemoryMXBean();
@@ -199,6 +224,18 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         sysreg.register(DAEMON_THREAD_CNT, threads::getDaemonThreadCount, null);
         sysreg.register("CurrentThreadCpuTime", threads::getCurrentThreadCpuTime, null);
         sysreg.register("CurrentThreadUserTime", threads::getCurrentThreadUserTime, null);
+
+        MetricRegistry pmeReg = registry(PME_METRICS);
+
+        long[] pmeBounds = new long[] {500, 1000, 5000, 30000};
+
+        pmeReg.histogram(PME_DURATION_HISTOGRAM, pmeBounds,
+            "Histogram of PME durations in milliseconds.");
+
+        pmeReg.histogram(PME_OPS_BLOCKED_DURATION_HISTOGRAM, pmeBounds,
+            "Histogram of cache operations blocked PME durations in milliseconds.");
+
+        registerTransactionMetrics();
     }
 
     /** {@inheritDoc} */
@@ -375,18 +412,18 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
             }, String.class, THRD_FACTORY_DESC);
         }
         else {
-            mreg.metric("ActiveCount", ACTIVE_COUNT_DESC).value(0);
-            mreg.metric("CompletedTaskCount", COMPLETED_TASK_DESC).value(0);
-            mreg.metric("CorePoolSize", CORE_SIZE_DESC).value(0);
-            mreg.metric("LargestPoolSize", LARGEST_SIZE_DESC).value(0);
-            mreg.metric("MaximumPoolSize", MAX_SIZE_DESC).value(0);
-            mreg.metric("PoolSize", POOL_SIZE_DESC).value(0);
-            mreg.metric("TaskCount", TASK_COUNT_DESC);
-            mreg.metric("QueueSize", QUEUE_SIZE_DESC).value(0);
-            mreg.metric("KeepAliveTime", KEEP_ALIVE_TIME_DESC).value(0);
+            mreg.longMetric("ActiveCount", ACTIVE_COUNT_DESC).value(0);
+            mreg.longMetric("CompletedTaskCount", COMPLETED_TASK_DESC).value(0);
+            mreg.longMetric("CorePoolSize", CORE_SIZE_DESC).value(0);
+            mreg.longMetric("LargestPoolSize", LARGEST_SIZE_DESC).value(0);
+            mreg.longMetric("MaximumPoolSize", MAX_SIZE_DESC).value(0);
+            mreg.longMetric("PoolSize", POOL_SIZE_DESC).value(0);
+            mreg.longMetric("TaskCount", TASK_COUNT_DESC);
+            mreg.longMetric("QueueSize", QUEUE_SIZE_DESC).value(0);
+            mreg.longMetric("KeepAliveTime", KEEP_ALIVE_TIME_DESC).value(0);
             mreg.register("Shutdown", execSvc::isShutdown, IS_SHUTDOWN_DESC);
             mreg.register("Terminated", execSvc::isTerminated, IS_TERMINATED_DESC);
-            mreg.metric("Terminating", IS_TERMINATING_DESC);
+            mreg.longMetric("Terminating", IS_TERMINATING_DESC);
             mreg.objectMetric("RejectedExecutionHandlerClass", String.class, REJ_HND_DESC).value("");
             mreg.objectMetric("ThreadFactoryClass", String.class, THRD_FACTORY_DESC).value("");
         }
@@ -494,6 +531,25 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
     }
 
     /** */
+    private void registerTransactionMetrics() {
+        MetricRegistry reg = registry(metricName(DIAGNOSTIC_METRICS, TRANSACTION_METRICS));
+
+        reg.longAdderMetric(GridNearTxLocal.METRIC_TOTAL_SYSTEM_TIME, "Total transactions system time on node.");
+        reg.longAdderMetric(GridNearTxLocal.METRIC_TOTAL_USER_TIME, "Total transactions user time on node.");
+
+        reg.histogram(
+            GridNearTxLocal.METRIC_SYSTEM_TIME_HISTOGRAM,
+            GridNearTxLocal.METRIC_TIME_BUCKETS,
+            "Transactions system times on node represented as histogram."
+        );
+        reg.histogram(
+            GridNearTxLocal.METRIC_USER_TIME_HISTOGRAM,
+            GridNearTxLocal.METRIC_TIME_BUCKETS,
+            "Transactions user times on node represented as histogram."
+        );
+    }
+
+    /** */
     private class MetricsUpdater implements Runnable {
         /** */
         private long prevGcTime = -1;
@@ -577,16 +633,16 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
     /** Memory usage metrics. */
     public class MemoryUsageMetrics {
         /** @see MemoryUsage#getInit() */
-        private final LongMetricImpl init;
+        private final AtomicLongMetric init;
 
         /** @see MemoryUsage#getUsed() */
-        private final LongMetricImpl used;
+        private final AtomicLongMetric used;
 
         /** @see MemoryUsage#getCommitted() */
-        private final LongMetricImpl committed;
+        private final AtomicLongMetric committed;
 
         /** @see MemoryUsage#getMax() */
-        private final LongMetricImpl max;
+        private final AtomicLongMetric max;
 
         /**
          * @param group Metric registry.
@@ -595,10 +651,10 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         public MemoryUsageMetrics(String group, String metricNamePrefix) {
             MetricRegistry mreg = registry(group);
 
-            init = mreg.metric(metricName(metricNamePrefix, "init"), null);
-            used = mreg.metric(metricName(metricNamePrefix, "used"), null);
-            committed = mreg.metric(metricName(metricNamePrefix, "committed"), null);
-            max = mreg.metric(metricName(metricNamePrefix, "max"), null);
+            init = mreg.longMetric(metricName(metricNamePrefix, "init"), null);
+            used = mreg.longMetric(metricName(metricNamePrefix, "used"), null);
+            committed = mreg.longMetric(metricName(metricNamePrefix, "committed"), null);
+            max = mreg.longMetric(metricName(metricNamePrefix, "max"), null);
         }
 
         /** Updates metric to the provided values. */
