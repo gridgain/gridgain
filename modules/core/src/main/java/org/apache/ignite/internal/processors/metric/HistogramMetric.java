@@ -106,8 +106,10 @@ public class HistogramMetric {
 
         assert Arrays.equals(h.bounds, other.holder.bounds) : "Adding values with different bounds";
 
-        for (int i = 0; i < h.bounds.length; i++)
-            h.measurements.getAndSet(i, h.measurements.get(i) + other.holder.measurements.get(i));
+        for (int i = 0; i < h.bounds.length; i++) {
+            int finalI = i;
+            h.measurements.updateAndGet(i, (cur) -> cur + other.holder.measurements.get(finalI));
+        }
     }
 
     /** Histogram holder. */

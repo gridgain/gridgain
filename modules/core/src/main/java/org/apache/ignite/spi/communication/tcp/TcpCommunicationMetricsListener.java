@@ -586,7 +586,7 @@ public class TcpCommunicationMetricsListener implements GridNioMetricsListener{
                 if (reqResTimeMap.containsKey(reqId)) {
                     Long reqTimestamp = reqResTimeMap.get(reqId);
 
-                    metricsMap.get(nodeId).get(entry.getKey()).value((U.nanosToMillis(System.nanoTime() - reqTimestamp)));
+                    metricsMap.get(nodeId).get(entry.getKey()).value(U.nanosToMillis(System.nanoTime() - reqTimestamp));
 
                     reqResTimeMap.remove(reqId);
 

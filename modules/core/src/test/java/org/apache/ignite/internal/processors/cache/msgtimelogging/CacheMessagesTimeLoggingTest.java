@@ -259,7 +259,6 @@ public class CacheMessagesTimeLoggingTest extends GridCacheMessagesTimeLoggingAb
         HistogramMetric metricAfterNodeStop = getMetric(0, leavingNodeId, GridDhtTxPrepareRequest.class, true);
 
         assertNull(metricAfterNodeStop);
-
     }
 
     /** {@inheritDoc} */
