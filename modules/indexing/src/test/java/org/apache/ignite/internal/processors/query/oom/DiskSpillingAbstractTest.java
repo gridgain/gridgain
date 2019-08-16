@@ -66,6 +66,9 @@ public class DiskSpillingAbstractTest extends GridCommonAbstractTest {
     /** */
     protected boolean checkGroupsSpilled;
 
+    /** */
+    protected List<Integer> listAggs;
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
@@ -149,6 +152,7 @@ public class DiskSpillingAbstractTest extends GridCommonAbstractTest {
 
         checkSortOrder = false;
         checkGroupsSpilled = false;
+        listAggs = null;
     }
 
 
@@ -183,6 +187,8 @@ public class DiskSpillingAbstractTest extends GridCommonAbstractTest {
 
             List<List<?>> inMemRes = runSql(sql, lazy, HUGE_MEM_LIMIT);
 
+            log.info("In-memory result:\n" + inMemRes);
+
             assertFalse("In-memory result is empty.", inMemRes.isEmpty());
 
             assertWorkDirClean();
@@ -209,8 +215,6 @@ public class DiskSpillingAbstractTest extends GridCommonAbstractTest {
 
             dirEvts = watchKey.pollEvents();
 
-            //TODO check grouped files
-
             // Check files have been created but deleted later.
             assertFalse("Disk events is empty for on-disk query. ", dirEvts.isEmpty());
 
@@ -230,6 +234,11 @@ public class DiskSpillingAbstractTest extends GridCommonAbstractTest {
                 fixSortOrder(inMemRes);
             }
 
+            if (listAggs != null) {
+                fixListAggsSort(onDiskRes);
+                fixListAggsSort(inMemRes);
+            }
+
             if (log.isInfoEnabled())
                 log.info("In-memory time=" + (startOnDisk - startInMem) + ", on-disk time=" + (finish - startOnDisk));
 
@@ -243,6 +252,27 @@ public class DiskSpillingAbstractTest extends GridCommonAbstractTest {
         }
         finally {
             U.closeQuiet(watchSvc);
+        }
+    }
+
+    /**
+     * Results for LISTAGG aggregate may arrive to reduce node in arbitrary order, so we need to fix this order
+     * to be able to compare results.
+     * @param res Result.
+     */
+    private void fixListAggsSort(List<List<?>> res) {
+        for (List row : res) {
+            for (Integer idx : listAggs) {
+                String listAgg = (String) row.get(idx);
+
+                String[] strings = listAgg.split(",");
+
+                Arrays.sort(strings);
+
+                String newListAgg = Arrays.stream(strings).collect(Collectors.joining(","));
+
+                row.set(idx, newListAgg);
+            }
         }
     }
 

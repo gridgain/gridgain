@@ -414,4 +414,6 @@ public abstract class AbstractExternalResult<T> implements AutoCloseable{
     public int size() {
         return size;
     }
+
+
 }

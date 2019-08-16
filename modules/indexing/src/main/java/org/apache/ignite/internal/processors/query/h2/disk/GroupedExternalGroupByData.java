@@ -27,7 +27,6 @@ import org.h2.expression.aggregate.AggregateData;
 import org.h2.value.CompareMode;
 import org.h2.value.Value;
 import org.h2.value.ValueRow;
-import org.jetbrains.annotations.NotNull;
 
 /**
  * TODO: Add class description.
@@ -147,38 +146,28 @@ public class GroupedExternalGroupByData extends GroupByData {
                 createExtGroupByData();
 
             spillGroupsToDisk();
-
         }
 
     }
 
     private void spillGroupsToDisk() {
-        for (Map.Entry<ValueRow, Object[]> e : groupByData.entrySet()) {
-            ValueRow key = e.getKey();
-            Object[] aggs = e.getValue();
+        sortedExtRes.spillGroupsToDisk(groupByData);
 
-            Object[] newRow = getObjectsArray(key, aggs);
-
-            //throw new RuntimeException("!!!");
-            sortedExtRes.addRow(newRow);
-
-
-        }
+//        for (Map.Entry<ValueRow, Object[]> row : groupByData.entrySet()) {
+//            long delta = H2Utils.calculateMemoryDelta(row.getKey(), row.getValue(), null);
+//
+//            tracker.released(-delta);
+//
+//            cleanupAggregates(row.getValue(), ses);
+//        }
 
         groupByData.clear();
 
         tracker.released(memReserved); // TODO cleanup aggregates
 
         memReserved = 0;
-    }
 
-    @NotNull private Object[] getObjectsArray(ValueRow key, Object[] aggs) {
-        Object[] newRow = new Object[aggs.length + 1];
 
-        newRow[0] = key;
-
-        System.arraycopy(aggs, 0, newRow, 1, aggs.length);
-        return newRow;
     }
 
     @Override public void updateCurrent(Object[] grpByExprData) {
@@ -210,6 +199,20 @@ public class GroupedExternalGroupByData extends GroupByData {
             cursor = new GroupsIterator(groupByData.entrySet().iterator());
     }
 
+    public static void mergeAggregates(Object curAgg, Object newAgg, Session ses) {
+        assert (newAgg == null) == (curAgg == null) : "newAgg=" + newAgg + ", curAgg=" + curAgg;
+
+        if (newAgg == null)
+            return;
+
+        assert newAgg.getClass() == curAgg.getClass() : "newAgg=" + newAgg + ", curAgg=" + curAgg;
+
+        if (newAgg instanceof AggregateData)
+            ((AggregateData)curAgg).mergeAggregate(ses, (AggregateData)newAgg);
+        else if (!(newAgg instanceof Value)) // Aggregation means no-op for Value.
+            throw new UnsupportedOperationException("Unsupported aggregate:" +
+                newAgg.getClass() + ", curAgg=" + curAgg.getClass());
+    }
     private static class GroupsIterator implements Iterator<T2<ValueRow, Object[]>> {
 
         private final Iterator<Map.Entry<ValueRow, Object[]>> it;
@@ -268,6 +271,9 @@ public class GroupedExternalGroupByData extends GroupByData {
             while (extSize-- > 0) {
                 Object[] row = sortedExtRes.next();
 
+                if (row == null)
+                    break;
+
                 if (cur == null) {
                     cur = getEntry(row);
 
@@ -281,18 +287,7 @@ public class GroupedExternalGroupByData extends GroupByData {
                         Object newAgg = row[i + 1];
                         Object curAgg = curAggs[i];
 
-                        assert (newAgg == null) == (curAgg == null) : "newAgg=" + newAgg + ", curAgg=" + curAgg;
-
-                        if (newAgg == null)
-                            continue;
-
-                        assert newAgg.getClass() == curAgg.getClass() : "newAgg=" + newAgg + ", curAgg=" + curAgg;
-
-                        if (newAgg instanceof AggregateData)
-                            ((AggregateData)curAgg).mergeAggregate(ses, (AggregateData)newAgg);
-                        else if (!(newAgg instanceof Value)) // Aggregation means no-op for Value.
-                            throw new UnsupportedOperationException("Unsupported aggregate:" +
-                                newAgg.getClass() + ", curAgg=" + curAgg.getClass());
+                        mergeAggregates(curAgg, newAgg, ses);
                     }
                 }
                 else {
@@ -302,9 +297,6 @@ public class GroupedExternalGroupByData extends GroupByData {
                 }
 
             }
-
-
-            // TODO: implement.
         }
 
         T2<ValueRow, Object[]> getEntry(Object[] row) {
@@ -314,8 +306,6 @@ public class GroupedExternalGroupByData extends GroupByData {
 
             return new T2<>((ValueRow)row[0], aggs);
         }
-
-
     }
 
 }

@@ -354,7 +354,7 @@ public class DiskSpillingQueriesTest extends DiskSpillingAbstractTest {
         checkGroupsSpilled = true;
 
         assertInMemoryAndOnDiskSameResults(true,
-            "SELECT depId, code, age, COUNT(*), SUM(salary)  LISTAGG(uuid) " +
+            "SELECT depId, code, age, COUNT(*), SUM(salary),  LISTAGG(uuid) " +
                 "FROM person GROUP BY age, depId, code ");
     }
 
@@ -397,6 +397,8 @@ public class DiskSpillingQueriesTest extends DiskSpillingAbstractTest {
     @Test
     public void groupByNullableAggregatesBigGroups() {
         checkGroupsSpilled = true;
+
+        listAggs = Arrays.asList(4);
 
         assertInMemoryAndOnDiskSameResults(false,
             "SELECT male, COUNT(nulls), COUNT(temperature), AVG(nulls), LISTAGG(temperature) " +
@@ -453,6 +455,8 @@ public class DiskSpillingQueriesTest extends DiskSpillingAbstractTest {
     @Test
     public void groupByValuesWithHaving() {
         checkGroupsSpilled = true;
+
+        listAggs = Arrays.asList(2);
 
         assertInMemoryAndOnDiskSameResults(false,
             "SELECT temperature, count(*), LISTAGG(name) " +

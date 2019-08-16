@@ -18,18 +18,18 @@ package org.apache.ignite.internal.processors.query.h2.disk;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
-import java.util.NoSuchElementException;
+import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.TreeMap;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
-import org.apache.ignite.internal.util.typedef.F;
 import org.h2.engine.Session;
 import org.h2.store.Data;
 import org.h2.value.Value;
 import org.h2.value.ValueRow;
+import org.jetbrains.annotations.NotNull;
 
 import static org.h2.command.dml.SelectGroups.cleanupAggregates;
 
@@ -40,17 +40,13 @@ public class GroupedExternalResult extends AbstractExternalResult<Object>  {
     /** Last written to file position. */
     private long lastWrittenPos;
 
-    /** In-memory buffer for gathering rows before spilling to disk. */
-    private TreeMap<ValueRow, Object[]> sortedRowsBuf;
-
     /** Sorted chunks addresses on the disk. */
     private final Collection<Chunk> chunks;
 
-    /**
-     * Result queue.
-     */
+    /** Result queue. */
     private Queue<Chunk> resQueue;
 
+    /** Session */
     private final Session ses;
 
     /**
@@ -72,10 +68,10 @@ public class GroupedExternalResult extends AbstractExternalResult<Object>  {
 
     /** {@inheritDoc} */
     public Object[] next() {
-        Chunk batch = resQueue.poll();
+        if (resQueue.isEmpty())
+            return null;
 
-        if (batch == null)
-            throw new NoSuchElementException();
+        Chunk batch = resQueue.poll();
 
         Object[] row = batch.currentRow();
 
@@ -85,61 +81,19 @@ public class GroupedExternalResult extends AbstractExternalResult<Object>  {
         return row;
     }
 
-    /** {@inheritDoc} */
-    public int addRows(Collection<Object[]> rows) {
-        for (Object[] row : rows)
-            addRow(row);
+    public void spillGroupsToDisk(TreeMap<ValueRow, Object[]> data) {
+        size += data.size();
 
-        return size;
-    }
+        ArrayList<Object[]> rows = new ArrayList<>(data.size());
 
-    /** {@inheritDoc} */
-    public int addRow(Object[] row) {
-        addRowToBuffer(row);
+        for (Map.Entry<ValueRow, Object[]> e : data.entrySet()) {
+            ValueRow key = e.getKey();
+            Object[] aggs = e.getValue();
 
-        if (needToSpill())
-            spillRowsBufferToDisk();
+            Object[] newRow = getObjectsArray(key, aggs);
 
-        return size++;
-    }
-
-
-    /**
-     * @return {@code True} if it is need to spill rows to disk.
-     */
-    private boolean needToSpill() {
-        return !memTracker.reserved(0);
-    }
-
-    /**
-     * Adds row in-memory row buffer.
-     * @param row Row.
-     */
-    private void addRowToBuffer(Object[] row) {
-        long delta = H2Utils.calculateMemoryDelta(null, null, row);
-
-        memTracker.reserved(delta);
-
-        if (sortedRowsBuf == null)
-            sortedRowsBuf = new TreeMap<>(cmp);
-
-        ValueRow key = getRowKey(row);
-
-        sortedRowsBuf.put(key, row);
-    }
-
-    /**
-     * Spills rows to disk from the in-memory buffer.
-     */
-    private void spillRowsBufferToDisk() {
-        if (F.isEmpty(sortedRowsBuf))
-            return;
-
-        ArrayList<Object[]> rows =  new ArrayList<>(sortedRowsBuf.values());
-
-        System.out.println("spillRowsBufferToDisk size=" + sortedRowsBuf.size());
-
-        sortedRowsBuf = null;
+            rows.add(newRow);
+        }
 
         Data buff = createDataBuffer(rowSize(rows));
 
@@ -156,19 +110,23 @@ public class GroupedExternalResult extends AbstractExternalResult<Object>  {
 
         chunks.add(new Chunk(initFilePos, lastWrittenPos));
 
-        for (Object[] row : rows) {
-            long delta = H2Utils.calculateMemoryDelta(null, row, null);
 
-            memTracker.released(-delta);
-
-            cleanupAggregates(row, ses);
-        }
     }
+
+
+    @NotNull private Object[] getObjectsArray(ValueRow key, Object[] aggs) {
+        Object[] newRow = new Object[aggs.length + 1];
+
+        newRow[0] = key;
+
+        System.arraycopy(aggs, 0, newRow, 1, aggs.length);
+
+        return newRow;
+    }
+
 
     /** {@inheritDoc} */
     public void reset() {
-        spillRowsBufferToDisk();
-
         if (resQueue != null) {
             resQueue.clear();
 

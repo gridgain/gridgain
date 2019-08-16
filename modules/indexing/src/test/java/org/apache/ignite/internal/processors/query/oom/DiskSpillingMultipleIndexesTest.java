@@ -28,6 +28,5 @@ public class DiskSpillingMultipleIndexesTest extends DiskSpillingQueriesTest {
         runDdlDml("CREATE INDEX pers_weight ON person(weight)");
         runDdlDml("CREATE INDEX pers_code ON person(code)");
         runDdlDml("CREATE INDEX pers_depId ON person(depId)");
-        runDdlDml("CREATE INDEX pers_temperature ON person(temperature)");
     }
 }
