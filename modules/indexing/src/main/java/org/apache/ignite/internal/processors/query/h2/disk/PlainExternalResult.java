@@ -24,7 +24,6 @@ import org.h2.store.Data;
 import org.h2.value.Value;
 
 /**
- * TODO: Add in-memory buffer with memory tracker.
  * This class is intended for spilling to the disk (disk offloading) unsorted intermediate query results.
  */
 public class PlainExternalResult extends AbstractExternalResult<Value> implements ResultExternal  {

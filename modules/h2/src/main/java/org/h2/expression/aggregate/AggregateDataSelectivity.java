@@ -72,7 +72,8 @@ class AggregateDataSelectivity extends AggregateData {
         return v.convertTo(dataType);
     }
 
-    @Override public long getMemory() {
+    @Override
+    public long getMemory() {
         throw new UnsupportedOperationException();
     }
 

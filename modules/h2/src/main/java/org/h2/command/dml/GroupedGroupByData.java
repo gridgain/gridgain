@@ -22,34 +22,44 @@ import org.h2.engine.Session;
 import org.h2.value.ValueRow;
 
 /**
- * TODO: Add class description.
+ * In-memory group data collector for group-by expressions.
  */
 public class GroupedGroupByData extends GroupByData {
+    /** Group by indexes. */
     private final int[] grpIdx;
 
-    private TreeMap<ValueRow, Object[]> groupByData;
+    /** Group-by data. */
+    private TreeMap<ValueRow, Object[]> grpByData;
 
+    /** */
     private ValueRow lastGrpKey;
 
+    /** */
     private Iterator<Map.Entry<ValueRow, Object[]>> cursor;
 
-    Map.Entry<ValueRow, Object[]> curEntry;
+    /** */
+    private Map.Entry<ValueRow, Object[]> curEntry;
 
+    /**
+     * @param ses Session.
+     * @param grpIdx Group key columns.
+     */
     public GroupedGroupByData(Session ses, int[] grpIdx) {
         super(ses);
         this.grpIdx = grpIdx;
-        groupByData = new TreeMap<>(ses.getDatabase().getCompareMode());
+        grpByData = new TreeMap<>(ses.getDatabase().getCompareMode());
     }
 
+    /** {@inheritDoc} */
     @Override public Object[] nextSource(ValueRow grpKey, int width) {
         lastGrpKey = grpKey;
 
-        Object[] values = groupByData.get(grpKey);
+        Object[] values = grpByData.get(grpKey);
 
         if (values == null) {
             values = new Object[width];
 
-            groupByData.put(grpKey, values);
+            grpByData.put(grpKey, values);
 
             onGroupChanged(grpKey, null, values);
         }
@@ -57,10 +67,12 @@ public class GroupedGroupByData extends GroupByData {
         return values;
     }
 
+    /** {@inheritDoc} */
     @Override public long size() {
-        return groupByData.size();
+        return grpByData.size();
     }
 
+    /** {@inheritDoc} */
     @Override public boolean next() {
         assert cursor != null;
 
@@ -71,29 +83,29 @@ public class GroupedGroupByData extends GroupByData {
         return hasNext;
     }
 
+    /** {@inheritDoc} */
     @Override public ValueRow groupKey() {
         assert curEntry != null;
 
         return curEntry.getKey();
     }
 
+    /** {@inheritDoc} */
     @Override public Object[] groupByExprData() {
         assert curEntry != null;
 
         return curEntry.getValue();
     }
 
-    @Override public void cleanup() {
-        // TODO Cleanup aggregates and merge with reset()?
-    }
-
+    /** {@inheritDoc} */
     @Override public void reset() {
-        groupByData = new TreeMap<>(ses.getDatabase().getCompareMode());
+        grpByData = new TreeMap<>(ses.getDatabase().getCompareMode());
         lastGrpKey = null;
         cursor = null;
         curEntry = null;
     }
 
+    /** {@inheritDoc} */
     @Override public void remove() {
         assert cursor != null;
 
@@ -102,20 +114,23 @@ public class GroupedGroupByData extends GroupByData {
         onGroupChanged(curEntry.getKey(), curEntry.getValue(), null);
     }
 
+    /** {@inheritDoc} */
     @Override public void onRowProcessed() {
         // No-op.
     }
 
+    /** {@inheritDoc} */
     @Override public void updateCurrent(Object[] grpByExprData) {
-        Object[] old = groupByData.put(lastGrpKey, grpByExprData);
+        Object[] old = grpByData.put(lastGrpKey, grpByExprData);
 
         onGroupChanged(lastGrpKey, old, grpByExprData);
     }
 
+    /** {@inheritDoc} */
     @Override public void done(int width) {
-        if (grpIdx == null && groupByData.isEmpty())
-            groupByData.put(ValueRow.getEmpty(), new Object[width]);
+        if (grpIdx == null && grpByData.isEmpty())
+            grpByData.put(ValueRow.getEmpty(), new Object[width]);
 
-        cursor = groupByData.entrySet().iterator();
+        cursor = grpByData.entrySet().iterator();
     }
 }

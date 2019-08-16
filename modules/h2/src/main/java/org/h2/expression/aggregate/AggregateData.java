@@ -105,5 +105,8 @@ public abstract class AggregateData {
      */
     public void cleanup(Session ses) {}
 
+    /**
+     * @return Aggregate size in bytes.
+     */
     public abstract long getMemory();
 }

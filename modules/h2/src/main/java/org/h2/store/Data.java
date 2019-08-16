@@ -814,7 +814,7 @@ public class Data {
             assert pos - start == getValueLen(v)
                 : "value size error: got " + (pos - start) + " expected " + getValueLen(v);
         }
-        else  if (o instanceof AggregateDataCount) {
+        else if (o instanceof AggregateDataCount) {
             AggregateDataCount a = (AggregateDataCount)o;
             writeByte(AGG_DATA_COUNT);
             writeByte(a.isAll() ? BOOLEAN_TRUE : BOOLEAN_FALSE);

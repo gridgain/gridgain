@@ -92,8 +92,6 @@ public class DiskSpillingAbstractTest extends GridCommonAbstractTest {
         return cfg;
     }
 
-
-
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
@@ -119,6 +117,15 @@ public class DiskSpillingAbstractTest extends GridCommonAbstractTest {
 
 
         populateData();
+    }
+
+    /** */
+    @Override protected void afterTestsStopped() throws Exception {
+        super.afterTestsStopped();
+
+        stopAllGrids();
+
+        cleanPersistenceDir();
     }
 
     /** */
@@ -187,8 +194,6 @@ public class DiskSpillingAbstractTest extends GridCommonAbstractTest {
 
             List<List<?>> inMemRes = runSql(sql, lazy, HUGE_MEM_LIMIT);
 
-            log.info("In-memory result:\n" + inMemRes);
-
             assertFalse("In-memory result is empty.", inMemRes.isEmpty());
 
             assertWorkDirClean();
@@ -242,8 +247,8 @@ public class DiskSpillingAbstractTest extends GridCommonAbstractTest {
             if (log.isInfoEnabled())
                 log.info("In-memory time=" + (startOnDisk - startInMem) + ", on-disk time=" + (finish - startOnDisk));
 
-           // if (log.isDebugEnabled())
-                log.info("In-memory result:\n" + inMemRes + "\nOn disk result:\n" + onDiskRes);
+            if (log.isDebugEnabled())
+                log.debug("In-memory result:\n" + inMemRes + "\nOn disk result:\n" + onDiskRes);
 
             assertEqualsCollections(inMemRes, onDiskRes);
         }
@@ -258,6 +263,7 @@ public class DiskSpillingAbstractTest extends GridCommonAbstractTest {
     /**
      * Results for LISTAGG aggregate may arrive to reduce node in arbitrary order, so we need to fix this order
      * to be able to compare results.
+     *
      * @param res Result.
      */
     private void fixListAggsSort(List<List<?>> res) {

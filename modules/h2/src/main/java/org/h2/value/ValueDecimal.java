@@ -261,4 +261,5 @@ public class ValueDecimal extends Value {
         }
         return bd.setScale(scale, RoundingMode.HALF_UP);
     }
+
 }

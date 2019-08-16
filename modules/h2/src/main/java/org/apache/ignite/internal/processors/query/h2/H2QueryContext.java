@@ -30,6 +30,14 @@ public interface H2QueryContext {
      */
     H2MemoryTracker queryMemoryTracker();
 
-    GroupByData newGroupByDataInstance(Session session, ArrayList<Expression> expressions, boolean isGroupQuery,
-        int[] groupIndex);
+    /**
+     * Group-by data fabric method.
+     *
+     * @param ses Session.
+     * @param expressions Expressions.
+     * @param isGrpQry Group query flag.
+     * @param grpIdx Group-by fields indexes.
+     * @return Group-by data.
+     */
+    GroupByData newGroupByDataInstance(Session ses, ArrayList<Expression> expressions, boolean isGrpQry, int[] grpIdx);
 }

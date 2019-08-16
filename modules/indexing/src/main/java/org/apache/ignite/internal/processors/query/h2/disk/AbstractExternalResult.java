@@ -173,7 +173,9 @@ public abstract class AbstractExternalResult<T> implements AutoCloseable{
         return row;
     }
 
+    /** */
     protected abstract T[] createEmptyArray(int colCnt);
+
     /**
      * Reads row header starting from the current position.
      *
@@ -217,7 +219,7 @@ public abstract class AbstractExternalResult<T> implements AutoCloseable{
      * @return New data buffer.
      */
     @NotNull protected Data createDataBuffer(int cap) {
-        Data data = Data.create(null, cap, true); // TODO use org.h2.store.Data.getValueLen(org.h2.value.Value)
+        Data data = Data.create(null, cap, true);
 
         data.setCompareMode(cmp);
 
@@ -411,9 +413,8 @@ public abstract class AbstractExternalResult<T> implements AutoCloseable{
         return size;
     }
 
+    /** */
     public int size() {
         return size;
     }
-
-
 }

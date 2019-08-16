@@ -37,7 +37,8 @@ public class AggregateDataCount extends AggregateData {
         }
     }
 
-    @Override public void mergeAggregate(Session ses, AggregateData agg) {
+    @Override
+    public void mergeAggregate(Session ses, AggregateData agg) {
         assert agg != null;
         assert agg instanceof AggregateDataCount : agg.getClass();
 

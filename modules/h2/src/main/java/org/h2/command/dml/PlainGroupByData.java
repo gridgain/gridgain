@@ -22,7 +22,7 @@ import org.h2.engine.Session;
 import org.h2.value.ValueRow;
 
 /**
- * TODO: Add class description.
+ * In-memory group-by data for window queries.
  */
 public class PlainGroupByData extends GroupByData {
     /** Rows holder. */
@@ -34,6 +34,9 @@ public class PlainGroupByData extends GroupByData {
     /** Current aggregates row. */
     private Object[] curr;
 
+    /**
+     * @param ses Session.
+     */
     public PlainGroupByData(Session ses) {
         super(ses);
     }
@@ -91,13 +94,10 @@ public class PlainGroupByData extends GroupByData {
     }
 
     /** {@inheritDoc} */
-    @Override public void cleanup() {
-        // TODO: Cleanup aggregates and merge with reset()?
-    }
-
-    /** {@inheritDoc} */
     @Override public void reset() {
-        // TODO: CODE: implement.
+        rows = new ArrayList<>();
+        cursor = null;
+        curr = null;
     }
 
     /** {@inheritDoc} */

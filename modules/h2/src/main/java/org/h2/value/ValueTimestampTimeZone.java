@@ -288,4 +288,5 @@ public class ValueTimestampTimeZone extends Value {
         throw DbException.getUnsupportedException(
                 "manipulating TIMESTAMP WITH TIME ZONE values is unsupported");
     }
+
 }

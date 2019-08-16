@@ -23,4 +23,9 @@ public class DiskSpillingPersistenceTest extends DiskSpillingMultipleNodesTest {
     @Override protected boolean persistence() {
         return true;
     }
+
+    /** {@inheritDoc} */
+    @Override protected int nodeCount() {
+        return 2;
+    }
 }

@@ -31,26 +31,38 @@ import org.h2.value.ValueRow;
 import static org.h2.command.dml.SelectGroups.cleanupAggregates;
 
 /**
- * TODO: Add class description.
+ * Group by data with disk offload capabilities.
  */
-public class GroupedExternalGroupByData extends GroupByData {
-
+public class ManagedGroupByData extends GroupByData {
+    /** Indexes of group-by columns. */
     private final int[] grpIdx;
 
+    /** External group-by result (offloaded groups). */
     private GroupedExternalResult sortedExtRes;
 
+    /** In-memory buffer for groups. */
     private TreeMap<ValueRow, Object[]> groupByData;
 
+    /** */
     private ValueRow lastGrpKey;
+
+    /** */
     private Object[] lastGrpData;
 
+    /** */
     private Iterator<T2<ValueRow, Object[]>> cursor;
 
+    /** */
     Map.Entry<ValueRow, Object[]> curEntry;
 
+    /** */
     private int size;
 
-    public GroupedExternalGroupByData(Session ses, int[] grpIdx) {
+    /**
+     * @param ses Session.
+     * @param grpIdx Indexes of group-by columns.
+     */
+    public ManagedGroupByData(Session ses, int[] grpIdx) {
         super(ses);
 
         this.grpIdx = grpIdx;
@@ -58,11 +70,13 @@ public class GroupedExternalGroupByData extends GroupByData {
         groupByData = new TreeMap<>(ses.getDatabase().getCompareMode());
     }
 
+    /** */
     private void createExtGroupByData() {
         sortedExtRes = new GroupedExternalResult(((QueryContext)ses.getQueryContext()).context(), ses,
              tracker,  groupByData.size());
     }
 
+    /** {@inheritDoc} */
     @Override public Object[] nextSource(ValueRow grpKey, int width) {
         lastGrpKey = grpKey;
 
@@ -81,10 +95,12 @@ public class GroupedExternalGroupByData extends GroupByData {
         return lastGrpData;
     }
 
+    /** {@inheritDoc} */
     @Override public long size() {
         return size;
     }
 
+    /** {@inheritDoc} */
     @Override public boolean next() {
         assert cursor != null;
 
@@ -95,22 +111,21 @@ public class GroupedExternalGroupByData extends GroupByData {
         return hasNext;
     }
 
+    /** {@inheritDoc} */
     @Override public ValueRow groupKey() {
         assert curEntry != null;
 
         return curEntry.getKey();
     }
 
+    /** {@inheritDoc} */
     @Override public Object[] groupByExprData() {
         assert curEntry != null;
 
         return curEntry.getValue();
     }
 
-    @Override public void cleanup() {
-        // TODO Cleanup aggregates and merge with reset()?
-    }
-
+    /** {@inheritDoc} */
     @Override public void reset() {
         if (sortedExtRes != null) {
             sortedExtRes.close();
@@ -128,17 +143,13 @@ public class GroupedExternalGroupByData extends GroupByData {
         memReserved = 0;
     }
 
+    /** {@inheritDoc} */
     @Override public void remove() {
-        assert cursor != null;
-
-        cursor.remove();
-
-        onGroupChanged(curEntry.getKey(), curEntry.getValue(), null);
-
-        size--;
+        throw new UnsupportedOperationException("remove");
     }
 
-    @Override public void onRowProcessed() { // TODO exception for non-serializable aggregates.
+    /** {@inheritDoc} */
+    @Override public void onRowProcessed() {
         Object[] old = groupByData.put(lastGrpKey, lastGrpData);
 
         onGroupChanged(lastGrpKey, old, lastGrpData);
@@ -149,9 +160,11 @@ public class GroupedExternalGroupByData extends GroupByData {
 
             spillGroupsToDisk();
         }
-
     }
 
+    /**
+     * Does the actual disk spilling.
+     */
     private void spillGroupsToDisk() {
         sortedExtRes.spillGroupsToDisk(groupByData);
 
@@ -165,6 +178,7 @@ public class GroupedExternalGroupByData extends GroupByData {
         memReserved = 0;
     }
 
+    /** {@inheritDoc} */
     @Override public void updateCurrent(Object[] grpByExprData) {
         // Looks like group-by data size can be increased only on the very first group update.
         // What is the sense of having groups with the different aggregate arrays sizes?
@@ -176,6 +190,7 @@ public class GroupedExternalGroupByData extends GroupByData {
         onGroupChanged(lastGrpKey, old, grpByExprData);
     }
 
+    /** {@inheritDoc} */
     @Override public void done(int width) {
         if (grpIdx == null && sortedExtRes == null && groupByData.isEmpty())
             groupByData.put(ValueRow.getEmpty(), new Object[width]);
@@ -194,32 +209,26 @@ public class GroupedExternalGroupByData extends GroupByData {
             cursor = new GroupsIterator(groupByData.entrySet().iterator());
     }
 
-    public static void mergeAggregates(Object curAgg, Object newAgg, Session ses) {
-        assert (newAgg == null) == (curAgg == null) : "newAgg=" + newAgg + ", curAgg=" + curAgg;
-
-        if (newAgg == null)
-            return;
-
-        assert newAgg.getClass() == curAgg.getClass() : "newAgg=" + newAgg + ", curAgg=" + curAgg;
-
-        if (newAgg instanceof AggregateData)
-            ((AggregateData)curAgg).mergeAggregate(ses, (AggregateData)newAgg);
-        else if (!(newAgg instanceof Value)) // Aggregation means no-op for Value.
-            throw new UnsupportedOperationException("Unsupported aggregate:" +
-                newAgg.getClass() + ", curAgg=" + curAgg.getClass());
-    }
+    /**
+     * Iterator over in-memory groups.
+     */
     private static class GroupsIterator implements Iterator<T2<ValueRow, Object[]>> {
-
+        /**  */
         private final Iterator<Map.Entry<ValueRow, Object[]>> it;
 
+        /**
+         * @param it In-memory groups iterator.
+         */
         private GroupsIterator(Iterator<Map.Entry<ValueRow, Object[]>> it) {
             this.it = it;
         }
 
+        /** {@inheritDoc} */
         @Override public boolean hasNext() {
             return it.hasNext();
         }
 
+        /** {@inheritDoc} */
         @Override public T2<ValueRow, Object[]> next() {
             Map.Entry<ValueRow, Object[]> row = it.next();
 
@@ -227,15 +236,32 @@ public class GroupedExternalGroupByData extends GroupByData {
         }
     }
 
+    /**
+     * Iterator over offloaded (spilled) groups.
+     */
     private static class ExternalGroupsIterator implements Iterator<T2<ValueRow, Object[]>> {
+        /** */
         private final GroupedExternalResult sortedExtRes;
+
+        /** */
         private final CompareMode cmp;
+
+        /** */
         private final Session ses;
+
+        /** */
         private int extSize;
+
+        /** */
         private T2<ValueRow, Object[]> cur;
+
+        /** */
         private T2<ValueRow, Object[]> next;
 
-
+        /**
+         * @param res External result.
+         * @param ses Session.
+         */
         private ExternalGroupsIterator(GroupedExternalResult res, Session ses) {
             sortedExtRes = res;
             this.ses = ses;
@@ -244,10 +270,12 @@ public class GroupedExternalGroupByData extends GroupByData {
             advance();
         }
 
+        /** {@inheritDoc} */
         @Override public boolean hasNext() {
             return cur != null;
         }
 
+        /** {@inheritDoc} */
         @Override public T2<ValueRow, Object[]> next() {
             if (cur == null)
                 throw new NoSuchElementException();
@@ -260,6 +288,9 @@ public class GroupedExternalGroupByData extends GroupByData {
             return res;
         }
 
+        /**
+         * Moves cursor forward.
+         */
         private void advance() {
             assert next == null;
 
@@ -290,10 +321,10 @@ public class GroupedExternalGroupByData extends GroupByData {
 
                     break;
                 }
-
             }
         }
 
+        /** */
         T2<ValueRow, Object[]> getEntry(Object[] row) {
             Object[] aggs = new Object[row.length - 1];
 
@@ -301,6 +332,21 @@ public class GroupedExternalGroupByData extends GroupByData {
 
             return new T2<>((ValueRow)row[0], aggs);
         }
-    }
 
+        /**  */
+        private static void mergeAggregates(Object curAgg, Object newAgg, Session ses) {
+            assert (newAgg == null) == (curAgg == null) : "newAgg=" + newAgg + ", curAgg=" + curAgg;
+
+            if (newAgg == null)
+                return;
+
+            assert newAgg.getClass() == curAgg.getClass() : "newAgg=" + newAgg + ", curAgg=" + curAgg;
+
+            if (newAgg instanceof AggregateData)
+                ((AggregateData)curAgg).mergeAggregate(ses, (AggregateData)newAgg);
+            else if (!(newAgg instanceof Value)) // Aggregation means no-op for Value.
+                throw new UnsupportedOperationException("Unsupported aggregate:" +
+                    newAgg.getClass() + ", curAgg=" + curAgg.getClass());
+        }
+    }
 }

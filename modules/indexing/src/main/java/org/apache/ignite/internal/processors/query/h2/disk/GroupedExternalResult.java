@@ -24,17 +24,14 @@ import java.util.Queue;
 import java.util.TreeMap;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
-import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.h2.engine.Session;
 import org.h2.store.Data;
 import org.h2.value.Value;
 import org.h2.value.ValueRow;
 import org.jetbrains.annotations.NotNull;
 
-import static org.h2.command.dml.SelectGroups.cleanupAggregates;
-
 /**
- * TODO: Add class description.
+ * Wrapper for spilled groups file.
  */
 public class GroupedExternalResult extends AbstractExternalResult<Object>  {
     /** Last written to file position. */
@@ -51,7 +48,7 @@ public class GroupedExternalResult extends AbstractExternalResult<Object>  {
 
     /**
      * @param ses Session.
-     * @param ctx Kernal context.
+     * @param ctx Kernel context.
      * @param memTracker MemoryTracker.
      * @param initSize Initial size;
      */
@@ -66,7 +63,7 @@ public class GroupedExternalResult extends AbstractExternalResult<Object>  {
     }
 
 
-    /** {@inheritDoc} */
+    /** */
     public Object[] next() {
         if (resQueue.isEmpty())
             return null;
@@ -81,6 +78,9 @@ public class GroupedExternalResult extends AbstractExternalResult<Object>  {
         return row;
     }
 
+    /**
+     * @param data Groups to spill.
+     */
     public void spillGroupsToDisk(TreeMap<ValueRow, Object[]> data) {
         size += data.size();
 
@@ -109,11 +109,14 @@ public class GroupedExternalResult extends AbstractExternalResult<Object>  {
         lastWrittenPos = initFilePos + written;
 
         chunks.add(new Chunk(initFilePos, lastWrittenPos));
-
-
     }
 
-
+    /**
+     * Creates merged array of key and aggs.
+     * @param key Key.
+     * @param aggs Aggregates.
+     * @return Merged array.
+     */
     @NotNull private Object[] getObjectsArray(ValueRow key, Object[] aggs) {
         Object[] newRow = new Object[aggs.length + 1];
 
@@ -125,7 +128,7 @@ public class GroupedExternalResult extends AbstractExternalResult<Object>  {
     }
 
 
-    /** {@inheritDoc} */
+    /** Invoked after all rows have been spilled to disk.*/
     public void reset() {
         if (resQueue != null) {
             resQueue.clear();
@@ -163,7 +166,6 @@ public class GroupedExternalResult extends AbstractExternalResult<Object>  {
     @Override protected void onClose() {
         super.onClose();
     }
-
 
     /**
      * Extracts distinct row key from the row.

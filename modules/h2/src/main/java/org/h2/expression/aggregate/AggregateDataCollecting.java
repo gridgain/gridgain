@@ -81,7 +81,8 @@ public class AggregateDataCollecting extends AggregateData implements Iterable<V
         }
     }
 
-    @Override public void mergeAggregate(Session ses, AggregateData agg) {
+    @Override
+    public void mergeAggregate(Session ses, AggregateData agg) {
         assert agg != null;
         assert agg instanceof AggregateDataCollecting : agg.getClass();
 
@@ -160,18 +161,22 @@ public class AggregateDataCollecting extends AggregateData implements Iterable<V
         }
     }
 
+    /** */
     @Override public long getMemory() {
         return memReserved;
     }
 
+    /** */
     public boolean isDistinct() {
         return distinct;
     }
 
+    /** */
     public Collection<Value> values() {
         return values;
     }
 
+    /** */
     public static AggregateDataCollecting from(boolean distinct, Collection<Value> values, Value shared) {
         return new AggregateDataCollecting(distinct, values, shared);
     }

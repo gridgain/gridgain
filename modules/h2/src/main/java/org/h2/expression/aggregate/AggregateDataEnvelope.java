@@ -67,7 +67,6 @@ class AggregateDataEnvelope extends AggregateData {
 
     @Override
     public void mergeAggregate(Session ses, AggregateData agg) {
-        // TODO https://ggsystems.atlassian.net/browse/GG-22406
         throw new UnsupportedOperationException();
     }
 
@@ -76,7 +75,8 @@ class AggregateDataEnvelope extends AggregateData {
         return ValueGeometry.fromEnvelope(envelope);
     }
 
-    @Override public long getMemory() {
+    @Override
+    public long getMemory() {
         throw new UnsupportedOperationException();
     }
 }

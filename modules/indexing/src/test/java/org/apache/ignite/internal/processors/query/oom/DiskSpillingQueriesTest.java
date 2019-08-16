@@ -25,14 +25,6 @@ import org.junit.runners.Parameterized;
 
 /**
  * Test for the intermediate query results disk offloading (disk spilling).
- * TODO Fix big decimal
- * TODO: Cleanup code.
- * TODO: Strange memory tracking results. Do I handle tracking properly? cleanup aggregates memory before spilling them
- *
- * Later:
- * TODO resolve GG-22406 - aggregates
- *
- *
  */
 @RunWith(Parameterized.class)
 public class DiskSpillingQueriesTest extends DiskSpillingAbstractTest {
@@ -367,6 +359,17 @@ public class DiskSpillingQueriesTest extends DiskSpillingAbstractTest {
             "SELECT age, code, COUNT(*), AVG(salary) FROM person GROUP BY code, age " +
                 "UNION " +
                 "SELECT age, name, SUM(age), MIN(salary) FROM person GROUP BY name, age");
+    }
+
+    /** */
+    @Test
+    public void groupByWithExcept() {
+        checkGroupsSpilled = true;
+
+        assertInMemoryAndOnDiskSameResults(true,
+            "SELECT age, code, COUNT(id) FROM person GROUP BY code, age " +
+                "EXCEPT " +
+                "SELECT age, name, COUNT(temperature) FROM person GROUP BY name, age");
     }
 
     /** */

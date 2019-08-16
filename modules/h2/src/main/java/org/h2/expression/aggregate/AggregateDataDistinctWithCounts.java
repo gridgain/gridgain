@@ -73,7 +73,6 @@ class AggregateDataDistinctWithCounts extends AggregateData  {
 
     @Override
     public void mergeAggregate(Session ses, AggregateData agg) {
-        // TODO https://ggsystems.atlassian.net/browse/GG-22406
         throw new UnsupportedOperationException();
     }
 

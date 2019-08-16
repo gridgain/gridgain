@@ -68,7 +68,7 @@ public abstract class SelectGroups {
         public void reset() {
             super.reset();
             if (groupByData != null) {
-                groupByData.cleanup();
+                groupByData.reset();
             }
 
             groupByData = session.newGroupByDataInstance(session, expressions, true, groupIndex);
@@ -95,7 +95,7 @@ public abstract class SelectGroups {
         }
 
         @Override public ValueRow currGroupKey() {
-            return currentGroupsKey; // TODO: CODE: implement.
+            return currentGroupsKey;
         }
 
         @Override
@@ -154,7 +154,7 @@ public abstract class SelectGroups {
         }
 
         @Override public ValueRow currGroupKey() {
-            return null; // TODO: CODE: implement.
+            return null;
         }
 
         @Override
@@ -385,12 +385,6 @@ public abstract class SelectGroups {
         windowData.clear();
         windowPartitionData.clear();
         currentGroupRowId = 0;
-
-//        if (trackable()) { TODO Do we really need to release memory here?
-//            session.queryMemoryTracker().released(memReserved);
-//
-//            memReserved = 0;
-//        }
     }
 
     /**
@@ -468,5 +462,6 @@ public abstract class SelectGroups {
         return expressions;
     }
 
+    /** Invoked on row processing finish. */
     abstract void onRowProcessed();
 }

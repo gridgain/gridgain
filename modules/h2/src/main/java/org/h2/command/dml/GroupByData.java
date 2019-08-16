@@ -21,12 +21,13 @@ import org.h2.engine.Session;
 import org.h2.value.ValueRow;
 
 /**
- * TODO: Add interface description.
+ * Group-by data holder.
  */
 public abstract class GroupByData {
-
+    /** */
     protected final H2MemoryTracker tracker;
 
+    /** */
     protected final Session ses;
 
     /**
@@ -36,6 +37,9 @@ public abstract class GroupByData {
      */
     protected long memReserved;
 
+    /**
+     * @param ses Session.
+     */
     protected GroupByData(Session ses) {
         this.ses = ses;
         this.tracker = ses.queryMemoryTracker();
@@ -44,32 +48,58 @@ public abstract class GroupByData {
             memReserved = -1;
     }
 
+    /**
+     * This method is called for each new row emitted from the source. See {@link SelectGroups} javadoc.
+     * @param grpKey Group key.
+     * @param width Aggregates array width.
+     * @return Aggregates.
+     */
     public abstract Object[] nextSource(ValueRow grpKey, int width);
 
+    /**
+     * Updates current aggregates data.
+     * @param grpByExprData New aggregates data.
+     */
     public abstract void updateCurrent(Object[] grpByExprData);
 
-
+    /**
+     * @return Size.
+     */
     public abstract long size();
 
+    /**
+     * @return {@code True} if has next.
+     */
     public abstract boolean next();
 
+    /**
+     * @return Current group key.
+     */
     public abstract ValueRow groupKey();
 
+    /**
+     * @return Current group aggregates data.
+     */
     public abstract Object[] groupByExprData();
 
-    public abstract void cleanup();
-
-
+    /**
+     * This method is called when gathering the groups is done and we are ready to iterate over them.
+     * @param width Aggregates array width.
+     */
     public abstract void done(int width);
 
+    /**
+     * Resets group by data.
+     */
     public abstract void reset();
 
-
+    /** */
     public abstract void remove();
 
+    /**
+     * This method is called when we finished source row processing.
+     */
     public abstract void onRowProcessed();
-
-
 
     /**
      * Group result updated callback.
