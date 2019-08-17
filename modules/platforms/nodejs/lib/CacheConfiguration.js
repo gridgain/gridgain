@@ -237,7 +237,7 @@ class QueryEntity {
     }
 
     /**
-     * Sets query fields for this query pair. The order if fields is important as it
+     * Sets query fields for this query pair. The order of the fields is important as it
      * defines the order of columns returned by the 'select *' queries.
      *
      * @param {Array<QueryField>} fields - Array of query fields.
@@ -250,7 +250,7 @@ class QueryEntity {
     }
 
     /**
-     * Gets query fields for this query pair. The order of fields is important as it
+     * Gets query fields for this query pair. The order of the fields is
      * defines the order of columns returned by the 'select *' queries.
      *
      * @return {Array<QueryField>} - Array of query fields.
@@ -260,7 +260,7 @@ class QueryEntity {
     }
 
     /**
-     * Sets mapping from full property name in dot notation to an alias that will be
+     * Sets mapping from a full property name in dot notation to an alias that will be
      * used as SQL column name. Example: {"parent.name" -> "parentName"}.
      *
      * @param {Map<string, string>} aliases - Aliases map.
@@ -719,8 +719,8 @@ class QueryIndex {
     }
 
     /**
-     * Sets index inline size in bytes. When enabled part of indexed value will be placed directly
-     * to index pages, thus minimizing data page accesses, thus increasing query performance.
+     * Sets index inline size in bytes. When enabled, a part of the indexed value is placed directly
+     * to the index pages, thus minimizing data page accesses and increasing query performance.
      *
      * @param {number} inlineSize - Index inline size in bytes.
      *
@@ -732,8 +732,8 @@ class QueryIndex {
     }
 
     /**
-     * Gets index inline size in bytes. When enabled part of indexed value will be placed directly
-     * to index pages, thus minimizing data page accesses, thus increasing query performance.
+     * Gets index inline size in bytes. When enabled, a part of the indexed value is placed directly
+     * to the index pages, thus minimizing data page accesses and increasing query performance.
      *
      * @return {number} - Index inline size in bytes.
      */
@@ -744,7 +744,7 @@ class QueryIndex {
     /**
      * Sets fields included in the index.
      *
-     * @param {Map<string, boolean>} fields - Map of index fields.
+     * @param {Map<string, boolean>} fields - Map of the index fields.
      *
      * @return {QueryIndex} - the same instance of the QueryIndex.
      */
@@ -756,7 +756,7 @@ class QueryIndex {
     /**
      * Gets fields included in the index.
      *
-     * @return {Map<string, boolean>} - Map of index fields.
+     * @return {Map<string, boolean>} - Map of the index fields.
      */
     getFields() {
         return this._fields;
@@ -1063,8 +1063,8 @@ class CacheConfiguration {
 
     /**
      * Gets the flag indicating whether a copy of the value stored in the on-heap cache
-     * should be created for a cache operation return the value. Also if this flag
-     * is set copies are created for values passed to CacheInterceptor and to CacheEntryProcessor.
+     * should be created for a cache operation return the value. Also, if this flag
+     * is set, copies are created for values passed to CacheInterceptor and to CacheEntryProcessor.
      * If the on-heap cache is disabled then this flag is of no use.
      *
      * @return {boolean} - Copy on read flag.
@@ -1186,7 +1186,7 @@ class CacheConfiguration {
     }
 
     /**
-     * Sets maximum number of concurrent asynchronous operations.
+     * Sets maximum number of allowed concurrent asynchronous operations.
      *
      * @param {number} maxConcurrentAsyncOperations - Maximum number of concurrent asynchronous operations.
      *
@@ -1231,7 +1231,7 @@ class CacheConfiguration {
     }
 
     /**
-     * Configures on-heap cache for the off-heap based page memory.
+     * Enables/disables on-heap cache for the off-heap based page memory.
      *
      * @param {boolean} isOnheapCacheEnabled - On-heap cache enabled flag.
      *
@@ -1279,6 +1279,7 @@ class CacheConfiguration {
 
     /**
      * Sets size of queries detail metrics that will be stored in memory for monitoring purposes.
+     * Note, larger number may lead to higher memory consumption.
      *
      * @param {number} queryDetailMetricsSize - Maximum number of latest queries metrics that will be stored in memory.
      *
@@ -1325,7 +1326,8 @@ class CacheConfiguration {
     /**
      * Sets read from backup flag.
      *
-     * @param {boolean} readFromBackup - True to allow reads from backups.
+     * @param {boolean} readFromBackup - True to allow reads from backups. False - data always
+     * should be read from primary node and never from backup.
      *
      * @return {CacheConfiguration} - the same instance of the CacheConfiguration.
      */
@@ -1335,8 +1337,7 @@ class CacheConfiguration {
     }
 
     /**
-     * Gets flag indicating whether data can be read from backup. If false always get data
-     * from primary node (never from backup).
+     * Gets flag indicating whether data can be read from backup.
      *
      * @return {boolean} - true if data can be read from backup node or false if data always
      *  should be read from primary node and never from backup.
@@ -1349,7 +1350,7 @@ class CacheConfiguration {
      * Sets rebalance batch size (to be loaded within a single rebalance message). Rebalancing algorithm will split
      * total data set on every node into multiple batches prior to sending data.
      *
-     * @param {number} rebalanceBatchSize - Rebalance batch size.
+     * @param {number} rebalanceBatchSize - Rebalance batch size (size in bytes of a single rebalance message).
      *
      * @return {CacheConfiguration} - the same instance of the CacheConfiguration.
      */
@@ -1419,7 +1420,7 @@ class CacheConfiguration {
     }
 
     /**
-     * Sets cache rebalance mode.
+     * Sets rebalance mode for distributed cache.
      *
      * @param {CacheConfiguration.REABALANCE_MODE} rebalanceMode - Rebalance mode.
      *
@@ -1480,7 +1481,7 @@ class CacheConfiguration {
     }
 
     /**
-     * Sets time in milliseconds to wait between rebalance messages to avoid overloading of CPU or network.
+     * Gets time in milliseconds to wait between rebalance messages to avoid overloading of CPU or network.
      *
      * @return {number} - Time in millis to wait between rebalance messages, 0 - throttling disabled.
      */
