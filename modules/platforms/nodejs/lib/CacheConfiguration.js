@@ -674,7 +674,7 @@ class QueryIndex {
     }
 
     /**
-     * Sets query index name.
+     * Sets query index name. Will be automatically set if not provided by a user.
      *
      * @param {string} name - Query index name.
      *
@@ -686,7 +686,7 @@ class QueryIndex {
     }
 
     /**
-     * Gets query index name. Will be automatically set if not provided by a user.
+     * Gets query index name.
      *
      * @return {string} - Query index name.
      */
@@ -720,7 +720,14 @@ class QueryIndex {
 
     /**
      * Sets index inline size in bytes. When enabled, a part of the indexed value is placed directly
-     * to the index pages, thus minimizing data page accesses and increasing query performance.
+     * to the index pages, thus minimizing data page accesses and increasing query performance. Allowed values:
+     *   - -1 (default) - determine inline size automatically (see below)
+     *   - 0 - index inline is disabled (not recommended)
+     *   - positive value - fixed index inline
+     *
+     * When set to -1, Ignite will try to detect inline size automatically. It will be no more than
+     * CacheConfiguration.getSqlIndexInlineMaxSize(). Index inline will be enabled for all fixed-length types,
+     * but will not be enabled for String.
      *
      * @param {number} inlineSize - Index inline size in bytes.
      *
@@ -732,8 +739,7 @@ class QueryIndex {
     }
 
     /**
-     * Gets index inline size in bytes. When enabled, a part of the indexed value is placed directly
-     * to the index pages, thus minimizing data page accesses and increasing query performance.
+     * Gets index inline size in bytes.
      *
      * @return {number} - Index inline size in bytes.
      */
@@ -1050,7 +1056,10 @@ class CacheConfiguration {
     }
 
     /**
-     * Sets copy on read flag.
+     * Sets the flag indicating whether a copy of the value stored in the on-heap cache
+     * should be created for a cache operation return the value. Also, if this flag
+     * is set, copies are created for values passed to CacheInterceptor and to CacheEntryProcessor.
+     * If the on-heap cache is disabled then this flag is of no use.
      *
      * @param {boolean} copyOnRead - Copy on read flag.
      *
@@ -1062,10 +1071,7 @@ class CacheConfiguration {
     }
 
     /**
-     * Gets the flag indicating whether a copy of the value stored in the on-heap cache
-     * should be created for a cache operation return the value. Also, if this flag
-     * is set, copies are created for values passed to CacheInterceptor and to CacheEntryProcessor.
-     * If the on-heap cache is disabled then this flag is of no use.
+     * Gets copy on read flag.
      *
      * @return {boolean} - Copy on read flag.
      */
@@ -1186,7 +1192,8 @@ class CacheConfiguration {
     }
 
     /**
-     * Sets maximum number of allowed concurrent asynchronous operations.
+     * Sets maximum number of allowed concurrent asynchronous operations. 0 - the number of concurrent asynchronous
+     * operations is unlimited.
      *
      * @param {number} maxConcurrentAsyncOperations - Maximum number of concurrent asynchronous operations.
      *
@@ -1208,7 +1215,9 @@ class CacheConfiguration {
     }
 
     /**
-     * Sets maximum number of query iterators that can be stored.
+     * Sets maximum number of query iterators that can be stored. Iterators are stored to support query
+     * pagination when each page of data is sent to user's node only on demand. Increase this property
+     * if you are running and processing lots of queries in parallel.
      *
      * @param {number} maxQueryIterators - Maximum number of query iterators that can be stored.
      *
@@ -1220,9 +1229,7 @@ class CacheConfiguration {
     }
 
     /**
-     * Gets maximum number of query iterators that can be stored. Iterators are stored to support query
-     * pagination when each page of data is sent to user's node only on demand. Increase this property
-     * if you are running and processing lots of queries in parallel.
+     * Gets maximum number of query iterators that can be stored.
      *
      * @return {number} - Maximum number of query iterators that can be stored.
      */
@@ -1279,7 +1286,7 @@ class CacheConfiguration {
 
     /**
      * Sets size of queries detail metrics that will be stored in memory for monitoring purposes.
-     * Note, larger number may lead to higher memory consumption.
+     * If 0, then history will not be collected. Note, larger number may lead to higher memory consumption.
      *
      * @param {number} queryDetailMetricsSize - Maximum number of latest queries metrics that will be stored in memory.
      *
@@ -1292,7 +1299,7 @@ class CacheConfiguration {
 
     /**
      * Gets size of queries detail metrics that will be stored in memory for monitoring purposes.
-     * If 0 then history will not be collected. Note, larger number may lead to higher memory consumption.
+     * If 0, then history will not be collected. Note, larger number may lead to higher memory consumption.
      *
      * @return {number} - Maximum number of query metrics that will be stored in memory.
      */
@@ -1301,7 +1308,9 @@ class CacheConfiguration {
     }
 
     /**
-     * Sets query parallelism.
+     * Defines a hint to query execution engine on desired degree of parallelism within a single node.
+     * Query executor may or may not use this hint depending on estimated query costs.
+     * Query executor may define certain restrictions on parallelism depending on query type and/or cache type.
      *
      * @param {number} queryParallelism - Query parallelism.
      *
@@ -1313,9 +1322,8 @@ class CacheConfiguration {
     }
 
     /**
-     * Defines a hint to query execution engine on desired degree of parallelism within a single node.
-     * Query executor may or may not use this hint depending on estimated query costs.
-     * Query executor may define certain restrictions on parallelism depending on query type and/or cache type.
+     * Gets query parallelism parameter which is a hint to query execution engine on desired degree of
+     * parallelism within a single node.
      *
      * @return {number} - Query parallelism.
      */
