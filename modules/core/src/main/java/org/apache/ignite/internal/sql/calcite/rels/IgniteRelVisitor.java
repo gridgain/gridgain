@@ -13,32 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.internal.sql.calcite.expressions;
+package org.apache.ignite.internal.sql.calcite.rels;
 
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
-import java.util.List;
+import org.apache.calcite.rel.core.Join;
 
 /**
  * TODO: Add class description.
  */
-public class FieldGetter implements Expression {
-    private int idx;
+public interface IgniteRelVisitor {
+    void onUnionExchange(UnionExchangeRel exch);
 
-    public FieldGetter(int idx) {
-        this.idx = idx;
-    }
+    void onRehashingExchange(RehashingExchange exch);
 
-    @Override public Object evaluate(List row) {
-        return row.get(idx);
-    }
+    void onFilter(FilterRel filter);
 
-    @Override public void writeExternal(ObjectOutput out) throws IOException {
-        out.writeInt(idx);
-    }
+    void onJoin(Join join);
 
-    @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-        idx = in.readInt();
-    }
+    void onProject(ProjectRel project);
+
+    void onTableScan(TableScanRel scan);
 }

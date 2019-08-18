@@ -13,32 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.internal.sql.calcite.expressions;
+package org.apache.ignite.internal.sql.calcite.iterators;
 
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
 import java.util.List;
 
 /**
  * TODO: Add class description.
  */
-public class FieldGetter implements Expression {
-    private int idx;
+public abstract class PhysicalOperator implements Iterable<List<?>> {
 
-    public FieldGetter(int idx) {
-        this.idx = idx;
-    }
-
-    @Override public Object evaluate(List row) {
-        return row.get(idx);
-    }
-
-    @Override public void writeExternal(ObjectOutput out) throws IOException {
-        out.writeInt(idx);
-    }
-
-    @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-        idx = in.readInt();
-    }
 }

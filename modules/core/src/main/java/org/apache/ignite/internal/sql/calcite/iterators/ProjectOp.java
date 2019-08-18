@@ -13,60 +13,53 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.internal.sql.calcite.ops;
+package org.apache.ignite.internal.sql.calcite.iterators;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
-import org.apache.ignite.internal.sql.calcite.expressions.Condition;
+import org.apache.ignite.IgniteException;
 import org.jetbrains.annotations.NotNull;
-
-import static org.apache.ignite.internal.sql.calcite.expressions.Condition.buildFilterCondition;
 
 /**
  * TODO: Add class description.
  */
-public class FilterOp extends PhysicalOperator {
-    private final PhysicalOperator rowsSrc;
-    private final Condition filterCondition;
+public class ProjectOp extends PhysicalOperator {
 
-    public FilterOp(PhysicalOperator rowsSrc, RexNode expression) {
+    private final PhysicalOperator rowsSrc;
+    private final List<RexNode> projects;
+
+    public ProjectOp(PhysicalOperator rowsSrc, List<RexNode> projects) {
         this.rowsSrc = rowsSrc;
-        filterCondition = (Condition)buildFilterCondition(expression);
+        this.projects = projects;
     }
 
     @NotNull @Override public Iterator<List<?>> iterator() {
-        Iterator<List<?>> srcIt = rowsSrc.iterator();
-
+        Iterator<List<?>> srcIter = rowsSrc.iterator();
         return new Iterator<List<?>>() {
-            private List<?> cur = findNext();
-
             @Override public boolean hasNext() {
-                return cur != null;
+                return srcIter.hasNext(); // TODO: CODE: implement.
             }
 
             @Override public List<?> next() {
-                List<?> res = cur;
+                List<?> srcRow = srcIter.next();
 
-                cur = findNext();
+                List projectedRow = new ArrayList<>(projects.size());
 
-                return res;
-            }
+                for (RexNode projection : projects) {
+                    if (!(projection instanceof RexInputRef))
+                        throw new IgniteException("Unsupported projection type: " + projection.getClass());
 
-            private List<?> findNext() {
-                while (srcIt.hasNext()) {
-                    List<?> r = srcIt.next();
+                    int colId = ((RexInputRef)projection).getIndex();
 
-                    if (filterCondition.evaluate(r)) {
-                        return r;
-                    }
+                    Object obj = srcRow.get(colId);
+                    projectedRow.add(obj);
                 }
 
-                return null;
+                return projectedRow; // TODO: CODE: implement.
             }
-        };
+        }; // TODO: CODE: implement.
     }
-
-
-
 }

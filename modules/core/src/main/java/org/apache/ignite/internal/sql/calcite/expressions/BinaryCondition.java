@@ -15,6 +15,9 @@
  */
 package org.apache.ignite.internal.sql.calcite.expressions;
 
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.util.List;
 import java.util.Objects;
 import org.apache.calcite.sql.SqlKind;
@@ -24,9 +27,9 @@ import org.apache.ignite.IgniteException;
  * TODO: Add class description.
  */
 public class BinaryCondition implements Condition {
-    private final SqlKind kind;
-    private final Expression left;
-    private final Expression right;
+    private SqlKind kind;
+    private Expression left;
+    private Expression right;
 
     public BinaryCondition(SqlKind kind, Expression left, Expression right) {
         this.kind = kind;
@@ -81,5 +84,17 @@ public class BinaryCondition implements Condition {
         }
 
         return Objects.equals(l, r);
+    }
+
+    @Override public void writeExternal(ObjectOutput out) throws IOException {
+        out.writeInt(kind.ordinal());
+        out.writeObject(left);
+        out.writeObject(right);
+    }
+
+    @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+        kind = SqlKind.values()[in.readInt()];
+        left = (Expression)in.readObject();
+        right = (Expression)in.readObject();
     }
 }

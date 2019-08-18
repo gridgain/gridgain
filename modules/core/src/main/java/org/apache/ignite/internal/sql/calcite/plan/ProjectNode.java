@@ -13,32 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.internal.sql.calcite.expressions;
+package org.apache.ignite.internal.sql.calcite.plan;
 
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.util.List;
 
 /**
  * TODO: Add class description.
  */
-public class FieldGetter implements Expression {
-    private int idx;
+public class ProjectNode implements PlanNode {
+    private PlanNode input;
 
-    public FieldGetter(int idx) {
-        this.idx = idx;
-    }
+    private int[] prjIdx; // TODO other types of projections (RexNode)
 
-    @Override public Object evaluate(List row) {
-        return row.get(idx);
+    public ProjectNode(int[] prjIdx) {
+        this.prjIdx = prjIdx;
     }
 
     @Override public void writeExternal(ObjectOutput out) throws IOException {
-        out.writeInt(idx);
+        out.writeObject(prjIdx);
+        out.writeObject(input);
     }
 
     @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-        idx = in.readInt();
+        prjIdx = (int[])in.readObject();
+        input = (PlanNode)in.readObject();
     }
 }

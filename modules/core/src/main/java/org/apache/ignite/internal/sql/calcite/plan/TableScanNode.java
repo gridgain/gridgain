@@ -13,18 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.internal.sql.calcite.physical;
+package org.apache.ignite.internal.sql.calcite.plan;
 
-import org.apache.calcite.plan.RelOptRule;
-import org.apache.calcite.plan.RelOptRuleOperand;
-import org.apache.calcite.rel.core.RelFactories;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 
 /**
  * TODO: Add class description.
  */
-public abstract class IgniteRule extends RelOptRule {
+public class TableScanNode implements PlanNode {
 
-    public IgniteRule(RelOptRuleOperand operand,  String desc) {
-        super(operand, RelFactories.LOGICAL_BUILDER, desc);
+    private String tableName;
+
+    private String cacheName;
+
+    public TableScanNode(String tableName, String cacheName) {
+        this.tableName = tableName;
+        this.cacheName = cacheName;
+    }
+
+    @Override public void writeExternal(ObjectOutput out) throws IOException {
+        out.writeUTF(tableName);
+        out.writeUTF(cacheName);
+
+    }
+
+    @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+        tableName = in.readUTF();
+        cacheName = in.readUTF();
     }
 }

@@ -13,8 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.internal.sql.calcite.expressions;
+package org.apache.ignite.internal.sql.calcite.plan;
 
+import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
@@ -23,22 +24,28 @@ import java.util.List;
 /**
  * TODO: Add class description.
  */
-public class FieldGetter implements Expression {
-    private int idx;
+public class SubPlan implements Externalizable {
+    private int id;
 
-    public FieldGetter(int idx) {
-        this.idx = idx;
-    }
+    private PlanNode subPlan;
 
-    @Override public Object evaluate(List row) {
-        return row.get(idx);
-    }
+    private List<Integer> inputSubPlans;
+
+    private int outputSubPlan;
+
+
 
     @Override public void writeExternal(ObjectOutput out) throws IOException {
-        out.writeInt(idx);
+        out.writeInt(id);
+        out.writeInt(outputSubPlan);
+        out.writeObject(inputSubPlans);
+        out.writeObject(subPlan);
     }
 
     @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-        idx = in.readInt();
+        id = in.readInt();
+        outputSubPlan = in.readInt();
+        inputSubPlans = (List<Integer>)in.readObject();
+        subPlan = (PlanNode)in.readObject();
     }
 }

@@ -19,11 +19,11 @@ package org.apache.ignite.internal.sql.calcite;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.ignite.internal.jdbc2.JdbcUtils;
-import org.apache.ignite.internal.sql.calcite.physical.ExchangeRule;
-import org.apache.ignite.internal.sql.calcite.physical.FilterRule;
-import org.apache.ignite.internal.sql.calcite.physical.JoinRule;
-import org.apache.ignite.internal.sql.calcite.physical.ProjectRule;
-import org.apache.ignite.internal.sql.calcite.physical.TableScanRule;
+import org.apache.ignite.internal.sql.calcite.rels.ExchangeRule;
+import org.apache.ignite.internal.sql.calcite.rels.FilterRule;
+import org.apache.ignite.internal.sql.calcite.rels.JoinRule;
+import org.apache.ignite.internal.sql.calcite.rels.ProjectRule;
+import org.apache.ignite.internal.sql.calcite.rels.TableScanRule;
 
 /**
  * TODO: Add class description.

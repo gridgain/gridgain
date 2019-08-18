@@ -13,13 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.internal.sql.calcite.ops;
+package org.apache.ignite.internal.sql.calcite.rels;
 
-import java.util.List;
+import org.apache.calcite.plan.RelOptRule;
+import org.apache.calcite.plan.RelOptRuleOperand;
+import org.apache.calcite.rel.core.RelFactories;
 
 /**
  * TODO: Add class description.
  */
-public abstract class PhysicalOperator implements Iterable<List<?>> {
+public abstract class IgniteRule extends RelOptRule {
 
+    public IgniteRule(RelOptRuleOperand operand,  String desc) {
+        super(operand, RelFactories.LOGICAL_BUILDER, desc);
+    }
 }

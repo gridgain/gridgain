@@ -15,6 +15,9 @@
  */
 package org.apache.ignite.internal.sql.calcite.expressions;
 
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.math.BigDecimal;
 import java.util.List;
 import org.apache.calcite.rel.type.RelDataType;
@@ -25,7 +28,7 @@ import org.apache.calcite.rex.RexLiteral;
  */
 public class Constant implements Expression {
 
-    private final Object constant;
+    private Object constant;
 
     public Constant(RexLiteral literal) {
         this.constant = convertValueIfNeeded(literal.getValue(), literal.getType());
@@ -40,5 +43,13 @@ public class Constant implements Expression {
             return ((BigDecimal)val).longValue(); // TODO DECIMAL types
 
         return val;
+    }
+
+    @Override public void writeExternal(ObjectOutput out) throws IOException {
+        out.writeObject(constant);
+    }
+
+    @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+        constant = in.readObject();
     }
 }

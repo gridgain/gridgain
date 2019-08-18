@@ -15,12 +15,13 @@
  */
 package org.apache.ignite.internal.sql.calcite.expressions;
 
+import java.io.Externalizable;
 import java.util.List;
 
 /**
  * TODO: Need to rethink it.
  */
-public interface Expression {
+public interface Expression extends Externalizable {
 
     Object evaluate(List row);
 }

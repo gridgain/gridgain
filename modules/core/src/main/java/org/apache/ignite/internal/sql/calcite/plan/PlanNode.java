@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.internal.sql.calcite.physical;
+package org.apache.ignite.internal.sql.calcite.plan;
 
-import org.apache.calcite.rel.RelNode;
+import java.io.Externalizable;
 
 /**
- * TODO: Add class description.
+ * TODO: Add interface description.
  */
-public interface IgniteRel extends RelNode {
+public interface PlanNode extends Externalizable {
 
 }

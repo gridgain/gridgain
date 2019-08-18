@@ -17,7 +17,7 @@ package org.apache.ignite.internal.sql.calcite;
 
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.plan.RelTraitSet;
-import org.apache.ignite.internal.sql.calcite.physical.IgniteRel;
+import org.apache.ignite.internal.sql.calcite.rels.IgniteRel;
 
 /**
  * TODO: Add class description.

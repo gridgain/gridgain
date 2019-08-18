@@ -47,7 +47,6 @@ import org.apache.calcite.rel.RelDistributionTraitDef;
 import org.apache.calcite.rel.RelDistributions;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
-import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.rules.AggregateExpandDistinctAggregatesRule;
 import org.apache.calcite.rel.rules.AggregateJoinTransposeRule;
@@ -87,7 +86,6 @@ import org.apache.calcite.rel.rules.UnionMergeRule;
 import org.apache.calcite.rel.rules.UnionPullUpConstantsRule;
 import org.apache.calcite.rel.rules.UnionToDistinctRule;
 import org.apache.calcite.rex.RexBuilder;
-import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.sql.SqlExplainLevel;
 import org.apache.calcite.sql.SqlNode;
@@ -97,19 +95,9 @@ import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.calcite.sql2rel.StandardConvertletTable;
-import org.apache.calcite.util.ImmutableIntList;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.sql.calcite.ops.FilterOp;
-import org.apache.ignite.internal.sql.calcite.ops.NestedLoopsJoinOp;
-import org.apache.ignite.internal.sql.calcite.ops.PhysicalOperator;
-import org.apache.ignite.internal.sql.calcite.ops.ProjectOp;
-import org.apache.ignite.internal.sql.calcite.ops.TableScanOp;
-import org.apache.ignite.internal.sql.calcite.physical.FilterRel;
-import org.apache.ignite.internal.sql.calcite.physical.JoinNestedLoopsRel;
-import org.apache.ignite.internal.sql.calcite.physical.ProjectRel;
-import org.apache.ignite.internal.sql.calcite.physical.TableScanRel;
-import org.jetbrains.annotations.NotNull;
+import org.apache.ignite.internal.sql.calcite.iterators.PhysicalOperator;
 
 /**
  * TODO: REUSE AS {@link PlannerImpl}
@@ -245,7 +233,7 @@ public class CalcitePlanner {
         System.out.println("Optimal plan:\n" + RelOptUtil.toString(optimalPlan, SqlExplainLevel.ALL_ATTRIBUTES));
 
         // TODO replace with a visitor
-        PhysicalOperator physicalOperator = convertToPhysical(optimalPlan);
+        PhysicalOperator physicalOperator = null; //convertToPhysical(optimalPlan);
 
         return physicalOperator;
     }
@@ -386,53 +374,53 @@ public class CalcitePlanner {
         );
     }
 
-    private PhysicalOperator convertToPhysical(RelNode plan) {
-        if (plan instanceof TableScanRel)
-            return convertToTableScan((TableScanRel)plan);
-        else if (plan instanceof ProjectRel)
-            return convertToProject((ProjectRel)plan);
-        else if (plan instanceof FilterRel)
-            return convertToFilter((FilterRel)plan);
-        else if (plan instanceof JoinNestedLoopsRel)
-            return convertToHashJoin((JoinNestedLoopsRel)plan);
-
-        throw new IgniteException("Operation is not supported yet: " + plan);
-    }
-
-    private PhysicalOperator convertToHashJoin(
-        JoinNestedLoopsRel plan) { // TODO why do we have HashJoin even for non-equi-joins?
-        PhysicalOperator leftSrc = convertToPhysical(plan.getInput(0));
-        PhysicalOperator rightSrc = convertToPhysical(plan.getInput(1));
-
-        ImmutableIntList leftJoinKeys = plan.getLeftKeys();
-        ImmutableIntList rightJoinKeys = plan.getRightKeys();
-
-        RexNode joinCond = plan.getCondition();
-
-        JoinRelType joinType = plan.getJoinType();
-
-        return new NestedLoopsJoinOp(leftSrc, rightSrc, leftJoinKeys, rightJoinKeys, joinCond, joinType);
-    }
-
-    private PhysicalOperator convertToFilter(FilterRel plan) {
-        PhysicalOperator rowsSrc = convertToPhysical(plan.getInput());
-
-        return new FilterOp(rowsSrc, plan.getCondition());
-    }
-
-    private ProjectOp convertToProject(ProjectRel plan) {
-        PhysicalOperator rowsSrc = convertToPhysical(plan.getInput());
-
-        List<RexNode> projects = plan.getProjects();
-
-        return new ProjectOp(rowsSrc, projects);
-    }
-
-    @NotNull private TableScanOp convertToTableScan(TableScanRel plan) {
-        List<String> tblName = plan.getTable().getQualifiedName(); // Schema + tblName
-
-        IgniteTable tbl = (IgniteTable)rootSchema.getSubSchema(tblName.get(0)).getTable(tblName.get(1));
-
-        return new TableScanOp(tbl, ctx.cache().cache(tbl.cacheName()));
-    }
+//    private PhysicalOperator convertToPhysical(RelNode plan) {
+//        if (plan instanceof TableScanRel)
+//            return convertToTableScan((TableScanRel)plan);
+//        else if (plan instanceof ProjectRel)
+//            return convertToProject((ProjectRel)plan);
+//        else if (plan instanceof FilterRel)
+//            return convertToFilter((FilterRel)plan);
+//        else if (plan instanceof JoinNestedLoopsRel)
+//            return convertToHashJoin((JoinNestedLoopsRel)plan);
+//
+//        throw new IgniteException("Operation is not supported yet: " + plan);
+//    }
+//
+//    private PhysicalOperator convertToHashJoin(
+//        JoinNestedLoopsRel plan) { // TODO why do we have HashJoin even for non-equi-joins?
+//        PhysicalOperator leftSrc = convertToPhysical(plan.getInput(0));
+//        PhysicalOperator rightSrc = convertToPhysical(plan.getInput(1));
+//
+//        ImmutableIntList leftJoinKeys = plan.getLeftKeys();
+//        ImmutableIntList rightJoinKeys = plan.getRightKeys();
+//
+//        RexNode joinCond = plan.getCondition();
+//
+//        JoinRelType joinType = plan.getJoinType();
+//
+//        return new NestedLoopsJoinOp(leftSrc, rightSrc, leftJoinKeys, rightJoinKeys, joinCond, joinType);
+//    }
+//
+//    private PhysicalOperator convertToFilter(FilterRel plan) {
+//        PhysicalOperator rowsSrc = convertToPhysical(plan.getInput());
+//
+//        return new FilterOp(rowsSrc, plan.getCondition());
+//    }
+//
+//    private ProjectOp convertToProject(ProjectRel plan) {
+//        PhysicalOperator rowsSrc = convertToPhysical(plan.getInput());
+//
+//        List<RexNode> projects = plan.getProjects();
+//
+//        return new ProjectOp(rowsSrc, projects);
+//    }
+//
+//    @NotNull private TableScanOp convertToTableScan(TableScanRel plan) {
+//        List<String> tblName = plan.getTable().getQualifiedName(); // Schema + tblName
+//
+//        IgniteTable tbl = (IgniteTable)rootSchema.getSubSchema(tblName.get(0)).getTable(tblName.get(1));
+//
+//        return new TableScanOp(tbl, ctx.cache().cache(tbl.cacheName()));
+//    }
 }

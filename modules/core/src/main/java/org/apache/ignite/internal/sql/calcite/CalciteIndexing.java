@@ -55,7 +55,7 @@ import org.apache.ignite.internal.processors.query.QueryTypeCandidate;
 import org.apache.ignite.internal.processors.query.SqlClientContext;
 import org.apache.ignite.internal.processors.query.UpdateSourceIterator;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitor;
-import org.apache.ignite.internal.sql.calcite.ops.PhysicalOperator;
+import org.apache.ignite.internal.sql.calcite.iterators.PhysicalOperator;
 import org.apache.ignite.internal.util.GridAtomicLong;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.lang.GridCloseableIterator;

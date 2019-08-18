@@ -13,24 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.internal.sql.calcite.physical;
+package org.apache.ignite.internal.sql.calcite.rels;
 
 import java.util.List;
 import org.apache.calcite.plan.RelOptCluster;
-import org.apache.calcite.plan.RelOptCost;
-import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.rel.RelDistribution;
 import org.apache.calcite.rel.RelDistributionTraitDef;
-import org.apache.calcite.rel.RelDistributions;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.SingleRel;
-import org.apache.calcite.rel.metadata.RelMetadataQuery;
 
 /**
  * TODO: Add class description.
  */
-public class UnionExchangeRel extends SingleRel implements IgniteRel {
+public class RehashingExchange extends SingleRel implements IgniteRel {
+
+    private final RelDistribution hashDist;
+
     /**
      * Creates a <code>SingleRel</code>.
      *
@@ -38,24 +38,29 @@ public class UnionExchangeRel extends SingleRel implements IgniteRel {
      * @param traits
      * @param input Input relational expression
      */
-    protected UnionExchangeRel(RelOptCluster cluster, RelTraitSet traits,
+    protected RehashingExchange(RelDistribution hashDist, RelOptCluster cluster, RelTraitSet traits,
         RelNode input) {
         super(cluster, traits, input);
+        this.hashDist = hashDist;
     }
 
     @Override
     public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
-        return new UnionExchangeRel(getCluster(), traitSet, sole(inputs));
+        return new RehashingExchange(hashDist, getCluster(), traitSet, sole(inputs));
     }
 
     @Override public RelWriter explainTerms(RelWriter pw) {
         return super.explainTerms(pw)
             .item("from", getInput().getTraitSet().getTrait(RelDistributionTraitDef.INSTANCE))
-            .item("to", RelDistributions.SINGLETON);
+            .item("to", hashDist);
     }
 
-    @Override public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {
-        return super.computeSelfCost(planner, mq).multiplyBy(20);
+    @Override public void accept(IgniteRelVisitor visitor) {
+        visitor.onRehashingExchange(this);
     }
 
+//    @Override public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {
+//        return super.computeSelfCost(planner, mq).multiplyBy(10);
+//    }
 }
+

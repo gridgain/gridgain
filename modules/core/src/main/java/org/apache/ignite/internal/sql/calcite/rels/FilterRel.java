@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.internal.sql.calcite.physical;
+package org.apache.ignite.internal.sql.calcite.rels;
 
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
@@ -40,5 +40,9 @@ public class FilterRel extends Filter implements IgniteRel {
     @Override public RelWriter explainTerms(RelWriter pw) {
         return super.explainTerms(pw)
             .item("dist", getTraitSet().getTrait(RelDistributionTraitDef.INSTANCE));
+    }
+
+    @Override public void accept(IgniteRelVisitor visitor) {
+        visitor.onFilter(this);
     }
 }

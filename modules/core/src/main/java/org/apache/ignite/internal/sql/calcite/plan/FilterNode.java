@@ -13,32 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.internal.sql.calcite.expressions;
+package org.apache.ignite.internal.sql.calcite.plan;
 
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.util.List;
+import org.apache.ignite.internal.sql.calcite.expressions.Condition;
 
 /**
  * TODO: Add class description.
  */
-public class FieldGetter implements Expression {
-    private int idx;
+public class FilterNode implements PlanNode {
+    private PlanNode input;
+    private Condition filterCond;
 
-    public FieldGetter(int idx) {
-        this.idx = idx;
-    }
-
-    @Override public Object evaluate(List row) {
-        return row.get(idx);
+    public FilterNode(Condition filterCond) {
+        this.filterCond = filterCond;
     }
 
     @Override public void writeExternal(ObjectOutput out) throws IOException {
-        out.writeInt(idx);
+        out.writeObject(filterCond);
+        out.writeObject(input);
     }
 
     @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-        idx = in.readInt();
+        filterCond = (Condition)in.readObject();
+        input = (PlanNode)in.readObject();
     }
 }
