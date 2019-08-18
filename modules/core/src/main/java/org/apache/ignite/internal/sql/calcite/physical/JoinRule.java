@@ -41,12 +41,13 @@ public class JoinRule extends ConverterRule {
 
         final JoinInfo info = JoinInfo.of(join.getLeft(), join.getRight(), join.getCondition()); // TODO take condition from info? See EnumerableJoinRule
 
-        System.out.println("info.leftKeys=" + info.leftKeys + ", info.rightKeys=" + info.rightKeys);
         final RelNode left = convertInput(join.getInputs().get(0), info.leftKeys);;
         final RelNode right = convertInput(join.getInputs().get(1), info.rightKeys);
 
+        //System.out.println("info.leftKeys=" + info.leftKeys + ", info.rightKeys=" +  info.rightKeys);
+
         return new JoinNestedLoopsRel(join.getCluster(),
-            rel.getTraitSet().replace(IgniteConvention.INSTANCE).replace(RelDistributions.RANDOM_DISTRIBUTED), // TODO distribution?
+            rel.getTraitSet().replace(IgniteConvention.INSTANCE).replace(RelDistributions.hash(info.leftKeys)), // TODO distribution?
             left,
             right,
             join.getCondition(),

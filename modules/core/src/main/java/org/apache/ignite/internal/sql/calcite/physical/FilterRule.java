@@ -16,6 +16,11 @@
 package org.apache.ignite.internal.sql.calcite.physical;
 
 import org.apache.calcite.plan.Convention;
+import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.plan.volcano.RelSubset;
+import org.apache.calcite.rel.RelDistribution;
+import org.apache.calcite.rel.RelDistributionTraitDef;
+import org.apache.calcite.rel.RelDistributions;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
 import org.apache.calcite.rel.logical.LogicalFilter;
@@ -37,12 +42,30 @@ public class FilterRule extends ConverterRule {
     }
 
     @Override public RelNode convert(RelNode rel) {
-        final LogicalFilter filter = (LogicalFilter) rel;
+        LogicalFilter filter = (LogicalFilter) rel;
+        RelNode input = filter.getInput();
+
+        RelTraitSet newTraits = input.getTraitSet().replace(IgniteConvention.INSTANCE);
+        RelNode newInput = convert(input, newTraits);
+
+        if (newInput instanceof RelSubset) { // We need to pull distribution trait from child nodes
+            RelSubset subset = (RelSubset) newInput;
+
+            for (RelNode r : subset.getRelList()) {
+                RelDistribution childDist = r.getTraitSet().getTrait(RelDistributionTraitDef.INSTANCE);
+
+                if (!childDist.equals(RelDistributions.ANY)) { // TODO check ignite convention?
+                    return new FilterRel(rel.getCluster(),
+                        newInput.getTraitSet().replace(childDist),
+                        newInput,
+                        filter.getCondition());
+                }
+            }
+        }
 
         return new FilterRel(rel.getCluster(),
-            rel.getTraitSet().replace(IgniteConvention.INSTANCE),
-            convert(filter.getInput(),
-                filter.getInput().getTraitSet().replace(IgniteConvention.INSTANCE)), // TODO why do we need to replace a child's convention?
+            newInput.getTraitSet(),
+            newInput,
             filter.getCondition());
     }
 }

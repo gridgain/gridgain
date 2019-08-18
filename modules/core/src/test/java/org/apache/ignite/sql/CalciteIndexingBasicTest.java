@@ -54,7 +54,16 @@ public class CalciteIndexingBasicTest extends GridCommonAbstractTest {
         devEntity.addQueryField("id", Integer.class.getName(), null);
         devEntity.setTableName("Developer");
 
-        ccfg.setQueryEntities(Arrays.asList(projEntity, devEntity));
+        QueryEntity countryEntity = new QueryEntity();
+        countryEntity.setKeyType(Integer.class.getName());
+        countryEntity.setKeyFieldName("id");
+        countryEntity.setValueType(Country.class.getName());
+        countryEntity.addQueryField("countryCode", Integer.class.getName(), null);
+        countryEntity.addQueryField("name", String.class.getName(), null);
+        countryEntity.addQueryField("id", Integer.class.getName(), null);
+        countryEntity.setTableName("Country");
+
+        ccfg.setQueryEntities(Arrays.asList(projEntity, devEntity, countryEntity));
 
         ccfg.setSqlSchema("PUBLIC");
 
@@ -71,6 +80,11 @@ public class CalciteIndexingBasicTest extends GridCommonAbstractTest {
         cache.put(7, new Developer("Euler", 3));
         cache.put(8, new Developer("Laplas", 2));
         cache.put(9, new Developer("Einstein", 1));
+
+        cache.put(10, new Country("Russia", 1));
+        cache.put(11, new Country("USA", 2));
+        cache.put(12, new Country("England", 3));
+
     }
 
     @Test
@@ -80,7 +94,14 @@ public class CalciteIndexingBasicTest extends GridCommonAbstractTest {
         List res = cache.query(new SqlFieldsQuery("SELECT d.name, d.projectId, p.name, p.id " +
             "FROM Developer d JOIN Project p " +
             "ON d.projectId = p.id " +
-            "WHERE p.ver > 1")).getAll();
+            "WHERE d.projectId > 1")).getAll();
+
+//        List res = cache.query(new SqlFieldsQuery("SELECT d.name, d.projectId, p.name, p.id " +
+//            "FROM Developer d JOIN Project p " +
+//            "ON d.projectId = p.id " +
+//            "JOIN Country c " +
+//            "ON c.countryCode = d.id " +
+//            "WHERE d.projectId > 1")).getAll();
 
 
         //List res = cache.query(new SqlFieldsQuery("SELECT id, name FROM Project WHERE ver > 1")).getAll();
@@ -127,6 +148,23 @@ public class CalciteIndexingBasicTest extends GridCommonAbstractTest {
             return "Developer{" +
                 "name='" + name + '\'' +
                 ", projectId=" + projectId +
+                '}';
+        }
+    }
+
+    private static class Country {
+        String name;
+        int countryCode;
+
+        public Country(String name, int countryCode) {
+            this.name = name;
+            this.countryCode = countryCode;
+        }
+
+        @Override public String toString() {
+            return "Country{" +
+                "name='" + name + '\'' +
+                ", countryCode=" + countryCode +
                 '}';
         }
     }

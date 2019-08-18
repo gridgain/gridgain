@@ -46,13 +46,10 @@ public class TableScanRule extends ConverterRule {
         LogicalTableScan scan = (LogicalTableScan) rel;
         final RelOptTable relOptTable = scan.getTable();
         final Table table = relOptTable.unwrap(Table.class); // TODO use this to change the distribution distTrait
-        System.out.println("TableScanRule table=" + table);
 
         IgniteTable tbl = (IgniteTable)table;
 
         RelTrait distTrait = tbl.partitioned() ? RelDistributions.hash(DIST_KEYS) : RelDistributions.BROADCAST_DISTRIBUTED;
-
-        System.out.println("TableScanRule distTrait=" + distTrait);
 
         return new TableScanRel(scan.getCluster(),
             scan.getTraitSet().replace(IgniteConvention.INSTANCE).replace(distTrait),

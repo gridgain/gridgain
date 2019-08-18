@@ -46,7 +46,7 @@ public class RehashingExchange extends SingleRel implements IgniteRel {
 
     @Override
     public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
-        return new UnionExchangeRel(getCluster(), traitSet, sole(inputs));
+        return new RehashingExchange(hashDist, getCluster(), traitSet, sole(inputs));
     }
 
     @Override public RelWriter explainTerms(RelWriter pw) {
