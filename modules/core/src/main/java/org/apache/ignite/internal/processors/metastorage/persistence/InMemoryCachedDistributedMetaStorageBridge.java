@@ -34,7 +34,7 @@ import static org.apache.ignite.internal.processors.metastorage.persistence.Dist
 import static org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageUtil.versionKey;
 
 /** */
-class InMemoryCachedDistributedMetaStorageBridge implements DistributedMetaStorageBridge {
+class InMemoryCachedDistributedMetaStorageBridge {
     /** */
     private final JdkMarshaller marshaller;
 
@@ -46,18 +46,36 @@ class InMemoryCachedDistributedMetaStorageBridge implements DistributedMetaStora
         this.marshaller = marshaller;
     }
 
-    /** {@inheritDoc} */
-    @Override public Serializable read(String globalKey) throws IgniteCheckedException {
+    /**
+     * Get unmarshalled data by key.
+     *
+     * @param globalKey The key.
+     * @return Value associated with the key.
+     * @throws IgniteCheckedException If unmarshalling failed.
+     */
+    public Serializable read(String globalKey) throws IgniteCheckedException {
         return unmarshal(marshaller, readMarshalled(globalKey));
     }
 
-    /** {@inheritDoc} */
-    @Override public byte[] readMarshalled(String globalKey) {
+    /**
+     * Get raw data by key.
+     *
+     * @param globalKey The key.
+     * @return Value associated with the key.
+     */
+    public byte[] readMarshalled(String globalKey) {
         return cache.get(globalKey);
     }
 
-    /** {@inheritDoc} */
-    @Override public void iterate(
+    /**
+     * Iterate over all values corresponding to the keys with given prefix. It is guaranteed that iteration will be
+     * executed in ascending keys order.
+     *
+     * @param globalKeyPrefix Prefix for the keys that will be iterated.
+     * @param cb Callback that will be applied to all {@code <key, value>} pairs.
+     * @throws IgniteCheckedException If unmarshalling failed.
+     */
+    public void iterate(
         String globalKeyPrefix,
         BiConsumer<String, ? super Serializable> cb
     ) throws IgniteCheckedException {
@@ -69,16 +87,26 @@ class InMemoryCachedDistributedMetaStorageBridge implements DistributedMetaStora
         }
     }
 
-    /** {@inheritDoc} */
-    @Override public void write(String globalKey, @Nullable byte[] valBytes) {
+    /**
+     * Write data into storage.
+     *
+     * @param globalKey The key.
+     * @param valBytes Value bytes.
+     */
+    public void write(String globalKey, @Nullable byte[] valBytes) {
         if (valBytes == null)
             cache.remove(globalKey);
         else
             cache.put(globalKey, valBytes);
     }
 
-    /** {@inheritDoc} */
-    @Override public DistributedMetaStorageKeyValuePair[] localFullData() {
+    /**
+     * Returns all {@code <key, value>} pairs currently stored in distributed metastorage. Values are not unmarshalled.
+     * All keys are sorted in ascending order.
+     *
+     * @return Array of all keys and values.
+     */
+    public DistributedMetaStorageKeyValuePair[] localFullData() {
         return cache.entrySet().stream().map(
             entry -> new DistributedMetaStorageKeyValuePair(entry.getKey(), entry.getValue())
         ).toArray(DistributedMetaStorageKeyValuePair[]::new);

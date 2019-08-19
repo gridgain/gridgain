@@ -127,13 +127,8 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
      */
     private final GridInternalSubscriptionProcessor isp;
 
-    /**
-     * Bridge. Has some "phase-specific" code. Exists to avoid countless {@code if}s in code.
-     *
-     * @see NotAvailableDistributedMetaStorageBridge
-     * @see InMemoryCachedDistributedMetaStorageBridge
-     */
-    private volatile DistributedMetaStorageBridge bridge = new NotAvailableDistributedMetaStorageBridge();
+    /** */
+    private volatile InMemoryCachedDistributedMetaStorageBridge bridge;
 
     /**
      * Version of distributed metastorage.
@@ -172,13 +167,6 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
     /**
-     * Becomes {@code true} if node was deactivated, this information is useful for joining node validation.
-     *
-     * @see #validateNode(ClusterNode, JoiningNodeDiscoveryData)
-     */
-    private boolean wasDeactivated;
-
-    /**
      * Context marshaller.
      */
     private final JdkMarshaller marshaller;
@@ -201,6 +189,8 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
         isp = ctx.internalSubscriptionProcessor();
 
         marshaller = ctx.marshallerContext().jdkMarshaller();
+
+        bridge = new InMemoryCachedDistributedMetaStorageBridge(marshaller);
 
         //noinspection IfMayBeConditional
         if (!isPersistenceEnabled)
@@ -278,11 +268,20 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
      *      just wait until queue is empty and worker completed its job.
      */
     @Override public void onKernalStop(boolean cancel) {
-        stopWorker(cancel);
+        lock.writeLock().lock();
+
+        try {
+            stopWorker(cancel);
+        }
+        finally {
+            lock.writeLock().unlock();
+        }
     }
 
     /** */
     private void stopWorker(boolean cancel) {
+        assert lock.isWriteLockedByCurrentThread();
+
         if (isPersistenceEnabled) {
             try {
                 worker.cancel(cancel);
@@ -297,11 +296,8 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
      * Executed roughly at the same time as {@link #onMetaStorageReadyForRead(ReadOnlyMetastorage)}.
      */
     public void inMemoryReadyForRead() {
-        if (!isPersistenceEnabled) {
-            bridge = new InMemoryCachedDistributedMetaStorageBridge(marshaller);
-
+        if (!isPersistenceEnabled)
             notifyReadyForRead();
-        }
     }
 
     /** Notify components listeners. */
@@ -337,8 +333,6 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
         lock.writeLock().lock();
 
         try {
-            wasDeactivated = true;
-
             stopWorker(false);
         }
         finally {
@@ -364,23 +358,19 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
     private void onMetaStorageReadyForRead(ReadOnlyMetastorage metastorage) throws IgniteCheckedException {
         assert isPersistenceEnabled;
 
-        InMemoryCachedDistributedMetaStorageBridge memBridge = new InMemoryCachedDistributedMetaStorageBridge(marshaller);
-
         localMetastorageLock();
 
         try {
             lock.writeLock().lock();
 
             try {
-                ver = memBridge.readInitialData(metastorage);
+                ver = bridge.readInitialData(metastorage);
 
                 metastorage.iterate(
                     historyItemPrefix(),
                     (key, val) -> addToHistoryCache(historyItemVer(key), (DistributedMetaStorageHistoryItem)val),
                     true
                 );
-
-                bridge = memBridge;
             }
             finally {
                 lock.writeLock().unlock();
@@ -667,7 +657,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
                     errorMsg = "Attempting to join node with larger distributed metastorage version id." +
                         " The node is most likely in invalid state and can't be joined.";
                 }
-                else if (wasDeactivated || remoteBltId < locBltId)
+                else if (remoteBltId < locBltId)
                     errorMsg = "Joining node has conflicting distributed metastorage data.";
                 else {
                     DistributedMetaStorageVersion newLocVer = locVer.nextVersion(
@@ -690,7 +680,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
                     errorMsg = "Attempting to join node with larger distributed metastorage version id." +
                         " The node is most likely in invalid state and can't be joined.";
                 }
-                else if (wasDeactivated || remoteBltId < locBltId)
+                else if (remoteBltId < locBltId)
                     errorMsg = "Joining node has conflicting distributed metastorage data.";
                 else {
                     errorMsg = "Joining node doesn't have enough history items in distributed metastorage data." +
@@ -884,8 +874,6 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
 
             ver = INITIAL_VERSION;
 
-            wasDeactivated = false;
-
             for (GridFutureAdapter<Boolean> fut : updateFuts.values())
                 fut.onDone(new IgniteCheckedException("Client was disconnected during the operation."));
 
@@ -929,7 +917,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
     }
 
     /**
-     * {@link DistributedMetaStorageBridge#localFullData()} invoked on {@link #bridge}.
+     * {@link InMemoryCachedDistributedMetaStorageBridge#localFullData()} invoked on {@link #bridge}.
      */
     @TestOnly
     private DistributedMetaStorageKeyValuePair[] localFullData() {
@@ -950,14 +938,12 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
             DistributedMetaStorageClusterNodeData nodeData = (DistributedMetaStorageClusterNodeData)data.commonData();
 
             if (nodeData != null) {
-                assert bridge instanceof InMemoryCachedDistributedMetaStorageBridge : bridge;
-
                 if (nodeData.fullData != null) {
                     ver = nodeData.ver;
 
                     notifyListenersBeforeReadyForWrite(nodeData.fullData);
 
-                    ((InMemoryCachedDistributedMetaStorageBridge)bridge).writeFullNodeData(nodeData);
+                    bridge.writeFullNodeData(nodeData);
                 }
 
                 if (nodeData.hist != null) {
