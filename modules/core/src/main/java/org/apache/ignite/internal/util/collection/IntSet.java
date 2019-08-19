@@ -14,21 +14,23 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.util.nio;
+package org.apache.ignite.internal.util.collection;
 
-import java.util.EventListener;
+import java.util.Set;
 
 /**
- * Metrics listener for NIO communication.
+ *
  */
-public interface GridNioMetricsListener extends EventListener {
-    /**
-     * @param bytesCnt Number of sent bytes.
-     */
-    public void onBytesSent(int bytesCnt);
+public interface IntSet extends Set<Integer> {
+    /** Returns <tt>true</tt> if this set contains the specified element. */
+    boolean contains(int element);
 
-    /**
-     * @param bytesCnt Number of received bytes.
-     */
-    public void onBytesReceived(int bytesCnt);
+    /** Adds the specified element to this set. */
+    boolean add(int element);
+
+    /** Removes the specified element from this set. */
+    boolean remove(int element);
+
+    /** Returns array with primitive types **/
+    int[] toIntArray();
 }
