@@ -24,6 +24,8 @@
         http://www.springframework.org/schema/util
         http://www.springframework.org/schema/util/spring-util.xsd">
     <bean id="ignite.cfg" class="org.apache.ignite.configuration.IgniteConfiguration">
+        <property name="igniteInstanceName" value="node-with-gmc-agent"/>
+
         <property name="includeEventTypes">
             <list>
                 <!--Task execution events-->

@@ -23,6 +23,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
@@ -77,7 +78,7 @@ public class Agent extends ManagementConsoleProcessor {
     private MetricsService metricSrvc;
 
     /** Execute service. */
-    private ExecutorService execSrvc = Executors.newSingleThreadExecutor();
+    private ExecutorService execSrvc;
 
     /** Meta storage. */
     private MetaStorage metaStorage;
@@ -86,7 +87,7 @@ public class Agent extends ManagementConsoleProcessor {
     private String curSrvUri;
 
     /** If first connection error after successful connection. */
-    private volatile boolean firstConnError = true;
+    private AtomicBoolean disconnected = new AtomicBoolean();
 
     /**
      * @param ctx Kernal context.
@@ -99,17 +100,17 @@ public class Agent extends ManagementConsoleProcessor {
     @Override public void onKernalStart(boolean active) {
         metaStorage = ctx.cache().context().database().metaStorage();
 
-        startAgent(null, ctx.discovery().discoCache());
+        launchAgentListener(null, ctx.discovery().discoCache());
 
         // Listener for coordinator changed.
-        ctx.event().addDiscoveryEventListener(this::startAgent, EVTS_DISCOVERY);
+        ctx.event().addDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
     }
 
     /** {@inheritDoc} */
     @Override public void onKernalStop(boolean cancel) {
-        U.quietAndInfo(log, "Stopping GMC agent...");
+        log.info("Stopping GMC agent.");
 
-        ctx.event().removeDiscoveryEventListener(this::startAgent, EVTS_DISCOVERY);
+        ctx.event().removeDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
 
         U.shutdownNow(this.getClass(), execSrvc, log);
 
@@ -117,28 +118,51 @@ public class Agent extends ManagementConsoleProcessor {
         U.closeQuiet(tracingSrvc);
         U.closeQuiet(topSrvc);
         U.closeQuiet(mgr);
+
+        disconnected.set(false);
+
+        U.quietAndInfo(log, "GMC agent stopped.");
     }
 
     /** {@inheritDoc} */
     @Override public void configuration(ManagementConfiguration cfg) {
+        if (cfg.hasServerUris()) {
+            writeToMetaStorage(cfg);
+
+            super.configuration(cfg);
+        }
+
         ManagementConfiguration oldCfg = configuration();
 
-        writeToMetaStorage(cfg);
-
-        super.configuration(cfg);
-
-        if (!oldCfg.equals(cfg)) {
-            // Set to false for disable submiting reconnect task when websocket manager will be closed in connect().
-            firstConnError = false;
-
-            connect();
-        }
+        if (oldCfg.isEnable() != cfg.isEnable())
+            toggleAgentState(cfg.isEnable());
+        else
+            execSrvc.submit(this::connect0);
     }
 
     /**
+     * Toggle agent state.
+     *
+     * @param enable Enable flag.
+     */
+    private void toggleAgentState(boolean enable) {
+        ManagementConfiguration cfg = configuration()
+            .setEnable(enable);
+
+        super.configuration(cfg);
+
+        writeToMetaStorage(cfg);
+
+        if (enable)
+            onKernalStart(ctx.cluster().get().active());
+        else
+            onKernalStop(true);
+    }
+    
+    /**
      * Start agent on local node if this is coordinator node.
      */
-    private void startAgent(DiscoveryEvent evt, DiscoCache discoCache) {
+    private void launchAgentListener(DiscoveryEvent evt, DiscoCache discoCache) {
         if (ctx.clientNode())
             return;
 
@@ -171,7 +195,7 @@ public class Agent extends ManagementConsoleProcessor {
         try {
             mgr.connect(toWsUri(curSrvUri), cfg, new AfterConnectedSessionHandler());
 
-            firstConnError = true;
+            disconnected.set(false);
         }
         catch (InterruptedException ignored) {
             // No-op.
@@ -181,11 +205,8 @@ public class Agent extends ManagementConsoleProcessor {
         }
         catch (ExecutionException e) {
             if (X.hasCause(e, ConnectException.class, UpgradeException.class, EofException.class)) {
-                if (firstConnError) {
+                if (disconnected.compareAndSet(false, true))
                     log.error("Failed to establish websocket connection with GMC server: " + curSrvUri);
-
-                    firstConnError = false;
-                }
 
                 connect0();
             }
@@ -220,6 +241,8 @@ public class Agent extends ManagementConsoleProcessor {
         metricSrvc = new MetricsService(ctx, mgr);
 
         tracingSrvc.registerHandler();
+
+        execSrvc = Executors.newSingleThreadExecutor();
 
         execSrvc.submit(this::connect0);
     }
@@ -300,10 +323,8 @@ public class Agent extends ManagementConsoleProcessor {
         /** {@inheritDoc} */
         @Override public void handleTransportError(StompSession stompSes, Throwable e) {
             if (e instanceof ConnectionLostException) {
-                if (firstConnError) {
+                if (disconnected.compareAndSet(false, true)) {
                     log.error("Lost websocket connection with server: " + curSrvUri);
-
-                    firstConnError = false;
 
                     execSrvc.submit(Agent.this::connect0);
                 }
