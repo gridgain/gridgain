@@ -51,8 +51,6 @@ import javax.management.ObjectName;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryNTimes;
-import org.apache.ignite.spi.discovery.tcp.ipfinder.zk.curator.TestingCluster;
-import org.apache.ignite.spi.discovery.tcp.ipfinder.zk.curator.TestingZooKeeperServer;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -123,6 +121,8 @@ import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
 import org.apache.ignite.spi.discovery.DiscoverySpiCustomMessage;
 import org.apache.ignite.spi.discovery.DiscoverySpiNodeAuthenticator;
+import org.apache.ignite.spi.discovery.tcp.ipfinder.zk.curator.TestingCluster;
+import org.apache.ignite.spi.discovery.tcp.ipfinder.zk.curator.TestingZooKeeperServer;
 import org.apache.ignite.spi.discovery.zk.ZookeeperDiscoverySpi;
 import org.apache.ignite.spi.discovery.zk.ZookeeperDiscoverySpiAbstractTestSuite;
 import org.apache.ignite.spi.discovery.zk.ZookeeperDiscoverySpiMBean;
@@ -3960,8 +3960,6 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
      */
     @Test
     public void testReconnectServersRestart_1() throws Exception {
-        fail("https://issues.apache.org/jira/browse/IGNITE-8178");
-
         reconnectServersRestart(1);
     }
 
@@ -3970,8 +3968,6 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
      */
     @Test
     public void testReconnectServersRestart_2() throws Exception {
-        fail("https://issues.apache.org/jira/browse/IGNITE-8178");
-
         reconnectServersRestart(3);
     }
 
@@ -4455,6 +4451,51 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
         waitForTopology(20);
 
         evts.clear();
+    }
+
+    /**
+     * Checks that a client will reconnect after previous cluster data was cleaned.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testReconnectServersRestart_4() throws Exception {
+        startGrid(0);
+
+        clientMode(true);
+
+        IgniteEx client = startGrid(1);
+
+        clientMode(false);
+
+        CountDownLatch latch = new CountDownLatch(1);
+
+        client.events().localListen(event -> {
+            latch.countDown();
+
+            return true;
+        }, EVT_CLIENT_NODE_DISCONNECTED);
+
+        waitForTopology(2);
+
+        stopGrid(0);
+
+        evts.clear();
+
+        // Waiting for client starts to reconnect and create join request.
+        assertTrue("Failed to wait for client node disconnected.", latch.await(10, SECONDS));
+
+        // Restart cluster twice for incrementing internal order. (alive zk-nodes having lower order and containing
+        // client join request will be removed). See {@link ZookeeperDiscoveryImpl#cleanupPreviousClusterData}.
+        startGrid(0);
+
+        stopGrid(0);
+
+        evts.clear();
+
+        startGrid(0);
+
+        waitForTopology(2);
     }
 
     /**
