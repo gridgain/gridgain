@@ -55,9 +55,21 @@
         </dependency>
 
         <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-ext-jdk15on</artifactId>
+            <version>1.62</version>
+        </dependency>
+
+        <dependency>
             <groupId>org.apache.jclouds.labs</groupId>
             <artifactId>docker</artifactId>
             <version>1.9.3</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.bouncycastle</groupId>
+                    <artifactId>bcprov-ext-jdk15on</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
