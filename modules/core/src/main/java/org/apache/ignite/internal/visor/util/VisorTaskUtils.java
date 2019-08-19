@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.visor.util;
 
-import javax.cache.configuration.Factory;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileFilter;
@@ -49,6 +48,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+import javax.cache.configuration.Factory;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.eviction.AbstractEvictionPolicyFactory;
@@ -421,14 +421,14 @@ public class VisorTaskUtils {
      * @param ignite Grid instance.
      * @return {@code true} if all task events explicitly specified in configuration.
      */
-    public static boolean checkExplicitTaskMonitoring(Ignite ignite) {
-        int[] evts = ignite.configuration().getIncludeEventTypes();
+    public static boolean checkExplicitEvents(Ignite ignite, int[] evts) {
+        int[] inclEvtTypes = ignite.configuration().getIncludeEventTypes();
 
-        if (F.isEmpty(evts))
+        if (F.isEmpty(inclEvtTypes))
             return false;
 
-        for (int evt : VISOR_TASK_EVTS) {
-            if (!F.contains(evts, evt))
+        for (int evt : evts) {
+            if (!F.contains(inclEvtTypes, evt))
                 return false;
         }
 
