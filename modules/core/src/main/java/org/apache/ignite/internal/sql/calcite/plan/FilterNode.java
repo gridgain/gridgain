@@ -27,8 +27,9 @@ public class FilterNode implements PlanNode {
     private PlanNode input;
     private Condition filterCond;
 
-    public FilterNode(Condition filterCond) {
+    public FilterNode(Condition filterCond, PlanNode input) {
         this.filterCond = filterCond;
+        this.input = input;
     }
 
     @Override public void writeExternal(ObjectOutput out) throws IOException {

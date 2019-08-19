@@ -15,7 +15,18 @@
  */
 package org.apache.ignite.internal.sql.calcite.plan;
 
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.LinkedList;
+import java.util.List;
+import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Join;
+import org.apache.calcite.rel.core.JoinInfo;
+import org.apache.calcite.rex.RexInputRef;
+import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexSlot;
+import org.apache.ignite.Ignite;
+import org.apache.ignite.internal.sql.calcite.IgniteTable;
 import org.apache.ignite.internal.sql.calcite.expressions.Condition;
 import org.apache.ignite.internal.sql.calcite.rels.FilterRel;
 import org.apache.ignite.internal.sql.calcite.rels.IgniteRel;
@@ -26,38 +37,85 @@ import org.apache.ignite.internal.sql.calcite.rels.TableScanRel;
 import org.apache.ignite.internal.sql.calcite.rels.UnionExchangeRel;
 
 import static org.apache.ignite.internal.sql.calcite.expressions.Condition.buildFilterCondition;
+import static org.apache.ignite.internal.sql.calcite.plan.JoinNode.JoinAlgorithm.NESTED_LOOPS;
 
 /**
- * TODO: Add class description.
+ * Runs post-order tree traversing and splits the tree when visiting exchange node.
  */
-public class PlanSplitter implements IgniteRelVisitor {
+@SuppressWarnings("TypeMayBeWeakened") public class PlanSplitter implements IgniteRelVisitor {
 
-    private SubPlan currSubPlan = new SubPlan();
+    private int curSubPlanId;
+
+    private List<SubPlan> subPlans = new ArrayList<>();
 
 
-    @Override public void onFilter(FilterRel filter) {
-        IgniteRel relInput = (IgniteRel)filter.getInput();
+    private Deque<PlanNode> childrenStack = new LinkedList<>();
 
-        Condition cond = (Condition)buildFilterCondition(filter.getCondition());
-        FilterNode node = new FilterNode(cond);
+    @Override public void onTableScan(TableScanRel scan) {
+        IgniteTable tbl = scan.table();
 
-        relInput.accept(this);
+        TableScanNode node = new TableScanNode(tbl.tableName(), tbl.cacheName())
 
+        childrenStack.push(node);
     }
 
+    @Override public void onFilter(FilterRel filter) {
+        visitChildren(filter);
+
+        PlanNode input = childrenStack.poll();
+
+        Condition cond = (Condition)buildFilterCondition(filter.getCondition());
+
+        FilterNode node = new FilterNode(cond, input);
+
+        childrenStack.push(node);
+    }
+
+
     @Override public void onJoin(Join join) {
+        visitChildren(join);
+
+        PlanNode right = childrenStack.poll();
+        PlanNode left = childrenStack.poll();
+
+        JoinInfo info = JoinInfo.of(join.getLeft(), join.getRight(), join.getCondition());
+
+        JoinNode node = new JoinNode(left, right, info.leftKeys.toIntArray(), info.rightKeys.toIntArray(),
+            (Condition)buildFilterCondition(join.getCondition()), join.getJoinType(), NESTED_LOOPS); // TODO Other types.
+
+        childrenStack.push(node);
 
     }
 
     @Override public void onProject(ProjectRel project) {
+        visitChildren(project);
 
+        PlanNode input = childrenStack.poll();
+
+        int[] projections = new int[project.getProjects().size()];
+
+        int i = 0;
+
+        for (RexNode proj : project.getProjects())
+            projections[i++] = ((RexSlot)proj).getIndex();
+
+        ProjectNode node = new ProjectNode(projections, input);
+
+        childrenStack.push(node);
     }
 
-    @Override public void onTableScan(TableScanRel scan) {
-
-    }
 
     @Override public void onUnionExchange(UnionExchangeRel exch) {
+        visitChildren(exch);
+
+        PlanNode input = childrenStack.poll();
+
+        SenderNode sender = new SenderNode(input, SenderNode.SenderType.SINGLE);
+
+        SubPlan subPlan = nextSubPlan(sender);
+
+        subPlans.add(subPlan);
+
 
     }
 
@@ -65,5 +123,13 @@ public class PlanSplitter implements IgniteRelVisitor {
 
     }
 
+    private void visitChildren(RelNode rel) {
+        for (RelNode input : rel.getInputs())
+            ((IgniteRel)input).accept(this);
+    }
 
+
+    private SubPlan nextSubPlan(PlanNode subPlan) {
+        return new SubPlan(++curSubPlanId, subPlan);
+    }
 }

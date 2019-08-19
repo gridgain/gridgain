@@ -105,6 +105,10 @@ public class IgniteTable extends AbstractTable implements ScannableTable/*, Proj
         return cacheName;
     }
 
+    public String tableName() {
+        return tblName;
+    }
+
     public List<Column> columns() {
         return cols;
     }

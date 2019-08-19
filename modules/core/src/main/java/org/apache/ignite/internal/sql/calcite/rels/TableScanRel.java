@@ -21,15 +21,19 @@ import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelDistributionTraitDef;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.core.TableScan;
+import org.apache.ignite.internal.sql.calcite.IgniteTable;
 
 /**
  *
  */
 public class TableScanRel extends TableScan implements IgniteRel {
 
+    private IgniteTable tbl;
+
     protected TableScanRel(RelOptCluster cluster, RelTraitSet traitSet,
-        RelOptTable table) {
+        RelOptTable table, IgniteTable igniteTbl) {
         super(cluster, traitSet, table);
+        this.tbl = igniteTbl;
     }
 
     @Override public RelWriter explainTerms(RelWriter pw) {
@@ -39,5 +43,9 @@ public class TableScanRel extends TableScan implements IgniteRel {
 
     @Override public void accept(IgniteRelVisitor visitor) {
         visitor.onTableScan(this);
+    }
+
+    public IgniteTable table() {
+        return tbl;
     }
 }

@@ -19,6 +19,7 @@ import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -29,11 +30,14 @@ public class SubPlan implements Externalizable {
 
     private PlanNode subPlan;
 
-    private List<Integer> inputSubPlans;
+    private List<Integer> inputSubPlans = new ArrayList<>();
 
-    private int outputSubPlan;
+    private int outputSubPlan = -1;
 
-
+    public SubPlan(int id, PlanNode subPlan) {
+        this.id = id;
+        this.subPlan = subPlan;
+    }
 
     @Override public void writeExternal(ObjectOutput out) throws IOException {
         out.writeInt(id);
@@ -47,5 +51,15 @@ public class SubPlan implements Externalizable {
         outputSubPlan = in.readInt();
         inputSubPlans = (List<Integer>)in.readObject();
         subPlan = (PlanNode)in.readObject();
+    }
+
+    public void addInputPlanId(int id) {
+        inputSubPlans.add(id);
+    }
+
+    public void setOutputSubPlan(int id) {
+        assert outputSubPlan == -1;
+
+        outputSubPlan = id;
     }
 }

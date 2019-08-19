@@ -26,6 +26,10 @@ public class SenderNode implements PlanNode {
     private PlanNode input;
     private SenderType type;
 
+    public SenderNode(PlanNode input, SenderType type) {
+        this.input = input;
+        this.type = type;
+    }
 
     @Override public void writeExternal(ObjectOutput out) throws IOException {
         out.writeInt(type.ordinal());

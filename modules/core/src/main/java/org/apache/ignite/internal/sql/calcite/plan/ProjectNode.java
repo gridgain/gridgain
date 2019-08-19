@@ -27,8 +27,9 @@ public class ProjectNode implements PlanNode {
 
     private int[] prjIdx; // TODO other types of projections (RexNode)
 
-    public ProjectNode(int[] prjIdx) {
+    public ProjectNode(int[] prjIdx, PlanNode input) {
         this.prjIdx = prjIdx;
+        this.input = input;
     }
 
     @Override public void writeExternal(ObjectOutput out) throws IOException {
