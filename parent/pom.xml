@@ -74,7 +74,7 @@
         <guava.version>25.1-jre</guava.version>
         <hadoop.version>2.9.2</hadoop.version>
         <hamcrest.version>1.2</hamcrest.version>
-        <httpclient.version>4.5.1</httpclient.version>
+        <httpclient.version>4.5.9</httpclient.version>
         <httpcore.version>4.4.3</httpcore.version>
         <jackson.version>2.9.9</jackson.version>
         <jackson1.version>1.9.13</jackson1.version>
@@ -122,7 +122,6 @@
         <slf4j.version>1.7.28</slf4j.version>
         <slf4j16.version>1.6.6</slf4j16.version>
         <snappy.version>1.1.7.2</snappy.version>
-        <spark.hadoop.version>2.6.5</spark.hadoop.version>
         <spark.version>2.3.3</spark.version>
         <spring.boot.version>1.5.20.RELEASE</spring.boot.version>
         <spring.data.version>1.13.14.RELEASE</spring.data.version> <!-- don't forget to update spring version -->
