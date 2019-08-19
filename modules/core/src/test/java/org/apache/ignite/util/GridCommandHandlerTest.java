@@ -208,62 +208,19 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
     }
 
     /**
-     * Verifies view action of Cluster ID and tag command.
-     */
-    @Test
-    public void testClusterIdAndTagView() throws Exception {
-        final String newTag = "new_tag";
-
-        IgniteEx ig = startGrid(0);
-
-        injectTestSystemOut();
-
-        //default action for Cluster ID and tag command is view action
-        assertEquals(EXIT_CODE_OK, execute("--id-and-tag"));
-
-        UUID clID = ig.cluster().id();
-        String clTag = ig.cluster().tag();
-
-        String out = testOut.toString();
-
-        assertTrue(out.contains("Cluster ID: " + clID));
-        assertTrue(out.contains("Cluster tag: " + clTag));
-
-        ig.cluster().active(true);
-
-        boolean tagUpdated = GridTestUtils.waitForCondition(() -> {
-            try {
-                ig.cluster().tag(newTag);
-            }
-            catch (IgniteCheckedException e) {
-                return false;
-            }
-
-            return true;
-        }, 10_000);
-
-        assertTrue("Tag has not been updated in 10 seconds.", tagUpdated);
-
-        assertEquals(EXIT_CODE_OK, execute("--id-and-tag", "view"));
-
-        out = testOut.toString();
-
-        assertTrue(out.contains("Cluster tag: " + newTag));
-    }
-
-    /**
      * Verifies that update-tag action obeys its specification: doesn't allow updating tag on inactive cluster,
      *
+     * @throws Exception If failed.
      */
     @Test
-    public void testClusterIdAndTagUpdate() throws Exception {
+    public void testClusterChangeTag() throws Exception {
         final String newTag = "new_tag";
 
         IgniteEx cl = startGrid(0);
 
         injectTestSystemOut();
 
-        assertEquals(EXIT_CODE_OK, execute("--id-and-tag", "change-tag", newTag));
+        assertEquals(EXIT_CODE_OK, execute("--change-tag", newTag));
 
         String out = testOut.toString();
 
@@ -273,9 +230,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
         cl.cluster().active(true);
 
         //because new tag should be non-empty string
-        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--id-and-tag", "change-tag", ""));
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--change-tag", ""));
 
-        assertEquals(EXIT_CODE_OK, execute("--id-and-tag", "change-tag", newTag));
+        assertEquals(EXIT_CODE_OK, execute("--change-tag", newTag));
 
         assertEquals(newTag, cl.cluster().tag());
     }
@@ -307,15 +264,46 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
      */
     @Test
     public void testState() throws Exception {
+        final String newTag = "new_tag";
+
         Ignite ignite = startGrids(1);
 
         assertFalse(ignite.cluster().active());
 
+        injectTestSystemOut();
+
         assertEquals(EXIT_CODE_OK, execute("--state"));
+
+        String out = testOut.toString();
+
+        UUID clId = ignite.cluster().id();
+        String clTag = ignite.cluster().tag();
+
+        assertTrue(out.contains("Cluster  ID: " + clId));
+        assertTrue(out.contains("Cluster tag: " + clTag));
 
         ignite.cluster().active(true);
 
         assertEquals(EXIT_CODE_OK, execute("--state"));
+
+        boolean tagUpdated = GridTestUtils.waitForCondition(() -> {
+            try {
+                ignite.cluster().tag(newTag);
+            }
+            catch (IgniteCheckedException e) {
+                return false;
+            }
+
+            return true;
+        }, 10_000);
+
+        assertTrue("Tag has not been updated in 10 seconds.", tagUpdated);
+
+        assertEquals(EXIT_CODE_OK, execute("--state"));
+
+        out = testOut.toString();
+
+        assertTrue(out.contains("Cluster tag: " + newTag));
     }
 
     /**

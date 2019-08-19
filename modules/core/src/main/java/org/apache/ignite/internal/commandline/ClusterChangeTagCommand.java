@@ -23,7 +23,7 @@ import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.client.GridClientNode;
 import org.apache.ignite.internal.visor.id_and_tag.VisorClusterChangeTagTask;
-import org.apache.ignite.internal.visor.id_and_tag.VisorIdAndTagTaskArg;
+import org.apache.ignite.internal.visor.id_and_tag.VisorClusterChangeTagTaskArg;
 import org.apache.ignite.internal.visor.id_and_tag.VisorClusterChangeTagTaskResult;
 
 import static org.apache.ignite.internal.commandline.CommandList.CLUSTER_CHANGE_TAG;
@@ -37,9 +37,6 @@ import static org.apache.ignite.internal.commandline.TaskExecutor.executeTaskByN
 public class ClusterChangeTagCommand implements Command<String> {
     /** */
     private static final String ERR_NO_NEW_TAG_PROVIDED = "Please provide new tag.";
-
-    /** */
-    private static final String ARG_NAME = "newTag";
 
     /** */
     private static final String ERR_EMPTY_TAG_PROVIDED = "Please provide non-empty tag.";
@@ -85,7 +82,7 @@ public class ClusterChangeTagCommand implements Command<String> {
 
     /** {@inheritDoc} */
     @Override public void printUsage(Logger logger) {
-        Command.usage(logger, "Change cluster tag to new value:", CLUSTER_CHANGE_TAG, "newTag", optional(CMD_AUTO_CONFIRMATION));
+        Command.usage(logger, "Change cluster tag to new value:", CLUSTER_CHANGE_TAG, "newTagValue", optional(CMD_AUTO_CONFIRMATION));
     }
 
     /** {@inheritDoc} */
@@ -93,15 +90,10 @@ public class ClusterChangeTagCommand implements Command<String> {
         if (!argIter.hasNextSubArg())
             throw new IllegalArgumentException(ERR_NO_NEW_TAG_PROVIDED);
 
-        String argName = argIter.nextArg(ERR_NO_NEW_TAG_PROVIDED);
+        newTagArg = argIter.nextArg(ERR_NO_NEW_TAG_PROVIDED);
 
-        if (!ARG_NAME.equalsIgnoreCase(argName))
-            throw new IllegalArgumentException("Expected correct argument");
-
-        String newTag = argIter.nextArg(ERR_NO_NEW_TAG_PROVIDED);
-
-        System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] "  + System.currentTimeMillis() +
-            " newTag: " + newTag);
+        if (newTagArg == null || newTagArg.isEmpty())
+            throw new IllegalArgumentException(ERR_EMPTY_TAG_PROVIDED);
     }
 
     /** {@inheritDoc} */
@@ -109,8 +101,13 @@ public class ClusterChangeTagCommand implements Command<String> {
         return CLUSTER_CHANGE_TAG.toCommandName();
     }
 
+    /** {@inheritDoc} */
+    @Override public String confirmationPrompt() {
+        return "Warning: the command will change cluster tag.";
+    }
+
     /** */
-    private VisorIdAndTagTaskArg toVisorArguments() {
-        return new VisorIdAndTagTaskArg(newTagArg);
+    private VisorClusterChangeTagTaskArg toVisorArguments() {
+        return new VisorClusterChangeTagTaskArg(newTagArg);
     }
 }

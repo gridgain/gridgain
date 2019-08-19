@@ -24,8 +24,6 @@ import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorOneNodeTask;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.internal.visor.id_and_tag.VisorIdAndTagOperation.VIEW;
-
 /**
  *
  */

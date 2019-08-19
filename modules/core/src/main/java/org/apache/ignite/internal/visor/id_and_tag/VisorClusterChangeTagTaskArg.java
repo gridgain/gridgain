@@ -26,7 +26,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  *
  */
-public class VisorIdAndTagTaskArg extends IgniteDataTransferObject {
+public class VisorClusterChangeTagTaskArg extends IgniteDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -34,12 +34,12 @@ public class VisorIdAndTagTaskArg extends IgniteDataTransferObject {
     private String newTag;
 
     /** */
-    public VisorIdAndTagTaskArg() {
+    public VisorClusterChangeTagTaskArg() {
         // No-op.
     }
 
     /** */
-    public VisorIdAndTagTaskArg(String newTag) {
+    public VisorClusterChangeTagTaskArg(String newTag) {
         this.newTag = newTag;
     }
 

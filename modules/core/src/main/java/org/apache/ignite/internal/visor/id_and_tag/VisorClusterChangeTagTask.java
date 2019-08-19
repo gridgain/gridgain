@@ -30,19 +30,20 @@ import org.jetbrains.annotations.Nullable;
  */
 @GridInternal
 @GridVisorManagementTask
-public class VisorClusterChangeTagTask extends VisorOneNodeTask<VisorIdAndTagTaskArg, VisorClusterChangeTagTaskResult> {
+public class VisorClusterChangeTagTask extends VisorOneNodeTask<VisorClusterChangeTagTaskArg, VisorClusterChangeTagTaskResult> {
     /** */
     private static final long serialVersionUID = 0L;
 
     /** {@inheritDoc} */
-    @Override protected VisorJob<VisorIdAndTagTaskArg, VisorClusterChangeTagTaskResult> job(VisorIdAndTagTaskArg arg) {
+    @Override protected VisorJob<VisorClusterChangeTagTaskArg, VisorClusterChangeTagTaskResult> job(
+        VisorClusterChangeTagTaskArg arg) {
         return new VisorClusterChangeTagJob(arg, debug);
     }
 
     /**
      * 
      */
-    private static class VisorClusterChangeTagJob extends VisorJob<VisorIdAndTagTaskArg, VisorClusterChangeTagTaskResult> {
+    private static class VisorClusterChangeTagJob extends VisorJob<VisorClusterChangeTagTaskArg, VisorClusterChangeTagTaskResult> {
         /** */
         private static final long serialVersionUID = 0L;
 
@@ -53,12 +54,12 @@ public class VisorClusterChangeTagTask extends VisorOneNodeTask<VisorIdAndTagTas
          * @param debug Flag indicating whether debug information should be printed into node log.
          */
         VisorClusterChangeTagJob(
-            @Nullable VisorIdAndTagTaskArg arg, boolean debug) {
+            @Nullable VisorClusterChangeTagTaskArg arg, boolean debug) {
             super(arg, debug);
         }
 
         /** {@inheritDoc} */
-        @Override protected VisorClusterChangeTagTaskResult run(@Nullable VisorIdAndTagTaskArg arg) throws IgniteException {
+        @Override protected VisorClusterChangeTagTaskResult run(@Nullable VisorClusterChangeTagTaskArg arg) throws IgniteException {
                 return update(arg.newTag());
         }
 
