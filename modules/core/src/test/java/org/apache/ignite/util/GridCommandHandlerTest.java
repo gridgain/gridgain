@@ -20,6 +20,7 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteAtomicSequence;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.BaselineNode;
@@ -55,7 +56,6 @@ import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.internal.visor.ru.VisorRollingUpgradeChangeModeResult;
 import org.apache.ignite.internal.visor.tx.VisorTxInfo;
 import org.apache.ignite.internal.visor.tx.VisorTxTaskResult;
 import org.apache.ignite.lang.IgniteBiPredicate;
@@ -98,7 +98,9 @@ import java.util.stream.Collectors;
 
 import static java.io.File.separatorChar;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
+import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
+import static org.apache.ignite.cache.PartitionLossPolicy.READ_ONLY_SAFE;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_ILLEGAL_STATE_ERROR;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_INVALID_ARGUMENTS;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
@@ -1644,5 +1646,44 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         assertEquals(EXIT_CODE_UNEXPECTED_ERROR,
             execute("--baseline", "set", "non-existing-node-id ," + consistentIds(ignite)));
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCacheIdleVerifyPrintLostPartitions() throws Exception {
+        IgniteEx ignite = startGrids(3);
+
+        ignite.cluster().active(true);
+
+        ignite.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME)
+            .setAffinity(new RendezvousAffinityFunction(false, 16))
+            .setCacheMode(PARTITIONED)
+            .setPartitionLossPolicy(READ_ONLY_SAFE)
+            .setBackups(1));
+
+        try (IgniteDataStreamer streamer = ignite.dataStreamer(DEFAULT_CACHE_NAME)) {
+            for (int i = 0; i < 10000; i++)
+                streamer.addData(i, new byte[i]);
+        }
+
+        String g1Name = grid(1).name();
+
+        stopGrid(1);
+
+        cleanPersistenceDir(g1Name);
+
+        //Start node 2 with empty PDS. Rebalance will be started.
+        startGrid(1);
+
+        //During rebalance stop node 3. Rebalance will be stopped which lead to lost partitions.
+        stopGrid(2);
+
+        injectTestSystemOut();
+
+        assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify", "--yes"));
+
+        assertContains(log, testOut.toString(), "LOST partitions:");
     }
 }
