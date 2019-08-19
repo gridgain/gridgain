@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.util;
 
-import com.sun.management.HotSpotDiagnosticMXBean;
 import com.sun.management.OperatingSystemMXBean;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -74,7 +73,7 @@ public class GridDebug {
     private static final String HOTSPOT_BEAN_NAME = "com.sun.management:type=HotSpotDiagnostic";
 
     /** field to store the hotspot diagnostic MBean */
-    private static volatile HotSpotDiagnosticMXBean hotspotMBean;
+    private static volatile Object hotspotMBean;
 
     /** Platform-specific management interface for the operating system. */
     private static final String OS_BEAN_NAME = "java.lang:type=OperatingSystem";
@@ -335,7 +334,8 @@ public class GridDebug {
             f.delete();
 
         try {
-            hotspotMBean.dumpHeap(fileName, live);
+            hotspotMBean.getClass().getMethod("dumpHeap", String.class, boolean.class)
+                .invoke(hotspotMBean, fileName, live);
         }
         catch (RuntimeException re) {
             throw re;
@@ -360,8 +360,15 @@ public class GridDebug {
     private static void initHotspotMBean() {
         if (hotspotMBean == null) {
             synchronized (GridDebug.class) {
-                if (hotspotMBean == null)
-                    hotspotMBean = getMBean(HOTSPOT_BEAN_NAME, HotSpotDiagnosticMXBean.class);
+                if (hotspotMBean == null) {
+                    try {
+                        hotspotMBean = getMBean(HOTSPOT_BEAN_NAME,
+                            Class.forName("com.sun.management.HotSpotDiagnosticMXBean"));
+                    }
+                    catch (ClassNotFoundException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
             }
         }
     }
