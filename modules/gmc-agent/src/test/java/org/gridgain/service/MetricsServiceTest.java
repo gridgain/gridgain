@@ -35,7 +35,6 @@ import org.gridgain.agent.StompDestinationsUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
-import org.springframework.messaging.simp.stomp.StompHeaders;
 
 import static org.apache.ignite.internal.GridTopic.TOPIC_METRICS;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYSTEM_POOL;
@@ -62,12 +61,12 @@ public class MetricsServiceTest extends AbstractServiceTest {
         MetricResponse metricRes = getMetricResponse();
         srvc.onNodeMetrics(UUID.randomUUID(), metricRes, SYSTEM_POOL);
 
-        ArgumentCaptor<StompHeaders> destCaptor = ArgumentCaptor.forClass(StompHeaders.class);
-        ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
+        ArgumentCaptor<String> destCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<byte[]> payloadCaptor = ArgumentCaptor.forClass(byte[].class);
         verify(mgr, times(1)).send(destCaptor.capture(), payloadCaptor.capture());
 
-        Assert.assertEquals(StompDestinationsUtils.buildMetricsDest(metricRes.clusterId()), destCaptor.getValue().getDestination());
-        Assert.assertArrayEquals(new byte[]{1, 2, 3, 4}, (byte[]) payloadCaptor.getValue());
+        Assert.assertEquals(StompDestinationsUtils.buildMetricsDest(metricRes.clusterId()), destCaptor.getValue());
+        Assert.assertArrayEquals(new byte[]{1, 2, 3, 4}, payloadCaptor.getValue());
     }
 
     /**
