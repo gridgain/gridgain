@@ -16,28 +16,32 @@
 
 package org.apache.ignite.internal.metric;
 
+import java.util.Optional;
 import java.util.Set;
 import javax.management.DynamicMBean;
+import javax.management.MBeanAttributeInfo;
 import javax.management.MBeanFeatureInfo;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.spi.metric.jmx.JmxExporterSpi;
+import org.apache.ignite.spi.metric.jmx.JmxMetricExporterSpi;
 import org.apache.ignite.testframework.GridTestUtils.RunnableX;
 import org.junit.Test;
 
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.CPU_LOAD;
+import static org.apache.ignite.internal.processors.metric.GridMetricManager.CPU_LOAD_DESCRIPTION;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.GC_CPU_LOAD;
+import static org.apache.ignite.internal.processors.metric.GridMetricManager.GC_CPU_LOAD_DESCRIPTION;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.SYS_METRICS;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrowsWithCause;
 
 /** */
-public class JmxExporterSpiTest extends AbstractExporterSpiTest {
+public class JmxMetricExporterSpiTest extends AbstractExporterSpiTest {
     /** */
     private static IgniteEx ignite;
 
@@ -50,7 +54,7 @@ public class JmxExporterSpiTest extends AbstractExporterSpiTest {
                 new DataRegionConfiguration()
                     .setPersistenceEnabled(true)));
 
-        JmxExporterSpi jmxSpi = new JmxExporterSpi();
+        JmxMetricExporterSpi jmxSpi = new JmxMetricExporterSpi();
 
         jmxSpi.setExportFilter(mgrp -> !mgrp.name().startsWith(FILTERED_PREFIX));
 
@@ -88,6 +92,20 @@ public class JmxExporterSpiTest extends AbstractExporterSpiTest {
         assertTrue(res.contains(metricName("memory", "heap", "used")));
         assertTrue(res.contains(metricName("memory", "nonheap", "committed")));
         assertTrue(res.contains(metricName("memory", "nonheap", "max")));
+
+        Optional<MBeanAttributeInfo> cpuLoad = stream(sysMBean.getMBeanInfo().getAttributes())
+            .filter(a -> a.getName().equals(CPU_LOAD))
+            .findFirst();
+
+        assertTrue(cpuLoad.isPresent());
+        assertEquals(CPU_LOAD_DESCRIPTION, cpuLoad.get().getDescription());
+
+        Optional<MBeanAttributeInfo> gcCpuLoad = stream(sysMBean.getMBeanInfo().getAttributes())
+            .filter(a -> a.getName().equals(GC_CPU_LOAD))
+            .findFirst();
+
+        assertTrue(gcCpuLoad.isPresent());
+        assertEquals(GC_CPU_LOAD_DESCRIPTION, gcCpuLoad.get().getDescription());
     }
 
     /** */
