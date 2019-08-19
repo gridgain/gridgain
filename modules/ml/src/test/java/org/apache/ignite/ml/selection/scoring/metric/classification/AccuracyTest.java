@@ -18,7 +18,7 @@ package org.apache.ignite.ml.selection.scoring.metric.classification;
 
 import org.apache.ignite.ml.selection.scoring.TestLabelPairCursor;
 import org.apache.ignite.ml.selection.scoring.cursor.LabelPairCursor;
-import org.apache.ignite.ml.selection.scoring.metric.Metric;
+import org.apache.ignite.ml.selection.scoring.metric.OldMetric;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -32,7 +32,7 @@ public class AccuracyTest {
     /** */
     @Test
     public void testScore() {
-        Metric<Integer> scoreCalculator = new Accuracy<>();
+        OldMetric<Integer> scoreCalculator = new Accuracy<>();
 
         LabelPairCursor<Integer> cursor = new TestLabelPairCursor<>(
             Arrays.asList(1, 1, 1, 1),

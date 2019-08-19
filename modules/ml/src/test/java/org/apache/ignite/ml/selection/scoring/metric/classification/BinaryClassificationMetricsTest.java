@@ -18,7 +18,7 @@ package org.apache.ignite.ml.selection.scoring.metric.classification;
 
 import org.apache.ignite.ml.selection.scoring.TestLabelPairCursor;
 import org.apache.ignite.ml.selection.scoring.cursor.LabelPairCursor;
-import org.apache.ignite.ml.selection.scoring.metric.Metric;
+import org.apache.ignite.ml.selection.scoring.metric.OldMetric;
 import org.apache.ignite.ml.selection.scoring.metric.exceptions.UnknownClassLabelException;
 import org.apache.ignite.ml.selection.scoring.metric.regression.RegressionMetrics;
 import org.junit.Test;
@@ -34,7 +34,7 @@ public class BinaryClassificationMetricsTest {
     /** */
     @Test
     public void testDefaultBehaviour() {
-        Metric scoreCalculator = new BinaryClassificationMetrics();
+        OldMetric scoreCalculator = new BinaryClassificationMetrics();
 
         LabelPairCursor<Double> cursor = new TestLabelPairCursor<>(
             Arrays.asList(1.0, 1.0, 1.0, 1.0),
@@ -64,7 +64,7 @@ public class BinaryClassificationMetricsTest {
     /** */
     @Test
     public void testAccuracy() {
-        Metric scoreCalculator = new BinaryClassificationMetrics()
+        OldMetric scoreCalculator = new BinaryClassificationMetrics()
             .withNegativeClsLb(1.0)
             .withPositiveClsLb(2.0);
 
@@ -81,7 +81,7 @@ public class BinaryClassificationMetricsTest {
     /** */
     @Test
     public void testCustomMetric() {
-        Metric scoreCalculator = new BinaryClassificationMetrics()
+        OldMetric scoreCalculator = new BinaryClassificationMetrics()
             .withNegativeClsLb(1.0)
             .withPositiveClsLb(2.0)
             .withMetric(BinaryClassificationMetricValues::tp);
@@ -99,7 +99,7 @@ public class BinaryClassificationMetricsTest {
     /** */
     @Test
     public void testNullCustomMetric() {
-        Metric scoreCalculator = new BinaryClassificationMetrics()
+        OldMetric scoreCalculator = new BinaryClassificationMetrics()
             .withNegativeClsLb(1.0)
             .withPositiveClsLb(2.0)
             .withMetric(null);
@@ -118,7 +118,7 @@ public class BinaryClassificationMetricsTest {
     /** */
     @Test
     public void testNaNinClassLabels() {
-        Metric scoreCalculator = new BinaryClassificationMetrics()
+        OldMetric scoreCalculator = new BinaryClassificationMetrics()
             .withNegativeClsLb(Double.NaN)
             .withPositiveClsLb(Double.POSITIVE_INFINITY);
 
@@ -136,7 +136,7 @@ public class BinaryClassificationMetricsTest {
     /** */
     @Test(expected = UnknownClassLabelException.class)
     public void testFailWithIncorrectClassLabelsInData() {
-        Metric scoreCalculator = new BinaryClassificationMetrics();
+        OldMetric scoreCalculator = new BinaryClassificationMetrics();
 
         LabelPairCursor<Double> cursor = new TestLabelPairCursor<>(
             Arrays.asList(2.0, 2.0, 2.0, 2.0),
@@ -149,7 +149,7 @@ public class BinaryClassificationMetricsTest {
     /** */
     @Test(expected = UnknownClassLabelException.class)
     public void testFailWithIncorrectClassLabelsInMetrics() {
-        Metric scoreCalculator = new BinaryClassificationMetrics()
+        OldMetric scoreCalculator = new BinaryClassificationMetrics()
             .withPositiveClsLb(42);
 
         LabelPairCursor<Double> cursor = new TestLabelPairCursor<>(

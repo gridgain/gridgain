@@ -22,6 +22,7 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
 import org.apache.ignite.ml.dataset.feature.extractor.impl.DummyVectorizer;
+import org.apache.ignite.ml.dataset.impl.cache.CacheBasedDatasetBuilder;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.nn.UpdatesStrategy;
 import org.apache.ignite.ml.optimization.updatecalculators.RPropParameterUpdate;
@@ -29,6 +30,7 @@ import org.apache.ignite.ml.optimization.updatecalculators.RPropUpdateCalculator
 import org.apache.ignite.ml.regressions.linear.LinearRegressionModel;
 import org.apache.ignite.ml.regressions.linear.LinearRegressionSGDTrainer;
 import org.apache.ignite.ml.selection.scoring.evaluator.Evaluator;
+import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
 import org.apache.ignite.ml.selection.scoring.metric.regression.RegressionMetrics;
 import org.apache.ignite.ml.util.MLSandboxDatasets;
 import org.apache.ignite.ml.util.SandboxMLCache;
@@ -76,6 +78,9 @@ public class LinearRegressionSGDTrainerExample {
                 LinearRegressionModel mdl = trainer.fit(ignite, dataCache, vectorizer);
 
                 System.out.println(">>> Linear regression model: " + mdl);
+
+                Evaluator.evaluate(mdl, new CacheBasedDatasetBuilder<>(ignite, dataCache), vectorizer,
+                    MetricName.MAE, MetricName.MSE, MetricName.R2, MetricName.RMSE).print(5);
 
                 double rmse = Evaluator.evaluate(
                     dataCache,

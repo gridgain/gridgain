@@ -19,7 +19,7 @@ package org.apache.ignite.ml.selection.scoring.metric.regression;
 import java.util.Arrays;
 import org.apache.ignite.ml.selection.scoring.TestLabelPairCursor;
 import org.apache.ignite.ml.selection.scoring.cursor.LabelPairCursor;
-import org.apache.ignite.ml.selection.scoring.metric.Metric;
+import org.apache.ignite.ml.selection.scoring.metric.OldMetric;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -33,7 +33,7 @@ public class RegressionMetricsTest {
      */
     @Test
     public void testDefaultBehaviour() {
-        Metric scoreCalculator = new RegressionMetrics();
+        OldMetric scoreCalculator = new RegressionMetrics();
 
         LabelPairCursor<Double> cursor = new TestLabelPairCursor<>(
             Arrays.asList(1.0, 1.0, 1.0, 1.0),

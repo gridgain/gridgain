@@ -17,7 +17,7 @@
 package org.apache.ignite.ml.selection.scoring.metric.classification;
 
 import org.apache.ignite.ml.selection.scoring.LabelPair;
-import org.apache.ignite.ml.selection.scoring.metric.Metric;
+import org.apache.ignite.ml.selection.scoring.metric.OldMetric;
 
 import java.util.Iterator;
 
@@ -26,7 +26,7 @@ import java.util.Iterator;
  *
  * @param <L> Type of a label (truth or prediction).
  */
-public class Accuracy<L> implements Metric<L> {
+public class Accuracy<L> implements OldMetric<L> {
     /** {@inheritDoc} */
     @Override public double score(Iterator<LabelPair<L>> iter) {
         long totalCnt = 0;

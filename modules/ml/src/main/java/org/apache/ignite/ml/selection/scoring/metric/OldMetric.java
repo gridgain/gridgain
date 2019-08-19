@@ -14,25 +14,31 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.ml.selection.scoring.metric.classification;
+package org.apache.ignite.ml.selection.scoring.metric;
 
-import org.apache.ignite.ml.selection.scoring.metric.Metric;
+import java.util.Iterator;
+import org.apache.ignite.ml.selection.scoring.LabelPair;
 
 /**
- * Metric calculator for one class label.
+ * Base interface for score calculators.
  *
  * @param <L> Type of a label (truth or prediction).
  */
-public abstract class ClassMetric<L> implements Metric<L> {
-    /** Class label. */
-    protected L clsLb;
+public interface OldMetric<L> {
+    /**
+     * Calculates score.
+     *
+     * @param iter Iterator that supplies pairs of truth values and predicated.
+     * @return Score.
+     */
+    public double score(Iterator<LabelPair<L>> iter);
 
     /**
-     * The class of interest or positive class.
+     * Returns the metric's name.
      *
-     * @param clsLb The label.
+     * NOTE: Should be unique to calculate multiple metrics correctly.
+     *
+     * @return String name representation.
      */
-    public ClassMetric(L clsLb) {
-        this.clsLb = clsLb;
-    }
+    public String name();
 }

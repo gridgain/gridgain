@@ -21,7 +21,7 @@ import java.util.Iterator;
 import java.util.PriorityQueue;
 import org.apache.commons.math3.util.Pair;
 import org.apache.ignite.ml.selection.scoring.LabelPair;
-import org.apache.ignite.ml.selection.scoring.metric.Metric;
+import org.apache.ignite.ml.selection.scoring.metric.OldMetric;
 import org.apache.ignite.ml.selection.scoring.metric.exceptions.UnknownClassLabelException;
 
 /**
@@ -30,7 +30,7 @@ import org.apache.ignite.ml.selection.scoring.metric.exceptions.UnknownClassLabe
  * The calculation of AUC is based on Mann-Whitney U test
  * (https://en.wikipedia.org/wiki/Mann-Whitney_U_test).
  */
-public class ROCAUC implements Metric<Double> {
+public class ROCAUC implements OldMetric<Double> {
     /** Positive class label. */
     private double positiveClsLb = 1.0;
 

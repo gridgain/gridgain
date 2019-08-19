@@ -25,7 +25,7 @@ import java.util.Iterator;
  *
  * @param <L> Type of a label (truth or prediction).
  */
-public class Fmeasure<L> extends ClassMetric<L> {
+public class Fmeasure<L> extends ClassOldMetric<L> {
     /**
      * The class of interest or positive class.
      *

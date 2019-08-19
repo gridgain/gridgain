@@ -45,7 +45,7 @@ import org.apache.ignite.ml.selection.paramgrid.ParamGrid;
 import org.apache.ignite.ml.selection.paramgrid.ParameterSetGenerator;
 import org.apache.ignite.ml.selection.paramgrid.RandomStrategy;
 import org.apache.ignite.ml.selection.scoring.cursor.LabelPairCursor;
-import org.apache.ignite.ml.selection.scoring.metric.Metric;
+import org.apache.ignite.ml.selection.scoring.metric.OldMetric;
 import org.apache.ignite.ml.selection.split.mapper.SHA256UniformMapper;
 import org.apache.ignite.ml.selection.split.mapper.UniformMapper;
 import org.apache.ignite.ml.trainers.DatasetTrainer;
@@ -82,7 +82,7 @@ public abstract class AbstractCrossValidation<M extends IgniteModel<Vector, L>, 
     protected Pipeline<K, V, Integer, Double> pipeline;
 
     /** Metric. */
-    protected Metric<L> metric;
+    protected OldMetric<L> metric;
 
     /** Preprocessor. */
     protected Preprocessor<K, V> preprocessor;
@@ -399,7 +399,7 @@ public abstract class AbstractCrossValidation<M extends IgniteModel<Vector, L>, 
     /**
      * @param metric Metric.
      */
-    public AbstractCrossValidation<M, L, K, V> withMetric(Metric<L> metric) {
+    public AbstractCrossValidation<M, L, K, V> withMetric(OldMetric<L> metric) {
         this.metric = metric;
         return this;
     }

@@ -25,7 +25,7 @@ import java.util.Iterator;
  *
  * @param <L> Type of a label (truth or prediction).
  */
-public class Recall<L> extends ClassMetric<L> {
+public class Recall<L> extends ClassOldMetric<L> {
     /**
      * The class of interest or positive class.
      *

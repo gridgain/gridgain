@@ -25,7 +25,7 @@ import java.util.function.Function;
  * Abstract metrics calculator.
  * It could be used in two ways: to caculate all regression metrics or custom regression metric.
  */
-public abstract class AbstractMetrics<M extends MetricValues> implements Metric<Double> {
+public abstract class AbstractMetrics<M extends MetricValues> implements OldMetric<Double> {
     /** The main metric to get individual score. */
     protected Function<M, Double> metric;
 

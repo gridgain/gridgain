@@ -19,7 +19,7 @@ package org.apache.ignite.ml.selection.scoring.metric.classification;
 import java.util.Arrays;
 import org.apache.ignite.ml.selection.scoring.TestLabelPairCursor;
 import org.apache.ignite.ml.selection.scoring.cursor.LabelPairCursor;
-import org.apache.ignite.ml.selection.scoring.metric.Metric;
+import org.apache.ignite.ml.selection.scoring.metric.OldMetric;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -31,7 +31,7 @@ public class ROCAUCTest {
     /** */
     @Test
     public void testTotalTruth() {
-        Metric<Double> scoreCalculator = new ROCAUC();
+        OldMetric<Double> scoreCalculator = new ROCAUC();
 
         LabelPairCursor<Double> cursor = new TestLabelPairCursor<>(
             Arrays.asList(1.0, 1.0, 1.0, 1.0, 1.0),
@@ -46,7 +46,7 @@ public class ROCAUCTest {
     /** */
     @Test
     public void testTotalUntruth() {
-        Metric<Double> scoreCalculator = new ROCAUC();
+        OldMetric<Double> scoreCalculator = new ROCAUC();
 
         LabelPairCursor<Double> cursor = new TestLabelPairCursor<>(
             Arrays.asList(1.0, 1.0, 1.0, 1.0, 1.0),
@@ -61,7 +61,7 @@ public class ROCAUCTest {
     /** */
     @Test
     public void testOneDifferent() {
-        Metric<Double> scoreCalculator = new ROCAUC();
+        OldMetric<Double> scoreCalculator = new ROCAUC();
 
         LabelPairCursor<Double> cursor = new TestLabelPairCursor<>(
             Arrays.asList(1.0, 1.0, 1.0, 0.0),
@@ -76,7 +76,7 @@ public class ROCAUCTest {
     /** */
     @Test
     public void testOneDifferentButBalanced() {
-        Metric<Double> scoreCalculator = new ROCAUC();
+        OldMetric<Double> scoreCalculator = new ROCAUC();
 
         LabelPairCursor<Double> cursor = new TestLabelPairCursor<>(
             Arrays.asList(1.0, 1.0, 0.0, 0.0),
@@ -91,7 +91,7 @@ public class ROCAUCTest {
     /** */
     @Test
     public void testTwoDifferentAndBalanced() {
-        Metric<Double> scoreCalculator = new ROCAUC();
+        OldMetric<Double> scoreCalculator = new ROCAUC();
 
         LabelPairCursor<Double> cursor = new TestLabelPairCursor<>(
             Arrays.asList(1.0, 1.0, 0.0, 0.0),
@@ -106,7 +106,7 @@ public class ROCAUCTest {
     /** */
     @Test
     public void testNotOnlyBinaryValues() {
-        Metric<Double> scoreCalculator = new ROCAUC();
+        OldMetric<Double> scoreCalculator = new ROCAUC();
 
         LabelPairCursor<Double> cursor = new TestLabelPairCursor<>(
             Arrays.asList(1.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0),
