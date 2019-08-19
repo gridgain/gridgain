@@ -1309,22 +1309,9 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
      * @param c Closure.
      */
     private void forAllCacheGroups(boolean crd, IgniteInClosureX<GridAffinityAssignmentCache> c) {
-        Collection<GridAffinityAssignmentCache> affinityCaches;
-
-        Collection<GridAffinityAssignmentCache> affinityCaches1 = grpHolders.values().stream()
+        Collection<GridAffinityAssignmentCache> affinityCaches = grpHolders.values().stream()
             .map(CacheGroupHolder::affinity)
             .collect(Collectors.toList());
-
-        Collection<GridAffinityAssignmentCache> affinityCaches2 = cctx.kernalContext().cache().cacheGroups().stream()
-            .filter(grp -> !grp.isLocal())
-            .filter(grp -> !grp.isRecoveryMode())
-            .map(CacheGroupContext::affinity)
-            .collect(Collectors.toList());
-
-        if (!cctx.localNode().isClient())
-            affinityCaches = affinityCaches1;
-        else
-            affinityCaches = affinityCaches2;
 
         try {
             U.doInParallel(cctx.kernalContext().getSystemExecutorService(), affinityCaches, t -> {
