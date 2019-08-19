@@ -19,7 +19,7 @@ package org.gridgain.agent;
 import java.util.UUID;
 
 /**
- * Stomp destinations utils
+ * Stomp destinations utils.
  */
 public class StompDestinationsUtils {
     /** Cluster topology dest. */
