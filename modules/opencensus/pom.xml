@@ -76,6 +76,30 @@
 
         <dependency>
             <groupId>io.opencensus</groupId>
+            <artifactId>opencensus-impl-core</artifactId>
+            <version>${opencensus.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-context</artifactId>
+            <version>${grpc-context.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.lmax</groupId>
+            <artifactId>disruptor</artifactId>
+            <version>${disruptor.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>${guava-opencensus.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.opencensus</groupId>
             <artifactId>opencensus-exporter-trace-zipkin</artifactId>
             <version>${opencensus.version}</version>
         </dependency>
