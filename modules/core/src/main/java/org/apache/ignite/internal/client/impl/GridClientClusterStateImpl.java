@@ -27,11 +27,9 @@ import org.apache.ignite.internal.client.GridClientPredicate;
 import org.apache.ignite.internal.client.balancer.GridClientLoadBalancer;
 import org.apache.ignite.internal.client.impl.connection.GridClientConnection;
 import org.apache.ignite.internal.client.impl.connection.GridClientConnectionResetException;
+import org.apache.ignite.internal.client.impl.id_and_tag.IdAndTagViewTask;
+import org.apache.ignite.internal.client.impl.id_and_tag.IdAndTagViewTaskResult;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
-import org.apache.ignite.internal.visor.id_and_tag.VisorIdAndTagOperation;
-import org.apache.ignite.internal.visor.id_and_tag.VisorIdAndTagTask;
-import org.apache.ignite.internal.visor.id_and_tag.VisorIdAndTagTaskArg;
-import org.apache.ignite.internal.visor.id_and_tag.VisorIdAndTagTaskResult;
 
 /**
  *
@@ -77,27 +75,27 @@ public class GridClientClusterStateImpl extends GridClientAbstractProjection<Gri
         }).get();
     }
 
+    /** {@inheritDoc} */
     @Override public UUID id() throws GridClientException {
-        return withReconnectHandling(new ClientProjectionClosure<VisorIdAndTagTaskResult>() {
-            @Override public GridClientFuture<VisorIdAndTagTaskResult> apply(GridClientConnection conn,
-                UUID nodeID) throws GridClientConnectionResetException, GridClientClosedException {
-                return conn.execute(VisorIdAndTagTask.class.getName(),
-                    new VisorTaskArgument<>(nodeID, new VisorIdAndTagTaskArg(VisorIdAndTagOperation.VIEW, null), false)
-                    , nodeID, false);
-            }
-        }).get().id();
+        return withReconnectHandling(
+            (ClientProjectionClosure<IdAndTagViewTaskResult>)(conn, nodeID) ->
+                conn.execute(
+                    IdAndTagViewTask.class.getName(),
+                    new VisorTaskArgument<>(nodeID, null, false),
+                    nodeID,
+                    false))
+            .get().id();
     }
 
+    /** {@inheritDoc} */
     @Override public String tag() throws GridClientException {
         return withReconnectHandling(
-            new ClientProjectionClosure<VisorIdAndTagTaskResult>() {
-            @Override public GridClientFuture<VisorIdAndTagTaskResult> apply(GridClientConnection conn,
-                UUID nodeId) throws GridClientConnectionResetException, GridClientClosedException {
-                return conn.execute(VisorIdAndTagTask.class.getName(),
-                        new VisorTaskArgument<>(nodeId, new VisorIdAndTagTaskArg(VisorIdAndTagOperation.VIEW, null), false),
-                    nodeId, false);
-                }
-            }
-        ).get().tag();
+            (ClientProjectionClosure<IdAndTagViewTaskResult>)(conn, nodeId) ->
+                conn.execute(
+                    IdAndTagViewTask.class.getName(),
+                    new VisorTaskArgument<>(nodeId, null, false),
+                    nodeId,
+                    false))
+            .get().tag();
     }
 }

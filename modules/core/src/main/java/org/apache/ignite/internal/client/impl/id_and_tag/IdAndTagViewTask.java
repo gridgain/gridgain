@@ -18,6 +18,8 @@ package org.apache.ignite.internal.client.impl.id_and_tag;
 
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
+import org.apache.ignite.internal.processors.task.GridInternal;
+import org.apache.ignite.internal.processors.task.GridVisorManagementTask;
 import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorOneNodeTask;
 import org.jetbrains.annotations.Nullable;
@@ -27,13 +29,15 @@ import static org.apache.ignite.internal.visor.id_and_tag.VisorIdAndTagOperation
 /**
  *
  */
+@GridInternal
+@GridVisorManagementTask
 public class IdAndTagViewTask extends VisorOneNodeTask<Void, IdAndTagViewTaskResult> {
     /** */
     private static final long serialVersionUID = 0L;
 
     /** {@inheritDoc} */
     @Override protected VisorJob<Void, IdAndTagViewTaskResult> job(Void arg) {
-        return null;
+        return new IdAndTagViewJob(arg, debug);
     }
 
     private static class IdAndTagViewJob extends VisorJob<Void, IdAndTagViewTaskResult> {
@@ -59,7 +63,7 @@ public class IdAndTagViewTask extends VisorOneNodeTask<Void, IdAndTagViewTaskRes
         private IdAndTagViewTaskResult view() {
             IgniteClusterEx cl = ignite.cluster();
 
-            return new IdAndTagViewTaskResult(VIEW.ordinal(), cl.id(), cl.tag(), null, null);
+            return new IdAndTagViewTaskResult(cl.id(), cl.tag());
         }
     }
 }

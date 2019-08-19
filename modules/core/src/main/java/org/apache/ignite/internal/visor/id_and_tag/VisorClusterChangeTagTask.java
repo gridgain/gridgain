@@ -25,27 +25,24 @@ import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorOneNodeTask;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.internal.visor.id_and_tag.VisorIdAndTagOperation.CHANGE_TAG;
-import static org.apache.ignite.internal.visor.id_and_tag.VisorIdAndTagOperation.VIEW;
-
 /**
  *
  */
 @GridInternal
 @GridVisorManagementTask
-public class VisorIdAndTagTask extends VisorOneNodeTask<VisorIdAndTagTaskArg, VisorIdAndTagTaskResult> {
+public class VisorClusterChangeTagTask extends VisorOneNodeTask<VisorIdAndTagTaskArg, VisorClusterChangeTagTaskResult> {
     /** */
     private static final long serialVersionUID = 0L;
 
     /** {@inheritDoc} */
-    @Override protected VisorJob<VisorIdAndTagTaskArg, VisorIdAndTagTaskResult> job(VisorIdAndTagTaskArg arg) {
-        return new VisorIdAndTagJob(arg, debug);
+    @Override protected VisorJob<VisorIdAndTagTaskArg, VisorClusterChangeTagTaskResult> job(VisorIdAndTagTaskArg arg) {
+        return new VisorClusterChangeTagJob(arg, debug);
     }
 
     /**
      * 
      */
-    private static class VisorIdAndTagJob extends VisorJob<VisorIdAndTagTaskArg, VisorIdAndTagTaskResult> {
+    private static class VisorClusterChangeTagJob extends VisorJob<VisorIdAndTagTaskArg, VisorClusterChangeTagTaskResult> {
         /** */
         private static final long serialVersionUID = 0L;
 
@@ -55,36 +52,20 @@ public class VisorIdAndTagTask extends VisorOneNodeTask<VisorIdAndTagTaskArg, Vi
          * @param arg Job argument.
          * @param debug Flag indicating whether debug information should be printed into node log.
          */
-        VisorIdAndTagJob(
+        VisorClusterChangeTagJob(
             @Nullable VisorIdAndTagTaskArg arg, boolean debug) {
             super(arg, debug);
         }
 
         /** {@inheritDoc} */
-        @Override protected VisorIdAndTagTaskResult run(@Nullable VisorIdAndTagTaskArg arg) throws IgniteException {
-            switch (arg.operation()) {
-                case VIEW:
-                    return view();
-
-                case CHANGE_TAG:
-                    return update(arg.newTag());
-
-                default:
-                    return view();
-            }
-        }
-
-        /** */
-        private VisorIdAndTagTaskResult view() {
-            IgniteClusterEx cl = ignite.cluster();
-
-            return new VisorIdAndTagTaskResult(VIEW.ordinal(), cl.id(), cl.tag(), null, null);
+        @Override protected VisorClusterChangeTagTaskResult run(@Nullable VisorIdAndTagTaskArg arg) throws IgniteException {
+                return update(arg.newTag());
         }
 
         /**
          * @param newTag New tag.
          */
-        private VisorIdAndTagTaskResult update(String newTag) {
+        private VisorClusterChangeTagTaskResult update(String newTag) {
             IgniteClusterEx cl = ignite.cluster();
 
             boolean success = false;
@@ -101,7 +82,7 @@ public class VisorIdAndTagTask extends VisorOneNodeTask<VisorIdAndTagTaskArg, Vi
                 errMsg = e.getMessage();
             }
 
-            return new VisorIdAndTagTaskResult(CHANGE_TAG.ordinal(), null, oldTag, Boolean.valueOf(success), errMsg);
+            return new VisorClusterChangeTagTaskResult(oldTag, Boolean.valueOf(success), errMsg);
         }
     }
 }

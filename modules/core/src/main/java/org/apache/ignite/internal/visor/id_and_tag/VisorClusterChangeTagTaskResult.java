@@ -19,24 +19,15 @@ package org.apache.ignite.internal.visor.id_and_tag;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.util.UUID;
-import org.apache.ignite.internal.visor.VisorDataTransferObject;
+import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.jetbrains.annotations.Nullable;
-
-import static org.apache.ignite.internal.visor.id_and_tag.VisorIdAndTagOperation.VIEW;
 
 /**
  *
  */
-public class VisorIdAndTagTaskResult extends VisorDataTransferObject {
+public class VisorClusterChangeTagTaskResult extends IgniteDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;
-
-    /** */
-    private int op;
-
-    /** */
-    private UUID id;
 
     /** */
     private String tag;
@@ -48,19 +39,16 @@ public class VisorIdAndTagTaskResult extends VisorDataTransferObject {
     private String errResp;
 
     /** Default constructor. */
-    public VisorIdAndTagTaskResult() {
+    public VisorClusterChangeTagTaskResult() {
         // No-op.
     }
 
     /**
-     * @param id Cluster ID.
      * @param tag Cluster tag.
      * @param success Success of update tag operation.
      * @param errResp Error response returned if cluster tag update has failed.
      */
-    public VisorIdAndTagTaskResult(int op, UUID id, String tag, @Nullable Boolean success, @Nullable String errResp) {
-        this.op = op;
-        this.id = id;
+    public VisorClusterChangeTagTaskResult(String tag, @Nullable Boolean success, @Nullable String errResp) {
         this.tag = tag;
         this.success = success;
         this.errResp = errResp;
@@ -68,35 +56,18 @@ public class VisorIdAndTagTaskResult extends VisorDataTransferObject {
 
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
-        out.write(op);
-
-        if (op == VIEW.ordinal())
-            out.writeObject(id);
-        else {
-            out.writeObject(success);
-            out.writeObject(errResp);
-        }
+        out.writeObject(success);
+        out.writeObject(errResp);
 
         out.writeObject(tag);
     }
 
     /** {@inheritDoc} */
     @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
-        op = in.read();
-
-        if (op == VIEW.ordinal())
-            id = (UUID)in.readObject();
-        else {
-            success = (Boolean)in.readObject();
-            errResp = (String)in.readObject();
-        }
+        success = (Boolean)in.readObject();
+        errResp = (String)in.readObject();
 
         tag = (String)in.readObject();
-    }
-
-    /** */
-    public UUID id() {
-        return id;
     }
 
     /** */

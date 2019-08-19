@@ -19,19 +19,16 @@ package org.apache.ignite.internal.visor.id_and_tag;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.internal.visor.VisorDataTransferObject;
 import org.jetbrains.annotations.Nullable;
 
 /**
  *
  */
-public class VisorIdAndTagTaskArg extends VisorDataTransferObject {
+public class VisorIdAndTagTaskArg extends IgniteDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;
-
-    /** */
-    private VisorIdAndTagOperation op;
 
     /** */
     private String newTag;
@@ -42,26 +39,18 @@ public class VisorIdAndTagTaskArg extends VisorDataTransferObject {
     }
 
     /** */
-    public VisorIdAndTagTaskArg(VisorIdAndTagOperation op, @Nullable String newTag) {
-        this.op = op;
+    public VisorIdAndTagTaskArg(String newTag) {
         this.newTag = newTag;
     }
 
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
-        U.writeEnum(out, op);
         out.writeObject(newTag);
     }
 
     /** {@inheritDoc} */
     @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
-        op = VisorIdAndTagOperation.fromOrdinal(in.readByte());
         newTag = (String)in.readObject();
-    }
-
-    /** */
-    public VisorIdAndTagOperation operation() {
-        return op;
     }
 
     /** */
