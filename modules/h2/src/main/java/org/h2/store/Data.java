@@ -128,9 +128,9 @@ public class Data {
     private static final int CUSTOM_DATA_TYPE = 135;
 
     // Aggregates.
-    private static final byte AGG_DATA_COUNT = 101;
-    private static final byte AGG_DATA_DEFAULT = 102;
-    private static final byte AGG_DATA_COLLECTION = 103;
+    private static final int AGG_DATA_COUNT = 136;
+    private static final int AGG_DATA_DEFAULT = 137;
+    private static final int AGG_DATA_COLLECTION = 138;
 
     private static final long MILLIS_PER_MINUTE = 1000 * 60;
 
@@ -816,13 +816,13 @@ public class Data {
         }
         else if (o instanceof AggregateDataCount) {
             AggregateDataCount a = (AggregateDataCount)o;
-            writeByte(AGG_DATA_COUNT);
+            writeByte((byte)AGG_DATA_COUNT);
             writeByte(a.isAll() ? BOOLEAN_TRUE : BOOLEAN_FALSE);
             writeLong(a.count());
         }
         else if (o instanceof AggregateDataDefault) {
             AggregateDataDefault a = (AggregateDataDefault)o;
-            writeByte(AGG_DATA_DEFAULT);
+            writeByte((byte)AGG_DATA_DEFAULT);
             writeInt(a.aggregateType().ordinal());
             writeInt(a.dataType());
             writeLong(a.count());
@@ -832,7 +832,7 @@ public class Data {
         }
         else if (o instanceof AggregateDataCollecting) {
             AggregateDataCollecting a = (AggregateDataCollecting)o;
-            writeByte(AGG_DATA_COLLECTION);
+            writeByte((byte)AGG_DATA_COLLECTION);
             writeByte(a.isDistinct() ? BOOLEAN_TRUE : BOOLEAN_FALSE);
             writeValue(a.getSharedArgument() == null ? ValueNull.INSTANCE : a.getSharedArgument());
             Collection<Value> values = a.values();
