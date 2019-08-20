@@ -14,19 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.persistence;
+import {Selector} from 'testcafe';
 
-/**
- * Tracks allocated pages.
- */
-public interface AllocatedPageTracker {
-    /** No-op instance. */
-    public AllocatedPageTracker NO_OP = delta -> {};
-
-    /**
-     * Updates totalAllocatedPages counter.
-     *
-     * @param delta Value to increment by.
-     */
-    public void updateTotalAllocatedPages(long delta);
-}
+export const dialog = Selector('.modal-title').withText('You Can').parent('.modal-dialog');
+export const closeButton = dialog.find('a').withText('Close');
