@@ -80,16 +80,13 @@ public class VisorNodeDataCollectorJob extends VisorJob<VisorNodeDataCollectorTa
 
     /**
      * @param evtOrderKey Event order key.
-     * @param types Events.
+     * @param types Event types.
      */
-    protected boolean startCollectEvents(String evtOrderKey, int[] types) {
+    protected void startCollectEvents(String evtOrderKey, int[] types) {
         VisorComputeMonitoringHolder holder = VisorComputeMonitoringHolder.getInstance(ignite);
 
         // Enable task monitoring for new node in grid.
         holder.startCollect(ignite, evtOrderKey, types);
-
-        // Update current state after change (it may not changed in some cases).
-        return ignite.allEventsUserRecordable(types);
     }
 
     /**
@@ -103,10 +100,10 @@ public class VisorNodeDataCollectorJob extends VisorJob<VisorNodeDataCollectorTa
             // Visor events explicitly enabled in configuration.
             if (checkExplicitEvents(ignite, VISOR_TASK_EVTS))
                 res.setTaskMonitoringEnabled(true);
-            else {
-                res.setTaskMonitoringEnabled(
-                    arg.isTaskMonitoringEnabled() && startCollectEvents(arg.getEventsOrderKey(), VISOR_TASK_EVTS)
-                );
+            else if (arg.isTaskMonitoringEnabled()) {
+                startCollectEvents(arg.getEventsOrderKey(), VISOR_TASK_EVTS);
+
+                res.setTaskMonitoringEnabled(ignite.allEventsUserRecordable(VISOR_TASK_EVTS));
             }
 
             events0(res, arg.getEventsOrderKey(), arg.getEventsThrottleCounterKey(), arg.isTaskMonitoringEnabled());
