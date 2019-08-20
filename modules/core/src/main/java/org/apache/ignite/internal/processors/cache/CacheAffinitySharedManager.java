@@ -1877,9 +1877,6 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
         forAllRegisteredCacheGroups(new IgniteInClosureX<CacheGroupDescriptor>() {
             @Override public void applyx(CacheGroupDescriptor desc) throws IgniteCheckedException {
-                if (cctx.localNode().isClient() && cctx.cache().cacheGroup(desc.groupId()) == null)
-                    return; // Skip non-started caches on client nodes.
-
                 CacheGroupHolder holder = getOrCreateGroupHolder(topVer, desc);
 
                 if (fut.cacheGroupAddedOnExchange(desc.groupId(), desc.receivedFrom())) {
