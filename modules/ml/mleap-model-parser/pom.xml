@@ -75,6 +75,12 @@
         </dependency>
 
         <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-mllib-local_2.11</artifactId>
+            <version>${spark.version}</version>
+        </dependency>
+
+        <dependency>
             <groupId>ml.combust.mleap</groupId>
             <artifactId>mleap-runtime_2.11</artifactId>
             <version>0.13.0</version>
@@ -82,6 +88,10 @@
                 <exclusion>
                     <groupId>org.apache.spark</groupId>
                     <artifactId>spark-tags_2.11</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.spark</groupId>
+                    <artifactId>spark-mllib-local_2.11</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>
