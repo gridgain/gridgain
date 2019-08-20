@@ -37,15 +37,12 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.managers.GridManagerAdapter;
 import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
-import org.apache.ignite.internal.managers.communication.GridMessageListener;
-import org.apache.ignite.internal.processors.metric.export.MetricExporter;
-import org.apache.ignite.internal.processors.metric.export.MetricRequest;
-import org.apache.ignite.internal.processors.metric.export.MetricResponse;
 import org.apache.ignite.internal.processors.metric.impl.DoubleMetricImpl;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.util.StripedExecutor;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.spi.communication.CommunicationSpi;
 import org.apache.ignite.spi.metric.MetricExporterSpi;
 import org.apache.ignite.spi.metric.ReadOnlyMetricRegistry;
 import org.apache.ignite.thread.IgniteStripedThreadPoolExecutor;
@@ -53,8 +50,13 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static org.apache.ignite.internal.GridTopic.TOPIC_METRICS;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_PHY_RAM;
+import static org.apache.ignite.internal.managers.communication.GridIoManager.COMM_METRICS;
+import static org.apache.ignite.internal.managers.communication.GridIoManager.OUTBOUND_MSG_QUEUE_CNT;
+import static org.apache.ignite.internal.managers.communication.GridIoManager.RCVD_BYTES_CNT;
+import static org.apache.ignite.internal.managers.communication.GridIoManager.RCVD_MSGS_CNT;
+import static org.apache.ignite.internal.managers.communication.GridIoManager.SENT_BYTES_CNT;
+import static org.apache.ignite.internal.managers.communication.GridIoManager.SENT_MSG_CNT;
 import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager.METRIC_SYSTEM_TIME_HISTOGRAM;
 import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager.METRIC_TIME_BUCKETS;
 import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager.METRIC_TOTAL_SYSTEM_TIME;
@@ -203,8 +205,6 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
     /** Nonheap memory metrics. */
     private final MemoryUsageMetrics nonHeap;
 
-    private final MetricExporter exporter = new MetricExporter();
-
     /**
      * @param ctx Kernal context.
      */
@@ -239,7 +239,9 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         sysreg.register("CurrentThreadCpuTime", threads::getCurrentThreadCpuTime, null);
         sysreg.register("CurrentThreadUserTime", threads::getCurrentThreadUserTime, null);
 
-        MetricRegistry pmeReg = get(PME_METRICS);
+        add(sysreg);
+
+        MetricRegistry pmeReg = new MetricRegistry(PME_METRICS, PME_METRICS);
 
         long[] pmeBounds = new long[] {500, 1000, 5000, 30000};
 
@@ -249,9 +251,27 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         pmeReg.histogram(PME_OPS_BLOCKED_DURATION_HISTOGRAM, pmeBounds,
             "Histogram of cache operations blocked PME durations in milliseconds.");
 
+        add(pmeReg);
+
         registerTransactionMetrics();
 
-        //add(sysreg);
+        MetricRegistry ioMetric = new MetricRegistry(COMM_METRICS, COMM_METRICS);
+
+        CommunicationSpi spi = ctx.config().getCommunicationSpi();
+
+        ioMetric.register(OUTBOUND_MSG_QUEUE_CNT, spi::getOutboundMessagesQueueSize,
+                "Outbound messages queue size.");
+
+        ioMetric.register(SENT_MSG_CNT, spi::getSentMessagesCount, "Sent messages count.");
+
+        ioMetric.register(SENT_BYTES_CNT, spi::getSentBytesCount, "Sent bytes count.");
+
+        ioMetric.register(RCVD_MSGS_CNT, spi::getReceivedMessagesCount,
+                "Received messages count.");
+
+        ioMetric.register(RCVD_BYTES_CNT, spi::getReceivedBytesCount, "Received bytes count.");
+
+        add(ioMetric);
     }
 
     /** {@inheritDoc} */
@@ -265,26 +285,6 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
             spi.setMetricRegistry(this);
 
         startSpi();
-
-        ctx.io().addMessageListener(TOPIC_METRICS, new GridMessageListener() {
-            @Override public void onMessage(UUID nodeId, Object msg, byte plc) {
-                if (msg instanceof MetricRequest) {
-                    int schemaVer = ((MetricRequest) msg).schemaVersion();
-
-                    if (schemaVer == -1) {
-                        MetricResponse res = exporter.export(ctx);
-
-                        try {
-                            ctx.io().sendToGridTopic(nodeId, TOPIC_METRICS, res, plc);
-                        }
-                        catch (IgniteCheckedException e) {
-                            log.error("Error during sending message [topic" + TOPIC_METRICS +
-                                    ", dstNodeId=" + nodeId + ", msg=" + msg + ']');
-                        }
-                    }
-                }
-            }
-        });
     }
 
     /** {@inheritDoc} */
@@ -590,7 +590,7 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
 
     /** */
     private void registerTransactionMetrics() {
-        MetricRegistry reg = registry(TX_METRICS);
+        MetricRegistry reg = new MetricRegistry(TX_METRICS, TX_METRICS);
 
         reg.longAdderMetric(METRIC_TOTAL_SYSTEM_TIME, "Total transactions system time on node.");
         reg.longAdderMetric(METRIC_TOTAL_USER_TIME, "Total transactions user time on node.");
@@ -605,6 +605,8 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
             METRIC_TIME_BUCKETS,
             "Transactions user times on node represented as histogram."
         );
+
+        add(reg);
     }
 
     /** */

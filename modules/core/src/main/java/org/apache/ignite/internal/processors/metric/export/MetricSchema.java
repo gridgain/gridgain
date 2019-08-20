@@ -22,9 +22,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-
-import org.apache.ignite.internal.processors.metric.MetricRegistry;
-
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.ignite.internal.util.GridUnsafe.BYTE_ARR_INT_OFF;
 import static org.apache.ignite.internal.util.GridUnsafe.BYTE_ARR_OFF;
@@ -85,6 +82,11 @@ public class MetricSchema {
     public MetricRegistrySchema registrySchema(short idx) {
         return regSchemas.get(idx);
     }
+
+    public int registrySchemas() {
+        return regSchemas.size();
+    }
+
 
     public byte[] toBytes() {
         byte[] arr = new byte[len];
@@ -216,7 +218,7 @@ public class MetricSchema {
     public static class Builder {
         private List<MetricSchemaItem> items = new ArrayList<>();
         private List<MetricRegistrySchema> regSchemas = new ArrayList<>();
-        private Map<Class, Short> idxMap = new LinkedHashMap<>();
+        private Map<String, Short> idxMap = new LinkedHashMap<>();
         private int len;
         private int dataSize;
 
@@ -224,16 +226,16 @@ public class MetricSchema {
             return new MetricSchema.Builder();
         }
 
-        public void add(Class<? extends MetricRegistry> cls, String pref, MetricRegistrySchema regSchema) {
+        public void add(String type, String pref, MetricRegistrySchema regSchema) {
             if (items == null)
                 throw new IllegalStateException("Builder can't be used twice.");
 
-            Short idx = idxMap.get(cls);
+            Short idx = idxMap.get(type);
 
             if (idx == null) {
                 idx = (short)regSchemas.size();
 
-                idxMap.put(cls, idx);
+                idxMap.put(type, idx);
 
                 regSchemas.add(regSchema);
 

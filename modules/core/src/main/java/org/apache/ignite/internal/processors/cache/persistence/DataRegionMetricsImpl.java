@@ -466,10 +466,21 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
      */
     public LongAdderMetric getOrAllocateGroupPageAllocationTracker(String grpName) {
         return grpAllocationTrackers.computeIfAbsent(grpName,
-            id -> mmgr.get(metricName(CACHE_GROUP_METRICS_PREFIX, grpName)).longAdderMetric(
-                "TotalAllocatedPages",
-                totalAllocatedPages::add,
-                "Cache group total allocated pages."));
+                id -> {
+                    String name = metricName(CACHE_GROUP_METRICS_PREFIX, grpName);
+
+                    MetricRegistry mreg = new MetricRegistry(name, name);
+
+                    LongAdderMetric m = mreg.longAdderMetric(
+                            "TotalAllocatedPages",
+                            totalAllocatedPages::add,
+                            "Cache group total allocated pages.");
+
+                    mmgr.add(mreg);
+
+                    return m;
+                }
+        );
     }
 
     /**
