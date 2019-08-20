@@ -119,7 +119,7 @@ public class VisorComputeMonitoringHolder {
 
         expiredEvts.removeAll(activeEvts);
 
-        if (expiredEvts.size() > 0) {
+        if (!expiredEvts.isEmpty()) {
             int[] types = expiredEvts.stream().mapToInt(Integer::intValue).toArray();
 
             ignite.events().disableLocal(types);
