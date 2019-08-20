@@ -22,6 +22,7 @@ import org.apache.ignite.Ignition;
 import org.apache.ignite.ml.dataset.DatasetBuilder;
 import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
 import org.apache.ignite.ml.dataset.feature.extractor.impl.DummyVectorizer;
+import org.apache.ignite.ml.dataset.impl.cache.CacheBasedDatasetBuilder;
 import org.apache.ignite.ml.environment.LearningEnvironmentBuilder;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.math.primitives.vector.VectorUtils;
@@ -33,8 +34,7 @@ import org.apache.ignite.ml.preprocessing.imputing.ImputerTrainer;
 import org.apache.ignite.ml.preprocessing.minmaxscaling.MinMaxScalerTrainer;
 import org.apache.ignite.ml.preprocessing.normalization.NormalizationTrainer;
 import org.apache.ignite.ml.selection.scoring.evaluator.Evaluator;
-import org.apache.ignite.ml.selection.scoring.metric.regression.RegressionMetricValues;
-import org.apache.ignite.ml.selection.scoring.metric.regression.RegressionMetrics;
+import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
 import org.apache.ignite.ml.structures.LabeledVector;
 import org.apache.ignite.ml.tree.DecisionTreeClassificationTrainer;
 import org.apache.ignite.ml.util.MLSandboxDatasets;
@@ -88,10 +88,9 @@ public class TrainingWithCustomPreprocessorsExample {
 
             System.out.println(">>> Perform scoring.");
             double score = Evaluator.evaluate(
-                trainingSet,
-                mdl,
+                mdl, new CacheBasedDatasetBuilder<>(ignite, trainingSet),
                 mdl.getPreprocessor(),
-                new RegressionMetrics().withMetric(RegressionMetricValues::r2)
+                MetricName.R2
             );
 
             System.out.println(">>> R^2 score: " + score);

@@ -31,7 +31,6 @@ import org.apache.ignite.ml.regressions.linear.LinearRegressionModel;
 import org.apache.ignite.ml.regressions.linear.LinearRegressionSGDTrainer;
 import org.apache.ignite.ml.selection.scoring.evaluator.Evaluator;
 import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
-import org.apache.ignite.ml.selection.scoring.metric.regression.RegressionMetrics;
 import org.apache.ignite.ml.util.MLSandboxDatasets;
 import org.apache.ignite.ml.util.SandboxMLCache;
 
@@ -79,14 +78,15 @@ public class LinearRegressionSGDTrainerExample {
 
                 System.out.println(">>> Linear regression model: " + mdl);
 
-                Evaluator.evaluate(mdl, new CacheBasedDatasetBuilder<>(ignite, dataCache), vectorizer,
-                    MetricName.MAE, MetricName.MSE, MetricName.R2, MetricName.RMSE).print(5);
+                Evaluator.evaluate(mdl,
+                    new CacheBasedDatasetBuilder<>(ignite, dataCache), vectorizer,
+                    MetricName.ACCURACY, MetricName.MSE, MetricName.R2, MetricName.RMSE
+                ).print(5);
 
                 double rmse = Evaluator.evaluate(
-                    dataCache,
-                    mdl,
+                    mdl, new CacheBasedDatasetBuilder<>(ignite, dataCache),
                     vectorizer,
-                    new RegressionMetrics()
+                    MetricName.RMSE
                 );
 
                 System.out.println("\n>>> Rmse = " + rmse);

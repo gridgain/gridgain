@@ -24,6 +24,7 @@ import org.apache.ignite.ml.composition.stacking.StackedModel;
 import org.apache.ignite.ml.composition.stacking.StackedVectorDatasetTrainer;
 import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
 import org.apache.ignite.ml.dataset.feature.extractor.impl.DummyVectorizer;
+import org.apache.ignite.ml.dataset.impl.cache.CacheBasedDatasetBuilder;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.nn.UpdatesStrategy;
 import org.apache.ignite.ml.optimization.updatecalculators.SimpleGDParameterUpdate;
@@ -37,7 +38,7 @@ import org.apache.ignite.ml.preprocessing.normalization.NormalizationTrainer;
 import org.apache.ignite.ml.regressions.logistic.LogisticRegressionModel;
 import org.apache.ignite.ml.regressions.logistic.LogisticRegressionSGDTrainer;
 import org.apache.ignite.ml.selection.scoring.evaluator.Evaluator;
-import org.apache.ignite.ml.selection.scoring.metric.classification.Accuracy;
+import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
 import org.apache.ignite.ml.tree.DecisionTreeClassificationTrainer;
 
 /**
@@ -119,10 +120,9 @@ public class Step_9_Scaling_With_Stacking {
                 System.out.println("\n>>> Trained model: " + mdl);
 
                 double accuracy = Evaluator.evaluate(
-                    dataCache,
-                    mdl,
+                    mdl, new CacheBasedDatasetBuilder<>(ignite, dataCache),
                     normalizationPreprocessor,
-                    new Accuracy<>()
+                    MetricName.ACCURACY
                 );
 
                 System.out.println("\n>>> Accuracy " + accuracy);

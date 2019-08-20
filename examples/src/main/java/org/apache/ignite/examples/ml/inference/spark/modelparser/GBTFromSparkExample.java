@@ -24,9 +24,10 @@ import org.apache.ignite.examples.ml.tutorial.TitanicUtils;
 import org.apache.ignite.ml.composition.ModelsComposition;
 import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
 import org.apache.ignite.ml.dataset.feature.extractor.impl.DummyVectorizer;
+import org.apache.ignite.ml.dataset.impl.cache.CacheBasedDatasetBuilder;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.selection.scoring.evaluator.Evaluator;
-import org.apache.ignite.ml.selection.scoring.metric.classification.Accuracy;
+import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
 import org.apache.ignite.ml.sparkmodelparser.SparkModelParser;
 import org.apache.ignite.ml.sparkmodelparser.SupportedSparkModels;
 
@@ -62,10 +63,9 @@ public class GBTFromSparkExample {
                 System.out.println(">>> GBT: " + mdl.toString(true));
 
                 double accuracy = Evaluator.evaluate(
-                    dataCache,
-                    mdl,
+                    mdl, new CacheBasedDatasetBuilder<>(ignite, dataCache),
                     vectorizer,
-                    new Accuracy<>()
+                    MetricName.ACCURACY
                 );
 
                 System.out.println("\n>>> Accuracy " + accuracy);

@@ -25,35 +25,39 @@ import org.apache.ignite.ml.structures.LabeledVector;
 public class RegressionMetricStatsAggregator implements MetricStatsAggregator<Double, EmptyContext, RegressionMetricStatsAggregator> {
     private long N = 0;
     private double absoluteError = Double.NaN;
-    private double squaredError = Double.NaN;
+    private double rss = Double.NaN;
     private double sumOfYs = Double.NaN;
     private double sumOfSquaredYs = Double.NaN;
 
     public RegressionMetricStatsAggregator() {
     }
 
-    public RegressionMetricStatsAggregator(long n, double absoluteError, double squaredError, double sumOfYs,
+    public RegressionMetricStatsAggregator(long n, double absoluteError, double rss, double sumOfYs,
         double sumOfSquaredYs) {
         N = n;
         this.absoluteError = absoluteError;
-        this.squaredError = squaredError;
+        this.rss = rss;
         this.sumOfYs = sumOfYs;
         this.sumOfSquaredYs = sumOfSquaredYs;
     }
 
     @Override public void aggregate(IgniteModel<Vector, Double> model, LabeledVector<Double> vector) {
         N += 1;
-        double error = vector.label() - model.predict(vector.features());
+        Double prediction = model.predict(vector.features());
+        Double truth = vector.label();
+        double error = truth - prediction;
+        System.out.println("[D] Prediction = " + prediction + "; Truth = " + truth + "; Error = " + Math.pow(error, 2.0));
+
         absoluteError = sum(Math.abs(error), absoluteError);
-        squaredError = sum(Math.pow(error, 2), squaredError);
-        sumOfYs = sum(vector.label(), sumOfYs);
-        sumOfSquaredYs = sum(Math.pow(vector.label(), 2), sumOfSquaredYs);
+        rss = sum(Math.pow(error, 2), rss);
+        sumOfYs = sum(truth, sumOfYs);
+        sumOfSquaredYs = sum(Math.pow(truth, 2), sumOfSquaredYs);
     }
 
     @Override public RegressionMetricStatsAggregator mergeWith(RegressionMetricStatsAggregator other) {
         long n = this.N + other.N;
         double absoluteError = sum(this.absoluteError, other.absoluteError);
-        double squaredError = sum(this.squaredError, other.squaredError);
+        double squaredError = sum(this.rss, other.rss);
         double sumOfYs = sum(this.sumOfYs, other.sumOfYs);
         double sumOfSquaredYs = sum(this.sumOfSquaredYs, other.sumOfSquaredYs);
 
@@ -73,11 +77,11 @@ public class RegressionMetricStatsAggregator implements MetricStatsAggregator<Do
     }
 
     public double getMSE() {
-        return squaredError / Math.max(N, 1);
+        return rss / Math.max(N, 1);
     }
 
     public double ssReg() {
-        return squaredError;
+        return rss;
     }
 
     public double ssTot() {
@@ -86,6 +90,10 @@ public class RegressionMetricStatsAggregator implements MetricStatsAggregator<Do
 
     public double ysVariance() {
         return (sumOfSquaredYs - Math.pow(sumOfYs, 2)) / Math.max(N, 1);
+    }
+
+    public double getRss() {
+        return rss;
     }
 
     private double sum(double v1, double v2) {

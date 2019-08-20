@@ -22,13 +22,14 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
 import org.apache.ignite.ml.dataset.feature.extractor.impl.DummyVectorizer;
+import org.apache.ignite.ml.dataset.impl.cache.CacheBasedDatasetBuilder;
 import org.apache.ignite.ml.environment.LearningEnvironmentBuilder;
 import org.apache.ignite.ml.knn.classification.KNNClassificationModel;
 import org.apache.ignite.ml.knn.classification.KNNClassificationTrainer;
 import org.apache.ignite.ml.math.distances.EuclideanDistance;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.selection.scoring.evaluator.Evaluator;
-import org.apache.ignite.ml.selection.scoring.metric.classification.Accuracy;
+import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
 import org.apache.ignite.ml.selection.split.TrainTestDatasetSplitter;
 import org.apache.ignite.ml.selection.split.TrainTestSplit;
 import org.apache.ignite.ml.util.MLSandboxDatasets;
@@ -75,11 +76,9 @@ public class IrisClassificationExample {
 
                 System.out.println(">>> Perform scoring.");
                 double accuracy = Evaluator.evaluate(
-                    dataCache,
-                    split.getTestFilter(),
-                    mdl,
+                    mdl, new CacheBasedDatasetBuilder<>(ignite, dataCache, split.getTestFilter()),
                     vectorizer,
-                    new Accuracy<>()
+                    MetricName.ACCURACY
                 );
 
                 System.out.println(">> Model accuracy: " + accuracy);

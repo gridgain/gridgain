@@ -18,15 +18,16 @@
 package org.apache.ignite.ml.selection.scoring.evaluator.metric.classification;
 
 import org.apache.ignite.ml.selection.scoring.evaluator.aggregator.BinaryClassificationPointwiseMetricStatsAggregator;
-import org.apache.ignite.ml.selection.scoring.evaluator.context.BinaryClassificationEvaluationContext;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.Metric;
 import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
 
-public class Precision implements Metric<Double, BinaryClassificationEvaluationContext, BinaryClassificationPointwiseMetricStatsAggregator> {
+public class Precision extends BinaryClassificationMetric {
     private Double precision = Double.NaN;
 
-    @Override public BinaryClassificationPointwiseMetricStatsAggregator makeAggregator() {
-        return new BinaryClassificationPointwiseMetricStatsAggregator();
+    public Precision(double truthLabel, double falseLabel) {
+        super(truthLabel, falseLabel);
+    }
+
+    public Precision() {
     }
 
     @Override public Precision initBy(BinaryClassificationPointwiseMetricStatsAggregator aggr) {

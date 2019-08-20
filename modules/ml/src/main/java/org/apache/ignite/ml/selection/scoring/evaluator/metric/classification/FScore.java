@@ -18,11 +18,9 @@
 package org.apache.ignite.ml.selection.scoring.evaluator.metric.classification;
 
 import org.apache.ignite.ml.selection.scoring.evaluator.aggregator.BinaryClassificationPointwiseMetricStatsAggregator;
-import org.apache.ignite.ml.selection.scoring.evaluator.context.BinaryClassificationEvaluationContext;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.Metric;
 import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
 
-public class FScore implements Metric<Double, BinaryClassificationEvaluationContext, BinaryClassificationPointwiseMetricStatsAggregator> {
+public class FScore extends BinaryClassificationMetric {
     private final double betaSquare;
     private final Precision precision = new Precision();
     private final Recall recall = new Recall();
@@ -30,15 +28,21 @@ public class FScore implements Metric<Double, BinaryClassificationEvaluationCont
     private Double fscore = Double.NaN;
 
     public FScore(double beta) {
-        this.betaSquare = Math.pow(beta, 2);
+        betaSquare = Math.pow(beta, 2);
     }
 
     public FScore() {
-        this.betaSquare = 1;
+        betaSquare = 1;
     }
 
-    @Override public BinaryClassificationPointwiseMetricStatsAggregator makeAggregator() {
-        return new BinaryClassificationPointwiseMetricStatsAggregator();
+    public FScore(double truthLabel, double falseLabel, double betaSquare) {
+        super(truthLabel, falseLabel);
+        this.betaSquare = betaSquare;
+    }
+
+    public FScore(double truthLabel, double falseLabel) {
+        super(truthLabel, falseLabel);
+        this.betaSquare = 1;
     }
 
     @Override public FScore initBy(BinaryClassificationPointwiseMetricStatsAggregator aggr) {

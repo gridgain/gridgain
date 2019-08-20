@@ -23,11 +23,13 @@ import org.apache.ignite.Ignition;
 import org.apache.ignite.ml.IgniteModel;
 import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
 import org.apache.ignite.ml.dataset.feature.extractor.impl.DummyVectorizer;
+import org.apache.ignite.ml.dataset.impl.cache.CacheBasedDatasetBuilder;
 import org.apache.ignite.ml.environment.LearningEnvironmentBuilder;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.regressions.logistic.LogisticRegressionSGDTrainer;
+import org.apache.ignite.ml.selection.scoring.evaluator.EvaluationResult;
 import org.apache.ignite.ml.selection.scoring.evaluator.Evaluator;
-import org.apache.ignite.ml.selection.scoring.metric.classification.BinaryClassificationMetricValues;
+import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
 import org.apache.ignite.ml.selection.split.TrainTestDatasetSplitter;
 import org.apache.ignite.ml.selection.split.TrainTestSplit;
 import org.apache.ignite.ml.trainers.DatasetTrainer;
@@ -107,20 +109,19 @@ public class FraudDetectionExample {
         );
 
         System.out.println(">>> Perform scoring.");
-        BinaryClassificationMetricValues metricValues = Evaluator.evaluate(
-            dataCache,
-            splitter.getTestFilter(),
-            mdl,
-            vectorizer
+        EvaluationResult metricValues = Evaluator.evaluate(
+            mdl, new CacheBasedDatasetBuilder<>(ignite, dataCache, splitter.getTestFilter()),
+            vectorizer, MetricName.ACCURACY, MetricName.PRECISION, MetricName.RECALL, MetricName.F_MEASURE
         );
 
-        System.out.println(String.format(">> Model accuracy: %.2f", metricValues.accuracy()));
-        System.out.println(String.format(">> Model precision: %.2f", metricValues.precision()));
-        System.out.println(String.format(">> Model recall: %.2f", metricValues.recall()));
-        System.out.println(String.format(">> Model f1-score: %.2f", metricValues.f1Score()));
-        System.out.println(">> Confusion matrix:");
-        System.out.println(">>                    fraud (ans) | not fraud (ans)");
-        System.out.println(String.format(">> fraud (pred)     | %1$11.2f | %2$15.2f ", metricValues.tp(), metricValues.fp()));
-        System.out.println(String.format(">> not fraud (pred) | %1$11.2f | %2$15.2f ", metricValues.fn(), metricValues.tn()));
+//        System.out.println(String.format(">> Model accuracy: %.2f", metricValues.accuracy()));
+//        System.out.println(String.format(">> Model precision: %.2f", metricValues.precision()));
+//        System.out.println(String.format(">> Model recall: %.2f", metricValues.recall()));
+//        System.out.println(String.format(">> Model f1-score: %.2f", metricValues.f1Score()));
+        metricValues.print();
+//        System.out.println(">> Confusion matrix:");
+//        System.out.println(">>                    fraud (ans) | not fraud (ans)");
+//        System.out.println(String.format(">> fraud (pred)     | %1$11.2f | %2$15.2f ", metricValues.tp(), metricValues.fp()));
+//        System.out.println(String.format(">> not fraud (pred) | %1$11.2f | %2$15.2f ", metricValues.fn(), metricValues.tn()));
     }
 }

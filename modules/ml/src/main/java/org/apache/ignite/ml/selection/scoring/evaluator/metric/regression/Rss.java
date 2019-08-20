@@ -15,31 +15,31 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.ml.selection.scoring.evaluator.metric.classification;
+package org.apache.ignite.ml.selection.scoring.evaluator.metric.regression;
 
-import org.apache.ignite.ml.selection.scoring.evaluator.aggregator.BinaryClassificationPointwiseMetricStatsAggregator;
+import org.apache.ignite.ml.selection.scoring.evaluator.aggregator.RegressionMetricStatsAggregator;
+import org.apache.ignite.ml.selection.scoring.evaluator.context.EmptyContext;
+import org.apache.ignite.ml.selection.scoring.evaluator.metric.Metric;
 import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
 
-public class Recall extends BinaryClassificationMetric {
-    private Double recall = Double.NaN;
+public class Rss implements Metric<Double, EmptyContext, RegressionMetricStatsAggregator> {
+    private double value = Double.NaN;
 
-    public Recall(double truthLabel, double falseLabel) {
-        super(truthLabel, falseLabel);
+    @Override public RegressionMetricStatsAggregator makeAggregator() {
+        return new RegressionMetricStatsAggregator();
     }
 
-    public Recall() {
-    }
-
-    @Override public Recall initBy(BinaryClassificationPointwiseMetricStatsAggregator aggr) {
-        recall = ((double) (aggr.getTruePositive()) / (aggr.getTruePositive() + aggr.getFalseNegative()));
+    @Override
+    public Metric<Double, EmptyContext, RegressionMetricStatsAggregator> initBy(RegressionMetricStatsAggregator aggr) {
+        value  = aggr.getRss();
         return this;
     }
 
     @Override public double value() {
-        return recall;
+        return value;
     }
 
     @Override public MetricName name() {
-        return MetricName.RECALL;
+        return MetricName.RSS;
     }
 }

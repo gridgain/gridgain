@@ -51,7 +51,7 @@ public class RegressionMetrics extends AbstractMetrics<RegressionMetricValues> {
 
             double prediction = e.getPrediction();
             double truth = e.getTruth();
-
+            System.out.println("[L] Prediction = " + prediction + "; Truth = " + truth + "; Error = " + Math.pow(prediction - truth, 2.0));
             rss += Math.pow(prediction - truth, 2.0);
             mae += Math.abs(prediction - truth);
 

@@ -22,10 +22,12 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
 import org.apache.ignite.ml.dataset.feature.extractor.impl.DummyVectorizer;
+import org.apache.ignite.ml.dataset.impl.cache.CacheBasedDatasetBuilder;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.naivebayes.discrete.DiscreteNaiveBayesModel;
 import org.apache.ignite.ml.naivebayes.discrete.DiscreteNaiveBayesTrainer;
 import org.apache.ignite.ml.selection.scoring.evaluator.Evaluator;
+import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
 import org.apache.ignite.ml.util.MLSandboxDatasets;
 import org.apache.ignite.ml.util.SandboxMLCache;
 
@@ -69,10 +71,9 @@ public class DiscreteNaiveBayesTrainerExample {
                 System.out.println(">>> Discrete Naive Bayes model: " + mdl);
 
                 double accuracy = Evaluator.evaluate(
-                    dataCache,
-                    mdl,
-                    vectorizer
-                ).accuracy();
+                    mdl, new CacheBasedDatasetBuilder<>(ignite, dataCache),
+                    vectorizer, MetricName.ACCURACY
+                );
 
                 System.out.println("\n>>> Accuracy " + accuracy);
 

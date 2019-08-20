@@ -25,6 +25,7 @@ import org.apache.ignite.ml.selection.scoring.evaluator.metric.regression.Mae;
 import org.apache.ignite.ml.selection.scoring.evaluator.metric.regression.Mse;
 import org.apache.ignite.ml.selection.scoring.evaluator.metric.regression.R2;
 import org.apache.ignite.ml.selection.scoring.evaluator.metric.regression.Rmse;
+import org.apache.ignite.ml.selection.scoring.evaluator.metric.regression.Rss;
 
 public enum MetricName {
     // binary classification metrics
@@ -37,6 +38,7 @@ public enum MetricName {
     MAE("MAE"),
     R2("R2"),
     RMSE("RMSE"),
+    RSS("RSS"),
     MSE("MSE");
 
     private final String prettyName;
@@ -63,6 +65,8 @@ public enum MetricName {
                 return new R2();
             case RMSE:
                 return new Rmse();
+            case RSS:
+                return new Rss();
         }
 
         throw new IllegalArgumentException("Cannot define metric by name: " + name());

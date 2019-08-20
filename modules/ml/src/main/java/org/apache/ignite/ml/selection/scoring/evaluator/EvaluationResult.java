@@ -33,6 +33,10 @@ public class EvaluationResult {
         return values.getOrDefault(name, Double.NaN);
     }
 
+    public double get() {
+        return values.values().stream().findFirst().orElse(Double.NaN);
+    }
+
     public Iterable<Map.Entry<MetricName, Double>> getAll() {
         return values.entrySet();
     }

@@ -101,4 +101,22 @@ public class BinaryClassificationPointwiseMetricStatsAggregator implements Metri
     public int getN() {
         return truePositive + falsePositive + trueNegative + falseNegative;
     }
+
+    public static class WithCustomLabels extends BinaryClassificationPointwiseMetricStatsAggregator {
+        private final double truthLabel;
+        private final double falseLabel;
+
+        public WithCustomLabels(double truthLabel, double falseLabel) {
+            this.truthLabel = truthLabel;
+            this.falseLabel = falseLabel;
+        }
+
+        @Override public BinaryClassificationEvaluationContext initialContext() {
+            return new BinaryClassificationEvaluationContext(falseLabel, truthLabel) {
+                @Override public boolean needToCompute() {
+                    return false;
+                }
+            };
+        }
+    }
 }

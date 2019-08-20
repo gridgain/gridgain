@@ -58,7 +58,7 @@ public class LocalLabelPairCursor<L, K, V, T> implements LabelPairCursor<L> {
     public LocalLabelPairCursor(Map<K, V> upstreamMap, IgniteBiPredicate<K, V> filter, Preprocessor<K, V> preprocessor,
                                 IgniteModel<Vector, L> mdl) {
         this.upstreamMap = upstreamMap;
-        this.filter = filter;
+        this.filter = filter == null ? (k,v) -> true : filter;
         this.preprocessor = preprocessor;
         this.mdl = mdl;
     }
@@ -94,13 +94,13 @@ public class LocalLabelPairCursor<L, K, V, T> implements LabelPairCursor<L> {
 
         /** {@inheritDoc} */
         @Override public boolean hasNext() {
-            if (filter == null) {
+            /*if (filter == null) {
                 Map.Entry<K, V> entry = iter.next();
                 nextEntry = entry;
                 return iter.hasNext();
             }
 
-            else
+            else*/
                 findNext();
 
             return nextEntry != null;

@@ -16,6 +16,7 @@
 
 package org.apache.ignite.examples.ml.tree;
 
+import java.util.Random;
 import org.apache.commons.math3.util.Precision;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
@@ -23,15 +24,10 @@ import org.apache.ignite.Ignition;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.ml.dataset.feature.extractor.impl.LabeledDummyVectorizer;
-import org.apache.ignite.ml.dataset.impl.cache.CacheBasedDatasetBuilder;
 import org.apache.ignite.ml.math.primitives.vector.VectorUtils;
-import org.apache.ignite.ml.selection.scoring.evaluator.Evaluator;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
 import org.apache.ignite.ml.structures.LabeledVector;
 import org.apache.ignite.ml.tree.DecisionTreeClassificationTrainer;
 import org.apache.ignite.ml.tree.DecisionTreeNode;
-
-import java.util.Random;
 
 /**
  * Example of using distributed {@link DecisionTreeClassificationTrainer}.
@@ -85,8 +81,6 @@ public class DecisionTreeClassificationTrainerExample {
                 );
 
                 System.out.println(">>> Decision tree classification model: " + mdl);
-
-                Evaluator.evaluate(mdl, new CacheBasedDatasetBuilder<>(ignite, trainingSet), vectorizer).print();
 
                 // Calculate score.
                 int correctPredictions = 0;

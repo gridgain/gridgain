@@ -24,17 +24,12 @@ import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
 import org.apache.ignite.ml.dataset.feature.extractor.impl.DummyVectorizer;
 import org.apache.ignite.ml.dataset.impl.cache.CacheBasedDatasetBuilder;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
-import org.apache.ignite.ml.selection.scoring.evaluator.EvaluationResult;
 import org.apache.ignite.ml.selection.scoring.evaluator.Evaluator;
+import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
 import org.apache.ignite.ml.svm.SVMLinearClassificationModel;
 import org.apache.ignite.ml.svm.SVMLinearClassificationTrainer;
 import org.apache.ignite.ml.util.MLSandboxDatasets;
 import org.apache.ignite.ml.util.SandboxMLCache;
-
-import static org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName.ACCURACY;
-import static org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName.F_MEASURE;
-import static org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName.PRECISION;
-import static org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName.RECALL;
 
 /**
  * Run SVM binary-class classification model ({@link SVMLinearClassificationModel}) over distributed dataset.
@@ -73,20 +68,9 @@ public class SVMBinaryClassificationExample {
                 System.out.println(">>> SVM model " + mdl);
 
                 double accuracy = Evaluator.evaluate(
-                    dataCache,
-                    mdl,
-                    vectorizer
-                ).accuracy();
-
-                EvaluationResult result = Evaluator.evaluate(mdl,
-                    new CacheBasedDatasetBuilder<>(ignite, dataCache), vectorizer,
-                    ACCURACY,
-                    F_MEASURE,
-                    PRECISION,
-                    RECALL
+                    mdl, new CacheBasedDatasetBuilder<>(ignite, dataCache),
+                    vectorizer, MetricName.ACCURACY
                 );
-
-                result.print();
 
                 System.out.println("\n>>> Accuracy " + accuracy);
 

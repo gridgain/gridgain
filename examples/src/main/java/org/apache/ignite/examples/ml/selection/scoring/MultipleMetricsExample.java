@@ -17,15 +17,16 @@
 package org.apache.ignite.examples.ml.selection.scoring;
 
 import java.io.IOException;
-import java.util.Map;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
 import org.apache.ignite.ml.dataset.feature.extractor.impl.DummyVectorizer;
+import org.apache.ignite.ml.dataset.impl.cache.CacheBasedDatasetBuilder;
 import org.apache.ignite.ml.knn.classification.KNNClassificationTrainer;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.selection.scoring.evaluator.Evaluator;
+import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
 import org.apache.ignite.ml.svm.SVMLinearClassificationModel;
 import org.apache.ignite.ml.svm.SVMLinearClassificationTrainer;
 import org.apache.ignite.ml.util.MLSandboxDatasets;
@@ -63,15 +64,10 @@ public class MultipleMetricsExample {
 
                 SVMLinearClassificationModel mdl = trainer.fit(ignite, dataCache, vectorizer);
 
-                Map<String, Double> scores = Evaluator.evaluate(
-                    dataCache,
-                    mdl,
-                    vectorizer
-                ).toMap();
-
-                scores.forEach(
-                    (metricName, score) -> System.out.println("\n>>>" + metricName + ": " + score)
-                );
+                Evaluator.evaluate(
+                    mdl, new CacheBasedDatasetBuilder<>(ignite, dataCache),
+                    vectorizer, MetricName.ACCURACY, MetricName.PRECISION, MetricName.RECALL, MetricName.F_MEASURE
+                ).print();
             } finally {
                 dataCache.destroy();
             }
