@@ -112,7 +112,7 @@ public class MetricExporterMessageSizeTest {
     MetricRegistry createMetricRegistry(String regName) {
         Random rnd = new Random();
 
-        MetricRegistry mreg = new MetricRegistry(regName, regName, new NullLogger());
+        MetricRegistry mreg = new MetricRegistry("cache", regName, new NullLogger());
 
         mreg.longMetric("CacheGets",
                 "The total number of gets to the cache.").value((int)rnd.nextLong());

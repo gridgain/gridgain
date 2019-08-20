@@ -27,6 +27,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
+import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
 import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.spi.metric.BooleanMetric;
@@ -39,6 +40,7 @@ import org.jetbrains.annotations.NotNull;
 import static org.apache.ignite.internal.GridTopic.TOPIC_METRICS;
 import static org.apache.ignite.internal.processors.metric.export.MetricType.BOOLEAN;
 import static org.apache.ignite.internal.processors.metric.export.MetricType.DOUBLE;
+import static org.apache.ignite.internal.processors.metric.export.MetricType.HISTOGRAM;
 import static org.apache.ignite.internal.processors.metric.export.MetricType.HIT_RATE;
 import static org.apache.ignite.internal.processors.metric.export.MetricType.INT;
 import static org.apache.ignite.internal.processors.metric.export.MetricType.LONG;
@@ -140,9 +142,9 @@ public class MetricExporter extends GridProcessorAdapter {
                 userTag,
                 consistentId,
                 schema.length(),
-                data.position(),  //schema.dataSize(),
+                data.position(),
                 (arr, off) -> writeSchema(schemaBytes, arr, off),
-                (arr, off) -> writeData(arr, off, data) //(arr, off) -> writeData(arr, off, metrics)
+                (arr, off) -> writeData(arr, off, data)
         );
 
         System.out.println("Message generation: " + (System.currentTimeMillis() - startTs) + " ms");
@@ -224,11 +226,30 @@ public class MetricExporter extends GridProcessorAdapter {
                 else if (type == INT)
                     buf.putVarInt(((IntMetric)m).value());
                 else if (type == HIT_RATE) {
-                    HitRateMetric hitRateMetric = (HitRateMetric)m;
+                    HitRateMetric metric = (HitRateMetric)m;
 
-                    buf.putVarLong(hitRateMetric.rateTimeInterval());
+                    buf.putVarLong(metric.rateTimeInterval());
 
-                    buf.putVarLong(hitRateMetric.value());
+                    buf.putVarLong(metric.value());
+                }
+                else if (type == HISTOGRAM) {
+                    HistogramMetric metric = (HistogramMetric)m;
+
+                    long[] bounds = metric.bounds();
+
+                    long[] vals = metric.value();
+
+                    buf.putVarInt(bounds.length);
+
+                    // Pais
+                    for (int i = 0; i < bounds.length; i++) {
+                        buf.putVarLong(bounds[i]);
+
+                        buf.putVarLong(vals[i]);
+                    }
+
+                    // Infinity value.
+                    buf.putVarLong(vals[vals.length - 1]);
                 }
                 else if (type == DOUBLE)
                     buf.putDouble(((DoubleMetric) m).value());

@@ -64,13 +64,9 @@ public class MetricRegistrySchema {
     /** Size of schema in binary representation. */
     private final int len;
 
-    /** Size of data block created accordingly to the metric registry schema. */
-    private final int dataSize;
-
-    private MetricRegistrySchema(List<MetricRegistrySchemaItem> items, int len, int dataSize) {
+    private MetricRegistrySchema(List<MetricRegistrySchemaItem> items, int len) {
         this.items = items;
         this.len = len;
-        this.dataSize = dataSize;
     }
 
     public List<MetricRegistrySchemaItem> items() {
@@ -85,10 +81,6 @@ public class MetricRegistrySchema {
         }
 
         List<MetricRegistrySchemaItem> items = new ArrayList<>();
-
-        int dataSize = 0;
-
-        int len0 = getInt(arr, BYTE_ARR_OFF + off);
 
         off += SCHEMA_LEN_SIZE;
 
@@ -110,11 +102,9 @@ public class MetricRegistrySchema {
             MetricRegistrySchemaItem item = new MetricRegistrySchemaItem(name, metricType);
 
             items.add(item);
-
-            dataSize += metricType.size();
         }
 
-        return new MetricRegistrySchema(items, len, dataSize);
+        return new MetricRegistrySchema(items, len);
     }
 
     /**
@@ -174,10 +164,6 @@ public class MetricRegistrySchema {
         items.add(new MetricRegistrySchemaItem(key, metricType));
     }
 
-    public int dataSize() {
-        return dataSize;
-    }
-
     public int length() {
         return len;
     }
@@ -186,7 +172,6 @@ public class MetricRegistrySchema {
     public static class Builder {
         private List<MetricRegistrySchemaItem> items = new ArrayList<>();
         private int len;
-        private int dataSize;
 
         public static Builder newInstance() {
             return new Builder();
@@ -200,13 +185,6 @@ public class MetricRegistrySchema {
 
             items.add(item);
 
-            try {
-                dataSize += metricType.size();
-            }
-            catch (Exception e) {
-                System.out.println();
-            }
-
             byte[] nameBytes = name.getBytes(UTF_8);
 
             len += VALUE_TYPE_SIZE + NAME_LEN_SIZE + nameBytes.length;
@@ -218,7 +196,7 @@ public class MetricRegistrySchema {
 
             len += SCHEMA_LEN_SIZE;
 
-            MetricRegistrySchema schema = new MetricRegistrySchema(items, len, dataSize);
+            MetricRegistrySchema schema = new MetricRegistrySchema(items, len);
 
             items = null;
 
