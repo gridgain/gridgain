@@ -164,7 +164,11 @@ export default class AgentManager {
 
     static restoreActiveCluster() {
         try {
-            return JSON.parse(localStorage.cluster);
+            const cluster = JSON.parse(localStorage.cluster);
+
+            delete cluster.secured;
+
+            return cluster;
         }
         catch (ignored) {
             localStorage.removeItem('cluster');
@@ -289,6 +293,8 @@ export default class AgentManager {
 
                 this.connectionSbj.next(conn);
 
+                this.saveToStorage();
+
                 break;
 
             case 'admin:announcement':
@@ -315,7 +321,8 @@ export default class AgentManager {
 
     saveToStorage(cluster = this.connectionSbj.getValue().cluster) {
         try {
-            localStorage.cluster = JSON.stringify(cluster);
+            if (cluster)
+                localStorage.cluster = JSON.stringify(cluster);
         }
         catch (ignored) {
             // No-op.
