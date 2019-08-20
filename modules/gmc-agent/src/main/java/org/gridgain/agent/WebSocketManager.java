@@ -43,6 +43,7 @@ import org.springframework.messaging.converter.StringMessageConverter;
 import org.springframework.messaging.simp.stomp.StompHeaders;
 import org.springframework.messaging.simp.stomp.StompSession;
 import org.springframework.messaging.simp.stomp.StompSessionHandler;
+import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.socket.WebSocketHttpHeaders;
 import org.springframework.web.socket.client.jetty.JettyWebSocketClient;
 import org.springframework.web.socket.messaging.WebSocketStompClient;
@@ -134,10 +135,22 @@ public class WebSocketManager implements AutoCloseable {
     }
 
     /**
-     * @return Stomp session.
+     * @param dest Destination.
+     * @param payload Payload.
      */
-    public StompSession getSession() {
-        return ses;
+    public boolean send(String dest, byte[] payload) {
+        boolean connected = ses != null && ses.isConnected();
+
+        // TODO: workaround of spring-messaging bug with send byte array data.
+        // https://github.com/spring-projects/spring-framework/issues/23358
+        StompHeaders headers = new StompHeaders();
+        headers.setContentType(MimeTypeUtils.APPLICATION_OCTET_STREAM);
+        headers.setDestination(dest);
+
+        if (connected)
+            ses.send(headers, payload);
+
+        return connected;
     }
 
     /**

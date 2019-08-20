@@ -17,10 +17,8 @@
 package org.gridgain.service;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -28,13 +26,10 @@ import com.google.common.collect.Lists;
 import io.opencensus.common.Timestamp;
 import io.opencensus.trace.SpanContext;
 import io.opencensus.trace.SpanId;
-import io.opencensus.trace.TraceComponent;
 import io.opencensus.trace.TraceId;
 import io.opencensus.trace.TraceOptions;
 import io.opencensus.trace.Tracestate;
-import io.opencensus.trace.export.ExportComponent;
 import io.opencensus.trace.export.SpanData;
-import io.opencensus.trace.export.SpanExporter;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.tracing.TracingSpi;
@@ -53,24 +48,17 @@ import static org.mockito.Mockito.when;
  * Tracing service test.
  */
 public class TracingServiceTest extends AbstractServiceTest {
-    /** Span exporter. */
-    private TestSpanExporter spanExporter = new TestSpanExporter();
-
     /**
      * Should register handler and export spans.
      */
     @Test
     public void registerHandler() {
         TracingService srvc = new TracingService(getMockContext(), mgr);
-        srvc.registerHandler();
-
-        Assert.assertEquals(1, spanExporter.handlers.size());
-
         List<SpanData> spanData = getSpanData();
 
         List<Span> expSpans = spanData.stream().map(srvc::fromSpanDataToSpan).collect(Collectors.toList());
 
-        spanExporter.exportSpans(spanData);
+        srvc.getTraceHandler().export(spanData);
 
         ArgumentCaptor<String> destCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
@@ -137,30 +125,5 @@ public class TracingServiceTest extends AbstractServiceTest {
         when(cfg.getTracingSpi()).thenReturn(tracingSpi);
 
         return ctx;
-    }
-
-    /**
-     * Test span exporter.
-     */
-    private class TestSpanExporter extends SpanExporter {
-        /** Handlers. */
-        private Map<String, Handler> handlers = new HashMap<>();
-
-        /**
-         * @param spanData Span data.
-         */
-        void exportSpans(Collection<SpanData> spanData) {
-            handlers.values().forEach(h -> h.export(spanData));
-        }
-
-        /** {@inheritDoc} */
-        @Override public void registerHandler(String name, Handler hnd) {
-            handlers.put(name, hnd);
-        }
-
-        /** {@inheritDoc} */
-        @Override public void unregisterHandler(String name) {
-            handlers.remove(name);
-        }
     }
 }

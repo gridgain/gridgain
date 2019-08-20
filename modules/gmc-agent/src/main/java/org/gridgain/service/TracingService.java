@@ -109,7 +109,7 @@ public class TracingService implements AutoCloseable {
     /**
      * @return Span exporter handler.
      */
-    private TimeLimitedHandler getTraceHandler() {
+    TimeLimitedHandler getTraceHandler() {
         return new TimeLimitedHandler(Tracing.getTracer(), Duration.create(10, 0), "SendGmcSpans") {
             /** Buffer. */
             private final List<Span> buf = Collections.synchronizedList(new ArrayList<>());

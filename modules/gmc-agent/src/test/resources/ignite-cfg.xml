@@ -24,6 +24,7 @@
         http://www.springframework.org/schema/util
         http://www.springframework.org/schema/util/spring-util.xsd">
     <bean id="ignite.cfg" class="org.apache.ignite.configuration.IgniteConfiguration">
+        <property name="igniteInstanceName" value="node-with-gmc-agent"/>
         <!-- TODO: GG-22214 Events EVT_CLUSTER_ACTIVATED and EVT_CLUSTER_DEACTIVATED should be in default list of events -->
         <property name="includeEventTypes">
             <list>

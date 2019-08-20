@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Objects;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
@@ -181,6 +182,13 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
         return this;
     }
 
+    /**
+     * @return {@code True} if contains server endpoints.
+     */
+    public boolean hasServerUris() {
+        return !F.isEmpty(srvUris);
+    }
+
     /** {@inheritDoc} */
     @Override public boolean equals(Object o) {
         if (this == o)
@@ -192,7 +200,7 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
         ManagementConfiguration that = (ManagementConfiguration)o;
         
         return enable == that.enable &&
-            srvUris.equals(that.srvUris) &&
+            Objects.equals(srvUris, that.srvUris) &&
             Objects.equals(srvKeyStore, that.srvKeyStore) &&
             Objects.equals(srvKeyStorePass, that.srvKeyStorePass) &&
             Objects.equals(srvTrustStore, that.srvTrustStore) &&
