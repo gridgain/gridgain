@@ -46,6 +46,16 @@
             <groupId>org.apache.jclouds</groupId>
             <artifactId>jclouds-allcompute</artifactId>
             <version>${jcloud.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.google.guava</groupId>
+                    <artifactId>guava</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.bouncycastle</groupId>
+                    <artifactId>bcprov-ext-jdk15on</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
@@ -55,33 +65,9 @@
         </dependency>
 
         <dependency>
-            <groupId>org.apache.jclouds.labs</groupId>
-            <artifactId>google-compute-engine</artifactId>
-            <version>1.9.3</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.google.guava</groupId>
-                    <artifactId>guava</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-
-        <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcprov-ext-jdk15on</artifactId>
             <version>1.62</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.jclouds.labs</groupId>
-            <artifactId>docker</artifactId>
-            <version>1.9.3</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.bouncycastle</groupId>
-                    <artifactId>bcprov-ext-jdk15on</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
 
         <dependency>
