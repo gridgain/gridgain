@@ -2315,6 +2315,8 @@ public abstract class GridAbstractTest extends JUnit3TestLegacySupport {
      * @throws Exception If failed.
      */
     protected void waitForTopology(final int expSize) throws Exception {
+        info("Before wait all nodes [size=" + G.allGrids().size() + ", exp=" + expSize + ']');
+
         assertTrue(GridTestUtils.waitForCondition(new GridAbsPredicate() {
             @Override public boolean apply() {
                 List<Ignite> nodes = G.allGrids();
