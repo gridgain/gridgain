@@ -2328,7 +2328,14 @@ public abstract class GridAbstractTest extends JUnit3TestLegacySupport {
 
                     nodes.stream().map(n -> (IgniteEx)n)
                         .forEach(n -> {
-                            sb.append(n.localNode()).append("\n");
+                            try {
+                                sb.append(n.localNode());
+                            }
+                            catch (Throwable e) {
+                                sb.append(e.getMessage());
+                            }
+
+                            sb.append("\n");
                         });
 
                     info("Nodes:" + sb);
