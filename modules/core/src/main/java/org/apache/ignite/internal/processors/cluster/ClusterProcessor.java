@@ -33,7 +33,6 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.internal.ClusterMetricsSnapshot;
-import org.apache.ignite.internal.GridDirectMap;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.GridKernalGatewayImpl;
 import org.apache.ignite.internal.IgniteDiagnosticInfo;
@@ -361,7 +360,7 @@ public class ClusterProcessor extends GridProcessorAdapter {
             try {
                 verChecker = new GridUpdateNotifier(ctx.igniteInstanceName(),
                     VER_STR,
-                    new GridKernalGatewayImpl(ctx.igniteInstanceName()),
+                    new GridKernalGatewayImpl(ctx.igniteInstanceName(), ctx.localNodeId()),
                     ctx.discovery(),
                     U.allPluginProviders(),
                     false,

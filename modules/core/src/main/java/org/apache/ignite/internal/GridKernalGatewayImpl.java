@@ -19,6 +19,7 @@ package org.apache.ignite.internal;
 import java.io.PrintWriter;
 import java.io.Serializable;
 import java.io.StringWriter;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
@@ -55,6 +56,10 @@ public class GridKernalGatewayImpl implements GridKernalGateway, Serializable {
     @GridToStringExclude
     private final String igniteInstanceName;
 
+    /** */
+    @GridToStringExclude
+    private final UUID nodeId;
+
     /**
      * User stack trace.
      *
@@ -65,8 +70,9 @@ public class GridKernalGatewayImpl implements GridKernalGateway, Serializable {
     /**
      * @param igniteInstanceName Ignite instance name.
      */
-    public GridKernalGatewayImpl(String igniteInstanceName) {
+    public GridKernalGatewayImpl(String igniteInstanceName, UUID nodeId) {
         this.igniteInstanceName = igniteInstanceName;
+        this.nodeId = nodeId;
     }
 
     /** {@inheritDoc} */
@@ -199,6 +205,7 @@ public class GridKernalGatewayImpl implements GridKernalGateway, Serializable {
     private IllegalStateException illegalState() {
         return new IllegalStateException("Grid is in invalid state to perform this operation. " +
             "It either not started yet or has already being or have stopped [igniteInstanceName=" + igniteInstanceName +
+            ", nodeId=" + nodeId +
             ", state=" + state + ']');
     }
 

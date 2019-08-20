@@ -902,7 +902,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         TimeBag startTimer
     )
         throws IgniteCheckedException {
-        gw.compareAndSet(null, new GridKernalGatewayImpl(cfg.getIgniteInstanceName()));
+        gw.compareAndSet(null, new GridKernalGatewayImpl(cfg.getIgniteInstanceName(), null));
 
         GridKernalGateway gw = this.gw.get();
 
@@ -2395,7 +2395,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
      * @param cancel Whether or not to cancel running jobs.
      */
     private void stop0(boolean cancel) {
-        gw.compareAndSet(null, new GridKernalGatewayImpl(igniteInstanceName));
+        gw.compareAndSet(null, new GridKernalGatewayImpl(igniteInstanceName, ctx.localNodeId()));
 
         GridKernalGateway gw = this.gw.get();
 
