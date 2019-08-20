@@ -19,7 +19,6 @@ package org.apache.ignite.yardstick.jdbc;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
@@ -38,6 +37,7 @@ public class NativeSqlMixedDateInlineBenchmark extends IgniteAbstractBenchmark {
     /** */
     private static final String TBL_NAME = NativeSqlInsertDeleteBenchmark.class.getSimpleName();
 
+    /** Dummy counter, just for possible jvm optimisation disable purpose. */
     private long resCount;
 
     /**
@@ -46,7 +46,7 @@ public class NativeSqlMixedDateInlineBenchmark extends IgniteAbstractBenchmark {
      * {@inheritDoc}
      */
     @Override public boolean test(Map<Object, Object> ctx) throws Exception {
-        long insertKey = ThreadLocalRandom.current().nextLong(args.range()) + 1 + args.range();
+        long insertKey = nextRandom(args.range()) + 1 + args.range();
 
         String insertQry = String.format("INSERT INTO %s VALUES (?, ?, ?, ?)", TBL_NAME);
 
@@ -60,7 +60,7 @@ public class NativeSqlMixedDateInlineBenchmark extends IgniteAbstractBenchmark {
 
         GridQueryProcessor qryProc = ((IgniteEx)ignite()).context().query();
 
-        long selectKey = ThreadLocalRandom.current().nextLong(args.range());
+        long selectKey = nextRandom(args.range());
 
         SqlFieldsQuery select1 = new SqlFieldsQuery(String.format("select * FROM %s where DATE_COL >= ? " +
             "and DATE_COL < ? and DEC_COL= ?", TBL_NAME));
@@ -76,7 +76,6 @@ public class NativeSqlMixedDateInlineBenchmark extends IgniteAbstractBenchmark {
         SqlFieldsQuery delete2 = new SqlFieldsQuery(String.format("DELETE FROM %s WHERE DATE_COL = ?", TBL_NAME));
         delete2.setArgs(LocalDate.ofEpochDay(++insertKey));
 
-
         try (FieldsQueryCursor<List<?>> insCur1 = qryProc.querySqlFields(insert1, false);
              FieldsQueryCursor<List<?>> insCur2 = qryProc.querySqlFields(insert2, false);
              FieldsQueryCursor<List<?>> selCur1 = qryProc.querySqlFields(select1, false);
@@ -91,8 +90,8 @@ public class NativeSqlMixedDateInlineBenchmark extends IgniteAbstractBenchmark {
             resCount += delCur1.getAll().size();
             resCount += delCur2.getAll().size();
         }
-        catch (Exception ignore) {
-            // collision occurred, ignoring
+        catch (Exception e) {
+            BenchmarkUtils.error("error: ", e);
         }
 
         return true;
