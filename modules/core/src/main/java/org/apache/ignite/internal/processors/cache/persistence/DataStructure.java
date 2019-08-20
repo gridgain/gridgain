@@ -50,6 +50,9 @@ public abstract class DataStructure {
     protected final int grpId;
 
     /** */
+    protected final String grpName;
+
+    /** */
     protected final PageMemory pageMem;
 
     /** */
@@ -63,11 +66,13 @@ public abstract class DataStructure {
 
     /**
      * @param cacheGrpId Cache group ID.
+     * @param grpName Cache group name.
      * @param pageMem Page memory.
      * @param wal Write ahead log manager.
      */
     public DataStructure(
         int cacheGrpId,
+        String grpName,
         PageMemory pageMem,
         IgniteWriteAheadLogManager wal,
         PageLockListener lockLsnr
@@ -75,6 +80,7 @@ public abstract class DataStructure {
         assert pageMem != null;
 
         this.grpId = cacheGrpId;
+        this.grpName = grpName;
         this.pageMem = pageMem;
         this.wal = wal;
         this.lockLsnr = lockLsnr == null ? NOOP_LSNR : lockLsnr;

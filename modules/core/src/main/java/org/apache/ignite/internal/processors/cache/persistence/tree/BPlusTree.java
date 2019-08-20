@@ -739,7 +739,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
     /**
      * @param name Tree name.
-     * @param cacheGrpId Cache ID.
+     * @param cacheGrpId Cache group ID.
+     * @param cacheGrpName Cache group name.
      * @param pageMem Page memory.
      * @param wal Write ahead log manager.
      * @param globalRmvId Remove ID.
@@ -753,6 +754,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
     protected BPlusTree(
         String name,
         int cacheGrpId,
+        String cacheGrpName,
         PageMemory pageMem,
         IgniteWriteAheadLogManager wal,
         AtomicLong globalRmvId,
@@ -766,6 +768,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         this(
             name,
             cacheGrpId,
+            cacheGrpName,
             pageMem,
             wal,
             globalRmvId,
@@ -781,6 +784,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
     /**
      * @param name Tree name.
      * @param cacheGrpId Cache ID.
+     * @param grpName Cache group name.
      * @param pageMem Page memory.
      * @param wal Write ahead log manager.
      * @param globalRmvId Remove ID.
@@ -792,6 +796,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
     protected BPlusTree(
         String name,
         int cacheGrpId,
+        String grpName,
         PageMemory pageMem,
         IgniteWriteAheadLogManager wal,
         AtomicLong globalRmvId,
@@ -800,7 +805,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         @Nullable FailureProcessor failureProcessor,
         @Nullable PageLockListener lsnr
     ) throws IgniteCheckedException {
-        super(cacheGrpId, pageMem, wal, lsnr);
+        super(cacheGrpId, grpName, pageMem, wal, lsnr);
 
         assert !F.isEmpty(name);
 
@@ -5919,7 +5924,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      * @return New CorruptedTreeException instance.
      */
     protected CorruptedTreeException corruptedTreeException(String msg, Throwable cause, int grpId, long... pageIds) {
-        CorruptedTreeException e = new CorruptedTreeException(msg, cause, grpId, pageIds);
+        CorruptedTreeException e = new CorruptedTreeException(msg, cause, grpId, grpName, pageIds);
 
         processFailure(FailureType.CRITICAL_ERROR, e);
 

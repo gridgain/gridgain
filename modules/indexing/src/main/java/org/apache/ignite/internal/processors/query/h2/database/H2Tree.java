@@ -166,6 +166,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
         String tblName,
         ReuseList reuseList,
         int grpId,
+        String grpName,
         PageMemory pageMem,
         IgniteWriteAheadLogManager wal,
         AtomicLong globalRmvId,
@@ -185,6 +186,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
         super(
             name,
             grpId,
+            grpName,
             pageMem,
             wal,
             globalRmvId,
@@ -798,7 +800,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
      * @return New CorruptedTreeException instance.
      */
     @Override protected CorruptedTreeException corruptedTreeException(String msg, Throwable cause, int grpId, long... pageIds) {
-        CorruptedTreeException e = new CorruptedTreeException(msg, cause, grpId, cacheName, idxName, pageIds);
+        CorruptedTreeException e = new CorruptedTreeException(msg, cause, grpId, grpName, cacheName, idxName, pageIds);
 
         processFailure(FailureType.CRITICAL_ERROR, e);
 

@@ -37,17 +37,23 @@ import org.apache.ignite.testframework.MessageOrderLogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static java.lang.String.format;
+
 /** */
 public class H2TreeCorruptedTreeExceptionTest extends GridCommonAbstractTest {
     /** */
     private static final String IDX_NAME = "A_IDX";
 
     /** */
+    private static final String GRP_NAME = "cacheGrp";
+
+    /** */
     private final AtomicBoolean failWithCorruptTree = new AtomicBoolean(false);
 
     /** */
-    private final LogListener logListener =
-        new MessageOrderLogListener(".*?Tree is corrupted.*?cacheId=65, cacheName=A, indexName=A_IDX.*");
+    private final LogListener logListener = new MessageOrderLogListener(
+        format(".*?Tree is corrupted.*?cacheId=65, cacheName=A, indexName=%s, grpName=%s.*", IDX_NAME, GRP_NAME)
+    );
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
@@ -83,9 +89,19 @@ public class H2TreeCorruptedTreeExceptionTest extends GridCommonAbstractTest {
                 PageHandler<Object, BPlusTree.Result> delegate = (PageHandler<Object, BPlusTree.Result>)hnd;
 
                 return new PageHandler<Object, BPlusTree.Result>() {
-                    @Override public BPlusTree.Result run(int cacheId, long pageId, long page, long pageAddr, PageIO io,
-                        Boolean walPlc, Object arg, int intArg, IoStatisticsHolder statHolder) throws IgniteCheckedException {
-                        BPlusTree.Result res = delegate.run(cacheId, pageId, page, pageAddr, io, walPlc, arg, intArg, statHolder);
+                    @Override public BPlusTree.Result run(
+                        int cacheId,
+                        long pageId,
+                        long page,
+                        long pageAddr,
+                        PageIO io,
+                        Boolean walPlc,
+                        Object arg,
+                        int intArg,
+                        IoStatisticsHolder statHolder
+                    ) throws IgniteCheckedException {
+                        BPlusTree.Result res =
+                            delegate.run(cacheId, pageId, page, pageAddr, io, walPlc, arg, intArg, statHolder);
 
                         if (failWithCorruptTree.get() && tree instanceof H2Tree && tree.getName().contains(IDX_NAME))
                             throw new RuntimeException("test exception");
@@ -117,7 +133,7 @@ public class H2TreeCorruptedTreeExceptionTest extends GridCommonAbstractTest {
 
         IgniteCache<Integer, Integer> cache = srv.getOrCreateCache(DEFAULT_CACHE_NAME);
 
-        cache.query(new SqlFieldsQuery("create table a (id integer primary key, a integer)"));
+        cache.query(new SqlFieldsQuery("create table a (id integer primary key, a integer) with \"CACHE_GROUP=" + GRP_NAME + "\""));
         cache.query(new SqlFieldsQuery("create index " + IDX_NAME + " on a(a)"));
 
         failWithCorruptTree.set(true);
