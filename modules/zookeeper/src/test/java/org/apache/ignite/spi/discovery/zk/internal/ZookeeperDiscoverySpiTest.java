@@ -89,6 +89,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheAbstractFullApiSelfT
 import org.apache.ignite.internal.processors.cache.distributed.TestCacheNodeExcludingFilter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
 import org.apache.ignite.internal.processors.security.SecurityContext;
+import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.IgniteFinishedFutureImpl;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
@@ -5489,7 +5490,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
         };
 
         /** Last killed nodes. */
-        static final Set<ClusterNode> LAST_KILLED_NODES = new HashSet<>();
+        static final Set<ClusterNode> LAST_KILLED_NODES = new GridConcurrentHashSet<>();
 
         /** */
         @LoggerResource
