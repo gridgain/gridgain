@@ -18,30 +18,25 @@ package org.apache.ignite.internal.sql.calcite.plan;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.util.Arrays;
 import java.util.Collections;
 
 /**
  * TODO: Add class description.
  */
-public class ProjectNode implements PlanNode {
+public class OutputNode implements PlanNode {
+
     private PlanNode input;
 
-    private int[] prjIdx; // TODO other types of projections (RexNode)
-
-    public ProjectNode(int[] prjIdx, PlanNode input) {
-        this.prjIdx = prjIdx;
+    public OutputNode(PlanNode input) {
         this.input = input;
     }
 
     @Override public void writeExternal(ObjectOutput out) throws IOException {
-        out.writeObject(prjIdx);
-        out.writeObject(input);
+        throw new UnsupportedOperationException();
     }
 
     @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-        prjIdx = (int[])in.readObject();
-        input = (PlanNode)in.readObject();
+        throw new UnsupportedOperationException();
     }
 
 
@@ -51,9 +46,7 @@ public class ProjectNode implements PlanNode {
         StringBuilder sb = new StringBuilder("\n");
 
         sb.append(margin)
-            .append("ProjectNode [prjIdx=")
-            .append(Arrays.toString(prjIdx))
-            .append("]")
+            .append("OutputNode")
             .append(input.toString(level + 1));
 
         return sb.toString();

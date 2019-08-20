@@ -29,9 +29,6 @@ import org.apache.ignite.internal.sql.calcite.IgniteConvention;
 /**
  * TODO: Add class description.
  */
-/**
- * TODO: Add class description.
- */
 public class FilterRule extends ConverterRule {
 
     public FilterRule() {

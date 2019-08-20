@@ -31,6 +31,7 @@ import org.apache.ignite.internal.sql.calcite.expressions.Condition;
 import org.apache.ignite.internal.sql.calcite.rels.FilterRel;
 import org.apache.ignite.internal.sql.calcite.rels.IgniteRel;
 import org.apache.ignite.internal.sql.calcite.rels.IgniteRelVisitor;
+import org.apache.ignite.internal.sql.calcite.rels.OutputRel;
 import org.apache.ignite.internal.sql.calcite.rels.ProjectRel;
 import org.apache.ignite.internal.sql.calcite.rels.RehashingExchange;
 import org.apache.ignite.internal.sql.calcite.rels.TableScanRel;
@@ -45,15 +46,14 @@ import static org.apache.ignite.internal.sql.calcite.plan.JoinNode.JoinAlgorithm
 @SuppressWarnings("TypeMayBeWeakened")
 public class PlanSplitter implements IgniteRelVisitor {
 
-    private int curSubPlanId;
+    private int curSubPlanId = 1; // Let's start enumeration from 1.
 
-    private List<SubPlan> subPlans = new ArrayList<>();
-
+    private List<PlanStep> planSteps = new ArrayList<>();
 
     private Deque<PlanNode> childrenStack = new LinkedList<>();
 
-    public List<SubPlan> subPlans() {
-        return subPlans;
+    public List<PlanStep> subPlans() {
+        return planSteps;
     }
 
     @Override public void onTableScan(TableScanRel scan) {
@@ -109,6 +109,17 @@ public class PlanSplitter implements IgniteRelVisitor {
         childrenStack.push(node);
     }
 
+    @Override public void onOutput(OutputRel out) {
+        visitChildren(out);
+
+        PlanNode input = childrenStack.poll();
+
+        OutputNode outputNode = new OutputNode(input);
+
+        PlanStep planStep = new PlanStep(curSubPlanId, outputNode, PlanStep.Distribution.SINGLE_NODE);
+
+        planSteps.add(planStep);
+    }
 
     @Override public void onUnionExchange(UnionExchangeRel exch) {
         visitChildren(exch);
@@ -117,15 +128,15 @@ public class PlanSplitter implements IgniteRelVisitor {
 
         PlanNode input = childrenStack.poll();
 
-        int linkId = curSubPlanId++; // each subPlan has id which equals to the sublan's root link id
+        int linkId = curSubPlanId++;
 
         SenderNode sender = new SenderNode(input, SenderNode.SenderType.SINGLE, linkId);
 
-        SubPlan.Distribution dist = singleSource ? SubPlan.Distribution.SINGLE_NODE : SubPlan.Distribution.ALL_NODES;
+        PlanStep.Distribution dist = singleSource ? PlanStep.Distribution.SINGLE_NODE : PlanStep.Distribution.ALL_NODES;
 
-        SubPlan subPlan = new SubPlan(linkId, sender, dist);
+        PlanStep planStep = new PlanStep(linkId, sender, dist);
 
-        subPlans.add(subPlan);
+        planSteps.add(planStep);
 
         ReceiverNode receiver = new ReceiverNode(linkId, singleSource ? ReceiverNode.Type.SINGLE :  ReceiverNode.Type.ALL);
 
@@ -137,13 +148,12 @@ public class PlanSplitter implements IgniteRelVisitor {
 
         PlanNode input = childrenStack.poll();
 
-        int linkId = curSubPlanId++; // each subPlan has id which equals to the sublan's root link id
-
+        int linkId = curSubPlanId++;
         SenderNode sender = new SenderNode(input, SenderNode.SenderType.HASH, linkId);
 
-        SubPlan subPlan = new SubPlan(linkId, sender, SubPlan.Distribution.ALL_NODES);
+        PlanStep planStep = new PlanStep(linkId, sender, PlanStep.Distribution.ALL_NODES);
 
-        subPlans.add(subPlan);
+        planSteps.add(planStep);
 
         ReceiverNode receiver = new ReceiverNode(linkId, ReceiverNode.Type.ALL);
 

@@ -18,6 +18,7 @@ package org.apache.ignite.internal.sql.calcite.plan;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.Collections;
 import org.apache.ignite.internal.sql.calcite.expressions.Condition;
 
 /**
@@ -42,5 +43,21 @@ public class FilterNode implements PlanNode {
         input = (PlanNode)in.readObject();
     }
 
+    @Override public String toString(int level) {
+        String margin = String.join("", Collections.nCopies(level, "  "));
 
+        StringBuilder sb = new StringBuilder("\n");
+
+        sb.append(margin)
+            .append("FilterNode [cond=")
+            .append(filterCond)
+            .append("]")
+            .append(input.toString(level + 1));
+
+        return sb.toString();
+    }
+
+    @Override public String toString() {
+        return toString(0);
+    }
 }

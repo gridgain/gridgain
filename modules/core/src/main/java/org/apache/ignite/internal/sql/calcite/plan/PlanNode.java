@@ -22,4 +22,5 @@ import java.io.Externalizable;
  */
 public interface PlanNode extends Externalizable {
 
+    String toString(int level);
 }

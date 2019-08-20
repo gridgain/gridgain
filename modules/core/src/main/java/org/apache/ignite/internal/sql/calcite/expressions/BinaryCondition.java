@@ -97,4 +97,8 @@ public class BinaryCondition implements Condition {
         left = (Expression)in.readObject();
         right = (Expression)in.readObject();
     }
+
+    @Override public String toString() {
+        return String.valueOf(kind);
+    }
 }

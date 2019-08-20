@@ -18,6 +18,7 @@ package org.apache.ignite.internal.sql.calcite.plan;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.Collections;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.ignite.internal.sql.calcite.expressions.Condition;
 
@@ -64,6 +65,29 @@ public class JoinNode implements PlanNode {
         rightJoinKeys = (int[])in.readObject();
         left = (PlanNode)in.readObject();
         right = (PlanNode)in.readObject();
+    }
+
+
+    @Override public String toString(int level) {
+        String margin = String.join("", Collections.nCopies(level, "  "));
+
+        StringBuilder sb = new StringBuilder("\n");
+
+        sb.append(margin)
+            .append("JoinNode [cond=")
+            .append(joinCond)
+            .append(", joinType=")
+            .append(joinType)
+            .append(", joinAlg=" + joinAlg)
+            .append("]")
+            .append(left.toString(level + 1))
+            .append(right.toString(level + 1));
+
+        return sb.toString();
+    }
+
+    @Override public String toString() {
+        return toString(0);
     }
 
     public enum JoinAlgorithm {

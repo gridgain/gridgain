@@ -19,54 +19,46 @@ import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * TODO: Add class description.
  */
-public class SubPlan implements Externalizable {
+public class PlanStep implements Externalizable {
     private int id;
 
-    private PlanNode subPlan;
-
-    private List<Integer> inputSubPlans = new ArrayList<>();
-
-    private int outputSubPlan = -1;
+    private PlanNode planStep;
 
     private Distribution dist;
 
 
-    public SubPlan(int id, PlanNode subPlan, Distribution dist) {
+    public PlanStep(int id, PlanNode planStep, Distribution dist) {
         this.id = id;
-        this.subPlan = subPlan;
+        this.planStep = planStep;
         this.dist = dist;
     }
 
     @Override public void writeExternal(ObjectOutput out) throws IOException {
         out.writeInt(id);
         out.writeInt(dist.ordinal());
-        out.writeInt(outputSubPlan);
-        out.writeObject(inputSubPlans);
-        out.writeObject(subPlan);
+        out.writeObject(planStep);
     }
 
     @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
         id = in.readInt();
         dist = Distribution.values()[in.readInt()];
-        outputSubPlan = in.readInt();
-        inputSubPlans = (List<Integer>)in.readObject();
-        subPlan = (PlanNode)in.readObject();
+        planStep = (PlanNode)in.readObject();
     }
 
-    public void addInputPlanId(int id) {
-        inputSubPlans.add(id);
+    public int id() {
+        return id;
     }
 
-    public void setOutputSubPlan(int id) {
-        assert outputSubPlan == -1;
+    public PlanNode plan() {
+        return planStep;
+    }
 
-        outputSubPlan = id;
+    public Distribution distribution() {
+        return dist;
     }
 
     public enum Distribution {
@@ -75,11 +67,9 @@ public class SubPlan implements Externalizable {
     }
 
     @Override public String toString() {
-        return "SubPlan{" +
+        return "PlanStep{" +
             "id=" + id +
-            ", subPlan=" + subPlan +
-            ", inputSubPlans=" + inputSubPlans +
-            ", outputSubPlan=" + outputSubPlan +
+            ", plan=" + planStep +
             ", dist=" + dist +
             '}';
     }

@@ -99,7 +99,9 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.sql.calcite.iterators.PhysicalOperator;
 import org.apache.ignite.internal.sql.calcite.plan.PlanSplitter;
+import org.apache.ignite.internal.sql.calcite.plan.PlanStep;
 import org.apache.ignite.internal.sql.calcite.rels.IgniteRel;
+import org.apache.ignite.internal.sql.calcite.rels.OutputRel;
 
 /**
  * TODO: REUSE AS {@link PlannerImpl}
@@ -236,14 +238,32 @@ public class CalcitePlanner {
 
         PlanSplitter splitter = new PlanSplitter();
 
+        optimalPlan = new OutputRel(optimalPlan.getCluster(), optimalPlan.getTraitSet(), optimalPlan);
+
         optimalPlan.accept(splitter);
 
-        System.out.println("splitter.subPlans()=" + splitter.subPlans());
+        List<PlanStep> multiStepPlan = splitter.subPlans();
+
+        printMultiStepPlan(multiStepPlan);
 
         // TODO replace with a visitor
         PhysicalOperator physicalOperator = null; //convertToPhysical(optimalPlan);
 
         return physicalOperator;
+    }
+
+    private void printMultiStepPlan(List<PlanStep> multiStepPlan) {
+        System.out.println();
+
+        System.out.println("===MultiStepPlan=== Steps: " + multiStepPlan.size());
+
+        System.out.println();
+
+        for (PlanStep planStep : multiStepPlan) {
+            System.out.println("planStep#" + planStep.id() + ": dist=" + planStep.distribution()  + planStep.plan());
+
+            System.out.println();
+        }
     }
 
     private RelNode rewritePlan(RelNode plan) {

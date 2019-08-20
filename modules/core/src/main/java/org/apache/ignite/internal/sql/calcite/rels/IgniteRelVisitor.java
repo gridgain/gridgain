@@ -21,6 +21,9 @@ import org.apache.calcite.rel.core.Join;
  * TODO: Add class description.
  */
 public interface IgniteRelVisitor {
+
+    void onOutput(OutputRel out);
+
     void onUnionExchange(UnionExchangeRel exch);
 
     void onRehashingExchange(RehashingExchange exch);

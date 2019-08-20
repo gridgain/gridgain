@@ -18,6 +18,7 @@ package org.apache.ignite.internal.sql.calcite.plan;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.Collections;
 
 /**
  * TODO: Add class description.
@@ -42,5 +43,23 @@ public class TableScanNode implements PlanNode {
     @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
         tableName = in.readUTF();
         cacheName = in.readUTF();
+    }
+
+
+    @Override public String toString(int level) {
+        String margin = String.join("", Collections.nCopies(level, "  "));
+
+        StringBuilder sb = new StringBuilder("\n");
+
+        sb.append(margin)
+            .append("TableScanNode [tableName=")
+            .append(tableName)
+            .append("]");
+
+        return sb.toString();
+    }
+
+    @Override public String toString() {
+        return toString(0);
     }
 }
