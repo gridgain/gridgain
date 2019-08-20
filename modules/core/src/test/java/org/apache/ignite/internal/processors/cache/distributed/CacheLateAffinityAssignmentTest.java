@@ -57,9 +57,11 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.IgniteNodeAttributes;
+import org.apache.ignite.internal.TestDelayingCommunicationSpi;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.cluster.ClusterTopologyServerNotFoundException;
 import org.apache.ignite.internal.cluster.NodeOrderComparator;
+import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.affinity.GridAffinityFunctionContextImpl;
@@ -70,9 +72,11 @@ import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtForceKeysRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtForceKeysResponse;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsAbstractMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsSingleMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsSingleRequest;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.F;
@@ -88,6 +92,7 @@ import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.services.Service;
 import org.apache.ignite.services.ServiceContext;
+import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -127,7 +132,7 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
     private IgnitePredicate<ClusterNode> cacheNodeFilter;
 
     /** */
-    private IgniteClosure<String, TestRecordingCommunicationSpi> spiC;
+    private IgniteClosure<String, TcpCommunicationSpi> spiC;
 
     /** */
     private IgniteClosure<String, Boolean> clientC;
@@ -142,7 +147,7 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        TestRecordingCommunicationSpi commSpi;
+        TcpCommunicationSpi commSpi;
 
         if (spiC != null)
             commSpi = spiC.apply(igniteInstanceName);
@@ -1993,33 +1998,36 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     private void concurrentStartStaticCaches(boolean withClients) throws Exception {
-        cacheC = new IgniteClosure<String, CacheConfiguration[]>() {
-            @Override public CacheConfiguration[] apply(String igniteInstanceName) {
-                int caches = getTestIgniteInstanceIndex(igniteInstanceName) + 1;
+        cacheC = igniteInstanceName -> {
+            int caches = getTestIgniteInstanceIndex(igniteInstanceName) + 1;
 
-                CacheConfiguration[] ccfgs = new CacheConfiguration[caches];
+            CacheConfiguration[] ccfgs = new CacheConfiguration[caches];
 
-                for (int i = 0; i < caches; i++) {
-                    CacheConfiguration ccfg = cacheConfiguration();
+            for (int i = 0; i < caches; i++) {
+                CacheConfiguration ccfg = cacheConfiguration();
 
+                // Unique cache is needed to have determined number of only locally configured caches start.
+                if (i == caches - 1)
+                    ccfg.setName("unique-cache-" + i);
+                else
                     ccfg.setName("cache-" + i);
 
-                    ccfgs[i] = ccfg;
-                }
-
-                return ccfgs;
+                ccfgs[i] = ccfg;
             }
+
+            return ccfgs;
         };
 
         if (withClients) {
-            clientC = new IgniteClosure<String, Boolean>() {
-                @Override public Boolean apply(String igniteInstanceName) {
-                    int idx = getTestIgniteInstanceIndex(igniteInstanceName);
+            clientC = igniteInstanceName -> {
+                int idx = getTestIgniteInstanceIndex(igniteInstanceName);
 
-                    return idx % 3 == 2;
-                }
+                return idx % 3 == 2;
             };
         }
+
+        // Ensure exchanges merge.
+        spiC = igniteInstanceName -> new TestDelayExchangeMessagesSpi();
 
         int ITERATIONS = 3;
 
@@ -2039,7 +2047,7 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
                 checkAffinity(NODES, topVer(NODES, 0), false);
             }
             else
-                checkAffinity(NODES, topVer(NODES, 3), true);
+                checkAffinity(NODES, topVer(NODES, NODES), true);
 
             if (i < ITERATIONS - 1) {
                 checkCaches();
@@ -2100,7 +2108,7 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
 
         final AtomicBoolean fail = new AtomicBoolean();
 
-        spiC = new IgniteClosure<String, TestRecordingCommunicationSpi>() {
+        spiC = new IgniteClosure<String, TcpCommunicationSpi>() {
             @Override public TestRecordingCommunicationSpi apply(String s) {
                 TestRecordingCommunicationSpi spi = new TestRecordingCommunicationSpi();
 
@@ -3025,6 +3033,19 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
             e.setValue(val);
 
             return null;
+        }
+    }
+
+    /**
+     * Communication SPI to ensure exchanges merge.
+     */
+    static class TestDelayExchangeMessagesSpi extends TestDelayingCommunicationSpi {
+        /** {@inheritDoc} */
+        @Override protected boolean delayMessage(Message msg, GridIoMessage ioMsg) {
+            if (msg instanceof GridDhtPartitionsAbstractMessage)
+                return ((GridDhtPartitionsAbstractMessage)msg).exchangeId() != null || (msg instanceof GridDhtPartitionsSingleRequest);
+
+            return false;
         }
     }
 }

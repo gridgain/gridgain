@@ -1234,7 +1234,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
                     ((IgniteChangeGlobalStateSupport)kctx.distributedMetastorage()).onDeActivate(kctx);
 
-                    kctx.cache().cancelStartFreshCaches();
+                    kctx.cache().cancelStartLocallyConfiguredCaches();
 
                     if (log.isInfoEnabled()) {
                         log.info("Successfully deactivated data structures, services and caches [" +

@@ -280,7 +280,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     private CacheConfigurationEnricher enricher;
 
     /** Caches configured on local node but not presented in a cluster during node local join. */
-    private volatile List<CacheData> freshCaches = Collections.emptyList();
+    private volatile List<CacheData> onlyLocallyConfiguredCaches = Collections.emptyList();
 
     /**
      * @param ctx Kernal context.
@@ -627,7 +627,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
             ctx.query().onCacheKernalStart();
 
-            awaitCachesStarted(active);
+            awaitLocallyConfiguredCachesStarted(active);
         }
         finally {
             cacheStartedLatch.countDown();
@@ -668,39 +668,42 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     }
 
     /**
-     * Await node local join and fresh caches (configured on node but not presented in cluster) start.
+     * Await node local join and locally configured caches (configured on node but not presented in cluster) start.
      *
      * @param active {@code True} if cluster is active.
      * @throws IgniteCheckedException If await has failed.
      */
-    private void awaitCachesStarted(boolean active) throws IgniteCheckedException {
-        List<DynamicCacheChangeRequest> cacheStartReqs = prepareStartRequests(freshCaches);
+    private void awaitLocallyConfiguredCachesStarted(boolean active) throws IgniteCheckedException {
+        List<DynamicCacheChangeRequest> cacheStartReqs = prepareStartRequests(onlyLocallyConfiguredCaches);
 
-        IgniteInternalFuture<?> cacheStartFut = startFreshCaches(cacheStartReqs);
+        IgniteInternalFuture<?> cacheStartFut = startLocallyConfiguredCaches(cacheStartReqs);
 
         // Start exchanger and wait for local join.
         sharedCtx.exchange().onKernalStart(active, false);
 
-        // Wait till fresh caches are started.
-        submitStartFreshCaches(cacheStartFut, cacheStartReqs).get();
+        // Wait till locally configured caches are started.
+        submitStartLocallyConfiguredCaches(cacheStartFut, cacheStartReqs).get();
     }
 
     /**
-     * Converts list of given {@link CacheData} {@code freshCaches} to cache start requests.
+     * Converts list of given {@link CacheData} {@code locallyConfiguredCaches} to cache start requests.
      *
-     * @param freshCaches Node fresh caches.
-     * @return List of start requests for given {@code freshCaches}.
+     * @param locallyConfiguredCaches Node locally configured caches.
+     * @return List of start requests for given {@code locallyConfiguredCaches}.
      * @throws IgniteCheckedException If preparing has failed.
      */
     private List<DynamicCacheChangeRequest> prepareStartRequests(
-        List<CacheData> freshCaches
+        List<CacheData> locallyConfiguredCaches
     ) throws IgniteCheckedException {
-        if (freshCaches.isEmpty())
+        if (locallyConfiguredCaches.isEmpty())
             return Collections.emptyList();
 
         List<DynamicCacheChangeRequest> cacheStartReqs = new ArrayList<>();
 
-        for (CacheData cacheData : freshCaches) {
+        for (CacheData cacheData : locallyConfiguredCaches) {
+            if (cacheData.template())
+                continue;
+
             // Shouldn't throw exception because failIfExists = false.
             DynamicCacheChangeRequest req = ctx.cache().prepareCacheChangeRequest(
                 cacheData.cacheConfiguration(),
@@ -716,8 +719,11 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                 null
             );
 
+            req.cacheConfigurationEnrichment(cacheData.cacheConfigurationEnrichment());
+
             // It's possible that descriptor for that cache is available
-            // if another joining node spawned discovery event of the same cache start in the same time.
+            // if another joining node spawned start discovery event for the same cache in the same time.
+            // If this flag set to 'true' and descriptor is already available assertion error occurs.
             req.clientStartOnly(false);
 
             cacheStartReqs.add(req);
@@ -727,20 +733,22 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     }
 
     /**
-     * Creates future indicates that node fresh caches have started.
+     * Creates future indicates that node locally configured caches have started.
      *
-     * @param cacheStartReqs Fresh caches start requests.
+     * @param locallyConfiguredCachesStartReqs Locally configured caches start requests.
      * @return Future that will be completed when node fresh cashes have started.
      */
-    private IgniteInternalFuture<?> startFreshCaches(List<DynamicCacheChangeRequest> cacheStartReqs) {
-        if (cacheStartReqs.isEmpty())
+    private IgniteInternalFuture<?> startLocallyConfiguredCaches(
+        List<DynamicCacheChangeRequest> locallyConfiguredCachesStartReqs
+    ) {
+        if (locallyConfiguredCachesStartReqs.isEmpty())
             return new GridFinishedFuture<>();
 
         GridCompoundFuture<Boolean, ?> awaitStartNewCaches = new GridCompoundFuture<>();
 
         // Exchange manager is not running, no cache start processes are running at the moment
         // It's safe to register callback on future cache start.
-        for (DynamicCacheChangeRequest req : cacheStartReqs) {
+        for (DynamicCacheChangeRequest req : locallyConfiguredCachesStartReqs) {
             DynamicCacheStartFuture fut = new DynamicCacheStartFuture(req.requestId());
 
             proxyStartFutures.put(req.cacheName(), fut);
@@ -754,38 +762,39 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     }
 
     /**
-     * Sends discovery event for fresh caches start.
+     * Sends discovery event for locally configured caches start.
      * If sending is failed returning future will be failed with corresponding exception.
      *
-     * @param startFreshCaches Fresh caches start future.
-     * @param cacheStartReqs Fresh caches start requests.
-     * @return Future that will be completed when node fresh cashes have started.
+     * @param startLocallyConfiguredCaches Locally configured caches start future.
+     * @param locallyConfiguredCacheStartReqs Locally configured caches start requests.
+     * @return Future that will be completed when node locally configured cashes have started.
      */
-    private IgniteInternalFuture<?> submitStartFreshCaches(
-        IgniteInternalFuture<?> startFreshCaches,
-        List<DynamicCacheChangeRequest> cacheStartReqs
+    private IgniteInternalFuture<?> submitStartLocallyConfiguredCaches(
+        IgniteInternalFuture<?> startLocallyConfiguredCaches,
+        List<DynamicCacheChangeRequest> locallyConfiguredCacheStartReqs
     ) {
-        if (cacheStartReqs.isEmpty())
-            return startFreshCaches;
+        if (locallyConfiguredCacheStartReqs.isEmpty())
+            return startLocallyConfiguredCaches;
 
         ctx.closure().runLocalSafe(() -> {
             try {
-                ctx.discovery().sendCustomEvent(new DynamicCacheChangeBatch(cacheStartReqs));
+                ctx.discovery().sendCustomEvent(new DynamicCacheChangeBatch(locallyConfiguredCacheStartReqs));
             }
             catch (IgniteCheckedException e) {
-                ((GridFutureAdapter)startFreshCaches).onDone(
-                    new IgniteCheckedException("Failed to initiate caches start process: " + cacheStartReqs, e));
+                ((GridFutureAdapter)startLocallyConfiguredCaches).onDone(
+                    new IgniteCheckedException("Failed to initiate caches start process: " + locallyConfiguredCacheStartReqs, e));
             }
         }, GridIoPolicy.SYSTEM_POOL);
 
-        return startFreshCaches;
+        return startLocallyConfiguredCaches;
     }
 
     /**
-     * Cancels starting fresh caches.
-     * Invoked during deactivation.
+     * Cancels starting locally configured caches.
+     *
+     * Invoked during deactivation to complete start future and resume node starter thread.
      */
-    public void cancelStartFreshCaches() {
+    public void cancelStartLocallyConfiguredCaches() {
         proxyStartFutures.forEach((name, fut) -> fut.onDone(false, null));
     }
 
@@ -907,7 +916,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             }
         }
 
-        cancelStartFreshCaches();
+        cancelStartLocallyConfiguredCaches();
     }
 
     /** {@inheritDoc} */
@@ -1026,11 +1035,11 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         if (!stoppedCaches.isEmpty())
             cachesReconnectFut.add(sharedCtx.exchange().deferStopCachesOnClientReconnect(stoppedCaches));
 
-        List<DynamicCacheChangeRequest> cacheStartReqs = prepareStartRequests(freshCaches);
+        List<DynamicCacheChangeRequest> cacheStartReqs = prepareStartRequests(onlyLocallyConfiguredCaches);
 
-        IgniteInternalFuture<?> freshCachesStartFut = startFreshCaches(cacheStartReqs);
+        IgniteInternalFuture<?> startLocallyConfiguredCaches = startLocallyConfiguredCaches(cacheStartReqs);
 
-        cachesReconnectFut.add(submitStartFreshCaches(freshCachesStartFut, cacheStartReqs));
+        cachesReconnectFut.add(submitStartLocallyConfiguredCaches(startLocallyConfiguredCaches, cacheStartReqs));
 
         cachesReconnectFut.markInitialized();
 
@@ -2113,24 +2122,19 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     }
 
     /**
-     * Stops all caches and groups, that was recovered, but not activated on node join. Such caches can remain only if
-     * it was filtered by node filter on current node. It's impossible to check whether current node is affinity node
-     * for given cache before join to topology.
+     * Stops all caches and groups have recovered, but not activated on node join.
+     * Such caches can remain in cases when:
+     * 1) Cache is filtered by node filter on current node. During recovery
+     * it's impossible to ensure whether current node is affinity node for that cache or not.
+     *
+     * 2) Cache is configured only on that node and joins to a new cluster. In this case such caches are started by
+     * separate event after local join.
      */
     public void shutdownNotFinishedRecoveryCaches() {
-        for (GridCacheAdapter cacheAdapter : caches.values()) {
-            GridCacheContext cacheContext = cacheAdapter.context();
-
-            if (cacheContext.isLocal())
-                continue;
-
-            if (cacheContext.isRecoveryMode()) {
-                assert !isLocalAffinity(cacheContext.config())
-                    : "Cache " + cacheAdapter.context() + " is still in recovery mode after start, but not activated.";
-
-                stopCacheSafely(cacheContext);
-            }
-        }
+        caches.values().stream()
+            .map(GridCacheAdapter::context)
+            .filter(ctx -> !ctx.isLocal() && ctx.isRecoveryMode())
+            .forEach(this::stopCacheSafely);
     }
 
     /**
@@ -3063,7 +3067,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
     /** {@inheritDoc} */
     @Override public void onGridDataReceived(GridDiscoveryData data) {
-        freshCaches = cachesInfo.onGridDataReceived(data);
+        onlyLocallyConfiguredCaches = cachesInfo.onGridDataReceived(data);
 
         sharedCtx.walState().onCachesInfoCollected();
     }

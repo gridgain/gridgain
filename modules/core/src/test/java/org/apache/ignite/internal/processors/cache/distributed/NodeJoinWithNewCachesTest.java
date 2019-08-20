@@ -1,24 +1,49 @@
+/*
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.ignite.internal.processors.cache.distributed;
 
+import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.TestRecordingCommunicationSpi;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+/**
+ * Tests check correct behaviour of node(s) join when it has configured caches that not presented in cluster.
+ */
 public class NodeJoinWithNewCachesTest extends GridCommonAbstractTest {
     /** Initial nodes. */
     private static final int INITIAL_NODES = 2;
 
-    /** Caches. */
-    private boolean spawnNewCaches;
-
-    /** Client. */
+    /** Client node indicator. */
     private boolean client;
 
     /** {@inheritDoc} */
@@ -34,10 +59,7 @@ public class NodeJoinWithNewCachesTest extends GridCommonAbstractTest {
                     .setPersistenceEnabled(false))
         );
 
-        int cachesCnt = INITIAL_NODES;
-
-        if (spawnNewCaches)
-            cachesCnt += getTestIgniteInstanceIndex(igniteInstanceName) + 1;
+        int cachesCnt = getTestIgniteInstanceIndex(igniteInstanceName) + 1;
 
         cfg.setCacheConfiguration(cacheConfiguration("cache-", cachesCnt));
 
@@ -45,31 +67,62 @@ public class NodeJoinWithNewCachesTest extends GridCommonAbstractTest {
 
         cfg.setActiveOnStart(false);
 
+        cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
+
         return cfg;
     }
 
-    CacheConfiguration[] cacheConfiguration(String prefix, int number) {
-        return cacheConfiguration(prefix, null ,number);
+    /**
+     * @param prefix Prefix.
+     * @param cachesNum Number.
+     */
+    private CacheConfiguration[] cacheConfiguration(String prefix, int cachesNum) {
+        return cacheConfiguration(prefix, null, cachesNum);
     }
 
-    CacheConfiguration[] cacheConfiguration(String prefix, String groupName, int number) {
-        CacheConfiguration[] ccfgs = new CacheConfiguration[number];
-        for (int i = 0; i < number; i++) {
+    /**
+     * @param prefix Prefix.
+     * @param grpName Group name.
+     * @param cachesNum Caches number.
+     */
+    private CacheConfiguration[] cacheConfiguration(String prefix, String grpName, int cachesNum) {
+        CacheConfiguration[] ccfgs = new CacheConfiguration[cachesNum + 1];
+
+        for (int i = 0; i < cachesNum; i++) {
             ccfgs[i] = new CacheConfiguration(prefix + i)
-                .setGroupName(groupName)
-                .setAffinity(new RendezvousAffinityFunction(false, 32))
-                .setBackups(1);
+                .setGroupName(grpName)
+                .setBackups(1)
+                .setAffinity(new RendezvousAffinityFunction(false, 32));
         }
+
+        // Unique cache.
+        ccfgs[cachesNum] = new CacheConfiguration("unique-" + (cachesNum - 1))
+            .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+            .setBackups(1)
+            .setAffinity(new RendezvousAffinityFunction(false, 32));
+
         return ccfgs;
     }
 
+    /**
+     *
+     */
     @Before
     public void before() throws Exception {
         stopAllGrids();
 
         cleanPersistenceDir();
+
+        IgniteEx crd = (IgniteEx) startGridsMultiThreaded(INITIAL_NODES);
+
+        crd.cluster().active(true);
+
+        awaitPartitionMapExchange();
     }
 
+    /**
+     *
+     */
     @After
     public void after() throws Exception {
         stopAllGrids();
@@ -77,62 +130,128 @@ public class NodeJoinWithNewCachesTest extends GridCommonAbstractTest {
         cleanPersistenceDir();
     }
 
-    @Test(timeout = 10005000L)
+    /**
+     * Test that server node join with new caches works correctly.
+     *
+     * @throws Exception If test failed.
+     */
+    @Test
     public void testNodeJoin() throws Exception {
-        IgniteEx crd = (IgniteEx) startGridsMultiThreaded(INITIAL_NODES);
-
-        crd.cluster().active(true);
-
-        awaitPartitionMapExchange();
-
-        spawnNewCaches = true;
-
         startGrid(2);
 
-        int ALL_NODES = INITIAL_NODES + 1;
-
-        for (int nodeIdx = ALL_NODES - 1; nodeIdx >= 0; nodeIdx--)
-            for (int cacheId = INITIAL_NODES + ALL_NODES - 1; cacheId >= 0; cacheId--)
-                grid(nodeIdx).cache("cache-" + cacheId).get(0);
+        assertCachesWorking(INITIAL_NODES + 1);
     }
 
-    @Test(timeout = 10005000L)
+    /**
+     * Test that multiple server nodes join simultaneously with new caches works correctly.
+     *
+     * @throws Exception If test failed.
+     */
+    @Test
     public void testMultipleNodeJoin() throws Exception {
-        IgniteEx crd = (IgniteEx) startGridsMultiThreaded(INITIAL_NODES);
-
-        crd.cluster().active(true);
-
-        awaitPartitionMapExchange();
-
-        spawnNewCaches = true;
-
         startGridsMultiThreaded(INITIAL_NODES, 3);
 
-        int ALL_NODES = INITIAL_NODES + 3;
-
-        for (int nodeIdx = ALL_NODES - 1; nodeIdx >= 0; nodeIdx--)
-            for (int cacheId = INITIAL_NODES + ALL_NODES - 1; cacheId >= 0; cacheId--)
-                grid(nodeIdx).cache("cache-" + cacheId).get(0);
+        assertCachesWorking(INITIAL_NODES + 3);
     }
 
-    @Test(timeout = 10005000L)
+    /**
+     * Test that multiple client nodes join simultaneously with new caches works correctly.
+     *
+     * @throws Exception If test failed.
+     */
+    @Test
     public void testMultipleNodeJoinClient() throws Exception {
-        IgniteEx crd = (IgniteEx) startGridsMultiThreaded(INITIAL_NODES);
-
-        crd.cluster().active(true);
-
-        awaitPartitionMapExchange();
-
-        spawnNewCaches = true;
-
         client = true;
 
         startGridsMultiThreaded(INITIAL_NODES, 3);
 
-        int ALL_NODES = INITIAL_NODES + 3;
+        assertCachesWorking(INITIAL_NODES + 3);
+    }
 
-        for (int nodeIdx = ALL_NODES - 1; nodeIdx >= 0; nodeIdx--)
-            for (int cacheId = INITIAL_NODES + ALL_NODES - 1; cacheId >= 0; cacheId--)
-                grid(nodeIdx).cache("cache-" + cacheId).get(0);
+    /**
+     * Test that new cache from client node works correctly
+     * if exchange of that cache start is not processed on other nodes yet.
+     *
+     * @throws Exception If test failed.
+     */
+    @Test
+    public void testJoinAndStartTransaction() throws Exception {
+        IgniteEx crd = grid(0);
+
+        TestRecordingCommunicationSpi.spi(crd).blockMessages((node, msg) -> {
+            // Delay exchange finish for unique-2 cache start on second node.
+            if (msg instanceof GridDhtPartitionsFullMessage && (node.id().getLeastSignificantBits() & 0xFFFF) == 1) {
+                GridDhtPartitionsFullMessage fullMsg = (GridDhtPartitionsFullMessage) msg;
+
+                return fullMsg.exchangeId().topologyVersion().equals(new AffinityTopologyVersion(3, 1));
+            }
+
+            return false;
+        });
+
+        client = true;
+
+        Ignite client = startGrid(2);
+
+        final IgniteCache<Integer, Integer> txCache = client.cache("unique-" + 2);
+
+        // Start transaction belongs to second node. This transaction should hang until cache on that node is started.
+        IgniteInternalFuture txFut = GridTestUtils.runAsync(() -> {
+            for (int i = 0; i < 32; ++i)
+                txCache.put(i, i);
+        });
+
+        assertFalse(GridTestUtils.waitForCondition(txFut::isDone, 5_000));
+
+        TestRecordingCommunicationSpi.spi(crd).stopBlock();
+
+        // Cache should be started on second node after exchange resume and transaction should be completed.
+        txFut.get();
+
+        for (int i = 0; i < 32; ++i)
+            assertEquals(Integer.valueOf(i), txCache.get(i));
+
+        assertCachesWorking(INITIAL_NODES + 1);
+    }
+
+    /**
+     * Assert that all configured caches are exist and operable.
+     *
+     * @param nodes Nodes count where caches are checked.
+     */
+    private void assertCachesWorking(int nodes) {
+        for (int nodeId = nodes - 1; nodeId >= 0; nodeId--) {
+            for (int cacheId = nodeId - 1; cacheId >= 0; cacheId--) {
+                IgniteCache<Object, Object> cache = grid(nodeId).cache("cache-" + cacheId);
+
+                Assert.assertNotNull(
+                    String.format("Cache is null [nodeId=%d, cacheId=%d]", nodeId, cacheId),
+                    cache
+                );
+
+                cache.put(0, 0);
+
+                Assert.assertEquals(
+                    String.format("Cache is not working as expected [nodeId=%d, cacheId=%d]", nodeId, cacheId),
+                    0,
+                    cache.get(0)
+                );
+            }
+
+            IgniteCache<Object, Object> cache = grid(nodeId).cache("unique-" + nodeId);
+
+            Assert.assertNotNull(
+                String.format("Unique cache is null [nodeId=%d, cacheId=%d]", nodeId, nodeId),
+                cache
+            );
+
+            cache.put(0, 0);
+
+            Assert.assertEquals(
+                String.format("Unique cache is not working as expected [nodeId=%d, cacheId=%d]", nodeId, nodeId),
+                0,
+                cache.get(0)
+            );
+        }
     }
 }
