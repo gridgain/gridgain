@@ -3104,11 +3104,11 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
         testCommSpi = true;
         commFailureRslvr = KillRandomCommunicationFailureResolver.FACTORY;
 
-        startGridsMultiThreaded(10);
+        startGrids(10);
 
         clientMode(true);
 
-        startGridsMultiThreaded(10, 5);
+        startGrids(10, 5);
 
         int nodesCnt = 15;
 

@@ -712,17 +712,22 @@ public abstract class GridAbstractTest extends JUnit3TestLegacySupport {
         return startGrid(getTestIgniteInstanceName());
     }
 
+    protected final IgniteEx startGrids(int cnt) throws Exception {
+        return startGrids(0, cnt);
+    }
+
     /**
+     * @param start Start index.
      * @param cnt Grid count.
      * @return First started grid.
      * @throws Exception If failed.
      */
-    protected final IgniteEx startGrids(int cnt) throws Exception {
+    protected final IgniteEx startGrids(int start, int cnt) throws Exception {
         assert cnt > 0;
 
         IgniteEx ignite = null;
 
-        for (int i = 0; i < cnt; i++)
+        for (int i = start; i < cnt; i++)
             if (ignite == null)
                 ignite = startGrid(i);
             else
