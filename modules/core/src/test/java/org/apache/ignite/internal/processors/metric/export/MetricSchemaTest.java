@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.metric.export;
 
-import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.junit.Test;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -64,7 +63,6 @@ public class MetricSchemaTest {
 
             String pref = REG_PREF + i;
 
-
             //TODO: actually need sum length of all unique registry schemas
             regSchemasSize = regSchema.length();
 
@@ -72,7 +70,7 @@ public class MetricSchemaTest {
 
             namesSize += pref.getBytes(UTF_8).length;
 
-            bldr.add(MetricRegistry.class, pref, regSchema);
+            bldr.add("regType", pref, regSchema);
         }
 
         MetricSchema schema = bldr.build();
@@ -99,12 +97,12 @@ public class MetricSchemaTest {
 
             MetricRegistrySchema regSchema = regBldr.build();
 
-            bldr.add(MetricRegistry.class, REG_PREF + i, regSchema);
+            bldr.add("regType", REG_PREF + i, regSchema);
         }
 
         bldr.build();
 
-        bldr.add(MetricRegistry.class, DISALLOWED, MetricRegistrySchema.Builder.newInstance().build());
+        bldr.add("regType", DISALLOWED, MetricRegistrySchema.Builder.newInstance().build());
     }
 
     @Test(expected = IllegalStateException.class)
@@ -119,7 +117,7 @@ public class MetricSchemaTest {
 
             MetricRegistrySchema regSchema = regBldr.build();
 
-            bldr.add(MetricRegistry.class, REG_PREF + i, regSchema);
+            bldr.add("regType", REG_PREF + i, regSchema);
         }
 
         bldr.build();
@@ -139,7 +137,7 @@ public class MetricSchemaTest {
 
             MetricRegistrySchema regSchema = regBldr.build();
 
-            bldr.add(MetricRegistry.class, REG_PREF + i, regSchema);
+            bldr.add("regType", REG_PREF + i, regSchema);
         }
 
         MetricSchema schema = bldr.build();
@@ -159,7 +157,7 @@ public class MetricSchemaTest {
 
             MetricRegistrySchema regSchema = regBldr.build();
 
-            bldr.add(MetricRegistry.class, REG_PREF + i, regSchema);
+            bldr.add("regType", REG_PREF + i, regSchema);
         }
 
         MetricSchema schema = bldr.build();
@@ -189,7 +187,7 @@ public class MetricSchemaTest {
 
             MetricRegistrySchema regSchema = regBldr.build();
 
-            bldr.add(MetricRegistry.class, REG_PREF + i, regSchema);
+            bldr.add("regType", REG_PREF + i, regSchema);
         }
 
         MetricSchema schema = bldr.build();

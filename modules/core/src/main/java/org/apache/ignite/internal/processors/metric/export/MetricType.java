@@ -19,10 +19,13 @@ package org.apache.ignite.internal.processors.metric.export;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
 import org.apache.ignite.spi.metric.BooleanMetric;
 import org.apache.ignite.spi.metric.DoubleMetric;
 import org.apache.ignite.spi.metric.IntMetric;
 import org.apache.ignite.spi.metric.LongMetric;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public enum MetricType {
     BOOLEAN((byte)0, 1, BooleanMetric.class),
@@ -31,7 +34,9 @@ public enum MetricType {
 
     LONG((byte)2, Long.BYTES, LongMetric.class),
 
-    DOUBLE((byte)3, Double.BYTES, DoubleMetric.class);
+    DOUBLE((byte)3, Double.BYTES, DoubleMetric.class),
+
+    HIT_RATE((byte)4, Long.BYTES * 2, HitRateMetric.class);
 
     private static final MetricType[] typeIdx = new MetricType[MetricType.values().length];
 
@@ -41,7 +46,7 @@ public enum MetricType {
 
     private final byte type;
 
-    private final Class cls;
+    private final Class<?> cls;
 
     MetricType(byte type, int size, Class cls) {
         this.type = type;
@@ -61,7 +66,7 @@ public enum MetricType {
         return cls;
     }
 
-    public static MetricType findByType(byte type) {
+    @NotNull public static MetricType findByType(byte type) {
         MetricType res = typeIdx[type];
 
         if (res == null) {
@@ -77,20 +82,22 @@ public enum MetricType {
         return res;
     }
 
-    public static MetricType findByClass(Class cls) {
+    @Nullable public static MetricType findByClass(Class cls) {
+        // HitRateMetric implements LongMetric interface so we need handle this case in the specific manner.
+        if (cls.equals(HitRateMetric.class))
+            return HIT_RATE;
+
         MetricType res = classIdx.get(cls);
 
         if (res == null) {
             for (MetricType m : MetricType.values()) {
-                if (m.clazz().isAssignableFrom(cls)) {
+                if (m.cls.isAssignableFrom(cls)) {
                     res = m;
 
                     classIdx.put(cls, m);
                 }
             }
         }
-
-        assert res != null;
 
         return res;
     }

@@ -213,16 +213,14 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
     /** */
     private boolean trackTimeout;
 
-    /**
-     * Counts how much time this transaction has spent on system calls, in nanoseconds.
-     */
-    private final AtomicLong systemTime = new AtomicLong(0);
+    /** Counts how much time this transaction has spent on system calls, in nanoseconds. */
+    private final AtomicLong sysTime = new AtomicLong(0);
 
     /**
      * Stores the nano time value when current system time has started, or <code>0</code> if no system section
      * is running currently.
      */
-    private final AtomicLong systemStartTime = new AtomicLong(0);
+    private final AtomicLong sysStartTime = new AtomicLong(0);
 
     /**
      * Stores the nano time value when prepare step has started, or <code>0</code> if no prepare step
@@ -3823,13 +3821,13 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
      * @return Amount of time in milliseconds.
      */
     public long systemTimeCurrent() {
-        long systemTime0 = systemTime.get();
+        long sysTime0 = sysTime.get();
 
-        long systemStartTime0 = systemStartTime.get();
+        long sysStartTime0 = sysStartTime.get();
 
-        long t = systemStartTime0 == 0 ? 0 : (System.nanoTime() - systemStartTime0);
+        long t = sysStartTime0 == 0 ? 0 : (System.nanoTime() - sysStartTime0);
 
-        return U.nanosToMillis(systemTime0 + t);
+        return U.nanosToMillis(sysTime0 + t);
     }
 
     /** {@inheritDoc} */
@@ -3843,13 +3841,13 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
             if (!commitOrRollbackTime.compareAndSet(0, System.nanoTime() - commitOrRollbackStartTime.get()))
                 return res;
 
-            long systemTimeMillis = U.nanosToMillis(this.systemTime.get());
+            long sysTimeMillis = U.nanosToMillis(sysTime.get());
             long totalTimeMillis = System.currentTimeMillis() - startTime();
 
-            //in some cases totalTimeMillis can be less than systemTimeMillis, as they are calculated with different precision
-            long userTimeMillis = Math.max(totalTimeMillis - systemTimeMillis, 0);
+            // In some cases totalTimeMillis can be less than systemTimeMillis, as they are calculated with different precision.
+            long userTimeMillis = Math.max(totalTimeMillis - sysTimeMillis, 0);
 
-            writeTxMetrics(systemTimeMillis, userTimeMillis);
+            writeTxMetrics(sysTimeMillis, userTimeMillis);
 
             boolean willBeSkipped = txDumpsThrottling == null || txDumpsThrottling.skipCurrent();
 
@@ -3864,7 +3862,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                     && ThreadLocalRandom.current().nextDouble() <= transactionTimeDumpSamplesCoefficient;
 
                 if (randomlyChosen || isLong) {
-                    String txDump = completedTransactionDump(state, systemTimeMillis, userTimeMillis, isLong);
+                    String txDump = completedTransactionDump(state, sysTimeMillis, userTimeMillis, isLong);
 
                     if (isLong)
                         log.warning(txDump);
@@ -3885,27 +3883,27 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
      * Builds dump string for completed transaction.
      *
      * @param state Transaction state.
-     * @param systemTimeMillis System time in milliseconds.
+     * @param sysTimeMillis System time in milliseconds.
      * @param userTimeMillis User time in milliseconds.
      * @param isLong Whether the dumped transaction is long running or not.
      * @return Dump string.
      */
     private String completedTransactionDump(
         TransactionState state,
-        long systemTimeMillis,
+        long sysTimeMillis,
         long userTimeMillis,
         boolean isLong
     ) {
         long cacheOperationsTimeMillis =
-            U.nanosToMillis(systemTime.get() - prepareTime.get() - commitOrRollbackTime.get());
+            U.nanosToMillis(sysTime.get() - prepareTime.get() - commitOrRollbackTime.get());
 
         GridStringBuilder warning = new GridStringBuilder(isLong ? "Long transaction time dump " : "Transaction time dump ")
             .a("[startTime=")
             .a(TIME_FORMAT.get().format(new Date(startTime)))
             .a(", totalTime=")
-            .a(systemTimeMillis + userTimeMillis)
+            .a(sysTimeMillis + userTimeMillis)
             .a(", systemTime=")
-            .a(systemTimeMillis)
+            .a(sysTimeMillis)
             .a(", userTime=")
             .a(userTimeMillis)
             .a(", cacheOperationsTime=")
@@ -3927,7 +3925,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
         warning
             .a(", tx=")
             .a(this)
-            .a("]");
+            .a(']');
 
         return warning.toString();
     }
@@ -5074,32 +5072,32 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
      * Enters the section when system time for this transaction is counted.
      */
     public void enterSystemSection() {
-        //setting systemStartTime only if it equals 0, otherwise it means that we are already in system section
-        //and sould do nothing.
-        systemStartTime.compareAndSet(0, System.nanoTime());
+        // Setting systemStartTime only if it equals 0, otherwise it means that we are already in system section
+        // and sould do nothing.
+        sysStartTime.compareAndSet(0, System.nanoTime());
     }
 
     /**
      * Leaves the section when system time for this transaction is counted.
      */
     public void leaveSystemSection() {
-        long systemStartTime0 = systemStartTime.getAndSet(0);
+        long sysStartTime0 = sysStartTime.getAndSet(0);
 
-        if (systemStartTime0 > 0)
-            systemTime.addAndGet(System.nanoTime() - systemStartTime0);
+        if (sysStartTime0 > 0)
+            sysTime.addAndGet(System.nanoTime() - sysStartTime0);
     }
 
     /**
      * Writes system and user time metrics.
      *
-     * @param systemTime System time.
+     * @param sysTime System time.
      * @param userTime User time.
      */
-    private void writeTxMetrics(long systemTime, long userTime) {
+    private void writeTxMetrics(long sysTime, long userTime) {
         MetricRegistry txMetricRegistry = cctx.kernalContext().metric()
-            .registry(metricName(DIAGNOSTIC_METRICS, TRANSACTION_METRICS));
+            .get(metricName(DIAGNOSTIC_METRICS, TRANSACTION_METRICS));
 
-        writeTxMetrics(txMetricRegistry, METRIC_TOTAL_SYSTEM_TIME, METRIC_SYSTEM_TIME_HISTOGRAM, systemTime);
+        writeTxMetrics(txMetricRegistry, METRIC_TOTAL_SYSTEM_TIME, METRIC_SYSTEM_TIME_HISTOGRAM, sysTime);
         writeTxMetrics(txMetricRegistry, METRIC_TOTAL_USER_TIME, METRIC_USER_TIME_HISTOGRAM, userTime);
     }
 

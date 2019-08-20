@@ -27,10 +27,13 @@ import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.jetbrains.annotations.Nullable;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.apache.ignite.internal.processors.metric.export.MetricType.BOOLEAN;
+import static org.apache.ignite.internal.processors.metric.export.MetricType.DOUBLE;
+import static org.apache.ignite.internal.processors.metric.export.MetricType.HIT_RATE;
+import static org.apache.ignite.internal.processors.metric.export.MetricType.INT;
+import static org.apache.ignite.internal.processors.metric.export.MetricType.LONG;
 import static org.apache.ignite.internal.util.GridUnsafe.BYTE_ARR_OFF;
 import static org.apache.ignite.internal.util.GridUnsafe.copyMemory;
-import static org.apache.ignite.internal.util.GridUnsafe.getBoolean;
-import static org.apache.ignite.internal.util.GridUnsafe.getDouble;
 import static org.apache.ignite.internal.util.GridUnsafe.getInt;
 import static org.apache.ignite.internal.util.GridUnsafe.getLong;
 import static org.apache.ignite.internal.util.GridUnsafe.getShort;
@@ -229,7 +232,9 @@ public class MetricResponse implements Message {
         if (off == NO_OFF)
             return;
 
-        int lim = off + dataSize();
+        VarIntByteBuffer data = new VarIntByteBuffer(body);
+
+        data.position(off);
 
         List<MetricSchemaItem> items = schema.items();
 
@@ -241,47 +246,31 @@ public class MetricResponse implements Message {
             List<MetricRegistrySchemaItem> regItems = regSchema.items();
 
             for (MetricRegistrySchemaItem regItem : regItems) {
-                assert off < lim;
-
                 String name =  item.prefix() + '.' + regItem.name();
 
-                byte type = regItem.metricType().type();
+                MetricType type = MetricType.findByType(regItem.metricType().type());
 
-                switch (type) {
-                    case 0:
-                        consumer.onBoolean(name, getBoolean(body, BYTE_ARR_OFF + off));
+                if (type == LONG)
+                    consumer.onLong(name, data.getVarLong());
+                else if (type == INT)
+                    consumer.onInt(name, data.getVarInt());
+                else if (type == HIT_RATE) {
+                    long interval = data.getVarLong();
 
-                        off += 1;
+                    long val = data.getVarLong();
 
-                        break;
-
-                    case 1:
-                        consumer.onInt(name, getInt(body, BYTE_ARR_OFF + off));
-
-                        off += Integer.BYTES;
-
-                        break;
-
-                    case 2:
-                        consumer.onLong(name, getLong(body, BYTE_ARR_OFF + off));
-
-                        off += Long.BYTES;
-
-                        break;
-
-                    case 3:
-                        consumer.onDouble(name, getDouble(body, BYTE_ARR_OFF + off));
-
-                        off += Double.BYTES;
-
-                        break;
-
-                    default:
-                        throw new IllegalArgumentException("Unknown metric type: " + type);
+                    consumer.onLong(name + '.' + interval, val);
                 }
+                else if (type == DOUBLE)
+                    consumer.onDouble(name, data.getDouble());
+                else if (type == BOOLEAN)
+                    consumer.onBoolean(name, data.getBoolean());
+                else
+                    throw new IllegalStateException("Unknown metric type [metric=" + name + ", type=" + type + ']');
             }
         }
     }
+
 
     public int schemaOffset() {
         return getInt(body, BYTE_ARR_OFF + SCHEMA_OFF_OFF);
