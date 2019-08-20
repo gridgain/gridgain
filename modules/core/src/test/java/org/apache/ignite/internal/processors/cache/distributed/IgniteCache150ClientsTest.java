@@ -61,6 +61,14 @@ public class IgniteCache150ClientsTest extends GridCommonAbstractTest {
         cfg.setPeerClassLoadingEnabled(false);
         cfg.setTimeServerPortRange(200);
 
+        cfg.setDataStreamerThreadPoolSize(2);
+        cfg.setManagementThreadPoolSize(2);
+        cfg.setPeerClassLoadingThreadPoolSize(1);
+        cfg.setPublicThreadPoolSize(2);
+        cfg.setStripedPoolSize(2);
+        cfg.setSystemThreadPoolSize(2);
+        cfg.setUtilityCachePoolSize(2);
+
         ((TcpCommunicationSpi)cfg.getCommunicationSpi()).setSocketWriteTimeout(200);
         ((TcpCommunicationSpi)cfg.getCommunicationSpi()).setLocalPortRange(200);
         ((TcpCommunicationSpi)cfg.getCommunicationSpi()).setSharedMemoryPort(-1);
