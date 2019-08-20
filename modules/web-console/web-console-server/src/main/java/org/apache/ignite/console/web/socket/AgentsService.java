@@ -58,6 +58,7 @@ import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_HANDSHAK
 import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_REVOKE_TOKEN;
 import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_STATUS;
 import static org.apache.ignite.console.websocket.WebSocketEvents.CLUSTER_TOPOLOGY;
+import static org.apache.ignite.console.websocket.WebSocketEvents.NODE_VISOR;
 
 /**
  * Agents service.
@@ -77,7 +78,7 @@ public class AgentsService extends AbstractSocketHandler {
     private AgentsRepository agentsRepo;
 
     /** */
-    private final Map<WebSocketSession, AgentSession> locAgents;
+    protected final Map<WebSocketSession, AgentSession> locAgents;
     
     /** */
     private final Map<String, UUID> srcOfRequests;
@@ -140,6 +141,10 @@ public class AgentsService extends AbstractSocketHandler {
                     log.warn("Failed to process topology update: " + evt, e);
                 }
 
+                break;
+
+            case NODE_VISOR:
+                log.info("DR EVENT PROCESSED: " + evt);
                 break;
 
             default:
