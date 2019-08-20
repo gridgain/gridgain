@@ -22,6 +22,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.console.dto.AbstractDto;
 import org.apache.ignite.console.messages.WebConsoleMessageSource;
@@ -74,8 +75,19 @@ public class OneToManyIndex<K, V> extends CacheHolder<K, Set<V>> {
      * @param parentId Parent ID.
      * @return Set of children IDs.
      */
-    public Set<V> get(K parentId) {
+    @Override public Set<V> get(K parentId) {
         return ensure(super.get(parentId));
+    }
+
+    /**
+     * @param parentIds Parent IDs.
+     * @return Set of children IDs.
+     */
+    public Set<V> getAll(Set<K> parentIds) {
+        return parentIds
+            .stream()
+            .flatMap(accId -> get(accId).stream())
+            .collect(Collectors.toSet());
     }
 
     /**

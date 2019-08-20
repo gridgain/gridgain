@@ -31,9 +31,10 @@
             </Policies>
         </RollingFile>
     </Appenders>
+
     <Loggers>
         <Root level="debug">
-            <AppenderRef ref="CONSOLE" level="error"/>
+            <AppenderRef ref="CONSOLE" level="info"/>
             <AppenderRef ref="ROLLING_FILE"/>
         </Root>
     </Loggers>

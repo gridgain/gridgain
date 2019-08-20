@@ -24,6 +24,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.ignite.Ignite;
@@ -59,7 +60,7 @@ import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_STATUS;
 import static org.apache.ignite.console.websocket.WebSocketEvents.CLUSTER_TOPOLOGY;
 
 /**
- * Agents web sockets handler.
+ * Agents service.
  */
 @Service
 public class AgentsService extends AbstractSocketHandler {
@@ -400,5 +401,16 @@ public class AgentsService extends AbstractSocketHandler {
         agentsRepo.add(accIds);
 
         locAgents.put(ses, new AgentSession(accIds));
+    }
+
+    /**
+     * @return List of connected account.
+     */
+    protected Set<UUID> connectedAccounts() {
+        return locAgents
+            .values()
+            .stream()
+            .flatMap(ses -> ses.getAccIds().stream())
+            .collect(Collectors.toSet());
     }
 }
