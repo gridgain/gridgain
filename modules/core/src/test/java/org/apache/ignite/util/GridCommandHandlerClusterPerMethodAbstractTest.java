@@ -14,17 +14,20 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.spi.metric;
+package org.apache.ignite.util;
 
 /**
- * Interface for the metrics that holds long primitive.
- */
-public interface LongMetric extends Metric {
-    /** @return Value of the metric. */
-    public long value();
-
+ * It is recommended to extends from this class in case of creating a cluster
+ * for each test method. Otherwise, use
+ * {@link GridCommandHandlerClusterByClassAbstractTest}
+ * */
+public abstract class GridCommandHandlerClusterPerMethodAbstractTest extends GridCommandHandlerAbstractTest {
     /** {@inheritDoc} */
-    @Override public default String getAsString() {
-        return Long.toString(value());
+    @Override protected void afterTest() throws Exception {
+        super.afterTest();
+
+        stopAllGrids();
+
+        cleanPersistenceDir();
     }
 }
