@@ -212,23 +212,4 @@ public class StoreArrayKeyTest extends GridCommonAbstractTest {
 
         assertFalse(it.hasNext());
     }
-
-    /**
-     *
-     */
-    @Test
-    public void shouldReadFromBackup() {
-        IgniteCache<Object, Object> cache = node2.getOrCreateCache(CACHE_WITH_BACKUPS);
-
-        cache.put(firstKey, 1);
-        cache.put(secondKey, 2);
-        cache.put(likeFirstKey, 3);
-
-        assertEquals(2, cache.size());
-
-        stopGrid(0);
-
-        assertEquals(3, cache.get(firstKey));
-        assertEquals(2, cache.get(secondKey));
-    }
 }

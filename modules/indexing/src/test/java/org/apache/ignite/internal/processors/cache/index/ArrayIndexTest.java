@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.index;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import org.apache.commons.codec.binary.Hex;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.QueryEntity;
@@ -28,7 +29,9 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -41,6 +44,16 @@ public class ArrayIndexTest extends AbstractIndexingCommonTest {
     @After
     public void tearDown() throws Exception {
         stopAllGrids();
+
+        cleanPersistenceDir();
+    }
+
+    /**
+     * @throws Exception if fails.
+     */
+    @Before
+    public void setUp() throws Exception {
+        cleanPersistenceDir();
     }
 
     /** {@inheritDoc} */
@@ -124,5 +137,34 @@ public class ArrayIndexTest extends AbstractIndexingCommonTest {
         List<?> row = res.get(0);
         assertTrue(Objects.deepEquals(row.get(0), new byte[] {5, 6, 7}));
         assertTrue(Objects.deepEquals(row.get(1), 2));
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void shouldCreateTableWithBinaryKey() throws Exception {
+        byte[] key = {1, 2, 3, 4};
+
+        IgniteEx ex = startGrid(0);
+
+        ex.cluster().active(true);
+
+        executeSql(ex, "CREATE TABLE Binary_Entries (key binary(16) not null, val binary(16), PRIMARY KEY(key))");
+
+        executeSql(ex, "INSERT INTO Binary_Entries(key, val) VALUES (x'" + Hex.encodeHexString(key) + "', x'01020304')");
+
+        assertEquals(ex.cache("SQL_PUBLIC_BINARY_ENTRIES").size(), 1);
+        assertTrue(ex.cache("SQL_PUBLIC_BINARY_ENTRIES").containsKey(key));
+
+    }
+
+    /**
+     *
+     */
+    private List<List<?>> executeSql(IgniteEx node, String sqlText) throws Exception {
+        GridQueryProcessor qryProc = node.context().query();
+
+        return qryProc.querySqlFields(new SqlFieldsQuery(sqlText), true).getAll();
     }
 }
