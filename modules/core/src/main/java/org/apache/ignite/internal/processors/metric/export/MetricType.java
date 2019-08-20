@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.metric.export;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
 import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
 import org.apache.ignite.spi.metric.BooleanMetric;
 import org.apache.ignite.spi.metric.DoubleMetric;
@@ -28,34 +29,29 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public enum MetricType {
-    BOOLEAN((byte)0, 1, BooleanMetric.class),
+    BOOLEAN((byte)0, BooleanMetric.class),
 
-    INT((byte)1, Integer.BYTES, IntMetric.class),
+    INT((byte)1, IntMetric.class),
 
-    LONG((byte)2, Long.BYTES, LongMetric.class),
+    LONG((byte)2, LongMetric.class),
 
-    DOUBLE((byte)3, Double.BYTES, DoubleMetric.class),
+    DOUBLE((byte)3, DoubleMetric.class),
 
-    HIT_RATE((byte)4, Long.BYTES * 2, HitRateMetric.class);
+    HIT_RATE((byte)4, HitRateMetric.class),
+
+    HISTOGRAM((byte)5, HistogramMetric.class);
 
     private static final MetricType[] typeIdx = new MetricType[MetricType.values().length];
 
     private static final Map<Class, MetricType> classIdx = new HashMap<>();
 
-    private final int size;
-
     private final byte type;
 
     private final Class<?> cls;
 
-    MetricType(byte type, int size, Class cls) {
+    MetricType(byte type, Class cls) {
         this.type = type;
-        this.size = size;
         this.cls = cls;
-    }
-
-    public int size() {
-        return size;
     }
 
     public byte type() {
@@ -86,6 +82,10 @@ public enum MetricType {
         // HitRateMetric implements LongMetric interface so we need handle this case in the specific manner.
         if (cls.equals(HitRateMetric.class))
             return HIT_RATE;
+
+        // HistogramMetric implements ObjectMetric interface so we need handle this case in the specific manner.
+        if (cls.equals(HistogramMetric.class))
+            return HISTOGRAM;
 
         MetricType res = classIdx.get(cls);
 

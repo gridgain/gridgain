@@ -29,6 +29,7 @@ import org.jetbrains.annotations.Nullable;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.ignite.internal.processors.metric.export.MetricType.BOOLEAN;
 import static org.apache.ignite.internal.processors.metric.export.MetricType.DOUBLE;
+import static org.apache.ignite.internal.processors.metric.export.MetricType.HISTOGRAM;
 import static org.apache.ignite.internal.processors.metric.export.MetricType.HIT_RATE;
 import static org.apache.ignite.internal.processors.metric.export.MetricType.INT;
 import static org.apache.ignite.internal.processors.metric.export.MetricType.LONG;
@@ -260,6 +261,19 @@ public class MetricResponse implements Message {
                     long val = data.getVarLong();
 
                     consumer.onLong(name + '.' + interval, val);
+                }
+                else if (type == HISTOGRAM) {
+                    int pairCnt = data.getVarInt();
+
+                    for (int i = 0; i < pairCnt; i++) {
+                        long bound = data.getVarLong();
+
+                        long val = data.getVarLong();
+
+                        consumer.onLong(name + '.' + bound, val);
+                    }
+
+                    consumer.onLong(name + ".inf", data.getVarLong());
                 }
                 else if (type == DOUBLE)
                     consumer.onDouble(name, data.getDouble());

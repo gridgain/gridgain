@@ -32,6 +32,7 @@ import static org.apache.ignite.internal.util.nio.GridNioServer.RECEIVED_BYTES_M
 import static org.apache.ignite.internal.util.nio.GridNioServer.SENT_BYTES_METRIC_DESC;
 import static org.apache.ignite.internal.util.nio.GridNioServer.SENT_BYTES_METRIC_NAME;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.COMMUNICATION_METRICS_GROUP_NAME;
+import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.COMMUNICATION_METRICS_GROUP_TYPE;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.RECEIVED_MESSAGES_BY_NODE_ID_METRIC_DESC;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.RECEIVED_MESSAGES_BY_NODE_ID_METRIC_NAME;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.RECEIVED_MESSAGES_BY_TYPE_METRIC_DESC;
@@ -56,16 +57,16 @@ class TcpCommunicationMetricsListener {
     private final MetricRegistry mreg;
 
     /** */
-    private final Function<Short, LongAdderMetric> sentMsgsCntByTypeMetricFactory;
+    //private final Function<Short, LongAdderMetric> sentMsgsCntByTypeMetricFactory;
 
     /** */
-    private final Function<Short, LongAdderMetric> rcvdMsgsCntByTypeMetricFactory;
+    //private final Function<Short, LongAdderMetric> rcvdMsgsCntByTypeMetricFactory;
 
     /** */
-    private final Function<UUID, LongAdderMetric> sentMsgsCntByNodeIdMetricFactory;
+    //private final Function<UUID, LongAdderMetric> sentMsgsCntByNodeIdMetricFactory;
 
     /** */
-    private final Function<UUID, LongAdderMetric> rcvdMsgsCntByNodeIdMetricFactory;
+    //private final Function<UUID, LongAdderMetric> rcvdMsgsCntByNodeIdMetricFactory;
 
     /** Sent bytes count metric.*/
     private final LongAdderMetric sentBytesMetric;
@@ -83,13 +84,13 @@ class TcpCommunicationMetricsListener {
     ConcurrentHashMap<Short, LongAdderMetric> sentMsgsMetricsByType = new ConcurrentHashMap<>();
 
     /** Received messages count metrics grouped by message type. */
-    ConcurrentHashMap<Short, LongAdderMetric> rcvdMsgsMetricsByType = new ConcurrentHashMap<>();
+    Map<Short, LongAdderMetric> rcvdMsgsMetricsByType = new ConcurrentHashMap<>();
 
     /** Sent messages count metrics grouped by message node id. */
-    ConcurrentHashMap<UUID, LongAdderMetric> sentMsgsMetricsByNodeId = new ConcurrentHashMap<>();
+    Map<UUID, LongAdderMetric> sentMsgsMetricsByNodeId = new ConcurrentHashMap<>();
 
     /** Received messages metrics count grouped by message node id. */
-    ConcurrentHashMap<UUID, LongAdderMetric> rcvdMsgsMetricsByNodeId = new ConcurrentHashMap<>();
+    Map<UUID, LongAdderMetric> rcvdMsgsMetricsByNodeId = new ConcurrentHashMap<>();
 
     /** Method to synchronize access to message type map. */
     private final Object msgTypMapMux = new Object();
@@ -102,8 +103,9 @@ class TcpCommunicationMetricsListener {
     public TcpCommunicationMetricsListener(GridMetricManager mmgr) {
         this.mmgr = mmgr;
 
-        mreg = mmgr.registry(COMMUNICATION_METRICS_GROUP_NAME);
+        mreg = new MetricRegistry(COMMUNICATION_METRICS_GROUP_NAME, COMMUNICATION_METRICS_GROUP_NAME);
 
+/*
         sentMsgsCntByTypeMetricFactory = directType -> mreg.longAdderMetric(
             sentMessagesByTypeMetricName(directType),
             SENT_MESSAGES_BY_TYPE_METRIC_DESC
@@ -124,12 +126,15 @@ class TcpCommunicationMetricsListener {
                 RECEIVED_MESSAGES_BY_NODE_ID_METRIC_NAME,
                 RECEIVED_MESSAGES_BY_NODE_ID_METRIC_DESC
             );
+*/
 
         sentBytesMetric = mreg.longAdderMetric(SENT_BYTES_METRIC_NAME, SENT_BYTES_METRIC_DESC);
         rcvdBytesMetric = mreg.longAdderMetric(RECEIVED_BYTES_METRIC_NAME, RECEIVED_BYTES_METRIC_DESC);
 
         sentMsgsMetric = mreg.longAdderMetric(SENT_MESSAGES_METRIC_NAME, SENT_MESSAGES_METRIC_DESC);
         rcvdMsgsMetric = mreg.longAdderMetric(RECEIVED_MESSAGES_METRIC_NAME, RECEIVED_MESSAGES_METRIC_DESC);
+
+        mmgr.add(mreg);
     }
 
     /** Metrics registry. */
@@ -154,9 +159,9 @@ class TcpCommunicationMetricsListener {
 
             sentMsgsMetric.increment();
 
-            sentMsgsMetricsByType.computeIfAbsent(msg.directType(), sentMsgsCntByTypeMetricFactory).increment();
+            //sentMsgsMetricsByType.computeIfAbsent(msg.directType(), sentMsgsCntByTypeMetricFactory).increment();
 
-            sentMsgsMetricsByNodeId.computeIfAbsent(nodeId, sentMsgsCntByNodeIdMetricFactory).increment();
+            //sentMsgsMetricsByNodeId.computeIfAbsent(nodeId, sentMsgsCntByNodeIdMetricFactory).increment();
         }
     }
 
@@ -177,9 +182,9 @@ class TcpCommunicationMetricsListener {
 
             rcvdMsgsMetric.increment();
 
-            rcvdMsgsMetricsByType.computeIfAbsent(msg.directType(), rcvdMsgsCntByTypeMetricFactory).increment();
+            //rcvdMsgsMetricsByType.computeIfAbsent(msg.directType(), rcvdMsgsCntByTypeMetricFactory).increment();
 
-            rcvdMsgsMetricsByNodeId.computeIfAbsent(nodeId, rcvdMsgsCntByNodeIdMetricFactory).increment();
+            //rcvdMsgsMetricsByNodeId.computeIfAbsent(nodeId, rcvdMsgsCntByNodeIdMetricFactory).increment();
         }
     }
 
