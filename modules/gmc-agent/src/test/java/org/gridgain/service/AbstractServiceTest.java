@@ -17,6 +17,8 @@
 package org.gridgain.service;
 
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteMessaging;
+import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.cluster.IgniteClusterImpl;
@@ -67,6 +69,7 @@ public abstract class AbstractServiceTest {
 
         ClusterProcessor clusterProcessor = mock(ClusterProcessor.class);
         IgniteEx grid = mock(IgniteEx.class);
+        IgniteMessaging messaging = mock(IgniteMessaging.class);
         IgniteClusterImpl cluster = mock(IgniteClusterImpl.class);
         when(cluster.id()).thenReturn(UUID.fromString("a-a-a-a-a"));
         when(cluster.tag()).thenReturn("Test tag");
@@ -75,6 +78,9 @@ public abstract class AbstractServiceTest {
         when(ctx.cluster()).thenReturn(clusterProcessor);
         when(grid.cluster()).thenReturn(cluster);
         when(clusterProcessor.get()).thenReturn(cluster);
+
+        when(grid.message()).thenReturn(messaging);
+        when(grid.message(any(ClusterGroup.class))).thenReturn(messaging);
 
         GridDiscoveryManager disco = mock(GridDiscoveryManager.class);
         DiscoCache discoCache = mock(DiscoCache.class);

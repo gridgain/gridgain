@@ -18,7 +18,8 @@ package org.gridgain.testsuites;
 
 import org.gridgain.service.MetricsServiceTest;
 import org.gridgain.service.TopologyServiceTest;
-import org.gridgain.service.TracingServiceTest;
+import org.gridgain.service.tracing.GmcSpanExporterTest;
+import org.gridgain.service.tracing.TracingServiceTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -29,6 +30,7 @@ import org.junit.runners.Suite;
 @Suite.SuiteClasses({
     TopologyServiceTest.class,
     TracingServiceTest.class,
+    GmcSpanExporterTest.class,
     MetricsServiceTest.class
 })
 public class AgentTestSuite {

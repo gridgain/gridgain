@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.gridgain.service;
+package org.gridgain.service.tracing;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -33,7 +33,9 @@ import io.opencensus.trace.export.SpanData;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.tracing.TracingSpi;
-import org.gridgain.dto.Span;
+import org.gridgain.dto.span.Span;
+import org.gridgain.dto.span.SpanList;
+import org.gridgain.service.AbstractServiceTest;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -52,13 +54,14 @@ public class TracingServiceTest extends AbstractServiceTest {
      * Should register handler and export spans.
      */
     @Test
-    public void registerHandler() {
+    public void shouldSendSpanList() {
         TracingService srvc = new TracingService(getMockContext(), mgr);
+
         List<SpanData> spanData = getSpanData();
 
-        List<Span> expSpans = spanData.stream().map(srvc::fromSpanDataToSpan).collect(Collectors.toList());
+        List<Span> expSpans = spanData.stream().map(GmcSpanExporter::fromSpanDataToSpan).collect(Collectors.toList());
 
-        srvc.getTraceHandler().export(spanData);
+        srvc.onNodeTraces(UUID.randomUUID(), new SpanList(expSpans));
 
         ArgumentCaptor<String> destCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
@@ -76,7 +79,6 @@ public class TracingServiceTest extends AbstractServiceTest {
     @Test
     public void sendInitialState() {
         TracingService srvc = new TracingService(getMockContext(), mgr);
-        srvc.registerHandler();
 
         srvc.sendInitialState();
 
