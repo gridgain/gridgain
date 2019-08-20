@@ -22,16 +22,50 @@ import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.selection.scoring.evaluator.context.EmptyContext;
 import org.apache.ignite.ml.structures.LabeledVector;
 
+/**
+ * Class represents statistics aggregator for regression estimation.
+ */
 public class RegressionMetricStatsAggregator implements MetricStatsAggregator<Double, EmptyContext, RegressionMetricStatsAggregator> {
+    /**
+     * Number of examples in dataset.
+     */
     private long N = 0;
+
+    /**
+     * Absolute error.
+     */
     private double absoluteError = Double.NaN;
+
+    /**
+     * Resudual sum of squares.
+     */
     private double rss = Double.NaN;
+
+    /**
+     * Sum of labels.
+     */
     private double sumOfYs = Double.NaN;
+
+    /**
+     * Sum of squared labels.
+     */
     private double sumOfSquaredYs = Double.NaN;
 
+    /**
+     * Creates an instance of RegressionMetricStatsAggregator.
+     */
     public RegressionMetricStatsAggregator() {
     }
 
+    /**
+     * Creates an instance of RegressionMetricStatsAggregator.
+     *
+     * @param n Number of examples in dataset.
+     * @param absoluteError Absolute error.
+     * @param rss Rss.
+     * @param sumOfYs Sum of labels.
+     * @param sumOfSquaredYs Sum of squared labels.
+     */
     public RegressionMetricStatsAggregator(long n, double absoluteError, double rss, double sumOfYs,
         double sumOfSquaredYs) {
         N = n;
@@ -41,6 +75,7 @@ public class RegressionMetricStatsAggregator implements MetricStatsAggregator<Do
         this.sumOfSquaredYs = sumOfSquaredYs;
     }
 
+    /** {@inheritDoc} */
     @Override public void aggregate(IgniteModel<Vector, Double> model, LabeledVector<Double> vector) {
         N += 1;
         Double prediction = model.predict(vector.features());
@@ -54,6 +89,7 @@ public class RegressionMetricStatsAggregator implements MetricStatsAggregator<Do
         sumOfSquaredYs = sum(Math.pow(truth, 2), sumOfSquaredYs);
     }
 
+    /** {@inheritDoc} */
     @Override public RegressionMetricStatsAggregator mergeWith(RegressionMetricStatsAggregator other) {
         long n = this.N + other.N;
         double absoluteError = sum(this.absoluteError, other.absoluteError);
@@ -64,38 +100,68 @@ public class RegressionMetricStatsAggregator implements MetricStatsAggregator<Do
         return new RegressionMetricStatsAggregator(n, absoluteError, squaredError, sumOfYs, sumOfSquaredYs);
     }
 
-    @Override public EmptyContext initialContext() {
+    /** {@inheritDoc} */
+    @Override public EmptyContext createUnitializedContext() {
         return new EmptyContext();
     }
 
+    /** {@inheritDoc} */
     @Override public void initByContext(EmptyContext context) {
 
     }
 
+    /**
+     * Returns mean absolute error.
+     *
+     * @return Mean absolute error.
+     */
     public double getMAE() {
         return absoluteError / Math.max(N, 1);
     }
 
+    /**
+     * Returns mean squared error.
+     *
+     * @return Mean squared error.
+     */
     public double getMSE() {
         return rss / Math.max(N, 1);
     }
 
-    public double ssReg() {
-        return rss;
-    }
-
-    public double ssTot() {
+    /**
+     * Returns sum of squared errors.
+     *
+     * @return Sum of squared errors
+     */
+    public double sumOfSquaredErrors() {
         return ysVariance() * Math.max(N, 1);
     }
 
+    /**
+     * Returns label variance.
+     *
+     * @return Label variance.
+     */
     public double ysVariance() {
         return (sumOfSquaredYs - Math.pow(sumOfYs, 2)) / Math.max(N, 1);
     }
 
+    /**
+     * Returns RSS.
+     *
+     * @return RSS.
+     */
     public double getRss() {
         return rss;
     }
 
+    /**
+     * Returns sum of given values considering NaNs.
+     *
+     * @param v1 First value.
+     * @param v2 Second value.
+     * @return v1 + v2.
+     */
     private double sum(double v1, double v2) {
         if (Double.isNaN(v1))
             return v2;

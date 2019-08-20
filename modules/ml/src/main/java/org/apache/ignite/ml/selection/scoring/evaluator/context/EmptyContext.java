@@ -19,15 +19,21 @@ package org.apache.ignite.ml.selection.scoring.evaluator.context;
 
 import org.apache.ignite.ml.structures.LabeledVector;
 
+/**
+ * Class represents context stub for metrics that don't require such context preparations.
+ */
 public class EmptyContext implements EvaluationContext<Double, EmptyContext> {
+    /** {@inheritDoc} */
     @Override public void aggregate(LabeledVector<Double> vector) {
 
     }
 
+    /** {@inheritDoc} */
     @Override public EmptyContext mergeWith(EmptyContext other) {
         return this;
     }
 
+    /** {@inheritDoc} */
     @Override public boolean needToCompute() {
         return false;
     }

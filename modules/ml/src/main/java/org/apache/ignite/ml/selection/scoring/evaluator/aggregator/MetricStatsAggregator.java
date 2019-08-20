@@ -22,9 +22,41 @@ import org.apache.ignite.ml.IgniteModel;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.structures.LabeledVector;
 
+/**
+ * Classes with such interface are responsible for metric statistics aggregations used for metric computations
+ * over given dataset.
+ *
+ * @param <L> Label class.
+ * @param <Ctx> Context class.
+ * @param <Self> Aggregator class.
+ */
 public interface MetricStatsAggregator<L, Ctx, Self extends MetricStatsAggregator<L, Ctx, ? super Self>> extends Serializable {
+    /**
+     * Aggregates statistics for metric computation given model and vector with answer.
+     *
+     * @param model Model.
+     * @param vector Vector.
+     */
     public void aggregate(IgniteModel<Vector, L> model, LabeledVector<L> vector);
+
+    /**
+     * Merges statistics of two aggregators to new aggreagator.
+     *
+     * @param other Other aggregator.
+     * @return New aggregator.
+     */
     public Self mergeWith(Self other);
-    public Ctx initialContext();
+
+    /**
+     * Returns unitialized context.
+     *
+     * @return Unitialized evaluation context.
+     */
+    public Ctx createUnitializedContext();
+
+    /**
+     * Inits this aggtegator by evaluation context.
+     * @param ctx Evaluation context.
+     */
     public void initByContext(Ctx ctx);
 }

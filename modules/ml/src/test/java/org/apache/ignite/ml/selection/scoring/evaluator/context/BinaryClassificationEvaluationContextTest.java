@@ -3,9 +3,13 @@ package org.apache.ignite.ml.selection.scoring.evaluator.context;
 import org.apache.ignite.ml.math.primitives.vector.VectorUtils;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
+/**
+ * Tests for {@link BinaryClassificationEvaluationContext} class.
+ */
 public class BinaryClassificationEvaluationContextTest {
+    /** */
     @Test
     public void testAggregate() {
         BinaryClassificationEvaluationContext ctx = new BinaryClassificationEvaluationContext();
@@ -18,6 +22,7 @@ public class BinaryClassificationEvaluationContextTest {
         assertEquals(ctx.getSecondClassLbl(), 1., 0.);
     }
 
+    /** */
     @Test(expected = IllegalArgumentException.class)
     public void testAggregateWithThreeLabels() {
         BinaryClassificationEvaluationContext ctx = new BinaryClassificationEvaluationContext();
@@ -30,6 +35,7 @@ public class BinaryClassificationEvaluationContextTest {
         ctx.aggregate(VectorUtils.of().labeled(0.0));
     }
 
+    /** */
     @Test
     public void testMerge1() {
         BinaryClassificationEvaluationContext left = new BinaryClassificationEvaluationContext();
@@ -40,6 +46,7 @@ public class BinaryClassificationEvaluationContextTest {
         assertEquals(res.getSecondClassLbl(), Double.NaN, 0.);
     }
 
+    /** */
     @Test
     public void testMerge2() {
         BinaryClassificationEvaluationContext left = new BinaryClassificationEvaluationContext(0., Double.NaN);
@@ -54,6 +61,7 @@ public class BinaryClassificationEvaluationContextTest {
         assertEquals(res.getSecondClassLbl(), Double.NaN, 0.);
     }
 
+    /** */
     @Test
     public void testMerge3() {
         BinaryClassificationEvaluationContext left = new BinaryClassificationEvaluationContext(Double.NaN, 0.);
@@ -68,6 +76,7 @@ public class BinaryClassificationEvaluationContextTest {
         assertEquals(res.getSecondClassLbl(), Double.NaN, 0.);
     }
 
+    /** */
     @Test
     public void testMerge4() {
         BinaryClassificationEvaluationContext left = new BinaryClassificationEvaluationContext(1., 0.);
@@ -82,6 +91,7 @@ public class BinaryClassificationEvaluationContextTest {
         assertEquals(res.getSecondClassLbl(), 1., 0.);
     }
 
+    /** */
     @Test
     public void testMerge5() {
         BinaryClassificationEvaluationContext left = new BinaryClassificationEvaluationContext(1., 0.);
@@ -96,6 +106,7 @@ public class BinaryClassificationEvaluationContextTest {
         assertEquals(res.getSecondClassLbl(), 1., 0.);
     }
 
+    /** */
     @Test(expected = IllegalArgumentException.class)
     public void testMerge6() {
         BinaryClassificationEvaluationContext left = new BinaryClassificationEvaluationContext(1., 0.);

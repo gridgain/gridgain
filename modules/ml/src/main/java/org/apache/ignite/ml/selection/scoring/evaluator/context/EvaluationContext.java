@@ -20,13 +20,44 @@ package org.apache.ignite.ml.selection.scoring.evaluator.context;
 import java.io.Serializable;
 import org.apache.ignite.ml.structures.LabeledVector;
 
+/**
+ * Classes with this interface are responsible for preparatory computations before model evaluation. For example
+ * if we don't know what is positive and negative label we can define it in autimatically way using
+ * such evaluation context.
+ *
+ * @param <L> Type of label.
+ * @param <Self> Type of evaluation context.
+ */
 public interface EvaluationContext<L, Self extends EvaluationContext<L, ? super Self>> extends Serializable {
+    /**
+     * Aggregates statistic from vector of sample.
+     *
+     * @param vector Vector.
+     */
     public void aggregate(LabeledVector<L> vector);
+
+    /**
+     * Merges statistics of this and other context.
+     *
+     * @param other Other context.
+     * @return New merged context.
+     */
     public Self mergeWith(Self other);
+
+    /**
+     * Returns true if this contexts should be evaluated through map-reduce.
+     *
+     * @return True if this contexts should be evaluated through map-reduce.
+     */
     public default boolean needToCompute() {
         return true;
     }
 
+    /**
+     * Returns default empty context.
+     *
+     * @return Empty context.
+     */
     public static EvaluationContext empty() {
         return new EmptyContext();
     }

@@ -31,8 +31,8 @@ public class R2 implements Metric<Double, EmptyContext, RegressionMetricStatsAgg
 
     @Override
     public R2 initBy(RegressionMetricStatsAggregator aggr) {
-        double ssReg = aggr.ssReg();
-        double ssTot = aggr.ssTot();
+        double ssReg = aggr.getRss();
+        double ssTot = aggr.sumOfSquaredErrors();
         value = ssReg / ssTot;
 
         return this;

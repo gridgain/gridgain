@@ -260,7 +260,7 @@ public class Evaluator {
         Metric... metrics
     ) {
         long nonEmptyCtxsCnt = Arrays.stream(metrics)
-            .map(x -> x.makeAggregator().initialContext())
+            .map(x -> x.makeAggregator().createUnitializedContext())
             .filter(x -> ((EvaluationContext)x).needToCompute())
             .count();
 
@@ -269,7 +269,7 @@ public class Evaluator {
 
             for (Metric m : metrics) {
                 MetricStatsAggregator<Double, ?, ?> aggregator = m.makeAggregator();
-                res.put(aggregator.getClass(), (EvaluationContext)m.makeAggregator().initialContext());
+                res.put(aggregator.getClass(), (EvaluationContext)m.makeAggregator().createUnitializedContext());
                 return res;
             }
         }
@@ -283,7 +283,7 @@ public class Evaluator {
             }
 
             Map<Class, EvaluationContext> aggrToEvCtx = new HashMap<>();
-            aggrs.forEach((clazz, aggr) -> aggrToEvCtx.put(clazz, (EvaluationContext)aggr.initialContext()));
+            aggrs.forEach((clazz, aggr) -> aggrToEvCtx.put(clazz, (EvaluationContext)aggr.createUnitializedContext()));
 
             for (int i = 0; i < data.getLabels().length; i++) {
                 LabeledVector<Double> vector = VectorUtils.of(data.getFeatures()[i]).labeled(data.getLabels()[i]);

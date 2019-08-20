@@ -21,20 +21,36 @@ import java.util.Arrays;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.ml.structures.LabeledVector;
 
+/**
+ * This context tries to define positive and negative labels for estimation of binary classifier.
+ */
 public class BinaryClassificationEvaluationContext implements EvaluationContext<Double, BinaryClassificationEvaluationContext> {
+    /** First class lbl. */
     private Double firstClassLbl;
+
+    /** Second class lbl. */
     private Double secondClassLbl;
 
+    /**
+     * Creates an instance of BinaryClassificationEvaluationContext.
+     */
     public BinaryClassificationEvaluationContext() {
         this.firstClassLbl = Double.NaN;
         this.secondClassLbl = Double.NaN;
     }
 
+    /**
+     * Creates an instance of BinaryClassificationEvaluationContext.
+     *
+     * @param firstClassLbl First class lbl.
+     * @param secondClassLbl Second class lbl.
+     */
     public BinaryClassificationEvaluationContext(Double firstClassLbl, Double secondClassLbl) {
         this.firstClassLbl = firstClassLbl;
         this.secondClassLbl = secondClassLbl;
     }
 
+    /** {@inheritDoc} */
     @Override public void aggregate(LabeledVector<Double> vector) {
         Double label = vector.label();
         if (firstClassLbl.isNaN())
@@ -47,6 +63,7 @@ public class BinaryClassificationEvaluationContext implements EvaluationContext<
             checkNewLabel(label);
     }
 
+    /** {@inheritDoc} */
     @Override public BinaryClassificationEvaluationContext mergeWith(BinaryClassificationEvaluationContext other) {
         checkNewLabel(other.firstClassLbl);
         checkNewLabel(other.secondClassLbl);
@@ -61,14 +78,29 @@ public class BinaryClassificationEvaluationContext implements EvaluationContext<
         );
     }
 
+    /**
+     * Returns first class label.
+     *
+     * @return First class label.
+     */
     public Double getFirstClassLbl() {
         return firstClassLbl;
     }
 
+    /**
+     * Returns second class label.
+     *
+     * @return Second class label.
+     */
     public Double getSecondClassLbl() {
         return secondClassLbl;
     }
 
+    /**
+     * Checks new label to mergeability with this context.
+     *
+     * @param label Label.
+     */
     private void checkNewLabel(Double label) {
         A.ensure(
             firstClassLbl.isNaN() || secondClassLbl.isNaN() || label.isNaN() ||

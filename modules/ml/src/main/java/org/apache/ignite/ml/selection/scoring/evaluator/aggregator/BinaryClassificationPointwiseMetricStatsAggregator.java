@@ -17,21 +17,54 @@
 
 package org.apache.ignite.ml.selection.scoring.evaluator.aggregator;
 
+import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.ml.IgniteModel;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.selection.scoring.evaluator.context.BinaryClassificationEvaluationContext;
 import org.apache.ignite.ml.structures.LabeledVector;
 
+/**
+ * This class represents statistics for pointwise metrics evaluation for binary classification like TruePositive,
+ * FalsePositive, TrueNegative and FalseNegative.
+ */
 public class BinaryClassificationPointwiseMetricStatsAggregator implements MetricStatsAggregator<Double, BinaryClassificationEvaluationContext, BinaryClassificationPointwiseMetricStatsAggregator> {
+    /** False label. */
     private Double falseLabel = Double.NaN;
+
+    /** Truth label. */
     private Double truthLabel = Double.NaN;
 
-    private int truePositive, falsePositive, trueNegative, falseNegative;
+    /** Count of true positives. */
+    private int truePositive;
 
+    /** Count of false positives. */
+    int falsePositive;
+
+    /** Count of true negatives. */
+    int trueNegative;
+
+    /** Count of false negatives. */
+    int falseNegative;
+
+    /**
+     * Creates an instance of BinaryClassificationPointwiseMetricStatsAggregator.
+     */
     public BinaryClassificationPointwiseMetricStatsAggregator() {
     }
 
-    public BinaryClassificationPointwiseMetricStatsAggregator(Double falseLabel, Double truthLabel, int truePositive, int falsePositive, int trueNegative, int falseNegative) {
+    /**
+     * Creates an instance of BinaryClassificationPointwiseMetricStatsAggregator.
+     *
+     * @param falseLabel False label.
+     * @param truthLabel Truth label.
+     * @param truePositive True positives count.
+     * @param falsePositive False positives count.
+     * @param trueNegative True negatives count.
+     * @param falseNegative False negatives count.
+     */
+    public BinaryClassificationPointwiseMetricStatsAggregator(Double falseLabel, Double truthLabel,
+        int truePositive, int falsePositive, int trueNegative, int falseNegative) {
+
         this.falseLabel = falseLabel;
         this.truthLabel = truthLabel;
         this.truePositive = truePositive;
@@ -40,6 +73,7 @@ public class BinaryClassificationPointwiseMetricStatsAggregator implements Metri
         this.falseNegative = falseNegative;
     }
 
+    /** {@inheritDoc} */
     @Override public void aggregate(IgniteModel<Vector, Double> model, LabeledVector<Double> vector) {
         Double modelAns = model.predict(vector.features());
         Double realAns = vector.label();
@@ -54,7 +88,11 @@ public class BinaryClassificationPointwiseMetricStatsAggregator implements Metri
             falsePositive += 1;
     }
 
+    /** {@inheritDoc} */
     @Override public BinaryClassificationPointwiseMetricStatsAggregator mergeWith(BinaryClassificationPointwiseMetricStatsAggregator other) {
+        A.ensure(this.falseLabel.equals(other.falseLabel), "this.falseLabel == other.falseLabel");
+        A.ensure(this.truthLabel.equals(other.truthLabel), "this.truthLabel == other.truthLabel");
+
         return new BinaryClassificationPointwiseMetricStatsAggregator(
             this.falseLabel,
             this.truthLabel,
@@ -65,53 +103,102 @@ public class BinaryClassificationPointwiseMetricStatsAggregator implements Metri
         );
     }
 
-    @Override public BinaryClassificationEvaluationContext initialContext() {
+    /** {@inheritDoc} */
+    @Override public BinaryClassificationEvaluationContext createUnitializedContext() {
         return new BinaryClassificationEvaluationContext();
     }
 
+    /** {@inheritDoc} */
     @Override public void initByContext(BinaryClassificationEvaluationContext context) {
         this.falseLabel = context.getFirstClassLbl();
         this.truthLabel = context.getSecondClassLbl();
     }
 
+    /**
+     * Returns false label.
+     *
+     * @return False label.
+     */
     public Double getFalseLabel() {
         return falseLabel;
     }
 
+    /**
+     * Returns truth label.
+     *
+     * @return Truth label.
+     */
     public Double getTruthLabel() {
         return truthLabel;
     }
 
+    /**
+     * Returns true positives count.
+     *
+     * @return True positives count.
+     */
     public int getTruePositive() {
         return truePositive;
     }
 
+    /**
+     * Returns false positives count.
+     *
+     * @return False positives count.
+     */
     public int getFalsePositive() {
         return falsePositive;
     }
 
+    /**
+     * Returns true negatives count.
+     *
+     * @return True negatives count.
+     */
     public int getTrueNegative() {
         return trueNegative;
     }
 
+    /**
+     * Returns false negatives count.
+     *
+     * @return False negatives count.
+     */
     public int getFalseNegative() {
         return falseNegative;
     }
 
+    /**
+     * Returns number of elements in dataset.
+     *
+     * @return Number of elements in dataset.
+     */
     public int getN() {
         return truePositive + falsePositive + trueNegative + falseNegative;
     }
 
-    public static class WithCustomLabels extends BinaryClassificationPointwiseMetricStatsAggregator {
+    /**
+     * Class represents already initialized aggregator.
+     */
+    public static class WithCustomLabelsAggregator extends BinaryClassificationPointwiseMetricStatsAggregator {
+        /** Truth label. */
         private final double truthLabel;
+
+        /** False label. */
         private final double falseLabel;
 
-        public WithCustomLabels(double truthLabel, double falseLabel) {
+        /**
+         * Create an instance of WithCustomLabels.
+         * @param truthLabel Truth label.
+         * @param falseLabel False label.
+         */
+        public WithCustomLabelsAggregator(double truthLabel, double falseLabel) {
             this.truthLabel = truthLabel;
             this.falseLabel = falseLabel;
         }
 
-        @Override public BinaryClassificationEvaluationContext initialContext() {
+        /** {@inheritDoc} */
+        @Override public BinaryClassificationEvaluationContext createUnitializedContext() {
             return new BinaryClassificationEvaluationContext(falseLabel, truthLabel) {
                 @Override public boolean needToCompute() {
                     return false;

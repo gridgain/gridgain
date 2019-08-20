@@ -39,6 +39,6 @@ public abstract class BinaryClassificationMetric implements Metric<Double, Binar
         if (Double.isNaN(truthLabel) && Double.isNaN(falseLabel))
             return new BinaryClassificationPointwiseMetricStatsAggregator();
         else
-            return new BinaryClassificationPointwiseMetricStatsAggregator.WithCustomLabels(truthLabel, falseLabel);
+            return new BinaryClassificationPointwiseMetricStatsAggregator.WithCustomLabelsAggregator(truthLabel, falseLabel);
     }
 }
