@@ -77,7 +77,19 @@ public class StoreArrayKeyTest extends GridCommonAbstractTest {
             new double[][] {new double[] {1, 2, 3}, new double[] {3, 2, 1}, new double[] {1, 2, 3}},
             new char[][] {new char[] {1, 2, 3}, new char[] {3, 2, 1}, new char[] {1, 2, 3}},
             new boolean[][] {new boolean[] {true, false, true}, new boolean[] {false, true, false}, new boolean[] {true, false, true}},
-            new String[][] {new String[] {"a", "b", "c"}, new String[] {"c", "b", "a"}, new String[] {"a", "b", "c"}}
+            new String[][] {new String[] {"a", "b", "c"}, new String[] {"c", "b", "a"}, new String[] {"a", "b", "c"}},
+            new Object[][] {
+                new String[][] {
+                    new String[] {"a", "b", "c"},
+                    new String[] {"a", "b", "c"},
+                    new String[] {"a", "b", "c"}
+                },
+                new String[] {"c", "b", "a"},
+                new String[][] {
+                    new String[] {"a", "b", "c"},
+                    new String[] {"a", "b", "c"},
+                    new String[] {"a", "b", "c"}
+                }}
         );
     }
 
@@ -87,9 +99,9 @@ public class StoreArrayKeyTest extends GridCommonAbstractTest {
 
         cfg.setDataStorageConfiguration(
             new DataStorageConfiguration()
-            .setDataRegionConfigurations(new DataRegionConfiguration()
-                .setName("pdr")
-                .setPersistenceEnabled(true))
+                .setDataRegionConfigurations(new DataRegionConfiguration()
+                    .setName("pdr")
+                    .setPersistenceEnabled(true))
         );
 
         cfg.setCacheConfiguration(

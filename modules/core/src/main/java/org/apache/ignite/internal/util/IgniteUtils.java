@@ -5405,7 +5405,12 @@ public abstract class IgniteUtils {
             if (obj instanceof boolean[])
                 return Arrays.hashCode((boolean[])obj);
 
-            return Arrays.hashCode((Object[])obj);
+            int result = 1;
+
+            for (Object element : (Object[])obj)
+                result = 31 * result + hashCode(element);
+
+            return result;
         }
         else
             return obj.hashCode();
