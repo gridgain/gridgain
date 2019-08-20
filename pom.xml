@@ -112,7 +112,6 @@
                 <module>modules/hibernate-5.1</module>
                 <module>modules/hibernate-5.3</module>
                 <module>modules/schedule</module>
-                <module>modules/web-console</module>
                 <module>modules/yardstick</module>
             </modules>
         </profile>
@@ -131,9 +130,8 @@
         </profile>
 
         <profile>
-            <id>all-other</id> <!-- used to update project versions and check all modules compilation -->
-            <modules> <!-- sorted alphabetically -->
-                <module>modules/web-console</module>
+            <id>all-other</id> <!-- Used to update project versions and check all modules compilation. -->
+            <modules> <!-- Sorted alphabetically. -->
             </modules>
         </profile>
 
@@ -181,6 +179,24 @@
             <build>
                 <plugins>
                     <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>build-helper-maven-plugin</artifactId>
+                        <version>3.0.0</version>
+                        <executions>
+                            <execution>
+                                <id>timestamp-property</id>
+                                <goals>
+                                    <goal>timestamp-property</goal>
+                                </goals>
+                                <phase>validate</phase>
+                                <configuration>
+                                    <name>current.year</name>
+                                    <pattern>yyyy</pattern>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-javadoc-plugin</artifactId>
                         <executions>
@@ -198,6 +214,70 @@
                                 </configuration>
                             </execution>
                         </executions>
+                        <configuration>
+                            <bottom>
+                                <![CDATA[
+                                            <table width="100%" border="0" cellspacing=0 cellpadding=0 style="padding: 5px">
+                                            <tr>
+                                                <td>
+                                                    <table style="padding-left: 0; margin: 0">
+                                                        <tbody style="padding: 0; margin: 0">
+                                                            <tr style="padding: 0; margin: 0">
+                                                                <td>
+                                                                    <a target=_blank href="http://www.gridgain.com/"><nobr>${current.year} Copyright &#169; GridGain Systems</nobr></a>
+                                                                </td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </td>
+                                                <td width="100%" align="right" valign="center">
+                                                    <table border=0 cellspacing=0 cellpadding=0>
+                                                    <tr>
+                                                        <td>
+                                                            <nobr>Follow us:&nbsp;&nbsp;</nobr>
+                                                        </td>
+                                                        <td style="padding-right: 5px">
+                                                            <a class='img_link' target=twitter href='http://www.twitter.com/gridgain'>
+                                                                <img border=0 align=absmiddle src='http://www.gridgain.com/images/twitter_bw.png' alt='Follow GridGain on Twitter' />
+                                                            </a>
+                                                        </td>
+                                                        <td style="padding-right: 5px">
+                                                            <a class='img_link' target=vimeo href='https://vimeo.com/apacheignite'>
+                                                                <img border=0 align=absmiddle src='http://www.gridgain.com/images/vimeo_bw.png' alt='Follow GridGain on Vimeo' />
+                                                            </a>
+                                                        </td>
+                                                    </tr>
+                                                    </table>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td colspan="2" valign="top" align="left">
+                                                    <table style="padding-left: 0; margin: 0">
+                                                        <tbody style="padding: 0; margin: 0">
+                                                            <tr style="padding: 0; margin: 0">
+                                                                <td>
+                                                                    <b>GridGain In-Memory Computing Platform</b>
+                                                                </td>
+                                                                <td>:&nbsp;&nbsp;
+                                                                    ver. <strong>${project.version}</strong>
+                                                                </td>
+                                                            </tr>
+                                                            <tr style="padding: 0; margin: 0">
+                                                                <td>
+                                                                    <b>Release Date</b>
+                                                                </td>
+                                                                <td>:&nbsp;&nbsp;
+                                                                    ${maven.build.timestamp}
+                                                                </td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </td>
+                                            </tr>
+                                            </table>
+                                        ]]>
+                            </bottom>
+                        </configuration>
                     </plugin>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
@@ -573,13 +653,6 @@
             <id>examples</id>
             <modules>
                 <module>examples</module>
-            </modules>
-        </profile>
-
-        <profile>
-            <id>web-console</id>
-            <modules>
-                <module>modules/web-console</module>
             </modules>
         </profile>
 

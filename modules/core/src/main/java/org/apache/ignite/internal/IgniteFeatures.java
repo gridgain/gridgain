@@ -71,7 +71,13 @@ public enum IgniteFeatures {
     TCP_DISCOVERY_MESSAGE_NODE_COMPACT_REPRESENTATION(14),
 
     /** Indexing enabled. */
-    INDEXING(15);
+    INDEXING(15),
+
+    /** Support of cluster ID and tag. */
+    CLUSTER_ID_AND_TAG(16),
+
+    /** LRT system and user time dump settings.  */
+    LRT_SYSTEM_USER_TIME_DUMP_SETTINGS(18);
 
     /**
      * Unique feature identifier.
