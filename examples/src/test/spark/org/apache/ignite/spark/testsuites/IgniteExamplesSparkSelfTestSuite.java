@@ -34,7 +34,8 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_OVERRIDE_MCAST_GRP
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
     SharedRDDExampleSelfTest.class,
-    IgniteDataFrameSelfTest.class,    JavaIgniteDataFrameSelfTest.class,
+    IgniteDataFrameSelfTest.class,
+    JavaIgniteDataFrameSelfTest.class,
 })
 public class IgniteExamplesSparkSelfTestSuite {
     /** */
