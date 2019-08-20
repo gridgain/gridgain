@@ -68,13 +68,4 @@ public class ClusterReadOnlyModeAbstractTest extends GridCommonAbstractTest {
     protected void changeClusterReadOnlyMode(boolean readOnly) {
         grid(0).cluster().readOnly(readOnly);
     }
-
-    /**
-     * @param e Exception.
-     */
-    public static void checkThatRootCauseIsReadOnly(Throwable e) {
-        for (Throwable t = e; t != null; t = t.getCause())
-            if (t.getCause() == null)
-                assertTrue(t.getMessage(), t instanceof IgniteClusterReadOnlyException);
-    }
 }

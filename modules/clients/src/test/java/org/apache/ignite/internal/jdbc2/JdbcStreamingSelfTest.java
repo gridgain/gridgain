@@ -31,7 +31,7 @@ import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.cluster.ClusterReadOnlyModeCheckedException;
+import org.apache.ignite.internal.processors.cache.distributed.dht.IgniteClusterReadOnlyException;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -199,7 +199,7 @@ public class JdbcStreamingSelfTest extends JdbcThinAbstractSelfTest {
                 catch (Exception e) {
                     log.error("Insert failed", e);
 
-                    failed = X.hasCause(e, ClusterReadOnlyModeCheckedException.class);
+                    failed = X.hasCause(e, IgniteClusterReadOnlyException.class);
                 }
 
                 try (ResultSet rs = selectStmt.executeQuery("select count(*) from PUBLIC.Person")) {

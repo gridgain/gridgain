@@ -28,7 +28,7 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.cluster.ClusterReadOnlyModeCheckedException;
+import org.apache.ignite.internal.processors.cache.distributed.dht.IgniteClusterReadOnlyException;
 import org.apache.ignite.internal.processors.service.GridServiceAssignmentsKey;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -43,7 +43,7 @@ import static org.apache.ignite.internal.processors.cache.ClusterReadOnlyModeTes
 
 /**
  * Checks main functionality of cluster read-only mode. In this mode cluster will be available only for read operations,
- * all data modification operations in user caches will be rejected with {@link ClusterReadOnlyModeCheckedException}
+ * all data modification operations in user caches will be rejected with {@link IgniteClusterReadOnlyException}
  *
  * 1) Read-only mode could be enabled on active cluster only.
  * 2) Read-only mode doesn't store on PDS (i.e. after cluster restart enabled read-only mode will be forgotten)

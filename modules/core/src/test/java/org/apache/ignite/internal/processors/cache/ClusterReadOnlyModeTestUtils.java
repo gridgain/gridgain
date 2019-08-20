@@ -27,6 +27,7 @@ import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.internal.processors.cache.distributed.dht.IgniteClusterReadOnlyException;
 import org.apache.ignite.internal.processors.datastreamer.DataStreamerImpl;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
@@ -36,6 +37,7 @@ import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 /**
@@ -104,8 +106,8 @@ public class ClusterReadOnlyModeTestUtils {
 
                             fail("Put must fail for cache " + cacheName);
                         }
-                        catch (Exception ignored) {
-                            // No-op.
+                        catch (Exception e) {
+                            checkThatRootCauseIsReadOnly(e);
                         }
 
                         // All removes must fail.
@@ -114,8 +116,8 @@ public class ClusterReadOnlyModeTestUtils {
 
                             fail("Remove must fail for cache " + cacheName);
                         }
-                        catch (Exception ignored) {
-                            // No-op.
+                        catch (Exception e) {
+                            checkThatRootCauseIsReadOnly(e);
                         }
                     }
                     else {
@@ -139,7 +141,7 @@ public class ClusterReadOnlyModeTestUtils {
 
         for (Ignite ignite : G.allGrids()) {
             for (String cacheName : cacheNames) {
-                boolean failed = false;
+                Exception failed = null;
 
                 try (IgniteDataStreamer<Integer, Integer> streamer = ignite.dataStreamer(cacheName)) {
                     for (int i = 0; i < 10; i++) {
@@ -152,14 +154,25 @@ public class ClusterReadOnlyModeTestUtils {
                         streamer.removeData(key);
                     }
                 }
-                catch (CacheException ignored) {
-                    failed = true;
+                catch (CacheException e) {
+                    failed = e;
                 }
 
-                if (failed != readOnly)
+                if ((failed == null) == readOnly)
                     fail("Streaming to " + cacheName + " must " + (readOnly ? "fail" : "succeed"));
+
+                checkThatRootCauseIsReadOnly(failed);
             }
         }
+    }
+
+    /**
+     * @param e Exception.
+     */
+    public static void checkThatRootCauseIsReadOnly(Throwable e) {
+        for (Throwable t = e; t != null; t = t.getCause())
+            if (t.getCause() == null)
+                assertTrue(t.getMessage(), t instanceof IgniteClusterReadOnlyException);
     }
 
     /**

@@ -66,7 +66,6 @@ import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.cluster.ClusterTopologyServerNotFoundException;
-import org.apache.ignite.internal.cluster.ClusterReadOnlyModeCheckedException;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
 import org.apache.ignite.internal.managers.deployment.GridDeployment;
@@ -86,6 +85,7 @@ import org.apache.ignite.internal.processors.cache.IgniteCacheFutureImpl;
 import org.apache.ignite.internal.processors.cache.IgniteCacheProxy;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopologyFuture;
+import org.apache.ignite.internal.processors.cache.distributed.dht.IgniteClusterReadOnlyException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtInvalidPartitionException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
@@ -964,8 +964,8 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
                                     resFut.onDone(new IgniteCheckedException("Failed to finish operation (too many remaps): "
                                         + remaps, e1));
                                 }
-                                else if (X.hasCause(e1, ClusterReadOnlyModeCheckedException.class)) {
-                                    resFut.onDone(new ClusterReadOnlyModeCheckedException(
+                                else if (X.hasCause(e1, IgniteClusterReadOnlyException.class)) {
+                                    resFut.onDone(new IgniteClusterReadOnlyException(
                                         "Failed to finish operation. Cluster in read-only mode!",
                                         e1
                                     ));
@@ -1206,7 +1206,7 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
 
                         err = true;
 
-                        if (X.cause(e, ClusterReadOnlyModeCheckedException.class) != null)
+                        if (X.cause(e, IgniteClusterReadOnlyException.class) != null)
                             throw e;
                     }
                 }
@@ -2072,8 +2072,8 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
 
                     if (cause instanceof ClusterTopologyCheckedException)
                         err = new ClusterTopologyCheckedException(msg, cause);
-                    else if (X.hasCause(cause, ClusterReadOnlyModeCheckedException.class))
-                        err = new ClusterReadOnlyModeCheckedException(msg, cause);
+                    else if (X.hasCause(cause, IgniteClusterReadOnlyException.class))
+                        err = new IgniteClusterReadOnlyException(msg, cause);
                     else
                         err = new IgniteCheckedException(msg, cause);
                 }
