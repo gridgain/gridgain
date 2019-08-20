@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal.processors.cache.distributed;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -35,16 +37,34 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Tests check correct behaviour of node(s) join when it has configured caches that not presented in cluster.
  */
+@RunWith(Parameterized.class)
 public class NodeJoinWithNewCachesTest extends GridCommonAbstractTest {
+    /** */
+    @Parameterized.Parameters(name = "Persistence enabled = {0}")
+    public static List<Object[]> parameters() {
+        ArrayList<Object[]> params = new ArrayList<>();
+
+        params.add(new Object[]{false});
+        params.add(new Object[]{true});
+
+        return params;
+    }
+
     /** Initial nodes. */
     private static final int INITIAL_NODES = 2;
 
-    /** Client node indicator. */
+    /** Client mode indicator. */
     private boolean client;
+
+    /** Persistence enabled. */
+    @Parameterized.Parameter
+    public boolean persistenceEnabled;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -56,7 +76,7 @@ public class NodeJoinWithNewCachesTest extends GridCommonAbstractTest {
             new DataStorageConfiguration()
                 .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
                     .setMaxSize(256 * 1024 * 1024)
-                    .setPersistenceEnabled(false))
+                    .setPersistenceEnabled(persistenceEnabled))
         );
 
         int cachesCnt = getTestIgniteInstanceIndex(igniteInstanceName) + 1;
