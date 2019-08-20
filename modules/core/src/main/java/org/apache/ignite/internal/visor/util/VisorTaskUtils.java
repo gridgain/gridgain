@@ -419,16 +419,17 @@ public class VisorTaskUtils {
      * Checks for explicit events configuration.
      *
      * @param ignite Grid instance.
+     * @param evts Event types.
      * @return {@code true} if all task events explicitly specified in configuration.
      */
     public static boolean checkExplicitEvents(Ignite ignite, int[] evts) {
-        int[] inclEvtTypes = ignite.configuration().getIncludeEventTypes();
+        int[] curEvts = ignite.configuration().getIncludeEventTypes();
 
-        if (F.isEmpty(inclEvtTypes))
+        if (F.isEmpty(curEvts))
             return false;
 
         for (int evt : evts) {
-            if (!F.contains(inclEvtTypes, evt))
+            if (!F.contains(curEvts, evt))
                 return false;
         }
 
