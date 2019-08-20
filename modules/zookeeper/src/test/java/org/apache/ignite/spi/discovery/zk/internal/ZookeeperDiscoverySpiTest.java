@@ -154,6 +154,7 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_INSTAN
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_SECURITY_CREDENTIALS;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_SECURITY_SUBJECT_V2;
 import static org.apache.ignite.spi.discovery.zk.internal.ZookeeperDiscoveryImpl.IGNITE_ZOOKEEPER_DISCOVERY_SPI_ACK_THRESHOLD;
+import static org.apache.ignite.spi.discovery.zk.internal.ZookeeperDiscoverySpiTest.KillRandomCommunicationFailureResolver.LAST_KILLED_NODES;
 import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED;
@@ -3141,7 +3142,9 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
 
             startGrid(nodeIdx++);
 
-            nodesCnt = nodesCnt - KillRandomCommunicationFailureResolver.LAST_KILLED_NODES.size() + 1;
+            info("Started=" + (nodeIdx - 1) + " nodesCnt=" + nodesCnt + " lastKilled=" + LAST_KILLED_NODES.size());
+
+            nodesCnt = nodesCnt - LAST_KILLED_NODES.size() + 1;
 
             waitForTopology(nodesCnt);
         }

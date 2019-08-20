@@ -2322,6 +2322,17 @@ public abstract class GridAbstractTest extends JUnit3TestLegacySupport {
                 if (nodes.size() != expSize) {
                     info("Wait all nodes [size=" + nodes.size() + ", exp=" + expSize + ']');
 
+                    StringBuilder sb = new StringBuilder();
+
+                    sb.append("\n");
+
+                    nodes.stream().map(n -> (IgniteEx)n)
+                        .forEach(n -> {
+                            sb.append(n.localNode()).append("\n");
+                        });
+
+                    info("Nodes:" + sb);
+
                     return false;
                 }
 
