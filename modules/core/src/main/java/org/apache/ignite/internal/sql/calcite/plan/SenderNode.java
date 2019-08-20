@@ -25,10 +25,12 @@ import java.io.ObjectOutput;
 public class SenderNode implements PlanNode {
     private PlanNode input;
     private SenderType type;
+    private int linkId;
 
-    public SenderNode(PlanNode input, SenderType type) {
+    public SenderNode(PlanNode input, SenderType type, int linkId) {
         this.input = input;
         this.type = type;
+        this.linkId = linkId;
     }
 
     @Override public void writeExternal(ObjectOutput out) throws IOException {

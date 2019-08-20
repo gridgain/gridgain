@@ -98,6 +98,8 @@ import org.apache.calcite.sql2rel.StandardConvertletTable;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.sql.calcite.iterators.PhysicalOperator;
+import org.apache.ignite.internal.sql.calcite.plan.PlanSplitter;
+import org.apache.ignite.internal.sql.calcite.rels.IgniteRel;
 
 /**
  * TODO: REUSE AS {@link PlannerImpl}
@@ -229,8 +231,14 @@ public class CalcitePlanner {
         RelNode rewrittenPlan = rewritePlan(logicalPlan);
         System.out.println("Rewritten logical plan:\n" + RelOptUtil.toString(rewrittenPlan));
 
-        RelNode optimalPlan = optimizePlan(rewrittenPlan);
+        IgniteRel optimalPlan = optimizePlan(rewrittenPlan);
         System.out.println("Optimal plan:\n" + RelOptUtil.toString(optimalPlan, SqlExplainLevel.ALL_ATTRIBUTES));
+
+        PlanSplitter splitter = new PlanSplitter();
+
+        optimalPlan.accept(splitter);
+
+        System.out.println("splitter.subPlans()=" + splitter.subPlans());
 
         // TODO replace with a visitor
         PhysicalOperator physicalOperator = null; //convertToPhysical(optimalPlan);
@@ -247,7 +255,7 @@ public class CalcitePlanner {
 //        return hepPlanner.findBestExp();
     }
 
-    private RelNode optimizePlan(RelNode plan) {
+    private IgniteRel optimizePlan(RelNode plan) {
         //cboPlanner.setNoneConventionHasInfiniteCost(false);EnumerableConvention.INSTANCE)
         RelTraitSet desiredTraits
             = plan.getCluster().traitSet()
@@ -268,7 +276,7 @@ public class CalcitePlanner {
 
         cboPlanner.setNoneConventionHasInfiniteCost(true);
 
-        return cboPlanner.findBestExp();
+        return (IgniteRel)cboPlanner.findBestExp();
     }
 
     private SqlNode validate(SqlNode sqlAst) {

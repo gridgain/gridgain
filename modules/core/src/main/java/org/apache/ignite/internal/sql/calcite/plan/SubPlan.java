@@ -34,13 +34,18 @@ public class SubPlan implements Externalizable {
 
     private int outputSubPlan = -1;
 
-    public SubPlan(int id, PlanNode subPlan) {
+    private Distribution dist;
+
+
+    public SubPlan(int id, PlanNode subPlan, Distribution dist) {
         this.id = id;
         this.subPlan = subPlan;
+        this.dist = dist;
     }
 
     @Override public void writeExternal(ObjectOutput out) throws IOException {
         out.writeInt(id);
+        out.writeInt(dist.ordinal());
         out.writeInt(outputSubPlan);
         out.writeObject(inputSubPlans);
         out.writeObject(subPlan);
@@ -48,6 +53,7 @@ public class SubPlan implements Externalizable {
 
     @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
         id = in.readInt();
+        dist = Distribution.values()[in.readInt()];
         outputSubPlan = in.readInt();
         inputSubPlans = (List<Integer>)in.readObject();
         subPlan = (PlanNode)in.readObject();
@@ -61,5 +67,20 @@ public class SubPlan implements Externalizable {
         assert outputSubPlan == -1;
 
         outputSubPlan = id;
+    }
+
+    public enum Distribution {
+        SINGLE_NODE,
+        ALL_NODES
+    }
+
+    @Override public String toString() {
+        return "SubPlan{" +
+            "id=" + id +
+            ", subPlan=" + subPlan +
+            ", inputSubPlans=" + inputSubPlans +
+            ", outputSubPlan=" + outputSubPlan +
+            ", dist=" + dist +
+            '}';
     }
 }

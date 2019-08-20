@@ -19,13 +19,13 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
+import org.apache.calcite.rel.RelDistributionTraitDef;
+import org.apache.calcite.rel.RelDistributions;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.JoinInfo;
-import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexSlot;
-import org.apache.ignite.Ignite;
 import org.apache.ignite.internal.sql.calcite.IgniteTable;
 import org.apache.ignite.internal.sql.calcite.expressions.Condition;
 import org.apache.ignite.internal.sql.calcite.rels.FilterRel;
@@ -42,7 +42,8 @@ import static org.apache.ignite.internal.sql.calcite.plan.JoinNode.JoinAlgorithm
 /**
  * Runs post-order tree traversing and splits the tree when visiting exchange node.
  */
-@SuppressWarnings("TypeMayBeWeakened") public class PlanSplitter implements IgniteRelVisitor {
+@SuppressWarnings("TypeMayBeWeakened")
+public class PlanSplitter implements IgniteRelVisitor {
 
     private int curSubPlanId;
 
@@ -51,10 +52,14 @@ import static org.apache.ignite.internal.sql.calcite.plan.JoinNode.JoinAlgorithm
 
     private Deque<PlanNode> childrenStack = new LinkedList<>();
 
+    public List<SubPlan> subPlans() {
+        return subPlans;
+    }
+
     @Override public void onTableScan(TableScanRel scan) {
         IgniteTable tbl = scan.table();
 
-        TableScanNode node = new TableScanNode(tbl.tableName(), tbl.cacheName())
+        TableScanNode node = new TableScanNode(tbl.tableName(), tbl.cacheName());
 
         childrenStack.push(node);
     }
@@ -108,28 +113,45 @@ import static org.apache.ignite.internal.sql.calcite.plan.JoinNode.JoinAlgorithm
     @Override public void onUnionExchange(UnionExchangeRel exch) {
         visitChildren(exch);
 
+        boolean singleSource = exch.getInput().getTraitSet().getTrait(RelDistributionTraitDef.INSTANCE).satisfies(RelDistributions.SINGLETON);
+
         PlanNode input = childrenStack.poll();
 
-        SenderNode sender = new SenderNode(input, SenderNode.SenderType.SINGLE);
+        int linkId = curSubPlanId++; // each subPlan has id which equals to the sublan's root link id
 
-        SubPlan subPlan = nextSubPlan(sender);
+        SenderNode sender = new SenderNode(input, SenderNode.SenderType.SINGLE, linkId);
+
+        SubPlan.Distribution dist = singleSource ? SubPlan.Distribution.SINGLE_NODE : SubPlan.Distribution.ALL_NODES;
+
+        SubPlan subPlan = new SubPlan(linkId, sender, dist);
 
         subPlans.add(subPlan);
 
+        ReceiverNode receiver = new ReceiverNode(linkId, singleSource ? ReceiverNode.Type.SINGLE :  ReceiverNode.Type.ALL);
 
+        childrenStack.push(receiver);
     }
 
-    @Override public void onRehashingExchange(RehashingExchange exch) {
+    @Override public void onRehashingExchange(RehashingExchange exch) { // TODO Add ROOT (Outcome?) node
+        visitChildren(exch);
 
+        PlanNode input = childrenStack.poll();
+
+        int linkId = curSubPlanId++; // each subPlan has id which equals to the sublan's root link id
+
+        SenderNode sender = new SenderNode(input, SenderNode.SenderType.HASH, linkId);
+
+        SubPlan subPlan = new SubPlan(linkId, sender, SubPlan.Distribution.ALL_NODES);
+
+        subPlans.add(subPlan);
+
+        ReceiverNode receiver = new ReceiverNode(linkId, ReceiverNode.Type.ALL);
+
+        childrenStack.push(receiver);
     }
 
     private void visitChildren(RelNode rel) {
         for (RelNode input : rel.getInputs())
             ((IgniteRel)input).accept(this);
-    }
-
-
-    private SubPlan nextSubPlan(PlanNode subPlan) {
-        return new SubPlan(++curSubPlanId, subPlan);
     }
 }

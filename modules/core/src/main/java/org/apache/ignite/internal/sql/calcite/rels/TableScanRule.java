@@ -53,6 +53,6 @@ public class TableScanRule extends ConverterRule {
 
         return new TableScanRel(scan.getCluster(),
             scan.getTraitSet().replace(IgniteConvention.INSTANCE).replace(distTrait),
-            relOptTable);
+            relOptTable, tbl);
     }
 }

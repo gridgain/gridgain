@@ -41,4 +41,6 @@ public class FilterNode implements PlanNode {
         filterCond = (Condition)in.readObject();
         input = (PlanNode)in.readObject();
     }
+
+
 }

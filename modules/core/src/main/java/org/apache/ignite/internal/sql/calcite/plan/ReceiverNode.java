@@ -24,6 +24,15 @@ import java.io.ObjectOutput;
  */
 public class ReceiverNode implements PlanNode {
 
+    private int inputLink;
+
+    private Type type;
+
+    public ReceiverNode(int inputLink, Type type) {
+        this.inputLink = inputLink;
+        this.type = type;
+    }
+
     @Override public void writeExternal(ObjectOutput out) throws IOException {
         // TODO: CODE: implement.
     }
@@ -32,7 +41,7 @@ public class ReceiverNode implements PlanNode {
         // TODO: CODE: implement.
     }
 
-    public enum ReceiverType {
+    public enum Type {
         SINGLE,
         ALL
     }
