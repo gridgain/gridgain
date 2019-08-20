@@ -46,8 +46,6 @@ public class MetricSchemaTest {
 
         int regSchemasSize = 0;
 
-        int dataSize = 0;
-
         int namesSize = 0;
 
         for (int i = 0; i < CNT; i++) {
@@ -66,8 +64,6 @@ public class MetricSchemaTest {
             //TODO: actually need sum length of all unique registry schemas
             regSchemasSize = regSchema.length();
 
-            dataSize += regSchema.dataSize();
-
             namesSize += pref.getBytes(UTF_8).length;
 
             bldr.add("regType", pref, regSchema);
@@ -79,8 +75,6 @@ public class MetricSchemaTest {
                 namesSize + regSchemasSize;
 
         assertEquals(exp, schema.length());
-
-        assertEquals(dataSize, schema.dataSize());
 
         assertEquals(CNT, schema.items().size());
     }
@@ -170,8 +164,6 @@ public class MetricSchemaTest {
 
         assertEquals(schema.length(), schema1.length());
 
-        assertEquals(schema.dataSize(), schema1.dataSize());
-
         assertEquals(schema.items(), schema1.items());
     }
 
@@ -200,8 +192,6 @@ public class MetricSchemaTest {
         MetricSchema schema1 = MetricSchema.fromBytes(arr, SCHEMA_OFF, schema.length());
 
         assertEquals(schema.length(), schema1.length());
-
-        assertEquals(schema.dataSize(), schema1.dataSize());
 
         assertEquals(schema.items(), schema1.items());
 

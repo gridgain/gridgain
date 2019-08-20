@@ -58,13 +58,10 @@ public class MetricSchema {
 
     private final int len;
 
-    private final int dataSize;
-
-    private MetricSchema(List<MetricSchemaItem> items, List<MetricRegistrySchema> regSchemas, int len, int dataSize) {
+    private MetricSchema(List<MetricSchemaItem> items, List<MetricRegistrySchema> regSchemas, int len) {
         this.items = items;
         this.regSchemas = regSchemas;
         this.len = len;
-        this.dataSize = dataSize;
     }
 
     public List<MetricSchemaItem> items() {
@@ -73,10 +70,6 @@ public class MetricSchema {
 
     public int length() {
         return len;
-    }
-
-    public int dataSize() {
-        return dataSize;
     }
 
     public MetricRegistrySchema registrySchema(short idx) {
@@ -197,11 +190,9 @@ public class MetricSchema {
             MetricSchemaItem item = new MetricSchemaItem(idx, pref);
 
             items.add(item);
-
-            dataSize += regSchemas.get(idx).dataSize();
         }
 
-        return new MetricSchema(items, regSchemas, len, dataSize);
+        return new MetricSchema(items, regSchemas, len);
     }
 
     /**
@@ -220,7 +211,6 @@ public class MetricSchema {
         private List<MetricRegistrySchema> regSchemas = new ArrayList<>();
         private Map<String, Short> idxMap = new LinkedHashMap<>();
         private int len;
-        private int dataSize;
 
         public static MetricSchema.Builder newInstance() {
             return new MetricSchema.Builder();
@@ -246,8 +236,6 @@ public class MetricSchema {
 
             items.add(item);
 
-            dataSize += regSchema.dataSize();
-
             byte[] prefBytes = pref.getBytes(UTF_8);
 
             len += REG_SCHEMA_IDX_SIZE + PREF_BYTES_LEN_SIZE + prefBytes.length;
@@ -259,7 +247,7 @@ public class MetricSchema {
 
             len += SCHEMA_ITEM_CNT_SIZE + REG_SCHEMA_CNT_SIZE + REG_SCHEMA_OFF_SIZE * regSchemas.size();
 
-            MetricSchema schema = new MetricSchema(items, regSchemas, len, dataSize);
+            MetricSchema schema = new MetricSchema(items, regSchemas, len);
 
             items = null;
 

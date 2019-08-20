@@ -42,16 +42,12 @@ public class MetricRegistrySchemaTest {
 
         int namesSize = 0;
 
-        int dataSize = 0;
-
         for (byte i = 0; i < CNT; i++) {
             String name = ITEM_NAME_PREF + i;
 
             bldr.add(name, MetricType.findByType(i));
 
             namesSize += name.getBytes(UTF_8).length;
-
-            dataSize += MetricType.findByType(i).size();
         }
 
         MetricRegistrySchema schema = bldr.build();
@@ -59,8 +55,6 @@ public class MetricRegistrySchemaTest {
         int exp = SCHEMA_LEN_SIZE + VALUE_TYPE_SIZE * CNT + NAME_LEN_SIZE * CNT + namesSize;
 
         assertEquals(exp, schema.length());
-
-        assertEquals(dataSize, schema.dataSize());
 
         assertEquals(CNT, schema.items().size());
     }
@@ -117,7 +111,6 @@ public class MetricRegistrySchemaTest {
         MetricRegistrySchema schema1 = MetricRegistrySchema.fromBytes(arr);
 
         assertEquals(schema.length(), schema1.length());
-        assertEquals(schema.dataSize(), schema1.dataSize());
         assertEquals(schema.items(), schema1.items());
     }
 
@@ -137,7 +130,6 @@ public class MetricRegistrySchemaTest {
         MetricRegistrySchema schema1 = MetricRegistrySchema.fromBytes(arr, SCHEMA_OFF, schema.length());
 
         assertEquals(schema.length(), schema1.length());
-        assertEquals(schema.dataSize(), schema1.dataSize());
         assertEquals(schema.items(), schema1.items());
     }
 
