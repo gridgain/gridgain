@@ -43,6 +43,7 @@ public class TracingService implements AutoCloseable {
     /** On node traces listener. */
     private IgniteBiPredicate<UUID, Object> onNodeTraces = this::onNodeTraces;
 
+    // TODO: Change on limited queue, GG-23047.
     /** Buffer. */
     private final List<Span> buf = Collections.synchronizedList(new ArrayList<>());
 
