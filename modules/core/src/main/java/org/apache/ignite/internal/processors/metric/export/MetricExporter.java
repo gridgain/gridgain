@@ -21,8 +21,13 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.managers.communication.GridMessageListener;
+import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
+import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.spi.metric.BooleanMetric;
 import org.apache.ignite.spi.metric.DoubleMetric;
@@ -31,12 +36,14 @@ import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.spi.metric.Metric;
 import org.jetbrains.annotations.NotNull;
 
+import static org.apache.ignite.internal.GridTopic.TOPIC_METRICS;
+import static org.apache.ignite.internal.processors.metric.export.MetricType.BOOLEAN;
+import static org.apache.ignite.internal.processors.metric.export.MetricType.DOUBLE;
+import static org.apache.ignite.internal.processors.metric.export.MetricType.HIT_RATE;
+import static org.apache.ignite.internal.processors.metric.export.MetricType.INT;
+import static org.apache.ignite.internal.processors.metric.export.MetricType.LONG;
 import static org.apache.ignite.internal.util.GridUnsafe.BYTE_ARR_OFF;
 import static org.apache.ignite.internal.util.GridUnsafe.copyMemory;
-import static org.apache.ignite.internal.util.GridUnsafe.putBoolean;
-import static org.apache.ignite.internal.util.GridUnsafe.putDouble;
-import static org.apache.ignite.internal.util.GridUnsafe.putInt;
-import static org.apache.ignite.internal.util.GridUnsafe.putLong;
 
 /**
  * header
@@ -46,35 +53,74 @@ import static org.apache.ignite.internal.util.GridUnsafe.putLong;
  * data
  */
 
-public class MetricExporter {
+public class MetricExporter extends GridProcessorAdapter {
     private final Map<Integer, IgniteBiTuple<MetricSchema, byte[]>> schemas = new HashMap<>();
     private final Map<String, IgniteBiTuple<MetricRegistrySchema, byte[]>> registrySchemas = new HashMap<>();
 
-    public MetricResponse export(GridKernalContext ctx) {
-        UUID clusterId = UUID.randomUUID(); //TODO: get real cluster ID
+    /**
+     * @param ctx Kernal context.
+     */
+    public MetricExporter(GridKernalContext ctx) {
+        super(ctx);
 
-        String userTag = "test_user_tag"; //TODO: get real user tag
+        ctx.io().addMessageListener(TOPIC_METRICS, new GridMessageListener() {
+            @Override public void onMessage(UUID nodeId, Object msg, byte plc) {
+                if (msg instanceof MetricRequest) {
+                    int schemaVer = ((MetricRequest) msg).schemaVersion();
+
+                    if (schemaVer == -1) {
+                        MetricResponse res = export();
+
+                        try {
+                            ctx.io().sendToGridTopic(nodeId, TOPIC_METRICS, res, plc);
+                        }
+                        catch (IgniteCheckedException e) {
+                            log.error("Error during sending message [topic" + TOPIC_METRICS +
+                                    ", dstNodeId=" + nodeId + ", msg=" + msg + ']');
+                        }
+                    }
+                }
+            }
+        });
+
+    }
+
+    public MetricResponse export() {
+        IgniteCluster cluster = ctx.cluster().get();
+
+        UUID clusterId = cluster.id();
+
+        assert clusterId != null : "ClusterId is null.";
+
+        String tag = cluster.tag();
+
+        String consistentId = (String)ctx.discovery().localNode().consistentId();
+
+        assert consistentId != null : "ConsistentId is null.";
 
         Map<String, MetricRegistry> metrics = ctx.metric().registries();
 
-        String consistentId = (String)ctx.config().getConsistentId();
-
-        assert consistentId != null : "consistent ID is null";
-
-        return metricMessage(clusterId, userTag, consistentId, metrics);
+        return metricMessage(clusterId, tag, consistentId, metrics);
     }
 
     @NotNull
     MetricResponse metricMessage(UUID clusterId, String userTag, String consistentId, Map<String, MetricRegistry> metrics) {
-        int ver = schemaVersion(metrics);
+        int ver = 0; //schemaVersion(metrics);
 
         long ts = System.currentTimeMillis();
 
-        IgniteBiTuple<MetricSchema, byte[]> tup = schemas.get(ver);
+        //IgniteBiTuple<MetricSchema, byte[]> tup = schemas.get(ver);
+
+        IgniteBiTuple<MetricSchema, byte[]> tup = null;
 
         if (tup == null) {
             //TODO: remove obsolete versions
+
+            long startTs = System.currentTimeMillis();
+
             MetricSchema schema = generateSchema(metrics);
+
+            System.out.println("Generate schema: " + (System.currentTimeMillis() - startTs) + " ms");
 
             schemas.put(ver, tup = new IgniteBiTuple<>(schema, schema.toBytes()));
         }
@@ -83,17 +129,25 @@ public class MetricExporter {
 
         byte[] schemaBytes = tup.get2();
 
-        return new MetricResponse(
+        long startTs = System.currentTimeMillis();
+
+        VarIntByteBuffer data = generateData(metrics);
+
+        MetricResponse metricResponse = new MetricResponse(
                 ver,
                 ts,
                 clusterId,
                 userTag,
                 consistentId,
                 schema.length(),
-                schema.dataSize(),
+                data.position(),  //schema.dataSize(),
                 (arr, off) -> writeSchema(schemaBytes, arr, off),
-                (arr, off) -> writeData(arr, off, metrics)
+                (arr, off) -> writeData(arr, off, data) //(arr, off) -> writeData(arr, off, metrics)
         );
+
+        System.out.println("Message generation: " + (System.currentTimeMillis() - startTs) + " ms");
+
+        return metricResponse;
     }
 
     private MetricSchema generateSchema(Map<String, MetricRegistry> metrics) {
@@ -102,7 +156,7 @@ public class MetricExporter {
         for (MetricRegistry reg : metrics.values()) {
             MetricRegistrySchema regSchema = generateOrGetRegistrySchema(reg);
 
-            bldr.add(MetricRegistry.class, reg.name(), regSchema);
+            bldr.add(reg.type(), reg.name(), regSchema);
         }
 
         return bldr.build();
@@ -147,34 +201,45 @@ public class MetricExporter {
         copyMemory(schemaBytes0, BYTE_ARR_OFF, arr, BYTE_ARR_OFF + off, schemaBytes0.length);
     }
 
-    private static void writeData(byte[] arr, int dataFrameOff, Map<String, MetricRegistry> metrics) {
-        int off = dataFrameOff;
+    private static void writeData(byte[] arr, int dataFrameOff, VarIntByteBuffer data) {
+        data.toBytes(arr, dataFrameOff);
+    }
+
+    private static VarIntByteBuffer generateData(Map<String, MetricRegistry> metrics) {
+        VarIntByteBuffer buf = new VarIntByteBuffer(new byte[1024]);
 
         for (Map.Entry<String, MetricRegistry> r : metrics.entrySet()) {
             for (Map.Entry<String, Metric> e : r.getValue().metrics().entrySet()) {
                 Metric m = e.getValue();
 
-                if (m instanceof BooleanMetric) {
-                    putBoolean(arr, BYTE_ARR_OFF + off, ((BooleanMetric)m).value());
+                MetricType type = MetricType.findByClass(m.getClass());
 
-                    off += 1;
-                }
-                else if (m instanceof IntMetric) {
-                    putInt(arr, BYTE_ARR_OFF + off, ((IntMetric)m).value());
+                // Unsupported type.
+                if (type == null)
+                    continue;
 
-                    off += Integer.BYTES;
-                }
-                else if (m instanceof LongMetric) {
-                    putLong(arr, BYTE_ARR_OFF + off, ((LongMetric)m).value());
+                // Most popular metric types are first.
+                if (type == LONG)
+                    buf.putVarLong(((LongMetric)m).value());
+                else if (type == INT)
+                    buf.putVarInt(((IntMetric)m).value());
+                else if (type == HIT_RATE) {
+                    HitRateMetric hitRateMetric = (HitRateMetric)m;
 
-                    off += Long.BYTES;
-                }
-                else if (m instanceof DoubleMetric) {
-                    putDouble(arr, BYTE_ARR_OFF + off, ((DoubleMetric)m).value());
+                    buf.putVarLong(hitRateMetric.rateTimeInterval());
 
-                    off += Double.BYTES;
+                    buf.putVarLong(hitRateMetric.value());
                 }
+                else if (type == DOUBLE)
+                    buf.putDouble(((DoubleMetric) m).value());
+                else if (type == BOOLEAN)
+                    buf.putBoolean(((BooleanMetric)m).value());
+                else
+                    throw new IllegalStateException("Unknown metric type [metric=" + m + ", type=" + type + ']');
             }
         }
+
+        return buf;
     }
+
 }

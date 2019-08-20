@@ -68,7 +68,7 @@ public class TransactionMetricsAdapter implements TransactionMetrics {
     public TransactionMetricsAdapter(GridKernalContext ctx) {
         gridKernalCtx = ctx;
 
-        MetricRegistry mreg = gridKernalCtx.metric().get(TX_METRICS);
+        MetricRegistry mreg = new MetricRegistry(TX_METRICS, TX_METRICS);
 
         txCommits = mreg.intMetric("txCommits", "Number of transaction commits.");
         txRollbacks = mreg.intMetric("txRollbacks", "Number of transaction rollbacks.");
@@ -91,6 +91,8 @@ public class TransactionMetricsAdapter implements TransactionMetrics {
         mreg.register("OwnerTransactionsNumber",
             this::nearTxNum,
             "The number of active transactions for which this node is the initiator.");
+
+        ctx.metric().add(mreg);
     }
 
     /** {@inheritDoc} */
@@ -247,7 +249,7 @@ public class TransactionMetricsAdapter implements TransactionMetrics {
             }
         }
 
-        final Long duration = System.currentTimeMillis() - tx.startTime();
+        long duration = System.currentTimeMillis() - tx.startTime();
 
         return top + "DURATION: " + duration;
     }
@@ -289,26 +291,26 @@ public class TransactionMetricsAdapter implements TransactionMetrics {
      * Count total number of holding locks on local node.
      */
     private long txHoldingLockNum() {
-        long holdingLockCounter = 0;
+        long holdingLockCntr = 0;
 
         IgniteTxManager tm = gridKernalCtx.cache().context().tm();
         for (IgniteInternalTx tx : tm.activeTransactions()) {
             if ((tx.optimistic() && tx.state() == TransactionState.ACTIVE) || tx.empty() || !tx.local())
                 continue;
 
-            holdingLockCounter++;
+            holdingLockCntr++;
         }
 
-        return holdingLockCounter;
+        return holdingLockCntr;
     }
 
     /**
      * Count total number of locked keys on local node.
      */
     private long txLockedKeysNum() {
-        GridCacheMvccManager mvccManager = gridKernalCtx.cache().context().mvcc();
+        GridCacheMvccManager mvccMgr = gridKernalCtx.cache().context().mvcc();
 
-        return mvccManager.lockedKeys().size() + mvccManager.nearLockedKeys().size();
+        return mvccMgr.lockedKeys().size() + mvccMgr.nearLockedKeys().size();
     }
 
     /** {@inheritDoc} */
