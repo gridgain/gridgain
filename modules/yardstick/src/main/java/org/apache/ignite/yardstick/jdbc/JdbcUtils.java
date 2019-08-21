@@ -23,6 +23,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.yardstickframework.BenchmarkConfiguration;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import static org.yardstickframework.BenchmarkUtils.println;
@@ -112,7 +113,7 @@ public class JdbcUtils {
 
                 StringBuilder qry = new StringBuilder(String.format("CREATE TABLE %s (", tblName) +
                     "id LONG PRIMARY KEY, " +
-                    "DEC_COL DECIMAL(8), " +
+                    "DEC_COL DECIMAL, " +
                     "DATE_COL DATE, " +
                     "BIG_INT_COL BIGINT" +
                     ") WITH \"wrap_value=true");
@@ -135,7 +136,7 @@ public class JdbcUtils {
                 for (long l = 1; l <= range; ++l) {
                     qProc.querySqlFields(
                         new SqlFieldsQuery(String.format("INSERT INTO %s VALUES (?, ?, ?, ?)", tblName))
-                            .setArgs(l, l + 1, LocalDate.ofEpochDay(l), l + 2), true);
+                            .setArgs(l, new BigDecimal(l + 1), LocalDate.ofEpochDay(l), l + 2), true);
 
                     if (l % 10000 == 0)
                         println(cfg, "Populate " + l);

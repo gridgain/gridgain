@@ -16,6 +16,7 @@
 
 package org.apache.ignite.yardstick.jdbc;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +25,7 @@ import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
+import org.apache.ignite.transactions.TransactionDuplicateKeyException;
 import org.apache.ignite.yardstick.IgniteAbstractBenchmark;
 import org.yardstickframework.BenchmarkConfiguration;
 import org.yardstickframework.BenchmarkUtils;
@@ -35,7 +37,7 @@ import static org.apache.ignite.yardstick.jdbc.JdbcUtils.fillTableWithIdx;
  */
 public class NativeSqlMixedDateInlineBenchmark extends IgniteAbstractBenchmark {
     /** */
-    private static final String TBL_NAME = NativeSqlInsertDeleteBenchmark.class.getSimpleName();
+    private static final String TBL_NAME = NativeSqlInsertDeleteBenchmark.class.getSimpleName().toUpperCase();
 
     /** Dummy counter, just for possible jvm optimisation disable purpose. */
     private long resCount;
@@ -51,12 +53,12 @@ public class NativeSqlMixedDateInlineBenchmark extends IgniteAbstractBenchmark {
         String insertQry = String.format("INSERT INTO %s VALUES (?, ?, ?, ?)", TBL_NAME);
 
         SqlFieldsQuery insert1 = new SqlFieldsQuery(insertQry);
-        insert1.setArgs(insertKey, insertKey + 1, LocalDate.ofEpochDay(insertKey), insertKey + 2);
+        insert1.setArgs(insertKey, new BigDecimal(insertKey + 1), LocalDate.ofEpochDay(insertKey), insertKey + 2);
 
         ++insertKey;
 
         SqlFieldsQuery insert2 = new SqlFieldsQuery(insertQry);
-        insert2.setArgs(insertKey, insertKey + 1, LocalDate.ofEpochDay(insertKey), insertKey + 2);
+        insert2.setArgs(insertKey, new BigDecimal(insertKey + 1), LocalDate.ofEpochDay(insertKey), insertKey + 2);
 
         GridQueryProcessor qryProc = ((IgniteEx)ignite()).context().query();
 
@@ -68,7 +70,7 @@ public class NativeSqlMixedDateInlineBenchmark extends IgniteAbstractBenchmark {
 
         SqlFieldsQuery select2 = new SqlFieldsQuery(String.format("select * FROM %s where DATE_COL = ? " +
             "and DEC_COL= ?", TBL_NAME));
-        select1.setArgs(LocalDate.ofEpochDay(selectKey), selectKey + 1);
+        select2.setArgs(LocalDate.ofEpochDay(selectKey), selectKey + 1);
 
         SqlFieldsQuery delete1 = new SqlFieldsQuery(String.format("DELETE FROM %s WHERE id = ?", TBL_NAME));
         delete1.setArgs(--insertKey);
@@ -91,7 +93,8 @@ public class NativeSqlMixedDateInlineBenchmark extends IgniteAbstractBenchmark {
             resCount += delCur2.getAll().size();
         }
         catch (Exception e) {
-            BenchmarkUtils.error("error: ", e);
+            if (!(e instanceof TransactionDuplicateKeyException))
+                BenchmarkUtils.error("error: ", e);
         }
 
         return true;
@@ -101,7 +104,7 @@ public class NativeSqlMixedDateInlineBenchmark extends IgniteAbstractBenchmark {
     @Override public void setUp(BenchmarkConfiguration cfg) throws Exception {
         super.setUp(cfg);
 
-        fillTableWithIdx(cfg, (IgniteEx)ignite(), this.getClass().getSimpleName(), args.range(), args.atomicMode());
+        fillTableWithIdx(cfg, (IgniteEx)ignite(), TBL_NAME, args.range(), args.atomicMode());
     }
 
     /** {@inheritDoc} */
