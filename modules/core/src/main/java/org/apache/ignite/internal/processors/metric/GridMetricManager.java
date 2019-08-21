@@ -43,7 +43,6 @@ import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.util.StripedExecutor;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.spi.communication.CommunicationSpi;
 import org.apache.ignite.spi.metric.MetricExporterSpi;
 import org.apache.ignite.spi.metric.ReadOnlyMetricRegistry;
 import org.apache.ignite.thread.IgniteStripedThreadPoolExecutor;
@@ -259,19 +258,17 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
 
         MetricRegistry ioMetric = new MetricRegistry(COMM_METRICS, COMM_METRICS);
 
-        CommunicationSpi spi = ctx.config().getCommunicationSpi();
-
-        ioMetric.register(OUTBOUND_MSG_QUEUE_CNT, spi::getOutboundMessagesQueueSize,
+        ioMetric.register(OUTBOUND_MSG_QUEUE_CNT, () -> ctx.config().getCommunicationSpi().getOutboundMessagesQueueSize(),
                 "Outbound messages queue size.");
 
-        ioMetric.register(SENT_MSG_CNT, spi::getSentMessagesCount, "Sent messages count.");
+        ioMetric.register(SENT_MSG_CNT, () -> ctx.config().getCommunicationSpi().getSentMessagesCount(), "Sent messages count.");
 
-        ioMetric.register(SENT_BYTES_CNT, spi::getSentBytesCount, "Sent bytes count.");
+        ioMetric.register(SENT_BYTES_CNT, () -> ctx.config().getCommunicationSpi().getSentBytesCount(), "Sent bytes count.");
 
-        ioMetric.register(RCVD_MSGS_CNT, spi::getReceivedMessagesCount,
+        ioMetric.register(RCVD_MSGS_CNT, () -> ctx.config().getCommunicationSpi().getReceivedMessagesCount(),
                 "Received messages count.");
 
-        ioMetric.register(RCVD_BYTES_CNT, spi::getReceivedBytesCount, "Received bytes count.");
+        ioMetric.register(RCVD_BYTES_CNT, () -> ctx.config().getCommunicationSpi().getReceivedBytesCount(), "Received bytes count.");
 
         add(ioMetric);
     }
