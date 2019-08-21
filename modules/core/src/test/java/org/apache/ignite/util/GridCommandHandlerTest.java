@@ -189,13 +189,19 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         assertFalse(ignite.cluster().readOnly());
 
+        injectTestSystemOut();
+
         assertEquals(EXIT_CODE_OK, execute("--read-only-on"));
 
         assertTrue(ignite.cluster().readOnly());
 
+        assertContains(log, testOut.toString(), "Cluster read-only mode enabled");
+
         assertEquals(EXIT_CODE_OK, execute("--read-only-off"));
 
         assertFalse(ignite.cluster().readOnly());
+
+        assertContains(log, testOut.toString(), "Cluster read-only mode disabled");
     }
 
     /**
