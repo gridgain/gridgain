@@ -20,8 +20,8 @@ import java.util.List;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
@@ -41,7 +41,7 @@ public class IgniteAbsentEvictionNodeOutOfBaselineTest extends GridCommonAbstrac
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        cfg.setDataStorageConfiguration(new DataStorageConfiguration()
+        cfg.setDataStorageConfiguration(new TestDataStorageConfiguration()
             .setWalSegmentSize(512 * 1024)
             .setWalSegments(4)
             .setDefaultDataRegionConfiguration(

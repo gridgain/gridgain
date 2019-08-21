@@ -25,6 +25,7 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
@@ -340,7 +341,7 @@ public abstract class IgniteChangeGlobalStateAbstractTest extends GridCommonAbst
     @Override protected IgniteConfiguration getConfiguration(final String gridName) throws Exception {
         final IgniteConfiguration cfg = super.getConfiguration(gridName);
 
-        DataStorageConfiguration pCfg = new DataStorageConfiguration();
+        DataStorageConfiguration pCfg = new TestDataStorageConfiguration();
 
         pCfg.setStoragePath(testName() + "/db");
         pCfg.setWalArchivePath(testName() + "/db/wal/archive");

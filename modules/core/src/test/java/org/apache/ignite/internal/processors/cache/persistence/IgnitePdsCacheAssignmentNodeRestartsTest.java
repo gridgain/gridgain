@@ -29,8 +29,8 @@ import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -59,7 +59,7 @@ public class IgnitePdsCacheAssignmentNodeRestartsTest extends GridCommonAbstract
 
         cfg.setConsistentId(igniteInstanceName);
 
-        cfg.setDataStorageConfiguration(new DataStorageConfiguration()
+        cfg.setDataStorageConfiguration(new TestDataStorageConfiguration()
             .setPageSize(1024)
             .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
                 .setPersistenceEnabled(true)

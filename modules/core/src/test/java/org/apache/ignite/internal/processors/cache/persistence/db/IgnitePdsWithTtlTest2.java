@@ -24,8 +24,8 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.NoOpFailureHandler;
 import org.apache.ignite.testframework.MvccFeatureChecker;
@@ -81,7 +81,7 @@ public class IgnitePdsWithTtlTest2 extends GridCommonAbstractTest {
         final IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         cfg.setDataStorageConfiguration(
-            new DataStorageConfiguration()
+            new TestDataStorageConfiguration()
                 .setDefaultDataRegionConfiguration(
                     new DataRegionConfiguration()
                         .setMaxSize(100L * 1024 * 1024)

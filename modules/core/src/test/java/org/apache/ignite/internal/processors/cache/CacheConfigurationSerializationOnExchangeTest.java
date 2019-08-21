@@ -16,16 +16,16 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import com.google.common.collect.Lists;
 import java.util.ArrayList;
 import java.util.List;
 import javax.cache.configuration.FactoryBuilder;
-import com.google.common.collect.Lists;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -71,7 +71,7 @@ public class CacheConfigurationSerializationOnExchangeTest extends GridCommonAbs
         cfg.setClientMode(clientMode);
 
         if (persistenceEnabled)
-            cfg.setDataStorageConfiguration(new DataStorageConfiguration()
+            cfg.setDataStorageConfiguration(new TestDataStorageConfiguration()
                 .setDefaultDataRegionConfiguration(
                     new DataRegionConfiguration().setPersistenceEnabled(true).setMaxSize(256 * 1024 * 1024))
             );

@@ -36,8 +36,8 @@ import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -130,7 +130,7 @@ public abstract class TxPartitionCounterStateAbstractTest extends GridCommonAbst
 
         cfg.setClientMode(client);
 
-        cfg.setDataStorageConfiguration(new DataStorageConfiguration().
+        cfg.setDataStorageConfiguration(new TestDataStorageConfiguration().
             setWalHistorySize(1000).
             setWalSegmentSize(8 * MB).setWalMode(LOG_ONLY).setPageSize(1024).
             setCheckpointFrequency(MILLISECONDS.convert(365, DAYS)).

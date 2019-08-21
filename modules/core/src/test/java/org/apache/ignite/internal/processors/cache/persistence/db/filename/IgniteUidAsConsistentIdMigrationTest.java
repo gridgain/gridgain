@@ -29,6 +29,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.filename.PdsConsistentIdProcessor;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -129,7 +130,7 @@ public class IgniteUidAsConsistentIdMigrationTest extends GridCommonAbstractTest
         if (configuredConsistentId != null)
             cfg.setConsistentId(configuredConsistentId);
 
-        final DataStorageConfiguration dsCfg = new DataStorageConfiguration();
+        final DataStorageConfiguration dsCfg = new TestDataStorageConfiguration();
 
         if (placeStorageInTemp) {
             final File tempDir = new File(System.getProperty("java.io.tmpdir"));

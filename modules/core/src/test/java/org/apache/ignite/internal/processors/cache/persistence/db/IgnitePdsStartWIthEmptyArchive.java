@@ -24,8 +24,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.WalSegmentArchivedEvent;
 import org.apache.ignite.internal.IgniteEx;
@@ -63,7 +63,7 @@ public class IgnitePdsStartWIthEmptyArchive extends GridCommonAbstractTest {
         );
 
         cfg.setDataStorageConfiguration(
-            new DataStorageConfiguration()
+            new TestDataStorageConfiguration()
                 // Checkpoint should not remove any WAL archive files.
                 .setMaxWalArchiveSize(Long.MAX_VALUE)
                 .setDefaultDataRegionConfiguration(

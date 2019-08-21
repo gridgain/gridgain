@@ -16,17 +16,17 @@
 
 package org.apache.ignite.util.mbeans;
 
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.mxbean.IgniteMXBean;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import java.util.Set;
-import java.util.stream.Collectors;
 import org.junit.Test;
 
 /**
@@ -43,13 +43,13 @@ public class GridMBeanBaselineTest extends GridCommonAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
             .setClientMode(igniteInstanceName.equals(getTestIgniteInstanceName(CLIENT_IDX)))
-            .setDataStorageConfiguration(new DataStorageConfiguration()
+            .setDataStorageConfiguration(new TestDataStorageConfiguration()
                 .setCheckpointFrequency(2_000)
                 .setDefaultDataRegionConfiguration(
                     new DataRegionConfiguration()
                         .setPersistenceEnabled(true)))
             .setDataStorageConfiguration(
-                new DataStorageConfiguration()
+                new TestDataStorageConfiguration()
                     .setDefaultDataRegionConfiguration(
                         new DataRegionConfiguration()
                             .setMaxSize(200L * 1024 * 1024)

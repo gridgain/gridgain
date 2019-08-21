@@ -25,6 +25,7 @@ import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.processors.rest.handlers.cluster.GridBaselineCommandResponse;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -67,7 +68,7 @@ public class JettyRestProcessorBaselineSelfTest extends JettyRestProcessorCommon
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        DataStorageConfiguration dsCfg = new DataStorageConfiguration()
+        DataStorageConfiguration dsCfg = new TestDataStorageConfiguration()
             .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
                 .setMaxSize(100 * 1024 * 1024)
                 .setPersistenceEnabled(true))

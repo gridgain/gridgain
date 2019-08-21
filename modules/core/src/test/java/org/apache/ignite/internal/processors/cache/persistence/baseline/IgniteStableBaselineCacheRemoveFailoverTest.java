@@ -24,9 +24,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.GridCacheAbstractRemoveFailureTest;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -66,7 +66,7 @@ public class IgniteStableBaselineCacheRemoveFailoverTest extends GridCacheAbstra
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         cfg.setDataStorageConfiguration(
-            new DataStorageConfiguration()
+            new TestDataStorageConfiguration()
                 .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
                     .setPersistenceEnabled(true)
                     .setInitialSize(512L * 1024 * 1024)

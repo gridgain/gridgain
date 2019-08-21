@@ -22,6 +22,7 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.DiskPageCompression;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.spi.encryption.keystore.KeystoreEncryptionSpi;
@@ -60,7 +61,7 @@ public class DiskPageCompressionConfigValidationTest extends GridCommonAbstractT
 
         cfg.setEncryptionSpi(encSpi);
 
-        DataStorageConfiguration dsCfg = new DataStorageConfiguration()
+        DataStorageConfiguration dsCfg = new TestDataStorageConfiguration()
             .setDefaultDataRegionConfiguration(
                 new DataRegionConfiguration()
                     .setMaxSize(10L * 1024 * 1024)

@@ -33,6 +33,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.failure.StopNodeFailureHandler;
@@ -74,7 +75,7 @@ public class IgniteShutdownOnSupplyMessageFailureTest extends GridCommonAbstract
 
         cfg.setConsistentId(name);
 
-        DataStorageConfiguration conf = new DataStorageConfiguration()
+        DataStorageConfiguration conf = new TestDataStorageConfiguration()
             .setWalHistorySize(WAL_HISTORY_SIZE)
             .setDefaultDataRegionConfiguration(
                 new DataRegionConfiguration()

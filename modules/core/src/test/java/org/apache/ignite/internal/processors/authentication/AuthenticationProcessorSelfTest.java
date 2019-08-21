@@ -22,8 +22,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -71,7 +71,7 @@ public class AuthenticationProcessorSelfTest extends GridCommonAbstractTest {
 
         cfg.setAuthenticationEnabled(true);
 
-        cfg.setDataStorageConfiguration(new DataStorageConfiguration()
+        cfg.setDataStorageConfiguration(new TestDataStorageConfiguration()
             .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
                 .setMaxSize(200L * 1024 * 1024)
                 .setPersistenceEnabled(true)));

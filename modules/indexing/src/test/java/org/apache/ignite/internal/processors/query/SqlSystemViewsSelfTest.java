@@ -54,6 +54,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.configuration.TopologyValidator;
 import org.apache.ignite.internal.ClusterMetricsSnapshot;
 import org.apache.ignite.internal.IgniteEx;
@@ -1157,7 +1158,7 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
     @SuppressWarnings("ConstantConditions")
     @Test
     public void testCachesViews() throws Exception {
-        DataStorageConfiguration dsCfg = new DataStorageConfiguration()
+        DataStorageConfiguration dsCfg = new TestDataStorageConfiguration()
             .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setName("def").setPersistenceEnabled(true))
             .setDataRegionConfigurations(new DataRegionConfiguration().setName("dr1"),
                 new DataRegionConfiguration().setName("dr2"), new DataRegionConfiguration().setName("dr3"));
@@ -1567,7 +1568,7 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
         IgniteConfiguration cfg = getConfiguration();
 
         cfg.setDataStorageConfiguration(
-            new DataStorageConfiguration().setDefaultDataRegionConfiguration(new DataRegionConfiguration()
+            new TestDataStorageConfiguration().setDefaultDataRegionConfiguration(new DataRegionConfiguration()
                 .setMaxSize(100L * 1024L * 1024L).setPersistenceEnabled(true))
         );
 

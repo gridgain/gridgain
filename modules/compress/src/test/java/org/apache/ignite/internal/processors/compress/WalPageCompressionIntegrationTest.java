@@ -22,6 +22,7 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.DiskPageCompression;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.pagemem.wal.record.CheckpointRecord;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
@@ -36,7 +37,7 @@ import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 public class WalPageCompressionIntegrationTest extends AbstractPageCompressionIntegrationTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteName) throws Exception {
-        DataStorageConfiguration dsCfg = new DataStorageConfiguration()
+        DataStorageConfiguration dsCfg = new TestDataStorageConfiguration()
             .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true))
             .setWalPageCompression(compression)
             .setWalPageCompressionLevel(compressionLevel);

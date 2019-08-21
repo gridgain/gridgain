@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -429,7 +430,7 @@ public class IgniteWalIteratorSwitchSegmentTest extends GridCommonAbstractTest {
                 IgniteConfiguration cfg = super.prepareIgniteConfiguration();
 
                 cfg.setDataStorageConfiguration(
-                    new DataStorageConfiguration()
+                    new TestDataStorageConfiguration()
                         .setWalSegmentSize(SEGMENT_SIZE)
                         .setWalRecordIteratorBufferSize(SEGMENT_SIZE / 2)
                         .setWalMode(WALMode.FSYNC)

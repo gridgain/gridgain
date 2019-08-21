@@ -28,6 +28,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -59,7 +60,7 @@ public class IgniteCacheStartWithLoadTest extends GridCommonAbstractTest {
             .setDataRegionName("ds")
             .setAffinity(new RendezvousAffinityFunction(false, 32));
 
-        DataStorageConfiguration dsCfg = new DataStorageConfiguration()
+        DataStorageConfiguration dsCfg = new TestDataStorageConfiguration()
             .setDataRegionConfigurations(
                 new DataRegionConfiguration()
                     .setName("ds")

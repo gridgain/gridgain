@@ -20,6 +20,7 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.junit.Test;
 
 /**
@@ -32,7 +33,7 @@ public class RowCountTableStatisticsSurvivesNodeRestartTest extends TableStatist
 
         cfg.setConsistentId(igniteInstanceName);
 
-        DataStorageConfiguration memCfg = new DataStorageConfiguration()
+        DataStorageConfiguration memCfg = new TestDataStorageConfiguration()
             .setDefaultDataRegionConfiguration(
                 new DataRegionConfiguration()
                     .setPersistenceEnabled(true)

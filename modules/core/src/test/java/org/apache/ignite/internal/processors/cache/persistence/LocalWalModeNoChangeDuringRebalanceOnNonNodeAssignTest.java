@@ -25,6 +25,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.pagemem.wal.WALIterator;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
@@ -59,7 +60,7 @@ public class LocalWalModeNoChangeDuringRebalanceOnNonNodeAssignTest extends Grid
         cfg.setConsistentId(name);
 
         cfg.setDataStorageConfiguration(
-            new DataStorageConfiguration()
+            new TestDataStorageConfiguration()
                 .setWalPath(walPath(name))
                 .setWalArchivePath(walArchivePath(name))
                 .setDefaultDataRegionConfiguration(

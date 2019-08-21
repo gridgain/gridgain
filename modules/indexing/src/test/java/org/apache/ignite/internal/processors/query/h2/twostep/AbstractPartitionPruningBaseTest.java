@@ -31,8 +31,8 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxQueryEnlistRequest;
@@ -110,7 +110,7 @@ public abstract class AbstractPartitionPruningBaseTest extends GridCommonAbstrac
             .setDiscoverySpi(new TcpDiscoverySpi().setIpFinder(IP_FINDER))
             .setCommunicationSpi(new TrackingTcpCommunicationSpi())
             .setLocalHost("127.0.0.1")
-            .setDataStorageConfiguration(new DataStorageConfiguration()
+            .setDataStorageConfiguration(new TestDataStorageConfiguration()
                 .setDataRegionConfigurations(new DataRegionConfiguration()
                     .setName(REGION_DISK)
                     .setPersistenceEnabled(true))

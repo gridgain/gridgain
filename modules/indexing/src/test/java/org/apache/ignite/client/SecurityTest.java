@@ -26,8 +26,8 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.configuration.ClientConnectorConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.ssl.SslContextFactory;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -202,7 +202,7 @@ public class SecurityTest {
     private static Ignite igniteWithAuthentication(SimpleEntry<String, String>... users) throws Exception {
         Ignite ignite = Ignition.start(Config.getServerConfiguration()
             .setAuthenticationEnabled(true)
-            .setDataStorageConfiguration(new DataStorageConfiguration()
+            .setDataStorageConfiguration(new TestDataStorageConfiguration()
                 .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true))
             )
         );

@@ -29,6 +29,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.persistence.DbCheckpointListener;
@@ -64,7 +65,7 @@ public class IgnitePersistentStoreSchemaLoadTest extends GridCommonAbstractTest 
 
         cfg.setCacheConfiguration(cacheCfg(TMPL_NAME));
 
-        DataStorageConfiguration pCfg = new DataStorageConfiguration();
+        DataStorageConfiguration pCfg = new TestDataStorageConfiguration();
 
         pCfg.setDefaultDataRegionConfiguration(new DataRegionConfiguration()
             .setPersistenceEnabled(true)

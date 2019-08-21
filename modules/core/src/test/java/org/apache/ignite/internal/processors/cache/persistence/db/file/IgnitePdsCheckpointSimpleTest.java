@@ -22,6 +22,7 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.NotNull;
@@ -38,7 +39,7 @@ public class IgnitePdsCheckpointSimpleTest extends GridCommonAbstractTest {
 
         DataRegionConfiguration regCfg = new DataRegionConfiguration().setPersistenceEnabled(true);
 
-        DataStorageConfiguration dsCfg = new DataStorageConfiguration()
+        DataStorageConfiguration dsCfg = new TestDataStorageConfiguration()
             .setPageSize(4 * 1024)
             .setDefaultDataRegionConfiguration(regCfg)
             .setCheckpointFrequency(TimeUnit.SECONDS.toMillis(10));

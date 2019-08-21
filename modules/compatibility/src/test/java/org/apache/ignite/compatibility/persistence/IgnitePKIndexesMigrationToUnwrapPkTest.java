@@ -26,6 +26,7 @@ import org.apache.ignite.compatibility.testframework.junits.Dependency;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.GridCacheAbstractFullApiSelfTest;
 import org.apache.ignite.lang.IgniteInClosure;
@@ -245,7 +246,7 @@ public class IgnitePKIndexesMigrationToUnwrapPkTest extends IgnitePersistenceCom
 
             cfg.setPeerClassLoadingEnabled(false);
 
-            DataStorageConfiguration memCfg = new DataStorageConfiguration()
+            DataStorageConfiguration memCfg = new TestDataStorageConfiguration()
                 .setDefaultDataRegionConfiguration(
                     new DataRegionConfiguration().setPersistenceEnabled(true)
                         .setInitialSize(1024 * 1024 * 10).setMaxSize(1024 * 1024 * 15))

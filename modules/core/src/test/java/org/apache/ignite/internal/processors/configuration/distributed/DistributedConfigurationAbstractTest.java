@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.configuration.distributed;
 
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -59,7 +60,7 @@ public abstract class DistributedConfigurationAbstractTest extends GridCommonAbs
 
         cfg.setConsistentId(igniteInstanceName);
 
-        DataStorageConfiguration storageCfg = new DataStorageConfiguration();
+        DataStorageConfiguration storageCfg = new TestDataStorageConfiguration();
 
         storageCfg.getDefaultDataRegionConfiguration()
             .setPersistenceEnabled(isPersistent())

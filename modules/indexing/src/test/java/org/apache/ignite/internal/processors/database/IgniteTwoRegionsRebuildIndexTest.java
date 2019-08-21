@@ -22,6 +22,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -41,7 +42,7 @@ public class IgniteTwoRegionsRebuildIndexTest extends GridCommonAbstractTest {
 
         boolean client = igniteInstanceName.startsWith("client");
 
-        DataStorageConfiguration dsCfg = new DataStorageConfiguration();
+        DataStorageConfiguration dsCfg = new TestDataStorageConfiguration();
 
         if (!client) {
             DataRegionConfiguration drCfg1 = new DataRegionConfiguration();

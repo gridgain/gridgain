@@ -22,8 +22,8 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -56,7 +56,7 @@ public class ServiceDeploymentOutsideBaselineTest extends GridCommonAbstractTest
 
         if (persistence) {
             cfg.setDataStorageConfiguration(
-                new DataStorageConfiguration()
+                new TestDataStorageConfiguration()
                     .setDefaultDataRegionConfiguration(
                         new DataRegionConfiguration()
                             .setPersistenceEnabled(true)

@@ -58,6 +58,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.configuration.TransactionConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.failure.StopNodeFailureHandler;
@@ -189,7 +190,7 @@ public abstract class CacheMvccAbstractTest extends GridCommonAbstractTest {
         if (nodeAttr != null)
             cfg.setUserAttributes(F.asMap(nodeAttr, true));
 
-        DataStorageConfiguration storageCfg = new DataStorageConfiguration();
+        DataStorageConfiguration storageCfg = new TestDataStorageConfiguration();
 
         storageCfg.setWalMode(WALMode.LOG_ONLY);
         storageCfg.setPageSize(PAGE_SIZE);

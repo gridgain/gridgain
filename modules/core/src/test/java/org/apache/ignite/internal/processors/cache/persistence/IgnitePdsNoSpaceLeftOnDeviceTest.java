@@ -25,6 +25,7 @@ import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
@@ -44,7 +45,7 @@ public class IgnitePdsNoSpaceLeftOnDeviceTest extends GridCommonAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
 
-        final DataStorageConfiguration dataStorageConfiguration = new DataStorageConfiguration();
+        final DataStorageConfiguration dataStorageConfiguration = new TestDataStorageConfiguration();
 
         dataStorageConfiguration.getDefaultDataRegionConfiguration().setPersistenceEnabled(true).setMaxSize(1 << 24);
         dataStorageConfiguration.setFileIOFactory(new FailingFileIOFactory());

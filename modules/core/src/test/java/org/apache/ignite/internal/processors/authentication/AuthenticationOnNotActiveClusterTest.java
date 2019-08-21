@@ -17,8 +17,8 @@
 package org.apache.ignite.internal.processors.authentication;
 
 import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -43,7 +43,7 @@ public class AuthenticationOnNotActiveClusterTest extends GridCommonAbstractTest
 
         cfg.setAuthenticationEnabled(true);
 
-        cfg.setDataStorageConfiguration(new DataStorageConfiguration()
+        cfg.setDataStorageConfiguration(new TestDataStorageConfiguration()
             .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
                 .setMaxSize(200L * 1024 * 1024)
                 .setPersistenceEnabled(true)));

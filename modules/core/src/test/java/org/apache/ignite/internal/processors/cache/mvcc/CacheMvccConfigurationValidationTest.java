@@ -23,7 +23,6 @@ import javax.cache.Cache;
 import javax.cache.CacheException;
 import javax.cache.configuration.Factory;
 import javax.cache.expiry.ExpiryPolicy;
-
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -36,6 +35,7 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -149,7 +149,7 @@ public class CacheMvccConfigurationValidationTest extends GridCommonAbstractTest
         cleanPersistenceDir();
 
         //Enable persistence.
-        DataStorageConfiguration storageCfg = new DataStorageConfiguration();
+        DataStorageConfiguration storageCfg = new TestDataStorageConfiguration();
         DataRegionConfiguration regionCfg = new DataRegionConfiguration();
         regionCfg.setPersistenceEnabled(true);
         storageCfg.setDefaultDataRegionConfiguration(regionCfg);
@@ -197,7 +197,7 @@ public class CacheMvccConfigurationValidationTest extends GridCommonAbstractTest
         cleanPersistenceDir();
 
         //Enable persistence.
-        DataStorageConfiguration storageCfg = new DataStorageConfiguration();
+        DataStorageConfiguration storageCfg = new TestDataStorageConfiguration();
         DataRegionConfiguration regionCfg = new DataRegionConfiguration();
         regionCfg.setPersistenceEnabled(true);
         regionCfg.setPageEvictionMode(RANDOM_LRU);

@@ -29,6 +29,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
@@ -67,7 +68,7 @@ public class SlowHistoricalRebalanceSmallHistoryTest extends GridCommonAbstractT
         cfg.setConsistentId(name);
 
         cfg.setDataStorageConfiguration(
-            new DataStorageConfiguration()
+            new TestDataStorageConfiguration()
                 .setWalHistorySize(WAL_HISTORY_SIZE)
                 .setDefaultDataRegionConfiguration(
                     new DataRegionConfiguration()

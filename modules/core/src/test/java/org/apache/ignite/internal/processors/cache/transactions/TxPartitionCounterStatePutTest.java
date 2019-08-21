@@ -23,8 +23,8 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -71,7 +71,7 @@ public class TxPartitionCounterStatePutTest extends GridCommonAbstractTest {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         // Set mixed persistence + in-memory configuration.
-        cfg.setDataStorageConfiguration(new DataStorageConfiguration().
+        cfg.setDataStorageConfiguration(new TestDataStorageConfiguration().
             setWalSegmentSize(8 * MB).setWalMode(LOG_ONLY).setPageSize(1024).setCheckpointFrequency(10000000000L).
             setDataRegionConfigurations(new DataRegionConfiguration().setName("mem").setInitialSize(100 * MB).setMaxSize(100 * MB)).
             setDefaultDataRegionConfiguration(new DataRegionConfiguration().setName("dflt").setPersistenceEnabled(true).

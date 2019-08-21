@@ -16,21 +16,20 @@
 
 package org.apache.ignite.internal.processors.cache.distributed;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
-
-import java.util.ArrayList;
-import java.util.List;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_ENABLED;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
@@ -54,7 +53,7 @@ public class CachePartitionLostWhileClearingTest extends GridCommonAbstractTest 
         cfg.setConsistentId(igniteInstanceName);
 
         cfg.setDataStorageConfiguration(
-                new DataStorageConfiguration()
+                new TestDataStorageConfiguration()
                         .setWalMode(WALMode.LOG_ONLY)
                         .setWalSegmentSize(4 * 1024 * 1024)
                         .setDefaultDataRegionConfiguration(

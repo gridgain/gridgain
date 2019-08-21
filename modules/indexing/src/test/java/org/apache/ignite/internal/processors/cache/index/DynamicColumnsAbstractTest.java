@@ -33,6 +33,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryField;
@@ -173,7 +174,7 @@ public abstract class DynamicColumnsAbstractTest extends AbstractIndexingCommonT
     protected IgniteConfiguration commonConfiguration(int idx) throws Exception {
         IgniteConfiguration cfg = getConfiguration(getTestIgniteInstanceName(idx));
 
-        DataStorageConfiguration memCfg = new DataStorageConfiguration().setDefaultDataRegionConfiguration(
+        DataStorageConfiguration memCfg = new TestDataStorageConfiguration().setDefaultDataRegionConfiguration(
             new DataRegionConfiguration().setMaxSize(128L * 1024 * 1024));
 
         cfg.setDataStorageConfiguration(memCfg);

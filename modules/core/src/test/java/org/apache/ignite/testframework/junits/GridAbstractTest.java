@@ -65,6 +65,7 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.events.EventType;
 import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.failure.NoOpFailureHandler;
@@ -972,6 +973,9 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
                         throw new IgniteException(e);
                     }
                 }
+
+                if (cfg.getDataStorageConfiguration() == null)
+                    cfg.setDataStorageConfiguration(new TestDataStorageConfiguration());
 
                 Ignite node = IgnitionEx.start(cfg, ctx);
 

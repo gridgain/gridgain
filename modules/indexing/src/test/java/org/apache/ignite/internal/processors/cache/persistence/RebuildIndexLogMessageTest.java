@@ -25,8 +25,8 @@ import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
@@ -95,7 +95,7 @@ public class RebuildIndexLogMessageTest extends GridCommonAbstractTest implement
         return super.getConfiguration(igniteInstanceName)
             .setGridLogger(testLog)
             .setDataStorageConfiguration(
-                new DataStorageConfiguration()
+                new TestDataStorageConfiguration()
                     .setDefaultDataRegionConfiguration(
                         new DataRegionConfiguration()
                             .setPersistenceEnabled(true)

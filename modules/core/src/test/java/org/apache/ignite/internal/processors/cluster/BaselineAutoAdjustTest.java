@@ -29,6 +29,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.spi.IgniteSpiException;
@@ -86,7 +87,7 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
 
         cfg.setConsistentId(igniteInstanceName);
 
-        DataStorageConfiguration storageCfg = new DataStorageConfiguration();
+        DataStorageConfiguration storageCfg = new TestDataStorageConfiguration();
 
         storageCfg.getDefaultDataRegionConfiguration()
             .setPersistenceEnabled(isPersistent())
@@ -520,7 +521,7 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
     private IgniteConfiguration persistentRegionConfiguration(int id) throws Exception {
         IgniteConfiguration conf = getConfiguration(getTestIgniteInstanceName(id));
 
-        DataStorageConfiguration storageCfg = new DataStorageConfiguration();
+        DataStorageConfiguration storageCfg = new TestDataStorageConfiguration();
 
         storageCfg.getDefaultDataRegionConfiguration()
             .setPersistenceEnabled(false)

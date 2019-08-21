@@ -20,8 +20,8 @@ import java.io.Serializable;
 import java.util.regex.Pattern;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
@@ -67,7 +67,7 @@ public class ConsistentIdImplicitlyExplicitlyTest extends GridCommonAbstractTest
         return super.getConfiguration(igniteInstanceName)
             .setGridLogger(log)
             .setConsistentId(defConsistentId)
-            .setDataStorageConfiguration(new DataStorageConfiguration()
+            .setDataStorageConfiguration(new TestDataStorageConfiguration()
                 .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
                     .setPersistenceEnabled(persistenceEnabled)
                     .setMaxSize(200L * 1024 * 1024)));

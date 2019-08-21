@@ -26,6 +26,7 @@ import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -47,7 +48,7 @@ public class IgnitePersistentStoreQueryWithMultipleClassesPerCacheTest extends G
 
         cfg.setCacheConfiguration(cacheCfg(CACHE_NAME));
 
-        DataStorageConfiguration pCfg = new DataStorageConfiguration();
+        DataStorageConfiguration pCfg = new TestDataStorageConfiguration();
 
         pCfg.setCheckpointFrequency(1000);
 

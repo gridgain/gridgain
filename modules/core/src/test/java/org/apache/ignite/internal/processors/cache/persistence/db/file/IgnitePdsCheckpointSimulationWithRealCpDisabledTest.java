@@ -41,6 +41,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
@@ -117,7 +118,7 @@ public class IgnitePdsCheckpointSimulationWithRealCpDisabledTest extends GridCom
         cfg.setCacheConfiguration(ccfg, mvccCfg);
 
         cfg.setDataStorageConfiguration(
-            new DataStorageConfiguration()
+            new TestDataStorageConfiguration()
                 .setCheckpointFrequency(500)
                 .setWalMode(WALMode.LOG_ONLY)
                 .setAlwaysWriteFullPages(true)

@@ -37,6 +37,7 @@ import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
@@ -162,7 +163,7 @@ public abstract class GridCommandHandlerAbstractTest extends GridCommonAbstractT
 
         cfg.setConnectorConfiguration(new ConnectorConfiguration());
 
-        DataStorageConfiguration memCfg = new DataStorageConfiguration()
+        DataStorageConfiguration memCfg = new TestDataStorageConfiguration()
             .setCheckpointFrequency(checkpointFreq)
             .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setMaxSize(50L * 1024 * 1024));
 

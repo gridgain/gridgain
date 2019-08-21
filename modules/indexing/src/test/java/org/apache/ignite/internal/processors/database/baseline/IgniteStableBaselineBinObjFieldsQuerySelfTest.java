@@ -16,8 +16,8 @@
 package org.apache.ignite.internal.processors.database.baseline;
 
 import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.processors.cache.IgniteBinaryObjectFieldsQuerySelfTest;
 
 /**
@@ -29,7 +29,7 @@ public class IgniteStableBaselineBinObjFieldsQuerySelfTest extends IgniteBinaryO
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         cfg.setDataStorageConfiguration(
-            new DataStorageConfiguration()
+            new TestDataStorageConfiguration()
                 .setDefaultDataRegionConfiguration(
                     new DataRegionConfiguration()
                         .setMaxSize(200L * 1024 * 1024)

@@ -24,6 +24,7 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.GridCacheAbstractFullApiSelfTest;
@@ -60,7 +61,7 @@ public class GridActivateExtensionTest extends GridCacheAbstractFullApiSelfTest 
         cfg.setConsistentId("ConsId" + (condId++));
         ((TcpDiscoverySpi)cfg.getDiscoverySpi()).setIpFinder(primaryIpFinder);
 
-        DataStorageConfiguration pCfg = new DataStorageConfiguration();
+        DataStorageConfiguration pCfg = new TestDataStorageConfiguration();
 
         pCfg.setStoragePath(testName + "/db");
         pCfg.setWalArchivePath(testName + "/db/wal/archive");

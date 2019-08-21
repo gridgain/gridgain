@@ -25,6 +25,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -51,7 +52,7 @@ public class GridMarshallerMappingConsistencyTest extends GridCommonAbstractTest
         DataRegionConfiguration drCfg = new DataRegionConfiguration();
         drCfg.setPersistenceEnabled(true).setMaxSize(DataStorageConfiguration.DFLT_DATA_REGION_INITIAL_SIZE);
 
-        DataStorageConfiguration dsCfg = new DataStorageConfiguration();
+        DataStorageConfiguration dsCfg = new TestDataStorageConfiguration();
         dsCfg.setDefaultDataRegionConfiguration(drCfg);
 
         igniteCfg.setDataStorageConfiguration(dsCfg);

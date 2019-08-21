@@ -26,6 +26,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -80,7 +81,7 @@ public class IgniteWalRecoveryPPCTest extends GridCommonAbstractTest {
 
         cfg.setCacheConfiguration(ccfg, ccfg2);
 
-        DataStorageConfiguration dbCfg = new DataStorageConfiguration();
+        DataStorageConfiguration dbCfg = new TestDataStorageConfiguration();
         dbCfg.setPageSize(4 * 1024);
 
         DataRegionConfiguration memPlcCfg = new DataRegionConfiguration();

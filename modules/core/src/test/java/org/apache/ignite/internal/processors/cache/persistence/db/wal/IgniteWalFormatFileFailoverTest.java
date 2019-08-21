@@ -27,6 +27,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.failure.TestFailureHandler;
@@ -78,7 +79,7 @@ public class IgniteWalFormatFileFailoverTest extends GridCommonAbstractTest {
         cfg.setCacheConfiguration(new CacheConfiguration(TEST_CACHE)
             .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL));
 
-        DataStorageConfiguration memCfg = new DataStorageConfiguration()
+        DataStorageConfiguration memCfg = new TestDataStorageConfiguration()
             .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
                 .setMaxSize(2048L * 1024 * 1024)
                 .setPersistenceEnabled(true))

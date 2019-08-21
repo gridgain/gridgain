@@ -22,6 +22,7 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -36,7 +37,7 @@ public class IgniteCheckClusterStateBeforeExecuteQueryTest extends GridCommonAbs
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
 
-        DataStorageConfiguration pCfg = new DataStorageConfiguration();
+        DataStorageConfiguration pCfg = new TestDataStorageConfiguration();
 
         pCfg.setDefaultDataRegionConfiguration(new DataRegionConfiguration()
             .setPersistenceEnabled(true)

@@ -27,6 +27,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
@@ -50,7 +51,7 @@ public abstract class WalDeletionArchiveAbstractTest extends GridCommonAbstractT
     private Ignite startGrid(Consumer<DataStorageConfiguration> customConfigurator) throws Exception {
         IgniteConfiguration configuration = getConfiguration(getTestIgniteInstanceName());
 
-        DataStorageConfiguration dbCfg = new DataStorageConfiguration();
+        DataStorageConfiguration dbCfg = new TestDataStorageConfiguration();
 
         dbCfg.setWalMode(walMode());
         dbCfg.setWalSegmentSize(512 * 1024);
@@ -104,7 +105,7 @@ public abstract class WalDeletionArchiveAbstractTest extends GridCommonAbstractT
         //given: wal history size and max wal archive size are both set.
         IgniteConfiguration configuration = getConfiguration(getTestIgniteInstanceName());
 
-        DataStorageConfiguration dbCfg = new DataStorageConfiguration();
+        DataStorageConfiguration dbCfg = new TestDataStorageConfiguration();
         dbCfg.setWalHistorySize(12);
         dbCfg.setMaxWalArchiveSize(9);
         configuration.setDataStorageConfiguration(dbCfg);

@@ -18,8 +18,8 @@ package org.apache.ignite.internal.processors.security;
 
 import java.util.Arrays;
 import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.security.impl.TestSecurityData;
 import org.apache.ignite.internal.processors.security.impl.TestSecurityPluginConfiguration;
@@ -53,7 +53,7 @@ public class AbstractSecurityTest extends GridCommonAbstractTest {
 
         return getConfiguration(instanceName)
             .setDataStorageConfiguration(
-                new DataStorageConfiguration()
+                new TestDataStorageConfiguration()
                     .setDefaultDataRegionConfiguration(
                         new DataRegionConfiguration().setPersistenceEnabled(true)
                     )

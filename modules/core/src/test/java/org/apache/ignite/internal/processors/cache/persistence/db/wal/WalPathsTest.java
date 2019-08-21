@@ -20,6 +20,7 @@ import java.io.File;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -46,7 +47,7 @@ public class WalPathsTest extends GridCommonAbstractTest {
     private IgniteConfiguration getConfig(boolean relativePath) throws Exception {
         IgniteConfiguration cfg = getConfiguration();
 
-        DataStorageConfiguration dsCfg = new DataStorageConfiguration();
+        DataStorageConfiguration dsCfg = new TestDataStorageConfiguration();
 
         dsCfg.setDefaultDataRegionConfiguration(new DataRegionConfiguration()
             .setPersistenceEnabled(true)

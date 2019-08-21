@@ -35,7 +35,12 @@ import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
-import org.apache.ignite.configuration.*;
+import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
+import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
@@ -88,7 +93,7 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         cfg.setDataStorageConfiguration(
-            new DataStorageConfiguration()
+            new TestDataStorageConfiguration()
                 .setDefaultDataRegionConfiguration(
                     new DataRegionConfiguration()
                         .setPersistenceEnabled(true)
@@ -98,7 +103,7 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
                 // Test verifies checkpoint count, so it is essencial that no checkpoint is triggered by timeout
                 .setCheckpointFrequency(999_999_999_999L)
                 .setWalMode(WALMode.LOG_ONLY)
-                .setFileIOFactory(new TestFileIOFactory(new DataStorageConfiguration().getFileIOFactory()))
+                .setFileIOFactory(new TestFileIOFactory(new TestDataStorageConfiguration().getFileIOFactory()))
         );
 
         cfg.setCacheConfiguration(

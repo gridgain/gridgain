@@ -36,6 +36,7 @@ import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.commandline.CommandHandler;
 import org.apache.ignite.internal.commandline.cache.argument.FindAndDeleteGarbageArg;
@@ -80,7 +81,7 @@ public class IgniteCacheGroupsWithRestartsTest extends GridCommonAbstractTest {
 
         configuration.setConnectorConfiguration(new ConnectorConfiguration());
 
-        DataStorageConfiguration cfg = new DataStorageConfiguration();
+        DataStorageConfiguration cfg = new TestDataStorageConfiguration();
 
         cfg.setDefaultDataRegionConfiguration(new DataRegionConfiguration()
             .setPersistenceEnabled(true)

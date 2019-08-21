@@ -31,6 +31,7 @@ import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
@@ -78,7 +79,7 @@ public class CorruptedTreeFailureHandlingTest extends GridCommonAbstractTest imp
 
         cfg.setConsistentId(gridName);
 
-        DataStorageConfiguration dataStorageConfiguration = new DataStorageConfiguration();
+        DataStorageConfiguration dataStorageConfiguration = new TestDataStorageConfiguration();
 
         dataStorageConfiguration.getDefaultDataRegionConfiguration().setPersistenceEnabled(true);
         dataStorageConfiguration.setFileIOFactory(new CollectLinkFileIOFactory());

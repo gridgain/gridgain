@@ -25,6 +25,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
@@ -47,7 +48,7 @@ public class IgnitePdsPartitionsStateRecoveryTest extends GridCommonAbstractTest
 
         cfg.setConsistentId(igniteInstanceName);
 
-        DataStorageConfiguration dsCfg = new DataStorageConfiguration()
+        DataStorageConfiguration dsCfg = new TestDataStorageConfiguration()
             .setWalMode(WALMode.LOG_ONLY)
             .setWalSegmentSize(16 * 1024 * 1024)
             .setCheckpointFrequency(20 * 60 * 1000)

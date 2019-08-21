@@ -21,8 +21,8 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.lang.IgniteBiTuple;
@@ -40,7 +40,7 @@ public class IgnitePdsCacheObjectBinaryProcessorOnDiscoveryTest extends GridComm
         if ("client".equals(igniteInstanceName))
             cfg.setClientMode(true).setFailureHandler(new StopNodeFailureHandler());
 
-        return cfg.setDataStorageConfiguration(new DataStorageConfiguration()
+        return cfg.setDataStorageConfiguration(new TestDataStorageConfiguration()
                         .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
                                 .setPersistenceEnabled(true)));
     }

@@ -33,6 +33,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.failure.AbstractFailureHandler;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
@@ -98,7 +99,7 @@ public class IgnitePdsTaskCancelingTest extends GridCommonAbstractTest {
      * Default data storage configuration.
      */
     private DataStorageConfiguration getDataStorageConfiguration() {
-        DataStorageConfiguration dbCfg = new DataStorageConfiguration();
+        DataStorageConfiguration dbCfg = new TestDataStorageConfiguration();
 
         dbCfg.setPageSize(PAGE_SIZE);
 

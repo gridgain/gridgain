@@ -25,6 +25,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -78,7 +79,7 @@ public class CacheRentingStateRepairTest extends GridCommonAbstractTest {
 
         long sz = 100 * 1024 * 1024;
 
-        DataStorageConfiguration memCfg = new DataStorageConfiguration().setPageSize(1024)
+        DataStorageConfiguration memCfg = new TestDataStorageConfiguration().setPageSize(1024)
             .setDefaultDataRegionConfiguration(
                 new DataRegionConfiguration().setPersistenceEnabled(true).setInitialSize(sz).setMaxSize(sz))
             .setWalSegmentSize(8 * 1024 * 1024)

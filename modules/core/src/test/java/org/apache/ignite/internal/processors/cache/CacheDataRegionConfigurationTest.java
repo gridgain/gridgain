@@ -23,6 +23,7 @@ import org.apache.ignite.configuration.DataPageEvictionMode;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.mem.IgniteOutOfMemoryException;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -192,7 +193,7 @@ public class CacheDataRegionConfigurationTest extends GridCommonAbstractTest {
         // Enabling the swap space.
         invCfg.setSwapPath("/path/to/some/directory");
 
-        memCfg = new DataStorageConfiguration();
+        memCfg = new TestDataStorageConfiguration();
         memCfg.setDataRegionConfigurations(invCfg);
 
         ccfg = new CacheConfiguration(DEFAULT_CACHE_NAME);

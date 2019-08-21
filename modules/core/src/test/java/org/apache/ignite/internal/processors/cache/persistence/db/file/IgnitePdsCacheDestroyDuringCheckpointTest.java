@@ -25,6 +25,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.testframework.GridTestUtils.SF;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -62,7 +63,7 @@ public class IgnitePdsCacheDestroyDuringCheckpointTest extends GridCommonAbstrac
      * @return DB config.
      */
     private DataStorageConfiguration createDbConfig() {
-        DataStorageConfiguration storageCfg = new DataStorageConfiguration();
+        DataStorageConfiguration storageCfg = new TestDataStorageConfiguration();
         storageCfg.setCheckpointFrequency(300);
 
         storageCfg.setDefaultDataRegionConfiguration(

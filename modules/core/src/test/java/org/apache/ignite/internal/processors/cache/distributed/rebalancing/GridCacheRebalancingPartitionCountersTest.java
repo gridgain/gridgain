@@ -27,8 +27,8 @@ import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
@@ -54,7 +54,7 @@ public class GridCacheRebalancingPartitionCountersTest extends GridCommonAbstrac
         return super.getConfiguration(igniteInstanceName)
                 .setConsistentId(igniteInstanceName)
                 .setDataStorageConfiguration(
-                    new DataStorageConfiguration()
+                    new TestDataStorageConfiguration()
                         .setCheckpointFrequency(3_000)
                         .setDefaultDataRegionConfiguration(
                             new DataRegionConfiguration()

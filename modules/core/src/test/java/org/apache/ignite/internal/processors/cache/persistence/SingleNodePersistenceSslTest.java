@@ -17,8 +17,8 @@
 package org.apache.ignite.internal.processors.cache.persistence;
 
 import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -34,7 +34,7 @@ public class SingleNodePersistenceSslTest extends GridCommonAbstractTest {
             .setSslContextFactory(GridTestUtils.sslFactory())
             .setFailureHandler(new StopNodeFailureHandler())
             .setDataStorageConfiguration(
-                new DataStorageConfiguration().setDefaultDataRegionConfiguration(
+                new TestDataStorageConfiguration().setDefaultDataRegionConfiguration(
                     new DataRegionConfiguration().setPersistenceEnabled(true)
                 )
             );

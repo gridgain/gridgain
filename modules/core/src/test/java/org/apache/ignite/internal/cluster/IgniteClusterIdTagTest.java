@@ -23,6 +23,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.events.ClusterTagUpdatedEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.EventType;
@@ -59,7 +60,7 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
         if (igniteInstanceName.contains("client"))
             cfg.setClientMode(true);
         else {
-            DataStorageConfiguration dsCfg = new DataStorageConfiguration()
+            DataStorageConfiguration dsCfg = new TestDataStorageConfiguration()
                 .setDefaultDataRegionConfiguration(
                     new DataRegionConfiguration()
                         .setInitialSize(128 * 1024 * 1024)

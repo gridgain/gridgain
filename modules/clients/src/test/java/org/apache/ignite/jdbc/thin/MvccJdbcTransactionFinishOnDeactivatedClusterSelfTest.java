@@ -23,8 +23,8 @@ import java.util.Collections;
 import java.util.concurrent.CountDownLatch;
 import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.client.GridClient;
@@ -52,7 +52,7 @@ public class MvccJdbcTransactionFinishOnDeactivatedClusterSelfTest extends GridC
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
             .setConnectorConfiguration(new ConnectorConfiguration())
-            .setDataStorageConfiguration(new DataStorageConfiguration().setDefaultDataRegionConfiguration(
+            .setDataStorageConfiguration(new TestDataStorageConfiguration().setDefaultDataRegionConfiguration(
                 new DataRegionConfiguration().setPersistenceEnabled(true))
             );
     }

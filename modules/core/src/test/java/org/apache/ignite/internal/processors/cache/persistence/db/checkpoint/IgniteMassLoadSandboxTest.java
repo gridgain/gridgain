@@ -45,6 +45,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager;
@@ -118,7 +119,7 @@ public class IgniteMassLoadSandboxTest extends GridCommonAbstractTest {
             .setMaxSize(2 * 1024L * 1024 * 1024)
             .setPersistenceEnabled(true);
 
-        DataStorageConfiguration dsCfg = new DataStorageConfiguration();
+        DataStorageConfiguration dsCfg = new TestDataStorageConfiguration();
 
         dsCfg.setDefaultDataRegionConfiguration(regCfg)
             .setPageSize(4 * 1024)

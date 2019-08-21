@@ -19,6 +19,7 @@ package org.apache.ignite.internal.visor;
 import java.util.UUID;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.visor.node.VisorCacheRebalanceCollectorTask;
@@ -61,7 +62,7 @@ public class VisorCacheRebalanceCollectorTaskSelfTest extends GridCommonAbstract
 
         cfg.setConsistentId(igniteInstanceName);
 
-        DataStorageConfiguration storageCfg = new DataStorageConfiguration();
+        DataStorageConfiguration storageCfg = new TestDataStorageConfiguration();
 
         storageCfg.setPageSize(1024).setWalMode(LOG_ONLY).setWalSegmentSize(8 * 1024 * 1024);
 

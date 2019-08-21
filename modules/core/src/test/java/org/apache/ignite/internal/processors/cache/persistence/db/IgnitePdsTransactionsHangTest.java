@@ -35,6 +35,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.configuration.TransactionConfiguration;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -119,7 +120,7 @@ public class IgnitePdsTransactionsHangTest extends GridCommonAbstractTest {
         memPlcCfg.setMaxSize(PAGE_CACHE_SIZE);
         memPlcCfg.setPersistenceEnabled(true);
 
-        DataStorageConfiguration memCfg = new DataStorageConfiguration();
+        DataStorageConfiguration memCfg = new TestDataStorageConfiguration();
 
         memCfg.setDefaultDataRegionConfiguration(memPlcCfg);
         memCfg.setWalHistorySize(1);

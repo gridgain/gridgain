@@ -25,6 +25,7 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -75,7 +76,7 @@ public class FailureHandlingConfigurationTest extends GridCommonAbstractTest {
         DataRegionConfiguration drCfg = new DataRegionConfiguration();
         drCfg.setPersistenceEnabled(true);
 
-        DataStorageConfiguration dsCfg = new DataStorageConfiguration();
+        DataStorageConfiguration dsCfg = new TestDataStorageConfiguration();
         dsCfg.setDefaultDataRegionConfiguration(drCfg);
 
         if (checkpointReadLockTimeout != null)

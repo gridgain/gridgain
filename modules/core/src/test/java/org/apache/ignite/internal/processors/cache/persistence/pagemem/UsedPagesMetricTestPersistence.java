@@ -16,8 +16,8 @@
 package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 
 import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -39,7 +39,7 @@ public class UsedPagesMetricTestPersistence extends UsedPagesMetricAbstractTest 
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
             .setDataStorageConfiguration(
-                new DataStorageConfiguration().setDefaultDataRegionConfiguration(
+                new TestDataStorageConfiguration().setDefaultDataRegionConfiguration(
                     new DataRegionConfiguration()
                         .setPersistenceEnabled(true)
                         .setInitialSize(100 * 1024L * 1024L)

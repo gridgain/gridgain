@@ -41,6 +41,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
@@ -119,7 +120,7 @@ public abstract class AbstractSchemaSelfTest extends AbstractIndexingCommonTest 
 
         cfg.setMarshaller(new BinaryMarshaller());
 
-        DataStorageConfiguration memCfg = new DataStorageConfiguration().setDefaultDataRegionConfiguration(
+        DataStorageConfiguration memCfg = new TestDataStorageConfiguration().setDefaultDataRegionConfiguration(
             new DataRegionConfiguration().setMaxSize(128 * 1024 * 1024));
 
         cfg.setDataStorageConfiguration(memCfg);

@@ -29,8 +29,8 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
@@ -65,7 +65,7 @@ public class IgnitePdsCacheConfigurationFileConsistencyCheckTest extends GridCom
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        return cfg.setDataStorageConfiguration(new DataStorageConfiguration()
+        return cfg.setDataStorageConfiguration(new TestDataStorageConfiguration()
                         .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
                                 .setMaxSize(200 * 1024 * 1024)
                                 .setPersistenceEnabled(true)));

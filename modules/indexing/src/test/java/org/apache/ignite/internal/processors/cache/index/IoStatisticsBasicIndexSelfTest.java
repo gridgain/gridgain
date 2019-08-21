@@ -35,8 +35,8 @@ import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.metric.IoStatisticsType;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
@@ -97,7 +97,7 @@ public class IoStatisticsBasicIndexSelfTest extends AbstractIndexingCommonTest {
 
         igniteCfg.setCacheConfiguration(ccfg);
 
-        igniteCfg.setDataStorageConfiguration(new DataStorageConfiguration()
+        igniteCfg.setDataStorageConfiguration(new TestDataStorageConfiguration()
             .setDefaultDataRegionConfiguration(
                 new DataRegionConfiguration().setPersistenceEnabled(true)
             )

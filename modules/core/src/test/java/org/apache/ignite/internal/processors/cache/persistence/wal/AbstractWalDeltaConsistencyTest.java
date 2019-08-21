@@ -21,6 +21,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.failure.FailureType;
@@ -83,7 +84,7 @@ public abstract class AbstractWalDeltaConsistencyTest extends GridCommonAbstract
      * @return Data storage configuration used for starting of grid.
      */
     protected DataStorageConfiguration getDataStorageConfiguration() {
-        return new DataStorageConfiguration()
+        return new TestDataStorageConfiguration()
             .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
                 .setInitialSize(256 * 1024 * 1024)
                 .setMaxSize(256 * 1024 * 1024)

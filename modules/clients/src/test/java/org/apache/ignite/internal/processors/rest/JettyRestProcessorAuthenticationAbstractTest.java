@@ -16,11 +16,12 @@
 
 package org.apache.ignite.internal.processors.rest;
 
-import java.util.concurrent.Callable;
 import com.fasterxml.jackson.databind.JsonNode;
+import java.util.concurrent.Callable;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.processors.authentication.IgniteAccessControlException;
 import org.apache.ignite.internal.processors.authentication.IgniteAuthenticationProcessor;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -66,7 +67,7 @@ public abstract class JettyRestProcessorAuthenticationAbstractTest extends Jetty
         cfg.setAuthenticationEnabled(true);
 
         // For now persistence is needed because of current authentication implementation.
-        DataStorageConfiguration dsCfg = new DataStorageConfiguration()
+        DataStorageConfiguration dsCfg = new TestDataStorageConfiguration()
             .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
                 .setMaxSize(100 * 1024 * 1024))
             .setWalMode(NONE);

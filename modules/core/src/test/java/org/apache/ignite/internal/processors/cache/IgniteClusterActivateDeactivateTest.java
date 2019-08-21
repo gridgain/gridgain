@@ -32,6 +32,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteClientReconnectAbstractTest;
 import org.apache.ignite.internal.IgniteEx;
@@ -114,7 +115,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
             ccfgs = null;
         }
 
-        DataStorageConfiguration memCfg = new DataStorageConfiguration();
+        DataStorageConfiguration memCfg = new TestDataStorageConfiguration();
         memCfg.setDefaultDataRegionConfiguration(new DataRegionConfiguration()
             .setMaxSize(150L * 1024 * 1024)
             .setPersistenceEnabled(persistenceEnabled()));

@@ -42,10 +42,10 @@ import org.apache.ignite.cache.store.CacheStoreAdapter;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.IgniteReflectionFactory;
 import org.apache.ignite.configuration.NearCacheConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -148,7 +148,7 @@ public class DataStreamProcessorSelfTest extends GridCommonAbstractTest {
             cfg.setCacheConfiguration(cc);
 
             if (persistenceEnabled())
-                cfg.setDataStorageConfiguration(new DataStorageConfiguration()
+                cfg.setDataStorageConfiguration(new TestDataStorageConfiguration()
                     .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
                             .setPersistenceEnabled(true))
                     .setWalMode(WALMode.LOG_ONLY));

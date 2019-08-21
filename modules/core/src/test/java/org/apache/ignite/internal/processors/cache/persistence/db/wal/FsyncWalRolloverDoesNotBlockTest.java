@@ -17,8 +17,8 @@
 package org.apache.ignite.internal.processors.cache.persistence.db.wal;
 
 import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.pagemem.wal.record.CheckpointRecord;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -41,7 +41,7 @@ public class FsyncWalRolloverDoesNotBlockTest extends GridCommonAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String name) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(name);
 
-        cfg.setDataStorageConfiguration(new DataStorageConfiguration()
+        cfg.setDataStorageConfiguration(new TestDataStorageConfiguration()
             .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true))
             .setWalMode(FSYNC)
             .setWalArchivePath(DFLT_WAL_PATH));

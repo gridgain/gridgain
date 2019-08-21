@@ -25,8 +25,8 @@ import javax.management.ObjectName;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.mxbean.ClusterMetricsMXBean;
@@ -137,7 +137,7 @@ public class ClusterBaselineNodesMetricsSelfTest extends GridCommonAbstractTest 
         String storePath = getClass().getSimpleName().toLowerCase() + "/" + getName();
 
         cfg.setDataStorageConfiguration(
-            new DataStorageConfiguration()
+            new TestDataStorageConfiguration()
                 .setWalMode(WALMode.LOG_ONLY)
                 .setStoragePath(storePath)
                 .setWalPath(storePath + "/wal")

@@ -41,6 +41,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.IgniteEx;
@@ -165,7 +166,7 @@ public class CacheGroupMetricsTest extends GridCommonAbstractTest implements Ser
         cfg.setCacheConfiguration(cCfg1, cCfg2, cCfg3, cCfg4);
 
         if (pds) {
-            cfg.setDataStorageConfiguration(new DataStorageConfiguration()
+            cfg.setDataStorageConfiguration(new TestDataStorageConfiguration()
                 .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
                     .setPersistenceEnabled(true)
                     .setMaxSize(DataStorageConfiguration.DFLT_DATA_REGION_INITIAL_SIZE)

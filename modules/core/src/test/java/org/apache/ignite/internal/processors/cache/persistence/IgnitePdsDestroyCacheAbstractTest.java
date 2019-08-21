@@ -24,8 +24,8 @@ import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.processors.cache.GatewayProtectedCacheProxy;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -47,7 +47,7 @@ public abstract class IgnitePdsDestroyCacheAbstractTest extends GridCommonAbstra
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        return cfg.setDataStorageConfiguration(new DataStorageConfiguration()
+        return cfg.setDataStorageConfiguration(new TestDataStorageConfiguration()
                             .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
                                 .setMaxSize(200 * 1024 * 1024)
                                 .setPersistenceEnabled(true)));
