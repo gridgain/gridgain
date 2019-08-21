@@ -65,6 +65,7 @@ public interface FileHandleManager {
      * @param explicitFsync {@code true} if fsync required.
      * @throws IgniteCheckedException if fail.
      * @throws StorageException if storage was fail.
+     * @return Flushed pointer. May be greater than or equal to a ptr.
      */
     WALPointer flush(WALPointer ptr, boolean explicitFsync) throws IgniteCheckedException, StorageException;
 }

@@ -2177,13 +2177,13 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             return lastFlushPtr;
 
         if (lastFlushPtr == null && lastReadPtr != null)
-            return lastFlushPtr;
+            return lastReadPtr;
 
         if (lastFlushPtr != null && lastReadPtr != null) {
-            FileWALPointer ptr0 = (FileWALPointer)lastFlushPtr;
-            FileWALPointer lastReadPointer0 = (FileWALPointer)lastReadPtr;
+            FileWALPointer lastFlushPtr0 = (FileWALPointer)lastFlushPtr;
+            FileWALPointer lastReadPtr0 = (FileWALPointer)lastReadPtr;
 
-            return lastReadPointer0.compareTo(ptr0) >= 0 ? lastReadPtr : ptr0;
+            return lastReadPtr0.compareTo(lastFlushPtr0) >= 0 ? lastReadPtr : lastFlushPtr0;
         }
 
         return null;
