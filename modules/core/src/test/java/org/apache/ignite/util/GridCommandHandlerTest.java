@@ -234,7 +234,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerAbstractTest {
 
         assertEquals(EXIT_CODE_OK, execute("--change-tag", newTag));
 
-        assertEquals(newTag, cl.cluster().tag());
+        boolean tagUpdated = GridTestUtils.waitForCondition(() -> newTag.equals(cl.cluster().tag()), 10_000);
+        assertTrue("Tag has not been updated in 10 seconds", tagUpdated);
     }
 
     /**
