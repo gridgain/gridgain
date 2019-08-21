@@ -20,6 +20,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
@@ -42,13 +44,31 @@ public class NativeSqlMixedDateInlineBenchmark extends IgniteAbstractBenchmark {
     /** Dummy counter, just for possible jvm optimisation disable purpose. */
     private long resCount;
 
+    /** */
+    private Map<Long, Integer> chunk = new ConcurrentHashMap<>();
+
+    /** */
+    private AtomicInteger pos = new AtomicInteger(1);
+
+    /**
+     * @param tid Thread id.
+     */
+    private Integer getGroupNumber(long tid) {
+        Integer part = chunk.get(tid);
+
+        if (part == null)
+            return chunk.computeIfAbsent(tid, k -> pos.getAndIncrement());
+
+        return part;
+    }
+
     /**
      * Benchmarked action that inserts and immediately deletes row.
      *
      * {@inheritDoc}
      */
     @Override public boolean test(Map<Object, Object> ctx) throws Exception {
-        long insertKey = nextRandom(args.range()) + 1 + args.range();
+        long insertKey = getGroupNumber(Thread.currentThread().getId()) * args.range() + 1 + nextRandom(args.range());
 
         String insertQry = String.format("INSERT INTO %s VALUES (?, ?, ?, ?)", TBL_NAME);
 
@@ -93,8 +113,7 @@ public class NativeSqlMixedDateInlineBenchmark extends IgniteAbstractBenchmark {
             resCount += delCur2.getAll().size();
         }
         catch (Exception e) {
-            if (!(e instanceof TransactionDuplicateKeyException))
-                BenchmarkUtils.error("error: ", e);
+            BenchmarkUtils.error("error: ", e);
         }
 
         return true;
