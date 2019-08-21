@@ -20,24 +20,37 @@ import java.util.Iterator;
 import java.util.List;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
-import org.jetbrains.annotations.NotNull;
+import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.lang.IgniteInClosure;
 
 /**
  * TODO: Add class description.
  */
 public class ProjectOp extends PhysicalOperator {
 
-    private final PhysicalOperator rowsSrc;
     private final List<RexNode> projects;
 
     public ProjectOp(PhysicalOperator rowsSrc, List<RexNode> projects) {
-        this.rowsSrc = rowsSrc;
         this.projects = projects;
+
+        rowsSrc.listen(new IgniteInClosure<IgniteInternalFuture<List<List<?>>>>() {
+            @Override public void apply(IgniteInternalFuture<List<List<?>>> fut) {
+                try {
+                    List<List<?>> input = fut.get();
+
+                    execute(input);
+                }
+                catch (IgniteCheckedException e) {
+                    onDone(e);
+                }
+            }
+        });
     }
 
-    @NotNull @Override public Iterator<List<?>> iterator() {
-        Iterator<List<?>> srcIter = rowsSrc.iterator();
+    @Override public Iterator<List<?>> iterator(List<List<?>> ... input) {
+        Iterator<List<?>> srcIter = input[0].iterator();
         return new Iterator<List<?>>() {
             @Override public boolean hasNext() {
                 return srcIter.hasNext(); // TODO: CODE: implement.

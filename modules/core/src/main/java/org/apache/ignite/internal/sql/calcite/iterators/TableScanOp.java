@@ -39,9 +39,11 @@ public class TableScanOp extends PhysicalOperator {
     public TableScanOp(IgniteTable tbl, IgniteInternalCache cache) {
         this.tbl = tbl;
         this.cache = cache;
+
+        execute(null);
     }
 
-    @Override public Iterator<List<?>> iterator() {
+    @Override public Iterator<List<?>> iterator(List<List<?>> ... input) {
         try {
             Iterator<Cache.Entry<Object, BinaryObject>> it = cache.scanIterator(true, null);
 

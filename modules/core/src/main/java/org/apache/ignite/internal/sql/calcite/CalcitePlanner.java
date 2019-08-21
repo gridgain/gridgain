@@ -97,7 +97,6 @@ import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.calcite.sql2rel.StandardConvertletTable;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.sql.calcite.iterators.PhysicalOperator;
 import org.apache.ignite.internal.sql.calcite.plan.PlanSplitter;
 import org.apache.ignite.internal.sql.calcite.plan.PlanStep;
 import org.apache.ignite.internal.sql.calcite.rels.IgniteRel;
@@ -222,7 +221,7 @@ public class CalcitePlanner {
 
     }
 
-    public PhysicalOperator createPlan(String sql) {
+    public List<PlanStep> plan(String sql) {
         SqlNode sqlAst = parse(sql);
 
         SqlNode validatedSqlAst = validate(sqlAst);
@@ -231,7 +230,7 @@ public class CalcitePlanner {
         System.out.println("Initial logical plan:\n" + RelOptUtil.toString(logicalPlan));
 
         RelNode rewrittenPlan = rewritePlan(logicalPlan);
-        System.out.println("Rewritten logical plan:\n" + RelOptUtil.toString(rewrittenPlan));
+        //System.out.println("Rewritten logical plan:\n" + RelOptUtil.toString(rewrittenPlan));
 
         IgniteRel optimalPlan = optimizePlan(rewrittenPlan);
         System.out.println("Optimal plan:\n" + RelOptUtil.toString(optimalPlan, SqlExplainLevel.ALL_ATTRIBUTES));
@@ -246,10 +245,7 @@ public class CalcitePlanner {
 
         printMultiStepPlan(multiStepPlan);
 
-        // TODO replace with a visitor
-        PhysicalOperator physicalOperator = null; //convertToPhysical(optimalPlan);
-
-        return physicalOperator;
+        return multiStepPlan;
     }
 
     private void printMultiStepPlan(List<PlanStep> multiStepPlan) {

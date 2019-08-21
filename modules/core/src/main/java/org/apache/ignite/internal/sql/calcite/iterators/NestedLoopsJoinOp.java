@@ -22,8 +22,11 @@ import java.util.NoSuchElementException;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.util.ImmutableIntList;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.sql.calcite.expressions.Condition;
+import org.apache.ignite.lang.IgniteInClosure;
 import org.jetbrains.annotations.NotNull;
 
 import static org.apache.ignite.internal.sql.calcite.expressions.Condition.buildFilterCondition;
@@ -57,12 +60,29 @@ public class NestedLoopsJoinOp extends PhysicalOperator {
         if (joinType != JoinRelType.INNER)
             throw new IgniteException("Unsupported join type: " + joinType);
 
+        leftSrc.listen(new IgniteInClosure<IgniteInternalFuture<List<List<?>>>>() {
+            @Override public void apply(IgniteInternalFuture<List<List<?>>> leftFut) {
+                rightSrc.listen(new IgniteInClosure<IgniteInternalFuture<List<List<?>>>>() {
+                    @Override public void apply(IgniteInternalFuture<List<List<?>>> rightFut) {
+                        try {
+                            List<List<?>> left = leftFut.get();
+                            List<List<?>> right = rightFut.get();
+
+                            execute(left, right);
+                        }
+                        catch (IgniteCheckedException e) {
+                            onDone(e);
+                        }
+                    }
+                });
+            }
+        });
     }
 
-    @NotNull @Override public Iterator<List<?>> iterator() {
+    @NotNull @Override public Iterator<List<?>> iterator(List<List<?>> ... input) {
         return new Iterator<List<?>>() {
-            private Iterator<List<?>> leftIt = leftSrc.iterator();
-            private Iterator<List<?>> rightIt = rightSrc.iterator();
+            private Iterator<List<?>> leftIt = input[0].iterator();
+            private Iterator<List<?>> rightIt = input[1].iterator();
 
             private List<?> curLeft;
             private List<?> curRight;

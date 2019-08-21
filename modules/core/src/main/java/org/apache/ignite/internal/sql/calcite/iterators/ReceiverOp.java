@@ -18,23 +18,30 @@ package org.apache.ignite.internal.sql.calcite.iterators;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import org.apache.ignite.internal.util.future.GridFutureAdapter;
 
 /**
- * TODO: Add class description.
+ * Receiver. Childless operator, like a table scan, but the result source is the another node.
  */
-public abstract class PhysicalOperator extends GridFutureAdapter<List<List<?>>> {
+public class ReceiverOp extends PhysicalOperator {
 
-    abstract  Iterator<List<?>> iterator(List<List<?>> ... input);
+    private int responsesCntr;
 
-    protected void execute(List<List<?>> ... input ) {
-        Iterator<List<?>> it = iterator(input);
+    private List<List<?>> accumulatedRes = new ArrayList<>();
 
-        List<List<?>> all = new ArrayList<>();
+    public ReceiverOp(int cntr) {
+        responsesCntr = cntr;
+    }
 
-        while (it.hasNext())
-            all.add(it.next());
+    public void onResult(List<List<?>> res) {
+        synchronized (this) {
+            accumulatedRes.addAll(res);
 
-        onDone(all);
+            if (--responsesCntr > 0)
+                execute(res); // All responses have arrived.
+        }
+    }
+
+    @Override Iterator<List<?>> iterator(List<List<?>>... input) {
+        return input[0].iterator();
     }
 }

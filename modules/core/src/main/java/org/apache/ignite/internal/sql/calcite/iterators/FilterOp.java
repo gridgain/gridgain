@@ -18,8 +18,10 @@ package org.apache.ignite.internal.sql.calcite.iterators;
 import java.util.Iterator;
 import java.util.List;
 import org.apache.calcite.rex.RexNode;
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.sql.calcite.expressions.Condition;
-import org.jetbrains.annotations.NotNull;
+import org.apache.ignite.lang.IgniteInClosure;
 
 import static org.apache.ignite.internal.sql.calcite.expressions.Condition.buildFilterCondition;
 
@@ -33,10 +35,23 @@ public class FilterOp extends PhysicalOperator {
     public FilterOp(PhysicalOperator rowsSrc, RexNode expression) {
         this.rowsSrc = rowsSrc;
         filterCondition = (Condition)buildFilterCondition(expression);
+
+        rowsSrc.listen(new IgniteInClosure<IgniteInternalFuture<List<List<?>>>>() {
+            @Override public void apply(IgniteInternalFuture<List<List<?>>> fut) {
+                try {
+                    List<List<?>> input = fut.get();
+
+                    execute(input);
+                }
+                catch (IgniteCheckedException e) {
+                    onDone(e);
+                }
+            }
+        });
     }
 
-    @NotNull @Override public Iterator<List<?>> iterator() {
-        Iterator<List<?>> srcIt = rowsSrc.iterator();
+    @Override public Iterator<List<?>> iterator(List<List<?>> ... input) {
+        Iterator<List<?>> srcIt = input[0].iterator();
 
         return new Iterator<List<?>>() {
             private List<?> cur = findNext();
@@ -66,7 +81,5 @@ public class FilterOp extends PhysicalOperator {
             }
         };
     }
-
-
 
 }

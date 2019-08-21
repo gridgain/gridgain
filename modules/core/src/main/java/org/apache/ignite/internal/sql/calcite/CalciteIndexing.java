@@ -18,7 +18,6 @@ package org.apache.ignite.internal.sql.calcite;
 
 import java.sql.SQLException;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import org.apache.calcite.schema.SchemaPlus;
@@ -30,13 +29,13 @@ import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.GridTopic;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.managers.IgniteMBeansManager;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContextInfo;
-import org.apache.ignite.internal.processors.cache.QueryCursorImpl;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.persistence.RootPage;
@@ -55,7 +54,8 @@ import org.apache.ignite.internal.processors.query.QueryTypeCandidate;
 import org.apache.ignite.internal.processors.query.SqlClientContext;
 import org.apache.ignite.internal.processors.query.UpdateSourceIterator;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitor;
-import org.apache.ignite.internal.sql.calcite.iterators.PhysicalOperator;
+import org.apache.ignite.internal.sql.calcite.executor.ExecutorOfGovnoAndPalki;
+import org.apache.ignite.internal.sql.calcite.plan.PlanStep;
 import org.apache.ignite.internal.util.GridAtomicLong;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.lang.GridCloseableIterator;
@@ -73,6 +73,7 @@ public class CalciteIndexing implements GridQueryIndexing {
 
     private final SchemaPlus rootSchema = Frameworks.createRootSchema(true);
 
+    private ExecutorOfGovnoAndPalki executor;
 
 
     /** {@inheritDoc} */
@@ -80,6 +81,10 @@ public class CalciteIndexing implements GridQueryIndexing {
         System.out.println("CalciteIndexing.start");
 
         this.ctx = ctx;
+
+        executor = new ExecutorOfGovnoAndPalki(ctx);
+
+        ctx.io().addMessageListener(GridTopic.TOPIC_QUERY, executor);
     }
 
     /** {@inheritDoc} */
@@ -131,9 +136,9 @@ public class CalciteIndexing implements GridQueryIndexing {
 
         CalcitePlanner planner = new CalcitePlanner(rootSchema.getSubSchema(schemaName), rootSchema, ctx);
 
-        PhysicalOperator physicalOperator = planner.createPlan(qry.getSql());
+        List<PlanStep> multiStepPlan = planner.plan(qry.getSql());
 
-        return Collections.singletonList(new QueryCursorImpl<>(physicalOperator));
+        return executor.execute(multiStepPlan);
     }
 
 

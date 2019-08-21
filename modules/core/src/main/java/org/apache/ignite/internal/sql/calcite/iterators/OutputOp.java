@@ -15,26 +15,25 @@
  */
 package org.apache.ignite.internal.sql.calcite.iterators;
 
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import org.apache.ignite.internal.util.future.GridFutureAdapter;
+import org.apache.ignite.IgniteCheckedException;
 
 /**
- * TODO: Add class description.
+ * Query tree output.
  */
-public abstract class PhysicalOperator extends GridFutureAdapter<List<List<?>>> {
+public class OutputOp extends PhysicalOperator {
 
-    abstract  Iterator<List<?>> iterator(List<List<?>> ... input);
+    public OutputOp(PhysicalOperator rowsSrc) {
+        try {
+            onDone(rowsSrc.get());
+        }
+        catch (IgniteCheckedException e) {
+            onDone(e);
+        }
+    }
 
-    protected void execute(List<List<?>> ... input ) {
-        Iterator<List<?>> it = iterator(input);
-
-        List<List<?>> all = new ArrayList<>();
-
-        while (it.hasNext())
-            all.add(it.next());
-
-        onDone(all);
+    @Override Iterator<List<?>> iterator(List<List<?>>... input) {
+        throw new UnsupportedOperationException();
     }
 }

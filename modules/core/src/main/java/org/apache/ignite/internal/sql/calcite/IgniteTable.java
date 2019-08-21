@@ -90,7 +90,7 @@ public class IgniteTable extends AbstractTable implements ScannableTable/*, Proj
     }
 
     @Override public Statistic getStatistic() {
-        return Statistics.of(rowCnt + 10 , keys);
+        return Statistics.of(rowCnt * rowCnt * rowCnt * rowCnt * 10 , keys);
     }
 
     public void incrementRowCount() {

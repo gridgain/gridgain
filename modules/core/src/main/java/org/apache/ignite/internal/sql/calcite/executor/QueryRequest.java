@@ -13,28 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.internal.sql.calcite.iterators;
-
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import org.apache.ignite.internal.util.future.GridFutureAdapter;
+package org.apache.ignite.internal.sql.calcite.executor;
 
 /**
  * TODO: Add class description.
  */
-public abstract class PhysicalOperator extends GridFutureAdapter<List<List<?>>> {
+public class QueryRequest {
 
-    abstract  Iterator<List<?>> iterator(List<List<?>> ... input);
-
-    protected void execute(List<List<?>> ... input ) {
-        Iterator<List<?>> it = iterator(input);
-
-        List<List<?>> all = new ArrayList<>();
-
-        while (it.hasNext())
-            all.add(it.next());
-
-        onDone(all);
-    }
 }
