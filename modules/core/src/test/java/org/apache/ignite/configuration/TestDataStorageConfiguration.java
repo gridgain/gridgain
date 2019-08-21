@@ -33,7 +33,7 @@ public class TestDataStorageConfiguration extends DataStorageConfiguration {
     public static final int DFLT_TEST_WAL_SEGMENTS = 5;
 
     /** Default test wal segment size for {@link TestDataStorageConfiguration}. */
-    public static final int DFLT_TEST_WAL_SEGMENT_SIZE = 8 * 1024 * 1024;
+    public static final int DFLT_TEST_WAL_SEGMENT_SIZE = 4 * 1024 * 1024;
 
     /**
      * Default constructor.

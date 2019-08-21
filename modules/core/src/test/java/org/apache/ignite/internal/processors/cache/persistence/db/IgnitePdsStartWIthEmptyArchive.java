@@ -123,7 +123,7 @@ public class IgnitePdsStartWIthEmptyArchive extends GridCommonAbstractTest {
 
         // Populate data for generate WAL archive segments.
         try (IgniteDataStreamer<Integer, byte[]> st = ig.dataStreamer(DEFAULT_CACHE_NAME)) {
-            int entries = 1000;
+            int entries = 50;
 
             for (int i = 0; i < entries; i++)
                 st.addData(i, new byte[1024 * 1024]);
@@ -158,13 +158,20 @@ public class IgnitePdsStartWIthEmptyArchive extends GridCommonAbstractTest {
         // Restart grid again after archive was removed.
         ig = startGrid(0);
 
+        int segments = ig.configuration().getDataStorageConfiguration().getWalSegments();
+
+        Assert.assertTrue(
+            "Unexpected archived segments count [" +
+            "maxSegments=" + segments +
+            "archivedSegments=" + archiveDir.listFiles().length,
+            archiveDir.listFiles().length <= segments
+        );
+
         walMgr = (FileWriteAheadLogManager)ig.context().cache().context().wal();
 
         SegmentAware afterSaw = U.field(walMgr, "segmentAware");
 
         long afterLastArchivedAbsoluteIndex = afterSaw.lastArchivedAbsoluteIndex();
-
-        int segments = ig.configuration().getDataStorageConfiguration().getWalSegments();
 
         Assert.assertTrue(
             "lastArchivedBeforeIdx=" + beforeLastArchivedAbsoluteIdx +
@@ -180,7 +187,10 @@ public class IgnitePdsStartWIthEmptyArchive extends GridCommonAbstractTest {
 
         long idxAfter = fhAfter.getSegmentId();
 
-        Assert.assertEquals(idxBefore, idxAfter);
+        Assert.assertTrue(
+            "idxBefore=" + idxBefore + ", idxAfter=" + idxAfter,
+            idxBefore == idxAfter || idxBefore + 1 == idxAfter
+        );
         Assert.assertTrue(idxAfter >= beforeLastArchivedAbsoluteIdx);
 
         log.info("currentIdx=" + idxAfter + ", lastArchivedBeforeIdx=" + beforeLastArchivedAbsoluteIdx +

@@ -39,12 +39,15 @@ import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.MvccFeatureChecker;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD;
+import static org.apache.ignite.configuration.TestDataStorageConfiguration.TEST_WAL_SEGMENTS_PROPERTY;
+import static org.apache.ignite.configuration.TestDataStorageConfiguration.TEST_WAL_SEGMENT_SIZE_PROPERTY;
 
 /**
  *
@@ -373,6 +376,8 @@ public class IgniteWalHistoryReservationsTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = TEST_WAL_SEGMENTS_PROPERTY, value = "10")
+    @WithSystemProperty(key = TEST_WAL_SEGMENT_SIZE_PROPERTY, value = "68157440") // 64Mb
     public void testWalHistoryPartiallyRemoved() throws Exception {
         Assume.assumeFalse("https://issues.apache.org/jira/browse/IGNITE-10551", MvccFeatureChecker.forcedMvcc());
 
