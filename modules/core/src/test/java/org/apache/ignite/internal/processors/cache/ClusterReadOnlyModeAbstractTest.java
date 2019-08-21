@@ -19,7 +19,6 @@ package org.apache.ignite.internal.processors.cache;
 import java.util.Collection;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.StopNodeOrHaltFailureHandler;
-import org.apache.ignite.internal.processors.cache.distributed.dht.IgniteClusterReadOnlyException;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 
 /**
