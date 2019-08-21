@@ -48,7 +48,7 @@ public class OpenCensusSpanAdapter implements Span {
 
     /** {@inheritDoc} */
     @Override public OpenCensusSpanAdapter addTag(String tagName, String tagVal) {
-        tagVal = tagVal != null ? tagVal : "";
+        tagVal = tagVal != null ? tagVal : "null";
 
         span.putAttribute(tagName, AttributeValue.stringAttributeValue(tagVal));
 
