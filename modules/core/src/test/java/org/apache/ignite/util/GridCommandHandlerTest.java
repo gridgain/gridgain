@@ -235,8 +235,6 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         assertTrue(testOut.toString(), testOut.toString().contains("Cluster is inactive"));
 
-        testOut.reset();
-
         ignite.cluster().active(true);
 
         assertTrue(ignite.cluster().active());
@@ -244,8 +242,6 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertEquals(EXIT_CODE_OK, execute("--state"));
 
         assertTrue(testOut.toString(), testOut.toString().contains("Cluster is active"));
-
-        testOut.reset();
 
         ignite.cluster().readOnly(true);
 
