@@ -921,6 +921,8 @@ public class GridRestProcessor extends GridProcessorAdapter {
             case BASELINE_SET:
             case BASELINE_ADD:
             case BASELINE_REMOVE:
+            case CLUSTER_READ_ONLY_ENABLE:
+            case CLUSTER_READ_ONLY_DISABLE:
                 perm = SecurityPermission.ADMIN_OPS;
 
                 break;
@@ -941,6 +943,7 @@ public class GridRestProcessor extends GridProcessorAdapter {
             case LOG:
             case CLUSTER_CURRENT_STATE:
             case BASELINE_CURRENT_STATE:
+            case CLUSTER_CURRENT_READ_ONLY_MODE:
             case AUTHENTICATE:
             case ADD_USER:
             case REMOVE_USER:

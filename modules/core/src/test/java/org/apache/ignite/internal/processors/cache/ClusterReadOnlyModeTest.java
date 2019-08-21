@@ -128,7 +128,7 @@ public class ClusterReadOnlyModeTest extends ClusterReadOnlyModeAbstractTest {
 
                         firstPackLatch.countDown();
 
-                        readOnlyEnabled.await(5, TimeUnit.SECONDS);
+                        assertTrue(cacheName, readOnlyEnabled.await(5, TimeUnit.SECONDS));
 
                         doLoad(streamer, 100, 1000000, manualFlush);
 
@@ -147,13 +147,13 @@ public class ClusterReadOnlyModeTest extends ClusterReadOnlyModeAbstractTest {
                 }));
             }
 
-            firstPackLatch.await(5, TimeUnit.SECONDS);
+            assertTrue(firstPackLatch.await(5, TimeUnit.SECONDS));
 
             changeClusterReadOnlyMode(true);
 
             readOnlyEnabled.countDown();
 
-            finishLatch.await(5, TimeUnit.SECONDS);
+            assertTrue(finishLatch.await(5, TimeUnit.SECONDS));
 
             assertEquals("exceptions: " + eMap, cacheNames().size(), eMap.size());
 
