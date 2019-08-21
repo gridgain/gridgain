@@ -42,7 +42,12 @@ public enum IgniteFeatures {
     DATA_PACKET_COMPRESSION(3),
 
     /** Support of different rebalance size for nodes.  */
-    DIFFERENT_REBALANCE_POOL_SIZE(4);
+    DIFFERENT_REBALANCE_POOL_SIZE(4),
+
+    /**
+     * A mode when data nodes throttle update rate regarding to DR sender load
+     */
+    DR_DATA_NODE_SMART_THROTTLING(19);
 
     /**
      * Unique feature identifier.
