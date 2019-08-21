@@ -20,25 +20,44 @@ package org.apache.ignite.ml.selection.scoring.evaluator.metric.classification;
 import org.apache.ignite.ml.selection.scoring.evaluator.aggregator.BinaryClassificationPointwiseMetricStatsAggregator;
 import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
 
+/**
+ * Recall metric class for binary classiticaion.
+ */
 public class Recall extends BinaryClassificationMetric {
+    /** Serial version uid. */
+    private static final long serialVersionUID = 8128102840736337225L;
+
+    /** Recall. */
     private Double recall = Double.NaN;
 
+    /**
+     * Creates an instance Recall class.
+     *
+     * @param truthLabel Truth label.
+     * @param falseLabel False label.
+     */
     public Recall(double truthLabel, double falseLabel) {
         super(truthLabel, falseLabel);
     }
 
+    /**
+     * Creates an instance Recall class.
+     */
     public Recall() {
     }
 
+    /** {@inheritDoc} */
     @Override public Recall initBy(BinaryClassificationPointwiseMetricStatsAggregator aggr) {
         recall = ((double) (aggr.getTruePositive()) / (aggr.getTruePositive() + aggr.getFalseNegative()));
         return this;
     }
 
+    /** {@inheritDoc} */
     @Override public double value() {
         return recall;
     }
 
+    /** {@inheritDoc} */
     @Override public MetricName name() {
         return MetricName.RECALL;
     }

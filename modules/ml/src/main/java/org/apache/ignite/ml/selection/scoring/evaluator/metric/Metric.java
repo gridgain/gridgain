@@ -21,12 +21,40 @@ import java.io.Serializable;
 import org.apache.ignite.ml.selection.scoring.evaluator.aggregator.MetricStatsAggregator;
 import org.apache.ignite.ml.selection.scoring.evaluator.context.EvaluationContext;
 
+/**
+ * This class represents a container with computed value of metric and it provides a factory for metric
+ * statistics aggregation class.
+ *
+ * @param <L> Type of label.
+ * @param <C> Type of evaluation context.
+ * @param <A> Type of statistics aggregator.
+ */
 public interface Metric<L, C extends EvaluationContext<L, C>, A extends MetricStatsAggregator<L, C, A>> extends Serializable {
+    /**
+     * Creates statistics aggregator.
+     *
+     * @return Statistics aggregator
+     */
     public A makeAggregator();
 
+    /**
+     * Initializes metric value by statistics aggregator.
+     *
+     * @param aggr Aggregator.
+     */
     public Metric<L, C, A> initBy(A aggr);
 
+    /**
+     * Returns metric value.
+     *
+     * @return Metric value.
+     */
     public double value();
 
+    /**
+     * Returns metric name.
+     *
+     * @return Metric name.
+     */
     public MetricName name();
 }

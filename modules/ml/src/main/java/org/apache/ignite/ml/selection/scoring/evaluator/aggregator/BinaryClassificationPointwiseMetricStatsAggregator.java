@@ -28,6 +28,9 @@ import org.apache.ignite.ml.structures.LabeledVector;
  * FalsePositive, TrueNegative and FalseNegative.
  */
 public class BinaryClassificationPointwiseMetricStatsAggregator implements MetricStatsAggregator<Double, BinaryClassificationEvaluationContext, BinaryClassificationPointwiseMetricStatsAggregator> {
+    /** Serial version uid. */
+    private static final long serialVersionUID = -7677193556950322385L;
+
     /** False label. */
     private Double falseLabel = Double.NaN;
 

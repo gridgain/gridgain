@@ -26,6 +26,9 @@ import org.apache.ignite.ml.structures.LabeledVector;
  * Class represents statistics aggregator for regression estimation.
  */
 public class RegressionMetricStatsAggregator implements MetricStatsAggregator<Double, EmptyContext, RegressionMetricStatsAggregator> {
+    /** Serial version uid. */
+    private static final long serialVersionUID = -2459352313996869235L;
+
     /**
      * Number of examples in dataset.
      */
@@ -81,7 +84,6 @@ public class RegressionMetricStatsAggregator implements MetricStatsAggregator<Do
         Double prediction = model.predict(vector.features());
         Double truth = vector.label();
         double error = truth - prediction;
-        System.out.println("[D] Prediction = " + prediction + "; Truth = " + truth + "; Error = " + Math.pow(error, 2.0));
 
         absoluteError = sum(Math.abs(error), absoluteError);
         rss = sum(Math.pow(error, 2), rss);
@@ -116,6 +118,9 @@ public class RegressionMetricStatsAggregator implements MetricStatsAggregator<Do
      * @return Mean absolute error.
      */
     public double getMAE() {
+        if (Double.isNaN(absoluteError))
+            return Double.NaN;
+
         return absoluteError / Math.max(N, 1);
     }
 
@@ -133,7 +138,7 @@ public class RegressionMetricStatsAggregator implements MetricStatsAggregator<Do
      *
      * @return Sum of squared errors
      */
-    public double sumOfSquaredErrors() {
+    public double ysRss() {
         return ysVariance() * Math.max(N, 1);
     }
 
@@ -143,7 +148,10 @@ public class RegressionMetricStatsAggregator implements MetricStatsAggregator<Do
      * @return Label variance.
      */
     public double ysVariance() {
-        return (sumOfSquaredYs - Math.pow(sumOfYs, 2)) / Math.max(N, 1);
+        if (Double.isNaN(sumOfSquaredYs))
+            return Double.NaN;
+
+        return (sumOfSquaredYs / Math.max(N, 1) - Math.pow(sumOfYs / Math.max(N, 1), 2));
     }
 
     /**

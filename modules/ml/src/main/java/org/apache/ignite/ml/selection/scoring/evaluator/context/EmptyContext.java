@@ -23,6 +23,9 @@ import org.apache.ignite.ml.structures.LabeledVector;
  * Class represents context stub for metrics that don't require such context preparations.
  */
 public class EmptyContext implements EvaluationContext<Double, EmptyContext> {
+    /** Serial version uid. */
+    private static final long serialVersionUID = 1439494372470803212L;
+
     /** {@inheritDoc} */
     @Override public void aggregate(LabeledVector<Double> vector) {
 

@@ -22,26 +22,37 @@ import org.apache.ignite.ml.selection.scoring.evaluator.context.EmptyContext;
 import org.apache.ignite.ml.selection.scoring.evaluator.metric.Metric;
 import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
 
+/**
+ * Class for coefficient of determination metric.
+ */
 public class R2 implements Metric<Double, EmptyContext, RegressionMetricStatsAggregator> {
+    /** Serial version uid. */
+    private static final long serialVersionUID = -3236888671577413798L;
+
+    /** Value. */
     private double value = Double.NaN;
 
+    /** {@inheritDoc} */
     @Override public RegressionMetricStatsAggregator makeAggregator() {
         return new RegressionMetricStatsAggregator();
     }
 
+    /** {@inheritDoc} */
     @Override
     public R2 initBy(RegressionMetricStatsAggregator aggr) {
         double ssReg = aggr.getRss();
-        double ssTot = aggr.sumOfSquaredErrors();
+        double ssTot = aggr.ysRss();
         value = ssReg / ssTot;
 
         return this;
     }
 
+    /** {@inheritDoc} */
     @Override public double value() {
         return value;
     }
 
+    /** {@inheritDoc} */
     @Override public MetricName name() {
         return MetricName.R2;
     }

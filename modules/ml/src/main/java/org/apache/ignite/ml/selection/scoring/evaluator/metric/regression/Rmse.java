@@ -22,23 +22,34 @@ import org.apache.ignite.ml.selection.scoring.evaluator.context.EmptyContext;
 import org.apache.ignite.ml.selection.scoring.evaluator.metric.Metric;
 import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
 
+/**
+ * Class for RMSE metric.
+ */
 public class Rmse implements Metric<Double, EmptyContext, RegressionMetricStatsAggregator> {
+    /** Serial version uid. */
+    private static final long serialVersionUID = 9027254107009342723L;
+
+    /** Mse. */
     private Mse mse = new Mse();
 
+    /** {@inheritDoc} */
     @Override public RegressionMetricStatsAggregator makeAggregator() {
         return mse.makeAggregator();
     }
 
+    /** {@inheritDoc} */
     @Override
     public Metric<Double, EmptyContext, RegressionMetricStatsAggregator> initBy(RegressionMetricStatsAggregator aggr) {
         mse.initBy(aggr);
         return this;
     }
 
+    /** {@inheritDoc} */
     @Override public double value() {
         return Math.sqrt(mse.value());
     }
 
+    /** {@inheritDoc} */
     @Override public MetricName name() {
         return MetricName.RMSE;
     }

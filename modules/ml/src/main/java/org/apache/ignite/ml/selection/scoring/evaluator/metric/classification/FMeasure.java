@@ -20,32 +20,70 @@ package org.apache.ignite.ml.selection.scoring.evaluator.metric.classification;
 import org.apache.ignite.ml.selection.scoring.evaluator.aggregator.BinaryClassificationPointwiseMetricStatsAggregator;
 import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
 
-public class FScore extends BinaryClassificationMetric {
+/**
+ * F-measure metric class.
+ */
+public class FMeasure extends BinaryClassificationMetric {
+    /**
+     * Serial version uid.
+     */
+    private static final long serialVersionUID = 5110086813607332001L;
+
+    /**
+     * Square of beta parameter for F-score.
+     */
     private final double betaSquare;
+
+    /** Precision. */
     private final Precision precision = new Precision();
+
+    /** Recall. */
     private final Recall recall = new Recall();
 
+    /** Fscore. */
     private Double fscore = Double.NaN;
 
-    public FScore(double beta) {
+    /**
+     * Creates an instance of FScore class.
+     *
+     * @param beta Beta (see https://en.wikipedia.org/wiki/F1_score ).
+     */
+    public FMeasure(double beta) {
         betaSquare = Math.pow(beta, 2);
     }
 
-    public FScore() {
+    /**
+     * Creates an instance of FScore class.
+     */
+    public FMeasure() {
         betaSquare = 1;
     }
 
-    public FScore(double truthLabel, double falseLabel, double betaSquare) {
+    /**
+     * Creates an instance of FScore class.
+     *
+     * @param truthLabel Truth label.
+     * @param falseLabel False label.
+     * @param betaSquare Squared beta parameter.
+     */
+    public FMeasure(double truthLabel, double falseLabel, double betaSquare) {
         super(truthLabel, falseLabel);
         this.betaSquare = betaSquare;
     }
 
-    public FScore(double truthLabel, double falseLabel) {
+    /**
+     * Creates an instance of FScore class.
+     *
+     * @param truthLabel Truth label.
+     * @param falseLabel False label.
+     */
+    public FMeasure(double truthLabel, double falseLabel) {
         super(truthLabel, falseLabel);
         this.betaSquare = 1;
     }
 
-    @Override public FScore initBy(BinaryClassificationPointwiseMetricStatsAggregator aggr) {
+    /** {@inheritDoc} */
+    @Override public FMeasure initBy(BinaryClassificationPointwiseMetricStatsAggregator aggr) {
         precision.initBy(aggr);
         recall.initBy(aggr);
 
@@ -55,10 +93,12 @@ public class FScore extends BinaryClassificationMetric {
         return this;
     }
 
+    /** {@inheritDoc} */
     @Override public double value() {
         return fscore;
     }
 
+    /** {@inheritDoc} */
     @Override public MetricName name() {
         return MetricName.F_MEASURE;
     }

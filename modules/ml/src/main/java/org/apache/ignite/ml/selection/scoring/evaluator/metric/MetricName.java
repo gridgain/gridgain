@@ -18,7 +18,7 @@
 package org.apache.ignite.ml.selection.scoring.evaluator.metric;
 
 import org.apache.ignite.ml.selection.scoring.evaluator.metric.classification.Accuracy;
-import org.apache.ignite.ml.selection.scoring.evaluator.metric.classification.FScore;
+import org.apache.ignite.ml.selection.scoring.evaluator.metric.classification.FMeasure;
 import org.apache.ignite.ml.selection.scoring.evaluator.metric.classification.Precision;
 import org.apache.ignite.ml.selection.scoring.evaluator.metric.classification.Recall;
 import org.apache.ignite.ml.selection.scoring.evaluator.metric.regression.Mae;
@@ -27,26 +27,56 @@ import org.apache.ignite.ml.selection.scoring.evaluator.metric.regression.R2;
 import org.apache.ignite.ml.selection.scoring.evaluator.metric.regression.Rmse;
 import org.apache.ignite.ml.selection.scoring.evaluator.metric.regression.Rss;
 
+/**
+ * Enum for all metrics aggregation.
+ */
 public enum MetricName {
     // binary classification metrics
+    /** Accuracy. */
     ACCURACY("Accuracy"),
+
+    /** Precision. */
     PRECISION("Precision"),
+
+    /** Recall. */
     RECALL("Recall"),
+
+    /** F measure. */
     F_MEASURE("F-measure"),
 
     // regression metrics
+    /** Mae. */
     MAE("MAE"),
+
+    /** R 2. */
     R2("R2"),
+
+    /** Rmse. */
     RMSE("RMSE"),
+
+    /** Rss. */
     RSS("RSS"),
+
+    /** Mse. */
     MSE("MSE");
 
+    /** Pretty name. */
     private final String prettyName;
 
+    /**
+     * Creates an instance of MetricName.
+     *
+     * @param prettyName Pretty name.
+     */
     MetricName(String prettyName) {
         this.prettyName = prettyName;
     }
 
+    /**
+     * Creates an instance of metric class by name.
+     *
+     * @return Metric instance.
+     */
     public Metric create() {
         switch (this) {
             case ACCURACY:
@@ -56,7 +86,7 @@ public enum MetricName {
             case RECALL:
                 return new Recall();
             case F_MEASURE:
-                return new FScore();
+                return new FMeasure();
             case MSE:
                 return new Mse();
             case MAE:
@@ -72,6 +102,11 @@ public enum MetricName {
         throw new IllegalArgumentException("Cannot define metric by name: " + name());
     }
 
+    /**
+     * Returns pretty name.
+     *
+     * @return Name of metric.
+     */
     public String getPrettyName() {
         return prettyName;
     }

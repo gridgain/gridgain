@@ -20,25 +20,44 @@ package org.apache.ignite.ml.selection.scoring.evaluator.metric.classification;
 import org.apache.ignite.ml.selection.scoring.evaluator.aggregator.BinaryClassificationPointwiseMetricStatsAggregator;
 import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
 
+/**
+ * Precision metric class for binary classificaion.
+ */
 public class Precision extends BinaryClassificationMetric {
+    /** Serial version uid. */
+    private static final long serialVersionUID = 2112795951652050170L;
+
+    /** Precision. */
     private Double precision = Double.NaN;
 
+    /**
+     * Creates an instance Precision class.
+     *
+     * @param truthLabel Truth label.
+     * @param falseLabel False label.
+     */
     public Precision(double truthLabel, double falseLabel) {
         super(truthLabel, falseLabel);
     }
 
+    /**
+     * Creates an instance Precision class.
+     */
     public Precision() {
     }
 
+    /** {@inheritDoc} */
     @Override public Precision initBy(BinaryClassificationPointwiseMetricStatsAggregator aggr) {
         precision = ((double) (aggr.getTruePositive()) / (aggr.getTruePositive() + aggr.getFalsePositive()));
         return this;
     }
 
+    /** {@inheritDoc} */
     @Override public double value() {
         return precision;
     }
 
+    /** {@inheritDoc} */
     @Override public MetricName name() {
         return MetricName.PRECISION;
     }

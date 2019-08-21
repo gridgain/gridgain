@@ -25,6 +25,9 @@ import org.apache.ignite.ml.structures.LabeledVector;
  * This context tries to define positive and negative labels for estimation of binary classifier.
  */
 public class BinaryClassificationEvaluationContext implements EvaluationContext<Double, BinaryClassificationEvaluationContext> {
+    /** Serial version uid. */
+    private static final long serialVersionUID = 658785331349096576L;
+
     /** First class lbl. */
     private Double firstClassLbl;
 
