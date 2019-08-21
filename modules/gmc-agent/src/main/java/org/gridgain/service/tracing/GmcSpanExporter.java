@@ -30,9 +30,11 @@ import io.opencensus.trace.SpanContext;
 import io.opencensus.trace.Status;
 import io.opencensus.trace.Tracing;
 import io.opencensus.trace.export.SpanData;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteMessaging;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.opencensus.spi.tracing.OpenCensusTraceExporter;
+import org.apache.ignite.spi.IgniteSpiException;
 import org.gridgain.dto.span.Span;
 import org.gridgain.dto.span.SpanList;
 
@@ -55,6 +57,9 @@ public class GmcSpanExporter implements AutoCloseable {
     /** Context. */
     private GridKernalContext ctx;
 
+    /** Logger. */
+    private IgniteLogger log;
+
     /** Exporter. */
     private OpenCensusTraceExporter exporter;
 
@@ -63,16 +68,22 @@ public class GmcSpanExporter implements AutoCloseable {
      */
     public GmcSpanExporter(GridKernalContext ctx) {
         this.ctx = ctx;
+        this.log = ctx.log(GmcSpanExporter.class);
 
         if (ctx.config().getTracingSpi() != null) {
-            exporter = new OpenCensusTraceExporter(getTraceHandler());
-            exporter.start(ctx.igniteInstanceName());
+            try {
+                exporter = new OpenCensusTraceExporter(getTraceHandler());
+                exporter.start(ctx.igniteInstanceName());
+            }
+            catch (IgniteSpiException ex) {
+                log.error("Can't start the trace exporter", ex);
+            }
         }
     }
 
     /** {@inheritDoc} */
     @Override public void close() {
-        if (ctx.config().getTracingSpi() != null)
+        if (ctx.config().getTracingSpi() != null && exporter != null)
             exporter.stop();
     }
 
