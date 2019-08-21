@@ -133,7 +133,7 @@ public class JdbcUtils {
 
                 println(cfg, "Populate data...");
 
-                for (long l = 1; l <= range; ++l) {
+                for (long l = 1; l < range; ++l) {
                     qProc.querySqlFields(
                         new SqlFieldsQuery(String.format("INSERT INTO %s VALUES (?, ?, ?, ?)", tblName))
                             .setArgs(l, new BigDecimal(l + 1), LocalDate.ofEpochDay(l), l + 2), true);

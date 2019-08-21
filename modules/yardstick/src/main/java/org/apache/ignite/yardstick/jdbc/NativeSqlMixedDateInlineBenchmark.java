@@ -20,14 +20,13 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
-import org.apache.ignite.transactions.TransactionDuplicateKeyException;
 import org.apache.ignite.yardstick.IgniteAbstractBenchmark;
 import org.yardstickframework.BenchmarkConfiguration;
 import org.yardstickframework.BenchmarkUtils;
@@ -44,22 +43,26 @@ public class NativeSqlMixedDateInlineBenchmark extends IgniteAbstractBenchmark {
     /** Dummy counter, just for possible jvm optimisation disable purpose. */
     private long resCount;
 
-    /** */
-    private Map<Long, Integer> chunk = new ConcurrentHashMap<>();
+    /** Digit pattern. */
+    Pattern digitPattern = Pattern.compile("[0-9]+");
 
     /** */
-    private AtomicInteger pos = new AtomicInteger(1);
+    private Integer getGroupNumber(Map<Object, Object> ctx) {
+        long tid = Thread.currentThread().getId();
 
-    /**
-     * @param tid Thread id.
-     */
-    private Integer getGroupNumber(long tid) {
-        Integer part = chunk.get(tid);
+        Integer cnt = (Integer)ctx.get(tid);
 
-        if (part == null)
-            return chunk.computeIfAbsent(tid, k -> pos.getAndIncrement());
+        if (cnt == null) {
+            Matcher matcher = digitPattern.matcher(Thread.currentThread().getName());
 
-        return part;
+            if (matcher.find()) {
+                cnt = Integer.parseInt(matcher.group());
+
+                ctx.put(tid, ++cnt);
+            }
+        }
+
+        return cnt;
     }
 
     /**
@@ -68,7 +71,7 @@ public class NativeSqlMixedDateInlineBenchmark extends IgniteAbstractBenchmark {
      * {@inheritDoc}
      */
     @Override public boolean test(Map<Object, Object> ctx) throws Exception {
-        long insertKey = getGroupNumber(Thread.currentThread().getId()) * args.range() + 1 + nextRandom(args.range());
+        long insertKey = getGroupNumber(ctx) * args.range() + nextRandom(args.range() - 1);
 
         String insertQry = String.format("INSERT INTO %s VALUES (?, ?, ?, ?)", TBL_NAME);
 
