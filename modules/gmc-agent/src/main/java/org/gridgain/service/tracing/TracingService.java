@@ -16,16 +16,15 @@
 
 package org.gridgain.service.tracing;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.UUID;
-import com.google.common.collect.Lists;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.gridgain.agent.WebSocketManager;
-import org.gridgain.dto.span.Span;
-import org.gridgain.dto.span.SpanList;
+import org.gridgain.dto.span.SpanBatch;
 
 import static org.gridgain.agent.StompDestinationsUtils.buildSaveSpanDest;
 import static org.gridgain.service.tracing.GmcSpanExporter.*;
@@ -34,6 +33,12 @@ import static org.gridgain.service.tracing.GmcSpanExporter.*;
  * Tracing service.
  */
 public class TracingService implements AutoCloseable {
+    /** Queue capacity. */
+    private static final int QUEUE_CAP = 100;
+
+    /** Logger. */
+    private IgniteLogger log;
+
     /** Context. */
     private GridKernalContext ctx;
 
@@ -43,9 +48,11 @@ public class TracingService implements AutoCloseable {
     /** On node traces listener. */
     private IgniteBiPredicate<UUID, Object> onNodeTraces = this::onNodeTraces;
 
-    // TODO: Change on limited queue, GG-23047.
-    /** Buffer. */
-    private final List<Span> buf = Collections.synchronizedList(new ArrayList<>());
+    /** Executor service. */
+    private final ExecutorService exSrvc = Executors.newSingleThreadExecutor();
+
+    /** Worker. */
+    private final RetryableSender<SpanBatch> worker;
 
     /**
      * @param ctx Context.
@@ -54,20 +61,18 @@ public class TracingService implements AutoCloseable {
     public TracingService(GridKernalContext ctx, WebSocketManager mgr) {
         this.ctx = ctx;
         this.mgr = mgr;
+        this.log = ctx.log(TracingService.class);
+        this.worker = createSenderWorker();
 
         ctx.grid().message().localListen(TRACING_TOPIC, onNodeTraces);
-    }
 
-    /**
-     * Send buffered spans.
-     */
-    public void sendInitialState() {
-        send(new SpanList());
+        exSrvc.submit(worker);
     }
 
     /** {@inheritDoc} */
     @Override public void close() {
         ctx.grid().message().stopLocalListen(TRACING_TOPIC, onNodeTraces);
+        exSrvc.shutdown();
     }
 
     /**
@@ -75,18 +80,20 @@ public class TracingService implements AutoCloseable {
      * @param spans Spans.
      */
     boolean onNodeTraces(UUID uuid, Object spans) {
-        send((SpanList) spans);
+        worker.addToSendQueue((SpanBatch) spans);
 
         return true;
     }
 
     /**
-     * @param spans Spans.
+     * @return Sender which send messages from queue to gmc.
      */
-    private void send(SpanList spans) {
-        buf.addAll(spans.getList());
-
-        if (mgr.send(buildSaveSpanDest(ctx.cluster().get().id()), Lists.newArrayList(buf)))
-            buf.clear();
+    private RetryableSender<SpanBatch> createSenderWorker() {
+        return new RetryableSender<SpanBatch>(log, QUEUE_CAP) {
+            @Override protected void send(SpanBatch list) {
+                if (!mgr.send(buildSaveSpanDest(ctx.cluster().get().id()), list.getList()))
+                    throw new IgniteException("Message with spans doesn't send");
+            }
+        };
     }
 }

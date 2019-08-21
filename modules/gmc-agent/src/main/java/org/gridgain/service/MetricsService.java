@@ -46,6 +46,7 @@ public class MetricsService implements AutoCloseable {
     /** Logger. */
     private IgniteLogger log;
 
+    /** Listener. */
     private GridMessageListener lsnr = this::onNodeMetrics;
 
     /**

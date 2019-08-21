@@ -27,9 +27,9 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * DTO for span list.
+ * DTO for batch of span list.
  */
-public class SpanList implements Externalizable {
+public class SpanBatch implements Externalizable {
     /** Serial version uid. */
     private static final long serialVersionUID = 0L;
 
@@ -39,13 +39,13 @@ public class SpanList implements Externalizable {
     /**
      * Default constructor.
      */
-    public SpanList() {
+    public SpanBatch() {
     }
 
     /**
      * @param list Span list.
      */
-    public SpanList(List<Span> list) {
+    public SpanBatch(List<Span> list) {
         this.list = list;
     }
 
