@@ -21,6 +21,7 @@ import java.util.List;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
+import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -111,6 +112,7 @@ public class NodeJoinWithNewCachesTest extends GridCommonAbstractTest {
         for (int i = 0; i < cachesNum; i++) {
             ccfgs[i] = new CacheConfiguration(prefix + i)
                 .setGroupName(grpName)
+                .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC)
                 .setBackups(1)
                 .setAffinity(new RendezvousAffinityFunction(false, 32));
         }
@@ -118,6 +120,7 @@ public class NodeJoinWithNewCachesTest extends GridCommonAbstractTest {
         // Unique cache.
         ccfgs[cachesNum] = new CacheConfiguration("unique-" + (cachesNum - 1))
             .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+            .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC)
             .setBackups(1)
             .setAffinity(new RendezvousAffinityFunction(false, 32));
 

@@ -27,11 +27,13 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.CacheExistsException;
@@ -1014,8 +1016,41 @@ class ClusterCachesInfo {
      * @return Discovery data is needed to send to a cluster when node joins/reconnects to it.
      */
     private Serializable joinDiscoveryData() {
-        if (cachesOnDisconnect != null)
-            return new CacheClientReconnectDiscoveryData(joinDiscoData.caches());
+        if (cachesOnDisconnect != null) {
+            assert joinDiscoData != null;
+
+            final Map<String, CacheDiscoveryInfo> locallyConfiguredCaches = joinDiscoData.caches();
+
+            return new CacheClientReconnectDiscoveryData(
+                Stream.concat(
+                    cachesOnDisconnect.caches.values().stream(),
+                    cachesOnDisconnect.templates.values().stream()
+                ).collect(Collectors.toMap(
+                    DynamicCacheDescriptor::cacheName,
+                    desc -> {
+                        // Preserve static configuration flag if cache is locally configured.
+                        boolean staticallyConfigured = locallyConfiguredCaches.containsKey(desc.cacheName());
+
+                        // Preserve near flag if cache context exists.
+                        boolean nearEnabled = Optional.ofNullable(ctx.cache().cache(desc.cacheName()))
+                            .map(cache -> cache.context().isNear())
+                            .orElse(false);
+
+                        // Preserve template flag.
+                        boolean template = desc.template();
+
+                        return new CacheDiscoveryInfo(
+                            desc.deploymentId(),
+                            desc.toStoredData(ctx.cache().splitter()),
+                            desc.cacheType(),
+                            staticallyConfigured ? CacheDiscoveryInfo.FLAG_STATICALLY_CONFIGURED : 0,
+                            nearEnabled ? CacheDiscoveryInfo.FLAG_NEAR : 0,
+                            template ? CacheDiscoveryInfo.FLAG_TEMPLATE : 0
+                        );
+                    }
+                ))
+            );
+        }
         else {
             assert ctx.config().isDaemon() || joinDiscoData != null;
 
@@ -1809,14 +1844,14 @@ class ClusterCachesInfo {
             else if (state.active() && !state.transition()) {
                 if (surviveReconnect(cacheName))
                     ctx.discovery().addClientNode(cacheName, clientNodeId, false);
-                else if (!cacheInfo.isTemplate()) {
+                else {
                     DynamicCacheDescriptor desc = registeredCaches.get(cacheName);
 
                     if (desc != null && desc.deploymentId().equals(cacheInfo.deploymentId()))
                         ctx.discovery().addClientNode(cacheName, clientNodeId, cacheInfo.isNear());
                 }
             }
-            else if (!state.active()) {
+            else if (!state.active() && cacheInfo.isStaticallyConfigured()) { // Client node has cache in configuration.
                 if (!registeredCaches.containsKey(cacheName)) {
                     registerNewCache(clientNodeId, cacheInfo.deploymentId(), cacheInfo);
 

@@ -402,8 +402,10 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
         if (nodeEncryptionKeys == null || nodeEncryptionKeys.newKeys == null || ctx.clientNode())
             return;
 
+        boolean active = ctx.state().clusterState().active();
+
         for (Map.Entry<Integer, byte[]> entry : nodeEncryptionKeys.newKeys.entrySet()) {
-            if (groupKey(entry.getKey()) == null) {
+            if (!active && groupKey(entry.getKey()) == null) {
                 U.quietAndInfo(log, "Store group key received from joining node [node=" +
                         data.joiningNodeId() + ", grp=" + entry.getKey() + "]");
 
@@ -595,7 +597,7 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
      * @param keyCnt Count of keys to generate.
      * @return Future that will contain results of generation.
      */
-    public IgniteInternalFuture<Collection<byte[]>> generateKeys(int keyCnt) {
+    public IgniteInternalFuture<List<byte[]>> generateKeys(int keyCnt) {
         if (keyCnt == 0 || !ctx.clientNode())
             return new GridFinishedFuture<>(createKeys(keyCnt));
 
@@ -735,7 +737,7 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
      * @param keyCnt Keys count.
      * @return Collection with newly generated encryption keys.
      */
-    private Collection<byte[]> createKeys(int keyCnt) {
+    private List<byte[]> createKeys(int keyCnt) {
         if (keyCnt == 0)
             return Collections.emptyList();
 
@@ -797,7 +799,7 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
     }
 
     /** */
-    private class GenerateEncryptionKeyFuture extends GridFutureAdapter<Collection<byte[]>> {
+    private class GenerateEncryptionKeyFuture extends GridFutureAdapter<List<byte[]>> {
         /** */
         private IgniteUuid id;
 
@@ -815,7 +817,7 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
         }
 
         /** {@inheritDoc} */
-        @Override public boolean onDone(@Nullable Collection<byte[]> res, @Nullable Throwable err) {
+        @Override public boolean onDone(@Nullable List<byte[]> res, @Nullable Throwable err) {
             // Make sure to remove future before completion.
             genEncKeyFuts.remove(id, this);
 

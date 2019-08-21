@@ -686,6 +686,32 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     }
 
     /**
+     * Generates encryption keys for encrypted caches in given {@code caches}.
+     *
+     * @param caches All caches.
+     * @return Map [CacheName, EncryptionKey].
+     * @throws IgniteCheckedException If encryption keys generation failed.
+     */
+    private Map<String, byte[]> generateEncKeys(List<CacheData> caches) throws IgniteCheckedException {
+        List<CacheConfiguration> encryptedCaches = caches.stream()
+            .map(CacheData::cacheConfiguration)
+            .filter(CacheConfiguration::isEncryptionEnabled)
+            .collect(Collectors.toList());
+
+        if (encryptedCaches.isEmpty())
+            return Collections.emptyMap();
+
+        ctx.encryption().checkEncryptedCacheSupported();
+
+        final Iterator<byte[]> encKeys = ctx.encryption().generateKeys(encryptedCaches.size()).get().listIterator();
+
+        return encryptedCaches.stream().collect(Collectors.toMap(
+            CacheConfiguration::getName,
+            cfg -> encKeys.next()
+        ));
+    }
+
+    /**
      * Converts list of given {@link CacheData} {@code locallyConfiguredCaches} to cache start requests.
      *
      * @param locallyConfiguredCaches Node locally configured caches.
@@ -699,6 +725,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             return Collections.emptyList();
 
         List<DynamicCacheChangeRequest> cacheStartReqs = new ArrayList<>();
+
+        Map<String, byte[]> encKeys = generateEncKeys(locallyConfiguredCaches);
 
         for (CacheData cacheData : locallyConfiguredCaches) {
             if (cacheData.template())
@@ -716,7 +744,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                 null,
                 false,
                 cacheData.schema().entities(),
-                null
+                encKeys.get(cacheData.cacheConfiguration().getName())
             );
 
             req.cacheConfigurationEnrichment(cacheData.cacheConfigurationEnrichment());
@@ -915,8 +943,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                 onKernalStop(entry.getValue(), cancel);
             }
         }
-
-        cancelStartLocallyConfiguredCaches();
     }
 
     /** {@inheritDoc} */
@@ -3543,12 +3569,12 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      */
     private IgniteInternalFuture<Boolean> generateEncryptionKeysAndStartCacheAfter(int keyCnt,
         GridPlainClosure<Collection<byte[]>, IgniteInternalFuture<Boolean>> after) {
-        IgniteInternalFuture<Collection<byte[]>> genEncKeyFut = ctx.encryption().generateKeys(keyCnt);
+        IgniteInternalFuture<List<byte[]>> genEncKeyFut = ctx.encryption().generateKeys(keyCnt);
 
         GridFutureAdapter<Boolean> res = new GridFutureAdapter<>();
 
-        genEncKeyFut.listen(new IgniteInClosure<IgniteInternalFuture<Collection<byte[]>>>() {
-            @Override public void apply(IgniteInternalFuture<Collection<byte[]>> fut) {
+        genEncKeyFut.listen(new IgniteInClosure<IgniteInternalFuture<List<byte[]>>>() {
+            @Override public void apply(IgniteInternalFuture<List<byte[]>> fut) {
                 try {
                     Collection<byte[]> grpKeys = fut.result();
 
