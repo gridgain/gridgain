@@ -33,7 +33,7 @@ import org.yardstickframework.BenchmarkUtils;
 import static org.apache.ignite.yardstick.jdbc.JdbcUtils.fillTableWithIdx;
 
 /**
- * Native sql benchmark that performs insert operations.
+ * Native sql benchmark that performs mixed insert/delete/select operations.
  */
 public class NativeSqlMixedDateInlineBenchmark extends IgniteAbstractBenchmark {
     /** */
