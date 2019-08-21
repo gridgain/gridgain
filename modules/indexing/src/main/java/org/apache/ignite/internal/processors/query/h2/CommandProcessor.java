@@ -1036,7 +1036,7 @@ public class CommandProcessor {
         if (!F.isEmpty(scale))
             res.setFieldsScale(scale);
 
-        String valTypeName = QueryUtils.createTableValueTypeName(createTbl.schemaName(), createTbl.tableName());
+        String valTypeName = QueryUtils.createTableCacheName(createTbl.schemaName(), createTbl.tableName());
         String keyTypeName = QueryUtils.createTableKeyTypeName(valTypeName);
 
         if (!F.isEmpty(createTbl.keyTypeName()))
