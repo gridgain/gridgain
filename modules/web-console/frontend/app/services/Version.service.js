@@ -111,6 +111,9 @@ export default class IgniteVersion {
      * @returns {Boolean} `True` if version is equal or greater than specified range.
      */
     since(target, ...ranges) {
+        if (!target)
+            return false;
+
         const targetVer = this.parse(target);
 
         return !!_.find(ranges, (range) => {

@@ -104,15 +104,27 @@ class ConnectionState {
 
         if (_.isEmpty(this.clusters))
             this.cluster = null;
-        else if (_.isNil(this.cluster))
-            this.cluster = _.head(clusters);
+        else if (_.isNil(this.cluster)) {
+            const restoredCluster = _.find(clusters, {id: localStorage.clusterId});
+
+            if (restoredCluster)
+                this.cluster = restoredCluster;
+            else {
+                this.cluster = _.head(clusters);
+
+                localStorage.clusterId = this.cluster.id;
+            }
+        }
         else {
             const updatedCluster = _.find(clusters, {id: this.cluster.id});
 
             if (updatedCluster)
                 _.merge(this.cluster, updatedCluster);
-            else
+            else {
                 this.cluster = _.head(clusters);
+
+                localStorage.clusterId = this.cluster.id;
+            }
         }
 
         this.hasDemo = hasDemo;
@@ -139,7 +151,7 @@ export default class AgentManager {
 
     clusterVersion: string;
 
-    connectionSbj = new BehaviorSubject(new ConnectionState(AgentManager.restoreActiveCluster()));
+    connectionSbj = new BehaviorSubject(new ConnectionState());
 
     clustersSecrets = new ClusterSecretsManager();
 
@@ -160,21 +172,6 @@ export default class AgentManager {
 
     removeClusterSwitchListener(func) {
         this.switchClusterListeners.delete(func);
-    }
-
-    static restoreActiveCluster() {
-        try {
-            const cluster = JSON.parse(localStorage.cluster);
-
-            delete cluster.secured;
-
-            return cluster;
-        }
-        catch (ignored) {
-            localStorage.removeItem('cluster');
-
-            return null;
-        }
     }
 
     constructor(
@@ -293,8 +290,6 @@ export default class AgentManager {
 
                 this.connectionSbj.next(conn);
 
-                this.saveToStorage();
-
                 break;
 
             case 'admin:announcement':
@@ -322,7 +317,7 @@ export default class AgentManager {
     saveToStorage(cluster = this.connectionSbj.getValue().cluster) {
         try {
             if (cluster)
-                localStorage.cluster = JSON.stringify(cluster);
+                localStorage.clusterId = cluster.id;
         }
         catch (ignored) {
             // No-op.
