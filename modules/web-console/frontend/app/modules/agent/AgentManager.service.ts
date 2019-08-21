@@ -86,6 +86,21 @@ const SuccessStatus = {
     SECURITY_CHECK_FAILED: 3
 };
 
+/**
+ * Save in local storage ID of specified cluster.
+ *
+ * @param {ClusterStats} cluster Cluster to save it's ID in local storage.
+ */
+const saveToStorage = (cluster) => {
+    try {
+        if (cluster)
+            localStorage.clusterId = cluster.id;
+    }
+    catch (ignored) {
+        // No-op.
+    }
+};
+
 class ConnectionState {
     constructor(cluster) {
         this.cluster = cluster;
@@ -107,13 +122,9 @@ class ConnectionState {
         else if (_.isNil(this.cluster)) {
             const restoredCluster = _.find(clusters, {id: localStorage.clusterId});
 
-            if (restoredCluster)
-                this.cluster = restoredCluster;
-            else {
-                this.cluster = _.head(clusters);
+            this.cluster = restoredCluster || _.head(clusters);
 
-                localStorage.clusterId = this.cluster.id;
-            }
+            saveToStorage(this.cluster);
         }
         else {
             const updatedCluster = _.find(clusters, {id: this.cluster.id});
@@ -123,7 +134,7 @@ class ConnectionState {
             else {
                 this.cluster = _.head(clusters);
 
-                localStorage.clusterId = this.cluster.id;
+                saveToStorage(this.cluster);
             }
         }
 
@@ -314,16 +325,6 @@ export default class AgentManager {
         });
     }
 
-    saveToStorage(cluster = this.connectionSbj.getValue().cluster) {
-        try {
-            if (cluster)
-                localStorage.clusterId = cluster.id;
-        }
-        catch (ignored) {
-            // No-op.
-        }
-    }
-
     updateCluster(newCluster) {
         const conn = this.connectionSbj.getValue();
 
@@ -351,7 +352,7 @@ export default class AgentManager {
 
                 this.connectionSbj.next(state);
 
-                this.saveToStorage(cluster);
+                saveToStorage(cluster);
 
                 return Promise.resolve();
             });
