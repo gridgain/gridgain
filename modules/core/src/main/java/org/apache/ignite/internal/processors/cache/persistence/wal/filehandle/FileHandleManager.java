@@ -66,5 +66,5 @@ public interface FileHandleManager {
      * @throws IgniteCheckedException if fail.
      * @throws StorageException if storage was fail.
      */
-    void flush(WALPointer ptr, boolean explicitFsync) throws IgniteCheckedException, StorageException;
+    WALPointer flush(WALPointer ptr, boolean explicitFsync) throws IgniteCheckedException, StorageException;
 }
