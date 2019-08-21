@@ -1123,7 +1123,7 @@ public final class IgniteSystemProperties {
      */
     public static final String IGNITE_FAIL_NODE_ON_UNRECOVERABLE_PARTITION_INCONSISTENCY =
         "IGNITE_FAIL_NODE_ON_UNRECOVERABLE_PARTITION_INCONSISTENCY";
-    
+
     /**
      * Starting from this number of dirty pages in checkpoint, array will be sorted with
      * {@link Arrays#parallelSort(Comparable[])} in case of {@link CheckpointWriteOrder#SEQUENTIAL}.
@@ -1197,6 +1197,11 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS =
         "IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS";
 
+    /**
+     * Disables smart DR throttling. Default value is <code>false</code>.
+     */
+    public static final String IGNITE_DISABLE_SMART_DR_THROTTLING =
+        "IGNITE_DISABLE_SMART_DR_THROTTLING";
     /**
      * Enforces singleton.
      */

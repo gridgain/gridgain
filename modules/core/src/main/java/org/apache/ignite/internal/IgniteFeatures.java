@@ -67,7 +67,12 @@ public enum IgniteFeatures {
     IGNITE_SECURITY_PROCESSOR(13),
 
     /** Replacing TcpDiscoveryNode field with nodeId field in discovery messages. */
-    TCP_DISCOVERY_MESSAGE_NODE_COMPACT_REPRESENTATION(14);
+    TCP_DISCOVERY_MESSAGE_NODE_COMPACT_REPRESENTATION(14),
+
+    /**
+     * A mode when data nodes throttle update rate regarding to DR sender load
+     */
+    DR_DATA_NODE_SMART_THROTTLING(19);
 
     /**
      * Unique feature identifier.
