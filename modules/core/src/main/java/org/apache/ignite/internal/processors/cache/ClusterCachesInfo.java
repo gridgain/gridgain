@@ -1032,7 +1032,7 @@ class ClusterCachesInfo {
                         boolean staticallyConfigured = locallyConfiguredCaches.containsKey(desc.cacheName());
 
                         // Preserve near flag if cache context exists.
-                        boolean nearEnabled = Optional.ofNullable(ctx.cache().cache(desc.cacheName()))
+                        boolean nearEnabled = Optional.ofNullable(ctx.cache().internalCache(desc.cacheName()))
                             .map(cache -> cache.context().isNear())
                             .orElse(false);
 
