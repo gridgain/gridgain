@@ -145,7 +145,7 @@ public class CorruptedTreeException extends IgniteCheckedException implements Co
             stringBuilder.a(", indexName=").a(indexName);
 
         if (grpName != null)
-            stringBuilder.a(", grpName=").a(grpName);
+            stringBuilder.a(", groupName=").a(grpName);
 
         stringBuilder.a(", msg=").a(msg).a("]");
 
