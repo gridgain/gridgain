@@ -58,7 +58,6 @@ import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_HANDSHAK
 import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_REVOKE_TOKEN;
 import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_STATUS;
 import static org.apache.ignite.console.websocket.WebSocketEvents.CLUSTER_TOPOLOGY;
-import static org.apache.ignite.console.websocket.WebSocketEvents.NODE_VISOR;
 
 /**
  * Agents service.
@@ -84,9 +83,17 @@ public class AgentsService extends AbstractSocketHandler {
     private final Map<String, UUID> srcOfRequests;
 
     /**
+     * @param ignite Ignite.
      * @param accRepo Repository to work with accounts.
+     * @param agentsRepo Repositories to work with agents.
+     * @param clustersRepo Repositories to work with clusters.
      */
-    public AgentsService(Ignite ignite, AccountsRepository accRepo, AgentsRepository agentsRepo, ClustersRepository clustersRepo) {
+    public AgentsService(
+        Ignite ignite,
+        AccountsRepository accRepo,
+        AgentsRepository agentsRepo,
+        ClustersRepository clustersRepo
+    ) {
         super(ignite);
 
         this.accRepo = accRepo;
@@ -141,10 +148,6 @@ public class AgentsService extends AbstractSocketHandler {
                     log.warn("Failed to process topology update: " + evt, e);
                 }
 
-                break;
-
-            case NODE_VISOR:
-                log.info("DR EVENT PROCESSED: " + evt);
                 break;
 
             default:
@@ -373,8 +376,8 @@ public class AgentsService extends AbstractSocketHandler {
     }
 
     /**
-     * @param accIds Account ids.
-     * @param demo is demo stats.
+     * @param accIds Account IDs.
+     * @param demo Is demo cluster.
      */
     private void sendAgentStats(Set<UUID> accIds, boolean demo) {
         for (UUID accId : accIds) {
@@ -415,6 +418,7 @@ public class AgentsService extends AbstractSocketHandler {
         return locAgents
             .values()
             .stream()
+            .filter(ses -> !F.isEmpty(ses.getClusterIds()))
             .flatMap(ses -> ses.getAccIds().stream())
             .collect(Collectors.toSet());
     }

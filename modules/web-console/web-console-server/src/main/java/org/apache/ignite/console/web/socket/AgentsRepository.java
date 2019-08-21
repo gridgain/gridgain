@@ -77,10 +77,10 @@ public class AgentsRepository {
     }
 
     /**
-     * Add cluster to local backend
+     * Add cluster to local backend.
      *
-     * @param accIds Account ids.
-     * @param clusterId Cluster id.
+     * @param accIds Account IDs.
+     * @param clusterId Cluster ID.
      */
     public void addCluster(Set<UUID> accIds, String clusterId) {
         UUID nid = ignite.cluster().localNode().id();
@@ -106,7 +106,7 @@ public class AgentsRepository {
      * @param nid Node id.
      */
     public void remove(AgentKey key, UUID nid) {
-        this.txMgr.doInTransaction(() -> backendByAgent.remove(key, nid));
+        txMgr.doInTransaction(() -> backendByAgent.remove(key, nid));
     }
 
     /**
