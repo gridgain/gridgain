@@ -76,30 +76,6 @@
 
         <dependency>
             <groupId>io.opencensus</groupId>
-            <artifactId>opencensus-impl-core</artifactId>
-            <version>${opencensus.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>io.grpc</groupId>
-            <artifactId>grpc-context</artifactId>
-            <version>${grpc-context.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.lmax</groupId>
-            <artifactId>disruptor</artifactId>
-            <version>${disruptor.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-            <version>${guava-opencensus.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>io.opencensus</groupId>
             <artifactId>opencensus-exporter-trace-zipkin</artifactId>
             <version>${opencensus.version}</version>
         </dependency>
@@ -125,4 +101,27 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-libs</id>
+                        <phase>test-compile</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <excludeGroupIds>org.gridgain</excludeGroupIds>
+                            <outputDirectory>target/libs</outputDirectory>
+                            <includeScope>runtime</includeScope>
+                            <excludeTransitive>false</excludeTransitive>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 </project>
