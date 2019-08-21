@@ -22,6 +22,7 @@ namespace Apache.Ignite.Core.Tests.ApiParity
     /// <summary>
     /// Tests that .NET <see cref="IgniteConfiguration"/> has all properties from Java configuration APIs.
     /// </summary>
+    [Ignore(ParityTest.IgnoreReason)]
     public class IgniteConfigurationParityTest
     {
         /** Known property name mappings Java -> .NET. */
