@@ -82,7 +82,7 @@ public class MovieLensSQLExample {
                     .withTrainerEnvironment(envBuilder.buildForTrainer());
 
                 System.out.println(">>> Training model...");
-                RecommendationModel<Serializable, Serializable> mdl = trainer.fitBinary(
+                RecommendationModel<Serializable, Serializable> mdl = trainer.fit(
                     new SqlDatasetBuilder(ignite, "SQL_PUBLIC_RATINGS"),
                     "movie_id",
                     "user_id",

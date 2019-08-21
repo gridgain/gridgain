@@ -72,7 +72,7 @@ public class RecommendationTrainer {
      * @param ratingFieldName Rating field name.
      * @return Trained recommendation model.
      */
-    public RecommendationModel<Serializable, Serializable> fitBinary(DatasetBuilder<Object, BinaryObject> datasetBuilder,
+    public RecommendationModel<Serializable, Serializable> fit(DatasetBuilder<Object, BinaryObject> datasetBuilder,
         String objFieldName, String subjFieldName, String ratingFieldName) {
         try (Dataset<EmptyContext, RecommendationDatasetData<Serializable, Serializable>> dataset = datasetBuilder.build(
             environmentBuilder,
