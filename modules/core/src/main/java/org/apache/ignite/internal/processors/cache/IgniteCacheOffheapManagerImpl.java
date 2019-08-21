@@ -1268,12 +1268,15 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     @Override public final void destroyCacheDataStore(CacheDataStore store) throws IgniteCheckedException {
         int p = store.partId();
 
-        try {
+        boolean withPersistence = getClass() != IgniteCacheOffheapManagerImpl.class;
+
+        if (withPersistence)
             ctx.database().checkpointReadLock();
 
-            try {
-                partStoreLock.lock(p);
+        try {
+            partStoreLock.lock(p);
 
+            try {
                 boolean removed = partDataStores.remove(p, store);
 
                 assert removed;
@@ -1288,7 +1291,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             throw new IgniteException(e);
         }
         finally {
-            ctx.database().checkpointReadUnlock();
+            if (withPersistence)
+                ctx.database().checkpointReadUnlock();
         }
     }
 
