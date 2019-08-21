@@ -17,11 +17,9 @@
 package org.gridgain.service.tracing;
 
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import com.google.common.collect.Lists;
 import io.opencensus.common.Duration;
 import io.opencensus.common.Function;
 import io.opencensus.common.Functions;
@@ -33,7 +31,6 @@ import io.opencensus.trace.Status;
 import io.opencensus.trace.Tracing;
 import io.opencensus.trace.export.SpanData;
 import org.apache.ignite.IgniteMessaging;
-import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.opencensus.spi.tracing.OpenCensusTraceExporter;
 import org.gridgain.dto.span.Span;
@@ -89,12 +86,8 @@ public class GmcSpanExporter implements AutoCloseable {
                         .map(GmcSpanExporter::fromSpanDataToSpan)
                         .collect(Collectors.toList());
 
-                ClusterNode node = ctx.grid().cluster().forServers().nodes().stream()
-                        .min(Comparator.comparingLong(ClusterNode::order))
-                        .orElse(null);
-
-                IgniteMessaging msg = ctx.grid().message(ctx.grid().cluster().forNode(node));
-                msg.send(TRACING_TOPIC, new SpanList(Lists.newArrayList(spans)));
+                IgniteMessaging msg = ctx.grid().message(ctx.grid().cluster().forOldest());
+                msg.send(TRACING_TOPIC, new SpanList(spans));
             }
         };
     }

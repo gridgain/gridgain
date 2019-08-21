@@ -16,19 +16,25 @@
 
 package org.gridgain.dto.span;
 
-import java.io.Serializable;
+import org.apache.ignite.internal.util.typedef.internal.U;
+
+import java.io.Externalizable;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 /**
  * DTO for span list.
  */
-public class SpanList implements Serializable {
+public class SpanList implements Externalizable {
     /** Serial version uid. */
     private static final long serialVersionUID = 0L;
 
     /** Span list. */
-    private List<Span> list = new ArrayList<>();
+    private Collection<Span> list = new ArrayList<>();
 
     /**
      * Default constructor.
@@ -46,15 +52,18 @@ public class SpanList implements Serializable {
     /**
      * Return list of spans.
      */
-    public List<Span> getList() {
+    public Collection<Span> getList() {
         return list;
     }
 
-    /**
-     * @param list Span list.
-     */
-    public SpanList setList(List<Span> list) {
-        this.list = list;
-        return this;
+    /** {@inheritDoc} */
+    @Override public void writeExternal(ObjectOutput out) throws IOException {
+        U.writeCollection(out, list);
+
+    }
+
+    /** {@inheritDoc} */
+    @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+        list = U.readCollection(in);
     }
 }
