@@ -14,17 +14,8 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.spi.metric;
-
 /**
- * Interface for the metrics that holds long primitive.
+ * <!-- Package description. -->
+ * Contains recommendation system framework.
  */
-public interface LongMetric extends Metric {
-    /** @return Value of the metric. */
-    public long value();
-
-    /** {@inheritDoc} */
-    @Override public default String getAsString() {
-        return Long.toString(value());
-    }
-}
+package org.apache.ignite.ml.recommendation;
