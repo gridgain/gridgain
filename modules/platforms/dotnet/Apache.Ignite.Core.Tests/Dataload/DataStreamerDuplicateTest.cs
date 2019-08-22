@@ -16,10 +16,8 @@
 
 namespace Apache.Ignite.Core.Tests.Dataload
 {
-    using System.Collections.Generic;
     using System.Linq;
     using Apache.Ignite.Core.Cache;
-    using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Datastream;
     using NUnit.Framework;
 
@@ -28,39 +26,29 @@ namespace Apache.Ignite.Core.Tests.Dataload
         [Test]
         public void TestDuplicateCounter()
         {
-            var cfg = new CacheConfiguration("wordCountCache");
-            var stmCache = Ignite.GetOrCreateCache<string, long>(cfg);
+            var cache = Ignite.GetOrCreateCache<string, long>("c");
 
-            using (var streamer = Ignite.GetDataStreamer<string, long>(stmCache.Name))
+            using (var streamer = Ignite.GetDataStreamer<string, long>(cache.Name))
             {
                 streamer.AllowOverwrite = true;
+                streamer.Receiver = new StreamTransformer<string, long, object, object>(new CountingEntryProcessor());
 
-                // Configure data transformation to count instances of the same word
-                streamer.Receiver = new StreamTransformer<string, long, object, object>(new MyEntryProcessor());
-
-                foreach (var word in GetWords())
+                var words = Enumerable.Repeat("a", 3).Concat(Enumerable.Repeat("b", 2));
+                foreach (var word in words)
                 {
                     streamer.AddData(word, 1L);
                 }
-
-                streamer.Flush();
             }
 
-            Assert.AreEqual(3, stmCache.Get("a"));
-            Assert.AreEqual(2, stmCache.Get("b"));
+            Assert.AreEqual(3, cache.Get("a"));
+            Assert.AreEqual(2, cache.Get("b"));
         }
 
-        private static IEnumerable<string> GetWords()
-        {
-            return Enumerable.Repeat("a", 3).Concat(Enumerable.Repeat("b", 2));
-        }
-
-        class MyEntryProcessor : ICacheEntryProcessor<string, long, object, object>
+        class CountingEntryProcessor : ICacheEntryProcessor<string, long, object, object>
         {
             public object Process(IMutableCacheEntry<string, long> e, object arg)
             {
-                var val = e.Value;
-                e.Value = val == 0 ? 1L : val + 1;
+                e.Value++;
 
                 return null;
             }
