@@ -364,7 +364,7 @@ public class WebSocketRouter implements AutoCloseable {
                     return;
                 }
                 case AGENT_REVOKE_TOKEN:
-                    processRevokeToken(fromJson(evt.getPayload(), String.class));
+                    processRevokeToken(evt.getPayload());
 
                     return;
 
