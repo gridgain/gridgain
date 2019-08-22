@@ -18,8 +18,10 @@ namespace Apache.Ignite.Core.Tests.Deployment
 {
     extern alias ExamplesDll;
     using System;
+    using System.Diagnostics;
     using System.IO;
     using System.Threading;
+    using System.Threading.Tasks;
     using Apache.Ignite.Core.Cluster;
     using Apache.Ignite.Core.Compute;
     using Apache.Ignite.Core.Deployment;
@@ -218,6 +220,15 @@ namespace Apache.Ignite.Core.Tests.Deployment
                 for (var i = 0; i < 10; i++)
                 {
                     Console.WriteLine("Test iteration {0}", i);
+                    Task.Factory.StartNew(() =>
+                    {
+                        Thread.Sleep(5000);
+                        var jh = Environment.GetEnvironmentVariable("JAVA_HOME");
+                        var jstack = Path.Combine(jh, "bin", "jstack.exe");
+                        Console.WriteLine("Taking java thread dump with " + jstack);
+                        var dump = Shell.Execute2(jstack, Process.GetCurrentProcess().Id.ToString());
+                        Console.WriteLine("JSTACK: " + dump);
+                    });
                     test(ignite);
                 }
             }
