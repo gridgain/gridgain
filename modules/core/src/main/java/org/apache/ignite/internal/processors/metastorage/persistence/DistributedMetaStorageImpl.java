@@ -1346,14 +1346,4 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
     private void localMetastorageUnlock() {
         ctx.cache().context().database().checkpointReadUnlock();
     }
-
-    /** */
-    public DistributedMetaStorageVersion getVer() {
-        return ver;
-    }
-
-    /** */
-    public void setVer(DistributedMetaStorageVersion ver) {
-        this.ver = ver;
-    }
 }
