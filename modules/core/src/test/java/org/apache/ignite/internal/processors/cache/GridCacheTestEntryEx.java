@@ -403,7 +403,7 @@ public class GridCacheTestEntryEx extends GridMetadataAwareAdapter implements Gr
     }
 
     /** @inheritDoc */
-    @Override public boolean isNew() {
+    public boolean isNew() {
         assert false; return false;
     }
 
@@ -662,7 +662,7 @@ public class GridCacheTestEntryEx extends GridMetadataAwareAdapter implements Gr
     }
 
     /** {@inheritDoc} */
-    @Override public void onMarkedObsolete() {
+    public void onMarkedObsolete() {
         // No-op.
     }
 
