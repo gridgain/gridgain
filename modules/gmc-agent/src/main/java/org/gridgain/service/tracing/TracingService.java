@@ -89,11 +89,9 @@ public class TracingService implements AutoCloseable {
      * @return Sender which send messages from queue to gmc.
      */
     private RetryableSender<SpanBatch> createSenderWorker() {
-        return new RetryableSender<SpanBatch>(log, QUEUE_CAP) {
-            @Override protected void send(SpanBatch list) {
-                if (!mgr.send(buildSaveSpanDest(ctx.cluster().get().id()), list.getList()))
-                    throw new IgniteException("Message with spans doesn't send");
-            }
-        };
+        return new RetryableSender<>(log, QUEUE_CAP, (b) -> {
+            if (!mgr.send(buildSaveSpanDest(ctx.cluster().get().id()), b.getList()))
+                throw new IgniteException("Failed to send message with spans");
+        });
     }
 }

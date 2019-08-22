@@ -19,11 +19,12 @@ package org.gridgain.service.tracing;
 import org.apache.ignite.IgniteLogger;
 
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.function.Consumer;
 
 /**
  * Retryable sender with limited queue.
  */
-public abstract class RetryableSender<T> implements Runnable {
+public class RetryableSender<T> implements Runnable {
     /** Max sleep time seconds. */
     private static final int MAX_SLEEP_TIME_SECONDS = 10;
 
@@ -33,14 +34,18 @@ public abstract class RetryableSender<T> implements Runnable {
     /** Queue. */
     private final LinkedBlockingDeque<T> queue;
 
+    /** Send function. */
+    private final Consumer<T> sndFn;
+
     /** Retry count. */
     private int retryCnt;
 
     /**
      * @param log Logger.
      */
-    protected RetryableSender(IgniteLogger log, int cap) {
+    protected RetryableSender(IgniteLogger log, int cap, Consumer<T> sndFn) {
         this.log = log;
+        this.sndFn = sndFn;
         queue = new LinkedBlockingDeque<>(cap);
     }
 
@@ -53,7 +58,7 @@ public abstract class RetryableSender<T> implements Runnable {
                 Thread.sleep(retryCnt * 1000);
 
                 e = queue.takeFirst();
-                send(e);
+                sndFn.accept(e);
 
                 retryCnt = 0;
             }
@@ -61,13 +66,13 @@ public abstract class RetryableSender<T> implements Runnable {
                 break;
             }
             catch (Exception ex) {
-                if (retryCnt == 0)
-                    log.warning("Can't send message with spans, retry!", ex);
-
-                addToSendQueue(e);
-
                 if (retryCnt <= MAX_SLEEP_TIME_SECONDS)
                     retryCnt++;
+
+                if (retryCnt == 0)
+                    log.warning("Failed to send message with spans, will retry in " + retryCnt * 1000 + " ms", ex);
+
+                addToSendQueue(e);
             }
         }
     }
@@ -81,9 +86,4 @@ public abstract class RetryableSender<T> implements Runnable {
             queue.offerLast(e);
         }
     }
-
-    /**
-     * @param list List.
-     */
-    protected abstract void send(T list);
 }

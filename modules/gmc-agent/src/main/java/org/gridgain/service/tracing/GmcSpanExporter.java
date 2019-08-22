@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import com.google.common.collect.Lists;
 import io.opencensus.common.Duration;
@@ -34,7 +35,6 @@ import io.opencensus.trace.Status;
 import io.opencensus.trace.Tracing;
 import io.opencensus.trace.export.SpanData;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.IgniteMessaging;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.opencensus.spi.tracing.OpenCensusTraceExporter;
 import org.apache.ignite.spi.IgniteSpiException;
@@ -130,12 +130,9 @@ public class GmcSpanExporter implements AutoCloseable {
      * @return Worker which send messages from queue to topic.
      */
     private RetryableSender<SpanBatch> createSenderWorker() {
-        return new RetryableSender<SpanBatch>(log, QUEUE_CAP) {
-            @Override protected void send(SpanBatch list) {
-                IgniteMessaging msg = ctx.grid().message(ctx.grid().cluster().forOldest());
-                msg.send(TRACING_TOPIC, list);
-            }
-        };
+        Consumer<SpanBatch> sndFn = (b) -> ctx.grid().message(ctx.grid().cluster().forOldest()).send(TRACING_TOPIC, b);
+
+        return new RetryableSender<>(log, QUEUE_CAP, sndFn);
     }
 
     /**

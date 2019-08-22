@@ -40,6 +40,7 @@ public class SpanBatch implements Externalizable {
      * Default constructor.
      */
     public SpanBatch() {
+        // No-op.
     }
 
     /**
