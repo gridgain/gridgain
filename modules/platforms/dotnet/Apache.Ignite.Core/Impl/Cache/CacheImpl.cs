@@ -960,8 +960,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             var holder = new CacheEntryProcessorHolder(processor, arg,
                 (e, a) => processor.Process((IMutableCacheEntry<TK, TV>)e, (TArg)a), typeof(TK), typeof(TV));
 
-            // TODO: This can break in explicit tx too?
-            var ptr = _txManager == null ? _ignite.HandleRegistry.Allocate(holder) : 0;
+            var ptr = AllocateNoTx(holder);
 
             try
             {
@@ -977,7 +976,8 @@ namespace Apache.Ignite.Core.Impl.Cache
             }
             finally
             {
-                _ignite.HandleRegistry.Release(ptr);
+                if (ptr != 0)
+                    _ignite.HandleRegistry.Release(ptr);
             }
         }
 
@@ -1534,15 +1534,6 @@ namespace Apache.Ignite.Core.Impl.Cache
             DoOutInOp((int) CacheOp.CloseLock, id);
         }
 
-        /// <summary>
-        /// Starts a transaction when applicable.
-        /// </summary>
-        private void StartTx()
-        {
-            if (_txManager != null)
-                _txManager.StartTx();
-        }
-
         /** <inheritdoc /> */
         public IQueryMetrics GetQueryMetrics()
         {
@@ -1576,6 +1567,28 @@ namespace Apache.Ignite.Core.Impl.Cache
         public bool LocalPreloadPartition(int partition)
         {
             return DoOutOp(CacheOp.LocalPreloadPartition, w => w.WriteInt(partition));
+        }
+
+        /// <summary>
+        /// Starts a transaction when applicable.
+        /// </summary>
+        private void StartTx()
+        {
+            if (_txManager != null)
+                _txManager.StartTx();
+        }
+
+        /// <summary>
+        /// Allocates a handle only when there is no active transaction.
+        /// </summary>
+        /// <returns>Handle or 0 when there is an active transaction.</returns>
+        private long AllocateNoTx(object obj)
+        {
+            // With transactions, actual cache operation execution is delayed, so we don't control handle lifetime.
+            if (_txManager != null && _txManager.IsInTx())
+                return 0;
+
+            return _ignite.HandleRegistry.Allocate(obj);
         }
     }
 }
