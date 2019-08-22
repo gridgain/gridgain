@@ -222,20 +222,6 @@ public interface GridCacheEntryEx {
         boolean evictOffheap) throws IgniteCheckedException;
 
     /**
-     * This method should be called each time entry is marked obsolete
-     * other than by calling {@link #markObsolete(GridCacheVersion)}.
-     */
-    public void onMarkedObsolete();
-
-    /**
-     * Checks if entry is new assuming lock is held externally.
-     *
-     * @return {@code True} if entry is new.
-     * @throws GridCacheEntryRemovedException If entry was removed.
-     */
-    public boolean isNew() throws GridCacheEntryRemovedException;
-
-    /**
      * Checks if entry is new while holding lock.
      *
      * @return {@code True} if entry is new.
