@@ -40,26 +40,33 @@ public class IdAndTagViewTaskResult extends IgniteDataTransferObject {
         // No-op.
     }
 
+    /**
+     * @param id Cluster ID.
+     * @param tag Cluster tag.
+     */
     public IdAndTagViewTaskResult(UUID id, String tag) {
         this.id = id;
         this.tag = tag;
     }
 
+    /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         out.writeObject(id);
         out.writeObject(tag);
     }
 
-    @Override
-    protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
+    /** {@inheritDoc} */
+    @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
         id = (UUID)in.readObject();
         tag = (String)in.readObject();
     }
 
+    /** */
     public UUID id() {
         return id;
     }
 
+    /** */
     public String tag() {
         return tag;
     }
