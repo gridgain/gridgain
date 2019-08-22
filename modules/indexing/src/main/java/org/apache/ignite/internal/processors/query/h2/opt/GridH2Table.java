@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -36,8 +36,10 @@ import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryField;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IndexRebuildPartialClosure;
+import org.apache.ignite.internal.processors.query.h2.database.H2IndexType;
 import org.apache.ignite.internal.processors.query.h2.database.H2RowFactory;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
+import org.apache.ignite.internal.processors.query.h2.database.IndexInformation;
 import org.apache.ignite.internal.processors.query.h2.twostep.GridMapQueryExecutor;
 import org.apache.ignite.internal.util.typedef.F;
 import org.h2.command.ddl.CreateTableData;
@@ -59,6 +61,8 @@ import org.h2.table.TableType;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
+import static org.apache.ignite.internal.processors.query.h2.H2TableDescriptor.PK_HASH_IDX_NAME;
+import static org.apache.ignite.internal.processors.query.h2.opt.GridH2PrimaryScanIndex.SCAN_INDEX_NAME_SUFFIX;
 import static org.apache.ignite.internal.processors.query.h2.opt.GridH2KeyValueRowOnheap.DEFAULT_COLUMNS_COUNT;
 import static org.apache.ignite.internal.processors.query.h2.opt.GridH2KeyValueRowOnheap.KEY_COL;
 
@@ -208,6 +212,56 @@ public class GridH2Table extends TableBase {
         sysIdxsCnt = idxs.size();
 
         lock = new ReentrantReadWriteLock();
+    }
+
+    /**
+     * @return Information about all indexes related to the table.
+     */
+    @SuppressWarnings("ZeroLengthArrayAllocation")
+    public List<IndexInformation> indexesInformation() {
+        List<IndexInformation> res = new ArrayList<>();
+
+        IndexColumn keyCol = indexColumn(KEY_COL, SortOrder.ASCENDING);
+
+        List<IndexColumn> wrappedKeyCols = H2Utils.treeIndexColumns(rowDescriptor(),
+            new ArrayList<>(2), keyCol, affKeyCol);
+
+        //explicit add HASH index, due to we know all their parameters and it doesn't created on non afinity nodes.
+        res.add(
+            new IndexInformation(false,
+                true, PK_HASH_IDX_NAME,
+                H2IndexType.HASH,
+                H2Utils.indexColumnsSql(wrappedKeyCols.toArray(new IndexColumn[0])),
+                null));
+
+        //explicit add SCAN index, due to we know all their parameters and it depends on affinity node or not.
+        res.add(new IndexInformation(false, false, SCAN_INDEX_NAME_SUFFIX, H2IndexType.SCAN, null, null));
+
+        for (Index idx : idxs) {
+            if (idx instanceof H2TreeIndex) {
+                res.add(new IndexInformation(
+                    idx.getIndexType().isPrimaryKey(),
+                    idx.getIndexType().isUnique(),
+                    idx.getName(),
+                    H2IndexType.BTREE,
+                    H2Utils.indexColumnsSql(idx.getIndexColumns()),
+                    ((H2TreeIndex)idx).inlineSize()
+                ));
+            }
+            else if (idx.getIndexType().isSpatial()) {
+                res.add(
+                    new IndexInformation(
+                        false,
+                        false,
+                        idx.getName(),
+                        H2IndexType.SPATIAL,
+                        H2Utils.indexColumnsSql(idx.getIndexColumns()),
+                        null)
+                );
+            }
+        }
+
+        return res;
     }
 
     /**
