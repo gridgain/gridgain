@@ -213,7 +213,9 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
     /** */
     private boolean trackTimeout;
 
-    /** Counts how much time this transaction has spent on system calls, in nanoseconds. */
+    /**
+     * Counts how much time this transaction has spent on system calls, in nanoseconds.
+     */
     private final AtomicLong sysTime = new AtomicLong(0);
 
     /**
