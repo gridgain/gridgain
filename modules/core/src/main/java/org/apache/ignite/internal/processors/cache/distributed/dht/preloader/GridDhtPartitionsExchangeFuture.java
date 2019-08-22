@@ -1195,15 +1195,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                         cctx.exchange().exchangerBlockingSectionEnd();
                     }
 
-                    cctx.exchange().exchangerBlockingSectionBegin();
-
-                    try {
-                        ((IgniteChangeGlobalStateSupport)kctx.distributedMetastorage()).onActivate(kctx);
-                    }
-                    finally {
-                        cctx.exchange().exchangerBlockingSectionEnd();
-                    }
-
                     assert registerCachesFuture == null : "No caches registration should be scheduled before new caches have started.";
 
                     cctx.exchange().exchangerBlockingSectionBegin();
@@ -3598,12 +3589,13 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
                 if (discoveryCustomMessage instanceof DynamicCacheChangeBatch) {
                     if (exchActions != null) {
-                        assignPartitionsStates();
 
                         Set<String> caches = exchActions.cachesToResetLostPartitions();
 
                         if (!F.isEmpty(caches))
                             resetLostPartitions(caches);
+
+                        assignPartitionsStates();
                     }
                 }
                 else if (discoveryCustomMessage instanceof SnapshotDiscoveryMessage

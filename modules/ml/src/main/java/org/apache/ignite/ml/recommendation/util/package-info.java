@@ -14,16 +14,8 @@
  * limitations under the License.
  */
 
-namespace Apache.Ignite.Core.Metric
-{
-    using System.Diagnostics.CodeAnalysis;
-
-    /// <summary>
-    /// MetricExporter SPI.
-    /// </summary>
-    [SuppressMessage("Microsoft.Design", "CA1040:AvoidEmptyInterfaces")]
-    public interface IMetricExporterSpi
-    {
-        // No-op.
-    }
-}
+/**
+ * <!-- Package description. -->
+ * Contains util classes used in recommendation system framework.
+ */
+package org.apache.ignite.ml.recommendation.util;
