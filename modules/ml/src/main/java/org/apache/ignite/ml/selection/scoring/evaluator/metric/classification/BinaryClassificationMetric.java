@@ -24,15 +24,15 @@ import org.apache.ignite.ml.selection.scoring.evaluator.metric.Metric;
 /**
  * Common abstract class for all binary classification metrics.
  */
-public abstract class BinaryClassificationMetric implements Metric<Double, BinaryClassificationEvaluationContext, BinaryClassificationPointwiseMetricStatsAggregator> {
+public abstract class BinaryClassificationMetric<L> implements Metric<L, BinaryClassificationEvaluationContext<L>, BinaryClassificationPointwiseMetricStatsAggregator<L>> {
     /** Serial version uid. */
     private static final long serialVersionUID = 7549975086331141766L;
 
     /** Truth label. */
-    private final double truthLabel;
+    private final L truthLabel;
 
     /** False label. */
-    private final double falseLabel;
+    private final L falseLabel;
 
     /**
      * Creates an instance of BinaryClassificationMetric.
@@ -40,7 +40,7 @@ public abstract class BinaryClassificationMetric implements Metric<Double, Binar
      * @param truthLabel User provided truth label.
      * @param falseLabel User provided false label.
      */
-    public BinaryClassificationMetric(double truthLabel, double falseLabel) {
+    public BinaryClassificationMetric(L truthLabel, L falseLabel) {
         this.truthLabel = truthLabel;
         this.falseLabel = falseLabel;
     }
@@ -49,15 +49,15 @@ public abstract class BinaryClassificationMetric implements Metric<Double, Binar
      * Creates an instance of BinaryClassificationMetric.
      */
     public BinaryClassificationMetric() {
-        truthLabel = Double.NaN;
-        falseLabel = Double.NaN;
+        truthLabel = null;
+        falseLabel = null;
     }
 
     /** {@inheritDoc} */
-    @Override public BinaryClassificationPointwiseMetricStatsAggregator makeAggregator() {
-        if (Double.isNaN(truthLabel) && Double.isNaN(falseLabel))
-            return new BinaryClassificationPointwiseMetricStatsAggregator();
+    @Override public BinaryClassificationPointwiseMetricStatsAggregator<L> makeAggregator() {
+        if (truthLabel == null && falseLabel == null)
+            return new BinaryClassificationPointwiseMetricStatsAggregator<>();
         else
-            return new BinaryClassificationPointwiseMetricStatsAggregator.WithCustomLabelsAggregator(truthLabel, falseLabel);
+            return new BinaryClassificationPointwiseMetricStatsAggregator.WithCustomLabelsAggregator<>(truthLabel, falseLabel);
     }
 }

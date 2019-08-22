@@ -27,15 +27,15 @@ import org.apache.ignite.ml.structures.LabeledVector;
  * This class represents statistics for pointwise metrics evaluation for binary classification like TruePositive,
  * FalsePositive, TrueNegative and FalseNegative.
  */
-public class BinaryClassificationPointwiseMetricStatsAggregator implements MetricStatsAggregator<Double, BinaryClassificationEvaluationContext, BinaryClassificationPointwiseMetricStatsAggregator> {
+public class BinaryClassificationPointwiseMetricStatsAggregator<L> implements MetricStatsAggregator<L, BinaryClassificationEvaluationContext<L>, BinaryClassificationPointwiseMetricStatsAggregator<L>> {
     /** Serial version uid. */
     private static final long serialVersionUID = -7677193556950322385L;
 
     /** False label. */
-    private Double falseLabel = Double.NaN;
+    private L falseLabel;
 
     /** Truth label. */
-    private Double truthLabel = Double.NaN;
+    private L truthLabel;
 
     /** Count of true positives. */
     private int truePositive;
@@ -65,7 +65,7 @@ public class BinaryClassificationPointwiseMetricStatsAggregator implements Metri
      * @param trueNegative True negatives count.
      * @param falseNegative False negatives count.
      */
-    public BinaryClassificationPointwiseMetricStatsAggregator(Double falseLabel, Double truthLabel,
+    public BinaryClassificationPointwiseMetricStatsAggregator(L falseLabel, L truthLabel,
         int truePositive, int falsePositive, int trueNegative, int falseNegative) {
 
         this.falseLabel = falseLabel;
@@ -77,9 +77,9 @@ public class BinaryClassificationPointwiseMetricStatsAggregator implements Metri
     }
 
     /** {@inheritDoc} */
-    @Override public void aggregate(IgniteModel<Vector, Double> model, LabeledVector<Double> vector) {
-        Double modelAns = model.predict(vector.features());
-        Double realAns = vector.label();
+    @Override public void aggregate(IgniteModel<Vector, L> model, LabeledVector<L> vector) {
+        L modelAns = model.predict(vector.features());
+        L realAns = vector.label();
 
         if (modelAns.equals(falseLabel) && realAns.equals(falseLabel))
             trueNegative += 1;
@@ -92,11 +92,11 @@ public class BinaryClassificationPointwiseMetricStatsAggregator implements Metri
     }
 
     /** {@inheritDoc} */
-    @Override public BinaryClassificationPointwiseMetricStatsAggregator mergeWith(BinaryClassificationPointwiseMetricStatsAggregator other) {
+    @Override public BinaryClassificationPointwiseMetricStatsAggregator<L> mergeWith(BinaryClassificationPointwiseMetricStatsAggregator other) {
         A.ensure(this.falseLabel.equals(other.falseLabel), "this.falseLabel == other.falseLabel");
         A.ensure(this.truthLabel.equals(other.truthLabel), "this.truthLabel == other.truthLabel");
 
-        return new BinaryClassificationPointwiseMetricStatsAggregator(
+        return new BinaryClassificationPointwiseMetricStatsAggregator<>(
             this.falseLabel,
             this.truthLabel,
             this.truePositive + other.truePositive,
@@ -107,12 +107,12 @@ public class BinaryClassificationPointwiseMetricStatsAggregator implements Metri
     }
 
     /** {@inheritDoc} */
-    @Override public BinaryClassificationEvaluationContext createUnitializedContext() {
-        return new BinaryClassificationEvaluationContext();
+    @Override public BinaryClassificationEvaluationContext<L> createUnitializedContext() {
+        return new BinaryClassificationEvaluationContext<>();
     }
 
     /** {@inheritDoc} */
-    @Override public void initByContext(BinaryClassificationEvaluationContext context) {
+    @Override public void initByContext(BinaryClassificationEvaluationContext<L> context) {
         this.falseLabel = context.getFirstClassLbl();
         this.truthLabel = context.getSecondClassLbl();
     }
@@ -122,7 +122,7 @@ public class BinaryClassificationPointwiseMetricStatsAggregator implements Metri
      *
      * @return False label.
      */
-    public Double getFalseLabel() {
+    public L getFalseLabel() {
         return falseLabel;
     }
 
@@ -131,7 +131,7 @@ public class BinaryClassificationPointwiseMetricStatsAggregator implements Metri
      *
      * @return Truth label.
      */
-    public Double getTruthLabel() {
+    public L getTruthLabel() {
         return truthLabel;
     }
 
@@ -183,26 +183,31 @@ public class BinaryClassificationPointwiseMetricStatsAggregator implements Metri
     /**
      * Class represents already initialized aggregator.
      */
-    public static class WithCustomLabelsAggregator extends BinaryClassificationPointwiseMetricStatsAggregator {
+    public static class WithCustomLabelsAggregator<L> extends BinaryClassificationPointwiseMetricStatsAggregator<L> {
         /** Truth label. */
-        private final double truthLabel;
+        private final L truthLabel;
 
         /** False label. */
-        private final double falseLabel;
+        private final L falseLabel;
 
         /**
          * Create an instance of WithCustomLabels.
          * @param truthLabel Truth label.
          * @param falseLabel False label.
          */
-        public WithCustomLabelsAggregator(double truthLabel, double falseLabel) {
+        public WithCustomLabelsAggregator(L truthLabel, L falseLabel) {
             this.truthLabel = truthLabel;
             this.falseLabel = falseLabel;
         }
 
         /** {@inheritDoc} */
-        @Override public BinaryClassificationEvaluationContext createUnitializedContext() {
-            return new BinaryClassificationEvaluationContext(falseLabel, truthLabel) {
+        @Override public BinaryClassificationEvaluationContext<L> createUnitializedContext() {
+            return new BinaryClassificationEvaluationContext<L>(falseLabel, truthLabel) {
+                /**
+                 * Serial version ID.
+                 */
+                private static final long serialVersionUID = 4739649114414953828L;
+
                 @Override public boolean needToCompute() {
                     return false;
                 }

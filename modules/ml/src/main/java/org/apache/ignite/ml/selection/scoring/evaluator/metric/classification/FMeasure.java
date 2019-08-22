@@ -17,13 +17,14 @@
 
 package org.apache.ignite.ml.selection.scoring.evaluator.metric.classification;
 
+import java.io.Serializable;
 import org.apache.ignite.ml.selection.scoring.evaluator.aggregator.BinaryClassificationPointwiseMetricStatsAggregator;
 import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
 
 /**
  * F-measure metric class.
  */
-public class FMeasure extends BinaryClassificationMetric {
+public class FMeasure<L extends Serializable> extends BinaryClassificationMetric<L> {
     /**
      * Serial version uid.
      */
@@ -35,10 +36,10 @@ public class FMeasure extends BinaryClassificationMetric {
     private final double betaSquare;
 
     /** Precision. */
-    private final Precision precision = new Precision();
+    private final Precision<L> precision = new Precision<L>();
 
     /** Recall. */
-    private final Recall recall = new Recall();
+    private final Recall<L> recall = new Recall<L>();
 
     /** Fscore. */
     private Double fscore = Double.NaN;
@@ -66,7 +67,7 @@ public class FMeasure extends BinaryClassificationMetric {
      * @param falseLabel False label.
      * @param betaSquare Squared beta parameter.
      */
-    public FMeasure(double truthLabel, double falseLabel, double betaSquare) {
+    public FMeasure(L truthLabel, L falseLabel, double betaSquare) {
         super(truthLabel, falseLabel);
         this.betaSquare = betaSquare;
     }
@@ -77,13 +78,13 @@ public class FMeasure extends BinaryClassificationMetric {
      * @param truthLabel Truth label.
      * @param falseLabel False label.
      */
-    public FMeasure(double truthLabel, double falseLabel) {
+    public FMeasure(L truthLabel, L falseLabel) {
         super(truthLabel, falseLabel);
         this.betaSquare = 1;
     }
 
     /** {@inheritDoc} */
-    @Override public FMeasure initBy(BinaryClassificationPointwiseMetricStatsAggregator aggr) {
+    @Override public FMeasure<L> initBy(BinaryClassificationPointwiseMetricStatsAggregator<L> aggr) {
         precision.initBy(aggr);
         recall.initBy(aggr);
 

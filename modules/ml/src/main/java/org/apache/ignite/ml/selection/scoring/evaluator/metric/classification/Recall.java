@@ -17,13 +17,14 @@
 
 package org.apache.ignite.ml.selection.scoring.evaluator.metric.classification;
 
+import java.io.Serializable;
 import org.apache.ignite.ml.selection.scoring.evaluator.aggregator.BinaryClassificationPointwiseMetricStatsAggregator;
 import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
 
 /**
  * Recall metric class for binary classiticaion.
  */
-public class Recall extends BinaryClassificationMetric {
+public class Recall<L extends Serializable> extends BinaryClassificationMetric<L> {
     /** Serial version uid. */
     private static final long serialVersionUID = 8128102840736337225L;
 
@@ -36,7 +37,7 @@ public class Recall extends BinaryClassificationMetric {
      * @param truthLabel Truth label.
      * @param falseLabel False label.
      */
-    public Recall(double truthLabel, double falseLabel) {
+    public Recall(L truthLabel, L falseLabel) {
         super(truthLabel, falseLabel);
     }
 
@@ -47,7 +48,7 @@ public class Recall extends BinaryClassificationMetric {
     }
 
     /** {@inheritDoc} */
-    @Override public Recall initBy(BinaryClassificationPointwiseMetricStatsAggregator aggr) {
+    @Override public Recall<L> initBy(BinaryClassificationPointwiseMetricStatsAggregator<L> aggr) {
         recall = ((double) (aggr.getTruePositive()) / (aggr.getTruePositive() + aggr.getFalseNegative()));
         return this;
     }

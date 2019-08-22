@@ -15,11 +15,11 @@ public class BinaryClassificationPointwiseMetricStatsAggregatorTest {
     /** */
     @Test
     public void testAggregate() {
-        BinaryClassificationPointwiseMetricStatsAggregator aggregator = new BinaryClassificationPointwiseMetricStatsAggregator();
-        assertEquals(Double.NaN, aggregator.getFalseLabel(), 0.);
-        assertEquals(Double.NaN, aggregator.getTruthLabel(), 0.);
+        BinaryClassificationPointwiseMetricStatsAggregator<Double> aggregator = new BinaryClassificationPointwiseMetricStatsAggregator<>();
+        assertEquals(null, aggregator.getFalseLabel());
+        assertEquals(null, aggregator.getTruthLabel());
 
-        aggregator.initByContext(new BinaryClassificationEvaluationContext(0., 1.));
+        aggregator.initByContext(new BinaryClassificationEvaluationContext<>(0., 1.));
         assertEquals(0., aggregator.getFalseLabel(), 0.);
         assertEquals(1., aggregator.getTruthLabel(), 0.);
         assertEquals(0, aggregator.getTrueNegative());
@@ -41,18 +41,18 @@ public class BinaryClassificationPointwiseMetricStatsAggregatorTest {
     /** */
     @Test
     public void testMerge() {
-        BinaryClassificationPointwiseMetricStatsAggregator agg1 = new BinaryClassificationPointwiseMetricStatsAggregator();
-        BinaryClassificationPointwiseMetricStatsAggregator agg2 = new BinaryClassificationPointwiseMetricStatsAggregator();
+        BinaryClassificationPointwiseMetricStatsAggregator<Double> agg1 = new BinaryClassificationPointwiseMetricStatsAggregator<>();
+        BinaryClassificationPointwiseMetricStatsAggregator<Double> agg2 = new BinaryClassificationPointwiseMetricStatsAggregator<>();
 
-        agg1.initByContext(new BinaryClassificationEvaluationContext(0., 1.));
-        agg2.initByContext(new BinaryClassificationEvaluationContext(0., 1.));
+        agg1.initByContext(new BinaryClassificationEvaluationContext<>(0., 1.));
+        agg2.initByContext(new BinaryClassificationEvaluationContext<>(0., 1.));
 
         agg1.aggregate(model, VectorUtils.of(0.).labeled(0.));
         agg1.aggregate(model, VectorUtils.of(1.).labeled(0.));
         agg2.aggregate(model, VectorUtils.of(1.).labeled(1.));
         agg2.aggregate(model, VectorUtils.of(0.).labeled(1.));
 
-        BinaryClassificationPointwiseMetricStatsAggregator res = agg1.mergeWith(agg2);
+        BinaryClassificationPointwiseMetricStatsAggregator<Double> res = agg1.mergeWith(agg2);
         assertEquals(1, res.getTrueNegative());
         assertEquals(1, res.getFalseNegative());
         assertEquals(1, res.getTruePositive());
@@ -62,11 +62,11 @@ public class BinaryClassificationPointwiseMetricStatsAggregatorTest {
     /** */
     @Test(expected = IllegalArgumentException.class)
     public void testMergeInequalAggreagators() {
-        BinaryClassificationPointwiseMetricStatsAggregator agg1 = new BinaryClassificationPointwiseMetricStatsAggregator();
-        BinaryClassificationPointwiseMetricStatsAggregator agg2 = new BinaryClassificationPointwiseMetricStatsAggregator();
+        BinaryClassificationPointwiseMetricStatsAggregator<Double> agg1 = new BinaryClassificationPointwiseMetricStatsAggregator<>();
+        BinaryClassificationPointwiseMetricStatsAggregator<Double> agg2 = new BinaryClassificationPointwiseMetricStatsAggregator<>();
 
-        agg1.initByContext(new BinaryClassificationEvaluationContext(0., 0.));
-        agg2.initByContext(new BinaryClassificationEvaluationContext(1., 1.));
+        agg1.initByContext(new BinaryClassificationEvaluationContext<>(0., 0.));
+        agg2.initByContext(new BinaryClassificationEvaluationContext<>(1., 1.));
         agg1.mergeWith(agg2);
     }
 

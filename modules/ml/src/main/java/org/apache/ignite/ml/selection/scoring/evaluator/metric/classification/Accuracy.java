@@ -17,13 +17,14 @@
 
 package org.apache.ignite.ml.selection.scoring.evaluator.metric.classification;
 
+import java.io.Serializable;
 import org.apache.ignite.ml.selection.scoring.evaluator.aggregator.BinaryClassificationPointwiseMetricStatsAggregator;
 import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
 
 /**
  * Accuracy metric class.
  */
-public class Accuracy extends BinaryClassificationMetric {
+public class Accuracy<L extends Serializable> extends BinaryClassificationMetric<L> {
     /** Serial version uid. */
     private static final long serialVersionUID = -7042505196665295151L;
 
@@ -38,7 +39,7 @@ public class Accuracy extends BinaryClassificationMetric {
      * @param truthLabel Truth label.
      * @param falseLabel False label
      */
-    public Accuracy(double truthLabel, double falseLabel) {
+    public Accuracy(L truthLabel, L falseLabel) {
         super(truthLabel, falseLabel);
     }
 
@@ -49,7 +50,7 @@ public class Accuracy extends BinaryClassificationMetric {
     }
 
     /** {@inheritDoc} */
-    @Override public Accuracy initBy(BinaryClassificationPointwiseMetricStatsAggregator aggr) {
+    @Override public Accuracy<L> initBy(BinaryClassificationPointwiseMetricStatsAggregator<L> aggr) {
         accuracy = ((double) (aggr.getTruePositive() + aggr.getTrueNegative())) / aggr.getN();
         return this;
     }

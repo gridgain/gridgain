@@ -17,29 +17,33 @@
 
 package org.apache.ignite.ml.selection.scoring.evaluator.context;
 
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.ml.structures.LabeledVector;
 
 /**
  * This context tries to define positive and negative labels for estimation of binary classifier.
  */
-public class BinaryClassificationEvaluationContext implements EvaluationContext<Double, BinaryClassificationEvaluationContext> {
+public class BinaryClassificationEvaluationContext<L> implements EvaluationContext<L, BinaryClassificationEvaluationContext<L>> {
     /** Serial version uid. */
     private static final long serialVersionUID = 658785331349096576L;
 
     /** First class lbl. */
-    private Double firstClassLbl;
+    private L firstClassLbl;
 
     /** Second class lbl. */
-    private Double secondClassLbl;
+    private L secondClassLbl;
 
     /**
      * Creates an instance of BinaryClassificationEvaluationContext.
      */
     public BinaryClassificationEvaluationContext() {
-        this.firstClassLbl = Double.NaN;
-        this.secondClassLbl = Double.NaN;
+        this.firstClassLbl = null;
+        this.secondClassLbl = null;
     }
 
     /**
@@ -48,36 +52,42 @@ public class BinaryClassificationEvaluationContext implements EvaluationContext<
      * @param firstClassLbl First class lbl.
      * @param secondClassLbl Second class lbl.
      */
-    public BinaryClassificationEvaluationContext(Double firstClassLbl, Double secondClassLbl) {
+    public BinaryClassificationEvaluationContext(L firstClassLbl, L secondClassLbl) {
         this.firstClassLbl = firstClassLbl;
         this.secondClassLbl = secondClassLbl;
     }
 
     /** {@inheritDoc} */
-    @Override public void aggregate(LabeledVector<Double> vector) {
-        Double label = vector.label();
-        if (firstClassLbl.isNaN())
+    @Override public void aggregate(LabeledVector<L> vector) {
+        L label = vector.label();
+        if (firstClassLbl == null)
             this.firstClassLbl = label;
-        else if (secondClassLbl.isNaN() && !label.equals(firstClassLbl)) {
-            secondClassLbl = Math.max(firstClassLbl, label);
-            firstClassLbl = Math.min(firstClassLbl, label);
-        }
+        else if (secondClassLbl == null && !label.equals(firstClassLbl))
+            secondClassLbl = label;
         else
             checkNewLabel(label);
     }
 
     /** {@inheritDoc} */
-    @Override public BinaryClassificationEvaluationContext mergeWith(BinaryClassificationEvaluationContext other) {
+    @Override public BinaryClassificationEvaluationContext<L> mergeWith(BinaryClassificationEvaluationContext<L> other) {
         checkNewLabel(other.firstClassLbl);
         checkNewLabel(other.secondClassLbl);
 
-        double[] labels = Arrays.stream(new double[] {this.firstClassLbl, this.secondClassLbl, other.firstClassLbl, other.secondClassLbl})
-            .filter(x -> !Double.isNaN(x)).sorted().distinct().toArray();
+        List<L> uniqLabels = new ArrayList<>(4);
+        uniqLabels.add(this.firstClassLbl);
+        uniqLabels.add(this.secondClassLbl);
+        uniqLabels.add(other.firstClassLbl);
+        uniqLabels.add(other.secondClassLbl);
+        Stream<L> s = uniqLabels.stream().filter(Objects::nonNull).distinct();
+        if (firstClassLbl instanceof Comparable || secondClassLbl instanceof Comparable ||
+            other.firstClassLbl instanceof Comparable || other.secondClassLbl instanceof Comparable)
+            s = s.sorted();
+        uniqLabels = s.collect(Collectors.toList());
 
-        A.ensure(labels.length < 3, "labels.length < 3");
-        return new BinaryClassificationEvaluationContext(
-            labels.length == 0 ? Double.NaN : labels[0],
-            labels.length < 2 ? Double.NaN : labels[1]
+        A.ensure(uniqLabels.size() < 3, "labels.length < 3");
+        return new BinaryClassificationEvaluationContext<>(
+            uniqLabels.isEmpty() ? null : uniqLabels.get(0),
+            uniqLabels.size() < 2 ? null : uniqLabels.get(1)
         );
     }
 
@@ -86,7 +96,7 @@ public class BinaryClassificationEvaluationContext implements EvaluationContext<
      *
      * @return First class label.
      */
-    public Double getFirstClassLbl() {
+    public L getFirstClassLbl() {
         return firstClassLbl;
     }
 
@@ -95,7 +105,7 @@ public class BinaryClassificationEvaluationContext implements EvaluationContext<
      *
      * @return Second class label.
      */
-    public Double getSecondClassLbl() {
+    public L getSecondClassLbl() {
         return secondClassLbl;
     }
 
@@ -104,9 +114,9 @@ public class BinaryClassificationEvaluationContext implements EvaluationContext<
      *
      * @param label Label.
      */
-    private void checkNewLabel(Double label) {
+    private void checkNewLabel(L label) {
         A.ensure(
-            firstClassLbl.isNaN() || secondClassLbl.isNaN() || label.isNaN() ||
+            firstClassLbl == null || secondClassLbl == null || label == null ||
                 label.equals(firstClassLbl) || label.equals(secondClassLbl),
             "Unable to collect binary classification ctx stat. There are more than two labels. " +
                 "First label = " + firstClassLbl +
