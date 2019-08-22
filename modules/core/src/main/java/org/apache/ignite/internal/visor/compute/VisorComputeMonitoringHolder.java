@@ -119,7 +119,7 @@ public class VisorComputeMonitoringHolder {
 
         expiredEvts.removeAll(activeEvts);
 
-        if (expiredEvts.size() > 0) {
+        if (!expiredEvts.isEmpty()) {
             int[] types = expiredEvts.stream().mapToInt(Integer::intValue).toArray();
 
             ignite.events().disableLocal(types);
@@ -175,7 +175,7 @@ public class VisorComputeMonitoringHolder {
     private static final class EventsSession {
         /** Flag to mark expired session. */
         private boolean expired;
-        
+
         /** Event types. */
         private Set<Integer> types;
 
