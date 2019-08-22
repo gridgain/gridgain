@@ -74,7 +74,15 @@ public enum IgniteFeatures {
     INDEXING(15),
 
     /** Support of cluster ID and tag. */
-    CLUSTER_ID_AND_TAG(16);
+    CLUSTER_ID_AND_TAG(16),
+
+    /** LRT system and user time dump settings.  */
+    LRT_SYSTEM_USER_TIME_DUMP_SETTINGS(18),
+
+    /**
+     * A mode when data nodes throttle update rate regarding to DR sender load
+     */
+    DR_DATA_NODE_SMART_THROTTLING(19);
 
     /**
      * Unique feature identifier.

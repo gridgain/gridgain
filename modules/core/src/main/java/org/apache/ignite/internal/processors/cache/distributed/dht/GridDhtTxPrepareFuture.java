@@ -76,6 +76,7 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.dr.GridDrType;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
 import org.apache.ignite.internal.transactions.IgniteTxOptimisticCheckedException;
+import org.apache.ignite.internal.transactions.IgniteTxRollbackCheckedException;
 import org.apache.ignite.internal.util.GridLeanSet;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
@@ -699,7 +700,12 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
             }
 
             if (forceKeysFut == null || (forceKeysFut.isDone() && forceKeysFut.error() == null))
-                prepare0();
+                try {
+                    prepare0();
+                }
+                catch (IgniteTxRollbackCheckedException e) {
+                    onError(e);
+                }
             else {
                 forceKeysFut.listen(new CI1<IgniteInternalFuture<?>>() {
                     @Override public void apply(IgniteInternalFuture<?> f) {
@@ -1253,7 +1259,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
     /**
      *
      */
-    private void prepare0() {
+    private void prepare0() throws IgniteTxRollbackCheckedException {
         boolean error = false;
 
         try {
@@ -1451,8 +1457,12 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
 
                     break;
                 }
-                catch (GridCacheEntryRemovedException ignore) {
-                    assert false : "Got removed exception on entry with dht local candidate: " + entry;
+                catch (GridCacheEntryRemovedException e) {
+                    log.error("Got removed exception on entry with dht local candidate. Transaction will be " +
+                        "rolled back. Entry: " + entry + " tx: " + CU.txDump(tx), e);
+
+                    // Entry was unlocked by concurrent rollback.
+                    onError(tx.rollbackException());
                 }
 
                 idx++;
@@ -1473,8 +1483,12 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
 
                         break;
                     }
-                    catch (GridCacheEntryRemovedException ignore) {
-                        assert false : "Got removed exception on entry with dht local candidate: " + entry;
+                    catch (GridCacheEntryRemovedException e) {
+                        log.error("Got removed exception on entry with dht local candidate. Transaction will be " +
+                            "rolled back. Entry: " + entry + " tx: " + CU.txDump(tx), e);
+
+                        // Entry was unlocked by concurrent rollback.
+                        onError(tx.rollbackException());
                     }
                 }
             }
@@ -1549,8 +1563,13 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
                             }
 
                             break;
-                        } catch (GridCacheEntryRemovedException ignore) {
-                            assert false : "Got removed exception on entry with dht local candidate: " + entry;
+                        }
+                        catch (GridCacheEntryRemovedException e) {
+                            log.error("Got removed exception on entry with dht local candidate. Transaction will be " +
+                                "rolled back. Entry: " + entry + " tx: " + CU.txDump(tx), e);
+
+                            // Entry was unlocked by concurrent rollback.
+                            onError(tx.rollbackException());
                         }
                     }
                 }

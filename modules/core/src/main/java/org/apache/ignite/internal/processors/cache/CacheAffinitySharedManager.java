@@ -61,6 +61,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cluster.DiscoveryDataClusterState;
+import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.GridPartitionStateMap;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
@@ -2193,6 +2194,9 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                 if (grpHolder.affinity().lastVersion().equals(evts.topologyVersion()))
                     return;
 
+                Span affCalcSpan = cctx.kernalContext().tracing().create("affinity.calculation", fut.span())
+                    .addTag("cache.group", desc.cacheOrGroupName());
+
                 boolean latePrimary = grpHolder.rebalanceEnabled;
 
                 boolean grpAdded = evts.nodeJoined(desc.receivedFrom());
@@ -2218,6 +2222,8 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                 }
 
                 cctx.exchange().exchangerUpdateHeartbeat();
+
+                affCalcSpan.end();
 
                 fut.timeBag().finishLocalStage("Affinity initialization (node join) " +
                     "[grp=" + desc.cacheOrGroupName() + ", crd=" + crd + "]");

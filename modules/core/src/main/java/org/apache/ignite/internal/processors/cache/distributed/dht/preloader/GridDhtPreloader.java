@@ -626,28 +626,12 @@ public class GridDhtPreloader implements GridCachePreloader {
         // No-op
     }
 
-    /** {@inheritDoc} */
-    @Override public IgnitePredicate<GridCacheEntryInfo> preloadPredicate() {
-        return preloadPred;
-    }
-
-    /** {@inheritDoc} */
-    @Override public long timeout() {
-        return grp.shared().gridConfig().getRebalanceTimeout();
-    }
-
-    /** {@inheritDoc} */
-    @Override public long batchesPrefetchCount() {
-        return grp.shared().gridConfig().getRebalanceBatchesPrefetchCount();
-    }
-
-    /** {@inheritDoc} */
-    @Override public long throttle() {
-        return grp.shared().gridConfig().getRebalanceThrottle();
-    }
-
-    /** {@inheritDoc} */
-    @Override public int batchSize() {
-        return grp.shared().gridConfig().getRebalanceBatchSize();
+    /**
+     * Return demander.
+     *
+     * @return Demander.
+     * */
+    public GridDhtPartitionDemander demander() {
+        return demander;
     }
 }

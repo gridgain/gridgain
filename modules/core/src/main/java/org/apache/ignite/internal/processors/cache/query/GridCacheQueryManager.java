@@ -82,6 +82,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheA
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtUnreservedPartitionException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor;
 import org.apache.ignite.internal.processors.datastructures.GridSetQueryPredicate;
@@ -222,7 +223,7 @@ public class GridCacheQueryManager<K, V> extends GridCacheManagerAdapter<K, V> {
     /** */
     private int maxIterCnt;
     /** */
-    private volatile GridCacheQueryMetricsAdapter metrics = new GridCacheQueryMetricsAdapter();
+    private volatile GridCacheQueryMetricsAdapter metrics;
     /** */
     private int detailMetricsSz;
     /** */
@@ -268,7 +269,7 @@ public class GridCacheQueryManager<K, V> extends GridCacheManagerAdapter<K, V> {
 
         cctx.io().addCacheHandler(cctx.cacheId(), GridCacheQueryRequest.class, this::processQueryRequest);
 
-        this.lsnr = new GridLocalEventListener() {
+        lsnr = new GridLocalEventListener() {
             @Override public void onEvent(Event evt) {
                 UUID nodeId = ((DiscoveryEvent)evt).eventNode().id();
 
@@ -307,7 +308,9 @@ public class GridCacheQueryManager<K, V> extends GridCacheManagerAdapter<K, V> {
             }
         };
 
-        cctx.events().addListener(this.lsnr, EVT_NODE_LEFT, EVT_NODE_FAILED);
+        metrics = new GridCacheQueryMetricsAdapter(cctx.kernalContext().metric(), cctx.name(), cctx.isNear());
+
+        cctx.events().addListener(lsnr, EVT_NODE_LEFT, EVT_NODE_FAILED);
 
         qryTopVer = cctx.startTopologyVersion();
 
@@ -2362,7 +2365,7 @@ public class GridCacheQueryManager<K, V> extends GridCacheManagerAdapter<K, V> {
      * @return Cache queries metrics.
      */
     public QueryMetrics metrics() {
-        return metrics.copy();
+        return metrics.snapshot();
     }
 
     /**
@@ -2415,7 +2418,7 @@ public class GridCacheQueryManager<K, V> extends GridCacheManagerAdapter<K, V> {
      * Resets metrics.
      */
     public void resetMetrics() {
-        metrics = new GridCacheQueryMetricsAdapter();
+        metrics.reset();
     }
 
     /**

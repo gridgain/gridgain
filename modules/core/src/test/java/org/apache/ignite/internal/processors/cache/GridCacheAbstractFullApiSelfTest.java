@@ -3623,7 +3623,7 @@ public abstract class GridCacheAbstractFullApiSelfTest extends GridCacheAbstract
      * @throws Exception If failed.
      */
     private void checkTtl(boolean inTx, boolean oldEntry) throws Exception {
-        int ttl = 1000;
+        int ttl = 4000;
 
         final ExpiryPolicy expiry = new TouchedExpiryPolicy(new Duration(MILLISECONDS, ttl));
 
