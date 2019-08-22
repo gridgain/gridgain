@@ -960,14 +960,24 @@ namespace Apache.Ignite.Core.Impl.Cache
             var holder = new CacheEntryProcessorHolder(processor, arg,
                 (e, a) => processor.Process((IMutableCacheEntry<TK, TV>)e, (TArg)a), typeof(TK), typeof(TV));
 
-            return DoOutInOpX((int) CacheOp.Invoke,
-                writer =>
-                {
-                    writer.WriteObjectDetached(key);
-                    writer.WriteObjectDetached(holder);
-                },
-                (input, res) => res == True ? Unmarshal<TRes>(input) : default(TRes),
-                _readException);
+            var ptr = _ignite.HandleRegistry.Allocate(holder);
+
+            try
+            {
+                return DoOutInOpX((int) CacheOp.Invoke,
+                    writer =>
+                    {
+                        writer.WriteObjectDetached(key);
+                        writer.WriteLong(ptr);
+                        writer.WriteObjectDetached(holder);
+                    },
+                    (input, res) => res == True ? Unmarshal<TRes>(input) : default(TRes),
+                    _readException);
+            }
+            finally
+            {
+                _ignite.HandleRegistry.Release(ptr);
+            }
         }
 
         /** <inheritDoc /> */
