@@ -107,6 +107,8 @@ public class GridCommandHandlerSslTest extends GridCommandHandlerClusterPerMetho
     }
 
     /**
+     * Verifies that when client without SSL tries to connect to SSL-enabled cluster,
+     * it fails and prints clear message with possible causes to output.
      *
      * @throws Exception If test failed.
      */
