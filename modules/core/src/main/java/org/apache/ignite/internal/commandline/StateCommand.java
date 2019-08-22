@@ -52,8 +52,6 @@ public class StateCommand implements Command<Void> {
             logger.info(CommandHandler.DELIM);
 
             logger.info("Cluster is " + (state.active() ? "active" : "inactive"));
-
-
         }
         catch (Throwable e) {
             if (!CommandHandler.isAuthError(e))

@@ -250,42 +250,34 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
     public void testChangeTagExceptions() throws Exception {
         IgniteEx ig0 = startGrid(0);
 
-        boolean expectedExceptionThrown = false;
         try {
             ig0.cluster().tag(null);
+
+            fail("Expected exception has not been thrown.");
         }
         catch (IgniteCheckedException e) {
-            if (e.getMessage().contains("cannot be null"))
-                expectedExceptionThrown = true;
+            assertTrue(e.getMessage().contains("cannot be null"));
         }
-
-        assertTrue(expectedExceptionThrown);
-
-        expectedExceptionThrown = false;
 
         try {
             ig0.cluster().tag("");
+
+            fail("Expected exception has not been thrown.");
         }
         catch (IgniteCheckedException e) {
-            if (e.getMessage().contains("should not be empty"))
-                expectedExceptionThrown = true;
+            assertTrue(e.getMessage().contains("should not be empty"));
         }
-
-        assertTrue(expectedExceptionThrown);
 
         String longString = new String(new char[281]);
 
-        expectedExceptionThrown = false;
-
         try {
             ig0.cluster().tag(longString);
+
+            fail("Expected exception has not been thrown.");
         }
         catch (IgniteCheckedException e) {
-            if (e.getMessage().contains("Maximum tag length is exceeded"))
-            expectedExceptionThrown = true;
+            assertTrue(e.getMessage().contains("Maximum tag length is exceeded"));
         }
-
-        assertTrue(expectedExceptionThrown);
     }
 
     /**
@@ -299,17 +291,14 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
 
         IgniteEx ig0 = startGrid(0);
 
-        boolean expectedExceptionThrown = false;
-
         try {
             ig0.cluster().tag(CUSTOM_TAG_0);
+
+            fail("Expected exception has not been thrown.");
         }
         catch (IgniteCheckedException e) {
-            if (e.getMessage().contains("Can not change cluster tag on inactive cluster."))
-                expectedExceptionThrown = true;
+            assertTrue(e.getMessage().contains("Can not change cluster tag on inactive cluster."));
         }
-
-        assertTrue(expectedExceptionThrown);
 
         IgniteEx ig1 = startGrid(1);
 

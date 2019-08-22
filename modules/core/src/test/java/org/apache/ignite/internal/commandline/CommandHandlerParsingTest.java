@@ -467,12 +467,8 @@ public class CommandHandlerParsingTest {
     @Test
     public void testConnectionSettings() {
         for (CommandList cmd : CommandList.values()) {
-            if (cmd == CommandList.CACHE ||
-                cmd == CommandList.WAL ||
-                cmd == CommandList.ROLLING_UPGRADE ||
-                cmd == CommandList.CLUSTER_CHANGE_TAG
-            )
-                continue; // --cache, --wal and --rolling-upgrade commands requires its own specific arguments.
+            if (skipCommand(cmd))
+                continue; // --cache, --wal, --rolling-upgrade, --change-tag commands require its own specific arguments.
 
             ConnectionAndSslParameters args = parseArgs(asList(cmd.text()));
 
