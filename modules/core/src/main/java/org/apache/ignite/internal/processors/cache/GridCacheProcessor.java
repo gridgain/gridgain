@@ -5393,13 +5393,13 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         /** {@inheritDoc} */
         @Override public void onBaselineChange() {
+            sharedCtx.database().cleanupRestoredCaches();
+
             onKernalStopCaches(true);
 
             stopCaches(true);
 
             sharedCtx.coordinators().stopTxLog();
-
-            sharedCtx.database().cleanupRestoredCaches();
         }
 
         /** {@inheritDoc} */
