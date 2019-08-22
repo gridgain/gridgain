@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.jdbc2;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
@@ -26,6 +27,7 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.Statement;
 import java.sql.Types;
+import java.sql.Date;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -45,12 +47,15 @@ import org.apache.ignite.internal.processors.query.QueryEntityEx;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.NotNull;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 import static java.sql.Types.INTEGER;
 import static java.sql.Types.VARCHAR;
+import static java.sql.Types.DECIMAL;
+import static java.sql.Types.DATE;
 import static org.apache.ignite.IgniteJdbcDriver.CFG_URL_PREFIX;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
@@ -86,7 +91,10 @@ public class JdbcMetadataSelfTest extends GridCommonAbstractTest {
                     .setNotNullFields(new HashSet<>(Arrays.asList("age", "name")))
             )),
             cacheConfiguration("org").setQueryEntities(Arrays.asList(
-                new QueryEntity(AffinityKey.class, Organization.class))));
+                new QueryEntity(AffinityKey.class, Organization.class))),
+
+            cacheConfiguration("metaTest").setQueryEntities(Arrays.asList(
+                new QueryEntity(AffinityKey.class, MetaTest.class))));
 
         cfg.setConnectorConfiguration(new ConnectorConfiguration());
 
@@ -157,6 +165,41 @@ public class JdbcMetadataSelfTest extends GridCommonAbstractTest {
             assertEquals(INTEGER, meta.getColumnType(2));
             assertEquals("INTEGER", meta.getColumnTypeName(2));
             assertEquals("java.lang.Integer", meta.getColumnClassName(2));
+        }
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testDecimalAndDateTypeMetaData() throws Exception {
+        try (Connection conn = DriverManager.getConnection(BASE_URL)) {
+            Statement stmt = conn.createStatement();
+
+            ResultSet rs = stmt.executeQuery(
+                    "select t.decimal, t.date from \"metaTest\".MetaTest as t");
+
+            Assert.assertNotNull("Result set should not be null", rs);
+
+            ResultSetMetaData meta = rs.getMetaData();
+
+            Assert.assertNotNull("Result set metadata should not be null", meta);
+
+            Assert.assertEquals("Columns count mismatch", 2, meta.getColumnCount());
+
+            Assert.assertEquals("Table name mismatch", "METATEST", meta.getTableName(1).toUpperCase());
+            Assert.assertEquals("Column name mismatch", "DECIMAL", meta.getColumnName(1).toUpperCase());
+            Assert.assertEquals("Column label mismatch", "DECIMAL", meta.getColumnLabel(1).toUpperCase());
+            Assert.assertEquals("Column type mismatch", DECIMAL, meta.getColumnType(1));
+            Assert.assertEquals("Column type name mismatch", "DECIMAL", meta.getColumnTypeName(1));
+            Assert.assertEquals("Column class mismatch", "java.math.BigDecimal", meta.getColumnClassName(1));
+
+            Assert.assertEquals("Table name mismatch", "METATEST", meta.getTableName(2).toUpperCase());
+            Assert.assertEquals("Column name mismatch", "DATE", meta.getColumnName(2).toUpperCase());
+            Assert.assertEquals("Column label mismatch", "DATE", meta.getColumnLabel(2).toUpperCase());
+            Assert.assertEquals("Column type mismatch", DATE, meta.getColumnType(2));
+            Assert.assertEquals("Column type name mismatch", "DATE", meta.getColumnTypeName(2));
+            Assert.assertEquals("Column class mismatch", "java.sql.Date", meta.getColumnClassName(2));
         }
     }
 
@@ -397,7 +440,7 @@ public class JdbcMetadataSelfTest extends GridCommonAbstractTest {
         try (Connection conn = DriverManager.getConnection(BASE_URL)) {
             ResultSet rs = conn.getMetaData().getSchemas();
 
-            Set<String> expectedSchemas = new HashSet<>(Arrays.asList("pers", "org"));
+            Set<String> expectedSchemas = new HashSet<>(Arrays.asList("pers", "org", "metaTest"));
 
             Set<String> schemas = new HashSet<>();
 
@@ -483,6 +526,33 @@ public class JdbcMetadataSelfTest extends GridCommonAbstractTest {
         private Organization(int id, String name) {
             this.id = id;
             this.name = name;
+        }
+    }
+
+    /**
+     * Meta Test.
+     */
+    private static class MetaTest implements Serializable {
+        /** ID. */
+        @QuerySqlField
+        private final int id;
+
+        /** Date. */
+        @QuerySqlField
+        private final Date date;
+
+        /** decimal. */
+        @QuerySqlField
+        private final BigDecimal decimal;
+
+        /**
+         * @param id ID.
+         * @param date Date.
+         */
+        private MetaTest(int id, Date date, BigDecimal decimal) {
+            this.id = id;
+            this.date = date;
+            this.decimal = decimal;
         }
     }
 }
