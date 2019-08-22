@@ -61,10 +61,10 @@ public class ZookeeperDiscoverySpiTestSuite1 {
 
         TestSuite suite = new TestSuite("ZookeeperDiscoverySpi Test Suite");
 
-        suite.addTest(new JUnit4TestAdapter(ZookeeperClientTest.class));
+//        suite.addTest(new JUnit4TestAdapter(ZookeeperClientTest.class));
         suite.addTest(new JUnit4TestAdapter(ZookeeperDiscoverySpiTest.class));
-        suite.addTest(new JUnit4TestAdapter(ZookeeperDiscoverySpiSaslFailedAuthTest.class));
-        suite.addTest(new JUnit4TestAdapter(ZookeeperDiscoverySpiSaslSuccessfulAuthTest.class));
+//        suite.addTest(new JUnit4TestAdapter(ZookeeperDiscoverySpiSaslFailedAuthTest.class));
+//        suite.addTest(new JUnit4TestAdapter(ZookeeperDiscoverySpiSaslSuccessfulAuthTest.class));
 
         return suite;
     }
