@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.transactions;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -38,16 +39,25 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsSingleMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLockRequest;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareRequest;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteBiPredicate;
+import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
+import org.apache.ignite.transactions.TransactionConcurrency;
+import org.apache.ignite.transactions.TransactionIsolation;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
+import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
+import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
+import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
+import static org.apache.ignite.transactions.TransactionIsolation.SERIALIZABLE;
 
 /**
  */
@@ -67,6 +77,9 @@ public class TxCrossCacheMapOnInvalidTopologyTest extends GridCommonAbstractTest
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
+        cfg.setFailureDetectionTimeout(1000000000L);
+        cfg.setClientFailureDetectionTimeout(1000000000L);
 
         cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
         cfg.setClientMode("client".equals(igniteInstanceName));
@@ -98,7 +111,30 @@ public class TxCrossCacheMapOnInvalidTopologyTest extends GridCommonAbstractTest
      *
      */
     @Test
-    public void testCrossCacheTxMapOnInvalidTopology() throws Exception {
+    public void testCrossCacheTxMapOnInvalidTopologyPessimistic() throws Exception {
+        doTestCrossCacheTxMapOnInvalidTopology(PESSIMISTIC, REPEATABLE_READ);
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void testCrossCacheTxMapOnInvalidTopologyOptimistic() throws Exception {
+        doTestCrossCacheTxMapOnInvalidTopology(OPTIMISTIC, REPEATABLE_READ);
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void testCrossCacheTxMapOnInvalidTopologyOptimisticSerializable() throws Exception {
+        doTestCrossCacheTxMapOnInvalidTopology(OPTIMISTIC, SERIALIZABLE);
+    }
+
+    /**
+     *
+     */
+    private void doTestCrossCacheTxMapOnInvalidTopology(TransactionConcurrency concurrency, TransactionIsolation isolation) throws Exception {
         try {
             IgniteEx crd = startGrid(0);
             IgniteEx g1 = startGrid(1);
@@ -229,19 +265,31 @@ public class TxCrossCacheMapOnInvalidTopologyTest extends GridCommonAbstractTest
                 return false;
             });
 
-            TestRecordingCommunicationSpi.spi(client).blockMessages((node, message) -> message instanceof GridNearLockRequest);
+            TestRecordingCommunicationSpi.spi(client).blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
+                @Override public boolean apply(ClusterNode node, Message message) {
+                    if (concurrency == PESSIMISTIC)
+                        return message instanceof GridNearLockRequest;
+                    else
+                        return message instanceof GridNearTxPrepareRequest;
+                }
+            });
 
             final int finalMovingPart = movingPart;
             IgniteInternalFuture<?> txFut = multithreadedAsync(new Runnable() {
                 @Override public void run() {
-                    try (Transaction tx = client.transactions().txStart()) {
-                        client.cache(CACHE1).put(0, 0); // Will successfully lock topology.
+                    try (Transaction tx = client.transactions().txStart(concurrency, isolation)) {
+                        Map<Integer, Integer> map = new LinkedHashMap<>();
+
+                        for (int p = 0; p < PARTS_CNT; p++)
+                            map.put(p, p);
+
+                        client.cache(CACHE1).putAll(map); // Will successfully lock topology.
                         client.cache(CACHE2).put(finalMovingPart, 0); // Should remap but will go through.
 
                         tx.commit();
                     }
                 }
-            }, 1, "tx");
+            }, 1, "tx-thread");
 
             TestRecordingCommunicationSpi.spi(client).waitForBlocked();
 
@@ -251,15 +299,17 @@ public class TxCrossCacheMapOnInvalidTopologyTest extends GridCommonAbstractTest
 
             TestRecordingCommunicationSpi.spi(client).stopBlock();
 
-            doSleep(5000);
+            doSleep(5000); // Make sure request will listen for current topology future completion.
 
             TestRecordingCommunicationSpi.spi(grid(2)).stopBlock();
-
-            txFut.get();
 
             crdSpi.stopBlock();
 
             awaitPartitionMapExchange();
+
+            txFut.get();
+
+            checkFutures();
         }
         finally {
             stopAllGrids();

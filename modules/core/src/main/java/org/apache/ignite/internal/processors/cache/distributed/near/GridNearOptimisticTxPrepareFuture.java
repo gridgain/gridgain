@@ -155,30 +155,8 @@ public class GridNearOptimisticTxPrepareFuture extends GridNearOptimisticTxPrepa
             }
         }
 
-        if (ERR_UPD.compareAndSet(this, null, e)) {
-            boolean marked = tx.setRollbackOnly();
-
-            if (e instanceof IgniteTxRollbackCheckedException) {
-                if (marked) {
-                    tx.rollbackAsync().listen(new IgniteInClosure<IgniteInternalFuture<IgniteInternalTx>>() {
-                        @Override public void apply(IgniteInternalFuture<IgniteInternalTx> fut) {
-                            try {
-                                fut.get();
-                            }
-                            catch (IgniteCheckedException e) {
-                                U.error(log, "Failed to automatically rollback transaction: " + tx, e);
-                            }
-
-                            onComplete();
-                        }
-                    });
-
-                    return;
-                }
-            }
-
+        if (ERR_UPD.compareAndSet(this, null, e))
             onComplete();
-        }
     }
 
     /** {@inheritDoc} */
@@ -536,7 +514,7 @@ public class GridNearOptimisticTxPrepareFuture extends GridNearOptimisticTxPrepa
                     tx.subjectId(),
                     tx.taskNameHash(),
                     m.clientFirst(),
-                    true,
+                    txMapping.transactionNodes().size() == 1,
                     tx.activeCachesDeploymentEnabled(),
                     tx.txState().recovery());
 

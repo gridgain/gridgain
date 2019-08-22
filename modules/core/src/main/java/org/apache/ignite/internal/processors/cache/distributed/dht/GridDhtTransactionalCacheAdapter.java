@@ -1101,7 +1101,7 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                     if (tx == null) {
                         tx = new GridDhtTxLocal(
                             ctx.shared(),
-                            req.topologyVersion(),
+                            topology().readyTopologyVersion(),
                             nearNode.id(),
                             req.version(),
                             req.futureId(),
@@ -1350,7 +1350,8 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
             0,
             null,
             topVer,
-            ctx.deploymentEnabled());
+            ctx.deploymentEnabled(),
+            null);
 
         try {
             ctx.io().send(nearNode, res, ctx.ioPolicy());
@@ -1396,7 +1397,10 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                 entries.size(),
                 err,
                 null,
-                ctx.deploymentEnabled());
+                ctx.deploymentEnabled(),
+                // For first request return actually locked topology version.
+                req.firstClientRequest() && tx != null && topology().readyTopologyVersion().after(req.topologyVersion()) ?
+                    topology().readyTopologyVersion() : null);
 
             if (err == null) {
                 res.pending(localDhtPendingVersions(entries, mappedVer));
@@ -1507,7 +1511,8 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                 entries.size(),
                 e,
                 null,
-                ctx.deploymentEnabled());
+                ctx.deploymentEnabled(),
+                null);
         }
     }
 

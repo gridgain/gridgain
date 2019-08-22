@@ -38,6 +38,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry;
 import org.apache.ignite.internal.transactions.IgniteTxTimeoutCheckedException;
+import org.apache.ignite.internal.util.GridIntList;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.C1;
 import org.apache.ignite.internal.util.typedef.CI1;
@@ -277,7 +278,10 @@ public class GridNearPessimisticTxPrepareFuture extends GridNearTxPrepareFutureA
 
         Map<UUID, GridDistributedTxMapping> mappings = new HashMap<>();
 
-        AffinityTopologyVersion topVer = tx.topologyVersion();
+        GridIntList enlistedCacheIds = tx.txState().cacheIds();
+
+        // Use locked topVer if more than one cache is enlisted in tx. Attempt to not break old behaviour then possible.
+        AffinityTopologyVersion topVer = tx.lockedTopVer != null && enlistedCacheIds != null && enlistedCacheIds.size() > 1 ? tx.lockedTopVer : tx.topologyVersion();
 
         boolean hasNearCache = false;
 

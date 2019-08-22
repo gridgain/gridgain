@@ -36,6 +36,7 @@ import java.util.stream.IntStream;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterTopologyException;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -599,6 +600,8 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
     /**
      * Tests tx load concurrently with PME not changing tx topology.
+     * In such scenario a race is possible with tx updates and PME counters set.
+     * Outdated counters on PME should be ignored.
      */
     @Test
     public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_TxDuringPME() throws Exception {
@@ -615,8 +618,10 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         IgniteCache<Object, Object> cache = client.cache(DEFAULT_CACHE_NAME);
 
         // Put one key per partition.
-        for (int k = 0; k < PARTS_CNT; k++)
-            cache.put(k, 0);
+        try(IgniteDataStreamer<Object, Object> streamer = client.dataStreamer(DEFAULT_CACHE_NAME)) {
+            for (int k = 0; k < PARTS_CNT; k++)
+                streamer.addData(k, 0);
+        }
 
         Integer key0 = primaryKey(grid(1).cache(DEFAULT_CACHE_NAME));
         Integer key = primaryKey(grid(0).cache(DEFAULT_CACHE_NAME));
@@ -658,15 +663,17 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
                 Map<Integer, Integer> map = new LinkedHashMap<>();
 
                 map.put(key, key); // clientFirst=true in lockAll.
-                map.put(key0, key0); // clientFirst=false in lockAll.
+                //map.put(key0, key0); // clientFirst=false in lockAll.
 
                 cache.putAll(map);
+
+                TransactionProxyImpl p = (TransactionProxyImpl)tx;
 
                 tx.commit(); // Will start preparing in the middle of PME.
             }
         });
 
-        IgniteInternalFuture crdFut = GridTestUtils.runAsync(() -> {
+        IgniteInternalFuture lockFut = GridTestUtils.runAsync(() -> {
             try {
                 cliSpi.waitForBlocked(); // Delay first before PME.
 
@@ -681,10 +688,11 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
             }
         });
 
-        txFut.get();
-        crdFut.get();
+        lockFut.get();
 
         spi.stopBlock();
+
+        txFut.get();
 
         fut.get();
 

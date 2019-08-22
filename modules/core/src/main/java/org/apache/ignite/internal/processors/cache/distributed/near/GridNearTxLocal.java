@@ -270,6 +270,8 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
     /** */
     private long crdVer;
 
+    public AffinityTopologyVersion lockedTopVer;
+
     /**
      * Empty constructor required for {@link Externalizable}.
      */

@@ -59,8 +59,11 @@ public class GridNearLockResponse extends GridDistributedLockResponse {
     /** Filter evaluation results for fast-commit transactions. */
     private boolean[] filterRes;
 
-    /** {@code True} if client node should remap lock request. */
+    /** Set if client node should remap lock request. */
     private AffinityTopologyVersion clientRemapVer;
+
+    /** Locked topology version. Set if differs from request topology version. */
+    private AffinityTopologyVersion lockTopVer;
 
     /**
      * Empty constructor (required by {@link Externalizable}).
@@ -89,7 +92,8 @@ public class GridNearLockResponse extends GridDistributedLockResponse {
         int cnt,
         Throwable err,
         AffinityTopologyVersion clientRemapVer,
-        boolean addDepInfo
+        boolean addDepInfo,
+        @Nullable AffinityTopologyVersion lockTopVer
     ) {
         super(cacheId, lockVer, futId, cnt, err, addDepInfo);
 
@@ -103,6 +107,15 @@ public class GridNearLockResponse extends GridDistributedLockResponse {
 
         if (filterRes)
             this.filterRes = new boolean[cnt];
+
+        this.lockTopVer = lockTopVer;
+    }
+
+    /**
+     * @return Locked topology version.
+     */
+    @Nullable public AffinityTopologyVersion lockedTopologyVersion() {
+        return lockTopVer;
     }
 
     /**
@@ -226,18 +239,24 @@ public class GridNearLockResponse extends GridDistributedLockResponse {
                 writer.incrementState();
 
             case 14:
-                if (!writer.writeObjectArray("mappedVers", mappedVers, MessageCollectionItemType.MSG))
+                if (!writer.writeAffinityTopologyVersion("lockTopVer", lockTopVer))
                     return false;
 
                 writer.incrementState();
 
             case 15:
-                if (!writer.writeInt("miniId", miniId))
+                if (!writer.writeObjectArray("mappedVers", mappedVers, MessageCollectionItemType.MSG))
                     return false;
 
                 writer.incrementState();
 
             case 16:
+                if (!writer.writeInt("miniId", miniId))
+                    return false;
+
+                writer.incrementState();
+
+            case 17:
                 if (!writer.writeCollection("pending", pending, MessageCollectionItemType.MSG))
                     return false;
 
@@ -284,7 +303,7 @@ public class GridNearLockResponse extends GridDistributedLockResponse {
                 reader.incrementState();
 
             case 14:
-                mappedVers = reader.readObjectArray("mappedVers", MessageCollectionItemType.MSG, GridCacheVersion.class);
+                lockTopVer = reader.readAffinityTopologyVersion("lockTopVer");
 
                 if (!reader.isLastRead())
                     return false;
@@ -292,7 +311,7 @@ public class GridNearLockResponse extends GridDistributedLockResponse {
                 reader.incrementState();
 
             case 15:
-                miniId = reader.readInt("miniId");
+                mappedVers = reader.readObjectArray("mappedVers", MessageCollectionItemType.MSG, GridCacheVersion.class);
 
                 if (!reader.isLastRead())
                     return false;
@@ -300,6 +319,14 @@ public class GridNearLockResponse extends GridDistributedLockResponse {
                 reader.incrementState();
 
             case 16:
+                miniId = reader.readInt("miniId");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 17:
                 pending = reader.readCollection("pending", MessageCollectionItemType.MSG);
 
                 if (!reader.isLastRead())
@@ -319,7 +346,7 @@ public class GridNearLockResponse extends GridDistributedLockResponse {
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 17;
+        return 18;
     }
 
     /** {@inheritDoc} */

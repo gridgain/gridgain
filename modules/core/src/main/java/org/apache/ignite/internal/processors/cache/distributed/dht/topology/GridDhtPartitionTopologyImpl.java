@@ -1171,9 +1171,11 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             AffinityTopologyVersion diffVer = diffFromAffinityVer;
 
             if (!diffVer.equals(topVer)) {
-                LT.warn(log, "Requested topology version does not match calculated diff, need to check if " +
-                    "affinity has changed [grp=" + grp.cacheOrGroupName() + ", topVer=" + topVer +
-                    ", diffVer=" + diffVer + "]");
+                if (log.isDebugEnabled()) {
+                    log.debug("Requested topology version does not match calculated diff, need to check if " +
+                        "affinity has changed [grp=" + grp.cacheOrGroupName() + ", topVer=" + topVer +
+                        ", diffVer=" + diffVer + "]");
+                }
 
                 boolean affChanged;
 
@@ -1183,9 +1185,11 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                     affChanged = ctx.exchange().affinityChanged(topVer, diffVer);
 
                 if (affChanged) {
-                    LT.warn(log, "Requested topology version does not match calculated diff, will require full iteration to" +
-                        "calculate mapping [grp=" + grp.cacheOrGroupName() + ", topVer=" + topVer +
-                        ", diffVer=" + diffVer + "]");
+                    if (log.isDebugEnabled()) {
+                        log.debug("Requested topology version does not match calculated diff, will require full iteration to" +
+                            "calculate mapping [grp=" + grp.cacheOrGroupName() + ", topVer=" + topVer +
+                            ", diffVer=" + diffVer + "]");
+                    }
 
                     nodes = new ArrayList<>();
 

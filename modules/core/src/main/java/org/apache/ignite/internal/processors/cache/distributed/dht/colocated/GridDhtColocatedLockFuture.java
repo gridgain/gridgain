@@ -178,6 +178,9 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
     /** {@code True} when mappings are ready for processing. */
     private boolean mappingsReady;
 
+    /** */
+    private AffinityTopologyVersion lockedTopVer;
+
     /**
      * @param cctx Registry.
      * @param keys Keys to lock.
@@ -446,6 +449,9 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
     void onResult(UUID nodeId, GridNearLockResponse res) {
         boolean done = isDone();
 
+        if (res.lockedTopologyVersion() != null)
+            lockedTopVer = res.lockedTopologyVersion();
+
         if (!done) {
             // onResult is always called after map() and timeoutObj is never reset to null, so this is
             // a race-free null check.
@@ -640,6 +646,12 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
                 tx.clearLockFuture(this);
         }
 
+        if (lockedTopVer != null) {
+            if (tx != null) {
+                tx.lockedTopVer = lockedTopVer;
+            }
+        }
+
         if (super.onDone(success, err)) {
             if (log.isDebugEnabled())
                 log.debug("Completing future: " + this);
@@ -771,6 +783,9 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
         if (topVer == null && tx != null)
             topVer = tx.topologyVersionSnapshot();
 
+        if (tx != null && tx.lockedTopVer != null)
+            topVer = tx.lockedTopVer;
+
         if (topVer != null) {
             for (GridDhtTopologyFuture fut : cctx.shared().exchange().exchangeFutures()) {
                 if (fut.exchangeDone() && fut.topologyVersion().equals(topVer)) {
@@ -829,7 +844,7 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
 
         final GridDhtTopologyFuture fut;
 
-        final boolean finish;
+        final boolean finished;
 
         try {
             if (cctx.topology().stopping()) {
@@ -843,9 +858,9 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
 
             fut = cctx.topologyVersionFuture();
 
-            finish = fut.isDone();
+            finished = fut.isDone();
 
-            if (finish) {
+            if (finished) {
                 Throwable err = fut.validateCache(cctx, recovery, read, null, keys);
 
                 if (err != null) {
@@ -882,7 +897,7 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
             cctx.topology().readUnlock();
         }
 
-        if (finish) {
+        if (finished) {
             map(keys, remap, false);
 
             if (c != null)
