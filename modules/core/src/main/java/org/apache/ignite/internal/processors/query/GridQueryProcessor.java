@@ -1543,7 +1543,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
             ccfg.setBackups(backups);
 
         ccfg.setEncryptionEnabled(encrypted);
-        ccfg.setSqlSchema(schemaName);
+        ccfg.setSqlSchema('"' + schemaName + '"');
         ccfg.setSqlEscapeAll(true);
         ccfg.setQueryEntities(Collections.singleton(entity));
 
