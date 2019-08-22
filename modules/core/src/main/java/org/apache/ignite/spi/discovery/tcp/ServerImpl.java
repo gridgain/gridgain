@@ -78,6 +78,7 @@ import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.events.DiscoveryCustomEvent;
 import org.apache.ignite.internal.managers.discovery.CustomMessageWrapper;
 import org.apache.ignite.internal.managers.discovery.DiscoveryServerOnlyCustomMessage;
+import org.apache.ignite.internal.processors.continuous.AbstractContinuousMessage;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.security.SecurityContext;
 import org.apache.ignite.internal.processors.security.SecurityUtils;
@@ -6397,6 +6398,10 @@ class ServerImpl extends TcpDiscoveryImpl {
                 }
                 catch (Throwable t) {
                     throw new IgniteException("Failed to unmarshal discovery custom message: " + msg, t);
+                }
+
+                if (msgObj instanceof AbstractContinuousMessage) {
+                    log.info("RECIVED " + msg.senderNodeId() + " " + getLocalNodeId() + " " + msgObj);
                 }
 
                 IgniteFuture<?> fut = lsnr.onDiscovery(
