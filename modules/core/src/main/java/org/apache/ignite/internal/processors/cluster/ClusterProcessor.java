@@ -259,6 +259,10 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     @Override public void onReadyForWrite(DistributedMetaStorage metastorage) {
         this.metastorage = metastorage;
 
+        // Fast and dirty workaround for tests.
+        if (ctx.clientNode())
+            return;
+
         //TODO GG-21718 - implement optimization so only coordinator makes a write to metastorage.
         ctx.closure().runLocalSafe(
             () -> {
