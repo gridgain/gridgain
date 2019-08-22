@@ -18,6 +18,7 @@ package org.apache.ignite.spi.discovery.zk.internal;
 
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.io.Serializable;
 import java.lang.management.ManagementFactory;
 import java.net.SocketTimeoutException;
@@ -5520,7 +5521,11 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
         @Override public void resolve(CommunicationFailureContext ctx) {
             LAST_KILLED_NODES.clear();
 
-            Thread.dumpStack();
+            PrintWriter ps = new PrintWriter(System.out);
+
+            new Exception("!!!! ALERT ").printStackTrace(ps);
+
+            ps.flush();
 
             List<ClusterNode> nodes = ctx.topologySnapshot();
 
