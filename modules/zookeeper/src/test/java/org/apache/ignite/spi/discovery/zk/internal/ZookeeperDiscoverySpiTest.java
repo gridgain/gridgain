@@ -3142,10 +3142,14 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
             assert spi != null;
 
             try {
-                spi.resolveCommunicationFailure(spi.getRemoteNodes().iterator().next(), new Exception("test"));
+                ClusterNode node = spi.getRemoteNodes().iterator().next();
+
+                System.out.println(">>>>> SPI FAILURE " + node);
+
+                spi.resolveCommunicationFailure(node, new Exception("test"));
             }
-            catch (IgniteSpiException ignore) {
-                // No-op.
+            catch (IgniteSpiException e) {
+                e.printStackTrace();
             }
 
             boolean clientMode = ThreadLocalRandom.current().nextBoolean();
