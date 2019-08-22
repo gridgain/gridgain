@@ -76,14 +76,14 @@ public class GmcSpanExporter implements AutoCloseable {
                 exporter.start(ctx.igniteInstanceName());
             }
             catch (IgniteSpiException ex) {
-                log.error("Can't start the trace exporter", ex);
+                log.error("Trace exporter start failed", ex);
             }
         }
     }
 
     /** {@inheritDoc} */
     @Override public void close() {
-        if (ctx.config().getTracingSpi() != null && exporter != null)
+        if (exporter != null)
             exporter.stop();
     }
 
