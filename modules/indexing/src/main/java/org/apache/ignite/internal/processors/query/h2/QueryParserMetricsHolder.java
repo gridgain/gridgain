@@ -39,10 +39,12 @@ public class QueryParserMetricsHolder {
      * @param metricMgr Metric manager.
      */
     public QueryParserMetricsHolder(GridMetricManager metricMgr) {
-        MetricRegistry registry = metricMgr.get(QUERY_PARSER_METRIC_GROUP_NAME);
+        MetricRegistry registry = new MetricRegistry(QUERY_PARSER_METRIC_GROUP_NAME, QUERY_PARSER_METRIC_GROUP_NAME);
 
         qryCacheHits = registry.longAdderMetric("hits", "Count of hits for queries cache");
         qryCacheMisses = registry.longAdderMetric("misses", "Count of misses for queries cache");
+
+        metricMgr.add(registry);
     }
 
     /**
