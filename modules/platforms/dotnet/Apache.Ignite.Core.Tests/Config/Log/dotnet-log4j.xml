@@ -81,11 +81,9 @@
     <!--
         Uncomment to enable Ignite debugging.
     -->
-    <!--
-    <category name="org.apache.ignite">
+    <category name="org.apache.ignite.cache.msg">
         <level value="DEBUG"/>
     </category>
-    -->
 
     <!--
         Uncomment this category to enable cache
