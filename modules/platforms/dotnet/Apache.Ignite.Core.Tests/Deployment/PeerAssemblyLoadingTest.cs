@@ -205,7 +205,6 @@ namespace Apache.Ignite.Core.Tests.Deployment
             // Start Ignite and execute computation on remote node.
             var cfg = new IgniteConfiguration(TestUtils.GetTestConfiguration())
             {
-                SpringConfigUrl = @"config\log\custom-log.xml",
                 PeerAssemblyLoadingMode = enablePeerDeployment
                     ? PeerAssemblyLoadingMode.CurrentAppDomain
                     : PeerAssemblyLoadingMode.Disabled
