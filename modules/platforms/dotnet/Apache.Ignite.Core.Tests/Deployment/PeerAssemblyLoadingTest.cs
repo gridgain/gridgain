@@ -226,8 +226,10 @@ namespace Apache.Ignite.Core.Tests.Deployment
                         var jh = Environment.GetEnvironmentVariable("JAVA_HOME");
                         var jstack = Path.Combine(jh, "bin", "jstack.exe");
                         Console.WriteLine("Taking java thread dump with " + jstack);
-                        var dump = Shell.Execute2(jstack, Process.GetCurrentProcess().Id.ToString());
-                        Console.WriteLine("JSTACK: " + dump);
+                        Console.WriteLine("JSTACK for in-proc node: " +
+                                          Shell.Execute2(jstack, Process.GetCurrentProcess().Id.ToString()));
+                        Console.WriteLine("JSTACK for external node: " +
+                                          Shell.Execute2(jstack, proc.Id.ToString()));
                     });
                     test(ignite);
                 }
