@@ -131,7 +131,7 @@ class ConnectionState {
         return cluster;
     }
 
-    update(demo, count, clusters, hasDemo) {
+    update(demo, hasAgent, clusters, hasDemo) {
         this.clusters = clusters;
 
         if (_.isEmpty(this.clusters))
@@ -157,7 +157,7 @@ class ConnectionState {
 
         this.hasDemo = hasDemo;
 
-        if (count === 0)
+        if (!hasAgent)
             this.state = State.AGENT_DISCONNECTED;
         else if (demo || this.cluster)
             this.state = State.CONNECTED;
@@ -310,11 +310,11 @@ export default class AgentManager {
 
         switch (eventType) {
             case 'agent:status':
-                const {clusters, count, hasDemo} = payload;
+                const {clusters, hasAgent, hasDemo} = payload;
 
                 const conn = this.connectionSbj.getValue();
 
-                conn.update(this.isDemoMode(), count, clusters, hasDemo);
+                conn.update(this.isDemoMode(), hasAgent, clusters, hasDemo);
 
                 this.connectionSbj.next(conn);
 
