@@ -30,6 +30,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.PersistentStoreConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.processors.marshaller.MappingProposedMessage;
@@ -39,6 +40,7 @@ import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.spi.discovery.DiscoveryNotification;
 import org.apache.ignite.spi.discovery.DiscoverySpiListener;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
@@ -185,6 +187,7 @@ public class IgniteMarshallerCacheFSRestoreTest extends GridCommonAbstractTest {
      * about this case.
      */
     @Test
+    @WithSystemProperty(key = TestDataStorageConfiguration.INIT_TEST_DS_CFG_PROPERTY, value = "false")
     public void testNodeStartFailsOnCorruptedStorage() throws Exception {
         isPersistenceEnabled = true;
 

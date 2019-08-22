@@ -19,12 +19,15 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.MemoryConfiguration;
 import org.apache.ignite.configuration.MemoryPolicyConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 /**
  *
  */
+@WithSystemProperty(key = TestDataStorageConfiguration.INIT_TEST_DS_CFG_PROPERTY, value = "false")
 public class MemoryPolicyConfigValidationTest extends GridCommonAbstractTest {
     /** */
     private static final String VALID_DEFAULT_MEM_PLC_NAME = "valid_dlft_mem_plc";

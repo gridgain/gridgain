@@ -23,6 +23,15 @@ public class TestDataStorageConfiguration extends DataStorageConfiguration {
     /** Serial version uid. */
     private static final long serialVersionUID = 0L;
 
+    /**
+     * Whether {@link TestDataStorageConfiguration} should be used in node configuration if
+     * {@link DataStorageConfiguration} config is absent. {@code true} by default.
+     */
+    public static final String INIT_TEST_DS_CFG_PROPERTY = "init.test.datastorage.configuration";
+
+    /** {@code true}, default value for {@link #INIT_TEST_DS_CFG_PROPERTY}.*/
+    public static final boolean DFLT_INIT_TEST_DS_CFG = true;
+
     /** Default wal segments count for {@link TestDataStorageConfiguration}. */
     public static final String TEST_WAL_SEGMENTS_PROPERTY = "test.wal.segments";
 

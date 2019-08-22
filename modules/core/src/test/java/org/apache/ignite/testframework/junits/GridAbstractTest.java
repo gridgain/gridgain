@@ -974,7 +974,12 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
                     }
                 }
 
-                if (cfg.getDataStorageConfiguration() == null)
+                boolean initTestDataStorageCfg = IgniteSystemProperties.getBoolean(
+                    TestDataStorageConfiguration.INIT_TEST_DS_CFG_PROPERTY,
+                    TestDataStorageConfiguration.DFLT_INIT_TEST_DS_CFG
+                );
+
+                if (cfg.getDataStorageConfiguration() == null && initTestDataStorageCfg)
                     cfg.setDataStorageConfiguration(new TestDataStorageConfiguration());
 
                 Ignite node = IgnitionEx.start(cfg, ctx);

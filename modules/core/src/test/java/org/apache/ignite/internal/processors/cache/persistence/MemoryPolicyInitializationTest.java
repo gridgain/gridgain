@@ -21,10 +21,12 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.MemoryConfiguration;
 import org.apache.ignite.configuration.MemoryPolicyConfiguration;
+import org.apache.ignite.configuration.TestDataStorageConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheProxy;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -33,6 +35,7 @@ import static org.apache.ignite.configuration.MemoryConfiguration.DFLT_MEM_PLC_D
 /**
  *
  */
+@WithSystemProperty(key = TestDataStorageConfiguration.INIT_TEST_DS_CFG_PROPERTY, value = "false")
 public class MemoryPolicyInitializationTest extends GridCommonAbstractTest {
     /** */
     private static final String CUSTOM_NON_DEFAULT_MEM_PLC_NAME = "custom_mem_plc";
