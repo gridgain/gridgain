@@ -5519,6 +5519,8 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
         @Override public void resolve(CommunicationFailureContext ctx) {
             LAST_KILLED_NODES.clear();
 
+            Thread.dumpStack();
+
             List<ClusterNode> nodes = ctx.topologySnapshot();
 
             ThreadLocalRandom rnd = ThreadLocalRandom.current();
