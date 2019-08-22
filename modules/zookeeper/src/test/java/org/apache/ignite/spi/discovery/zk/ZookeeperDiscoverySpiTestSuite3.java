@@ -36,17 +36,17 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-    GridCacheReplicatedNodeRestartSelfTest.class,
+//    GridCacheReplicatedNodeRestartSelfTest.class,
     GridEventConsumeSelfTest.class,
-    GridCachePartitionedNodeRestartTxSelfTest.class,
-    IgniteClientDataStructuresTest.class,
-    GridCacheReplicatedSequenceApiSelfTest.class,
-    GridCachePartitionedSequenceApiSelfTest.class,
-    GridCacheAtomicMultiJvmFullApiSelfTest.class,
-    GridCachePartitionedMultiJvmFullApiSelfTest.class,
-    GridP2PContinuousDeploymentSelfTest.class,
-    CacheContinuousQueryOperationP2PTest.class,
-    CacheContinuousQueryLongP2PTest.class
+//    GridCachePartitionedNodeRestartTxSelfTest.class,
+//    IgniteClientDataStructuresTest.class,
+//    GridCacheReplicatedSequenceApiSelfTest.class,
+//    GridCachePartitionedSequenceApiSelfTest.class,
+//    GridCacheAtomicMultiJvmFullApiSelfTest.class,
+//    GridCachePartitionedMultiJvmFullApiSelfTest.class,
+//    GridP2PContinuousDeploymentSelfTest.class,
+//    CacheContinuousQueryOperationP2PTest.class,
+//    CacheContinuousQueryLongP2PTest.class
 })
 public class ZookeeperDiscoverySpiTestSuite3 {
     /** */
