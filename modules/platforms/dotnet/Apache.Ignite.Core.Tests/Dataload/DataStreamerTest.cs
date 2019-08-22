@@ -507,6 +507,7 @@ namespace Apache.Ignite.Core.Tests.Dataload
         {
             var cache = _grid.GetOrCreateCache<string, long>("c");
 
+            // TODO: Bench and profile this with and without local handle optimization
             using (var streamer = _grid.GetDataStreamer<string, long>(cache.Name))
             {
                 streamer.AllowOverwrite = true;
