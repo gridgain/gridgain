@@ -3104,11 +3104,23 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
         testCommSpi = true;
         commFailureRslvr = KillRandomCommunicationFailureResolver.FACTORY;
 
+        System.out.println(">>>>> START SERVERS ");
+
         startGrids(10);
+
+        awaitPartitionMapExchange();
+
+        System.out.println(">>>>> SERVERS STARTED ");
 
         clientMode(true);
 
+        System.out.println(">>>>> START CLIENTS ");
+
         startGrids(10, 5);
+
+        awaitPartitionMapExchange();
+
+        System.out.println(">>>>> CLIENTS STARTED ");
 
         int nodesCnt = 15;
 

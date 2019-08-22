@@ -727,14 +727,16 @@ public abstract class GridAbstractTest extends JUnit3TestLegacySupport {
 
         IgniteEx ignite = null;
 
-        for (int i = start; i < cnt; i++)
+        List<Ignite> alreadyStarted = G.allGrids();
+
+        for (int i = start; i < start + cnt; i++)
             if (ignite == null)
                 ignite = startGrid(i);
             else
                 startGrid(i);
 
         if (checkTopology())
-            checkTopology(cnt);
+            checkTopology(alreadyStarted.size() + cnt);
 
         assert ignite != null;
 
