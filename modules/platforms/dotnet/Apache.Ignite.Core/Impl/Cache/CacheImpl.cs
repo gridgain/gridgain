@@ -960,7 +960,8 @@ namespace Apache.Ignite.Core.Impl.Cache
             var holder = new CacheEntryProcessorHolder(processor, arg,
                 (e, a) => processor.Process((IMutableCacheEntry<TK, TV>)e, (TArg)a), typeof(TK), typeof(TV));
 
-            var ptr = _ignite.HandleRegistry.Allocate(holder);
+            // TODO: This can break in explicit tx too?
+            var ptr = _txManager == null ? _ignite.HandleRegistry.Allocate(holder) : 0;
 
             try
             {
