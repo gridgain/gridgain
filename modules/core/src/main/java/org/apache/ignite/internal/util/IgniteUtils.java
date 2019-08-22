@@ -1080,13 +1080,6 @@ public abstract class IgniteUtils {
     }
 
     /**
-     * @return Value of {@link System#nanoTime()} in microseconds.
-     */
-    public static long microTime() {
-        return System.nanoTime() / 1000;
-    }
-
-    /**
      * Convert milliseconds time interval to nanoseconds.
      *
      * @param millis Original time interval.
@@ -1510,6 +1503,18 @@ public abstract class IgniteUtils {
         ThreadInfo threadInfo = mxBean.getThreadInfo(threadId, Integer.MAX_VALUE);
 
         printThreadInfo(threadInfo, sb, Collections.<Long>emptySet());
+    }
+
+    /**
+     * @return Stacktrace of current thread as {@link String}.
+     */
+    public static String stackTrace() {
+        GridStringBuilder sb = new GridStringBuilder();
+        long threadId = Thread.currentThread().getId();
+
+        printStackTrace(threadId, sb);
+
+        return sb.toString();
     }
 
     /**
