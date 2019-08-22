@@ -87,7 +87,12 @@ goto checkIgniteHome2
 ::
 :: ADD YOUR/CHANGE ADDITIONAL OPTIONS HERE
 ::
-if "%JVM_OPTS%" == "" set JVM_OPTS=-Xms1g -Xmx1g -server -XX:MaxMetaspaceSize=256m -DIGNITE_UPDATE_NOTIFIER
+if "%JVM_OPTS%" == "" set JVM_OPTS=-Xms1g -Xmx1g -server -XX:MaxMetaspaceSize=256m
+
+::
+:: Disable update notifier.
+::
+set JVM_OPTS=-DIGNITE_UPDATE_NOTIFIER %JVM_OPTS%
 
 ::
 :: Final JVM_OPTS for Java 9+ compatibility

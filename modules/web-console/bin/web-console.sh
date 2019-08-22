@@ -117,8 +117,23 @@ checkJava() {
 # ADD YOUR/CHANGE ADDITIONAL OPTIONS HERE
 #
 if [ -z "$JVM_OPTS" ] ; then
-    JVM_OPTS="-Xms1g -Xmx1g -server -XX:MaxMetaspaceSize=256m -DIGNITE_UPDATE_NOTIFIER"
+    JVM_OPTS="-Xms1g -Xmx1g -server -XX:MaxMetaspaceSize=256m"
 fi
+
+#
+# Disable update notifier.
+#
+JVM_OPTS="-DIGNITE_UPDATE_NOTIFIER=false ${JVM_OPTS}"
+
+#
+# Set 'file.encoding' to UTF-8 default if not specified otherwise
+#
+case "${JVM_OPTS:-}" in
+    *-Dfile.encoding=*)
+        ;;
+    *)
+        JVM_OPTS="${JVM_OPTS:-} -Dfile.encoding=UTF-8";;
+esac
 
 #
 # Discover path to Java executable and check it's version.
