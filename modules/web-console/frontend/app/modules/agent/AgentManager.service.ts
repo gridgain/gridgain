@@ -101,6 +101,22 @@ const saveToStorage = (cluster) => {
     }
 };
 
+/**
+ * Get ID of last used cluster from local storage.
+ *
+ * @return {string} ID of last used cluster.
+ */
+const restoreActiveCluster = () => {
+    try {
+        return localStorage.clusterId;
+    }
+    catch (ignored) {
+        localStorage.removeItem('clusterId');
+
+        return null;
+    }
+};
+
 class ConnectionState {
     constructor(cluster) {
         this.cluster = cluster;
@@ -120,7 +136,7 @@ class ConnectionState {
         if (_.isEmpty(this.clusters))
             this.cluster = null;
         else if (_.isNil(this.cluster)) {
-            const restoredCluster = _.find(clusters, {id: localStorage.clusterId});
+            const restoredCluster = _.find(clusters, {id: restoreActiveCluster()});
 
             this.cluster = restoredCluster || _.head(clusters);
 
