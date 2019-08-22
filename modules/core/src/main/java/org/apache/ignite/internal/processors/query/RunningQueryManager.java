@@ -60,21 +60,21 @@ public class RunningQueryManager {
     private volatile QueryHistoryTracker qryHistTracker;
 
     /** Number of successfully executed queries. */
-    private LongAdderMetric successQrsCnt;
+    private final LongAdderMetric successQrsCnt;
 
     /** Number of failed queries in total by any reason. */
-    private AtomicLongMetric failedQrsCnt;
+    private final AtomicLongMetric failedQrsCnt;
 
     /**
      * Number of canceled queries. Canceled queries a treated as failed and counting twice: here and in {@link
      * #failedQrsCnt}.
      */
-    private AtomicLongMetric canceledQrsCnt;
+    private final AtomicLongMetric canceledQrsCnt;
 
     /**
      * Number of queries, failed due to OOM protection. {@link #failedQrsCnt} metric includes this value.
      */
-    private AtomicLongMetric oomQrsCnt;
+    private final AtomicLongMetric oomQrsCnt;
 
     /**
      * Constructor.
@@ -88,19 +88,21 @@ public class RunningQueryManager {
 
         qryHistTracker = new QueryHistoryTracker(histSz);
 
-        MetricRegistry userMetrics = ctx.metric().get(SQL_USER_QUERIES_REG_NAME);
-//        TODO: GMC dirty hack don't merge
-//        successQrsCnt = userMetrics.longAdderMetric("success",
-//            "Number of successfully executed user queries that have been started on this node.");
-//
-//        failedQrsCnt = userMetrics.longMetric("failed", "Total number of failed by any reason (cancel, oom etc)" +
-//            " queries that have been started on this node.");
-//
-//        canceledQrsCnt = userMetrics.longMetric("canceled", "Number of canceled queries that have been started " +
-//            "on this node. This metric number included in the general 'failed' metric.");
-//
-//        oomQrsCnt = userMetrics.longMetric("failedByOOM", "Number of queries started on this node failed due to " +
-//            "out of memory protection. This metric number included in the general 'failed' metric.");
+        MetricRegistry userMetrics = new MetricRegistry(SQL_USER_QUERIES_REG_NAME, SQL_USER_QUERIES_REG_NAME);
+
+        successQrsCnt = userMetrics.longAdderMetric("success",
+            "Number of successfully executed user queries that have been started on this node.");
+
+        failedQrsCnt = userMetrics.longMetric("failed", "Total number of failed by any reason (cancel, oom etc)" +
+            " queries that have been started on this node.");
+
+        canceledQrsCnt = userMetrics.longMetric("canceled", "Number of canceled queries that have been started " +
+            "on this node. This metric number included in the general 'failed' metric.");
+
+        oomQrsCnt = userMetrics.longMetric("failedByOOM", "Number of queries started on this node failed due to " +
+            "out of memory protection. This metric number included in the general 'failed' metric.");
+
+        ctx.metric().add(userMetrics);
     }
 
     /**

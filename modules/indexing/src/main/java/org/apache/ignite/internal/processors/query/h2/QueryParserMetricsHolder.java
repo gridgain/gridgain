@@ -20,8 +20,6 @@ import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 
-import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
-
 /**
  * Metric holder for metrics of query parser.
  */
@@ -41,10 +39,12 @@ public class QueryParserMetricsHolder {
      * @param metricMgr Metric manager.
      */
     public QueryParserMetricsHolder(GridMetricManager metricMgr) {
-        MetricRegistry registry = metricMgr.get(QUERY_PARSER_METRIC_GROUP_NAME);
-//      TODO: GMC dirty hack don't merge
-        qryCacheHits = new LongAdderMetric(metricName(QUERY_PARSER_METRIC_GROUP_NAME, "hits"), "Count of hits for queries cache");
-        qryCacheMisses = new LongAdderMetric(metricName(QUERY_PARSER_METRIC_GROUP_NAME, "misses"), "Count of misses for queries cache");
+        MetricRegistry registry = new MetricRegistry(QUERY_PARSER_METRIC_GROUP_NAME, QUERY_PARSER_METRIC_GROUP_NAME);
+
+        qryCacheHits = registry.longAdderMetric("hits", "Count of hits for queries cache");
+        qryCacheMisses = registry.longAdderMetric("misses", "Count of misses for queries cache");
+
+        metricMgr.add(registry);
     }
 
     /**
