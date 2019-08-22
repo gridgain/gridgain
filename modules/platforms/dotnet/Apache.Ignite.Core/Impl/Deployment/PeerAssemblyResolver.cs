@@ -140,7 +140,7 @@ namespace Apache.Ignite.Core.Impl.Deployment
             if (ignite.Configuration.PeerAssemblyLoadingMode == PeerAssemblyLoadingMode.Disabled)
                 return null;
 
-            Debug.WriteLine("Requesting assembly from other nodes: " + assemblyName);
+            Console.WriteLine("Requesting assembly from other nodes: " + assemblyName);
 
             // New nodes are not tracked during the loop, since some of the existing nodes caused this call.
             var func = new GetAssemblyFunc();
