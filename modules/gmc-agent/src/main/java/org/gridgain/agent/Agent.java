@@ -41,7 +41,8 @@ import org.eclipse.jetty.websocket.api.UpgradeException;
 import org.gridgain.dto.ClusterInfo;
 import org.gridgain.service.MetricsService;
 import org.gridgain.service.TopologyService;
-import org.gridgain.service.TracingService;
+import org.gridgain.service.tracing.TracingService;
+import org.gridgain.service.tracing.GmcSpanExporter;
 import org.springframework.messaging.simp.stomp.ConnectionLostException;
 import org.springframework.messaging.simp.stomp.StompFrameHandler;
 import org.springframework.messaging.simp.stomp.StompHeaders;
@@ -74,6 +75,9 @@ public class Agent extends ManagementConsoleProcessor {
     /** Tracing service. */
     private TracingService tracingSrvc;
 
+    /** Span exporter. */
+    private GmcSpanExporter spanExporter;
+
     /** Metric service. */
     private MetricsService metricSrvc;
 
@@ -98,6 +102,7 @@ public class Agent extends ManagementConsoleProcessor {
 
     /** {@inheritDoc} */
     @Override public void onKernalStart(boolean active) {
+        spanExporter = new GmcSpanExporter(ctx);
         metaStorage = ctx.cache().context().database().metaStorage();
 
         launchAgentListener(null, ctx.discovery().discoCache());
@@ -115,6 +120,7 @@ public class Agent extends ManagementConsoleProcessor {
         U.shutdownNow(this.getClass(), execSrvc, log);
 
         U.closeQuiet(metricSrvc);
+        U.closeQuiet(spanExporter);
         U.closeQuiet(tracingSrvc);
         U.closeQuiet(topSrvc);
         U.closeQuiet(mgr);
@@ -239,8 +245,6 @@ public class Agent extends ManagementConsoleProcessor {
         topSrvc = new TopologyService(ctx, mgr);
         tracingSrvc = new TracingService(ctx, mgr);
         metricSrvc = new MetricsService(ctx, mgr);
-
-        tracingSrvc.registerHandler();
 
         execSrvc = Executors.newSingleThreadExecutor();
 

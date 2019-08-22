@@ -25,6 +25,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.web.socket.config.annotation.AbstractWebSocketMessageBrokerConfigurer;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
+import org.springframework.web.socket.config.annotation.WebSocketTransportRegistration;
 import org.springframework.web.socket.server.standard.ServletServerContainerFactoryBean;
 
 /**
@@ -42,6 +43,11 @@ public class WebSocketConfig extends AbstractWebSocketMessageBrokerConfigurer {
     /** {@inheritDoc} */
     @Override public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint(AGENTS_PATH);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void configureWebSocketTransport(WebSocketTransportRegistration registration) {
+        registration.setMessageSizeLimit(128 * 1024);
     }
 
     /** {@inheritDoc} */

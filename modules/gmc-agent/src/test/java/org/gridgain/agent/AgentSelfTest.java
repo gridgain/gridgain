@@ -18,6 +18,7 @@ package org.gridgain.agent;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.Callable;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCluster;
@@ -31,15 +32,16 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.TransactionConfiguration;
 import org.apache.ignite.failure.NoOpFailureHandler;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
+import org.apache.ignite.opencensus.spi.tracing.OpenCensusTracingSpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.testframework.junits.IgniteTestResources;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.gridgain.config.TestChannelInterceptor;
+import org.gridgain.dto.span.Span;
 import org.gridgain.dto.topology.TopologySnapshot;
 import org.junit.After;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -60,6 +62,7 @@ import static org.gridgain.agent.StompDestinationsUtils.buildClusterAddDest;
 import static org.gridgain.agent.StompDestinationsUtils.buildClusterTopologyDest;
 import static org.gridgain.agent.StompDestinationsUtils.buildMetricsDest;
 import static org.gridgain.agent.StompDestinationsUtils.buildMetricsPullTopic;
+import static org.gridgain.agent.StompDestinationsUtils.buildSaveSpanDest;
 
 /**
  * Agent integration tests.
@@ -99,6 +102,7 @@ public class AgentSelfTest extends GridCommonAbstractTest {
         assertWithPoll(() -> interceptor.getPayload(buildClusterTopologyDest(cluster.id())) != null);
         assertWithPoll(() -> interceptor.getPayload(buildBaselineTopologyDest(cluster.id())) != null);
         assertWithPoll(() -> interceptor.getPayload(buildClusterActiveStateDest(cluster.id())) != null);
+        assertWithPoll(() -> interceptor.getPayload(buildSaveSpanDest(cluster.id())) != null);
     }
 
     /**
@@ -124,7 +128,6 @@ public class AgentSelfTest extends GridCommonAbstractTest {
      * Should send changed baseline topology.
      */
     @Test
-    @Ignore
     @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_ENABLED, value = "false")
     public void shouldSendChangedBaselineTopology() throws Exception {
         Ignite ignite_1 = startGrid(0);
@@ -203,6 +206,24 @@ public class AgentSelfTest extends GridCommonAbstractTest {
         );
     }
 
+    /**
+     * Should send changed baseline topology.
+     */
+    @Test
+    public void shouldSendSpans() throws Exception {
+        Ignite ignite_1 = startGrid(0);
+
+        IgniteCluster cluster = ignite_1.cluster();
+        cluster.active(true);
+
+        assertWithPoll(
+                () -> {
+                    List<Span> spans = interceptor.getPayload(buildSaveSpanDest(cluster.id()), List.class);
+                    return spans != null && !spans.isEmpty();
+                }
+        );
+    }
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName, IgniteTestResources rsrcs) {
         return new IgniteConfiguration()
@@ -235,6 +256,7 @@ public class AgentSelfTest extends GridCommonAbstractTest {
                             .setPersistenceEnabled(true)
                         )
             )
+            .setTracingSpi(new OpenCensusTracingSpi())
             // TODO temporary fix for GG-22214
             .setIncludeEventTypes(EVT_CLUSTER_ACTIVATED, EVT_CLUSTER_DEACTIVATED)
             .setFailureHandler(new NoOpFailureHandler())
@@ -251,6 +273,6 @@ public class AgentSelfTest extends GridCommonAbstractTest {
      * @param cond Condition.
      */
     private void assertWithPoll(Callable<Boolean> cond) {
-        with().pollInterval(500, MILLISECONDS).await().atMost(15, SECONDS).until(cond);
+        with().pollInterval(500, MILLISECONDS).await().atMost(20, SECONDS).until(cond);
     }
 }
