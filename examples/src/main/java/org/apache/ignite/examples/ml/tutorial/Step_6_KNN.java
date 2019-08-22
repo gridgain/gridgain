@@ -22,7 +22,6 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
 import org.apache.ignite.ml.dataset.feature.extractor.impl.DummyVectorizer;
-import org.apache.ignite.ml.dataset.impl.cache.CacheBasedDatasetBuilder;
 import org.apache.ignite.ml.knn.classification.KNNClassificationModel;
 import org.apache.ignite.ml.knn.classification.KNNClassificationTrainer;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
@@ -105,10 +104,8 @@ public class Step_6_KNN {
 
                 System.out.println("\n>>> Trained model: " + mdl);
 
-                double accuracy = Evaluator.evaluate(
-                    mdl, new CacheBasedDatasetBuilder<>(ignite, dataCache),
-                    normalizationPreprocessor,
-                    MetricName.ACCURACY
+                double accuracy = Evaluator.evaluate(dataCache,
+                    mdl, normalizationPreprocessor, MetricName.ACCURACY
                 );
 
                 System.out.println("\n>>> Accuracy " + accuracy);

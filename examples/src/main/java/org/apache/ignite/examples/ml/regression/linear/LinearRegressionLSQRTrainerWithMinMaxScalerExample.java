@@ -22,7 +22,6 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
 import org.apache.ignite.ml.dataset.feature.extractor.impl.DummyVectorizer;
-import org.apache.ignite.ml.dataset.impl.cache.CacheBasedDatasetBuilder;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.preprocessing.Preprocessor;
 import org.apache.ignite.ml.preprocessing.minmaxscaling.MinMaxScalerPreprocessor;
@@ -85,11 +84,7 @@ public class LinearRegressionLSQRTrainerWithMinMaxScalerExample {
 
                 System.out.println(">>> Linear regression model: " + mdl);
 
-                double rmse = Evaluator.evaluate(
-                    mdl, new CacheBasedDatasetBuilder<>(ignite, dataCache),
-                    preprocessor,
-                    MetricName.RMSE
-                );
+                double rmse = Evaluator.evaluate(dataCache, mdl, preprocessor, MetricName.RMSE);
 
                 System.out.println("\n>>> Rmse = " + rmse);
 

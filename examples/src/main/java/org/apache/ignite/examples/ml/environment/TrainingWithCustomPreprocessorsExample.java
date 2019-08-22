@@ -22,7 +22,6 @@ import org.apache.ignite.Ignition;
 import org.apache.ignite.ml.dataset.DatasetBuilder;
 import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
 import org.apache.ignite.ml.dataset.feature.extractor.impl.DummyVectorizer;
-import org.apache.ignite.ml.dataset.impl.cache.CacheBasedDatasetBuilder;
 import org.apache.ignite.ml.environment.LearningEnvironmentBuilder;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.math.primitives.vector.VectorUtils;
@@ -87,10 +86,8 @@ public class TrainingWithCustomPreprocessorsExample {
                 .fit(ignite, trainingSet);
 
             System.out.println(">>> Perform scoring.");
-            double score = Evaluator.evaluate(
-                mdl, new CacheBasedDatasetBuilder<>(ignite, trainingSet),
-                mdl.getPreprocessor(),
-                MetricName.R2
+            double score = Evaluator.evaluate(trainingSet,
+                mdl, mdl.getPreprocessor(), MetricName.R2
             );
 
             System.out.println(">>> R^2 score: " + score);

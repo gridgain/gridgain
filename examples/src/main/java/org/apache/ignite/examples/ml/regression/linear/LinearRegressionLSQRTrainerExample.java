@@ -22,7 +22,6 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
 import org.apache.ignite.ml.dataset.feature.extractor.impl.DummyVectorizer;
-import org.apache.ignite.ml.dataset.impl.cache.CacheBasedDatasetBuilder;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.regressions.linear.LinearRegressionLSQRTrainer;
 import org.apache.ignite.ml.regressions.linear.LinearRegressionModel;
@@ -74,8 +73,7 @@ public class LinearRegressionLSQRTrainerExample {
                 LinearRegressionModel mdl = trainer.fit(ignite, dataCache, new DummyVectorizer<Integer>()
                     .labeled(Vectorizer.LabelCoordinate.FIRST));
 
-                double rmse = Evaluator.evaluate(
-                    mdl, new CacheBasedDatasetBuilder<>(ignite, dataCache),
+                double rmse = Evaluator.evaluate(dataCache, mdl,
                     new DummyVectorizer<Integer>().labeled(Vectorizer.LabelCoordinate.FIRST),
                     MetricName.RMSE
                 );

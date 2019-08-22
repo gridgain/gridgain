@@ -24,7 +24,6 @@ import org.apache.ignite.ml.composition.bagging.BaggedTrainer;
 import org.apache.ignite.ml.composition.predictionsaggregator.OnMajorityPredictionsAggregator;
 import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
 import org.apache.ignite.ml.dataset.feature.extractor.impl.DummyVectorizer;
-import org.apache.ignite.ml.dataset.impl.cache.CacheBasedDatasetBuilder;
 import org.apache.ignite.ml.environment.LearningEnvironmentBuilder;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.nn.UpdatesStrategy;
@@ -91,9 +90,8 @@ public class BaggedLogisticRegressionSGDTrainerExample {
                 Vectorizer<Integer, Vector, Integer, Double> vectorizer = new DummyVectorizer<Integer>()
                     .labeled(Vectorizer.LabelCoordinate.FIRST);
 
-                double accuracy = Evaluator.evaluate(
+                double accuracy = Evaluator.evaluate(dataCache,
                     baggedTrainer.fit(ignite, dataCache, vectorizer),
-                    new CacheBasedDatasetBuilder<>(ignite, dataCache),
                     vectorizer,
                     MetricName.ACCURACY
                 );

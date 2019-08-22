@@ -24,7 +24,6 @@ import org.apache.ignite.Ignition;
 import org.apache.ignite.examples.ml.tutorial.TitanicUtils;
 import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
 import org.apache.ignite.ml.dataset.feature.extractor.impl.DummyVectorizer;
-import org.apache.ignite.ml.dataset.impl.cache.CacheBasedDatasetBuilder;
 import org.apache.ignite.ml.environment.LearningEnvironmentBuilder;
 import org.apache.ignite.ml.environment.logging.ConsoleLogger;
 import org.apache.ignite.ml.environment.parallelism.ParallelismStrategy;
@@ -178,10 +177,8 @@ public class Step_12_Parallel_Random_Search {
 
                 System.out.println("\n>>> Trained model: " + bestMdl);
 
-                double accuracy = Evaluator.evaluate(
-                    bestMdl, new CacheBasedDatasetBuilder<>(ignite, dataCache, split.getTestFilter()),
-                    normalizationPreprocessor,
-                    MetricName.ACCURACY
+                double accuracy = Evaluator.evaluate(dataCache, split.getTestFilter(),
+                    bestMdl, normalizationPreprocessor, MetricName.ACCURACY
                 );
 
                 System.out.println("\n>>> Accuracy " + accuracy);

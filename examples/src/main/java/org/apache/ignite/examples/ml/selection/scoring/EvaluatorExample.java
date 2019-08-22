@@ -22,7 +22,6 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
 import org.apache.ignite.ml.dataset.feature.extractor.impl.DummyVectorizer;
-import org.apache.ignite.ml.dataset.impl.cache.CacheBasedDatasetBuilder;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.selection.scoring.evaluator.EvaluationResult;
 import org.apache.ignite.ml.selection.scoring.evaluator.Evaluator;
@@ -66,10 +65,8 @@ public class EvaluatorExample {
 
                 SVMLinearClassificationModel mdl = trainer.fit(ignite, dataCache, vectorizer);
 
-                EvaluationResult evaluationResult = Evaluator.evaluate(
-                    mdl, new CacheBasedDatasetBuilder<>(ignite, dataCache),
-                    vectorizer,
-                    MetricName.ACCURACY, MetricName.F_MEASURE
+                EvaluationResult evaluationResult = Evaluator.evaluate(dataCache,
+                    mdl, vectorizer, MetricName.ACCURACY, MetricName.F_MEASURE
                 );
 
                 evaluationResult.print();

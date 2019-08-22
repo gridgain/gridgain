@@ -24,7 +24,6 @@ import org.apache.ignite.examples.ml.tutorial.TitanicUtils;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
 import org.apache.ignite.ml.dataset.feature.extractor.impl.DummyVectorizer;
-import org.apache.ignite.ml.dataset.impl.cache.CacheBasedDatasetBuilder;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.selection.scoring.evaluator.Evaluator;
 import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
@@ -64,10 +63,8 @@ public class DecisionTreeFromSparkExample {
 
                 System.out.println(">>> DT: " + mdl);
 
-                double accuracy = Evaluator.evaluate(
-                    mdl, new CacheBasedDatasetBuilder<>(ignite, dataCache),
-                    vectorizer,
-                    MetricName.ACCURACY
+                double accuracy = Evaluator.evaluate(dataCache,
+                    mdl, vectorizer, MetricName.ACCURACY
                 );
 
                 System.out.println("\n>>> Accuracy " + accuracy);

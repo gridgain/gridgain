@@ -28,6 +28,7 @@ import org.apache.ignite.ml.math.distances.EuclideanDistance;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.math.primitives.vector.VectorUtils;
 import org.apache.ignite.ml.selection.scoring.evaluator.metric.MetricName;
+import org.apache.ignite.ml.selection.scoring.evaluator.metric.regression.Rss;
 import org.apache.ignite.ml.selection.split.TrainTestDatasetSplitter;
 import org.apache.ignite.ml.selection.split.TrainTestSplit;
 import org.junit.Test;
@@ -68,7 +69,7 @@ public class RegressionEvaluatorTest extends TrainerTest {
         LocalDatasetBuilder<Integer, Vector> datasetBuilder = new LocalDatasetBuilder<>(data, parts);
         KNNRegressionModel mdl = trainer.fit(datasetBuilder, vectorizer);
 
-        double score = Evaluator.evaluate(mdl, datasetBuilder, vectorizer, MetricName.RSS);
+        double score = Evaluator.evaluate(data, mdl, vectorizer, MetricName.RSS);
 
         assertEquals(5581012.666666679, score, 1e-4);
     }
@@ -109,10 +110,9 @@ public class RegressionEvaluatorTest extends TrainerTest {
             vectorizer
         );
 
-        double score = Evaluator.evaluate(mdl,
-            new LocalDatasetBuilder<>(data, split.getTrainFilter(), parts), vectorizer,
-            MetricName.RSS
-        );
+        double score = Evaluator.evaluate(new LocalDatasetBuilder<>(data, split.getTrainFilter(), parts),
+            mdl, vectorizer, new Rss()
+        ).get();
 
         assertEquals(4800164.444444457, score, 1e-4);
     }

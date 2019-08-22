@@ -21,7 +21,6 @@ import java.util.Map;
 import org.apache.ignite.ml.common.TrainerTest;
 import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
 import org.apache.ignite.ml.dataset.feature.extractor.impl.DummyVectorizer;
-import org.apache.ignite.ml.dataset.impl.local.LocalDatasetBuilder;
 import org.apache.ignite.ml.knn.classification.KNNClassificationModel;
 import org.apache.ignite.ml.knn.classification.KNNClassificationTrainer;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
@@ -57,8 +56,7 @@ public class BinaryClassificationEvaluatorTest extends TrainerTest {
             vectorizer
         );
 
-        double score = Evaluator.evaluate(mdl, new LocalDatasetBuilder<>(cacheMock, 1),
-            vectorizer, MetricName.ACCURACY);
+        double score = Evaluator.evaluate(cacheMock, mdl, vectorizer, MetricName.ACCURACY);
 
         assertEquals(0.9919839679358717, score, 1e-12);
     }
@@ -89,9 +87,7 @@ public class BinaryClassificationEvaluatorTest extends TrainerTest {
             vectorizer
         );
 
-        double score = Evaluator.evaluate(mdl, new LocalDatasetBuilder<>(cacheMock, 1), vectorizer,
-            MetricName.ACCURACY);
-
+        double score = Evaluator.evaluate(cacheMock, split.getTestFilter(), mdl, vectorizer, MetricName.ACCURACY);
         assertEquals(0.9, score, 1);
     }
 }

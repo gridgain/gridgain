@@ -22,7 +22,6 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
 import org.apache.ignite.ml.dataset.feature.extractor.impl.DummyVectorizer;
-import org.apache.ignite.ml.dataset.impl.cache.CacheBasedDatasetBuilder;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.preprocessing.Preprocessor;
 import org.apache.ignite.ml.preprocessing.imputing.ImputerTrainer;
@@ -72,10 +71,8 @@ public class Step_2_Imputing {
 
                 System.out.println("\n>>> Trained model: " + mdl);
 
-                double accuracy = Evaluator.evaluate(
-                    mdl, new CacheBasedDatasetBuilder<>(ignite, dataCache),
-                    imputingPreprocessor,
-                    MetricName.ACCURACY
+                double accuracy = Evaluator.evaluate(dataCache,
+                    mdl, imputingPreprocessor, MetricName.ACCURACY
                 );
 
                 System.out.println("\n>>> Accuracy " + accuracy);

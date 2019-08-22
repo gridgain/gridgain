@@ -22,7 +22,6 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
 import org.apache.ignite.ml.dataset.feature.extractor.impl.DummyVectorizer;
-import org.apache.ignite.ml.dataset.impl.cache.CacheBasedDatasetBuilder;
 import org.apache.ignite.ml.knn.regression.KNNRegressionModel;
 import org.apache.ignite.ml.knn.regression.KNNRegressionTrainer;
 import org.apache.ignite.ml.knn.utils.indices.SpatialIndexType;
@@ -72,10 +71,8 @@ public class KNNRegressionExample {
 
                 KNNRegressionModel knnMdl = (KNNRegressionModel)trainer.fit(ignite, dataCache, vectorizer);
 
-                double rmse = Evaluator.evaluate(
-                    knnMdl, new CacheBasedDatasetBuilder<>(ignite, dataCache),
-                    vectorizer,
-                    MetricName.RMSE
+                double rmse = Evaluator.evaluate(dataCache,
+                    knnMdl, vectorizer, MetricName.RMSE
                 );
 
                 System.out.println("\n>>> Rmse = " + rmse);
