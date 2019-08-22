@@ -268,7 +268,6 @@ namespace Apache.Ignite.Core.Tests.Deployment
 
         private static IgniteConfiguration GetConfig()
         {
-            SpringConfigUrl = @"config\log\custom-log.xml",
             var cfg = TestUtils.GetTestConfiguration(null, Guid.NewGuid().ToString());
             cfg.PeerAssemblyLoadingMode = PeerAssemblyLoadingMode.CurrentAppDomain;
             return cfg;
