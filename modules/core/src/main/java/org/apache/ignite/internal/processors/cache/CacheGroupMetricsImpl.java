@@ -56,7 +56,7 @@ public class CacheGroupMetricsImpl {
     private final CacheGroupContext ctx;
 
     /** */
-    private final LongAdderMetric groupPageAllocationTracker;
+    private final LongAdderMetric grpPageAllocationTracker;
 
     /** Interface describing a predicate of two integers. */
     private interface IntBiPredicate {
@@ -73,7 +73,7 @@ public class CacheGroupMetricsImpl {
     public CacheGroupMetricsImpl(CacheGroupContext ctx) {
         this.ctx = ctx;
 
-        MetricRegistry mreg = ctx.shared().kernalContext().metric().registry(metricGroupName());
+        MetricRegistry mreg = new MetricRegistry(CACHE_GROUP_METRICS_PREFIX, metricGroupName());
 
         mreg.register("Caches", this::getCaches, List.class, null);
 
@@ -142,16 +142,18 @@ public class CacheGroupMetricsImpl {
         if (region != null) {
             DataRegionMetricsImpl dataRegionMetrics = ctx.dataRegion().memoryMetrics();
 
-            groupPageAllocationTracker =
+            grpPageAllocationTracker =
                 dataRegionMetrics.getOrAllocateGroupPageAllocationTracker(ctx.cacheOrGroupName());
         }
         else
-            groupPageAllocationTracker = new LongAdderMetric("NO_OP", null);
+            grpPageAllocationTracker = new LongAdderMetric("NO_OP", null);
+
+        ctx.shared().kernalContext().metric().add(mreg);
     }
 
     /** */
     public long getIndexBuildCountPartitionsLeft() {
-        return idxBuildCntPartitionsLeft.get();
+        return idxBuildCntPartitionsLeft.value();
     }
 
     /** Set number of partitions need processed for finished indexes create or rebuilding. */
@@ -416,7 +418,7 @@ public class CacheGroupMetricsImpl {
 
     /** */
     public long getTotalAllocatedPages() {
-        return groupPageAllocationTracker.longValue();
+        return grpPageAllocationTracker.value();
     }
 
     /** */

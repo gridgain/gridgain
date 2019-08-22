@@ -21,14 +21,23 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.BiConsumer;
 
-import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.jetbrains.annotations.Nullable;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.apache.ignite.internal.processors.metric.export.MetricType.BOOLEAN;
+import static org.apache.ignite.internal.processors.metric.export.MetricType.DOUBLE;
+import static org.apache.ignite.internal.processors.metric.export.MetricType.HISTOGRAM;
+import static org.apache.ignite.internal.processors.metric.export.MetricType.HIT_RATE;
+import static org.apache.ignite.internal.processors.metric.export.MetricType.INT;
+import static org.apache.ignite.internal.processors.metric.export.MetricType.LONG;
 import static org.apache.ignite.internal.util.GridUnsafe.BYTE_ARR_OFF;
 import static org.apache.ignite.internal.util.GridUnsafe.copyMemory;
+import static org.apache.ignite.internal.util.GridUnsafe.getInt;
+import static org.apache.ignite.internal.util.GridUnsafe.getLong;
+import static org.apache.ignite.internal.util.GridUnsafe.getShort;
 import static org.apache.ignite.internal.util.GridUnsafe.putInt;
 import static org.apache.ignite.internal.util.GridUnsafe.putLong;
 import static org.apache.ignite.internal.util.GridUnsafe.putShort;
@@ -41,19 +50,20 @@ import static org.apache.ignite.internal.util.GridUnsafe.putShort;
  * Header:
  *  0 - int - message size in bytes.
  *  4 - short - version of protocol.
- *  6 - int - version of schema.
- * 10 - int - offset of schema frame (0xFFFFFFFF if no schema frame in message).
- * 14 - int - size of schema frame in bytes (0 if no schema frame in message).
- * 18 - int - offset of data frame (0xFFFFFFFF if no data farame in message).
- * 22 - int - size of data frame in bytes (0 if no data in message).
- * 26 - UUID - cluster ID (two long values: most significant bits, then least significant bits).
- * 42 - int - size of user tag in bytes (0 if user tag isn't defined).
- * 46 - byte[] - user tag.
- * 46 + user tag size - int - size of consistent ID in bytes.
- * 46 + user tag size + 4 - byte[] - consistent ID ()
+ *  6 - long - timestamp.
+ * 14 - int - version of schema.
+ * 18 - int - offset of schema frame (0xFFFFFFFF if no schema frame in message).
+ * 22 - int - size of schema frame in bytes (0 if no schema frame in message).
+ * 26 - int - offset of data frame (0xFFFFFFFF if no data farame in message).
+ * 30 - int - size of data frame in bytes (0 if no data in message).
+ * 34 - UUID - cluster ID (two long values: most significant bits, then least significant bits).
+ * 50 - int - size of user tag in bytes (0 if user tag isn't defined).
+ * 54 - byte[] - user tag.
+ * 54 + user tag size - int - size of consistent ID in bytes.
+ * 54 + user tag size + 4 - byte[] - consistent ID ()
  *
  * Schema:
- * 0 - byte - particular metirc type.
+ * 0 - byte - particular metric type.
  * 1 - int - size of particular metric name in bytes.
  * 5 - bytes - particular metric name
  *
@@ -69,7 +79,7 @@ public class MetricResponse implements Message {
     private static final short PROTO_VER_1 = 1;
 
     /** Header size without user tag bytes. */
-    static final int BASE_HEADER_SIZE = 46;
+    static final int BASE_HEADER_SIZE = 54;
 
     /** Message size field offset. */
     private static final int MSG_SIZE_OFF = 0;
@@ -77,32 +87,38 @@ public class MetricResponse implements Message {
     /** Protocol version field offset. */
     private static final int PROTO_VER_OFF = 4;
 
+    /** Timestamp. */
+    private static final int TIMESTAMP_OFF = 6;
+
     /** Schema version field offset. */
-    private static final int SCHEMA_VER_OFF = 6;
+    private static final int SCHEMA_VER_OFF = 14;
 
     /** Schema offset field offset. */
-    private static final int SCHEMA_OFF_OFF = 10;
+    private static final int SCHEMA_OFF_OFF = 18;
 
     /** Schema size field offset. */
-    private static final int SCHEMA_SIZE_OFF = 14;
+    private static final int SCHEMA_SIZE_OFF = 22;
 
     /** Data offset field offset. */
-    private static final int DATA_OFF_OFF = 18;
+    private static final int DATA_OFF_OFF = 26;
 
     /** Data size field offset. */
-    private static final int DATA_SIZE_OFF = 22;
+    private static final int DATA_SIZE_OFF = 30;
 
     /** Cluster ID field offset. */
-    private static final int CLUSTER_ID_OFF = 26;
+    private static final int CLUSTER_ID_OFF = 34;
 
     /** User tag size field offset. */
-    private static final int USER_TAG_SIZE_OFF = 42;
+    private static final int USER_TAG_SIZE_OFF = 50;
 
     /** User tag field offset. */
-    private static final int USER_TAG_OFF = 46;
+    private static final int USER_TAG_OFF = 54;
 
     /** Constant for indication of absent some block of data. */
     private static final int NO_OFF = -1;
+
+    /** Size of consistent ID length field. */
+    static final int CONSISTENT_ID_LEN_SIZE = Integer.BYTES;
 
     /** Message body. */
     byte[] body;
@@ -116,6 +132,7 @@ public class MetricResponse implements Message {
 
     public MetricResponse(
             int schemaVer,
+            long ts,
             UUID clusterId,
             @Nullable String userTag,
             String consistentId,
@@ -129,22 +146,22 @@ public class MetricResponse implements Message {
         int userTagLen = 0;
 
         if (userTag != null && !userTag.isEmpty()) {
-            userTagBytes = userTag.getBytes(Schema.UTF_8);
+            userTagBytes = userTag.getBytes(UTF_8);
 
             userTagLen = userTagBytes.length;
         }
 
-        byte[] consistentIdBytes = consistentId.getBytes(Schema.UTF_8);
+        byte[] consistentIdBytes = consistentId.getBytes(UTF_8);
 
-        int len = BASE_HEADER_SIZE + userTagLen + Integer.BYTES + consistentIdBytes.length + schemaSize + dataSize;
+        int len = BASE_HEADER_SIZE + userTagLen + CONSISTENT_ID_LEN_SIZE + consistentIdBytes.length + schemaSize + dataSize;
 
-        int schemaOff = BASE_HEADER_SIZE + userTagLen + Integer.BYTES + consistentIdBytes.length;
+        int schemaOff = BASE_HEADER_SIZE + userTagLen + CONSISTENT_ID_LEN_SIZE + consistentIdBytes.length;
 
         int dataOff = schemaOff + schemaSize;
 
         body = new byte[len];
 
-        header(schemaVer, clusterId, userTagBytes, consistentIdBytes, schemaOff, schemaSize, dataOff, dataSize);
+        header(schemaVer, ts, clusterId, userTagBytes, consistentIdBytes, schemaOff, schemaSize, dataOff, dataSize);
 
         if (schemaOff > -1)
             schemaWriter.accept(body, schemaOff);
@@ -154,22 +171,26 @@ public class MetricResponse implements Message {
     }
 
     public int size() {
-        return GridUnsafe.getInt(body, BYTE_ARR_OFF + MSG_SIZE_OFF);
+        return getInt(body, BYTE_ARR_OFF + MSG_SIZE_OFF);
     }
 
     public short protocolVersion() {
-        return GridUnsafe.getShort(body, BYTE_ARR_OFF + PROTO_VER_OFF);
+        return getShort(body, BYTE_ARR_OFF + PROTO_VER_OFF);
+    }
+
+    public long timestamp() {
+        return getLong(body, BYTE_ARR_OFF + TIMESTAMP_OFF);
     }
 
     public int schemaVersion() {
-        return GridUnsafe.getInt(body, BYTE_ARR_OFF + SCHEMA_VER_OFF);
+        return getInt(body, BYTE_ARR_OFF + SCHEMA_VER_OFF);
     }
 
     //TODO: could be null?
     public UUID clusterId() {
-        long mostSigBits = GridUnsafe.getLong(body, BYTE_ARR_OFF + CLUSTER_ID_OFF);
+        long mostSigBits = getLong(body, BYTE_ARR_OFF + CLUSTER_ID_OFF);
 
-        long leastSigBits = GridUnsafe.getLong(body, BYTE_ARR_OFF + CLUSTER_ID_OFF + Long.BYTES);
+        long leastSigBits = getLong(body, BYTE_ARR_OFF + CLUSTER_ID_OFF + Long.BYTES);
 
         return new UUID(mostSigBits, leastSigBits);
     }
@@ -180,102 +201,110 @@ public class MetricResponse implements Message {
         if (len == 0)
             return null;
 
-        return new String(body, USER_TAG_OFF, len, Schema.UTF_8);
+        return new String(body, USER_TAG_OFF, len, UTF_8);
     }
 
     private int userTagSize() {
-        return GridUnsafe.getInt(body, BYTE_ARR_OFF + USER_TAG_SIZE_OFF);
+        return getInt(body, BYTE_ARR_OFF + USER_TAG_SIZE_OFF);
     }
 
     public String consistentId() {
         int consistentIdSizeOff = BASE_HEADER_SIZE + userTagSize();
 
-        int len = GridUnsafe.getInt(body, BYTE_ARR_OFF + consistentIdSizeOff);
+        int len = getInt(body, BYTE_ARR_OFF + consistentIdSizeOff);
 
         int off = consistentIdSizeOff + Integer.BYTES;
 
-        return new String(body, off, len, Schema.UTF_8);
+        return new String(body, off, len, UTF_8);
     }
 
-    @Nullable public Schema schema() {
+    @Nullable public MetricSchema schema() {
         int off = schemaOffset();
 
         if (off == NO_OFF)
             return null;
 
-        return Schema.fromBytes(body, off, schemaSize());
+        return MetricSchema.fromBytes(body, off, schemaSize());
     }
 
-    public void processData(Schema schema, MetricValueConsumer consumer) {
+    public void processData(MetricSchema schema, MetricValueConsumer consumer) {
         int off = dataOffset();
 
         if (off == NO_OFF)
             return;
 
-        int lim = off + dataSize();
+        VarIntByteBuffer data = new VarIntByteBuffer(body);
 
-        List<SchemaItem> items = schema.items();
+        data.position(off);
 
-        for (SchemaItem item : items) {
-            assert off < lim;
+        List<MetricSchemaItem> items = schema.items();
 
-            String name = item.name();
+        for (MetricSchemaItem item : items) {
+            short idx = item.index();
 
-            byte type = item.type();
+            MetricRegistrySchema regSchema = schema.registrySchema(idx);
 
-            switch (type) {
-                case 0:
-                    consumer.onBoolean(name, GridUnsafe.getBoolean(body, BYTE_ARR_OFF + off));
+            List<MetricRegistrySchemaItem> regItems = regSchema.items();
 
-                    off += 1;
+            for (MetricRegistrySchemaItem regItem : regItems) {
+                String name =  item.prefix() + '.' + regItem.name();
 
-                    break;
+                MetricType type = MetricType.findByType(regItem.metricType().type());
 
-                case 1:
-                    consumer.onInt(name, GridUnsafe.getInt(body, BYTE_ARR_OFF + off));
+                if (type == LONG)
+                    consumer.onLong(name, data.getVarLong());
+                else if (type == INT)
+                    consumer.onInt(name, data.getVarInt());
+                else if (type == HIT_RATE) {
+                    long interval = data.getVarLong();
 
-                    off += Integer.BYTES;
+                    long val = data.getVarLong();
 
-                    break;
+                    consumer.onLong(name + '.' + interval, val);
+                }
+                else if (type == HISTOGRAM) {
+                    int pairCnt = data.getVarInt();
 
-                case 2:
-                    consumer.onLong(name, GridUnsafe.getLong(body, BYTE_ARR_OFF + off));
+                    for (int i = 0; i < pairCnt; i++) {
+                        long bound = data.getVarLong();
 
-                    off += Long.BYTES;
+                        long val = data.getVarLong();
 
-                    break;
+                        consumer.onLong(name + '.' + bound, val);
+                    }
 
-                case 3:
-                    consumer.onDouble(name, GridUnsafe.getDouble(body, BYTE_ARR_OFF + off));
-
-                    off += Double.BYTES;
-
-                    break;
-
-                default:
-                    throw new IllegalArgumentException("Unknown metric type: " + type);
+                    consumer.onLong(name + ".inf", data.getVarLong());
+                }
+                else if (type == DOUBLE)
+                    consumer.onDouble(name, data.getDouble());
+                else if (type == BOOLEAN)
+                    consumer.onBoolean(name, data.getBoolean());
+                else
+                    throw new IllegalStateException("Unknown metric type [metric=" + name + ", type=" + type + ']');
             }
         }
     }
 
+
     public int schemaOffset() {
-        return GridUnsafe.getInt(body, BYTE_ARR_OFF + SCHEMA_OFF_OFF);
+        return getInt(body, BYTE_ARR_OFF + SCHEMA_OFF_OFF);
     }
 
     public int schemaSize() {
-        return GridUnsafe.getInt(body, BYTE_ARR_OFF + SCHEMA_SIZE_OFF);
+        return getInt(body, BYTE_ARR_OFF + SCHEMA_SIZE_OFF);
     }
 
     public int dataOffset() {
-        return GridUnsafe.getInt(body, BYTE_ARR_OFF + DATA_OFF_OFF);
+        return getInt(body, BYTE_ARR_OFF + DATA_OFF_OFF);
     }
 
     public int dataSize() {
-        return GridUnsafe.getInt(body, BYTE_ARR_OFF + DATA_SIZE_OFF);
+        return getInt(body, BYTE_ARR_OFF + DATA_SIZE_OFF);
     }
 
     private void header(
             int schemaVer,
+            long ts,
             UUID clusterId,
             byte[] userTagBytes,
             byte[] consistentIdBytes,
@@ -287,6 +316,8 @@ public class MetricResponse implements Message {
         putInt(body, BYTE_ARR_OFF + MSG_SIZE_OFF, body.length);
 
         putShort(body, BYTE_ARR_OFF + PROTO_VER_OFF, PROTO_VER_1);
+
+        putLong(body, BYTE_ARR_OFF + TIMESTAMP_OFF, ts);
 
         putInt(body, BYTE_ARR_OFF + SCHEMA_VER_OFF, schemaVer);
 

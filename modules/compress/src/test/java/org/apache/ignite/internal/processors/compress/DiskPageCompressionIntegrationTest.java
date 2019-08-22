@@ -83,8 +83,7 @@ public class DiskPageCompressionIntegrationTest extends AbstractPageCompressionI
     /**
      * @throws Exception If failed.
      */
-    @Override
-    protected void doTestPageCompression() throws Exception {
+    @Override protected void doTestPageCompression() throws Exception {
         IgniteEx ignite = startGrid(0);
 
         ignite.cluster().active(true);
@@ -135,15 +134,15 @@ public class DiskPageCompressionIntegrationTest extends AbstractPageCompressionI
         GridCacheContext<?,?> cctx = ignite.cachex(cacheName).context();
 
         int cacheId = cctx.cacheId();
-        int groupId = cctx.groupId();
+        int grpId = cctx.groupId();
 
-        assertEquals(cacheId, groupId);
+        assertEquals(cacheId, grpId);
 
-        MetricRegistry mreg = ignite.context().metric().registry(
+        MetricRegistry mreg = ignite.context().metric().get(
             metricName(CACHE_GROUP_METRICS_PREFIX, cctx.group().cacheOrGroupName()));
 
-        storeSize = mreg.<LongMetric>findMetric("StorageSize").longValue();
-        sparseStoreSize = mreg.<LongMetric>findMetric("SparseStorageSize").longValue();
+        storeSize = mreg.<LongMetric>findMetric("StorageSize").value();
+        sparseStoreSize = mreg.<LongMetric>findMetric("SparseStorageSize").value();
 
         assertTrue("storeSize: " + storeSize, storeSize > 0);
 
@@ -199,7 +198,7 @@ public class DiskPageCompressionIntegrationTest extends AbstractPageCompressionI
 
         IgniteInternalCache<Integer,TestVal> cache = ignite.cachex(cacheName);
 
-        MetricRegistry mreg = ignite.context().metric().registry(
+        MetricRegistry mreg = ignite.context().metric().get(
             metricName(CACHE_GROUP_METRICS_PREFIX, cacheName));
 
         GridCacheDatabaseSharedManager dbMgr = ((GridCacheDatabaseSharedManager)ignite.context()
@@ -213,8 +212,8 @@ public class DiskPageCompressionIntegrationTest extends AbstractPageCompressionI
             if (i % 50_000 == 0) {
                 dbMgr.forceCheckpoint("test").finishFuture().get();
 
-                long sparse = mreg.<LongMetric>findMetric("SparseStorageSize").longValue();
-                long size = mreg.<LongMetric>findMetric("StorageSize").longValue();
+                long sparse = mreg.<LongMetric>findMetric("SparseStorageSize").value();
+                long size = mreg.<LongMetric>findMetric("StorageSize").value();
 
                 System.out.println(i + " >> " + sparse + " / " + size + " = " + ((double)sparse / size));
             }

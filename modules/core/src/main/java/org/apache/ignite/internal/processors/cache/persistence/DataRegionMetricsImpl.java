@@ -19,6 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.ignite.DataRegionMetrics;
 import org.apache.ignite.DataRegionMetricsProvider;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
@@ -114,8 +115,10 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
      * @param dataRegionMetricsProvider Data region metrics provider.
      */
     public DataRegionMetricsImpl(DataRegionConfiguration memPlcCfg,
-        GridMetricManager mmgr,
-        DataRegionMetricsProvider dataRegionMetricsProvider) {
+                                 GridMetricManager mmgr,
+                                 DataRegionMetricsProvider dataRegionMetricsProvider,
+                                 IgniteLogger log
+    ) {
         this.memPlcCfg = memPlcCfg;
         this.dataRegionMetricsProvider = dataRegionMetricsProvider;
         this.mmgr = mmgr;
@@ -128,7 +131,11 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
 
         subInts = memPlcCfg.getMetricsSubIntervalCount();
 
-        MetricRegistry mreg = mmgr.registry(metricName(DATAREGION_METRICS_PREFIX, memPlcCfg.getName()));
+        MetricRegistry mreg = new MetricRegistry(
+                DATAREGION_METRICS_PREFIX,
+                metricName(DATAREGION_METRICS_PREFIX, memPlcCfg.getName()),
+                log
+        );
 
         allocRate = mreg.hitRateMetric("AllocationRate",
             "Allocation rate (pages per second) averaged across rateTimeInternal.",
@@ -203,6 +210,8 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
         mreg.register("UsedCheckpointBufferSize",
             this::getUsedCheckpointBufferSize,
             "Gets used checkpoint buffer size in bytes");
+
+        mmgr.add(mreg);
     }
 
     /** {@inheritDoc} */
@@ -212,7 +221,7 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
 
     /** {@inheritDoc} */
     @Override public long getTotalAllocatedPages() {
-        return totalAllocatedPages.longValue();
+        return totalAllocatedPages.value();
     }
 
     /** {@inheritDoc} */
@@ -248,9 +257,7 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
         if (!metricsEnabled)
             return 0;
 
-        return totalAllocatedPages.longValue() != 0 ?
-                (float) largeEntriesPages.longValue() / totalAllocatedPages.longValue()
-                : 0;
+        return totalAllocatedPages.value() != 0 ? (float)largeEntriesPages.value() / totalAllocatedPages.value() : 0;
     }
 
     /** {@inheritDoc} */
@@ -260,11 +267,9 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
 
         long freeSpace = dataRegionMetricsProvider.partiallyFilledPagesFreeSpace();
 
-        long totalAllocated = getPageSize() * totalAllocatedPages.longValue();
+        long totalAllocated = getPageSize() * totalAllocatedPages.value();
 
-        return totalAllocated != 0 ?
-            (float) (totalAllocated - freeSpace) / totalAllocated
-            : 0f;
+        return totalAllocated != 0 ? (float)(totalAllocated - freeSpace) / totalAllocated : 0f;
     }
 
     /** {@inheritDoc} */
@@ -272,7 +277,7 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
         if (!metricsEnabled || !persistenceEnabled)
             return 0;
 
-        return dirtyPages.longValue();
+        return dirtyPages.value();
     }
 
     /** {@inheritDoc} */
@@ -331,7 +336,7 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
         if (!metricsEnabled || !persistenceEnabled)
             return 0;
 
-        return checkpointBufferSize.get();
+        return checkpointBufferSize.value();
     }
 
     /** {@inheritDoc} */
@@ -349,7 +354,7 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
         if (!metricsEnabled)
             return 0;
 
-        return readPages.longValue();
+        return readPages.value();
     }
 
     /** {@inheritDoc} */
@@ -357,7 +362,7 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
         if (!metricsEnabled)
             return 0;
 
-        return writtenPages.longValue();
+        return writtenPages.value();
     }
 
     /** {@inheritDoc} */
@@ -365,12 +370,12 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
         if (!metricsEnabled)
             return 0;
 
-        return replacedPages.longValue();
+        return replacedPages.value();
     }
 
     /** {@inheritDoc} */
     @Override public long getOffHeapSize() {
-        return offHeapSize.get();
+        return offHeapSize.value();
     }
 
     /** {@inheritDoc} */
@@ -461,10 +466,21 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
      */
     public LongAdderMetric getOrAllocateGroupPageAllocationTracker(String grpName) {
         return grpAllocationTrackers.computeIfAbsent(grpName,
-            id -> mmgr.registry(metricName(CACHE_GROUP_METRICS_PREFIX, grpName)).longAdderMetric(
-                "TotalAllocatedPages",
-                totalAllocatedPages::add,
-                "Cache group total allocated pages."));
+                id -> {
+                    String name = metricName(CACHE_GROUP_METRICS_PREFIX, grpName);
+
+                    MetricRegistry mreg = new MetricRegistry(name, name);
+
+                    LongAdderMetric m = mreg.longAdderMetric(
+                            "TotalAllocatedPages",
+                            totalAllocatedPages::add,
+                            "Cache group total allocated pages.");
+
+                    mmgr.add(mreg);
+
+                    return m;
+                }
+        );
     }
 
     /**

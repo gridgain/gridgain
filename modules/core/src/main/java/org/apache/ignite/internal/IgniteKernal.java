@@ -151,6 +151,7 @@ import org.apache.ignite.internal.processors.marshaller.GridMarshallerMappingPro
 import org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageImpl;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
+import org.apache.ignite.internal.processors.metric.export.MetricExporter;
 import org.apache.ignite.internal.processors.nodevalidation.DiscoveryNodeValidationProcessor;
 import org.apache.ignite.internal.processors.nodevalidation.OsDiscoveryNodeValidationProcessor;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
@@ -299,8 +300,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     /** */
     private static final long serialVersionUID = 0L;
 
-    /** Ignite site that is shown in log messages. */
-    public static final String SITE = "ignite.apache.org";
+    /** GridGain site that is shown in log messages. */
+    public static final String SITE = "gridgain.com";
 
     /** System line separator. */
     private static final String NL = U.nl();
@@ -1089,8 +1090,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
             // Start SPI managers.
             // NOTE: that order matters as there are dependencies between managers.
-            startManager(new GridIoManager(ctx));
             startManager(new GridMetricManager(ctx));
+            startManager(new GridIoManager(ctx));
             startManager(new GridCheckpointManager(ctx));
 
             startManager(new GridEventStorageManager(ctx));
@@ -1148,6 +1149,10 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
                 // Start transactional data replication processor.
                 startProcessor(createComponent(TransactionalDrProcessor.class, ctx));
+
+                startProcessor(new MetricExporter(ctx));
+
+                //TODO: start metrics exporter
 
                 startTimer.finishGlobalStage("Start processors");
 
@@ -4391,7 +4396,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     @Override public void resetMetrics(String registry) {
         assert registry != null;
 
-        MetricRegistry mreg = ctx.metric().registry(registry);
+        MetricRegistry mreg = ctx.metric().get(registry);
 
         if (mreg != null)
             mreg.reset();

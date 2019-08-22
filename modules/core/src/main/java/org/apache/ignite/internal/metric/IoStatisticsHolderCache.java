@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.metric;
 
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
@@ -53,20 +54,26 @@ public class IoStatisticsHolderCache implements IoStatisticsHolder {
      * @param grpId Group id.
      * @param mmgr Metric manager.
      */
-    public IoStatisticsHolderCache(String cacheName, int grpId, GridMetricManager mmgr) {
+    public IoStatisticsHolderCache(String cacheName, int grpId, GridMetricManager mmgr, IgniteLogger log) {
         assert cacheName != null;
 
         this.cacheName = cacheName;
         this.grpId = grpId;
 
-        MetricRegistry mreg = mmgr.registry(metricName(CACHE_GROUP.metricGroupName(), cacheName));
+        MetricRegistry mreg = new MetricRegistry(
+                CACHE_GROUP.metricGroupName(),
+                metricName(CACHE_GROUP.metricGroupName(), cacheName),
+                log
+        );
 
         mreg.longMetric("startTime", null).value(U.currentTimeMillis());
         mreg.objectMetric("name", String.class, null).value(cacheName);
         mreg.intMetric("grpId", null).value(grpId);
 
-        this.logicalReadCtr = mreg.longAdderMetric(LOGICAL_READS, null);
-        this.physicalReadCtr = mreg.longAdderMetric(PHYSICAL_READS, null);
+        logicalReadCtr = mreg.longAdderMetric(LOGICAL_READS, null);
+        physicalReadCtr = mreg.longAdderMetric(PHYSICAL_READS, null);
+
+        mmgr.add(mreg);
     }
 
     /** {@inheritDoc} */
@@ -95,12 +102,12 @@ public class IoStatisticsHolderCache implements IoStatisticsHolder {
 
     /** {@inheritDoc} */
     @Override public long logicalReads() {
-        return logicalReadCtr.longValue();
+        return logicalReadCtr.value();
     }
 
     /** {@inheritDoc} */
     @Override public long physicalReads() {
-        return physicalReadCtr.longValue();
+        return physicalReadCtr.value();
     }
 
     /**

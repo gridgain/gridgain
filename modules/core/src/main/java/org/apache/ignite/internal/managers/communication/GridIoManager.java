@@ -249,8 +249,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
             sysLsnrs = new GridMessageListener[GridTopic.values().length];
         }
 
-        // This is GMC only fix! Need remove before merge to master.
-        /*MetricRegistry ioMetric = ctx.metric().registry(COMM_METRICS);
+        MetricRegistry ioMetric = ctx.metric().get(COMM_METRICS);
 
         CommunicationSpi spi = ctx.config().getCommunicationSpi();
 
@@ -264,7 +263,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         ioMetric.register(RCVD_MSGS_CNT, spi::getReceivedMessagesCount,
             "Received messages count.");
 
-        ioMetric.register(RCVD_BYTES_CNT, spi::getReceivedBytesCount, "Received bytes count.");*/
+        ioMetric.register(RCVD_BYTES_CNT, spi::getReceivedBytesCount, "Received bytes count.");
     }
 
     /**
