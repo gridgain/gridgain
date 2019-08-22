@@ -5528,7 +5528,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
 
             int killNodes = rnd.nextInt(nodes.size() / 2);
 
-            log.info("Resolver kills nodes [total=" + nodes.size() + ", kill=" + killNodes + ']');
+            System.out.println("Resolver kills nodes [total=" + nodes.size() + ", kill=" + killNodes + ']');
 
             long srvCnt = nodes.stream().filter(node -> !node.isClient()).count();
 
@@ -5546,7 +5546,7 @@ public class ZookeeperDiscoverySpiTest extends GridCommonAbstractTest {
             for (int idx : idxs) {
                 ClusterNode node = nodes.get(idx);
 
-                log.info("Resolver kills node: " + node.id());
+                System.out.println("Resolver kills node: " + node.id());
 
                 LAST_KILLED_NODES.add(node);
 
