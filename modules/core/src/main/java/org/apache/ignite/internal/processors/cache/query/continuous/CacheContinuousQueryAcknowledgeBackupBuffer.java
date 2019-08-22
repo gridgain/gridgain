@@ -29,7 +29,9 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.Nullable;
 
-/** */
+/**
+ * Buffer for collecting CQ acknowledges before sending CQ buffer cleanup message to backup nodes.
+ */
 class CacheContinuousQueryAcknowledgeBackupBuffer {
     /** */
     private int size;
@@ -44,7 +46,7 @@ class CacheContinuousQueryAcknowledgeBackupBuffer {
 
     /**
      * @param batch Batch.
-     * @return Non-null tuple if acknowledge should be sent to backups.
+     * @return Tuple if acknowledge should be sent to backups.
      */
     @SuppressWarnings("unchecked")
     @Nullable synchronized IgniteBiTuple<Map<Integer, Long>, Set<AffinityTopologyVersion>>onAcknowledged(
@@ -63,7 +65,7 @@ class CacheContinuousQueryAcknowledgeBackupBuffer {
 
     /**
      * @param e Entry.
-     * @return Non-null tuple if acknowledge should be sent to backups.
+     * @return Tuple if acknowledge should be sent to backups.
      */
     @Nullable synchronized IgniteBiTuple<Map<Integer, Long>, Set<AffinityTopologyVersion>>
     onAcknowledged(CacheContinuousQueryEntry e) {
@@ -87,7 +89,7 @@ class CacheContinuousQueryAcknowledgeBackupBuffer {
     }
 
     /**
-     * @return Non-null tuple if acknowledge should be sent to backups.
+     * @return Tuple if acknowledge should be sent to backups.
      */
     @Nullable synchronized IgniteBiTuple<Map<Integer, Long>, Set<AffinityTopologyVersion>>
         acknowledgeOnTimeout() {
@@ -106,6 +108,8 @@ class CacheContinuousQueryAcknowledgeBackupBuffer {
             new IgniteBiTuple<>(cntrs, topVers);
 
         topVers = U.newHashSet(1);
+
+        updateCntrs.clear();
 
         size = 0;
 
