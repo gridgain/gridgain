@@ -126,6 +126,7 @@ import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYS
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.UTILITY_CACHE_POOL;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.isReservedGridIoPolicy;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
+import static org.apache.ignite.internal.processors.tracing.MTC.isTraceble;
 import static org.apache.ignite.internal.processors.tracing.MTC.supportSpan;
 import static org.apache.ignite.internal.processors.tracing.MTC.trace;
 import static org.apache.ignite.internal.processors.tracing.MTC.traceTag;
@@ -1128,7 +1129,8 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         Runnable c = new TraceRunnable(ctx.tracing(), REGULAR_PROCESS) {
             @Override public void execute() {
                 try {
-                    traceTag(SpanTags.MESSAGE, traceName(msg));
+                    if (isTraceble())
+                        traceTag(SpanTags.MESSAGE, traceName(msg));
 
                     threadProcessingMessage(true, msgC);
 
@@ -1682,7 +1684,8 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         assert topicOrd >= 0 || !(topic instanceof GridTopic) : msg;
 
         try (TraceSurroundings ignored = supportSpan(span)) {
-            trace("Create communication msg - " + traceName(msg));
+            if (isTraceble())
+                trace("Create communication msg - " + traceName(msg));
 
             GridIoMessage ioMsg = createGridIoMessage(topic, topicOrd, msg, plc, ordered, timeout, skipOnTimeout);
 
@@ -2882,7 +2885,8 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
             for (OrderedMessageContainer mc = msgs.poll(); mc != null; mc = msgs.poll()) {
                 try(TraceSurroundings ignore = ctx.tracing().startChild(ORDERED_PROCESS, mc.parentSpan)) {
                     try {
-                        traceTag(SpanTags.MESSAGE, traceName(mc.message));
+                        if (isTraceble())
+                            traceTag(SpanTags.MESSAGE, traceName(mc.message));
 
                         invokeListener(plc, lsnr, nodeId, mc.message.message(), secSubj(mc.message));
                     }

@@ -16,13 +16,13 @@
 
 package org.apache.ignite;
 
+import javax.net.ssl.HostnameVerifier;
 import java.io.Serializable;
 import java.lang.management.RuntimeMXBean;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
-import javax.net.ssl.HostnameVerifier;
 import org.apache.ignite.cache.CacheEntryProcessor;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -1316,6 +1316,11 @@ public final class IgniteSystemProperties {
      */
     public static final String IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_PER_SECOND_LIMIT =
         "IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_PER_SECOND_LIMIT";
+
+    /**
+     * Enable tracing. Default: true
+     */
+    public static final String IGNITE_TRACING_ENABLED = "IGNITE_TRACING_ENABLED";
 
     /**
      * Enforces singleton.

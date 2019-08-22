@@ -35,6 +35,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.util.deque.FastSizeDeque;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.internal.processors.tracing.MTC.isTraceble;
 import static org.apache.ignite.internal.processors.tracing.MTC.trace;
 import static org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesTable.traceName;
 import static org.apache.ignite.internal.util.nio.GridNioServer.OUTBOUND_MESSAGES_QUEUE_SIZE_METRIC_DESC;
@@ -291,7 +292,8 @@ class GridSelectorNioSessionImpl extends GridNioSessionImpl implements GridNioKe
 
         boolean res = queue.offerFirst(writeFut);
 
-        trace("Added to system queue - " + traceName(writeFut.message()));
+        if (isTraceble())
+            trace("Added to system queue - " + traceName(writeFut.message()));
 
         assert res : "Future was not added to queue";
 
@@ -321,7 +323,8 @@ class GridSelectorNioSessionImpl extends GridNioSessionImpl implements GridNioKe
 
         boolean res = queue.offer(writeFut);
 
-        trace("Added to queue - " + traceName(writeFut.message()));
+        if (isTraceble())
+            trace("Added to queue - " + traceName(writeFut.message()));
 
         assert res : "Future was not added to queue";
 
