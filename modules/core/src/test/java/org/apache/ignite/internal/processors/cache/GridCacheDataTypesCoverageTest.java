@@ -40,6 +40,8 @@ import javax.cache.expiry.Duration;
 import javax.cache.expiry.EternalExpiryPolicy;
 import javax.cache.expiry.ExpiryPolicy;
 import java.io.Serializable;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -55,10 +57,12 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
@@ -306,7 +310,11 @@ public class GridCacheDataTypesCoverageTest extends GridCommonAbstractTest {
      */
     @Test
     public void testByteDataType() throws Exception {
-        checkBasicCacheOperations(Byte.MIN_VALUE, Byte.MAX_VALUE, 0, 1);
+        checkBasicCacheOperations(
+            Byte.MIN_VALUE,
+            Byte.MAX_VALUE,
+            0,
+            1);
     }
 
     /**
@@ -315,7 +323,11 @@ public class GridCacheDataTypesCoverageTest extends GridCommonAbstractTest {
      */
     @Test
     public void testShortDataType() throws Exception {
-        checkBasicCacheOperations(Short.MIN_VALUE, Short.MAX_VALUE, 0, 1);
+        checkBasicCacheOperations(
+            Short.MIN_VALUE,
+            Short.MAX_VALUE,
+            0,
+            1);
     }
 
     /**
@@ -324,7 +336,11 @@ public class GridCacheDataTypesCoverageTest extends GridCommonAbstractTest {
      */
     @Test
     public void testIntegerDataType() throws Exception {
-        checkBasicCacheOperations(Integer.MIN_VALUE, Integer.MAX_VALUE, 0, 1);
+        checkBasicCacheOperations(
+            Integer.MIN_VALUE,
+            Integer.MAX_VALUE,
+            0,
+            1);
     }
 
     /**
@@ -333,7 +349,11 @@ public class GridCacheDataTypesCoverageTest extends GridCommonAbstractTest {
      */
     @Test
     public void testLongDataType() throws Exception {
-        checkBasicCacheOperations(Long.MIN_VALUE, Long.MAX_VALUE, 0, 1);
+        checkBasicCacheOperations(
+            Long.MIN_VALUE,
+            Long.MAX_VALUE,
+            0,
+            1);
     }
 
     /**
@@ -342,8 +362,16 @@ public class GridCacheDataTypesCoverageTest extends GridCommonAbstractTest {
      */
     @Test
     public void testFloatDataType() throws Exception {
-        checkBasicCacheOperations(Float.MIN_VALUE, Float.MAX_VALUE, Float.NaN, Float.NEGATIVE_INFINITY,
-            Float.POSITIVE_INFINITY, 0, 0.0, 1, 1.1);
+        checkBasicCacheOperations(
+            Float.MIN_VALUE,
+            Float.MAX_VALUE,
+            Float.NaN,
+            Float.NEGATIVE_INFINITY,
+            Float.POSITIVE_INFINITY,
+            0,
+            0.0,
+            1,
+            1.1);
     }
 
     /**
@@ -352,8 +380,16 @@ public class GridCacheDataTypesCoverageTest extends GridCommonAbstractTest {
      */
     @Test
     public void testDoubleDataType() throws Exception {
-        checkBasicCacheOperations(Double.MIN_VALUE, Double.MAX_VALUE, Double.NaN, Double.NEGATIVE_INFINITY,
-            Double.POSITIVE_INFINITY, 0, 0.0, 1, 1.1);
+        checkBasicCacheOperations(
+            Double.MIN_VALUE,
+            Double.MAX_VALUE,
+            Double.NaN,
+            Double.NEGATIVE_INFINITY,
+            Double.POSITIVE_INFINITY,
+            0,
+            0.0,
+            1,
+            1.1);
     }
 
     /**
@@ -362,7 +398,9 @@ public class GridCacheDataTypesCoverageTest extends GridCommonAbstractTest {
      */
     @Test
     public void testBooleanDataType() throws Exception {
-        checkBasicCacheOperations(Boolean.TRUE, Boolean.FALSE);
+        checkBasicCacheOperations(
+            Boolean.TRUE,
+            Boolean.FALSE);
     }
 
     /**
@@ -371,7 +409,10 @@ public class GridCacheDataTypesCoverageTest extends GridCommonAbstractTest {
      */
     @Test
     public void testCharacterDataType() throws Exception {
-        checkBasicCacheOperations('a', 'A', 0);
+        checkBasicCacheOperations(
+            'a',
+            'A',
+            0);
     }
 
     /**
@@ -380,7 +421,9 @@ public class GridCacheDataTypesCoverageTest extends GridCommonAbstractTest {
      */
     @Test
     public void testStringDataType() throws Exception {
-        checkBasicCacheOperations("aAbB", "");
+        checkBasicCacheOperations(
+            "aAbB",
+            "");
     }
 
     /**
@@ -389,7 +432,9 @@ public class GridCacheDataTypesCoverageTest extends GridCommonAbstractTest {
      */
     @Test
     public void testByteArrayDataType() throws Exception {
-        checkBasicCacheOperations(new byte[] {}, new byte[] {3, 2, 1});
+        checkBasicCacheOperations(
+            new byte[] {},
+            new byte[] {3, 2, 1});
         // TODO: 23.08.19 new Byte[]{}, new Byte[] {1, 2, 3} fails with unexpected return type.
 //        checkBasicCacheOperations(new Byte[]{}, new Byte[] {1, 2, 3}, new byte[] {3, 2, 1});
     }
@@ -400,8 +445,11 @@ public class GridCacheDataTypesCoverageTest extends GridCommonAbstractTest {
      */
     @Test
     public void testObjectArrayDataType() throws Exception {
-        checkBasicCacheOperations(new Object[]{}, new Object[] {"String", Boolean.TRUE, 'A', 1},
-            new Object[] {"String", new ObjectBasedOnPrimitives(123, 123.123, true)});
+        checkBasicCacheOperations(
+            new Object[]{},
+            new Object[] {"String", Boolean.TRUE, 'A', 1},
+            new Object[] {"String",
+                new ObjectBasedOnPrimitives(123, 123.123, true)});
     }
 
     /**
@@ -410,7 +458,9 @@ public class GridCacheDataTypesCoverageTest extends GridCommonAbstractTest {
      */
     @Test
     public void testListDataType() throws Exception {
-        checkBasicCacheOperations(new ArrayList<>(), (Serializable)Collections.singletonList("Aaa"),
+        checkBasicCacheOperations(
+            new ArrayList<>(),
+            (Serializable)Collections.singletonList("Aaa"),
             (Serializable)Arrays.asList("String", Boolean.TRUE, 'A', 1));
     }
 
@@ -420,7 +470,9 @@ public class GridCacheDataTypesCoverageTest extends GridCommonAbstractTest {
      */
     @Test
     public void testSetDataType() throws Exception {
-        checkBasicCacheOperations(new HashSet<>(), (Serializable)Collections.singleton("Aaa"),
+        checkBasicCacheOperations(
+            new HashSet<>(),
+            (Serializable)Collections.singleton("Aaa"),
             new HashSet<>(Arrays.asList("String", Boolean.TRUE, 'A', 1)));
     }
 
@@ -436,7 +488,9 @@ public class GridCacheDataTypesCoverageTest extends GridCommonAbstractTest {
         // TODO: 22.08.19 In case of using ArrayBlockingQueue as key, cache.get() returns null.
 //        checkBasicCacheOperations(new LinkedList<>(), new LinkedList<>(Arrays.asList("Aaa", "Bbb")), queueToCheck);
 
-        checkBasicCacheOperations(new LinkedList<>(), new LinkedList<>(Arrays.asList("Aaa", "Bbb")));
+        checkBasicCacheOperations(
+            new LinkedList<>(),
+            new LinkedList<>(Arrays.asList("Aaa", "Bbb")));
     }
 
     /**
@@ -457,8 +511,11 @@ public class GridCacheDataTypesCoverageTest extends GridCommonAbstractTest {
     @Test
     public void testObjectBasedOnPrimitivesAndCollectionsDataType() throws Exception {
         checkBasicCacheOperations(
-            new ObjectBasedOnPrimitivesAndCollections(0, Collections.emptyList(), new boolean[] {}),
-            new ObjectBasedOnPrimitivesAndCollections(123, Arrays.asList(1.0, 0.0),
+            new ObjectBasedOnPrimitivesAndCollections(0,
+                Collections.emptyList(),
+                new boolean[] {}),
+            new ObjectBasedOnPrimitivesAndCollections(123,
+                Arrays.asList(1.0, 0.0),
                 new boolean[] {true, false}));
     }
 
@@ -489,7 +546,10 @@ public class GridCacheDataTypesCoverageTest extends GridCommonAbstractTest {
      */
     @Test
     public void testDateDataType() throws Exception {
-        checkBasicCacheOperations(new Date(), new Date(Long.MIN_VALUE), new Date(Long.MAX_VALUE));
+        checkBasicCacheOperations(
+            new Date(),
+            new Date(Long.MIN_VALUE),
+            new Date(Long.MAX_VALUE));
     }
 
     /**
@@ -498,7 +558,9 @@ public class GridCacheDataTypesCoverageTest extends GridCommonAbstractTest {
      */
     @Test
     public void testSqlDateDataType() throws Exception {
-        checkBasicCacheOperations(new java.sql.Date(Long.MIN_VALUE), new java.sql.Date(Long.MAX_VALUE));
+        checkBasicCacheOperations(
+            new java.sql.Date(Long.MIN_VALUE),
+            new java.sql.Date(Long.MAX_VALUE));
     }
 
     /**
@@ -516,7 +578,9 @@ public class GridCacheDataTypesCoverageTest extends GridCommonAbstractTest {
      */
     @Test
     public void testInstantDataType() throws Exception {
-        checkBasicCacheOperations(Instant.now(), Instant.ofEpochMilli(Long.MIN_VALUE),
+        checkBasicCacheOperations(
+            Instant.now(),
+            Instant.ofEpochMilli(Long.MIN_VALUE),
             Instant.ofEpochMilli(Long.MAX_VALUE));
     }
 
@@ -526,7 +590,9 @@ public class GridCacheDataTypesCoverageTest extends GridCommonAbstractTest {
      */
     @Test
     public void testLocalDateDataType() throws Exception {
-        checkBasicCacheOperations(LocalDate.of(2015, 2, 20), LocalDate.now().plusDays(1));
+        checkBasicCacheOperations(
+            LocalDate.of(2015, 2, 20),
+            LocalDate.now().plusDays(1));
     }
 
     /**
@@ -535,7 +601,8 @@ public class GridCacheDataTypesCoverageTest extends GridCommonAbstractTest {
      */
     @Test
     public void testLocalDateTimeDataType() throws Exception {
-        checkBasicCacheOperations(LocalDateTime.of(2015, 2, 20, 9, 4, 30),
+        checkBasicCacheOperations(
+            LocalDateTime.of(2015, 2, 20, 9, 4, 30),
             LocalDateTime.now().plusDays(1));
     }
 
@@ -545,7 +612,38 @@ public class GridCacheDataTypesCoverageTest extends GridCommonAbstractTest {
      */
     @Test
     public void testLocalTimeDataType() throws Exception {
-        checkBasicCacheOperations(LocalTime.of(9, 4, 40), LocalTime.now());
+        checkBasicCacheOperations(
+            LocalTime.of(9, 4, 40),
+            LocalTime.now());
+    }
+
+    /**
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testBigIntegerDataType() throws Exception {
+        checkBasicCacheOperations(
+            new BigInteger("1"),
+            BigInteger.ONE,
+            BigInteger.ZERO,
+            new BigInteger("123456789"));
+    }
+
+    /**
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testBigDecimalDataType() throws Exception {
+        checkBasicCacheOperations(
+            new BigDecimal(123.123),
+            BigDecimal.ONE,
+            BigDecimal.ZERO,
+            BigDecimal.valueOf(123456789, 0),
+            BigDecimal.valueOf(123456789, 1),
+            BigDecimal.valueOf(123456789, 2),
+            BigDecimal.valueOf(123456789, 3));
     }
 
     /**
@@ -564,6 +662,18 @@ public class GridCacheDataTypesCoverageTest extends GridCommonAbstractTest {
      */
     @SuppressWarnings("unchecked")
     private void checkBasicCacheOperations(Serializable... valsToCheck) throws Exception {
+        assert valsToCheck.length > 0;
+
+        // In case of BigDecimal, cache internally changes bitLength of BigDecimal's intValue,
+        // so that EqualsBuilder.reflectionEquals returns false.
+        // As a result in case of BigDecimal data type Objects.equals is used.
+        // Same is about BigInteger.
+        BiFunction<Object, Object, Boolean> equalsProcessor =
+            valsToCheck[0] instanceof BigDecimal || valsToCheck[0] instanceof BigInteger ?
+                Objects::equals :
+                (lhs, rhs) -> EqualsBuilder.reflectionEquals(
+                    lhs, rhs, false, lhs.getClass(), true);
+
         String cacheName = "cache" + UUID.randomUUID();
 
         IgniteCache<Object, Object> cache = grid(new Random().nextInt(NODES_CNT)).createCache(
@@ -593,10 +703,7 @@ public class GridCacheDataTypesCoverageTest extends GridCommonAbstractTest {
                 fail("Unable to retrieve value for key = [" + clonedKey + "].");
 
             // Check Put/Get.
-            assertTrue(EqualsBuilder.reflectionEquals(
-                keyValEntry.getValue(),
-                cache.get(clonedKey),
-                false, keyValEntry.getKey().getClass(), true));
+            assertTrue(equalsProcessor.apply(keyValEntry.getValue(), cache.get(clonedKey)));
 
             // Remove.
             cache.remove(clonedKey);
@@ -620,10 +727,7 @@ public class GridCacheDataTypesCoverageTest extends GridCommonAbstractTest {
                 !waitForCondition(() -> cache.get(clonedKey) != null, TIMEOUT_FOR_KEY_RETRIEVAL_IN_FULL_ASYNC_MODE))
                 fail("Unable to retrieve value for key = [" + clonedKey + "].");
 
-            assertTrue(EqualsBuilder.reflectionEquals(
-                keyValEntry.getValue(),
-                cache.get(clonedKey),
-                false, keyValEntry.getKey().getClass(), true));
+            assertTrue(equalsProcessor.apply(keyValEntry.getValue(), cache.get(clonedKey)));
         }
 
         Set<Serializable> clonedKeySet =
@@ -641,16 +745,10 @@ public class GridCacheDataTypesCoverageTest extends GridCommonAbstractTest {
         for (Map.Entry<Serializable, Serializable> keyValEntry : keyValMap.entrySet()) {
             boolean keyFound = false;
             for (Map.Entry<Object, Object> keyValEntryToCheck : mapToCheck.entrySet()) {
-                if (EqualsBuilder.reflectionEquals(
-                    keyValEntry.getKey(),
-                    keyValEntryToCheck.getKey(),
-                    false, keyValEntry.getKey().getClass(), true)) {
+                if (equalsProcessor.apply(keyValEntry.getKey(), keyValEntryToCheck.getKey())) {
                     keyFound = true;
 
-                    assertTrue(EqualsBuilder.reflectionEquals(
-                        keyValEntry.getValue(),
-                        keyValEntryToCheck.getValue(),
-                        false, keyValEntry.getKey().getClass(), true));
+                    assertTrue(equalsProcessor.apply(keyValEntry.getValue(), keyValEntryToCheck.getValue()));
 
                     break;
                 }
