@@ -117,9 +117,11 @@ public class GmcSpanExporter implements AutoCloseable {
      * @return Worker which send messages from queue to topic.
      */
     private RetryableSender<Span> createSenderWorker() {
-        Consumer<List<Span>> sndFn = (b) -> ctx.grid().message(ctx.grid().cluster().forOldest()).send(TRACING_TOPIC, (Object) b);
-
-        return new RetryableSender<>(log, QUEUE_CAP, sndFn);
+        return new RetryableSender<>(
+            log,
+            QUEUE_CAP,
+            (b) -> ctx.grid().message(ctx.grid().cluster().forOldest()).send(TRACING_TOPIC, (Object) b)
+        );
     }
 
     /**
