@@ -18,7 +18,7 @@
 package org.apache.ignite.internal.processors.query.h2.database;
 
 /**
- * Type of supported indexed types.
+ * Type of supported indexes types.
  */
 public enum H2IndexType {
     /** Hash index type. */

@@ -33,7 +33,6 @@ import org.junit.Test;
  * Test expose SPATIAL indexes through SQL system view INDEXES.
  */
 public class H2IndexesSystemViewTest extends GridCommonAbstractTest {
-
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration() throws Exception {
         return super.getConfiguration().setCacheConfiguration(new CacheConfiguration().setName(DEFAULT_CACHE_NAME));
