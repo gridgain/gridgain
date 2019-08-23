@@ -16,7 +16,6 @@
 
 package org.apache.ignite.console.agent.handlers;
 
-import java.net.ConnectException;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -30,6 +29,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.console.agent.AgentConfiguration;
@@ -39,7 +39,6 @@ import org.apache.ignite.console.demo.AgentClusterDemo;
 import org.apache.ignite.console.json.JsonObject;
 import org.apache.ignite.console.websocket.AgentHandshakeRequest;
 import org.apache.ignite.console.websocket.AgentHandshakeResponse;
-import org.apache.ignite.console.websocket.WebSocketEvent;
 import org.apache.ignite.console.websocket.WebSocketRequest;
 import org.apache.ignite.console.websocket.WebSocketResponse;
 import org.apache.ignite.internal.util.typedef.F;
@@ -48,7 +47,6 @@ import org.apache.ignite.logger.slf4j.Slf4jLogger;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.websocket.api.Session;
-import org.eclipse.jetty.websocket.api.UpgradeException;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketClose;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketConnect;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketError;
@@ -78,7 +76,6 @@ import static org.apache.ignite.console.websocket.WebSocketEvents.NODE_VISOR;
 import static org.apache.ignite.console.websocket.WebSocketEvents.SCHEMA_IMPORT_DRIVERS;
 import static org.apache.ignite.console.websocket.WebSocketEvents.SCHEMA_IMPORT_METADATA;
 import static org.apache.ignite.console.websocket.WebSocketEvents.SCHEMA_IMPORT_SCHEMAS;
-import static org.eclipse.jetty.websocket.api.StatusCode.SERVER_ERROR;
 
 /**
  * Router that listen for web socket and redirect messages to event bus.
@@ -122,7 +119,7 @@ public class WebSocketRouter implements AutoCloseable {
     private final ClustersWatcher watcher;
 
     /** Reconnect count. */
-    private int reconnectCnt = -1;
+    private AtomicInteger reconnectCnt = new AtomicInteger();
 
     /** Active tokens after handshake. */
     private List<String> validTokens;
@@ -214,19 +211,18 @@ public class WebSocketRouter implements AutoCloseable {
      * Connect to backend.
      */
     private void connect0() {
+        boolean connecting = reconnectCnt.getAndIncrement() == 0;
+
         try {
             stopClient();
 
             if (!isRunning())
                 return;
 
-            if (reconnectCnt == -1)
+            if (connecting)
                 log.info("Connecting to server: " + cfg.serverUri());
 
-            if (reconnectCnt < 10)
-                reconnectCnt++;
-
-            Thread.sleep(reconnectCnt * 1000);
+            Thread.sleep(Math.min(10, reconnectCnt.get() - 1) * 1000);
 
             if (!isRunning())
                 return;
@@ -242,7 +238,7 @@ public class WebSocketRouter implements AutoCloseable {
             client.start();
             client.connect(this, URI.create(cfg.serverUri()).resolve(AGENTS_PATH)).get(10L, TimeUnit.SECONDS);
 
-            reconnectCnt = -1;
+            reconnectCnt.set(0);
         }
         catch (InterruptedException e) {
             closeLatch.countDown();
@@ -251,7 +247,7 @@ public class WebSocketRouter implements AutoCloseable {
             // No-op.
         }
         catch (Exception e) {
-            if (reconnectCnt == 0)
+            if (connecting)
                 log.error("Failed to establish websocket connection with server: " + cfg.serverUri(), e);
         }
     }
@@ -450,16 +446,15 @@ public class WebSocketRouter implements AutoCloseable {
     }
 
     /**
-     * @param e Error.
+     * @param ignored Error.
      */
     @OnWebSocketError
-    public void onError(Throwable e) {
-        if (e instanceof ConnectException || e instanceof UpgradeException) {
-            if (reconnectCnt <= 0)
-                log.error("Failed to establish websocket connection with server: " + cfg.serverUri());
+    public void onError(Throwable ignored) {
+        if (reconnectCnt.get() == 1)
+            log.error("Failed to establish websocket connection with server: " + cfg.serverUri());
 
+        if (reconnectCnt.get() >= 1)
             connect();
-        }
     }
 
     /**
@@ -468,10 +463,11 @@ public class WebSocketRouter implements AutoCloseable {
      */
     @OnWebSocketClose
     public void onClose(int statusCode, String reason) {
-        if (statusCode != SERVER_ERROR)
+        if (reconnectCnt.get() == 0) {
             log.info("Websocket connection closed with code: " + statusCode);
 
-        connect();
+            connect();
+        }
     }
 
     /**
