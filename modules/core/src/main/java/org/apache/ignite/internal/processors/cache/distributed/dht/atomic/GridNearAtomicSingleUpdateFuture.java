@@ -233,13 +233,24 @@ public class GridNearAtomicSingleUpdateFuture extends GridNearAtomicAbstractUpda
         CachePartialUpdateCheckedException err0 = null;
 
         synchronized (this) {
-            if (!checkFutureId(res.futureId()))
+            if (!checkFutureId(res.futureId())) {
+                if (msgLog.isDebugEnabled())
+                    msgLog.debug("Dropping near atomic update response (checkFutureId failed): " + res);
+
                 return;
+            }
 
             req = reqState.processPrimaryResponse(nodeId, res);
 
-            if (req == null)
+            if (req == null) {
+                if (msgLog.isDebugEnabled())
+                    msgLog.debug("Dropping near atomic update response because req==null: " + reqState);
+
                 return;
+            }
+
+            if (msgLog.isDebugEnabled())
+                msgLog.debug("processing req=" + req);
 
             boolean remapKey = res.remapTopologyVersion() != null;
 
@@ -272,8 +283,12 @@ public class GridNearAtomicSingleUpdateFuture extends GridNearAtomicAbstractUpda
 
                 assert reqState != null;
 
-                if (!reqState.onPrimaryResponse(res, cctx))
+                if (!reqState.onPrimaryResponse(res, cctx)) {
+                    if (msgLog.isDebugEnabled())
+                        msgLog.debug("After onPrimaryResponse returned false: " + reqState);
+
                     return;
+                }
             }
 
             remapTopVer0 = onAllReceived();
@@ -291,6 +306,9 @@ public class GridNearAtomicSingleUpdateFuture extends GridNearAtomicAbstractUpda
         }
 
         if (remapTopVer0 != null) {
+            if (msgLog.isDebugEnabled())
+                msgLog.debug("Will wait for topology version: " + remapTopVer0);
+
             waitAndRemap(remapTopVer0);
 
             return;
@@ -372,6 +390,9 @@ public class GridNearAtomicSingleUpdateFuture extends GridNearAtomicAbstractUpda
         if (fut == null)
             fut = new GridFinishedFuture<>(remapTopVer);
 
+        if (msgLog.isDebugEnabled())
+            msgLog.debug("Will wait for remap the future: " + fut);
+
         fut.listen(new CI1<IgniteInternalFuture<AffinityTopologyVersion>>() {
             @Override public void apply(final IgniteInternalFuture<AffinityTopologyVersion> fut) {
                 cctx.kernalContext().closure().runLocalSafe(new GridPlainRunnable() {
@@ -404,7 +425,8 @@ public class GridNearAtomicSingleUpdateFuture extends GridNearAtomicAbstractUpda
     @Override protected void mapOnTopology() {
         AffinityTopologyVersion topVer;
 
-        U.debug(log, "Map on topology: " + this);
+        if (msgLog.isDebugEnabled())
+            msgLog.debug("Map on topology: " + this);
 
         if (cache.topology().stopping()) {
             completeFuture(
@@ -433,7 +455,8 @@ public class GridNearAtomicSingleUpdateFuture extends GridNearAtomicAbstractUpda
         else {
             assert !topLocked : this;
 
-            U.debug(log, "Will wait for future completion: " + fut);
+            if (msgLog.isDebugEnabled())
+                msgLog.debug("Will wait for future completion: " + fut);
 
             fut.listen(new CI1<IgniteInternalFuture<AffinityTopologyVersion>>() {
                 @Override public void apply(IgniteInternalFuture<AffinityTopologyVersion> t) {
