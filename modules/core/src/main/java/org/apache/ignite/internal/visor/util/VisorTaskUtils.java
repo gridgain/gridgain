@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.visor.util;
 
-import javax.cache.configuration.Factory;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileFilter;
@@ -49,6 +48,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+import javax.cache.configuration.Factory;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.eviction.AbstractEvictionPolicyFactory;
@@ -419,16 +419,17 @@ public class VisorTaskUtils {
      * Checks for explicit events configuration.
      *
      * @param ignite Grid instance.
+     * @param evts Event types.
      * @return {@code true} if all task events explicitly specified in configuration.
      */
-    public static boolean checkExplicitTaskMonitoring(Ignite ignite) {
-        int[] evts = ignite.configuration().getIncludeEventTypes();
+    public static boolean checkExplicitEvents(Ignite ignite, int[] evts) {
+        int[] curEvts = ignite.configuration().getIncludeEventTypes();
 
-        if (F.isEmpty(evts))
+        if (F.isEmpty(curEvts))
             return false;
 
-        for (int evt : VISOR_TASK_EVTS) {
-            if (!F.contains(evts, evt))
+        for (int evt : evts) {
+            if (!F.contains(curEvts, evt))
                 return false;
         }
 
@@ -486,17 +487,20 @@ public class VisorTaskUtils {
         final long lastOrder = getOrElse(nl, evtOrderKey, -1L);
         final long throttle = getOrElse(nl, evtThrottleCntrKey, 0L);
 
-        // When we first time arrive onto a node to get its local events,
-        // we'll grab only last those events that not older than given period to make sure we are
-        // not grabbing GBs of data accidentally.
-        final long notOlderThan = System.currentTimeMillis() - EVENTS_COLLECT_TIME_WINDOW;
-
         // Flag for detecting gaps between events.
         final AtomicBoolean lastFound = new AtomicBoolean(lastOrder < 0);
 
+        /**
+         * When we  arrive onto a node to get its local events,
+         * we'll grab only first MAX_EVENTS_CNT those events that not older than given period
+         * to make sure we are not grabbing GBs of data accidentally.
+         */
         IgnitePredicate<Event> p = new IgnitePredicate<Event>() {
-            /** */
-            private static final long serialVersionUID = 0L;
+            /** Maximum of events count to collect from node. */
+            private static final int MAX_EVTS_CNT = 200;
+
+            /** Collected events count. */
+            private int cnt;
 
             @Override public boolean apply(Event e) {
                 // Detects that events were lost.
@@ -504,7 +508,7 @@ public class VisorTaskUtils {
                     lastFound.set(true);
 
                 // Retains events by lastOrder, period and type.
-                return e.localOrder() > lastOrder && e.timestamp() > notOlderThan;
+                return e.localOrder() > lastOrder && cnt++ <= MAX_EVTS_CNT;
             }
         };
 
