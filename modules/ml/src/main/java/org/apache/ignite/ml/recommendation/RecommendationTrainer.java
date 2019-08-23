@@ -133,7 +133,6 @@ public class RecommendationTrainer {
         Map<S, Vector> subjMatrix = generateRandomVectorForEach(subjects, trainerEnvironment.randomNumbersGenerator());
 
         // SGD steps.
-        // TODO: GG-22916 Add convergence check into recommendation system SGD
         for (int i = 0; maxIterations == -1 || i < maxIterations; i++) {
             int seed = i;
 
