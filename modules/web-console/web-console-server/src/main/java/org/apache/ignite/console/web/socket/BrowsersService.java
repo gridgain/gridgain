@@ -28,7 +28,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
-import org.apache.ignite.Ignite;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.dto.Announcement;
 import org.apache.ignite.console.json.JsonArray;
@@ -50,7 +49,6 @@ import org.springframework.web.socket.WebSocketSession;
 import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.console.utils.Utils.fromJson;
 import static org.apache.ignite.console.utils.Utils.toJson;
-import static org.apache.ignite.console.web.socket.TransitionService.SEND_TO_AGENT;
 import static org.apache.ignite.console.websocket.WebSocketEvents.NODE_REST;
 import static org.apache.ignite.console.websocket.WebSocketEvents.NODE_VISOR;
 import static org.apache.ignite.console.websocket.WebSocketEvents.SCHEMA_IMPORT_DRIVERS;
@@ -85,16 +83,18 @@ public class BrowsersService extends AbstractSocketHandler {
     private volatile WebSocketEvent<Announcement> lastAnn;
 
     /** */
-    private AgentsService agentsHnd;
+    private final AgentsService agentsSrvc;
+
+    /** */
+    private final TransitionService transitionSrvc;
 
     /**
-     * @param ignite Ignite.
-     * @param agentsHnd Agents handler.
+     * @param agentsSrvc Agents service.
+     * @param transitionSrvc Service for transfering messages between backends.
      */
-    public BrowsersService(Ignite ignite, AgentsService agentsHnd) {
-        super(ignite);
-
-        this.agentsHnd = agentsHnd;
+    public BrowsersService(AgentsService agentsSrvc, TransitionService transitionSrvc) {
+        this.agentsSrvc = agentsSrvc;
+        this.transitionSrvc = transitionSrvc;
 
         locBrowsers = new ConcurrentHashMap<>();
         locRequests = new ConcurrentHashMap<>();
@@ -130,7 +130,7 @@ public class BrowsersService extends AbstractSocketHandler {
         if (lastAnn != null)
             sendMessageQuiet(ses, lastAnn);
 
-        sendMessageQuiet(ses, agentsHnd.collectAgentStats(id));
+        sendMessageQuiet(ses, agentsSrvc.collectAgentStats(id));
     }
 
     /**
@@ -138,8 +138,7 @@ public class BrowsersService extends AbstractSocketHandler {
      * @param evt Event.
      */
     protected void sendToAgent(AgentKey key, WebSocketRequest evt) {
-        ignite.message(ignite.cluster().forLocal())
-            .send(SEND_TO_AGENT, new AgentRequest(ignite.cluster().localNode().id(), key, evt));
+        transitionSrvc.sendToAgent(key, evt);
     }
 
     /** {@inheritDoc} */

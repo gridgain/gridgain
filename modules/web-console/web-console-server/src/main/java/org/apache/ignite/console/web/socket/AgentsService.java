@@ -51,8 +51,6 @@ import org.springframework.web.socket.WebSocketSession;
 import static org.apache.ignite.console.utils.Utils.entriesToMap;
 import static org.apache.ignite.console.utils.Utils.entry;
 import static org.apache.ignite.console.utils.Utils.fromJson;
-import static org.apache.ignite.console.web.socket.TransitionService.SEND_RESPONSE;
-import static org.apache.ignite.console.web.socket.TransitionService.SEND_TO_USER_BROWSER;
 import static org.apache.ignite.console.websocket.AgentHandshakeRequest.SUPPORTED_VERS;
 import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_HANDSHAKE;
 import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_REVOKE_TOKEN;
@@ -68,13 +66,16 @@ public class AgentsService extends AbstractSocketHandler {
     private static final Logger log = LoggerFactory.getLogger(AgentsService.class);
 
     /** */
-    protected AccountsRepository accRepo;
+    protected final AccountsRepository accRepo;
 
     /** */
-    protected ClustersRepository clustersRepo;
+    protected final ClustersRepository clustersRepo;
     
     /** */
-    private AgentsRepository agentsRepo;
+    private final AgentsRepository agentsRepo;
+
+    /** */
+    protected final TransitionService transitionSrvc;
 
     /** */
     protected final Map<WebSocketSession, AgentSession> locAgents;
@@ -83,22 +84,20 @@ public class AgentsService extends AbstractSocketHandler {
     private final Map<String, UUID> srcOfRequests;
 
     /**
-     * @param ignite Ignite.
      * @param accRepo Repository to work with accounts.
      * @param agentsRepo Repositories to work with agents.
      * @param clustersRepo Repositories to work with clusters.
      */
     public AgentsService(
-        Ignite ignite,
         AccountsRepository accRepo,
         AgentsRepository agentsRepo,
-        ClustersRepository clustersRepo
+        ClustersRepository clustersRepo,
+        TransitionService transitionSrvc
     ) {
-        super(ignite);
-
         this.accRepo = accRepo;
         this.agentsRepo = agentsRepo;
         this.clustersRepo = clustersRepo;
+        this.transitionSrvc = transitionSrvc;
 
         locAgents = new ConcurrentLinkedHashMap<>();
         srcOfRequests = new ConcurrentHashMap<>();
@@ -154,7 +153,7 @@ public class AgentsService extends AbstractSocketHandler {
                 try {
                     UUID nid = srcOfRequests.remove(evt.getRequestId());
 
-                    ignite.message(ignite.cluster().forNodeId(nid)).send(SEND_RESPONSE, evt);
+                    transitionSrvc.sendResponse(nid, evt);
                 }
                 catch (ClusterGroupEmptyException ignored) {
                     // No-op.
@@ -385,7 +384,7 @@ public class AgentsService extends AbstractSocketHandler {
             WebSocketResponse stats = collectAgentStats(key);
 
             try {
-                ignite.message().send(SEND_TO_USER_BROWSER, new UserEvent(key, stats));
+                transitionSrvc.sendToBrowser(key, stats);
             }
             catch (Throwable e) {
                 log.error("Failed to send connected clusters to browsers", e);
