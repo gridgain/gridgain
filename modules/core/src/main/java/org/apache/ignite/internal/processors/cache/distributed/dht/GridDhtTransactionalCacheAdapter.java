@@ -1351,7 +1351,7 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
             null,
             topVer,
             ctx.deploymentEnabled(),
-            null);
+            false);
 
         try {
             ctx.io().send(nearNode, res, ctx.ioPolicy());
@@ -1388,6 +1388,12 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
         assert tx == null || tx.xidVersion().equals(mappedVer);
 
         try {
+            // All subsequent lock requests must use actual topology version to avoid mapping on invalid primaries.
+            AffinityTopologyVersion clienRemapVer =
+                req.firstClientRequest() && tx != null &&
+                topology().readyTopologyVersion().after(req.topologyVersion()) ?
+                topology().readyTopologyVersion() : null;
+
             // Send reply back to originating near node.
             GridNearLockResponse res = new GridNearLockResponse(ctx.cacheId(),
                 req.version(),
@@ -1396,11 +1402,9 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                 tx != null && tx.onePhaseCommit(),
                 entries.size(),
                 err,
-                null,
+                clienRemapVer,
                 ctx.deploymentEnabled(),
-                // For first request return actually locked topology version.
-                req.firstClientRequest() && tx != null && topology().readyTopologyVersion().after(req.topologyVersion()) ?
-                    topology().readyTopologyVersion() : null);
+                clienRemapVer != null);
 
             if (err == null) {
                 res.pending(localDhtPendingVersions(entries, mappedVer));
@@ -1512,7 +1516,7 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                 e,
                 null,
                 ctx.deploymentEnabled(),
-                null);
+                false);
         }
     }
 

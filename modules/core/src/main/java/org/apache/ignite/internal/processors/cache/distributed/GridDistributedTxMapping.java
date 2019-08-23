@@ -276,7 +276,7 @@ public class GridDistributedTxMapping {
         if (entries == null || entries.isEmpty())
             return;
 
-        for (Iterator<IgniteTxEntry> it = entries.iterator(); it.hasNext();) {
+        for (Iterator<IgniteTxEntry> it = entries.iterator(); it.hasNext(); ) {
             IgniteTxEntry entry = it.next();
 
             if (keys.contains(entry.txKey()))

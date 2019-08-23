@@ -278,10 +278,7 @@ public class GridNearPessimisticTxPrepareFuture extends GridNearTxPrepareFutureA
 
         Map<UUID, GridDistributedTxMapping> mappings = new HashMap<>();
 
-        GridIntList enlistedCacheIds = tx.txState().cacheIds();
-
-        // Use locked topVer if more than one cache is enlisted in tx. Attempt to not break old behaviour then possible.
-        AffinityTopologyVersion topVer = tx.lockedTopVer != null && enlistedCacheIds != null && enlistedCacheIds.size() > 1 ? tx.lockedTopVer : tx.topologyVersion();
+        AffinityTopologyVersion topVer = tx.topologyVersion();
 
         boolean hasNearCache = false;
 

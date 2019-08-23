@@ -916,7 +916,7 @@ public final class GridNearLockFuture extends GridCacheCompoundIdentityFuture<Bo
 
                 if (remap) {
                     if (tx != null)
-                        tx.onRemap(topVer);
+                        tx.onRemap(topVer, true);
 
                     this.topVer = topVer;
                 }

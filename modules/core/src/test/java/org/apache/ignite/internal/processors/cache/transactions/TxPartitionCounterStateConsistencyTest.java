@@ -663,11 +663,9 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
                 Map<Integer, Integer> map = new LinkedHashMap<>();
 
                 map.put(key, key); // clientFirst=true in lockAll.
-                //map.put(key0, key0); // clientFirst=false in lockAll.
+                map.put(key0, key0); // clientFirst=false in lockAll.
 
                 cache.putAll(map);
-
-                TransactionProxyImpl p = (TransactionProxyImpl)tx;
 
                 tx.commit(); // Will start preparing in the middle of PME.
             }
@@ -688,11 +686,10 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
             }
         });
 
+        txFut.get(); // Transaction should not be blocked by concurrent PME.
         lockFut.get();
 
         spi.stopBlock();
-
-        txFut.get();
 
         fut.get();
 

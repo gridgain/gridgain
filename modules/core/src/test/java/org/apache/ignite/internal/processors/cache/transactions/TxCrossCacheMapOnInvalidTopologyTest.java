@@ -78,9 +78,6 @@ public class TxCrossCacheMapOnInvalidTopologyTest extends GridCommonAbstractTest
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        cfg.setFailureDetectionTimeout(1000000000L);
-        cfg.setClientFailureDetectionTimeout(1000000000L);
-
         cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
         cfg.setClientMode("client".equals(igniteInstanceName));
         cfg.setCacheConfiguration(cacheConfiguration(CACHE1), cacheConfiguration(CACHE2).setRebalanceOrder(10));
@@ -284,7 +281,7 @@ public class TxCrossCacheMapOnInvalidTopologyTest extends GridCommonAbstractTest
                             map.put(p, p);
 
                         client.cache(CACHE1).putAll(map); // Will successfully lock topology.
-                        client.cache(CACHE2).put(finalMovingPart, 0); // Should remap but will go through.
+                        client.cache(CACHE2).put(finalMovingPart, 0); // Should remap but will go through without fix.
 
                         tx.commit();
                     }
