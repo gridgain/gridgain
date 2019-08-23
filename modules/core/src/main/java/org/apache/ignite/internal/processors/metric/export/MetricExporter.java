@@ -57,7 +57,6 @@ import static org.apache.ignite.internal.util.GridUnsafe.copyMemory;
 
 public class MetricExporter extends GridProcessorAdapter {
     private final Map<Integer, IgniteBiTuple<MetricSchema, byte[]>> schemas = new HashMap<>();
-    private final Map<String, IgniteBiTuple<MetricRegistrySchema, byte[]>> registrySchemas = new HashMap<>();
 
     /**
      * @param ctx Kernal context.
@@ -156,25 +155,12 @@ public class MetricExporter extends GridProcessorAdapter {
         MetricSchema.Builder bldr = MetricSchema.Builder.newInstance();
 
         for (MetricRegistry reg : metrics.values()) {
-            MetricRegistrySchema regSchema = generateOrGetRegistrySchema(reg);
+            MetricRegistrySchema regSchema = generateMetricRegistrySchema(reg);
 
             bldr.add(reg.type(), reg.name(), regSchema);
         }
 
         return bldr.build();
-    }
-
-    private MetricRegistrySchema generateOrGetRegistrySchema(MetricRegistry reg) {
-        IgniteBiTuple<MetricRegistrySchema, byte[]> tup = registrySchemas.computeIfAbsent(
-                reg.type(),
-                type -> {
-                    MetricRegistrySchema schema = generateMetricRegistrySchema(reg);
-
-                    return new IgniteBiTuple<>(schema, schema.toBytes());
-                }
-        );
-
-        return tup.get1();
     }
 
     private MetricRegistrySchema generateMetricRegistrySchema(MetricRegistry reg) {

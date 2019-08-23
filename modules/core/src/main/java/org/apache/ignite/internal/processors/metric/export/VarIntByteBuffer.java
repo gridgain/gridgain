@@ -263,7 +263,7 @@ public class VarIntByteBuffer {
         int b, i = 0, res = 0;
 
         do {
-            b = (arr[pos++] & 0xFF);
+            b = arr[pos++] & 0xFF;
 
             res |= ((b & 0x7F) << (7 * i++));
         }
@@ -278,7 +278,7 @@ public class VarIntByteBuffer {
         long b, res = 0;
 
         do {
-            b = (arr[pos++] & 0xFF);
+            b = arr[pos++] & 0xFF;
 
             res |= ((b & 0x7F) << (7 * i++));
         }

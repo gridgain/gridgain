@@ -154,8 +154,6 @@ public class MetricSchema {
 
         List<MetricRegistrySchema> regSchemas = new ArrayList<>(regSchemasCnt);
 
-        int dataSize = 0;
-
         int regSchemasSize = 0;
 
         for (int i = 0; i < regSchemasCnt; i++) {
