@@ -226,7 +226,7 @@ public class GridH2Table extends TableBase {
         List<IndexColumn> wrappedKeyCols = H2Utils.treeIndexColumns(rowDescriptor(),
             new ArrayList<>(2), keyCol, affKeyCol);
 
-        // Explicit add HASH index, due to we know all their parameters and it doesn't created on non afinity nodes.
+        // Explicit add HASH index, due to we know all their parameters and it doesn't created on non affinity nodes.
         res.add(
             new IndexInformation(false,
                 true, PK_HASH_IDX_NAME,
