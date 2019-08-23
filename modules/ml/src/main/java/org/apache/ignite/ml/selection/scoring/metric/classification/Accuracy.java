@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,13 +17,15 @@
 package org.apache.ignite.ml.selection.scoring.metric.classification;
 
 import java.io.Serializable;
-import org.apache.ignite.ml.selection.scoring.evaluator.aggregator.BinaryClassificationPointwiseMetricStatsAggregator;
+import org.apache.ignite.ml.selection.scoring.evaluator.aggregator.ClassificationMetricsAggregator;
+import org.apache.ignite.ml.selection.scoring.evaluator.context.EmptyContext;
+import org.apache.ignite.ml.selection.scoring.metric.Metric;
 import org.apache.ignite.ml.selection.scoring.metric.MetricName;
 
 /**
  * Accuracy metric class.
  */
-public class Accuracy<L extends Serializable> extends BinaryClassificationMetric<L> {
+public class Accuracy<L extends Serializable> implements Metric<L, EmptyContext<L>, ClassificationMetricsAggregator<L>> {
     /** Serial version uid. */
     private static final long serialVersionUID = -7042505196665295151L;
 
@@ -35,24 +36,19 @@ public class Accuracy<L extends Serializable> extends BinaryClassificationMetric
 
     /**
      * Creates an instance of Accuracy metric.
-     *
-     * @param truthLabel Truth label.
-     * @param falseLabel False label
-     */
-    public Accuracy(L truthLabel, L falseLabel) {
-        super(truthLabel, falseLabel);
-    }
-
-    /**
-     * Creates an instance of Accuracy metric.
      */
     public Accuracy() {
     }
 
     /** {@inheritDoc} */
-    @Override public Accuracy<L> initBy(BinaryClassificationPointwiseMetricStatsAggregator<L> aggr) {
-        accuracy = ((double) (aggr.getTruePositive() + aggr.getTrueNegative())) / aggr.getN();
+    @Override public Accuracy<L> initBy(ClassificationMetricsAggregator<L> aggr) {
+        accuracy = ((double) aggr.getValidAnswersCount()) / Math.max(aggr.getTotalNumberOfExamples(), 1);
         return this;
+    }
+
+    /** {@inheritDoc} */
+    @Override public ClassificationMetricsAggregator<L> makeAggregator() {
+        return new ClassificationMetricsAggregator<>();
     }
 
     /** {@inheritDoc} */

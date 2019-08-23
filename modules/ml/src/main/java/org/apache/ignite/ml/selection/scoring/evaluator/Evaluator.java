@@ -19,8 +19,11 @@ package org.apache.ignite.ml.selection.scoring.evaluator;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import javax.cache.Cache;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.Ignition;
+import org.apache.ignite.cache.query.QueryCursor;
+import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.ml.IgniteModel;
@@ -34,6 +37,7 @@ import org.apache.ignite.ml.dataset.primitive.builder.context.EmptyContextBuilde
 import org.apache.ignite.ml.dataset.primitive.context.EmptyContext;
 import org.apache.ignite.ml.environment.LearningEnvironment;
 import org.apache.ignite.ml.environment.LearningEnvironmentBuilder;
+import org.apache.ignite.ml.knn.KNNModel;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.math.primitives.vector.VectorUtils;
 import org.apache.ignite.ml.preprocessing.Preprocessor;
@@ -214,7 +218,7 @@ public class Evaluator {
         Preprocessor<K, V> preprocessor,
         MetricName metric1, MetricName metric2, MetricName... other
     ) {
-        return evaluate(dataCache, (k,v) -> true, mdl, preprocessor, metric1, metric2, other);
+        return evaluate(dataCache, (k, v) -> true, mdl, preprocessor, metric1, metric2, other);
     }
 
     /**
@@ -273,7 +277,7 @@ public class Evaluator {
     public static <K, V> double evaluate(Map<K, V> dataCache, IgniteBiPredicate<K, V> filter,
         IgniteModel<Vector, Double> mdl,
         Preprocessor<K, V> preprocessor,
-        Metric metric1, Metric metric2, Metric ... other) {
+        Metric metric1, Metric metric2, Metric... other) {
 
         return evaluate(
             new LocalDatasetBuilder<>(dataCache, filter, 1),
@@ -337,7 +341,7 @@ public class Evaluator {
     public static <K, V> double evaluate(Map<K, V> dataCache, IgniteBiPredicate<K, V> filter,
         IgniteModel<Vector, Double> mdl,
         Preprocessor<K, V> preprocessor,
-        MetricName metric1, MetricName metric2, MetricName ... other) {
+        MetricName metric1, MetricName metric2, MetricName... other) {
 
         return evaluate(
             new LocalDatasetBuilder<>(dataCache, filter, 1),
@@ -551,7 +555,11 @@ public class Evaluator {
             new FeatureMatrixWithLabelsOnHeapDataBuilder<>(preprocessor),
             LearningEnvironment.DEFAULT_TRAINER_ENV
         )) {
-            return evaluate(mdl, dataset, metrics);
+            IgniteCache<K, V> cache = null;
+            if (datasetBuilder instanceof CacheBasedDatasetBuilder)
+                cache = ((CacheBasedDatasetBuilder<K, V>)datasetBuilder).getUpstreamCache();
+
+            return evaluate(mdl, dataset, cache, preprocessor, metrics);
         }
         catch (Exception e) {
             throw new RuntimeException(e);
@@ -567,8 +575,9 @@ public class Evaluator {
      * @return Evaluation result.
      */
     @SuppressWarnings("unchecked")
-    private static EvaluationResult evaluate(IgniteModel<Vector, Double> mdl,
-        Dataset<EmptyContext, FeatureMatrixWithLabelsOnHeapData> dataset, Metric[] metrics) {
+    private static <K, V> EvaluationResult evaluate(IgniteModel<Vector, Double> mdl,
+        Dataset<EmptyContext, FeatureMatrixWithLabelsOnHeapData> dataset, IgniteCache<K, V> cache,
+        Preprocessor<K, V> preprocessor, Metric[] metrics) {
         final Map<MetricName, Metric> metricMap = new HashMap<>();
         final Map<MetricName, Class> metricToAggrCls = new HashMap<>();
         for (Metric metric : metrics) {
@@ -582,7 +591,7 @@ public class Evaluator {
         Map<MetricName, Double> res = new HashMap<>();
 
         final Map<Class, EvaluationContext> aggrClsToCtx = initEvaluationContexts(dataset, metrics);
-        final Map<Class, MetricStatsAggregator> aggrClsToAggr = computeStats(mdl, dataset, aggrClsToCtx, metrics);
+        final Map<Class, MetricStatsAggregator> aggrClsToAggr = computeStats(mdl, dataset, cache, preprocessor, aggrClsToCtx, metrics);
 
         for (Metric metric : metrics) {
             MetricName name = metric.name();
@@ -665,47 +674,88 @@ public class Evaluator {
      * @return Aggregated statistics.
      */
     @SuppressWarnings("unchecked")
-    private static Map<Class, MetricStatsAggregator> computeStats(IgniteModel<Vector, Double> mdl,
-        Dataset<EmptyContext, FeatureMatrixWithLabelsOnHeapData> dataset,
+    private static <K, V> Map<Class, MetricStatsAggregator> computeStats(IgniteModel<Vector, Double> mdl,
+        Dataset<EmptyContext, FeatureMatrixWithLabelsOnHeapData> dataset, IgniteCache<K, V> cache,
+        Preprocessor<K, V> preprocessor,
         Map<Class, EvaluationContext> ctxs, Metric... metrics) {
 
-        return dataset.compute(data -> {
-            Map<Class, MetricStatsAggregator> aggrs = new HashMap<>();
-            for (Metric m : metrics) {
-                MetricStatsAggregator aggregator = m.makeAggregator();
-                EvaluationContext ctx = ctxs.get(aggregator.getClass());
-                A.ensure(ctx != null, "ctx != null");
-                aggregator.initByContext(ctx);
+        if (isOnlyLocalEstimation(mdl) && cache != null) {
+            Map<Class, MetricStatsAggregator> aggrs = initAggregators(ctxs, metrics);
 
-                if (!aggrs.containsKey(aggregator.getClass()))
-                    aggrs.put(aggregator.getClass(), aggregator);
-            }
+            try (QueryCursor<Cache.Entry<K, V>> query = cache.query(new ScanQuery<>())) {
+                query.iterator().forEachRemaining(kv -> {
+                    LabeledVector vector = preprocessor.apply(kv.getKey(), kv.getValue());
 
-            for (int i = 0; i < data.getLabels().length; i++) {
-                LabeledVector<Double> vector = VectorUtils.of(data.getFeatures()[i]).labeled(data.getLabels()[i]);
-                for (Class key : aggrs.keySet()) {
-                    MetricStatsAggregator aggr = aggrs.get(key);
-                    aggr.aggregate(mdl, vector);
-                }
+                    for (Class key : aggrs.keySet()) {
+                        MetricStatsAggregator aggr = aggrs.get(key);
+                        aggr.aggregate(mdl, vector);
+                    }
+                });
             }
 
             return aggrs;
-        }, (left, right) -> {
-            if (left == null && right == null)
-                return new HashMap<>();
-            if (left == null)
-                return right;
-            if (right == null)
-                return left;
+        }
+        else {
+            return dataset.compute(data -> {
+                Map<Class, MetricStatsAggregator> aggrs = initAggregators(ctxs, metrics);
 
-            HashMap<Class, MetricStatsAggregator> res = new HashMap<>();
-            for (Class key : left.keySet()) {
-                MetricStatsAggregator agg1 = left.get(key);
-                MetricStatsAggregator agg2 = right.get(key);
-                A.ensure(agg1 != null && agg2 != null, "agg1 != null && agg2 != null");
-                res.put(key, agg1.mergeWith(agg2));
-            }
-            return res;
-        });
+                for (int i = 0; i < data.getLabels().length; i++) {
+                    LabeledVector<Double> vector = VectorUtils.of(data.getFeatures()[i]).labeled(data.getLabels()[i]);
+                    for (Class key : aggrs.keySet()) {
+                        MetricStatsAggregator aggr = aggrs.get(key);
+                        aggr.aggregate(mdl, vector);
+                    }
+                }
+
+                return aggrs;
+            }, (left, right) -> {
+                if (left == null && right == null)
+                    return new HashMap<>();
+                if (left == null)
+                    return right;
+                if (right == null)
+                    return left;
+
+                HashMap<Class, MetricStatsAggregator> res = new HashMap<>();
+                for (Class key : left.keySet()) {
+                    MetricStatsAggregator agg1 = left.get(key);
+                    MetricStatsAggregator agg2 = right.get(key);
+                    A.ensure(agg1 != null && agg2 != null, "agg1 != null && agg2 != null");
+                    res.put(key, agg1.mergeWith(agg2));
+                }
+                return res;
+            });
+        }
+    }
+
+    /**
+     * Inits aggregators.
+     *
+     * @param ctxs Evaluation contexts.
+     * @param metrics Metrics.
+     * @return Aggregators map.
+     */
+    private static Map<Class, MetricStatsAggregator> initAggregators(Map<Class, EvaluationContext> ctxs, Metric[] metrics) {
+        Map<Class, MetricStatsAggregator> aggrs = new HashMap<>();
+        for (Metric m : metrics) {
+            MetricStatsAggregator aggregator = m.makeAggregator();
+            EvaluationContext ctx = ctxs.get(aggregator.getClass());
+            A.ensure(ctx != null, "ctx != null");
+            aggregator.initByContext(ctx);
+
+            if (!aggrs.containsKey(aggregator.getClass()))
+                aggrs.put(aggregator.getClass(), aggregator);
+        }
+        return aggrs;
+    }
+
+    /**
+     * Returns true if model should be evaluated only through scan query.
+     *
+     * @param mdl Model to estimation.
+     * @return true if model should be evaluated only through scan query.
+     */
+    private static boolean isOnlyLocalEstimation(IgniteModel<Vector, Double> mdl) {
+        return mdl instanceof KNNModel;
     }
 }

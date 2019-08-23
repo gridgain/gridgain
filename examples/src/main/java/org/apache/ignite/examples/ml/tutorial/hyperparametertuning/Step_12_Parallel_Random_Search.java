@@ -142,7 +142,7 @@ public class Step_12_Parallel_Random_Search {
                         .withLoggingFactoryDependency(ConsoleLogger.Factory.LOW))
                     .withTrainer(trainerCV)
                     .isRunningOnPipeline(false)
-                    .withMetric(new Accuracy<>(1.0, 0.0))
+                    .withMetric(new Accuracy<>())
                     .withFilter(split.getTrainFilter())
                     .withPreprocessor(normalizationPreprocessor)
                     .withAmountOfFolds(3)

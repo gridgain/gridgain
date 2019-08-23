@@ -289,7 +289,7 @@ public class CrossValidationTest {
         for (int i = 0; i < 1000; i++)
             data.put(i, new double[] { i, i % 2 == 0 ? 1.0 : 0.0});
 
-        Vectorizer<Integer, double[], Integer, Double> vectorizer = new DoubleArrayVectorizer<Integer>().labeled(Vectorizer.LabelCoordinate.FIRST);
+        Vectorizer<Integer, double[], Integer, Double> vectorizer = new DoubleArrayVectorizer<Integer>().labeled(Vectorizer.LabelCoordinate.LAST);
 
         DecisionTreeClassificationTrainer trainer = new DecisionTreeClassificationTrainer(1, 0);
 
@@ -302,8 +302,7 @@ public class CrossValidationTest {
             .withUpstreamMap(data)
             .withAmountOfParts(1)
             .withTrainer(trainer)
-            .withMetric(new Accuracy())
-
+            .withMetric(new Accuracy<>())
             .withPreprocessor(vectorizer)
             .withAmountOfFolds(folds)
             .isRunningOnPipeline(false);

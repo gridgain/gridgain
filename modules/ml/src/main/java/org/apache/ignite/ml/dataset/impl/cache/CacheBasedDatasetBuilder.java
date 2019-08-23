@@ -194,4 +194,13 @@ public class CacheBasedDatasetBuilder<K, V> implements DatasetBuilder<K, V> {
     public CacheBasedDatasetBuilder<K, V> withRetriesNumber(int retries) {
         return new CacheBasedDatasetBuilder<K, V>(ignite, upstreamCache, filter, transformerBuilder, upstreamKeepBinary, retries);
     }
+
+    /**
+     * Returns upstream cache.
+     *
+     * @return Upstream cache.
+     */
+    public IgniteCache<K, V> getUpstreamCache() {
+        return upstreamCache;
+    }
 }

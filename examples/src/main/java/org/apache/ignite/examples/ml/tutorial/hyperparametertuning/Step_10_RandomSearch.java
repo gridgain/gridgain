@@ -133,7 +133,7 @@ public class Step_10_RandomSearch {
                     .withIgnite(ignite)
                     .withUpstreamCache(dataCache)
                     .withTrainer(trainerCV)
-                    .withMetric(new Accuracy<>(1.0, 0.0))
+                    .withMetric(new Accuracy<>())
                     .withFilter(split.getTrainFilter())
                     .isRunningOnPipeline(false)
                     .withPreprocessor(normalizationPreprocessor)
