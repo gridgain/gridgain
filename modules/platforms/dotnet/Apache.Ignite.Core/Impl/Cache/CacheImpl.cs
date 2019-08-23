@@ -1023,10 +1023,13 @@ namespace Apache.Ignite.Core.Impl.Cache
             var holder = new CacheEntryProcessorHolder(processor, arg,
                 (e, a) => processor.Process((IMutableCacheEntry<TK, TV>)e, (TArg)a), typeof(TK), typeof(TV));
 
+            var ptr = AllocateNoTx(holder);
+
             return DoOutInOpX((int) CacheOp.InvokeAll,
                 writer =>
                 {
                     writer.WriteEnumerable(keys);
+                    writer.WriteLong(ptr);
                     writer.Write(holder);
                 },
                 (input, res) => res == True
