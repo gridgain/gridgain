@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,8 +19,6 @@ package org.apache.ignite.internal.visor.node;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ConcurrentMap;
-
 import org.apache.ignite.DataRegionMetrics;
 import org.apache.ignite.IgniteFileSystem;
 import org.apache.ignite.cache.CacheMetrics;
@@ -48,14 +46,13 @@ import org.apache.ignite.lang.IgniteProductVersion;
 
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isIgfsCache;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isSystemCache;
-import static org.apache.ignite.internal.visor.compute.VisorComputeMonitoringHolder.COMPUTE_MONITORING_HOLDER_KEY;
 import static org.apache.ignite.internal.visor.util.VisorTaskUtils.EVT_MAPPER;
 import static org.apache.ignite.internal.visor.util.VisorTaskUtils.MINIMAL_REBALANCE;
 import static org.apache.ignite.internal.visor.util.VisorTaskUtils.NOTHING_TO_REBALANCE;
 import static org.apache.ignite.internal.visor.util.VisorTaskUtils.REBALANCE_COMPLETE;
 import static org.apache.ignite.internal.visor.util.VisorTaskUtils.REBALANCE_NOT_AVAILABLE;
 import static org.apache.ignite.internal.visor.util.VisorTaskUtils.VISOR_TASK_EVTS;
-import static org.apache.ignite.internal.visor.util.VisorTaskUtils.checkExplicitTaskMonitoring;
+import static org.apache.ignite.internal.visor.util.VisorTaskUtils.checkExplicitEvents;
 import static org.apache.ignite.internal.visor.util.VisorTaskUtils.collectEvents;
 import static org.apache.ignite.internal.visor.util.VisorTaskUtils.isProxyCache;
 import static org.apache.ignite.internal.visor.util.VisorTaskUtils.isRestartingCache;
@@ -92,6 +89,17 @@ public class VisorNodeDataCollectorJob extends VisorJob<VisorNodeDataCollectorTa
     }
 
     /**
+     * @param evtOrderKey Event order key.
+     * @param types Event types.
+     */
+    protected void startCollectEvents(String evtOrderKey, int[] types) {
+        VisorComputeMonitoringHolder holder = VisorComputeMonitoringHolder.getInstance(ignite);
+
+        // Enable task monitoring for new node in grid.
+        holder.startCollect(ignite, evtOrderKey, types);
+    }
+
+    /**
      * Collect events.
      *
      * @param res Job result.
@@ -100,31 +108,12 @@ public class VisorNodeDataCollectorJob extends VisorJob<VisorNodeDataCollectorTa
     protected void events(VisorNodeDataCollectorJobResult res, VisorNodeDataCollectorTaskArg arg) {
         try {
             // Visor events explicitly enabled in configuration.
-            if (checkExplicitTaskMonitoring(ignite))
+            if (checkExplicitEvents(ignite, VISOR_TASK_EVTS))
                 res.setTaskMonitoringEnabled(true);
-            else {
-                // Get current task monitoring state.
-                res.setTaskMonitoringEnabled(arg.isTaskMonitoringEnabled());
+            else if (arg.isTaskMonitoringEnabled()) {
+                startCollectEvents(arg.getEventsOrderKey(), VISOR_TASK_EVTS);
 
-                if (arg.isTaskMonitoringEnabled()) {
-                    ConcurrentMap<String, VisorComputeMonitoringHolder> storage = ignite.cluster().nodeLocalMap();
-
-                    VisorComputeMonitoringHolder holder = storage.get(COMPUTE_MONITORING_HOLDER_KEY);
-
-                    if (holder == null) {
-                        VisorComputeMonitoringHolder holderNew = new VisorComputeMonitoringHolder();
-
-                        VisorComputeMonitoringHolder holderOld = storage.putIfAbsent(COMPUTE_MONITORING_HOLDER_KEY, holderNew);
-
-                        holder = holderOld == null ? holderNew : holderOld;
-                    }
-
-                    // Enable task monitoring for new node in grid.
-                    holder.startCollect(ignite, arg.getEventsOrderKey());
-
-                    // Update current state after change (it may not changed in some cases).
-                    res.setTaskMonitoringEnabled(ignite.allEventsUserRecordable(VISOR_TASK_EVTS));
-                }
+                res.setTaskMonitoringEnabled(ignite.allEventsUserRecordable(VISOR_TASK_EVTS));
             }
 
             events0(res, arg.getEventsOrderKey(), arg.getEventsThrottleCounterKey(), arg.isTaskMonitoringEnabled());
