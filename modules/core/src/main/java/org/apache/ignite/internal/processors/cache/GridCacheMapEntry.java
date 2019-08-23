@@ -2732,7 +2732,24 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             if (obsoleteVersionExtras() != null)
                 return false;
 
-            if (!hasValueUnlocked()) {
+            if (hasValueUnlocked()) {
+                long expireTime = expireTimeExtras();
+
+                if (expireTime > 0 && (expireTime < U.currentTimeMillis())) {
+                    if (obsoleteVer == null)
+                        obsoleteVer = nextVersion();
+
+                    if (onExpired(this.val, obsoleteVer)) {
+                        if (cctx.deferredDelete()) {
+                            deferred = true;
+                            ver0 = ver;
+                        }
+                        else
+                            obsolete = true;
+                    }
+                }
+            }
+            else {
                 if (cctx.deferredDelete() && !isStartVersion() && !detached() && !isInternal()) {
                     if (!deletedUnlocked()) {
                         update(null, 0L, 0L, ver, true);
@@ -3289,6 +3306,11 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     ) throws IgniteCheckedException, GridCacheEntryRemovedException {
         ensureFreeSpace();
 
+        boolean deferred = false;
+        boolean obsolete = false;
+
+        GridCacheVersion oldVer = null;
+
         lockListenerReadLock();
         lockEntry();
 
@@ -3336,6 +3358,20 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 update = p.apply(null);
 
                 if (update) {
+                    // If entry is already unswapped and we are modifying it, we must run deletion callbacks for old value.
+                    long oldExpTime = expireTimeUnlocked();
+
+                    if (oldExpTime > 0 && oldExpTime < U.currentTimeMillis()) {
+                        if (onExpired(this.val, null)) {
+                            if (cctx.deferredDelete()) {
+                                deferred = true;
+                                oldVer = this.ver;
+                            }
+                            else if (val == null)
+                                obsolete = true;
+                        }
+                    }
+
                     if (cctx.mvccEnabled()) {
                         assert !preload;
 
@@ -3351,6 +3387,21 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     unswap(false);
 
                     if (update = p.apply(null)) {
+                        // If entry is already unswapped and we are modifying it, we must run deletion callbacks for old value.
+                        long oldExpTime = expireTimeUnlocked();
+                        long delta = (oldExpTime == 0 ? 0 : oldExpTime - U.currentTimeMillis());
+
+                        if (delta < 0) {
+                            if (onExpired(this.val, null)) {
+                                if (cctx.deferredDelete()) {
+                                    deferred = true;
+                                    oldVer = this.ver;
+                                }
+                                else if (val == null)
+                                    obsolete = true;
+                            }
+                        }
+
                         assert !preload;
 
                         cctx.offheap().mvccInitialValue(this, val, ver, expTime, mvccVer, newMvccVer);
@@ -3437,6 +3488,18 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             unlockListenerReadLock();
 
             // It is necessary to execute these callbacks outside of lock to avoid deadlocks.
+
+            if (obsolete) {
+                onMarkedObsolete();
+
+                cctx.cache().removeEntry(this);
+            }
+
+            if (deferred) {
+                assert oldVer != null;
+
+                cctx.onDeferredDelete(this, oldVer);
+            }
         }
     }
 
@@ -4006,10 +4069,17 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         if (log.isTraceEnabled())
             log.trace("onExpired clear [key=" + key + ", entry=" + System.identityHashCode(this) + ']');
 
-        if (cctx.mvccEnabled())
-            cctx.offheap().mvccRemoveAll(this);
-        else
-            removeValue();
+//        cctx.shared().database().checkpointReadLock();
+//
+//        try {
+//            if (cctx.mvccEnabled())
+//                cctx.offheap().mvccRemoveAll(this);
+//            else
+//                removeValue();
+//        }
+//        finally {
+//            cctx.shared().database().checkpointReadUnlock();
+//        }
 
         if (cctx.events().isRecordable(EVT_CACHE_OBJECT_EXPIRED)) {
             cctx.events().addEvent(partition(),
