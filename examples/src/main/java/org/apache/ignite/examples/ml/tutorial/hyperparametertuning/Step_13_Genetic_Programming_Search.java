@@ -165,7 +165,7 @@ public class Step_13_Genetic_Programming_Search {
 
                 System.out.println("\n>>> Trained model: " + bestMdl);
 
-                double accuracy = Evaluator.evaluate(dataCache, split.getTestFilter()
+                double accuracy = Evaluator.evaluate(dataCache, split.getTestFilter(),
                     bestMdl, normalizationPreprocessor, MetricName.ACCURACY
                 );
 
