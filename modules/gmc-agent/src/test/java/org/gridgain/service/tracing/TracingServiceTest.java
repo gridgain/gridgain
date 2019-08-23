@@ -33,8 +33,7 @@ import io.opencensus.trace.export.SpanData;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.tracing.TracingSpi;
-import org.gridgain.dto.span.Span;
-import org.gridgain.dto.span.SpanBatch;
+import org.gridgain.dto.Span;
 import org.gridgain.service.AbstractServiceTest;
 import org.junit.Assert;
 import org.junit.Test;
@@ -61,7 +60,7 @@ public class TracingServiceTest extends AbstractServiceTest {
 
         List<Span> expSpans = spanData.stream().map(GmcSpanExporter::fromSpanDataToSpan).collect(Collectors.toList());
 
-        srvc.onNodeTraces(UUID.randomUUID(), new SpanBatch(expSpans));
+        srvc.onNodeTraces(UUID.randomUUID(), expSpans);
 
         ArgumentCaptor<String> destCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);

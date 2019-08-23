@@ -19,11 +19,8 @@ package org.gridgain.service.tracing;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-import com.google.common.collect.Lists;
 import io.opencensus.common.Duration;
 import io.opencensus.common.Function;
 import io.opencensus.common.Functions;
@@ -36,10 +33,11 @@ import io.opencensus.trace.Tracing;
 import io.opencensus.trace.export.SpanData;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.opencensus.spi.tracing.OpenCensusTraceExporter;
 import org.apache.ignite.spi.IgniteSpiException;
-import org.gridgain.dto.span.Span;
-import org.gridgain.dto.span.SpanBatch;
+import org.gridgain.agent.RetryableSender;
+import org.gridgain.dto.Span;
 
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -50,9 +48,6 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 public class GmcSpanExporter implements AutoCloseable {
     /** Queue capacity. */
     private static final int QUEUE_CAP = 100;
-
-    /** Batch size. */
-    private static final int BATCH_SIZE = 10;
 
     /** Status description. */
     public static final String TRACING_TOPIC = "gmc-tracing-topic";
@@ -72,11 +67,8 @@ public class GmcSpanExporter implements AutoCloseable {
     /** Exporter. */
     private OpenCensusTraceExporter exporter;
 
-    /** Executor service. */
-    private final ExecutorService exSrvc = Executors.newSingleThreadExecutor();
-
     /** Worker. */
-    private RetryableSender<SpanBatch> worker;
+    private RetryableSender<Span> worker;
 
     /**
      * @param ctx Context.
@@ -90,8 +82,6 @@ public class GmcSpanExporter implements AutoCloseable {
                 worker = createSenderWorker();
                 exporter = new OpenCensusTraceExporter(getTraceHandler());
                 exporter.start(ctx.igniteInstanceName());
-
-                exSrvc.submit(worker);
             }
             catch (IgniteSpiException ex) {
                 log.error("Trace exporter start failed", ex);
@@ -102,7 +92,7 @@ public class GmcSpanExporter implements AutoCloseable {
     /** {@inheritDoc} */
     @Override public void close() {
         if (exporter != null) {
-            exSrvc.shutdown();
+            U.closeQuiet(worker);
             exporter.stop();
         }
     }
@@ -118,10 +108,7 @@ public class GmcSpanExporter implements AutoCloseable {
                         .map(GmcSpanExporter::fromSpanDataToSpan)
                         .collect(Collectors.toList());
 
-                Lists.partition(spans, BATCH_SIZE)
-                        .stream()
-                        .map(SpanBatch::new)
-                        .forEach(worker::addToSendQueue);
+                worker.send(spans);
             }
         };
     }
@@ -129,8 +116,8 @@ public class GmcSpanExporter implements AutoCloseable {
     /**
      * @return Worker which send messages from queue to topic.
      */
-    private RetryableSender<SpanBatch> createSenderWorker() {
-        Consumer<SpanBatch> sndFn = (b) -> ctx.grid().message(ctx.grid().cluster().forOldest()).send(TRACING_TOPIC, b);
+    private RetryableSender<Span> createSenderWorker() {
+        Consumer<List<Span>> sndFn = (b) -> ctx.grid().message(ctx.grid().cluster().forOldest()).send(TRACING_TOPIC, (Object) b);
 
         return new RetryableSender<>(log, QUEUE_CAP, sndFn);
     }

@@ -16,15 +16,16 @@
 
 package org.gridgain.service.tracing;
 
+import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
+import org.gridgain.agent.RetryableSender;
 import org.gridgain.agent.WebSocketManager;
-import org.gridgain.dto.span.SpanBatch;
+import org.gridgain.dto.Span;
 
 import static org.gridgain.agent.StompDestinationsUtils.buildSaveSpanDest;
 import static org.gridgain.service.tracing.GmcSpanExporter.*;
@@ -48,11 +49,8 @@ public class TracingService implements AutoCloseable {
     /** On node traces listener. */
     private IgniteBiPredicate<UUID, Object> onNodeTraces = this::onNodeTraces;
 
-    /** Executor service. */
-    private final ExecutorService exSrvc = Executors.newSingleThreadExecutor();
-
     /** Worker. */
-    private final RetryableSender<SpanBatch> worker;
+    private final RetryableSender<Span> worker;
 
     /**
      * @param ctx Context.
@@ -65,14 +63,12 @@ public class TracingService implements AutoCloseable {
         this.worker = createSenderWorker();
 
         ctx.grid().message().localListen(TRACING_TOPIC, onNodeTraces);
-
-        exSrvc.submit(worker);
     }
 
     /** {@inheritDoc} */
     @Override public void close() {
         ctx.grid().message().stopLocalListen(TRACING_TOPIC, onNodeTraces);
-        exSrvc.shutdown();
+        U.closeQuiet(worker);
     }
 
     /**
@@ -80,7 +76,7 @@ public class TracingService implements AutoCloseable {
      * @param spans Spans.
      */
     boolean onNodeTraces(UUID uuid, Object spans) {
-        worker.addToSendQueue((SpanBatch) spans);
+        worker.send((List<Span>) spans);
 
         return true;
     }
@@ -88,9 +84,9 @@ public class TracingService implements AutoCloseable {
     /**
      * @return Sender which send messages from queue to gmc.
      */
-    private RetryableSender<SpanBatch> createSenderWorker() {
+    private RetryableSender<Span> createSenderWorker() {
         return new RetryableSender<>(log, QUEUE_CAP, (b) -> {
-            if (!mgr.send(buildSaveSpanDest(ctx.cluster().get().id()), b.getList()))
+            if (!mgr.send(buildSaveSpanDest(ctx.cluster().get().id()), b))
                 throw new IgniteException("Failed to send message with spans");
         });
     }

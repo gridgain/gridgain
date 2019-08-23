@@ -31,13 +31,14 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.processors.tracing.TracingSpi;
 import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
-import org.gridgain.dto.span.SpanBatch;
+import org.gridgain.dto.Span;
 import org.gridgain.service.AbstractServiceTest;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
@@ -70,7 +71,7 @@ public class GmcSpanExporterTest extends AbstractServiceTest {
 
 
         Assert.assertEquals(TRACING_TOPIC, topicCaptor.getValue());
-        Assert.assertEquals(1, ((SpanBatch)payloadCaptor.getValue()).getList().size());
+        Assert.assertEquals(1, ((Collection<Span>) payloadCaptor.getValue()).size());
     }
 
     /** {@inheritDoc} */
