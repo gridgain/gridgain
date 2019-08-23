@@ -164,7 +164,7 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testApi() throws Exception {
         try {
             grid(0).events().stopRemoteListen(null);
@@ -242,7 +242,7 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testApiAsync() throws Exception {
         IgniteEvents evt = grid(0).events();
 
@@ -322,7 +322,7 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testAllEvents() throws Exception {
         final Collection<UUID> nodeIds = new HashSet<>();
         final AtomicInteger cnt = new AtomicInteger();
@@ -363,7 +363,7 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testEventsByType() throws Exception {
         final Collection<UUID> nodeIds = new HashSet<>();
         final AtomicInteger cnt = new AtomicInteger();
@@ -405,7 +405,7 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testEventsByFilter() throws Exception {
         final Collection<UUID> nodeIds = new HashSet<>();
         final AtomicInteger cnt = new AtomicInteger();
@@ -450,7 +450,7 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testEventsByTypeAndFilter() throws Exception {
         final Collection<UUID> nodeIds = new HashSet<>();
         final AtomicInteger cnt = new AtomicInteger();
@@ -497,7 +497,7 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testRemoteProjection() throws Exception {
         final Collection<UUID> nodeIds = new ConcurrentSkipListSet<>();
         final AtomicInteger cnt = new AtomicInteger();
@@ -539,7 +539,7 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testProjectionWithLocalNode() throws Exception {
         final Collection<UUID> nodeIds = new HashSet<>();
         final AtomicInteger cnt = new AtomicInteger();
@@ -581,7 +581,7 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testLocalNodeOnly() throws Exception {
         final Collection<UUID> nodeIds = new HashSet<>();
         final AtomicInteger cnt = new AtomicInteger();
@@ -625,7 +625,7 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testStopByCallback() throws Exception {
         final Collection<UUID> nodeIds = new HashSet<>();
         final AtomicInteger cnt = new AtomicInteger();
@@ -667,7 +667,7 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testStopRemoteListen() throws Exception {
         final Collection<UUID> nodeIds = new HashSet<>();
         final AtomicInteger cnt = new AtomicInteger();
@@ -718,7 +718,7 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testStopLocalListenByCallback() throws Exception {
         final AtomicInteger cnt = new AtomicInteger();
         final CountDownLatch latch = new CountDownLatch(1);
@@ -754,7 +754,7 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testNodeJoin() throws Exception {
         final Collection<UUID> nodeIds = new HashSet<>();
         final AtomicInteger cnt = new AtomicInteger();
@@ -806,7 +806,7 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testNodeJoinWithProjection() throws Exception {
         final Collection<UUID> nodeIds = new HashSet<>();
         final AtomicInteger cnt = new AtomicInteger();
@@ -909,7 +909,7 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testResources() throws Exception {
         final Collection<UUID> nodeIds = new HashSet<>();
         final AtomicInteger cnt = new AtomicInteger();
@@ -964,7 +964,7 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testMasterNodeLeave() throws Exception {
         final CountDownLatch latch = new CountDownLatch(GRID_CNT);
 
@@ -1004,7 +1004,7 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test @Ignore
+    @Test
     public void testMasterNodeLeaveNoAutoUnsubscribe() throws Exception {
         Ignite g = startGrid("anotherGrid");
 
